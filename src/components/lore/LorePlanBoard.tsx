@@ -25,12 +25,13 @@ import gameIcons from '@iconify-json/game-icons/icons.json';
 const ICON_BODIES = gameIcons.icons as Record<string, { body: string }>;
 
 // Inline game-icon SVG for embedding in a vis-timeline item's HTML content.
-// fill:currentColor → the icon inherits the bar's text colour.
-function statusIconSvg(slug: string): string {
+// `color` is a token (var(--suc)…) so the glyph carries the status colour.
+function statusIconSvg(slug: string, color: string): string {
   const body = ICON_BODIES[slug]?.body;
   if (!body) return '';
-  return `<svg viewBox="0 0 512 512" width="11" height="11" `
-    + `style="vertical-align:-2px;margin-right:4px;flex:none;pointer-events:none" fill="currentColor">${body}</svg>`;
+  return `<svg viewBox="0 0 512 512" width="12" height="12" `
+    + `style="vertical-align:-2px;margin-right:5px;flex:none;pointer-events:none;color:${color}" `
+    + `fill="currentColor">${body}</svg>`;
 }
 
 function esc(s: string): string {
@@ -322,11 +323,11 @@ export default function LorePlanBoard({ onError }: Props) {
       next.push({
         id: item.item_id,
         group: item.track_id ?? UNTRACKED,
-        content: statusIconSvg(meta.icon) + esc(cleanLabel(item.label)),
+        content: statusIconSvg(meta.icon, meta.color) + esc(cleanLabel(item.label)),
         start: addWeeks(w0, ws),
         end:   addWeeks(w0, end),
         type: 'range',
-        className: `it fam-${fam}` + (isDone ? ' done' : ''),
+        className: `it fam-${fam}`,
         title: `${item.label}\nплан W${ws}–${we}`
           + (doneIso != null ? `\nфакт закрытия W${weAct}` : '')
           + (item.represents_sprint ? `\n${item.represents_sprint}` : '')

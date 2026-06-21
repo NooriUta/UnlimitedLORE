@@ -55,9 +55,9 @@
 
 /* ── Items (bars) ─────────────────────────────────────────────────────── */
 .lore-tl .vis-item {
-  border-width: 1.5px;
-  border-radius: 4px;
-  color: #fff;
+  border-width: 1px;
+  border-radius: var(--seer-radius-sm);
+  color: var(--t1);
   font-size: 11px;
 }
 .lore-tl .vis-item.vis-range {
@@ -66,25 +66,20 @@
 .lore-tl .vis-item .vis-item-content {
   display: inline-flex;
   align-items: center;
-  padding: 3px 7px;
+  padding: 3px 8px;
   white-space: nowrap;
   font-weight: 500;
-  text-shadow: 0 1px 3px #000a;
 }
-.lore-tl .vis-item.done { opacity: 0.5; }
 
-/* Status families — fill / border / text from semantic tokens (theme-aware).
-   The inline `border-left` (category accent) overrides the left side. */
-.lore-tl .vis-item.fam-done    { background-color: var(--suc);    border-color: var(--suc); }
-.lore-tl .vis-item.fam-active  { background-color: var(--inf);    border-color: var(--inf); }
-.lore-tl .vis-item.fam-warn    { background-color: var(--wrn);    border-color: var(--wrn); }
-.lore-tl .vis-item.fam-blocked { background-color: var(--danger); border-color: var(--danger); }
-.lore-tl .vis-item.fam-muted {
-  background-color: transparent;
-  border-color: var(--t3);
-  color: var(--t2);
-  text-shadow: none;
-}
+/* Status families — StatusChip-style tinted fill + token border + light text,
+   theme/palette-aware and readable on the dark board. Live work (active /
+   blocked / partial) reads stronger than the calm `done` tint; not-started is a
+   neutral surface (never the old transparent dark-on-dark). */
+.lore-tl .vis-item.fam-done    { background-color: color-mix(in srgb, var(--suc) 20%, var(--bg1));    border-color: color-mix(in srgb, var(--suc) 45%, transparent); }
+.lore-tl .vis-item.fam-active  { background-color: color-mix(in srgb, var(--inf) 34%, var(--bg1));    border-color: var(--inf); }
+.lore-tl .vis-item.fam-warn    { background-color: color-mix(in srgb, var(--wrn) 32%, var(--bg1));    border-color: var(--wrn); }
+.lore-tl .vis-item.fam-blocked { background-color: color-mix(in srgb, var(--danger) 34%, var(--bg1)); border-color: var(--danger); }
+.lore-tl .vis-item.fam-muted   { background-color: var(--bg3); border-color: var(--bdh); color: var(--t2); }
 
 /* Selection ring (override vis' default yellow/orange) */
 .lore-tl .vis-item.vis-selected {
