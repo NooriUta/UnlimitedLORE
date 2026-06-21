@@ -19,13 +19,15 @@
 
 /* Group labels (track names, left column) */
 .lore-tl .vis-labelset .vis-label {
-  color: var(--t2);
+  color: var(--t1);
   border-bottom: 1px solid var(--b2);
+  display: flex;
+  align-items: center;
 }
 .lore-tl .vis-labelset .vis-label .vis-inner {
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 500;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* Foreground group row separators */
@@ -53,17 +55,36 @@
 
 /* ── Items (bars) ─────────────────────────────────────────────────────── */
 .lore-tl .vis-item {
-  border-width: 1px;
-  border-radius: 3px;
+  border-width: 1.5px;
+  border-radius: 4px;
   color: #fff;
-  font-size: 10px;
+  font-size: 11px;
+}
+.lore-tl .vis-item.vis-range {
+  min-height: 20px;
 }
 .lore-tl .vis-item .vis-item-content {
-  padding: 1px 5px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
   white-space: nowrap;
-  text-shadow: 0 0 4px #0006;
+  font-weight: 500;
+  text-shadow: 0 1px 3px #000a;
 }
-.lore-tl .vis-item.done { opacity: 0.45; }
+.lore-tl .vis-item.done { opacity: 0.5; }
+
+/* Status families — fill / border / text from semantic tokens (theme-aware).
+   The inline `border-left` (category accent) overrides the left side. */
+.lore-tl .vis-item.fam-done    { background-color: var(--suc);    border-color: var(--suc); }
+.lore-tl .vis-item.fam-active  { background-color: var(--inf);    border-color: var(--inf); }
+.lore-tl .vis-item.fam-warn    { background-color: var(--wrn);    border-color: var(--wrn); }
+.lore-tl .vis-item.fam-blocked { background-color: var(--danger); border-color: var(--danger); }
+.lore-tl .vis-item.fam-muted {
+  background-color: transparent;
+  border-color: var(--t3);
+  color: var(--t2);
+  text-shadow: none;
+}
 
 /* Selection ring (override vis' default yellow/orange) */
 .lore-tl .vis-item.vis-selected {
@@ -91,14 +112,17 @@
   background-color: color-mix(in srgb, var(--wrn) 40%, transparent);
 }
 
-/* Section background bands */
+/* Section (phase) background bands */
 .lore-tl .vis-item.vis-background.sec {
-  border-left: 1px solid var(--b3);
+  border-left: 2px solid var(--b3);
 }
 .lore-tl .vis-item.vis-background.sec .vis-item-content {
-  color: var(--t3);
-  font-size: 9px;
-  padding: 2px 4px;
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 3px 6px;
   text-shadow: none;
 }
 

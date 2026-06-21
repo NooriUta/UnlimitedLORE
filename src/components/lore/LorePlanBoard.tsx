@@ -13,17 +13,49 @@ import {
   type LorePlanConfig, type LorePlanTrack, type LorePlanSection,
   type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
   type LorePlanItemStatus, type LorePlanVersion,
-  type LoreSprintDoneDate, type LoreSprintTask,
+  type LoreSprintDoneDate, type LoreSprintTask, type LoreSprintRow,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
+import gameIcons from '@iconify-json/game-icons/icons.json';
 
-// ── Status accent colours + cycle ────────────────────────────────────────────
-const STATUS_COLOR: Record<string, string> = {
-  done:    'var(--suc)',
-  active:  'var(--inf)',
-  high:    'var(--wrn)',
-  blocked: 'var(--danger)',
+// ── Status helpers ───────────────────────────────────────────────────────────
+// Status colour + icon come from the single source of truth (lore-status.ts),
+// so the board matches the chips/ticks and adapts to theme + palette.
+const ICON_BODIES = gameIcons.icons as Record<string, { body: string }>;
+
+// Inline game-icon SVG for embedding in a vis-timeline item's HTML content.
+// fill:currentColor → the icon inherits the bar's text colour.
+function statusIconSvg(slug: string): string {
+  const body = ICON_BODIES[slug]?.body;
+  if (!body) return '';
+  return `<svg viewBox="0 0 512 512" width="11" height="11" `
+    + `style="vertical-align:-2px;margin-right:4px;flex:none;pointer-events:none" fill="currentColor">${body}</svg>`;
+}
+
+function esc(s: string): string {
+  return s.replace(/[&<>"]/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+}
+
+// Map a status to a colour family (drives the fam-* CSS class). Derived from the
+// single source (statusMeta.color) so the board never drifts from the chips.
+type StatusFamily = 'done' | 'active' | 'warn' | 'blocked' | 'muted';
+function statusFamily(status: string | null | undefined): StatusFamily {
+  switch (statusMeta(status).color) {
+    case 'var(--suc)':    return 'done';
+    case 'var(--inf)':    return 'active';
+    case 'var(--wrn)':    return 'warn';
+    case 'var(--danger)': return 'blocked';
+    default:              return 'muted';
+  }
+}
+
+// Legend ordering + RU labels (legend is built from statuses actually present).
+const STATUS_ORDER = ['active', 'high', 'planned', 'partial', 'blocked', 'todo', 'done', 'deferred', 'cancelled'];
+const STATUS_RU: Record<string, string> = {
+  active: 'в работе', high: 'важно', planned: 'план', partial: 'частично',
+  blocked: 'блок', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',
 };
 
 const STATUS_CYCLE: LorePlanItemStatus[] = ['todo', 'active', 'done'];
@@ -55,6 +87,9 @@ export default function LorePlanBoard({ onError }: Props) {
   const [releases, setReleases] = useState<LoreRelease[]>([]);
   const [versions, setVersions] = useState<LorePlanVersion[]>([]);
   const [doneBySprint, setDoneBySprint] = useState<Map<string, string>>(new Map());
+  // Real sprint status (status_raw) keyed by sprint_id — the bar's status source
+  // for sprint bars, so the gantt matches the actual sprint state (not plan_item).
+  const [statusBySprint, setStatusBySprint] = useState<Map<string, string>>(new Map());
   const [loading,  setLoading]  = useState(true);
 
   // ── Toggles ────────────────────────────────────────────────────────────────
@@ -96,8 +131,9 @@ export default function LorePlanBoard({ onError }: Props) {
       fetchLoreSlice<LoreRelease>('releases',            undefined, ctrl.signal),
       fetchLoreSlice<LorePlanVersion>('plan_versions',   undefined, ctrl.signal),
       fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
+      fetchLoreSlice<LoreSprintRow>('sprints',            undefined, ctrl.signal),
     ])
-      .then(([cfgs, trks, secs, its, chkps, milestones, rels, vers, dones]) => {
+      .then(([cfgs, trks, secs, its, chkps, milestones, rels, vers, dones, sprints]) => {
         setConfig(cfgs[0] ?? null);
         setTracks(trks);
         setSections(secs);
@@ -108,6 +144,9 @@ export default function LorePlanBoard({ onError }: Props) {
         setVersions(vers);
         setDoneBySprint(new Map(
           dones.filter(d => d.done_date).map(d => [d.sprint_id, d.done_date as string])
+        ));
+        setStatusBySprint(new Map(
+          sprints.filter(s => s.status_raw).map(s => [s.sprint_id, s.status_raw as string])
         ));
         if (vers[0]) setSelectedVer(vers[0].version_id);
         setLoading(false);
@@ -162,7 +201,7 @@ export default function LorePlanBoard({ onError }: Props) {
 
     const groups = new DataSet<TimelineGroup>([]);
     if (mss.length) {
-      groups.add({ id: MS_GROUP, content: '◆ Вехи', order: -1 } as TimelineGroup);
+      groups.add({ id: MS_GROUP, content: 'Вехи', order: -1 } as TimelineGroup);
     }
     usedTracks.forEach((tr, i) =>
       groups.add({ id: tr.track_id, content: tr.label, order: i } as TimelineGroup));
@@ -176,7 +215,7 @@ export default function LorePlanBoard({ onError }: Props) {
       groupOrder: 'order',
       zoomMin: 3 * 86400 * 1000,           // 3 days
       zoomMax: 3 * 365 * 86400 * 1000,     // ~3 years
-      margin: { item: { horizontal: 2, vertical: 4 }, axis: 6 },
+      margin: { item: { horizontal: 3, vertical: 7 }, axis: 8 },
       showCurrentTime: true,
       selectable: true,
       multiselect: false,
@@ -185,15 +224,21 @@ export default function LorePlanBoard({ onError }: Props) {
       zoomKey: 'ctrlKey',
       maxHeight: '100%',
       tooltip: { followMouse: true, overflowMethod: 'flip' },
+      // Item content carries our own inline status SVG; labels are HTML-escaped
+      // (esc()) so disabling the sanitizer is safe and keeps the icons.
+      xss: { disabled: true },
     };
 
     const tl = new Timeline(hostRef.current, itemsDS, groups, options);
     timelineRef.current = tl;
 
-    // Initial window: a stretched ~12-week view (readable bar labels) anchored a
-    // few weeks before "now"; pan/zoom or «Уместить» reveals the full span.
-    const startW = Math.max(0, W_NOW - 3);
-    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 12), { animation: false });
+    // Initial window: a wide ~9-week view (bar labels fully legible) anchored a
+    // couple weeks before "now"; pan/zoom or «Уместить» reveals the full span.
+    const startW = Math.max(0, W_NOW - 2);
+    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 9), { animation: false });
+    // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
+    // force one redraw on the next frame so the first paint is never blank.
+    requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });
 
     tl.on('select', (props: { items: Array<string | number> }) => {
       const id = props.items[0];
@@ -252,7 +297,12 @@ export default function LorePlanBoard({ onError }: Props) {
       const we = item.week_end;
       if (ws == null || we == null) continue;                 // unpositioned → skip
       if (cropPast && we < W_NOW) continue;
-      const isDone = item.status === 'done';
+      // Effective status: for sprint bars use the REAL sprint state (status_raw
+      // parsed by taskTick), not plan_item.status which drifts from reality.
+      const sprintRaw = item.represents_sprint
+        ? statusBySprint.get(item.represents_sprint) : undefined;
+      const effStatus = sprintRaw ? taskTick(sprintRaw).status : (item.status ?? 'todo');
+      const isDone = effStatus === 'done';
       if (!showDone && isDone) continue;
       if (!showActive && !isDone) continue;
 
@@ -265,22 +315,22 @@ export default function LorePlanBoard({ onError }: Props) {
         ? Math.max(ws + 1, Math.round((new Date(doneIso).getTime() - w0.getTime()) / WEEK_MS))
         : we;
       const end = Math.max(ws + 1, weAct);
-      const bg  = item.bar_color ?? 'var(--acc)';
-      const outline = STATUS_COLOR[item.status ?? ''] ?? bg;
+      // Colour = status only (no category) via semantic-token CSS family class.
+      const meta = statusMeta(effStatus);
+      const fam  = statusFamily(effStatus);            // done|active|warn|blocked|muted
 
       next.push({
         id: item.item_id,
         group: item.track_id ?? UNTRACKED,
-        content: cleanLabel(item.label),
+        content: statusIconSvg(meta.icon) + esc(cleanLabel(item.label)),
         start: addWeeks(w0, ws),
         end:   addWeeks(w0, end),
         type: 'range',
-        className: 'it' + (isDone ? ' done' : ''),
-        style: `background-color:${bg};border-color:${outline};`,
+        className: `it fam-${fam}` + (isDone ? ' done' : ''),
         title: `${item.label}\nплан W${ws}–${we}`
           + (doneIso != null ? `\nфакт закрытия W${weAct}` : '')
           + (item.represents_sprint ? `\n${item.represents_sprint}` : '')
-          + (item.status ? `\nстатус: ${item.status}` : ''),
+          + `\nстатус: ${effStatus}`,
       } as TimelineItem);
     }
 
@@ -301,17 +351,17 @@ export default function LorePlanBoard({ onError }: Props) {
       } as TimelineItem);
     }
 
-    // Releases → thin vertical guide-lines spanning every track (background,
-    // no group). A swimlane of 71 stacked points would dwarf the real tracks.
+    // Release marker — only the CURRENT release, as one vertical guide-line.
+    // (All 71 lines cluttered the board; the full list lives in «Релизы».)
     for (const rel of releases) {
-      if (rel.week == null) continue;
+      if (rel.week == null || !rel.is_current) continue;
       const at = addWeeks(w0, rel.week);
       next.push({
         id: 'rel_' + rel.release_id,
         start: at,
         end: new Date(at.getTime() + WEEK_MS * 0.12),
         type: 'background',
-        className: 'rel' + (rel.is_current ? ' cur' : ''),
+        className: 'rel cur',
         title: `${rel.git_tag ?? rel.release_id}\nW${rel.week}${rel.release_date ? ' · ' + rel.release_date.slice(0, 10) : ''}`,
       } as TimelineItem);
     }
@@ -320,7 +370,7 @@ export default function LorePlanBoard({ onError }: Props) {
     msByIdRef.current   = msById;
     ds.clear();
     ds.add(next);
-  }, [items, sections, mss, cps, releases, doneBySprint, w0,
+  }, [items, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
       showDone, showActive, cropPast, W_NOW]);
 
   // ── Status cycling helper (panel button) ─────────────────────────────────────
@@ -351,6 +401,14 @@ export default function LorePlanBoard({ onError }: Props) {
     if (!showActive && !isDone) return false;
     return true;
   }).length;
+
+  // Effective status of an item (real sprint state for sprint bars).
+  const effStatusOf = (it: LorePlanItem): string => {
+    const raw = it.represents_sprint ? statusBySprint.get(it.represents_sprint) : undefined;
+    return raw ? taskTick(raw).status : (it.status ?? 'todo');
+  };
+  // Legend shows only statuses that actually occur (avoids advertising phantoms).
+  const presentStatuses = STATUS_ORDER.filter(s => items.some(it => effStatusOf(it) === s));
 
   return (
     <div style={S.root}>
@@ -398,7 +456,27 @@ export default function LorePlanBoard({ onError }: Props) {
         <span style={S.stat} title="Паритет: доля баров с позицией (SAGA↔план)">
           {parityPct}% parity
         </span>
-        <span style={{ ...S.zlabel, opacity: 0.6 }}>Ctrl+колесо = зум</span>
+        <span style={{ ...S.zlabel, opacity: 0.6 }}>Ctrl+колесо = зум · тащить = листать</span>
+      </div>
+
+      {/* ── Legend ─────────────────────────────────────────────────────────── */}
+      <div style={S.legend}>
+        <span style={S.legendCap}>заливка = статус:</span>
+        {presentStatuses.map(s => <LegendStatus key={s} status={s} label={STATUS_RU[s] ?? s} />)}
+        <span style={S.legendSep} />
+        <span style={S.legendGlyph}>
+          <span style={{ width: 14, height: 11, borderRadius: 2, display: 'inline-block',
+            background: 'var(--bg3)', border: '2px solid var(--acc)' }} /> веха
+        </span>
+        <span style={S.legendGlyph}>
+          <span style={{ width: 2, height: 13, display: 'inline-block',
+            background: 'color-mix(in srgb, var(--wrn) 60%, transparent)' }} /> текущий релиз
+        </span>
+        <span style={S.legendGlyph}>
+          <span style={{ width: 16, height: 11, borderRadius: 2, display: 'inline-block',
+            background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid var(--b3)' }} /> фаза
+        </span>
+        <span style={S.legendDim}>клик по бару → карточка спринта</span>
       </div>
 
       {/* ── Main: timeline host + side panel ───────────────────────────────── */}
@@ -440,12 +518,12 @@ export default function LorePlanBoard({ onError }: Props) {
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '3px 8px', borderRadius: 3, cursor: 'pointer',
                     fontSize: 11, fontWeight: 600,
-                    background: 'color-mix(in srgb, ' +
-                      (STATUS_COLOR[sprintCard.status ?? ''] ?? 'var(--acc)') + ' 18%, transparent)',
-                    color: STATUS_COLOR[sprintCard.status ?? ''] ?? 'var(--t2)',
-                    border: '1px solid ' + (STATUS_COLOR[sprintCard.status ?? ''] ?? 'var(--b3)'),
+                    background: `color-mix(in srgb, ${statusMeta(sprintCard.status).color} 18%, transparent)`,
+                    color: statusMeta(sprintCard.status).color,
+                    border: `1px solid ${statusMeta(sprintCard.status).color}`,
                   }}
                 >
+                  <GameIcon slug={statusMeta(sprintCard.status).icon} size={12} style={{ color: 'inherit' }} />
                   {sprintCard.status ?? 'todo'}
                   <span style={{ opacity: 0.7, fontSize: 9 }}>
                     → {cycleStatus(sprintCard.status)}
@@ -571,8 +649,10 @@ function renderMsGroups(
       )}
       {[...grouped.entries()].map(([st, grp]) => (
         <div key={st} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
-            color: STATUS_COLOR[st] ?? 'var(--t3)', marginBottom: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+            color: statusMeta(st).color, marginBottom: 3 }}>
+            <GameIcon slug={statusMeta(st).icon} size={11} style={{ color: 'inherit' }} />
             {st} ({grp.length})
           </div>
           {grp.map(it => (
@@ -620,6 +700,16 @@ function Tog({ active, onClick, children }: {
   );
 }
 
+function LegendStatus({ status, label }: { status: string; label: string }) {
+  const m = statusMeta(status);
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--t2)' }}>
+      <GameIcon slug={m.icon} size={12} style={{ color: m.color }} />
+      {label}
+    </span>
+  );
+}
+
 function PRow({ k, v, color }: { k: string; v: string; color?: string }) {
   return (
     <div style={{ display: 'flex', gap: 8, marginBottom: 5, fontSize: 11 }}>
@@ -649,6 +739,15 @@ const S = {
   },
   zlabel: { fontSize: 10, color: 'var(--t3)' },
   stat:   { fontSize: 10, color: 'var(--t3)' },
+  legend: {
+    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const,
+    padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    background: 'var(--b1)',
+  },
+  legendCap:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  legendGlyph: { fontSize: 10, color: 'var(--t2)', display: 'inline-flex', gap: 4, alignItems: 'center' },
+  legendSep:   { width: 1, height: 14, background: 'var(--b3)' },
+  legendDim:   { fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' },
   verSel: {
     height: 22, padding: '0 6px', fontSize: 10,
     border: '1px solid var(--b3)', borderRadius: 3,
