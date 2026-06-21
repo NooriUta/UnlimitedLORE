@@ -13,6 +13,7 @@ import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
+import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta }      from '../components/lore/lore-status';
 
@@ -20,7 +21,7 @@ import { statusMeta }      from '../components/lore/lore-status';
 type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases'
   | 'components'
-  | 'evolution' | 'timeline';
+  | 'evolution' | 'timeline' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; label: string }[] = [
@@ -32,6 +33,7 @@ const SECTIONS: { id: Section; icon: string; label: string }[] = [
   { id: 'components', icon: 'cog',            label: 'Компоненты'   },
   { id: 'evolution',  icon: 'hourglass',      label: 'История'      },
   { id: 'timeline',   icon: 'tied-scroll',    label: 'Лента'        },
+  { id: 'mcp',        icon: 'plug',           label: 'MCP API'      },
 ];
 
 // Sections that use master-detail layout (list panel + detail panel)
@@ -365,6 +367,9 @@ export default function LorePage() {
             <LoreTimeline module="" q={q} onError={handleFetchError}
               onSelect={navigateToAdr} onSelectSprint={navigateToSprint} />
           )}
+
+          {/* MCP API — published reference for the aida-lore MCP server */}
+          {section === 'mcp' && <LoreMcpApiScreen />}
         </div>
       </div>
     </div>

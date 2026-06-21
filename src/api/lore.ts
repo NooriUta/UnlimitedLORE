@@ -53,6 +53,22 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+// Slice catalog (GET /lore/slices) — the whitelist the MCP `lore_list_slices`
+// tool exposes. Used by the MCP API screen to show the live catalog.
+export interface LoreSliceDescriptor {
+  id: string;
+  required: string[];
+  optional: string[];
+}
+
+export async function fetchLoreSliceCatalog(signal?: AbortSignal): Promise<LoreSliceDescriptor[]> {
+  const res = await fetch(`${LORE_BASE}/slices`, { signal });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  const body = (await res.json()) as { slices?: LoreSliceDescriptor[] };
+  return body.slices ?? [];
+}
+
 // ── Typed slice helpers ────────────────────────────────────────────────────
 
 export interface LoreTimelineItem {
