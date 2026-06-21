@@ -190,9 +190,10 @@ export default function LorePlanBoard({ onError }: Props) {
     const tl = new Timeline(hostRef.current, itemsDS, groups, options);
     timelineRef.current = tl;
 
-    // Initial window: w0 .. w0 + weeks_total, with a small lead-in
-    const span = (config.weeks_total ?? 30) + 2;
-    tl.setWindow(addWeeks(w0, -1), addWeeks(w0, span), { animation: false });
+    // Initial window: a stretched ~12-week view (readable bar labels) anchored a
+    // few weeks before "now"; pan/zoom or «Уместить» reveals the full span.
+    const startW = Math.max(0, W_NOW - 3);
+    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 12), { animation: false });
 
     tl.on('select', (props: { items: Array<string | number> }) => {
       const id = props.items[0];
