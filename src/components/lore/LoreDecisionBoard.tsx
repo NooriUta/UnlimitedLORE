@@ -64,7 +64,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
         if (rows[0]) setDetail(prev => ({ ...prev, [id]: rows[0] }));
         setLoadingDetail(null);
       })
-      .catch(() => setLoadingDetail(null));
+      .catch(e => { onError(e); setLoadingDetail(null); });
   }
 
   function toggleGroup(status: string) {

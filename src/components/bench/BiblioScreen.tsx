@@ -6,6 +6,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { MartProse } from './MartProse';
+import { fetchMartSlice, benchFileUrl } from '../../api/bench';
 
 /* ELK runs in-process (bundled build, no worker) — one instance for the module */
 const elk = new ELK();
@@ -76,19 +77,27 @@ interface EdgeLink {
   edge_type:  string;
 }
 
-/* ── ArcadeDB fetch ─────────────────────────────────────────────────── */
-const ADB_URL  = '/arcadedb/api/v1/query/RAGVSDL';
-const ADB_AUTH = 'Basic ' + btoa('root:playwithdata');
+/* ── Mart-slice fetch ───────────────────────────────────────────────────
+ * Goes through the backend mart (named slices) like the rest of the bench
+ * panel — the browser sends NO SQL and NO ArcadeDB credentials. SQL templates
+ * live server-side in MartSlices (biblio_* slices). */
+const fetchSlice = fetchMartSlice;
 
-async function fetchRAGVSDL<T>(sql: string): Promise<T[]> {
-  const r = await fetch(ADB_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: ADB_AUTH },
-    body: JSON.stringify({ language: 'sql', command: sql }),
-  });
-  if (!r.ok) throw new Error(`ArcadeDB ${r.status}`);
-  const body = await r.json();
-  return (body.result ?? []) as T[];
+/* Reference link normalizer: the `link` field holds heterogeneous values —
+ * full URLs, bare arXiv codes ("arXiv:2503.11984"), DOIs, or benchmark-repo
+ * doc paths ("docs/...."). Build a real href so the card link actually opens. */
+function resolveRefUrl(link: string): string {
+  const s = link.trim();
+  if (/^https?:\/\//i.test(s)) return s;                       // already a URL
+  const arxiv = s.match(/^arxiv:\s*(.+)$/i);                   // arXiv:2503.11984
+  if (arxiv) return `https://arxiv.org/abs/${arxiv[1].trim()}`;
+  const doi = s.match(/^doi:\s*(.+)$/i);                       // doi:10.1145/3725278
+  if (doi) return `https://doi.org/${doi[1].trim()}`;
+  if (/^10\.\d{4,}\//.test(s)) return `https://doi.org/${s}`;  // bare DOI
+  const acl = s.match(/^aclanthology:\s*(.+)$/i);              // aclanthology:2020.emnlp-main.564
+  if (acl) return `https://aclanthology.org/${acl[1].trim()}/`;
+  if (/^(docs|results|backups)\//.test(s)) return benchFileUrl(s); // repo file
+  return s;
 }
 
 /* ── Language picker ────────────────────────────────────────────────── */
@@ -266,7 +275,7 @@ function CardsView({
                     return <span key={tid} style={S.topicChip}>{lbl}</span>;
                   })}
                   {r.link && (
-                    <a href={r.link} target="_blank" rel="noopener noreferrer"
+                    <a href={resolveRefUrl(r.link)} target="_blank" rel="noopener noreferrer"
                       style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--acc)' }}
                       onClick={e => e.stopPropagation()}>↗</a>
                   )}
@@ -1033,9 +1042,9 @@ function GraphView({
             )}
             <p style={{ fontSize: 11, color: 'var(--t1)', margin: '8px 0' }}>{panelRef.citation}</p>
             {panelRef.link && (
-              <a href={panelRef.link} target="_blank" rel="noopener noreferrer"
+              <a href={resolveRefUrl(panelRef.link)} target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: 10, color: 'var(--acc)', wordBreak: 'break-all', display: 'block', marginBottom: 8 }}>
-                ↗ {panelRef.link}
+                ↗ {resolveRefUrl(panelRef.link)}
               </a>
             )}
             {panelTakeaway && (
@@ -1076,27 +1085,13 @@ export function BiblioScreen({ onError }: Props) {
 
   useEffect(() => {
     Promise.all([
-      fetchRAGVSDL<RefRow>(
-        'SELECT ref_id, citation, source_role, ref_group, year, link,' +
-        ' relevance_ru, relevance_ru_sci, relevance_en, relevance,' +
-        ' takeaway_ru, takeaway_ru_sci, takeaway_en, takeaway,' +
-        ' group_overview_ru, group_overview_ru_sci, group_overview_en, group_overview' +
-        ' FROM ExpReference ORDER BY year DESC'
-      ),
-      fetchRAGVSDL<HarmoNode>(
-        'SELECT node_id, kind, title, label_ru, label_en, summary_ru, summary_en,' +
-        ' description_ru_sci, description_en FROM ExpHarmonizationNode ORDER BY kind DESC, node_id'
-      ),
-      fetchRAGVSDL<NodeEdgeRaw>(
-        'SELECT node_id, outE().@type AS edge_types, outE().inV().ref_id AS to_refs FROM ExpHarmonizationNode'
-      ),
-      fetchRAGVSDL<TopicRow>('SELECT topic_id, label_ru, label_en FROM ExpTopic'),
-      fetchRAGVSDL<RefTopicRow>('SELECT ref_id, out(\'REF_TOPIC\').topic_id AS topics FROM ExpReference'),
-      fetchRAGVSDL<{ from_node: string; edge_types: string[] | null; to_nodes: string[] | null }>(
-        'SELECT node_id AS from_node,' +
-        ' outE(\'HAS_CHILD\',\'GROUNDS\',\'EXTENDS\',\'PARALLELS\',\'INSTRUMENTS\').@type AS edge_types,' +
-        ' outE(\'HAS_CHILD\',\'GROUNDS\',\'EXTENDS\',\'PARALLELS\',\'INSTRUMENTS\').inV().node_id AS to_nodes' +
-        ' FROM ExpHarmonizationNode'
+      fetchSlice<RefRow>('biblio_refs'),
+      fetchSlice<HarmoNode>('biblio_nodes'),
+      fetchSlice<NodeEdgeRaw>('biblio_node_refs'),
+      fetchSlice<TopicRow>('biblio_topics'),
+      fetchSlice<RefTopicRow>('biblio_ref_topics'),
+      fetchSlice<{ from_node: string; edge_types: string[] | null; to_nodes: string[] | null }>(
+        'biblio_node_edges',
       ),
     ])
       .then(([r, n, e, t, rt, ie]) => {
@@ -1137,7 +1132,7 @@ export function BiblioScreen({ onError }: Props) {
       });
   }, [onError]);
 
-  if (loading) return <div style={S.loadMsg}>Загрузка RAGVSDL…</div>;
+  if (loading) return <div style={S.loadMsg}>Загрузка исследований…</div>;
   if (error)   return <div style={S.errMsg}>{error}</div>;
 
   return (

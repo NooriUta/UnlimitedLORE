@@ -95,6 +95,31 @@ public final class MartSlices {
             "relevance, relevance_ru_sci, relevance_ru, relevance_en, " +
             "group_overview, group_overview_ru_sci, group_overview_ru, group_overview_en " +
             "FROM ExpReference ORDER BY ref_group, ref_id");
+        // ── bibliography graph (BiblioScreen) — references + harmonization map ──
+        // These replace the screen's former direct-to-ArcadeDB SQL: the browser
+        // now sends NO SQL and NO credentials, going through the mart like the
+        // rest of the bench panel.
+        slice("biblio_refs",
+            "SELECT ref_id, citation, source_role, ref_group, year, link, " +
+            "relevance_ru, relevance_ru_sci, relevance_en, relevance, " +
+            "takeaway_ru, takeaway_ru_sci, takeaway_en, takeaway, " +
+            "group_overview_ru, group_overview_ru_sci, group_overview_en, group_overview " +
+            "FROM ExpReference ORDER BY year DESC");
+        slice("biblio_nodes",
+            "SELECT node_id, kind, title, label_ru, label_en, summary_ru, summary_en, " +
+            "description_ru_sci, description_en FROM ExpHarmonizationNode ORDER BY kind DESC, node_id");
+        slice("biblio_node_refs",
+            "SELECT node_id, outE().@type AS edge_types, outE().inV().ref_id AS to_refs " +
+            "FROM ExpHarmonizationNode");
+        slice("biblio_topics",
+            "SELECT topic_id, label_ru, label_en FROM ExpTopic");
+        slice("biblio_ref_topics",
+            "SELECT ref_id, out('REF_TOPIC').topic_id AS topics FROM ExpReference");
+        slice("biblio_node_edges",
+            "SELECT node_id AS from_node, " +
+            "outE('HAS_CHILD','GROUNDS','EXTENDS','PARALLELS','INSTRUMENTS').@type AS edge_types, " +
+            "outE('HAS_CHILD','GROUNDS','EXTENDS','PARALLELS','INSTRUMENTS').inV().node_id AS to_nodes " +
+            "FROM ExpHarmonizationNode");
         // literature grounding of one substrate — edge idiom per the mart skill:
         // expand(out('EDGE')) is the reliable traversal form in ArcadeDB
         slice("substrate_refs",

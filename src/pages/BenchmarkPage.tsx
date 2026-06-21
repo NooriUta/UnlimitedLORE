@@ -78,7 +78,7 @@ const NAV_SECTIONS: Array<{
     titleKey: 'bench.navLibrary', titleFallback: 'Library',
     items: [
       { id: 'references',  labelKey: 'bench.tabReferences',  fallback: 'Bibliography' },
-      { id: 'biblio',      labelKey: 'bench.tabBiblio',      fallback: 'Biblio · RAGVSDL' },
+      { id: 'biblio',      labelKey: 'bench.tabBiblio',      fallback: 'Biblio · Research' },
     ],
   },
   {

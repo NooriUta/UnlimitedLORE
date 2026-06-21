@@ -218,6 +218,7 @@ export default function LorePage() {
         <input
           style={S.searchInput}
           placeholder="поиск по базе знаний…"
+          aria-label="поиск по базе знаний"
           value={search}
           onChange={e => onSearchChange(e.target.value)}
         />

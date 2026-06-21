@@ -89,10 +89,10 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
         setPrRefs(prev => ({ ...prev, [id]: prs }));
         setLoadingDetail(null);
       })
-      .catch(() => setLoadingDetail(null));
+      .catch(e => { onError(e); setLoadingDetail(null); });
   }
 
-  const filtered = rows
+  const filtered = [...rows]
     .sort(semverCompare)
     .filter(r =>
       !q || (r.git_tag ?? r.release_id).toLowerCase().includes(q.toLowerCase())

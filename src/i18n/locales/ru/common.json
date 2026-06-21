@@ -9,7 +9,7 @@
   },
   "bench": {
     "title":            "RAG vs Parse — эксперимент",
-    "subtitle":         "Read-only поверх витрины измерений RAGVSDL",
+    "subtitle":         "Read-only поверх витрины измерений «Исследования»",
     "unavailable":      "Витрина эксперимента недоступна",
     "statusUnavailable": "Live-статус недоступен — репозиторий бенчмарка не примонтирован",
     "loading":          "Загрузка…",
@@ -35,7 +35,7 @@
     "tabHypotheses":    "Гипотезы",
     "tabFindings":      "Находки",
     "tabReferences":    "Библиография",
-    "tabBiblio":        "Библио · RAGVSDL",
+    "tabBiblio":        "Библио · Исследования",
     "tabCaseRegistry":  "Кейсы и голд",
     "tabFinance":       "Финансы",
     "tabAdvisor":       "Советник",

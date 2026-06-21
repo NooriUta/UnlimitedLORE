@@ -9,7 +9,7 @@
   },
   "bench": {
     "title":            "RAG vs Parse — experiment",
-    "subtitle":         "Read-only over the RAGVSDL experiment mart",
+    "subtitle":         "Read-only over the Research experiment mart",
     "unavailable":      "Experiment mart is unavailable",
     "statusUnavailable": "Live status unavailable — benchmark repo is not mounted",
     "loading":          "Loading…",
@@ -35,7 +35,7 @@
     "tabHypotheses":    "Hypotheses",
     "tabFindings":      "Findings",
     "tabReferences":    "Bibliography",
-    "tabBiblio":        "Biblio · RAGVSDL",
+    "tabBiblio":        "Biblio · Research",
     "tabCaseRegistry":  "Cases & gold",
     "tabFinance":       "Finance",
     "tabAdvisor":       "Advisor",
