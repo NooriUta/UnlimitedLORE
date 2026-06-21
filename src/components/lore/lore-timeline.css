@@ -1,0 +1,116 @@
+/* Dark amber (Seiðr) theme overrides for vis-timeline.
+   Scoped under .lore-tl so the library's default light skin never leaks. */
+
+.lore-tl,
+.lore-tl .vis-timeline {
+  border: none;
+  font-family: var(--font);
+  font-size: 11px;
+}
+
+/* Panels / borders */
+.lore-tl .vis-panel.vis-center,
+.lore-tl .vis-panel.vis-left,
+.lore-tl .vis-panel.vis-right,
+.lore-tl .vis-panel.vis-top,
+.lore-tl .vis-panel.vis-bottom {
+  border-color: var(--b2);
+}
+
+/* Group labels (track names, left column) */
+.lore-tl .vis-labelset .vis-label {
+  color: var(--t2);
+  border-bottom: 1px solid var(--b2);
+}
+.lore-tl .vis-labelset .vis-label .vis-inner {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Foreground group row separators */
+.lore-tl .vis-foreground .vis-group {
+  border-bottom: 1px solid var(--b2);
+}
+
+/* Time axis */
+.lore-tl .vis-time-axis .vis-text {
+  color: var(--t3);
+  font-size: 9px;
+}
+.lore-tl .vis-time-axis .vis-text.vis-major {
+  color: var(--t2);
+  font-weight: 600;
+}
+.lore-tl .vis-time-axis .vis-grid.vis-minor { border-color: var(--b2); }
+.lore-tl .vis-time-axis .vis-grid.vis-major { border-color: var(--b3); }
+
+/* Current-time marker */
+.lore-tl .vis-current-time {
+  background-color: var(--dng);
+  width: 1px;
+}
+
+/* ── Items (bars) ─────────────────────────────────────────────────────── */
+.lore-tl .vis-item {
+  border-width: 1px;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 10px;
+}
+.lore-tl .vis-item .vis-item-content {
+  padding: 1px 5px;
+  white-space: nowrap;
+  text-shadow: 0 0 4px #0006;
+}
+.lore-tl .vis-item.done { opacity: 0.45; }
+
+/* Selection ring (override vis' default yellow/orange) */
+.lore-tl .vis-item.vis-selected {
+  box-shadow: 0 0 0 2px var(--acc);
+  border-color: var(--acc) !important;
+  background-color: inherit;
+  z-index: 5;
+}
+
+/* Milestone box items */
+.lore-tl .vis-item.ms {
+  background-color: var(--bg3);
+  border: 2px solid var(--acc);
+  color: var(--acc);
+  font-weight: 600;
+}
+.lore-tl .vis-item.ms .vis-item-content { text-shadow: none; }
+
+/* Release guide-lines (thin vertical background bands across all tracks) */
+.lore-tl .vis-item.vis-background.rel {
+  background-color: color-mix(in srgb, var(--t1) 7%, transparent);
+  border: none;
+}
+.lore-tl .vis-item.vis-background.rel.cur {
+  background-color: color-mix(in srgb, var(--wrn) 40%, transparent);
+}
+
+/* Section background bands */
+.lore-tl .vis-item.vis-background.sec {
+  border-left: 1px solid var(--b3);
+}
+.lore-tl .vis-item.vis-background.sec .vis-item-content {
+  color: var(--t3);
+  font-size: 9px;
+  padding: 2px 4px;
+  text-shadow: none;
+}
+
+/* Tooltip */
+.lore-tl .vis-tooltip {
+  background: var(--b1);
+  border: 1px solid var(--b3);
+  color: var(--t1);
+  border-radius: 4px;
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 6px 8px;
+  white-space: pre-line;
+  box-shadow: 0 6px 20px #0008;
+}

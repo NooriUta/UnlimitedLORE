@@ -1,6 +1,13 @@
-// GanttCanvas — renders system_aida_lore plan data as a Gantt chart.
-// Spec: PLAN_AS_DB_RENDER.md v1.1 · LAL-23 · write-path LAL-23a · time-travel LAL-25
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+// LorePlanBoard — renders system_aida_lore plan data as a readable swimlane
+// timeline (vis-timeline). Tracks → groups, plan items → range bars, milestones
+// → boxes, releases → points, sections → background bands. Built-in zoom/pan
+// (Ctrl+wheel zoom, wheel/drag pan) replaces the old hand-rolled Gantt canvas.
+// Spec: PLAN_AS_DB_RENDER.md · write-path LAL-23a · time-travel LAL-25
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Timeline, DataSet } from 'vis-timeline/standalone';
+import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/standalone';
+import 'vis-timeline/styles/vis-timeline-graph2d.css';
+import './lore-timeline.css';
 import {
   fetchLoreSlice, postLoreStatus,
   type LorePlanConfig, type LorePlanTrack, type LorePlanSection,
@@ -11,15 +18,7 @@ import {
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
 
-// ── Layout constants ──────────────────────────────────────────────────────────
-const LABEL_W = 156;
-const ROW_H   = 22;
-const MS_H    = 30;
-const HDR_H   = 20;
-
 // ── Status accent colours + cycle ────────────────────────────────────────────
-// Theme + palette aware: reuse the semantic design tokens (tokens.css). Only these
-// four keys carry an outline colour; todo/null intentionally has none.
 const STATUS_COLOR: Record<string, string> = {
   done:    'var(--suc)',
   active:  'var(--inf)',
@@ -33,10 +32,11 @@ function cycleStatus(current: string | null): LorePlanItemStatus {
   return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
 }
 
-const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-
+const MS_GROUP = '__ms__';
+const UNTRACKED = '__untracked__';
+const WEEK_MS = 7 * 86400 * 1000;
 function addWeeks(base: Date, w: number): Date {
-  return new Date(base.getTime() + w * 7 * 86400 * 1000);
+  return new Date(base.getTime() + w * WEEK_MS);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -61,12 +61,6 @@ export default function LorePlanBoard({ onError }: Props) {
   const [showDone,   setShowDone]   = useState(true);
   const [showActive, setShowActive] = useState(true);
   const [cropPast,   setCropPast]   = useState(false);
-  const [showCps,    setShowCps]    = useState(true);
-  const [W,          setW]          = useState(() => {
-    // Auto-fit initial zoom to fill available chart area (sidebar ≈148, labels=156)
-    const approxChartPx = window.innerWidth - 148 - LABEL_W;
-    return Math.max(8, Math.min(40, Math.floor(approxChartPx / 32)));
-  });
 
   // ── Time-travel (LAL-25) ───────────────────────────────────────────────────
   const [selectedVer, setSelectedVer] = useState('');
@@ -81,10 +75,15 @@ export default function LorePlanBoard({ onError }: Props) {
   const [cardSprintStatus, setCardSprintStatus] = useState<string | null>(null);
   const [cardReleases,     setCardReleases]     = useState<string[]>([]);
 
-  // ── Synced scroll ──────────────────────────────────────────────────────────
-  const labelsRef = useRef<HTMLDivElement>(null);
-  const chartRef  = useRef<HTMLDivElement>(null);
+  // ── Timeline plumbing ────────────────────────────────────────────────────────
+  const hostRef     = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<Timeline | null>(null);
+  const itemsDSRef  = useRef<DataSet<TimelineItem> | null>(null);
+  // id → source object lookups for the select handler
+  const itemByIdRef = useRef<Map<string, LorePlanItem>>(new Map());
+  const msByIdRef   = useRef<Map<string, LoreMilestone>>(new Map());
 
+  // ── Load all plan slices ─────────────────────────────────────────────────────
   useEffect(() => {
     const ctrl = new AbortController();
     Promise.all([
@@ -117,7 +116,7 @@ export default function LorePlanBoard({ onError }: Props) {
     return () => ctrl.abort();
   }, [onError]);
 
-  // Lazy-load tasks of the sprint behind the selected card
+  // ── Lazy-load tasks of the sprint behind the selected card ───────────────────
   useEffect(() => {
     const sprintId = sprintCard?.represents_sprint;
     if (!sprintId) { setCardTasks([]); setCardSprintStatus(null); setCardReleases([]); return; }
@@ -137,113 +136,220 @@ export default function LorePlanBoard({ onError }: Props) {
     return () => ctrl.abort();
   }, [sprintCard?.represents_sprint]);
 
-  // ── Status cycling (Shift+click, LAL-23a) ──────────────────────────────────
-  function handleStatusCycle(item: LorePlanItem, e: React.MouseEvent): boolean {
-    if (!e.shiftKey) return false;
-    e.stopPropagation();
-    const newStatus = cycleStatus(item.status);
-    setItems(prev => prev.map(it =>
-      it.item_id === item.item_id ? { ...it, status: newStatus } : it
-    ));
-    if (sprintCard?.item_id === item.item_id) {
-      setSprintCard(prev => prev ? { ...prev, status: newStatus } : prev);
+  // ── Derived scalars ──────────────────────────────────────────────────────────
+  const w0 = useMemo(() => config ? new Date(config.w0_date) : null, [config]);
+  const W_NOW = w0 ? Math.round((Date.now() - w0.getTime()) / WEEK_MS) : 0;
+  const nowLabel = useMemo(() => {
+    if (!w0) return '';
+    const d = addWeeks(w0, W_NOW);
+    return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  }, [w0, W_NOW]);
+
+  const itemsWithPos = items.filter(it => it.week_start != null && it.week_end != null).length;
+  const parityPct    = items.length > 0 ? Math.round(itemsWithPos / items.length * 100) : 0;
+
+  // Tracks that actually carry items (avoid a forest of empty swimlanes)
+  const usedTracks = useMemo(() => {
+    const ids = new Set(items.map(it => it.track_id ?? UNTRACKED));
+    const list = tracks.filter(t => ids.has(t.track_id));
+    if (ids.has(UNTRACKED)) list.push({ track_id: UNTRACKED, label: '— без дорожки —', type: null });
+    return list;
+  }, [tracks, items]);
+
+  // ── Create the Timeline once data is loaded ──────────────────────────────────
+  useEffect(() => {
+    if (loading || !config || !w0 || !hostRef.current) return;
+
+    const groups = new DataSet<TimelineGroup>([]);
+    if (mss.length) {
+      groups.add({ id: MS_GROUP, content: '◆ Вехи', order: -1 } as TimelineGroup);
     }
-    postLoreStatus('plan_item', item.item_id, newStatus).catch(err => {
-      console.error('[lore status cycle]', err);
-      setItems(prev => prev.map(it =>
-        it.item_id === item.item_id ? { ...it, status: item.status } : it
-      ));
-      if (sprintCard?.item_id === item.item_id) {
-        setSprintCard(prev => prev ? { ...prev, status: item.status } : prev);
+    usedTracks.forEach((tr, i) =>
+      groups.add({ id: tr.track_id, content: tr.label, order: i } as TimelineGroup));
+
+    const itemsDS = new DataSet<TimelineItem>([]);
+    itemsDSRef.current = itemsDS;
+
+    const options: TimelineOptions = {
+      stack: true,
+      orientation: { axis: 'top', item: 'top' },
+      groupOrder: 'order',
+      zoomMin: 3 * 86400 * 1000,           // 3 days
+      zoomMax: 3 * 365 * 86400 * 1000,     // ~3 years
+      margin: { item: { horizontal: 2, vertical: 4 }, axis: 6 },
+      showCurrentTime: true,
+      selectable: true,
+      multiselect: false,
+      horizontalScroll: true,
+      verticalScroll: true,
+      zoomKey: 'ctrlKey',
+      maxHeight: '100%',
+      tooltip: { followMouse: true, overflowMethod: 'flip' },
+    };
+
+    const tl = new Timeline(hostRef.current, itemsDS, groups, options);
+    timelineRef.current = tl;
+
+    // Initial window: w0 .. w0 + weeks_total, with a small lead-in
+    const span = (config.weeks_total ?? 30) + 2;
+    tl.setWindow(addWeeks(w0, -1), addWeeks(w0, span), { animation: false });
+
+    tl.on('select', (props: { items: Array<string | number> }) => {
+      const id = props.items[0];
+      if (id == null) { setSprintCard(null); setMsPanel(null); return; }
+      const sid = String(id);
+      if (sid.startsWith('ms_')) {
+        const ms = msByIdRef.current.get(sid.slice(3)) ?? null;
+        setSprintCard(null); setMsPanel(ms);
+      } else {
+        const it = itemByIdRef.current.get(sid) ?? null;
+        setMsPanel(null); setSprintCard(it);
       }
     });
-    return true;
-  }
 
-  const handleChartScroll = () => {
-    if (labelsRef.current && chartRef.current)
-      labelsRef.current.scrollTop = chartRef.current.scrollTop;
-  };
+    // vis measures the container at construction; under flex the real size only
+    // resolves after layout, so redraw when the host's dimensions actually
+    // change (guarded to avoid a scrollbar-flutter redraw loop).
+    let lastW = 0, lastH = 0;
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      if (Math.round(width) === lastW && Math.round(height) === lastH) return;
+      lastW = Math.round(width); lastH = Math.round(height);
+      tl.redraw();
+    });
+    ro.observe(hostRef.current);
+
+    return () => { ro.disconnect(); tl.destroy(); timelineRef.current = null; itemsDSRef.current = null; };
+    // Re-create only when the structural inputs change.
+  }, [loading, config, w0, usedTracks, mss.length, releases.length]);
+
+  // ── (Re)populate items whenever data / toggles change ────────────────────────
+  useEffect(() => {
+    const ds = itemsDSRef.current;
+    if (!ds || !w0) return;
+
+    const itemById = new Map<string, LorePlanItem>();
+    const msById   = new Map<string, LoreMilestone>();
+    const next: TimelineItem[] = [];
+
+    // Section background bands
+    for (const sec of sections) {
+      next.push({
+        id: 'sec_' + sec.section_id,
+        content: sec.label,
+        start: addWeeks(w0, sec.start_week),
+        end:   addWeeks(w0, sec.end_week),
+        type: 'background',
+        className: 'sec',
+        style: `background-color:${sec.color}14;border-color:${sec.color}40;`,
+      } as TimelineItem);
+    }
+
+    // Plan-item bars
+    for (const item of items) {
+      const ws = item.week_start;
+      const we = item.week_end;
+      if (ws == null || we == null) continue;                 // unpositioned → skip
+      if (cropPast && we < W_NOW) continue;
+      const isDone = item.status === 'done';
+      if (!showDone && isDone) continue;
+      if (!showActive && !isDone) continue;
+
+      itemById.set(item.item_id, item);
+
+      // Actual close week from the sprint's SCD2 done-date, when known
+      const doneIso = isDone && item.represents_sprint
+        ? doneBySprint.get(item.represents_sprint) : undefined;
+      const weAct = doneIso != null
+        ? Math.max(ws + 1, Math.round((new Date(doneIso).getTime() - w0.getTime()) / WEEK_MS))
+        : we;
+      const end = Math.max(ws + 1, weAct);
+      const bg  = item.bar_color ?? 'var(--acc)';
+      const outline = STATUS_COLOR[item.status ?? ''] ?? bg;
+
+      next.push({
+        id: item.item_id,
+        group: item.track_id ?? UNTRACKED,
+        content: cleanLabel(item.label),
+        start: addWeeks(w0, ws),
+        end:   addWeeks(w0, end),
+        type: 'range',
+        className: 'it' + (isDone ? ' done' : ''),
+        style: `background-color:${bg};border-color:${outline};`,
+        title: `${item.label}\nплан W${ws}–${we}`
+          + (doneIso != null ? `\nфакт закрытия W${weAct}` : '')
+          + (item.represents_sprint ? `\n${item.represents_sprint}` : '')
+          + (item.status ? `\nстатус: ${item.status}` : ''),
+      } as TimelineItem);
+    }
+
+    // Milestones (box) + their checkpoints count in the tooltip
+    for (const ms of mss) {
+      if (ms.week == null) continue;
+      msById.set(ms.milestone_id, ms);
+      const grp = cps.filter(c => c.milestone === ms.milestone_id);
+      next.push({
+        id: 'ms_' + ms.milestone_id,
+        group: MS_GROUP,
+        content: ms.milestone_id,
+        start: addWeeks(w0, ms.week),
+        type: 'box',
+        className: 'ms',
+        title: `${ms.milestone_id}: ${ms.label}\nW${ms.week}${ms.date_display ? ' · ' + ms.date_display : ''}`
+          + (grp.length ? `\n⚑ ${grp.length} плашек` : ''),
+      } as TimelineItem);
+    }
+
+    // Releases → thin vertical guide-lines spanning every track (background,
+    // no group). A swimlane of 71 stacked points would dwarf the real tracks.
+    for (const rel of releases) {
+      if (rel.week == null) continue;
+      const at = addWeeks(w0, rel.week);
+      next.push({
+        id: 'rel_' + rel.release_id,
+        start: at,
+        end: new Date(at.getTime() + WEEK_MS * 0.12),
+        type: 'background',
+        className: 'rel' + (rel.is_current ? ' cur' : ''),
+        title: `${rel.git_tag ?? rel.release_id}\nW${rel.week}${rel.release_date ? ' · ' + rel.release_date.slice(0, 10) : ''}`,
+      } as TimelineItem);
+    }
+
+    itemByIdRef.current = itemById;
+    msByIdRef.current   = msById;
+    ds.clear();
+    ds.add(next);
+  }, [items, sections, mss, cps, releases, doneBySprint, w0,
+      showDone, showActive, cropPast, W_NOW]);
+
+  // ── Status cycling helper (panel button) ─────────────────────────────────────
+  function applyStatusCycle(target: LorePlanItem) {
+    const newStatus = cycleStatus(target.status);
+    const prevStatus = target.status;
+    setItems(prev => prev.map(it =>
+      it.item_id === target.item_id ? { ...it, status: newStatus } : it));
+    setSprintCard(prev => prev && prev.item_id === target.item_id
+      ? { ...prev, status: newStatus } : prev);
+    postLoreStatus('plan_item', target.item_id, newStatus).catch(err => {
+      console.error('[lore status cycle]', err);
+      setItems(prev => prev.map(it =>
+        it.item_id === target.item_id ? { ...it, status: prevStatus } : it));
+      setSprintCard(prev => prev && prev.item_id === target.item_id
+        ? { ...prev, status: prevStatus } : prev);
+    });
+  }
 
   if (loading) return <div style={S.empty}>Loading plan…</div>;
   if (!config)  return <div style={S.empty}>Plan config not found in system_aida_lore.</div>;
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-  const w0         = new Date(config.w0_date);
-  const totalWeeks = (config.weeks_total ?? 30) + 2;
-  const chartW     = totalWeeks * W;
-  const W_NOW      = Math.round((Date.now() - w0.getTime()) / (7 * 86400 * 1000));
-  const nowDate    = addWeeks(w0, W_NOW);
-  const nowLabel   = `${nowDate.getDate()} ${MONTHS[nowDate.getMonth()]}`;
-
-  // Parity: fraction of items with position data (SAGA coverage vs plan)
-  const itemsWithPos = items.filter(it => it.week_start != null && it.week_end != null).length;
-  const parityPct    = items.length > 0 ? Math.round(itemsWithPos / items.length * 100) : 0;
-
-  const visibleItems = items.filter(item => {
-    if (cropPast && (item.week_end ?? 0) < W_NOW) return false;
-    const isDone = item.status === 'done';
-    if (!showDone && isDone)   return false;
+  const shownBars = items.filter(it => {
+    if (it.week_start == null || it.week_end == null) return false;
+    if (cropPast && it.week_end < W_NOW) return false;
+    const isDone = it.status === 'done';
+    if (!showDone && isDone) return false;
     if (!showActive && !isDone) return false;
     return true;
-  });
-
-  const itemsByTrack = new Map<string, LorePlanItem[]>();
-  for (const item of visibleItems) {
-    const tid = item.track_id ?? '__untracked__';
-    if (!itemsByTrack.has(tid)) itemsByTrack.set(tid, []);
-    itemsByTrack.get(tid)!.push(item);
-  }
-
-  // Lane assignment: parallel items on one track stack into sub-lanes
-  // (greedy first-fit by week_start), the track row grows to fit all lanes.
-  const trackLayout = new Map<string, { placed: { item: LorePlanItem; lane: number }[]; lanes: number }>();
-  for (const tr of tracks) {
-    const rowItems = [...(itemsByTrack.get(tr.track_id) ?? [])]
-      .sort((a, b) => (a.week_start ?? 0) - (b.week_start ?? 0));
-    const laneEnds: number[] = [];
-    const placed: { item: LorePlanItem; lane: number }[] = [];
-    for (const item of rowItems) {
-      const ws = item.week_start ?? 0;
-      const we = Math.max(item.week_end ?? ws + 1, ws + 1);
-      let lane = laneEnds.findIndex(end => end <= ws);
-      if (lane === -1) { lane = laneEnds.length; laneEnds.push(we); }
-      else laneEnds[lane] = we;
-      placed.push({ item, lane });
-    }
-    trackLayout.set(tr.track_id, { placed, lanes: Math.max(1, laneEnds.length) });
-  }
-
-  // Cumulative row tops (rows have variable height once lanes > 1)
-  const trackTops = new Map<string, number>();
-  let yCursor = 0;
-  for (const tr of tracks) {
-    trackTops.set(tr.track_id, yCursor);
-    yCursor += (trackLayout.get(tr.track_id)?.lanes ?? 1) * ROW_H;
-  }
-  const tracksH = yCursor;
-
-  // Month ticks for week header
-  const monthTicks: { x: number; label: string }[] = [];
-  let lastMonth = -1;
-  for (let w = 0; w < totalWeeks; w += 1) {
-    const d = addWeeks(w0, w);
-    const m = d.getMonth();
-    if (m !== lastMonth) {
-      monthTicks.push({ x: w * W, label: `${MONTHS[m]} ${d.getFullYear()}` });
-      lastMonth = m;
-    }
-  }
-
-  // Checkpoints grouped per milestone — strip shows a count badge, full list in panel
-  const cpsByMs = new Map<string, LorePlanCheckpoint[]>();
-  for (const cp of cps) {
-    if (!cp.milestone) continue;
-    if (!cpsByMs.has(cp.milestone)) cpsByMs.set(cp.milestone, []);
-    cpsByMs.get(cp.milestone)!.push(cp);
-  }
-
-  const totalH = MS_H + HDR_H + tracksH;
+  }).length;
 
   return (
     <div style={S.root}>
@@ -253,17 +359,20 @@ export default function LorePlanBoard({ onError }: Props) {
         <Tog active={showActive} onClick={() => setShowActive(v => !v)}>Активные</Tog>
         <Tog active={showDone}   onClick={() => setShowDone(v => !v)}>Done</Tog>
         <Tog active={!cropPast}  onClick={() => setCropPast(v => !v)}>Прошлые</Tog>
-        <Tog active={showCps}    onClick={() => setShowCps(v => !v)}>Плашки</Tog>
-        <span style={{ flex: 1 }} />
-        <span style={S.zlabel}>Zoom</span>
-        <input type="range" min={6} max={40} step={1} value={W}
-          onChange={e => setW(Number(e.target.value))}
-          style={{ width: 72, cursor: 'pointer', accentColor: 'var(--acc)' }} />
-        <span style={S.zlabel}>{W}px/w</span>
-        <span style={{ flex: 1 }} />
-        <span style={S.stat}>{visibleItems.length} / {items.length} баров · {tracks.length} дорожек</span>
+        <button style={S.btn} onClick={() => timelineRef.current?.fit({ animation: true })}>
+          Уместить
+        </button>
+        <button style={S.btn} onClick={() => {
+          if (!w0) return;
+          timelineRef.current?.moveTo(addWeeks(w0, W_NOW), { animation: true });
+        }}>
+          Сегодня
+        </button>
 
-        {/* Time-travel version selector (LAL-25) */}
+        <span style={{ flex: 1 }} />
+
+        <span style={S.stat}>{shownBars} / {items.length} баров · {usedTracks.length} дорожек</span>
+
         {versions.length > 0 && (
           <select
             value={selectedVer}
@@ -273,16 +382,14 @@ export default function LorePlanBoard({ onError }: Props) {
           >
             {versions.map(v => (
               <option key={v.version_id} value={v.version_id}>
-                {v.version_id}
-                {v.version_date ? ' · ' + v.version_date.slice(0, 10) : ''}
+                {v.version_id}{v.version_date ? ' · ' + v.version_date.slice(0, 10) : ''}
               </option>
             ))}
           </select>
         )}
 
-        {/* Parity indicator: current week + position coverage (LAL-25) */}
         <span
-          style={{ ...S.zlabel, color: 'var(--acc)', opacity: 0.8, fontWeight: 600 }}
+          style={{ ...S.zlabel, color: 'var(--acc)', opacity: 0.85, fontWeight: 600 }}
           title={`Текущая неделя плана (W0 = ${config.w0_date})`}
         >
           W{W_NOW} · {nowLabel}
@@ -290,224 +397,12 @@ export default function LorePlanBoard({ onError }: Props) {
         <span style={S.stat} title="Паритет: доля баров с позицией (SAGA↔план)">
           {parityPct}% parity
         </span>
-
-        <span style={{ ...S.zlabel, opacity: 0.6 }}>⇧+click = цикл статуса</span>
+        <span style={{ ...S.zlabel, opacity: 0.6 }}>Ctrl+колесо = зум</span>
       </div>
 
-      {/* ── Main ───────────────────────────────────────────────────────────── */}
+      {/* ── Main: timeline host + side panel ───────────────────────────────── */}
       <div style={S.main}>
-
-        {/* Track labels (left, fixed) */}
-        <div ref={labelsRef} style={S.labels}>
-          <div style={{ height: MS_H + HDR_H, flexShrink: 0 }} />
-          {tracks.map(tr => (
-            <div key={tr.track_id}
-              style={{ ...S.labelRow, height: (trackLayout.get(tr.track_id)?.lanes ?? 1) * ROW_H }}
-              title={tr.label}>
-              <span style={S.labelText}>{tr.label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Scrollable chart area */}
-        <div ref={chartRef} style={S.chartScroll} onScroll={handleChartScroll}>
-          <div style={{ position: 'relative', width: chartW, height: totalH, minHeight: '100%' }}>
-
-            {/* Section background bands */}
-            {sections.map(sec => (
-              <div key={sec.section_id} style={{
-                position: 'absolute',
-                left: sec.start_week * W,
-                width: Math.max(0, (sec.end_week - sec.start_week) * W),
-                top: MS_H + HDR_H, height: tracksH,
-                background: sec.color + '14',
-                borderLeft: `1px solid ${sec.color}28`,
-                pointerEvents: 'none',
-              }} />
-            ))}
-
-            {/* Current-week indicator */}
-            {W_NOW >= 0 && W_NOW <= totalWeeks && (
-              <div style={{
-                position: 'absolute', left: W_NOW * W, top: 0,
-                width: 1, height: totalH,
-                background: '#ef535040', pointerEvents: 'none', zIndex: 1,
-              }} />
-            )}
-
-            {/* Release markers */}
-            {releases.map(rel => rel.week == null ? null : (
-              <div key={rel.release_id}
-                title={`${rel.git_tag ?? rel.release_id} · W${rel.week}`}
-                style={{
-                  position: 'absolute', left: rel.week * W, top: MS_H,
-                  width: 1, height: HDR_H + tracksH,
-                  background: rel.is_current
-                    ? 'color-mix(in srgb, var(--wrn) 45%, transparent)'
-                    : 'color-mix(in srgb, var(--t1) 8%, transparent)',
-                  pointerEvents: 'none',
-                }} />
-            ))}
-
-            {/* Week / month header */}
-            <div style={{
-              position: 'absolute', top: MS_H, left: 0,
-              height: HDR_H, width: chartW,
-              borderBottom: '1px solid var(--b2)',
-            }}>
-              {monthTicks.map(t => (
-                <span key={t.x} style={{
-                  position: 'absolute', left: t.x + 3, top: 4,
-                  fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap',
-                }}>
-                  {t.label}
-                </span>
-              ))}
-            </div>
-
-            {/* Milestone strip */}
-            <div style={{
-              position: 'absolute', top: 0, left: 0,
-              height: MS_H, width: chartW,
-              borderBottom: '1px solid var(--b2)',
-            }}>
-              {mss.map(ms => {
-                if (ms.week == null) return null;
-                const x = ms.week * W;
-                const active = msPanel?.milestone_id === ms.milestone_id;
-                return (
-                  <div key={ms.milestone_id} style={{ position: 'absolute', left: x }}>
-                    {/* Diamond marker */}
-                    <div
-                      onClick={() => { setSprintCard(null); setMsPanel(active ? null : ms); }}
-                      title={`${ms.milestone_id}: ${ms.label}\nW${ms.week} · ${ms.date_display ?? ''}`}
-                      style={{
-                        position: 'absolute', top: 8, left: -5,
-                        width: 10, height: 10,
-                        background: active ? 'var(--acc)' : 'var(--b3)',
-                        border: '2px solid var(--acc)',
-                        transform: 'rotate(45deg)',
-                        borderRadius: 1, cursor: 'pointer', zIndex: 2,
-                      }}
-                    />
-                    <span style={{
-                      position: 'absolute', top: 4, left: 8,
-                      fontSize: 9, color: 'var(--acc)',
-                      whiteSpace: 'nowrap', pointerEvents: 'none',
-                    }}>
-                      {ms.milestone_id}
-                    </span>
-                  </div>
-                );
-              })}
-
-              {/* Checkpoint count badges — one per milestone, list opens in panel */}
-              {showCps && [...cpsByMs.entries()].map(([msId, grp]) => {
-                const ms = mss.find(m => m.milestone_id === msId);
-                if (ms?.week == null) return null;
-                return (
-                  <div key={msId}
-                    onClick={() => { setSprintCard(null); setMsPanel(ms); }}
-                    title={grp.map(c => '✓ ' + c.label).join('\n')}
-                    style={{
-                      position: 'absolute', left: ms.week * W - 5, top: 19,
-                      fontSize: 8, lineHeight: '10px', padding: '0 4px', borderRadius: 2,
-                      background: 'color-mix(in srgb, var(--acc) 15%, transparent)',
-                      color: 'var(--acc)', whiteSpace: 'nowrap', cursor: 'pointer',
-                      zIndex: 2,
-                    }}
-                  >
-                    ⚑{grp.length}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Track rows with bars */}
-            {tracks.map(tr => {
-              const layout = trackLayout.get(tr.track_id);
-              const rowH   = (layout?.lanes ?? 1) * ROW_H;
-              return (
-                <div key={tr.track_id} style={{
-                  position: 'absolute',
-                  top: MS_H + HDR_H + (trackTops.get(tr.track_id) ?? 0),
-                  left: 0, width: chartW, height: rowH,
-                  borderBottom: '1px solid var(--b2)',
-                }}>
-                  {(layout?.placed ?? []).map(({ item, lane }) => {
-                    const ws      = item.week_start ?? 0;
-                    const wePlan  = item.week_end   ?? ws + 1;
-                    const isDone  = item.status === 'done';
-                    // Actual close week from the sprint's SCD2 done-date, when known.
-                    const doneIso = isDone && item.represents_sprint
-                      ? doneBySprint.get(item.represents_sprint) : undefined;
-                    const weAct   = doneIso != null
-                      ? Math.max(ws + 1, Math.round((new Date(doneIso).getTime() - w0.getTime()) / (7 * 86400 * 1000)))
-                      : null;
-                    const we      = weAct ?? wePlan;
-                    const barW    = Math.max(4, (we - ws) * W - 2);
-                    const showGhost = weAct != null && Math.abs(weAct - wePlan) >= 1;
-                    const outline = STATUS_COLOR[item.status ?? ''];
-                    const isSelected = sprintCard?.item_id === item.item_id;
-                    const top = lane * ROW_H + 3;
-                    const tip = `${item.label}\nплан W${ws}–${wePlan}`
-                      + (weAct != null ? `\nфакт закрытия W${weAct}` : '')
-                      + (item.represents_sprint ? `\n${item.represents_sprint}` : '')
-                      + `\n⇧+click → цикл статуса`;
-                    return (
-                      <Fragment key={item.item_id}>
-                        {/* Planned-span ghost when actual close differs from plan */}
-                        {showGhost && (
-                          <div style={{
-                            position: 'absolute',
-                            left: ws * W + 1, top,
-                            width: Math.max(4, (wePlan - ws) * W - 2), height: ROW_H - 6,
-                            border: '1px dashed var(--t3)', borderRadius: 2,
-                            opacity: 0.5, pointerEvents: 'none', boxSizing: 'border-box',
-                          }} />
-                        )}
-                        <div
-                          onClick={(e) => {
-                            if (handleStatusCycle(item, e)) return;
-                            setMsPanel(null);
-                            setSprintCard(isSelected ? null : item);
-                          }}
-                          title={tip}
-                          style={{
-                            position: 'absolute',
-                            left: ws * W + 1, top,
-                            width: barW, height: ROW_H - 6,
-                            background: item.bar_color ?? 'var(--acc)',
-                            opacity: isDone ? 0.45 : 1,
-                            borderRadius: 2,
-                            outline: isSelected
-                              ? '2px solid var(--acc)'
-                              : outline ? `1px solid ${outline}` : 'none',
-                            cursor: 'pointer', overflow: 'hidden',
-                            display: 'flex', alignItems: 'center',
-                            boxSizing: 'border-box', zIndex: 1,
-                          }}
-                        >
-                          {barW > 32 && (
-                            <span style={{
-                              fontSize: 8, paddingLeft: 3,
-                              whiteSpace: 'nowrap', overflow: 'hidden',
-                              color: '#fff', textShadow: '0 0 4px #0006',
-                              userSelect: 'none', pointerEvents: 'none',
-                            }}>
-                              {cleanLabel(item.label)}
-                            </span>
-                          )}
-                        </div>
-                      </Fragment>
-                    );
-                  })}
-                </div>
-              );
-            })}
-
-          </div>
-        </div>
+        <div ref={hostRef} className="lore-tl" style={S.host} />
 
         {/* Sprint card panel */}
         {sprintCard && (
@@ -522,8 +417,7 @@ export default function LorePlanBoard({ onError }: Props) {
             <div style={S.panelBody}>
               <PRow k="ID"     v={sprintCard.item_id} />
               {sprintCard.represents_sprint && (
-                <PRow k="Sprint" v={sprintCard.represents_sprint}
-                  color="var(--acc)" />
+                <PRow k="Sprint" v={sprintCard.represents_sprint} color="var(--acc)" />
               )}
               {(sprintCard.week_start != null || sprintCard.week_end != null) && (
                 <PRow k="Weeks"  v={`W${sprintCard.week_start ?? '?'}–${sprintCard.week_end ?? '?'}`} />
@@ -540,21 +434,7 @@ export default function LorePlanBoard({ onError }: Props) {
               <div style={{ marginTop: 10 }}>
                 <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Статус</div>
                 <button
-                  onClick={() => {
-                    const newStatus = cycleStatus(sprintCard.status);
-                    const updated = { ...sprintCard, status: newStatus };
-                    setSprintCard(updated);
-                    setItems(prev => prev.map(it =>
-                      it.item_id === sprintCard.item_id ? { ...it, status: newStatus } : it
-                    ));
-                    postLoreStatus('plan_item', sprintCard.item_id, newStatus).catch(err => {
-                      console.error('[lore status panel]', err);
-                      setSprintCard(sprintCard);
-                      setItems(prev => prev.map(it =>
-                        it.item_id === sprintCard.item_id ? { ...it, status: sprintCard.status } : it
-                      ));
-                    });
-                  }}
+                  onClick={() => applyStatusCycle(sprintCard)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '3px 8px', borderRadius: 3, cursor: 'pointer',
@@ -642,14 +522,13 @@ export default function LorePlanBoard({ onError }: Props) {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
+const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
 
 // Strip emoji (renders as boxes/CJK at small sizes on some systems)
 function cleanLabel(s: string): string {
@@ -674,7 +553,6 @@ function renderMsGroups(
   setMsPanel: (m: LoreMilestone | null) => void,
   setSprintCard: (i: LorePlanItem | null) => void,
 ) {
-  // Items linked to this milestone via milestone_id field (from CONTRIBUTES_TO edge)
   const msItems = items.filter(it => it.milestone_id === ms.milestone_id);
   const grouped = new Map<string, LorePlanItem[]>();
   for (const item of msItems) {
@@ -762,6 +640,12 @@ const S = {
     display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
     padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
   },
+  btn: {
+    height: 22, padding: '0 8px',
+    border: '1px solid var(--b3)', borderRadius: 3,
+    fontSize: 10, cursor: 'pointer',
+    background: 'var(--b2)', color: 'var(--t2)',
+  },
   zlabel: { fontSize: 10, color: 'var(--t3)' },
   stat:   { fontSize: 10, color: 'var(--t3)' },
   verSel: {
@@ -775,25 +659,7 @@ const S = {
     flex: 1, display: 'flex', overflow: 'hidden',
     position: 'relative' as const, minWidth: 0,
   },
-  labels: {
-    width: LABEL_W, flexShrink: 0,
-    overflowY: 'hidden' as const, overflowX: 'hidden' as const,
-    borderRight: '1px solid var(--b2)',
-    display: 'flex', flexDirection: 'column' as const,
-  },
-  labelRow: {
-    height: ROW_H, display: 'flex', alignItems: 'center',
-    padding: '0 8px', borderBottom: '1px solid var(--b2)',
-    flexShrink: 0,
-  },
-  labelText: {
-    fontSize: 10, color: 'var(--t2)',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
-  },
-  chartScroll: {
-    flex: 1, minWidth: 0,
-    overflowX: 'auto' as const, overflowY: 'auto' as const,
-  },
+  host: { flex: 1, minWidth: 0, height: '100%', overflow: 'hidden' },
   panel: {
     width: 272, flexShrink: 0,
     borderLeft: '1px solid var(--b2)',
