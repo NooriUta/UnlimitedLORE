@@ -1,0 +1,25 @@
+services:
+  # Independent Quarkus backend — copied lore+bench logic, talks to the SAME
+  # ArcadeDB (:2480 on the host) as the main project. Replaces heimdall-backend :9093.
+  lore-backend:
+    build: ./backend
+    ports:
+      - "9100:9100"                    # published so the host-side MCP server can reach it
+    extra_hosts:
+      - "arcade:host-gateway"          # ArcadeDB runs on the host :2480
+    environment:
+      - MART_ARCADE_URL=http://arcade:2480
+      - ARCADEDB_USER=${ARCADEDB_USER:-root}
+      - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
+      - BENCH_ROOT=/bench-data
+      - TEAM_DOCS_ROOT=/team-docs
+    volumes:
+      - C:/AIDA/rag-vs-parse:/bench-data:ro   # STATUS.json + report html
+      - C:/AIDA/docs:/team-docs:ro            # ingestion source (opt-in)
+
+  lore-app:
+    build: .
+    ports:
+      - "4400:80"
+    depends_on:
+      - lore-backend

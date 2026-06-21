@@ -1,0 +1,10 @@
+// Standalone Gradle build for the UnlimitedLORE backend (extracted verbatim from
+// heimdall-backend lore+bench packages). Not part of the aida-root monorepo.
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'lore-backend'

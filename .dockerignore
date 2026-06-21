@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.vscode
+.claude
+mcp-server
+backend
+*.log
+Dockerfile
+.dockerignore
+docker-compose.yml

@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+mcp-server/node_modules/
+
+# build output
+dist/
+mcp-server/dist/
+
+# java / gradle (backend)
+backend/build/
+backend/.gradle/
+.gradle/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# local env / secrets
+.env
+.env.local
+*.local

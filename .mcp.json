@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "aida-lore": {
+      "command": "node",
+      "args": ["mcp-server/dist/index.js"],
+      "env": {
+        "LORE_BACKEND_URL": "http://localhost:9100",
+        "LORE_SEER_ROLE": "admin"
+      }
+    }
+  }
+}
