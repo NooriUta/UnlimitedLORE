@@ -524,13 +524,11 @@ export default function LorePlanBoard({ onError }: Props) {
         {sprintCard && (
           <div style={S.panel}>
             <div style={S.panelHdr}>
-              <span style={{ flex: 1, fontWeight: 600, fontSize: 12,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {sprintCard.label}
-              </span>
+              <span style={S.panelTitle}>{sprintCard.label}</span>
               <button style={S.closeBtn} onClick={() => setSprintCard(null)}>✕</button>
             </div>
             <div style={S.panelBody}>
+             <div style={S.panelCol}>
               {/* Type badge: real sprint vs standalone plan-item ("заглушка") */}
               {(() => {
                 const isSprint = sprintCard.represents_sprint != null;
@@ -601,10 +599,11 @@ export default function LorePlanBoard({ onError }: Props) {
                   </span>
                 </button>
               </div>
+             </div>{/* /panelCol */}
 
               {/* Tasks of the represented sprint */}
               {sprintCard.represents_sprint && (
-                <div style={{ marginTop: 14 }}>
+                <div style={S.panelTasks}>
                   {(() => {
                     const total = cardTasks.length;
                     const done  = cardTasks.filter(t => taskTick(t.status_raw).done).length;
@@ -628,24 +627,32 @@ export default function LorePlanBoard({ onError }: Props) {
                   {!cardTasksLoading && cardTasks.length === 0 && (
                     <div style={{ fontSize: 11, color: 'var(--t3)' }}>Задачи не заведены.</div>
                   )}
-                  {!cardTasksLoading && cardTasks.map(t => {
-                    const meta = statusMeta(taskTick(t.status_raw).status);
-                    return (
-                      <div key={t.task_uid} style={{
-                        display: 'flex', alignItems: 'center', gap: 5,
-                        fontSize: 11, lineHeight: 1.7, color: 'var(--t2)',
-                      }}>
-                        <GameIcon slug={meta.icon} size={12} style={{ color: meta.color }} />
-                        <span style={{ color: 'var(--acc)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
-                          {t.task_id}
-                        </span>
-                        {t.title && <span style={{ color: 'var(--t1)' }}>{t.title}</span>}
-                        {t.effort_days != null && (
-                          <span style={{ color: 'var(--t3)', fontSize: 9, marginLeft: 'auto' }}>{t.effort_days}d</span>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {!cardTasksLoading && cardTasks.length > 0 && (
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                      columnGap: 24, rowGap: 1,
+                    }}>
+                      {cardTasks.map(t => {
+                        const meta = statusMeta(taskTick(t.status_raw).status);
+                        return (
+                          <div key={t.task_uid} style={{
+                            display: 'flex', alignItems: 'center', gap: 5,
+                            fontSize: 11, lineHeight: 1.7, color: 'var(--t2)', minWidth: 0,
+                          }}>
+                            <GameIcon slug={meta.icon} size={12} style={{ color: meta.color, flexShrink: 0 }} />
+                            <span style={{ color: 'var(--acc)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                              {t.task_id}
+                            </span>
+                            {t.title && <span style={{ color: 'var(--t1)', overflow: 'hidden',
+                              textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>}
+                            {t.effort_days != null && (
+                              <span style={{ color: 'var(--t3)', fontSize: 9, marginLeft: 'auto', flexShrink: 0 }}>{t.effort_days}d</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -656,19 +663,21 @@ export default function LorePlanBoard({ onError }: Props) {
         {msPanel && (
           <div style={S.panel}>
             <div style={S.panelHdr}>
-              <span style={{ flex: 1, fontWeight: 600, fontSize: 12, color: 'var(--acc)' }}>
+              <span style={{ ...S.panelTitle, color: 'var(--acc)' }}>
                 {msPanel.milestone_id} · {msPanel.label}
               </span>
               <button style={S.closeBtn} onClick={() => setMsPanel(null)}>✕</button>
             </div>
-            <div style={S.panelBody}>
+            <div style={S.panelBodyCol}>
               {msPanel.date_display && (
                 <div style={{ color: 'var(--t3)', marginBottom: 10, fontSize: 11 }}>
                   W{msPanel.week} · {msPanel.date_display}
                 </div>
               )}
               <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11 }}>Что закрыть:</div>
-              {renderMsGroups(msPanel, items, cps, setMsPanel, setSprintCard)}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', columnGap: 24 }}>
+                {renderMsGroups(msPanel, items, cps, setMsPanel, setSprintCard)}
+              </div>
             </div>
           </div>
         )}
@@ -827,24 +836,33 @@ const S = {
     fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
     maxWidth: 200,
   },
+  // Timeline on top, detail panel as a full-width strip at the bottom.
   main: {
-    flex: 1, display: 'flex', overflow: 'hidden',
+    flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
     position: 'relative' as const, minWidth: 0,
   },
-  host: { flex: 1, minWidth: 0, height: '100%', overflow: 'hidden' },
+  host: { flex: 1, minWidth: 0, minHeight: 0, width: '100%', overflow: 'hidden' },
   panel: {
-    width: 272, flexShrink: 0,
-    borderLeft: '1px solid var(--b2)',
-    background: 'var(--b1)', overflowY: 'auto' as const,
-    display: 'flex', flexDirection: 'column' as const,
+    flexShrink: 0, height: 232,
+    borderTop: '1px solid var(--b2)',
+    background: 'var(--b1)',
+    display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
   },
   panelHdr: {
-    display: 'flex', alignItems: 'center', gap: 4,
-    padding: '8px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    display: 'flex', alignItems: 'flex-start', gap: 8,
+    padding: '8px 14px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
   },
-  panelBody: { padding: '10px 12px', overflowY: 'auto' as const, flex: 1 },
+  // Title wraps fully now (no ellipsis) — the whole description is visible.
+  panelTitle: {
+    flex: 1, fontWeight: 600, fontSize: 13, lineHeight: 1.35, color: 'var(--t1)',
+    overflowWrap: 'anywhere' as const,
+  },
+  panelBody:    { flex: 1, overflowY: 'auto' as const, padding: '10px 14px', display: 'flex', gap: 28, alignItems: 'flex-start' },
+  panelBodyCol: { flex: 1, overflowY: 'auto' as const, padding: '10px 14px' },
+  panelCol:     { flexShrink: 0, width: 300 },
+  panelTasks:   { flex: 1, minWidth: 0 },
   closeBtn: {
     background: 'transparent', border: 'none', cursor: 'pointer',
-    color: 'var(--t3)', fontSize: 12, padding: '0 4px',
+    color: 'var(--t3)', fontSize: 13, padding: '0 4px', flexShrink: 0,
   },
 };
