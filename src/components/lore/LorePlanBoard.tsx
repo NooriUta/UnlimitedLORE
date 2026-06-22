@@ -99,6 +99,10 @@ export default function LorePlanBoard({ onError }: Props) {
   const [showDone,   setShowDone]   = useState(false);
   const [showActive, setShowActive] = useState(true);
   const [cropPast,   setCropPast]   = useState(true);
+  // A bar is a real sprint when it represents one; otherwise it's a standalone
+  // plan-item / placeholder ("заглушка"). Both shown by default.
+  const [showSprints, setShowSprints] = useState(true);
+  const [showStubs,   setShowStubs]   = useState(true);
 
   // ── Time-travel (LAL-25) ───────────────────────────────────────────────────
   const [selectedVer, setSelectedVer] = useState('');
@@ -300,6 +304,9 @@ export default function LorePlanBoard({ onError }: Props) {
       const we = item.week_end;
       if (ws == null || we == null) continue;                 // unpositioned → skip
       if (cropPast && we < W_NOW) continue;
+      const isStub = item.represents_sprint == null;           // placeholder, not a sprint
+      if (!showStubs && isStub) continue;
+      if (!showSprints && !isStub) continue;
       // Effective status: for sprint bars use the REAL sprint state (status_raw
       // parsed by taskTick), not plan_item.status which drifts from reality.
       const sprintRaw = item.represents_sprint
@@ -374,7 +381,7 @@ export default function LorePlanBoard({ onError }: Props) {
     ds.clear();
     ds.add(next);
   }, [items, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
-      showDone, showActive, cropPast, W_NOW]);
+      showDone, showActive, cropPast, showSprints, showStubs, W_NOW]);
 
   // ── Status cycling helper (panel button) ─────────────────────────────────────
   function applyStatusCycle(target: LorePlanItem) {
@@ -396,20 +403,24 @@ export default function LorePlanBoard({ onError }: Props) {
   if (loading) return <div style={S.empty}>Loading plan…</div>;
   if (!config)  return <div style={S.empty}>Plan config not found in system_aida_lore.</div>;
 
-  const shownBars = items.filter(it => {
-    if (it.week_start == null || it.week_end == null) return false;
-    if (cropPast && it.week_end < W_NOW) return false;
-    const isDone = it.status === 'done';
-    if (!showDone && isDone) return false;
-    if (!showActive && !isDone) return false;
-    return true;
-  }).length;
-
   // Effective status of an item (real sprint state for sprint bars).
   const effStatusOf = (it: LorePlanItem): string => {
     const raw = it.represents_sprint ? statusBySprint.get(it.represents_sprint) : undefined;
     return raw ? taskTick(raw).status : (it.status ?? 'todo');
   };
+
+  const shownBars = items.filter(it => {
+    if (it.week_start == null || it.week_end == null) return false;
+    if (cropPast && it.week_end < W_NOW) return false;
+    const isStub = it.represents_sprint == null;
+    if (!showStubs && isStub) return false;
+    if (!showSprints && !isStub) return false;
+    const isDone = effStatusOf(it) === 'done';
+    if (!showDone && isDone) return false;
+    if (!showActive && !isDone) return false;
+    return true;
+  }).length;
+
   // Legend shows only statuses that actually occur (avoids advertising phantoms).
   const presentStatuses = STATUS_ORDER.filter(s => items.some(it => effStatusOf(it) === s));
 
@@ -421,6 +432,9 @@ export default function LorePlanBoard({ onError }: Props) {
         <Tog active={showActive} onClick={() => setShowActive(v => !v)}>Активные</Tog>
         <Tog active={showDone}   onClick={() => setShowDone(v => !v)}>Done</Tog>
         <Tog active={!cropPast}  onClick={() => setCropPast(v => !v)}>Прошлые</Tog>
+        <span style={S.divider} />
+        <Tog active={showSprints} onClick={() => setShowSprints(v => !v)}>Спринты</Tog>
+        <Tog active={showStubs}   onClick={() => setShowStubs(v => !v)}>Заглушки</Tog>
         <button style={S.btn} onClick={() => timelineRef.current?.fit({ animation: true })}>
           Уместить
         </button>
@@ -497,6 +511,22 @@ export default function LorePlanBoard({ onError }: Props) {
               <button style={S.closeBtn} onClick={() => setSprintCard(null)}>✕</button>
             </div>
             <div style={S.panelBody}>
+              {/* Type badge: real sprint vs standalone plan-item ("заглушка") */}
+              {(() => {
+                const isSprint = sprintCard.represents_sprint != null;
+                const c = isSprint ? 'var(--acc)' : 'var(--t3)';
+                return (
+                  <span style={{
+                    display: 'inline-block', marginBottom: 8,
+                    fontSize: 9, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase',
+                    padding: '2px 7px', borderRadius: 3,
+                    background: `color-mix(in srgb, ${c} 16%, transparent)`,
+                    color: c, border: `1px solid color-mix(in srgb, ${c} 35%, transparent)`,
+                  }}>
+                    {isSprint ? 'Спринт' : 'План-элемент'}
+                  </span>
+                );
+              })()}
               <PRow k="ID"     v={sprintCard.item_id} />
               {sprintCard.represents_sprint && (
                 <PRow k="Sprint" v={sprintCard.represents_sprint} color="var(--acc)" />
@@ -742,6 +772,7 @@ const S = {
   },
   zlabel: { fontSize: 10, color: 'var(--t3)' },
   stat:   { fontSize: 10, color: 'var(--t3)' },
+  divider:{ width: 1, height: 16, background: 'var(--b3)', margin: '0 2px' },
   legend: {
     display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const,
     padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
