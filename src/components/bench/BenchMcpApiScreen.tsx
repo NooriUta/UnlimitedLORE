@@ -20,11 +20,11 @@ interface ToolDoc {
 // Read tools mirror the LORE read tools 1:1 — the backend already serves them;
 // the MCP wrappers are Phase 2 (mcp-server/src/tools/bench.ts, currently a stub).
 const TOOLS: ToolDoc[] = [
-  { name: 'bench_list_slices', state: 'planned', backend: 'GET /bench/mart/slices', params: '—',
+  { name: 'bench_list_slices', state: 'live', backend: 'GET /bench/mart/slices', params: '—',
     desc: 'Каталог именованных слайсов витрины эксперимента RAGVSDL с их параметрами. Вызывать первым — узнать, что можно запросить (campaigns, hypotheses, findings, runs, trace, substrates, references, biblio…).' },
-  { name: 'bench_query_slice', state: 'planned', backend: 'GET /bench/mart/slice/{slice}', params: 'slice, params?',
+  { name: 'bench_query_slice', state: 'live', backend: 'GET /bench/mart/slice/{slice}', params: 'slice, params?',
     desc: 'Выполнить слайс витрины и получить rows[]. params — map строк, напр. {"run":"…","case_id":"…","substrate":"…"} для slice "trace". SQL и whitelisting — на бэкенде.' },
-  { name: 'bench_status', state: 'planned', backend: 'GET /bench/api/status', params: '—',
+  { name: 'bench_status', state: 'live', backend: 'GET /bench/api/status', params: '—',
     desc: 'Живой STATUS.json текущего прогона эксперимента: manifest, done/total, current, errors, elapsed_min, updated.' },
 ];
 
@@ -86,9 +86,11 @@ export default function BenchMcpApiScreen() {
 
         <Section title="Инструменты (bench)">
           <div style={S.banner}>
-            Backend уже отдаёт эти данные; MCP-обёртки — <b>Phase 2</b>
-            (<code style={S.code}>mcp-server/src/tools/bench.ts</code>, каркас).
-            Write-инструменты (заводить кампании/гипотезы, гонять прогоны) — по отдельной спеке.
+            Read-инструменты <b>реализованы</b> (<code style={S.code}>mcp-server/src/tools/bench.ts</code>) —
+            после пересборки <code style={S.code}>npm run build</code> и перезапуска клиента доступны как
+            <code style={S.code}>bench_*</code>. Витрина пишется только Python-движком
+            <code style={S.code}>rag-vs-parse/scripts/mart.py</code>; эти тулзы — только чтение.
+            Write-инструменты (кампании/гипотезы/прогоны) — отдельно, по спеке.
           </div>
           <div style={S.tableWrap}>
             <table style={S.table}>
