@@ -329,18 +329,30 @@ export default function LorePlanBoard({ onError }: Props) {
       const weAct = doneIso != null
         ? Math.max(ws + 1, Math.round((new Date(doneIso).getTime() - w0.getTime()) / WEEK_MS))
         : null;
-      const meta = statusMeta(effStatus);
-      const fam  = statusFamily(effStatus);            // done|active|warn|blocked|muted
+      // Split the "todo" bucket so planned sprints ≠ placeholders:
+      //  · todo + has sprint  → planned (acc colour, calendar icon)
+      //  · todo + no sprint   → stub/placeholder (hollow dashed, light-bulb)
+      //  · everything else    → by real status (done/active/blocked/partial)
+      let famClass: string, iconSlug: string, iconColor: string;
+      if (effStatus === 'todo' && isStub) {
+        famClass = 'fam-stub'; iconSlug = 'light-bulb'; iconColor = 'var(--t3)';
+      } else if (effStatus === 'todo') {
+        famClass = 'fam-planned'; iconSlug = 'calendar'; iconColor = 'var(--acc)';
+      } else {
+        const m = statusMeta(effStatus);
+        famClass = 'fam-' + statusFamily(effStatus);
+        iconSlug = m.icon; iconColor = m.color;
+      }
 
       // Main bar = PLANNED span (the roadmap position, stable + labelled).
       next.push({
         id: item.item_id,
         group: item.track_id ?? UNTRACKED,
-        content: statusIconSvg(meta.icon, meta.color) + esc(cleanLabel(item.label)),
+        content: statusIconSvg(iconSlug, iconColor) + esc(cleanLabel(item.label)),
         start: addWeeks(w0, ws),
         end:   addWeeks(w0, Math.max(ws + 1, we)),
         type: 'range',
-        className: `it fam-${fam}`,
+        className: `it ${famClass}`,
         title: `${item.label}\nплан W${ws}–${we}`
           + (weAct != null ? `\nфакт W${ws}–${weAct} (закрыт)` : '')
           + (item.represents_sprint ? `\n${item.represents_sprint}` : '')
@@ -543,7 +555,13 @@ export default function LorePlanBoard({ onError }: Props) {
       {/* ── Legend ─────────────────────────────────────────────────────────── */}
       <div style={S.legend}>
         <span style={S.legendCap}>заливка = статус:</span>
-        {presentStatuses.map(s => <LegendStatus key={s} status={s} label={STATUS_RU[s] ?? s} />)}
+        {presentStatuses.filter(s => s !== 'todo').map(s => <LegendStatus key={s} status={s} label={STATUS_RU[s] ?? s} />)}
+        {presentStatuses.includes('todo') && (
+          <>
+            <span style={S.legendGlyph}><GameIcon slug="calendar" size={12} style={{ color: 'var(--acc)' }} /> планируется</span>
+            <span style={S.legendGlyph}><GameIcon slug="light-bulb" size={12} style={{ color: 'var(--t3)' }} /> заглушка</span>
+          </>
+        )}
         <span style={S.legendSep} />
         <span style={S.legendGlyph}>
           <span style={{ width: 14, height: 11, borderRadius: 2, display: 'inline-block',
