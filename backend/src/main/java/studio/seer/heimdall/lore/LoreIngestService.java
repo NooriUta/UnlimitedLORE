@@ -15,6 +15,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -50,7 +52,7 @@ public class LoreIngestService {
     public record IngestReport(
         int adrs, int decisions, int sprints, int edges,
         int runbooks, int qualityGates, int docs,
-        int tasks, int findings,
+        int tasks, int findings, int releases,
         List<String> errors) {}
 
     public IngestReport ingest(String docsRootOverride) {
@@ -62,11 +64,11 @@ public class LoreIngestService {
                 ? base
                 : Paths.get(docsRootOverride).toAbsolutePath().normalize();
         if (!root.startsWith(base)) {
-            return new IngestReport(0, 0, 0, 0, 0, 0, 0, 0, 0,
+            return new IngestReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     List.of("docs root must stay within " + base + ": " + root));
         }
         if (!Files.isDirectory(root)) {
-            return new IngestReport(0, 0, 0, 0, 0, 0, 0, 0, 0,
+            return new IngestReport(0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                     List.of("docs root not found: " + root));
         }
         LOG.infof("[LORE INGEST] Starting from %s", root);
@@ -81,13 +83,14 @@ public class LoreIngestService {
         int docs         = ingestKnowDocs(root, errors);
         int tasks        = ingestBacklogTasks(root, errors);
         int findings     = ingestFindings(root, errors);
+        int releases     = ingestReleases(root, errors);
 
         LOG.infof("[LORE INGEST] Complete: adrs=%d decisions=%d sprints=%d edges=%d " +
-                "runbooks=%d qgs=%d docs=%d tasks=%d findings=%d errors=%d",
+                "runbooks=%d qgs=%d docs=%d tasks=%d findings=%d releases=%d errors=%d",
                 adrs, decisions, sprints, edges, runbooks, qualityGates,
-                docs, tasks, findings, errors.size());
+                docs, tasks, findings, releases, errors.size());
         return new IngestReport(adrs, decisions, sprints, edges,
-                runbooks, qualityGates, docs, tasks, findings, errors);
+                runbooks, qualityGates, docs, tasks, findings, releases, errors);
     }
 
     // ── ADR ingest ────────────────────────────────────────────────────────────
@@ -515,6 +518,64 @@ public class LoreIngestService {
     }
 
     // ── Infrastructure ────────────────────────────────────────────────────────
+
+    // ── Releases ingest (RELEASE_PROD_INDEX.md → KnowRelease) ───────────────────
+    // Mirrors scripts/lore-sync-releases.mjs: parse the release index and UPDATE
+    // existing KnowRelease with release_date / is_current / description_md. No
+    // UPSERT — new releases are seeded elsewhere; a non-existent id updates 0 rows.
+    private static final Pattern RELEASE_HEADER = Pattern.compile(
+        "^## (v[\\d.]+(?:\\s*/\\s*v[\\d.]+)?)\\s*[—–-]\\s*(\\d{4}-\\d{2}-\\d{2})(.*)");
+    private static final Pattern REL_CURRENT  = Pattern.compile("⭐\\s*CURRENT", Pattern.CASE_INSENSITIVE);
+    private static final Pattern REL_PREV      = Pattern.compile("(ранее|previously)\\s+CURRENT", Pattern.CASE_INSENSITIVE);
+    private static final Pattern REL_DESC      = Pattern.compile("\\(([^)]{4,})\\)\\s*$");
+
+    private int ingestReleases(Path root, List<String> errors) {
+        Path md = root.resolve("RELEASE_PROD_INDEX.md");
+        if (!Files.isRegularFile(md)) {
+            LOG.warnf("[LORE INGEST] RELEASE_PROD_INDEX.md not found under %s", root);
+            return 0;
+        }
+        int count = 0;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        try {
+            for (String line : Files.readAllLines(md, StandardCharsets.UTF_8)) {
+                Matcher m = RELEASE_HEADER.matcher(line);
+                if (!m.find()) continue;
+                String versionPart = m.group(1).trim();
+                String date        = m.group(2);
+                String rest        = m.group(3) == null ? "" : m.group(3);
+
+                boolean isCurrent = REL_CURRENT.matcher(rest).find() && !REL_PREV.matcher(rest).find();
+
+                String description = null;
+                Matcher dm = REL_DESC.matcher(rest);
+                if (dm.find()) {
+                    String d = dm.group(1).trim();
+                    if (!d.matches("(?i)^(ранее|previously)\\s+CURRENT$")) {
+                        description = d.length() > 400 ? d.substring(0, 400) : d;
+                    }
+                }
+
+                for (String v : versionPart.split("\\s*/\\s*")) {
+                    String rid = v.trim();
+                    if (rid.isEmpty() || !seen.add(rid)) continue;
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("release_id",     rid);
+                    params.put("release_date",   date);
+                    params.put("description_md", nullToEmpty(description));
+                    // is_current is a boolean literal — ArcadeDB rejects boolean params in SET.
+                    exec("UPDATE KnowRelease SET release_date=:release_date, " +
+                            "is_current=" + isCurrent + ", description_md=:description_md " +
+                            "WHERE release_id=:release_id", params);
+                    count++;
+                }
+            }
+        } catch (IOException e) {
+            errors.add("RELEASE_PROD_INDEX parse: " + e.getMessage());
+        }
+        LOG.infof("[LORE INGEST] Releases processed: %d", count);
+        return count;
+    }
 
     private void exec(String sql, Map<String, Object> params) {
         client.command(db, basicAuth(),

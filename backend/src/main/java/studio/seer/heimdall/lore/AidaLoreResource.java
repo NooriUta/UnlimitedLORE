@@ -324,6 +324,7 @@ public class AidaLoreResource {
         result.put("docs",         report.docs());
         result.put("tasks",        report.tasks());
         result.put("findings",     report.findings());
+        result.put("releases",     report.releases());
         result.put("errors",       report.errors());
         return noStore(Response.ok(result));
     }
