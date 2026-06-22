@@ -501,7 +501,10 @@ export default function LorePlanBoard({ onError }: Props) {
         </button>
         <button style={S.btn} onClick={() => {
           if (!w0) return;
-          timelineRef.current?.moveTo(addWeeks(w0, W_NOW), { animation: true });
+          // «Сегодня» → put today at the LEFT edge (small lead so the now-line
+          // isn't clipped), ~6 weeks ahead — not centred.
+          timelineRef.current?.setWindow(
+            addWeeks(w0, W_NOW - 0.3), addWeeks(w0, W_NOW + 6), { animation: true });
         }}>
           Сегодня
         </button>
