@@ -94,9 +94,11 @@ export default function LorePlanBoard({ onError }: Props) {
   const [loading,  setLoading]  = useState(true);
 
   // ── Toggles ────────────────────────────────────────────────────────────────
-  const [showDone,   setShowDone]   = useState(true);
+  // Default to the "not the archive" view: done + past hidden. Toggles re-enable
+  // them when the user actually wants to look back.
+  const [showDone,   setShowDone]   = useState(false);
   const [showActive, setShowActive] = useState(true);
-  const [cropPast,   setCropPast]   = useState(false);
+  const [cropPast,   setCropPast]   = useState(true);
 
   // ── Time-travel (LAL-25) ───────────────────────────────────────────────────
   const [selectedVer, setSelectedVer] = useState('');
