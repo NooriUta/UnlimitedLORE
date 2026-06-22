@@ -81,6 +81,19 @@
 .lore-tl .vis-item.fam-blocked { background-color: color-mix(in srgb, var(--danger) 34%, var(--bg1)); border-color: var(--danger); }
 .lore-tl .vis-item.fam-muted   { background-color: var(--bg3); border-color: var(--bdh); color: var(--t2); }
 
+/* Actual-span baseline (план vs факт): thin dashed outline under the plan bar.
+   early = finished before plan (green), late = ran over (amber). */
+.lore-tl .vis-item.vis-range.fact {
+  background-color: transparent;
+  border: 1px dashed var(--t3);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+.lore-tl .vis-item.fact .vis-item-content { padding: 0; }
+.lore-tl .vis-item.fact.early { border-color: var(--suc); }
+.lore-tl .vis-item.fact.late  { border-color: var(--wrn); }
+.lore-tl .vis-item.fact.vis-selected { box-shadow: none; }
+
 /* Selection ring (override vis' default yellow/orange) */
 .lore-tl .vis-item.vis-selected {
   box-shadow: 0 0 0 2px var(--acc);
