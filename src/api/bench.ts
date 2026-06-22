@@ -64,6 +64,22 @@ export async function fetchBenchStatus(signal?: AbortSignal): Promise<BenchStatu
   return JSON.parse(text) as BenchStatus;
 }
 
+/** Mart slice catalog (GET /bench/mart/slices) — the whitelist a bench MCP
+ *  `bench_list_slices` tool would expose. Used by the Research MCP API screen. */
+export interface MartSliceDescriptor {
+  id: string;
+  required: string[];
+  optional: string[];
+}
+
+export async function fetchMartCatalog(signal?: AbortSignal): Promise<MartSliceDescriptor[]> {
+  const res = await fetch(`${BENCH_BASE}/mart/slices`, { signal });
+  if (!res.ok) await parseError(res);
+  assertJsonResponse(res);
+  const body = (await res.json()) as { slices?: MartSliceDescriptor[] };
+  return Array.isArray(body.slices) ? body.slices : [];
+}
+
 /** Execute a named mart slice (BenchMartResource) and return its rows. */
 export async function fetchMartSlice<T>(
   slice: string,

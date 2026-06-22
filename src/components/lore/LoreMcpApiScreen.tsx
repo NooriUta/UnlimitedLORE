@@ -15,18 +15,18 @@ interface ToolDoc {
 
 const TOOLS: ToolDoc[] = [
   { name: 'lore_list_slices', kind: 'read', backend: 'GET /lore/slices', params: '—',
-    desc: 'Каталог именованных слайсов с обязательными/опциональными параметрами. Вызывать первым.' },
+    desc: 'Каталог из ~43 именованных слайсов с их обязательными/опциональными параметрами. Вызывать первым, чтобы узнать, что можно запросить (план, спринты, ADR, решения, релизы, компоненты, спеки, доки, находки…).' },
   { name: 'lore_query_slice', kind: 'read', backend: 'GET /lore/slice/{slice}', params: 'slice, params?',
-    desc: 'Выполнить слайс. params — map строк (напр. {id: "ADR-12"}). Возвращает rows[].' },
+    desc: 'Выполнить один слайс и получить rows[]. params — map строк: напр. {"id":"ADR-FE-001"} для слайса adr, {"sprint_id":"SPRINT_X"} для tasks_of_sprint, {"status":"✅%"} для sprints. SQL и whitelisting — на бэкенде; агент шлёт только имя слайса + параметры.' },
   { name: 'lore_set_status', kind: 'write', backend: 'POST /lore/status',
     params: 'entity_type, id, status',
-    desc: 'entity_type ∈ plan_item|sprint|task|checkpoint; status ∈ todo|active|partial|done|blocked|high|cancelled.' },
+    desc: 'Сменить статус сущности, версионно (SCD2: прошлая запись закрывается valid_to=now, пишется новая — история сохраняется, работает time-travel плана). entity_type → какой id передавать: plan_item → item_id, sprint → sprint_id, task → task_uid, checkpoint (пока 501, не реализован). status ∈ todo|active|partial|done|blocked|high|cancelled. Для sprint/task пишется канонический status_raw (✅ DONE / 🟡 PARTIAL / …), который сразу отражается цветом бара на плане. Требует X-Seer-Role: admin.' },
   { name: 'lore_create_task', kind: 'write', backend: 'POST /lore/task',
     params: 'sprint_id, task_id, title, note_md?',
-    desc: 'Завести задачу в спринте.' },
+    desc: 'Завести новую задачу в спринте: sprint_id — в какой, task_id — код задачи (напр. LAL-23a), title — заголовок, note_md — опц. заметка в Markdown. Требует admin.' },
   { name: 'lore_edit_task', kind: 'write', backend: 'POST /lore/task/edit',
     params: 'task_uid, title, note_md?',
-    desc: 'Отредактировать заголовок/заметку задачи.' },
+    desc: 'Изменить заголовок/заметку существующей задачи по её task_uid (внутренний uid, не task_id — берётся из слайса tasks_of_sprint). Требует admin.' },
 ];
 
 const ENV_ROWS: [string, string, string][] = [
@@ -119,9 +119,12 @@ export default function LoreMcpApiScreen() {
             </table>
           </div>
           <p style={S.note}>
-            Записи идут с заголовком <code style={S.code}>X-Seer-Role: admin</code> и
-            мутируют общую <code style={S.code}>system_aida_lore</code> — применять
-            осознанно.
+            Write-инструменты идут с заголовком <code style={S.code}>X-Seer-Role: admin</code>,
+            версионны (SCD2 — история не теряется) и мутируют общую{' '}
+            <code style={S.code}>system_aida_lore</code> — применять осознанно.
+            Из набора пока не реализован только <code style={S.code}>checkpoint</code> (бэкенд → 501).
+            Инструменты по <b>Исследованиям</b> (витрина RAGVSDL) — на отдельной странице
+            «MCP API» в разделе «Исследования» (<code style={S.code}>/benchmark?tab=mcp</code>).
           </p>
         </Section>
 

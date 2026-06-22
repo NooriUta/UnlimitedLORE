@@ -26,6 +26,7 @@ import { FinanceScreen } from '../components/bench/FinanceScreen';
 import { AdvisorScreen } from '../components/bench/AdvisorScreen';
 import { WinLossScreen } from '../components/bench/WinLossScreen';
 import { BiblioScreen } from '../components/bench/BiblioScreen';
+import BenchMcpApiScreen from '../components/bench/BenchMcpApiScreen';
 import {
   DesignScreen, MetricsScreen, ProjectScreen, RisksScreen,
 } from '../components/bench/NarrativeScreens';
@@ -37,7 +38,8 @@ type TabId =
   | 'project' | 'story' | 'campaigns' | 'advisor' | 'report' | 'risks' | 'design'
   | 'substrates' | 'generations' | 'hypotheses' | 'findings'
   | 'case_registry' | 'references' | 'biblio' | 'dictionaries' | 'metrics'
-  | 'matrix' | 'semantic' | 'drift' | 'dispersion' | 'cases' | 'pareto' | 'finance' | 'winloss';
+  | 'matrix' | 'semantic' | 'drift' | 'dispersion' | 'cases' | 'pareto' | 'finance' | 'winloss'
+  | 'mcp';
 
 // Sidebar in three registers (owner: corpora/substrates had no entry point,
 // people got lost): Story — the narrative; Registries — flat directories of
@@ -79,6 +81,7 @@ const NAV_SECTIONS: Array<{
     items: [
       { id: 'references',  labelKey: 'bench.tabReferences',  fallback: 'Bibliography' },
       { id: 'biblio',      labelKey: 'bench.tabBiblio',      fallback: 'Biblio · Research' },
+      { id: 'mcp',         labelKey: 'bench.tabMcp',         fallback: 'MCP API' },
     ],
   },
   {
@@ -239,18 +242,21 @@ export default function BenchmarkPage() {
         <div className="bench-scroll" style={{ flex: 1, minWidth: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
       {tab === 'report' && <ReportScreen />}
       {tab === 'biblio' && <BiblioScreen />}
-      {tab !== 'report' && martUnavailable && (
+      {/* MCP API reference is self-contained (pings its own endpoints) — never
+          gated by the experiment-mart availability checks below. */}
+      {tab === 'mcp' && <BenchMcpApiScreen />}
+      {tab !== 'report' && tab !== 'mcp' && martUnavailable && (
         <PanelMsg kind="info" text={t('bench.unavailable',
           'Experiment mart is unavailable — the panel works in the heimdall dev stack only')} onRetry={runs.reload} />
       )}
-      {tab !== 'report' && !martUnavailable && runs.error && (
+      {tab !== 'report' && tab !== 'mcp' && !martUnavailable && runs.error && (
         <PanelMsg kind="error" text={runs.error} onRetry={runs.reload} />
       )}
-      {tab !== 'report' && !martUnavailable && !runs.error && !martReady && (
+      {tab !== 'report' && tab !== 'mcp' && !martUnavailable && !runs.error && !martReady && (
         <PanelMsg kind="loading" text={t('bench.loading', 'Loading…')} />
       )}
 
-      {tab !== 'report' && !martUnavailable && !runs.error && martReady && (
+      {tab !== 'report' && tab !== 'mcp' && !martUnavailable && !runs.error && martReady && (
         <BenchErrorBoundary key={tab}>
           {tab === 'story' && <StoryScreen runs={runs.rows ?? []} />}
           {tab === 'campaigns' && <CampaignsScreen runs={runs.rows ?? []} />}
