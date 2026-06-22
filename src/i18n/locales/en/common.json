@@ -8,7 +8,7 @@
     "benchmark": "BENCHMARK"
   },
   "bench": {
-    "title":            "RAG vs Parse — experiment",
+    "title":            "RAG · Graph · Parse — experiment",
     "subtitle":         "Read-only over the Research experiment mart",
     "unavailable":      "Experiment mart is unavailable",
     "statusUnavailable": "Live status unavailable — benchmark repo is not mounted",

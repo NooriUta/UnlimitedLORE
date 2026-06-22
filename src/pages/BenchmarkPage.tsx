@@ -111,7 +111,7 @@ const ALL_TABS = NAV_SECTIONS.flatMap(s => s.items);
  */
 export default function BenchmarkPage() {
   const { t } = useTranslation();
-  usePageTitle(t('bench.title', 'RAG vs Parse — experiment'));
+  usePageTitle(t('bench.title', 'RAG · Graph · Parse — experiment'));
 
   // tab + case-drill preset live in the URL — shareable slices, and matrix
   // cells can deep-link into the Cases tab (audit P0: number → cases → trace)
@@ -186,7 +186,7 @@ export default function BenchmarkPage() {
     <div className="page-content" style={{ padding: '16px 20px', height: '100%', boxSizing: 'border-box',
                                            display: 'flex', flexDirection: 'column' }}
          data-testid="bench-page">
-      <h1 className="page-title">{t('bench.title', 'RAG vs Parse — experiment')}</h1>
+      <h1 className="page-title">{t('bench.title', 'RAG · Graph · Parse — experiment')}</h1>
       <p className="analytics-meta">{t('bench.subtitle',
         'Read-only view over the RAGVSDL measurement mart; the live card reads results/STATUS.json of the running cell')}</p>
 

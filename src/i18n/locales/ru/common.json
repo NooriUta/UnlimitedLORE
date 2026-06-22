@@ -8,7 +8,7 @@
     "benchmark": "BENCHMARK"
   },
   "bench": {
-    "title":            "RAG vs Parse — эксперимент",
+    "title":            "RAG · Graph · Parse — эксперимент",
     "subtitle":         "Read-only поверх витрины измерений «Исследования»",
     "unavailable":      "Витрина эксперимента недоступна",
     "statusUnavailable": "Live-статус недоступен — репозиторий бенчмарка не примонтирован",
