@@ -301,6 +301,33 @@ export async function editLoreTask(
   return res.json() as Promise<LoreTaskWriteResponse>;
 }
 
+export interface LoreSprintRegisterResponse {
+  ok: boolean;
+  item_id: string;
+  sprint_id: string;
+  created: boolean;
+}
+
+/** Register a real sprint for a standalone plan-item placeholder (POST /lore/sprint). */
+export async function registerLoreSprint(
+  itemId: string,
+  opts?: { sprintId?: string; name?: string; status?: string },
+): Promise<LoreSprintRegisterResponse> {
+  const res = await fetch(`${LORE_BASE}/sprint`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({
+      item_id: itemId,
+      sprint_id: opts?.sprintId ?? null,
+      name: opts?.name ?? null,
+      status: opts?.status ?? 'active',
+    }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<LoreSprintRegisterResponse>;
+}
+
 export interface LoreRelease {
   release_id: string;
   git_tag: string | null;

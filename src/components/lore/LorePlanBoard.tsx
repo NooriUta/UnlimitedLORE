@@ -9,7 +9,7 @@ import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/
 import 'vis-timeline/styles/vis-timeline-graph2d.css';
 import './lore-timeline.css';
 import {
-  fetchLoreSlice, postLoreStatus,
+  fetchLoreSlice, postLoreStatus, registerLoreSprint,
   type LorePlanConfig, type LorePlanTrack, type LorePlanSection,
   type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
   type LorePlanItemStatus, type LorePlanVersion,
@@ -110,6 +110,7 @@ export default function LorePlanBoard({ onError }: Props) {
   // ── Panels ─────────────────────────────────────────────────────────────────
   const [sprintCard, setSprintCard] = useState<LorePlanItem | null>(null);
   const [msPanel,    setMsPanel]    = useState<LoreMilestone | null>(null);
+  const [registering, setRegistering] = useState(false);
 
   // Tasks of the sprint behind the selected card (lazy, keyed by represents_sprint)
   const [cardTasks,        setCardTasks]        = useState<LoreSprintTask[]>([]);
@@ -383,6 +384,25 @@ export default function LorePlanBoard({ onError }: Props) {
   }, [items, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
       showDone, showActive, cropPast, showSprints, showStubs, W_NOW]);
 
+  // ── Register a real sprint for a plan-item placeholder ───────────────────────
+  function handleRegisterSprint(item: LorePlanItem) {
+    setRegistering(true);
+    registerLoreSprint(item.item_id, { name: item.label, status: 'active' })
+      .then(r => {
+        // Optimistically link the bar → it flips from placeholder to sprint, and
+        // its colour follows the new sprint's status (active → 🔄 IN PROGRESS).
+        setItems(prev => prev.map(it =>
+          it.item_id === item.item_id ? { ...it, represents_sprint: r.sprint_id } : it));
+        setSprintCard(prev => prev && prev.item_id === item.item_id
+          ? { ...prev, represents_sprint: r.sprint_id } : prev);
+        setStatusBySprint(prev => {
+          const m = new Map(prev); m.set(r.sprint_id, '🔄 IN PROGRESS'); return m;
+        });
+      })
+      .catch(e => onError(e))
+      .finally(() => setRegistering(false));
+  }
+
   // ── Status cycling helper (panel button) ─────────────────────────────────────
   function applyStatusCycle(target: LorePlanItem) {
     const newStatus = cycleStatus(target.status);
@@ -527,6 +547,24 @@ export default function LorePlanBoard({ onError }: Props) {
                   </span>
                 );
               })()}
+              {/* Placeholder → register a real sprint */}
+              {!sprintCard.represents_sprint && (
+                <button
+                  onClick={() => handleRegisterSprint(sprintCard)}
+                  disabled={registering}
+                  title="Создать KnowSprint, связать план-элемент (REPRESENTS) и завести начальный статус"
+                  style={{
+                    display: 'block', width: '100%', marginBottom: 10,
+                    padding: '6px 8px', borderRadius: 4, cursor: registering ? 'default' : 'pointer',
+                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                    background: 'color-mix(in srgb, var(--acc) 16%, transparent)',
+                    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 40%, transparent)',
+                    opacity: registering ? 0.6 : 1,
+                  }}
+                >
+                  {registering ? 'Регистрирую…' : '＋ Запланировать спринт'}
+                </button>
+              )}
               <PRow k="ID"     v={sprintCard.item_id} />
               {sprintCard.represents_sprint && (
                 <PRow k="Sprint" v={sprintCard.represents_sprint} color="var(--acc)" />

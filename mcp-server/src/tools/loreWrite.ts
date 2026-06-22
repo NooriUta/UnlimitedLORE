@@ -51,6 +51,32 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_register_sprint',
+    'Register a real sprint for a standalone plan-item placeholder: create a ' +
+      'KnowSprint, seed its initial status, and link the plan-item via REPRESENTS ' +
+      '(the bar flips from placeholder to sprint). Idempotent — a plan-item that ' +
+      'already represents a sprint is returned unchanged. Mutates system_aida_lore.',
+    {
+      item_id: z.string().describe('plan-item id (from plan_items) to back with a sprint'),
+      sprint_id: z.string().optional().describe('explicit sprint id; default SPRINT_<ITEM_ID>'),
+      name: z.string().optional().describe('sprint name; default the plan-item label'),
+      status: z
+        .enum(['todo', 'active', 'partial', 'done', 'blocked', 'high', 'cancelled'])
+        .optional()
+        .describe('initial status, default "active"'),
+    },
+    async ({ item_id, sprint_id, name, status }) => {
+      try {
+        return json(await lorePost('/lore/sprint', {
+          item_id, sprint_id: sprint_id ?? null, name: name ?? null, status: status ?? 'active',
+        }));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  server.tool(
     'lore_edit_task',
     'Edit a task title and/or note (updates the vertex and its open history row). ' +
       'Mutates the shared system_aida_lore.',

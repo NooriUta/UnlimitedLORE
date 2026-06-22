@@ -329,6 +329,50 @@ public class AidaLoreResource {
         return noStore(Response.ok(result));
     }
 
+    // ── Write-path: register a sprint for a plan-item placeholder ────────────
+
+    public record SprintRegisterRequest(String item_id, String sprint_id, String name, String status) {}
+
+    @POST
+    @Path("sprint")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response registerSprint(SprintRegisterRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.item_id() == null || req.item_id().isBlank()) {
+            return badParams("item_id required");
+        }
+        if (!SAFE_ID.matcher(req.item_id()).matches()
+                || (req.sprint_id() != null && !req.sprint_id().isBlank()
+                    && !SAFE_ID.matcher(req.sprint_id()).matches())) {
+            return badParams("item_id / sprint_id contain illegal characters");
+        }
+        String status = (req.status() == null || req.status().isBlank()) ? "active" : req.status();
+        if (!PLAN_STATUSES.contains(status)) {
+            return badParams("status must be one of: " + PLAN_STATUSES);
+        }
+        try {
+            LoreIngestService.RegisterSprintResult r =
+                ingestService.registerSprint(req.item_id(), req.sprint_id(), req.name(), status);
+            if (!r.ok()) {
+                return noStore(Response.status(Response.Status.NOT_FOUND)
+                    .entity(new LoreError("NOT_FOUND", r.error())));
+            }
+            java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("item_id", r.itemId());
+            out.put("sprint_id", r.sprintId());
+            out.put("created", r.created());
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPRINT REGISTER] %s: %s", req.item_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Write-path: create / edit a task ────────────────────────────────────
 
     @POST

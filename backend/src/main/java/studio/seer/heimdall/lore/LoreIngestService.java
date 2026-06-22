@@ -55,6 +55,73 @@ public class LoreIngestService {
         int tasks, int findings, int releases,
         List<String> errors) {}
 
+    public record RegisterSprintResult(
+        boolean ok, String sprintId, String itemId, boolean created, String error) {}
+
+    // Canonical status token → status_raw, mirrors AidaLoreResource.SCD2_STATUS_RAW.
+    private static final Map<String, String> SPRINT_STATUS_RAW = Map.of(
+        "done", "✅ DONE", "active", "🔄 IN PROGRESS", "partial", "🟡 PARTIAL",
+        "todo", "📋 PLANNED", "blocked", "🔴 BLOCKED", "high", "🔴 P0",
+        "cancelled", "🚫 CANCELLED");
+
+    /**
+     * Register a real sprint for a standalone plan-item placeholder:
+     * upsert KnowSprint, seed an initial KnowSprintHist + HAS_STATE state row,
+     * and link the PlanItem via a REPRESENTS edge. Idempotent — a plan-item that
+     * already represents a sprint is returned unchanged.
+     */
+    public RegisterSprintResult registerSprint(String itemId, String sprintIdOverride,
+                                               String name, String status) {
+        List<Map<String, Object>> rows = queryRows(
+            "SELECT label, out('REPRESENTS').sprint_id AS rep FROM PlanItem WHERE item_id = :item",
+            Map.of("item", itemId));
+        if (rows.isEmpty()) {
+            return new RegisterSprintResult(false, null, itemId, false, "plan item not found: " + itemId);
+        }
+        Object rep = rows.get(0).get("rep");
+        if (rep instanceof List<?> l && !l.isEmpty()) {
+            return new RegisterSprintResult(true, String.valueOf(l.get(0)), itemId, false, null);
+        }
+        Object labelObj = rows.get(0).get("label");
+        String label = labelObj != null ? labelObj.toString() : itemId;
+
+        String sprintId = (sprintIdOverride != null && !sprintIdOverride.isBlank())
+            ? sprintIdOverride
+            : "SPRINT_" + itemId.toUpperCase(java.util.Locale.ROOT).replaceAll("[^A-Z0-9_]", "_");
+        String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "active" : status, "🔄 IN PROGRESS");
+        String nm = (name != null && !name.isBlank()) ? name : label;
+
+        exec("UPDATE KnowSprint SET sprint_id = :sid, name = :name, status_raw = :sraw " +
+                "UPSERT WHERE sprint_id = :sid",
+            Map.of("sid", sprintId, "name", nm, "sraw", statusRaw));
+
+        List<Map<String, Object>> st = queryRows(
+            "SELECT out('HAS_STATE').size() AS n FROM KnowSprint WHERE sprint_id = :sid",
+            Map.of("sid", sprintId));
+        long stateN = (!st.isEmpty() && st.get(0).get("n") instanceof Number num) ? num.longValue() : 0;
+        if (stateN == 0) {
+            String stateUid = java.util.UUID.randomUUID().toString();
+            String now = java.time.Instant.now().toString();
+            exec("INSERT INTO KnowSprintHist SET state_uid = :su, status_raw = :sraw, valid_from = :now",
+                Map.of("su", stateUid, "sraw", statusRaw, "now", now));
+            exec("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sp) " +
+                    "TO (SELECT FROM KnowSprintHist WHERE state_uid = :su)",
+                Map.of("sp", sprintId, "su", stateUid));
+        }
+        exec("CREATE EDGE REPRESENTS FROM (SELECT FROM PlanItem WHERE item_id = :item) " +
+                "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
+            Map.of("item", itemId, "sid", sprintId));
+        LOG.infof("[LORE] registered sprint %s for plan-item %s", sprintId, itemId);
+        return new RegisterSprintResult(true, sprintId, itemId, true, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> queryRows(String sql, Map<String, Object> params) {
+        LoreCommandClient.LoreCommandResult r = client.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
+        return r.result() instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+    }
+
     public IngestReport ingest(String docsRootOverride) {
         // team-docs.root is the trusted base; an override may only point INSIDE it.
         // Canonicalise + containment guard defeats path traversal in the override
