@@ -240,10 +240,11 @@ export default function LorePlanBoard({ onError }: Props) {
     const tl = new Timeline(hostRef.current, itemsDS, groups, options);
     timelineRef.current = tl;
 
-    // Initial window: a wide ~9-week view (bar labels fully legible) anchored a
-    // couple weeks before "now"; pan/zoom or «Уместить» reveals the full span.
-    const startW = Math.max(0, W_NOW - 2);
-    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 9), { animation: false });
+    // Initial window: a wide ~6-week view so bar labels fit (was 9 — too cramped,
+    // ~half the names clipped). Anchored ~1 week before "now"; pan/zoom or
+    // «Уместить» reveals the full span.
+    const startW = Math.max(0, W_NOW - 1);
+    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 6), { animation: false });
     // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
     // force one redraw on the next frame so the first paint is never blank.
     requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });
