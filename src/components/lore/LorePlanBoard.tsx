@@ -59,6 +59,13 @@ const STATUS_RU: Record<string, string> = {
   blocked: 'блок', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',
 };
 
+// Canonical token → status_raw (mirrors backend SCD2_STATUS_RAW), for optimistic
+// statusBySprint updates so a cycled sprint re-colours before the server round-trip.
+const STATUS_RAW: Record<string, string> = {
+  done: '✅ DONE', active: '🔄 IN PROGRESS', partial: '🟡 PARTIAL', todo: '📋 PLANNED',
+  blocked: '🔴 BLOCKED', high: '🔴 P0', cancelled: '🚫 CANCELLED',
+};
+
 const STATUS_CYCLE: LorePlanItemStatus[] = ['todo', 'active', 'done'];
 function cycleStatus(current: string | null): LorePlanItemStatus {
   const idx = STATUS_CYCLE.indexOf((current ?? 'todo') as LorePlanItemStatus);
@@ -458,6 +465,21 @@ export default function LorePlanBoard({ onError }: Props) {
 
   // ── Status cycling helper (panel button) ─────────────────────────────────────
   function applyStatusCycle(target: LorePlanItem) {
+    const sid = target.represents_sprint;
+    if (sid) {
+      // Sprint bar → cycle the REAL sprint status (status_raw); update
+      // statusBySprint so the bar re-colours immediately (no reload).
+      const prevRaw = statusBySprint.get(sid);
+      const cur  = prevRaw ? taskTick(prevRaw).status : 'todo';
+      const next = cycleStatus(cur);
+      setStatusBySprint(m => { const n = new Map(m); n.set(sid, STATUS_RAW[next] ?? next); return n; });
+      postLoreStatus('sprint', sid, next).catch(err => {
+        console.error('[lore status cycle]', err);
+        setStatusBySprint(m => { const n = new Map(m); if (prevRaw == null) n.delete(sid); else n.set(sid, prevRaw); return n; });
+      });
+      return;
+    }
+    // Placeholder (no sprint) → cycle plan_item.status.
     const newStatus = cycleStatus(target.status);
     const prevStatus = target.status;
     setItems(prev => prev.map(it =>
@@ -640,27 +662,31 @@ export default function LorePlanBoard({ onError }: Props) {
                 <PRow k="Релиз" v={cardReleases.join(', ')} color="var(--acc)" />
               )}
 
-              {/* Status cycling badge */}
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Статус</div>
-                <button
-                  onClick={() => applyStatusCycle(sprintCard)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '3px 8px', borderRadius: 3, cursor: 'pointer',
-                    fontSize: 11, fontWeight: 600,
-                    background: `color-mix(in srgb, ${statusMeta(sprintCard.status).color} 18%, transparent)`,
-                    color: statusMeta(sprintCard.status).color,
-                    border: `1px solid ${statusMeta(sprintCard.status).color}`,
-                  }}
-                >
-                  <GameIcon slug={statusMeta(sprintCard.status).icon} size={12} style={{ color: 'inherit' }} />
-                  {sprintCard.status ?? 'todo'}
-                  <span style={{ opacity: 0.7, fontSize: 9 }}>
-                    → {cycleStatus(sprintCard.status)}
-                  </span>
-                </button>
-              </div>
+              {/* Status cycling badge — reflects the EFFECTIVE status (real sprint
+                  status for sprint bars), and updates the board live on click. */}
+              {(() => {
+                const cs = effStatusOf(sprintCard);
+                const m = statusMeta(cs);
+                return (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Статус</div>
+                    <button
+                      onClick={() => applyStatusCycle(sprintCard)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '3px 8px', borderRadius: 3, cursor: 'pointer',
+                        fontSize: 11, fontWeight: 600,
+                        background: `color-mix(in srgb, ${m.color} 18%, transparent)`,
+                        color: m.color, border: `1px solid ${m.color}`,
+                      }}
+                    >
+                      <GameIcon slug={m.icon} size={12} style={{ color: 'inherit' }} />
+                      {cs}
+                      <span style={{ opacity: 0.7, fontSize: 9 }}>→ {cycleStatus(cs)}</span>
+                    </button>
+                  </div>
+                );
+              })()}
              </div>{/* /panelCol */}
 
               {/* Tasks of the represented sprint */}
