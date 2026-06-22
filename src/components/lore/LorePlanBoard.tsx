@@ -111,6 +111,8 @@ export default function LorePlanBoard({ onError }: Props) {
   const [sprintCard, setSprintCard] = useState<LorePlanItem | null>(null);
   const [msPanel,    setMsPanel]    = useState<LoreMilestone | null>(null);
   const [registering, setRegistering] = useState(false);
+  const [panelH,     setPanelH]     = useState(238);          // resizable bottom panel
+  const panelDragRef = useRef<{ y: number; h: number } | null>(null);
 
   // Tasks of the sprint behind the selected card (lazy, keyed by represents_sprint)
   const [cardTasks,        setCardTasks]        = useState<LoreSprintTask[]>([]);
@@ -244,7 +246,7 @@ export default function LorePlanBoard({ onError }: Props) {
     // ~half the names clipped). Anchored ~1 week before "now"; pan/zoom or
     // «Уместить» reveals the full span.
     const startW = Math.max(0, W_NOW - 1);
-    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 6), { animation: false });
+    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 4), { animation: false });
     // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
     // force one redraw on the next frame so the first paint is never blank.
     requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });
@@ -385,6 +387,19 @@ export default function LorePlanBoard({ onError }: Props) {
   }, [items, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
       showDone, showActive, cropPast, showSprints, showStubs, W_NOW]);
 
+  // ── Drag-resize the bottom detail panel ──────────────────────────────────────
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!panelDragRef.current) return;
+      const delta = panelDragRef.current.y - e.clientY;   // drag up → taller
+      setPanelH(Math.min(560, Math.max(120, panelDragRef.current.h + delta)));
+    };
+    const onUp = () => { panelDragRef.current = null; document.body.style.userSelect = ''; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+
   // ── Register a real sprint for a plan-item placeholder ───────────────────────
   function handleRegisterSprint(item: LorePlanItem) {
     setRegistering(true);
@@ -402,6 +417,12 @@ export default function LorePlanBoard({ onError }: Props) {
       })
       .catch(e => onError(e))
       .finally(() => setRegistering(false));
+  }
+
+  function startPanelDrag(e: React.MouseEvent) {
+    panelDragRef.current = { y: e.clientY, h: panelH };
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
   }
 
   // ── Status cycling helper (panel button) ─────────────────────────────────────
@@ -523,29 +544,15 @@ export default function LorePlanBoard({ onError }: Props) {
 
         {/* Sprint card panel */}
         {sprintCard && (
-          <div style={S.panel}>
+          <div style={{ ...S.panel, height: panelH }}>
+            <ResizeGrip onDown={startPanelDrag} />
             <div style={S.panelHdr}>
+              <TypeBadge isSprint={sprintCard.represents_sprint != null} />
               <span style={S.panelTitle}>{sprintCard.label}</span>
               <button style={S.closeBtn} onClick={() => setSprintCard(null)}>✕</button>
             </div>
             <div style={S.panelBody}>
              <div style={S.panelCol}>
-              {/* Type badge: real sprint vs standalone plan-item ("заглушка") */}
-              {(() => {
-                const isSprint = sprintCard.represents_sprint != null;
-                const c = isSprint ? 'var(--acc)' : 'var(--t3)';
-                return (
-                  <span style={{
-                    display: 'inline-block', marginBottom: 8,
-                    fontSize: 9, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase',
-                    padding: '2px 7px', borderRadius: 3,
-                    background: `color-mix(in srgb, ${c} 16%, transparent)`,
-                    color: c, border: `1px solid color-mix(in srgb, ${c} 35%, transparent)`,
-                  }}>
-                    {isSprint ? 'Спринт' : 'План-элемент'}
-                  </span>
-                );
-              })()}
               {/* Placeholder → register a real sprint */}
               {!sprintCard.represents_sprint && (
                 <button
@@ -662,7 +669,8 @@ export default function LorePlanBoard({ onError }: Props) {
 
         {/* Milestone panel — "Что закрыть" */}
         {msPanel && (
-          <div style={S.panel}>
+          <div style={{ ...S.panel, height: panelH }}>
+            <ResizeGrip onDown={startPanelDrag} />
             <div style={S.panelHdr}>
               <span style={{ ...S.panelTitle, color: 'var(--acc)' }}>
                 {msPanel.milestone_id} · {msPanel.label}
@@ -791,6 +799,35 @@ function LegendStatus({ status, label }: { status: string; label: string }) {
   );
 }
 
+// Drag handle at the top edge of the bottom panel (resize its height).
+function ResizeGrip({ onDown }: { onDown: (e: React.MouseEvent) => void }) {
+  return (
+    <div onMouseDown={onDown} title="Потянуть, чтобы изменить высоту панели"
+      style={{
+        height: 9, flexShrink: 0, cursor: 'ns-resize',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderBottom: '1px solid var(--b2)', background: 'var(--b2)',
+      }}>
+      <span style={{ width: 36, height: 3, borderRadius: 2, background: 'var(--bdh)' }} />
+    </div>
+  );
+}
+
+function TypeBadge({ isSprint }: { isSprint: boolean }) {
+  const c = isSprint ? 'var(--acc)' : 'var(--t3)';
+  return (
+    <span style={{
+      flexShrink: 0, alignSelf: 'flex-start', marginTop: 1,
+      fontSize: 9, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase',
+      padding: '2px 7px', borderRadius: 3,
+      background: `color-mix(in srgb, ${c} 16%, transparent)`,
+      color: c, border: `1px solid color-mix(in srgb, ${c} 35%, transparent)`,
+    }}>
+      {isSprint ? 'Спринт' : 'План-элемент'}
+    </span>
+  );
+}
+
 function PRow({ k, v, color }: { k: string; v: string; color?: string }) {
   return (
     <div style={{ display: 'flex', gap: 8, marginBottom: 5, fontSize: 11 }}>
@@ -858,9 +895,9 @@ const S = {
     flex: 1, fontWeight: 600, fontSize: 13, lineHeight: 1.35, color: 'var(--t1)',
     overflowWrap: 'anywhere' as const,
   },
-  panelBody:    { flex: 1, overflowY: 'auto' as const, padding: '10px 14px', display: 'flex', gap: 28, alignItems: 'flex-start' },
-  panelBodyCol: { flex: 1, overflowY: 'auto' as const, padding: '10px 14px' },
-  panelCol:     { flexShrink: 0, width: 300 },
+  panelBody:    { flex: 1, overflowY: 'auto' as const, padding: '12px 16px', display: 'flex', gap: 24, alignItems: 'stretch' },
+  panelBodyCol: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
+  panelCol:     { flexShrink: 0, width: 286, borderRight: '1px solid var(--b2)', paddingRight: 22 },
   panelTasks:   { flex: 1, minWidth: 0 },
   closeBtn: {
     background: 'transparent', border: 'none', cursor: 'pointer',
