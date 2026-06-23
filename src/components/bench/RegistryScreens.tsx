@@ -310,14 +310,10 @@ function MethodCardBlock({ card }: { card: MethodCardRow }) {
           <span style={{ fontWeight: 600 }}>↳ HOUND: </span>{card.hound}
         </div>
       )}
-      {(card.findings || card.architecture || card.method) && (
+      {card.md && (
         <details style={{ marginTop: 4 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>подробнее</summary>
-          <div style={{ paddingTop: 4, paddingLeft: 10 }}>
-            {card.findings && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Findings:</b> {card.findings}</div>}
-            {card.architecture && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Архитектура:</b> {card.architecture}</div>}
-            {card.method && <div style={{ fontSize: 11, color: 'var(--t2)' }}><b>Метод:</b> {card.method}</div>}
-          </div>
+          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>полная карточка + диаграмма</summary>
+          <MartProse text={card.md} style={{ paddingTop: 8, paddingLeft: 4, maxWidth: 900 }} />
         </details>
       )}
     </div>

@@ -58,7 +58,7 @@ interface RefRow {
 }
 
 interface SourceRow { source_id: string; ref_id: string | null; kind: string | null; url: string | null; annotation: string | null; }
-interface MethodCardRow { card_id: string; ref_id: string | null; name: string | null; group_name: string | null; date: string | null; bird: string | null; spider: string | null; link: string | null; tldr: string | null; architecture: string | null; method: string | null; findings: string | null; hound: string | null; }
+interface MethodCardRow { card_id: string; ref_id: string | null; name: string | null; group_name: string | null; date: string | null; bird: string | null; spider: string | null; link: string | null; tldr: string | null; architecture: string | null; method: string | null; findings: string | null; hound: string | null; md: string | null; }
 
 interface TopicRow {
   topic_id:  string;
@@ -345,14 +345,10 @@ function CardsView({
                       </div>
                       {mc.tldr && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5 }}>{mc.tldr}</div>}
                       {mc.hound && <div style={{ fontSize: 11, color: 'var(--wrn)', marginTop: 4, lineHeight: 1.5 }}><b>↳ HOUND: </b>{mc.hound}</div>}
-                      {(mc.findings || mc.architecture || mc.method) && (
+                      {mc.md && (
                         <details style={{ marginTop: 4 }}>
-                          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>подробнее</summary>
-                          <div style={{ paddingTop: 4, paddingLeft: 10 }}>
-                            {mc.findings && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Findings:</b> {mc.findings}</div>}
-                            {mc.architecture && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Архитектура:</b> {mc.architecture}</div>}
-                            {mc.method && <div style={{ fontSize: 11, color: 'var(--t2)' }}><b>Метод:</b> {mc.method}</div>}
-                          </div>
+                          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>полная карточка + диаграмма</summary>
+                          <MartProse text={mc.md} style={{ paddingTop: 8, paddingLeft: 4, maxWidth: 900 }} />
                         </details>
                       )}
                     </div>
