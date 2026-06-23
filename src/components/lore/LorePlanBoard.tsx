@@ -316,13 +316,18 @@ export default function LorePlanBoard({ onError }: Props) {
       } as TimelineItem);
     }
 
-    // Plan-item bars
+    // Plan-item bars — one sprint = one bar: skip duplicate plan items for the same sprint.
+    const seenSprints = new Set<string>();
     for (const item of items) {
       const ws = item.week_start;
       const we = item.week_end;
       if (ws == null || we == null) continue;                 // unpositioned → skip
       if (cropPast && we < W_NOW) continue;
       const isStub = item.represents_sprint == null;           // placeholder, not a sprint
+      if (!isStub && item.represents_sprint) {
+        if (seenSprints.has(item.represents_sprint)) continue; // already rendered this sprint
+        seenSprints.add(item.represents_sprint);
+      }
       if (!showStubs && isStub) continue;
       if (!showSprints && !isStub) continue;
       // Effective status: for sprint bars use the REAL sprint state (status_raw
