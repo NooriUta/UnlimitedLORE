@@ -233,6 +233,7 @@ public final class MartSlices {
             "SELECT subtype_id, task_id, level_id, hop_kind_id FROM ExpSubtype ORDER BY task_id, subtype_id");
         slice("corpora",
             "SELECT corpus_id, name, corpus_role, files, duplicates, sql_lines, corpus_date, " +
+            "description, description_ru, description_en, " +
             "design_rationale, design_rationale_ru_sci, design_rationale_ru, design_rationale_en, " +
             "note, note_ru_sci, note_ru, note_en FROM ExpCorpus ORDER BY corpus_id");
 

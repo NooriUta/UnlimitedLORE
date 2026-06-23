@@ -287,7 +287,10 @@ export interface CorpusRow {
   duplicates?: number;
   sql_lines?: number;
   corpus_date?: string;
-  design_rationale?: string; // MD
+  description?: string; // MD — what the corpus is (bilingual)
+  description_ru?: string;
+  description_en?: string;
+  design_rationale?: string; // MD — why it is built this way
   design_rationale_ru_sci?: string;
   design_rationale_ru?: string;
   design_rationale_en?: string;

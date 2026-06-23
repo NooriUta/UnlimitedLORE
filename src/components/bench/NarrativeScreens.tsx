@@ -321,7 +321,8 @@ export function DesignScreen({ tasks }: { tasks: TaskRow[] }) {
         {corpora.unavailable && <PanelMsg kind="info" text={t('bench.unavailable', 'Experiment mart is unavailable')} onRetry={corpora.reload} />}
         {!corpora.unavailable && corpora.error && <PanelMsg kind="error" text={corpora.error} onRetry={corpora.reload} />}
         {!corpora.unavailable && !corpora.error && !corpora.rows && <PanelMsg kind="loading" text={t('bench.loading', 'Loading…')} />}
-        {(corpora.rows ?? []).filter(c => c.design_rationale).map(c => {
+        {(corpora.rows ?? []).filter(c => c.design_rationale || c.description).map(c => {
+          const corpDesc   = pickLocale(lang, undefined, c.description_en, c.description, c.description_ru);
           const corpDesign = pickLocale(lang, c.design_rationale_ru_sci, c.design_rationale_en, c.design_rationale, c.design_rationale_ru);
           return (
             <div key={c.corpus_id} data-testid={`design-corpus-${c.corpus_id}`}
@@ -333,7 +334,8 @@ export function DesignScreen({ tasks }: { tasks: TaskRow[] }) {
                   files={c.files ?? '?'} · dup={c.duplicates ?? '?'} · sql_lines={c.sql_lines ?? '?'}
                 </span>
               </div>
-              <MartProse text={corpDesign} />
+              {corpDesc && <MartProse text={corpDesc} />}
+              {corpDesign && <MartProse text={corpDesign} />}
             </div>
           );
         })}
