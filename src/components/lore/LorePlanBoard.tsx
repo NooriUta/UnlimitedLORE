@@ -4,6 +4,7 @@
 // (Ctrl+wheel zoom, wheel/drag pan) replaces the old hand-rolled Gantt canvas.
 // Spec: PLAN_AS_DB_RENDER.md · write-path LAL-23a · time-travel LAL-25
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { marked } from 'marked';
 import { Timeline, DataSet } from 'vis-timeline/standalone';
 import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/standalone';
 import 'vis-timeline/styles/vis-timeline-graph2d.css';
@@ -126,6 +127,9 @@ export default function LorePlanBoard({ onError }: Props) {
   const [cardTasksLoading, setCardTasksLoading] = useState(false);
   const [cardSprintStatus, setCardSprintStatus] = useState<string | null>(null);
   const [cardReleases,     setCardReleases]     = useState<string[]>([]);
+  // Task list filter + selected note
+  const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
+  const [selectedTaskUid,  setSelectedTaskUid]  = useState<string | null>(null);
 
   // ── Timeline plumbing ────────────────────────────────────────────────────────
   const hostRef     = useRef<HTMLDivElement>(null);
@@ -189,6 +193,8 @@ export default function LorePlanBoard({ onError }: Props) {
         setCardTasksLoading(false);
       })
       .catch(() => { setCardTasks([]); setCardTasksLoading(false); });
+    setTaskStatusFilter(new Set());
+    setSelectedTaskUid(null);
     return () => ctrl.abort();
   }, [sprintCard?.represents_sprint]);
 
@@ -692,15 +698,43 @@ export default function LorePlanBoard({ onError }: Props) {
               {/* Tasks of the represented sprint */}
               {sprintCard.represents_sprint && (
                 <div style={S.panelTasks}>
+                  {/* Header: count + status filter chips */}
                   {(() => {
                     const total = cardTasks.length;
                     const done  = cardTasks.filter(t => taskTick(t.status_raw).done).length;
+                    const counts: Record<string, number> = {};
+                    for (const t of cardTasks) {
+                      const k = taskTick(t.status_raw).status;
+                      counts[k] = (counts[k] ?? 0) + 1;
+                    }
                     return (
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 10, color: 'var(--t3)' }}>Задачи</span>
                         {total > 0 && (
                           <span style={{ fontSize: 10, color: 'var(--t2)' }}>{done}/{total}</span>
                         )}
+                        {Object.entries(counts).map(([k, n]) => {
+                          const m = statusMeta(k);
+                          const active = taskStatusFilter.has(k);
+                          return (
+                            <button key={k} type="button"
+                              title={`${k}: ${n}`}
+                              onClick={() => setTaskStatusFilter(prev => {
+                                const s = new Set(prev); s.has(k) ? s.delete(k) : s.add(k); return s;
+                              })}
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 3,
+                                padding: '0 5px', height: 16, borderRadius: 9, cursor: 'pointer',
+                                fontSize: 10, fontWeight: 700, lineHeight: 1, color: m.color,
+                                background: active ? `color-mix(in srgb, ${m.color} 22%, transparent)` : 'transparent',
+                                border: `1px solid color-mix(in srgb, ${m.color} ${active ? 90 : 35}%, transparent)`,
+                              }}
+                            >
+                              <GameIcon slug={m.icon} size={10} style={{ color: m.color }} />
+                              {n}
+                            </button>
+                          );
+                        })}
                         {cardSprintStatus && (
                           <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 'auto',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}
@@ -711,36 +745,65 @@ export default function LorePlanBoard({ onError }: Props) {
                       </div>
                     );
                   })()}
+
                   {cardTasksLoading && <div style={{ fontSize: 11, color: 'var(--t3)' }}>Загрузка…</div>}
                   {!cardTasksLoading && cardTasks.length === 0 && (
                     <div style={{ fontSize: 11, color: 'var(--t3)' }}>Задачи не заведены.</div>
                   )}
-                  {!cardTasksLoading && cardTasks.length > 0 && (
-                    <div style={{
-                      display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                      columnGap: 24, rowGap: 1,
-                    }}>
-                      {cardTasks.map(t => {
-                        const meta = statusMeta(taskTick(t.status_raw).status);
-                        return (
-                          <div key={t.task_uid} style={{
-                            display: 'flex', alignItems: 'center', gap: 5,
-                            fontSize: 11, lineHeight: 1.7, color: 'var(--t2)', minWidth: 0,
-                          }}>
-                            <GameIcon slug={meta.icon} size={12} style={{ color: meta.color, flexShrink: 0 }} />
-                            <span style={{ color: 'var(--acc)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
-                              {t.task_id}
-                            </span>
-                            {t.title && <span style={{ color: 'var(--t1)', overflow: 'hidden',
-                              textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>}
-                            {t.effort_days != null && (
-                              <span style={{ color: 'var(--t3)', fontSize: 9, marginLeft: 'auto', flexShrink: 0 }}>{t.effort_days}d</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {!cardTasksLoading && cardTasks.length > 0 && (() => {
+                    const filtered = taskStatusFilter.size === 0
+                      ? cardTasks
+                      : cardTasks.filter(t => taskStatusFilter.has(taskTick(t.status_raw).status));
+                    return (
+                      <div style={{ overflowY: 'auto' }}>
+                        {filtered.map(t => {
+                          const meta    = statusMeta(taskTick(t.status_raw).status);
+                          const hasNote = !!(t.note_md && t.note_md.trim());
+                          const open    = selectedTaskUid === t.task_uid;
+                          return (
+                            <div key={t.task_uid}
+                              style={{ borderBottom: '1px solid color-mix(in srgb, var(--b2) 40%, transparent)' }}>
+                              <div
+                                onClick={() => hasNote && setSelectedTaskUid(open ? null : t.task_uid)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 5,
+                                  fontSize: 11, lineHeight: 1.7, color: 'var(--t2)', minWidth: 0,
+                                  cursor: hasNote ? 'pointer' : 'default', padding: '0 2px',
+                                }}
+                              >
+                                <GameIcon slug={meta.icon} size={12} style={{ color: meta.color, flexShrink: 0 }} />
+                                <span style={{ color: 'var(--acc)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                                  {t.task_id}
+                                </span>
+                                {t.title && (
+                                  <span style={{ color: 'var(--t1)', flex: 1, overflow: 'hidden',
+                                    textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
+                                )}
+                                <span style={{ marginLeft: 'auto', display: 'flex', gap: 4,
+                                  alignItems: 'center', flexShrink: 0 }}>
+                                  {t.effort_days != null && (
+                                    <span style={{ color: 'var(--t3)', fontSize: 9 }}>{t.effort_days}d</span>
+                                  )}
+                                  {hasNote && (
+                                    <span style={{ fontSize: 9, color: 'var(--t3)' }}>{open ? '▲' : '▼'}</span>
+                                  )}
+                                </span>
+                              </div>
+                              {open && hasNote && (
+                                <div style={{
+                                  fontSize: 11, color: 'var(--t2)', lineHeight: 1.6,
+                                  padding: '4px 8px 8px 22px', overflowX: 'auto',
+                                  background: 'color-mix(in srgb, var(--b2) 50%, transparent)',
+                                }}
+                                  dangerouslySetInnerHTML={{ __html: marked.parse(t.note_md!) as string }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

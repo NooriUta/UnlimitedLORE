@@ -159,7 +159,7 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
 }
 
 // Status-count chips for the sprint header: one chip per present status (icon + count).
-// Clicking a chip filters the task list to that status; clicking the active chip clears it.
+// Multi-select: click chips to show only those statuses; click again to deselect.
 const STATUS_COUNT_ORDER = ['done', 'active', 'partial', 'todo', 'blocked', 'cancelled'] as const;
 const STATUS_COUNT_LABEL: Record<string, string> = {
   done: 'Готово', active: 'В работе', partial: 'Частично', todo: 'В плане', blocked: 'Заблокировано',
@@ -168,8 +168,8 @@ const STATUS_COUNT_LABEL: Record<string, string> = {
 
 function StatusCounts({ tasks, filter, onFilter }: {
   tasks: LoreSprintTask[];
-  filter: string | null;
-  onFilter: (key: string | null) => void;
+  filter: Set<string>;
+  onFilter: (key: string) => void;
 }) {
   const counts: Record<string, number> = {};
   for (const t of tasks) {
@@ -179,17 +179,17 @@ function StatusCounts({ tasks, filter, onFilter }: {
   const shown = STATUS_COUNT_ORDER.filter(k => counts[k]);
   if (shown.length === 0) return null;
   return (
-    <span role="group" aria-label="Задачи по статусам (клик — фильтр)"
+    <span role="group" aria-label="Задачи по статусам (мультивыбор)"
       style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
       {shown.map(k => {
         const meta = statusMeta(k);
-        const active = filter === k;
+        const active = filter.has(k);
         return (
           <button
             key={k} type="button" aria-pressed={active}
-            title={`${STATUS_COUNT_LABEL[k]}: ${counts[k]} — ${active ? 'снять фильтр' : 'фильтровать'}`}
+            title={`${STATUS_COUNT_LABEL[k]}: ${counts[k]} — ${active ? 'снять' : 'фильтровать'}`}
             aria-label={`${STATUS_COUNT_LABEL[k]}: ${counts[k]}`}
-            onClick={() => onFilter(active ? null : k)}
+            onClick={() => onFilter(k)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3,
               padding: '0 6px', height: 18, borderRadius: 9, cursor: 'pointer',
@@ -314,6 +314,7 @@ function TaskLine({ t, onChanged, onError }: {
 }) {
   const meta = statusMeta(taskTick(t.status_raw).status);
   const hasDetail = !!(t.note_md && t.note_md.trim());
+  const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [title, setTitle]     = useState(t.title ?? '');
   const [note, setNote]       = useState(t.note_md ?? '');
@@ -334,10 +335,16 @@ function TaskLine({ t, onChanged, onError }: {
 
   return (
     <div style={{ borderBottom: '1px solid color-mix(in srgb, var(--b2) 45%, transparent)' }}>
-      <div style={S.task}>
+      <div
+        style={{ ...S.task, cursor: hasDetail && !editing ? 'pointer' : 'default' }}
+        onClick={() => { if (hasDetail && !editing) setExpanded(v => !v); }}
+      >
         <GameIcon slug={meta.icon} size={13} style={{ color: meta.color, alignSelf: 'center' }} />
         <span style={S.taskId}>{t.task_id}</span>
         {t.title && <span style={{ color: 'var(--t1)' }}>{t.title}</span>}
+        {hasDetail && !editing && (
+          <span style={{ fontSize: 9, color: 'var(--t3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
+        )}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           {t.effort_days != null && (
             <span style={{ color: 'var(--t3)', fontSize: 10 }}>{t.effort_days}d</span>
@@ -348,7 +355,7 @@ function TaskLine({ t, onChanged, onError }: {
             onChanged={onChanged} onError={onError}
           />
           <button type="button" style={iconBtn} title="Редактировать"
-            onClick={() => setEditing(v => !v)}>✎</button>
+            onClick={e => { e.stopPropagation(); setEditing(v => !v); }}>✎</button>
         </span>
       </div>
 
@@ -366,7 +373,7 @@ function TaskLine({ t, onChanged, onError }: {
         </div>
       )}
 
-      {hasDetail && !editing && (
+      {hasDetail && !editing && expanded && (
         <div style={mdBox} dangerouslySetInnerHTML={{ __html: mdHtml(t.note_md) }} />
       )}
     </div>
@@ -420,11 +427,14 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
   const [tasks,   setTasks]   = useState<LoreSprintTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
-  const [filter, setFilter]   = useState<string | null>(null);
+  const [filter, setFilter]   = useState<Set<string>>(new Set());
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
+  function toggleFilter(k: string) {
+    setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  }
 
   // Reset the status filter when switching sprints (not on in-place reloads).
-  useEffect(() => { setFilter(null); }, [sprintId]);
+  useEffect(() => { setFilter(new Set()); }, [sprintId]);
 
   useEffect(() => {
     setLoading(true);
@@ -464,8 +474,8 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
     setParams(p => { p.set('section', 'releases'); p.set('q', v); p.delete('passport'); return p; });
   }
 
-  // Optional status filter, driven by the header status-count chips.
-  const visibleTasks = filter ? tasks.filter(t => taskTick(t.status_raw).status === filter) : tasks;
+  // Optional status filter — multi-select; empty set = show all.
+  const visibleTasks = filter.size === 0 ? tasks : tasks.filter(t => filter.has(taskTick(t.status_raw).status));
 
   // Group tasks by phase; tasks with no phase fall into NO_PHASE bucket.
   const byPhase = new Map<string, LoreSprintTask[]>();
@@ -491,7 +501,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         />
         {tasks.length > 0 && (
           <>
-            <StatusCounts tasks={tasks} filter={filter} onFilter={setFilter} />
+            <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
             <span style={S.meta}>{doneTotal}/{tasks.length}</span>
           </>
         )}
@@ -581,10 +591,10 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         )}
 
         {/* Filter matched nothing (sprint has tasks, just none in the picked status) */}
-        {filter && tasks.length > 0 && visibleTasks.length === 0 && (
+        {filter.size > 0 && tasks.length > 0 && visibleTasks.length === 0 && (
           <div style={S.empty}>
-            Нет задач со статусом «{STATUS_COUNT_LABEL[filter]}».{' '}
-            <button type="button" onClick={() => setFilter(null)}
+            Нет задач с выбранными статусами.{' '}
+            <button type="button" onClick={() => setFilter(new Set())}
               style={{ ...ghostBtn, padding: '1px 6px' }}>сбросить фильтр</button>
           </div>
         )}
