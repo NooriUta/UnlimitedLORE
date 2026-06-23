@@ -249,11 +249,11 @@ export default function LorePlanBoard({ onError }: Props) {
     const tl = new Timeline(hostRef.current, itemsDS, groups, options);
     timelineRef.current = tl;
 
-    // Initial window: a wide ~6-week view so bar labels fit (was 9 — too cramped,
-    // ~half the names clipped). Anchored ~1 week before "now"; pan/zoom or
-    // «Уместить» reveals the full span.
-    const startW = Math.max(0, W_NOW - 1);
-    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 4), { animation: false });
+    // Initial window: ~16 weeks around today so multiple sprints are visible on
+    // load without pressing any button. «Сжать» fits everything, «Раздвинуть»
+    // returns to this 8-week detail view.
+    const startW = Math.max(0, W_NOW - 2);
+    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 16), { animation: false });
     // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
     // force one redraw on the next frame so the first paint is never blank.
     requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });
@@ -530,17 +530,17 @@ export default function LorePlanBoard({ onError }: Props) {
         <span style={S.divider} />
         <Tog active={showSprints} onClick={() => setShowSprints(v => !v)}>Спринты</Tog>
         <Tog active={showStubs}   onClick={() => setShowStubs(v => !v)}>Заглушки</Tog>
-        <button style={S.btn} onClick={() => timelineRef.current?.fit({ animation: true })}>
-          Уместить
+        <button style={S.btn} onClick={() => timelineRef.current?.fit({ animation: true })}
+          title="Уместить все бары в экран">
+          Сжать
         </button>
         <button style={S.btn} onClick={() => {
           if (!w0) return;
-          // «Сегодня» → put today at the LEFT edge (small lead so the now-line
-          // isn't clipped), ~6 weeks ahead — not centred.
+          // «Раздвинуть» → 8-week detail view starting just before today.
           timelineRef.current?.setWindow(
-            addWeeks(w0, W_NOW - 0.3), addWeeks(w0, W_NOW + 6), { animation: true });
-        }}>
-          Сегодня
+            addWeeks(w0, W_NOW - 0.3), addWeeks(w0, W_NOW + 8), { animation: true });
+        }} title="Раздвинуть — 8 недель вокруг сегодня">
+          Раздвинуть
         </button>
 
         <span style={{ flex: 1 }} />
