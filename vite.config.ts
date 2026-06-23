@@ -3,6 +3,17 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('mermaid') || id.includes('cytoscape') || id.includes('dagre')) {
+            return 'mermaid';
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 4400,
     proxy: {

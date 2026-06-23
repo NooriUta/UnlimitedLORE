@@ -481,44 +481,60 @@ export function ReferencesScreen() {
               const description = pickLocale(lang, undefined, r.description_en, r.description, r.description_ru);
               const relevance = pickLocale(lang, r.relevance_ru_sci, r.relevance_en, r.relevance, r.relevance_ru);
               const takeaway = pickLocale(lang, r.takeaway_ru_sci, r.takeaway_en, r.takeaway, r.takeaway_ru);
+              const srcs = srcByRef.get(r.ref_id) ?? [];
               return (
-                <div key={r.ref_id} style={{ padding: '5px 0', fontSize: 12, borderBottom: '1px solid var(--bd)' }}>
-                  <span style={{ color: 'var(--t1)' }}>{r.citation ?? r.ref_id}</span>
-                  {(r.venue || r.year) && (
-                    <span style={{ color: 'var(--t3)' }}> · {r.venue ?? ''}{r.year ? ` ${r.year}` : ''}</span>
+                <div key={r.ref_id} style={{ padding: '8px 0 10px', borderBottom: '1px solid var(--bd)' }}>
+                  {/* ── citation header ── */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)', lineHeight: 1.4 }}>
+                      {r.citation ?? r.ref_id}
+                    </span>
+                    {(r.venue || r.year) && (
+                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+                        {r.venue ?? ''}{r.year ? ` ${r.year}` : ''}
+                      </span>
+                    )}
+                    {r.link && (
+                      <a href={r.link} target="_blank" rel="noopener noreferrer"
+                         style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>
+                    )}
+                    {srcs.length > 0 && srcs.map(s => {
+                      const label = SRC_KIND_LABEL[s.kind ?? ''] ?? s.kind ?? 'src';
+                      const muted = s.kind === 'status' || !s.url;
+                      const chip: CSSProperties = {
+                        fontSize: 10, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap',
+                        border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
+                        background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 10%, transparent)`,
+                        color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none',
+                      };
+                      return muted ? (
+                        <span key={s.source_id} title={s.annotation} style={chip}>{label}</span>
+                      ) : (
+                        <a key={s.source_id} href={s.url} target="_blank" rel="noopener noreferrer"
+                           title={s.annotation} style={chip}>{label} ↗</a>
+                      );
+                    })}
+                  </div>
+                  {/* ── description ── */}
+                  {description && (
+                    <MartProse text={description} style={{ fontSize: 12, color: 'var(--t2)', marginTop: 4, lineHeight: 1.6 }} />
                   )}
-                  {description && <MartProse text={description} style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2 }} />}
-                  {takeaway && <MartProse text={takeaway} style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2, fontStyle: 'italic' }} />}
+                  {/* ── takeaway: left-border callout ── */}
+                  {takeaway && (
+                    <div style={{
+                      marginTop: 5, paddingLeft: 8,
+                      borderLeft: '2px solid color-mix(in srgb, var(--acc) 50%, transparent)',
+                    }}>
+                      <MartProse text={takeaway} style={{ fontSize: 11, color: 'var(--t2)', fontStyle: 'italic' }} />
+                    </div>
+                  )}
+                  {/* ── relevance: inline, labeled ── */}
                   {relevance && (
-                    <details style={{ marginTop: 3 }}>
-                      <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--acc)' }}>
-                        {t('bench.refs.relevance', 'how it shaped our method')}
-                      </summary>
-                      <MartProse text={relevance} style={{ maxWidth: 940, padding: '4px 0 0 14px' }} />
-                    </details>
-                  )}
-                  {r.link && (
-                    <a href={r.link} target="_blank" rel="noopener noreferrer"
-                       style={{ color: 'var(--acc)', fontSize: 11 }}>{r.link}</a>
-                  )}
-                  {(srcByRef.get(r.ref_id) ?? []).length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                      {(srcByRef.get(r.ref_id) ?? []).map(s => {
-                        const label = SRC_KIND_LABEL[s.kind ?? ''] ?? s.kind ?? 'src';
-                        const muted = s.kind === 'status' || !s.url;
-                        const chip: CSSProperties = {
-                          fontSize: 10, padding: '1px 6px', borderRadius: 3, whiteSpace: 'nowrap',
-                          border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
-                          background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 12%, transparent)`,
-                          color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none',
-                        };
-                        return muted ? (
-                          <span key={s.source_id} title={s.annotation} style={chip}>{label}</span>
-                        ) : (
-                          <a key={s.source_id} href={s.url} target="_blank" rel="noopener noreferrer"
-                             title={s.annotation} style={chip}>{label} ↗</a>
-                        );
-                      })}
+                    <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '1px solid var(--bd)' }}>
+                      <div style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600, marginBottom: 2, letterSpacing: 0.3 }}>
+                        ↳ {t('bench.refs.relevance', 'how it shaped our method')}
+                      </div>
+                      <MartProse text={relevance} style={{ fontSize: 11, color: 'var(--t2)' }} />
                     </div>
                   )}
                   {(cardsByRef.get(r.ref_id) ?? []).map(mc => (
