@@ -53,5 +53,6 @@ export function taskTick(statusRaw: string | null | undefined): { status: string
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return { status: 'partial', done: false };
   if (s.startsWith('🔴') || /^(BLOCK|ЗАБЛОК)/i.test(s)) return { status: 'blocked', done: false };
   if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return { status: 'cancelled', done: false };
+  if (s.startsWith('⬜') || /^(DEFER|ОТЛОЖЕН)/i.test(s)) return { status: 'deferred', done: false };
   return { status: 'todo', done: false };
 }
