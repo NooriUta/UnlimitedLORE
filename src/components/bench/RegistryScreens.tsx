@@ -288,34 +288,68 @@ function MethodCardBlock({ card }: { card: MethodCardRow }) {
     card.bird   ? `BIRD ${card.bird}`   : null,
     card.spider ? `Spider ${card.spider}` : null,
   ].filter(Boolean).join(' · ');
+  const mermaidSrc = card.mermaid ? '```mermaid\n' + card.mermaid + '\n```' : null;
+  const hasSections = card.architecture || card.prep || card.method || card.results || card.findings;
   return (
     <div style={{
-      marginTop: 6, borderRadius: 5, padding: '6px 10px',
+      marginTop: 6, borderRadius: 5,
       border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
-      background: 'color-mix(in srgb, var(--acc) 6%, transparent)',
+      background: 'color-mix(in srgb, var(--acc) 5%, transparent)',
+      overflow: 'hidden',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{card.name ?? card.card_id}</span>
+      {/* header */}
+      <div style={{
+        padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--acc) 15%, transparent)',
+      }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{card.name ?? card.card_id}</span>
         {card.group_name && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{card.group_name}</span>}
-        {card.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{card.date}</span>}
-        {scores && <span style={{ fontSize: 10, color: 'var(--acc)', marginLeft: 'auto' }}>{scores}</span>}
+        {card.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>· {card.date}</span>}
+        <span style={{ flex: 1 }} />
+        {scores && <span style={{ fontSize: 10, color: 'var(--acc)' }}>{scores}</span>}
         {card.link && (
           <a href={card.link} target="_blank" rel="noopener noreferrer"
              style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>
         )}
       </div>
-      {card.tldr && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5 }}>{card.tldr}</div>}
-      {card.hound && (
-        <div style={{ fontSize: 11, color: 'var(--wrn)', marginTop: 4, lineHeight: 1.5 }}>
-          <span style={{ fontWeight: 600 }}>↳ HOUND: </span>{card.hound}
-        </div>
-      )}
-      {card.md && (
-        <details style={{ marginTop: 4 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>полная карточка + диаграмма</summary>
-          <MartProse text={card.md} style={{ paddingTop: 8, paddingLeft: 4, maxWidth: 900 }} />
-        </details>
-      )}
+      {/* body */}
+      <div style={{ padding: '6px 10px 8px' }}>
+        {card.tldr && (
+          <p style={{
+            margin: '0 0 6px', fontSize: 12, color: 'var(--t2)', lineHeight: 1.55, fontStyle: 'italic',
+            borderLeft: '2px solid color-mix(in srgb, var(--acc) 40%, transparent)', paddingLeft: 8,
+          }}>
+            {card.tldr}
+          </p>
+        )}
+        {card.hound && (
+          <div style={{ fontSize: 11, color: 'var(--wrn)', lineHeight: 1.5, marginBottom: 6 }}>
+            <span style={{ fontWeight: 700 }}>↳ HOUND: </span>{card.hound}
+          </div>
+        )}
+        {mermaidSrc && <MartProse text={mermaidSrc} style={{ marginTop: 4 }} />}
+        {hasSections && (
+          <details style={{ marginTop: 6 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)', userSelect: 'none' }}>
+              детали методики
+            </summary>
+            <div style={{ paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {[
+                { label: 'Архитектура', val: card.architecture },
+                { label: 'Данные',      val: card.prep },
+                { label: 'Метод',       val: card.method },
+                { label: 'Результаты',  val: card.results },
+                { label: 'Выводы',      val: card.findings },
+              ].filter(s => s.val).map(s => (
+                <div key={s.label} style={{ fontSize: 11, lineHeight: 1.5 }}>
+                  <span style={{ color: 'var(--t3)', fontWeight: 600 }}>{s.label}: </span>
+                  <span style={{ color: 'var(--t2)' }}>{s.val}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
     </div>
   );
 }

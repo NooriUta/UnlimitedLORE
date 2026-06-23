@@ -58,7 +58,7 @@ interface RefRow {
 }
 
 interface SourceRow { source_id: string; ref_id: string | null; kind: string | null; url: string | null; annotation: string | null; }
-interface MethodCardRow { card_id: string; ref_id: string | null; name: string | null; group_name: string | null; date: string | null; bird: string | null; spider: string | null; link: string | null; tldr: string | null; architecture: string | null; method: string | null; findings: string | null; hound: string | null; md: string | null; }
+interface MethodCardRow { card_id: string; ref_id: string | null; name: string | null; group_name: string | null; date: string | null; bird: string | null; spider: string | null; link: string | null; tldr: string | null; architecture: string | null; prep: string | null; method: string | null; results: string | null; findings: string | null; hound: string | null; mermaid: string | null; md: string | null; }
 
 interface TopicRow {
   topic_id:  string;
@@ -332,23 +332,54 @@ function CardsView({
                     <div key={mc.card_id} style={{ marginTop: 10, borderRadius: 5, padding: '6px 10px',
                       border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
                       background: 'color-mix(in srgb, var(--acc) 6%, transparent)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{mc.name ?? mc.card_id}</span>
+                      {/* header */}
+                      <div style={{
+                        padding: '4px 8px', margin: '-6px -8px 6px',
+                        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                        borderBottom: '1px solid color-mix(in srgb, var(--acc) 15%, transparent)',
+                      }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{mc.name ?? mc.card_id}</span>
                         {mc.group_name && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{mc.group_name}</span>}
-                        {mc.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{mc.date}</span>}
+                        {mc.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>· {mc.date}</span>}
+                        <span style={{ flex: 1 }} />
                         {(mc.bird || mc.spider) && (
-                          <span style={{ fontSize: 10, color: 'var(--acc)', marginLeft: 'auto' }}>
+                          <span style={{ fontSize: 10, color: 'var(--acc)' }}>
                             {[mc.bird ? `BIRD ${mc.bird}` : null, mc.spider ? `Spider ${mc.spider}` : null].filter(Boolean).join(' · ')}
                           </span>
                         )}
                         {mc.link && <a href={mc.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>}
                       </div>
-                      {mc.tldr && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5 }}>{mc.tldr}</div>}
-                      {mc.hound && <div style={{ fontSize: 11, color: 'var(--wrn)', marginTop: 4, lineHeight: 1.5 }}><b>↳ HOUND: </b>{mc.hound}</div>}
-                      {mc.md && (
-                        <details style={{ marginTop: 4 }}>
-                          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>полная карточка + диаграмма</summary>
-                          <MartProse text={mc.md} style={{ paddingTop: 8, paddingLeft: 4, maxWidth: 900 }} />
+                      {mc.tldr && (
+                        <p style={{
+                          margin: '0 0 6px', fontSize: 12, color: 'var(--t2)', lineHeight: 1.55, fontStyle: 'italic',
+                          borderLeft: '2px solid color-mix(in srgb, var(--acc) 40%, transparent)', paddingLeft: 8,
+                        }}>{mc.tldr}</p>
+                      )}
+                      {mc.hound && (
+                        <div style={{ fontSize: 11, color: 'var(--wrn)', lineHeight: 1.5, marginBottom: 6 }}>
+                          <span style={{ fontWeight: 700 }}>↳ HOUND: </span>{mc.hound}
+                        </div>
+                      )}
+                      {mc.mermaid && (
+                        <MartProse text={'```mermaid\n' + mc.mermaid + '\n```'} style={{ marginTop: 4 }} />
+                      )}
+                      {(mc.architecture || mc.prep || mc.method || mc.results || mc.findings) && (
+                        <details style={{ marginTop: 6 }}>
+                          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)', userSelect: 'none' }}>детали методики</summary>
+                          <div style={{ paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {([
+                              { label: 'Архитектура', val: mc.architecture },
+                              { label: 'Данные',      val: mc.prep },
+                              { label: 'Метод',       val: mc.method },
+                              { label: 'Результаты',  val: mc.results },
+                              { label: 'Выводы',      val: mc.findings },
+                            ] as { label: string; val: string | null }[]).filter(s => s.val).map(s => (
+                              <div key={s.label} style={{ fontSize: 11, lineHeight: 1.5 }}>
+                                <span style={{ color: 'var(--t3)', fontWeight: 600 }}>{s.label}: </span>
+                                <span style={{ color: 'var(--t2)' }}>{s.val}</span>
+                              </div>
+                            ))}
+                          </div>
                         </details>
                       )}
                     </div>
