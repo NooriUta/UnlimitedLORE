@@ -281,6 +281,85 @@ export function FindingsScreen() {
   );
 }
 
+// ── NL2SQL method cards overview table ────────────────────────────────────────
+
+function MethodCardsOverview({ cards }: { cards: MethodCardRow[] }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const sorted = useMemo(() => [...cards].sort((a, b) => {
+    const fa = parseFloat((a.bird ?? '').replace(/[^0-9.]/g, '')) || 0;
+    const fb = parseFloat((b.bird ?? '').replace(/[^0-9.]/g, '')) || 0;
+    if (fb !== fa) return fb - fa;
+    return (a.date ?? '').localeCompare(b.date ?? '');
+  }), [cards]);
+
+  const TH: CSSProperties = {
+    fontSize: 10, fontWeight: 600, color: 'var(--t3)', padding: '3px 8px',
+    borderBottom: '1px solid var(--bd)', textAlign: 'left', whiteSpace: 'nowrap',
+  };
+  const TR_BASE: CSSProperties = {
+    cursor: 'pointer', borderBottom: '1px solid var(--bd)',
+  };
+
+  return (
+    <div className="analytics-card" style={{ marginBottom: 12 }}>
+      <div className="analytics-card-title">Конкуренты · NL2SQL — {cards.length} систем</div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={TH}>Метод</th>
+              <th style={TH}>Команда</th>
+              <th style={TH}>Дата</th>
+              <th style={{ ...TH, textAlign: 'right' }}>BIRD</th>
+              <th style={{ ...TH, textAlign: 'right' }}>Spider</th>
+              <th style={{ ...TH, width: '40%' }}>TL;DR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map(card => {
+              const isOpen = expandedId === card.card_id;
+              const rowBg = isOpen
+                ? 'color-mix(in srgb, var(--acc) 8%, transparent)'
+                : 'transparent';
+              return [
+                <tr key={card.card_id}
+                    onClick={() => setExpandedId(isOpen ? null : card.card_id)}
+                    style={{ ...TR_BASE, background: rowBg }}>
+                  <td style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
+                    {isOpen ? '▾ ' : '▸ '}{card.name ?? card.card_id}
+                  </td>
+                  <td style={{ fontSize: 11, color: 'var(--t3)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
+                    {card.group_name ?? '—'}
+                  </td>
+                  <td style={{ fontSize: 11, color: 'var(--t3)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
+                    {card.date ?? '—'}
+                  </td>
+                  <td style={{ fontSize: 11, color: card.bird ? 'var(--acc)' : 'var(--t3)', padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {card.bird || '—'}
+                  </td>
+                  <td style={{ fontSize: 11, color: card.spider ? 'var(--acc)' : 'var(--t3)', padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {card.spider || '—'}
+                  </td>
+                  <td style={{ fontSize: 11, color: 'var(--t2)', padding: '5px 8px', lineHeight: 1.4 }}>
+                    {(card.tldr ?? '').slice(0, 100)}{(card.tldr?.length ?? 0) > 100 ? '…' : ''}
+                  </td>
+                </tr>,
+                isOpen && (
+                  <tr key={`${card.card_id}-exp`}>
+                    <td colSpan={6} style={{ padding: '0 8px 12px 24px', background: rowBg }}>
+                      <MethodCardBlock card={card} />
+                    </td>
+                  </tr>
+                ),
+              ];
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── shared MethodCardBlock ────────────────────────────────────────────────────
 
 function MethodCardBlock({ card }: { card: MethodCardRow }) {
@@ -388,6 +467,9 @@ export function ReferencesScreen() {
     <div>
       <ScreenTitle text={t('bench.refs.title', 'Bibliography')}
                    hint={t('bench.refs.subtitle', 'ExpReference — what the method is grounded in (GROUNDED_IN)')} />
+      {(methodCards.rows ?? []).length > 0 && (
+        <MethodCardsOverview cards={methodCards.rows!} />
+      )}
       {[...groups.entries()].map(([group, items]) => {
         const firstRef = items.find(r => r.group_overview || r.group_overview_ru_sci || r.group_overview_en || r.group_overview_ru);
         const overview = firstRef ? pickLocale(lang, firstRef.group_overview_ru_sci, firstRef.group_overview_en, firstRef.group_overview, firstRef.group_overview_ru) : undefined;
