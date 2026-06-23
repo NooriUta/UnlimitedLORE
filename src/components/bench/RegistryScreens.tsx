@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMartSlice } from '../../hooks/useBench';
 import type {
-  CaseDimRow, FindingRow, GoldRow, GoldVerdictRow, HypothesisRow, ReferenceRow,
+  CaseDimRow, FindingRow, GoldRow, GoldVerdictRow, HypothesisRow, ReferenceRow, SourceRow,
   SubstrateRevAllRow, SubstrateRow,
 } from '../../utils/benchData';
 import { groupRevChains, pickLocale, substrateSortKey } from '../../utils/benchData';
@@ -13,6 +13,12 @@ import {
 } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
+
+// ExpSource.kind → short chip label.
+const SRC_KIND_LABEL: Record<string, string> = {
+  arxiv: 'arXiv', github: 'GitHub', huggingface: 'HF', doi: 'DOI',
+  project: 'project', other: 'link', status: 'нет репо',
+};
 
 /** "value × n" chips for the registry footers (the owner's aggregation rule) */
 function hist(values: Array<string | undefined>): Array<{ text: string }> {
@@ -278,6 +284,7 @@ export function ReferencesScreen() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const refs = useMartSlice<ReferenceRow>('references', EMPTY_PARAMS);
+  const sources = useMartSlice<SourceRow>('sources', EMPTY_PARAMS);
   if (refs.unavailable) return <PanelMsg kind="info" text={t('bench.unavailable', 'Experiment mart is unavailable')} onRetry={refs.reload} />;
   if (refs.error) return <PanelMsg kind="error" text={refs.error} onRetry={refs.reload} />;
   if (!refs.rows) return <PanelMsg kind="loading" text={t('bench.loading', 'Loading…')} />;
@@ -287,6 +294,13 @@ export function ReferencesScreen() {
     const g = r.ref_group ?? 'other';
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g)!.push(r);
+  }
+  // ExpSource links grouped by reference (git / HF / arXiv / doi …).
+  const srcByRef = new Map<string, SourceRow[]>();
+  for (const s of sources.rows ?? []) {
+    if (!s.ref_id) continue;
+    if (!srcByRef.has(s.ref_id)) srcByRef.set(s.ref_id, []);
+    srcByRef.get(s.ref_id)!.push(s);
   }
   return (
     <div>
@@ -320,6 +334,26 @@ export function ReferencesScreen() {
                   {r.link && (
                     <a href={r.link} target="_blank" rel="noopener noreferrer"
                        style={{ color: 'var(--acc)', fontSize: 11 }}>{r.link}</a>
+                  )}
+                  {(srcByRef.get(r.ref_id) ?? []).length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                      {(srcByRef.get(r.ref_id) ?? []).map(s => {
+                        const label = SRC_KIND_LABEL[s.kind ?? ''] ?? s.kind ?? 'src';
+                        const muted = s.kind === 'status' || !s.url;
+                        const chip: CSSProperties = {
+                          fontSize: 10, padding: '1px 6px', borderRadius: 3, whiteSpace: 'nowrap',
+                          border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
+                          background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 12%, transparent)`,
+                          color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none',
+                        };
+                        return muted ? (
+                          <span key={s.source_id} title={s.annotation} style={chip}>{label}</span>
+                        ) : (
+                          <a key={s.source_id} href={s.url} target="_blank" rel="noopener noreferrer"
+                             title={s.annotation} style={chip}>{label} ↗</a>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               );

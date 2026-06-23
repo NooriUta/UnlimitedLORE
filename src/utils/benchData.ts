@@ -189,6 +189,15 @@ export interface ReferenceRow {
   group_overview_en?: string;
 }
 
+/** A source link (git / HF / arXiv / doi …) attached to a reference (SRC_OF). */
+export interface SourceRow {
+  source_id: string;
+  ref_id?: string;
+  kind?: string;        // arxiv | github | huggingface | doi | project | other | status
+  url?: string;
+  annotation?: string;  // why this source correlates with the paper
+}
+
 export interface TaskRow {
   task_id: string;
   n_cases?: number;

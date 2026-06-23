@@ -95,6 +95,9 @@ public final class MartSlices {
             "relevance, relevance_ru_sci, relevance_ru, relevance_en, " +
             "group_overview, group_overview_ru_sci, group_overview_ru, group_overview_en " +
             "FROM ExpReference ORDER BY ref_group, ref_id");
+        // Source links per reference (ExpSource: git/HF/arXiv/doi/…, SRC_OF → ExpReference).
+        slice("sources",
+            "SELECT source_id, ref_id, kind, url, annotation FROM ExpSource ORDER BY ref_id, kind");
         // ── bibliography graph (BiblioScreen) — references + harmonization map ──
         // These replace the screen's former direct-to-ArcadeDB SQL: the browser
         // now sends NO SQL and NO credentials, going through the mart like the
