@@ -314,6 +314,7 @@ export function ReferencesScreen() {
             <div className="analytics-card-title">{group}</div>
             {overview && <MartProse text={overview} style={{ maxWidth: 940, marginBottom: 8 }} />}
             {items.map(r => {
+              const description = pickLocale(lang, undefined, r.description_en, r.description, r.description_ru);
               const relevance = pickLocale(lang, r.relevance_ru_sci, r.relevance_en, r.relevance, r.relevance_ru);
               const takeaway = pickLocale(lang, r.takeaway_ru_sci, r.takeaway_en, r.takeaway, r.takeaway_ru);
               return (
@@ -322,7 +323,8 @@ export function ReferencesScreen() {
                   {(r.venue || r.year) && (
                     <span style={{ color: 'var(--t3)' }}> · {r.venue ?? ''}{r.year ? ` ${r.year}` : ''}</span>
                   )}
-                  {takeaway && <div style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2 }}>{takeaway}</div>}
+                  {description && <div style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2 }}>{description}</div>}
+                  {takeaway && <div style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2, fontStyle: 'italic' }}>{takeaway}</div>}
                   {relevance && (
                     <details style={{ marginTop: 3 }}>
                       <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--acc)' }}>

@@ -91,6 +91,7 @@ public final class MartSlices {
         // every row of the group — the UI takes the first one)
         slice("references",
             "SELECT ref_id, citation, year, venue, link, ref_group, " +
+            "description, description_ru, description_en, " +
             "takeaway, takeaway_ru_sci, takeaway_ru, takeaway_en, " +
             "relevance, relevance_ru_sci, relevance_ru, relevance_en, " +
             "group_overview, group_overview_ru_sci, group_overview_ru, group_overview_en " +

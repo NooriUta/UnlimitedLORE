@@ -175,6 +175,9 @@ export interface ReferenceRow {
   venue?: string;
   link?: string;
   ref_group?: string;
+  description?: string;
+  description_ru?: string;
+  description_en?: string;
   takeaway?: string;
   takeaway_ru_sci?: string;
   takeaway_ru?: string;
