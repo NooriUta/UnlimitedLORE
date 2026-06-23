@@ -267,8 +267,7 @@ export default function LorePlanBoard({ onError }: Props) {
     tl.on('select', (props: { items: Array<string | number> }) => {
       const id = props.items[0];
       if (id == null) { setSprintCard(null); setMsPanel(null); return; }
-      let sid = String(id);
-      if (sid.startsWith('fact_')) sid = sid.slice(5);   // fact baseline → parent sprint
+      const sid = String(id);
       if (sid.startsWith('ms_')) {
         const ms = msByIdRef.current.get(sid.slice(3)) ?? null;
         setSprintCard(null); setMsPanel(ms);
@@ -364,39 +363,23 @@ export default function LorePlanBoard({ onError }: Props) {
         iconSlug = m.icon; iconColor = m.color;
       }
 
-      // Main bar = PLANNED span (the roadmap position, stable + labelled).
+      // One bar per sprint: if done with a known close date, show actual span;
+      // otherwise show planned span. Plan vs fact info surfaced in the tooltip.
+      const displayEnd = (isDone && weAct != null) ? weAct : we;
       next.push({
         id: item.item_id,
         group: item.track_id ?? UNTRACKED,
         content: statusIconSvg(iconSlug, iconColor) + esc(cleanLabel(item.label)),
         start: addWeeks(w0, ws),
-        end:   addWeeks(w0, Math.max(ws + 1, we)),
+        end:   addWeeks(w0, Math.max(ws + 1, displayEnd)),
         type: 'range',
         className: `it ${famClass}`,
         title: `${item.label}\nплан W${ws}–${we}`
-          + (weAct != null ? `\nфакт W${ws}–${weAct} (закрыт)` : '')
+          + (weAct != null ? `\nфакт W${ws}–${weAct}` : '')
           + (item.represents_sprint ? `\n${item.represents_sprint}` : '')
           + `\nстатус: ${effStatus}`,
       } as TimelineItem);
 
-      // Actual span = thin baseline under the bar (sprints only): done → close
-      // week; active → up to now. Green = finished early, amber = ran over plan.
-      if (item.represents_sprint) {
-        const factEnd = weAct != null ? weAct
-          : effStatus === 'active' ? Math.max(ws + 1, W_NOW) : null;
-        if (factEnd != null) {
-          next.push({
-            id: 'fact_' + item.item_id,
-            group: item.track_id ?? UNTRACKED,
-            content: '',
-            start: addWeeks(w0, ws),
-            end:   addWeeks(w0, Math.max(ws + 1, factEnd)),
-            type: 'range',
-            className: 'fact' + (factEnd < we ? ' early' : factEnd > we ? ' late' : ''),
-            title: `факт W${ws}–${factEnd}` + (isDone ? ' · закрыт' : ' · идёт'),
-          } as TimelineItem);
-        }
-      }
     }
 
     // Milestones (box) + their checkpoints count in the tooltip
@@ -609,10 +592,6 @@ export default function LorePlanBoard({ onError }: Props) {
         <span style={S.legendGlyph}>
           <span style={{ width: 16, height: 11, borderRadius: 2, display: 'inline-block',
             background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid var(--b3)' }} /> фаза
-        </span>
-        <span style={S.legendGlyph}>
-          <span style={{ width: 16, height: 8, borderRadius: 2, display: 'inline-block',
-            border: '1px dashed var(--t3)' }} /> факт (под баром-планом)
         </span>
         <span style={S.legendDim}>клик по бару → карточка спринта</span>
       </div>
