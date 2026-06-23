@@ -19,7 +19,7 @@ import { CasesScreen } from '../components/bench/CasesScreen';
 import { ParetoScreen } from '../components/bench/ParetoScreen';
 import { ReportScreen } from '../components/bench/ReportScreen';
 import {
-  CasesDimScreen, FindingsScreen, HypothesesScreen, ReferencesScreen, SubstratesScreen,
+  CasesDimScreen, DecisionsScreen, FindingsScreen, HypothesesScreen, ReferencesScreen, SubstratesScreen,
 } from '../components/bench/RegistryScreens';
 import { DictionariesScreen } from '../components/bench/DictionariesScreen';
 import { FinanceScreen } from '../components/bench/FinanceScreen';
@@ -37,7 +37,7 @@ const EMPTY_PARAMS: Record<string, string> = {};
 type TabId =
   | 'project' | 'story' | 'campaigns' | 'advisor' | 'report' | 'risks' | 'design'
   | 'substrates' | 'generations' | 'hypotheses' | 'findings'
-  | 'case_registry' | 'references' | 'biblio' | 'dictionaries' | 'metrics'
+  | 'case_registry' | 'references' | 'biblio' | 'dictionaries' | 'metrics' | 'decisions'
   | 'matrix' | 'semantic' | 'drift' | 'dispersion' | 'cases' | 'pareto' | 'finance' | 'winloss'
   | 'mcp';
 
@@ -74,6 +74,7 @@ const NAV_SECTIONS: Array<{
       { id: 'dictionaries', labelKey: 'bench.tabDictionaries', fallback: 'Dictionaries' },
       // N2: the legend behind every score (metric chips deep-link here)
       { id: 'metrics',     labelKey: 'bench.tabMetrics',     fallback: 'Metrics' },
+      { id: 'decisions',   labelKey: 'bench.tabDecisions',   fallback: 'Method decisions' },
     ],
   },
   {
@@ -299,6 +300,7 @@ export default function BenchmarkPage() {
           {tab === 'case_registry' && <CasesDimScreen />}
           {tab === 'references' && <ReferencesScreen />}
           {tab === 'dictionaries' && <DictionariesScreen />}
+          {tab === 'decisions' && <DecisionsScreen />}
           {/* HBR-11 narrative pages (N1–N4): all prose from the mart */}
           {tab === 'project' && <ProjectScreen />}
           {tab === 'metrics' && (

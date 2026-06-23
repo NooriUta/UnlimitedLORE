@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMartSlice } from '../../hooks/useBench';
 import type {
-  CaseDimRow, FindingRow, GoldRow, GoldVerdictRow, HypothesisRow, ReferenceRow, SourceRow,
+  CaseDimRow, DecisionRow, FindingRow, GoldRow, GoldVerdictRow, HypothesisRow, ReferenceRow, SourceRow,
   SubstrateRevAllRow, SubstrateRow,
 } from '../../utils/benchData';
 import { groupRevChains, pickLocale, substrateSortKey } from '../../utils/benchData';
@@ -527,6 +527,150 @@ export function CasesDimScreen() {
           }],
         },
       ]} />
+    </div>
+  );
+}
+
+// ── status helpers for method decisions ──────────────────────────────────────
+
+const DEC_STATUS_ORDER: Record<string, number> = { adopted: 0, under_review: 1, superseded: 2 };
+const DEC_STATUS_TONE: Record<string, string> = {
+  adopted: 'var(--suc)', under_review: 'var(--wrn)', superseded: 'var(--t3)',
+};
+const DEC_STATUS_LABEL: Record<string, { ru: string; en: string }> = {
+  adopted:      { ru: 'принято',     en: 'adopted' },
+  under_review: { ru: 'на ревью',    en: 'under review' },
+  superseded:   { ru: 'пересмотрено', en: 'superseded' },
+};
+
+// ── DecisionsScreen — «Методологические решения / Method Decisions» ──────────
+
+export function DecisionsScreen() {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const [q, setQ] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const decisions = useMartSlice<DecisionRow>('decisions', EMPTY_PARAMS);
+
+  if (decisions.unavailable) return <PanelMsg kind="info" text={t('bench.unavailable', 'Experiment mart is unavailable')} onRetry={decisions.reload} />;
+  if (decisions.error) return <PanelMsg kind="error" text={decisions.error} onRetry={decisions.reload} />;
+  if (!decisions.rows) return <PanelMsg kind="loading" text={t('bench.loading', 'Loading…')} />;
+
+  const needle = q.toLowerCase();
+  const filtered = (decisions.rows ?? [])
+    .filter(d => !statusFilter || d.status === statusFilter)
+    .filter(d => !needle
+      || d.decision_id.toLowerCase().includes(needle)
+      || (d.topic ?? '').toLowerCase().includes(needle)
+      || (d.decision ?? '').toLowerCase().includes(needle)
+      || (d.rationale ?? '').toLowerCase().includes(needle))
+    .slice()
+    .sort((a, b) =>
+      (DEC_STATUS_ORDER[a.status ?? ''] ?? 9) - (DEC_STATUS_ORDER[b.status ?? ''] ?? 9)
+      || (a.topic ?? '').localeCompare(b.topic ?? ''));
+
+  const byStatus = (decisions.rows ?? []).reduce<Record<string, number>>((acc, d) => {
+    const s = d.status ?? 'unknown';
+    acc[s] = (acc[s] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <ScreenTitle
+        text={t('bench.decisions.title', 'Методологические решения')}
+        hint={`${decisions.rows!.length} решений`}
+      />
+
+      {/* filter bar */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          placeholder={t('bench.decisions.search', 'Поиск по теме, тексту, ратионалу…')}
+          value={q} onChange={e => setQ(e.target.value)}
+          style={{ padding: '3px 8px', fontSize: 12, borderRadius: 4,
+            border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--t1)',
+            minWidth: 260 }}
+        />
+        {(['', 'adopted', 'under_review', 'superseded'] as const).map(s => (
+          <button key={s}
+            onClick={() => setStatusFilter(s)}
+            style={{
+              padding: '2px 10px', fontSize: 11, borderRadius: 10, cursor: 'pointer',
+              border: `1px solid ${s === statusFilter ? DEC_STATUS_TONE[s] ?? 'var(--acc)' : 'var(--bd)'}`,
+              background: s === statusFilter
+                ? `color-mix(in srgb, ${DEC_STATUS_TONE[s] ?? 'var(--acc)'} 18%, transparent)`
+                : 'transparent',
+              color: s === statusFilter ? (DEC_STATUS_TONE[s] ?? 'var(--acc)') : 'var(--t2)',
+            }}>
+            {s === '' ? `все · ${decisions.rows!.length}`
+              : `${DEC_STATUS_LABEL[s]?.[lang === 'ru' ? 'ru' : 'en'] ?? s} · ${byStatus[s] ?? 0}`}
+          </button>
+        ))}
+      </div>
+
+      {/* decision cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {filtered.map(d => {
+          const decText  = pickLocale(lang, d.decision_ru_sci, d.decision_en, d.decision, d.decision_ru);
+          const ratText  = pickLocale(lang, d.rationale_ru_sci, d.rationale_en, d.rationale, d.rationale_ru);
+          const statusColor = DEC_STATUS_TONE[d.status ?? ''] ?? 'var(--t3)';
+          const statusLabel = DEC_STATUS_LABEL[d.status ?? '']?.[lang === 'ru' ? 'ru' : 'en'] ?? d.status ?? '—';
+          return (
+            <div key={d.decision_id}
+                 style={{
+                   border: '1px solid var(--bd)', borderRadius: 6, padding: '10px 14px',
+                   borderLeft: `3px solid ${statusColor}`,
+                   background: 'color-mix(in srgb, var(--bg2) 40%, transparent)',
+                 }}>
+              {/* header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' }}>
+                  {d.decision_id}
+                </span>
+                {d.topic && (
+                  <span style={{
+                    fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                    background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
+                    color: 'var(--acc)',
+                  }}>{d.topic}</span>
+                )}
+                {d.phase_id && (
+                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{d.phase_id}</span>
+                )}
+                <span style={{ marginLeft: 'auto', fontSize: 10, color: statusColor }}>
+                  {statusLabel}
+                </span>
+                {d.created_ts && (
+                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{d.created_ts}</span>
+                )}
+              </div>
+
+              {/* decision text */}
+              {decText && (
+                <div style={{ marginTop: 6, fontSize: 13, color: 'var(--t1)', lineHeight: 1.5 }}>
+                  {decText}
+                </div>
+              )}
+
+              {/* rationale */}
+              {ratText && (
+                <details style={{ marginTop: 6 }}>
+                  <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--acc)' }}>
+                    {t('bench.decisions.rationale', 'обоснование')}
+                  </summary>
+                  <MartProse text={ratText} style={{ padding: '4px 0 0 14px', maxWidth: 900 }} />
+                </details>
+              )}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div style={{ color: 'var(--t3)', fontSize: 12, padding: '12px 0' }}>
+            {t('bench.noMatch', 'Нет совпадений')}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
