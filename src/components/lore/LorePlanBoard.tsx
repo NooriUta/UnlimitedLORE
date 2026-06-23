@@ -316,9 +316,11 @@ export default function LorePlanBoard({ onError }: Props) {
       } as TimelineItem);
     }
 
-    // Plan-item bars — one sprint = one bar: skip duplicate plan items for the same sprint.
+    // Plan-item bars — real sprints first so stubs never displace them during dedup.
     const seenSprints = new Set<string>();
-    for (const item of items) {
+    const sortedItems = [...items].sort((a, b) =>
+      (a.represents_sprint ? 0 : 1) - (b.represents_sprint ? 0 : 1));
+    for (const item of sortedItems) {
       const ws = item.week_start;
       const we = item.week_end;
       if (ws == null || we == null) continue;                 // unpositioned → skip
