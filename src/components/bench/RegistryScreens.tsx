@@ -405,8 +405,8 @@ export function ReferencesScreen() {
                   {(r.venue || r.year) && (
                     <span style={{ color: 'var(--t3)' }}> · {r.venue ?? ''}{r.year ? ` ${r.year}` : ''}</span>
                   )}
-                  {description && <div style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2 }}>{description}</div>}
-                  {takeaway && <div style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2, fontStyle: 'italic' }}>{takeaway}</div>}
+                  {description && <MartProse text={description} style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2 }} />}
+                  {takeaway && <MartProse text={takeaway} style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2, fontStyle: 'italic' }} />}
                   {relevance && (
                     <details style={{ marginTop: 3 }}>
                       <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--acc)' }}>

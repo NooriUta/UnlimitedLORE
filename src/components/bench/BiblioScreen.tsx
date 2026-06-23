@@ -295,7 +295,7 @@ function CardsView({
                   </span>
                 </div>
                 <span style={S.citation}>{r.citation}</span>
-                {description && <div style={{ fontSize: 11, color: 'var(--t2)', margin: '2px 0 0', lineHeight: 1.5 }}>{description}</div>}
+                {description && <MartProse text={description} style={{ fontSize: 11, color: 'var(--t2)', margin: '2px 0 0', lineHeight: 1.5 }} />}
                 {takeaway && <MartProse text={takeaway} style={{ fontSize: 11, color: 'var(--t3)', margin: '2px 0 0', fontStyle: 'italic' }} />}
                 {refSrcs.length > 0 && (
                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
