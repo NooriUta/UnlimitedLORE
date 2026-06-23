@@ -192,6 +192,27 @@ export interface ReferenceRow {
   group_overview_en?: string;
 }
 
+/** Competitor / related-work method card (CARD_OF → ExpReference). */
+export interface MethodCardRow {
+  card_id: string;
+  ref_id?: string;
+  name?: string;
+  group_name?: string;
+  date?: string;
+  bird?: string;
+  spider?: string;
+  link?: string;
+  tldr?: string;
+  architecture?: string;
+  prep?: string;
+  method?: string;
+  results?: string;
+  findings?: string;
+  hound?: string;  // how this system relates to our HOUND experiment
+  mermaid?: string;
+  md?: string;
+}
+
 /** A source link (git / HF / arXiv / doi …) attached to a reference (SRC_OF). */
 export interface SourceRow {
   source_id: string;

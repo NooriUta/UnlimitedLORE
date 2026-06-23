@@ -40,6 +40,9 @@ interface RefRow {
   ref_group:            string | null;
   year:                 number | null;
   link:                 string | null;
+  description:          string | null;
+  description_ru:       string | null;
+  description_en:       string | null;
   relevance_ru:         string | null;
   relevance_ru_sci:     string | null;
   relevance_en:         string | null;
@@ -53,6 +56,9 @@ interface RefRow {
   group_overview_en:    string | null;
   group_overview:       string | null;
 }
+
+interface SourceRow { source_id: string; ref_id: string | null; kind: string | null; url: string | null; annotation: string | null; }
+interface MethodCardRow { card_id: string; ref_id: string | null; name: string | null; group_name: string | null; date: string | null; bird: string | null; spider: string | null; link: string | null; tldr: string | null; architecture: string | null; method: string | null; findings: string | null; hound: string | null; }
 
 interface TopicRow {
   topic_id:  string;
@@ -148,12 +154,14 @@ const ROLE_COLOR: Record<string, string> = {
 
 /* ── ── ── Cards View ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── */
 function CardsView({
-  refs, topics, refTopics, lang,
+  refs, topics, refTopics, lang, srcByRef, cardsByRef,
 }: {
   refs: RefRow[];
   topics: TopicRow[];
   refTopics: Map<string, string[]>;
   lang: LangMode;
+  srcByRef: Map<string, SourceRow[]>;
+  cardsByRef: Map<string, MethodCardRow[]>;
 }) {
   const [search,   setSearch]   = useState('');
   const [role,     setRole]     = useState('');
@@ -253,10 +261,13 @@ function CardsView({
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }} className="lore-panel-scroll">
         {visible.map(r => {
           const isOpen      = expanded === r.ref_id;
+          const description = pick(lang, r.description_ru, null, r.description_en, r.description);
           const relevance   = pick(lang, r.relevance_ru, r.relevance_ru_sci, r.relevance_en, r.relevance);
           const takeaway    = pick(lang, r.takeaway_ru, r.takeaway_ru_sci, r.takeaway_en, r.takeaway);
           const groupOv     = pick(lang, r.group_overview_ru, r.group_overview_ru_sci, r.group_overview_en, r.group_overview);
           const cardTopics  = refTopics.get(r.ref_id) ?? [];
+          const refSrcs     = srcByRef.get(r.ref_id) ?? [];
+          const refCards    = cardsByRef.get(r.ref_id) ?? [];
           return (
             <div key={r.ref_id} style={{ ...S.card, ...(isOpen ? S.cardOpen : {}) }}>
               <div style={S.cardHead} onClick={() => setExpanded(isOpen ? null : r.ref_id)}>
@@ -284,7 +295,24 @@ function CardsView({
                   </span>
                 </div>
                 <span style={S.citation}>{r.citation}</span>
-                {takeaway && <MartProse text={takeaway} style={{ fontSize: 11, color: 'var(--t3)', margin: '2px 0 0' }} />}
+                {description && <div style={{ fontSize: 11, color: 'var(--t2)', margin: '2px 0 0', lineHeight: 1.5 }}>{description}</div>}
+                {takeaway && <MartProse text={takeaway} style={{ fontSize: 11, color: 'var(--t3)', margin: '2px 0 0', fontStyle: 'italic' }} />}
+                {refSrcs.length > 0 && (
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
+                    {refSrcs.map(s => {
+                      const SRC_LABELS: Record<string, string> = { arxiv: 'arXiv', github: 'GitHub', huggingface: 'HF', doi: 'DOI', project: 'project', other: 'link', status: 'нет репо' };
+                      const label = SRC_LABELS[s.kind ?? ''] ?? s.kind ?? 'src';
+                      const muted = s.kind === 'status' || !s.url;
+                      const chip = { fontSize: 10, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' as const,
+                        border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
+                        background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 12%, transparent)`,
+                        color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none' as const };
+                      return muted
+                        ? <span key={s.source_id} title={s.annotation ?? undefined} style={chip}>{label}</span>
+                        : <a key={s.source_id} href={s.url!} target="_blank" rel="noopener noreferrer" title={s.annotation ?? undefined} style={chip}>{label} ↗</a>;
+                    })}
+                  </div>
+                )}
               </div>
               {isOpen && (
                 <div style={S.cardBody}>
@@ -300,6 +328,35 @@ function CardsView({
                       <MartProse text={relevance} />
                     </div>
                   )}
+                  {refCards.map(mc => (
+                    <div key={mc.card_id} style={{ marginTop: 10, borderRadius: 5, padding: '6px 10px',
+                      border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
+                      background: 'color-mix(in srgb, var(--acc) 6%, transparent)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{mc.name ?? mc.card_id}</span>
+                        {mc.group_name && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{mc.group_name}</span>}
+                        {mc.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{mc.date}</span>}
+                        {(mc.bird || mc.spider) && (
+                          <span style={{ fontSize: 10, color: 'var(--acc)', marginLeft: 'auto' }}>
+                            {[mc.bird ? `BIRD ${mc.bird}` : null, mc.spider ? `Spider ${mc.spider}` : null].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                        {mc.link && <a href={mc.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>}
+                      </div>
+                      {mc.tldr && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5 }}>{mc.tldr}</div>}
+                      {mc.hound && <div style={{ fontSize: 11, color: 'var(--wrn)', marginTop: 4, lineHeight: 1.5 }}><b>↳ HOUND: </b>{mc.hound}</div>}
+                      {(mc.findings || mc.architecture || mc.method) && (
+                        <details style={{ marginTop: 4 }}>
+                          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>подробнее</summary>
+                          <div style={{ paddingTop: 4, paddingLeft: 10 }}>
+                            {mc.findings && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Findings:</b> {mc.findings}</div>}
+                            {mc.architecture && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Архитектура:</b> {mc.architecture}</div>}
+                            {mc.method && <div style={{ fontSize: 11, color: 'var(--t2)' }}><b>Метод:</b> {mc.method}</div>}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1082,6 +1139,8 @@ export function BiblioScreen({ onError }: Props) {
   const [interEdges, setInterEdges] = useState<InterNodeEdge[]>([]);
   const [topics,     setTopics]     = useState<TopicRow[]>([]);
   const [refTopics,  setRefTopics]  = useState<Map<string, string[]>>(new Map());
+  const [srcByRef,   setSrcByRef]   = useState<Map<string, SourceRow[]>>(new Map());
+  const [cardsByRef, setCardsByRef] = useState<Map<string, MethodCardRow[]>>(new Map());
 
   useEffect(() => {
     Promise.all([
@@ -1093,8 +1152,10 @@ export function BiblioScreen({ onError }: Props) {
       fetchSlice<{ from_node: string; edge_types: string[] | null; to_nodes: string[] | null }>(
         'biblio_node_edges',
       ),
+      fetchSlice<SourceRow>('sources'),
+      fetchSlice<MethodCardRow>('method_cards'),
     ])
-      .then(([r, n, e, t, rt, ie]) => {
+      .then(([r, n, e, t, rt, ie, srcs, mcards]) => {
         setRefs(r);
         setNodes(n);
         setTopics(t);
@@ -1122,6 +1183,12 @@ export function BiblioScreen({ onError }: Props) {
           if (tids.length) tm.set(row.ref_id, tids);
         }
         setRefTopics(tm);
+        const sm = new Map<string, SourceRow[]>();
+        for (const s of srcs) { if (s.ref_id) { if (!sm.has(s.ref_id)) sm.set(s.ref_id, []); sm.get(s.ref_id)!.push(s); } }
+        setSrcByRef(sm);
+        const cm = new Map<string, MethodCardRow[]>();
+        for (const c of mcards) { if (c.ref_id) { if (!cm.has(c.ref_id)) cm.set(c.ref_id, []); cm.get(c.ref_id)!.push(c); } }
+        setCardsByRef(cm);
         setLoading(false);
       })
       .catch(err => {
@@ -1166,7 +1233,7 @@ export function BiblioScreen({ onError }: Props) {
 
       {/* Content */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-        {view === 'cards' && <CardsView refs={refs} topics={topics} refTopics={refTopics} lang={lang} />}
+        {view === 'cards' && <CardsView refs={refs} topics={topics} refTopics={refTopics} lang={lang} srcByRef={srcByRef} cardsByRef={cardsByRef} />}
         {view === 'slice' && <SliceView nodes={nodes} refs={refs} edges={edges} interEdges={interEdges} lang={lang} />}
         {view === 'graph' && <GraphView nodes={nodes} refs={refs} edges={edges} interEdges={interEdges} lang={lang} />}
       </div>

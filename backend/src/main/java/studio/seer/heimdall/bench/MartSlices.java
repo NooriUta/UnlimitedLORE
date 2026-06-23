@@ -105,10 +105,16 @@ public final class MartSlices {
         // rest of the bench panel.
         slice("biblio_refs",
             "SELECT ref_id, citation, source_role, ref_group, year, link, " +
+            "description, description_ru, description_en, " +
             "relevance_ru, relevance_ru_sci, relevance_en, relevance, " +
             "takeaway_ru, takeaway_ru_sci, takeaway_en, takeaway, " +
             "group_overview_ru, group_overview_ru_sci, group_overview_en, group_overview " +
             "FROM ExpReference ORDER BY year DESC");
+        // ExpMethodCard: detailed competitor/related-work cards (CARD_OF → ExpReference)
+        slice("method_cards",
+            "SELECT card_id, ref_id, name, group_name, date, bird, spider, link, " +
+            "tldr, architecture, prep, method, results, findings, hound, mermaid, md " +
+            "FROM ExpMethodCard ORDER BY card_id");
         slice("biblio_nodes",
             "SELECT node_id, kind, title, label_ru, label_en, summary_ru, summary_en, " +
             "description_ru_sci, description_en FROM ExpHarmonizationNode ORDER BY kind DESC, node_id");

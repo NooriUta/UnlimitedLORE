@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMartSlice } from '../../hooks/useBench';
 import type {
-  CaseDimRow, DecisionRow, FindingRow, GoldRow, GoldVerdictRow, HypothesisRow, ReferenceRow, SourceRow,
+  CaseDimRow, DecisionRow, FindingRow, GoldRow, GoldVerdictRow, HypothesisRow,
+  MethodCardRow, ReferenceRow, SourceRow,
   SubstrateRevAllRow, SubstrateRow,
 } from '../../utils/benchData';
 import { groupRevChains, pickLocale, substrateSortKey } from '../../utils/benchData';
@@ -280,11 +281,55 @@ export function FindingsScreen() {
   );
 }
 
+// ── shared MethodCardBlock ────────────────────────────────────────────────────
+
+function MethodCardBlock({ card }: { card: MethodCardRow }) {
+  const scores = [
+    card.bird   ? `BIRD ${card.bird}`   : null,
+    card.spider ? `Spider ${card.spider}` : null,
+  ].filter(Boolean).join(' · ');
+  return (
+    <div style={{
+      marginTop: 6, borderRadius: 5, padding: '6px 10px',
+      border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
+      background: 'color-mix(in srgb, var(--acc) 6%, transparent)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{card.name ?? card.card_id}</span>
+        {card.group_name && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{card.group_name}</span>}
+        {card.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{card.date}</span>}
+        {scores && <span style={{ fontSize: 10, color: 'var(--acc)', marginLeft: 'auto' }}>{scores}</span>}
+        {card.link && (
+          <a href={card.link} target="_blank" rel="noopener noreferrer"
+             style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>
+        )}
+      </div>
+      {card.tldr && <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5 }}>{card.tldr}</div>}
+      {card.hound && (
+        <div style={{ fontSize: 11, color: 'var(--wrn)', marginTop: 4, lineHeight: 1.5 }}>
+          <span style={{ fontWeight: 600 }}>↳ HOUND: </span>{card.hound}
+        </div>
+      )}
+      {(card.findings || card.architecture || card.method) && (
+        <details style={{ marginTop: 4 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)' }}>подробнее</summary>
+          <div style={{ paddingTop: 4, paddingLeft: 10 }}>
+            {card.findings && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Findings:</b> {card.findings}</div>}
+            {card.architecture && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 4 }}><b>Архитектура:</b> {card.architecture}</div>}
+            {card.method && <div style={{ fontSize: 11, color: 'var(--t2)' }}><b>Метод:</b> {card.method}</div>}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export function ReferencesScreen() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const refs = useMartSlice<ReferenceRow>('references', EMPTY_PARAMS);
   const sources = useMartSlice<SourceRow>('sources', EMPTY_PARAMS);
+  const methodCards = useMartSlice<MethodCardRow>('method_cards', EMPTY_PARAMS);
   if (refs.unavailable) return <PanelMsg kind="info" text={t('bench.unavailable', 'Experiment mart is unavailable')} onRetry={refs.reload} />;
   if (refs.error) return <PanelMsg kind="error" text={refs.error} onRetry={refs.reload} />;
   if (!refs.rows) return <PanelMsg kind="loading" text={t('bench.loading', 'Loading…')} />;
@@ -301,6 +346,13 @@ export function ReferencesScreen() {
     if (!s.ref_id) continue;
     if (!srcByRef.has(s.ref_id)) srcByRef.set(s.ref_id, []);
     srcByRef.get(s.ref_id)!.push(s);
+  }
+  // ExpMethodCard competitor cards grouped by reference.
+  const cardsByRef = new Map<string, MethodCardRow[]>();
+  for (const c of methodCards.rows ?? []) {
+    if (!c.ref_id) continue;
+    if (!cardsByRef.has(c.ref_id)) cardsByRef.set(c.ref_id, []);
+    cardsByRef.get(c.ref_id)!.push(c);
   }
   return (
     <div>
@@ -357,6 +409,9 @@ export function ReferencesScreen() {
                       })}
                     </div>
                   )}
+                  {(cardsByRef.get(r.ref_id) ?? []).map(mc => (
+                    <MethodCardBlock key={mc.card_id} card={mc} />
+                  ))}
                 </div>
               );
             })}
