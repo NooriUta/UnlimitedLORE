@@ -748,25 +748,38 @@ const RF_NODE_TYPES = {
   source:    SourceNodeComp,
 };
 
+const SRC_KIND_LABEL: Record<string, string> = {
+  arxiv: 'arXiv', github: 'GitHub', huggingface: 'HF', doi: 'DOI',
+  pdf: 'PDF', demo: 'Demo', blog: 'Blog', video: 'Video', dataset: 'Dataset',
+};
+
 /* ── ── ── Graph View ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── */
 function GraphView({
-  nodes, refs, edges, interEdges = [], lang,
+  nodes, refs, edges, interEdges = [], lang, srcByRef,
 }: {
   nodes: HarmoNode[];
   refs: RefRow[];
   edges: EdgeLink[];
   interEdges?: InterNodeEdge[];
   lang: LangMode;
+  srcByRef: Map<string, SourceRow[]>;
 }) {
   const [sel,            setSel]            = useState<string | null>(null);
   const [challengeLayer, setChallengeLayer] = useState(false);
   const [panelRef,       setPanelRef]       = useState<RefRow | null>(null);
+  const [panelNode,      setPanelNode]      = useState<HarmoNode | null>(null);
 
   const refMap = useMemo(() => {
     const m = new Map<string, RefRow>();
     refs.forEach(r => m.set(r.ref_id, r));
     return m;
   }, [refs]);
+
+  const nodeMap = useMemo(() => {
+    const m = new Map<string, HarmoNode>();
+    nodes.forEach(n => m.set(n.node_id, n));
+    return m;
+  }, [nodes]);
 
   // distinct refs referenced by any edge (the source nodes on the right)
   const refIds = useMemo(() => [...new Set(edges.map(e => e.to_ref))], [edges]);
@@ -992,19 +1005,26 @@ function GraphView({
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.type === 'construct') {
-      setSel(prev => prev === node.id ? null : node.id);
+      const nodeId = node.id;
+      setSel(prev => prev === nodeId ? null : nodeId);
       setChallengeLayer(false);
-      setPanelRef(null);            // close ref panel + clear reverse-highlight
+      setPanelRef(null);
+      setPanelNode(prev => prev?.node_id === nodeId ? null : (nodeMap.get(nodeId) ?? null));
     } else if (node.type === 'source') {
       const refId = String(node.data.ref_id);
-      setSel(null);                 // clear forward-highlight
+      setSel(null);
       setChallengeLayer(false);
+      setPanelNode(null);
       setPanelRef(prev => prev?.ref_id === refId ? null : (refMap.get(refId) ?? null));
     }
-  }, [refMap]);
+  }, [refMap, nodeMap]);
 
   const panelRelevance = panelRef ? pick(lang, panelRef.relevance_ru, panelRef.relevance_ru_sci, panelRef.relevance_en, panelRef.relevance) : '';
   const panelTakeaway  = panelRef ? pick(lang, panelRef.takeaway_ru,  panelRef.takeaway_ru_sci,  panelRef.takeaway_en,  panelRef.takeaway)  : '';
+
+  const nodeLabel   = panelNode ? (lang === 'en' ? panelNode.label_en : panelNode.label_ru) ?? panelNode.title ?? panelNode.node_id : '';
+  const nodeSummary = panelNode ? (lang === 'en' ? panelNode.summary_en : panelNode.summary_ru) : null;
+  const nodeDesc    = panelNode ? (lang === 'en' ? panelNode.description_en : panelNode.description_ru_sci) : null;
 
   /* Do NOT remount on layout change — a fresh ReactFlow instance fails to
      re-measure handles and edges vanish. Keep one instance, refit via the API
@@ -1070,9 +1090,11 @@ function GraphView({
         <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--t3)' }}>
           {challengeLayer
             ? `Слой CHALLENGED_BY`
-            : sel
-              ? `${sel} · рёбра выделены`
-              : 'Кликните конструкт'}
+            : panelNode
+              ? `${panelNode.node_id} · конструкт`
+              : sel
+                ? `${sel} · рёбра выделены`
+                : 'Кликните конструкт или источник'}
         </span>
       </div>
 
@@ -1081,7 +1103,7 @@ function GraphView({
           height regardless of the flex chain above it. minHeight is the fallback
           when the chain collapses (e.g. in narrow iframes / SSR). */}
       <div style={{ flex: 1, position: 'relative', minHeight: 400, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, right: panelRef ? 300 : 0, bottom: 0 }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: (panelRef || panelNode) ? 300 : 0, bottom: 0 }}>
           <ReactFlow
             key="graph"
             onInit={inst => { rfRef.current = inst; }}
@@ -1127,9 +1149,29 @@ function GraphView({
             <p style={{ fontSize: 11, color: 'var(--t1)', margin: '8px 0' }}>{panelRef.citation}</p>
             {panelRef.link && (
               <a href={resolveRefUrl(panelRef.link)} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: 10, color: 'var(--acc)', wordBreak: 'break-all', display: 'block', marginBottom: 8 }}>
+                style={{ fontSize: 10, color: 'var(--acc)', wordBreak: 'break-all', display: 'block', marginBottom: 6 }}>
                 ↗ {resolveRefUrl(panelRef.link)}
               </a>
+            )}
+            {(srcByRef.get(panelRef.ref_id) ?? []).length > 0 && (
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
+                {(srcByRef.get(panelRef.ref_id) ?? []).map(s => {
+                  const label = SRC_KIND_LABEL[s.kind ?? ''] ?? s.kind ?? 'src';
+                  const muted = s.kind === 'status' || !s.url;
+                  const chip: React.CSSProperties = {
+                    fontSize: 10, padding: '2px 7px', borderRadius: 3, whiteSpace: 'nowrap',
+                    border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
+                    background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 10%, transparent)`,
+                    color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none',
+                  };
+                  return muted ? (
+                    <span key={s.source_id} title={s.annotation ?? undefined} style={chip}>{label}</span>
+                  ) : (
+                    <a key={s.source_id} href={s.url!} target="_blank" rel="noopener noreferrer"
+                       title={s.annotation ?? undefined} style={chip}>{label} ↗</a>
+                  );
+                })}
+              </div>
             )}
             {panelTakeaway && (
               <div style={{ marginBottom: 8 }}>
@@ -1141,6 +1183,40 @@ function GraphView({
               <div>
                 <span style={S.sectionLabel}>Релевантность</span>
                 <MartProse text={panelRelevance} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Construct detail panel */}
+        {panelNode && (
+          <div style={S.graphPanel} className="lore-panel-scroll">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 8 }}>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', display: 'block', marginBottom: 2 }}>
+                  {panelNode.node_id}
+                </span>
+                {panelNode.kind && (
+                  <span style={{ fontSize: 10, color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', borderRadius: 3, padding: '1px 5px' }}>
+                    {panelNode.kind}
+                  </span>
+                )}
+              </div>
+              <button style={S.panelClose} onClick={() => { setPanelNode(null); setSel(null); }}>✕</button>
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', margin: '6px 0 8px', lineHeight: 1.4 }}>
+              {nodeLabel}
+            </p>
+            {nodeSummary && (
+              <div style={{ marginBottom: 8 }}>
+                <span style={S.sectionLabel}>Суть</span>
+                <MartProse text={nodeSummary} />
+              </div>
+            )}
+            {nodeDesc && (
+              <div>
+                <span style={S.sectionLabel}>Описание</span>
+                <MartProse text={nodeDesc} />
               </div>
             )}
           </div>
@@ -1262,7 +1338,7 @@ export function BiblioScreen({ onError }: Props) {
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
         {view === 'cards' && <CardsView refs={refs} topics={topics} refTopics={refTopics} lang={lang} srcByRef={srcByRef} cardsByRef={cardsByRef} />}
         {view === 'slice' && <SliceView nodes={nodes} refs={refs} edges={edges} interEdges={interEdges} lang={lang} />}
-        {view === 'graph' && <GraphView nodes={nodes} refs={refs} edges={edges} interEdges={interEdges} lang={lang} />}
+        {view === 'graph' && <GraphView nodes={nodes} refs={refs} edges={edges} interEdges={interEdges} lang={lang} srcByRef={srcByRef} />}
       </div>
     </div>
   );
