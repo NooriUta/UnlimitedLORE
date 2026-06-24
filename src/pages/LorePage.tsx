@@ -195,7 +195,7 @@ export default function LorePage() {
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>📚</span>
         <span>LORE отключён в этой среде.</span>
-        <span style={{ fontSize: 11 }}>Установить <code>lore.enabled=true</code> в heimdall-backend.</span>
+        <span style={{ fontSize: 11 }}>Установить <code>lore.enabled=true</code> в lore-backend (:9100).</span>
       </div>
     </div>
   );
@@ -204,7 +204,7 @@ export default function LorePage() {
     <div style={S.root}>
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>⚠️</span>
-        <span>LORE недоступен — heimdall-backend не отвечает.</span>
+        <span>LORE недоступен — lore-backend (:9100) не отвечает.</span>
         <button style={{ fontSize: 11, marginTop: 8, cursor: 'pointer' }} onClick={() => setLoreUnreachable(false)}>
           Повторить
         </button>

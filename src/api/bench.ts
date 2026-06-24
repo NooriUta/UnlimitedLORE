@@ -1,5 +1,5 @@
 // ── /bench transport layer ────────────────────────────────────────────────────
-// Same-origin in dev: the vite proxy forwards /bench to heimdall-backend, which
+// Same-origin in dev: the vite proxy forwards /bench to lore-backend (:9100), which
 // reads rag-vs-parse files (live STATUS.json, static report) and queries the
 // RAGVSDL experiment mart via named slices. The browser never sees ArcadeDB
 // credentials and never sends SQL.

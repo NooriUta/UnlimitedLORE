@@ -1,5 +1,5 @@
 // ── /lore transport layer ──────────────────────────────────────────────────
-// Same-origin in dev: the vite proxy forwards /lore to heimdall-backend which
+// Same-origin in dev: the vite proxy forwards /lore to lore-backend (:9100) which
 // queries system_aida_lore via named slices (AidaLoreResource). The browser
 // never sees ArcadeDB credentials and never sends SQL.
 //
