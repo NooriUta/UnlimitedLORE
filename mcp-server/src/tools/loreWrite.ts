@@ -153,19 +153,30 @@ export function registerLoreWrite(server: McpServer): void {
 
   server.tool(
     'lore_edit_task',
-    'Edit a task title and/or note (updates the vertex and its open history row). ' +
-      'Mutates the shared system_aida_lore.',
+    'Edit one task OR a batch of tasks (title + note_md). Updates the vertex and its ' +
+      'open history row. Mutates the shared system_aida_lore.\n\n' +
+      'Single: pass task_uid + title (+ optional note_md).\n' +
+      'Batch:  pass tasks=[{task_uid, title, note_md?}, ...] — all processed in one call, ' +
+      'errors collected per-item without aborting the rest.',
     {
-      task_uid: z.string().describe('full task uid, e.g. "<sprint_id>/<task_id>"'),
-      title: z.string(),
-      note_md: z.string().optional(),
+      task_uid: z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
+      title:    z.string().optional().describe('single-mode: new title'),
+      note_md:  z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
+      tasks: z.array(z.object({
+        task_uid: z.string(),
+        title:    z.string(),
+        note_md:  z.string().optional(),
+      })).optional().describe('batch-mode: array of {task_uid, title, note_md?}'),
     },
-    async ({ task_uid, title, note_md }) => {
+    async ({ task_uid, title, note_md, tasks }) => {
       try {
+        if (tasks && tasks.length > 0) {
+          return json(await lorePost('/lore/task/edit/batch',
+            tasks.map(t => ({ task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null }))));
+        }
+        if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', { task_uid, title, note_md: note_md ?? null }));
-      } catch (e) {
-        return err(e);
-      }
+      } catch (e) { return err(e); }
     },
   );
 }

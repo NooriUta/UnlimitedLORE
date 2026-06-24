@@ -446,6 +446,45 @@ public class AidaLoreResource {
     }
 
     @POST
+    @Path("task/edit/batch")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response editTaskBatch(List<TaskEditRequest> reqs, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (reqs == null || reqs.isEmpty()) return badParams("tasks array required");
+        int updated = 0;
+        List<String> errors = new java.util.ArrayList<>();
+        for (TaskEditRequest req : reqs) {
+            if (req == null || req.task_uid() == null || req.title() == null || req.title().isBlank()) {
+                errors.add("skipped (missing task_uid or title): " + req); continue;
+            }
+            if (!SAFE_ID.matcher(req.task_uid()).matches()) {
+                errors.add("skipped (illegal task_uid): " + req.task_uid()); continue;
+            }
+            try {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowTask SET title = :title, note_md = :note WHERE task_uid = :uid",
+                    mapOfNullable("title", req.title().trim(), "note", req.note_md(), "uid", req.task_uid())))
+                    .await().indefinitely();
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowTaskHist SET note_md = :note " +
+                    "WHERE in('HAS_STATE').task_uid CONTAINS :uid AND valid_to IS NULL",
+                    mapOfNullable("note", req.note_md(), "uid", req.task_uid())))
+                    .await().indefinitely();
+                updated++;
+            } catch (Exception e) {
+                errors.add(req.task_uid() + ": " + e.getMessage());
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", errors.isEmpty()); out.put("updated", updated);
+        if (!errors.isEmpty()) out.put("errors", errors);
+        return noStore(Response.ok(out));
+    }
+
+    @POST
     @Path("task/edit")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
