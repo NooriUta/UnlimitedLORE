@@ -8,6 +8,7 @@
   "dependencies": {
     "@iconify-json/game-icons": "^1.2.4",
     "@iconify/react": "^6.0.2",
+    "@mermaid-js/layout-elk": "^0.2.1",
     "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
     "@xyflow/react": "^12.11.0",

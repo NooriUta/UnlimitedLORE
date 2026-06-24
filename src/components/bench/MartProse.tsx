@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import mermaid from 'mermaid';
+import elkLayouts from '@mermaid-js/layout-elk';
 
 // The mart is a carrier of reasoning (v6.1): prose fields (narrative,
 // rationale/mechanism/interpretation, long_description, conclusions) are
@@ -8,6 +9,8 @@ import mermaid from 'mermaid';
 // Same trust model as DocsPage: prose is authored by the experiment owner.
 
 marked.setOptions({ gfm: true, breaks: false });
+
+mermaid.registerLayoutLoaders(elkLayouts);
 
 // DocsPage initializes mermaid on its module load, but it is lazy — initialize
 // here too so prose diagrams work without ever visiting /docs (idempotent).
