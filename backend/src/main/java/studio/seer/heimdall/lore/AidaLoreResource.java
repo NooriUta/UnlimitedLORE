@@ -331,6 +331,16 @@ public class AidaLoreResource {
 
     // ── Write-path: register a sprint for a plan-item placeholder ────────────
 
+    // ── Release write-path records ────────────────────────────────────────────
+    public record ReleaseCreateRequest(
+        String release_id, String release_date, String git_tag,
+        String type, String description_md, Boolean is_current, Integer week) {}
+    public record ReleaseUpdateRequest(
+        String release_id, String release_date, String git_tag,
+        String description_md, Boolean is_current) {}
+    public record ReleaseLinkRequest(
+        String release_id, List<Integer> pr_numbers, List<String> sprint_ids) {}
+
     public record SprintRegisterRequest(String item_id, String sprint_id, String name, String status) {}
 
     @POST
@@ -467,6 +477,180 @@ public class AidaLoreResource {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
             });
+    }
+
+    // ── Write-path: create a new KnowRelease ────────────────────────────────
+
+    @POST
+    @Path("release")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createRelease(ReleaseCreateRequest req,
+                                  @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.release_id() == null || req.release_id().isBlank()) {
+            return badParams("release_id required");
+        }
+        if (!SAFE_ID.matcher(req.release_id()).matches()) {
+            return badParams("release_id contains illegal characters");
+        }
+        try {
+            boolean cur = Boolean.TRUE.equals(req.is_current());
+            if (cur) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowRelease SET is_current=false WHERE is_current=true",
+                    null)).await().indefinitely();
+            }
+            String now  = Instant.now().toString();
+            String nsid = UUID.randomUUID().toString();
+            Map<String, Object> p = mapOfNullable(
+                "rid",      req.release_id(),
+                "tag",      req.git_tag(),
+                "date",     req.release_date(),
+                "type",     req.type(),
+                "desc",     req.description_md(),
+                "week",     req.week());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "INSERT INTO KnowRelease SET release_id=:rid, git_tag=:tag, " +
+                "release_date=:date, type=:type, description_md=:desc, " +
+                "week=:week, is_current=" + cur,
+                p)).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now",
+                Map.of("nsid", nsid, "now", now))).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE HAS_STATE " +
+                "FROM (SELECT FROM KnowRelease WHERE release_id=:rid) " +
+                "TO   (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid)",
+                Map.of("rid", req.release_id(), "nsid", nsid))).await().indefinitely();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("release_id", req.release_id());
+            out.put("is_current", cur); out.put("created", now);
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE RELEASE CREATE] %s: %s", req.release_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Write-path: update fields on an existing KnowRelease ────────────────
+
+    @POST
+    @Path("release/update")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateRelease(ReleaseUpdateRequest req,
+                                  @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.release_id() == null || req.release_id().isBlank()) {
+            return badParams("release_id required");
+        }
+        if (!SAFE_ID.matcher(req.release_id()).matches()) {
+            return badParams("release_id contains illegal characters");
+        }
+        try {
+            boolean curSet = req.is_current() != null;
+            boolean cur    = Boolean.TRUE.equals(req.is_current());
+            if (cur) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowRelease SET is_current=false WHERE is_current=true",
+                    null)).await().indefinitely();
+            }
+            // Build SET clause only for non-null fields to allow partial updates.
+            StringBuilder sb = new StringBuilder("UPDATE KnowRelease SET ");
+            Map<String, Object> p = new LinkedHashMap<>();
+            if (req.git_tag()      != null) { sb.append("git_tag=:tag, ");  p.put("tag",  req.git_tag()); }
+            if (req.release_date() != null) { sb.append("release_date=:date, "); p.put("date", req.release_date()); }
+            if (req.description_md() != null) { sb.append("description_md=:desc, "); p.put("desc", req.description_md()); }
+            if (curSet) sb.append("is_current=").append(cur).append(", ");
+            // Remove trailing comma+space and finish.
+            String set = sb.toString().replaceAll(",\\s*$", "");
+            if (set.equals("UPDATE KnowRelease SET")) {
+                return badParams("at least one field (git_tag, release_date, description_md, is_current) required");
+            }
+            p.put("rid", req.release_id());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                set + " WHERE release_id=:rid", p)).await().indefinitely();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("release_id", req.release_id());
+            out.put("updated_at", Instant.now().toString());
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE RELEASE UPDATE] %s: %s", req.release_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Write-path: link PRs / sprints to a release ─────────────────────────
+
+    @POST
+    @Path("release/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkRelease(ReleaseLinkRequest req,
+                                @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.release_id() == null || req.release_id().isBlank()) {
+            return badParams("release_id required");
+        }
+        if (!SAFE_ID.matcher(req.release_id()).matches()) {
+            return badParams("release_id contains illegal characters");
+        }
+        int sprintsLinked = 0, prsLinked = 0;
+        List<String> errors = new java.util.ArrayList<>();
+        try {
+            List<String> sprintIds = req.sprint_ids() != null ? req.sprint_ids() : List.of();
+            for (String sid : sprintIds) {
+                if (!SAFE_ID.matcher(sid).matches()) {
+                    errors.add("skipped sprint (illegal id): " + sid); continue;
+                }
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE IMPLEMENTED_IN_RELEASE " +
+                        "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                        "TO   (SELECT FROM KnowRelease WHERE release_id=:rid)",
+                        Map.of("sid", sid, "rid", req.release_id()))).await().indefinitely();
+                    sprintsLinked++;
+                } catch (Exception e) {
+                    errors.add("sprint " + sid + ": " + e.getMessage());
+                }
+            }
+            List<Integer> prs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
+            for (Integer prNum : prs) {
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "UPDATE KnowPR SET pr_number=:n UPSERT WHERE pr_number=:n",
+                        Map.of("n", prNum))).await().indefinitely();
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE SHIPPED_IN " +
+                        "FROM (SELECT FROM KnowPR WHERE pr_number=:n) " +
+                        "TO   (SELECT FROM KnowRelease WHERE release_id=:rid)",
+                        Map.of("n", prNum, "rid", req.release_id()))).await().indefinitely();
+                    prsLinked++;
+                } catch (Exception e) {
+                    errors.add("pr #" + prNum + ": " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE RELEASE LINK] %s: %s", req.release_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", errors.isEmpty());
+        out.put("release_id", req.release_id());
+        out.put("sprints_linked", sprintsLinked);
+        out.put("prs_linked", prsLinked);
+        if (!errors.isEmpty()) out.put("errors", errors);
+        return noStore(Response.ok(out));
     }
 
     private Response requireAdmin(String role) {

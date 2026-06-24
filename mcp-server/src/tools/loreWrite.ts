@@ -76,6 +76,81 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  // ── Release management ──────────────────────────────────────────────────
+
+  server.tool(
+    'lore_create_release',
+    'Create a new KnowRelease vertex in system_aida_lore. ' +
+      'If is_current=true, the previous current release is automatically cleared. ' +
+      'Returns the created release_id and timestamp.',
+    {
+      release_id:     z.string().describe('release id, e.g. "v1.6.12"'),
+      release_date:   z.string().optional().describe('YYYY-MM-DD'),
+      git_tag:        z.string().optional(),
+      type:           z.enum(['patch', 'minor', 'major']).optional(),
+      description_md: z.string().optional().describe('changelog / release notes in Markdown'),
+      is_current:     z.boolean().optional().default(false).describe('mark as current prod release'),
+      week:           z.number().int().optional().describe('plan week number (relative to W0)'),
+    },
+    async ({ release_id, release_date, git_tag, type, description_md, is_current, week }) => {
+      try {
+        return json(await lorePost('/lore/release', {
+          release_id, release_date: release_date ?? null,
+          git_tag: git_tag ?? null, type: type ?? null,
+          description_md: description_md ?? null,
+          is_current: is_current ?? false, week: week ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_update_release',
+    'Update fields on an existing KnowRelease (partial update — only supplied fields are written). ' +
+      'If is_current=true, clears the previous current release first. ' +
+      'Useful for adding description_md / git_tag after the release is live.',
+    {
+      release_id:     z.string().describe('existing release id, e.g. "v1.6.11"'),
+      git_tag:        z.string().optional(),
+      release_date:   z.string().optional().describe('YYYY-MM-DD'),
+      description_md: z.string().optional().describe('changelog in Markdown'),
+      is_current:     z.boolean().optional().describe('promote to current prod release'),
+    },
+    async ({ release_id, git_tag, release_date, description_md, is_current }) => {
+      try {
+        return json(await lorePost('/lore/release/update', {
+          release_id,
+          git_tag: git_tag ?? null,
+          release_date: release_date ?? null,
+          description_md: description_md ?? null,
+          is_current: is_current ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_release_pr',
+    'Link sprints and/or PRs to a KnowRelease. ' +
+      'For each sprint_id creates an IMPLEMENTED_IN_RELEASE edge (KnowSprint → KnowRelease). ' +
+      'For each pr_number upserts a KnowPR vertex and creates a SHIPPED_IN edge (KnowPR → KnowRelease). ' +
+      'Returns counts of linked sprints and PRs.',
+    {
+      release_id:  z.string().describe('target release, e.g. "v1.6.11"'),
+      sprint_ids:  z.array(z.string()).optional().describe('e.g. ["SPRINT_HOUND_ROWSET_V2"]'),
+      pr_numbers:  z.array(z.number().int()).optional().describe('e.g. [401, 402]'),
+    },
+    async ({ release_id, sprint_ids, pr_numbers }) => {
+      try {
+        return json(await lorePost('/lore/release/link', {
+          release_id,
+          sprint_ids: sprint_ids ?? [],
+          pr_numbers: pr_numbers ?? [],
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
   server.tool(
     'lore_edit_task',
     'Edit a task title and/or note (updates the vertex and its open history row). ' +
