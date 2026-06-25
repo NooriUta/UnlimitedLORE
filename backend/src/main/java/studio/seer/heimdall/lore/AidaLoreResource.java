@@ -53,7 +53,8 @@ public class AidaLoreResource {
     public record StatusUpdateResponse(
         boolean ok, String entity_type, String id,
         String old_status, String new_status, StatusRevision revision) {}
-    public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers, String repo_url) {}
+    public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers,
+        String git_project, String repo_url) {}
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
         String priority, String plan_id, Integer effort_days) {}
     public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
@@ -342,14 +343,18 @@ public class AidaLoreResource {
     // ── Release write-path records ────────────────────────────────────────────
     public record ReleaseCreateRequest(
         String release_id, String release_date, String git_tag,
-        String type, String description_md, Boolean is_current, Integer week) {}
+        String type, String description_md, Boolean is_current, Integer week,
+        String git_project) {}
     public record ReleaseUpdateRequest(
         String release_id, String release_date, String git_tag,
-        String description_md, Boolean is_current) {}
+        String description_md, Boolean is_current, String git_project) {}
     public record ReleaseLinkRequest(
-        String release_id, List<Integer> pr_numbers, List<String> sprint_ids) {}
+        String release_id, List<Integer> pr_numbers, List<String> sprint_ids,
+        String git_project) {}
 
     public record SprintRegisterRequest(String item_id, String sprint_id, String name, String status) {}
+    public record SprintCreateRequest(String sprint_id, String name, String status,
+        String item_id, String plan_id, String priority, String outcome_md) {}
 
     @POST
     @Path("sprint")
@@ -386,6 +391,42 @@ public class AidaLoreResource {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT REGISTER] %s: %s", req.item_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Write-path: create sprint directly (no plan-item required) ──────────
+
+    @POST
+    @Path("sprint/create")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createSprint(SprintCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.sprint_id() == null || req.sprint_id().isBlank()) {
+            return badParams("sprint_id required");
+        }
+        if (!SAFE_ID.matcher(req.sprint_id()).matches()) {
+            return badParams("sprint_id contains illegal characters");
+        }
+        String status = (req.status() == null || req.status().isBlank()) ? "todo" : req.status();
+        if (!PLAN_STATUSES.contains(status)) {
+            return badParams("status must be one of: " + PLAN_STATUSES);
+        }
+        try {
+            LoreIngestService.CreateSprintResult r = ingestService.createSprint(
+                req.sprint_id(), req.name(), status, req.item_id(), req.plan_id(), req.priority(), req.outcome_md());
+            java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("sprint_id", r.sprintId());
+            out.put("item_id", r.itemId());
+            out.put("created", r.created());
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPRINT CREATE] %s: %s", req.sprint_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
@@ -558,10 +599,17 @@ public class AidaLoreResource {
             StringBuilder set = new StringBuilder(
                 "INSERT INTO KnowRelease SET release_id=:rid, is_current=" + cur);
             if (req.git_tag()        != null) { set.append(", git_tag=:tag");          p.put("tag",   req.git_tag()); }
-            if (req.release_date()   != null) { set.append(", release_date=:date");  p.put("date",  req.release_date()); }
+            String rdate = req.release_date() != null ? req.release_date()
+                                                      : java.time.LocalDate.now().toString();
+            set.append(", release_date=:date"); p.put("date", rdate);
             if (req.type()           != null) { set.append(", `type`=:rtype");       p.put("rtype", req.type()); }
             if (req.description_md() != null) { set.append(", description_md=:dmd"); p.put("dmd", req.description_md()); }
             if (req.week()           != null) { set.append(", week=:week");          p.put("week",  req.week()); }
+            String gp  = (req.git_project() != null && !req.git_project().isBlank())
+                ? req.git_project() : "NooriUta/AIDA";
+            String ruid = gp + "#" + req.release_id();
+            set.append(", git_project=:gp, release_uid=:ruid");
+            p.put("gp", gp); p.put("ruid", ruid);
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 set.toString(), p)).await().indefinitely();
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -611,18 +659,30 @@ public class AidaLoreResource {
             // Build SET clause only for non-null fields to allow partial updates.
             StringBuilder sb = new StringBuilder("UPDATE KnowRelease SET ");
             Map<String, Object> p = new LinkedHashMap<>();
-            if (req.git_tag()      != null) { sb.append("git_tag=:tag, ");  p.put("tag",  req.git_tag()); }
-            if (req.release_date() != null) { sb.append("release_date=:date, "); p.put("date", req.release_date()); }
-            if (req.description_md() != null) { sb.append("description_md=:dmd, "); p.put("dmd", req.description_md()); }
+            if (req.git_tag()        != null) { sb.append("git_tag=:tag, ");          p.put("tag",  req.git_tag()); }
+            if (req.release_date()   != null) { sb.append("release_date=:date, ");    p.put("date", req.release_date()); }
+            if (req.description_md() != null) { sb.append("description_md=:dmd, ");   p.put("dmd",  req.description_md()); }
+            if (req.git_project()    != null) {
+                sb.append("git_project=:gp, release_uid=:ruid, ");
+                p.put("gp", req.git_project());
+                p.put("ruid", req.git_project() + "#" + req.release_id());
+            }
             if (curSet) sb.append("is_current=").append(cur).append(", ");
             // Remove trailing comma+space and finish.
             String set = sb.toString().replaceAll(",\\s*$", "");
             if (set.equals("UPDATE KnowRelease SET")) {
                 return badParams("at least one field (git_tag, release_date, description_md, is_current) required");
             }
-            p.put("rid", req.release_id());
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                set + " WHERE release_id=:rid", p)).await().indefinitely();
+            // Prefer release_uid lookup when git_project is known for multi-repo safety
+            if (req.git_project() != null && !req.git_project().isBlank()) {
+                p.put("rkey", req.git_project() + "#" + req.release_id());
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    set + " WHERE release_uid=:rkey", p)).await().indefinitely();
+            } else {
+                p.put("rid", req.release_id());
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    set + " WHERE release_id=:rid", p)).await().indefinitely();
+            }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("updated_at", Instant.now().toString());
@@ -654,6 +714,9 @@ public class AidaLoreResource {
         int sprintsLinked = 0, prsLinked = 0;
         List<String> errors = new java.util.ArrayList<>();
         try {
+            String gp = (req.git_project() != null && !req.git_project().isBlank())
+                ? req.git_project() : "NooriUta/AIDA";
+            String ruid = gp + "#" + req.release_id();
             List<String> sprintIds = req.sprint_ids() != null ? req.sprint_ids() : List.of();
             for (String sid : sprintIds) {
                 if (!SAFE_ID.matcher(sid).matches()) {
@@ -663,8 +726,8 @@ public class AidaLoreResource {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE IMPLEMENTED_IN_RELEASE " +
                         "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
-                        "TO   (SELECT FROM KnowRelease WHERE release_id=:rid)",
-                        Map.of("sid", sid, "rid", req.release_id()))).await().indefinitely();
+                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
+                        Map.of("sid", sid, "ruid", ruid))).await().indefinitely();
                     sprintsLinked++;
                 } catch (Exception e) {
                     errors.add("sprint " + sid + ": " + e.getMessage());
@@ -673,14 +736,16 @@ public class AidaLoreResource {
             List<Integer> prs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
             for (Integer prNum : prs) {
                 try {
+                    String prUid = gp + "#" + prNum;
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "UPDATE KnowPR SET pr_number=:n UPSERT WHERE pr_number=:n",
-                        Map.of("n", prNum))).await().indefinitely();
+                        "UPDATE KnowPR SET pr_uid=:uid, pr_number=:n, git_project=:gp " +
+                        "UPSERT WHERE pr_uid=:uid",
+                        Map.of("uid", prUid, "n", prNum, "gp", gp))).await().indefinitely();
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE SHIPPED_IN " +
-                        "FROM (SELECT FROM KnowPR WHERE pr_number=:n) " +
-                        "TO   (SELECT FROM KnowRelease WHERE release_id=:rid)",
-                        Map.of("n", prNum, "rid", req.release_id()))).await().indefinitely();
+                        "FROM (SELECT FROM KnowPR WHERE pr_uid=:uid) " +
+                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
+                        Map.of("uid", prUid, "ruid", ruid))).await().indefinitely();
                     prsLinked++;
                 } catch (Exception e) {
                     errors.add("pr #" + prNum + ": " + e.getMessage());
@@ -698,6 +763,136 @@ public class AidaLoreResource {
         out.put("prs_linked", prsLinked);
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
+    }
+
+    // ── Write-path: unlink sprint or PR from a release ───────────────────────────
+
+    public record ReleaseUnlinkRequest(String release_id, String git_project,
+                                       List<String> sprint_ids, List<Integer> pr_numbers) {}
+
+    @POST
+    @Path("release/unlink")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response unlinkRelease(ReleaseUnlinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.release_id() == null || req.release_id().isBlank())
+            return badParams("release_id required");
+        String gp = (req.git_project() != null && !req.git_project().isBlank())
+            ? req.git_project() : "NooriUta/AIDA";
+        String ruid = gp + "#" + req.release_id();
+        int sprintsRemoved = 0, prsRemoved = 0;
+        List<String> errors = new java.util.ArrayList<>();
+        try {
+            for (String sid : (req.sprint_ids() != null ? req.sprint_ids() : List.of())) {
+                if (!SAFE_ID.matcher(sid).matches()) { errors.add("bad sprint id: " + sid); continue; }
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE EDGE IMPLEMENTED_IN_RELEASE " +
+                        "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
+                        Map.of("sid", sid, "ruid", ruid))).await().indefinitely();
+                    sprintsRemoved++;
+                } catch (Exception e) { errors.add("sprint " + sid + ": " + e.getMessage()); }
+            }
+            for (Integer prNum : (req.pr_numbers() != null ? req.pr_numbers() : List.of())) {
+                String prUid = gp + "#" + prNum;
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE EDGE SHIPPED_IN " +
+                        "FROM (SELECT FROM KnowPR WHERE pr_uid=:uid) " +
+                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
+                        Map.of("uid", prUid, "ruid", ruid))).await().indefinitely();
+                    prsRemoved++;
+                } catch (Exception e) { errors.add("pr #" + prNum + ": " + e.getMessage()); }
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE RELEASE UNLINK] %s: %s", req.release_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", errors.isEmpty());
+        out.put("release_id", req.release_id());
+        out.put("sprints_removed", sprintsRemoved);
+        out.put("prs_removed", prsRemoved);
+        if (!errors.isEmpty()) out.put("errors", errors);
+        return noStore(Response.ok(out));
+    }
+
+    // ── Write-path: move PR or release to a different git_project ───────────────
+
+    public record ProjectMoveRequest(String entity_type, String id, String git_project) {}
+
+    @POST
+    @Path("project/move")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response moveToProject(ProjectMoveRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.entity_type() == null || req.id() == null || req.git_project() == null
+                || req.id().isBlank() || req.git_project().isBlank())
+            return badParams("entity_type, id, git_project required");
+        try {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("entity_type", req.entity_type());
+            out.put("id", req.id());
+            out.put("git_project", req.git_project());
+
+            if ("pr".equals(req.entity_type())) {
+                // pr_uid may be old format (number-only) or new "project#number"
+                // Accept either pr_uid or raw pr_number as id
+                List<Map<String, Object>> rows = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "SELECT @rid, pr_number, git_project FROM KnowPR " +
+                        "WHERE pr_uid = :id OR pr_number.asString() = :id LIMIT 1",
+                        Map.of("id", req.id()))).await().indefinitely().result();
+                if (rows == null || rows.isEmpty())
+                    return noStore(Response.status(Response.Status.NOT_FOUND)
+                        .entity(new LoreError("NOT_FOUND", "PR not found: " + req.id())));
+                String rid      = rows.get(0).get("@rid").toString();
+                Object prNumObj = rows.get(0).get("pr_number");
+                int    prNum    = prNumObj instanceof Number n ? n.intValue() : Integer.parseInt(req.id());
+                String newUid   = req.git_project() + "#" + prNum;
+                // Update vertex fields
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE " + rid + " SET git_project=:gp, pr_uid=:uid",
+                    Map.of("gp", req.git_project(), "uid", newUid))).await().indefinitely();
+                // Re-wire BELONGS_TO_PROJECT: delete old edge, create new
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE EDGE BELONGS_TO_PROJECT FROM " + rid, null)).await().indefinitely();
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM " + rid +
+                    " TO (SELECT FROM KnowGitProject WHERE slug=:gp)",
+                    Map.of("gp", req.git_project()))).await().indefinitely();
+                out.put("pr_uid", newUid);
+
+            } else if ("release".equals(req.entity_type())) {
+                String newRuid = req.git_project() + "#" + req.id();
+                int updated = ((List<?>) writeClient.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sql",
+                        "UPDATE KnowRelease SET git_project=:gp, release_uid=:ruid " +
+                        "WHERE release_id=:rid OR release_uid=:rid",
+                        Map.of("gp", req.git_project(), "ruid", newRuid, "rid", req.id())))
+                    .await().indefinitely().result()).size();
+                if (updated == 0)
+                    return noStore(Response.status(Response.Status.NOT_FOUND)
+                        .entity(new LoreError("NOT_FOUND", "release not found: " + req.id())));
+                out.put("release_uid", newRuid);
+            } else {
+                return badParams("entity_type must be 'pr' or 'release'");
+            }
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE PROJECT MOVE] %s %s: %s", req.entity_type(), req.id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
     }
 
     // ── Write-path: append PR numbers to open KnowSprintHist.pr_refs ───────────
@@ -718,9 +913,11 @@ public class AidaLoreResource {
         if (req.pr_numbers() == null || req.pr_numbers().isEmpty())
             return badParams("pr_numbers required");
 
+        String gp = (req.git_project() != null && !req.git_project().isBlank())
+            ? req.git_project() : "NooriUta/AIDA";
         String base = (req.repo_url() != null && !req.repo_url().isBlank())
             ? req.repo_url().replaceAll("/+$", "")
-            : "https://github.com/NooriUta/AIDA/pull";
+            : "https://github.com/" + gp + "/pull";
 
         try {
             // Read current pr_refs from the open hist row.

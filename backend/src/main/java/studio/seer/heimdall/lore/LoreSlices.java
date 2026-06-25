@@ -56,7 +56,7 @@ public final class LoreSlices {
             List.of(), Map.of(), " LIMIT 200");
 
         slice("timeline_releases",
-            "SELECT release_id, git_tag, release_date, is_current " +
+            "SELECT release_id, git_tag, release_date, is_current, git_project " +
             "FROM KnowRelease ORDER BY release_id DESC",
             List.of(), Map.of(), " LIMIT 100");
 
@@ -361,8 +361,10 @@ public final class LoreSlices {
 
         // ── Releases ─────────────────────────────────────────────────────────
         slice("releases",
-            "SELECT release_id, git_tag, version, week, type, " +
-            "release_date, is_current, description_md " +
+            "SELECT release_id, release_uid, git_tag, version, week, type, " +
+            "release_date, is_current, description_md, git_project, " +
+            "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
+            "in('SHIPPED_IN').size() AS pr_count " +
             "FROM KnowRelease ORDER BY release_id DESC",
             List.of(), Map.of(), " LIMIT 200");
 
@@ -372,15 +374,29 @@ public final class LoreSlices {
             List.of("tag"), Map.of(), "");
 
         // Sprints linked to a given release via IMPLEMENTED_IN_RELEASE edge.
+        // Prefer ruid (release_uid, e.g. "NooriUta/AIDA#v1.0.0") for multi-project safety.
+        // Falls back to tag (release_id) when ruid is absent (legacy callers).
         slice("release_sprints",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+            "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_uid CONTAINS :ruid",
+            List.of("ruid"), Map.of(), " LIMIT 50");
+
+        slice("release_sprints_by_tag",
             "SELECT sprint_id, name, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
             "FROM KnowSprint WHERE out('IMPLEMENTED_IN_RELEASE').release_id CONTAINS :tag",
             List.of("tag"), Map.of(), " LIMIT 50");
 
         // PRs shipped in a given release via the SHIPPED_IN edge (KnowPR → KnowRelease).
+        // Prefer ruid for multi-project safety.
         slice("release_prs",
-            "SELECT pr_number, title, merged_at, url " +
+            "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
+            "FROM KnowPR WHERE out('SHIPPED_IN').release_uid CONTAINS :ruid ORDER BY pr_number",
+            List.of("ruid"), Map.of(), " LIMIT 100");
+
+        slice("release_prs_by_tag",
+            "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag ORDER BY pr_number",
             List.of("tag"), Map.of(), " LIMIT 100");
     }

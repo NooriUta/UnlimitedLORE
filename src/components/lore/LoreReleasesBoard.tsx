@@ -22,6 +22,8 @@ interface SprintRef {
 
 interface PrRef {
   pr_number: number;
+  pr_uid: string | null;
+  git_project: string | null;
   title: string;
   merged_at: string | null;
   url: string | null;
@@ -63,6 +65,7 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
   const [sprintRefs,     setSprintRefs]     = useState<Record<string, SprintRef[]>>({});
   const [prRefs,         setPrRefs]         = useState<Record<string, PrRef[]>>({});
   const [loadingDetail,  setLoadingDetail]  = useState<string | null>(null);
+  const [projectFilter,  setProjectFilter]  = useState<string>('all');
 
   useEffect(() => {
     setLoading(true);
@@ -73,30 +76,34 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
     return () => ctrl.abort();
   }, [onError]);
 
-  function toggle(id: string, tag: string) {
-    if (expanded === id) { setExpanded(null); return; }
-    setExpanded(id);
-    if (decisions[id]) return;
-    setLoadingDetail(id);
+  function toggle(uid: string, tag: string, ruid: string) {
+    if (expanded === uid) { setExpanded(null); return; }
+    setExpanded(uid);
+    if (decisions[uid]) return;
+    setLoadingDetail(uid);
     Promise.all([
       fetchLoreSlice<DecisionRef>('release_decisions', { tag }),
-      fetchLoreSlice<SprintRef>('release_sprints', { tag }),
-      fetchLoreSlice<PrRef>('release_prs', { tag }),
+      fetchLoreSlice<SprintRef>('release_sprints', { ruid }),
+      fetchLoreSlice<PrRef>('release_prs', { ruid }),
     ])
       .then(([decs, sprints, prs]) => {
-        setDecisions(prev => ({ ...prev, [id]: decs }));
-        setSprintRefs(prev => ({ ...prev, [id]: sprints }));
-        setPrRefs(prev => ({ ...prev, [id]: prs }));
+        setDecisions(prev => ({ ...prev, [uid]: decs }));
+        setSprintRefs(prev => ({ ...prev, [uid]: sprints }));
+        setPrRefs(prev => ({ ...prev, [uid]: prs }));
         setLoadingDetail(null);
       })
       .catch(e => { onError(e); setLoadingDetail(null); });
   }
 
+  const projects = ['all', ...Array.from(new Set(rows.map(r => r.git_project ?? 'NooriUta/AIDA')))];
+
   const filtered = [...rows]
     .sort(semverCompare)
-    .filter(r =>
-      !q || (r.git_tag ?? r.release_id).toLowerCase().includes(q.toLowerCase())
-    );
+    .filter(r => {
+      if (projectFilter !== 'all' && (r.git_project ?? 'NooriUta/AIDA') !== projectFilter) return false;
+      if (q && !(r.git_tag ?? r.release_id).toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    });
 
   // Group by minor version (v1.3.x, v1.4.x, ...)
   const groups: Map<string, LoreRelease[]> = new Map();
@@ -113,6 +120,15 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
     <div style={S.root}>
       <div style={S.header}>
         <span style={S.count}>{filtered.length} релизов</span>
+        {projects.length > 2 && projects.map(p => (
+          <span
+            key={p}
+            style={{ ...S.projectTab, ...(projectFilter === p ? S.projectTabActive : {}) }}
+            onClick={() => setProjectFilter(p)}
+          >
+            {p === 'all' ? 'Все' : p.split('/')[1]}
+          </span>
+        ))}
         {q && <span style={S.filterNote}>фильтр: «{q}»</span>}
       </div>
       <div style={S.list} className="lore-panel-scroll">
@@ -125,18 +141,21 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
             </div>
             {releases.map(r => {
               const id     = r.release_id;
+              const uid    = r.release_uid ?? id;
               const tag    = r.git_tag ?? id;
-              const isOpen = expanded === id;
-              const decs   = decisions[id];
-              const sprints = sprintRefs[id];
-              const prs    = prRefs[id];
+              const ruid   = r.release_uid ?? `${r.git_project ?? 'NooriUta/AIDA'}#${id}`;
+              const isOpen = expanded === uid;
+              const decs   = decisions[uid];
+              const sprints = sprintRefs[uid];
+              const prs    = prRefs[uid];
               const type   = r.type as string | null;
-              const ghUrl  = `https://github.com/NooriUta/AIDA/releases/tag/${tag}`;
+              const gp     = r.git_project ?? 'NooriUta/AIDA';
+              const ghUrl  = `https://github.com/${gp}/releases/tag/${tag}`;
               return (
                 <div
-                  key={id}
+                  key={uid}
                   style={{ ...S.row, background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
-                  onClick={() => toggle(id, tag)}
+                  onClick={() => toggle(uid, tag, ruid)}
                 >
                   <div style={S.tagCell}>
                     <span style={{ ...S.tag, ...(type === 'major' ? S.tagMajor : type === 'minor' ? S.tagMinor : S.tagPatch) }}>
@@ -145,9 +164,18 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
                     {r.is_current && <span style={S.currentBadge}>CURRENT</span>}
                   </div>
                   <div style={S.body}>
+                    {projectFilter === 'all' && projects.length > 2 && (
+                      <span style={S.repoBadge} title={gp}>{gp.split('/')[1]}</span>
+                    )}
                     {type && <span style={S.typeBadge}>{TYPE_LABEL[type] ?? type}</span>}
                     {r.week != null && <span style={S.weekBadge}>wk {r.week}</span>}
-                    {r.description_md && <span style={S.desc}>{r.description_md.slice(0, 120)}</span>}
+                    {(r.sprint_count != null && r.sprint_count > 0) && (
+                      <span style={S.countBadge} title="Привязанных спринтов">↗ {r.sprint_count}</span>
+                    )}
+                    {(r.pr_count != null && r.pr_count > 0) && (
+                      <span style={S.countBadge} title="Привязанных PR">PR {r.pr_count}</span>
+                    )}
+                    {r.description_md && <span style={S.desc}>{r.description_md.slice(0, 110)}</span>}
                     {isOpen && (
                       <div style={S.detail} onClick={e => e.stopPropagation()}>
                         {loadingDetail === id && <span style={S.meta}>Загрузка…</span>}
@@ -176,22 +204,26 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
                         {prs && prs.length > 0 && (
                           <>
                             <span style={{ ...S.refLabel, marginTop: sprints?.length ? 8 : 0 }}>PR</span>
-                            {prs.map(p => (
-                              <div key={p.pr_number} style={S.decisionRef}>
-                                <span style={S.decisionNum}>#{p.pr_number}</span>
-                                <span style={S.decisionTitle}>{p.title}</span>
-                                {p.url && (
+                            {prs.map(p => {
+                              const prGp  = p.git_project ?? 'NooriUta/AIDA';
+                              const prUrl = p.url ?? `https://github.com/${prGp}/pull/${p.pr_number}`;
+                              const prRepo = prGp !== gp ? prGp.split('/')[1] : null;
+                              return (
+                                <div key={p.pr_uid ?? p.pr_number} style={S.decisionRef}>
+                                  <span style={S.decisionNum}>#{p.pr_number}</span>
+                                  {prRepo && <span style={S.prRepo}>{prRepo}</span>}
+                                  <span style={S.decisionTitle}>{p.title}</span>
                                   <a
-                                    href={p.url}
+                                    href={prUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={e => e.stopPropagation()}
                                     style={S.ghLink}
-                                    title={`PR #${p.pr_number}`}
+                                    title={`PR #${p.pr_number} · ${prGp}`}
                                   ><GhIcon /></a>
-                                )}
-                              </div>
-                            ))}
+                                </div>
+                              );
+                            })}
                           </>
                         )}
 
@@ -244,6 +276,26 @@ const S = {
   },
   count:      { fontSize: 11, color: 'var(--t3)' },
   filterNote: { fontSize: 11, color: 'var(--acc)' },
+  projectTab: {
+    fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
+    border: '1px solid var(--bd)', color: 'var(--t3)',
+    background: 'transparent', transition: 'all 0.1s',
+  },
+  projectTabActive: {
+    background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
+    color: 'var(--acc)', borderColor: 'color-mix(in srgb, var(--acc) 40%, transparent)',
+  },
+  prRepo: {
+    fontSize: 9, padding: '1px 4px', borderRadius: 3,
+    background: 'color-mix(in srgb, var(--war) 10%, transparent)',
+    color: 'var(--war)', fontFamily: 'var(--mono)', flexShrink: 0,
+  },
+  repoBadge: {
+    fontSize: 9, padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)',
+    background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
+    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
+    flexShrink: 0,
+  },
   list:  { flex: 1, overflowY: 'auto' as const },
   empty: { padding: '24px 16px', color: 'var(--t3)', fontSize: 12 },
 
@@ -295,6 +347,12 @@ const S = {
     fontSize: 10, padding: '1px 5px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--t3) 8%, transparent)',
     color: 'var(--t3)', fontFamily: 'var(--mono)',
+  },
+  countBadge: {
+    fontSize: 10, padding: '1px 5px', borderRadius: 3,
+    background: 'color-mix(in srgb, var(--acc) 8%, transparent)',
+    color: 'var(--t3)', fontFamily: 'var(--mono)',
+    border: '1px solid color-mix(in srgb, var(--acc) 20%, transparent)',
   },
   desc: { fontSize: 11, color: 'var(--t2)' },
   date: { fontSize: 10, color: 'var(--t3)', flexShrink: 0, paddingTop: 2 },

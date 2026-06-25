@@ -51,6 +51,37 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_create_sprint',
+    'Create a new KnowSprint vertex directly — no plan-item required. ' +
+      'Idempotent (upsert by sprint_id). Seeds an initial HAS_STATE history row. ' +
+      'Use lore_register_sprint instead when a plan-item placeholder already exists ' +
+      '(it also wires the Gantt bar). Mutates system_aida_lore.',
+    {
+      sprint_id:  z.string().describe('unique sprint id, e.g. "SPRINT_SITE_EXTRACT"'),
+      name:       z.string().describe('human-readable sprint name'),
+      status:     z.enum(['todo', 'active', 'partial', 'done', 'blocked', 'high', 'cancelled'])
+                   .optional().default('todo'),
+      item_id:    z.string().optional()
+                   .describe('plan-item id for the Gantt bar; default = sprint_id with SPRINT_ stripped'),
+      plan_id:    z.string().optional().describe('optional plan this sprint belongs to'),
+      priority:   z.string().optional().describe('e.g. "high", "critical"'),
+      outcome_md: z.string().optional().describe('sprint goal / outcome in Markdown'),
+    },
+    async ({ sprint_id, name, status, item_id, plan_id, priority, outcome_md }) => {
+      try {
+        return json(await lorePost('/lore/sprint/create', {
+          sprint_id, name,
+          status: status ?? 'todo',
+          item_id: item_id ?? null,
+          plan_id: plan_id ?? null,
+          priority: priority ?? null,
+          outcome_md: outcome_md ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_register_sprint',
     'Register a real sprint for a standalone plan-item placeholder: create a ' +
       'KnowSprint, seed its initial status, and link the plan-item via REPRESENTS ' +
@@ -173,15 +204,15 @@ export function registerLoreWrite(server: McpServer): void {
       'as a markdown link string). Skips PRs already present. ' +
       'Returns the updated pr_refs string and count of newly added links.',
     {
-      sprint_id:  z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
-      pr_numbers: z.array(z.number().int()).describe('PR numbers to append, e.g. [420, 421]'),
-      repo_url:   z.string().optional()
-        .describe('base URL for PR links (default: https://github.com/NooriUta/AIDA/pull)'),
+      sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
+      pr_numbers:  z.array(z.number().int()).describe('PR numbers to append, e.g. [420, 421]'),
+      git_project: z.string().optional()
+        .describe('GitHub project slug, e.g. "NooriUta/aida-documentation" (default: NooriUta/AIDA)'),
     },
-    async ({ sprint_id, pr_numbers, repo_url }) => {
+    async ({ sprint_id, pr_numbers, git_project }) => {
       try {
         return json(await lorePost('/lore/sprint/refs', {
-          sprint_id, pr_numbers, repo_url: repo_url ?? null,
+          sprint_id, pr_numbers, git_project: git_project ?? null,
         }));
       } catch (e) { return err(e); }
     },
@@ -190,26 +221,49 @@ export function registerLoreWrite(server: McpServer): void {
   // ── Release management ──────────────────────────────────────────────────
 
   server.tool(
+    'lore_move_to_project',
+    'Correct the git_project on a PR or release that was accidentally assigned to the wrong repo. ' +
+      'For PRs: updates git_project, pr_uid, and re-wires the BELONGS_TO_PROJECT edge. ' +
+      'For releases: updates git_project field.',
+    {
+      entity_type: z.enum(['pr', 'release']),
+      id: z.string().describe(
+        'For PR: pr_uid (e.g. "NooriUta/AIDA#420") or bare pr_number. ' +
+        'For release: release_id (e.g. "v1.0.0") or release_uid (e.g. "NooriUta/AIDA#v1.0.0").'
+      ),
+      git_project: z.string().describe('correct project slug, e.g. "NooriUta/seidr-site"'),
+    },
+    async ({ entity_type, id, git_project }) => {
+      try {
+        return json(await lorePost('/lore/project/move', { entity_type, id, git_project }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_create_release',
     'Create a new KnowRelease vertex in system_aida_lore. ' +
       'If is_current=true, the previous current release is automatically cleared. ' +
       'Returns the created release_id and timestamp.',
     {
       release_id:     z.string().describe('release id, e.g. "v1.6.12"'),
-      release_date:   z.string().optional().describe('YYYY-MM-DD'),
+      release_date:   z.string().optional().describe('YYYY-MM-DD; defaults to today'),
       git_tag:        z.string().optional(),
       type:           z.enum(['patch', 'minor', 'major']).optional(),
       description_md: z.string().optional().describe('changelog / release notes in Markdown'),
       is_current:     z.boolean().optional().default(false).describe('mark as current prod release'),
       week:           z.number().int().optional().describe('plan week number (relative to W0)'),
+      git_project:    z.string().optional()
+        .describe('GitHub project slug (default: NooriUta/AIDA)'),
     },
-    async ({ release_id, release_date, git_tag, type, description_md, is_current, week }) => {
+    async ({ release_id, release_date, git_tag, type, description_md, is_current, week, git_project }) => {
       try {
         return json(await lorePost('/lore/release', {
           release_id, release_date: release_date ?? null,
           git_tag: git_tag ?? null, type: type ?? null,
           description_md: description_md ?? null,
           is_current: is_current ?? false, week: week ?? null,
+          git_project: git_project ?? null,
         }));
       } catch (e) { return err(e); }
     },
@@ -226,8 +280,10 @@ export function registerLoreWrite(server: McpServer): void {
       release_date:   z.string().optional().describe('YYYY-MM-DD'),
       description_md: z.string().optional().describe('changelog in Markdown'),
       is_current:     z.boolean().optional().describe('promote to current prod release'),
+      git_project:    z.string().optional()
+        .describe('GitHub project slug, e.g. "NooriUta/aida-documentation" (default: NooriUta/AIDA)'),
     },
-    async ({ release_id, git_tag, release_date, description_md, is_current }) => {
+    async ({ release_id, git_tag, release_date, description_md, is_current, git_project }) => {
       try {
         return json(await lorePost('/lore/release/update', {
           release_id,
@@ -235,6 +291,7 @@ export function registerLoreWrite(server: McpServer): void {
           release_date: release_date ?? null,
           description_md: description_md ?? null,
           is_current: is_current ?? null,
+          git_project: git_project ?? null,
         }));
       } catch (e) { return err(e); }
     },
@@ -245,16 +302,44 @@ export function registerLoreWrite(server: McpServer): void {
     'Link sprints and/or PRs to a KnowRelease. ' +
       'For each sprint_id creates an IMPLEMENTED_IN_RELEASE edge (KnowSprint → KnowRelease). ' +
       'For each pr_number upserts a KnowPR vertex and creates a SHIPPED_IN edge (KnowPR → KnowRelease). ' +
-      'Returns counts of linked sprints and PRs.',
+      'Returns counts of linked sprints and PRs.\n\n' +
+      'MULTI-REPO: always pass git_project to avoid linking to the wrong project\'s release ' +
+      'when multiple projects share the same release_id (e.g. v1.0.0). ' +
+      'git_project is used to construct release_uid = "{git_project}#{release_id}" which is the unique key.',
     {
-      release_id:  z.string().describe('target release, e.g. "v1.6.11"'),
+      release_id:  z.string().describe('target release version, e.g. "v1.6.11"'),
       sprint_ids:  z.array(z.string()).optional().describe('e.g. ["SPRINT_HOUND_ROWSET_V2"]'),
       pr_numbers:  z.array(z.number().int()).optional().describe('e.g. [401, 402]'),
+      git_project: z.string()
+        .describe('REQUIRED. GitHub project slug, e.g. "NooriUta/AIDA" or "NooriUta/seidr-site". ' +
+                  'Determines which project\'s release to link to.'),
     },
-    async ({ release_id, sprint_ids, pr_numbers }) => {
+    async ({ release_id, sprint_ids, pr_numbers, git_project }) => {
       try {
         return json(await lorePost('/lore/release/link', {
           release_id,
+          sprint_ids: sprint_ids ?? [],
+          pr_numbers: pr_numbers ?? [],
+          git_project,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_unlink_release',
+    'Remove IMPLEMENTED_IN_RELEASE (sprint→release) or SHIPPED_IN (PR→release) edges. ' +
+      'Use to correct accidental double-links.',
+    {
+      release_id:  z.string().describe('target release version, e.g. "v1.6.11"'),
+      git_project: z.string().describe('GitHub project slug, e.g. "NooriUta/AIDA"'),
+      sprint_ids:  z.array(z.string()).optional().describe('sprint ids to unlink'),
+      pr_numbers:  z.array(z.number().int()).optional().describe('PR numbers to unlink'),
+    },
+    async ({ release_id, git_project, sprint_ids, pr_numbers }) => {
+      try {
+        return json(await lorePost('/lore/release/unlink', {
+          release_id, git_project,
           sprint_ids: sprint_ids ?? [],
           pr_numbers: pr_numbers ?? [],
         }));

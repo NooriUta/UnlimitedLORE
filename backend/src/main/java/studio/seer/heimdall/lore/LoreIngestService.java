@@ -57,6 +57,7 @@ public class LoreIngestService {
 
     public record RegisterSprintResult(
         boolean ok, String sprintId, String itemId, boolean created, String error) {}
+    public record CreateSprintResult(String sprintId, String itemId, boolean created) {}
 
     // Canonical status token → status_raw, mirrors AidaLoreResource.SCD2_STATUS_RAW.
     private static final Map<String, String> SPRINT_STATUS_RAW = Map.of(
@@ -113,6 +114,77 @@ public class LoreIngestService {
             Map.of("item", itemId, "sid", sprintId));
         LOG.infof("[LORE] registered sprint %s for plan-item %s", sprintId, itemId);
         return new RegisterSprintResult(true, sprintId, itemId, true, null);
+    }
+
+    /**
+     * Create a KnowSprint directly without a plan-item. Idempotent — if the sprint
+     * already exists its fields are updated but no duplicate HAS_STATE row is created.
+     */
+    /**
+     * Create a KnowSprint + PlanItem simultaneously, then link them via REPRESENTS.
+     * This makes the sprint appear on the Gantt without a pre-existing plan-item.
+     * item_id defaults to sprint_id with "SPRINT_" prefix stripped.
+     * All operations are idempotent — safe to call multiple times.
+     */
+    public CreateSprintResult createSprint(String sprintId, String name, String status,
+                                           String itemIdOverride, String planId,
+                                           String priority, String outcomeMd) {
+        String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "todo" : status, "📋 PLANNED");
+        String nm = (name != null && !name.isBlank()) ? name : sprintId;
+
+        // 1. Upsert KnowSprint
+        StringBuilder set = new StringBuilder(
+            "UPDATE KnowSprint SET sprint_id=:sid, name=:nm, status_raw=:sraw");
+        java.util.Map<String, Object> p = new java.util.LinkedHashMap<>(
+            Map.of("sid", sprintId, "nm", nm, "sraw", statusRaw));
+        if (planId    != null) { set.append(", plan_id=:pid");    p.put("pid", planId); }
+        if (priority  != null) { set.append(", priority=:pri");   p.put("pri", priority); }
+        if (outcomeMd != null) { set.append(", outcome_md=:omd"); p.put("omd", outcomeMd); }
+        set.append(" UPSERT WHERE sprint_id=:sid");
+        exec(set.toString(), p);
+
+        // 2. Seed HAS_STATE if none yet
+        List<Map<String, Object>> st = queryRows(
+            "SELECT out('HAS_STATE').size() AS n FROM KnowSprint WHERE sprint_id=:sid",
+            Map.of("sid", sprintId));
+        long stateN = (!st.isEmpty() && st.get(0).get("n") instanceof Number num) ? num.longValue() : 0;
+        boolean created = stateN == 0;
+        if (created) {
+            String stateUid = java.util.UUID.randomUUID().toString();
+            String now = java.time.Instant.now().toString();
+            exec("INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now",
+                Map.of("su", stateUid, "sraw", statusRaw, "now", now));
+            exec("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
+                    "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su)",
+                Map.of("sp", sprintId, "su", stateUid));
+        }
+
+        // 3. Upsert PlanItem so the sprint appears on the Gantt
+        String itemId = (itemIdOverride != null && !itemIdOverride.isBlank())
+            ? itemIdOverride
+            : sprintId.replaceFirst("(?i)^SPRINT_", "");
+        java.util.Map<String, Object> piP = new java.util.LinkedHashMap<>();
+        piP.put("iid", itemId); piP.put("lbl", nm);
+        StringBuilder piSet = new StringBuilder(
+            "UPDATE PlanItem SET item_id=:iid, label=:lbl");
+        if (planId != null) { piSet.append(", plan_id=:pid"); piP.put("pid", planId); }
+        if (status != null) { piSet.append(", status=:st");   piP.put("st",  status); }
+        piSet.append(" UPSERT WHERE item_id=:iid");
+        exec(piSet.toString(), piP);
+
+        // 4. REPRESENTS edge (idempotent — skip if already exists)
+        List<Map<String, Object>> rep = queryRows(
+            "SELECT out('REPRESENTS').size() AS n FROM PlanItem WHERE item_id=:iid",
+            Map.of("iid", itemId));
+        long repN = (!rep.isEmpty() && rep.get(0).get("n") instanceof Number num) ? num.longValue() : 0;
+        if (repN == 0) {
+            exec("CREATE EDGE REPRESENTS FROM (SELECT FROM PlanItem WHERE item_id=:iid) " +
+                    "TO (SELECT FROM KnowSprint WHERE sprint_id=:sid)",
+                Map.of("iid", itemId, "sid", sprintId));
+        }
+
+        LOG.infof("[LORE] created sprint %s + plan-item %s (new=%b)", sprintId, itemId, created);
+        return new CreateSprintResult(sprintId, itemId, created);
     }
 
     @SuppressWarnings("unchecked")

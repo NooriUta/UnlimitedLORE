@@ -330,6 +330,7 @@ export async function registerLoreSprint(
 
 export interface LoreRelease {
   release_id: string;
+  release_uid: string | null;
   git_tag: string | null;
   version: string | null;
   type: 'major' | 'minor' | 'patch' | string | null;
@@ -337,6 +338,9 @@ export interface LoreRelease {
   is_current: boolean | null;
   description_md: string | null;
   week: number | null;
+  sprint_count: number | null;
+  pr_count: number | null;
+  git_project: string | null;
 }
 
 export interface LoreHistRow {
