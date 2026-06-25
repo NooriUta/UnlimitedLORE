@@ -604,6 +604,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         const ALL_PROJECTS = [
           'NooriUta/AIDA', 'NooriUta/seidr-site',
           'NooriUta/aida-documentation', 'NooriUta/AIDA-TestPlayGround',
+          'NooriUta/HUGINN', 'NooriUta/UnlimitedLORE',
         ];
         const unlinked = ALL_PROJECTS.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;

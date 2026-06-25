@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "lore-app",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 4400
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "echo", "already running on 4400"],
+      "port": 4400,
+      "autoPort": false
     }
   ]
 }
