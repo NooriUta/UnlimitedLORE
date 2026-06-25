@@ -54,6 +54,13 @@ public class AidaLoreResource {
         boolean ok, String entity_type, String id,
         String old_status, String new_status, StatusRevision revision) {}
     public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers, String repo_url) {}
+    public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
+        String priority, String plan_id, Integer effort_days) {}
+    public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
+    public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
+        String component_id, String context_md, String decision_md, String consequences_md) {}
+    public record DecisionCreateRequest(String decision_id, String title, String body_md,
+        String date_created, String refs_raw) {}
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md) {}
     public record TaskEditRequest(String task_uid, String title, String note_md) {}
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index) {}
@@ -545,18 +552,18 @@ public class AidaLoreResource {
             }
             String now  = Instant.now().toString();
             String nsid = UUID.randomUUID().toString();
-            Map<String, Object> p = mapOfNullable(
-                "rid",      req.release_id(),
-                "tag",      req.git_tag(),
-                "date",     req.release_date(),
-                "type",     req.type(),
-                "desc",     req.description_md(),
-                "week",     req.week());
+            // Build SET clause dynamically — ArcadeDB rejects null param bindings
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("rid", req.release_id());
+            StringBuilder set = new StringBuilder(
+                "INSERT INTO KnowRelease SET release_id=:rid, is_current=" + cur);
+            if (req.git_tag()        != null) { set.append(", git_tag=:tag");          p.put("tag",   req.git_tag()); }
+            if (req.release_date()   != null) { set.append(", release_date=:date");  p.put("date",  req.release_date()); }
+            if (req.type()           != null) { set.append(", `type`=:rtype");       p.put("rtype", req.type()); }
+            if (req.description_md() != null) { set.append(", description_md=:desc"); p.put("desc", req.description_md()); }
+            if (req.week()           != null) { set.append(", week=:week");          p.put("week",  req.week()); }
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "INSERT INTO KnowRelease SET release_id=:rid, git_tag=:tag, " +
-                "release_date=:date, type=:type, description_md=:desc, " +
-                "week=:week, is_current=" + cur,
-                p)).await().indefinitely();
+                set.toString(), p)).await().indefinitely();
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now",
                 Map.of("nsid", nsid, "now", now))).await().indefinitely();
@@ -755,6 +762,157 @@ public class AidaLoreResource {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT REFS] %s: %s", req.sprint_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Write-path: update KnowSprint vertex fields ──────────────────────────
+
+    @POST
+    @Path("sprint/update")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateSprint(SprintUpdateRequest req,
+                                 @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
+            return badParams("sprint_id required");
+        if (!SAFE_ID.matcher(req.sprint_id()).matches())
+            return badParams("sprint_id contains illegal characters");
+        StringBuilder sb = new StringBuilder("UPDATE KnowSprint SET ");
+        Map<String, Object> p = new LinkedHashMap<>();
+        if (req.name()       != null) { sb.append("name=:name, ");           p.put("name",       req.name()); }
+        if (req.outcome_md() != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    req.outcome_md()); }
+        if (req.priority()   != null) { sb.append("priority=:priority, ");   p.put("priority",   req.priority()); }
+        if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
+        if (req.effort_days()!= null) { sb.append("effort_days=:effort, ");  p.put("effort",     req.effort_days()); }
+        String set = sb.toString().replaceAll(",\\s*$", "");
+        if (set.equals("UPDATE KnowSprint SET"))
+            return badParams("at least one field required");
+        p.put("sid", req.sprint_id());
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                set + " WHERE sprint_id=:sid", p)).await().indefinitely();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("sprint_id", req.sprint_id());
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPRINT UPDATE] %s: %s", req.sprint_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Write-path: batch status update ──────────────────────────────────────
+
+    @POST
+    @Path("status/batch")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response batchSetStatus(BatchStatusRequest req,
+                                   @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.ids() == null || req.ids().isEmpty())
+            return badParams("ids required");
+        if (req.entity_type() == null || req.status() == null)
+            return badParams("entity_type and status required");
+        int updated = 0;
+        List<String> errors = new java.util.ArrayList<>();
+        for (String id : req.ids()) {
+            try {
+                var body = new StatusUpdateRequest(req.entity_type(), id, req.status());
+                Response r = updateStatus(body, "admin").await().indefinitely();
+                if (r.getStatus() == 200) updated++;
+                else errors.add(id + ": HTTP " + r.getStatus());
+            } catch (Exception e) {
+                errors.add(id + ": " + e.getMessage());
+            }
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("ok", errors.isEmpty()); out.put("updated", updated);
+        if (!errors.isEmpty()) out.put("errors", errors);
+        return noStore(Response.ok(out));
+    }
+
+    // ── Write-path: create / upsert KnowADR ──────────────────────────────────
+
+    @POST
+    @Path("adr")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createAdr(AdrCreateRequest req,
+                              @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.adr_id() == null || req.adr_id().isBlank())
+            return badParams("adr_id required");
+        if (!SAFE_ID.matcher(req.adr_id()).matches())
+            return badParams("adr_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "adr_id",           req.adr_id(),
+                "name",             req.name(),
+                "status",           req.status() != null ? req.status() : "PROPOSED",
+                "date_created",     req.date_created() != null ? req.date_created()
+                                        : java.time.LocalDate.now().toString(),
+                "component_id",     req.component_id(),
+                "context_md",       req.context_md(),
+                "decision_md",      req.decision_md(),
+                "consequences_md",  req.consequences_md());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowADR SET adr_id=:adr_id, name=:name, status=:status, " +
+                "date_created=:date_created, component_id=:component_id, " +
+                "context_md=:context_md, decision_md=:decision_md, " +
+                "consequences_md=:consequences_md UPSERT WHERE adr_id=:adr_id",
+                p)).await().indefinitely();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("adr_id", req.adr_id());
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Write-path: create / upsert KnowDecision ─────────────────────────────
+
+    @POST
+    @Path("decision")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createDecision(DecisionCreateRequest req,
+                                   @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.decision_id() == null || req.decision_id().isBlank())
+            return badParams("decision_id required");
+        if (req.title() == null || req.title().isBlank())
+            return badParams("title required");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "did",   req.decision_id(),
+                "title", req.title().trim(),
+                "body",  req.body_md(),
+                "date",  req.date_created() != null ? req.date_created()
+                             : java.time.LocalDate.now().toString(),
+                "refs",  req.refs_raw());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowDecision SET decision_id=:did, title=:title, body_md=:body, " +
+                "date_created=:date, refs_raw=:refs UPSERT WHERE decision_id=:did",
+                p)).await().indefinitely();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("decision_id", req.decision_id());
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }

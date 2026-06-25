@@ -77,6 +77,97 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_update_sprint',
+    'Update metadata fields on a KnowSprint vertex (partial update — only supplied fields written). ' +
+      'Covers name, outcome_md, priority, plan_id, effort_days. ' +
+      'Does NOT change status — use lore_set_status for that.',
+    {
+      sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
+      name:        z.string().optional(),
+      outcome_md:  z.string().optional().describe('sprint outcome / retrospective in Markdown'),
+      priority:    z.string().optional().describe('e.g. "high", "critical"'),
+      plan_id:     z.string().optional(),
+      effort_days: z.number().int().optional().describe('actual effort in person-days'),
+    },
+    async ({ sprint_id, name, outcome_md, priority, plan_id, effort_days }) => {
+      try {
+        return json(await lorePost('/lore/sprint/update', {
+          sprint_id,
+          name: name ?? null, outcome_md: outcome_md ?? null,
+          priority: priority ?? null, plan_id: plan_id ?? null,
+          effort_days: effort_days ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_batch_set_status',
+    'Set the same status on multiple LORE entities in one call. ' +
+      'Each item goes through the full SCD2 transition (closes old hist row, opens new one). ' +
+      'Errors are collected per-item without aborting the rest. ' +
+      'Returns {ok, updated, errors[]}.',
+    {
+      entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint']),
+      ids:         z.array(z.string()).describe('list of entity ids'),
+      status:      z.enum(['todo', 'active', 'partial', 'done', 'blocked', 'high', 'cancelled']),
+    },
+    async ({ entity_type, ids, status }) => {
+      try {
+        return json(await lorePost('/lore/status/batch', { entity_type, ids, status }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_adr',
+    'Create or update a KnowADR (Architecture Decision Record). Idempotent — upserts by adr_id. ' +
+      'Default status is PROPOSED. Supports context_md / decision_md / consequences_md sections.',
+    {
+      adr_id:           z.string().describe('e.g. "ADR-HND-022"'),
+      name:             z.string().describe('short title'),
+      status:           z.enum(['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED']).optional(),
+      date_created:     z.string().optional().describe('YYYY-MM-DD, defaults to today'),
+      component_id:     z.string().optional().describe('e.g. "HND" for Hound'),
+      context_md:       z.string().optional(),
+      decision_md:      z.string().optional(),
+      consequences_md:  z.string().optional(),
+    },
+    async ({ adr_id, name, status, date_created, component_id, context_md, decision_md, consequences_md }) => {
+      try {
+        return json(await lorePost('/lore/adr', {
+          adr_id, name,
+          status: status ?? null, date_created: date_created ?? null,
+          component_id: component_id ?? null, context_md: context_md ?? null,
+          decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_decision',
+    'Create or update a KnowDecision (logged decision/verdict). Idempotent — upserts by decision_id. ' +
+      'Use for recording key decisions made during a sprint or design session.',
+    {
+      decision_id:  z.string().describe('unique id, e.g. "D-2026-047"'),
+      title:        z.string(),
+      body_md:      z.string().optional().describe('full decision text in Markdown'),
+      date_created: z.string().optional().describe('YYYY-MM-DD, defaults to today'),
+      refs_raw:     z.string().optional().describe('free-text references, e.g. "#420, ADR-HND-021"'),
+    },
+    async ({ decision_id, title, body_md, date_created, refs_raw }) => {
+      try {
+        return json(await lorePost('/lore/decision', {
+          decision_id, title,
+          body_md: body_md ?? null, date_created: date_created ?? null,
+          refs_raw: refs_raw ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_update_sprint_refs',
     'Append PR numbers to a sprint\'s pr_refs field (stored on the open KnowSprintHist row ' +
       'as a markdown link string). Skips PRs already present. ' +
