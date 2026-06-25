@@ -18,5 +18,5 @@ export interface ShellTab {
 
 export const SHELL_TABS: ShellTab[] = [
   { id: 'projects', labelKey: 'shell.projects', fallback: 'Проекты', icon: 'compass',    to: '/lore?section=plan', match: '/lore' },
-  { id: 'research', labelKey: 'shell.research', fallback: 'MUNINN',  icon: 'raven',      to: '/benchmark',         match: '/benchmark' },
+  { id: 'research', labelKey: 'shell.research', fallback: 'HUGINN',  icon: 'raven',      to: '/benchmark',         match: '/benchmark' },
 ];
