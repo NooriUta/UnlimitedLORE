@@ -1004,6 +1004,56 @@ public class AidaLoreResource {
         }
     }
 
+    // ── Write-path: link sprint ↔ project ────────────────────────────────────
+
+    public record SprintProjectRequest(String sprint_id, String git_project, String action) {}
+
+    @POST
+    @Path("sprint/project")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkSprintProject(SprintProjectRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.sprint_id() == null || req.git_project() == null)
+            return badParams("sprint_id and git_project required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE EDGE BELONGS_TO_PROJECT " +
+                    "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                    "TO   (SELECT FROM KnowGitProject WHERE slug=:gp)",
+                    Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
+            } else {
+                // Idempotent: create edge only if not already linked
+                List<Map<String, Object>> existing = ingestService.queryPublic(
+                    "SELECT out('BELONGS_TO_PROJECT').slug AS gps FROM KnowSprint WHERE sprint_id=:sid",
+                    Map.of("sid", req.sprint_id()));
+                @SuppressWarnings("unchecked")
+                List<String> current = existing.isEmpty() ? List.of()
+                    : (List<String>) existing.get(0).getOrDefault("gps", List.of());
+                if (!current.contains(req.git_project())) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE BELONGS_TO_PROJECT " +
+                        "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                        "TO   (SELECT FROM KnowGitProject WHERE slug=:gp)",
+                        Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
+                }
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("sprint_id", req.sprint_id());
+            out.put("git_project", req.git_project()); out.put("action", remove ? "removed" : "added");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPRINT PROJECT] %s / %s: %s", req.sprint_id(), req.git_project(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Write-path: batch status update ──────────────────────────────────────
 
     @POST

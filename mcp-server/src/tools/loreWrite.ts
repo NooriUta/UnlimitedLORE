@@ -138,6 +138,26 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_sprint_project',
+    'Link (or unlink) a KnowSprint to a KnowGitProject via BELONGS_TO_PROJECT edge. ' +
+      'A sprint can belong to multiple projects (e.g. a cross-repo sprint). ' +
+      'Idempotent on add. Use action="remove" to unlink. ' +
+      'Known slugs: "NooriUta/AIDA", "NooriUta/seidr-site", "NooriUta/aida-documentation", "NooriUta/AIDA-TestPlayGround".',
+    {
+      sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
+      git_project: z.string().describe('project slug, e.g. "NooriUta/AIDA"'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ sprint_id, git_project, action }) => {
+      try {
+        return json(await lorePost('/lore/sprint/project', {
+          sprint_id, git_project, action: action ?? 'add',
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_batch_set_status',
     'Set the same status on multiple LORE entities in one call. ' +
       'Each item goes through the full SCD2 transition (closes old hist row, opens new one). ' +

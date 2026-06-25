@@ -123,7 +123,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
-            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date " +
+            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
+            "out('BELONGS_TO_PROJECT').slug             AS git_projects " +
             "FROM KnowSprint",
             List.of(),
             new LinkedHashMap<>(Map.of(

@@ -131,6 +131,7 @@ export interface LoreSprintRow {
   release_ids: string[] | null;
   release_dates: string[] | null;
   done_date: string | null;
+  git_projects: string[] | null;
 }
 
 export interface LoreSprintDoneDate {
@@ -306,6 +307,22 @@ export interface LoreSprintRegisterResponse {
   item_id: string;
   sprint_id: string;
   created: boolean;
+}
+
+/** Link or unlink a KnowSprint to a KnowGitProject (POST /lore/sprint/project). */
+export async function linkSprintProject(
+  sprintId: string,
+  gitProject: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean; sprint_id: string; git_project: string; action: string }> {
+  const res = await fetch(`${LORE_BASE}/sprint/project`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ sprint_id: sprintId, git_project: gitProject, action }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; sprint_id: string; git_project: string; action: string }>;
 }
 
 /** Partial update of KnowSprint vertex fields (POST /lore/sprint/update). */

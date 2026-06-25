@@ -188,6 +188,10 @@ public class LoreIngestService {
         return new CreateSprintResult(sprintId, itemId, created);
     }
 
+    public List<Map<String, Object>> queryPublic(String sql, Map<String, Object> params) {
+        return queryRows(sql, params);
+    }
+
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> queryRows(String sql, Map<String, Object> params) {
         LoreCommandClient.LoreCommandResult r = client.command(db, basicAuth(),
