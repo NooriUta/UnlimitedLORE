@@ -53,6 +53,7 @@ public class AidaLoreResource {
     public record StatusUpdateResponse(
         boolean ok, String entity_type, String id,
         String old_status, String new_status, StatusRevision revision) {}
+    public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers, String repo_url) {}
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md) {}
     public record TaskEditRequest(String task_uid, String title, String note_md) {}
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index) {}
@@ -690,6 +691,73 @@ public class AidaLoreResource {
         out.put("prs_linked", prsLinked);
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
+    }
+
+    // ── Write-path: append PR numbers to open KnowSprintHist.pr_refs ───────────
+
+    @POST
+    @Path("sprint/refs")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateSprintRefs(SprintRefsRequest req,
+                                     @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
+            return badParams("sprint_id required");
+        if (!SAFE_ID.matcher(req.sprint_id()).matches())
+            return badParams("sprint_id contains illegal characters");
+        if (req.pr_numbers() == null || req.pr_numbers().isEmpty())
+            return badParams("pr_numbers required");
+
+        String base = (req.repo_url() != null && !req.repo_url().isBlank())
+            ? req.repo_url().replaceAll("/+$", "")
+            : "https://github.com/NooriUta/AIDA/pull";
+
+        try {
+            // Read current pr_refs from the open hist row.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> rows = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT @rid, pr_refs FROM KnowSprintHist " +
+                    "WHERE in('HAS_STATE').sprint_id CONTAINS :sid AND valid_to IS NULL",
+                    Map.of("sid", req.sprint_id()))).await().indefinitely().result();
+
+            if (rows == null || rows.isEmpty())
+                return noStore(Response.status(Response.Status.NOT_FOUND)
+                    .entity(new LoreError("NOT_FOUND", "no open hist row for sprint: " + req.sprint_id())));
+
+            // pr_refs is a markdown string; build the new entries and append.
+            String existing = "";
+            Object raw = rows.get(0).get("pr_refs");
+            if (raw != null) existing = raw.toString().trim();
+            String rid = rows.get(0).get("@rid").toString();
+
+            StringBuilder sb = new StringBuilder(existing);
+            int added = 0;
+            for (Integer n : req.pr_numbers()) {
+                String link = "[#" + n + "](" + base + "/" + n + ")";
+                if (!existing.contains(link)) {
+                    if (!sb.isEmpty() && !sb.toString().endsWith(" ")) sb.append(" ");
+                    sb.append(link);
+                    added++;
+                }
+            }
+            String updated = sb.toString().trim();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE " + rid + " SET pr_refs = :refs",
+                Map.of("refs", updated))).await().indefinitely();
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("sprint_id", req.sprint_id());
+            out.put("added", added); out.put("pr_refs", updated);
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPRINT REFS] %s: %s", req.sprint_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
     }
 
     private Response requireAdmin(String role) {

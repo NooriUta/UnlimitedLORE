@@ -76,6 +76,26 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  server.tool(
+    'lore_update_sprint_refs',
+    'Append PR numbers to a sprint\'s pr_refs field (stored on the open KnowSprintHist row ' +
+      'as a markdown link string). Skips PRs already present. ' +
+      'Returns the updated pr_refs string and count of newly added links.',
+    {
+      sprint_id:  z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
+      pr_numbers: z.array(z.number().int()).describe('PR numbers to append, e.g. [420, 421]'),
+      repo_url:   z.string().optional()
+        .describe('base URL for PR links (default: https://github.com/NooriUta/AIDA/pull)'),
+    },
+    async ({ sprint_id, pr_numbers, repo_url }) => {
+      try {
+        return json(await lorePost('/lore/sprint/refs', {
+          sprint_id, pr_numbers, repo_url: repo_url ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
   // ── Release management ──────────────────────────────────────────────────
 
   server.tool(
