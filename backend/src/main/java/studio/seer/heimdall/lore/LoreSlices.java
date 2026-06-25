@@ -131,7 +131,7 @@ public final class LoreSlices {
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, name, context_md, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +

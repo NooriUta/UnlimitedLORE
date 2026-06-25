@@ -56,7 +56,7 @@ public class AidaLoreResource {
     public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers,
         String git_project, String repo_url) {}
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
-        String priority, String plan_id, Integer effort_days) {}
+        String context_md, String priority, String plan_id, Integer effort_days) {}
     public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
         String component_id, String context_md, String decision_md, String consequences_md) {}
@@ -354,7 +354,7 @@ public class AidaLoreResource {
 
     public record SprintRegisterRequest(String item_id, String sprint_id, String name, String status) {}
     public record SprintCreateRequest(String sprint_id, String name, String status,
-        String item_id, String plan_id, String priority, String outcome_md) {}
+        String item_id, String plan_id, String priority, String outcome_md, String context_md) {}
 
     @POST
     @Path("sprint")
@@ -418,7 +418,7 @@ public class AidaLoreResource {
         }
         try {
             LoreIngestService.CreateSprintResult r = ingestService.createSprint(
-                req.sprint_id(), req.name(), status, req.item_id(), req.plan_id(), req.priority(), req.outcome_md());
+                req.sprint_id(), req.name(), status, req.item_id(), req.plan_id(), req.priority(), req.outcome_md(), req.context_md());
             java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
@@ -786,7 +786,7 @@ public class AidaLoreResource {
         int sprintsRemoved = 0, prsRemoved = 0;
         List<String> errors = new java.util.ArrayList<>();
         try {
-            for (String sid : (req.sprint_ids() != null ? req.sprint_ids() : List.of())) {
+            for (String sid : (req.sprint_ids() != null ? req.sprint_ids() : List.<String>of())) {
                 if (!SAFE_ID.matcher(sid).matches()) { errors.add("bad sprint id: " + sid); continue; }
                 try {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -797,7 +797,7 @@ public class AidaLoreResource {
                     sprintsRemoved++;
                 } catch (Exception e) { errors.add("sprint " + sid + ": " + e.getMessage()); }
             }
-            for (Integer prNum : (req.pr_numbers() != null ? req.pr_numbers() : List.of())) {
+            for (Integer prNum : (req.pr_numbers() != null ? req.pr_numbers() : List.<Integer>of())) {
                 String prUid = gp + "#" + prNum;
                 try {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -981,8 +981,9 @@ public class AidaLoreResource {
             return badParams("sprint_id contains illegal characters");
         StringBuilder sb = new StringBuilder("UPDATE KnowSprint SET ");
         Map<String, Object> p = new LinkedHashMap<>();
-        if (req.name()       != null) { sb.append("name=:name, ");           p.put("name",       req.name()); }
+        if (req.name()       != null) { sb.append("name=:name, ");            p.put("name",       req.name()); }
         if (req.outcome_md() != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    req.outcome_md()); }
+        if (req.context_md() != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        req.context_md()); }
         if (req.priority()   != null) { sb.append("priority=:priority, ");   p.put("priority",   req.priority()); }
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
         if (req.effort_days()!= null) { sb.append("effort_days=:effort, ");  p.put("effort",     req.effort_days()); }

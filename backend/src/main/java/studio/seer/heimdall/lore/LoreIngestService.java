@@ -128,7 +128,7 @@ public class LoreIngestService {
      */
     public CreateSprintResult createSprint(String sprintId, String name, String status,
                                            String itemIdOverride, String planId,
-                                           String priority, String outcomeMd) {
+                                           String priority, String outcomeMd, String contextMd) {
         String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "todo" : status, "📋 PLANNED");
         String nm = (name != null && !name.isBlank()) ? name : sprintId;
 
@@ -137,9 +137,10 @@ public class LoreIngestService {
             "UPDATE KnowSprint SET sprint_id=:sid, name=:nm, status_raw=:sraw");
         java.util.Map<String, Object> p = new java.util.LinkedHashMap<>(
             Map.of("sid", sprintId, "nm", nm, "sraw", statusRaw));
-        if (planId    != null) { set.append(", plan_id=:pid");    p.put("pid", planId); }
-        if (priority  != null) { set.append(", priority=:pri");   p.put("pri", priority); }
-        if (outcomeMd != null) { set.append(", outcome_md=:omd"); p.put("omd", outcomeMd); }
+        if (planId    != null) { set.append(", plan_id=:pid");     p.put("pid", planId); }
+        if (priority  != null) { set.append(", priority=:pri");    p.put("pri", priority); }
+        if (outcomeMd != null) { set.append(", outcome_md=:omd");  p.put("omd", outcomeMd); }
+        if (contextMd != null) { set.append(", context_md=:ctx");  p.put("ctx", contextMd); }
         set.append(" UPSERT WHERE sprint_id=:sid");
         exec(set.toString(), p);
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { marked } from 'marked';
 import {
-  fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask,
+  fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
@@ -17,6 +17,7 @@ interface SprintMeta {
   release_ids: string[] | null;
   milestone_ids: string[] | null;
   depends_on: string[] | null;
+  context_md: string | null;
 }
 
 interface PhaseRow {
@@ -428,6 +429,9 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [filter, setFilter]   = useState<Set<string>>(new Set());
+  const [ctxEdit, setCtxEdit] = useState(false);
+  const [ctxDraft, setCtxDraft] = useState('');
+  const [ctxSaving, setCtxSaving] = useState(false);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -511,6 +515,56 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
       </div>
 
       {sprint.name && <div style={S.sprintName}>{sprint.name}</div>}
+
+      {/* context_md — background / WHY section, editable inline */}
+      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Контекст</span>
+          {!ctxEdit && (
+            <button
+              onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
+              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+            >✎ ред.</button>
+          )}
+        </div>
+        {ctxEdit ? (
+          <div>
+            <textarea
+              value={ctxDraft}
+              onChange={e => setCtxDraft(e.target.value)}
+              rows={8}
+              placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки, связанные спринты..."
+              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
+            />
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <button
+                disabled={ctxSaving}
+                onClick={async () => {
+                  setCtxSaving(true);
+                  try {
+                    await updateLoreSprint(sprint.sprint_id, { context_md: ctxDraft || null });
+                    setSprint(s => s ? { ...s, context_md: ctxDraft || null } : s);
+                    setCtxEdit(false);
+                  } catch (e) { onError(e); }
+                  finally { setCtxSaving(false); }
+                }}
+                style={{ fontSize: 11, padding: '2px 10px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer' }}
+              >{ctxSaving ? '…' : 'Сохранить'}</button>
+              <button
+                onClick={() => setCtxEdit(false)}
+                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+              >Отмена</button>
+            </div>
+          </div>
+        ) : sprint.context_md ? (
+          <div
+            style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.55 }}
+            dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }}
+          />
+        ) : (
+          <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>Контекст не заполнен</div>
+        )}
+      </div>
 
       {releases.length > 0 && (
         <div style={S.prBar}>

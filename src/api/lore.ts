@@ -308,6 +308,21 @@ export interface LoreSprintRegisterResponse {
   created: boolean;
 }
 
+/** Partial update of KnowSprint vertex fields (POST /lore/sprint/update). */
+export async function updateLoreSprint(
+  sprintId: string,
+  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; priority?: string | null },
+): Promise<{ ok: boolean; sprint_id: string }> {
+  const res = await fetch(`${LORE_BASE}/sprint/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ sprint_id: sprintId, ...fields }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; sprint_id: string }>;
+}
+
 /** Register a real sprint for a standalone plan-item placeholder (POST /lore/sprint). */
 export async function registerLoreSprint(
   itemId: string,

@@ -66,8 +66,9 @@ export function registerLoreWrite(server: McpServer): void {
       plan_id:    z.string().optional().describe('optional plan this sprint belongs to'),
       priority:   z.string().optional().describe('e.g. "high", "critical"'),
       outcome_md: z.string().optional().describe('sprint goal / outcome in Markdown'),
+      context_md: z.string().optional().describe('background context for the sprint — WHY it exists, key decisions, related sprints, links to docs. Shown in sprint detail panel.'),
     },
-    async ({ sprint_id, name, status, item_id, plan_id, priority, outcome_md }) => {
+    async ({ sprint_id, name, status, item_id, plan_id, priority, outcome_md, context_md }) => {
       try {
         return json(await lorePost('/lore/sprint/create', {
           sprint_id, name,
@@ -76,6 +77,7 @@ export function registerLoreWrite(server: McpServer): void {
           plan_id: plan_id ?? null,
           priority: priority ?? null,
           outcome_md: outcome_md ?? null,
+          context_md: context_md ?? null,
         }));
       } catch (e) { return err(e); }
     },
@@ -110,21 +112,24 @@ export function registerLoreWrite(server: McpServer): void {
   server.tool(
     'lore_update_sprint',
     'Update metadata fields on a KnowSprint vertex (partial update — only supplied fields written). ' +
-      'Covers name, outcome_md, priority, plan_id, effort_days. ' +
-      'Does NOT change status — use lore_set_status for that.',
+      'Covers name, outcome_md, context_md, priority, plan_id, effort_days. ' +
+      'Does NOT change status — use lore_set_status for that. ' +
+      'RULE: always fill context_md when you know WHY the sprint exists, key decisions, or related sprints.',
     {
       sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
       name:        z.string().optional(),
       outcome_md:  z.string().optional().describe('sprint outcome / retrospective in Markdown'),
+      context_md:  z.string().optional().describe('background context — WHY the sprint exists, key decisions, links to ADRs/docs, related sprints. Fill whenever you have this information.'),
       priority:    z.string().optional().describe('e.g. "high", "critical"'),
       plan_id:     z.string().optional(),
       effort_days: z.number().int().optional().describe('actual effort in person-days'),
     },
-    async ({ sprint_id, name, outcome_md, priority, plan_id, effort_days }) => {
+    async ({ sprint_id, name, outcome_md, context_md, priority, plan_id, effort_days }) => {
       try {
         return json(await lorePost('/lore/sprint/update', {
           sprint_id,
           name: name ?? null, outcome_md: outcome_md ?? null,
+          context_md: context_md ?? null,
           priority: priority ?? null, plan_id: plan_id ?? null,
           effort_days: effort_days ?? null,
         }));
