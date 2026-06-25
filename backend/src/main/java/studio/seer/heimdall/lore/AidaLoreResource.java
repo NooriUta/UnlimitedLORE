@@ -560,7 +560,7 @@ public class AidaLoreResource {
             if (req.git_tag()        != null) { set.append(", git_tag=:tag");          p.put("tag",   req.git_tag()); }
             if (req.release_date()   != null) { set.append(", release_date=:date");  p.put("date",  req.release_date()); }
             if (req.type()           != null) { set.append(", `type`=:rtype");       p.put("rtype", req.type()); }
-            if (req.description_md() != null) { set.append(", description_md=:desc"); p.put("desc", req.description_md()); }
+            if (req.description_md() != null) { set.append(", description_md=:dmd"); p.put("dmd", req.description_md()); }
             if (req.week()           != null) { set.append(", week=:week");          p.put("week",  req.week()); }
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 set.toString(), p)).await().indefinitely();
@@ -613,7 +613,7 @@ public class AidaLoreResource {
             Map<String, Object> p = new LinkedHashMap<>();
             if (req.git_tag()      != null) { sb.append("git_tag=:tag, ");  p.put("tag",  req.git_tag()); }
             if (req.release_date() != null) { sb.append("release_date=:date, "); p.put("date", req.release_date()); }
-            if (req.description_md() != null) { sb.append("description_md=:desc, "); p.put("desc", req.description_md()); }
+            if (req.description_md() != null) { sb.append("description_md=:dmd, "); p.put("dmd", req.description_md()); }
             if (curSet) sb.append("is_current=").append(cur).append(", ");
             // Remove trailing comma+space and finish.
             String set = sb.toString().replaceAll(",\\s*$", "");
