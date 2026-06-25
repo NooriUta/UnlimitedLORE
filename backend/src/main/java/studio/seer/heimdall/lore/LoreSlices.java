@@ -137,7 +137,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
             "out('CONTRIBUTES_TO').milestone_id AS milestone_ids, " +
-            "out('DEPENDS_ON').sprint_id AS depends_on " +
+            "out('DEPENDS_ON').sprint_id AS depends_on, " +
+            "out('BELONGS_TO_PROJECT').slug AS git_projects " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
 
