@@ -13,6 +13,8 @@ const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
 
 function activeTabId(pathname: string): ShellTab['id'] {
   if (pathname.startsWith('/benchmark')) return 'research';
+  if (pathname.startsWith('/muninn'))    return 'muninn';
+  if (pathname.startsWith('/tyr'))       return 'tyr';
   if (pathname.startsWith('/bragi'))     return 'bragi';
   return 'projects';
 }
@@ -94,7 +96,7 @@ export default function AppShell() {
                   if (!isActive) e.currentTarget.style.background = 'transparent';
                 }}
               >
-                <GameIcon slug={tab.icon} size={15} style={{ color: 'inherit' }} />
+                <GameIcon slug={tab.icon} size={15} style={{ color: 'inherit', transform: tab.flipX ? 'scaleX(-1)' : undefined }} />
                 <span>{t(tab.labelKey, tab.fallback)}</span>
               </button>
             );

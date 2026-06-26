@@ -7,6 +7,8 @@ import HypothesisPage from './pages/HypothesisPage';
 import FindingPage from './pages/FindingPage';
 import ReferencesPage from './pages/ReferencesPage';
 import BragiPage from './pages/BragiPage';
+import MuninnPage from './pages/MuninnPage';
+import TyrPage from './pages/TyrPage';
 import './styles/tokens.css';
 
 export default function App() {
@@ -21,6 +23,8 @@ export default function App() {
           <Route path="/benchmark/hypothesis/:id" element={<HypothesisPage />} />
           <Route path="/benchmark/finding/:id" element={<FindingPage />} />
           <Route path="/benchmark/references" element={<ReferencesPage />} />
+          <Route path="/muninn/*" element={<MuninnPage />} />
+          <Route path="/tyr/*" element={<TyrPage />} />
           <Route path="/bragi/*" element={<BragiPage />} />
         </Route>
       </Routes>

@@ -1,7 +1,9 @@
 {
   "shell": {
-    "projects": "Projects",
+    "projects": "Forseti",
     "research": "HUGINN",
+    "muninn": "MUNINN",
+    "tyr": "TYR",
     "bragi": "BRAGI"
   },
   "nav": {
