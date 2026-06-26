@@ -1,11 +1,11 @@
-// Top-level shell tabs — the two faces of the app under the LORE brand:
+// Top-level shell tabs:
 //   Проекты → LORE (plan / sprints / ADRs / decisions / releases / …)
-//   MUNINN  → the experiment workspace (research / benchmark / biblio / story)
-// Active tab is derived from pathname (see AppShell): /benchmark* → research,
-// everything else → projects.
+//   HUGINN  → the experiment workspace (research / benchmark / biblio / story)
+//   BRAGI   → [stub] narrative / docs / skald module
+// Active tab derived from pathname (see AppShell).
 
 export interface ShellTab {
-  id: 'projects' | 'research';
+  id: 'projects' | 'research' | 'bragi';
   labelKey: string;
   fallback: string;
   /** game-icons slug rendered before the label */
@@ -17,6 +17,7 @@ export interface ShellTab {
 }
 
 export const SHELL_TABS: ShellTab[] = [
-  { id: 'projects', labelKey: 'shell.projects', fallback: 'Проекты', icon: 'compass',    to: '/lore?section=plan', match: '/lore' },
-  { id: 'research', labelKey: 'shell.research', fallback: 'HUGINN',  icon: 'raven',      to: '/benchmark',         match: '/benchmark' },
+  { id: 'projects', labelKey: 'shell.projects', fallback: 'Проекты', icon: 'compass',      to: '/lore?section=plan', match: '/lore' },
+  { id: 'research', labelKey: 'shell.research', fallback: 'HUGINN',  icon: 'raven',        to: '/benchmark',         match: '/benchmark' },
+  { id: 'bragi',    labelKey: 'shell.bragi',    fallback: 'BRAGI',   icon: 'quill-ink',    to: '/bragi',             match: '/bragi' },
 ];

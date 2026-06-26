@@ -6,6 +6,7 @@ import SubstratePage from './pages/SubstratePage';
 import HypothesisPage from './pages/HypothesisPage';
 import FindingPage from './pages/FindingPage';
 import ReferencesPage from './pages/ReferencesPage';
+import BragiPage from './pages/BragiPage';
 import './styles/tokens.css';
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/benchmark/hypothesis/:id" element={<HypothesisPage />} />
           <Route path="/benchmark/finding/:id" element={<FindingPage />} />
           <Route path="/benchmark/references" element={<ReferencesPage />} />
+          <Route path="/bragi/*" element={<BragiPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

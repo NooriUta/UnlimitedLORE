@@ -12,7 +12,9 @@ const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
 
 function activeTabId(pathname: string): ShellTab['id'] {
-  return pathname.startsWith('/benchmark') ? 'research' : 'projects';
+  if (pathname.startsWith('/benchmark')) return 'research';
+  if (pathname.startsWith('/bragi'))     return 'bragi';
+  return 'projects';
 }
 
 export default function AppShell() {
