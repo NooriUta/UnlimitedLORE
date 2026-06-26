@@ -35,6 +35,44 @@
   --seer-radius-xl: 14px;
 }
 
+/* ---------- SLATE (dark, blue) ---------- */
+[data-theme='slate'] {
+  --bg0: #0e131b;
+  --bg1: #131a25;
+  --bg2: #1c2434;
+  --bg3: #263043;
+  --bd:  #2f3a52;
+  --bdh: #41506e;
+  --t1:  #e2e8f3;
+  --t2:  #8593ad;
+  --t3:  #5a6582;
+  --acc:    #6aa6ff;
+  --suc:    #4ade80;
+  --wrn:    #fbbf24;
+  --inf:    #93c5fd;
+  --dng:    #f87171;
+  --danger: #f87171;
+}
+
+/* ---------- LIGHT ---------- */
+[data-theme='light'] {
+  --bg0: #f5f3ee;
+  --bg1: #fbfaf6;
+  --bg2: #ffffff;
+  --bg3: #ece8de;
+  --bd:  #d6cfbe;
+  --bdh: #b9b099;
+  --t1:  #1a1812;
+  --t2:  #5b5340;
+  --t3:  #8a826d;
+  --acc:    #6b5b9a;
+  --suc:    #2f7d4f;
+  --wrn:    #a86a1a;
+  --inf:    #356a8a;
+  --dng:    #b03e2e;
+  --danger: #b03e2e;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root { height: 100%; }
