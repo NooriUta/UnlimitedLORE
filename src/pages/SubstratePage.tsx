@@ -2,15 +2,15 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { useMartSlice } from '../hooks/useBench';
+import { useMartSlice } from '../hooks/useHuginn';
 import type {
   CapabilityRow, ReferenceRow, SubstrateFactRow, SubstrateRevRow, SubstrateRow,
-} from '../utils/benchData';
+} from '../utils/huginnData';
 import {
   HOP_ORDER, aggregateSubstrateRuns, buildCellSql, f1CellBg, fmtF1, formatSeconds, formatTokens,
   formatUsd, pickLocale, taxonomyDistribution,
-} from '../utils/benchData';
-import { BenchSelect, Field, PanelMsg, SqlChip, StatusBadge } from '../components/bench/shared';
+} from '../utils/huginnData';
+import { HuginnSelect, Field, PanelMsg, SqlChip, StatusBadge } from '../components/bench/shared';
 import { MartProse } from '../components/bench/MartProse';
 import { RevisionTimeline } from '../components/bench/RevisionTimeline';
 
@@ -247,7 +247,7 @@ export default function SubstratePage() {
                  hint={t('bench.sub.failuresHint', 'empty taxonomy = scored fine')}>
             <div style={{ marginBottom: 8 }}>
               <Field label={t('bench.run', 'Run')}>
-                <BenchSelect value={taxRun} onChange={setTaxRun} allLabel={t('bench.sub.allRuns', 'all runs')}
+                <HuginnSelect value={taxRun} onChange={setTaxRun} allLabel={t('bench.sub.allRuns', 'all runs')}
                              options={(runAggs ?? []).map(r => ({ value: r.run_id, label: r.run_id }))} />
               </Field>
             </div>

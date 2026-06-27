@@ -1,12 +1,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useBench';
-import type { DriftRow, RunRow, SnapshotRow, SubstrateRevAllRow, SubstrateRow, TaskRow } from '../../utils/benchData';
+import { useMartSlice } from '../../hooks/useHuginn';
+import type { DriftRow, RunRow, SnapshotRow, SubstrateRevAllRow, SubstrateRow, TaskRow } from '../../utils/huginnData';
 import {
   REV_SERIES_SEP, buildCellSql, dedupe, f1CellBg, filterRevAtRunTime, fmtF1, groupRevChains,
   pivotDrift, short, splitRevSeries,
-} from '../../utils/benchData';
-import { BenchSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
+} from '../../utils/huginnData';
+import { HuginnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
 
 function shortSnapshot(id: string): string {
   // DALI_vCANONICAL_2026-06-10_2120 → vCANONICAL 06-10
@@ -74,11 +74,11 @@ export function DriftScreen({ runs, snapshots, subLabel }: {
                    hint={t('bench.secDriftHint', '▲ gain / ▼ drop vs previous snapshot (Δ in tooltip); — = not measured under these pins')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.model', 'Model')}>
-          <BenchSelect value={model} onChange={setModel}
+          <HuginnSelect value={model} onChange={setModel}
                        options={models.map(m => ({ value: m, label: m }))} />
         </Field>
         <Field label={t('bench.prompt', 'Prompt')}>
-          <BenchSelect value={prompt} onChange={setPrompt}
+          <HuginnSelect value={prompt} onChange={setPrompt}
                        options={prompts.map(p => ({ value: p, label: p }))} />
         </Field>
         <span style={{ fontSize: 11, color: 'var(--t3)' }}>

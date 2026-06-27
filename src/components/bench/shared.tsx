@@ -1,14 +1,14 @@
 import { Component, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { CapabilityRow, StructuralZero } from '../../utils/benchData';
-import { f1Band, fmtF1 } from '../../utils/benchData';
+import type { CapabilityRow, StructuralZero } from '../../utils/huginnData';
+import { f1Band, fmtF1 } from '../../utils/huginnData';
 
 /**
  * One bad fact must never white-screen the whole panel: a render error inside
  * a screen collapses to an inline message (the rest of the page stays alive).
  */
-export class BenchErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+export class HuginnErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
   state = { error: null as string | null };
 
   static getDerivedStateFromError(err: unknown) {
@@ -227,7 +227,7 @@ export function useRegistryTable<T>(rows: T[], cols: RegCol<T>[]) {
     <>
       {fkCols.map(c => (
         <Field key={c.key} label={c.label}>
-          <BenchSelect value={filters[c.key] ?? ''}
+          <HuginnSelect value={filters[c.key] ?? ''}
                        onChange={v => setFilters(f => ({ ...f, [c.key]: v }))}
                        allLabel={t('bench.reg.all', 'all')}
                        options={[...new Set(rows.map(r => String(c.get(r) ?? '—')))].sort()
@@ -235,7 +235,7 @@ export function useRegistryTable<T>(rows: T[], cols: RegCol<T>[]) {
         </Field>
       ))}
       <Field label={t('bench.reg.groupBy', 'Group by')}>
-        <BenchSelect value={groupBy} onChange={setGroupBy}
+        <HuginnSelect value={groupBy} onChange={setGroupBy}
                      allLabel={t('bench.reg.noGroup', 'no grouping')}
                      options={fkCols.map(c => ({ value: c.key, label: c.label }))} />
       </Field>
@@ -259,7 +259,7 @@ const SELECT_STYLE: React.CSSProperties = {
   borderRadius: 6, padding: '5px 8px', fontSize: 12, fontFamily: 'var(--mono)', maxWidth: 280,
 };
 
-export function BenchSelect({ value, onChange, options, allLabel }: {
+export function HuginnSelect({ value, onChange, options, allLabel }: {
   value: string;
   onChange: (v: string) => void;
   options: Array<{ value: string; label: string }>;

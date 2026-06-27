@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { useMartSlice } from '../hooks/useBench';
+import { useMartSlice } from '../hooks/useHuginn';
 import type {
   CapabilityRow, HopKindRow, RunRow, SnapshotRow, SubstrateRow, TaskRow,
-} from '../utils/benchData';
+} from '../utils/huginnData';
 import { LiveRunCard } from '../components/bench/LiveRunCard';
 import { CampaignsScreen } from '../components/bench/CampaignsScreen';
 import { StoryScreen } from '../components/bench/StoryScreen';
@@ -26,11 +26,11 @@ import { FinanceScreen } from '../components/bench/FinanceScreen';
 import { AdvisorScreen } from '../components/bench/AdvisorScreen';
 import { WinLossScreen } from '../components/bench/WinLossScreen';
 import { BiblioScreen } from '../components/bench/BiblioScreen';
-import BenchMcpApiScreen from '../components/bench/BenchMcpApiScreen';
+import HuginnMcpApiScreen from '../components/bench/HuginnMcpApiScreen';
 import {
   DesignScreen, MetricsScreen, ProjectScreen, RisksScreen,
 } from '../components/bench/NarrativeScreens';
-import { BenchErrorBoundary, PanelMsg } from '../components/bench/shared';
+import { HuginnErrorBoundary, PanelMsg } from '../components/bench/shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -110,7 +110,7 @@ const ALL_TABS = NAV_SECTIONS.flatMap(s => s.items);
  * data left is the live STATUS.json of the running cell (LiveRunCard) and the
  * static report iframe. Strictly read-only on both paths.
  */
-export default function BenchmarkPage() {
+export default function HuginnPage() {
   const { t } = useTranslation();
   usePageTitle(t('bench.title', 'RAG · Graph · Parse — experiment'));
 
@@ -245,7 +245,7 @@ export default function BenchmarkPage() {
       {tab === 'biblio' && <BiblioScreen />}
       {/* MCP API reference is self-contained (pings its own endpoints) — never
           gated by the experiment-mart availability checks below. */}
-      {tab === 'mcp' && <BenchMcpApiScreen />}
+      {tab === 'mcp' && <HuginnMcpApiScreen />}
       {tab !== 'report' && tab !== 'mcp' && martUnavailable && (
         <PanelMsg kind="info" text={t('bench.unavailable',
           'Experiment mart is unavailable — the panel works in the heimdall dev stack only')} onRetry={runs.reload} />
@@ -258,7 +258,7 @@ export default function BenchmarkPage() {
       )}
 
       {tab !== 'report' && tab !== 'mcp' && !martUnavailable && !runs.error && martReady && (
-        <BenchErrorBoundary key={tab}>
+        <HuginnErrorBoundary key={tab}>
           {tab === 'story' && <StoryScreen runs={runs.rows ?? []} />}
           {tab === 'campaigns' && <CampaignsScreen runs={runs.rows ?? []} />}
           {tab === 'generations' && (
@@ -309,7 +309,7 @@ export default function BenchmarkPage() {
           )}
           {tab === 'risks' && <RisksScreen />}
           {tab === 'design' && <DesignScreen tasks={tasks.rows ?? []} />}
-        </BenchErrorBoundary>
+        </HuginnErrorBoundary>
       )}
         </div>
       </div>

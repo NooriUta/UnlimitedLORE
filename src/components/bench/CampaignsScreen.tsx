@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useBench';
-import type { CampaignRow, FindingRow, HypothesisRow, RunRow } from '../../utils/benchData';
-import { dedupe, formatTokens, formatUsd, num, pickLocale, strArr } from '../../utils/benchData';
+import { useMartSlice } from '../../hooks/useHuginn';
+import type { CampaignRow, FindingRow, HypothesisRow, RunRow } from '../../utils/huginnData';
+import { dedupe, formatTokens, formatUsd, num, pickLocale, strArr } from '../../utils/huginnData';
 import { PanelMsg, StatusBadge, campaignTone, hypothesisTone } from './shared';
 import { MartProse } from './MartProse';
 

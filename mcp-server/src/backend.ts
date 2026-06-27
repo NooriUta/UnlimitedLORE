@@ -37,14 +37,14 @@ export async function loreSlice(
 }
 
 /** GET /bench/mart/slices — catalog of RAGVSDL experiment-mart slices. */
-export async function benchSlices(): Promise<unknown> {
+export async function huginnSlices(): Promise<unknown> {
   const res = await fetch(`${BASE}/bench/mart/slices`);
   if (!res.ok) throw new Error(`GET /bench/mart/slices → ${res.status} ${await detail(res)}`);
   return res.json();
 }
 
 /** GET /bench/mart/slice/{slice} — rows for a named experiment-mart slice. */
-export async function benchSlice(
+export async function huginnSlice(
   slice: string,
   params?: Record<string, string>,
 ): Promise<unknown[]> {
@@ -59,7 +59,7 @@ export async function benchSlice(
 }
 
 /** GET /bench/api/status — live STATUS.json of the running experiment cell. */
-export async function benchStatus(): Promise<unknown> {
+export async function huginnStatus(): Promise<unknown> {
   const res = await fetch(`${BASE}/bench/api/status`);
   if (!res.ok) throw new Error(`GET /bench/api/status → ${res.status} ${await detail(res)}`);
   return res.json();

@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useBench';
+import { useMartSlice } from '../../hooks/useHuginn';
 import type {
   CaseDimRow, FactRow, GoldRow, HypothesisRow, RunRow, SubstrateRow,
-} from '../../utils/benchData';
+} from '../../utils/huginnData';
 import {
   advisorCells, advisorDisclaimers, advisorSpread, buildCellSql, defaultRunId,
   engineGaps, fmtF1, formatUsd, num, pickLocale,
-} from '../../utils/benchData';
-import { BenchSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
+} from '../../utils/huginnData';
+import { HuginnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -68,7 +68,7 @@ export function AdvisorScreen({ runs, subLabel }: {
                    hint={t('bench.adv.hint', 'the §1 decision map live from the mart; every number carries evidence links and a reproducing SQL')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.run', 'Run')}>
-          <BenchSelect value={run} onChange={setRun}
+          <HuginnSelect value={run} onChange={setRun}
                        options={runs.map(r => ({ value: r.run_id, label: r.run_id }))} />
         </Field>
         <span style={{ fontSize: 11, color: 'var(--t3)' }}>

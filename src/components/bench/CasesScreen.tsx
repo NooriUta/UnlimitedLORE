@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
-import { useMartSlice } from '../../hooks/useBench';
-import type { CaseDimRow, CaseRow, CaseWithDim, GoldInfo, GoldRow, GoldVerdictRow, HopKindRow, RunRow, SubstrateRow, TaskRow, TraceRow } from '../../utils/benchData';
-import { buildGoldIndex, diffGoldPredicted, f1Band, fmtF1, formatTokens, formatUsd, joinCases, num, strArr } from '../../utils/benchData';
-import { BenchSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink } from './shared';
+import { useMartSlice } from '../../hooks/useHuginn';
+import type { CaseDimRow, CaseRow, CaseWithDim, GoldInfo, GoldRow, GoldVerdictRow, HopKindRow, RunRow, SubstrateRow, TaskRow, TraceRow } from '../../utils/huginnData';
+import { buildGoldIndex, diffGoldPredicted, f1Band, fmtF1, formatTokens, formatUsd, joinCases, num, strArr } from '../../utils/huginnData';
+import { HuginnSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink } from './shared';
 import { MetricChip } from './NarrativeScreens';
 import type { CasesPreset } from './MatrixScreen';
 
@@ -225,23 +225,23 @@ export function CasesScreen({ runs, substrates, tasks, hopKinds, subLabel, prese
       <ScreenTitle text={t('bench.secCases', 'Case drill-down — facts joined with the case dimension')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.run', 'Run')}>
-          <BenchSelect value={run} onChange={setRun}
+          <HuginnSelect value={run} onChange={setRun}
                        options={runs.map(r => ({ value: r.run_id, label: r.run_id }))} />
         </Field>
         <Field label={t('bench.substrate', 'Substrate')}>
-          <BenchSelect value={substrate} onChange={setSubstrate} allLabel={t('bench.all', 'all')}
+          <HuginnSelect value={substrate} onChange={setSubstrate} allLabel={t('bench.all', 'all')}
                        options={substrates.map(s => ({ value: s.substrate_id, label: subLabel(s.substrate_id) }))} />
         </Field>
         <Field label={t('bench.task', 'Task')}>
-          <BenchSelect value={task} onChange={setTask} allLabel={t('bench.all', 'all')}
+          <HuginnSelect value={task} onChange={setTask} allLabel={t('bench.all', 'all')}
                        options={tasks.map(x => ({ value: x.task_id, label: x.task_id }))} />
         </Field>
         <Field label={t('bench.hopKind', 'Hop kind')}>
-          <BenchSelect value={hopKind} onChange={setHopKind} allLabel={t('bench.all', 'all')}
+          <HuginnSelect value={hopKind} onChange={setHopKind} allLabel={t('bench.all', 'all')}
                        options={hopKinds.map(h => ({ value: h.hop_kind_id, label: h.hop_kind_id }))} />
         </Field>
         <Field label={t('bench.filterTaxonomy', 'Failure')}>
-          <BenchSelect value={taxonomy} onChange={setTaxonomy} allLabel={t('bench.all', 'all')}
+          <HuginnSelect value={taxonomy} onChange={setTaxonomy} allLabel={t('bench.all', 'all')}
                        options={taxonomyOptions.map(x => ({ value: x, label: x }))} />
         </Field>
         <input

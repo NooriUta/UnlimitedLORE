@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useBench';
+import { useMartSlice } from '../../hooks/useHuginn';
 import type {
   CampaignRow, DriftRow, FindingRow, HypothesisRow, RunRow, SnapshotRow, SubstrateRevAllRow, SubstrateRow,
-} from '../../utils/benchData';
-import { dedupe, filterRevAtRunTime, fmtF1, generationDeltas, groupRevChains, num, pickLocale, strArr } from '../../utils/benchData';
+} from '../../utils/huginnData';
+import { dedupe, filterRevAtRunTime, fmtF1, generationDeltas, groupRevChains, num, pickLocale, strArr } from '../../utils/huginnData';
 import { MartProse } from './MartProse';
-import { BenchSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink, campaignTone, hypothesisTone } from './shared';
+import { HuginnSelect, Field, PanelMsg, ScreenTitle, StatusBadge, SubstrateLink, campaignTone, hypothesisTone } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
@@ -78,10 +78,10 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
                    hint={t('bench.gen.hint', 'F1 deltas need model+prompt pins; pairs must exist in both generations')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <Field label={t('bench.model', 'Model')}>
-          <BenchSelect value={model} onChange={setModel} options={models.map(m => ({ value: m, label: m }))} />
+          <HuginnSelect value={model} onChange={setModel} options={models.map(m => ({ value: m, label: m }))} />
         </Field>
         <Field label={t('bench.prompt', 'Prompt')}>
-          <BenchSelect value={prompt} onChange={setPrompt} options={prompts.map(p => ({ value: p, label: p }))} />
+          <HuginnSelect value={prompt} onChange={setPrompt} options={prompts.map(p => ({ value: p, label: p }))} />
         </Field>
       </div>
 

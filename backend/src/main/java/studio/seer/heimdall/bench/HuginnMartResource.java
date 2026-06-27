@@ -32,9 +32,9 @@ import java.util.Map;
  * Disabled outside dev (bench.mart.enabled=false) → 404 MART_DISABLED.
  */
 @Path("/bench/mart")
-public class BenchMartResource {
+public class HuginnMartResource {
 
-    private static final Logger LOG = Logger.getLogger(BenchMartResource.class);
+    private static final Logger LOG = Logger.getLogger(HuginnMartResource.class);
 
     public record MartError(String error, String detail) {}
     public record SliceInfo(String id, List<String> required, List<String> optional) {}

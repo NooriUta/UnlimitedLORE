@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useBench';
+import { useMartSlice } from '../../hooks/useHuginn';
 import type {
   CampaignRow, ModelRow, PhaseRow, PriceEpochRow, RunRow,
-} from '../../utils/benchData';
-import { formatTokens, formatUsd, num, runCostAt, strArr } from '../../utils/benchData';
+} from '../../utils/huginnData';
+import { formatTokens, formatUsd, num, runCostAt, strArr } from '../../utils/huginnData';
 import { PanelMsg, ScreenTitle, StatusBadge } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};

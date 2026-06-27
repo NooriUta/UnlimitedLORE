@@ -6,17 +6,17 @@
 //
 // In prod / Shell-MF mode the proxy and the mart are absent: nginx SPA-fallback
 // answers /bench/* with index.html — the content-type guard below turns that
-// into BenchUnavailableError instead of a JSON parse crash.
+// into HuginnUnavailableError instead of a JSON parse crash.
 
-import type { BenchStatus } from '../utils/benchData';
+import type { HuginnStatus } from '../utils/huginnData';
 
 const BENCH_BASE = '/bench';
 
-export class BenchUnavailableError extends Error {
+export class HuginnUnavailableError extends Error {
   constructor() { super('bench endpoints unavailable (dev-only feature)'); }
 }
 
-export class BenchRootMissingError extends Error {
+export class HuginnRootMissingError extends Error {
   constructor(detail?: string) { super(detail ?? 'benchmark repo not found'); }
 }
 
@@ -31,7 +31,7 @@ export class MartUpstreamError extends Error {
 /** Reject SPA-fallback / proxy-less responses before parsing. */
 function assertJsonResponse(res: Response): void {
   const ct = res.headers.get('content-type') ?? '';
-  if (!ct.includes('application/json')) throw new BenchUnavailableError();
+  if (!ct.includes('application/json')) throw new HuginnUnavailableError();
 }
 
 async function parseError(res: Response): Promise<never> {
@@ -45,7 +45,7 @@ async function parseError(res: Response): Promise<never> {
   } catch {
     // fall through to generic error
   }
-  if (code === 'BENCH_ROOT_MISSING') throw new BenchRootMissingError(detail);
+  if (code === 'BENCH_ROOT_MISSING') throw new HuginnRootMissingError(detail);
   if (code === 'MART_DISABLED') throw new MartDisabledError();
   if (code === 'MART_UPSTREAM') throw new MartUpstreamError(detail);
   throw new Error(`${res.status} ${code || res.statusText}${detail ? `: ${detail}` : ''}`);
@@ -56,12 +56,12 @@ async function parseError(res: Response): Promise<never> {
  * orchestrator every few seconds). May be mid-write → JSON.parse can throw
  * SyntaxError; the polling hook keeps the last good value in that case.
  */
-export async function fetchBenchStatus(signal?: AbortSignal): Promise<BenchStatus> {
+export async function fetchHuginnStatus(signal?: AbortSignal): Promise<HuginnStatus> {
   const res = await fetch(`${BENCH_BASE}/api/status`, { signal });
   if (!res.ok) await parseError(res);
   assertJsonResponse(res);
   const text = await res.text();
-  return JSON.parse(text) as BenchStatus;
+  return JSON.parse(text) as HuginnStatus;
 }
 
 /** Mart slice catalog (GET /bench/mart/slices) — the whitelist a bench MCP
@@ -80,7 +80,7 @@ export async function fetchMartCatalog(signal?: AbortSignal): Promise<MartSliceD
   return Array.isArray(body.slices) ? body.slices : [];
 }
 
-/** Execute a named mart slice (BenchMartResource) and return its rows. */
+/** Execute a named mart slice (HuginnMartResource) and return its rows. */
 export async function fetchMartSlice<T>(
   slice: string,
   params?: Record<string, string>,
@@ -97,7 +97,7 @@ export async function fetchMartSlice<T>(
 }
 
 /** URL of a whitelisted benchmark-repo file (report iframe, links). */
-export function benchFileUrl(relPath: string): string {
+export function huginnFileUrl(relPath: string): string {
   const encoded = relPath.split('/').map(encodeURIComponent).join('/');
   return `${BENCH_BASE}/files/${encoded}`;
 }

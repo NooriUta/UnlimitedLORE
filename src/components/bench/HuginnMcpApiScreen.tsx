@@ -1,13 +1,13 @@
-// BenchMcpApiScreen — published API reference for the BENCHMARK (Исследования)
+// HuginnMcpApiScreen — published API reference for HUGINN (Исследования)
 // side of the aida-lore MCP server. Separate page from the LORE MCP reference
 // (which lives at /lore?section=mcp). Documents the planned bench tools, pings
 // the live bench backend for health + the real mart-slice catalog.
 import { useEffect, useState } from 'react';
 import {
-  fetchMartCatalog, fetchBenchStatus,
+  fetchMartCatalog, fetchHuginnStatus,
   type MartSliceDescriptor,
-} from '../../api/bench';
-import type { BenchStatus } from '../../utils/benchData';
+} from '../../api/huginn';
+import type { HuginnStatus } from '../../utils/huginnData';
 
 interface ToolDoc {
   name: string;
@@ -41,9 +41,9 @@ const MCP_JSON = `{
   }
 }`;
 
-export default function BenchMcpApiScreen() {
+export default function HuginnMcpApiScreen() {
   const [slices, setSlices] = useState<MartSliceDescriptor[] | null>(null);
-  const [status, setStatus] = useState<BenchStatus | null>(null);
+  const [status, setStatus] = useState<HuginnStatus | null>(null);
   const [health, setHealth] = useState<'checking' | 'up' | 'down'>('checking');
   const [filter, setFilter] = useState('');
 
@@ -51,7 +51,7 @@ export default function BenchMcpApiScreen() {
     const ctrl = new AbortController();
     Promise.all([
       fetchMartCatalog(ctrl.signal),
-      fetchBenchStatus(ctrl.signal).catch(() => null),
+      fetchHuginnStatus(ctrl.signal).catch(() => null),
     ])
       .then(([cat, st]) => { setSlices(cat); setStatus(st); setHealth('up'); })
       .catch(() => { if (!ctrl.signal.aborted) setHealth('down'); });
@@ -86,7 +86,7 @@ export default function BenchMcpApiScreen() {
 
         <Section title="Инструменты (bench)">
           <div style={S.banner}>
-            Read-инструменты <b>реализованы</b> (<code style={S.code}>mcp-server/src/tools/bench.ts</code>) —
+            Read-инструменты <b>реализованы</b> (<code style={S.code}>mcp-server/src/tools/huginn.ts</code>) —
             после пересборки <code style={S.code}>npm run build</code> и перезапуска клиента доступны как
             <code style={S.code}>bench_*</code>. Витрина пишется только Python-движком
             <code style={S.code}>rag-vs-parse/scripts/mart.py</code>; эти тулзы — только чтение.

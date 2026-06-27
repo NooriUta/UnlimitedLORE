@@ -1,9 +1,9 @@
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { useMartSlice } from '../hooks/useBench';
-import type { FindingRow } from '../utils/benchData';
-import { dedupe, pickLocale, strArr } from '../utils/benchData';
+import { useMartSlice } from '../hooks/useHuginn';
+import type { FindingRow } from '../utils/huginnData';
+import { dedupe, pickLocale, strArr } from '../utils/huginnData';
 import { PanelMsg, StatusBadge } from '../components/bench/shared';
 import { MartProse } from '../components/bench/MartProse';
 

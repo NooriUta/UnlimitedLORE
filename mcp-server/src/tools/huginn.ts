@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { benchSlices, benchSlice, benchStatus } from '../backend.js';
+import { huginnSlices, huginnSlice, huginnStatus } from '../backend.js';
 
-// ── BENCHMARK (Исследования) read tools ─────────────────────────────────────
+// ── HUGINN (Исследования) read tools ─────────────────────────────────────────
 // Read-only access to the RAG-vs-Parse experiment mart (RAGVSDL) via the
 // UnlimitedLORE backend (:9100). The mart is written exclusively by the Python
 // engine (rag-vs-parse/scripts/mart.py) — these tools never write.
@@ -16,7 +16,7 @@ const err = (e: unknown) => ({
   isError: true,
 });
 
-export function registerBench(server: McpServer): void {
+export function registerHuginn(server: McpServer): void {
   server.tool(
     'bench_list_slices',
     'List all available BENCHMARK (RAG-vs-Parse) experiment-mart slices with ' +
@@ -26,7 +26,7 @@ export function registerBench(server: McpServer): void {
     {},
     async () => {
       try {
-        return json(await benchSlices());
+        return json(await huginnSlices());
       } catch (e) {
         return err(e);
       }
@@ -48,7 +48,7 @@ export function registerBench(server: McpServer): void {
     },
     async ({ slice, params }) => {
       try {
-        return json(await benchSlice(slice, params));
+        return json(await huginnSlice(slice, params));
       } catch (e) {
         return err(e);
       }
@@ -63,7 +63,7 @@ export function registerBench(server: McpServer): void {
     {},
     async () => {
       try {
-        return json(await benchStatus());
+        return json(await huginnStatus());
       } catch (e) {
         return err(e);
       }
