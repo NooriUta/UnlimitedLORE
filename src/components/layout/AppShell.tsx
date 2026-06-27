@@ -7,12 +7,8 @@ import { SHELL_TABS, type ShellTab } from './shellNav';
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
 
-type Theme = 'amber' | 'slate' | 'light';
-const THEMES: { id: Theme; label: string }[] = [
-  { id: 'amber', label: '◑' },
-  { id: 'slate', label: '◐' },
-  { id: 'light', label: '○' },
-];
+type Palette = 'amber' | 'slate';
+type Mode    = 'dark'  | 'light';
 
 function activeTabId(pathname: string): ShellTab['id'] {
   if (pathname.startsWith('/benchmark')) return 'research';
@@ -29,19 +25,26 @@ export default function AppShell() {
   const active = activeTabId(pathname);
   const lang = i18n.language?.startsWith('en') ? 'en' : 'ru';
 
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem('lore-theme') as Theme) ?? 'amber',
-  );
+  const [palette, setPalette] = useState<Palette>(() => {
+    const saved = localStorage.getItem('lore-palette') ?? localStorage.getItem('lore-theme');
+    return (saved === 'slate') ? 'slate' : 'amber';
+  });
+  const [mode, setMode] = useState<Mode>(() => {
+    const saved = localStorage.getItem('lore-mode') ?? localStorage.getItem('lore-theme');
+    return (saved === 'light') ? 'light' : 'dark';
+  });
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('lore-theme', theme);
-  }, [theme]);
+    const el = document.documentElement;
+    el.setAttribute('data-theme', palette);
+    if (mode === 'light') el.setAttribute('data-mode', 'light');
+    else                  el.removeAttribute('data-mode');
+    localStorage.setItem('lore-palette', palette);
+    localStorage.setItem('lore-mode',    mode);
+  }, [palette, mode]);
 
-  const cycleTheme = () => {
-    const order: Theme[] = ['amber', 'slate', 'light'];
-    setTheme(order[(order.indexOf(theme) + 1) % order.length]);
-  };
+  const togglePalette = () => setPalette(p => p === 'amber' ? 'slate' : 'amber');
+  const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
 
   const btnStyle = {
     background: 'transparent',
@@ -133,14 +136,24 @@ export default function AppShell() {
           })}
         </nav>
 
-        {/* Theme cycle */}
+        {/* Palette toggle */}
         <button
           type="button"
-          onClick={cycleTheme}
-          title={`Тема: ${theme}`}
+          onClick={togglePalette}
+          title={`Палитра: ${palette}`}
           style={btnStyle}
         >
-          {THEMES.find(t => t.id === theme)?.label ?? '◑'} {theme}
+          {palette === 'amber' ? '◑' : '◐'} {palette}
+        </button>
+
+        {/* Dark / light toggle */}
+        <button
+          type="button"
+          onClick={toggleMode}
+          title={mode === 'dark' ? 'Светлый режим' : 'Тёмный режим'}
+          style={btnStyle}
+        >
+          {mode === 'dark' ? '🌙' : '☀'}
         </button>
 
         {/* Language toggle */}

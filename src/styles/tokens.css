@@ -54,8 +54,9 @@
   --danger: #f87171;
 }
 
-/* ---------- LIGHT ---------- */
-[data-theme='light'] {
+/* ---------- AMBER LIGHT ---------- */
+[data-mode='light'] {
+  color-scheme: light;
   --bg0: #f5f3ee;
   --bg1: #fbfaf6;
   --bg2: #ffffff;
@@ -71,6 +72,26 @@
   --inf:    #356a8a;
   --dng:    #b03e2e;
   --danger: #b03e2e;
+}
+
+/* ---------- SLATE LIGHT ---------- */
+[data-theme='slate'][data-mode='light'] {
+  color-scheme: light;
+  --bg0: #f0f4fb;
+  --bg1: #f7faff;
+  --bg2: #ffffff;
+  --bg3: #e3ecf8;
+  --bd:  #c4d2e8;
+  --bdh: #9eb2d0;
+  --t1:  #0e1524;
+  --t2:  #3d4f6e;
+  --t3:  #6a7d9c;
+  --acc:    #2563eb;
+  --suc:    #16a34a;
+  --wrn:    #d97706;
+  --inf:    #0284c7;
+  --dng:    #dc2626;
+  --danger: #dc2626;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

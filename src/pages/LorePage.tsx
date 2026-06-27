@@ -4,7 +4,7 @@ import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
 import LoreTimeline        from '../components/lore/LoreTimeline';
 import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
-import LoreSprintTree      from '../components/lore/LoreSprintTree';
+import LoreSprintTree, { STATUS_FILTERS, type DatePeriod, type SprintStats } from '../components/lore/LoreSprintTree';
 import LoreArtifactList    from '../components/lore/LoreArtifactList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import LoreSpecView        from '../components/lore/LoreSpecView';
@@ -125,11 +125,21 @@ export default function LorePage() {
   const [loreUnreachable, setLoreUnreachable] = useState(false);
   const [search, setSearch] = useState(q);
   const [listSearch, setListSearch] = useState('');
+  const [sprintQ, setSprintQ] = useState('');
+  const [sprintStatusSel, setSprintStatusSel] = useState<Set<string>>(new Set());
+  const [sprintCounts, setSprintCounts] = useState<Record<string, number>>({});
+  const [sprintNoRelease, setSprintNoRelease] = useState(false);
+  const [sprintDatePeriod, setSprintDatePeriod] = useState<DatePeriod>(null);
+  const [sprintPriorityFilter, setSprintPriorityFilter] = useState<Set<string>>(new Set());
+  const [sprintStats, setSprintStats] = useState<SprintStats>({ total: 0, done: 0, active: 0, p0Open: 0, noRelease: 0 });
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [listW, setListW] = useState(LIST_W_DEFAULT);
   const dragRef = useRef<{ x: number; w: number } | null>(null);
 
   const isMasterDetail = MASTER_DETAIL.includes(section);
+
+  const sprintPresetWorking   = sprintStatusSel.has('in_progress') && sprintStatusSel.has('partial') && sprintStatusSel.size === 2 && !sprintNoRelease;
+  const sprintPresetAttention = sprintStatusSel.has('in_progress') && sprintStatusSel.size === 1 && sprintNoRelease;
 
   const go = (s: Section) => setParams(p => {
     p.set('section', s);
@@ -160,6 +170,13 @@ export default function LorePage() {
 
   // Clear list search on section change
   useEffect(() => { setListSearch(''); }, [section]);
+  // Clear sprint filter on leaving sprints
+  useEffect(() => {
+    if (section !== 'sprints') {
+      setSprintQ(''); setSprintStatusSel(new Set());
+      setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set());
+    }
+  }, [section]);
 
   // Drag-resize list panel
   useEffect(() => {
@@ -229,30 +246,212 @@ export default function LorePage() {
       {/* ── Horizontal section nav ─────────────────────────────────────────── */}
       {sectionNav}
 
+      {/* ── Sprint filter bar: статусы + пресеты + приоритет + даты + без релиза ─ */}
+      {section === 'sprints' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
+          padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+        }}>
+          {/* Статусы */}
+          {STATUS_FILTERS.map(f => {
+            const on  = sprintStatusSel.has(f.key);
+            const meta = statusMeta(f.key);
+            const cnt  = sprintCounts[f.key] ?? 0;
+            return (
+              <span key={f.key}
+                onClick={() => setSprintStatusSel(prev => {
+                  const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
+                })}
+                title={`${f.label}: ${cnt}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? meta.color : 'var(--b3)'}`,
+                  background: on ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
+                  color: on ? 'var(--t1)' : 'var(--t3)',
+                }}
+              >
+                <GameIcon slug={meta.icon} size={11} style={{ color: meta.color }} />
+                {f.label}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+              </span>
+            );
+          })}
+
+          {/* Сепаратор */}
+          <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+
+          {/* Пресет: В работе */}
+          <span
+            onClick={() => {
+              if (sprintPresetWorking) { setSprintStatusSel(new Set()); }
+              else { setSprintStatusSel(new Set(['in_progress', 'partial'])); setSprintNoRelease(false); }
+            }}
+            title="В работе + Частично"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
+              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              border: `1px solid ${sprintPresetWorking ? 'var(--acc)' : 'var(--b3)'}`,
+              background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
+              color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
+            }}
+          >⚡ В работе</span>
+
+          {/* Пресет: Нужно внимание */}
+          <span
+            onClick={() => {
+              if (sprintPresetAttention) { setSprintStatusSel(new Set()); setSprintNoRelease(false); }
+              else { setSprintStatusSel(new Set(['in_progress'])); setSprintNoRelease(true); }
+            }}
+            title="В работе без привязки к релизу"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
+              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              border: `1px solid ${sprintPresetAttention ? '#E24B4A' : 'var(--b3)'}`,
+              background: sprintPresetAttention ? 'color-mix(in srgb, #E24B4A 16%, transparent)' : 'transparent',
+              color: sprintPresetAttention ? '#E24B4A' : 'var(--t3)',
+            }}
+          >⚠ Внимание</span>
+
+          {/* Распорка */}
+          <span style={{ flex: 1 }} />
+
+          {/* Приоритет */}
+          {(['P0', 'P1', 'P2'] as const).map(p => {
+            const on    = sprintPriorityFilter.has(p);
+            const color = p === 'P0' ? '#E24B4A' : p === 'P1' ? '#ef9f27' : 'var(--t3)';
+            return (
+              <span key={p}
+                onClick={() => setSprintPriorityFilter(prev => {
+                  const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n;
+                })}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, fontWeight: on ? 600 : 400,
+                  padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? color : 'var(--b3)'}`,
+                  background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
+                  color: on ? color : 'var(--t3)',
+                }}
+              >{p}</span>
+            );
+          })}
+
+          <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+
+          {/* Даты */}
+          {(['month', 'quarter', '90d'] as DatePeriod[]).map(p => {
+            const label = p === 'month' ? 'Этот месяц' : p === 'quarter' ? 'Квартал' : '90 дней';
+            const on    = sprintDatePeriod === p;
+            return (
+              <span key={p!}
+                onClick={() => setSprintDatePeriod(on ? null : p)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
+                  background: on ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
+                  color: on ? 'var(--acc)' : 'var(--t3)',
+                }}
+              >{label}</span>
+            );
+          })}
+
+          <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+
+          {/* Без релиза */}
+          <span
+            onClick={() => setSprintNoRelease(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
+              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              border: `1px solid ${sprintNoRelease ? 'var(--acc)' : 'var(--b3)'}`,
+              background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
+              color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
+            }}
+          >Без релиза</span>
+
+          {/* Сброс */}
+          {(sprintStatusSel.size > 0 || sprintNoRelease || sprintDatePeriod || sprintPriorityFilter.size > 0) && (
+            <>
+              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+              <span
+                onClick={() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); }}
+                style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+                title="Сбросить фильтры"
+              >✕ сброс</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Sprint stats row ─────────────────────────────────────────────────── */}
+      {section === 'sprints' && sprintStats.total > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'stretch',
+          borderBottom: '1px solid var(--b2)', flexShrink: 0, overflowX: 'auto',
+        }}>
+          {([
+            { label: 'всего',      value: sprintStats.total,     color: 'var(--t1)' },
+            { label: 'завершено',  value: sprintStats.done,      color: '#4dc9a0'   },
+            { label: 'активных',   value: sprintStats.active,    color: 'var(--acc)'},
+            { label: 'P0 открыто', value: sprintStats.p0Open,    color: '#E24B4A'   },
+            { label: 'без релиза', value: sprintStats.noRelease, color: 'var(--t3)' },
+          ] as const).map((s, i) => (
+            <div key={i} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '3px 14px', flexShrink: 0,
+              borderLeft: i === 0 ? 'none' : '1px solid var(--b2)',
+            }}>
+              <span style={{ fontSize: 15, fontWeight: 500, color: s.color, lineHeight: 1.1 }}>{s.value}</span>
+              <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{s.label}</span>
+            </div>
+          ))}
+          {/* % выполнено */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '3px 14px', flexShrink: 0, borderLeft: '1px solid var(--b2)',
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 500, color: '#4dc9a0', lineHeight: 1.1 }}>
+              {Math.round(sprintStats.done / sprintStats.total * 100)}%
+            </span>
+            <div style={{ width: 44, height: 3, background: 'var(--b2)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${Math.round(sprintStats.done / sprintStats.total * 100)}%`,
+                height: '100%', background: '#4dc9a0', borderRadius: 2,
+              }} />
+            </div>
+            <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>выполнено</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div style={S.body}>
         {/* ── Master-detail layout ─────────────────────────────────────────── */}
         {isMasterDetail && (
           <>
           <div style={{ ...S.listPanel, width: listW }} className="lore-panel-scroll">
-            {/* List panel header with search */}
-            <div style={S.listPanelHeader}>
-              🔍
-              <input
-                style={S.listPanelSearch}
-                placeholder={section === 'adrs' ? 'ADR-...' : section === 'decisions' ? '#...' : 'спринт...'}
-                value={listSearch}
-                onChange={e => setListSearch(e.target.value)}
-              />
-              {passport && (
-                <button
-                  onClick={clearItem}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer',
-                           color: 'var(--t3)', fontSize: 11, padding: '0 2px' }}
-                  title="Сбросить выбор"
-                >✕</button>
-              )}
-            </div>
+            {/* List panel header — search only for ADRs; sprints use the full-width bar above */}
+            {section === 'adrs' && (
+              <div style={S.listPanelHeader}>
+                🔍
+                <input
+                  style={S.listPanelSearch}
+                  placeholder="ADR-..."
+                  value={listSearch}
+                  onChange={e => setListSearch(e.target.value)}
+                />
+                {passport && (
+                  <button
+                    onClick={clearItem}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer',
+                             color: 'var(--t3)', fontSize: 11, padding: '0 2px' }}
+                    title="Сбросить выбор"
+                  >✕</button>
+                )}
+              </div>
+            )}
 
             {/* List content */}
             {section === 'adrs' && (
@@ -265,13 +464,43 @@ export default function LorePage() {
               />
             )}
             {section === 'sprints' && (
-              <LoreSprintTree
-                module=""
-                q={listSearch}
-                selectedId={passport}
-                onError={handleFetchError}
-                onSelect={selectItem}
-              />
+              <>
+                {/* Поиск по имени/ID — в шапке левой панели */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '0 10px', height: 30, flexShrink: 0,
+                  borderBottom: '1px solid var(--b2)',
+                }}>
+                  <span style={{ color: 'var(--t3)', fontSize: 12, flexShrink: 0 }}>🔍</span>
+                  <input
+                    style={{
+                      flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                      color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
+                    }}
+                    placeholder="спринт…"
+                    aria-label="поиск по имени спринта"
+                    value={sprintQ}
+                    onChange={e => setSprintQ(e.target.value)}
+                  />
+                  {sprintQ && (
+                    <span onClick={() => setSprintQ('')}
+                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>✕</span>
+                  )}
+                </div>
+                <LoreSprintTree
+                  module=""
+                  q={sprintQ}
+                  statusFilter={sprintStatusSel}
+                  priorityFilter={sprintPriorityFilter}
+                  noRelease={sprintNoRelease}
+                  datePeriod={sprintDatePeriod}
+                  selectedId={passport}
+                  onError={handleFetchError}
+                  onSelect={selectItem}
+                  onCounts={setSprintCounts}
+                  onStats={setSprintStats}
+                />
+              </>
             )}
           </div>
           <div

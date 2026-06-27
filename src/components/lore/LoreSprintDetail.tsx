@@ -435,6 +435,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
   const [ctxDraft, setCtxDraft] = useState('');
   const [ctxSaving, setCtxSaving] = useState(false);
   const [projLinking, setProjLinking] = useState(false);
+  const [allProjects, setAllProjects] = useState<string[]>([]);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -442,6 +443,13 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
 
   // Reset the status filter when switching sprints (not on in-place reloads).
   useEffect(() => { setFilter(new Set()); }, [sprintId]);
+
+  // Load available projects from DB once (not per-sprint).
+  useEffect(() => {
+    fetchLoreSlice<{ slug: string }>('git_projects', {})
+      .then(rows => setAllProjects(rows.map(r => r.slug).filter(Boolean)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -601,12 +609,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {
         const linked = sprint.git_projects ?? [];
-        const ALL_PROJECTS = [
-          'NooriUta/AIDA', 'NooriUta/seidr-site',
-          'NooriUta/aida-documentation', 'NooriUta/AIDA-TestPlayGround',
-          'NooriUta/HUGINN', 'NooriUta/UnlimitedLORE',
-        ];
-        const unlinked = ALL_PROJECTS.filter(g => !linked.includes(g));
+        const unlinked = allProjects.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         return (
           <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>

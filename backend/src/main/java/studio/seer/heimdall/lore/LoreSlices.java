@@ -124,7 +124,8 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
             "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
-            "out('BELONGS_TO_PROJECT').slug             AS git_projects " +
+            "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
+            "context_md " +
             "FROM KnowSprint",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -342,10 +343,22 @@ public final class LoreSlices {
             List.of("qg_id"), Map.of(), " LIMIT 100");
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
+        slice("git_projects",
+            "SELECT slug, name FROM KnowGitProject",
+            List.of(), Map.of(), " ORDER BY slug");
+
         slice("backlog_tasks",
             "SELECT task_uid, task_id, title, status_raw, priority, component_id " +
             "FROM KnowTask WHERE in('PART_OF') IS NULL",
             List.of(), Map.of(), " ORDER BY task_uid LIMIT 200");
+
+        slice("all_tasks",
+            "SELECT task_uid, task_id, title, status_raw, priority, component_id, " +
+            "out('PART_OF').sprint_id[0]    AS sprint_id, " +
+            "out('PART_OF').title[0]        AS sprint_title, " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md " +
+            "FROM KnowTask",
+            List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 500");
 
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",

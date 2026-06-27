@@ -2,6 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "lore-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "autoPort": false
+    },
+    {
       "name": "lore-app",
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "echo", "already running on 4400"],

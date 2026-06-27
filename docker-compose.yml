@@ -17,36 +17,12 @@ services:
       - C:/AIDA/rag-vs-parse:/bench-data:ro   # STATUS.json + report html
       - C:/AIDA/docs:/team-docs:ro            # ingestion source (opt-in)
 
-  tyr-server:
-    build:
-      context: C:/AIDA/TestPlayGround
-      dockerfile: Dockerfile.tyr
-    ports:
-      - "9200:9200"
-    extra_hosts:
-      - "arcade:host-gateway"   # ArcadeDB on host :2480
-    environment:
-      - PORT=9200
-      - HOST=0.0.0.0
-      - MART_ARCADE_URL=http://arcade:2480
-      - ARCADEDB_USER=${ARCADEDB_USER:-root}
-      - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
-    volumes:
-      # Tests editable on host without image rebuild
-      - C:/AIDA/TestPlayGround/tests:/app/tests
-      - C:/AIDA/TestPlayGround/fixtures:/app/fixtures
-      - C:/AIDA/TestPlayGround/utils:/app/utils
-      - C:/AIDA/TestPlayGround/pages:/app/pages
-      # Runs/reports persist between restarts
-      - tyr-runs:/app/runs
-
   lore-app:
     build: .
     ports:
       - "4400:80"
     depends_on:
       - lore-backend
-      - tyr-server
+    volumes:
+      - C:/AIDA/TestPlayGround/runs:/tyr-runs:ro
 
-volumes:
-  tyr-runs:

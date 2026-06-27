@@ -132,6 +132,7 @@ export interface LoreSprintRow {
   release_dates: string[] | null;
   done_date: string | null;
   git_projects: string[] | null;
+  context_md: string | null;
 }
 
 export interface LoreSprintDoneDate {

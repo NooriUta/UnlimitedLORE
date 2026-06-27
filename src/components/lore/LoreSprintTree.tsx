@@ -37,9 +37,9 @@ function projColor(slug: string, allSlugs: string[]): string {
   return PROJ_COLORS[i % PROJ_COLORS.length];
 }
 
-type SortMode = 'date' | 'release' | 'project';
+type SortMode = 'date' | 'release' | 'project' | 'priority';
 
-const STATUS_FILTERS = [
+export const STATUS_FILTERS = [
   { key: 'done',        label: 'Готово'    },
   { key: 'in_progress', label: 'В работе'  },
   { key: 'partial',     label: 'Частично'  },
@@ -48,26 +48,16 @@ const STATUS_FILTERS = [
   { key: 'cancelled',   label: 'Отменено'  },
 ];
 
+export interface SprintStats {
+  total: number;
+  done: number;
+  active: number;
+  p0Open: number;
+  noRelease: number;
+}
+
 const S = {
   wrap:    { flex: 1, display: 'flex', flexDirection: 'column' as const, minHeight: 0 },
-
-  // Project filter sidebar
-  projBar: {
-    display: 'flex', flexDirection: 'column' as const, gap: 2,
-    padding: '6px 4px', borderBottom: '1px solid var(--b2)',
-    flexShrink: 0,
-  },
-  projIcon: (on: boolean, color: string) => ({
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    width: 28, height: 22, borderRadius: 5, cursor: 'pointer',
-    fontSize: 9, fontWeight: 700, letterSpacing: '-0.02em',
-    userSelect: 'none' as const,
-    border: `1px solid ${on ? color : 'var(--b3)'}`,
-    background: on ? `color-mix(in srgb, ${color} 22%, transparent)` : 'transparent',
-    color: on ? color : 'var(--t3)',
-    transition: 'all 0.1s',
-    title: '',
-  }),
 
   // Toolbar (status chips + sort + refresh)
   toolbar: {
@@ -88,6 +78,15 @@ const S = {
     color: 'var(--t3)', fontSize: 13, flexShrink: 0,
     marginLeft: 'auto' as const,
   },
+  projChip: (on: boolean, color: string) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 3,
+    cursor: 'pointer', userSelect: 'none' as const,
+    fontSize: 10, padding: '2px 7px', borderRadius: 12, whiteSpace: 'nowrap' as const,
+    border: `1px solid ${on ? color : 'var(--b3)'}`,
+    background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+    color: on ? color : 'var(--t3)',
+    fontWeight: on ? 600 : 400,
+  }),
   statusChip: (on: boolean, color: string) => ({
     display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
     userSelect: 'none' as const, fontSize: 10, padding: '2px 7px',
@@ -120,22 +119,31 @@ const S = {
   spinning: { display: 'inline-block', animation: 'lore-spin 0.6s linear infinite' },
 };
 
+export type DatePeriod = 'month' | 'quarter' | '90d' | null;
+
 interface Props {
   module: string;
   q?: string;
+  statusFilter?: Set<string>;
+  priorityFilter?: Set<string>;
+  noRelease?: boolean;
+  datePeriod?: DatePeriod;
   selectedId?: string;
   onError: (e: unknown) => void;
   onSelect?: (id: string) => void;
+  onCounts?: (counts: Record<string, number>) => void;
+  onStats?: (stats: SprintStats) => void;
 }
 
-export default function LoreSprintTree({ module: _module, q, selectedId, onError, onSelect }: Props) {
+export default function LoreSprintTree({ module: _module, q, statusFilter, priorityFilter, noRelease, datePeriod, selectedId, onError, onSelect, onCounts, onStats }: Props) {
   const [rows, setRows]           = useState<LoreSprintRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [sortMode, setSortMode]   = useState<SortMode>('date');
   const [sortDesc, setSortDesc]   = useState(true);
-  const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
+  const statusSel   = statusFilter   ?? new Set<string>();
+  const prioritySel = priorityFilter ?? new Set<string>();
   const [projSel, setProjSel]     = useState<Set<string>>(new Set());
   const abortRef = useRef<AbortController | null>(null);
 
@@ -164,6 +172,18 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
     return c;
   }, [rows]);
 
+  useEffect(() => { onCounts?.(counts); }, [counts, onCounts]);
+
+  const stats = useMemo<SprintStats>(() => ({
+    total:     rows.length,
+    done:      rows.filter(r => normalizeStatus(r.status_raw) === 'done').length,
+    active:    rows.filter(r => ['in_progress', 'partial'].includes(normalizeStatus(r.status_raw))).length,
+    p0Open:    rows.filter(r => r.priority === 'P0' && normalizeStatus(r.status_raw) !== 'done').length,
+    noRelease: rows.filter(r => !r.release_ids || r.release_ids.length === 0).length,
+  }), [rows]);
+
+  useEffect(() => { onStats?.(stats); }, [stats, onStats]);
+
   const projCounts = useMemo(() => {
     const c: Record<string, number> = {};
     rows.forEach(s => s.git_projects?.forEach(g => { c[g] = (c[g] || 0) + 1; }));
@@ -172,11 +192,29 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
 
   const visible = useMemo(() => {
     const qLow = q?.toLowerCase() ?? '';
-    let v = rows.filter(s =>
-      (!qLow || s.sprint_id.toLowerCase().includes(qLow) || (s.name ?? '').toLowerCase().includes(qLow)) &&
-      (statusSel.size === 0 || statusSel.has(normalizeStatus(s.status_raw))) &&
-      (projSel.size === 0 || s.git_projects?.some(g => projSel.has(g)))
-    );
+    const now = new Date();
+    const cutoff: string | null = (() => {
+      if (!datePeriod) return null;
+      const d = new Date(now);
+      if (datePeriod === 'month')   { d.setDate(1); }
+      if (datePeriod === 'quarter') { d.setMonth(Math.floor(d.getMonth() / 3) * 3, 1); }
+      if (datePeriod === '90d')     { d.setDate(d.getDate() - 90); }
+      return d.toISOString().slice(0, 10);
+    })();
+    let v = rows.filter(s => {
+      if (qLow && !s.sprint_id.toLowerCase().includes(qLow) &&
+          !(s.name ?? '').toLowerCase().includes(qLow) &&
+          !(s.context_md ?? '').toLowerCase().includes(qLow)) return false;
+      if (statusSel.size > 0 && !statusSel.has(normalizeStatus(s.status_raw))) return false;
+      if (projSel.size > 0 && !s.git_projects?.some(g => projSel.has(g))) return false;
+      if (prioritySel.size > 0 && !prioritySel.has(s.priority ?? '')) return false;
+      if (noRelease && (s.release_ids?.length ?? 0) > 0) return false;
+      if (cutoff) {
+        const date = (s.done_date ?? s.valid_from ?? '').slice(0, 10);
+        if (!date || date < cutoff) return false;
+      }
+      return true;
+    });
 
     v = [...v].sort((a, b) => {
       if (sortMode === 'release') {
@@ -190,6 +228,12 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
         if (pa !== pb) return sortDesc ? pb.localeCompare(pa) : pa.localeCompare(pb);
         return a.sprint_id.localeCompare(b.sprint_id);
       }
+      if (sortMode === 'priority') {
+        const PMAP: Record<string, number> = { P0: 0, P1: 1, P2: 2 };
+        const pa = PMAP[a.priority ?? ''] ?? 3, pb = PMAP[b.priority ?? ''] ?? 3;
+        if (pa !== pb) return sortDesc ? pa - pb : pb - pa;
+        return a.sprint_id.localeCompare(b.sprint_id);
+      }
       // default: date
       const da = a.valid_from ?? '', db = b.valid_from ?? '';
       if (!da && !db) return a.sprint_id.localeCompare(b.sprint_id);
@@ -198,11 +242,8 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
       return sortDesc ? db.localeCompare(da) : da.localeCompare(db);
     });
     return v;
-  }, [rows, q, statusSel, projSel, sortMode, sortDesc]);
+  }, [rows, q, statusSel, prioritySel, projSel, noRelease, datePeriod, sortMode, sortDesc]);
 
-  const toggleStatus = (k: string) => setStatusSel(p => {
-    const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n;
-  });
   const toggleProj = (g: string) => setProjSel(p => {
     const n = new Set(p); n.has(g) ? n.delete(g) : n.add(g); return n;
   });
@@ -218,28 +259,7 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
 
   return (
     <div style={S.wrap}>
-      {/* ── Project filter icons (left sidebar strip) ─── */}
-      {allProjects.length > 0 && (
-        <div style={S.projBar}>
-          {allProjects.map(slug => {
-            const color = projColor(slug, allProjects);
-            const on = projSel.has(slug);
-            const label = projLabel(slug);
-            return (
-              <span
-                key={slug}
-                style={S.projIcon(on, color)}
-                onClick={() => toggleProj(slug)}
-                title={`${slug} (${projCounts[slug] ?? 0})`}
-              >
-                {label.slice(0, 4).toUpperCase()}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Toolbar: sort + status chips + refresh ─────── */}
+      {/* ── Toolbar: sort + refresh ────────────────────── */}
       <div style={S.toolbar}>
         <button style={S.sortBtn(sortMode === 'date')}
           onClick={() => cycleSort('date')} title="Сортировка по дате">
@@ -253,6 +273,10 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
           onClick={() => cycleSort('project')} title="Сортировка по проекту">
           Проект {sortMode === 'project' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
+        <button style={S.sortBtn(sortMode === 'priority')}
+          onClick={() => cycleSort('priority')} title="Сортировка по приоритету">
+          Приоритет {sortMode === 'priority' ? (sortDesc ? '↓' : '↑') : ''}
+        </button>
 
         <button
           style={S.refreshBtn}
@@ -264,20 +288,24 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
         </button>
       </div>
 
-      {/* ── Status filter chips ────────────────────────── */}
-      <div style={{ ...S.toolbar, paddingTop: 3, paddingBottom: 5 }}>
-        {STATUS_FILTERS.map(f => {
-          const on = statusSel.has(f.key);
-          const meta = statusMeta(f.key);
-          return (
-            <span key={f.key} style={S.statusChip(on, meta.color)} onClick={() => toggleStatus(f.key)}>
-              <GameIcon slug={meta.icon} size={11} />
-              {f.label}
-              <span style={S.chipCount(on)}>{counts[f.key] ?? 0}</span>
-            </span>
-          );
-        })}
-      </div>
+
+      {/* ── Project filter pills — прямо над списком ─── */}
+      {allProjects.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '5px 8px 4px', borderBottom: '1px solid var(--b2)', flexShrink: 0 }}>
+          {allProjects.map(slug => {
+            const color = projColor(slug, allProjects);
+            const on = projSel.has(slug);
+            return (
+              <span key={slug} style={S.projChip(on, color)}
+                onClick={() => toggleProj(slug)}
+                title={`${slug} (${projCounts[slug] ?? 0})`}>
+                {projLabel(slug)}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{projCounts[slug] ?? 0}</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── List ──────────────────────────────────────── */}
       <div style={S.root}>
@@ -309,6 +337,12 @@ export default function LoreSprintTree({ module: _module, q, selectedId, onError
               {(date || status || release || relDate) && (
                 <div style={S.line2}>
                   {date && <span style={S.date}>{date}</span>}
+                  {s.priority && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, flexShrink: 0,
+                      color: s.priority === 'P0' ? '#E24B4A' : s.priority === 'P1' ? '#ef9f27' : 'var(--t3)',
+                    }}>{s.priority}</span>
+                  )}
                   {status && (
                     <span title={status} style={{ display: 'inline-flex', alignItems: 'center' }}>
                       <GameIcon slug={statusMeta(status).icon} size={12}

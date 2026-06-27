@@ -8,7 +8,7 @@
   },
   "nav": {
     "lore":      "LORE",
-    "benchmark": "BENCHMARK"
+    "benchmark": "MUNINN"
   },
   "bench": {
     "title":            "RAG · Graph · Parse — эксперимент",

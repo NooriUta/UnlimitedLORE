@@ -323,29 +323,42 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
-    'lore_link_release_pr',
-    'Link sprints and/or PRs to a KnowRelease. ' +
-      'For each sprint_id creates an IMPLEMENTED_IN_RELEASE edge (KnowSprint → KnowRelease). ' +
-      'For each pr_number upserts a KnowPR vertex and creates a SHIPPED_IN edge (KnowPR → KnowRelease). ' +
-      'Returns counts of linked sprints and PRs.\n\n' +
-      'MULTI-REPO: always pass git_project to avoid linking to the wrong project\'s release ' +
-      'when multiple projects share the same release_id (e.g. v1.0.0). ' +
-      'git_project is used to construct release_uid = "{git_project}#{release_id}" which is the unique key.',
+    'lore_link_release',
+    'Attach one or more SPRINTS to a release. ' +
+      'Creates IMPLEMENTED_IN_RELEASE edges (KnowSprint → KnowRelease). ' +
+      'Use when a sprint is done and shipped in a specific release. ' +
+      'For linking PRs to a release use lore_link_release_pr instead.\n\n' +
+      'MULTI-REPO: always pass git_project — release_uid = "{git_project}#{release_id}".',
     {
       release_id:  z.string().describe('target release version, e.g. "v1.6.11"'),
-      sprint_ids:  z.array(z.string()).optional().describe('e.g. ["SPRINT_HOUND_ROWSET_V2"]'),
-      pr_numbers:  z.array(z.number().int()).optional().describe('e.g. [401, 402]'),
-      git_project: z.string()
-        .describe('REQUIRED. GitHub project slug, e.g. "NooriUta/AIDA" or "NooriUta/seidr-site". ' +
-                  'Determines which project\'s release to link to.'),
+      sprint_ids:  z.array(z.string()).describe('sprint ids to attach, e.g. ["SPRINT_HOUND_ROWSET_V2"]'),
+      git_project: z.string().describe('GitHub project slug, e.g. "NooriUta/AIDA"'),
     },
-    async ({ release_id, sprint_ids, pr_numbers, git_project }) => {
+    async ({ release_id, sprint_ids, git_project }) => {
       try {
         return json(await lorePost('/lore/release/link', {
-          release_id,
-          sprint_ids: sprint_ids ?? [],
-          pr_numbers: pr_numbers ?? [],
-          git_project,
+          release_id, sprint_ids, pr_numbers: [], git_project,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_release_pr',
+    'Attach one or more PULL REQUESTS to a release. ' +
+      'Upserts KnowPR vertices and creates SHIPPED_IN edges (KnowPR → KnowRelease). ' +
+      'Use when you know which PRs were merged into a release. ' +
+      'For linking sprints to a release use lore_link_release instead.\n\n' +
+      'MULTI-REPO: always pass git_project — release_uid = "{git_project}#{release_id}".',
+    {
+      release_id:  z.string().describe('target release version, e.g. "v1.6.11"'),
+      pr_numbers:  z.array(z.number().int()).describe('PR numbers to attach, e.g. [401, 402]'),
+      git_project: z.string().describe('GitHub project slug, e.g. "NooriUta/AIDA"'),
+    },
+    async ({ release_id, pr_numbers, git_project }) => {
+      try {
+        return json(await lorePost('/lore/release/link', {
+          release_id, sprint_ids: [], pr_numbers, git_project,
         }));
       } catch (e) { return err(e); }
     },
