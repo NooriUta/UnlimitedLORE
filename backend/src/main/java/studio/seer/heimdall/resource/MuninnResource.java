@@ -18,7 +18,7 @@ import java.util.Set;
  * Read-only FILE viewer for the external rag-vs-parse benchmark repo (dev-only).
  *
  * Scope after the experiment-mart switch: closed measurements live in ArcadeDB
- * RAGVSDL (see HuginnMartResource) — files remain ONLY for:
+ * RAGVSDL (see MuninnMartResource) — files remain ONLY for:
  *
  * GET /bench/api/status      → results/STATUS.json — live progress of the RUNNING
  *                              cell, written by the orchestrator every few seconds
@@ -33,9 +33,9 @@ import java.util.Set;
  * 404 {"error":"BENCH_ROOT_MISSING"} so the frontend can show a friendly empty state.
  */
 @Path("/bench")
-public class HuginnResource {
+public class MuninnResource {
 
-    public record HuginnError(String error, String detail) {}
+    public record MuninnError(String error, String detail) {}
 
     static final Set<String> ALLOWED_EXTENSIONS = Set.of(".json", ".jsonl", ".md", ".html");
     static final Set<String> ALLOWED_TOP_DIRS   = Set.of("results", "backups", "docs");
@@ -55,7 +55,7 @@ public class HuginnResource {
         if (!isAllowedRelPath(path)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(new HuginnError("FORBIDDEN", "path outside whitelist")));
+                .entity(new MuninnError("FORBIDDEN", "path outside whitelist")));
         }
         return rawFile(path, contentTypeFor(path));
     }
@@ -99,31 +99,31 @@ public class HuginnResource {
         } catch (InvalidPathException e) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(new HuginnError("FORBIDDEN", "invalid path")));
+                .entity(new MuninnError("FORBIDDEN", "invalid path")));
         }
         if (!file.startsWith(root)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(new HuginnError("FORBIDDEN", "path traversal blocked")));
+                .entity(new MuninnError("FORBIDDEN", "path traversal blocked")));
         }
         if (!Files.isRegularFile(file)) {
             return noStore(Response.status(Response.Status.NOT_FOUND)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(new HuginnError("NOT_FOUND", relPath)));
+                .entity(new MuninnError("NOT_FOUND", relPath)));
         }
         try {
             return noStore(Response.ok(Files.newInputStream(file)).type(contentType));
         } catch (IOException e) {
             return noStore(Response.status(Response.Status.NOT_FOUND)
                 .type(MediaType.APPLICATION_JSON)
-                .entity(new HuginnError("NOT_FOUND", relPath)));
+                .entity(new MuninnError("NOT_FOUND", relPath)));
         }
     }
 
     private Response rootMissing() {
         return noStore(Response.status(Response.Status.NOT_FOUND)
             .type(MediaType.APPLICATION_JSON)
-            .entity(new HuginnError("BENCH_ROOT_MISSING", benchRoot)));
+            .entity(new MuninnError("BENCH_ROOT_MISSING", benchRoot)));
     }
 
     private static Response noStore(Response.ResponseBuilder builder) {

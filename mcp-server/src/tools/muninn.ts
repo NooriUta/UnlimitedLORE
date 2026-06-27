@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { huginnSlices, huginnSlice, huginnStatus } from '../backend.js';
+import { muninnSlices, muninnSlice, muninnStatus } from '../backend.js';
 
-// ── HUGINN (Исследования) read tools ─────────────────────────────────────────
+// ── MUNINN (Исследования) read tools ─────────────────────────────────────────
 // Read-only access to the RAG-vs-Parse experiment mart (RAGVSDL) via the
 // UnlimitedLORE backend (:9100). The mart is written exclusively by the Python
 // engine (rag-vs-parse/scripts/mart.py) — these tools never write.
@@ -16,7 +16,7 @@ const err = (e: unknown) => ({
   isError: true,
 });
 
-export function registerHuginn(server: McpServer): void {
+export function registerMuninn(server: McpServer): void {
   server.tool(
     'bench_list_slices',
     'List all available BENCHMARK (RAG-vs-Parse) experiment-mart slices with ' +
@@ -26,7 +26,7 @@ export function registerHuginn(server: McpServer): void {
     {},
     async () => {
       try {
-        return json(await huginnSlices());
+        return json(await muninnSlices());
       } catch (e) {
         return err(e);
       }
@@ -48,7 +48,7 @@ export function registerHuginn(server: McpServer): void {
     },
     async ({ slice, params }) => {
       try {
-        return json(await huginnSlice(slice, params));
+        return json(await muninnSlice(slice, params));
       } catch (e) {
         return err(e);
       }
@@ -63,7 +63,7 @@ export function registerHuginn(server: McpServer): void {
     {},
     async () => {
       try {
-        return json(await huginnStatus());
+        return json(await muninnStatus());
       } catch (e) {
         return err(e);
       }

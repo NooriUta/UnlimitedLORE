@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerLoreRead } from './tools/loreRead.js';
 import { registerLoreWrite } from './tools/loreWrite.js';
 import { BACKEND_URL } from './backend.js';
-import { registerHuginn } from './tools/huginn.js';
+import { registerMuninn } from './tools/muninn.js';
 
 // stdio MCP server for AIDA LORE. Talks to the UnlimitedLORE backend (:9100),
 // which in turn serves system_aida_lore. NEVER write to stdout — it is the
@@ -13,7 +13,7 @@ const server = new McpServer({ name: 'aida-lore', version: '1.0.0' });
 
 registerLoreRead(server);
 registerLoreWrite(server);
-registerHuginn(server);
+registerMuninn(server);
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();

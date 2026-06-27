@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { huginnFileUrl } from '../../api/huginn';
+import { muninnFileUrl } from '../../api/muninn';
 import { ScreenTitle } from './shared';
 
 const REPORT_PATH = 'docs/RAG_VS_PARSE_EXPERIMENT.html';
@@ -12,7 +12,7 @@ const REPORT_PATH = 'docs/RAG_VS_PARSE_EXPERIMENT.html';
  */
 export function ReportScreen() {
   const { t } = useTranslation();
-  const url = huginnFileUrl(REPORT_PATH);
+  const url = muninnFileUrl(REPORT_PATH);
   return (
     <div data-testid="bench-report">
       <ScreenTitle text={t('bench.secReport', 'Static experiment report (v0.9)')} />

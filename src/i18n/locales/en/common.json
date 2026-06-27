@@ -1,8 +1,8 @@
 {
   "shell": {
     "projects": "Forseti",
-    "research": "HUGINN",
-    "muninn": "MUNINN",
+    "research": "MUNINN",
+    "muninn": "HUGINN",
     "tyr": "TYR",
     "bragi": "BRAGI"
   },

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useHuginn';
-import type { DispersionRow, SnapshotRow, TaskRow } from '../../utils/huginnData';
-import { buildCellSql, fmtF1, groupDispersion } from '../../utils/huginnData';
-import { HuginnSelect, DotStrip, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
+import { useMartSlice } from '../../hooks/useMuninn';
+import type { DispersionRow, SnapshotRow, TaskRow } from '../../utils/muninnData';
+import { buildCellSql, fmtF1, groupDispersion } from '../../utils/muninnData';
+import { MuninnSelect, DotStrip, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } from './shared';
 
 /**
  * Screen 5 — replication dispersion: avg(f1) per run at a fixed snapshot+task.
@@ -34,11 +34,11 @@ export function DispersionScreen({ snapshots, tasks, subLabel, preset, onPinsCha
       <ScreenTitle text={t('bench.secDispersion', 'Replication dispersion — one point per run (mean F1), spread between runs')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <Field label={t('bench.snapshot', 'Snapshot')}>
-          <HuginnSelect value={snapshot} onChange={pickSnapshot}
+          <MuninnSelect value={snapshot} onChange={pickSnapshot}
                        options={snapshots.map(s => ({ value: s.snapshot_id, label: s.snapshot_id }))} />
         </Field>
         <Field label={t('bench.task', 'Task')}>
-          <HuginnSelect value={task} onChange={pickTask}
+          <MuninnSelect value={task} onChange={pickTask}
                        options={tasks.map(x => ({ value: x.task_id, label: x.task_id }))} />
         </Field>
       </div>

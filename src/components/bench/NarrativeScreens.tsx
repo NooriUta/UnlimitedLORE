@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { useMartSlice } from '../../hooks/useHuginn';
+import { useMartSlice } from '../../hooks/useMuninn';
 import type {
   CorpusRow, HopKindRow, MetricRow, ProjectRow, RiskRow, SubtypeRow, TaskRow,
-} from '../../utils/huginnData';
-import { num, pickLocale, severityRank, strArr } from '../../utils/huginnData';
+} from '../../utils/muninnData';
+import { num, pickLocale, severityRank, strArr } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
 import { PanelMsg, ScreenTitle, StatusBadge } from './shared';
 

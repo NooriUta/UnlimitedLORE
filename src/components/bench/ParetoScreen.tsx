@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useHuginn';
-import type { FactRow, RunRow } from '../../utils/huginnData';
-import { defaultRunId, formatSeconds, formatTokens, formatUsd, paretoPoints } from '../../utils/huginnData';
-import { HuginnSelect, Field, PanelMsg, ScatterSVG, ScreenTitle } from './shared';
+import { useMartSlice } from '../../hooks/useMuninn';
+import type { FactRow, RunRow } from '../../utils/muninnData';
+import { defaultRunId, formatSeconds, formatTokens, formatUsd, paretoPoints } from '../../utils/muninnData';
+import { MuninnSelect, Field, PanelMsg, ScatterSVG, ScreenTitle } from './shared';
 
 /**
  * Screen 7 — Pareto: avg(f1) vs total tokens and vs total wall-clock time per
@@ -23,7 +23,7 @@ export function ParetoScreen({ runs, subLabel }: {
       <ScreenTitle text={t('bench.secPareto', 'Pareto — avg(F1) vs total cost per substrate (structural zeros excluded)')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <Field label={t('bench.run', 'Run')}>
-          <HuginnSelect value={run} onChange={setRun}
+          <MuninnSelect value={run} onChange={setRun}
                        options={runs.map(r => ({ value: r.run_id, label: `${r.run_id} (${r.model ?? '?'} · ${r.prompt ?? '?'})` }))} />
         </Field>
       </div>

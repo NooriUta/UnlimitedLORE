@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useHuginn';
+import { useMartSlice } from '../../hooks/useMuninn';
 import type {
   AspectOriginRow, AspectRow, CategoryRow, DecisionRow,
   DetailedCategoryRow, GoldShapeRow, HopKindRow, LevelRow, TaskRow,
-} from '../../utils/huginnData';
-import { pickLocale, short } from '../../utils/huginnData';
+} from '../../utils/muninnData';
+import { pickLocale, short } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
 import { PanelMsg, ScreenTitle } from './shared';
 

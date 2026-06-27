@@ -1,9 +1,9 @@
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePageTitle } from '../hooks/usePageTitle';
-import { useMartSlice } from '../hooks/useHuginn';
-import type { HypothesisRow } from '../utils/huginnData';
-import { pickLocale } from '../utils/huginnData';
+import { useMartSlice } from '../hooks/useMuninn';
+import type { HypothesisRow } from '../utils/muninnData';
+import { pickLocale } from '../utils/muninnData';
 import { PanelMsg, StatusBadge, hypothesisTone } from '../components/bench/shared';
 import { MartProse } from '../components/bench/MartProse';
 

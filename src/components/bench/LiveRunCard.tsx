@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useHuginnStatus } from '../../hooks/useHuginn';
-import { humanizeSeconds, parseHuginnTimestamp } from '../../utils/huginnData';
+import { useMuninnStatus } from '../../hooks/useMuninn';
+import { humanizeSeconds, parseMuninnTimestamp } from '../../utils/muninnData';
 import { StatusBadge } from './shared';
 
 const POLL_ACTIVE_MS = 4000;
@@ -26,7 +26,7 @@ export function LiveRunCard() {
   // a finished cell barely changes — drop from 4s to 30s polling on complete
   const [intervalMs, setIntervalMs] = useState(POLL_ACTIVE_MS);
   const [expanded, setExpanded] = useState(false);
-  const { status, stale, unavailable } = useHuginnStatus(intervalMs);
+  const { status, stale, unavailable } = useMuninnStatus(intervalMs);
   useEffect(() => {
     setIntervalMs(status?.current === 'complete' ? POLL_COMPLETE_MS : POLL_ACTIVE_MS);
   }, [status?.current]);
@@ -52,7 +52,7 @@ export function LiveRunCard() {
   const total = status.total ?? 0;
   const errors = Array.isArray(status.errors) ? status.errors : [];
   const isComplete = status.current === 'complete';
-  const updatedMs = parseHuginnTimestamp(status.updated);
+  const updatedMs = parseMuninnTimestamp(status.updated);
   const ageSec = updatedMs !== null ? Math.max(0, Math.round((Date.now() - updatedMs) / 1000)) : null;
 
   // a finished run is context, not news — collapse to a one-line strip and

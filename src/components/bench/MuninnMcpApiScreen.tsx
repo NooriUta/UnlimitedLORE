@@ -1,13 +1,13 @@
-// HuginnMcpApiScreen — published API reference for HUGINN (Исследования)
+// MuninnMcpApiScreen — published API reference for MUNINN (Исследования)
 // side of the aida-lore MCP server. Separate page from the LORE MCP reference
 // (which lives at /lore?section=mcp). Documents the planned bench tools, pings
 // the live bench backend for health + the real mart-slice catalog.
 import { useEffect, useState } from 'react';
 import {
-  fetchMartCatalog, fetchHuginnStatus,
+  fetchMartCatalog, fetchMuninnStatus,
   type MartSliceDescriptor,
-} from '../../api/huginn';
-import type { HuginnStatus } from '../../utils/huginnData';
+} from '../../api/muninn';
+import type { MuninnStatus } from '../../utils/muninnData';
 
 interface ToolDoc {
   name: string;
@@ -41,9 +41,9 @@ const MCP_JSON = `{
   }
 }`;
 
-export default function HuginnMcpApiScreen() {
+export default function MuninnMcpApiScreen() {
   const [slices, setSlices] = useState<MartSliceDescriptor[] | null>(null);
-  const [status, setStatus] = useState<HuginnStatus | null>(null);
+  const [status, setStatus] = useState<MuninnStatus | null>(null);
   const [health, setHealth] = useState<'checking' | 'up' | 'down'>('checking');
   const [filter, setFilter] = useState('');
 
@@ -51,7 +51,7 @@ export default function HuginnMcpApiScreen() {
     const ctrl = new AbortController();
     Promise.all([
       fetchMartCatalog(ctrl.signal),
-      fetchHuginnStatus(ctrl.signal).catch(() => null),
+      fetchMuninnStatus(ctrl.signal).catch(() => null),
     ])
       .then(([cat, st]) => { setSlices(cat); setStatus(st); setHealth('up'); })
       .catch(() => { if (!ctrl.signal.aborted) setHealth('down'); });
@@ -86,7 +86,7 @@ export default function HuginnMcpApiScreen() {
 
         <Section title="Инструменты (bench)">
           <div style={S.banner}>
-            Read-инструменты <b>реализованы</b> (<code style={S.code}>mcp-server/src/tools/huginn.ts</code>) —
+            Read-инструменты <b>реализованы</b> (<code style={S.code}>mcp-server/src/tools/muninn.ts</code>) —
             после пересборки <code style={S.code}>npm run build</code> и перезапуска клиента доступны как
             <code style={S.code}>bench_*</code>. Витрина пишется только Python-движком
             <code style={S.code}>rag-vs-parse/scripts/mart.py</code>; эти тулзы — только чтение.
