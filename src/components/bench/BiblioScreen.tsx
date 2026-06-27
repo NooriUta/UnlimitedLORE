@@ -6,7 +6,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { MartProse } from './MartProse';
-import { fetchMartSlice, huginnFileUrl } from '../../api/huginn';
+import { fetchMartSlice, muninnFileUrl } from '../../api/muninn';
 
 /* ELK runs in-process (bundled build, no worker) — one instance for the module */
 const elk = new ELK();
@@ -102,7 +102,7 @@ function resolveRefUrl(link: string): string {
   if (/^10\.\d{4,}\//.test(s)) return `https://doi.org/${s}`;  // bare DOI
   const acl = s.match(/^aclanthology:\s*(.+)$/i);              // aclanthology:2020.emnlp-main.564
   if (acl) return `https://aclanthology.org/${acl[1].trim()}/`;
-  if (/^(docs|results|backups)\//.test(s)) return huginnFileUrl(s); // repo file
+  if (/^(docs|results|backups)\//.test(s)) return muninnFileUrl(s); // repo file
   return s;
 }
 

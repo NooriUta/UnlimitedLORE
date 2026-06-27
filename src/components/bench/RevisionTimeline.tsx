@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SubstrateFactRow, SubstrateRevRow } from '../../utils/huginnData';
-import { fmtF1, pickLocale, revFactStats } from '../../utils/huginnData';
+import type { SubstrateFactRow, SubstrateRevRow } from '../../utils/muninnData';
+import { fmtF1, pickLocale, revFactStats } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
 
 /**

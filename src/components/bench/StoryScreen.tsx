@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useHuginn';
+import { useMartSlice } from '../../hooks/useMuninn';
 import type {
   CampaignRow, DecisionRow, FindingRow, HypothesisRow, PhaseRow, RunRow,
-} from '../../utils/huginnData';
-import { dedupe, formatSeconds, formatUsd, num, pickLocale, strArr } from '../../utils/huginnData';
+} from '../../utils/muninnData';
+import { dedupe, formatSeconds, formatUsd, num, pickLocale, strArr } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
 import { PanelMsg, StatusBadge, campaignTone, hypothesisTone } from './shared';
 

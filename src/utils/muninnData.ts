@@ -5,7 +5,7 @@
 // what is there. Reading rules (experiment-mart skill): structural zeros
 // (capability='cap:none') never enter averages — they are kept as separate rows.
 
-export interface HuginnStatus {
+export interface MuninnStatus {
   manifest?: string;
   total?: number;
   done?: number;
@@ -1463,7 +1463,7 @@ export function formatSeconds(s: number | undefined): string {
 }
 
 /** "2026-06-10 21:31:09" (local clock of the benchmark machine) → epoch ms. */
-export function parseHuginnTimestamp(s: string | undefined): number | null {
+export function parseMuninnTimestamp(s: string | undefined): number | null {
   if (!s) return null;
   const ms = new Date(s.replace(' ', 'T')).getTime();
   return Number.isFinite(ms) ? ms : null;

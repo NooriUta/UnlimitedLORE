@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useHuginn';
-import type { CapabilityRow, FactRow, RunRow } from '../../utils/huginnData';
-import { buildCellSql, defaultRunId, f1CellBg, fmtF1, pivotMatrix } from '../../utils/huginnData';
-import { HuginnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink, ZerosBlock } from './shared';
+import { useMartSlice } from '../../hooks/useMuninn';
+import type { CapabilityRow, FactRow, RunRow } from '../../utils/muninnData';
+import { buildCellSql, defaultRunId, f1CellBg, fmtF1, pivotMatrix } from '../../utils/muninnData';
+import { MuninnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink, ZerosBlock } from './shared';
 import { MetricChip } from './NarrativeScreens';
 
 export interface CasesPreset {
@@ -42,7 +42,7 @@ export function MatrixScreen({ runs, subLabel, capabilities, onOpenCases }: {
                    hint={t('bench.secMatrixHint', 'click a cell to open its cases')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.run', 'Run')}>
-          <HuginnSelect value={run} onChange={setRun} options={runOptions} />
+          <MuninnSelect value={run} onChange={setRun} options={runOptions} />
         </Field>
         {/* N2: the legend behind every number on this screen */}
         <MetricChip metric="exact_set" />

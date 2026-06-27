@@ -1,13 +1,13 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useHuginn';
+import { useMartSlice } from '../../hooks/useMuninn';
 import type {
   CaseDimRow, DecisionRow, FindingRow, GoldRow, GoldVerdictRow, HypothesisRow,
   MethodCardRow, ReferenceRow, SourceRow,
   SubstrateRevAllRow, SubstrateRow,
-} from '../../utils/huginnData';
-import { groupRevChains, pickLocale, substrateSortKey } from '../../utils/huginnData';
+} from '../../utils/muninnData';
+import { groupRevChains, pickLocale, substrateSortKey } from '../../utils/muninnData';
 import { MartProse } from './MartProse';
 import {
   PanelMsg, RegistryFooter, ScreenTitle, StatusBadge, SubstrateLink, hypothesisTone, useRegistryTable,

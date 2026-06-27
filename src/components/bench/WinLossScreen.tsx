@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMartSlice } from '../../hooks/useHuginn';
-import type { CaseRow, FactRow, RunRow, SubstrateRow } from '../../utils/huginnData';
-import { defaultRunId, fmtF1, short, substrateSortKey, winLoss } from '../../utils/huginnData';
+import { useMartSlice } from '../../hooks/useMuninn';
+import type { CaseRow, FactRow, RunRow, SubstrateRow } from '../../utils/muninnData';
+import { defaultRunId, fmtF1, short, substrateSortKey, winLoss } from '../../utils/muninnData';
 import { CaseDetails } from './CasesScreen';
-import { HuginnSelect, Field, PanelMsg, ScreenTitle } from './shared';
+import { MuninnSelect, Field, PanelMsg, ScreenTitle } from './shared';
 
 // categorical register B (NOT the F1 scale A): A — accent, B — violet
 const A_COLOR = 'var(--acc)';
@@ -83,11 +83,11 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
                    hint={t('bench.wl.hint', 'the WHY behind a leaderboard gap: divergent cases side by side, with traces')} />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
         <Field label={t('bench.run', 'Run')}>
-          <HuginnSelect value={run} onChange={setRun}
+          <MuninnSelect value={run} onChange={setRun}
                        options={runs.map(r => ({ value: r.run_id, label: r.run_id }))} />
         </Field>
-        <Field label="A"><HuginnSelect value={effA} onChange={setSubA} options={subOptions} /></Field>
-        <Field label="B"><HuginnSelect value={effB} onChange={setSubB} options={subOptions} /></Field>
+        <Field label="A"><MuninnSelect value={effA} onChange={setSubA} options={subOptions} /></Field>
+        <Field label="B"><MuninnSelect value={effB} onChange={setSubB} options={subOptions} /></Field>
         <span style={{ fontSize: 11, color: 'var(--t3)' }}>
           {t('bench.wl.measuredOnly', 'only actors measured in this run are offered (facts in brackets)')}
         </span>
