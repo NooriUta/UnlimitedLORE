@@ -73,6 +73,7 @@ function toToken(key: string): LorePlanItemStatus {
   if (key === 'done') return 'done';
   if (key === 'in_progress' || key === 'active') return 'active';
   if (key === 'partial') return 'partial';
+  if (key === 'ready_for_deploy') return 'ready_for_deploy';
   if (key === 'deferred' || key === 'blocked') return 'blocked';
   if (key === 'cancelled') return 'cancelled';
   return 'todo';
@@ -81,12 +82,13 @@ function toToken(key: string): LorePlanItemStatus {
 // Status options for the inline picker — localized RU labels + the status-key whose
 // game-icon/colour (lore-status) the button shows.
 const PICK_OPTS: { token: LorePlanItemStatus; statusKey: string; label: string }[] = [
-  { token: 'todo',      statusKey: 'planned',     label: 'В план' },
-  { token: 'active',    statusKey: 'in_progress', label: 'В работе' },
-  { token: 'partial',   statusKey: 'partial',     label: 'Частично' },
-  { token: 'done',      statusKey: 'done',        label: 'Готово' },
-  { token: 'blocked',   statusKey: 'blocked',     label: 'Заблокировано' },
-  { token: 'cancelled', statusKey: 'cancelled',   label: 'Отменено' },
+  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
+  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
+  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
+  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
+  { token: 'done',             statusKey: 'done',             label: 'Готово' },
+  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
+  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
 ];
 
 // Inline status setter — admin-only write to system_aida_lore via POST /lore/status (SCD2).

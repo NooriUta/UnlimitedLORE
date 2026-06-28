@@ -190,6 +190,19 @@ public final class LoreSlices {
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
 
+        // Batch variant: fetch tasks for multiple sprints in one query.
+        // sprint_ids is a comma-separated string that the slice layer splits into a list.
+        slice("tasks_of_sprints_batch",
+            "SELECT task_uid, task_id, title, order_index, " +
+            "out('PART_OF').sprint_id[0]                              AS sprint_id, " +
+            "out('IN_PHASE').phase_uid[0]                            AS phase_uid, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md " +
+            "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
+            "ORDER BY out('PART_OF').sprint_id[0], order_index",
+            List.of("sprint_ids"), Map.of(), "");
+
         // ── §3 Milestones ────────────────────────────────────────────────────
         slice("milestones",
             "SELECT milestone_id, label, week, date_display, " +
@@ -241,7 +254,7 @@ public final class LoreSlices {
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
-            "SELECT component_id, full_name, area, parent_id, game_icon, " +
+            "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "in('PARENT_OF').component_id AS children, " +
             "out('USES').tech_id AS tech " +
             "FROM LoreComponent",
@@ -250,7 +263,7 @@ public final class LoreSlices {
             " ORDER BY full_name");
 
         slice("component",
-            "SELECT component_id, full_name, area, parent_id, game_icon, " +
+            "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "out('PARENT_OF').component_id  AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
             "in('BELONGS_TO').adr_id        AS adrs, " +

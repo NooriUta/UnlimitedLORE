@@ -38,8 +38,10 @@ const S = {
     background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent', color: 'var(--t1)',
   }),
   specName: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  adrId:   { flex: 1, minWidth: 0, color: 'var(--acc)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)' },
-  adrDate: { color: 'var(--t3)', fontSize: 10, flexShrink: 0 },
+  adrId:     { minWidth: 0, color: 'var(--acc)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)', flexShrink: 0, maxWidth: '38%', fontSize: 10 },
+  adrName:   { flex: 1, minWidth: 0, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, fontSize: 11 },
+  adrStatus: { fontSize: 9, padding: '1px 5px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t3)', flexShrink: 0, textTransform: 'uppercase' as const },
+  adrDate:   { color: 'var(--t3)', fontSize: 10, flexShrink: 0 },
   empty: { padding: 20, color: 'var(--t3)', fontSize: 12 },
 };
 
@@ -97,6 +99,12 @@ export default function LoreModulePassport({
           <span>· {specs.length} спек</span>
           {children.length > 0 && <span>· {children.length} дочерних</span>}
         </div>
+        {(meta.owner || meta.team) && (
+          <div style={S.attrRow}>
+            {meta.owner && <><span style={S.attrLabel}>Владелец</span><span style={S.tech}>{meta.owner}</span></>}
+            {meta.team  && <><span style={{ ...S.attrLabel, marginLeft: meta.owner ? 12 : 0 }}>Команда</span><span style={S.tech}>{meta.team}</span></>}
+          </div>
+        )}
         {tech.length > 0 && (
           <div style={S.attrRow}>
             <span style={S.attrLabel}>Технологии</span>
@@ -121,6 +129,8 @@ export default function LoreModulePassport({
             {adrs.map(a => (
               <div key={a.adr_id} style={S.specRow(selectedAdr === a.adr_id)} onClick={() => onOpenAdr(a.adr_id)} title={a.adr_id}>
                 <span style={S.adrId}>{a.adr_id}</span>
+                <span style={S.adrName}>{a.name ?? a.adr_id}</span>
+                {a.status && <span style={S.adrStatus}>{a.status}</span>}
                 {a.date_created && <span style={S.adrDate}>{a.date_created.slice(0, 10)}</span>}
               </div>
             ))}

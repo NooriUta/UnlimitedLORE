@@ -31,8 +31,10 @@ export function normalizeStatus(raw: string | null): string {
   if (s.startsWith('🔄') || s.startsWith('🟢') ||
       /^(IN.?PROGRESS|WIP|ACTIVE|READY)/i.test(s)) return 'in_progress';
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return 'partial';
-  if (s.startsWith('📋') || s.startsWith('⬜') || /^(TODO|PLANNED|STUB|DRAFT)/i.test(s)) return 'planned';
-  if (s.startsWith('🟣') || s.startsWith('⏸') || s.startsWith('⬜ DEFERRED') ||
+  if (s.startsWith('📋') || /^(PLANNED|STUB|DRAFT)/i.test(s)) return 'planned';
+  if (s.startsWith('⬜') || /^TODO/i.test(s)) return 'todo';
+  if (s.startsWith('🚀') || /^(READY.?FOR.?DEPLOY|RFD)/i.test(s)) return 'ready_for_deploy';
+  if (s.startsWith('🟣') || s.startsWith('⏸') ||
       /^(BACKLOG|DEFERRED|BLOCKED|ARCHIVED)/i.test(s)) return 'deferred';
   if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return 'cancelled';
   return '';

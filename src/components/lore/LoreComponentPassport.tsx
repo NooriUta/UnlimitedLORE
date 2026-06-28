@@ -57,9 +57,10 @@ interface Props {
   onError: (e: unknown) => void;
   onNavigateAdr?: (id: string) => void;
   onNavigateComponent?: (id: string) => void;
+  onOpenSpec?: (id: string) => void;
 }
 
-export default function LoreComponentPassport({ componentId, onError, onNavigateAdr, onNavigateComponent }: Props) {
+export default function LoreComponentPassport({ componentId, onError, onNavigateAdr, onNavigateComponent, onOpenSpec }: Props) {
   const [comp, setComp]       = useState<LoreComponentDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -153,8 +154,18 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
       {specs.length > 0 && (
         <div style={S.section}>
           <div style={S.sLabel}>Спецификации ({specs.length})</div>
-          <div style={S.chips}>
-            {specs.map(id => <span key={id} style={S.chip}>{id}</span>)}
+          <div style={S.adrList}>
+            {specs.map(id => (
+              <div
+                key={id}
+                style={{ ...S.adrRow, cursor: onOpenSpec ? 'pointer' : 'default' }}
+                onClick={() => onOpenSpec?.(id)}
+                onMouseEnter={e => { if (onOpenSpec) (e.currentTarget as HTMLElement).style.background = 'var(--b2)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              >
+                <span style={{ ...S.adrId, color: 'var(--t2)' }}>{id}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

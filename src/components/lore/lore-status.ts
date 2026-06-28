@@ -21,7 +21,9 @@ const STATUS_META: Record<string, StatusMeta> = {
   proposed:    { icon: 'calendar',       color: 'var(--wrn)' },
   high:        { icon: 'dice-fire',      color: 'var(--wrn)' },
   // partially done — distinct from active (🟡 marker, half-battery) → warning amber
-  partial:     { icon: 'battery-50',     color: 'var(--wrn)' },
+  partial:          { icon: 'battery-50',     color: 'var(--wrn)' },
+  // ready for deploy — work done, waiting for release
+  ready_for_deploy: { icon: 'delivery',       color: 'var(--inf)' },
   // blocked / rejected family → danger red
   blocked:     { icon: 'padlock',        color: 'var(--danger)' },
   rejected:    { icon: 'crossed-sabres', color: 'var(--danger)' },
@@ -51,6 +53,7 @@ export function taskTick(statusRaw: string | null | undefined): { status: string
   if (s.startsWith('🔄') || /^(IN.?PROGRESS|WIP|ACTIVE)/i.test(s))
     return { status: 'active', done: false };
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return { status: 'partial', done: false };
+  if (s.startsWith('🚀') || /^(READY.?FOR.?DEPLOY|RFD|К.?ДЕПЛОЮ)/i.test(s)) return { status: 'ready_for_deploy', done: false };
   if (s.startsWith('🔴') || /^(BLOCK|ЗАБЛОК)/i.test(s)) return { status: 'blocked', done: false };
   if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return { status: 'cancelled', done: false };
   if (s.startsWith('⬜') || /^(DEFER|ОТЛОЖЕН)/i.test(s)) return { status: 'deferred', done: false };

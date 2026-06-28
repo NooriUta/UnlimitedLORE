@@ -95,17 +95,16 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
         setSprintRefs(prev => ({ ...prev, [uid]: sprints }));
         setPrRefs(prev => ({ ...prev, [uid]: prs }));
         setLoadingDetail(null);
-        // Fetch tasks for each sprint in parallel
+        // Fetch tasks for all sprints in one batch request
         if (sprints.length > 0) {
-          Promise.all(sprints.map(s =>
-            fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: s.sprint_id })
-              .then(tasks => ({ sid: s.sprint_id, tasks }))
-              .catch(() => ({ sid: s.sprint_id, tasks: [] as LoreSprintTask[] }))
-          )).then(results => {
+          const ids = sprints.map(s => s.sprint_id).join(',');
+          fetchLoreSlice<LoreSprintTask & { sprint_id: string }>(
+            'tasks_of_sprints_batch', { sprint_ids: ids }
+          ).then(tasks => {
             const m: Record<string, LoreSprintTask[]> = {};
-            results.forEach(r => { m[r.sid] = r.tasks; });
+            tasks.forEach(t => { (m[t.sprint_id] ??= []).push(t); });
             setTaskMap(prev => ({ ...prev, [uid]: m }));
-          });
+          }).catch(() => { /* swallow — tasks are non-critical */ });
         }
       })
       .catch(e => { onError(e); setLoadingDetail(null); });

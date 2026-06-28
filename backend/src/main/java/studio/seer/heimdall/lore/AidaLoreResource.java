@@ -79,13 +79,14 @@ public class AidaLoreResource {
     // Mirrors the leading-marker convention the frontend normalizer (LoreSprintDetail) reads back.
     // 🟡 PARTIAL is a distinct status from 🔄 IN PROGRESS — see lore-status.ts taskTick.
     private static final Map<String, String> SCD2_STATUS_RAW = Map.of(
-        "done",      "✅ DONE",
-        "active",    "🔄 IN PROGRESS",
-        "partial",   "🟡 PARTIAL",
-        "todo",      "📋 PLANNED",
-        "blocked",   "🔴 BLOCKED",
-        "high",      "🔴 P0",
-        "cancelled", "🚫 CANCELLED");
+        "done",             "✅ DONE",
+        "active",           "🔄 IN PROGRESS",
+        "partial",          "🟡 PARTIAL",
+        "todo",             "📋 PLANNED",
+        "blocked",          "🔴 BLOCKED",
+        "high",             "🔴 P0",
+        "cancelled",        "🚫 CANCELLED",
+        "ready_for_deploy", "🚀 READY FOR DEPLOY");
 
     @ConfigProperty(name = "lore.enabled", defaultValue = "false")
     boolean enabled;
@@ -1307,6 +1308,35 @@ public class AidaLoreResource {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record ComponentUpdateRequest(String component_id, String owner, String team) {}
+
+    @POST
+    @Path("component/update")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateComponent(ComponentUpdateRequest req,
+                                    @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.component_id() == null || req.component_id().isBlank())
+            return badParams("component_id required");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "cid",   req.component_id(),
+                "owner", req.owner(),
+                "team",  req.team());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE LoreComponent SET owner=:owner, team=:team WHERE component_id=:cid",
+                p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }

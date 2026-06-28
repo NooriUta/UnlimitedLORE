@@ -197,6 +197,8 @@ export interface LoreComponent {
   game_icon: string | null;
   children: string[];
   tech: string[];
+  owner?: string | null;
+  team?: string | null;
 }
 
 export interface LoreComponentDetail extends LoreComponent {
@@ -267,7 +269,7 @@ export interface LorePlanItem {
   milestone_id: string | null;
 }
 
-export type LorePlanItemStatus = 'todo' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled';
+export type LorePlanItemStatus = 'todo' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
 
 export interface LoreStatusUpdateResponse {
   ok: boolean;

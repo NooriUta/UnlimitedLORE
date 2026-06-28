@@ -2,7 +2,9 @@ services:
   # Independent Quarkus backend — copied lore+bench logic, talks to the SAME
   # ArcadeDB (:2480 on the host) as the main project. Replaces heimdall-backend :9093.
   lore-backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.local
     ports:
       - "9100:9100"                    # published so the host-side MCP server can reach it
     extra_hosts:
