@@ -28,7 +28,9 @@ const STATUS_META: Record<string, StatusMeta> = {
   blocked:     { icon: 'padlock',        color: 'var(--danger)' },
   rejected:    { icon: 'crossed-sabres', color: 'var(--danger)' },
   missed:      { icon: 'crossed-sabres', color: 'var(--danger)' },
-  // neutral / paused family → muted text
+  // design / backlog / neutral family → muted/amber
+  design:      { icon: 'pencil',         color: 'var(--wrn)' },
+  backlog:     { icon: 'stack',          color: 'var(--t3)' },
   todo:        { icon: 'checkbox-tree',  color: 'var(--t3)' },
   deferred:    { icon: 'pause-button',   color: 'var(--t3)' },
   superseded:  { icon: 'pause-button',   color: 'var(--t3)' },

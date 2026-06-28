@@ -79,10 +79,25 @@ function toToken(key: string): LorePlanItemStatus {
   return 'todo';
 }
 
-// Status options for the inline picker — localized RU labels + the status-key whose
-// game-icon/colour (lore-status) the button shows.
-const PICK_OPTS: { token: LorePlanItemStatus; statusKey: string; label: string }[] = [
+type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string };
+
+// Task picker: 7-status canon (no planning statuses — tasks don't have planned/design/backlog)
+const TASK_PICK_OPTS: PickOpt[] = [
   { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
+  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
+  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
+  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
+  { token: 'done',             statusKey: 'done',             label: 'Готово' },
+  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
+  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
+];
+
+// Sprint picker: 10-status canon (includes planning phases)
+const SPRINT_PICK_OPTS: PickOpt[] = [
+  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
+  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано' },
+  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог' },
+  { token: 'design',           statusKey: 'design',           label: 'Дизайн' },
   { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
   { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
   { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
@@ -101,6 +116,7 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
+  const opts = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
     if (next === current || busy) return;
@@ -114,7 +130,7 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
       role="group" aria-label="Изменить статус"
       style={{ display: 'inline-flex', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
     >
-      {PICK_OPTS.map(o => {
+      {opts.map(o => {
         const meta = statusMeta(o.statusKey);
         const sel  = o.token === current;
         return (

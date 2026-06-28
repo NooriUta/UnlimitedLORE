@@ -269,7 +269,7 @@ export interface LorePlanItem {
   milestone_id: string | null;
 }
 
-export type LorePlanItemStatus = 'todo' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
+export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
 
 export interface LoreStatusUpdateResponse {
   ok: boolean;
