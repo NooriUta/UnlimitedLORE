@@ -272,6 +272,15 @@ public final class LoreSlices {
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 
+        // LCX-02: sprints related to component by naming convention (sprint_id LIKE '%<key>%')
+        // The key is derived on the frontend from component_id or full_name first word
+        slice("component_sprints",
+            "SELECT sprint_id, name, status_raw, " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id[0] AS release_id " +
+            "FROM KnowSprint WHERE sprint_id LIKE :pattern " +
+            "ORDER BY sprint_id DESC",
+            List.of("pattern"), Map.of(), " LIMIT 30");
+
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.
         // The vertex `title` is backfilled from the content_md heading by

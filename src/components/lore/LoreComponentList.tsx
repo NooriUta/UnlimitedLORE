@@ -95,36 +95,52 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
   }, [rows, q, areaSel]);
 
   const treeOrder = useMemo(() => {
-    if (isFiltered) return null;
-    const byParent = new Map<string | null, LoreComponent[]>();
-    rows.forEach(r => {
-      const key = r.parent_id ?? null;
-      if (!byParent.has(key)) byParent.set(key, []);
-      byParent.get(key)!.push(r);
-    });
-    byParent.forEach(arr => arr.sort((a, b) =>
-      a.area !== b.area ? a.area.localeCompare(b.area) : a.component_id.localeCompare(b.component_id)
-    ));
-    const result: { comp: LoreComponent; indent: number }[] = [];
-    function walk(parentId: string | null, depth: number) {
-      (byParent.get(parentId) ?? []).forEach(c => {
-        result.push({ comp: c, indent: depth });
-        walk(c.component_id, depth + 1);
+    const byId = new Map(rows.map(r => [r.component_id, r]));
+    function buildTree(include: Set<string>, matchSet?: Set<string>) {
+      const byParent = new Map<string | null, LoreComponent[]>();
+      rows.filter(r => include.has(r.component_id)).forEach(r => {
+        const key = r.parent_id && include.has(r.parent_id) ? r.parent_id : null;
+        if (!byParent.has(key)) byParent.set(key, []);
+        byParent.get(key)!.push(r);
       });
+      byParent.forEach(arr => arr.sort((a, b) =>
+        a.area !== b.area ? a.area.localeCompare(b.area) : a.component_id.localeCompare(b.component_id)
+      ));
+      const result: { comp: LoreComponent; indent: number; dimmed: boolean }[] = [];
+      function walk(parentId: string | null, depth: number) {
+        (byParent.get(parentId) ?? []).forEach(c => {
+          result.push({ comp: c, indent: depth, dimmed: matchSet ? !matchSet.has(c.component_id) : false });
+          walk(c.component_id, depth + 1);
+        });
+      }
+      walk(null, 0);
+      return result;
     }
-    walk(null, 0);
-    return result;
-  }, [rows, isFiltered]);
+
+    if (isFiltered) {
+      const matchSet = new Set(shown.map(r => r.component_id));
+      if (matchSet.size === 0) return null;
+      // collect ancestors of every match
+      const ancestorSet = new Set<string>();
+      matchSet.forEach(id => {
+        let cur = byId.get(id);
+        while (cur?.parent_id) { ancestorSet.add(cur.parent_id); cur = byId.get(cur.parent_id); }
+      });
+      return buildTree(new Set([...matchSet, ...ancestorSet]), matchSet);
+    }
+
+    return buildTree(new Set(rows.map(r => r.component_id)));
+  }, [rows, isFiltered, shown]);
 
   if (loading) return <LoreSkeleton />;
 
-  const renderRow = (r: LoreComponent, indent = 0) => {
+  const renderRow = (r: LoreComponent, indent = 0, dimmed = false) => {
     const color = areaColor(r.area);
     return (
       <div
         key={r.component_id}
-        style={S.row(selectedId === r.component_id, indent)}
-        onClick={() => onSelect(r.component_id)}
+        style={{ ...S.row(selectedId === r.component_id, indent), opacity: dimmed ? 0.4 : 1 }}
+        onClick={() => !dimmed && onSelect(r.component_id)}
       >
         <div style={S.iconBox(color)}>
           {r.game_icon
@@ -147,7 +163,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
         {treeOrder !== null ? (
           treeOrder.length === 0
             ? <div style={S.empty}>Компоненты не найдены.</div>
-            : treeOrder.map(({ comp, indent }) => renderRow(comp, indent))
+            : treeOrder.map(({ comp, indent, dimmed }) => renderRow(comp, indent, dimmed))
         ) : (
           shown.length === 0
             ? <div style={S.empty}>Компоненты не найдены.</div>

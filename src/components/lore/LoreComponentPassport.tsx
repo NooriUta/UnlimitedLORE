@@ -10,6 +10,13 @@ import { statusMeta } from './lore-status';
 import { normalizeStatus } from './loreUtils';
 import { areaColor } from './LoreComponentList';
 
+interface ComponentSprintRow {
+  sprint_id: string;
+  name: string | null;
+  status_raw: string | null;
+  release_id: string | null;
+}
+
 const S = {
   root:   { flex: 1, overflowY: 'auto' as const, padding: '16px 20px 40px' },
   header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 },
@@ -97,6 +104,7 @@ interface Props {
 export default function LoreComponentPassport({ componentId, onError, onNavigateAdr, onNavigateComponent, onOpenSpec }: Props) {
   const [comp, setComp]         = useState<LoreComponentDetail | null>(null);
   const [adrs, setAdrs]         = useState<LoreAdrRow[]>([]);
+  const [sprints, setSprints]   = useState<ComponentSprintRow[]>([]);
   const [loading, setLoading]   = useState(true);
   const [editing, setEditing]   = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -109,6 +117,7 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
     setLoading(true);
     setComp(null);
     setAdrs([]);
+    setSprints([]);
     setEditing(false);
     const ctrl = new AbortController();
     Promise.all([
@@ -124,7 +133,15 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
         setEditIcon(c?.game_icon ?? '');
         setEditFullName(c?.full_name ?? '');
         setLoading(false);
+        // derive sprint search key: short ids (< 4 chars) use first word of full_name
+        const key = componentId.length < 4
+          ? (c?.full_name?.split(/\s+/)[0]?.toUpperCase() ?? componentId)
+          : componentId;
+        return fetchLoreSlice<ComponentSprintRow>(
+          'component_sprints', { pattern: `%${key}%` }, ctrl.signal
+        );
       })
+      .then(sprintRows => setSprints(sprintRows ?? []))
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
   }, [componentId, onError]);
@@ -265,6 +282,34 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
                     </span>
                   )}
                   <span style={S.adrDate}>{adr.date_created?.slice(0, 10) ?? ''}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Sprints — LCX-02 */}
+      {sprints.length > 0 && (
+        <div style={S.section}>
+          <div style={S.sLabel}>Спринты ({sprints.length})</div>
+          <div style={S.adrList}>
+            {sprints.map(s => {
+              const norm = normalizeStatus(s.status_raw ?? null);
+              const meta = statusMeta(norm);
+              return (
+                <div key={s.sprint_id} style={S.adrRow}>
+                  <span style={S.adrId}>{s.sprint_id}</span>
+                  <span style={S.adrName}>{s.name ?? s.sprint_id}</span>
+                  {norm && (
+                    <span style={S.adrStatus(meta.color)}>
+                      <GameIcon slug={meta.icon} size={10} style={{ color: meta.color }} />
+                      {' '}{norm}
+                    </span>
+                  )}
+                  {s.release_id && (
+                    <span style={S.adrDate}>{s.release_id}</span>
+                  )}
                 </div>
               );
             })}

@@ -71,9 +71,11 @@ public class AidaLoreResource {
     // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
     private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
     private static final Set<String> ENTITY_TYPES =
-        Set.of("plan_item", "sprint", "task", "checkpoint");
+        Set.of("plan_item", "sprint", "task", "checkpoint", "adr");
     private static final Set<String> PLAN_STATUSES =
         Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled");
+    private static final Set<String> ADR_STATUSES =
+        Set.of("proposed", "accepted", "draft", "deferred", "superseded");
 
     // Canonical status token → status_raw string written on KnowSprintHist / KnowTaskHist.
     // Mirrors the leading-marker convention the frontend normalizer (LoreSprintDetail) reads back.
@@ -187,7 +189,12 @@ public class AidaLoreResource {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", "id contains illegal characters"))));
         }
-        if (!PLAN_STATUSES.contains(req.status())) {
+        if ("adr".equals(req.entity_type())) {
+            if (!ADR_STATUSES.contains(req.status().toLowerCase())) {
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new LoreError("BAD_PARAMS", "adr status must be one of: " + ADR_STATUSES))));
+            }
+        } else if (!PLAN_STATUSES.contains(req.status())) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", "unknown status: " + req.status()))));
         }
@@ -199,6 +206,7 @@ public class AidaLoreResource {
                                     "sprint_id", req.id(), req.status(), now, nsid);
             case "task"      -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
                                     "task_uid", req.id(), req.status(), now, nsid);
+            case "adr"       -> updateAdrStatusDirect(req.id(), req.status().toUpperCase(), now);
             default          -> Uni.createFrom().item(noStore(Response.status(501)
                                     .entity(new LoreError("NOT_IMPLEMENTED",
                                         req.entity_type() + " not supported yet"))));
@@ -263,6 +271,18 @@ public class AidaLoreResource {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
             });
+    }
+
+    // LH-44: direct status setter for KnowADR (no SCD2 hist row — status is a plain field)
+    private Uni<Response> updateAdrStatusDirect(String adrId, String status, String now) {
+        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowADR SET status=:status WHERE adr_id=:id",
+                Map.of("status", status, "id", adrId)))
+            .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
+                true, "adr", adrId, null, status, new StatusRevision(now, null)))))
+            .onFailure().recoverWithItem(ex ->
+                noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
     }
 
     private Uni<Response> updatePlanItemStatus(String itemId, String newStatus,
@@ -738,6 +758,31 @@ public class AidaLoreResource {
                     errors.add("sprint " + sid + ": " + e.getMessage());
                 }
             }
+            // LH-43: auto-set week on KnowRelease if null, computed from release_date vs w0_date
+            if (sprintsLinked > 0) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> relInfo = (List<Map<String, Object>>)
+                        client.query(db, basicAuth(), new MartQuery("sql",
+                            "SELECT release_date, week FROM KnowRelease WHERE release_uid=:ruid",
+                            Map.of("ruid", ruid), -1)).await().indefinitely().result();
+                    if (relInfo != null && !relInfo.isEmpty()) {
+                        Object weekVal = relInfo.get(0).get("week");
+                        Object dateVal = relInfo.get(0).get("release_date");
+                        if (weekVal == null && dateVal != null) {
+                            java.time.LocalDate w0 = java.time.LocalDate.of(2026, 4, 13);
+                            java.time.LocalDate relDate = java.time.LocalDate.parse(
+                                dateVal.toString().substring(0, 10));
+                            int week = (int)(java.time.temporal.ChronoUnit.DAYS.between(w0, relDate) / 7) + 1;
+                            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                                "UPDATE KnowRelease SET week=:week WHERE release_uid=:ruid AND week IS NULL",
+                                Map.of("week", week, "ruid", ruid))).await().indefinitely();
+                        }
+                    }
+                } catch (Exception e) {
+                    LOG.warnf("[LORE RELEASE LINK] week auto-set failed for %s: %s", ruid, e.getMessage());
+                }
+            }
             List<Integer> prs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
             for (Integer prNum : prs) {
                 try {
@@ -1111,18 +1156,33 @@ public class AidaLoreResource {
             String now  = Instant.now().toString();
             String nsid = UUID.randomUUID().toString();
 
-            // Step 1: upsert KnowADR vertex (metadata only — body lives in the SCD2 hist row)
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowADR SET adr_id=:adr_id, name=:name, status=:status, " +
-                "date_created=:date_created, component_id=:component_id " +
-                "UPSERT WHERE adr_id=:adr_id",
-                mapOfNullable(
-                    "adr_id",       req.adr_id(),
-                    "name",         req.name(),
-                    "status",       req.status() != null ? req.status() : "PROPOSED",
-                    "date_created", req.date_created() != null ? req.date_created()
-                                        : java.time.LocalDate.now().toString(),
-                    "component_id", req.component_id())))
+            // Step 1: upsert KnowADR vertex — LH-44: only set status when provided; for
+            // new ADRs default to PROPOSED, for existing ones never overwrite with null.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> existingAdr = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT status FROM KnowADR WHERE adr_id=:id",
+                    Map.of("id", req.adr_id())))
+                .await().indefinitely().result();
+            boolean isNewAdr = existingAdr == null || existingAdr.isEmpty();
+            String resolvedStatus = (req.status() != null && !req.status().isBlank())
+                ? req.status() : (isNewAdr ? "PROPOSED" : null);
+            StringBuilder upsertSql = new StringBuilder(
+                "UPDATE KnowADR SET adr_id=:adr_id, name=:name, " +
+                "date_created=:date_created, component_id=:component_id");
+            Map<String, Object> upsertP = mapOfNullable(
+                "adr_id",       req.adr_id(),
+                "name",         req.name(),
+                "date_created", req.date_created() != null ? req.date_created()
+                                    : java.time.LocalDate.now().toString(),
+                "component_id", req.component_id());
+            if (resolvedStatus != null) {
+                upsertSql.append(", status=:status");
+                upsertP.put("status", resolvedStatus);
+            }
+            upsertSql.append(" UPSERT WHERE adr_id=:adr_id");
+            writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sql", upsertSql.toString(), upsertP))
                 .await().indefinitely();
 
             // Step 2: check for an existing open SCD2 hist row
