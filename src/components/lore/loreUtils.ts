@@ -1,11 +1,25 @@
 export function parsePrRefs(s: string | string[] | null | undefined): string[] {
   if (!s) return [];
   const parts = Array.isArray(s) ? s : [s];
-  return parts
-    .filter((x): x is string => typeof x === 'string')
-    .flatMap(x => x.split(','))
-    .map(x => x.trim())
-    .filter(Boolean);
+  const result: string[] = [];
+  for (const part of parts) {
+    if (typeof part !== 'string') continue;
+    // Markdown links: [#439](url) or [439](url) — common when pr_refs stored as MD text
+    const mdMatches = part.match(/\[#?(\d+)\]\([^)]*\)/g);
+    if (mdMatches) {
+      for (const m of mdMatches) {
+        const num = m.match(/\[#?(\d+)\]/);
+        if (num) result.push(num[1]);
+      }
+    } else {
+      // Fallback: comma/space separated plain numbers or bare #NNN
+      for (const tok of part.split(/[\s,]+/)) {
+        const n = tok.replace(/^#/, '').trim();
+        if (/^\d+$/.test(n)) result.push(n);
+      }
+    }
+  }
+  return result;
 }
 
 // Normalize sprint/task status by LEADING marker, so a "DONE" mentioned later
