@@ -45,11 +45,11 @@ const S = {
   },
   desc: { fontSize: 12, color: 'var(--t2)', borderLeft: '2px solid var(--b3)', padding: '2px 0 2px 10px', marginBottom: 14 },
   table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 11, marginTop: 14 },
-  th: { textAlign: 'left' as const, padding: '4px 8px', color: 'var(--t3)', fontWeight: 600, borderBottom: '1px solid var(--b2)' },
+  th: { textAlign: 'left' as const, padding: '4px 8px', color: 'var(--t3)', fontWeight: 600, borderBottom: '1px solid var(--bd)' },
   td: { padding: '4px 8px', color: 'var(--t2)', verticalAlign: 'top' as const },
   tdCode: { padding: '4px 8px', color: 'var(--acc)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const },
   tdThresh: { padding: '4px 8px', color: 'var(--t1)', whiteSpace: 'pre-wrap' as const, maxWidth: 240 },
-  idFoot: { marginTop: 18, paddingTop: 10, borderTop: '1px solid var(--b2)', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' },
+  idFoot: { marginTop: 18, paddingTop: 10, borderTop: '1px solid var(--bd)', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
 };
 

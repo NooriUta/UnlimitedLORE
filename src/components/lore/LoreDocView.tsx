@@ -130,11 +130,11 @@ const S = {
   list: {
     width: 300, flexShrink: 0,
     display: 'flex', flexDirection: 'column' as const,
-    borderRight: '1px solid var(--b2)', overflow: 'hidden',
+    borderRight: '1px solid var(--bd)', overflow: 'hidden',
   },
   listHdr: {
     display: 'flex', alignItems: 'center', gap: 6,
-    padding: '6px 10px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    padding: '6px 10px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   filterInp: {
     flex: 1, height: 24, padding: '0 8px', fontSize: 11,
@@ -144,7 +144,7 @@ const S = {
   },
   listCount: { fontSize: 10, color: 'var(--t3)', flexShrink: 0 },
   docRow: {
-    padding: '7px 10px', borderBottom: '1px solid var(--b2)',
+    padding: '7px 10px', borderBottom: '1px solid var(--bd)',
     cursor: 'pointer', transition: 'background 0.1s',
   },
   docId: {
@@ -176,7 +176,7 @@ const S = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   detailHdr: {
-    padding: '10px 16px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    padding: '10px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   detailTitle: { fontSize: 13, fontWeight: 600, color: 'var(--t1)', display: 'block', marginBottom: 3 },
   detailMeta:  { fontSize: 10, color: 'var(--t3)' },

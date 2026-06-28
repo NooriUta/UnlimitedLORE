@@ -11,7 +11,7 @@ const AREA_COLOR: Record<string, string> = {
 
 const S = {
   root: { flex: 1, display: 'flex', flexDirection: 'column' as const, minWidth: 0, overflow: 'hidden' },
-  head: { padding: '14px 20px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0 },
+  head: { padding: '14px 20px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0 },
   titleRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' as const },
   icon: { flexShrink: 0, display: 'flex' },
   name: { fontSize: 17, fontWeight: 600, color: 'var(--t1)' },
@@ -29,12 +29,12 @@ const S = {
   childChip: { fontSize: 11, padding: '1px 7px', borderRadius: 3, background: 'color-mix(in srgb, var(--acc) 10%, transparent)', color: 'var(--acc)', cursor: 'pointer' },
   cols: { flex: 1, display: 'flex', minHeight: 0 },
   col:  { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' as const, minHeight: 0 },
-  colDivider: { borderLeft: '1px solid var(--b2)' },
-  colHead: { fontSize: 11, fontWeight: 600, color: 'var(--t2)', padding: '8px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: 0.3 },
+  colDivider: { borderLeft: '1px solid var(--bd)' },
+  colHead: { fontSize: 11, fontWeight: 600, color: 'var(--t2)', padding: '8px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: 0.3 },
   specList: { flex: 1, overflowY: 'auto' as const },
   specRow: (sel: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 7, padding: '6px 12px',
-    borderBottom: '1px solid var(--b2)', fontSize: 11, cursor: 'pointer',
+    borderBottom: '1px solid var(--bd)', fontSize: 11, cursor: 'pointer',
     background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent', color: 'var(--t1)',
   }),
   specName: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },

@@ -2,20 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchLoreSlice, type LoreSprintRow } from '../../api/lore';
 import { statusMeta } from './lore-status';
 import { GameIcon } from './GameIcon';
-
-function normalizeStatus(raw: string | null): string {
-  if (!raw) return '';
-  const s = raw.trimStart();
-  if (s.startsWith('✅') || /^(DONE|CLOSED|ЗАВЕРШ|MERGED|ЗАКРЫТ)/i.test(s)) return 'done';
-  if (s.startsWith('🔄') || s.startsWith('🟢') ||
-      /^(IN.?PROGRESS|WIP|ACTIVE|READY)/i.test(s)) return 'in_progress';
-  if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return 'partial';
-  if (s.startsWith('📋') || s.startsWith('⬜') || /^(TODO|PLANNED|STUB|DRAFT)/i.test(s)) return 'planned';
-  if (s.startsWith('🟣') || s.startsWith('⏸') ||
-      /^(BACKLOG|DEFERRED|BLOCKED|ARCHIVED)/i.test(s)) return 'deferred';
-  if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return 'cancelled';
-  return '';
-}
+import LoreSkeleton from './LoreSkeleton';
+import { normalizeStatus } from './loreUtils';
 
 // Semver-aware release comparator: v1.10.0 > v1.9.0
 function releaseKey(id: string | null | undefined): string {
@@ -62,7 +50,7 @@ const S = {
   // Toolbar (status chips + sort + refresh)
   toolbar: {
     display: 'flex', flexWrap: 'wrap' as const, alignItems: 'center',
-    gap: 4, padding: '5px 8px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    gap: 4, padding: '5px 8px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   sortBtn: (active: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer',
@@ -101,7 +89,7 @@ const S = {
   root:  { flex: 1, overflowY: 'auto' as const, overflowX: 'hidden' as const },
   row: {
     display: 'flex', flexDirection: 'column' as const, gap: 2,
-    padding: '6px 10px', borderBottom: '1px solid var(--b2)', minWidth: 0,
+    padding: '6px 10px', borderBottom: '1px solid var(--bd)', minWidth: 0,
   },
   line1: { display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 },
   line2: { display: 'flex', alignItems: 'center', gap: 5, paddingLeft: 1 },
@@ -254,7 +242,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
 
   const refresh = () => setReloadKey(k => k + 1);
 
-  if (loading) return <div style={S.empty}>Загрузка спринтов…</div>;
+  if (loading) return <LoreSkeleton />;
   if (!rows.length) return <div style={S.empty}>Спринты не найдены.</div>;
 
   return (
@@ -291,7 +279,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
 
       {/* ── Project filter pills — прямо над списком ─── */}
       {allProjects.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '5px 8px 4px', borderBottom: '1px solid var(--b2)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '5px 8px 4px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
           {allProjects.map(slug => {
             const color = projColor(slug, allProjects);
             const on = projSel.has(slug);

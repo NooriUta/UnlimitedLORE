@@ -6,7 +6,7 @@ import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
 import LoreAdrEditor       from '../components/lore/LoreAdrEditor';
 import LoreSprintTree, { STATUS_FILTERS, type DatePeriod, type SprintStats } from '../components/lore/LoreSprintTree';
-import LoreComponentList     from '../components/lore/LoreComponentList';
+import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import { ADR_STATUS_FILTERS } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
@@ -30,7 +30,7 @@ const SECTIONS: { id: Section; icon: string; label: string }[] = [
   { id: 'sprints',    icon: 'sprint',         label: 'Спринты'      },
   { id: 'adrs',       icon: 'scroll-quill',   label: 'ADR'          },
   { id: 'decisions',  icon: 'vote',           label: 'Решения'      },
-  { id: 'releases',   icon: '',               label: 'Релизы'       },
+  { id: 'releases',   icon: 'open-book',      label: 'Релизы'       },
   { id: 'components', icon: 'cog',            label: 'Компоненты'   },
   { id: 'evolution',  icon: 'hourglass',      label: 'История'      },
   { id: 'timeline',   icon: 'tied-scroll',    label: 'Лента'        },
@@ -54,7 +54,7 @@ const S = {
   topBar: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '0 12px', height: 36, flexShrink: 0,
-    borderBottom: '1px solid var(--b2)',
+    borderBottom: '1px solid var(--bd)',
   },
   searchIcon: { color: 'var(--t3)', fontSize: 13, flexShrink: 0 },
   searchInput: {
@@ -68,7 +68,7 @@ const S = {
   navBar: {
     display: 'flex', alignItems: 'center', gap: 2,
     padding: '4px 10px', flexShrink: 0,
-    borderBottom: '1px solid var(--b2)',
+    borderBottom: '1px solid var(--bd)',
     overflowX: 'auto' as const,
   },
   navItem: (active: boolean) => ({
@@ -84,13 +84,13 @@ const S = {
   // List panel (master-detail) — width applied dynamically via listW state
   listPanel: {
     flexShrink: 0,
-    borderRight: '1px solid var(--b2)',
+    borderRight: '1px solid var(--bd)',
     display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
   },
   listPanelHeader: {
     display: 'flex', alignItems: 'center', gap: 6,
     padding: '0 12px', height: 32, flexShrink: 0,
-    borderBottom: '1px solid var(--b2)',
+    borderBottom: '1px solid var(--bd)',
     fontSize: 11, color: 'var(--t3)',
     fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: 1,
   },
@@ -119,6 +119,12 @@ export default function LorePage() {
   const section   = (params.get('section') as Section) || 'plan';
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
+
+  const [debouncedQ, setDebouncedQ] = useState(q);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 300);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const [loreDisabled, setLoreDisabled] = useState(false);
   const [loreUnreachable, setLoreUnreachable] = useState(false);
@@ -258,7 +264,7 @@ export default function LorePage() {
       {section === 'sprints' && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
         }}>
           {/* Статусы */}
           {STATUS_FILTERS.map(f => {
@@ -397,7 +403,7 @@ export default function LorePage() {
       {section === 'adrs' && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
         }}>
           {ADR_STATUS_FILTERS.map(f => {
             const on  = adrStatusSel.has(f.key);
@@ -445,19 +451,13 @@ export default function LorePage() {
       {section === 'components' && Object.keys(compAreaCounts).length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
         }}>
           {Object.entries(compAreaCounts)
             .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
             .map(([area, cnt]) => {
               const on = compAreaSel.has(area);
-              // Use the same color map as LoreComponentList
-              const AREA_COLOR: Record<string, string> = {
-                engine: '#e8923a', frontend: '#4a90d9', api: '#a974d6', data: '#3fb8a0',
-                platform: '#6b91c1', algorithm: '#e07a5f', security: '#E24B4A',
-                observability: '#ef9f27', infra: '#7c7c7c', service: '#4caf50', ai: '#9b59b6',
-              };
-              const color = AREA_COLOR[area] ?? 'var(--t3)';
+              const color = areaColor(area);
               return (
                 <span key={area}
                   onClick={() => setCompAreaSel(prev => {
@@ -498,7 +498,7 @@ export default function LorePage() {
       {section === 'sprints' && sprintStats.total > 0 && (
         <div style={{
           display: 'flex', alignItems: 'stretch',
-          borderBottom: '1px solid var(--b2)', flexShrink: 0, overflowX: 'auto',
+          borderBottom: '1px solid var(--bd)', flexShrink: 0, overflowX: 'auto',
         }}>
           {([
             { label: 'всего',      value: sprintStats.total,     color: 'var(--t1)' },
@@ -510,28 +510,30 @@ export default function LorePage() {
             <div key={i} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '3px 14px', flexShrink: 0,
-              borderLeft: i === 0 ? 'none' : '1px solid var(--b2)',
+              borderLeft: i === 0 ? 'none' : '1px solid var(--bd)',
             }}>
               <span style={{ fontSize: 15, fontWeight: 500, color: s.color, lineHeight: 1.1 }}>{s.value}</span>
               <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{s.label}</span>
             </div>
           ))}
           {/* % выполнено */}
+          {(() => { const pct = sprintStats.total > 0 ? Math.round(sprintStats.done / sprintStats.total * 100) : 0; return (
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '3px 14px', flexShrink: 0, borderLeft: '1px solid var(--b2)',
+            padding: '3px 14px', flexShrink: 0, borderLeft: '1px solid var(--bd)',
           }}>
             <span style={{ fontSize: 15, fontWeight: 500, color: '#4dc9a0', lineHeight: 1.1 }}>
-              {Math.round(sprintStats.done / sprintStats.total * 100)}%
+              {pct}%
             </span>
             <div style={{ width: 44, height: 3, background: 'var(--b2)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>
               <div style={{
-                width: `${Math.round(sprintStats.done / sprintStats.total * 100)}%`,
+                width: `${pct}%`,
                 height: '100%', background: '#4dc9a0', borderRadius: 2,
               }} />
             </div>
             <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>выполнено</span>
           </div>
+          ); })()}
         </div>
       )}
 
@@ -581,7 +583,7 @@ export default function LorePage() {
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '0 10px', height: 30, flexShrink: 0,
-                  borderBottom: '1px solid var(--b2)',
+                  borderBottom: '1px solid var(--bd)',
                 }}>
                   <span style={{ color: 'var(--t3)', fontSize: 12, flexShrink: 0 }}>🔍</span>
                   <input
@@ -619,7 +621,7 @@ export default function LorePage() {
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '0 10px', height: 30, flexShrink: 0,
-                  borderBottom: '1px solid var(--b2)',
+                  borderBottom: '1px solid var(--bd)',
                 }}>
                   <span style={{ color: 'var(--t3)', fontSize: 12, flexShrink: 0 }}>🔍</span>
                   <input
@@ -677,17 +679,21 @@ export default function LorePage() {
             />
           )}
           {section === 'adrs' && !passport && (
-            <div style={S.placeholder}>Выберите ADR из списка слева</div>
+            <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
+              <GameIcon slug="scroll-quill" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
+              <span>Выберите ADR из списка слева</span>
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>или нажмите «+ новый ADR» чтобы создать</span>
+            </div>
           )}
 
           {/* Decisions: composite feed */}
           {section === 'decisions' && (
-            <LoreDecisionBoard q={q} onError={handleFetchError} />
+            <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} />
           )}
 
           {/* Releases */}
           {section === 'releases' && (
-            <LoreReleasesBoard q={q} onError={handleFetchError} onNavigateToSprint={navigateToSprint} />
+            <LoreReleasesBoard q={debouncedQ} onClearQ={() => setParams(p => { p.delete('q'); return p; })} onError={handleFetchError} onNavigateToSprint={navigateToSprint} />
           )}
 
           {/* Sprints: detail or placeholder */}
@@ -716,7 +722,7 @@ export default function LorePage() {
 
           {/* Timeline */}
           {section === 'timeline' && (
-            <LoreTimeline module="" q={q} onError={handleFetchError}
+            <LoreTimeline module="" q={debouncedQ} onError={handleFetchError}
               onSelect={navigateToAdr} onSelectSprint={navigateToSprint} />
           )}
 

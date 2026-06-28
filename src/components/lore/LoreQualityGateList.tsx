@@ -103,7 +103,7 @@ const S = {
   state: { padding: 24, color: 'var(--t3)', fontSize: 12 },
   row: {
     display: 'flex', alignItems: 'center', gap: 8,
-    padding: '7px 16px', borderBottom: '1px solid var(--b2)',
+    padding: '7px 16px', borderBottom: '1px solid var(--bd)',
     fontSize: 12, cursor: 'pointer',
     background: 'transparent',
   },
@@ -121,13 +121,13 @@ const S = {
   detail: {
     padding: '8px 16px 12px 40px',
     background: 'color-mix(in srgb, var(--b2) 40%, transparent)',
-    borderBottom: '1px solid var(--b2)',
+    borderBottom: '1px solid var(--bd)',
   },
   desc: { color: 'var(--t2)', fontSize: 11, marginBottom: 8 },
   table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 11 },
   th: {
     textAlign: 'left' as const, padding: '4px 8px',
-    color: 'var(--t3)', fontWeight: 600, borderBottom: '1px solid var(--b2)',
+    color: 'var(--t3)', fontWeight: 600, borderBottom: '1px solid var(--bd)',
   },
   td:         { padding: '4px 8px', color: 'var(--t2)', verticalAlign: 'top' as const },
   tdCode:     { padding: '4px 8px', color: 'var(--acc)', fontFamily: 'monospace', whiteSpace: 'nowrap' as const },

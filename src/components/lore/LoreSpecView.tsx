@@ -22,7 +22,7 @@ const S = {
     fontSize: 12, color: 'var(--t2)', fontStyle: 'italic' as const,
     borderLeft: '2px solid var(--b3)', padding: '2px 0 2px 10px', marginBottom: 14,
   },
-  path:  { marginTop: 18, paddingTop: 10, borderTop: '1px solid var(--b2)', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' },
+  path:  { marginTop: 18, paddingTop: 10, borderTop: '1px solid var(--bd)', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
 };
 

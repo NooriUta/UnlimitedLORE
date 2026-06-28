@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
+import LoreSkeleton from './LoreSkeleton';
 
 interface Props {
   q: string;
+  onClearQ?: () => void;
   onError: (e: unknown) => void;
   onNavigateToSprint: (id: string) => void;
 }
@@ -57,7 +59,7 @@ function GhIcon() {
   );
 }
 
-export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Props) {
+export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSprint }: Props) {
   const [rows,           setRows]           = useState<LoreRelease[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [expanded,       setExpanded]       = useState<string | null>(null);
@@ -67,6 +69,7 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
   const [taskMap,        setTaskMap]        = useState<Record<string, Record<string, LoreSprintTask[]>>>({});
   const [loadingDetail,  setLoadingDetail]  = useState<string | null>(null);
   const [projectFilter,  setProjectFilter]  = useState<string>('all');
+  const [onlyCurrent,    setOnlyCurrent]    = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -110,10 +113,14 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
 
   const projects = ['all', ...Array.from(new Set(rows.map(r => r.git_project ?? 'NooriUta/AIDA')))];
 
+  const currentByProject: Record<string, string> = {};
+  rows.forEach(r => { if (r.is_current) currentByProject[r.git_project ?? 'NooriUta/AIDA'] = r.git_tag ?? r.release_id; });
+
   const filtered = [...rows]
     .sort(semverCompare)
     .filter(r => {
       if (projectFilter !== 'all' && (r.git_project ?? 'NooriUta/AIDA') !== projectFilter) return false;
+      if (onlyCurrent && !r.is_current) return false;
       if (q && !(r.git_tag ?? r.release_id).toLowerCase().includes(q.toLowerCase())) return false;
       return true;
     });
@@ -127,13 +134,24 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
     groups.get(key)!.push(r);
   }
 
-  if (loading) return <div style={S.empty}>Загрузка релизов…</div>;
+  if (loading) return <LoreSkeleton rows={6} />;
 
   return (
     <div style={S.root}>
       <div style={S.header}>
         <span style={S.count}>{filtered.length} релизов</span>
-        {projects.length > 2 && projects.map(p => (
+
+        {/* Current filter chip */}
+        <span
+          style={{ ...S.projectTab, ...(onlyCurrent ? S.currentTabActive : {}) }}
+          onClick={() => setOnlyCurrent(v => !v)}
+          title="Показать только текущие релизы каждого модуля"
+        >
+          ● CURRENT
+        </span>
+
+        {/* Project tabs — always visible when >1 project */}
+        {projects.filter(p => p !== 'all').length > 1 && projects.map(p => (
           <span
             key={p}
             style={{ ...S.projectTab, ...(projectFilter === p ? S.projectTabActive : {}) }}
@@ -142,7 +160,21 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
             {p === 'all' ? 'Все' : p.split('/')[1]}
           </span>
         ))}
-        {q && <span style={S.filterNote}>фильтр: «{q}»</span>}
+
+        {/* Active filter chips */}
+        {(projectFilter !== 'all' || onlyCurrent || q) && (
+          <span
+            style={S.resetBtn}
+            onClick={() => { setProjectFilter('all'); setOnlyCurrent(false); onClearQ?.(); }}
+          >
+            ✕ сбросить
+          </span>
+        )}
+        {q && (
+          <span style={S.filterNote}>
+            «{q}»{onClearQ && <span style={S.clearQ} onClick={onClearQ}>✕</span>}
+          </span>
+        )}
       </div>
       <div style={S.list} className="lore-panel-scroll">
         {filtered.length === 0 && <div style={S.empty}>Релизы не найдены.</div>}
@@ -309,7 +341,17 @@ const S = {
     padding: '6px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   count:      { fontSize: 11, color: 'var(--t3)' },
-  filterNote: { fontSize: 11, color: 'var(--acc)' },
+  filterNote: { fontSize: 11, color: 'var(--acc)', display: 'inline-flex', alignItems: 'center', gap: 4 },
+  clearQ: { cursor: 'pointer', fontSize: 10, color: 'var(--t3)', padding: '0 2px' },
+  resetBtn: {
+    fontSize: 10, padding: '2px 7px', borderRadius: 10, cursor: 'pointer',
+    border: '1px solid color-mix(in srgb, var(--err) 40%, transparent)',
+    color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 6%, transparent)',
+  },
+  currentTabActive: {
+    background: 'color-mix(in srgb, var(--suc) 14%, transparent)',
+    color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)',
+  },
   projectTab: {
     fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
     border: '1px solid var(--bd)', color: 'var(--t3)',

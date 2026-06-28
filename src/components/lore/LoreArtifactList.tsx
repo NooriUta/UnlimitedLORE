@@ -35,7 +35,7 @@ const KIND_ORDER = Object.fromEntries(ARTIFACT_KINDS.map((k, i) => [k.kind, i]))
 
 const S = {
   root:   { flex: 1, display: 'flex', flexDirection: 'column' as const, minWidth: 0, overflow: 'hidden' },
-  head:   { padding: '10px 14px', borderBottom: '1px solid var(--b2)', flexShrink: 0, display: 'flex', flexDirection: 'column' as const, gap: 8 },
+  head:   { padding: '10px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0, display: 'flex', flexDirection: 'column' as const, gap: 8 },
   chips:  { display: 'flex', flexWrap: 'wrap' as const, gap: 6 },
   chip: (on: boolean, color: string) => ({
     display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', userSelect: 'none' as const,
@@ -55,7 +55,7 @@ const S = {
   list:   { flex: 1, overflowY: 'auto' as const },
   row: (sel: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px',
-    borderBottom: '1px solid var(--b2)', fontSize: 12, cursor: 'pointer',
+    borderBottom: '1px solid var(--bd)', fontSize: 12, cursor: 'pointer',
     background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
   }),
   badge: (color: string) => ({

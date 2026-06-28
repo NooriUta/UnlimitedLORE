@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
@@ -37,7 +38,6 @@ interface Props {
 }
 
 const NO_PHASE = '__no_phase__';
-const GH_REPO  = 'https://github.com/NooriUta/AIDA';
 
 function GhIcon() {
   return (
@@ -64,31 +64,6 @@ function extractVersion(s: string | null): string | null {
 // a comma-joined string in some, an ArcadeDB LIST (string[]) in others. Accept any
 // shape — a non-string here previously threw `s.split is not a function`, crashing
 // the whole LoreSprintDetail render to a black page (e.g. SPRINT_LOOM_L2_REDESIGN).
-function parsePrRefs(s: string | string[] | null | undefined): string[] {
-  if (!s) return [];
-  const parts = Array.isArray(s) ? s : [s];
-  return parts
-    .filter((x): x is string => typeof x === 'string')
-    .flatMap(x => x.split(','))
-    .map(x => x.trim())
-    .filter(Boolean);
-}
-
-// Normalize sprint status by LEADING marker, so a "DONE" mentioned later in the
-// line (e.g. "⬜ TODO — (V1 ✅ DONE 2026-05-04)") does not flip it to done.
-function normalizeStatus(raw: string | null): string {
-  if (!raw) return '';
-  const s = raw.trimStart();
-  if (s.startsWith('✅') || /^(DONE|CLOSED|ЗАВЕРШ|MERGED|ЗАКРЫТ)/i.test(s)) return 'done';
-  if (s.startsWith('🔄') || s.startsWith('🟢') ||
-      /^(IN.?PROGRESS|WIP|ACTIVE|READY)/i.test(s)) return 'in_progress';
-  if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return 'partial';
-  if (s.startsWith('📋') || s.startsWith('⬜') || /^(TODO|PLANNED|STUB|DRAFT)/i.test(s)) return 'planned';
-  if (s.startsWith('🟣') || s.startsWith('⏸') || s.startsWith('⬜ DEFERRED') ||
-      /^(BACKLOG|DEFERRED|BLOCKED|ARCHIVED)/i.test(s)) return 'deferred';
-  if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return 'cancelled';
-  return '';
-}
 
 // taskTick lives in ./lore-status (shared with LorePlanBoard) so the status mapping
 // — including the 🔴 BLOCKED branch — stays in one place.
@@ -219,12 +194,12 @@ const S = {
   },
   header: {
     display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const,
-    padding: '10px 16px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    padding: '10px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   sprintId:  { fontSize: 13, fontWeight: 700, color: 'var(--acc)', fontFamily: 'var(--mono)' },
   sprintName: {
     padding: '10px 16px', fontSize: 13, fontWeight: 600, color: 'var(--t1)',
-    borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   meta: { fontSize: 11, color: 'var(--t3)' },
   section: { padding: '12px 16px' },
@@ -267,7 +242,7 @@ const S = {
   },
   prBar: {
     display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
-    padding: '5px 16px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    padding: '5px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   prLabel: {
     fontSize: 9, fontWeight: 700, color: 'var(--t3)',
@@ -476,6 +451,8 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
   if (!sprint)  return <div style={S.empty}>Спринт {sprintId} не найден.</div>;
 
   const status  = normalizeStatus(sprint.status_raw);
+  const ghSlug  = sprint.git_projects?.[0] ?? 'NooriUta/AIDA';
+  const ghBase  = ghSlug.startsWith('http') ? ghSlug : `https://github.com/${ghSlug}`;
   // Prefer the structured IMPLEMENTED_IN_RELEASE edge (accurate — ADR-bridge + curated
   // status ship-patterns); fall back to the version named in status_raw for sprints
   // that have no edge yet.
@@ -536,7 +513,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
                 {v}
               </button>
               <a
-                href={`${GH_REPO}/releases/tag/${v}`}
+                href={`${ghBase}/releases/tag/${v}`}
                 target="_blank" rel="noopener noreferrer"
                 style={S.ghLink} title={`GitHub Release ${v}`}
               ><GhIcon /></a>
@@ -549,7 +526,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         <div style={S.prBar}>
           <span style={S.prLabel}>PR</span>
           {prNums.map(n => (
-            <a key={n} href={`${GH_REPO}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>
+            <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>
               #{n}
             </a>
           ))}

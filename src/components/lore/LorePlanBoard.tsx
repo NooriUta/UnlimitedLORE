@@ -935,7 +935,7 @@ function ResizeGrip({ onDown }: { onDown: (e: React.MouseEvent) => void }) {
       style={{
         height: 9, flexShrink: 0, cursor: 'ns-resize',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderBottom: '1px solid var(--b2)', background: 'var(--b2)',
+        borderBottom: '1px solid var(--bd)', background: 'var(--b2)',
       }}>
       <span style={{ width: 36, height: 3, borderRadius: 2, background: 'var(--bdh)' }} />
     </div>
@@ -976,7 +976,7 @@ const S = {
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
   toolbar: {
     display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
-    padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   btn: {
     height: 22, padding: '0 8px',
@@ -989,7 +989,7 @@ const S = {
   divider:{ width: 1, height: 16, background: 'var(--b3)', margin: '0 2px' },
   legend: {
     display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const,
-    padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
     background: 'var(--b1)',
   },
   legendCap:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
@@ -1011,13 +1011,13 @@ const S = {
   host: { flex: 1, minWidth: 0, minHeight: 0, width: '100%', overflow: 'hidden' },
   panel: {
     flexShrink: 0, height: 232,
-    borderTop: '1px solid var(--b2)',
+    borderTop: '1px solid var(--bd)',
     background: 'var(--b1)',
     display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
   },
   panelHdr: {
     display: 'flex', alignItems: 'flex-start', gap: 8,
-    padding: '8px 14px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    padding: '8px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   // Title wraps fully now (no ellipsis) — the whole description is visible.
   panelTitle: {
@@ -1026,7 +1026,7 @@ const S = {
   },
   panelBody:    { flex: 1, overflowY: 'auto' as const, padding: '12px 16px', display: 'flex', gap: 24, alignItems: 'stretch' },
   panelBodyCol: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
-  panelCol:     { flexShrink: 0, width: 286, borderRight: '1px solid var(--b2)', paddingRight: 22 },
+  panelCol:     { flexShrink: 0, width: 286, borderRight: '1px solid var(--bd)', paddingRight: 22 },
   panelTasks:   { flex: 1, minWidth: 0 },
   closeBtn: {
     background: 'transparent', border: 'none', cursor: 'pointer',

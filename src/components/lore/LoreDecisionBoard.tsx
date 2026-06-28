@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { fetchLoreSlice, type LoreDecisionRow, type LoreDecisionPassport } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
+import LoreSkeleton from './LoreSkeleton';
 
 interface Props {
   q: string;
@@ -169,7 +170,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
     );
   }
 
-  if (loading) return <div style={S.empty}>Загрузка решений…</div>;
+  if (loading) return <LoreSkeleton />;
 
   return (
     <div style={S.root}>

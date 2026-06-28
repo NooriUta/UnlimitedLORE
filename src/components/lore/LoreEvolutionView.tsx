@@ -31,6 +31,7 @@ export default function LoreEvolutionView({ onError }: Props) {
   const [loadedId,  setLoadedId]  = useState('');
   const [loading,   setLoading]   = useState(false);
   const [picker,    setPicker]    = useState<EntityOpt[]>([]);
+  const [pickerErr, setPickerErr] = useState(false);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -45,6 +46,7 @@ export default function LoreEvolutionView({ onError }: Props) {
     const cfg = ENTITY[kind];
     const ctrl = new AbortController();
     setPicker([]);
+    setPickerErr(false);
     fetchLoreSlice<Record<string, unknown>>(cfg.slice, undefined, ctrl.signal)
       .then(recs => {
         const opts: EntityOpt[] = recs
@@ -58,7 +60,7 @@ export default function LoreEvolutionView({ onError }: Props) {
         setPicker(opts);
         if (opts[0]) load(opts[0].id);
       })
-      .catch(onError);
+      .catch(e => { onError(e); setPickerErr(true); });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
@@ -89,7 +91,7 @@ export default function LoreEvolutionView({ onError }: Props) {
           style={{ ...S.sel, flex: 1, minWidth: 220, maxWidth: 360 }}
           disabled={picker.length === 0}
         >
-          {picker.length === 0 && <option value="">— загрузка списка… —</option>}
+          {picker.length === 0 && <option value="">{pickerErr ? '— ошибка загрузки —' : '— загрузка списка… —'}</option>}
           {picker.map(o => (
             <option key={o.id} value={o.id}>{o.label}</option>
           ))}
@@ -169,7 +171,7 @@ export default function LoreEvolutionView({ onError }: Props) {
 
         {/* ── Plan versions sidebar ─────────────────────────────────────────── */}
         <div style={S.versPane}>
-          <div style={S.versHdr}>Plan Versions ({versions.length})</div>
+          <div style={S.versHdr}>Версии плана ({versions.length})</div>
           {versions.map(v => (
             <div key={v.version_id} style={S.versRow}>
               <div style={S.versId}>{v.version_id}</div>
@@ -192,7 +194,7 @@ const S = {
   },
   topBar: {
     display: 'flex', alignItems: 'center', gap: 8,
-    padding: '8px 14px', borderBottom: '1px solid var(--b2)',
+    padding: '8px 14px', borderBottom: '1px solid var(--bd)',
     flexShrink: 0, flexWrap: 'wrap' as const,
   },
   sel: {
@@ -231,11 +233,11 @@ const S = {
   th: {
     padding: '6px 12px', textAlign: 'left' as const,
     fontWeight: 600, fontSize: 10, color: 'var(--t3)',
-    borderBottom: '2px solid var(--b2)', background: 'var(--b1)',
+    borderBottom: '2px solid var(--bd)', background: 'var(--b1)',
     whiteSpace: 'nowrap' as const, position: 'sticky' as const, top: 0,
   },
   trow: {
-    borderBottom: '1px solid var(--b2)',
+    borderBottom: '1px solid var(--bd)',
   },
   td: {
     padding: '5px 12px', color: 'var(--t1)', fontSize: 11,
@@ -243,17 +245,17 @@ const S = {
   },
   versPane: {
     width: 260, flexShrink: 0,
-    borderLeft: '1px solid var(--b2)',
+    borderLeft: '1px solid var(--bd)',
     overflowY: 'auto' as const,
     display: 'flex', flexDirection: 'column' as const,
   },
   versHdr: {
     padding: '8px 12px', fontWeight: 600, fontSize: 11,
-    borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    borderBottom: '1px solid var(--bd)', flexShrink: 0,
     color: 'var(--t2)',
   },
   versRow: {
-    padding: '8px 12px', borderBottom: '1px solid var(--b2)',
+    padding: '8px 12px', borderBottom: '1px solid var(--bd)',
   },
   versId: {
     fontSize: 11, fontWeight: 600, color: 'var(--acc)',

@@ -20,7 +20,7 @@
 /* Group labels (track names, left column) */
 .lore-tl .vis-labelset .vis-label {
   color: var(--t1);
-  border-bottom: 1px solid var(--b2);
+  border-bottom: 1px solid var(--bd);
   display: flex;
   align-items: center;
 }
@@ -32,7 +32,7 @@
 
 /* Foreground group row separators */
 .lore-tl .vis-foreground .vis-group {
-  border-bottom: 1px solid var(--b2);
+  border-bottom: 1px solid var(--bd);
 }
 
 /* Time axis */

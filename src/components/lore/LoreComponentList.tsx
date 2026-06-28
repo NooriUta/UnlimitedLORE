@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchLoreSlice, type LoreComponent } from '../../api/lore';
 import { GameIcon } from './GameIcon';
+import LoreSkeleton from './LoreSkeleton';
 
 export const AREA_COLOR: Record<string, string> = {
   engine:        '#e8923a',
@@ -21,9 +22,10 @@ export const areaColor = (a: string) => AREA_COLOR[a] ?? 'var(--t3)';
 const S = {
   root:  { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
   list:  { flex: 1, overflowY: 'auto' as const },
-  row: (sel: boolean) => ({
-    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
-    borderBottom: '1px solid var(--b2)', cursor: 'pointer',
+  row: (sel: boolean, indent = 0) => ({
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: `6px 12px 6px ${12 + indent * 16}px`,
+    borderBottom: '1px solid var(--bd)', cursor: 'pointer',
     background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
   }),
   iconBox: (color: string) => ({
@@ -75,6 +77,8 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
     onCounts(c);
   }, [rows, onCounts]);
 
+  const isFiltered = q.trim() !== '' || areaSel.size > 0;
+
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return rows
@@ -85,31 +89,62 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
       );
   }, [rows, q, areaSel]);
 
-  if (loading) return <div style={S.empty}>Загрузка компонентов…</div>;
+  const treeOrder = useMemo(() => {
+    if (isFiltered) return null;
+    const byParent = new Map<string | null, LoreComponent[]>();
+    rows.forEach(r => {
+      const key = r.parent_id ?? null;
+      if (!byParent.has(key)) byParent.set(key, []);
+      byParent.get(key)!.push(r);
+    });
+    byParent.forEach(arr => arr.sort((a, b) =>
+      a.area !== b.area ? a.area.localeCompare(b.area) : a.component_id.localeCompare(b.component_id)
+    ));
+    const result: { comp: LoreComponent; indent: number }[] = [];
+    function walk(parentId: string | null, depth: number) {
+      (byParent.get(parentId) ?? []).forEach(c => {
+        result.push({ comp: c, indent: depth });
+        walk(c.component_id, depth + 1);
+      });
+    }
+    walk(null, 0);
+    return result;
+  }, [rows, isFiltered]);
+
+  if (loading) return <LoreSkeleton />;
+
+  const renderRow = (r: LoreComponent, indent = 0) => {
+    const color = areaColor(r.area);
+    return (
+      <div
+        key={r.component_id}
+        style={S.row(selectedId === r.component_id, indent)}
+        onClick={() => onSelect(r.component_id)}
+      >
+        <div style={S.iconBox(color)}>
+          {r.game_icon
+            ? <GameIcon slug={r.game_icon} size={13} style={{ color: 'inherit' }} />
+            : <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{r.component_id[0]}</span>}
+        </div>
+        <span style={S.compId}>{r.component_id}</span>
+        <span style={S.name}>{r.full_name || r.component_id}</span>
+        <span style={S.areaChip(color)}>{r.area}</span>
+      </div>
+    );
+  };
 
   return (
     <div style={S.root}>
       <div style={S.list}>
-        {shown.length === 0 && <div style={S.empty}>Компоненты не найдены.</div>}
-        {shown.map(r => {
-          const color = areaColor(r.area);
-          return (
-            <div
-              key={r.component_id}
-              style={S.row(selectedId === r.component_id)}
-              onClick={() => onSelect(r.component_id)}
-            >
-              <div style={S.iconBox(color)}>
-                {r.game_icon
-                  ? <GameIcon slug={r.game_icon} size={13} style={{ color: 'inherit' }} />
-                  : <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{r.component_id[0]}</span>}
-              </div>
-              <span style={S.compId}>{r.component_id}</span>
-              <span style={S.name}>{r.full_name || r.component_id}</span>
-              <span style={S.areaChip(color)}>{r.area}</span>
-            </div>
-          );
-        })}
+        {treeOrder !== null ? (
+          treeOrder.length === 0
+            ? <div style={S.empty}>Компоненты не найдены.</div>
+            : treeOrder.map(({ comp, indent }) => renderRow(comp, indent))
+        ) : (
+          shown.length === 0
+            ? <div style={S.empty}>Компоненты не найдены.</div>
+            : shown.map(r => renderRow(r, 0))
+        )}
       </div>
     </div>
   );

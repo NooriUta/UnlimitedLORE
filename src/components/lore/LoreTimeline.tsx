@@ -12,7 +12,7 @@ const S = {
   root:    { flex: 1, overflowY: 'auto' as const },
   item: {
     display: 'flex', alignItems: 'center', gap: 8,
-    padding: '7px 16px', borderBottom: '1px solid var(--b2)',
+    padding: '7px 16px', borderBottom: '1px solid var(--bd)',
     fontSize: 12, cursor: 'default',
   },
   date:    { color: 'var(--t3)', fontSize: 11, minWidth: 80, flexShrink: 0 },

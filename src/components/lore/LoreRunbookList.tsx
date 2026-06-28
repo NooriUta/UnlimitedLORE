@@ -63,7 +63,7 @@ const S = {
   root:    { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
   toolbar: {
     display: 'flex', gap: 6, padding: '8px 16px',
-    borderBottom: '1px solid var(--b2)', flexShrink: 0,
+    borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   chip: (active: boolean) => ({
     height: 24, padding: '0 10px', border: 'none', borderRadius: 3,
@@ -75,7 +75,7 @@ const S = {
   state: { padding: 24, color: 'var(--t3)', fontSize: 12 },
   row: {
     display: 'flex', alignItems: 'center', gap: 10,
-    padding: '7px 16px', borderBottom: '1px solid var(--b2)', fontSize: 12,
+    padding: '7px 16px', borderBottom: '1px solid var(--bd)', fontSize: 12,
   },
   area: (a: string) => ({
     fontSize: 10, padding: '1px 6px', borderRadius: 3, flexShrink: 0,

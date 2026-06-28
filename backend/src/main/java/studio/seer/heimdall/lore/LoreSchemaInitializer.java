@@ -89,6 +89,7 @@ public class LoreSchemaInitializer {
         // Ядра
         "CREATE VERTEX TYPE KnowDecision     IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowADR          IF NOT EXISTS EXTENDS V",
+        "CREATE VERTEX TYPE KnowTag          IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowSprint       IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowSpec         IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowFinding      IF NOT EXISTS EXTENDS V",
@@ -156,6 +157,7 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON PlanConfig      (config_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDecision    (decision_id)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowADR         (adr_id)       UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowTag         (tag_id)       UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSprint      (sprint_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSpec        (spec_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowFinding     (finding_id)   UNIQUE",

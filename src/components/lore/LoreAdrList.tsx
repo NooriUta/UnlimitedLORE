@@ -23,7 +23,7 @@ const S = {
   list: { flex: 1, overflowY: 'auto' as const },
   row: {
     display: 'flex', flexDirection: 'column' as const, gap: 2,
-    padding: '6px 10px', borderBottom: '1px solid var(--b2)',
+    padding: '6px 10px', borderBottom: '1px solid var(--bd)',
     fontSize: 11, cursor: 'pointer', minWidth: 0,
   },
   line1: { display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 },
@@ -97,7 +97,7 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
     return rows
       .filter(r => statusSel.size === 0 || statusSel.has((r.status ?? 'PROPOSED').toUpperCase()))
       .filter(r => !ql || r.adr_id.toLowerCase().includes(ql) || (r.name ?? '').toLowerCase().includes(ql));
-  }, [rows, q, statusSel]);
+  }, [rows, q, [...statusSel].sort().join(',')]);
 
   return (
     <div style={S.root}>

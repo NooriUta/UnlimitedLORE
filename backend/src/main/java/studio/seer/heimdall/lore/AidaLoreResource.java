@@ -588,9 +588,11 @@ public class AidaLoreResource {
         }
         try {
             boolean cur = Boolean.TRUE.equals(req.is_current());
+            String gp   = req.git_project() != null && !req.git_project().isBlank()
+                          ? req.git_project() : "NooriUta/AIDA";
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowRelease SET is_current=false WHERE is_current=true",
+                    "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + gp + "'",
                     null)).await().indefinitely();
             }
             String now  = Instant.now().toString();
@@ -607,8 +609,6 @@ public class AidaLoreResource {
             if (req.type()           != null) { set.append(", `type`=:rtype");       p.put("rtype", req.type()); }
             if (req.description_md() != null) { set.append(", description_md=:dmd"); p.put("dmd", req.description_md()); }
             if (req.week()           != null) { set.append(", week=:week");          p.put("week",  req.week()); }
-            String gp  = (req.git_project() != null && !req.git_project().isBlank())
-                ? req.git_project() : "NooriUta/AIDA";
             String ruid = gp + "#" + req.release_id();
             set.append(", git_project=:gp, release_uid=:ruid");
             p.put("gp", gp); p.put("ruid", ruid);
@@ -653,9 +653,11 @@ public class AidaLoreResource {
         try {
             boolean curSet = req.is_current() != null;
             boolean cur    = Boolean.TRUE.equals(req.is_current());
+            String ugp     = req.git_project() != null && !req.git_project().isBlank()
+                             ? req.git_project() : "NooriUta/AIDA";
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowRelease SET is_current=false WHERE is_current=true",
+                    "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + ugp + "'",
                     null)).await().indefinitely();
             }
             // Build SET clause only for non-null fields to allow partial updates.
@@ -1126,7 +1128,7 @@ public class AidaLoreResource {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "SELECT @rid AS rid FROM KnowADRHist " +
+                    "SELECT state_uid FROM KnowADRHist " +
                     "WHERE in('HAS_STATE').adr_id[0] = :id AND valid_to IS NULL LIMIT 1",
                     Map.of("id", req.adr_id())))
                 .await().indefinitely().result();
@@ -1139,10 +1141,11 @@ public class AidaLoreResource {
             boolean histCreated;
             if (histRows != null && !histRows.isEmpty()) {
                 // Step 3a: update body fields on the existing open hist row (re-create / re-call)
-                String histRid = String.valueOf(histRows.get(0).get("rid"));
+                String sid = String.valueOf(histRows.get(0).get("state_uid"));
+                histP.put("sid", sid);
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE " + histRid +
-                    " SET context_md=:ctx, decision_md=:dec, consequences_md=:con",
+                    "UPDATE KnowADRHist SET context_md=:ctx, decision_md=:dec, consequences_md=:con" +
+                    " WHERE state_uid=:sid",
                     histP)).await().indefinitely();
                 histCreated = false;
             } else {
@@ -1164,9 +1167,13 @@ public class AidaLoreResource {
 
             // Step 4: replace DEPENDS_ON edges
             if (req.depends_on_ids() != null) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE EDGE DEPENDS_ON FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
-                    Map.of("id", req.adr_id()))).await().indefinitely();
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM (SELECT expand(outE('DEPENDS_ON')) FROM KnowADR WHERE adr_id = :id)",
+                        Map.of("id", req.adr_id()))).await().indefinitely();
+                } catch (Exception ex) {
+                    LOG.warnf("[LORE ADR DEPENDS_ON DEL] %s: %s", req.adr_id(), ex.getMessage());
+                }
                 for (String dep : req.depends_on_ids()) {
                     if (dep == null || dep.isBlank()) continue;
                     try {
@@ -1183,9 +1190,13 @@ public class AidaLoreResource {
 
             // Step 5: replace SUPERSEDES edges
             if (req.supersedes_ids() != null) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE EDGE SUPERSEDES FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
-                    Map.of("id", req.adr_id()))).await().indefinitely();
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM (SELECT expand(outE('SUPERSEDES')) FROM KnowADR WHERE adr_id = :id)",
+                        Map.of("id", req.adr_id()))).await().indefinitely();
+                } catch (Exception ex) {
+                    LOG.warnf("[LORE ADR SUPERSEDES DEL] %s: %s", req.adr_id(), ex.getMessage());
+                }
                 for (String sup : req.supersedes_ids()) {
                     if (sup == null || sup.isBlank()) continue;
                     try {
@@ -1206,9 +1217,13 @@ public class AidaLoreResource {
                 : (req.component_id() != null && !req.component_id().isBlank()
                     ? List.of(req.component_id()) : null);
             if (compIds != null) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE EDGE BELONGS_TO FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
-                    Map.of("id", req.adr_id()))).await().indefinitely();
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM (SELECT expand(outE('BELONGS_TO')) FROM KnowADR WHERE adr_id = :id)",
+                        Map.of("id", req.adr_id()))).await().indefinitely();
+                } catch (Exception ex) {
+                    LOG.warnf("[LORE ADR BELONGS_TO DEL] %s: %s", req.adr_id(), ex.getMessage());
+                }
                 for (String cid : compIds) {
                     if (cid == null || cid.isBlank()) continue;
                     try {
@@ -1225,9 +1240,13 @@ public class AidaLoreResource {
 
             // Step 7: replace TAGGED_WITH edges (upsert KnowTag on the fly)
             if (req.tags() != null) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE EDGE TAGGED_WITH FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
-                    Map.of("id", req.adr_id()))).await().indefinitely();
+                try {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM (SELECT expand(outE('TAGGED_WITH')) FROM KnowADR WHERE adr_id = :id)",
+                        Map.of("id", req.adr_id()))).await().indefinitely();
+                } catch (Exception ex) {
+                    LOG.warnf("[LORE ADR TAGGED_WITH DEL] %s: %s", req.adr_id(), ex.getMessage());
+                }
                 for (String tag : req.tags()) {
                     if (tag == null || tag.isBlank()) continue;
                     try {
