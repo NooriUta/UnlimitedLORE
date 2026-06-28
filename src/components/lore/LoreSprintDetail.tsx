@@ -75,8 +75,11 @@ function toToken(key: string): LorePlanItemStatus {
   if (key === 'in_progress' || key === 'active') return 'active';
   if (key === 'partial') return 'partial';
   if (key === 'ready_for_deploy') return 'ready_for_deploy';
-  if (key === 'deferred' || key === 'blocked') return 'blocked';
+  if (key === 'blocked') return 'blocked';
   if (key === 'cancelled') return 'cancelled';
+  if (key === 'planned' || key === 'deferred') return 'planned';
+  if (key === 'backlog') return 'backlog';
+  if (key === 'design') return 'design';
   return 'todo';
 }
 
@@ -132,15 +135,16 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
               display: 'inline-flex', alignItems: 'center', gap: compact ? 0 : 3,
               padding: compact ? '0 4px' : '0 6px', height: 18,
               cursor: busy ? 'default' : 'pointer', borderRadius: 3,
+              opacity: sel ? 1 : 0.42,
               background: sel ? `color-mix(in srgb, ${o.c} 16%, transparent)` : 'transparent',
-              border: sel ? `1px solid ${o.c}` : '1px solid var(--bd)',
+              border: `1px solid ${sel ? o.c : 'transparent'}`,
             }}
           >
-            <GameIcon slug={o.gi} size={compact ? 12 : 13} style={{ color: sel ? o.c : 'var(--t3)' }} />
+            <GameIcon slug={o.gi} size={compact ? 12 : 13} style={{ color: o.c }} />
             {!compact && (
               <span style={{
                 fontSize: 9, fontFamily: 'var(--mono)', lineHeight: 1, letterSpacing: '0.03em',
-                color: sel ? o.c : 'var(--t2)',
+                color: o.c,
                 fontWeight: sel ? 600 : 400,
               }}>{o.abbr}</span>
             )}
@@ -600,13 +604,13 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
       )}
 
       {/* context_md — background / WHY section, editable inline */}
-      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
+      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Контекст</span>
           {!ctxEdit && (
             <button
               onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
-              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
             >✎ ред.</button>
           )}
         </div>
@@ -617,7 +621,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
               onChange={e => setCtxDraft(e.target.value)}
               rows={8}
               placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки, связанные спринты..."
-              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
+              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
             />
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
               <button
@@ -635,7 +639,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
               >{ctxSaving ? '…' : 'Сохранить'}</button>
               <button
                 onClick={() => setCtxEdit(false)}
-                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
               >Отмена</button>
             </div>
           </div>
@@ -655,7 +659,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         const unlinked = allProjects.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         return (
-          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
+          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проекты</span>
             </div>
@@ -695,9 +699,12 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
                     } catch (err) { onError(err); }
                     finally { setProjLinking(false); }
                   }}
-                  style={{ fontSize: 11, padding: '2px 4px', borderRadius: 5,
-                    background: 'var(--bg2)', border: '1px solid var(--bdr)',
-                    color: 'var(--t2)', cursor: 'pointer' }}
+                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+                    background: 'var(--bg2)', border: '1px solid var(--bd)',
+                    color: 'var(--t2)', cursor: 'pointer',
+                    appearance: 'none' as const,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}
                 >
                   <option value="">+ привязать…</option>
                   {unlinked.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}

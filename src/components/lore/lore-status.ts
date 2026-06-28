@@ -8,10 +8,10 @@ export interface StatusMeta { icon: string; color: string }
 
 const STATUS_META: Record<string, StatusMeta> = {
   // done / closed family → success green
-  done:        { icon: 'check-mark',     color: 'var(--suc)' },
-  fixed:       { icon: 'check-mark',     color: 'var(--suc)' },
-  reached:     { icon: 'check-mark',     color: 'var(--suc)' },
-  accepted:    { icon: 'laurel-crown',   color: 'var(--suc)' },
+  done:        { icon: 'divided-spiral',  color: 'var(--suc)' },
+  fixed:       { icon: 'divided-spiral',  color: 'var(--suc)' },
+  reached:     { icon: 'divided-spiral',  color: 'var(--suc)' },
+  accepted:    { icon: 'laurel-crown',    color: 'var(--suc)' },
   // in-progress family → info teal
   active:      { icon: 'progression',    color: 'var(--inf)' },
   in_progress: { icon: 'progression',    color: 'var(--inf)' },
@@ -20,22 +20,22 @@ const STATUS_META: Record<string, StatusMeta> = {
   planned:     { icon: 'calendar',       color: 'var(--wrn)' },
   proposed:    { icon: 'calendar',       color: 'var(--wrn)' },
   high:        { icon: 'dice-fire',      color: 'var(--wrn)' },
-  // partially done — distinct from active (🟡 marker, half-battery) → warning amber
-  partial:          { icon: 'battery-50',     color: 'var(--wrn)' },
+  // partially done — distinct from active → warning amber
+  partial:          { icon: 'battery-50',    color: 'var(--wrn)' },
   // ready for deploy — work done, waiting for release
-  ready_for_deploy: { icon: 'delivery',       color: 'var(--inf)' },
+  ready_for_deploy: { icon: 'wave-crest',    color: 'var(--inf)' },
   // blocked / rejected family → danger red
-  blocked:     { icon: 'padlock',        color: 'var(--danger)' },
-  rejected:    { icon: 'crossed-sabres', color: 'var(--danger)' },
-  missed:      { icon: 'crossed-sabres', color: 'var(--danger)' },
+  blocked:     { icon: 'handcuffed',     color: 'var(--dng)' },
+  rejected:    { icon: 'crossed-sabres', color: 'var(--dng)' },
+  missed:      { icon: 'crossed-sabres', color: 'var(--dng)' },
   // design / backlog / neutral family → muted/amber
-  design:      { icon: 'pencil',         color: 'var(--wrn)' },
-  backlog:     { icon: 'stack',          color: 'var(--t3)' },
+  design:      { icon: 'magic-swirl',    color: 'var(--wrn)' },
+  backlog:     { icon: 'tied-scroll',    color: 'var(--t3)' },
   todo:        { icon: 'checkbox-tree',  color: 'var(--t3)' },
   deferred:    { icon: 'pause-button',   color: 'var(--t3)' },
   superseded:  { icon: 'pause-button',   color: 'var(--t3)' },
   // cancelled — task explicitly removed from scope
-  cancelled:   { icon: 'cancel',         color: 'var(--t3)' },
+  cancelled:   { icon: 'cross-mark',     color: 'var(--t3)' },
 };
 
 const FALLBACK: StatusMeta = { icon: 'checkbox-tree', color: 'var(--t3)' };
