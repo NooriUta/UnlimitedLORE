@@ -1416,6 +1416,181 @@ public class AidaLoreResource {
         }
     }
 
+    // ── Spec write ───────────────────────────────────────────────────────────
+    public record SpecUpsertRequest(String spec_id, String title, String version,
+        String component_id, String content_md, String file_path) {}
+    public record SpecDeleteRequest(String spec_id) {}
+
+    @POST
+    @Path("spec")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertSpec(SpecUpsertRequest req,
+                               @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.spec_id() == null || req.spec_id().isBlank())
+            return badParams("spec_id required");
+        if (!SAFE_ID.matcher(req.spec_id()).matches())
+            return badParams("spec_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "id",      req.spec_id(),
+                "title",   req.title(),
+                "version", req.version(),
+                "cid",     req.component_id(),
+                "content", req.content_md(),
+                "fp",      req.file_path());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowSpec SET spec_id=:id, title=:title, version=:version, " +
+                "component_id=:cid, content_md=:content, file_path=:fp " +
+                "UPSERT WHERE spec_id=:id", p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @POST
+    @Path("spec/delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteSpec(SpecDeleteRequest req,
+                               @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.spec_id() == null || req.spec_id().isBlank())
+            return badParams("spec_id required");
+        if (!SAFE_ID.matcher(req.spec_id()).matches())
+            return badParams("spec_id contains illegal characters");
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM KnowSpec WHERE spec_id=:id",
+                Map.of("id", req.spec_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPEC DELETE] %s: %s", req.spec_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── QualityGate write ────────────────────────────────────────────────────
+    public record QGUpsertRequest(String qg_id, String name, String description,
+        String component_id, String status, String content_md) {}
+
+    @POST
+    @Path("quality-gate")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertQualityGate(QGUpsertRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.qg_id() == null || req.qg_id().isBlank())
+            return badParams("qg_id required");
+        if (!SAFE_ID.matcher(req.qg_id()).matches())
+            return badParams("qg_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "id",  req.qg_id(),
+                "nm",  req.name(),
+                "dsc", req.description(),
+                "cid", req.component_id(),
+                "st",  req.status(),
+                "cnt", req.content_md());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE QualityGate SET qg_id=:id, name=:nm, description=:dsc, " +
+                "component_id=:cid, status=:st, content_md=:cnt " +
+                "UPSERT WHERE qg_id=:id", p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "qg_id", req.qg_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Runbook write ────────────────────────────────────────────────────────
+    public record RunbookUpsertRequest(String runbook_id, String name, String area,
+        String date_created, String content_md) {}
+
+    @POST
+    @Path("runbook")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertRunbook(RunbookUpsertRequest req,
+                                  @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.runbook_id() == null || req.runbook_id().isBlank())
+            return badParams("runbook_id required");
+        if (!SAFE_ID.matcher(req.runbook_id()).matches())
+            return badParams("runbook_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "id",      req.runbook_id(),
+                "name",    req.name(),
+                "area",    req.area(),
+                "date",    req.date_created() != null ? req.date_created()
+                               : java.time.LocalDate.now().toString(),
+                "content", req.content_md());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowRunbook SET runbook_id=:id, name=:name, area=:area, " +
+                "date_created=:date, content_md=:content " +
+                "UPSERT WHERE runbook_id=:id", p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE RUNBOOK UPSERT] %s: %s", req.runbook_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── KnowDoc write ────────────────────────────────────────────────────────
+    public record DocUpsertRequest(String doc_id, String title, String kind,
+        Boolean has_ext_deps, String component_id, String file_path, String content_html) {}
+
+    @POST
+    @Path("doc")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertDoc(DocUpsertRequest req,
+                              @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.doc_id() == null || req.doc_id().isBlank())
+            return badParams("doc_id required");
+        if (!SAFE_ID.matcher(req.doc_id()).matches())
+            return badParams("doc_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "id",       req.doc_id(),
+                "title",    req.title(),
+                "kind",     req.kind(),
+                "ext_deps", req.has_ext_deps(),
+                "cid",      req.component_id(),
+                "fp",       req.file_path(),
+                "content",  req.content_html());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowDoc SET doc_id=:id, title=:title, kind=:kind, " +
+                "has_ext_deps=:ext_deps, component_id=:cid, file_path=:fp, content_html=:content " +
+                "UPSERT WHERE doc_id=:id", p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     private Response requireAdmin(String role) {
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)

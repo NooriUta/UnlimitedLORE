@@ -15,6 +15,7 @@ interface SprintMeta {
   sprint_id: string;
   name: string;
   status_raw: string | null;
+  priority: string | null;
   pr_refs: string | null;
   release_ids: string[] | null;
   milestone_ids: string[] | null;
@@ -79,36 +80,25 @@ function toToken(key: string): LorePlanItemStatus {
   return 'todo';
 }
 
-type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string };
+type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string; gi: string; c: string; abbr: string };
 
-// Task picker: 7-status canon (no planning statuses — tasks don't have planned/design/backlog)
-const TASK_PICK_OPTS: PickOpt[] = [
-  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
-  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
-  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
-  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
-  { token: 'done',             statusKey: 'done',             label: 'Готово' },
-  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
-  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
-];
-
-// Sprint picker: 10-status canon (includes planning phases)
 const SPRINT_PICK_OPTS: PickOpt[] = [
-  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
-  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано' },
-  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог' },
-  { token: 'design',           statusKey: 'design',           label: 'Дизайн' },
-  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
-  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
-  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
-  { token: 'done',             statusKey: 'done',             label: 'Готово' },
-  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
-  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
+  { token: 'todo',             statusKey: 'todo',             label: 'TODO',          gi: 'checkbox-tree',  c: '#665C48', abbr: 'TODO' },
+  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано', gi: 'calendar',        c: '#D4922A', abbr: 'PLN'  },
+  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог',        gi: 'tied-scroll',     c: '#9A8C6E', abbr: 'BL'   },
+  { token: 'design',           statusKey: 'design',           label: 'Дизайн',        gi: 'magic-swirl',     c: '#D4922A', abbr: 'DS'   },
+  { token: 'active',           statusKey: 'in_progress',      label: 'В работе',      gi: 'progression',     c: '#88B8A8', abbr: 'WIP'  },
+  { token: 'partial',          statusKey: 'partial',          label: 'Частично',      gi: 'battery-50',      c: '#D4922A', abbr: 'PART' },
+  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою',      gi: 'wave-crest',      c: '#7DBF78', abbr: 'RD'   },
+  { token: 'done',             statusKey: 'done',             label: 'Готово',        gi: 'divided-spiral',  c: '#7DBF78', abbr: 'DONE' },
+  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано', gi: 'handcuffed',      c: '#C85848', abbr: 'BLK'  },
+  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено',      gi: 'cross-mark',      c: '#C85848', abbr: 'CNC'  },
 ];
 
-// Inline status setter — admin-only write to system_aida_lore via POST /lore/status (SCD2).
-// Renders as a small row of icon-buttons (consistent with the LORE status ticks),
-// the active status highlighted; RU tooltips. No raw <select>.
+const TASK_PICK_OPTS: PickOpt[] = SPRINT_PICK_OPTS.filter(o =>
+  ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'].includes(o.token)
+);
+
 function StatusPicker({ entityType, id, current, onChanged, onError }: {
   entityType: 'sprint' | 'task';
   id: string;
@@ -116,7 +106,8 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
-  const opts = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
+  const opts    = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
+  const compact = entityType === 'task';
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
     if (next === current || busy) return;
@@ -128,26 +119,77 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   return (
     <span
       role="group" aria-label="Изменить статус"
-      style={{ display: 'inline-flex', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
+      style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
     >
       {opts.map(o => {
-        const meta = statusMeta(o.statusKey);
-        const sel  = o.token === current;
+        const sel = o.token === current;
         return (
           <button
             key={o.token} type="button" disabled={busy}
             title={o.label} aria-label={o.label} aria-pressed={sel}
             onClick={e => { e.stopPropagation(); void set(o.token); }}
             style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 20, height: 18, padding: 0, lineHeight: 0,
+              display: 'inline-flex', alignItems: 'center', gap: compact ? 0 : 3,
+              padding: compact ? '0 4px' : '0 6px', height: 18,
               cursor: busy ? 'default' : 'pointer', borderRadius: 3,
-              background: sel ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
-              border: sel ? `1px solid ${meta.color}` : '1px solid var(--bd)',
+              background: sel ? `color-mix(in srgb, ${o.c} 16%, transparent)` : 'transparent',
+              border: sel ? `1px solid ${o.c}` : '1px solid var(--bd)',
             }}
           >
-            <GameIcon slug={meta.icon} size={12} style={{ color: meta.color }} />
+            <GameIcon slug={o.gi} size={compact ? 12 : 13} style={{ color: sel ? o.c : 'var(--t3)' }} />
+            {!compact && (
+              <span style={{
+                fontSize: 9, fontFamily: 'var(--mono)', lineHeight: 1, letterSpacing: '0.03em',
+                color: sel ? o.c : 'var(--t2)',
+                fontWeight: sel ? 600 : 400,
+              }}>{o.abbr}</span>
+            )}
           </button>
+        );
+      })}
+    </span>
+  );
+}
+
+const PRIORITY_OPTS = [
+  { value: 'P0', label: 'P0 — критично', color: '#E24B4A' },
+  { value: 'P1', label: 'P1 — высокий',  color: '#ef9f27' },
+  { value: 'P2', label: 'P2 — обычный',  color: 'var(--t3)' },
+];
+
+function PriorityPicker({ sprintId, current, onChanged, onError }: {
+  sprintId: string;
+  current: string | null;
+  onChanged: () => void;
+  onError: (e: unknown) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  async function set(next: string | null) {
+    if (busy) return;
+    const val = next === current ? null : next; // повторный клик — сброс
+    setBusy(true);
+    try { await updateLoreSprint(sprintId, { priority: val }); onChanged(); }
+    catch (err) { onError(err); }
+    finally { setBusy(false); }
+  }
+  return (
+    <span role="group" aria-label="Приоритет" style={{ display: 'inline-flex', gap: 2, opacity: busy ? 0.5 : 1 }}>
+      {PRIORITY_OPTS.map(o => {
+        const sel = o.value === current;
+        return (
+          <button
+            key={o.value} type="button" disabled={busy}
+            title={o.label} aria-label={o.label} aria-pressed={sel}
+            onClick={e => { e.stopPropagation(); void set(o.value); }}
+            style={{
+              padding: '0 6px', height: 18, borderRadius: 3, fontSize: 10,
+              fontWeight: sel ? 600 : 400, cursor: busy ? 'default' : 'pointer',
+              fontFamily: 'var(--mono)',
+              color: sel ? o.color : 'var(--t3)',
+              background: sel ? `color-mix(in srgb, ${o.color} 15%, transparent)` : 'transparent',
+              border: sel ? `1px solid ${o.color}` : '1px solid var(--bd)',
+            }}
+          >{o.value}</button>
         );
       })}
     </span>
@@ -506,6 +548,12 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
           entityType="sprint"
           id={sprint.sprint_id}
           current={toToken(status)}
+          onChanged={reload}
+          onError={onError}
+        />
+        <PriorityPicker
+          sprintId={sprint.sprint_id}
+          current={sprint.priority}
           onChanged={reload}
           onError={onError}
         />

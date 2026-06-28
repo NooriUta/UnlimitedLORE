@@ -287,7 +287,7 @@ public final class LoreSlices {
         // lore-backfill-spec-titles.mjs; until then the frontend falls back to spec_id.
         slice("specs",
             "SELECT spec_id, title, file_path, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -296,11 +296,11 @@ public final class LoreSlices {
 
         slice("spec_by_id",
             "SELECT spec_id, title, file_path, " +
-            "out('HAS_STATE').content_md[0]    AS content_md, " +
-            "out('HAS_STATE').summary[0]       AS summary, " +
-            "out('HAS_STATE').version[0]       AS version, " +
-            "out('HAS_STATE').valid_from[0]    AS valid_from, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').summary[0]                          AS summary, " +
+            "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
+            "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -320,7 +320,7 @@ public final class LoreSlices {
         // query gracefully (returns [] until KnowDoc vertices are ingested).
         slice("docs",
             "SELECT doc_id, title, kind, has_ext_deps, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
