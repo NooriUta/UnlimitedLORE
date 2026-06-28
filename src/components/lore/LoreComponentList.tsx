@@ -47,6 +47,11 @@ const S = {
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
     whiteSpace: 'nowrap' as const,
   }),
+  countBadge: {
+    fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+    color: 'var(--t3)', background: 'var(--b2)', border: '1px solid var(--bd)',
+    whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)',
+  },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
 };
 
@@ -128,6 +133,9 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
         </div>
         <span style={S.compId}>{r.component_id}</span>
         <span style={S.name}>{r.full_name || r.component_id}</span>
+        {(r.adr_count != null && r.adr_count > 0) && (
+          <span style={S.countBadge}>{r.adr_count} ADR</span>
+        )}
         <span style={S.areaChip(color)}>{r.area}</span>
       </div>
     );

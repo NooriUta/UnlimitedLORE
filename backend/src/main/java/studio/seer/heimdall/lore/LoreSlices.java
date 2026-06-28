@@ -256,7 +256,8 @@ public final class LoreSlices {
         slice("components",
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "in('PARENT_OF').component_id AS children, " +
-            "out('USES').tech_id AS tech " +
+            "out('USES').tech_id AS tech, " +
+            "in('BELONGS_TO')[adr_id IS NOT NULL].size() AS adr_count " +
             "FROM LoreComponent",
             List.of(),
             new LinkedHashMap<>(Map.of("root", " WHERE parent_id = :root")),
@@ -266,9 +267,8 @@ public final class LoreSlices {
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "out('PARENT_OF').component_id  AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
-            "in('BELONGS_TO').adr_id        AS adrs, " +
-            "in('BELONGS_TO').spec_id       AS specs, " +
-            "out('DOCUMENTED_IN').spec_id   AS spec_docs " +
+            "in('BELONGS_TO')[adr_id IS NOT NULL].adr_id  AS adrs, " +
+            "out('DOCUMENTED_IN').spec_id   AS specs " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 

@@ -1313,7 +1313,11 @@ public class AidaLoreResource {
         }
     }
 
-    public record ComponentUpdateRequest(String component_id, String owner, String team) {}
+    public record ComponentUpdateRequest(
+        String component_id,
+        String owner, String team,
+        String full_name, String area, String game_icon, String parent_id
+    ) {}
 
     @POST
     @Path("component/update")
@@ -1328,11 +1332,17 @@ public class AidaLoreResource {
             return badParams("component_id required");
         try {
             Map<String, Object> p = mapOfNullable(
-                "cid",   req.component_id(),
-                "owner", req.owner(),
-                "team",  req.team());
+                "cid",       req.component_id(),
+                "owner",     req.owner(),
+                "team",      req.team(),
+                "full_name", req.full_name(),
+                "area",      req.area(),
+                "game_icon", req.game_icon(),
+                "parent_id", req.parent_id());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE LoreComponent SET owner=:owner, team=:team WHERE component_id=:cid",
+                "UPDATE LoreComponent SET owner=:owner, team=:team, " +
+                "full_name=:full_name, area=:area, game_icon=:game_icon, parent_id=:parent_id " +
+                "WHERE component_id=:cid",
                 p)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
