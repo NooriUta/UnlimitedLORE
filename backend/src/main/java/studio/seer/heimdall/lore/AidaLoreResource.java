@@ -1534,18 +1534,56 @@ public class AidaLoreResource {
         if (!SAFE_ID.matcher(req.runbook_id()).matches())
             return badParams("runbook_id contains illegal characters");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "id",      req.runbook_id(),
-                "name",    req.name(),
-                "area",    req.area(),
-                "date",    req.date_created() != null ? req.date_created()
-                               : java.time.LocalDate.now().toString(),
-                "content", req.content_md());
+            String now  = Instant.now().toString();
+            String nsid = UUID.randomUUID().toString();
+
+            // Step 1: upsert KnowRunbook vertex (metadata only — content lives in hist)
+            Map<String, Object> upsertP = mapOfNullable(
+                "id",   req.runbook_id(),
+                "name", req.name(),
+                "area", req.area(),
+                "date", req.date_created() != null ? req.date_created()
+                            : java.time.LocalDate.now().toString());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowRunbook SET runbook_id=:id, name=:name, area=:area, " +
-                "date_created=:date, content_md=:content " +
-                "UPSERT WHERE runbook_id=:id", p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id())));
+                "date_created=:date UPSERT WHERE runbook_id=:id", upsertP))
+                .await().indefinitely();
+
+            // Step 2: check for an existing open SCD2 hist row
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> histRows = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT state_uid FROM KnowRunbookHist " +
+                    "WHERE in('HAS_STATE').runbook_id[0] = :id AND valid_to IS NULL LIMIT 1",
+                    Map.of("id", req.runbook_id())))
+                .await().indefinitely().result();
+
+            boolean histCreated;
+            if (histRows != null && !histRows.isEmpty()) {
+                // Step 3a: update content on the existing open hist row
+                String sid = String.valueOf(histRows.get(0).get("state_uid"));
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowRunbookHist SET content_md=:cnt WHERE state_uid=:sid",
+                    mapOfNullable("cnt", req.content_md(), "sid", sid)))
+                    .await().indefinitely();
+                histCreated = false;
+            } else {
+                // Step 3b: create the initial open hist row + HAS_STATE edge
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt",
+                    mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md())))
+                    .await().indefinitely();
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_STATE " +
+                    "FROM (SELECT FROM KnowRunbook     WHERE runbook_id = :id) " +
+                    "TO   (SELECT FROM KnowRunbookHist WHERE state_uid  = :nsid)",
+                    Map.of("id", req.runbook_id(), "nsid", nsid)))
+                    .await().indefinitely();
+                histCreated = true;
+            }
+
+            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                "hist_created", histCreated)));
         } catch (Exception e) {
             LOG.warnf("[LORE RUNBOOK UPSERT] %s: %s", req.runbook_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

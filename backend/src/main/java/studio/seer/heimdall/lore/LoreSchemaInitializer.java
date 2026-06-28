@@ -187,6 +187,7 @@ public class LoreSchemaInitializer {
 
         // ── Phase 5 (v1.2): KnowRunbook + QualityGate + QGMetric ────────────────
         "CREATE VERTEX TYPE KnowRunbook     IF NOT EXISTS EXTENDS V",
+        "CREATE VERTEX TYPE KnowRunbookHist IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE QualityGate     IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE QGMetric        IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowDoc         IF NOT EXISTS EXTENDS V",
@@ -194,11 +195,18 @@ public class LoreSchemaInitializer {
 
         "CREATE EDGE TYPE MEASURED_BY       IF NOT EXISTS EXTENDS E",
 
-        "CREATE INDEX IF NOT EXISTS ON KnowRunbook  (runbook_id)  UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON QualityGate  (qg_id)       UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON QGMetric     (metric_id)   UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowDoc      (doc_id)      UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowDocHist  (valid_to)",
+        "CREATE PROPERTY KnowRunbookHist.state_uid  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowRunbookHist.valid_from  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowRunbookHist.valid_to    IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowRunbookHist.content_md  IF NOT EXISTS STRING",
+
+        "CREATE INDEX IF NOT EXISTS ON KnowRunbook    (runbook_id)  UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (state_uid)  UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (valid_to)   NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON QualityGate   (qg_id)        UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON QGMetric      (metric_id)    UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowDoc       (doc_id)       UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to)",
 
         // ── Phase 6 (v1.3): ClRoutine* — routine run outputs stored in LORE ──
         // ArcadeDB DDL: CREATE VERTEX/EDGE TYPE (no EXTENDS V/E via SQL),

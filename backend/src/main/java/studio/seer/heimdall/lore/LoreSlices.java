@@ -342,7 +342,9 @@ public final class LoreSlices {
             " ORDER BY runbook_id LIMIT 100");
 
         slice("runbook_by_id",
-            "SELECT runbook_id, name, area, date_created, content_md " +
+            "SELECT runbook_id, name, area, date_created, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowRunbook WHERE runbook_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
