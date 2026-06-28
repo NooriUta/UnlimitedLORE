@@ -28,14 +28,16 @@ export function normalizeStatus(raw: string | null): string {
   if (!raw) return '';
   const s = raw.trimStart();
   if (s.startsWith('✅') || /^(DONE|CLOSED|ЗАВЕРШ|MERGED|ЗАКРЫТ)/i.test(s)) return 'done';
-  if (s.startsWith('🔄') || s.startsWith('🟢') ||
-      /^(IN.?PROGRESS|WIP|ACTIVE|READY)/i.test(s)) return 'in_progress';
+  if (s.startsWith('🔄') || s.startsWith('🟢') || s.startsWith('🔨') ||
+      /^(IN.?PROGRESS|WIP|ACTIVE|READY|ОТКРЫТ)/i.test(s)) return 'in_progress';
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return 'partial';
-  if (s.startsWith('📋') || /^(PLANNED|STUB|DRAFT)/i.test(s)) return 'planned';
+  if (s.startsWith('🟣') || /BACKLOG/i.test(s.slice(0, 15))) return 'backlog';
+  if (s.startsWith('📋') || s.startsWith('⏳') || /^(PLANNED|STUB|DRAFT|PENDING)/i.test(s)) return 'planned';
   if (s.startsWith('⬜') || /^TODO/i.test(s)) return 'todo';
   if (s.startsWith('🚀') || /^(READY.?FOR.?DEPLOY|RFD)/i.test(s)) return 'ready_for_deploy';
-  if (s.startsWith('🟣') || s.startsWith('⏸') ||
-      /^(BACKLOG|DEFERRED|BLOCKED|ARCHIVED)/i.test(s)) return 'deferred';
+  if (s.startsWith('🔴') || /^BLOCKED/i.test(s)) return 'blocked';
+  if (s.startsWith('⏸') || /^(DEFERRED|ARCHIVED)/i.test(s)) return 'deferred';
+  if (s.startsWith('🔬') || /^(DESIGN|DESIGNING|RESEARCH|ИССЛЕДОВАН)/i.test(s)) return 'design';
   if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return 'cancelled';
   return '';
 }
