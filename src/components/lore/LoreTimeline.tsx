@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchLoreSlice, type LoreTimelineItem } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
@@ -7,9 +7,27 @@ import { GameIcon } from './GameIcon';
 const KIND_ICON: Record<string, string> = {
   adr: 'scroll-quill', decision: 'vote', release: 'rocket', sprint: 'sprint',
 };
+const KIND_LABEL: Record<string, string> = {
+  adr: 'ADR', decision: 'Решения', release: 'Релизы', sprint: 'Спринты',
+};
+const ALL_KINDS = ['adr', 'decision', 'release', 'sprint'] as const;
+type Kind = typeof ALL_KINDS[number];
 
 const S = {
-  root:    { flex: 1, overflowY: 'auto' as const },
+  root:    { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
+  toolbar: {
+    display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
+    padding: '6px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+  },
+  chip: (on: boolean) => ({
+    display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+    padding: '2px 8px', borderRadius: 10, fontSize: 10,
+    border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
+    background: on ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
+    color: on ? 'var(--t1)' : 'var(--t3)',
+    userSelect: 'none' as const,
+  }),
+  list:    { flex: 1, overflowY: 'auto' as const },
   item: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '7px 16px', borderBottom: '1px solid var(--bd)',
@@ -29,7 +47,6 @@ interface DecRow  { decision_id: string; title: string; date_created: string }
 interface RelRow  { release_id: string; git_tag?: string; release_date?: string }
 interface SprRow  { sprint_id: string; name?: string; valid_from?: string; status_raw?: string | null }
 
-// Normalize sprint status by leading marker (a "DONE" later in the line must not flip it).
 function normalizeSprintStatus(raw: string | null | undefined): string {
   if (!raw) return '';
   const s = raw.trimStart();
@@ -50,8 +67,9 @@ interface Props {
 }
 
 export default function LoreTimeline({ module, q, onError, onSelect, onSelectSprint }: Props) {
-  const [items, setItems]     = useState<LoreTimelineItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allItems, setAllItems] = useState<LoreTimelineItem[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [kindSel, setKindSel]   = useState<Set<Kind>>(new Set());
 
   useEffect(() => {
     setLoading(true);
@@ -93,53 +111,81 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
           status: normalizeSprintStatus(s.status_raw),
         })),
       ];
-
       merged.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
-
-      const filtered = q
-        ? merged.filter(i =>
-            i.title.toLowerCase().includes(q.toLowerCase()) ||
-            i.ref_id.toLowerCase().includes(q.toLowerCase()))
-        : merged;
-
-      const byModule = module
-        ? filtered.filter(i => i.kind !== 'adr' || i.status === module)
-        : filtered;
-
-      setItems(byModule);
+      setAllItems(merged);
       setLoading(false);
     }).catch(e => { onError(e); setLoading(false); });
 
     return () => ctrl.abort();
-  }, [module, q, onError]);
+  }, [onError]);
 
-  if (loading) return <div style={S.loading}>Загрузка событий…</div>;
-  if (!items.length) return <div style={S.empty}>Событий не найдено.</div>;
+  const items = useMemo(() => {
+    const ql = q.toLowerCase();
+    return allItems
+      .filter(i => kindSel.size === 0 || kindSel.has(i.kind as Kind))
+      .filter(i => !module || i.kind !== 'adr' || i.status === module)
+      .filter(i => !ql || i.title.toLowerCase().includes(ql) || i.ref_id.toLowerCase().includes(ql));
+  }, [allItems, kindSel, module, q]);
+
+  function toggleKind(k: Kind) {
+    setKindSel(prev => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      return next;
+    });
+  }
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {};
+    allItems.forEach(i => { c[i.kind] = (c[i.kind] || 0) + 1; });
+    return c;
+  }, [allItems]);
 
   return (
     <div style={S.root}>
-      {items.map((item, i) => {
-        const isSprint  = item.kind === 'sprint';
-        const clickable = item.kind === 'adr' || item.kind === 'decision'
-          || (isSprint && !!onSelectSprint);
-        return (
-          <div
-            key={`${item.kind}-${item.ref_id}-${i}`}
-            style={{ ...S.item, cursor: clickable ? 'pointer' : 'default' }}
-            onClick={() => {
-              if (isSprint) onSelectSprint?.(item.ref_id);
-              else if (item.kind === 'adr' || item.kind === 'decision') onSelect(item.ref_id);
-            }}
-          >
-            <span style={S.date}>{item.date?.slice(0, 10)}</span>
-            <span style={S.icon}><GameIcon slug={KIND_ICON[item.kind]} size={14} /></span>
-            <span style={S.kind}>{item.kind}</span>
-            <span style={S.ref}>{item.ref_id}</span>
-            <span style={S.title}>{item.title}</span>
-            {item.status && <StatusChip status={item.status} />}
-          </div>
-        );
-      })}
+      <div style={S.toolbar}>
+        {ALL_KINDS.map(k => {
+          const on = kindSel.has(k);
+          return (
+            <span key={k} style={S.chip(on)} onClick={() => toggleKind(k)}>
+              <GameIcon slug={KIND_ICON[k]} size={11} />
+              {KIND_LABEL[k]}
+              <span style={{ opacity: 0.6, fontSize: 9 }}>{counts[k] ?? 0}</span>
+            </span>
+          );
+        })}
+        {module && (
+          <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 4 }}>
+            · фильтр по модулю {module} — только ADR
+          </span>
+        )}
+      </div>
+      <div style={S.list}>
+        {loading && <div style={S.loading}>Загрузка событий…</div>}
+        {!loading && !items.length && <div style={S.empty}>Событий не найдено.</div>}
+        {items.map((item, i) => {
+          const isSprint  = item.kind === 'sprint';
+          const clickable = item.kind === 'adr' || item.kind === 'decision'
+            || (isSprint && !!onSelectSprint);
+          return (
+            <div
+              key={`${item.kind}-${item.ref_id}-${i}`}
+              style={{ ...S.item, cursor: clickable ? 'pointer' : 'default' }}
+              onClick={() => {
+                if (isSprint) onSelectSprint?.(item.ref_id);
+                else if (item.kind === 'adr' || item.kind === 'decision') onSelect(item.ref_id);
+              }}
+            >
+              <span style={S.date}>{item.date?.slice(0, 10)}</span>
+              <span style={S.icon}><GameIcon slug={KIND_ICON[item.kind]} size={14} /></span>
+              <span style={S.kind}>{item.kind}</span>
+              <span style={S.ref}>{item.ref_id}</span>
+              <span style={S.title}>{item.title}</span>
+              {item.status && <StatusChip status={item.status} />}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

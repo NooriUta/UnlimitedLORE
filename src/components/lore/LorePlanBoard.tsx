@@ -336,6 +336,7 @@ export default function LorePlanBoard({ onError }: Props) {
       const sprintRaw = item.represents_sprint
         ? statusBySprint.get(item.represents_sprint) : undefined;
       const effStatus = sprintRaw ? taskTick(sprintRaw).status : (item.status ?? 'todo');
+      if (effStatus === 'cancelled') continue;
       const isDone = effStatus === 'done';
       if (!showDone && isDone) continue;
       if (!showActive && !isDone) continue;
@@ -502,6 +503,7 @@ export default function LorePlanBoard({ onError }: Props) {
 
   const shownBars = items.filter(it => {
     if (it.week_start == null || it.week_end == null) return false;
+    if (effStatusOf(it) === 'cancelled') return false;
     if (cropPast && it.week_end < W_NOW) return false;
     const isStub = it.represents_sprint == null;
     if (!showStubs && isStub) return false;
@@ -659,23 +661,47 @@ export default function LorePlanBoard({ onError }: Props) {
               {(() => {
                 const cs = effStatusOf(sprintCard);
                 const m = statusMeta(cs);
+                const isCancelled = cs === 'cancelled';
                 return (
                   <div style={{ marginTop: 10 }}>
                     <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Статус</div>
-                    <button
-                      onClick={() => applyStatusCycle(sprintCard)}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '3px 8px', borderRadius: 3, cursor: 'pointer',
-                        fontSize: 11, fontWeight: 600,
-                        background: `color-mix(in srgb, ${m.color} 18%, transparent)`,
-                        color: m.color, border: `1px solid ${m.color}`,
-                      }}
-                    >
-                      <GameIcon slug={m.icon} size={12} style={{ color: 'inherit' }} />
-                      {cs}
-                      <span style={{ opacity: 0.7, fontSize: 9 }}>→ {cycleStatus(cs)}</span>
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => applyStatusCycle(sprintCard)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '3px 8px', borderRadius: 3, cursor: 'pointer',
+                          fontSize: 11, fontWeight: 600,
+                          background: `color-mix(in srgb, ${m.color} 18%, transparent)`,
+                          color: m.color, border: `1px solid ${m.color}`,
+                        }}
+                      >
+                        <GameIcon slug={m.icon} size={12} style={{ color: 'inherit' }} />
+                        {cs}
+                        <span style={{ opacity: 0.7, fontSize: 9 }}>→ {cycleStatus(cs)}</span>
+                      </button>
+                      {!sprintCard.represents_sprint && !isCancelled && (
+                        <button
+                          onClick={() => {
+                            const prev = sprintCard.status;
+                            setItems(p => p.map(it => it.item_id === sprintCard.item_id ? { ...it, status: 'cancelled' } : it));
+                            setSprintCard(p => p && p.item_id === sprintCard.item_id ? { ...p, status: 'cancelled' } : p);
+                            postLoreStatus('plan_item', sprintCard.item_id, 'cancelled').catch(err => {
+                              console.error('[lore cancel]', err);
+                              setItems(p => p.map(it => it.item_id === sprintCard.item_id ? { ...it, status: prev } : it));
+                              setSprintCard(p => p && p.item_id === sprintCard.item_id ? { ...p, status: prev } : p);
+                            });
+                          }}
+                          style={{
+                            fontSize: 10, padding: '2px 7px', borderRadius: 3, cursor: 'pointer',
+                            background: 'transparent', color: 'var(--danger)',
+                            border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
+                          }}
+                        >
+                          🚫 Отменить
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })()}

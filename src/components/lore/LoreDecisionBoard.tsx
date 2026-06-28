@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { fetchLoreSlice, type LoreDecisionRow, type LoreDecisionPassport } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
+import { MartProse } from '../bench/MartProse';
 
 interface Props {
   q: string;
@@ -130,11 +131,11 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
               {loadingDetail === d.decision_id && <span style={S.meta}>Загрузка…</span>}
               {det && (
                 <>
-                  {det.body_md && <pre style={S.bodyMd}>{det.body_md}</pre>}
+                  {det.body_md && <MartProse text={det.body_md} />}
                   {det.rationale_md && (
                     <div style={S.rationaleWrap}>
                       <span style={S.rationaleLabel}>Обоснование</span>
-                      <pre style={S.bodyMd}>{det.rationale_md}</pre>
+                      <MartProse text={det.rationale_md} />
                     </div>
                   )}
                   {hasLinks ? (

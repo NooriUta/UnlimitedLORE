@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
+import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
 import LoreTimeline        from '../components/lore/LoreTimeline';
 import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
@@ -8,6 +9,7 @@ import LoreAdrEditor       from '../components/lore/LoreAdrEditor';
 import LoreSprintTree, { STATUS_FILTERS, type DatePeriod, type SprintStats } from '../components/lore/LoreSprintTree';
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
+import LoreSpecView           from '../components/lore/LoreSpecView';
 import { ADR_STATUS_FILTERS } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
@@ -119,6 +121,7 @@ export default function LorePage() {
   const section   = (params.get('section') as Section) || 'plan';
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
+  const spec      = params.get('spec')      || '';
 
   const [debouncedQ, setDebouncedQ] = useState(q);
   useEffect(() => {
@@ -131,15 +134,40 @@ export default function LorePage() {
   const [search, setSearch] = useState(q);
   const [listSearch, setListSearch] = useState('');
   const [sprintQ, setSprintQ] = useState('');
-  const [sprintStatusSel, setSprintStatusSel] = useState<Set<string>>(new Set());
+  // LH-11: init sprint + ADR filters from URL params
+  const [sprintStatusSel, setSprintStatusSel] = useState<Set<string>>(() => {
+    const v = params.get('ss'); return v ? new Set(v.split(',').filter(Boolean)) : new Set();
+  });
   const [sprintCounts, setSprintCounts] = useState<Record<string, number>>({});
-  const [sprintNoRelease, setSprintNoRelease] = useState(false);
+  const [sprintNoRelease, setSprintNoRelease] = useState(() => params.get('snr') === '1');
   const [sprintDatePeriod, setSprintDatePeriod] = useState<DatePeriod>(null);
   const [sprintPriorityFilter, setSprintPriorityFilter] = useState<Set<string>>(new Set());
   const [sprintStats, setSprintStats] = useState<SprintStats>({ total: 0, done: 0, active: 0, p0Open: 0, noRelease: 0 });
   // ADR filters
-  const [adrStatusSel, setAdrStatusSel] = useState<Set<string>>(new Set());
+  const [adrStatusSel, setAdrStatusSel] = useState<Set<string>>(() => {
+    const v = params.get('as'); return v ? new Set(v.split(',').filter(Boolean)) : new Set();
+  });
   const [adrCounts, setAdrCounts]       = useState<Record<string, number>>({});
+
+  // LH-11: sync filter state → URL params (debounce-free, small payload)
+  useEffect(() => {
+    setParams(p => {
+      const ss = [...sprintStatusSel].join(',');
+      ss ? p.set('ss', ss) : p.delete('ss');
+      sprintNoRelease ? p.set('snr', '1') : p.delete('snr');
+      return p;
+    }, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sprintStatusSel, sprintNoRelease]);
+
+  useEffect(() => {
+    setParams(p => {
+      const as = [...adrStatusSel].join(',');
+      as ? p.set('as', as) : p.delete('as');
+      return p;
+    }, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adrStatusSel]);
   // Component filters
   const [compQ, setCompQ]               = useState('');
   const [compAreaSel, setCompAreaSel]   = useState<Set<string>>(new Set());
@@ -149,6 +177,18 @@ export default function LorePage() {
   const dragRef = useRef<{ x: number; w: number } | null>(null);
 
   const isMasterDetail = MASTER_DETAIL.includes(section);
+
+  // Sections where the global search bar is actually passed to children
+  const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
+  const showGlobalSearch = SEARCH_SECTIONS.includes(section);
+
+  // LH-26: seed local search fields from global q when switching sections (once, if empty)
+  useEffect(() => {
+    if (section === 'sprints'    && !sprintQ    && q) setSprintQ(q);
+    if (section === 'components' && !compQ      && q) setCompQ(q);
+    if (section === 'adrs'       && !listSearch && q) setListSearch(q);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section]);
 
   const sprintPresetWorking   = sprintStatusSel.has('in_progress') && sprintStatusSel.has('partial') && sprintStatusSel.size === 2 && !sprintNoRelease;
   const sprintPresetAttention = sprintStatusSel.has('in_progress') && sprintStatusSel.size === 1 && sprintNoRelease;
@@ -161,8 +201,10 @@ export default function LorePage() {
     return p;
   });
 
-  const selectItem    = (id: string) => setParams(p => { p.set('passport', id); return p; });
-  const clearItem     = ()           => setParams(p => { p.delete('passport'); return p; });
+  const selectItem    = (id: string) => setParams(p => { p.set('passport', id); p.delete('spec'); return p; });
+  const clearItem     = ()           => setParams(p => { p.delete('passport'); p.delete('spec'); return p; });
+  const openSpec      = (id: string) => setParams(p => { p.set('spec', id); p.delete('passport'); return p; });
+  const clearSpec     = ()           => setParams(p => { p.delete('spec'); return p; });
   const navigateToAdr    = (id: string) => setParams(p => { p.set('section', 'adrs');    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
 
@@ -245,17 +287,19 @@ export default function LorePage() {
 
   return (
     <div style={S.root}>
-      {/* ── Top search bar ─────────────────────────────────────────────────── */}
-      <div style={S.topBar}>
-        <span style={S.searchIcon}>🔍</span>
-        <input
-          style={S.searchInput}
-          placeholder="поиск по базе знаний…"
-          aria-label="поиск по базе знаний"
-          value={search}
-          onChange={e => onSearchChange(e.target.value)}
-        />
-      </div>
+      {/* ── Top search bar — only on sections that use global q ───────────── */}
+      {showGlobalSearch && (
+        <div style={S.topBar}>
+          <span style={S.searchIcon}>🔍</span>
+          <input
+            style={S.searchInput}
+            placeholder="поиск по базе знаний…"
+            aria-label="поиск по базе знаний"
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* ── Horizontal section nav ─────────────────────────────────────────── */}
       {sectionNav}
@@ -659,6 +703,7 @@ export default function LorePage() {
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
         <div style={S.content}>
+          <LoreErrorBoundary label={`Ошибка секции «${section}»`}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} />}
 
@@ -705,15 +750,24 @@ export default function LorePage() {
           )}
 
           {/* Components — master-detail: component list → component passport */}
-          {section === 'components' && passport && (
+          {section === 'components' && spec && (
+            <LoreSpecView
+              specId={spec}
+              onError={handleFetchError}
+              onBack={clearSpec}
+              onNavigateComponent={selectItem}
+            />
+          )}
+          {section === 'components' && !spec && passport && (
             <LoreComponentPassport
               componentId={passport}
               onError={handleFetchError}
               onNavigateAdr={navigateToAdr}
               onNavigateComponent={selectItem}
+              onOpenSpec={openSpec}
             />
           )}
-          {section === 'components' && !passport && (
+          {section === 'components' && !spec && !passport && (
             <div style={S.placeholder}>Выберите компонент из списка слева</div>
           )}
 
@@ -728,6 +782,7 @@ export default function LorePage() {
 
           {/* MCP API — published reference for the aida-lore MCP server */}
           {section === 'mcp' && <LoreMcpApiScreen />}
+          </LoreErrorBoundary>
         </div>
       </div>
     </div>

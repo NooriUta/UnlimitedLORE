@@ -134,18 +134,11 @@ export interface TestDetail {
   } | null;
 }
 
-const fixReportUrl = <T extends { reportUrl?: string }>(run: T): T =>
-  run.reportUrl ? { ...run, reportUrl: run.reportUrl.replace(/^\/api\//, '/tyr-api/') } : run;
-
 export const api = {
   health:   () => j<{ ok: boolean; version: string }>(fetch('/tyr-api/health')),
   tests:    (mode: EnvMode) => j<TestTree>(fetch(`/tyr-api/tests?mode=${mode}`)),
-  runs:     async () => {
-              const d = await j<{ runs: RunMeta[]; busy: boolean; pending: number }>(fetch('/tyr-api/runs'));
-              d.runs = d.runs.map(fixReportUrl);
-              return d;
-            },
-  run:      async (id: string) => fixReportUrl(await j<RunMeta>(fetch(`/tyr-api/runs/${id}`))),
+  runs:     () => j<{ runs: RunMeta[]; busy: boolean; pending: number }>(fetch('/tyr-api/runs')),
+  run:      (id: string) => j<RunMeta>(fetch(`/tyr-api/runs/${id}`)),
   log:      async (id: string) => (await fetch(`/tyr-api/runs/${id}/log`)).text(),
   start:    (body: { mode: EnvMode; filter: string; filterDescr: string; chunks?: string[] }) =>
             j<{ id: string; queued: number }>(

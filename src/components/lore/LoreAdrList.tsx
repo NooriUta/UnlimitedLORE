@@ -1,6 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
 
+type DatePreset = null | '3m' | '6m' | '1y';
+const DATE_PRESETS: { key: DatePreset; label: string }[] = [
+  { key: null, label: 'Все' },
+  { key: '3m', label: '3м' },
+  { key: '6m', label: '6м' },
+  { key: '1y', label: 'Год' },
+];
+function cutoffDate(preset: DatePreset): string | null {
+  if (!preset) return null;
+  const d = new Date();
+  if (preset === '3m') d.setMonth(d.getMonth() - 3);
+  else if (preset === '6m') d.setMonth(d.getMonth() - 6);
+  else d.setFullYear(d.getFullYear() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export const ADR_STATUS_FILTERS = [
   { key: 'PROPOSED',   label: 'Proposed',   color: 'var(--inf)' },
   { key: 'ACCEPTED',   label: 'Accepted',   color: 'var(--suc)' },
@@ -20,6 +36,13 @@ const S = {
     color: 'var(--acc)', border: '1px dashed color-mix(in srgb, var(--acc) 40%, transparent)',
     borderRadius: 5, cursor: 'pointer', fontSize: 11, fontWeight: 600,
   },
+  dateLine: { display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', flexShrink: 0 },
+  dateBtn: (on: boolean) => ({
+    padding: '2px 8px', borderRadius: 4, fontSize: 10, cursor: 'pointer',
+    border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
+    background: on ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
+    color: on ? 'var(--acc)' : 'var(--t3)',
+  }),
   list: { flex: 1, overflowY: 'auto' as const },
   row: {
     display: 'flex', flexDirection: 'column' as const, gap: 2,
@@ -68,8 +91,9 @@ interface Props {
 }
 
 export default function LoreAdrList({ module, q, statusSel, selectedId, onError, onOpen, onNew, onCounts }: Props) {
-  const [rows, setRows]       = useState<LoreAdrRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows]             = useState<LoreAdrRow[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [datePreset, setDatePreset] = useState<DatePreset>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -93,15 +117,24 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
   }, [rows, onCounts]);
 
   const shown = useMemo(() => {
-    const ql = q.trim().toLowerCase();
+    const ql     = q.trim().toLowerCase();
+    const cutoff = cutoffDate(datePreset);
     return rows
       .filter(r => statusSel.size === 0 || statusSel.has((r.status ?? 'PROPOSED').toUpperCase()))
+      .filter(r => !cutoff || (r.date_created ?? '') >= cutoff)
       .filter(r => !ql || r.adr_id.toLowerCase().includes(ql) || (r.name ?? '').toLowerCase().includes(ql));
-  }, [rows, q, [...statusSel].sort().join(',')]);
+  }, [rows, q, [...statusSel].sort().join(','), datePreset]);
 
   return (
     <div style={S.root}>
       <button style={S.newBtn} onClick={onNew}>+ Новый ADR</button>
+      <div style={S.dateLine}>
+        {DATE_PRESETS.map(p => (
+          <button key={String(p.key)} style={S.dateBtn(datePreset === p.key)} onClick={() => setDatePreset(p.key)}>
+            {p.label}
+          </button>
+        ))}
+      </div>
       <div style={S.list}>
         {loading && <div style={S.empty}>Загрузка ADR…</div>}
         {!loading && !shown.length && <div style={S.empty}>ADR не найдены.</div>}
