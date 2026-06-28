@@ -527,6 +527,35 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
 
       {sprint.name && <div style={S.sprintName}>{sprint.name}</div>}
 
+      {releases.length > 0 && (
+        <div style={S.prBar}>
+          <span style={S.prLabel}>Релиз</span>
+          {releases.map(v => (
+            <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={`Перейти к релизу ${v}`}>
+                {v}
+              </button>
+              <a
+                href={`${GH_REPO}/releases/tag/${v}`}
+                target="_blank" rel="noopener noreferrer"
+                style={S.ghLink} title={`GitHub Release ${v}`}
+              ><GhIcon /></a>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {prNums.length > 0 && (
+        <div style={S.prBar}>
+          <span style={S.prLabel}>PR</span>
+          {prNums.map(n => (
+            <a key={n} href={`${GH_REPO}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>
+              #{n}
+            </a>
+          ))}
+        </div>
+      )}
+
       {/* context_md — background / WHY section, editable inline */}
       <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -569,42 +598,13 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
           </div>
         ) : sprint.context_md ? (
           <div
-            style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.55 }}
+            style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }}
             dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }}
           />
         ) : (
           <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>Контекст не заполнен</div>
         )}
       </div>
-
-      {releases.length > 0 && (
-        <div style={S.prBar}>
-          <span style={S.prLabel}>Релиз</span>
-          {releases.map(v => (
-            <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={`Перейти к релизу ${v}`}>
-                {v}
-              </button>
-              <a
-                href={`${GH_REPO}/releases/tag/${v}`}
-                target="_blank" rel="noopener noreferrer"
-                style={S.ghLink} title={`GitHub Release ${v}`}
-              ><GhIcon /></a>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {prNums.length > 0 && (
-        <div style={S.prBar}>
-          <span style={S.prLabel}>PR</span>
-          {prNums.map(n => (
-            <a key={n} href={`${GH_REPO}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>
-              #{n}
-            </a>
-          ))}
-        </div>
-      )}
 
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {

@@ -59,7 +59,9 @@ public class AidaLoreResource {
         String context_md, String priority, String plan_id, Integer effort_days) {}
     public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
-        String component_id, String context_md, String decision_md, String consequences_md) {}
+        String component_id, String context_md, String decision_md, String consequences_md,
+        List<String> depends_on_ids, List<String> supersedes_ids,
+        List<String> component_ids, List<String> tags) {}
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
         String date_created, String refs_raw) {}
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md) {}
@@ -1103,24 +1105,149 @@ public class AidaLoreResource {
         if (!SAFE_ID.matcher(req.adr_id()).matches())
             return badParams("adr_id contains illegal characters");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "adr_id",           req.adr_id(),
-                "name",             req.name(),
-                "status",           req.status() != null ? req.status() : "PROPOSED",
-                "date_created",     req.date_created() != null ? req.date_created()
-                                        : java.time.LocalDate.now().toString(),
-                "component_id",     req.component_id(),
-                "context_md",       req.context_md(),
-                "decision_md",      req.decision_md(),
-                "consequences_md",  req.consequences_md());
+            String now  = Instant.now().toString();
+            String nsid = UUID.randomUUID().toString();
+
+            // Step 1: upsert KnowADR vertex (metadata only — body lives in the SCD2 hist row)
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowADR SET adr_id=:adr_id, name=:name, status=:status, " +
-                "date_created=:date_created, component_id=:component_id, " +
-                "context_md=:context_md, decision_md=:decision_md, " +
-                "consequences_md=:consequences_md UPSERT WHERE adr_id=:adr_id",
-                p)).await().indefinitely();
+                "date_created=:date_created, component_id=:component_id " +
+                "UPSERT WHERE adr_id=:adr_id",
+                mapOfNullable(
+                    "adr_id",       req.adr_id(),
+                    "name",         req.name(),
+                    "status",       req.status() != null ? req.status() : "PROPOSED",
+                    "date_created", req.date_created() != null ? req.date_created()
+                                        : java.time.LocalDate.now().toString(),
+                    "component_id", req.component_id())))
+                .await().indefinitely();
+
+            // Step 2: check for an existing open SCD2 hist row
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> histRows = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT @rid AS rid FROM KnowADRHist " +
+                    "WHERE in('HAS_STATE').adr_id[0] = :id AND valid_to IS NULL LIMIT 1",
+                    Map.of("id", req.adr_id())))
+                .await().indefinitely().result();
+
+            Map<String, Object> histP = mapOfNullable(
+                "ctx", req.context_md(),
+                "dec", req.decision_md(),
+                "con", req.consequences_md());
+
+            boolean histCreated;
+            if (histRows != null && !histRows.isEmpty()) {
+                // Step 3a: update body fields on the existing open hist row (re-create / re-call)
+                String histRid = String.valueOf(histRows.get(0).get("rid"));
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE " + histRid +
+                    " SET context_md=:ctx, decision_md=:dec, consequences_md=:con",
+                    histP)).await().indefinitely();
+                histCreated = false;
+            } else {
+                // Step 3b: create the initial open hist row + HAS_STATE edge
+                histP.put("nsid", nsid);
+                histP.put("now",  now);
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
+                    "context_md=:ctx, decision_md=:dec, consequences_md=:con",
+                    histP)).await().indefinitely();
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_STATE " +
+                    "FROM (SELECT FROM KnowADR     WHERE adr_id    = :id) " +
+                    "TO   (SELECT FROM KnowADRHist WHERE state_uid = :nsid)",
+                    Map.of("id", req.adr_id(), "nsid", nsid)))
+                    .await().indefinitely();
+                histCreated = true;
+            }
+
+            // Step 4: replace DEPENDS_ON edges
+            if (req.depends_on_ids() != null) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE EDGE DEPENDS_ON FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
+                    Map.of("id", req.adr_id()))).await().indefinitely();
+                for (String dep : req.depends_on_ids()) {
+                    if (dep == null || dep.isBlank()) continue;
+                    try {
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "CREATE EDGE DEPENDS_ON " +
+                            "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
+                            "TO   (SELECT FROM KnowADR WHERE adr_id = :dep)",
+                            Map.of("id", req.adr_id(), "dep", dep))).await().indefinitely();
+                    } catch (Exception ex) {
+                        LOG.warnf("[LORE ADR DEPENDS_ON] %s → %s: %s", req.adr_id(), dep, ex.getMessage());
+                    }
+                }
+            }
+
+            // Step 5: replace SUPERSEDES edges
+            if (req.supersedes_ids() != null) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE EDGE SUPERSEDES FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
+                    Map.of("id", req.adr_id()))).await().indefinitely();
+                for (String sup : req.supersedes_ids()) {
+                    if (sup == null || sup.isBlank()) continue;
+                    try {
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "CREATE EDGE SUPERSEDES " +
+                            "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
+                            "TO   (SELECT FROM KnowADR WHERE adr_id = :sup)",
+                            Map.of("id", req.adr_id(), "sup", sup))).await().indefinitely();
+                    } catch (Exception ex) {
+                        LOG.warnf("[LORE ADR SUPERSEDES] %s → %s: %s", req.adr_id(), sup, ex.getMessage());
+                    }
+                }
+            }
+
+            // Step 6: replace BELONGS_TO edges (component_ids wins over legacy single component_id)
+            List<String> compIds = (req.component_ids() != null && !req.component_ids().isEmpty())
+                ? req.component_ids()
+                : (req.component_id() != null && !req.component_id().isBlank()
+                    ? List.of(req.component_id()) : null);
+            if (compIds != null) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE EDGE BELONGS_TO FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
+                    Map.of("id", req.adr_id()))).await().indefinitely();
+                for (String cid : compIds) {
+                    if (cid == null || cid.isBlank()) continue;
+                    try {
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "CREATE EDGE BELONGS_TO " +
+                            "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
+                            "TO   (SELECT FROM LoreComponent WHERE component_id = :cid)",
+                            Map.of("id", req.adr_id(), "cid", cid))).await().indefinitely();
+                    } catch (Exception ex) {
+                        LOG.warnf("[LORE ADR BELONGS_TO] %s → %s: %s", req.adr_id(), cid, ex.getMessage());
+                    }
+                }
+            }
+
+            // Step 7: replace TAGGED_WITH edges (upsert KnowTag on the fly)
+            if (req.tags() != null) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE EDGE TAGGED_WITH FROM (SELECT FROM KnowADR WHERE adr_id = :id)",
+                    Map.of("id", req.adr_id()))).await().indefinitely();
+                for (String tag : req.tags()) {
+                    if (tag == null || tag.isBlank()) continue;
+                    try {
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "UPDATE KnowTag SET tag_id=:tag UPSERT WHERE tag_id=:tag",
+                            Map.of("tag", tag))).await().indefinitely();
+                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "CREATE EDGE TAGGED_WITH " +
+                            "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
+                            "TO   (SELECT FROM KnowTag WHERE tag_id = :tag)",
+                            Map.of("id", req.adr_id(), "tag", tag))).await().indefinitely();
+                    } catch (Exception ex) {
+                        LOG.warnf("[LORE ADR TAGGED_WITH] %s → %s: %s", req.adr_id(), tag, ex.getMessage());
+                    }
+                }
+            }
+
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("adr_id", req.adr_id());
+            out.put("hist_created", histCreated);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());

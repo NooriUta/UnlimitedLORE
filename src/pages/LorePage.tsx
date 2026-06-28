@@ -4,10 +4,11 @@ import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
 import LoreTimeline        from '../components/lore/LoreTimeline';
 import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
+import LoreAdrEditor       from '../components/lore/LoreAdrEditor';
 import LoreSprintTree, { STATUS_FILTERS, type DatePeriod, type SprintStats } from '../components/lore/LoreSprintTree';
-import LoreArtifactList    from '../components/lore/LoreArtifactList';
-import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
-import LoreSpecView        from '../components/lore/LoreSpecView';
+import LoreComponentList     from '../components/lore/LoreComponentList';
+import LoreComponentPassport from '../components/lore/LoreComponentPassport';
+import { ADR_STATUS_FILTERS } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
@@ -37,7 +38,7 @@ const SECTIONS: { id: Section; icon: string; label: string }[] = [
 ];
 
 // Sections that use master-detail layout (list panel + detail panel)
-const MASTER_DETAIL: Section[] = ['adrs', 'sprints'];
+const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components'];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const LIST_W_DEFAULT = 260;
@@ -118,8 +119,6 @@ export default function LorePage() {
   const section   = (params.get('section') as Section) || 'plan';
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
-  const kind      = params.get('kind')      || '';
-  const art       = params.get('art')       || '';
 
   const [loreDisabled, setLoreDisabled] = useState(false);
   const [loreUnreachable, setLoreUnreachable] = useState(false);
@@ -132,6 +131,13 @@ export default function LorePage() {
   const [sprintDatePeriod, setSprintDatePeriod] = useState<DatePeriod>(null);
   const [sprintPriorityFilter, setSprintPriorityFilter] = useState<Set<string>>(new Set());
   const [sprintStats, setSprintStats] = useState<SprintStats>({ total: 0, done: 0, active: 0, p0Open: 0, noRelease: 0 });
+  // ADR filters
+  const [adrStatusSel, setAdrStatusSel] = useState<Set<string>>(new Set());
+  const [adrCounts, setAdrCounts]       = useState<Record<string, number>>({});
+  // Component filters
+  const [compQ, setCompQ]               = useState('');
+  const [compAreaSel, setCompAreaSel]   = useState<Set<string>>(new Set());
+  const [compAreaCounts, setCompAreaCounts] = useState<Record<string, number>>({});
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [listW, setListW] = useState(LIST_W_DEFAULT);
   const dragRef = useRef<{ x: number; w: number } | null>(null);
@@ -176,6 +182,8 @@ export default function LorePage() {
       setSprintQ(''); setSprintStatusSel(new Set());
       setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set());
     }
+    if (section !== 'adrs')       { setAdrStatusSel(new Set()); }
+    if (section !== 'components') { setCompQ(''); setCompAreaSel(new Set()); }
   }, [section]);
 
   // Drag-resize list panel
@@ -385,6 +393,107 @@ export default function LorePage() {
         </div>
       )}
 
+      {/* ── ADR filter bar ──────────────────────────────────────────────────── */}
+      {section === 'adrs' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
+          padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+        }}>
+          {ADR_STATUS_FILTERS.map(f => {
+            const on  = adrStatusSel.has(f.key);
+            const cnt = adrCounts[f.key] ?? 0;
+            return (
+              <span key={f.key}
+                onClick={() => setAdrStatusSel(prev => {
+                  const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
+                })}
+                title={`${f.label}: ${cnt}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? f.color : 'var(--b3)'}`,
+                  background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
+                  color: on ? 'var(--t1)' : 'var(--t3)',
+                }}
+              >
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
+                {f.label}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+              </span>
+            );
+          })}
+          {adrStatusSel.size > 0 && (
+            <>
+              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+              <span
+                onClick={() => setAdrStatusSel(new Set())}
+                style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+                title="Сбросить фильтры"
+              >✕ сброс</span>
+            </>
+          )}
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+            {adrStatusSel.size === 0
+              ? `${Object.values(adrCounts).reduce((a, b) => a + b, 0)} ADR всего`
+              : `${ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0)} из ${Object.values(adrCounts).reduce((a, b) => a + b, 0)}`}
+          </span>
+        </div>
+      )}
+
+      {/* ── Component filter bar ─────────────────────────────────────────────── */}
+      {section === 'components' && Object.keys(compAreaCounts).length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
+          padding: '5px 12px', borderBottom: '1px solid var(--b2)', flexShrink: 0,
+        }}>
+          {Object.entries(compAreaCounts)
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+            .map(([area, cnt]) => {
+              const on = compAreaSel.has(area);
+              // Use the same color map as LoreComponentList
+              const AREA_COLOR: Record<string, string> = {
+                engine: '#e8923a', frontend: '#4a90d9', api: '#a974d6', data: '#3fb8a0',
+                platform: '#6b91c1', algorithm: '#e07a5f', security: '#E24B4A',
+                observability: '#ef9f27', infra: '#7c7c7c', service: '#4caf50', ai: '#9b59b6',
+              };
+              const color = AREA_COLOR[area] ?? 'var(--t3)';
+              return (
+                <span key={area}
+                  onClick={() => setCompAreaSel(prev => {
+                    const n = new Set(prev); n.has(area) ? n.delete(area) : n.add(area); return n;
+                  })}
+                  title={`${area}: ${cnt}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                    userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                    border: `1px solid ${on ? color : 'var(--b3)'}`,
+                    background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                    color: on ? 'var(--t1)' : 'var(--t3)',
+                  }}
+                >
+                  {area}
+                  <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                </span>
+              );
+            })}
+          {compAreaSel.size > 0 && (
+            <>
+              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+              <span
+                onClick={() => setCompAreaSel(new Set())}
+                style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+                title="Сбросить фильтр по area"
+              >✕ сброс</span>
+            </>
+          )}
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+            {Object.values(compAreaCounts).reduce((a, b) => a + b, 0)} компонентов
+          </span>
+        </div>
+      )}
+
       {/* ── Sprint stats row ─────────────────────────────────────────────────── */}
       {section === 'sprints' && sprintStats.total > 0 && (
         <div style={{
@@ -458,9 +567,12 @@ export default function LorePage() {
               <LoreAdrList
                 module=""
                 q={listSearch}
-                selectedId={passport}
+                statusSel={adrStatusSel}
+                selectedId={passport === '__new' ? undefined : passport}
                 onError={handleFetchError}
                 onOpen={selectItem}
+                onNew={() => selectItem('__new')}
+                onCounts={setAdrCounts}
               />
             )}
             {section === 'sprints' && (
@@ -502,6 +614,39 @@ export default function LorePage() {
                 />
               </>
             )}
+            {section === 'components' && (
+              <>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '0 10px', height: 30, flexShrink: 0,
+                  borderBottom: '1px solid var(--b2)',
+                }}>
+                  <span style={{ color: 'var(--t3)', fontSize: 12, flexShrink: 0 }}>🔍</span>
+                  <input
+                    style={{
+                      flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                      color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
+                    }}
+                    placeholder="компонент…"
+                    aria-label="поиск по компонентам"
+                    value={compQ}
+                    onChange={e => setCompQ(e.target.value)}
+                  />
+                  {compQ && (
+                    <span onClick={() => setCompQ('')}
+                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>✕</span>
+                  )}
+                </div>
+                <LoreComponentList
+                  q={compQ}
+                  areaSel={compAreaSel}
+                  selectedId={passport}
+                  onSelect={selectItem}
+                  onCounts={setCompAreaCounts}
+                  onError={handleFetchError}
+                />
+              </>
+            )}
           </div>
           <div
             className="lore-resize-handle"
@@ -515,8 +660,15 @@ export default function LorePage() {
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} />}
 
+          {/* ADR — new */}
+          {section === 'adrs' && passport === '__new' && (
+            <LoreAdrEditor
+              onSaved={id => navigateToAdr(id)}
+              onCancel={clearItem}
+            />
+          )}
           {/* ADR detail */}
-          {section === 'adrs' && passport && (
+          {section === 'adrs' && passport && passport !== '__new' && (
             <LoreAdrPassportView
               adrId={passport}
               onError={handleFetchError}
@@ -546,46 +698,17 @@ export default function LorePage() {
             <div style={S.placeholder}>Выберите спринт из списка слева</div>
           )}
 
-          {/* Components — unified artifact list (ADR / specs / runbooks / docs / QG) */}
-          {section === 'components' && (
-            <>
-              {/* List stays visible (master); detail opens beside it — like ADR */}
-              <div style={{ width: 400, flexShrink: 0, borderRight: '1px solid var(--b2)', display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' }}>
-                <LoreArtifactList
-                  selectedKind={kind}
-                  selectedId={art}
-                  onError={handleFetchError}
-                  onOpen={(k, id) => setParams(p => { p.set('kind', k); p.set('art', id); return p; })}
-                />
-              </div>
-              <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                {kind && art ? (
-                  kind === 'adr' ? (
-                    <LoreAdrPassportView
-                      adrId={art}
-                      onError={handleFetchError}
-                      onBack={() => setParams(p => { p.delete('kind'); p.delete('art'); return p; })}
-                      onNavigate={id => setParams(p => { p.set('kind', 'adr'); p.set('art', id); return p; })}
-                    />
-                  ) : kind === 'spec' ? (
-                    <LoreSpecView
-                      specId={art}
-                      onError={handleFetchError}
-                      onBack={() => setParams(p => { p.delete('kind'); p.delete('art'); return p; })}
-                    />
-                  ) : (
-                    <LoreArtifactDoc
-                      kind={kind as DocKind}
-                      id={art}
-                      onError={handleFetchError}
-                      onBack={() => setParams(p => { p.delete('kind'); p.delete('art'); return p; })}
-                    />
-                  )
-                ) : (
-                  <div style={S.placeholder}>Выберите артефакт из списка</div>
-                )}
-              </div>
-            </>
+          {/* Components — master-detail: component list → component passport */}
+          {section === 'components' && passport && (
+            <LoreComponentPassport
+              componentId={passport}
+              onError={handleFetchError}
+              onNavigateAdr={navigateToAdr}
+              onNavigateComponent={selectItem}
+            />
+          )}
+          {section === 'components' && !passport && (
+            <div style={S.placeholder}>Выберите компонент из списка слева</div>
           )}
 
           {/* Evolution */}

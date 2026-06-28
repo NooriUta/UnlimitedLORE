@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchLoreSlice, type LoreRelease } from '../../api/lore';
+import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 
 interface Props {
@@ -64,6 +64,7 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
   const [decisions,      setDecisions]      = useState<Record<string, DecisionRef[]>>({});
   const [sprintRefs,     setSprintRefs]     = useState<Record<string, SprintRef[]>>({});
   const [prRefs,         setPrRefs]         = useState<Record<string, PrRef[]>>({});
+  const [taskMap,        setTaskMap]        = useState<Record<string, Record<string, LoreSprintTask[]>>>({});
   const [loadingDetail,  setLoadingDetail]  = useState<string | null>(null);
   const [projectFilter,  setProjectFilter]  = useState<string>('all');
 
@@ -76,21 +77,33 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
     return () => ctrl.abort();
   }, [onError]);
 
-  function toggle(uid: string, tag: string, ruid: string) {
+  function toggle(uid: string, tag: string, _ruid: string) {
     if (expanded === uid) { setExpanded(null); return; }
     setExpanded(uid);
     if (decisions[uid]) return;
     setLoadingDetail(uid);
     Promise.all([
       fetchLoreSlice<DecisionRef>('release_decisions', { tag }),
-      fetchLoreSlice<SprintRef>('release_sprints', { ruid }),
-      fetchLoreSlice<PrRef>('release_prs', { ruid }),
+      fetchLoreSlice<SprintRef>('release_sprints_by_tag', { tag }),
+      fetchLoreSlice<PrRef>('release_prs_by_tag', { tag }),
     ])
       .then(([decs, sprints, prs]) => {
         setDecisions(prev => ({ ...prev, [uid]: decs }));
         setSprintRefs(prev => ({ ...prev, [uid]: sprints }));
         setPrRefs(prev => ({ ...prev, [uid]: prs }));
         setLoadingDetail(null);
+        // Fetch tasks for each sprint in parallel
+        if (sprints.length > 0) {
+          Promise.all(sprints.map(s =>
+            fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: s.sprint_id })
+              .then(tasks => ({ sid: s.sprint_id, tasks }))
+              .catch(() => ({ sid: s.sprint_id, tasks: [] as LoreSprintTask[] }))
+          )).then(results => {
+            const m: Record<string, LoreSprintTask[]> = {};
+            results.forEach(r => { m[r.sid] = r.tasks; });
+            setTaskMap(prev => ({ ...prev, [uid]: m }));
+          });
+        }
       })
       .catch(e => { onError(e); setLoadingDetail(null); });
   }
@@ -145,9 +158,10 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
               const tag    = r.git_tag ?? id;
               const ruid   = r.release_uid ?? `${r.git_project ?? 'NooriUta/AIDA'}#${id}`;
               const isOpen = expanded === uid;
-              const decs   = decisions[uid];
+              const decs    = decisions[uid];
               const sprints = sprintRefs[uid];
-              const prs    = prRefs[uid];
+              const prs     = prRefs[uid];
+              const tasks   = taskMap[uid];
               const type   = r.type as string | null;
               const gp     = r.git_project ?? 'NooriUta/AIDA';
               const ghUrl  = `https://github.com/${gp}/releases/tag/${tag}`;
@@ -178,25 +192,45 @@ export default function LoreReleasesBoard({ q, onError, onNavigateToSprint }: Pr
                     {r.description_md && <span style={S.desc}>{r.description_md.slice(0, 110)}</span>}
                     {isOpen && (
                       <div style={S.detail} onClick={e => e.stopPropagation()}>
-                        {loadingDetail === id && <span style={S.meta}>Загрузка…</span>}
+                        {loadingDetail === uid && <span style={S.meta}>Загрузка…</span>}
 
-                        {/* Sprints */}
+                        {/* Sprints + Tasks */}
                         {sprints && sprints.length > 0 && (
                           <>
-                            <span style={S.refLabel}>Спринты</span>
-                            {sprints.map(s => (
-                              <div
-                                key={s.sprint_id}
-                                style={S.sprintRef}
-                                onClick={() => onNavigateToSprint(s.sprint_id)}
-                                title={`Открыть спринт ${s.sprint_id}`}
-                              >
-                                <span style={S.sprintId}>{s.sprint_id}</span>
-                                {s.name && s.name !== s.sprint_id && (
-                                  <span style={S.sprintName}>{s.name}</span>
-                                )}
-                              </div>
-                            ))}
+                            <span style={S.refLabel}>Спринты ({sprints.length})</span>
+                            {sprints.map(s => {
+                              const sTasks = tasks?.[s.sprint_id];
+                              return (
+                                <div key={s.sprint_id} style={S.sprintBlock}>
+                                  <div
+                                    style={S.sprintRef}
+                                    onClick={() => onNavigateToSprint(s.sprint_id)}
+                                    title={`Открыть спринт ${s.sprint_id}`}
+                                  >
+                                    <span style={S.sprintId}>{s.sprint_id}</span>
+                                    {s.name && s.name !== s.sprint_id && (
+                                      <span style={S.sprintName}>{s.name}</span>
+                                    )}
+                                    {s.status_raw && <StatusChip status={s.status_raw} />}
+                                    {sTasks && <span style={S.taskCount}>{sTasks.length} tasks</span>}
+                                  </div>
+                                  {sTasks && sTasks.length > 0 && (
+                                    <div style={S.taskList}>
+                                      {sTasks.map(t => {
+                                        const done = (t.status_raw ?? '').includes('DONE') || (t.status_raw ?? '').includes('✅');
+                                        return (
+                                          <div key={t.task_uid} style={S.taskRow}>
+                                            <span style={S.taskDot(done)} />
+                                            <span style={S.taskId}>{t.task_id}</span>
+                                            <span style={{ ...S.taskTitle, opacity: done ? 0.5 : 1 }}>{t.title}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </>
                         )}
 
@@ -364,6 +398,7 @@ const S = {
     textTransform: 'uppercase' as const, letterSpacing: '0.08em',
     display: 'block', marginBottom: 4,
   },
+  sprintBlock: { marginBottom: 4 },
   sprintRef: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '3px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)',
@@ -374,6 +409,24 @@ const S = {
     fontWeight: 700, flexShrink: 0,
   },
   sprintName: { fontSize: 11, color: 'var(--t2)', flex: 1 },
+  taskCount: {
+    fontSize: 9, padding: '1px 4px', borderRadius: 2, flexShrink: 0,
+    background: 'color-mix(in srgb, var(--acc) 8%, transparent)',
+    color: 'var(--t3)', border: '1px solid color-mix(in srgb, var(--acc) 18%, transparent)',
+  },
+  taskList: {
+    paddingLeft: 16, paddingBottom: 4,
+    borderLeft: '2px solid color-mix(in srgb, var(--acc) 18%, transparent)',
+    marginLeft: 4, marginTop: 2,
+  },
+  taskRow: { display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0' },
+  taskDot: (done: boolean) => ({
+    width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
+    background: done ? 'var(--suc)' : 'var(--acc)',
+    opacity: done ? 0.5 : 1,
+  }),
+  taskId: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)', flexShrink: 0 },
+  taskTitle: { fontSize: 10, color: 'var(--t2)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   decisionRef: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '3px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)',

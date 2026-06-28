@@ -14,19 +14,72 @@ interface ToolDoc {
 }
 
 const TOOLS: ToolDoc[] = [
+  // ── Read ──────────────────────────────────────────────────────────────────
   { name: 'lore_list_slices', kind: 'read', backend: 'GET /lore/slices', params: '—',
-    desc: 'Каталог из ~43 именованных слайсов с их обязательными/опциональными параметрами. Вызывать первым, чтобы узнать, что можно запросить (план, спринты, ADR, решения, релизы, компоненты, спеки, доки, находки…).' },
+    desc: 'Каталог именованных слайсов с их обязательными/опциональными параметрами. Вызывать первым.' },
   { name: 'lore_query_slice', kind: 'read', backend: 'GET /lore/slice/{slice}', params: 'slice, params?',
-    desc: 'Выполнить один слайс и получить rows[]. params — map строк: напр. {"id":"ADR-FE-001"} для слайса adr, {"sprint_id":"SPRINT_X"} для tasks_of_sprint, {"status":"✅%"} для sprints. SQL и whitelisting — на бэкенде; агент шлёт только имя слайса + параметры.' },
+    desc: 'Выполнить слайс и получить rows[]. params — map строк: {"id":"ADR-FE-001"}, {"sprint_id":"SPRINT_X"} и т.п. SQL и whitelisting на бэкенде.' },
+
+  // ── Sprint ─────────────────────────────────────────────────────────────────
+  { name: 'lore_create_sprint', kind: 'write', backend: 'POST /lore/sprint/create',
+    params: 'sprint_id, name, status?, item_id?, plan_id?, priority?, outcome_md?, context_md?',
+    desc: 'Создать KnowSprint напрямую (без plan-item). Идемпотентен (upsert by sprint_id). Сеет начальную HAS_STATE hist-строку.' },
+  { name: 'lore_register_sprint', kind: 'write', backend: 'POST /lore/sprint',
+    params: 'item_id, sprint_id?, name?, status?',
+    desc: 'Зарегистрировать реальный спринт для placeholder plan-item: создаёт KnowSprint, линкует REPRESENTS. Используй, когда plan-item уже есть.' },
+  { name: 'lore_update_sprint', kind: 'write', backend: 'POST /lore/sprint/update',
+    params: 'sprint_id, name?, outcome_md?, context_md?, priority?, plan_id?, effort_days?',
+    desc: 'Partial-update метаданных KnowSprint. Не меняет статус (для статуса — lore_set_status). Всегда заполнять context_md, если известен контекст.' },
+  { name: 'lore_link_sprint_project', kind: 'write', backend: 'POST /lore/sprint/project',
+    params: 'sprint_id, git_project, action?',
+    desc: 'Добавить/убрать BELONGS_TO_PROJECT edge (KnowSprint → KnowGitProject). action = add | remove.' },
+  { name: 'lore_update_sprint_refs', kind: 'write', backend: 'POST /lore/sprint/refs',
+    params: 'sprint_id, pr_numbers, git_project?',
+    desc: 'Добавить PR-ссылки в pr_refs открытой KnowSprintHist строки. Пропускает уже присутствующие. Возвращает updated pr_refs.' },
+
+  // ── Status ─────────────────────────────────────────────────────────────────
   { name: 'lore_set_status', kind: 'write', backend: 'POST /lore/status',
     params: 'entity_type, id, status',
-    desc: 'Сменить статус сущности, версионно (SCD2: прошлая запись закрывается valid_to=now, пишется новая — история сохраняется, работает time-travel плана). entity_type → какой id передавать: plan_item → item_id, sprint → sprint_id, task → task_uid, checkpoint (пока 501, не реализован). status ∈ todo|active|partial|done|blocked|high|cancelled. Для sprint/task пишется канонический status_raw (✅ DONE / 🟡 PARTIAL / …), который сразу отражается цветом бара на плане. Требует X-Seer-Role: admin.' },
+    desc: 'Сменить статус (SCD2: закрыть старую hist-строку valid_to=now, открыть новую). entity_type: plan_item|sprint|task. status ∈ todo|active|partial|done|blocked|high|cancelled.' },
+  { name: 'lore_batch_set_status', kind: 'write', backend: 'POST /lore/status/batch',
+    params: 'entity_type, ids[], status',
+    desc: 'Массово сменить статус: каждый id проходит полный SCD2-переход. Ошибки per-item, не прерывают остальных. Возвращает {ok, updated, errors[]}.' },
+
+  // ── Task ───────────────────────────────────────────────────────────────────
   { name: 'lore_create_task', kind: 'write', backend: 'POST /lore/task',
     params: 'sprint_id, task_id, title, note_md?',
-    desc: 'Завести новую задачу в спринте: sprint_id — в какой, task_id — код задачи (напр. LAL-23a), title — заголовок, note_md — опц. заметка в Markdown. Требует admin.' },
+    desc: 'Создать задачу в спринте (order_index = max+1, начальный статус PLANNED с HAS_STATE hist-строкой).' },
   { name: 'lore_edit_task', kind: 'write', backend: 'POST /lore/task/edit',
-    params: 'task_uid, title, note_md?',
-    desc: 'Изменить заголовок/заметку существующей задачи по её task_uid (внутренний uid, не task_id — берётся из слайса tasks_of_sprint). Требует admin.' },
+    params: 'task_uid | tasks[]',
+    desc: 'Изменить заголовок/заметку задачи. Одиночный режим: task_uid + title. Batch-режим: tasks=[{task_uid, title, note_md?}].' },
+
+  // ── ADR / Decision ─────────────────────────────────────────────────────────
+  { name: 'lore_create_adr', kind: 'write', backend: 'POST /lore/adr',
+    params: 'adr_id, name, status?, date_created?, component_id?, context_md?, decision_md?, consequences_md?',
+    desc: 'Создать/обновить KnowADR (upsert by adr_id). Создаёт полную SCD2-структуру: вершина KnowADR + открытая KnowADRHist (valid_to=null) с context_md / decision_md / consequences_md + HAS_STATE edge. При повторном вызове обновляет тело открытой hist-строки.' },
+  { name: 'lore_create_decision', kind: 'write', backend: 'POST /lore/decision',
+    params: 'decision_id, title, body_md?, date_created?, refs_raw?',
+    desc: 'Создать/обновить KnowDecision (upsert by decision_id). Для записи ключевых решений, принятых в ходе спринта или дизайн-сессии.' },
+
+  // ── Release ────────────────────────────────────────────────────────────────
+  { name: 'lore_create_release', kind: 'write', backend: 'POST /lore/release',
+    params: 'release_id, release_date?, git_tag?, type?, description_md?, is_current?, week?, git_project?',
+    desc: 'Создать KnowRelease. is_current=true автоматически сбрасывает флаг у предыдущего текущего релиза. Сеет KnowReleaseHist + HAS_STATE edge.' },
+  { name: 'lore_update_release', kind: 'write', backend: 'POST /lore/release/update',
+    params: 'release_id, git_tag?, release_date?, description_md?, is_current?, git_project?',
+    desc: 'Partial-update существующего KnowRelease (только переданные поля). Удобно для добавления description_md / git_tag после выпуска.' },
+  { name: 'lore_link_release', kind: 'write', backend: 'POST /lore/release/link',
+    params: 'release_id, sprint_ids[], git_project',
+    desc: 'Прикрепить спринты к релизу (IMPLEMENTED_IN_RELEASE edges). Использовать, когда спринт завершён и вошёл в релиз.' },
+  { name: 'lore_link_release_pr', kind: 'write', backend: 'POST /lore/release/link',
+    params: 'release_id, pr_numbers[], git_project',
+    desc: 'Прикрепить PR к релизу (SHIPPED_IN edges, upsert KnowPR). Всегда передавать git_project для multi-repo корректности.' },
+  { name: 'lore_unlink_release', kind: 'write', backend: 'POST /lore/release/unlink',
+    params: 'release_id, git_project, sprint_ids?, pr_numbers?',
+    desc: 'Удалить IMPLEMENTED_IN_RELEASE или SHIPPED_IN edges. Для исправления случайных двойных линков.' },
+  { name: 'lore_move_to_project', kind: 'write', backend: 'POST /lore/project/move',
+    params: 'entity_type, id, git_project',
+    desc: 'Исправить git_project у PR или Release: перевешивает BELONGS_TO_PROJECT edge, обновляет pr_uid / release_uid. entity_type = pr | release.' },
 ];
 
 const ENV_ROWS: [string, string, string][] = [
@@ -97,7 +150,7 @@ export default function LoreMcpApiScreen() {
         </div>
 
         {/* ── Tools ──────────────────────────────────────────────────────────── */}
-        <Section title="Инструменты (5)">
+        <Section title={`Инструменты (${TOOLS.length})`}>
           <div style={S.tableWrap}>
             <table style={S.table}>
               <thead>
@@ -122,6 +175,9 @@ export default function LoreMcpApiScreen() {
             Write-инструменты идут с заголовком <code style={S.code}>X-Seer-Role: admin</code>,
             версионны (SCD2 — история не теряется) и мутируют общую{' '}
             <code style={S.code}>system_aida_lore</code> — применять осознанно.
+            <code style={S.code}>lore_create_adr</code> создаёт полную SCD2-структуру:
+            вершина + KnowADRHist (valid_to=null) + HAS_STATE edge — тело ADR читается
+            именно из hist-строки.{' '}
             Из набора пока не реализован только <code style={S.code}>checkpoint</code> (бэкенд → 501).
             Инструменты по <b>Исследованиям</b> (витрина RAGVSDL) — на отдельной странице
             «MCP API» в разделе «Исследования» (<code style={S.code}>/benchmark?tab=mcp</code>).

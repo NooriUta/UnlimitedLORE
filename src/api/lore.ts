@@ -81,12 +81,16 @@ export interface LoreTimelineItem {
 
 export interface LoreAdrRow {
   adr_id: string;
+  name: string | null;
+  status: string | null;
   date_created: string | null;
   component: string | null;
 }
 
 export interface LoreAdrPassport {
   adr_id: string;
+  name: string | null;
+  status: string | null;
   file_path: string | null;
   date_created: string | null;
   components: string[] | null;
@@ -99,6 +103,31 @@ export interface LoreAdrPassport {
   release_ids: string[] | null;
   supersedes_ids: string[] | null;
   tags: string[] | null;
+}
+
+export interface AdrWritePayload {
+  adr_id: string;
+  name: string;
+  status?: string;
+  date_created?: string;
+  context_md?: string;
+  decision_md?: string;
+  consequences_md?: string;
+  depends_on_ids?: string[];
+  supersedes_ids?: string[];
+  component_ids?: string[];
+  tags?: string[];
+}
+
+export async function createLoreAdr(payload: AdrWritePayload): Promise<{ ok: boolean; adr_id: string; hist_created: boolean }> {
+  const res = await fetch(`${LORE_BASE}/adr`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(payload),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; adr_id: string; hist_created: boolean }>;
 }
 
 export interface LoreDecisionRow {
@@ -171,8 +200,10 @@ export interface LoreComponent {
 }
 
 export interface LoreComponentDetail extends LoreComponent {
+  sub_components: string[] | null;
   adrs: string[] | null;
   specs: string[] | null;
+  spec_docs: string[] | null;
 }
 
 export interface LoreSpecRow {

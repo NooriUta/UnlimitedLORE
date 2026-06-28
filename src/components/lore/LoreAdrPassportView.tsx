@@ -1,16 +1,35 @@
 import { useEffect, useState } from 'react';
 import { fetchLoreSlice, type LoreAdrPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
+import LoreAdrEditor from './LoreAdrEditor';
+
+const STATUS_COLOR: Record<string, string> = {
+  PROPOSED:   'var(--inf)',
+  ACCEPTED:   'var(--suc)',
+  DEPRECATED: 'var(--wrn)',
+  SUPERSEDED: 'var(--t3)',
+};
 
 const S = {
   root:    { flex: 1, overflowY: 'auto' as const, padding: '12px 20px' },
+  topBar:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   back: {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--acc)', fontSize: 12, padding: '0 0 12px',
-    display: 'block',
+    color: 'var(--acc)', fontSize: 12, padding: 0,
+  },
+  editBtn: {
+    background: 'none', border: '1px solid var(--b3)', cursor: 'pointer',
+    color: 'var(--t2)', fontSize: 11, padding: '2px 10px', borderRadius: 4,
   },
   header:  { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' as const },
   id:      { fontSize: 15, fontWeight: 600, color: 'var(--t1)' },
+  name:    { fontSize: 13, color: 'var(--t2)', flex: 1 },
+  statusChip: (status: string) => ({
+    padding: '2px 7px', borderRadius: 3, fontSize: 10, whiteSpace: 'nowrap' as const,
+    color: STATUS_COLOR[status] ?? 'var(--t3)',
+    background: `color-mix(in srgb, ${STATUS_COLOR[status] ?? 'var(--t3)'} 14%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${STATUS_COLOR[status] ?? 'var(--t3)'} 30%, transparent)`,
+  }),
   section: { marginTop: 16 },
   sLabel:  { fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase' as const, marginBottom: 4 },
   chips:   { display: 'flex', flexWrap: 'wrap' as const, gap: 4 },
@@ -40,38 +59,66 @@ interface Props {
 export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate }: Props) {
   const [data, setData]       = useState<LoreAdrPassport | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [reload, setReload]   = useState(0);
 
   useEffect(() => {
     setLoading(true);
+    setEditing(false);
     const ctrl = new AbortController();
     fetchLoreSlice<LoreAdrPassport>('adr', { id: adrId }, ctrl.signal)
       .then(rows => { setData(rows[0] ?? null); setLoading(false); })
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
-  }, [adrId, onError]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adrId, reload]);
 
-  if (loading) return <div style={S.empty}>Loading {adrId}…</div>;
-  if (!data)   return <div style={S.empty}>ADR not found: {adrId}</div>;
+  if (loading) return <div style={S.empty}>Загрузка {adrId}…</div>;
+  if (!data)   return <div style={S.empty}>ADR не найден: {adrId}</div>;
 
-  const components   = data.components   ?? [];
-  const dependsOn    = data.depends_on_ids    ?? [];
-  const supersedes   = data.supersedes_ids    ?? [];
+  if (editing) {
+    return (
+      <LoreAdrEditor
+        lockId
+        initial={{
+          adr_id:          data.adr_id,
+          name:            data.name            ?? '',
+          status:          (data.status?.toUpperCase()) ?? 'PROPOSED',
+          date_created:    data.date_created    ?? '',
+          context_md:      data.context_md      ?? '',
+          decision_md:     data.decision_md     ?? '',
+          consequences_md: data.consequences_md ?? '',
+          depends_on_ids:  data.depends_on_ids  ?? [],
+          supersedes_ids:  data.supersedes_ids  ?? [],
+          component_ids:   data.components      ?? [],
+          tags:            data.tags            ?? [],
+        }}
+        onSaved={() => { setEditing(false); setReload(r => r + 1); }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+
+  const components    = data.components        ?? [];
+  const dependsOn     = data.depends_on_ids    ?? [];
+  const supersedes    = data.supersedes_ids    ?? [];
   const implementedIn = data.implemented_in_ids ?? [];
-  const releasedIn   = data.release_ids   ?? [];
-  const tags         = data.tags          ?? [];
+  const releasedIn    = data.release_ids        ?? [];
+  const tags          = data.tags              ?? [];
 
   return (
     <div style={S.root}>
-      <button style={S.back} onClick={onBack}>← К списку</button>
+      <div style={S.topBar}>
+        <button style={S.back} onClick={onBack}>← К списку</button>
+        <button style={S.editBtn} onClick={() => setEditing(true)}>✎ Редактировать</button>
+      </div>
 
       <div style={S.header}>
         <span style={S.id}>{data.adr_id}</span>
-        {components.map(c => (
-          <span key={c} style={S.compChip}>{c}</span>
-        ))}
-        {data.date_created && (
-          <span style={S.date}>{data.date_created.slice(0, 10)}</span>
-        )}
+        {data.status && <span style={S.statusChip(data.status.toUpperCase())}>{data.status.toUpperCase()}</span>}
+        {data.name && <span style={S.name}>{data.name}</span>}
+        {components.map(c => <span key={c} style={S.compChip}>{c}</span>)}
+        {data.date_created && <span style={S.date}>{data.date_created.slice(0, 10)}</span>}
       </div>
 
       {data.context_md && (
@@ -117,9 +164,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
         <div style={S.section}>
           <div style={S.sLabel}>Implemented in sprint</div>
           <div style={S.chips}>
-            {implementedIn.map(id => (
-              <span key={id} style={S.chip(false)}>{id}</span>
-            ))}
+            {implementedIn.map(id => <span key={id} style={S.chip(false)}>{id}</span>)}
           </div>
         </div>
       )}
@@ -127,9 +172,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
         <div style={S.section}>
           <div style={S.sLabel}>Released in</div>
           <div style={S.chips}>
-            {releasedIn.map(id => (
-              <span key={id} style={S.chip(false)}>{id}</span>
-            ))}
+            {releasedIn.map(id => <span key={id} style={S.chip(false)}>{id}</span>)}
           </div>
         </div>
       )}

@@ -26,8 +26,8 @@ public final class LoreSlices {
 
     public record Composed(String sql, Map<String, Object> params) {}
 
-    /** Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards. */
-    static final Pattern VALUE_RE = Pattern.compile("[\\w@.,:+\\-/ %]{1,160}");
+    /** Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards, release_uid (contains #). */
+    static final Pattern VALUE_RE = Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}");
 
     private static final Map<String, SliceDef> SLICES = new LinkedHashMap<>();
 
@@ -69,7 +69,7 @@ public final class LoreSlices {
 
         // ── §2 ADRs ──────────────────────────────────────────────────────────
         slice("adrs",
-            "SELECT adr_id, date_created, " +
+            "SELECT adr_id, name, status, date_created, " +
             "out('BELONGS_TO').component_id[0] AS component " +
             "FROM KnowADR",
             List.of(),
@@ -79,7 +79,7 @@ public final class LoreSlices {
 
         // ADR passport — full context with traversals
         slice("adr",
-            "SELECT adr_id, file_path, date_created, " +
+            "SELECT adr_id, name, status, file_path, date_created, " +
             "out('HAS_STATE').context_md[0]      AS context_md, " +
             "out('HAS_STATE').decision_md[0]     AS decision_md, " +
             "out('HAS_STATE').consequences_md[0] AS consequences_md, " +
@@ -251,10 +251,11 @@ public final class LoreSlices {
 
         slice("component",
             "SELECT component_id, full_name, area, parent_id, game_icon, " +
-            "in('PARENT_OF').component_id  AS children, " +
+            "out('PARENT_OF').component_id  AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
             "in('BELONGS_TO').adr_id        AS adrs, " +
-            "in('BELONGS_TO').spec_id       AS specs " +
+            "in('BELONGS_TO').spec_id       AS specs, " +
+            "out('DOCUMENTED_IN').spec_id   AS spec_docs " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 
