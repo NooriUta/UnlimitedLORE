@@ -73,22 +73,26 @@ public class AidaLoreResource {
     private static final Set<String> ENTITY_TYPES =
         Set.of("plan_item", "sprint", "task", "checkpoint", "adr");
     private static final Set<String> PLAN_STATUSES =
-        Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled");
+        Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled",
+               "planned", "backlog", "design", "ready_for_deploy");
     private static final Set<String> ADR_STATUSES =
         Set.of("proposed", "accepted", "draft", "deferred", "superseded");
 
     // Canonical status token → status_raw string written on KnowSprintHist / KnowTaskHist.
     // Mirrors the leading-marker convention the frontend normalizer (LoreSprintDetail) reads back.
     // 🟡 PARTIAL is a distinct status from 🔄 IN PROGRESS — see lore-status.ts taskTick.
-    private static final Map<String, String> SCD2_STATUS_RAW = Map.of(
-        "done",             "✅ DONE",
-        "active",           "🔄 IN PROGRESS",
-        "partial",          "🟡 PARTIAL",
-        "todo",             "📋 PLANNED",
-        "blocked",          "🔴 BLOCKED",
-        "high",             "🔴 P0",
-        "cancelled",        "🚫 CANCELLED",
-        "ready_for_deploy", "🚀 READY FOR DEPLOY");
+    private static final Map<String, String> SCD2_STATUS_RAW = Map.ofEntries(
+        Map.entry("done",             "✅ DONE"),
+        Map.entry("active",           "🔄 IN PROGRESS"),
+        Map.entry("partial",          "🟡 PARTIAL"),
+        Map.entry("todo",             "⬜ TODO"),
+        Map.entry("planned",          "📋 PLANNED"),
+        Map.entry("blocked",          "🔴 BLOCKED"),
+        Map.entry("high",             "🔴 P0"),
+        Map.entry("cancelled",        "🚫 CANCELLED"),
+        Map.entry("ready_for_deploy", "🚀 READY FOR DEPLOY"),
+        Map.entry("backlog",          "🟣 BACKLOG"),
+        Map.entry("design",           "🔬 DESIGN"));
 
     @ConfigProperty(name = "lore.enabled", defaultValue = "false")
     boolean enabled;
