@@ -198,6 +198,46 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON QualityGate  (qg_id)       UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON QGMetric     (metric_id)   UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDoc      (doc_id)      UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowDocHist  (valid_to)"
+        "CREATE INDEX IF NOT EXISTS ON KnowDocHist  (valid_to)",
+
+        // ── Phase 6 (v1.3): ClRoutine* — routine run outputs stored in LORE ──
+        // ArcadeDB DDL: CREATE VERTEX/EDGE TYPE (no EXTENDS V/E via SQL),
+        // properties via CREATE PROPERTY <Type>.<prop> <TYPE>
+        "CREATE VERTEX TYPE ClRoutineRun        IF NOT EXISTS",
+        "CREATE PROPERTY ClRoutineRun.routine_name     IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineRun.run_date         IF NOT EXISTS DATE",
+        "CREATE PROPERTY ClRoutineRun.run_ts           IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY ClRoutineRun.status           IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineRun.flags            IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineRun.detail_md        IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineRun.gates_failed_ids IF NOT EXISTS STRING",
+
+        "CREATE VERTEX TYPE ClRoutineMetric     IF NOT EXISTS",
+        "CREATE PROPERTY ClRoutineMetric.routine_name  IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineMetric.run_date      IF NOT EXISTS DATE",
+        "CREATE PROPERTY ClRoutineMetric.metric_key    IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineMetric.value         IF NOT EXISTS DOUBLE",
+        "CREATE PROPERTY ClRoutineMetric.unit          IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineMetric.target        IF NOT EXISTS DOUBLE",
+        "CREATE PROPERTY ClRoutineMetric.status        IF NOT EXISTS STRING",
+
+        "CREATE VERTEX TYPE ClRoutineSprintFlag IF NOT EXISTS",
+        "CREATE PROPERTY ClRoutineSprintFlag.routine_name IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineSprintFlag.run_date     IF NOT EXISTS DATE",
+        "CREATE PROPERTY ClRoutineSprintFlag.sprint_id    IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineSprintFlag.flag         IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineSprintFlag.lore_status  IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineSprintFlag.git_status   IF NOT EXISTS STRING",
+
+        "CREATE VERTEX TYPE ClRoutineOutput     IF NOT EXISTS",
+        "CREATE PROPERTY ClRoutineOutput.routine_name  IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineOutput.run_date      IF NOT EXISTS DATE",
+        "CREATE PROPERTY ClRoutineOutput.output_type   IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineOutput.title         IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineOutput.content_md    IF NOT EXISTS STRING",
+
+        "CREATE EDGE TYPE ClRoutineHasOutput    IF NOT EXISTS",
+
+        "CREATE INDEX IF NOT EXISTS ON ClRoutineOutput(routine_name, run_date, output_type) UNIQUE"
     );
 }

@@ -428,6 +428,32 @@ public final class LoreSlices {
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag ORDER BY pr_number",
             List.of("tag"), Map.of(), " LIMIT 100");
+
+        // ── §13 ClRoutine* slices (Phase 6 v1.3) ─────────────────────────────
+        slice("routine_latest",
+            "SELECT metric_key, value, unit, status, run_date " +
+            "FROM ClRoutineMetric WHERE routine_name = :routine_name " +
+            "AND run_date = (SELECT max(run_date) FROM ClRoutineMetric " +
+            "WHERE routine_name = :routine_name) ORDER BY metric_key LIMIT 50",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_last_run",
+            "SELECT routine_name, run_date, status, flags, detail_md, gates_failed_ids " +
+            "FROM ClRoutineRun WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC LIMIT 1",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_outputs",
+            "SELECT output_type, title, run_date " +
+            "FROM ClRoutineOutput WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC LIMIT 50",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_output_by_type",
+            "SELECT output_type, title, run_date, content_md " +
+            "FROM ClRoutineOutput WHERE routine_name = :routine_name " +
+            "AND output_type = :output_type ORDER BY run_date DESC LIMIT 1",
+            List.of("routine_name", "output_type"), Map.of(), "");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }
