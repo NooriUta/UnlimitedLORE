@@ -125,6 +125,7 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
             "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
+            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id, " +
             "context_md " +
             "FROM KnowSprint",
             List.of(),
@@ -138,8 +139,23 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
             "out('CONTRIBUTES_TO').milestone_id AS milestone_ids, " +
-            "out('DEPENDS_ON').sprint_id AS depends_on, " +
-            "out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "out('DEPENDS_ON').sprint_id   AS depends_on, " +
+            "in('DEPENDS_ON').sprint_id    AS blocks, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id " +
+            "FROM KnowSprint WHERE sprint_id = :id",
+            List.of("id"), Map.of(), "");
+
+        // Sprint dependency graph — all DEPENDS_ON edges with metadata
+        slice("sprint_deps",
+            "SELECT @out.sprint_id AS from_sprint, @in.sprint_id AS to_sprint, kind, reason " +
+            "FROM DEPENDS_ON WHERE @out.sprint_id IS NOT NULL",
+            List.of(), Map.of(), "");
+
+        // Focused dep view for a single sprint (depends_on + blocks)
+        slice("sprint_deps_of",
+            "SELECT out('DEPENDS_ON').sprint_id AS depends_on, in('DEPENDS_ON').sprint_id AS blocks " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -172,7 +188,8 @@ public final class LoreSlices {
             "out('HAS_STATE').commit_refs[0] AS commit_refs, " +
             // sparse: a later status flip inserts a note-less open row, so recover the
             // note from whichever hist row carries it — same form as tasks_of_sprint.
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
+            "out('TAGGED_WITH').component_id AS component_ids " +
             "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
@@ -185,7 +202,8 @@ public final class LoreSlices {
             "out('IN_PHASE').phase_uid[0]                            AS phase_uid, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
+            "out('TAGGED_WITH').component_id                          AS component_ids " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
@@ -198,7 +216,8 @@ public final class LoreSlices {
             "out('IN_PHASE').phase_uid[0]                            AS phase_uid, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
+            "out('TAGGED_WITH').component_id                          AS component_ids " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
@@ -240,6 +259,10 @@ public final class LoreSlices {
             "out('HAS_STATE').bar_color[0]    AS bar_color, " +
             "out('HAS_STATUS').status[0]      AS status, " +
             "out('REPRESENTS').sprint_id[0]        AS represents_sprint, " +
+            // Component links of the represented sprint (PlanItem→REPRESENTS→KnowSprint
+            // →BELONGS_TO→LoreComponent). A list; the frontend resolves project/group/
+            // icon from the `components` slice and picks the lane (primary = leaf).
+            "out('REPRESENTS').out('BELONGS_TO').component_id AS components, " +
             "out('CONTRIBUTES_TO').milestone_id[0] AS milestone_id " +
             "FROM PlanItem ORDER BY item_id",
             List.of(), Map.of(), " LIMIT 300");
@@ -257,9 +280,10 @@ public final class LoreSlices {
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "in('PARENT_OF').component_id AS children, " +
             "out('USES').tech_id AS tech, " +
-            "in('BELONGS_TO')[adr_id IS NOT NULL].size() AS adr_count, " +
-            "out('DOCUMENTED_IN').size()                 AS spec_count, " +
-            "in('BELONGS_TO')[qg_id IS NOT NULL].size()  AS qg_count " +
+            "in('BELONGS_TO')[adr_id IS NOT NULL].size()    AS adr_count, " +
+            "out('DOCUMENTED_IN').size()                    AS spec_count, " +
+            "in('BELONGS_TO')[qg_id IS NOT NULL].size()     AS qg_count, " +
+            "in('BELONGS_TO')[sprint_id IS NOT NULL].size() AS sprint_count " +
             "FROM LoreComponent",
             List.of(),
             new LinkedHashMap<>(Map.of("root", " WHERE parent_id = :root")),
@@ -267,21 +291,29 @@ public final class LoreSlices {
 
         slice("component",
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
-            "out('PARENT_OF').component_id  AS sub_components, " +
+            "in('PARENT_OF').component_id   AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
             "in('BELONGS_TO')[adr_id IS NOT NULL].adr_id  AS adrs, " +
             "out('DOCUMENTED_IN').spec_id   AS specs " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
 
-        // LCX-02: sprints related to component by naming convention (sprint_id LIKE '%<key>%')
-        // The key is derived on the frontend from component_id or full_name first word
+        // LCX-02: sprints related to a component. Two sources, explicit wins:
+        //   1. Explicit BELONGS_TO edge (sprint→component) — authoritative re-link.
+        //   2. Naming convention (sprint_id LIKE '%<key>%') — fuzzy fallback, but ONLY
+        //      for sprints that carry NO explicit component link (so a re-linked sprint
+        //      stops showing under the component its name happens to match).
+        // :pattern is the naming key (frontend-derived); :cid is the component_id.
         slice("component_sprints",
-            "SELECT sprint_id, name, status_raw, " +
-            "in('IMPLEMENTED_IN_RELEASE').release_id[0] AS release_id " +
-            "FROM KnowSprint WHERE sprint_id LIKE :pattern " +
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids " +
+            "FROM KnowSprint WHERE " +
+            "(out('BELONGS_TO').component_id CONTAINS :cid) " +
+            "OR (sprint_id LIKE :pattern AND out('BELONGS_TO').size() = 0) " +
             "ORDER BY sprint_id DESC",
-            List.of("pattern"), Map.of(), " LIMIT 30");
+            List.of("pattern", "cid"), Map.of(), " LIMIT 30");
 
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.

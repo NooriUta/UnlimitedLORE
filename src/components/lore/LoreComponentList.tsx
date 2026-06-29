@@ -4,64 +4,77 @@ import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
 
 export const AREA_COLOR: Record<string, string> = {
-  engine:        '#e8923a',
-  frontend:      '#4a90d9',
-  api:           '#a974d6',
-  data:          '#3fb8a0',
-  platform:      '#6b91c1',
-  algorithm:     '#e07a5f',
-  security:      '#E24B4A',
-  observability: '#ef9f27',
-  infra:         '#7c7c7c',
-  service:       '#4caf50',
-  ai:            '#9b59b6',
+  platform:      'var(--acc)',
+  api:           'color-mix(in srgb,var(--acc) 55%,var(--inf))',
+  marketing:     'color-mix(in srgb,var(--acc) 55%,var(--wrn))',
+  ai:            'var(--inf)',
+  frontend:      'color-mix(in srgb,var(--suc) 70%,var(--bg0))',
+  db:            'color-mix(in srgb,var(--inf) 70%,var(--bg0))',
+  algorithm:     'color-mix(in srgb,var(--acc) 60%,var(--dng))',
+  data:          'var(--suc)',
+  service:       'color-mix(in srgb,var(--suc) 55%,var(--wrn))',
+  infra:         'var(--t2)',
+  observability: 'var(--wrn)',
+  engine:        'color-mix(in srgb,var(--wrn) 60%,var(--dng))',
+  security:      'var(--dng)',
 };
 
-export const areaColor = (a: string | null | undefined) => AREA_COLOR[a ?? ''] ?? 'var(--t3)';
-export const compArea  = (r: { area?: string | null; team?: string | null }) => r.area || r.team || '';
+export const AREA_STYLE: Record<string, 'B'> = {
+  api: 'B', frontend: 'B', algorithm: 'B', service: 'B', engine: 'B',
+};
+
+export const areaColor  = (a: string | null | undefined) => AREA_COLOR[a ?? ''] ?? 'var(--t3)';
+export const areaInvert = (a: string | null | undefined) => !!(a && AREA_STYLE[a]);
+export const compArea   = (r: { area?: string | null; team?: string | null }) => r.area || r.team || '';
 
 const S = {
   root:  { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
-  list:  { flex: 1, overflowY: 'auto' as const },
-  row: (sel: boolean, indent = 0) => ({
-    display: 'flex', alignItems: 'center', gap: 8,
-    padding: `6px 12px 6px ${12 + indent * 16}px`,
-    borderBottom: '1px solid var(--bd)', cursor: 'pointer',
-    background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
+  list:  { flex: 1, overflowY: 'auto' as const, padding: '4px 6px' },
+  card: (sel: boolean, indent: number, accentColor: string) => ({
+    display: 'flex', alignItems: 'center', gap: 7,
+    padding: '5px 8px',
+    marginBottom: 3,
+    marginLeft: indent * 10,
+    borderRadius: indent > 0 ? '0 6px 6px 0' : 6,
+    background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'var(--b2)',
+    border: `1px solid ${sel ? 'color-mix(in srgb, var(--acc) 35%, transparent)' : 'var(--bd)'}`,
+    borderLeft: indent > 0
+      ? `2px solid color-mix(in srgb, ${accentColor} 45%, transparent)`
+      : `1px solid ${sel ? 'color-mix(in srgb, var(--acc) 35%, transparent)' : 'var(--bd)'}`,
+    cursor: 'pointer',
   }),
-  iconBox: (color: string) => ({
-    width: 22, height: 22, borderRadius: 4, flexShrink: 0,
+  iconBox: (color: string, invert = false) => ({
+    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color, background: `color-mix(in srgb, ${color} 15%, transparent)`,
+    color:      invert ? `color-mix(in srgb, ${color} 22%, var(--bg1))` : color,
+    background: invert ? color : `color-mix(in srgb, ${color} 15%, transparent)`,
   }),
   compId: {
-    fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
-    whiteSpace: 'nowrap' as const,
+    fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)',
+    whiteSpace: 'nowrap' as const, fontWeight: 600,
   },
   compName: {
-    fontSize: 10, color: 'var(--t3)',
+    fontSize: 9, color: 'var(--t3)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
   },
   compBlock: {
     flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' as const,
   },
-  areaChip: (color: string) => ({
-    fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
-    color, background: `color-mix(in srgb, ${color} 14%, transparent)`,
-    border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
-    whiteSpace: 'nowrap' as const,
-  }),
   countBadge: {
-    fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+    fontSize: 8, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
     color: 'var(--t3)', background: 'var(--b2)', border: '1px solid var(--bd)',
+    whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)',
+  },
+  sprintBadge: {
+    fontSize: 8, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+    color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)',
   },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
   sectionHdr: {
-    padding: '3px 12px', fontSize: 9, fontWeight: 700, letterSpacing: '0.07em',
-    textTransform: 'uppercase' as const, color: 'var(--t3)',
-    background: 'color-mix(in srgb, var(--b2) 60%, transparent)',
-    borderBottom: '1px solid var(--bd)', flexShrink: 0,
+    padding: '8px 4px 3px', fontSize: 9, fontWeight: 700, letterSpacing: '0.07em',
+    textTransform: 'uppercase' as const, color: 'var(--t3)', flexShrink: 0,
   },
 };
 
@@ -75,8 +88,13 @@ interface Props {
 }
 
 export default function LoreComponentList({ q, areaSel, selectedId, onSelect, onCounts, onError }: Props) {
-  const [rows, setRows]       = useState<LoreComponent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows]         = useState<LoreComponent[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  function toggleArea(area: string) {
+    setCollapsed(prev => { const n = new Set(prev); n.has(area) ? n.delete(area) : n.add(area); return n; });
+  }
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -152,47 +170,66 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
   if (loading) return <LoreSkeleton />;
 
   const renderRow = (r: LoreComponent, indent = 0, dimmed = false) => {
-    const color = areaColor(compArea(r));
-    const name  = r.full_name && r.full_name !== r.component_id ? r.full_name : null;
+    const area   = compArea(r);
+    const color  = areaColor(area);
+    const invert = areaInvert(area);
+    const name   = r.full_name && r.full_name !== r.component_id ? r.full_name : null;
+    const sel    = selectedId === r.component_id;
     return (
       <div
         key={r.component_id}
-        style={{ ...S.row(selectedId === r.component_id, indent), opacity: dimmed ? 0.4 : 1 }}
+        style={{ ...S.card(sel, indent, color), opacity: dimmed ? 0.4 : 1 }}
         onClick={() => !dimmed && onSelect(r.component_id)}
       >
-        <div style={S.iconBox(color)}>
+        <div style={S.iconBox(color, invert)}>
           {r.game_icon
-            ? <GameIcon slug={r.game_icon} size={13} style={{ color: 'inherit' }} />
-            : <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{r.component_id[0]}</span>}
+            ? <GameIcon slug={r.game_icon} size={12} style={{ color: 'inherit' }} />
+            : <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700 }}>{r.component_id[0]}</span>}
         </div>
         <div style={S.compBlock}>
           <span style={S.compId}>{r.component_id}</span>
           {name && <span style={S.compName}>{name}</span>}
         </div>
+        {(r.sprint_count != null && r.sprint_count > 0) && (
+          <span style={S.sprintBadge} title="Привязанных спринтов">{r.sprint_count}Sp</span>
+        )}
         {(r.spec_count != null && r.spec_count > 0) && (
-          <span style={S.countBadge}>{r.spec_count} Spec</span>
+          <span style={S.countBadge}>{r.spec_count}S</span>
         )}
         {(r.qg_count != null && r.qg_count > 0) && (
-          <span style={S.countBadge}>{r.qg_count} QG</span>
+          <span style={S.countBadge}>{r.qg_count}Q</span>
         )}
         {(r.adr_count != null && r.adr_count > 0) && (
-          <span style={S.countBadge}>{r.adr_count} ADR</span>
+          <span style={S.countBadge}>{r.adr_count}A</span>
         )}
       </div>
     );
   };
 
-  // Render tree with section headers when the root-level area changes.
+  // Render tree with collapsible section headers when the root-level area changes.
   function renderWithGroups(items: { comp: LoreComponent; indent: number; dimmed: boolean }[]) {
     const nodes: React.ReactNode[] = [];
-    let lastArea = '';
+    let curArea = '';
     items.forEach(({ comp, indent, dimmed }) => {
-      const area = indent === 0 ? compArea(comp) : '';
-      if (indent === 0 && area !== lastArea) {
-        lastArea = area;
-        if (area) nodes.push(<div key={`hdr-${area}`} style={S.sectionHdr}>{area}</div>);
+      const area = indent === 0 ? compArea(comp) : curArea;
+      if (indent === 0 && compArea(comp) !== curArea) {
+        curArea = compArea(comp);
+        if (curArea) {
+          const isCollapsed = collapsed.has(curArea);
+          nodes.push(
+            <div key={`hdr-${curArea}`}
+              style={{ ...S.sectionHdr, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
+              onClick={() => toggleArea(curArea)}
+            >
+              <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
+              {curArea}
+            </div>
+          );
+        }
       }
-      nodes.push(renderRow(comp, indent, dimmed));
+      if (!area || !collapsed.has(area)) {
+        nodes.push(renderRow(comp, indent, dimmed));
+      }
     });
     return nodes;
   }
@@ -209,6 +246,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
             ? <div style={S.empty}>Компоненты не найдены.</div>
             : shown.map(r => renderRow(r, 0))
         )}
+        <div style={{ height: 4 }} />
       </div>
     </div>
   );

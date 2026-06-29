@@ -7,7 +7,7 @@
           {
             "type": "command",
             "shell": "powershell",
-            "command": "$j = $input | Out-String | ConvertFrom-Json; $f = $j.tool_input.file_path; if ($f -match 'backend[/\\\\]src[/\\\\]main[/\\\\]java.*\\.java') { Set-Location 'C:/AIDA/UnlimitedLORE'; docker compose build lore-backend 2>&1 | Write-Output; docker compose up -d lore-backend 2>&1 | Write-Output }",
+            "command": "$j = $input | Out-String | ConvertFrom-Json; $f = $j.tool_input.file_path; if ($f -match 'backend[/\\\\]src[/\\\\]main[/\\\\]java.*\\.java') { Set-Location 'C:/AIDA/OMILORE'; docker compose build lore-backend 2>&1 | Write-Output; docker compose up -d lore-backend 2>&1 | Write-Output }",
             "timeout": 180,
             "statusMessage": "Rebuilding lore-backend Docker image...",
             "async": true

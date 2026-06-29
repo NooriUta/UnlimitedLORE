@@ -17,17 +17,18 @@ import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
+import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
 import LoreQualityGateList from '../components/lore/LoreQualityGateList';
 import LoreRunbookList     from '../components/lore/LoreRunbookList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
-import { statusMeta }      from '../components/lore/lore-status';
+import { statusMeta, resolveStatusMeta, statusLabel } from '../components/lore/lore-status';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases'
   | 'knowledge' | 'components'
-  | 'evolution' | 'timeline' | 'mcp';
+  | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; label: string }[] = [
@@ -40,6 +41,7 @@ const SECTIONS: { id: Section; icon: string; label: string }[] = [
   { id: 'components', icon: 'cog',            label: 'Компоненты'   },
   { id: 'evolution',  icon: 'hourglass',      label: 'История'      },
   { id: 'timeline',   icon: 'tied-scroll',    label: 'Лента'        },
+  { id: 'analytics',  icon: 'pie-chart',      label: 'Аналитика'    },
   { id: 'mcp',        icon: 'plug',           label: 'MCP API'      },
 ];
 
@@ -210,10 +212,10 @@ export default function LorePage() {
 
   const selectItem    = (id: string) => setParams(p => { p.set('passport', id); p.delete('spec'); return p; });
   const clearItem     = ()           => setParams(p => { p.delete('passport'); p.delete('spec'); return p; });
-  const openSpec      = (id: string) => setParams(p => { p.set('spec', id); p.delete('passport'); return p; });
   const clearSpec     = ()           => setParams(p => { p.delete('spec'); return p; });
   const navigateToAdr    = (id: string) => setParams(p => { p.set('section', 'adrs');    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('kind', kind); p.set('art', id); return p; });
   const closeArt  = () => setParams(p => { p.delete('kind'); p.delete('art'); return p; });
 
@@ -759,7 +761,7 @@ export default function LorePage() {
         <div style={S.content}>
           <LoreErrorBoundary label={`Ошибка секции «${section}»`}>
           {/* Plan */}
-          {section === 'plan' && <LorePlanBoard onError={handleFetchError} />}
+          {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
 
           {/* ADR — new */}
           {section === 'adrs' && passport === '__new' && (
@@ -797,7 +799,7 @@ export default function LorePage() {
 
           {/* Sprints: detail or placeholder */}
           {section === 'sprints' && passport && (
-            <LoreSprintDetail sprintId={passport} onError={handleFetchError} />
+            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} />
           )}
           {section === 'sprints' && !passport && (
             <div style={S.placeholder}>Выберите спринт из списка слева</div>
@@ -816,9 +818,7 @@ export default function LorePage() {
             <LoreComponentPassport
               componentId={passport}
               onError={handleFetchError}
-              onNavigateAdr={navigateToAdr}
               onNavigateComponent={selectItem}
-              onOpenSpec={openSpec}
             />
           )}
           {section === 'components' && !spec && !passport && (
@@ -851,6 +851,15 @@ export default function LorePage() {
               onSelect={navigateToAdr} onSelectSprint={navigateToSprint} />
           )}
 
+          {/* Analytics — aggregated task/sprint/component/release stats */}
+          {section === 'analytics' && (
+            <LoreAnalyticsView
+              onError={handleFetchError}
+              onNavigateToSprint={navigateToSprint}
+              onNavigateToComponent={navigateToComponent}
+            />
+          )}
+
           {/* MCP API — published reference for the aida-lore MCP server */}
           {section === 'mcp' && <LoreMcpApiScreen />}
           </LoreErrorBoundary>
@@ -861,7 +870,11 @@ export default function LorePage() {
 }
 
 export function StatusChip({ status }: { status: string }) {
-  const { icon, color } = statusMeta(status);
+  // status may arrive raw ("✅ DONE", "🟡 PARTIAL") or as a clean key ("accepted").
+  // resolveStatusMeta normalizes both so we never fall back to the generic
+  // checkbox-tree icon; statusLabel strips the leading emoji so it isn't shown
+  // twice (chip icon + inline emoji).
+  const { icon, color } = resolveStatusMeta(status);
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -871,7 +884,7 @@ export function StatusChip({ status }: { status: string }) {
       whiteSpace: 'nowrap',
     }}>
       <GameIcon slug={icon} size={11} style={{ color: 'inherit' }} />
-      {status}
+      {statusLabel(status)}
     </span>
   );
 }

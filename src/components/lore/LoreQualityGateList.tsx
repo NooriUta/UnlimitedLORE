@@ -117,11 +117,25 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
       <div style={S.statsBar}>
         <span style={S.statTotal}>{rows.length}</span>
         <span style={{ color: 'var(--t3)', fontSize: 10 }}>всего</span>
-        {statsByStatus.map(({ s, n, m }) => (
-          <span key={s} style={S.statBadge(m.color)}>
-            {m.label} <b>{n}</b>
-          </span>
-        ))}
+        {statsByStatus.map(({ s, n, m }) => {
+          const on = statusSel.has(s);
+          return (
+            <span
+              key={s}
+              onClick={() => toggleStatus(s)}
+              style={{
+                ...S.statBadge(m.color),
+                cursor: 'pointer',
+                background: on ? `color-mix(in srgb, ${m.color} 22%, transparent)` : `color-mix(in srgb, ${m.color} 10%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${m.color} ${on ? 45 : 25}%, transparent)`,
+                fontWeight: on ? 700 : 400,
+                opacity: statusSel.size > 0 && !on ? 0.45 : 1,
+              }}
+            >
+              {m.label} <b>{n}</b>
+            </span>
+          );
+        })}
         <span style={{ flex: 1 }} />
         <button style={S.exportBtn} onClick={() => exportHtml(rows)} title="Экспорт активных QG в HTML">
           ↓ HTML
