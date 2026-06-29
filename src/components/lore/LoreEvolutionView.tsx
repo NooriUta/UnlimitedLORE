@@ -1,7 +1,11 @@
-// SCD2 history viewer + plan versions — LAL-24
-// Slices: history_sprint · history_plan_item · adr_history · plan_versions
-import { useEffect, useState } from 'react';
-import { fetchLoreSlice, type LoreHistRow, type LorePlanVersion } from '../../api/lore';
+// SCD2 history viewer — LAL-24
+// LHR-01: no auto-load · LHR-03: status icon · LHR-04: HH:MM time
+// LHR-05: diff column  · LHR-06: master-detail · LHR-08: summary header
+import { useEffect, useMemo, useState } from 'react';
+import { fetchLoreSlice, type LoreHistRow } from '../../api/lore';
+import { GameIcon } from './GameIcon';
+import { statusMeta } from './lore-status';
+import { normalizeStatus } from './loreUtils';
 
 type EntityKind = 'sprint' | 'plan_item' | 'adr';
 
@@ -11,8 +15,6 @@ const SLICE: Record<EntityKind, string> = {
   adr:       'adr_history',
 };
 
-// Where to get the list of pickable entities for each kind, and which fields
-// carry the id + a human label.
 const ENTITY: Record<EntityKind, { slice: string; id: string; label?: string }> = {
   sprint:    { slice: 'sprints',    id: 'sprint_id', label: 'name' },
   plan_item: { slice: 'plan_items', id: 'item_id',   label: 'label' },
@@ -21,107 +23,173 @@ const ENTITY: Record<EntityKind, { slice: string; id: string; label?: string }> 
 
 interface EntityOpt { id: string; label: string; }
 
+interface DiffRow {
+  status?: string;
+  weeks?: string;
+}
+
+function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso.slice(0, 10);
+  const date = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  return `${date} ${time}`;
+}
+
+function computeDiff(cur: LoreHistRow, prev: LoreHistRow): DiffRow {
+  const d: DiffRow = {};
+  const cs = normalizeStatus(cur.status_raw ?? null);
+  const ps = normalizeStatus(prev.status_raw ?? null);
+  if (cs && ps && cs !== ps) d.status = `${ps} → ${cs}`;
+  if (cur.week_start !== prev.week_start || cur.week_end !== prev.week_end) {
+    const pw = prev.week_start != null ? `W${prev.week_start}–${prev.week_end}` : '—';
+    const cw = cur.week_start  != null ? `W${cur.week_start}–${cur.week_end}`  : '—';
+    if (pw !== cw) d.weeks = `${pw} → ${cw}`;
+  }
+  return d;
+}
+
 interface Props { onError: (e: unknown) => void; }
 
 export default function LoreEvolutionView({ onError }: Props) {
-  const [kind,      setKind]      = useState<EntityKind>('sprint');
-  const [idInput,   setIdInput]   = useState('');
-  const [rows,      setRows]      = useState<LoreHistRow[]>([]);
-  const [versions,  setVersions]  = useState<LorePlanVersion[]>([]);
-  const [loadedId,  setLoadedId]  = useState('');
-  const [loading,   setLoading]   = useState(false);
-  const [picker,    setPicker]    = useState<EntityOpt[]>([]);
-  const [pickerErr, setPickerErr] = useState(false);
+  const [kind,        setKind]        = useState<EntityKind>('sprint');
+  const [rows,        setRows]        = useState<LoreHistRow[]>([]);
+  const [loadedId,    setLoadedId]    = useState('');
+  const [loading,     setLoading]     = useState(false);
+  const [picker,      setPicker]      = useState<EntityOpt[]>([]);
+  const [pickerErr,   setPickerErr]   = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
 
-  useEffect(() => {
-    const ctrl = new AbortController();
-    fetchLoreSlice<LorePlanVersion>('plan_versions', undefined, ctrl.signal)
-      .then(setVersions)
-      .catch(onError);
-    return () => ctrl.abort();
-  }, [onError]);
-
-  // Load the entity picker list whenever kind changes, then auto-load the first.
   useEffect(() => {
     const cfg = ENTITY[kind];
     const ctrl = new AbortController();
     setPicker([]);
     setPickerErr(false);
+    setLoadingList(true);
+    setRows([]);
+    setLoadedId('');
     fetchLoreSlice<Record<string, unknown>>(cfg.slice, undefined, ctrl.signal)
       .then(recs => {
         const opts: EntityOpt[] = recs
           .map(r => {
-            const id = String(r[cfg.id] ?? '');
-            const lbl = cfg.label ? String(r[cfg.label] ?? '') : '';
+            const id    = String(r[cfg.id] ?? '');
+            const lbl   = cfg.label ? String(r[cfg.label] ?? '') : '';
             return { id, label: lbl && lbl !== id ? `${id} · ${lbl}` : id };
           })
-          .filter(o => o.id)
+          .filter(o => o.id && o.id.length >= 2)   // LHR-02: skip single-char junk
           .sort((a, b) => a.id.localeCompare(b.id));
         setPicker(opts);
-        if (opts[0]) load(opts[0].id);
+        setLoadingList(false);
+        // LHR-01: intentionally NO auto-load — show empty state instead
       })
-      .catch(e => { onError(e); setPickerErr(true); });
+      .catch(e => { onError(e); setPickerErr(true); setLoadingList(false); });
     return () => ctrl.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind]);
+  }, [kind, onError]);
 
-  function load(explicitId?: string) {
-    const id = (explicitId ?? idInput).trim();
+  function load(id: string) {
     if (!id) return;
-    setIdInput(id);
     setLoading(true);
     fetchLoreSlice<LoreHistRow>(SLICE[kind], { id })
       .then(r => { setRows(r); setLoadedId(id); setLoading(false); })
       .catch(e => { onError(e); setLoading(false); });
   }
 
+  const diffs = useMemo<DiffRow[]>(() => {
+    return rows.map((r, i) => i === 0 ? {} : computeDiff(r, rows[i - 1]));
+  }, [rows]);
+
+  // LHR-08: summary data
+  const curRow   = rows[0];
+  const firstRow = rows[rows.length - 1];
+  const curStatus = curRow ? normalizeStatus(curRow.status_raw ?? null) : null;
+  const curMeta   = curStatus ? statusMeta(curStatus) : null;
+
   return (
     <div style={S.root}>
-      {/* ── Selector row ──────────────────────────────────────────────────── */}
+      {/* ── Kind selector ────────────────────────────────────────────────── */}
       <div style={S.topBar}>
-        <select value={kind} onChange={e => setKind(e.target.value as EntityKind)} style={S.sel}>
-          <option value="sprint">Спринт</option>
-          <option value="plan_item">PlanItem</option>
-          <option value="adr">ADR</option>
-        </select>
-        {/* Entity picker — replaces blind ID typing */}
-        <select
-          value={loadedId}
-          onChange={e => load(e.target.value)}
-          style={{ ...S.sel, flex: 1, minWidth: 220, maxWidth: 360 }}
-          disabled={picker.length === 0}
-        >
-          {picker.length === 0 && <option value="">{pickerErr ? '— ошибка загрузки —' : '— загрузка списка… —'}</option>}
-          {picker.map(o => (
-            <option key={o.id} value={o.id}>{o.label}</option>
-          ))}
-        </select>
-        {/* Manual ID fallback for ids not in the (possibly truncated) list */}
-        <input
-          value={idInput}
-          onChange={e => setIdInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && load()}
-          placeholder="…или ID вручную"
-          style={{ ...S.inp, flex: '0 1 160px', minWidth: 120 }}
-        />
-        <button onClick={() => load()} style={S.btn}>Загрузить</button>
-        {loadedId && (
-          <span style={S.hint}>{loadedId} · {rows.length} ревизий</span>
-        )}
+        {(['sprint', 'plan_item', 'adr'] as EntityKind[]).map(k => (
+          <button
+            key={k}
+            style={{ ...S.kindBtn, ...(kind === k ? S.kindBtnActive : {}) }}
+            onClick={() => setKind(k)}
+          >
+            {k === 'sprint' ? 'Спринт' : k === 'plan_item' ? 'PlanItem' : 'ADR'}
+          </button>
+        ))}
+        <span style={S.hint}>
+          {loadingList ? 'загрузка…' : pickerErr ? 'ошибка списка' : `${picker.length} сущностей`}
+        </span>
       </div>
 
       <div style={S.body}>
-        {/* ── History table ────────────────────────────────────────────────── */}
+        {/* ── LHR-06: left entity list ─────────────────────────────────── */}
+        <div style={S.listPane}>
+          {pickerErr && <div style={S.msg}>Ошибка загрузки списка.</div>}
+          {picker.map(o => {
+            const namePart = o.label !== o.id ? o.label.replace(/^[^·]+·\s*/, '') : '';
+            return (
+              <div
+                key={o.id}
+                style={{
+                  ...S.listRow,
+                  background: loadedId === o.id
+                    ? 'color-mix(in srgb, var(--acc) 10%, transparent)'
+                    : 'transparent',
+                }}
+                onClick={() => load(o.id)}
+              >
+                <span style={S.listId}>{o.id}</span>
+                {namePart && <span style={S.listLabel}>{namePart}</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Right: history detail ────────────────────────────────────── */}
         <div style={S.histPane}>
-          {loading && <div style={S.msg}>Загрузка…</div>}
-          {!loading && rows.length === 0 && loadedId && (
-            <div style={S.msg}>История пуста для «{loadedId}».</div>
-          )}
-          {!loading && !loadedId && (
+          {/* LHR-01: empty state */}
+          {!loadedId && !loading && (
             <div style={S.msg}>
-              Выберите тип сущности и введите ID для просмотра SCD2-истории.
+              Выберите сущность из списка слева для просмотра SCD2-истории.
             </div>
           )}
+          {loading && <div style={S.msg}>Загрузка…</div>}
+          {!loading && loadedId && rows.length === 0 && (
+            <div style={S.msg}>История пуста для «{loadedId}».</div>
+          )}
+
+          {/* LHR-08: summary header */}
+          {rows.length > 0 && (
+            <div style={S.summary}>
+              <span style={S.sumId}>{loadedId}</span>
+              <span style={S.sumDot}>·</span>
+              <span style={S.sumInfo}>{rows.length} ревизий</span>
+              {firstRow?.valid_from && (
+                <>
+                  <span style={S.sumDot}>·</span>
+                  <span style={S.sumInfo}>создано {firstRow.valid_from.slice(0, 10)}</span>
+                </>
+              )}
+              {curRow && curRow !== firstRow && curRow.valid_from && (
+                <>
+                  <span style={S.sumDot}>·</span>
+                  <span style={S.sumInfo}>ред. {curRow.valid_from.slice(0, 10)}</span>
+                </>
+              )}
+              {curMeta && curStatus && (
+                <>
+                  <span style={S.sumDot}>·</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    <GameIcon slug={curMeta.icon} size={11} style={{ color: curMeta.color }} />
+                    <span style={{ fontSize: 11, color: curMeta.color }}>{curStatus}</span>
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
           {rows.length > 0 && (
             <table style={S.tbl}>
               <thead>
@@ -129,59 +197,67 @@ export default function LoreEvolutionView({ onError }: Props) {
                   <th style={S.th}>#</th>
                   <th style={S.th}>valid_from</th>
                   <th style={S.th}>valid_to</th>
-                  {kind === 'sprint'    && <th style={S.th}>status</th>}
-                  {kind === 'plan_item' && <th style={S.th}>weeks</th>}
+                  {kind === 'sprint'    && <th style={S.th}>статус</th>}
+                  {kind === 'plan_item' && <th style={S.th}>недели</th>}
+                  <th style={S.th}>Δ</th>
                   <th style={S.th}>hash</th>
                   <th style={S.th}>commit</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} style={{
-                    ...S.trow,
-                    background: r.valid_to == null
-                      ? 'color-mix(in srgb, var(--acc) 8%, transparent)'
-                      : 'transparent',
-                  }}>
-                    <td style={{ ...S.td, color: 'var(--t3)' }}>{i + 1}</td>
-                    <td style={S.td}>{r.valid_from?.slice(0, 10) ?? '—'}</td>
-                    <td style={{ ...S.td, color: r.valid_to == null ? 'var(--suc)' : 'var(--t3)' }}>
-                      {r.valid_to?.slice(0, 10) ?? '✓ current'}
-                    </td>
-                    {kind === 'sprint' && (
-                      <td style={S.td}>{r.status_raw ?? '—'}</td>
-                    )}
-                    {kind === 'plan_item' && (
-                      <td style={S.td}>
-                        {r.week_start != null ? `W${r.week_start}–${r.week_end}` : '—'}
+                {rows.map((r, i) => {
+                  const norm = normalizeStatus(r.status_raw ?? null);
+                  const meta = statusMeta(norm);
+                  const diff = diffs[i];
+                  const isCurrent = r.valid_to == null;
+                  return (
+                    <tr key={i} style={{
+                      ...S.trow,
+                      background: isCurrent
+                        ? 'color-mix(in srgb, var(--acc) 8%, transparent)'
+                        : 'transparent',
+                    }}>
+                      <td style={{ ...S.td, color: 'var(--t3)' }}>{i + 1}</td>
+                      {/* LHR-04: date + HH:MM */}
+                      <td style={S.td}>{fmtDate(r.valid_from)}</td>
+                      <td style={{ ...S.td, color: isCurrent ? 'var(--suc)' : 'var(--t3)' }}>
+                        {isCurrent ? '✓ текущая' : fmtDate(r.valid_to)}
                       </td>
-                    )}
-                    <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 10, color: 'var(--t3)' }}>
-                      {r.content_hash?.slice(0, 8) ?? '—'}
-                    </td>
-                    <td style={{ ...S.td, fontFamily: 'monospace', fontSize: 10, color: 'var(--acc)' }}>
-                      {r.source_commit?.slice(0, 7) ?? '—'}
-                    </td>
-                  </tr>
-                ))}
+                      {/* LHR-03: status → icon + tooltip */}
+                      {kind === 'sprint' && (
+                        <td style={S.td} title={r.status_raw ?? ''}>
+                          {norm ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <GameIcon slug={meta.icon} size={11} style={{ color: meta.color }} />
+                              <span style={{ color: meta.color }}>{norm}</span>
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--t3)' }}>{r.status_raw ?? '—'}</span>
+                          )}
+                        </td>
+                      )}
+                      {kind === 'plan_item' && (
+                        <td style={S.td}>
+                          {r.week_start != null ? `W${r.week_start}–${r.week_end}` : '—'}
+                        </td>
+                      )}
+                      {/* LHR-05: diff markers */}
+                      <td style={S.tdDiff}>
+                        {diff?.status && <span style={S.diffBadge}>{diff.status}</span>}
+                        {diff?.weeks  && <span style={{ ...S.diffBadge, marginLeft: 4 }}>{diff.weeks}</span>}
+                      </td>
+                      <td style={{ ...S.tdMono, color: 'var(--t3)' }}>
+                        {r.content_hash?.slice(0, 8) ?? '—'}
+                      </td>
+                      <td style={{ ...S.tdMono, color: 'var(--acc)' }}>
+                        {r.source_commit?.slice(0, 7) ?? '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
-        </div>
-
-        {/* ── Plan versions sidebar ─────────────────────────────────────────── */}
-        <div style={S.versPane}>
-          <div style={S.versHdr}>Версии плана ({versions.length})</div>
-          {versions.map(v => (
-            <div key={v.version_id} style={S.versRow}>
-              <div style={S.versId}>{v.version_id}</div>
-              <div style={S.versDate}>{v.version_date?.slice(0, 10) ?? ''}</div>
-              {v.changelog_md && (
-                <div style={S.versClog}>{v.changelog_md.slice(0, 100)}</div>
-              )}
-            </div>
-          ))}
-          {versions.length === 0 && <div style={S.msg}>Нет версий.</div>}
         </div>
       </div>
     </div>
@@ -193,39 +269,57 @@ const S = {
     flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
   },
   topBar: {
-    display: 'flex', alignItems: 'center', gap: 8,
+    display: 'flex', alignItems: 'center', gap: 6,
     padding: '8px 14px', borderBottom: '1px solid var(--bd)',
-    flexShrink: 0, flexWrap: 'wrap' as const,
+    flexShrink: 0,
   },
-  sel: {
-    height: 26, padding: '0 6px', fontSize: 11,
-    border: '1px solid var(--b3)', borderRadius: 4,
-    background: 'var(--b2)', color: 'var(--t1)',
-    fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
-  },
-  inp: {
-    flex: 1, minWidth: 220, height: 26, padding: '0 8px',
-    fontSize: 11, fontFamily: 'var(--mono)',
-    border: '1px solid var(--b3)', borderRadius: 4,
-    background: 'var(--b2)', color: 'var(--t1)', outline: 'none',
-  },
-  btn: {
+  kindBtn: {
     height: 26, padding: '0 12px', fontSize: 11, cursor: 'pointer',
-    border: '1px solid var(--acc)', borderRadius: 4,
+    border: '1px solid var(--b3)', borderRadius: 4,
+    background: 'transparent', color: 'var(--t2)', fontFamily: 'inherit',
+  },
+  kindBtnActive: {
     background: 'color-mix(in srgb, var(--acc) 15%, transparent)',
-    color: 'var(--acc)', fontFamily: 'inherit',
+    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 35%, transparent)',
   },
-  hint: { fontSize: 10, color: 'var(--t3)' },
-  body: {
-    flex: 1, display: 'flex', overflow: 'hidden',
+  hint: { fontSize: 10, color: 'var(--t3)', marginLeft: 8 },
+  body: { flex: 1, display: 'flex', overflow: 'hidden' },
+
+  // LHR-06: master-detail
+  listPane: {
+    width: 220, flexShrink: 0,
+    borderRight: '1px solid var(--bd)',
+    overflowY: 'auto' as const,
   },
+  listRow: {
+    display: 'flex', flexDirection: 'column' as const,
+    padding: '5px 10px', borderBottom: '1px solid var(--bd)',
+    cursor: 'pointer',
+  },
+  listId: {
+    fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+  },
+  listLabel: {
+    fontSize: 10, color: 'var(--t3)', marginTop: 1,
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+  },
+
   histPane: {
     flex: 1, overflowY: 'auto' as const, overflowX: 'auto' as const,
-    padding: '8px 0',
   },
-  msg: {
-    padding: '24px 16px', color: 'var(--t3)', fontSize: 12,
+  msg: { padding: '24px 16px', color: 'var(--t3)', fontSize: 12 },
+
+  // LHR-08: summary
+  summary: {
+    display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' as const,
+    padding: '8px 14px', borderBottom: '1px solid var(--bd)',
+    background: 'var(--b2)', flexShrink: 0,
   },
+  sumId:   { fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--t1)' },
+  sumDot:  { fontSize: 11, color: 'var(--t3)' },
+  sumInfo: { fontSize: 11, color: 'var(--t2)' },
+
   tbl: {
     width: '100%', borderCollapse: 'collapse' as const,
     fontSize: 11, tableLayout: 'auto' as const,
@@ -236,36 +330,23 @@ const S = {
     borderBottom: '2px solid var(--bd)', background: 'var(--b1)',
     whiteSpace: 'nowrap' as const, position: 'sticky' as const, top: 0,
   },
-  trow: {
-    borderBottom: '1px solid var(--bd)',
-  },
+  trow: { borderBottom: '1px solid var(--bd)' },
   td: {
     padding: '5px 12px', color: 'var(--t1)', fontSize: 11,
     whiteSpace: 'nowrap' as const,
   },
-  versPane: {
-    width: 260, flexShrink: 0,
-    borderLeft: '1px solid var(--bd)',
-    overflowY: 'auto' as const,
-    display: 'flex', flexDirection: 'column' as const,
+  tdDiff: {
+    padding: '5px 12px', fontSize: 10, color: 'var(--t3)',
+    whiteSpace: 'nowrap' as const,
   },
-  versHdr: {
-    padding: '8px 12px', fontWeight: 600, fontSize: 11,
-    borderBottom: '1px solid var(--bd)', flexShrink: 0,
-    color: 'var(--t2)',
+  tdMono: {
+    padding: '5px 12px', fontFamily: 'monospace', fontSize: 10,
+    whiteSpace: 'nowrap' as const,
   },
-  versRow: {
-    padding: '8px 12px', borderBottom: '1px solid var(--bd)',
-  },
-  versId: {
-    fontSize: 11, fontWeight: 600, color: 'var(--acc)',
-    fontFamily: 'var(--mono)',
-  },
-  versDate: { fontSize: 10, color: 'var(--t3)', marginTop: 2 },
-  versClog: {
-    fontSize: 10, color: 'var(--t2)', marginTop: 4,
-    overflow: 'hidden', textOverflow: 'ellipsis',
-    display: '-webkit-box', WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical' as const,
+  diffBadge: {
+    display: 'inline-block', padding: '1px 5px', borderRadius: 3,
+    background: 'color-mix(in srgb, var(--wrn) 12%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--wrn) 28%, transparent)',
+    color: 'var(--wrn)', fontSize: 10,
   },
 };

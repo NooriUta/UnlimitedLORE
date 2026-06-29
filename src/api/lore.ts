@@ -199,6 +199,7 @@ export interface LoreComponent {
   tech: string[];
   owner?: string | null;
   team?: string | null;
+  adr_count?: number | null;
 }
 
 export interface LoreComponentDetail extends LoreComponent {
@@ -206,6 +207,27 @@ export interface LoreComponentDetail extends LoreComponent {
   adrs: string[] | null;
   specs: string[] | null;
   spec_docs: string[] | null;
+}
+
+export interface ComponentUpdatePayload {
+  component_id: string;
+  owner?: string | null;
+  team?: string | null;
+  full_name?: string | null;
+  area?: string | null;
+  game_icon?: string | null;
+  parent_id?: string | null;
+}
+
+export async function updateLoreComponent(payload: ComponentUpdatePayload): Promise<{ ok: boolean; component_id: string }> {
+  const res = await fetch('/lore/component/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(payload),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; component_id: string }>;
 }
 
 export interface LoreSpecRow {

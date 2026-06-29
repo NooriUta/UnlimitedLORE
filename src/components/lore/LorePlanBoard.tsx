@@ -10,7 +10,7 @@ import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/
 import 'vis-timeline/styles/vis-timeline-graph2d.css';
 import './lore-timeline.css';
 import {
-  fetchLoreSlice, postLoreStatus, registerLoreSprint,
+  fetchLoreSlice, postLoreStatus, registerLoreSprint, updateLoreSprint,
   type LorePlanConfig, type LorePlanTrack, type LorePlanSection,
   type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
   type LorePlanItemStatus, type LorePlanVersion,
@@ -123,10 +123,12 @@ export default function LorePlanBoard({ onError }: Props) {
   const panelDragRef = useRef<{ y: number; h: number } | null>(null);
 
   // Tasks of the sprint behind the selected card (lazy, keyed by represents_sprint)
-  const [cardTasks,        setCardTasks]        = useState<LoreSprintTask[]>([]);
-  const [cardTasksLoading, setCardTasksLoading] = useState(false);
-  const [cardSprintStatus, setCardSprintStatus] = useState<string | null>(null);
-  const [cardReleases,     setCardReleases]     = useState<string[]>([]);
+  const [cardTasks,          setCardTasks]          = useState<LoreSprintTask[]>([]);
+  const [cardTasksLoading,   setCardTasksLoading]   = useState(false);
+  const [cardSprintStatus,   setCardSprintStatus]   = useState<string | null>(null);
+  const [cardReleases,       setCardReleases]       = useState<string[]>([]);
+  const [cardSprintPriority, setCardSprintPriority] = useState<string | null>(null);
+  const [priorityBusy,       setPriorityBusy]       = useState(false);
   // Task list filter + selected note
   const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
   const [selectedTaskUid,  setSelectedTaskUid]  = useState<string | null>(null);
@@ -179,17 +181,21 @@ export default function LorePlanBoard({ onError }: Props) {
   // ── Lazy-load tasks of the sprint behind the selected card ───────────────────
   useEffect(() => {
     const sprintId = sprintCard?.represents_sprint;
-    if (!sprintId) { setCardTasks([]); setCardSprintStatus(null); setCardReleases([]); return; }
+    if (!sprintId) {
+      setCardTasks([]); setCardSprintStatus(null); setCardReleases([]); setCardSprintPriority(null);
+      return;
+    }
     setCardTasksLoading(true);
     const ctrl = new AbortController();
     Promise.all([
       fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: sprintId }, ctrl.signal),
-      fetchLoreSlice<{ status_raw: string | null; release_ids: string[] | null }>('sprint_tree', { id: sprintId }, ctrl.signal),
+      fetchLoreSlice<{ status_raw: string | null; release_ids: string[] | null; priority: string | null }>('sprint_tree', { id: sprintId }, ctrl.signal),
     ])
       .then(([tasks, trees]) => {
         setCardTasks(tasks);
         setCardSprintStatus(trees[0]?.status_raw ?? null);
         setCardReleases(trees[0]?.release_ids ?? []);
+        setCardSprintPriority(trees[0]?.priority ?? null);
         setCardTasksLoading(false);
       })
       .catch(() => { setCardTasks([]); setCardTasksLoading(false); });
@@ -654,6 +660,46 @@ export default function LorePlanBoard({ onError }: Props) {
               )}
               {cardReleases.length > 0 && (
                 <PRow k="Релиз" v={cardReleases.join(', ')} color="var(--acc)" />
+              )}
+
+              {/* Priority picker — only for real sprints (not plan-item stubs) */}
+              {sprintCard.represents_sprint && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Приоритет</div>
+                  <div style={{ display: 'flex', gap: 4, opacity: priorityBusy ? 0.5 : 1 }}>
+                    {[
+                      { v: 'P0', c: '#E24B4A' },
+                      { v: 'P1', c: '#ef9f27' },
+                      { v: 'P2', c: 'var(--t3)' },
+                    ].map(({ v, c }) => {
+                      const sel = cardSprintPriority === v;
+                      return (
+                        <button
+                          key={v} type="button" disabled={priorityBusy}
+                          title={v} aria-pressed={sel}
+                          onClick={() => {
+                            const sid = sprintCard.represents_sprint!;
+                            const next = sel ? null : v;
+                            const prev = cardSprintPriority;
+                            setCardSprintPriority(next);
+                            setPriorityBusy(true);
+                            updateLoreSprint(sid, { priority: next })
+                              .catch(() => setCardSprintPriority(prev))
+                              .finally(() => setPriorityBusy(false));
+                          }}
+                          style={{
+                            padding: '0 7px', height: 18, borderRadius: 3, fontSize: 10,
+                            fontWeight: sel ? 600 : 400, cursor: priorityBusy ? 'default' : 'pointer',
+                            fontFamily: 'var(--mono)',
+                            color: sel ? c : 'var(--t3)',
+                            background: sel ? `color-mix(in srgb, ${c} 15%, transparent)` : 'transparent',
+                            border: sel ? `1px solid ${c}` : '1px solid var(--bd)',
+                          }}
+                        >{v}</button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
 
               {/* Status cycling badge — reflects the EFFECTIVE status (real sprint

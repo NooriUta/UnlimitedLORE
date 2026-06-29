@@ -28,12 +28,17 @@ function projColor(slug: string, allSlugs: string[]): string {
 type SortMode = 'date' | 'release' | 'project' | 'priority';
 
 export const STATUS_FILTERS = [
-  { key: 'done',        label: 'Готово'    },
-  { key: 'in_progress', label: 'В работе'  },
-  { key: 'partial',     label: 'Частично'  },
-  { key: 'planned',     label: 'План'      },
-  { key: 'deferred',    label: 'Отложено'  },
-  { key: 'cancelled',   label: 'Отменено'  },
+  { key: 'done',             label: 'Готово'        },
+  { key: 'in_progress',      label: 'В работе'      },
+  { key: 'partial',          label: 'Частично'      },
+  { key: 'ready_for_deploy', label: 'К деплою'      },
+  { key: 'planned',          label: 'Запланировано' },
+  { key: 'todo',             label: 'TODO'          },
+  { key: 'design',           label: 'Дизайн'        },
+  { key: 'backlog',          label: 'Беклог'        },
+  { key: 'blocked',          label: 'Заблокировано' },
+  { key: 'deferred',         label: 'Отложено'      },
+  { key: 'cancelled',        label: 'Отменено'      },
 ];
 
 export interface SprintStats {

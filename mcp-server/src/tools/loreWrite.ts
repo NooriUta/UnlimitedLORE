@@ -386,6 +386,89 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_create_spec',
+    'Create or update a specification document (KnowSpec vertex). ' +
+      'Idempotent — upserts by spec_id. Mutates system_aida_lore.',
+    {
+      spec_id:      z.string().describe('unique spec id, e.g. "SPEC-AUTH-001"'),
+      title:        z.string(),
+      version:      z.string().optional().describe('e.g. "1.0.0"'),
+      component_id: z.string().optional().describe('e.g. "AUTH"'),
+      content_md:   z.string().optional().describe('spec body in Markdown'),
+      file_path:    z.string().optional().describe('source file path relative to docs root'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/spec', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_delete_spec',
+    'Permanently delete a KnowSpec vertex by spec_id. Mutates system_aida_lore.',
+    { spec_id: z.string() },
+    async ({ spec_id }) => {
+      try { return json(await lorePost('/lore/spec/delete', { spec_id })); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_quality_gate',
+    'Create or update a QualityGate vertex. ' +
+      'Idempotent — upserts by qg_id. Mutates system_aida_lore.',
+    {
+      qg_id:        z.string().describe('e.g. "QG-HOUND-listener-chain"'),
+      name:         z.string(),
+      description:  z.string().optional(),
+      component_id: z.string().optional(),
+      status:       z.string().optional().describe('e.g. "active", "draft", "deprecated"'),
+      content_md:   z.string().optional().describe('gate body in Markdown'),
+      sprint_id:    z.string().optional().describe('sprint this QG belongs to, e.g. "SPRINT_AUTH_REDESIGN"'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/quality-gate', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_runbook',
+    'Create or update a KnowRunbook vertex. ' +
+      'Idempotent — upserts by runbook_id. Mutates system_aida_lore.',
+    {
+      runbook_id:   z.string().describe('e.g. "RUNBOOK-ARCADEDB-BACKUP"'),
+      name:         z.string(),
+      area:         z.string().optional().describe('e.g. "recovery", "infra", "deploy", "ops", "auth", "db", "service"'),
+      date_created: z.string().optional().describe('ISO date YYYY-MM-DD; defaults to today'),
+      content_md:   z.string().optional().describe('runbook body in Markdown'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/runbook', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_doc',
+    'Create or update a KnowDoc vertex (HTML documentation page or fragment). ' +
+      'Idempotent — upserts by doc_id. Mutates system_aida_lore.',
+    {
+      doc_id:       z.string().describe('unique id, e.g. "engine_specs_auth" (/ → _)'),
+      title:        z.string(),
+      kind:         z.string().optional().describe('e.g. "page", "fragment", "guide", "reference", "research", "product", "site", "prompt"'),
+      has_ext_deps: z.boolean().optional().describe('true when content references external CDN'),
+      component_id: z.string().optional(),
+      file_path:    z.string().optional(),
+      content_html: z.string().optional().describe('HTML content (100 KB max)'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/doc', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_edit_task',
     'Edit one task OR a batch of tasks (title + note_md). Updates the vertex and its ' +
       'open history row. Mutates the shared system_aida_lore.\n\n' +

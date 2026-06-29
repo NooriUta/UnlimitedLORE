@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
-import { fetchLoreSlice, type LoreComponentDetail } from '../../api/lore';
+import {
+  fetchLoreSlice,
+  updateLoreComponent,
+  type LoreComponentDetail,
+  type LoreAdrRow,
+} from '../../api/lore';
 import { GameIcon } from './GameIcon';
+import { statusMeta } from './lore-status';
+import { normalizeStatus } from './loreUtils';
 import { areaColor } from './LoreComponentList';
+
+interface ComponentSprintRow {
+  sprint_id: string;
+  name: string | null;
+  status_raw: string | null;
+  release_id: string | null;
+}
 
 const S = {
   root:   { flex: 1, overflowY: 'auto' as const, padding: '16px 20px 40px' },
@@ -26,6 +40,11 @@ const S = {
     border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     cursor: 'pointer', whiteSpace: 'nowrap' as const,
   },
+  editBtn: {
+    padding: '3px 8px', borderRadius: 4, fontSize: 11, flexShrink: 0,
+    background: 'transparent', color: 'var(--t3)',
+    border: '1px solid var(--bd)', cursor: 'pointer', whiteSpace: 'nowrap' as const,
+  },
   section: { marginTop: 16 },
   sLabel:  { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 6 },
   chips:   { display: 'flex', flexWrap: 'wrap' as const, gap: 5 },
@@ -47,9 +66,33 @@ const S = {
     borderRadius: 4, cursor: 'pointer', fontSize: 11,
     background: 'transparent',
   },
-  adrId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', fontSize: 11, flex: 1 },
+  adrId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', fontSize: 11, flexShrink: 0, width: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  adrName: { flex: 1, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
+  sprintId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', fontSize: 11, flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  sprintName: { color: 'var(--t3)', fontSize: 10, flex: '0 1 auto', maxWidth: '45%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   adrDate: { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)', flexShrink: 0 },
+  adrStatus: (color: string) => ({ color, fontSize: 10, flexShrink: 0 }),
   empty:   { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  // Edit panel
+  editPanel: {
+    marginTop: 16, padding: '12px 14px', borderRadius: 6,
+    background: 'var(--b2)', border: '1px solid var(--bd)',
+  },
+  editRow:  { display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' },
+  editLabel:{ fontSize: 10, color: 'var(--t3)', width: 72, flexShrink: 0, textTransform: 'uppercase' as const },
+  editInput: {
+    flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 11,
+    background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)',
+  },
+  editActions: { display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' as const },
+  saveBtn: {
+    padding: '4px 12px', borderRadius: 4, fontSize: 11, cursor: 'pointer',
+    background: 'var(--acc)', color: '#fff', border: 'none',
+  },
+  cancelBtn: {
+    padding: '4px 12px', borderRadius: 4, fontSize: 11, cursor: 'pointer',
+    background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)',
+  },
 };
 
 interface Props {
@@ -61,29 +104,77 @@ interface Props {
 }
 
 export default function LoreComponentPassport({ componentId, onError, onNavigateAdr, onNavigateComponent, onOpenSpec }: Props) {
-  const [comp, setComp]       = useState<LoreComponentDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [comp, setComp]         = useState<LoreComponentDetail | null>(null);
+  const [adrs, setAdrs]         = useState<LoreAdrRow[]>([]);
+  const [sprints, setSprints]   = useState<ComponentSprintRow[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [editing, setEditing]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [editOwner, setEditOwner]     = useState('');
+  const [editTeam, setEditTeam]       = useState('');
+  const [editIcon, setEditIcon]       = useState('');
+  const [editFullName, setEditFullName] = useState('');
 
   useEffect(() => {
     setLoading(true);
     setComp(null);
+    setAdrs([]);
+    setSprints([]);
+    setEditing(false);
     const ctrl = new AbortController();
-    fetchLoreSlice<LoreComponentDetail>('component', { id: componentId }, ctrl.signal)
-      .then(rows => { setComp(rows[0] ?? null); setLoading(false); })
+    Promise.all([
+      fetchLoreSlice<LoreComponentDetail>('component', { id: componentId }, ctrl.signal),
+      fetchLoreSlice<LoreAdrRow>('adrs', { component: componentId }, ctrl.signal),
+    ])
+      .then(([compRows, adrRows]) => {
+        const c = compRows[0] ?? null;
+        setComp(c);
+        setAdrs(adrRows);
+        setEditOwner(c?.owner ?? '');
+        setEditTeam(c?.team ?? '');
+        setEditIcon(c?.game_icon ?? '');
+        setEditFullName(c?.full_name ?? '');
+        setLoading(false);
+        // derive sprint search key: short ids (< 4 chars) use first word of full_name
+        const key = componentId.length < 4
+          ? (c?.full_name?.split(/\s+/)[0]?.toUpperCase() ?? componentId)
+          : componentId;
+        return fetchLoreSlice<ComponentSprintRow>(
+          'component_sprints', { pattern: `%${key}%` }, ctrl.signal
+        );
+      })
+      .then(sprintRows => setSprints(sprintRows ?? []))
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
   }, [componentId, onError]);
 
+  const handleSave = async () => {
+    if (!comp) return;
+    setSaving(true);
+    try {
+      await updateLoreComponent({
+        component_id: comp.component_id,
+        owner: editOwner || null,
+        team: editTeam || null,
+        game_icon: editIcon || null,
+        full_name: editFullName || null,
+      });
+      setComp(prev => prev ? { ...prev, owner: editOwner, team: editTeam, game_icon: editIcon, full_name: editFullName } : prev);
+      setEditing(false);
+    } catch (e) {
+      onError(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div style={S.empty}>Загрузка {componentId}…</div>;
   if (!comp)   return <div style={S.empty}>Компонент не найден: {componentId}</div>;
 
-  const color       = areaColor(comp.area);
-  const subComps    = comp.sub_components ?? [];
-  const tech        = comp.tech           ?? [];
-  const adrs        = (comp.adrs ?? []).filter(Boolean) as string[];
-  const specs       = [
-    ...new Set([...(comp.specs ?? []), ...(comp.spec_docs ?? [])].filter(Boolean) as string[])
-  ];
+  const color    = areaColor(comp.area);
+  const subComps = comp.sub_components ?? [];
+  const tech     = comp.tech           ?? [];
+  const specs    = [...new Set([...(comp.specs ?? []), ...(comp.spec_docs ?? [])].filter(Boolean) as string[])];
 
   return (
     <div style={S.root}>
@@ -104,7 +195,45 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
             ↑ {comp.parent_id}
           </button>
         )}
+        <button style={S.editBtn} onClick={() => setEditing(e => !e)}>✎</button>
       </div>
+
+      {/* Edit panel */}
+      {editing && (
+        <div style={S.editPanel}>
+          <div style={S.editRow}>
+            <span style={S.editLabel}>Название</span>
+            <input style={S.editInput} value={editFullName} onChange={e => setEditFullName(e.target.value)} placeholder="Full name" />
+          </div>
+          <div style={S.editRow}>
+            <span style={S.editLabel}>Owner</span>
+            <input style={S.editInput} value={editOwner} onChange={e => setEditOwner(e.target.value)} placeholder="owner" />
+          </div>
+          <div style={S.editRow}>
+            <span style={S.editLabel}>Team</span>
+            <input style={S.editInput} value={editTeam} onChange={e => setEditTeam(e.target.value)} placeholder="team" />
+          </div>
+          <div style={S.editRow}>
+            <span style={S.editLabel}>Icon</span>
+            <input style={S.editInput} value={editIcon} onChange={e => setEditIcon(e.target.value)} placeholder="game-icon slug" />
+          </div>
+          <div style={S.editActions}>
+            <button style={S.cancelBtn} onClick={() => setEditing(false)}>Отмена</button>
+            <button style={S.saveBtn} disabled={saving} onClick={handleSave}>{saving ? '…' : 'Сохранить'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Owner/team */}
+      {(comp.owner || comp.team) && (
+        <div style={S.section}>
+          <div style={S.sLabel}>Команда</div>
+          <div style={S.chips}>
+            {comp.owner && <span style={S.chip}>👤 {comp.owner}</span>}
+            {comp.team  && <span style={S.chip}>🏷 {comp.team}</span>}
+          </div>
+        </div>
+      )}
 
       {/* Tech stack */}
       {tech.length > 0 && (
@@ -130,22 +259,64 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
         </div>
       )}
 
-      {/* ADRs */}
+      {/* ADRs — rich rows with name + status + date */}
       {adrs.length > 0 && (
         <div style={S.section}>
           <div style={S.sLabel}>ADR ({adrs.length})</div>
           <div style={S.adrList}>
-            {adrs.map(id => (
-              <div
-                key={id}
-                style={{ ...S.adrRow, ...(onNavigateAdr ? { ':hover': { background: 'var(--b2)' } } : {}) }}
-                onClick={() => onNavigateAdr?.(id)}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--b2)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-              >
-                <span style={S.adrId}>{id}</span>
-              </div>
-            ))}
+            {adrs.map(adr => {
+              const norm = normalizeStatus(adr.status);
+              const meta = statusMeta(norm);
+              return (
+                <div
+                  key={adr.adr_id}
+                  style={S.adrRow}
+                  onClick={() => onNavigateAdr?.(adr.adr_id)}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--b2)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <span style={S.adrId}>{adr.adr_id}</span>
+                  <span style={S.adrName}>{adr.name ?? adr.adr_id}</span>
+                  {adr.status && (
+                    <span style={S.adrStatus(meta.color)}>
+                      <GameIcon slug={meta.icon} size={10} style={{ color: meta.color }} />
+                      {' '}{adr.status}
+                    </span>
+                  )}
+                  <span style={S.adrDate}>{adr.date_created?.slice(0, 10) ?? ''}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Sprints — LCX-02 */}
+      {sprints.length > 0 && (
+        <div style={S.section}>
+          <div style={S.sLabel}>Спринты ({sprints.length})</div>
+          <div style={S.adrList}>
+            {sprints.map(s => {
+              const norm = normalizeStatus(s.status_raw ?? null);
+              const meta = statusMeta(norm);
+              return (
+                <div key={s.sprint_id} style={S.adrRow}>
+                  <span style={S.sprintId}>{s.sprint_id}</span>
+                  {s.name && s.name !== s.sprint_id && (
+                    <span style={S.sprintName}>{s.name}</span>
+                  )}
+                  {norm && (
+                    <span style={S.adrStatus(meta.color)}>
+                      <GameIcon slug={meta.icon} size={10} style={{ color: meta.color }} />
+                      {' '}{norm}
+                    </span>
+                  )}
+                  {s.release_id && (
+                    <span style={S.adrDate}>{s.release_id}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -163,7 +334,7 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
                 onMouseEnter={e => { if (onOpenSpec) (e.currentTarget as HTMLElement).style.background = 'var(--b2)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
               >
-                <span style={{ ...S.adrId, color: 'var(--t2)' }}>{id}</span>
+                <span style={{ ...S.adrId, color: 'var(--t2)', width: 'auto' }}>{id}</span>
               </div>
             ))}
           </div>

@@ -256,7 +256,8 @@ public final class LoreSlices {
         slice("components",
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "in('PARENT_OF').component_id AS children, " +
-            "out('USES').tech_id AS tech " +
+            "out('USES').tech_id AS tech, " +
+            "in('BELONGS_TO')[adr_id IS NOT NULL].size() AS adr_count " +
             "FROM LoreComponent",
             List.of(),
             new LinkedHashMap<>(Map.of("root", " WHERE parent_id = :root")),
@@ -266,11 +267,19 @@ public final class LoreSlices {
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "out('PARENT_OF').component_id  AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
-            "in('BELONGS_TO').adr_id        AS adrs, " +
-            "in('BELONGS_TO').spec_id       AS specs, " +
-            "out('DOCUMENTED_IN').spec_id   AS spec_docs " +
+            "in('BELONGS_TO')[adr_id IS NOT NULL].adr_id  AS adrs, " +
+            "out('DOCUMENTED_IN').spec_id   AS specs " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
+
+        // LCX-02: sprints related to component by naming convention (sprint_id LIKE '%<key>%')
+        // The key is derived on the frontend from component_id or full_name first word
+        slice("component_sprints",
+            "SELECT sprint_id, name, status_raw, " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id[0] AS release_id " +
+            "FROM KnowSprint WHERE sprint_id LIKE :pattern " +
+            "ORDER BY sprint_id DESC",
+            List.of("pattern"), Map.of(), " LIMIT 30");
 
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.
@@ -278,7 +287,7 @@ public final class LoreSlices {
         // lore-backfill-spec-titles.mjs; until then the frontend falls back to spec_id.
         slice("specs",
             "SELECT spec_id, title, file_path, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -287,11 +296,11 @@ public final class LoreSlices {
 
         slice("spec_by_id",
             "SELECT spec_id, title, file_path, " +
-            "out('HAS_STATE').content_md[0]    AS content_md, " +
-            "out('HAS_STATE').summary[0]       AS summary, " +
-            "out('HAS_STATE').version[0]       AS version, " +
-            "out('HAS_STATE').valid_from[0]    AS valid_from, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').summary[0]                          AS summary, " +
+            "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
+            "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -311,7 +320,7 @@ public final class LoreSlices {
         // query gracefully (returns [] until KnowDoc vertices are ingested).
         slice("docs",
             "SELECT doc_id, title, kind, has_ext_deps, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -333,13 +342,15 @@ public final class LoreSlices {
             " ORDER BY runbook_id LIMIT 100");
 
         slice("runbook_by_id",
-            "SELECT runbook_id, name, area, date_created, content_md " +
+            "SELECT runbook_id, name, area, date_created, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowRunbook WHERE runbook_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, component_id, status, date_created " +
+            "SELECT qg_id, name, description, component_id, status, date_created, sprint_id " +
             "FROM QualityGate",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -347,7 +358,7 @@ public final class LoreSlices {
             " ORDER BY qg_id LIMIT 100");
 
         slice("quality_gate_by_id",
-            "SELECT qg_id, name, description, component_id, status, date_created, content_md " +
+            "SELECT qg_id, name, description, component_id, status, date_created, content_md, sprint_id " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -428,6 +439,32 @@ public final class LoreSlices {
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag ORDER BY pr_number",
             List.of("tag"), Map.of(), " LIMIT 100");
+
+        // ── §13 ClRoutine* slices (Phase 6 v1.3) ─────────────────────────────
+        slice("routine_latest",
+            "SELECT metric_key, value, unit, status, run_date " +
+            "FROM ClRoutineMetric WHERE routine_name = :routine_name " +
+            "AND run_date = (SELECT max(run_date) FROM ClRoutineMetric " +
+            "WHERE routine_name = :routine_name) ORDER BY metric_key LIMIT 50",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_last_run",
+            "SELECT routine_name, run_date, status, flags, detail_md, gates_failed_ids " +
+            "FROM ClRoutineRun WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC LIMIT 1",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_outputs",
+            "SELECT output_type, title, run_date " +
+            "FROM ClRoutineOutput WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC LIMIT 50",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_output_by_type",
+            "SELECT output_type, title, run_date, content_md " +
+            "FROM ClRoutineOutput WHERE routine_name = :routine_name " +
+            "AND output_type = :output_type ORDER BY run_date DESC LIMIT 1",
+            List.of("routine_name", "output_type"), Map.of(), "");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }

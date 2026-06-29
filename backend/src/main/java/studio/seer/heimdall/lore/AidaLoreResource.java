@@ -71,22 +71,28 @@ public class AidaLoreResource {
     // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
     private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
     private static final Set<String> ENTITY_TYPES =
-        Set.of("plan_item", "sprint", "task", "checkpoint");
+        Set.of("plan_item", "sprint", "task", "checkpoint", "adr");
     private static final Set<String> PLAN_STATUSES =
-        Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled");
+        Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled",
+               "planned", "backlog", "design", "ready_for_deploy");
+    private static final Set<String> ADR_STATUSES =
+        Set.of("proposed", "accepted", "draft", "deferred", "superseded");
 
     // Canonical status token → status_raw string written on KnowSprintHist / KnowTaskHist.
     // Mirrors the leading-marker convention the frontend normalizer (LoreSprintDetail) reads back.
     // 🟡 PARTIAL is a distinct status from 🔄 IN PROGRESS — see lore-status.ts taskTick.
-    private static final Map<String, String> SCD2_STATUS_RAW = Map.of(
-        "done",             "✅ DONE",
-        "active",           "🔄 IN PROGRESS",
-        "partial",          "🟡 PARTIAL",
-        "todo",             "📋 PLANNED",
-        "blocked",          "🔴 BLOCKED",
-        "high",             "🔴 P0",
-        "cancelled",        "🚫 CANCELLED",
-        "ready_for_deploy", "🚀 READY FOR DEPLOY");
+    private static final Map<String, String> SCD2_STATUS_RAW = Map.ofEntries(
+        Map.entry("done",             "✅ DONE"),
+        Map.entry("active",           "🔄 IN PROGRESS"),
+        Map.entry("partial",          "🟡 PARTIAL"),
+        Map.entry("todo",             "⬜ TODO"),
+        Map.entry("planned",          "📋 PLANNED"),
+        Map.entry("blocked",          "🔴 BLOCKED"),
+        Map.entry("high",             "🔴 P0"),
+        Map.entry("cancelled",        "🚫 CANCELLED"),
+        Map.entry("ready_for_deploy", "🚀 READY FOR DEPLOY"),
+        Map.entry("backlog",          "🟣 BACKLOG"),
+        Map.entry("design",           "🔬 DESIGN"));
 
     @ConfigProperty(name = "lore.enabled", defaultValue = "false")
     boolean enabled;
@@ -187,7 +193,12 @@ public class AidaLoreResource {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", "id contains illegal characters"))));
         }
-        if (!PLAN_STATUSES.contains(req.status())) {
+        if ("adr".equals(req.entity_type())) {
+            if (!ADR_STATUSES.contains(req.status().toLowerCase())) {
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new LoreError("BAD_PARAMS", "adr status must be one of: " + ADR_STATUSES))));
+            }
+        } else if (!PLAN_STATUSES.contains(req.status())) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", "unknown status: " + req.status()))));
         }
@@ -199,6 +210,7 @@ public class AidaLoreResource {
                                     "sprint_id", req.id(), req.status(), now, nsid);
             case "task"      -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
                                     "task_uid", req.id(), req.status(), now, nsid);
+            case "adr"       -> updateAdrStatusDirect(req.id(), req.status().toUpperCase(), now);
             default          -> Uni.createFrom().item(noStore(Response.status(501)
                                     .entity(new LoreError("NOT_IMPLEMENTED",
                                         req.entity_type() + " not supported yet"))));
@@ -263,6 +275,18 @@ public class AidaLoreResource {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
             });
+    }
+
+    // LH-44: direct status setter for KnowADR (no SCD2 hist row — status is a plain field)
+    private Uni<Response> updateAdrStatusDirect(String adrId, String status, String now) {
+        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowADR SET status=:status WHERE adr_id=:id",
+                Map.of("status", status, "id", adrId)))
+            .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
+                true, "adr", adrId, null, status, new StatusRevision(now, null)))))
+            .onFailure().recoverWithItem(ex ->
+                noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
     }
 
     private Uni<Response> updatePlanItemStatus(String itemId, String newStatus,
@@ -738,6 +762,31 @@ public class AidaLoreResource {
                     errors.add("sprint " + sid + ": " + e.getMessage());
                 }
             }
+            // LH-43: auto-set week on KnowRelease if null, computed from release_date vs w0_date
+            if (sprintsLinked > 0) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> relInfo = (List<Map<String, Object>>)
+                        client.query(db, basicAuth(), new MartQuery("sql",
+                            "SELECT release_date, week FROM KnowRelease WHERE release_uid=:ruid",
+                            Map.of("ruid", ruid), -1)).await().indefinitely().result();
+                    if (relInfo != null && !relInfo.isEmpty()) {
+                        Object weekVal = relInfo.get(0).get("week");
+                        Object dateVal = relInfo.get(0).get("release_date");
+                        if (weekVal == null && dateVal != null) {
+                            java.time.LocalDate w0 = java.time.LocalDate.of(2026, 4, 13);
+                            java.time.LocalDate relDate = java.time.LocalDate.parse(
+                                dateVal.toString().substring(0, 10));
+                            int week = (int)(java.time.temporal.ChronoUnit.DAYS.between(w0, relDate) / 7) + 1;
+                            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                                "UPDATE KnowRelease SET week=:week WHERE release_uid=:ruid AND week IS NULL",
+                                Map.of("week", week, "ruid", ruid))).await().indefinitely();
+                        }
+                    }
+                } catch (Exception e) {
+                    LOG.warnf("[LORE RELEASE LINK] week auto-set failed for %s: %s", ruid, e.getMessage());
+                }
+            }
             List<Integer> prs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
             for (Integer prNum : prs) {
                 try {
@@ -1111,18 +1160,33 @@ public class AidaLoreResource {
             String now  = Instant.now().toString();
             String nsid = UUID.randomUUID().toString();
 
-            // Step 1: upsert KnowADR vertex (metadata only — body lives in the SCD2 hist row)
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowADR SET adr_id=:adr_id, name=:name, status=:status, " +
-                "date_created=:date_created, component_id=:component_id " +
-                "UPSERT WHERE adr_id=:adr_id",
-                mapOfNullable(
-                    "adr_id",       req.adr_id(),
-                    "name",         req.name(),
-                    "status",       req.status() != null ? req.status() : "PROPOSED",
-                    "date_created", req.date_created() != null ? req.date_created()
-                                        : java.time.LocalDate.now().toString(),
-                    "component_id", req.component_id())))
+            // Step 1: upsert KnowADR vertex — LH-44: only set status when provided; for
+            // new ADRs default to PROPOSED, for existing ones never overwrite with null.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> existingAdr = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT status FROM KnowADR WHERE adr_id=:id",
+                    Map.of("id", req.adr_id())))
+                .await().indefinitely().result();
+            boolean isNewAdr = existingAdr == null || existingAdr.isEmpty();
+            String resolvedStatus = (req.status() != null && !req.status().isBlank())
+                ? req.status() : (isNewAdr ? "PROPOSED" : null);
+            StringBuilder upsertSql = new StringBuilder(
+                "UPDATE KnowADR SET adr_id=:adr_id, name=:name, " +
+                "date_created=:date_created, component_id=:component_id");
+            Map<String, Object> upsertP = mapOfNullable(
+                "adr_id",       req.adr_id(),
+                "name",         req.name(),
+                "date_created", req.date_created() != null ? req.date_created()
+                                    : java.time.LocalDate.now().toString(),
+                "component_id", req.component_id());
+            if (resolvedStatus != null) {
+                upsertSql.append(", status=:status");
+                upsertP.put("status", resolvedStatus);
+            }
+            upsertSql.append(" UPSERT WHERE adr_id=:adr_id");
+            writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sql", upsertSql.toString(), upsertP))
                 .await().indefinitely();
 
             // Step 2: check for an existing open SCD2 hist row
@@ -1313,7 +1377,11 @@ public class AidaLoreResource {
         }
     }
 
-    public record ComponentUpdateRequest(String component_id, String owner, String team) {}
+    public record ComponentUpdateRequest(
+        String component_id,
+        String owner, String team,
+        String full_name, String area, String game_icon, String parent_id
+    ) {}
 
     @POST
     @Path("component/update")
@@ -1328,15 +1396,235 @@ public class AidaLoreResource {
             return badParams("component_id required");
         try {
             Map<String, Object> p = mapOfNullable(
-                "cid",   req.component_id(),
-                "owner", req.owner(),
-                "team",  req.team());
+                "cid",       req.component_id(),
+                "owner",     req.owner(),
+                "team",      req.team(),
+                "full_name", req.full_name(),
+                "area",      req.area(),
+                "game_icon", req.game_icon(),
+                "parent_id", req.parent_id());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE LoreComponent SET owner=:owner, team=:team WHERE component_id=:cid",
+                "UPDATE LoreComponent SET owner=:owner, team=:team, " +
+                "full_name=:full_name, area=:area, game_icon=:game_icon, parent_id=:parent_id " +
+                "WHERE component_id=:cid",
                 p)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Spec write ───────────────────────────────────────────────────────────
+    public record SpecUpsertRequest(String spec_id, String title, String version,
+        String component_id, String content_md, String file_path) {}
+    public record SpecDeleteRequest(String spec_id) {}
+
+    @POST
+    @Path("spec")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertSpec(SpecUpsertRequest req,
+                               @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.spec_id() == null || req.spec_id().isBlank())
+            return badParams("spec_id required");
+        if (!SAFE_ID.matcher(req.spec_id()).matches())
+            return badParams("spec_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "id",      req.spec_id(),
+                "title",   req.title(),
+                "version", req.version(),
+                "cid",     req.component_id(),
+                "content", req.content_md(),
+                "fp",      req.file_path());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowSpec SET spec_id=:id, title=:title, version=:version, " +
+                "component_id=:cid, content_md=:content, file_path=:fp " +
+                "UPSERT WHERE spec_id=:id", p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @POST
+    @Path("spec/delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteSpec(SpecDeleteRequest req,
+                               @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.spec_id() == null || req.spec_id().isBlank())
+            return badParams("spec_id required");
+        if (!SAFE_ID.matcher(req.spec_id()).matches())
+            return badParams("spec_id contains illegal characters");
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM KnowSpec WHERE spec_id=:id",
+                Map.of("id", req.spec_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPEC DELETE] %s: %s", req.spec_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── QualityGate write ────────────────────────────────────────────────────
+    public record QGUpsertRequest(String qg_id, String name, String description,
+        String component_id, String status, String content_md, String sprint_id) {}
+
+    @POST
+    @Path("quality-gate")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertQualityGate(QGUpsertRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.qg_id() == null || req.qg_id().isBlank())
+            return badParams("qg_id required");
+        if (!SAFE_ID.matcher(req.qg_id()).matches())
+            return badParams("qg_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "id",  req.qg_id(),
+                "nm",  req.name(),
+                "dsc", req.description(),
+                "cid", req.component_id(),
+                "st",  req.status(),
+                "cnt", req.content_md(),
+                "sid", req.sprint_id());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE QualityGate SET qg_id=:id, name=:nm, description=:dsc, " +
+                "component_id=:cid, status=:st, content_md=:cnt, sprint_id=:sid " +
+                "UPSERT WHERE qg_id=:id", p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "qg_id", req.qg_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Runbook write ────────────────────────────────────────────────────────
+    public record RunbookUpsertRequest(String runbook_id, String name, String area,
+        String date_created, String content_md) {}
+
+    @POST
+    @Path("runbook")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertRunbook(RunbookUpsertRequest req,
+                                  @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.runbook_id() == null || req.runbook_id().isBlank())
+            return badParams("runbook_id required");
+        if (!SAFE_ID.matcher(req.runbook_id()).matches())
+            return badParams("runbook_id contains illegal characters");
+        try {
+            String now  = Instant.now().toString();
+            String nsid = UUID.randomUUID().toString();
+
+            // Step 1: upsert KnowRunbook vertex (metadata only — content lives in hist)
+            Map<String, Object> upsertP = mapOfNullable(
+                "id",   req.runbook_id(),
+                "name", req.name(),
+                "area", req.area(),
+                "date", req.date_created() != null ? req.date_created()
+                            : java.time.LocalDate.now().toString());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowRunbook SET runbook_id=:id, name=:name, area=:area, " +
+                "date_created=:date UPSERT WHERE runbook_id=:id", upsertP))
+                .await().indefinitely();
+
+            // Step 2: check for an existing open SCD2 hist row
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> histRows = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT state_uid FROM KnowRunbookHist " +
+                    "WHERE in('HAS_STATE').runbook_id[0] = :id AND valid_to IS NULL LIMIT 1",
+                    Map.of("id", req.runbook_id())))
+                .await().indefinitely().result();
+
+            boolean histCreated;
+            if (histRows != null && !histRows.isEmpty()) {
+                // Step 3a: update content on the existing open hist row
+                String sid = String.valueOf(histRows.get(0).get("state_uid"));
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowRunbookHist SET content_md=:cnt WHERE state_uid=:sid",
+                    mapOfNullable("cnt", req.content_md(), "sid", sid)))
+                    .await().indefinitely();
+                histCreated = false;
+            } else {
+                // Step 3b: create the initial open hist row + HAS_STATE edge
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt",
+                    mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md())))
+                    .await().indefinitely();
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_STATE " +
+                    "FROM (SELECT FROM KnowRunbook     WHERE runbook_id = :id) " +
+                    "TO   (SELECT FROM KnowRunbookHist WHERE state_uid  = :nsid)",
+                    Map.of("id", req.runbook_id(), "nsid", nsid)))
+                    .await().indefinitely();
+                histCreated = true;
+            }
+
+            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                "hist_created", histCreated)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE RUNBOOK UPSERT] %s: %s", req.runbook_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── KnowDoc write ────────────────────────────────────────────────────────
+    public record DocUpsertRequest(String doc_id, String title, String kind,
+        Boolean has_ext_deps, String component_id, String file_path, String content_html) {}
+
+    @POST
+    @Path("doc")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertDoc(DocUpsertRequest req,
+                              @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.doc_id() == null || req.doc_id().isBlank())
+            return badParams("doc_id required");
+        if (!SAFE_ID.matcher(req.doc_id()).matches())
+            return badParams("doc_id contains illegal characters");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "id",       req.doc_id(),
+                "title",    req.title(),
+                "kind",     req.kind(),
+                "ext_deps", req.has_ext_deps(),
+                "cid",      req.component_id(),
+                "fp",       req.file_path(),
+                "content",  req.content_html());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowDoc SET doc_id=:id, title=:title, kind=:kind, " +
+                "has_ext_deps=:ext_deps, component_id=:cid, file_path=:fp, content_html=:content " +
+                "UPSERT WHERE doc_id=:id", p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }

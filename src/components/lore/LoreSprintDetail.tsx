@@ -15,6 +15,7 @@ interface SprintMeta {
   sprint_id: string;
   name: string;
   status_raw: string | null;
+  priority: string | null;
   pr_refs: string | null;
   release_ids: string[] | null;
   milestone_ids: string[] | null;
@@ -74,41 +75,33 @@ function toToken(key: string): LorePlanItemStatus {
   if (key === 'in_progress' || key === 'active') return 'active';
   if (key === 'partial') return 'partial';
   if (key === 'ready_for_deploy') return 'ready_for_deploy';
-  if (key === 'deferred' || key === 'blocked') return 'blocked';
+  if (key === 'blocked') return 'blocked';
   if (key === 'cancelled') return 'cancelled';
+  if (key === 'planned' || key === 'deferred') return 'planned';
+  if (key === 'backlog') return 'backlog';
+  if (key === 'design') return 'design';
   return 'todo';
 }
 
-type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string };
+type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string; gi: string; c: string; abbr: string };
 
-// Task picker: 7-status canon (no planning statuses — tasks don't have planned/design/backlog)
-const TASK_PICK_OPTS: PickOpt[] = [
-  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
-  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
-  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
-  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
-  { token: 'done',             statusKey: 'done',             label: 'Готово' },
-  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
-  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
-];
-
-// Sprint picker: 10-status canon (includes planning phases)
 const SPRINT_PICK_OPTS: PickOpt[] = [
-  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
-  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано' },
-  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог' },
-  { token: 'design',           statusKey: 'design',           label: 'Дизайн' },
-  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
-  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
-  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
-  { token: 'done',             statusKey: 'done',             label: 'Готово' },
-  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
-  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
+  { token: 'todo',             statusKey: 'todo',             label: 'TODO',          gi: 'checkbox-tree',  c: '#665C48', abbr: 'TODO' },
+  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано', gi: 'calendar',        c: '#D4922A', abbr: 'PLN'  },
+  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог',        gi: 'tied-scroll',     c: '#9A8C6E', abbr: 'BL'   },
+  { token: 'design',           statusKey: 'design',           label: 'Дизайн',        gi: 'magic-swirl',     c: '#D4922A', abbr: 'DS'   },
+  { token: 'active',           statusKey: 'in_progress',      label: 'В работе',      gi: 'progression',     c: '#88B8A8', abbr: 'WIP'  },
+  { token: 'partial',          statusKey: 'partial',          label: 'Частично',      gi: 'battery-50',      c: '#D4922A', abbr: 'PART' },
+  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою',      gi: 'wave-crest',      c: '#7DBF78', abbr: 'RD'   },
+  { token: 'done',             statusKey: 'done',             label: 'Готово',        gi: 'divided-spiral',  c: '#7DBF78', abbr: 'DONE' },
+  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано', gi: 'handcuffed',      c: '#C85848', abbr: 'BLK'  },
+  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено',      gi: 'cross-mark',      c: '#C85848', abbr: 'CNC'  },
 ];
 
-// Inline status setter — admin-only write to system_aida_lore via POST /lore/status (SCD2).
-// Renders as a small row of icon-buttons (consistent with the LORE status ticks),
-// the active status highlighted; RU tooltips. No raw <select>.
+const TASK_PICK_OPTS: PickOpt[] = SPRINT_PICK_OPTS.filter(o =>
+  ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'].includes(o.token)
+);
+
 function StatusPicker({ entityType, id, current, onChanged, onError }: {
   entityType: 'sprint' | 'task';
   id: string;
@@ -116,7 +109,8 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
-  const opts = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
+  const opts    = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
+  const compact = entityType === 'task';
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
     if (next === current || busy) return;
@@ -128,26 +122,78 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   return (
     <span
       role="group" aria-label="Изменить статус"
-      style={{ display: 'inline-flex', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
+      style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
     >
       {opts.map(o => {
-        const meta = statusMeta(o.statusKey);
-        const sel  = o.token === current;
+        const sel = o.token === current;
         return (
           <button
             key={o.token} type="button" disabled={busy}
             title={o.label} aria-label={o.label} aria-pressed={sel}
             onClick={e => { e.stopPropagation(); void set(o.token); }}
             style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 20, height: 18, padding: 0, lineHeight: 0,
+              display: 'inline-flex', alignItems: 'center', gap: compact ? 0 : 3,
+              padding: compact ? '0 4px' : '0 6px', height: 18,
               cursor: busy ? 'default' : 'pointer', borderRadius: 3,
-              background: sel ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
-              border: sel ? `1px solid ${meta.color}` : '1px solid var(--bd)',
+              opacity: sel ? 1 : 0.42,
+              background: sel ? `color-mix(in srgb, ${o.c} 16%, transparent)` : 'transparent',
+              border: `1px solid ${sel ? o.c : 'transparent'}`,
             }}
           >
-            <GameIcon slug={meta.icon} size={12} style={{ color: meta.color }} />
+            <GameIcon slug={o.gi} size={compact ? 12 : 13} style={{ color: o.c }} />
+            {!compact && (
+              <span style={{
+                fontSize: 9, fontFamily: 'var(--mono)', lineHeight: 1, letterSpacing: '0.03em',
+                color: o.c,
+                fontWeight: sel ? 600 : 400,
+              }}>{o.abbr}</span>
+            )}
           </button>
+        );
+      })}
+    </span>
+  );
+}
+
+const PRIORITY_OPTS = [
+  { value: 'P0', label: 'P0 — критично', color: '#E24B4A' },
+  { value: 'P1', label: 'P1 — высокий',  color: '#ef9f27' },
+  { value: 'P2', label: 'P2 — обычный',  color: 'var(--t3)' },
+];
+
+function PriorityPicker({ sprintId, current, onChanged, onError }: {
+  sprintId: string;
+  current: string | null;
+  onChanged: () => void;
+  onError: (e: unknown) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  async function set(next: string | null) {
+    if (busy) return;
+    const val = next === current ? null : next; // повторный клик — сброс
+    setBusy(true);
+    try { await updateLoreSprint(sprintId, { priority: val }); onChanged(); }
+    catch (err) { onError(err); }
+    finally { setBusy(false); }
+  }
+  return (
+    <span role="group" aria-label="Приоритет" style={{ display: 'inline-flex', gap: 2, opacity: busy ? 0.5 : 1 }}>
+      {PRIORITY_OPTS.map(o => {
+        const sel = o.value === current;
+        return (
+          <button
+            key={o.value} type="button" disabled={busy}
+            title={o.label} aria-label={o.label} aria-pressed={sel}
+            onClick={e => { e.stopPropagation(); void set(o.value); }}
+            style={{
+              padding: '0 6px', height: 18, borderRadius: 3, fontSize: 10,
+              fontWeight: sel ? 600 : 400, cursor: busy ? 'default' : 'pointer',
+              fontFamily: 'var(--mono)',
+              color: sel ? o.color : 'var(--t3)',
+              background: sel ? `color-mix(in srgb, ${o.color} 15%, transparent)` : 'transparent',
+              border: sel ? `1px solid ${o.color}` : '1px solid var(--bd)',
+            }}
+          >{o.value}</button>
         );
       })}
     </span>
@@ -509,6 +555,12 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
           onChanged={reload}
           onError={onError}
         />
+        <PriorityPicker
+          sprintId={sprint.sprint_id}
+          current={sprint.priority}
+          onChanged={reload}
+          onError={onError}
+        />
         {tasks.length > 0 && (
           <>
             <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
@@ -552,13 +604,13 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
       )}
 
       {/* context_md — background / WHY section, editable inline */}
-      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
+      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Контекст</span>
           {!ctxEdit && (
             <button
               onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
-              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
             >✎ ред.</button>
           )}
         </div>
@@ -569,7 +621,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
               onChange={e => setCtxDraft(e.target.value)}
               rows={8}
               placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки, связанные спринты..."
-              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
+              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
             />
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
               <button
@@ -587,7 +639,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
               >{ctxSaving ? '…' : 'Сохранить'}</button>
               <button
                 onClick={() => setCtxEdit(false)}
-                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
               >Отмена</button>
             </div>
           </div>
@@ -607,7 +659,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         const unlinked = allProjects.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         return (
-          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
+          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проекты</span>
             </div>
@@ -647,9 +699,12 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
                     } catch (err) { onError(err); }
                     finally { setProjLinking(false); }
                   }}
-                  style={{ fontSize: 11, padding: '2px 4px', borderRadius: 5,
-                    background: 'var(--bg2)', border: '1px solid var(--bdr)',
-                    color: 'var(--t2)', cursor: 'pointer' }}
+                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+                    background: 'var(--bg2)', border: '1px solid var(--bd)',
+                    color: 'var(--t2)', cursor: 'pointer',
+                    appearance: 'none' as const,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}
                 >
                   <option value="">+ привязать…</option>
                   {unlinked.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
