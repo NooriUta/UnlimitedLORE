@@ -350,7 +350,7 @@ public final class LoreSlices {
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, component_id, status, date_created " +
+            "SELECT qg_id, name, description, component_id, status, date_created, sprint_id " +
             "FROM QualityGate",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -358,7 +358,7 @@ public final class LoreSlices {
             " ORDER BY qg_id LIMIT 100");
 
         slice("quality_gate_by_id",
-            "SELECT qg_id, name, description, component_id, status, date_created, content_md " +
+            "SELECT qg_id, name, description, component_id, status, date_created, content_md, sprint_id " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 

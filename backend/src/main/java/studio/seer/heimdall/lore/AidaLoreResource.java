@@ -1481,7 +1481,7 @@ public class AidaLoreResource {
 
     // ── QualityGate write ────────────────────────────────────────────────────
     public record QGUpsertRequest(String qg_id, String name, String description,
-        String component_id, String status, String content_md) {}
+        String component_id, String status, String content_md, String sprint_id) {}
 
     @POST
     @Path("quality-gate")
@@ -1503,10 +1503,11 @@ public class AidaLoreResource {
                 "dsc", req.description(),
                 "cid", req.component_id(),
                 "st",  req.status(),
-                "cnt", req.content_md());
+                "cnt", req.content_md(),
+                "sid", req.sprint_id());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE QualityGate SET qg_id=:id, name=:nm, description=:dsc, " +
-                "component_id=:cid, status=:st, content_md=:cnt " +
+                "component_id=:cid, status=:st, content_md=:cnt, sprint_id=:sid " +
                 "UPSERT WHERE qg_id=:id", p)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "qg_id", req.qg_id())));
         } catch (Exception e) {

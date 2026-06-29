@@ -17,13 +17,16 @@ import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
+import LoreQualityGateList from '../components/lore/LoreQualityGateList';
+import LoreRunbookList     from '../components/lore/LoreRunbookList';
+import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta }      from '../components/lore/lore-status';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases'
-  | 'components'
+  | 'knowledge' | 'components'
   | 'evolution' | 'timeline' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
@@ -33,6 +36,7 @@ const SECTIONS: { id: Section; icon: string; label: string }[] = [
   { id: 'adrs',       icon: 'scroll-quill',   label: 'ADR'          },
   { id: 'decisions',  icon: 'vote',           label: 'Решения'      },
   { id: 'releases',   icon: 'open-book',      label: 'Релизы'       },
+  { id: 'knowledge',  icon: 'spell-book',     label: 'Знания'       },
   { id: 'components', icon: 'cog',            label: 'Компоненты'   },
   { id: 'evolution',  icon: 'hourglass',      label: 'История'      },
   { id: 'timeline',   icon: 'tied-scroll',    label: 'Лента'        },
@@ -40,7 +44,7 @@ const SECTIONS: { id: Section; icon: string; label: string }[] = [
 ];
 
 // Sections that use master-detail layout (list panel + detail panel)
-const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components'];
+const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge'];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const LIST_W_DEFAULT = 260;
@@ -122,6 +126,8 @@ export default function LorePage() {
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
   const spec      = params.get('spec')      || '';
+  const artKind   = (params.get('kind') as DocKind | '') || '';
+  const artId     = params.get('art')        || '';
 
   const [debouncedQ, setDebouncedQ] = useState(q);
   useEffect(() => {
@@ -169,6 +175,7 @@ export default function LorePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adrStatusSel]);
   // Component filters
+  const [knowledgeKind, setKnowledgeKind] = useState<'qg' | 'runbook'>('qg');
   const [compQ, setCompQ]               = useState('');
   const [compAreaSel, setCompAreaSel]   = useState<Set<string>>(new Set());
   const [compAreaCounts, setCompAreaCounts] = useState<Record<string, number>>({});
@@ -207,6 +214,8 @@ export default function LorePage() {
   const clearSpec     = ()           => setParams(p => { p.delete('spec'); return p; });
   const navigateToAdr    = (id: string) => setParams(p => { p.set('section', 'adrs');    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
+  const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('kind', kind); p.set('art', id); return p; });
+  const closeArt  = () => setParams(p => { p.delete('kind'); p.delete('art'); return p; });
 
   const onSearchChange = (v: string) => {
     setSearch(v);
@@ -693,6 +702,51 @@ export default function LorePage() {
                 />
               </>
             )}
+            {section === 'knowledge' && (
+              <>
+                {/* Knowledge sub-nav: QG | Runbooks */}
+                <div style={{
+                  display: 'flex', gap: 0, flexShrink: 0,
+                  borderBottom: '1px solid var(--bd)',
+                }}>
+                  {([
+                    { key: 'qg'      as const, label: 'Quality Gates', icon: 'checkered-flag' },
+                    { key: 'runbook' as const, label: 'Runbooks',       icon: 'papers'         },
+                  ] as const).map(tab => (
+                    <button
+                      key={tab.key}
+                      style={{
+                        flex: 1, height: 30, border: 'none', cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 11,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                        background: knowledgeKind === tab.key
+                          ? 'color-mix(in srgb, var(--acc) 10%, transparent)'
+                          : 'transparent',
+                        color: knowledgeKind === tab.key ? 'var(--acc)' : 'var(--t3)',
+                        borderBottom: knowledgeKind === tab.key ? '2px solid var(--acc)' : '2px solid transparent',
+                        fontWeight: knowledgeKind === tab.key ? 600 : 400,
+                      }}
+                      onClick={() => { setKnowledgeKind(tab.key); closeArt(); }}
+                    >
+                      <GameIcon slug={tab.icon} size={12} style={{ color: 'inherit' }} />
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                {knowledgeKind === 'qg' && (
+                  <LoreQualityGateList
+                    onError={handleFetchError}
+                    onOpen={id => openArt('qg', id)}
+                  />
+                )}
+                {knowledgeKind === 'runbook' && (
+                  <LoreRunbookList
+                    onError={handleFetchError}
+                    onOpen={id => openArt('runbook', id)}
+                  />
+                )}
+              </>
+            )}
           </div>
           <div
             className="lore-resize-handle"
@@ -769,6 +823,23 @@ export default function LorePage() {
           )}
           {section === 'components' && !spec && !passport && (
             <div style={S.placeholder}>Выберите компонент из списка слева</div>
+          )}
+
+          {/* Knowledge — QG + Runbook master-detail (T01-T07) */}
+          {section === 'knowledge' && artKind && artId && (
+            <LoreArtifactDoc
+              kind={artKind as DocKind}
+              id={artId}
+              onError={handleFetchError}
+              onBack={closeArt}
+              onNavigateSprint={navigateToSprint}
+            />
+          )}
+          {section === 'knowledge' && !(artKind && artId) && (
+            <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
+              <GameIcon slug="spell-book" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
+              <span>Выберите элемент из списка слева</span>
+            </div>
           )}
 
           {/* Evolution */}

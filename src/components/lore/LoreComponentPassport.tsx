@@ -66,8 +66,10 @@ const S = {
     borderRadius: 4, cursor: 'pointer', fontSize: 11,
     background: 'transparent',
   },
-  adrId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', fontSize: 11, flexShrink: 0, width: 80 },
+  adrId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', fontSize: 11, flexShrink: 0, width: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   adrName: { flex: 1, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
+  sprintId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', fontSize: 11, flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  sprintName: { color: 'var(--t3)', fontSize: 10, flex: '0 1 auto', maxWidth: '45%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   adrDate: { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)', flexShrink: 0 },
   adrStatus: (color: string) => ({ color, fontSize: 10, flexShrink: 0 }),
   empty:   { padding: 24, color: 'var(--t3)', fontSize: 12 },
@@ -299,8 +301,10 @@ export default function LoreComponentPassport({ componentId, onError, onNavigate
               const meta = statusMeta(norm);
               return (
                 <div key={s.sprint_id} style={S.adrRow}>
-                  <span style={S.adrId}>{s.sprint_id}</span>
-                  <span style={S.adrName}>{s.name ?? s.sprint_id}</span>
+                  <span style={S.sprintId}>{s.sprint_id}</span>
+                  {s.name && s.name !== s.sprint_id && (
+                    <span style={S.sprintName}>{s.name}</span>
+                  )}
                   {norm && (
                     <span style={S.adrStatus(meta.color)}>
                       <GameIcon slug={meta.icon} size={10} style={{ color: meta.color }} />

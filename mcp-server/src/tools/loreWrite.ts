@@ -424,6 +424,7 @@ export function registerLoreWrite(server: McpServer): void {
       component_id: z.string().optional(),
       status:       z.string().optional().describe('e.g. "active", "draft", "deprecated"'),
       content_md:   z.string().optional().describe('gate body in Markdown'),
+      sprint_id:    z.string().optional().describe('sprint this QG belongs to, e.g. "SPRINT_AUTH_REDESIGN"'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/quality-gate', p)); }

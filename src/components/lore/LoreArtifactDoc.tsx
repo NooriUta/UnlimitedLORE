@@ -18,7 +18,7 @@ interface RawRow {
   kind?: string | null; has_ext_deps?: boolean | null;
   date_created?: string | null; valid_from?: string | null;
   content_md?: string | null; content_html?: string | null;
-  component_id?: string | null;
+  component_id?: string | null; sprint_id?: string | null;
 }
 
 interface QgMetricRow { metric_id: string; name: string; threshold: string; }
@@ -51,6 +51,8 @@ const S = {
   tdThresh: { padding: '4px 8px', color: 'var(--t1)', whiteSpace: 'pre-wrap' as const, maxWidth: 240 },
   idFoot: { marginTop: 18, paddingTop: 10, borderTop: '1px solid var(--bd)', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  sprintLink: { fontSize: 11, color: 'var(--t3)', marginBottom: 10 },
+  sprintAnchor: { color: 'var(--acc)', cursor: 'pointer', textDecoration: 'underline' },
 };
 
 interface Props {
@@ -58,9 +60,10 @@ interface Props {
   id: string;
   onError: (e: unknown) => void;
   onBack: () => void;
+  onNavigateSprint?: (id: string) => void;
 }
 
-export default function LoreArtifactDoc({ kind, id, onError, onBack }: Props) {
+export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateSprint }: Props) {
   const [row, setRow]         = useState<RawRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<QgMetricRow[] | null>(null);
@@ -104,6 +107,20 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack }: Props) {
         {row.component_id && <span style={S.comp}>{row.component_id}</span>}
       </div>
       {metaBits.length > 0 && <div style={S.meta}>{metaBits.join(' · ')}</div>}
+
+      {/* T08: QG ↔ Sprint cross-link */}
+      {kind === 'qg' && row.sprint_id && (
+        <div style={S.sprintLink}>
+          Спринт:{' '}
+          {onNavigateSprint ? (
+            <span style={S.sprintAnchor} onClick={() => onNavigateSprint(row.sprint_id!)}>
+              {row.sprint_id}
+            </span>
+          ) : (
+            <span style={{ color: 'var(--acc)' }}>{row.sprint_id}</span>
+          )}
+        </div>
+      )}
 
       {row.has_ext_deps && (
         <div style={S.cdnBanner}>

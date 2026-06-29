@@ -33,6 +33,7 @@ export function normalizeStatus(raw: string | null): string {
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return 'partial';
   if (s.startsWith('🟣') || /BACKLOG/i.test(s.slice(0, 15))) return 'backlog';
   if (s.startsWith('📋') || s.startsWith('⏳') || /^(PLANNED|STUB|DRAFT|PENDING)/i.test(s)) return 'planned';
+  if (s.startsWith('⬜') && /^(DEFERRED|ARCHIVED)/i.test(s.slice(2).trimStart())) return 'deferred';
   if (s.startsWith('⬜') || /^TODO/i.test(s)) return 'todo';
   if (s.startsWith('🚀') || /^(READY.?FOR.?DEPLOY|RFD)/i.test(s)) return 'ready_for_deploy';
   if (s.startsWith('🔴') || /^BLOCKED/i.test(s)) return 'blocked';
