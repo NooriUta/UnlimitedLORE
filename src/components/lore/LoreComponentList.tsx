@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { fetchLoreSlice, type LoreComponent } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
@@ -57,6 +57,12 @@ const S = {
     whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)',
   },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  sectionHdr: {
+    padding: '3px 12px', fontSize: 9, fontWeight: 700, letterSpacing: '0.07em',
+    textTransform: 'uppercase' as const, color: 'var(--t3)',
+    background: 'color-mix(in srgb, var(--b2) 60%, transparent)',
+    borderBottom: '1px solid var(--bd)', flexShrink: 0,
+  },
 };
 
 interface Props {
@@ -93,9 +99,10 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
     return rows
       .filter(r => areaSel.size === 0 || areaSel.has(compArea(r)))
       .filter(r => !ql || r.component_id.toLowerCase().includes(ql) || (r.full_name ?? '').toLowerCase().includes(ql))
-      .sort((a, b) =>
-        a.area !== b.area ? a.area.localeCompare(b.area) : a.component_id.localeCompare(b.component_id)
-      );
+      .sort((a, b) => {
+        const aa = compArea(a), ab = compArea(b);
+        return aa !== ab ? aa.localeCompare(ab) : a.component_id.localeCompare(b.component_id);
+      });
   }, [rows, q, areaSel]);
 
   const treeOrder = useMemo(() => {
@@ -112,9 +119,10 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
         if (!byParent.has(key)) byParent.set(key, []);
         byParent.get(key)!.push(r);
       });
-      byParent.forEach(arr => arr.sort((a, b) =>
-        a.area !== b.area ? a.area.localeCompare(b.area) : a.component_id.localeCompare(b.component_id)
-      ));
+      byParent.forEach(arr => arr.sort((a, b) => {
+        const aa = compArea(a), ab = compArea(b);
+        return aa !== ab ? aa.localeCompare(ab) : a.component_id.localeCompare(b.component_id);
+      }));
       const result: { comp: LoreComponent; indent: number; dimmed: boolean }[] = [];
       function walk(parentId: string | null, depth: number) {
         (byParent.get(parentId) ?? []).forEach(c => {
@@ -144,8 +152,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
   if (loading) return <LoreSkeleton />;
 
   const renderRow = (r: LoreComponent, indent = 0, dimmed = false) => {
-    const area  = compArea(r);
-    const color = areaColor(area);
+    const color = areaColor(compArea(r));
     const name  = r.full_name && r.full_name !== r.component_id ? r.full_name : null;
     return (
       <div
@@ -165,10 +172,24 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
         {(r.adr_count != null && r.adr_count > 0) && (
           <span style={S.countBadge}>{r.adr_count} ADR</span>
         )}
-        {area && <span style={S.areaChip(color)}>{area}</span>}
       </div>
     );
   };
+
+  // Render tree with section headers when the root-level area changes.
+  function renderWithGroups(items: { comp: LoreComponent; indent: number; dimmed: boolean }[]) {
+    const nodes: React.ReactNode[] = [];
+    let lastArea = '';
+    items.forEach(({ comp, indent, dimmed }) => {
+      const area = indent === 0 ? compArea(comp) : '';
+      if (indent === 0 && area !== lastArea) {
+        lastArea = area;
+        if (area) nodes.push(<div key={`hdr-${area}`} style={S.sectionHdr}>{area}</div>);
+      }
+      nodes.push(renderRow(comp, indent, dimmed));
+    });
+    return nodes;
+  }
 
   return (
     <div style={S.root}>
@@ -176,7 +197,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
         {treeOrder !== null ? (
           treeOrder.length === 0
             ? <div style={S.empty}>Компоненты не найдены.</div>
-            : treeOrder.map(({ comp, indent, dimmed }) => renderRow(comp, indent, dimmed))
+            : renderWithGroups(treeOrder)
         ) : (
           shown.length === 0
             ? <div style={S.empty}>Компоненты не найдены.</div>
