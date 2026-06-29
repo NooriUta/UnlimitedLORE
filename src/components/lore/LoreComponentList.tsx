@@ -215,11 +215,12 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
       if (indent === 0 && compArea(comp) !== curArea) {
         curArea = compArea(comp);
         if (curArea) {
-          const isCollapsed = collapsed.has(curArea);
+          const thisArea = curArea; // capture for closure — curArea is mutated each iteration
+          const isCollapsed = collapsed.has(thisArea);
           nodes.push(
-            <div key={`hdr-${curArea}`}
+            <div key={`hdr-${thisArea}`}
               style={{ ...S.sectionHdr, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
-              onClick={() => toggleArea(curArea)}
+              onClick={() => toggleArea(thisArea)}
             >
               <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
               {curArea}
