@@ -17,7 +17,8 @@ export const AREA_COLOR: Record<string, string> = {
   ai:            '#9b59b6',
 };
 
-export const areaColor = (a: string) => AREA_COLOR[a] ?? 'var(--t3)';
+export const areaColor = (a: string | null | undefined) => AREA_COLOR[a ?? ''] ?? 'var(--t3)';
+export const compArea  = (r: { area?: string | null; team?: string | null }) => r.area || r.team || '';
 
 const S = {
   root:  { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
@@ -35,11 +36,14 @@ const S = {
   }),
   compId: {
     fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
-    flexShrink: 0, width: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+    whiteSpace: 'nowrap' as const,
   },
-  name: {
-    flex: 1, fontSize: 11, color: 'var(--t1)',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0,
+  compName: {
+    fontSize: 10, color: 'var(--t3)',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+  },
+  compBlock: {
+    flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' as const,
   },
   areaChip: (color: string) => ({
     fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
@@ -78,7 +82,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
 
   useEffect(() => {
     const c: Record<string, number> = {};
-    rows.forEach(r => { c[r.area] = (c[r.area] || 0) + 1; });
+    rows.forEach(r => { const a = compArea(r); if (a) c[a] = (c[a] || 0) + 1; });
     onCounts(c);
   }, [rows, onCounts]);
 
@@ -87,7 +91,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return rows
-      .filter(r => areaSel.size === 0 || areaSel.has(r.area))
+      .filter(r => areaSel.size === 0 || areaSel.has(compArea(r)))
       .filter(r => !ql || r.component_id.toLowerCase().includes(ql) || (r.full_name ?? '').toLowerCase().includes(ql))
       .sort((a, b) =>
         a.area !== b.area ? a.area.localeCompare(b.area) : a.component_id.localeCompare(b.component_id)
@@ -96,10 +100,15 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
 
   const treeOrder = useMemo(() => {
     const byId = new Map(rows.map(r => [r.component_id, r]));
+    // Derive parent from children[] arrays (parent_id is null for all components in DB)
+    const parentOf = new Map<string, string>();
+    rows.forEach(r => r.children?.forEach(c => parentOf.set(c, r.component_id)));
+
     function buildTree(include: Set<string>, matchSet?: Set<string>) {
       const byParent = new Map<string | null, LoreComponent[]>();
       rows.filter(r => include.has(r.component_id)).forEach(r => {
-        const key = r.parent_id && include.has(r.parent_id) ? r.parent_id : null;
+        const p = parentOf.get(r.component_id);
+        const key = p && include.has(p) ? p : null;
         if (!byParent.has(key)) byParent.set(key, []);
         byParent.get(key)!.push(r);
       });
@@ -135,7 +144,9 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
   if (loading) return <LoreSkeleton />;
 
   const renderRow = (r: LoreComponent, indent = 0, dimmed = false) => {
-    const color = areaColor(r.area);
+    const area  = compArea(r);
+    const color = areaColor(area);
+    const name  = r.full_name && r.full_name !== r.component_id ? r.full_name : null;
     return (
       <div
         key={r.component_id}
@@ -147,12 +158,14 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
             ? <GameIcon slug={r.game_icon} size={13} style={{ color: 'inherit' }} />
             : <span style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{r.component_id[0]}</span>}
         </div>
-        <span style={S.compId}>{r.component_id}</span>
-        <span style={S.name}>{r.full_name || r.component_id}</span>
+        <div style={S.compBlock}>
+          <span style={S.compId}>{r.component_id}</span>
+          {name && <span style={S.compName}>{name}</span>}
+        </div>
         {(r.adr_count != null && r.adr_count > 0) && (
           <span style={S.countBadge}>{r.adr_count} ADR</span>
         )}
-        <span style={S.areaChip(color)}>{r.area}</span>
+        {area && <span style={S.areaChip(color)}>{area}</span>}
       </div>
     );
   };
