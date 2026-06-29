@@ -200,6 +200,8 @@ export interface LoreComponent {
   owner?: string | null;
   team?: string | null;
   adr_count?: number | null;
+  spec_count?: number | null;
+  qg_count?: number | null;
 }
 
 export interface LoreComponentDetail extends LoreComponent {

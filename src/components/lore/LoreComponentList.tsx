@@ -169,6 +169,12 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
           <span style={S.compId}>{r.component_id}</span>
           {name && <span style={S.compName}>{name}</span>}
         </div>
+        {(r.spec_count != null && r.spec_count > 0) && (
+          <span style={S.countBadge}>{r.spec_count} Spec</span>
+        )}
+        {(r.qg_count != null && r.qg_count > 0) && (
+          <span style={S.countBadge}>{r.qg_count} QG</span>
+        )}
         {(r.adr_count != null && r.adr_count > 0) && (
           <span style={S.countBadge}>{r.adr_count} ADR</span>
         )}
