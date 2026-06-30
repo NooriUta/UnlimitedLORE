@@ -200,6 +200,7 @@ export interface LoreSprintRow {
   release_dates: string[] | null;
   done_date: string | null;
   git_projects: string[] | null;
+  components: string[] | null;
   track_id: string | null;
   context_md: string | null;
 }
@@ -244,6 +245,7 @@ export interface LoreComponent {
   spec_count?: number | null;
   qg_count?: number | null;
   sprint_count?: number | null;
+  git_projects?: string[] | null;
 }
 
 export interface LoreComponentDetail extends LoreComponent {

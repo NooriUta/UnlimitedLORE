@@ -125,6 +125,7 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
             "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
+            "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id, " +
             "context_md " +
             "FROM KnowSprint",
@@ -227,7 +228,9 @@ public final class LoreSlices {
             "SELECT milestone_id, label, week, date_display, " +
             "out('HAS_STATE').goal_md[0]      AS goal_md, " +
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
-            "in('CONTRIBUTES_TO').sprint_id   AS sprint_ids " +
+            // Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint.
+            // Sprints don't link to milestones directly; the plan item bridges them.
+            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint'].sprint_id AS sprint_ids " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
 
@@ -283,7 +286,10 @@ public final class LoreSlices {
             "in('BELONGS_TO')[adr_id IS NOT NULL].size()    AS adr_count, " +
             "out('DOCUMENTED_IN').size()                    AS spec_count, " +
             "in('BELONGS_TO')[qg_id IS NOT NULL].size()     AS qg_count, " +
-            "in('BELONGS_TO')[sprint_id IS NOT NULL].size() AS sprint_count " +
+            "in('BELONGS_TO')[sprint_id IS NOT NULL].size() AS sprint_count, " +
+            // Git projects this component touches, via its sprints
+            // (Component ← BELONGS_TO ← KnowSprint → BELONGS_TO_PROJECT → KnowGitProject).
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint'].out('BELONGS_TO_PROJECT').slug AS git_projects " +
             "FROM LoreComponent",
             List.of(),
             new LinkedHashMap<>(Map.of("root", " WHERE parent_id = :root")),
@@ -344,6 +350,13 @@ public final class LoreSlices {
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
+        // Bulk: every sprint state row (scalar valid_from). Frontend takes the min
+        // valid_from per sprint_id = real sprint start, for lead/cycle time.
+        slice("sprint_starts",
+            "SELECT in('HAS_STATE').sprint_id[0] AS sprint_id, valid_from " +
+            "FROM KnowSprintHist WHERE valid_from IS NOT NULL ORDER BY valid_from",
+            List.of(), Map.of(), "");
+
         slice("history_plan_item",
             "SELECT valid_from, valid_to, week_start, week_end, content_hash " +
             "FROM PlanItemHist WHERE in('HAS_STATE').item_id[0] = :id ORDER BY valid_from",
@@ -399,6 +412,19 @@ public final class LoreSlices {
         slice("qg_metrics",
             "SELECT metric_id, name, threshold " +
             "FROM QGMetric WHERE in('MEASURED_BY').qg_id[0] = :qg_id",
+            List.of("qg_id"), Map.of(), " LIMIT 100");
+
+        slice("qg_job_tasks",
+            "SELECT job_id, inv_id, severity, status, run_date, note_md " +
+            "FROM QGJobTask WHERE qg_id = :qg_id ORDER BY run_date DESC",
+            List.of("qg_id"), Map.of(), " LIMIT 200");
+
+        slice("qg_recommendations",
+            "SELECT rec_id, title, body_md, status, " +
+            "in('PRODUCED').inv_id[0] AS inv_id, in('PRODUCED').severity[0] AS severity, " +
+            "in('PRODUCED').qg_id[0] AS qg_id " +
+            "FROM QGRecommendation WHERE in('PRODUCED').qg_id CONTAINS :qg_id " +
+            "ORDER BY status",
             List.of("qg_id"), Map.of(), " LIMIT 100");
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
