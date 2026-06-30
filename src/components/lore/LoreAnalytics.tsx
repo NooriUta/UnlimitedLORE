@@ -837,6 +837,28 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [qgRows]);
 
+  // drilldown state — must be before early returns
+  const openSprints = useMemo(() =>
+    (data?.by_sprint ?? []).filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; })
+      .sort((a, b) => {
+        const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
+        return rank(classify(a.status_raw)) - rank(classify(b.status_raw));
+      }),
+  [data]);
+
+  const openSprintGroups = useMemo(() => {
+    const groups: { label: string; col: string; sprints: LoreAnalyticsSprint[] }[] = [
+      { label: 'Заблокированы',     col: 'var(--dng)', sprints: openSprints.filter(s => classify(s.status_raw) === 'blocked') },
+      { label: 'В работе',          col: 'var(--inf)', sprints: openSprints.filter(s => classify(s.status_raw) === 'in_progress') },
+      { label: 'Ready for deploy',  col: 'var(--suc)', sprints: openSprints.filter(s => classify(s.status_raw) === 'ready_for_deploy') },
+      { label: 'Частично',          col: 'var(--wrn)', sprints: openSprints.filter(s => classify(s.status_raw) === 'partial') },
+      { label: 'Запланированы',     col: 'var(--t3)',  sprints: openSprints.filter(s => { const k = classify(s.status_raw); return !['blocked','in_progress','ready_for_deploy','partial'].includes(k); }) },
+    ].filter(g => g.sprints.length > 0);
+    return groups;
+  }, [openSprints]);
+
+  const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
+
   if (loading) return <LoreSkeleton />;
   if (!data)   return <div style={S.empty}>Нет данных.</div>;
 
@@ -1500,28 +1522,6 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // ── Tab 4: Спринты ────────────────────────────────────────────────────────
 
   const filteredSprints = filterSprints(data.by_sprint, sprintFilter);
-
-  // open sprints broken down by status group for drilldown
-  const openSprints = useMemo(() =>
-    data.by_sprint.filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; })
-      .sort((a, b) => {
-        const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
-        return rank(classify(a.status_raw)) - rank(classify(b.status_raw));
-      }),
-  [data]);
-
-  const openSprintGroups = useMemo(() => {
-    const groups: { label: string; col: string; sprints: LoreAnalyticsSprint[] }[] = [
-      { label: 'Заблокированы',     col: 'var(--dng)', sprints: openSprints.filter(s => classify(s.status_raw) === 'blocked') },
-      { label: 'В работе',          col: 'var(--inf)', sprints: openSprints.filter(s => classify(s.status_raw) === 'in_progress') },
-      { label: 'Ready for deploy',  col: 'var(--suc)', sprints: openSprints.filter(s => classify(s.status_raw) === 'ready_for_deploy') },
-      { label: 'Частично',          col: 'var(--wrn)', sprints: openSprints.filter(s => classify(s.status_raw) === 'partial') },
-      { label: 'Запланированы',     col: 'var(--t3)',  sprints: openSprints.filter(s => { const k = classify(s.status_raw); return !['blocked','in_progress','ready_for_deploy','partial'].includes(k); }) },
-    ].filter(g => g.sprints.length > 0);
-    return groups;
-  }, [openSprints]);
-
-  const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
 
   const tabSprints = (
     <>
