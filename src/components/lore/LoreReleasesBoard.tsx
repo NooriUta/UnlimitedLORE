@@ -80,15 +80,19 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
     return () => ctrl.abort();
   }, [onError]);
 
-  function toggle(uid: string, tag: string, _ruid: string) {
+  function toggle(uid: string, tag: string, ruid: string, gitTag: string | null) {
     if (expanded === uid) { setExpanded(null); return; }
     setExpanded(uid);
     if (decisions[uid]) return;
     setLoadingDetail(uid);
+    // Use ruid-based slices to avoid cross-project tag collisions (e.g. AIDA#v1.3.0 vs seidr-site#v1.3.0).
+    // Decisions are tag-based only — skip when release has no real git_tag.
     Promise.all([
-      fetchLoreSlice<DecisionRef>('release_decisions', { tag }),
-      fetchLoreSlice<SprintRef>('release_sprints_by_tag', { tag }),
-      fetchLoreSlice<PrRef>('release_prs_by_tag', { tag }),
+      gitTag
+        ? fetchLoreSlice<DecisionRef>('release_decisions', { tag })
+        : Promise.resolve([] as DecisionRef[]),
+      fetchLoreSlice<SprintRef>('release_sprints', { ruid }),
+      fetchLoreSlice<PrRef>('release_prs', { ruid }),
     ])
       .then(([decs, sprints, prs]) => {
         setDecisions(prev => ({ ...prev, [uid]: decs }));
@@ -200,7 +204,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                 <div
                   key={uid}
                   style={{ ...S.row, background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
-                  onClick={() => toggle(uid, tag, ruid)}
+                  onClick={() => toggle(uid, tag, ruid, r.git_tag ?? null)}
                 >
                   <div style={S.tagCell}>
                     <span style={{ ...S.tag, ...(type === 'major' ? S.tagMajor : type === 'minor' ? S.tagMinor : S.tagPatch) }}>

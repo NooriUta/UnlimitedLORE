@@ -10,6 +10,14 @@ const err = (e: unknown) => ({
   isError: true,
 });
 
+// Full set of statuses accepted by the backend (mirrors AidaLoreResource.VALID_STATUSES).
+// Keep in sync with: Set.of("todo","active","partial","done","blocked","high","cancelled",
+//                           "planned","backlog","design","ready_for_deploy")
+const LORE_STATUS = z.enum([
+  'todo', 'planned', 'active', 'partial', 'done',
+  'blocked', 'high', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
+]);
+
 export function registerLoreWrite(server: McpServer): void {
   // SCD2 status transition (closes the open history row, opens a new one, edges,
   // denormalizes status onto the vertex). Writes to the shared system_aida_lore.
@@ -20,7 +28,7 @@ export function registerLoreWrite(server: McpServer): void {
     {
       entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint']),
       id: z.string().describe('entity id (e.g. sprint_id, task_uid, item_id, checkpoint_id)'),
-      status: z.enum(['todo', 'active', 'partial', 'done', 'blocked', 'high', 'cancelled']),
+      status: LORE_STATUS,
     },
     async ({ entity_type, id, status }) => {
       try {
@@ -59,8 +67,7 @@ export function registerLoreWrite(server: McpServer): void {
     {
       sprint_id:  z.string().describe('unique sprint id, e.g. "SPRINT_SITE_EXTRACT"'),
       name:       z.string().describe('human-readable sprint name'),
-      status:     z.enum(['todo', 'active', 'partial', 'done', 'blocked', 'high', 'cancelled'])
-                   .optional().default('todo'),
+      status:     LORE_STATUS.optional().default('todo'),
       item_id:    z.string().optional()
                    .describe('plan-item id for the Gantt bar; default = sprint_id with SPRINT_ stripped'),
       plan_id:    z.string().optional().describe('optional plan this sprint belongs to'),
@@ -158,6 +165,70 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_sprint_dep',
+    'Link (or unlink) two KnowSprint vertices via a DEPENDS_ON edge (from_sprint depends on to_sprint). ' +
+      'Idempotent on add. Cycle-guard on server rejects edges that would create a cycle. ' +
+      'kind: hard (blocks deployment), soft (coordination), gate (go/no-go), informs (awareness). ' +
+      'Use action="remove" to delete the dependency.',
+    {
+      from_sprint: z.string().describe('the sprint that depends on another, e.g. "SPRINT_FE_REDESIGN"'),
+      to_sprint:   z.string().describe('the sprint being depended on, e.g. "SPRINT_INFRA_V3"'),
+      kind:        z.enum(['hard', 'soft', 'gate', 'informs']).optional().default('soft'),
+      reason:      z.string().optional().describe('brief reason for the dependency'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ from_sprint, to_sprint, kind, reason, action }) => {
+      try {
+        return json(await lorePost('/lore/sprint/dep', {
+          from_sprint, to_sprint,
+          kind: kind ?? 'soft',
+          reason: reason ?? null,
+          action: action ?? 'add',
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_sprint_component',
+    'Link (or unlink) a KnowSprint to a LoreComponent via a BELONGS_TO edge. ' +
+      'An explicit link OVERRIDES the fuzzy naming-convention match (sprint_id LIKE %component_key%) ' +
+      'in the component_sprints slice and the sprint-detail module badges. ' +
+      'Idempotent on add. Use action="remove" to unlink.',
+    {
+      sprint_id:    z.string().describe('the sprint, e.g. "SPRINT_LORE_WRITE_TOOLS"'),
+      component_id: z.string().describe('the component, e.g. "OMILORE", "FORSETI", "FORSETI_MCP"'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ sprint_id, component_id, action }) => {
+      try {
+        return json(await lorePost('/lore/sprint/component', {
+          sprint_id, component_id, action: action ?? 'add',
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_task_component',
+    'Tag (or untag) a KnowTask with a LoreComponent via a TAGGED_WITH edge. ' +
+      'Many-to-many: a task can be linked to 0..N components. ' +
+      'Idempotent on add. Use action="remove" to remove the tag.',
+    {
+      task_uid:     z.string().describe('the task uid, e.g. "SPRINT_LORE_WRITE_TOOLS/T01"'),
+      component_id: z.string().describe('the component, e.g. "OMILORE", "FORSETI"'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ task_uid, component_id, action }) => {
+      try {
+        return json(await lorePost('/lore/task/component', {
+          task_uid, component_id, action: action ?? 'add',
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_batch_set_status',
     'Set the same status on multiple LORE entities in one call. ' +
       'Each item goes through the full SCD2 transition (closes old hist row, opens new one). ' +
@@ -166,7 +237,7 @@ export function registerLoreWrite(server: McpServer): void {
     {
       entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint']),
       ids:         z.array(z.string()).describe('list of entity ids'),
-      status:      z.enum(['todo', 'active', 'partial', 'done', 'blocked', 'high', 'cancelled']),
+      status:      LORE_STATUS,
     },
     async ({ entity_type, ids, status }) => {
       try {
@@ -386,30 +457,164 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_create_spec',
+    'Create or update a specification document (KnowSpec vertex). ' +
+      'Idempotent — upserts by spec_id. Mutates system_aida_lore.',
+    {
+      spec_id:      z.string().describe('unique spec id, e.g. "SPEC-AUTH-001"'),
+      title:        z.string(),
+      version:      z.string().optional().describe('e.g. "1.0.0"'),
+      component_id: z.string().optional().describe('e.g. "AUTH"'),
+      content_md:   z.string().optional().describe('spec body in Markdown'),
+      file_path:    z.string().optional().describe('source file path relative to docs root'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/spec', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_delete_spec',
+    'Permanently delete a KnowSpec vertex by spec_id. Mutates system_aida_lore.',
+    { spec_id: z.string() },
+    async ({ spec_id }) => {
+      try { return json(await lorePost('/lore/spec/delete', { spec_id })); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_quality_gate',
+    'Create or update a QualityGate vertex. ' +
+      'Idempotent — upserts by qg_id. Mutates system_aida_lore.',
+    {
+      qg_id:        z.string().describe('e.g. "QG-HOUND-listener-chain"'),
+      name:         z.string(),
+      description:  z.string().optional(),
+      component_id: z.string().optional(),
+      status:       z.string().optional().describe('e.g. "active", "draft", "deprecated"'),
+      content_md:   z.string().optional().describe('gate body in Markdown'),
+      sprint_id:    z.string().optional().describe('sprint this QG belongs to, e.g. "SPRINT_AUTH_REDESIGN"'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/quality-gate', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_runbook',
+    'Create or update a KnowRunbook vertex. ' +
+      'Idempotent — upserts by runbook_id. Mutates system_aida_lore.',
+    {
+      runbook_id:   z.string().describe('e.g. "RUNBOOK-ARCADEDB-BACKUP"'),
+      name:         z.string(),
+      area:         z.string().optional().describe('e.g. "recovery", "infra", "deploy", "ops", "auth", "db", "service"'),
+      date_created: z.string().optional().describe('ISO date YYYY-MM-DD; defaults to today'),
+      content_md:   z.string().optional().describe('runbook body in Markdown'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/runbook', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_doc',
+    'Create or update a KnowDoc vertex (HTML documentation page or fragment). ' +
+      'Idempotent — upserts by doc_id. Mutates system_aida_lore.',
+    {
+      doc_id:       z.string().describe('unique id, e.g. "engine_specs_auth" (/ → _)'),
+      title:        z.string(),
+      kind:         z.string().optional().describe('e.g. "page", "fragment", "guide", "reference", "research", "product", "site", "prompt"'),
+      has_ext_deps: z.boolean().optional().describe('true when content references external CDN'),
+      component_id: z.string().optional(),
+      file_path:    z.string().optional(),
+      content_html: z.string().optional().describe('HTML content (100 KB max)'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/doc', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_edit_task',
-    'Edit one task OR a batch of tasks (title + note_md). Updates the vertex and its ' +
+    'Edit one task OR a batch of tasks (title, note_md, effort_days). Updates the vertex and its ' +
       'open history row. Mutates the shared system_aida_lore.\n\n' +
-      'Single: pass task_uid + title (+ optional note_md).\n' +
-      'Batch:  pass tasks=[{task_uid, title, note_md?}, ...] — all processed in one call, ' +
+      'Single: pass task_uid + title (+ optional note_md, effort_days).\n' +
+      'Batch:  pass tasks=[{task_uid, title, note_md?, effort_days?}, ...] — all processed in one call, ' +
       'errors collected per-item without aborting the rest.',
     {
-      task_uid: z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
-      title:    z.string().optional().describe('single-mode: new title'),
-      note_md:  z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
+      task_uid:    z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
+      title:       z.string().optional().describe('single-mode: new title'),
+      note_md:     z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
+      effort_days: z.number().int().optional().describe('single-mode: estimated effort in person-days'),
       tasks: z.array(z.object({
-        task_uid: z.string(),
-        title:    z.string(),
-        note_md:  z.string().optional(),
-      })).optional().describe('batch-mode: array of {task_uid, title, note_md?}'),
+        task_uid:    z.string(),
+        title:       z.string(),
+        note_md:     z.string().optional(),
+        effort_days: z.number().int().optional(),
+      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?}'),
     },
-    async ({ task_uid, title, note_md, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
-            tasks.map(t => ({ task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null }))));
+            tasks.map(t => ({ task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
-        return json(await lorePost('/lore/task/edit', { task_uid, title, note_md: note_md ?? null }));
+        return json(await lorePost('/lore/task/edit', { task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_component',
+    'Create a new LoreComponent vertex (upsert by component_id). ' +
+      'Use for brand-new components not yet in the knowledge graph. ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      component_id: z.string().describe('SHORT uppercase ID, e.g. OMILORE, MIMIR'),
+      full_name:    z.string().optional().describe('Human-readable full name'),
+      area:         z.string().optional().describe('Team area, e.g. platform, engine, frontend'),
+      team:         z.string().optional().describe('Team slug'),
+      game_icon:    z.string().optional().describe('game-icons.net slug, e.g. spell-book'),
+      owner:        z.string().optional().describe('Owner login'),
+      parent_id:    z.string().optional().describe('Parent component_id if this is a sub-component'),
+    },
+    async ({ component_id, full_name, area, team, game_icon, owner, parent_id }) => {
+      try {
+        return json(await lorePost('/lore/component/create', {
+          component_id, full_name, area, team, game_icon, owner, parent_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_update_component',
+    'Update metadata fields on an existing LoreComponent vertex (partial update — only supplied fields written). ' +
+      'Covers full_name, area, team, game_icon, owner, parent_id. ' +
+      'Use to rename, re-assign owner/team, fix icon slug, or reparent a component. ' +
+      'Does NOT create a new component — use lore_create_component for that.',
+    {
+      component_id: z.string().describe('ID of the component to update, e.g. "FORSETI"'),
+      full_name:    z.string().optional().describe('Human-readable full name'),
+      area:         z.string().optional().describe('Team area, e.g. platform, engine, frontend'),
+      team:         z.string().optional().describe('Team slug'),
+      game_icon:    z.string().optional().describe('game-icons.net slug, e.g. spell-book'),
+      owner:        z.string().optional().describe('Owner login'),
+      parent_id:    z.string().optional().describe('Parent component_id if this is a sub-component'),
+    },
+    async ({ component_id, full_name, area, team, game_icon, owner, parent_id }) => {
+      try {
+        return json(await lorePost('/lore/component/update', {
+          component_id, full_name: full_name ?? null, area: area ?? null,
+          team: team ?? null, game_icon: game_icon ?? null,
+          owner: owner ?? null, parent_id: parent_id ?? null,
+        }));
       } catch (e) { return err(e); }
     },
   );

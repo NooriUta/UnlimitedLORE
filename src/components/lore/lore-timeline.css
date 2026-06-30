@@ -35,6 +35,57 @@
   border-bottom: 1px solid var(--bd);
 }
 
+/* ── Nested group hierarchy (Tech → Project → track, Product → children) ──
+   vis-timeline ships a light default skin for nested groups; override it so
+   the dark theme never leaks a #f5f5f5 row. */
+.lore-tl .vis-labelset .vis-label.vis-nesting-group,
+.lore-tl .vis-labelset .vis-label.vis-nested-group {
+  background-color: transparent;
+}
+/* Top-level expandable parents (Tech, Product) — quiet uppercase heading */
+.lore-tl .vis-labelset .vis-label.vis-nesting-group.vis-group-level-0 > .vis-inner {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  color: var(--t2);
+}
+/* Expand/collapse caret vis injects on .vis-nesting-group */
+.lore-tl .vis-labelset .vis-label.vis-nesting-group .vis-inner {
+  cursor: pointer;
+}
+.lore-tl .vis-labelset .vis-label.vis-nesting-group.expanded > .vis-inner::before {
+  content: '▾ ';
+  color: var(--t3);
+}
+.lore-tl .vis-labelset .vis-label.vis-nesting-group.collapsed > .vis-inner::before {
+  content: '▸ ';
+  color: var(--t3);
+}
+/* Kill vis-timeline's built-in bright-red warning border for nested groups that
+   lack a resolvable treeLevel (class `vis-group-level-unknown-but-gte1`). vis ships
+   `border: 1px solid red` for it as a dev hint; we don't want it in any theme. */
+.lore-tl .vis-labelset .vis-label.vis-group-level-unknown-but-gte1,
+.lore-tl .vis-foreground .vis-group.vis-group-level-unknown-but-gte1,
+.lore-tl .vis-label[class*="vis-group-level"],
+.lore-tl .vis-foreground .vis-group[class*="vis-group-level"] {
+  border-color: var(--bd) !important;
+}
+
+/* Nested children indented so the tree reads visually */
+.lore-tl .vis-labelset .vis-label.vis-nested-group > .vis-inner {
+  padding-left: 20px;
+  font-weight: 500;
+  color: var(--t1);
+}
+/* A nested label that is itself a parent (project rows) — keep caret, mid weight */
+.lore-tl .vis-labelset .vis-label.vis-nested-group.vis-nesting-group > .vis-inner {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+  color: var(--acc);
+}
+
 /* Time axis */
 .lore-tl .vis-time-axis .vis-text {
   color: var(--t3);

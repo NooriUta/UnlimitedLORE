@@ -1,178 +1,807 @@
-import { useEffect, useState } from 'react';
-import { fetchLoreSlice, type LoreComponentDetail } from '../../api/lore';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  fetchLoreSlice,
+  updateLoreComponent,
+  type LoreComponent,
+  type LoreComponentDetail,
+  type LoreAdrRow,
+  type LoreAdrPassport,
+  type LoreSpecRow,
+  type LoreSpecPassport,
+  type LoreSprintRow,
+  type LoreSprintTask,
+} from '../../api/lore';
 import { GameIcon } from './GameIcon';
-import { areaColor } from './LoreComponentList';
+import { statusMeta, taskTick } from './lore-status';
+import { areaColor, compArea } from './LoreComponentList';
 
+interface QGRow {
+  qg_id: string;
+  name: string;
+  description: string | null;
+  component_id: string | null;
+  status: string | null;
+  date_created: string | null;
+  content_md?: string | null;
+}
+
+interface QGPassport extends QGRow {
+  content_md: string | null;
+}
+
+interface ComponentSprintRow {
+  sprint_id: string;
+  name: string | null;
+  status_raw: string | null;
+  release_ids: string[] | null;
+}
+
+type DocTab = 'adr' | 'spec' | 'qg' | 'sprint';
+
+type DocContent =
+  | { type: 'spec';   data: LoreSpecPassport }
+  | { type: 'qg';    data: QGPassport }
+  | { type: 'adr';   data: LoreAdrPassport }
+  | { type: 'sprint'; data: LoreSprintRow; tasks: LoreSprintTask[] };
+
+// QG status labels/colors (mirrors LoreQualityGateList)
+const QG_ST: Record<string, { color: string; label: string }> = {
+  active:     { color: 'var(--suc)',  label: 'активен'  },
+  draft:      { color: 'var(--wrn)',  label: 'черновик' },
+  archived:   { color: 'var(--t3)',   label: 'архив'    },
+  deprecated: { color: 'var(--dng)', label: 'устарел'  },
+};
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 const S = {
-  root:   { flex: 1, overflowY: 'auto' as const, padding: '16px 20px 40px' },
-  header: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 },
+  root: {
+    flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
+  },
+
+  // ── TOP: passport + tabs + list ──────────────────────────────────────────
+  top: {
+    flexShrink: 0, borderBottom: '2px solid var(--bd)',
+    display: 'flex', flexDirection: 'column' as const,
+    background: 'color-mix(in srgb, var(--b1) 60%, transparent)',
+  },
+  hdr: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '10px 14px 0',
+  },
   iconLg: (color: string) => ({
-    width: 36, height: 36, borderRadius: 7, flexShrink: 0,
+    width: 28, height: 28, borderRadius: 6, flexShrink: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     color, background: `color-mix(in srgb, ${color} 15%, transparent)`,
   }),
+  compId:   { fontSize: 14, fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' },
+  fullName: { fontSize: 11, color: 'var(--t2)', marginTop: 1 },
   titleCol: { flex: 1, minWidth: 0 },
-  compId:  { fontSize: 13, fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' },
-  fullName:{ fontSize: 12, color: 'var(--t2)', marginTop: 2 },
-  areaChip: (color: string) => ({
-    padding: '3px 8px', borderRadius: 4, fontSize: 11, flexShrink: 0,
-    color, background: `color-mix(in srgb, ${color} 14%, transparent)`,
-    border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
-    whiteSpace: 'nowrap' as const,
-  }),
   parentBtn: {
-    padding: '3px 8px', borderRadius: 4, fontSize: 11, flexShrink: 0,
+    padding: '2px 7px', borderRadius: 4, fontSize: 10, flexShrink: 0,
     background: 'transparent', color: 'var(--acc)',
     border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
-    cursor: 'pointer', whiteSpace: 'nowrap' as const,
+    cursor: 'pointer', whiteSpace: 'nowrap' as const, display: 'flex', alignItems: 'center', gap: 3,
   },
-  section: { marginTop: 16 },
-  sLabel:  { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 6 },
-  chips:   { display: 'flex', flexWrap: 'wrap' as const, gap: 5 },
-  chip: {
-    padding: '2px 7px', borderRadius: 3, fontSize: 11,
-    background: 'var(--b2)', color: 'var(--t2)', border: '1px solid var(--b3)',
+  editBtn: {
+    padding: '2px 7px', borderRadius: 4, fontSize: 10, flexShrink: 0,
+    background: 'transparent', color: 'var(--t3)',
+    border: '1px solid var(--bd)', cursor: 'pointer',
+  },
+
+  meta: {
+    display: 'flex', gap: 6, padding: '6px 14px', flexWrap: 'wrap' as const,
+    alignItems: 'center',
+  },
+  metaChip: (color?: string) => ({
+    display: 'flex', alignItems: 'center', gap: 4,
+    padding: '1px 7px', borderRadius: 3, fontSize: 10,
+    background: color
+      ? `color-mix(in srgb, ${color} 12%, transparent)`
+      : 'var(--b2)',
+    color: color ?? 'var(--t2)',
+    border: `1px solid ${color
+      ? `color-mix(in srgb, ${color} 28%, transparent)`
+      : 'var(--bd)'}`,
+    whiteSpace: 'nowrap' as const,
+  }),
+  techChip: {
+    fontFamily: 'var(--mono)', fontSize: 9,
+    padding: '1px 6px', borderRadius: 3,
+    background: 'var(--b2)', color: 'var(--t2)', border: '1px solid var(--bd)',
     whiteSpace: 'nowrap' as const,
   },
   childChip: (color: string) => ({
-    padding: '2px 7px', borderRadius: 3, fontSize: 11, cursor: 'pointer',
+    fontFamily: 'var(--mono)', fontSize: 9, cursor: 'pointer',
+    padding: '1px 6px', borderRadius: 3,
     color, background: `color-mix(in srgb, ${color} 12%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
     whiteSpace: 'nowrap' as const,
-    fontFamily: 'var(--mono)',
   }),
-  adrList: { display: 'flex', flexDirection: 'column' as const, gap: 2 },
-  adrRow:  {
-    display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px',
-    borderRadius: 4, cursor: 'pointer', fontSize: 11,
-    background: 'transparent',
+
+  // ── Doc tabs ──────────────────────────────────────────────────────────────
+  tabsRow: {
+    display: 'flex', borderTop: '1px solid var(--bd)',
+    marginTop: 2,
   },
-  adrId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', fontSize: 11, flex: 1 },
-  adrDate: { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)', flexShrink: 0 },
-  empty:   { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  tab: (active: boolean) => ({
+    padding: '5px 12px', fontSize: 10, fontWeight: 600,
+    letterSpacing: '0.03em', cursor: 'pointer',
+    color: active ? 'var(--acc)' : 'var(--t3)',
+    borderBottom: `2px solid ${active ? 'var(--acc)' : 'transparent'}`,
+    background: active ? 'color-mix(in srgb, var(--acc) 6%, transparent)' : 'transparent',
+    whiteSpace: 'nowrap' as const,
+    display: 'flex', alignItems: 'center', gap: 4,
+  }),
+  tabCnt: { fontSize: 9, opacity: 0.65 },
+
+  // ── Doc list ──────────────────────────────────────────────────────────────
+  docList: { maxHeight: 160, overflowY: 'auto' as const },
+  docRow: (sel: boolean) => ({
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '4px 14px', cursor: 'pointer',
+    borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)',
+    background: sel ? 'color-mix(in srgb, var(--acc) 7%, transparent)' : 'transparent',
+  }),
+  docId:   { fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--acc)', fontWeight: 600, flexShrink: 0, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  docTitle:{ flex: 1, fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
+  docSt:   (color: string) => ({
+    fontSize: 9, color, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3,
+    padding: '1px 5px', borderRadius: 3,
+    background: `color-mix(in srgb, ${color} 14%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
+  }),
+  docHint: { fontSize: 9, color: 'var(--t3)', flexShrink: 0, whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)' },
+  docEmpty:{ padding: '12px 14px', fontSize: 11, color: 'var(--t3)' },
+
+  // ── BOTTOM: reader ────────────────────────────────────────────────────────
+  reader: {
+    flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
+  },
+  readerHdr: {
+    padding: '8px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+    display: 'flex', alignItems: 'flex-start', gap: 8,
+  },
+  readerTitle:{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', flex: 1, minWidth: 0 },
+  readerBadge: (color: string) => ({
+    fontSize: 9, padding: '1px 6px', borderRadius: 3, fontWeight: 700,
+    fontFamily: 'var(--mono)', flexShrink: 0,
+    color, background: `color-mix(in srgb, ${color} 14%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
+  }),
+  readerScroll: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
+  rH1:  { fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginTop: 14, marginBottom: 6 },
+  rH2:  { fontSize: 11, fontWeight: 700, color: 'var(--t2)', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
+  rH3:  { fontSize: 10, fontWeight: 600, color: 'var(--t3)', marginTop: 10, marginBottom: 3, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  rP:   { fontSize: 11, color: 'var(--t2)', lineHeight: 1.65, marginBottom: 8 },
+  rBullet: { fontSize: 11, color: 'var(--t2)', lineHeight: 1.7, paddingLeft: 10, marginBottom: 2 },
+  rCode:{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 3, padding: '1px 5px', color: 'var(--inf)' },
+  rPre: {
+    fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)',
+    background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5,
+    padding: '8px 12px', margin: '6px 0', whiteSpace: 'pre' as const,
+    overflow: 'auto', lineHeight: 1.6,
+  },
+  placeholder: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)', fontSize: 11 },
+
+  // ── Edit panel ────────────────────────────────────────────────────────────
+  editPanel: { margin: '0 14px 10px', padding: '10px 12px', borderRadius: 6, background: 'var(--b2)', border: '1px solid var(--bd)' },
+  editRow:   { display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' },
+  editLabel: { fontSize: 10, color: 'var(--t3)', width: 68, flexShrink: 0, textTransform: 'uppercase' as const },
+  editInput: { flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 11, background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)', fontFamily: 'inherit', outline: 'none' },
+  editActions:{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' as const },
+  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'var(--acc)', color: '#fff', border: 'none', fontFamily: 'inherit' },
+  cancelBtn: { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)', fontFamily: 'inherit' },
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function stLabel(s: string | null | undefined) {
+  return (s ?? '').toUpperCase().replace('_', ' ');
+}
+
+function inlineMd(text: string): ReactNode {
+  const boldM = /\*\*([^*\n]+)\*\*/.exec(text);
+  const codeM = /`([^`\n]+)`/.exec(text);
+  const candidates = ([
+    boldM && { m: boldM, type: 'bold' as const },
+    codeM && { m: codeM, type: 'code' as const },
+  ] as Array<{ m: RegExpExecArray; type: 'bold' | 'code' } | false>)
+    .filter((x): x is { m: RegExpExecArray; type: 'bold' | 'code' } => Boolean(x))
+    .sort((a, b) => a.m.index - b.m.index);
+  if (!candidates.length) return text;
+  const { m, type } = candidates[0];
+  const before = text.slice(0, m.index);
+  const inner  = m[1];
+  const rest   = text.slice(m.index + m[0].length);
+  const restNode = rest ? inlineMd(rest) : null;
+  if (type === 'bold')
+    return <>{before}<strong style={{ color: 'var(--t1)', fontWeight: 600 }}>{inner}</strong>{restNode}</>;
+  return <>{before}<code style={{ fontFamily: 'var(--mono)', fontSize: '0.88em', background: 'color-mix(in srgb, var(--acc) 10%, var(--b3))', padding: '1px 4px', borderRadius: 3, color: 'var(--acc)' }}>{inner}</code>{restNode}</>;
+}
+
+function renderMd(md: string | null | undefined): ReactNode {
+  if (!md?.trim()) return null;
+  const nodes: ReactNode[] = [];
+  let preLines: string[] = [];
+  let preLang = '';
+  let inPre = false;
+  md.split('\n').forEach((line, i) => {
+    if (line.startsWith('```')) {
+      if (inPre) {
+        if (preLang === 'mermaid') {
+          nodes.push(<MermaidBlock key={`mermaid-${i}`} code={preLines.join('\n')} />);
+        } else {
+          nodes.push(<pre key={`pre-${i}`} style={S.rPre}>{preLines.join('\n')}</pre>);
+        }
+        preLines = []; preLang = ''; inPre = false;
+      } else { inPre = true; preLang = line.slice(3).trim().toLowerCase(); }
+      return;
+    }
+    if (inPre) { preLines.push(line); return; }
+    if (!line.trim()) return;
+    if (line === '---' || line === '***' || line === '___')
+      nodes.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid var(--bd)', margin: '8px 0' }} />);
+    else if (line.startsWith('# '))        nodes.push(<div key={i} style={S.rH1}>{inlineMd(line.slice(2))}</div>);
+    else if (line.startsWith('## '))       nodes.push(<div key={i} style={S.rH2}>{inlineMd(line.slice(3))}</div>);
+    else if (line.startsWith('### '))      nodes.push(<div key={i} style={S.rH3}>{inlineMd(line.slice(4))}</div>);
+    else if (line.startsWith('- ') || line.startsWith('* '))
+      nodes.push(<div key={i} style={S.rBullet}>{'• '}{inlineMd(line.slice(2))}</div>);
+    else if (/^\d+\.\s/.test(line)) {
+      const dot = line.indexOf('. ');
+      nodes.push(
+        <div key={i} style={{ ...S.rBullet, display: 'flex', gap: 5, paddingLeft: 0 }}>
+          <span style={{ color: 'var(--t3)', flexShrink: 0 }}>{line.slice(0, dot + 1)}</span>
+          <span>{inlineMd(line.slice(dot + 2))}</span>
+        </div>
+      );
+    } else
+      nodes.push(<p key={i} style={S.rP}>{inlineMd(line)}</p>);
+  });
+  if (inPre && preLines.length) {
+    if (preLang === 'mermaid') {
+      nodes.push(<MermaidBlock key="mermaid-end" code={preLines.join('\n')} />);
+    } else {
+      nodes.push(<pre key="pre-end" style={S.rPre}>{preLines.join('\n')}</pre>);
+    }
+  }
+  return nodes;
+}
+
+let _mermaidId = 0;
+function MermaidBlock({ code }: { code: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !code.trim()) return;
+    const id = `mm-${++_mermaidId}`;
+    import('mermaid').then(m => {
+      m.default.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
+      m.default.render(id, code).then(({ svg }) => {
+        if (ref.current) ref.current.innerHTML = svg;
+      }).catch(() => {
+        if (ref.current) ref.current.textContent = code;
+      });
+    });
+  }, [code]);
+  return (
+    <div style={{ margin: '8px 0', padding: '8px', background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5, overflow: 'auto' }}>
+      <div ref={ref} style={{ fontSize: 11, color: 'var(--t3)' }}>Рендеринг диаграммы…</div>
+    </div>
+  );
+}
+
+function MdBlock({ md, label }: { md: string | null | undefined; label: string }) {
+  if (!md?.trim()) return null;
+  return (
+    <>
+      <div style={S.rH2}>{label}</div>
+      {renderMd(md)}
+    </>
+  );
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   componentId: string;
   onError: (e: unknown) => void;
-  onNavigateAdr?: (id: string) => void;
   onNavigateComponent?: (id: string) => void;
-  onOpenSpec?: (id: string) => void;
 }
 
-export default function LoreComponentPassport({ componentId, onError, onNavigateAdr, onNavigateComponent, onOpenSpec }: Props) {
+export default function LoreComponentPassport({
+  componentId, onError, onNavigateComponent,
+}: Props) {
   const [comp, setComp]       = useState<LoreComponentDetail | null>(null);
+  const [adrs, setAdrs]       = useState<LoreAdrRow[]>([]);
+  const [specs, setSpecs]     = useState<LoreSpecRow[]>([]);
+  const [qgs, setQgs]         = useState<QGRow[]>([]);
+  const [sprints, setSprints] = useState<ComponentSprintRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [editing, setEditing]           = useState(false);
+  const [saving, setSaving]             = useState(false);
+  const [editOwner, setEditOwner]       = useState('');
+  const [editTeam, setEditTeam]         = useState('');
+  const [editIcon, setEditIcon]         = useState('');
+  const [editFullName, setEditFullName] = useState('');
+  const [editParentId, setEditParentId] = useState<string>('');
+  const [allComponents, setAllComponents] = useState<LoreComponent[]>([]);
+
+  const [docTab, setDocTab]           = useState<DocTab>('adr');
+  const [selDocId, setSelDocId]       = useState<string | null>(null);
+  const [docContent, setDocContent]   = useState<DocContent | null>(null);
+  const [docLoading, setDocLoading]   = useState(false);
+  const [selTaskUid, setSelTaskUid]         = useState<string | null>(null);
+  const [sprintStatusFilter, setSprintStatusFilter] = useState<Set<string>>(new Set());
+  const [taskStatusFilter, setTaskStatusFilter]     = useState<Set<string>>(new Set());
+
+  // ── Resizable split ────────────────────────────────────────────────────────
+  const [topHeight, setTopHeight] = useState(280);
+  const dragState = useRef<{ startY: number; startH: number } | null>(null);
+
   useEffect(() => {
-    setLoading(true);
-    setComp(null);
+    function onMove(e: MouseEvent) {
+      if (!dragState.current) return;
+      const delta = e.clientY - dragState.current.startY;
+      setTopHeight(Math.max(120, Math.min(600, dragState.current.startH + delta)));
+    }
+    function onUp() { dragState.current = null; document.body.style.cursor = ''; }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+
+  // ── Data load ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    setLoading(true); setComp(null); setAdrs([]); setSpecs([]); setQgs([]);
+    setSprints([]); setEditing(false); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
+    setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
     const ctrl = new AbortController();
-    fetchLoreSlice<LoreComponentDetail>('component', { id: componentId }, ctrl.signal)
-      .then(rows => { setComp(rows[0] ?? null); setLoading(false); })
+
+    Promise.all([
+      fetchLoreSlice<LoreComponentDetail>('component',      { id: componentId },        ctrl.signal),
+      fetchLoreSlice<LoreAdrRow>          ('adrs',           { component: componentId }, ctrl.signal),
+      fetchLoreSlice<LoreSpecRow>         ('specs',          { component: componentId }, ctrl.signal),
+      fetchLoreSlice<QGRow>               ('quality_gates',  { component: componentId }, ctrl.signal),
+    ])
+      .then(([compRows, adrRows, specRows, qgRows]) => {
+        const c = compRows[0] ?? null;
+        setComp(c); setAdrs(adrRows); setSpecs(specRows); setQgs(qgRows);
+        setEditOwner(c?.owner ?? '');
+        setEditTeam(c?.team ?? '');
+        setEditIcon(c?.game_icon ?? '');
+        setEditFullName(c?.full_name ?? '');
+        setEditParentId(c?.parent_id ?? '');
+        setLoading(false);
+        const key = componentId.length < 4
+          ? (c?.full_name?.split(/\s+/)[0]?.toUpperCase() ?? componentId)
+          : componentId;
+        return fetchLoreSlice<ComponentSprintRow>('component_sprints', { pattern: `%${key}%`, cid: componentId }, ctrl.signal);
+      })
+      .then(rows => setSprints(rows ?? []))
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
   }, [componentId, onError]);
 
-  if (loading) return <div style={S.empty}>Загрузка {componentId}…</div>;
-  if (!comp)   return <div style={S.empty}>Компонент не найден: {componentId}</div>;
+  // ── Doc content load ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!selDocId) { setDocContent(null); return; }
+    setDocLoading(true);
+    const ctrl = new AbortController();
 
-  const color       = areaColor(comp.area);
-  const subComps    = comp.sub_components ?? [];
-  const tech        = comp.tech           ?? [];
-  const adrs        = (comp.adrs ?? []).filter(Boolean) as string[];
-  const specs       = [
-    ...new Set([...(comp.specs ?? []), ...(comp.spec_docs ?? [])].filter(Boolean) as string[])
+    const load = async () => {
+      if (docTab === 'spec') {
+        const rows = await fetchLoreSlice<LoreSpecPassport>('spec_by_id', { id: selDocId }, ctrl.signal);
+        if (rows[0]) setDocContent({ type: 'spec', data: rows[0] });
+      } else if (docTab === 'qg') {
+        const rows = await fetchLoreSlice<QGPassport>('quality_gate_by_id', { id: selDocId }, ctrl.signal);
+        if (rows[0]) setDocContent({ type: 'qg', data: rows[0] });
+      } else if (docTab === 'adr') {
+        const rows = await fetchLoreSlice<LoreAdrPassport>('adr', { id: selDocId }, ctrl.signal);
+        if (rows[0]) setDocContent({ type: 'adr', data: rows[0] });
+      } else {
+        const [sprintRows, taskRows] = await Promise.all([
+          fetchLoreSlice<LoreSprintRow>('sprint_tree', { id: selDocId }, ctrl.signal),
+          fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: selDocId }, ctrl.signal),
+        ]);
+        const sprintData = sprintRows[0] ?? (sprints.find(s => s.sprint_id === selDocId) as unknown as LoreSprintRow);
+        if (sprintData) setDocContent({ type: 'sprint', data: sprintData, tasks: taskRows });
+      }
+    };
+    load().catch(onError).finally(() => setDocLoading(false));
+    return () => ctrl.abort();
+  }, [selDocId, docTab, sprints, onError]);
+
+  // ── Load all components for parent selector ────────────────────────────────
+  const openEdit = async () => {
+    setEditing(e => !e);
+    if (allComponents.length === 0) {
+      try {
+        const rows = await fetchLoreSlice<LoreComponent>('components');
+        setAllComponents(rows.sort((a, b) => a.component_id.localeCompare(b.component_id)));
+      } catch { /* non-critical */ }
+    }
+  };
+
+  // ── Save ───────────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!comp) return;
+    setSaving(true);
+    try {
+      const newParent = editParentId || null;
+      await updateLoreComponent({
+        component_id: comp.component_id,
+        owner: editOwner || null, team: editTeam || null,
+        game_icon: editIcon || null, full_name: editFullName || null,
+        parent_id: newParent,
+      });
+      setComp(prev => prev ? { ...prev, owner: editOwner, team: editTeam, game_icon: editIcon, full_name: editFullName, parent_id: newParent } : prev);
+      setEditing(false);
+    } catch (e) { onError(e); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>Загрузка {componentId}…</div>;
+  if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>Не найден: {componentId}</div>;
+
+  const color   = areaColor(compArea(comp));
+  const tech    = comp.tech ?? [];
+  const children = comp.children ?? [];
+
+  const tabList: { key: DocTab; label: string; count: number }[] = [
+    { key: 'adr',    label: 'ADR',     count: adrs.length    },
+    { key: 'spec',   label: 'Spec',    count: specs.length   },
+    { key: 'qg',     label: 'QG',      count: qgs.length     },
+    { key: 'sprint', label: 'Спринты', count: sprints.length },
   ];
+
+  const docRows: { id: string; title: string; status: string | null; hint?: string | null; releases?: string[] | null }[] =
+    docTab === 'adr'    ? adrs.map(a => ({ id: a.adr_id, title: a.name ?? a.adr_id, status: a.status }))
+    : docTab === 'spec' ? specs.map(s => ({ id: s.spec_id, title: s.title ?? s.spec_id, status: null, hint: s.file_path?.split('/').pop() ?? null }))
+    : docTab === 'qg'   ? qgs.map(q => ({ id: q.qg_id, title: q.name, status: q.status, hint: q.date_created?.slice(0, 10) ?? null }))
+    : sprints
+        .map(s => { const { status } = taskTick(s.status_raw); return { id: s.sprint_id, title: s.name ?? s.sprint_id, status, releases: s.release_ids }; })
+        .filter(r => sprintStatusFilter.size === 0 || sprintStatusFilter.has(r.status ?? ''));
 
   return (
     <div style={S.root}>
-      {/* Header */}
-      <div style={S.header}>
-        <div style={S.iconLg(color)}>
-          {comp.game_icon
-            ? <GameIcon slug={comp.game_icon} size={20} style={{ color: 'inherit' }} />
-            : <span style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 700 }}>{comp.component_id[0]}</span>}
+      {/* ── TOP ──────────────────────────────────────────────────────────── */}
+      <div style={{ ...S.top, height: topHeight, flexShrink: 0, overflow: 'hidden' }}>
+        {/* Header row */}
+        <div style={S.hdr}>
+          <div style={S.iconLg(color)}>
+            {comp.game_icon
+              ? <GameIcon slug={comp.game_icon} size={16} style={{ color: 'inherit' }} />
+              : <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700 }}>{comp.component_id[0]}</span>}
+          </div>
+          <div style={S.titleCol}>
+            <div style={S.compId}>{comp.component_id}</div>
+            {comp.full_name && <div style={S.fullName}>{comp.full_name}</div>}
+          </div>
+          {comp.parent_id && (
+            <button style={S.parentBtn} onClick={() => onNavigateComponent?.(comp.parent_id!)}>
+              ↑ {comp.parent_id}
+            </button>
+          )}
+          <button style={S.editBtn} onClick={openEdit}>✎</button>
         </div>
-        <div style={S.titleCol}>
-          <div style={S.compId}>{comp.component_id}</div>
-          <div style={S.fullName}>{comp.full_name}</div>
+
+        {/* Meta row: owner, team, children */}
+        <div style={S.meta}>
+          {comp.owner && <span style={S.metaChip()}>👤 {comp.owner}</span>}
+          {comp.team  && <span style={S.metaChip(color)}>⬡ {comp.team}</span>}
+          {children.length > 0 && children.map(c => (
+            <span key={c} style={S.childChip(color)} onClick={() => onNavigateComponent?.(c)}>{c}</span>
+          ))}
+          {tech.length > 0 && tech.map(t => <span key={t} style={S.techChip}>{t}</span>)}
         </div>
-        <span style={S.areaChip(color)}>{comp.area}</span>
-        {comp.parent_id && (
-          <button style={S.parentBtn} onClick={() => onNavigateComponent?.(comp.parent_id!)}>
-            ↑ {comp.parent_id}
-          </button>
+
+        {/* Edit panel */}
+        {editing && (
+          <div style={S.editPanel}>
+            {[
+              { label: 'Название', val: editFullName, set: setEditFullName, ph: 'Full name' },
+              { label: 'Owner',    val: editOwner,    set: setEditOwner,    ph: 'owner' },
+              { label: 'Team',     val: editTeam,     set: setEditTeam,     ph: 'team' },
+              { label: 'Icon',     val: editIcon,     set: setEditIcon,     ph: 'game-icon slug' },
+            ].map(f => (
+              <div key={f.label} style={S.editRow}>
+                <span style={S.editLabel}>{f.label}</span>
+                <input style={S.editInput} value={f.val} placeholder={f.ph} onChange={e => f.set(e.target.value)} />
+              </div>
+            ))}
+            <div style={S.editRow}>
+              <span style={S.editLabel}>Родитель</span>
+              <select
+                style={{ ...S.editInput, cursor: 'pointer' }}
+                value={editParentId}
+                onChange={e => setEditParentId(e.target.value)}
+              >
+                <option value="">— нет родителя —</option>
+                {allComponents
+                  .filter(c => c.component_id !== comp.component_id)
+                  .map(c => (
+                    <option key={c.component_id} value={c.component_id}>
+                      {c.component_id}{c.full_name ? ` — ${c.full_name}` : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div style={S.editActions}>
+              <button style={S.cancelBtn} onClick={() => setEditing(false)}>Отмена</button>
+              <button style={S.saveBtn} disabled={saving} onClick={handleSave}>{saving ? '…' : 'Сохранить'}</button>
+            </div>
+          </div>
         )}
+
+        {/* Doc tabs */}
+        <div style={S.tabsRow}>
+          {tabList.map(t => (
+            <div key={t.key} style={S.tab(docTab === t.key)} onClick={() => { setDocTab(t.key); setSelDocId(null); setDocContent(null); setSprintStatusFilter(new Set()); setSelTaskUid(null); setTaskStatusFilter(new Set()); }}>
+              {t.label}
+              {t.count > 0 && <span style={S.tabCnt}>{t.count}</span>}
+            </div>
+          ))}
+        </div>
+
+        {/* Sprint status stats */}
+        {docTab === 'sprint' && sprints.length > 0 && (() => {
+          const cnt = new Map<string, number>();
+          sprints.forEach(s => { const { status } = taskTick(s.status_raw); cnt.set(status, (cnt.get(status) ?? 0) + 1); });
+          const toggleSprint = (st: string) => {
+            setSprintStatusFilter(prev => {
+              const next = new Set(prev);
+              next.has(st) ? next.delete(st) : next.add(st);
+              return next;
+            });
+            setSelDocId(null); setDocContent(null); setSelTaskUid(null);
+          };
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4, padding: '5px 8px', borderBottom: '1px solid var(--bd)', background: 'var(--b1)' }}>
+              {Array.from(cnt.entries()).map(([st, n]) => {
+                const sm = statusMeta(st);
+                const active = sprintStatusFilter.has(st);
+                return (
+                  <div
+                    key={st}
+                    onClick={() => toggleSprint(st)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 3,
+                      padding: '2px 6px', borderRadius: 4, cursor: 'pointer',
+                      background: active ? `color-mix(in srgb, ${sm.color} 22%, transparent)` : `color-mix(in srgb, ${sm.color} 8%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${sm.color} ${active ? 50 : 20}%, transparent)`,
+                      opacity: sprintStatusFilter.size > 0 && !active ? 0.45 : 1,
+                    }}
+                  >
+                    <GameIcon slug={sm.icon} size={9} style={{ color: sm.color }} />
+                    <span style={{ fontSize: 9, color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 600 }}>{n}</span>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* Doc list */}
+        <div style={S.docList}>
+          {docRows.length === 0
+            ? <div style={S.docEmpty}>Нет документов</div>
+            : docRows.map(d => {
+              const sm = d.status ? (
+                docTab === 'qg'
+                  ? { icon: statusMeta(d.status).icon, color: (QG_ST[d.status] ?? { color: 'var(--t3)' }).color }
+                  : statusMeta(d.status)
+              ) : null;
+              return (
+                <div
+                  key={d.id}
+                  style={S.docRow(selDocId === d.id)}
+                  onClick={() => setSelDocId(d.id)}
+                  onMouseEnter={e => { if (selDocId !== d.id) (e.currentTarget as HTMLElement).style.background = 'var(--b2)'; }}
+                  onMouseLeave={e => { if (selDocId !== d.id) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <span style={S.docId}>{d.id}</span>
+                  <span style={S.docTitle}>{d.title}</span>
+                  {d.hint && <span style={S.docHint}>{d.hint}</span>}
+                  {d.releases && d.releases.length > 0 && (
+                    <span style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                      {d.releases.slice(0, 2).map(r => (
+                        <span key={r} style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'color-mix(in srgb, var(--inf) 12%, transparent)', color: 'var(--inf)', border: '1px solid color-mix(in srgb, var(--inf) 25%, transparent)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const }}>
+                          {r}
+                        </span>
+                      ))}
+                      {d.releases.length > 2 && <span style={{ fontSize: 8, color: 'var(--t3)' }}>+{d.releases.length - 2}</span>}
+                    </span>
+                  )}
+                  {sm && (
+                    <span style={S.docSt(sm.color)}>
+                      <GameIcon slug={sm.icon} size={9} style={{ color: 'inherit' }} />
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+        </div>
       </div>
 
-      {/* Tech stack */}
-      {tech.length > 0 && (
-        <div style={S.section}>
-          <div style={S.sLabel}>Стек технологий</div>
-          <div style={S.chips}>
-            {tech.map(t => <span key={t} style={S.chip}>{t}</span>)}
-          </div>
-        </div>
-      )}
+      {/* ── Resize handle ────────────────────────────────────────────────── */}
+      <div
+        onMouseDown={e => { dragState.current = { startY: e.clientY, startH: topHeight }; document.body.style.cursor = 'ns-resize'; e.preventDefault(); }}
+        style={{
+          height: 5, flexShrink: 0, cursor: 'ns-resize',
+          background: 'transparent',
+          borderTop: '1px solid var(--bd)',
+          borderBottom: '1px solid var(--bd)',
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'color-mix(in srgb, var(--acc) 20%, transparent)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+      />
 
-      {/* Sub-components */}
-      {subComps.length > 0 && (
-        <div style={S.section}>
-          <div style={S.sLabel}>Подмодули ({subComps.length})</div>
-          <div style={S.chips}>
-            {subComps.map(c => (
-              <span key={c} style={S.childChip(color)} onClick={() => onNavigateComponent?.(c)}>
-                {c}
+      {/* ── BOTTOM: reader ───────────────────────────────────────────────── */}
+      <div style={S.reader}>
+        {!selDocId ? (
+          <div style={S.placeholder}>Выберите документ выше</div>
+        ) : docLoading ? (
+          <div style={S.placeholder}>Загрузка…</div>
+        ) : !docContent ? (
+          <div style={S.placeholder}>Нет содержимого</div>
+        ) : (
+          <>
+            <div style={S.readerHdr}>
+              <div style={S.readerTitle}>
+                {docContent.type === 'adr'    && (docContent.data.name ?? docContent.data.adr_id)}
+                {docContent.type === 'spec'   && (docContent.data.title ?? docContent.data.spec_id)}
+                {docContent.type === 'qg'     && docContent.data.name}
+                {docContent.type === 'sprint' && (docContent.data.name ?? docContent.data.sprint_id)}
+              </div>
+              <span style={S.readerBadge(
+                docContent.type === 'adr'    ? 'var(--acc)' :
+                docContent.type === 'spec'   ? 'var(--inf)' :
+                docContent.type === 'qg'     ? 'var(--wrn)' : 'var(--suc)'
+              )}>
+                {docContent.type.toUpperCase()}
               </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ADRs */}
-      {adrs.length > 0 && (
-        <div style={S.section}>
-          <div style={S.sLabel}>ADR ({adrs.length})</div>
-          <div style={S.adrList}>
-            {adrs.map(id => (
-              <div
-                key={id}
-                style={{ ...S.adrRow, ...(onNavigateAdr ? { ':hover': { background: 'var(--b2)' } } : {}) }}
-                onClick={() => onNavigateAdr?.(id)}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--b2)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-              >
-                <span style={S.adrId}>{id}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Specs */}
-      {specs.length > 0 && (
-        <div style={S.section}>
-          <div style={S.sLabel}>Спецификации ({specs.length})</div>
-          <div style={S.adrList}>
-            {specs.map(id => (
-              <div
-                key={id}
-                style={{ ...S.adrRow, cursor: onOpenSpec ? 'pointer' : 'default' }}
-                onClick={() => onOpenSpec?.(id)}
-                onMouseEnter={e => { if (onOpenSpec) (e.currentTarget as HTMLElement).style.background = 'var(--b2)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-              >
-                <span style={{ ...S.adrId, color: 'var(--t2)' }}>{id}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {adrs.length === 0 && specs.length === 0 && tech.length === 0 && subComps.length === 0 && (
-        <div style={{ ...S.empty, padding: '24px 0' }}>Нет связанных артефактов.</div>
-      )}
+            </div>
+            <div style={S.readerScroll}>
+              {docContent.type === 'adr' && (
+                <>
+                  <MdBlock md={docContent.data.context_md}      label="Контекст" />
+                  <MdBlock md={docContent.data.decision_md}     label="Решение" />
+                  <MdBlock md={docContent.data.consequences_md} label="Последствия" />
+                  {!docContent.data.context_md && !docContent.data.decision_md && (
+                    <p style={S.rP}>Содержимое не заполнено.</p>
+                  )}
+                </>
+              )}
+              {docContent.type === 'spec' && (
+                <>
+                  <MdBlock md={docContent.data.content_md} label="Содержимое" />
+                  {!docContent.data.content_md && (
+                    <p style={S.rP}>Содержимое не заполнено.</p>
+                  )}
+                </>
+              )}
+              {docContent.type === 'qg' && (
+                <>
+                  {docContent.data.description && <p style={S.rP}>{docContent.data.description}</p>}
+                  <MdBlock md={docContent.data.content_md} label="Содержимое" />
+                  {!docContent.data.description && !docContent.data.content_md && (
+                    <p style={S.rP}>Содержимое не заполнено.</p>
+                  )}
+                </>
+              )}
+              {docContent.type === 'sprint' && (() => {
+                const { status } = taskTick(docContent.data.status_raw);
+                const sm = statusMeta(status);
+                const tasks = docContent.tasks ?? [];
+                return (
+                  <>
+                    {status !== 'todo' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                        <GameIcon slug={sm.icon} size={12} style={{ color: sm.color }} />
+                        <span style={{ fontSize: 10, color: sm.color, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>
+                          {stLabel(status)}
+                        </span>
+                      </div>
+                    )}
+                    <MdBlock md={docContent.data.context_md} label="Контекст" />
+                    {tasks.length > 0 && (
+                      <>
+                        <div style={S.rH2}>Задачи</div>
+                        {(() => {
+                          const tc = new Map<string, number>();
+                          tasks.forEach(t => { const { status } = taskTick(t.status_raw); tc.set(status, (tc.get(status) ?? 0) + 1); });
+                          const toggleTask = (st: string) => {
+                            setTaskStatusFilter(prev => {
+                              const next = new Set(prev);
+                              next.has(st) ? next.delete(st) : next.add(st);
+                              return next;
+                            });
+                            setSelTaskUid(null);
+                          };
+                          return (
+                            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 3, marginBottom: 8, padding: '4px 7px', background: 'var(--b2)', borderRadius: 5, border: '1px solid var(--bd)' }}>
+                              {Array.from(tc.entries()).map(([st, n]) => {
+                                const sm = statusMeta(st);
+                                const active = taskStatusFilter.has(st);
+                                return (
+                                  <div
+                                    key={st}
+                                    onClick={() => toggleTask(st)}
+                                    style={{
+                                      display: 'flex', alignItems: 'center', gap: 3,
+                                      padding: '1px 5px', borderRadius: 3, cursor: 'pointer',
+                                      background: active ? `color-mix(in srgb, ${sm.color} 18%, transparent)` : `color-mix(in srgb, ${sm.color} 7%, transparent)`,
+                                      border: `1px solid color-mix(in srgb, ${sm.color} ${active ? 45 : 18}%, transparent)`,
+                                      opacity: taskStatusFilter.size > 0 && !active ? 0.4 : 1,
+                                    }}
+                                  >
+                                    <GameIcon slug={sm.icon} size={8} style={{ color: sm.color }} />
+                                    <span style={{ fontSize: 9, color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 400 }}>{n}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          {/* task list */}
+                          <div style={{ flex: '0 0 auto', width: selTaskUid ? '44%' : '100%', transition: 'width 0.15s' }}>
+                            {tasks
+                              .filter(t => { if (!taskStatusFilter.size) return true; const { status } = taskTick(t.status_raw); return taskStatusFilter.has(status); })
+                              .sort((a, b) => a.order_index - b.order_index).map(t => {
+                              const { status: ts } = taskTick(t.status_raw);
+                              const tsm = statusMeta(ts);
+                              const sel = selTaskUid === t.task_uid;
+                              return (
+                                <div
+                                  key={t.task_uid}
+                                  onClick={() => setSelTaskUid(sel ? null : t.task_uid)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: 5,
+                                    marginBottom: 3, padding: '3px 5px', borderRadius: 4,
+                                    cursor: 'pointer',
+                                    background: sel ? 'color-mix(in srgb, var(--acc) 8%, transparent)' : 'transparent',
+                                    border: `1px solid ${sel ? 'color-mix(in srgb, var(--acc) 25%, transparent)' : 'transparent'}`,
+                                  }}
+                                >
+                                  <GameIcon slug={tsm.icon} size={10} style={{ color: tsm.color, flexShrink: 0 }} />
+                                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--acc)', flexShrink: 0 }}>{t.task_id}</span>
+                                  <span style={{ fontSize: 11, color: ts === 'done' ? 'var(--t3)' : 'var(--t2)', flex: 1, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{t.title}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* note panel */}
+                          {selTaskUid && (() => {
+                            const t = tasks.find(x => x.task_uid === selTaskUid);
+                            if (!t) return null;
+                            const { status: ts } = taskTick(t.status_raw);
+                            const tsm = statusMeta(ts);
+                            return (
+                              <div style={{ flex: 1, minWidth: 0, borderLeft: `2px solid color-mix(in srgb, ${tsm.color} 35%, transparent)`, paddingLeft: 10 }}>
+                                <div style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{t.task_id}</div>
+                                <div style={{ fontSize: 11, color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{t.title}</div>
+                                {t.note_md?.trim()
+                                  ? renderMd(t.note_md)
+                                  : <span style={{ fontSize: 10, color: 'var(--t3)' }}>Заметки не заполнены</span>}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </>
+                    )}
+                    {!docContent.data.context_md && tasks.length === 0 && (
+                      <p style={S.rP}>Содержимое спринта не заполнено.</p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

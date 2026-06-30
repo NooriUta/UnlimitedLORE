@@ -125,6 +125,10 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
             "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
+            "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
+            "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
+            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
+            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id, " +
             "context_md " +
             "FROM KnowSprint",
             List.of(),
@@ -137,9 +141,25 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
-            "out('CONTRIBUTES_TO').milestone_id AS milestone_ids, " +
-            "out('DEPENDS_ON').sprint_id AS depends_on, " +
-            "out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
+            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
+            "out('DEPENDS_ON').sprint_id   AS depends_on, " +
+            "in('DEPENDS_ON').sprint_id    AS blocks, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id " +
+            "FROM KnowSprint WHERE sprint_id = :id",
+            List.of("id"), Map.of(), "");
+
+        // Sprint dependency graph — all DEPENDS_ON edges with metadata
+        slice("sprint_deps",
+            "SELECT @out.sprint_id AS from_sprint, @in.sprint_id AS to_sprint, kind, reason " +
+            "FROM DEPENDS_ON WHERE @out.sprint_id IS NOT NULL",
+            List.of(), Map.of(), "");
+
+        // Focused dep view for a single sprint (depends_on + blocks)
+        slice("sprint_deps_of",
+            "SELECT out('DEPENDS_ON').sprint_id AS depends_on, in('DEPENDS_ON').sprint_id AS blocks " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -172,7 +192,8 @@ public final class LoreSlices {
             "out('HAS_STATE').commit_refs[0] AS commit_refs, " +
             // sparse: a later status flip inserts a note-less open row, so recover the
             // note from whichever hist row carries it — same form as tasks_of_sprint.
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
+            "out('TAGGED_WITH').component_id AS component_ids " +
             "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
@@ -185,7 +206,8 @@ public final class LoreSlices {
             "out('IN_PHASE').phase_uid[0]                            AS phase_uid, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
+            "out('TAGGED_WITH').component_id                          AS component_ids " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
@@ -198,17 +220,22 @@ public final class LoreSlices {
             "out('IN_PHASE').phase_uid[0]                            AS phase_uid, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
+            "out('TAGGED_WITH').component_id                          AS component_ids " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
 
         // ── §3 Milestones ────────────────────────────────────────────────────
         slice("milestones",
-            "SELECT milestone_id, label, week, date_display, " +
+            "SELECT milestone_id, label, week, date_display, priority, " +
             "out('HAS_STATE').goal_md[0]      AS goal_md, " +
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
-            "in('CONTRIBUTES_TO').sprint_id   AS sprint_ids " +
+            // Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint.
+            // Sprints link via plan item (CONTRIBUTES_TO→REPRESENTS) OR directly
+            // (TARGETS_MILESTONE, set from the milestone-management UI). Frontend unions both.
+            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint'].sprint_id AS sprint_ids, " +
+            "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
 
@@ -240,6 +267,10 @@ public final class LoreSlices {
             "out('HAS_STATE').bar_color[0]    AS bar_color, " +
             "out('HAS_STATUS').status[0]      AS status, " +
             "out('REPRESENTS').sprint_id[0]        AS represents_sprint, " +
+            // Component links of the represented sprint (PlanItem→REPRESENTS→KnowSprint
+            // →BELONGS_TO→LoreComponent). A list; the frontend resolves project/group/
+            // icon from the `components` slice and picks the lane (primary = leaf).
+            "out('REPRESENTS').out('BELONGS_TO').component_id AS components, " +
             "out('CONTRIBUTES_TO').milestone_id[0] AS milestone_id " +
             "FROM PlanItem ORDER BY item_id",
             List.of(), Map.of(), " LIMIT 300");
@@ -256,7 +287,14 @@ public final class LoreSlices {
         slice("components",
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
             "in('PARENT_OF').component_id AS children, " +
-            "out('USES').tech_id AS tech " +
+            "out('USES').tech_id AS tech, " +
+            "in('BELONGS_TO')[adr_id IS NOT NULL].size()    AS adr_count, " +
+            "out('DOCUMENTED_IN').size()                    AS spec_count, " +
+            "in('BELONGS_TO')[qg_id IS NOT NULL].size()     AS qg_count, " +
+            "in('BELONGS_TO')[sprint_id IS NOT NULL].size() AS sprint_count, " +
+            // Git projects this component touches, via its sprints
+            // (Component ← BELONGS_TO ← KnowSprint → BELONGS_TO_PROJECT → KnowGitProject).
+            "in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint'].out('BELONGS_TO_PROJECT').slug AS git_projects " +
             "FROM LoreComponent",
             List.of(),
             new LinkedHashMap<>(Map.of("root", " WHERE parent_id = :root")),
@@ -264,13 +302,29 @@ public final class LoreSlices {
 
         slice("component",
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
-            "out('PARENT_OF').component_id  AS sub_components, " +
+            "in('PARENT_OF').component_id   AS sub_components, " +
             "out('USES').tech_id            AS tech, " +
-            "in('BELONGS_TO').adr_id        AS adrs, " +
-            "in('BELONGS_TO').spec_id       AS specs, " +
-            "out('DOCUMENTED_IN').spec_id   AS spec_docs " +
+            "in('BELONGS_TO')[adr_id IS NOT NULL].adr_id  AS adrs, " +
+            "out('DOCUMENTED_IN').spec_id   AS specs " +
             "FROM LoreComponent WHERE component_id = :id",
             List.of("id"), Map.of(), "");
+
+        // LCX-02: sprints related to a component. Two sources, explicit wins:
+        //   1. Explicit BELONGS_TO edge (sprint→component) — authoritative re-link.
+        //   2. Naming convention (sprint_id LIKE '%<key>%') — fuzzy fallback, but ONLY
+        //      for sprints that carry NO explicit component link (so a re-linked sprint
+        //      stops showing under the component its name happens to match).
+        // :pattern is the naming key (frontend-derived); :cid is the component_id.
+        slice("component_sprints",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "in('IMPLEMENTED_IN_RELEASE').release_id AS release_ids " +
+            "FROM KnowSprint WHERE " +
+            "(out('BELONGS_TO').component_id CONTAINS :cid) " +
+            "OR (sprint_id LIKE :pattern AND out('BELONGS_TO').size() = 0) " +
+            "ORDER BY sprint_id DESC",
+            List.of("pattern", "cid"), Map.of(), " LIMIT 30");
 
         // ── §6b Specs (KnowSpec — technical articles, LAL-32) ────────────────
         // content_md/summary live on the SCD2 state row (KnowSpecHist), like ADRs.
@@ -278,7 +332,7 @@ public final class LoreSlices {
         // lore-backfill-spec-titles.mjs; until then the frontend falls back to spec_id.
         slice("specs",
             "SELECT spec_id, title, file_path, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -287,11 +341,11 @@ public final class LoreSlices {
 
         slice("spec_by_id",
             "SELECT spec_id, title, file_path, " +
-            "out('HAS_STATE').content_md[0]    AS content_md, " +
-            "out('HAS_STATE').summary[0]       AS summary, " +
-            "out('HAS_STATE').version[0]       AS version, " +
-            "out('HAS_STATE').valid_from[0]    AS valid_from, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').summary[0]                          AS summary, " +
+            "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
+            "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -300,6 +354,20 @@ public final class LoreSlices {
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
+
+        // Bulk: every sprint state row (scalar valid_from). Frontend takes the min
+        // valid_from per sprint_id = real sprint start, for lead/cycle time.
+        slice("sprint_starts",
+            "SELECT in('HAS_STATE').sprint_id[0] AS sprint_id, valid_from " +
+            "FROM KnowSprintHist WHERE valid_from IS NOT NULL ORDER BY valid_from",
+            List.of(), Map.of(), "");
+
+        // Sprints that ever passed through a BLOCKED state — for blocked/reopen rate.
+        // Frontend dedups by sprint_id and divides by total sprints.
+        slice("blocked_sprints",
+            "SELECT in('HAS_STATE').sprint_id[0] AS sprint_id " +
+            "FROM KnowSprintHist WHERE status_raw LIKE '%BLOCK%'",
+            List.of(), Map.of(), "");
 
         slice("history_plan_item",
             "SELECT valid_from, valid_to, week_start, week_end, content_hash " +
@@ -311,7 +379,7 @@ public final class LoreSlices {
         // query gracefully (returns [] until KnowDoc vertices are ingested).
         slice("docs",
             "SELECT doc_id, title, kind, has_ext_deps, " +
-            "out('BELONGS_TO').component_id[0] AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -333,13 +401,15 @@ public final class LoreSlices {
             " ORDER BY runbook_id LIMIT 100");
 
         slice("runbook_by_id",
-            "SELECT runbook_id, name, area, date_created, content_md " +
+            "SELECT runbook_id, name, area, date_created, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowRunbook WHERE runbook_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, component_id, status, date_created " +
+            "SELECT qg_id, name, description, component_id, status, date_created, sprint_id " +
             "FROM QualityGate",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -347,7 +417,7 @@ public final class LoreSlices {
             " ORDER BY qg_id LIMIT 100");
 
         slice("quality_gate_by_id",
-            "SELECT qg_id, name, description, component_id, status, date_created, content_md " +
+            "SELECT qg_id, name, description, component_id, status, date_created, content_md, sprint_id " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -355,6 +425,36 @@ public final class LoreSlices {
             "SELECT metric_id, name, threshold " +
             "FROM QGMetric WHERE in('MEASURED_BY').qg_id[0] = :qg_id",
             List.of("qg_id"), Map.of(), " LIMIT 100");
+
+        slice("qg_job_tasks",
+            "SELECT job_id, inv_id, severity, status, run_date, note_md " +
+            "FROM QGJobTask WHERE qg_id = :qg_id ORDER BY run_date DESC",
+            List.of("qg_id"), Map.of(), " LIMIT 200");
+
+        slice("qg_recommendations",
+            "SELECT rec_id, title, body_md, status, " +
+            "in('PRODUCED').inv_id[0] AS inv_id, in('PRODUCED').severity[0] AS severity, " +
+            "in('PRODUCED').qg_id[0] AS qg_id " +
+            "FROM QGRecommendation WHERE in('PRODUCED').qg_id CONTAINS :qg_id " +
+            "ORDER BY status",
+            List.of("qg_id"), Map.of(), " LIMIT 100");
+
+        // ── §10b QG dashboard slices (no required params) ─────────────────────
+        slice("qg_violations",
+            "SELECT job_id, inv_id, severity, status, run_date, note_md, qg_id, component_id " +
+            "FROM QGJobTask WHERE status = 'open' ORDER BY run_date DESC",
+            List.of(), Map.of(), " LIMIT 300");
+
+        slice("qg_pending_recs",
+            "SELECT rec_id, title, body_md, status, priority, severity, effort_days, " +
+            "tags, component_id, qg_id, inv_id, fix_cmd, how_to_verify " +
+            "FROM QGRecommendation WHERE status = 'pending' ORDER BY priority ASC",
+            List.of(), Map.of(), " LIMIT 200");
+
+        slice("qg_routine_runs",
+            "SELECT routine_name, run_date, status, flags " +
+            "FROM ClRoutineRun WHERE routine_name LIKE 'qg-%' ORDER BY run_date DESC",
+            List.of(), Map.of(), " LIMIT 100");
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
         slice("git_projects",
@@ -428,6 +528,38 @@ public final class LoreSlices {
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag ORDER BY pr_number",
             List.of("tag"), Map.of(), " LIMIT 100");
+
+        // ── §13 ClRoutine* slices (Phase 6 v1.3) ─────────────────────────────
+        slice("routine_latest",
+            "SELECT metric_key, value, unit, status, run_date " +
+            "FROM ClRoutineMetric WHERE routine_name = :routine_name " +
+            "AND run_date = (SELECT max(run_date) FROM ClRoutineMetric " +
+            "WHERE routine_name = :routine_name) ORDER BY metric_key LIMIT 50",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_last_run",
+            "SELECT routine_name, run_date, status, flags, detail_md, gates_failed_ids " +
+            "FROM ClRoutineRun WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC LIMIT 1",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_outputs",
+            "SELECT output_type, title, run_date " +
+            "FROM ClRoutineOutput WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC LIMIT 50",
+            List.of("routine_name"), Map.of(), "");
+
+        slice("routine_output_by_type",
+            "SELECT output_type, title, run_date, content_md " +
+            "FROM ClRoutineOutput WHERE routine_name = :routine_name " +
+            "AND output_type = :output_type ORDER BY run_date DESC LIMIT 1",
+            List.of("routine_name", "output_type"), Map.of(), "");
+
+        slice("qg_run_history",
+            "SELECT routine_name, run_date, status, flags " +
+            "FROM ClRoutineRun WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC",
+            List.of("routine_name"), Map.of(), " LIMIT 20");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }

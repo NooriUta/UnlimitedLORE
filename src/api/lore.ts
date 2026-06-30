@@ -69,6 +69,38 @@ export async function fetchLoreSliceCatalog(signal?: AbortSignal): Promise<LoreS
   return body.slices ?? [];
 }
 
+// ── Analytics dashboard (GET /lore/analytics) ──────────────────────────────
+export interface LoreAnalyticsComponent {
+  component_id: string;
+  full_name: string | null;
+  area: string | null;
+  sprint_count: number;
+  task_total: number;
+  task_done: number;
+}
+export interface LoreAnalyticsSprint {
+  sprint_id: string;
+  status_raw: string | null;
+  task_total: number;
+  task_done: number;
+}
+export interface LoreAnalytics {
+  totals: { sprints: number; tasks: number; tasks_done: number; releases: number; components: number };
+  tasks_by_status: Record<string, number>;
+  sprints_by_status: Record<string, number>;
+  by_component: LoreAnalyticsComponent[];
+  by_sprint: LoreAnalyticsSprint[];
+  releases_by_project: Record<string, number>;
+  current_releases: string[];
+}
+
+export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnalytics> {
+  const res = await fetch(`${LORE_BASE}/analytics`, { signal });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return (await res.json()) as LoreAnalytics;
+}
+
 // ── Typed slice helpers ────────────────────────────────────────────────────
 
 export interface LoreTimelineItem {
@@ -103,6 +135,13 @@ export interface LoreAdrPassport {
   release_ids: string[] | null;
   supersedes_ids: string[] | null;
   tags: string[] | null;
+}
+
+export interface LoreSprintDep {
+  from_sprint: string;
+  to_sprint: string;
+  kind: string | null;   // 'hard' | 'soft' | null
+  reason: string | null;
 }
 
 export interface AdrWritePayload {
@@ -161,6 +200,8 @@ export interface LoreSprintRow {
   release_dates: string[] | null;
   done_date: string | null;
   git_projects: string[] | null;
+  components: string[] | null;
+  track_id: string | null;
   context_md: string | null;
 }
 
@@ -178,6 +219,7 @@ export interface LoreSprintTask {
   status_raw: string | null;
   effort_days: number | null;
   note_md: string | null;
+  component_ids: string[] | null;
 }
 
 export interface LoreMilestone {
@@ -187,6 +229,8 @@ export interface LoreMilestone {
   date_display: string | null;
   goal_md: string | null;
   sprint_ids: string[] | null;
+  direct_sprint_ids?: string[] | null;
+  priority?: string | null;
 }
 
 export interface LoreComponent {
@@ -199,6 +243,11 @@ export interface LoreComponent {
   tech: string[];
   owner?: string | null;
   team?: string | null;
+  adr_count?: number | null;
+  spec_count?: number | null;
+  qg_count?: number | null;
+  sprint_count?: number | null;
+  git_projects?: string[] | null;
 }
 
 export interface LoreComponentDetail extends LoreComponent {
@@ -206,6 +255,27 @@ export interface LoreComponentDetail extends LoreComponent {
   adrs: string[] | null;
   specs: string[] | null;
   spec_docs: string[] | null;
+}
+
+export interface ComponentUpdatePayload {
+  component_id: string;
+  owner?: string | null;
+  team?: string | null;
+  full_name?: string | null;
+  area?: string | null;
+  game_icon?: string | null;
+  parent_id?: string | null;
+}
+
+export async function updateLoreComponent(payload: ComponentUpdatePayload): Promise<{ ok: boolean; component_id: string }> {
+  const res = await fetch('/lore/component/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(payload),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; component_id: string }>;
 }
 
 export interface LoreSpecRow {
@@ -267,6 +337,8 @@ export interface LorePlanItem {
   represents_sprint: string | null;
   status: string | null;
   milestone_id: string | null;
+  /** Component ids the represented sprint BELONGS_TO (lane + bar icons). */
+  components: string[] | null;
 }
 
 export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
@@ -344,6 +416,36 @@ export interface LoreSprintRegisterResponse {
 }
 
 /** Link or unlink a KnowSprint to a KnowGitProject (POST /lore/sprint/project). */
+export async function linkTaskComponent(
+  taskUid: string,
+  componentId: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean; task_uid: string; component_id: string; action: string }> {
+  const res = await fetch(`${LORE_BASE}/task/component`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ task_uid: taskUid, component_id: componentId, action }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; task_uid: string; component_id: string; action: string }>;
+}
+
+export async function linkSprintComponent(
+  sprintId: string,
+  componentId: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean; sprint_id: string; component_id: string; action: string }> {
+  const res = await fetch(`${LORE_BASE}/sprint/component`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ sprint_id: sprintId, component_id: componentId, action }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; sprint_id: string; component_id: string; action: string }>;
+}
+
 export async function linkSprintProject(
   sprintId: string,
   gitProject: string,
@@ -359,7 +461,51 @@ export async function linkSprintProject(
   return res.json() as Promise<{ ok: boolean; sprint_id: string; git_project: string; action: string }>;
 }
 
+/** Link or unlink a KnowSprint to a KnowMilestone (POST /lore/milestone/sprint). */
+export async function linkSprintMilestone(
+  sprintId: string,
+  milestoneId: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }> {
+  const res = await fetch(`${LORE_BASE}/milestone/sprint`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ sprint_id: sprintId, milestone_id: milestoneId, action }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }>;
+}
+
+/** Create or edit a KnowMilestone (POST /lore/milestone). */
+export async function upsertMilestone(
+  m: { milestone_id: string; label?: string; week?: number | null; date_display?: string | null; goal_md?: string | null; priority?: string | null },
+): Promise<{ ok: boolean; milestone_id: string }> {
+  const res = await fetch(`${LORE_BASE}/milestone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(m),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; milestone_id: string }>;
+}
+
 /** Partial update of KnowSprint vertex fields (POST /lore/sprint/update). */
+export async function setSprintTrack(
+  sprintId: string,
+  trackId: string | null,
+): Promise<{ ok: boolean; sprint_id: string; track_id: string | null }> {
+  const res = await fetch(`${LORE_BASE}/sprint/track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ sprint_id: sprintId, track_id: trackId }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; sprint_id: string; track_id: string | null }>;
+}
+
 export async function updateLoreSprint(
   sprintId: string,
   fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; priority?: string | null },
@@ -444,4 +590,40 @@ export async function fetchLoreDoc(
 ): Promise<LoreKnowDoc | null> {
   const rows = await fetchLoreSlice<LoreKnowDoc>('doc_by_id', { id: docId }, signal);
   return rows[0] ?? null;
+}
+
+// ── QG dashboard types ──────────────────────────────────────────────────────
+
+export interface LoreQGViolation {
+  job_id: string;
+  inv_id: string | null;
+  severity: string | null;
+  status: string | null;
+  run_date: string | null;
+  note_md: string | null;
+  qg_id: string | null;
+  component_id: string | null;
+}
+
+export interface LoreQGPendingRec {
+  rec_id: string;
+  title: string | null;
+  body_md: string | null;
+  status: string | null;
+  priority: string | null;
+  severity: string | null;
+  effort_days: number | null;
+  tags: string | null;
+  component_id: string | null;
+  qg_id: string | null;
+  inv_id: string | null;
+  fix_cmd: string | null;
+  how_to_verify: string | null;
+}
+
+export interface LoreQGRoutineRun {
+  routine_name: string;
+  run_date: string | null;
+  status: string | null;
+  flags: string | null;
 }

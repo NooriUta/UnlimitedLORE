@@ -20,6 +20,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-l", "5601", "C:\\Users\\LEGION\\AppData\\Local\\Temp\\claude\\C--AIDA-UnlimitedLORE\\34a4d2b2-cab6-49fb-97bb-6fc52c79c844\\scratchpad"],
       "port": 5601
+    },
+    {
+      "name": "icon-assignment",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "5602", "C:\\AIDA\\OMILORE"],
+      "port": 5602
     }
   ]
 }

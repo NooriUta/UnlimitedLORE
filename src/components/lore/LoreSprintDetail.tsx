@@ -4,21 +4,25 @@ import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
-  linkSprintProject,
+  linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
+import { areaColor } from './LoreComponentList';
 
 interface SprintMeta {
   sprint_id: string;
   name: string;
   status_raw: string | null;
+  priority: string | null;
   pr_refs: string | null;
   release_ids: string[] | null;
   milestone_ids: string[] | null;
   depends_on: string[] | null;
+  blocks: string[] | null;
+  components: string[] | null;
   context_md: string | null;
   git_projects: string[] | null;
 }
@@ -35,6 +39,24 @@ interface PhaseRow {
 interface Props {
   sprintId: string;
   onError: (e: unknown) => void;
+  onNavigateToComponent?: (componentId: string) => void;
+}
+
+// A component is "linked" to a sprint by the same naming convention the component
+// passport uses in reverse (component_sprints: sprint_id LIKE '%<key>%'). Here we
+// derive each component's key and keep those whose key appears in the sprint_id.
+interface CompRow {
+  component_id: string;
+  full_name: string | null;
+  area: string | null;
+  game_icon: string | null;
+}
+
+function componentKey(c: CompRow): string {
+  // Mirror LoreComponentPassport: short ids fall back to the first full_name word.
+  return (c.component_id.length < 4
+    ? (c.full_name?.split(/\s+/)[0] ?? c.component_id)
+    : c.component_id).toUpperCase();
 }
 
 const NO_PHASE = '__no_phase__';
@@ -74,41 +96,33 @@ function toToken(key: string): LorePlanItemStatus {
   if (key === 'in_progress' || key === 'active') return 'active';
   if (key === 'partial') return 'partial';
   if (key === 'ready_for_deploy') return 'ready_for_deploy';
-  if (key === 'deferred' || key === 'blocked') return 'blocked';
+  if (key === 'blocked') return 'blocked';
   if (key === 'cancelled') return 'cancelled';
+  if (key === 'planned' || key === 'deferred') return 'planned';
+  if (key === 'backlog') return 'backlog';
+  if (key === 'design') return 'design';
   return 'todo';
 }
 
-type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string };
+type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string; gi: string; c: string; abbr: string };
 
-// Task picker: 7-status canon (no planning statuses — tasks don't have planned/design/backlog)
-const TASK_PICK_OPTS: PickOpt[] = [
-  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
-  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
-  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
-  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
-  { token: 'done',             statusKey: 'done',             label: 'Готово' },
-  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
-  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
-];
-
-// Sprint picker: 10-status canon (includes planning phases)
 const SPRINT_PICK_OPTS: PickOpt[] = [
-  { token: 'todo',             statusKey: 'todo',             label: 'TODO' },
-  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано' },
-  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог' },
-  { token: 'design',           statusKey: 'design',           label: 'Дизайн' },
-  { token: 'active',           statusKey: 'in_progress',      label: 'В работе' },
-  { token: 'partial',          statusKey: 'partial',          label: 'Частично' },
-  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою' },
-  { token: 'done',             statusKey: 'done',             label: 'Готово' },
-  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано' },
-  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено' },
+  { token: 'todo',             statusKey: 'todo',             label: 'TODO',          gi: 'checkbox-tree',  c: '#665C48', abbr: 'TODO' },
+  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано', gi: 'calendar',        c: '#D4922A', abbr: 'PLN'  },
+  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог',        gi: 'tied-scroll',     c: '#9A8C6E', abbr: 'BL'   },
+  { token: 'design',           statusKey: 'design',           label: 'Дизайн',        gi: 'magic-swirl',     c: '#D4922A', abbr: 'DS'   },
+  { token: 'active',           statusKey: 'in_progress',      label: 'В работе',      gi: 'progression',     c: '#88B8A8', abbr: 'WIP'  },
+  { token: 'partial',          statusKey: 'partial',          label: 'Частично',      gi: 'battery-50',      c: '#D4922A', abbr: 'PART' },
+  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою',      gi: 'wave-crest',      c: '#7DBF78', abbr: 'RD'   },
+  { token: 'done',             statusKey: 'done',             label: 'Готово',        gi: 'divided-spiral',  c: '#7DBF78', abbr: 'DONE' },
+  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано', gi: 'handcuffed',      c: '#C85848', abbr: 'BLK'  },
+  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено',      gi: 'cross-mark',      c: '#C85848', abbr: 'CNC'  },
 ];
 
-// Inline status setter — admin-only write to system_aida_lore via POST /lore/status (SCD2).
-// Renders as a small row of icon-buttons (consistent with the LORE status ticks),
-// the active status highlighted; RU tooltips. No raw <select>.
+const TASK_PICK_OPTS: PickOpt[] = SPRINT_PICK_OPTS.filter(o =>
+  ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'].includes(o.token)
+);
+
 function StatusPicker({ entityType, id, current, onChanged, onError }: {
   entityType: 'sprint' | 'task';
   id: string;
@@ -116,7 +130,8 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
-  const opts = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
+  const opts    = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
+  const compact = entityType === 'task';
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
     if (next === current || busy) return;
@@ -128,26 +143,78 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   return (
     <span
       role="group" aria-label="Изменить статус"
-      style={{ display: 'inline-flex', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
+      style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
     >
       {opts.map(o => {
-        const meta = statusMeta(o.statusKey);
-        const sel  = o.token === current;
+        const sel = o.token === current;
         return (
           <button
             key={o.token} type="button" disabled={busy}
             title={o.label} aria-label={o.label} aria-pressed={sel}
             onClick={e => { e.stopPropagation(); void set(o.token); }}
             style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 20, height: 18, padding: 0, lineHeight: 0,
+              display: 'inline-flex', alignItems: 'center', gap: compact ? 0 : 3,
+              padding: compact ? '0 4px' : '0 6px', height: 18,
               cursor: busy ? 'default' : 'pointer', borderRadius: 3,
-              background: sel ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
-              border: sel ? `1px solid ${meta.color}` : '1px solid var(--bd)',
+              opacity: sel ? 1 : 0.42,
+              background: sel ? `color-mix(in srgb, ${o.c} 16%, transparent)` : 'transparent',
+              border: `1px solid ${sel ? o.c : 'transparent'}`,
             }}
           >
-            <GameIcon slug={meta.icon} size={12} style={{ color: meta.color }} />
+            <GameIcon slug={o.gi} size={compact ? 12 : 13} style={{ color: o.c }} />
+            {!compact && (
+              <span style={{
+                fontSize: 9, fontFamily: 'var(--mono)', lineHeight: 1, letterSpacing: '0.03em',
+                color: o.c,
+                fontWeight: sel ? 600 : 400,
+              }}>{o.abbr}</span>
+            )}
           </button>
+        );
+      })}
+    </span>
+  );
+}
+
+const PRIORITY_OPTS = [
+  { value: 'P0', label: 'P0 — критично', color: '#E24B4A' },
+  { value: 'P1', label: 'P1 — высокий',  color: '#ef9f27' },
+  { value: 'P2', label: 'P2 — обычный',  color: 'var(--t3)' },
+];
+
+function PriorityPicker({ sprintId, current, onChanged, onError }: {
+  sprintId: string;
+  current: string | null;
+  onChanged: () => void;
+  onError: (e: unknown) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  async function set(next: string | null) {
+    if (busy) return;
+    const val = next === current ? null : next; // повторный клик — сброс
+    setBusy(true);
+    try { await updateLoreSprint(sprintId, { priority: val }); onChanged(); }
+    catch (err) { onError(err); }
+    finally { setBusy(false); }
+  }
+  return (
+    <span role="group" aria-label="Приоритет" style={{ display: 'inline-flex', gap: 2, opacity: busy ? 0.5 : 1 }}>
+      {PRIORITY_OPTS.map(o => {
+        const sel = o.value === current;
+        return (
+          <button
+            key={o.value} type="button" disabled={busy}
+            title={o.label} aria-label={o.label} aria-pressed={sel}
+            onClick={e => { e.stopPropagation(); void set(o.value); }}
+            style={{
+              padding: '0 6px', height: 18, borderRadius: 3, fontSize: 10,
+              fontWeight: sel ? 600 : 400, cursor: busy ? 'default' : 'pointer',
+              fontFamily: 'var(--mono)',
+              color: sel ? o.color : 'var(--t3)',
+              background: sel ? `color-mix(in srgb, ${o.color} 15%, transparent)` : 'transparent',
+              border: sel ? `1px solid ${o.color}` : '1px solid var(--bd)',
+            }}
+          >{o.value}</button>
         );
       })}
     </span>
@@ -303,8 +370,9 @@ function mdHtml(md: string | null | undefined): string {
   return md && md.trim() ? (marked.parse(md) as string) : '';
 }
 
-function TaskLine({ t, onChanged, onError }: {
+function TaskLine({ t, allComps, onChanged, onError }: {
   t: LoreSprintTask;
+  allComps: CompRow[];
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
@@ -315,6 +383,20 @@ function TaskLine({ t, onChanged, onError }: {
   const [title, setTitle]     = useState(t.title ?? '');
   const [note, setNote]       = useState(t.note_md ?? '');
   const [busy, setBusy]       = useState(false);
+  const [compPicker, setCompPicker] = useState(false);
+  const [compBusy, setCompBusy]     = useState<string | null>(null);
+  const linkedIds = new Set(t.component_ids ?? []);
+
+  async function toggleComp(componentId: string) {
+    if (compBusy) return;
+    const action = linkedIds.has(componentId) ? 'remove' : 'add';
+    setCompBusy(componentId);
+    try {
+      await linkTaskComponent(t.task_uid, componentId, action);
+      onChanged();
+    } catch (e) { onError(e); }
+    finally { setCompBusy(null); }
+  }
 
   async function save() {
     if (busy || !title.trim()) return;
@@ -341,6 +423,23 @@ function TaskLine({ t, onChanged, onError }: {
         {hasDetail && !editing && (
           <span style={{ fontSize: 9, color: 'var(--t3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
         )}
+        {/* Component tags */}
+        {Array.from(linkedIds).map(cid => {
+          const c = allComps.find(x => x.component_id === cid);
+          const color = areaColor(c?.area ?? '');
+          return (
+            <span key={cid}
+              title={c?.full_name ?? cid}
+              style={{
+                fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
+                color, fontFamily: 'var(--mono)', flexShrink: 0, cursor: 'default',
+              }}
+              onClick={e => e.stopPropagation()}
+            >{cid}</span>
+          );
+        })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           {t.effort_days != null && (
             <span style={{ color: 'var(--t3)', fontSize: 10 }}>{t.effort_days}d</span>
@@ -350,10 +449,36 @@ function TaskLine({ t, onChanged, onError }: {
             current={toToken(taskTick(t.status_raw).status)}
             onChanged={onChanged} onError={onError}
           />
+          <button type="button" style={iconBtn} title="Компоненты"
+            onClick={e => { e.stopPropagation(); setCompPicker(v => !v); }}>⊕</button>
           <button type="button" style={iconBtn} title="Редактировать"
             onClick={e => { e.stopPropagation(); setEditing(v => !v); }}>✎</button>
         </span>
       </div>
+
+      {compPicker && allComps.length > 0 && (
+        <div style={{ padding: '4px 8px 6px 26px', display: 'flex', flexWrap: 'wrap', gap: 4 }}
+          onClick={e => e.stopPropagation()}>
+          {allComps.map(c => {
+            const linked = linkedIds.has(c.component_id);
+            const color  = areaColor(c.area ?? '');
+            const loading = compBusy === c.component_id;
+            return (
+              <button key={c.component_id} type="button" disabled={!!compBusy}
+                title={c.full_name ?? c.component_id}
+                onClick={() => void toggleComp(c.component_id)}
+                style={{
+                  fontSize: 9, padding: '1px 5px', borderRadius: 3, cursor: compBusy ? 'default' : 'pointer',
+                  opacity: loading ? 0.5 : (linked ? 1 : 0.45),
+                  background: linked ? `color-mix(in srgb, ${color} 14%, transparent)` : 'transparent',
+                  border: `1px solid color-mix(in srgb, ${color} ${linked ? 40 : 25}%, transparent)`,
+                  color, fontFamily: 'var(--mono)',
+                }}
+              >{c.component_id}</button>
+            );
+          })}
+        </div>
+      )}
 
       {editing && (
         <div style={{ padding: '4px 8px 8px 26px', display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -416,9 +541,10 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   );
 }
 
-export default function LoreSprintDetail({ sprintId, onError }: Props) {
+export default function LoreSprintDetail({ sprintId, onError, onNavigateToComponent }: Props) {
   const [, setParams]         = useSearchParams();
   const [sprint,  setSprint]  = useState<SprintMeta | null>(null);
+  const [allComps, setAllComps] = useState<CompRow[]>([]);
   const [phases,  setPhases]  = useState<PhaseRow[]>([]);
   const [tasks,   setTasks]   = useState<LoreSprintTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -427,8 +553,11 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
   const [ctxEdit, setCtxEdit] = useState(false);
   const [ctxDraft, setCtxDraft] = useState('');
   const [ctxSaving, setCtxSaving] = useState(false);
-  const [projLinking, setProjLinking] = useState(false);
+  const [projLinking, setProjLinking]   = useState(false);
+  const [compLinking, setCompLinking] = useState(false);
+  const [msLinking, setMsLinking]     = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
+  const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -441,6 +570,20 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
   useEffect(() => {
     fetchLoreSlice<{ slug: string }>('git_projects', {})
       .then(rows => setAllProjects(rows.map(r => r.slug).filter(Boolean)))
+      .catch(() => {});
+  }, []);
+
+  // Load all components once for the reverse sprint→modules badges.
+  useEffect(() => {
+    fetchLoreSlice<CompRow>('components', {})
+      .then(rows => setAllComps(rows ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Load milestones once (for the sprint↔milestone linker).
+  useEffect(() => {
+    fetchLoreSlice<{ milestone_id: string; label: string }>('milestones', {})
+      .then(rows => setAllMilestones((rows ?? []).map(r => ({ id: r.milestone_id, label: r.label }))))
       .catch(() => {});
   }, []);
 
@@ -480,6 +623,17 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
     : (fallbackVer ? [fallbackVer] : []);
   const prNums  = parsePrRefs(sprint.pr_refs);
 
+  // Modules for this sprint. Explicit BELONGS_TO links (sprint.components, from the
+  // sprint_tree slice) are authoritative — when present, show ONLY those. Otherwise
+  // fall back to the naming-convention reverse match (component key ⊂ sprint_id,
+  // key length ≥ 3 to avoid noisy 1–2 char matches).
+  const sprintIdUpper = sprint.sprint_id.toUpperCase();
+  const explicit = sprint.components ?? [];
+  const linkedComps = (explicit.length
+    ? allComps.filter(c => explicit.includes(c.component_id))
+    : allComps.filter(c => { const k = componentKey(c); return k.length >= 3 && sprintIdUpper.includes(k); })
+  ).sort((a, b) => componentKey(b).length - componentKey(a).length);
+
   function goToRelease(v: string) {
     setParams(p => { p.set('section', 'releases'); p.set('q', v); p.delete('passport'); return p; });
   }
@@ -506,6 +660,12 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
           entityType="sprint"
           id={sprint.sprint_id}
           current={toToken(status)}
+          onChanged={reload}
+          onError={onError}
+        />
+        <PriorityPicker
+          sprintId={sprint.sprint_id}
+          current={sprint.priority}
           onChanged={reload}
           onError={onError}
         />
@@ -552,13 +712,13 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
       )}
 
       {/* context_md — background / WHY section, editable inline */}
-      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
+      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Контекст</span>
           {!ctxEdit && (
             <button
               onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
-              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
             >✎ ред.</button>
           )}
         </div>
@@ -569,7 +729,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
               onChange={e => setCtxDraft(e.target.value)}
               rows={8}
               placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки, связанные спринты..."
-              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
+              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
             />
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
               <button
@@ -587,7 +747,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
               >{ctxSaving ? '…' : 'Сохранить'}</button>
               <button
                 onClick={() => setCtxEdit(false)}
-                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bdr)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
+                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
               >Отмена</button>
             </div>
           </div>
@@ -607,7 +767,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         const unlinked = allProjects.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         return (
-          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bdr)' }}>
+          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проекты</span>
             </div>
@@ -647,15 +807,155 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
                     } catch (err) { onError(err); }
                     finally { setProjLinking(false); }
                   }}
-                  style={{ fontSize: 11, padding: '2px 4px', borderRadius: 5,
-                    background: 'var(--bg2)', border: '1px solid var(--bdr)',
-                    color: 'var(--t2)', cursor: 'pointer' }}
+                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+                    background: 'var(--bg2)', border: '1px solid var(--bd)',
+                    color: 'var(--t2)', cursor: 'pointer',
+                    appearance: 'none' as const,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}
                 >
                   <option value="">+ привязать…</option>
                   {unlinked.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
                 </select>
               )}
               {projLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Milestones section (sprint→milestone, TARGETS_MILESTONE) ──────────── */}
+      {(() => {
+        const linked = sprint.milestone_ids ?? [];
+        const unlinked = allMilestones.filter(m => !linked.includes(m.id));
+        return (
+          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <GameIcon slug="crossed-axes" size={11} style={{ color: 'var(--t3)' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Вехи</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+              {linked.map(mid => (
+                <span key={mid} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
+                  padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
+                  {mid}
+                  <button disabled={msLinking}
+                    onClick={async () => {
+                      setMsLinking(true);
+                      try {
+                        await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
+                        setSprint(s => s ? { ...s, milestone_ids: (s.milestone_ids ?? []).filter(x => x !== mid) } : s);
+                      } catch (e) { onError(e); } finally { setMsLinking(false); }
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 10, padding: 0, lineHeight: 1, opacity: 0.7 }}
+                    title={`Отвязать ${mid}`}>✕</button>
+                </span>
+              ))}
+              {unlinked.length > 0 && (
+                <select disabled={msLinking} value=""
+                  onChange={async e => {
+                    const mid = e.target.value;
+                    if (!mid) return;
+                    setMsLinking(true);
+                    try {
+                      await linkSprintMilestone(sprint.sprint_id, mid, 'add');
+                      setSprint(s => s ? { ...s, milestone_ids: [...(s.milestone_ids ?? []), mid] } : s);
+                    } catch (err) { onError(err); } finally { setMsLinking(false); }
+                  }}
+                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+                    background: 'var(--bg2)', border: '1px solid var(--bd)', color: 'var(--t2)', cursor: 'pointer',
+                    appearance: 'none' as const,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}>
+                  <option value="">+ привязать веху…</option>
+                  {unlinked.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
+                </select>
+              )}
+              {linked.length === 0 && unlinked.length === 0 && <span style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' }}>нет вех</span>}
+              {msLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Modules section (sprint→component links) ────────────────────────── */}
+      {(() => {
+        const unlinkedComps = allComps.filter(c => !explicit.includes(c.component_id));
+        const selectStyle = { fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+          background: 'var(--bg2)', border: '1px solid var(--bd)',
+          color: 'var(--t2)', cursor: 'pointer',
+          appearance: 'none' as const,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' };
+        return (
+          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Модули</span>
+              {linkedComps.length > 0 && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{linkedComps.length}</span>}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+              {linkedComps.map(c => {
+                const col = areaColor(c.area);
+                const isExplicit = explicit.includes(c.component_id);
+                return (
+                  <span key={c.component_id} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11,
+                    padding: '2px 4px 2px 8px', borderRadius: 10,
+                    background: `color-mix(in srgb, ${col} 14%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${col} 30%, transparent)`,
+                    color: col,
+                  }}>
+                    <button
+                      onClick={onNavigateToComponent ? () => onNavigateToComponent(c.component_id) : undefined}
+                      disabled={!onNavigateToComponent}
+                      title={onNavigateToComponent ? `Открыть ${c.full_name ?? c.component_id}` : (c.full_name ?? c.component_id)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
+                        color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
+                    >
+                      <GameIcon slug={c.game_icon} size={12} style={{ color: 'inherit' }} />
+                      {c.component_id}
+                    </button>
+                    {isExplicit && (
+                      <button
+                        disabled={compLinking}
+                        title={`Отвязать ${c.component_id}`}
+                        onClick={async () => {
+                          setCompLinking(true);
+                          try {
+                            await linkSprintComponent(sprint.sprint_id, c.component_id, 'remove');
+                            setSprint(s => s ? { ...s, components: (s.components ?? []).filter(x => x !== c.component_id) } : s);
+                          } catch (e) { onError(e); }
+                          finally { setCompLinking(false); }
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: compLinking ? 'default' : 'pointer',
+                          color: 'inherit', fontSize: 10, padding: '0 1px', lineHeight: 1, opacity: 0.65 }}
+                      >✕</button>
+                    )}
+                  </span>
+                );
+              })}
+              {unlinkedComps.length > 0 && (
+                <select
+                  disabled={compLinking}
+                  value=""
+                  onChange={async e => {
+                    const cid = e.target.value;
+                    if (!cid) return;
+                    setCompLinking(true);
+                    try {
+                      await linkSprintComponent(sprint.sprint_id, cid, 'add');
+                      setSprint(s => s ? { ...s, components: [...(s.components ?? []), cid] } : s);
+                    } catch (err) { onError(err); }
+                    finally { setCompLinking(false); }
+                  }}
+                  style={selectStyle}
+                >
+                  <option value="">+ привязать…</option>
+                  {unlinkedComps.map(c => <option key={c.component_id} value={c.component_id}>{c.component_id}</option>)}
+                </select>
+              )}
+              {compLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
             </div>
           </div>
         );
@@ -685,7 +985,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
                   {phaseTasks.length > 0 && (
                     <div style={{ marginTop: 4 }}>
                       {phaseTasks.map(t => (
-                        <TaskLine key={t.task_uid} t={t} onChanged={reload} onError={onError} />
+                        <TaskLine key={t.task_uid} t={t} allComps={allComps} onChanged={reload} onError={onError} />
                       ))}
                     </div>
                   )}
@@ -700,7 +1000,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
           <div style={{ marginTop: phases.length > 0 ? 12 : 0 }}>
             <div style={S.sectionLabel}>Задачи ({orphanTasks.length})</div>
             {orphanTasks.map(t => (
-              <TaskLine key={t.task_uid} t={t} onChanged={reload} onError={onError} />
+              <TaskLine key={t.task_uid} t={t} allComps={allComps} onChanged={reload} onError={onError} />
             ))}
           </div>
         )}
@@ -726,6 +1026,15 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
             <div style={S.sectionLabel}>Зависит от</div>
             {sprint.depends_on.map(d => (
               <div key={d} style={S.depItem}>· {d}</div>
+            ))}
+          </div>
+        ) : null}
+
+        {sprint.blocks?.length ? (
+          <div style={S.deps}>
+            <div style={{ ...S.sectionLabel, color: 'var(--wrn)' }}>Блокирует</div>
+            {sprint.blocks.map(d => (
+              <div key={d} style={{ ...S.depItem, color: 'var(--wrn)' }}>· {d}</div>
             ))}
           </div>
         ) : null}

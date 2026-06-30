@@ -8,10 +8,10 @@ export interface StatusMeta { icon: string; color: string }
 
 const STATUS_META: Record<string, StatusMeta> = {
   // done / closed family → success green
-  done:        { icon: 'check-mark',     color: 'var(--suc)' },
-  fixed:       { icon: 'check-mark',     color: 'var(--suc)' },
-  reached:     { icon: 'check-mark',     color: 'var(--suc)' },
-  accepted:    { icon: 'laurel-crown',   color: 'var(--suc)' },
+  done:        { icon: 'divided-spiral',  color: 'var(--suc)' },
+  fixed:       { icon: 'divided-spiral',  color: 'var(--suc)' },
+  reached:     { icon: 'divided-spiral',  color: 'var(--suc)' },
+  accepted:    { icon: 'laurel-crown',    color: 'var(--suc)' },
   // in-progress family → info teal
   active:      { icon: 'progression',    color: 'var(--inf)' },
   in_progress: { icon: 'progression',    color: 'var(--inf)' },
@@ -20,28 +20,51 @@ const STATUS_META: Record<string, StatusMeta> = {
   planned:     { icon: 'calendar',       color: 'var(--wrn)' },
   proposed:    { icon: 'calendar',       color: 'var(--wrn)' },
   high:        { icon: 'dice-fire',      color: 'var(--wrn)' },
-  // partially done — distinct from active (🟡 marker, half-battery) → warning amber
-  partial:          { icon: 'battery-50',     color: 'var(--wrn)' },
+  // partially done — distinct from active → warning amber
+  partial:          { icon: 'battery-50',    color: 'var(--wrn)' },
   // ready for deploy — work done, waiting for release
-  ready_for_deploy: { icon: 'delivery',       color: 'var(--inf)' },
+  ready_for_deploy: { icon: 'wave-crest',    color: 'var(--inf)' },
   // blocked / rejected family → danger red
-  blocked:     { icon: 'padlock',        color: 'var(--danger)' },
-  rejected:    { icon: 'crossed-sabres', color: 'var(--danger)' },
-  missed:      { icon: 'crossed-sabres', color: 'var(--danger)' },
+  blocked:     { icon: 'handcuffed',     color: 'var(--dng)' },
+  rejected:    { icon: 'crossed-sabres', color: 'var(--dng)' },
+  missed:      { icon: 'crossed-sabres', color: 'var(--dng)' },
   // design / backlog / neutral family → muted/amber
-  design:      { icon: 'pencil',         color: 'var(--wrn)' },
-  backlog:     { icon: 'stack',          color: 'var(--t3)' },
+  design:      { icon: 'magic-swirl',    color: 'var(--wrn)' },
+  backlog:     { icon: 'tied-scroll',    color: 'var(--t3)' },
   todo:        { icon: 'checkbox-tree',  color: 'var(--t3)' },
   deferred:    { icon: 'pause-button',   color: 'var(--t3)' },
   superseded:  { icon: 'pause-button',   color: 'var(--t3)' },
   // cancelled — task explicitly removed from scope
-  cancelled:   { icon: 'cancel',         color: 'var(--t3)' },
+  cancelled:   { icon: 'cross-mark',     color: 'var(--t3)' },
 };
 
 const FALLBACK: StatusMeta = { icon: 'checkbox-tree', color: 'var(--t3)' };
 
 export function statusMeta(status: string | null | undefined): StatusMeta {
   return STATUS_META[(status ?? '').toLowerCase()] ?? FALLBACK;
+}
+
+/**
+ * Resolve status meta from EITHER a clean key ("accepted", "active") OR a raw
+ * marker line ("✅ DONE", "🟡 PARTIAL"). Plain keys hit STATUS_META directly;
+ * emoji/prefix-marked raw statuses are normalized via {@link taskTick} first.
+ * Avoids the silent FALLBACK (checkbox-tree) when given an emoji-prefixed status.
+ */
+export function resolveStatusMeta(status: string | null | undefined): StatusMeta {
+  const direct = STATUS_META[(status ?? '').toLowerCase().trim()];
+  if (direct) return direct;
+  return STATUS_META[taskTick(status).status] ?? FALLBACK;
+}
+
+/**
+ * Display label for a status chip: strips a leading emoji/marker so the chip's
+ * game-icon isn't duplicated by an inline emoji ("✅ DONE" → "DONE"). Clean keys
+ * pass through unchanged ("accepted" → "accepted").
+ */
+export function statusLabel(status: string | null | undefined): string {
+  const raw = (status ?? '').trim();
+  const stripped = raw.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  return stripped || raw;
 }
 
 /**
@@ -58,6 +81,11 @@ export function taskTick(statusRaw: string | null | undefined): { status: string
   if (s.startsWith('🚀') || /^(READY.?FOR.?DEPLOY|RFD|К.?ДЕПЛОЮ)/i.test(s)) return { status: 'ready_for_deploy', done: false };
   if (s.startsWith('🔴') || /^(BLOCK|ЗАБЛОК)/i.test(s)) return { status: 'blocked', done: false };
   if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return { status: 'cancelled', done: false };
-  if (s.startsWith('⬜') || /^(DEFER|ОТЛОЖЕН)/i.test(s)) return { status: 'deferred', done: false };
+  if (s.startsWith('🔬') || /^(DESIGN|ДИЗАЙН|ПРОЕКТ)/i.test(s)) return { status: 'design', done: false };
+  if (s.startsWith('🟣') || /^(BACKLOG|БЭКЛОГ|БЭКЛ)/i.test(s)) return { status: 'backlog', done: false };
+  if (s.startsWith('📋') || /^(PLANNED|ЗАПЛАН|ПЛАН)/i.test(s)) return { status: 'planned', done: false };
+  if (s.startsWith('⏸') || /^(CONDITION|HOLD|PAUSE|ON.?HOLD|DEFER|ОТЛОЖЕН|УСЛОВН|ПАУ)/i.test(s)) return { status: 'deferred', done: false };
+  // ⬜ is the canonical "todo" marker on the backend (SCD2_STATUS_RAW), not deferred.
+  if (s.startsWith('⬜') || /^(TODO|TO.?DO|НЕ.?НАЧАТ)/i.test(s)) return { status: 'todo', done: false };
   return { status: 'todo', done: false };
 }
