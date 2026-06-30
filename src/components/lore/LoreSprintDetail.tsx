@@ -4,8 +4,8 @@ import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
-  linkSprintProject, linkSprintComponent, setSprintTrack, linkTaskComponent,
-  type LoreSprintTask, type LorePlanItemStatus, type LorePlanTrack,
+  linkSprintProject, linkSprintComponent, linkTaskComponent,
+  type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
@@ -25,7 +25,6 @@ interface SprintMeta {
   components: string[] | null;
   context_md: string | null;
   git_projects: string[] | null;
-  track_id: string | null;
 }
 
 interface PhaseRow {
@@ -555,10 +554,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [ctxDraft, setCtxDraft] = useState('');
   const [ctxSaving, setCtxSaving] = useState(false);
   const [projLinking, setProjLinking]   = useState(false);
-  const [compUnlinking, setCompUnlinking] = useState(false);
+  const [compLinking, setCompLinking] = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
-  const [allTracks, setAllTracks]   = useState<LorePlanTrack[]>([]);
-  const [trackSaving, setTrackSaving] = useState(false);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -571,13 +568,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   useEffect(() => {
     fetchLoreSlice<{ slug: string }>('git_projects', {})
       .then(rows => setAllProjects(rows.map(r => r.slug).filter(Boolean)))
-      .catch(() => {});
-  }, []);
-
-  // Load plan tracks once (for the track picker).
-  useEffect(() => {
-    fetchLoreSlice<LorePlanTrack>('plan_tracks', {})
-      .then(rows => setAllTracks(rows ?? []))
       .catch(() => {});
   }, []);
 
@@ -762,38 +752,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         )}
       </div>
 
-      {/* ── Track section ──────────────────────────────────────────────────── */}
-      {allTracks.length > 0 && (
-        <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', flexShrink: 0 }}>Дорожка</span>
-            <select
-              disabled={trackSaving}
-              value={sprint.track_id ?? ''}
-              onChange={async e => {
-                const tid = e.target.value || null;
-                setTrackSaving(true);
-                try {
-                  await setSprintTrack(sprint.sprint_id, tid);
-                  setSprint(s => s ? { ...s, track_id: tid } : s);
-                } catch (err) { onError(err); }
-                finally { setTrackSaving(false); }
-              }}
-              style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
-                background: 'var(--bg2)', border: '1px solid var(--bd)',
-                color: sprint.track_id ? 'var(--t1)' : 'var(--t3)', cursor: 'pointer',
-                appearance: 'none' as const,
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}
-            >
-              <option value="">— не задана —</option>
-              {allTracks.map(t => <option key={t.track_id} value={t.track_id}>{t.label}</option>)}
-            </select>
-            {trackSaving && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
-          </div>
-        </div>
-      )}
-
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {
         const linked = sprint.git_projects ?? [];
@@ -857,57 +815,87 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
-      {/* ── Modules section (reverse sprint→component links) ────────────────── */}
-      {linkedComps.length > 0 && (
-        <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Модули</span>
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{linkedComps.length}</span>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-            {linkedComps.map(c => {
-              const col = areaColor(c.area);
-              const isExplicit = explicit.includes(c.component_id);
-              return (
-                <span key={c.component_id} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11,
-                  padding: '2px 4px 2px 8px', borderRadius: 10,
-                  background: `color-mix(in srgb, ${col} 14%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${col} 30%, transparent)`,
-                  color: col,
-                }}>
-                  <button
-                    onClick={onNavigateToComponent ? () => onNavigateToComponent(c.component_id) : undefined}
-                    disabled={!onNavigateToComponent}
-                    title={onNavigateToComponent ? `Открыть ${c.full_name ?? c.component_id}` : (c.full_name ?? c.component_id)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
-                      color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
-                  >
-                    <GameIcon slug={c.game_icon} size={12} style={{ color: 'inherit' }} />
-                    {c.component_id}
-                  </button>
-                  {isExplicit && (
+      {/* ── Modules section (sprint→component links) ────────────────────────── */}
+      {(() => {
+        const unlinkedComps = allComps.filter(c => !explicit.includes(c.component_id));
+        const selectStyle = { fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+          background: 'var(--bg2)', border: '1px solid var(--bd)',
+          color: 'var(--t2)', cursor: 'pointer',
+          appearance: 'none' as const,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' };
+        return (
+          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Модули</span>
+              {linkedComps.length > 0 && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{linkedComps.length}</span>}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+              {linkedComps.map(c => {
+                const col = areaColor(c.area);
+                const isExplicit = explicit.includes(c.component_id);
+                return (
+                  <span key={c.component_id} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11,
+                    padding: '2px 4px 2px 8px', borderRadius: 10,
+                    background: `color-mix(in srgb, ${col} 14%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${col} 30%, transparent)`,
+                    color: col,
+                  }}>
                     <button
-                      disabled={compUnlinking}
-                      title={`Отвязать ${c.component_id}`}
-                      onClick={async () => {
-                        setCompUnlinking(true);
-                        try {
-                          await linkSprintComponent(sprint.sprint_id, c.component_id, 'remove');
-                          setSprint(s => s ? { ...s, components: (s.components ?? []).filter(x => x !== c.component_id) } : s);
-                        } catch (e) { onError(e); }
-                        finally { setCompUnlinking(false); }
-                      }}
-                      style={{ background: 'none', border: 'none', cursor: compUnlinking ? 'default' : 'pointer',
-                        color: 'inherit', fontSize: 10, padding: '0 1px', lineHeight: 1, opacity: 0.65 }}
-                    >✕</button>
-                  )}
-                </span>
-              );
-            })}
+                      onClick={onNavigateToComponent ? () => onNavigateToComponent(c.component_id) : undefined}
+                      disabled={!onNavigateToComponent}
+                      title={onNavigateToComponent ? `Открыть ${c.full_name ?? c.component_id}` : (c.full_name ?? c.component_id)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
+                        color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
+                    >
+                      <GameIcon slug={c.game_icon} size={12} style={{ color: 'inherit' }} />
+                      {c.component_id}
+                    </button>
+                    {isExplicit && (
+                      <button
+                        disabled={compLinking}
+                        title={`Отвязать ${c.component_id}`}
+                        onClick={async () => {
+                          setCompLinking(true);
+                          try {
+                            await linkSprintComponent(sprint.sprint_id, c.component_id, 'remove');
+                            setSprint(s => s ? { ...s, components: (s.components ?? []).filter(x => x !== c.component_id) } : s);
+                          } catch (e) { onError(e); }
+                          finally { setCompLinking(false); }
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: compLinking ? 'default' : 'pointer',
+                          color: 'inherit', fontSize: 10, padding: '0 1px', lineHeight: 1, opacity: 0.65 }}
+                      >✕</button>
+                    )}
+                  </span>
+                );
+              })}
+              {unlinkedComps.length > 0 && (
+                <select
+                  disabled={compLinking}
+                  value=""
+                  onChange={async e => {
+                    const cid = e.target.value;
+                    if (!cid) return;
+                    setCompLinking(true);
+                    try {
+                      await linkSprintComponent(sprint.sprint_id, cid, 'add');
+                      setSprint(s => s ? { ...s, components: [...(s.components ?? []), cid] } : s);
+                    } catch (err) { onError(err); }
+                    finally { setCompLinking(false); }
+                  }}
+                  style={selectStyle}
+                >
+                  <option value="">+ привязать…</option>
+                  {unlinkedComps.map(c => <option key={c.component_id} value={c.component_id}>{c.component_id}</option>)}
+                </select>
+              )}
+              {compLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div style={S.section}>
         {/* Phases (when present) each with their tasks */}

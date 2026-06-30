@@ -11,7 +11,7 @@ import 'vis-timeline/styles/vis-timeline-graph2d.css';
 import './lore-timeline.css';
 import {
   fetchLoreSlice, postLoreStatus, registerLoreSprint, updateLoreSprint,
-  type LorePlanConfig, type LorePlanTrack, type LorePlanSection,
+  type LorePlanConfig, type LorePlanSection,
   type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
   type LorePlanItemStatus, type LoreSprintDep,
   type LoreSprintDoneDate, type LoreSprintTask, type LoreSprintRow,
@@ -165,7 +165,6 @@ function computeCriticalPath(
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const [config,   setConfig]   = useState<LorePlanConfig | null>(null);
-  const [tracks,   setTracks]   = useState<LorePlanTrack[]>([]);
   const [comps,    setComps]    = useState<LoreComponent[]>([]);
   const [sections, setSections] = useState<LorePlanSection[]>([]);
   const [items,    setItems]    = useState<LorePlanItem[]>([]);
@@ -226,7 +225,6 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     const ctrl = new AbortController();
     Promise.all([
       fetchLoreSlice<LorePlanConfig>('plan_config',      undefined, ctrl.signal),
-      fetchLoreSlice<LorePlanTrack>('plan_tracks',       undefined, ctrl.signal),
       fetchLoreSlice<LorePlanSection>('plan_sections',   undefined, ctrl.signal),
       fetchLoreSlice<LorePlanItem>('plan_items',         undefined, ctrl.signal),
       fetchLoreSlice<LorePlanCheckpoint>('plan_checkpoints', undefined, ctrl.signal),
@@ -236,9 +234,8 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       fetchLoreSlice<LoreSprintRow>('sprints',            undefined, ctrl.signal),
       fetchLoreSlice<LoreComponent>('components',         undefined, ctrl.signal),
     ])
-      .then(([cfgs, trks, secs, its, chkps, milestones, rels, dones, sprints, components]) => {
+      .then(([cfgs, secs, its, chkps, milestones, rels, dones, sprints, components]) => {
         setConfig(cfgs[0] ?? null);
-        setTracks(trks);
         setComps(components);
         setSections(secs);
         // The sprint is the source of truth for status: a plan item that represents
@@ -1113,10 +1110,6 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                 const c = wa < we ? 'var(--suc)' : wa > we ? 'var(--wrn)' : 'var(--t2)';
                 return <PRow k="Факт" v={`W${ws}–${wa} · ${dd.slice(0, 10)}`} color={c} />;
               })()}
-              {sprintCard.track_id && (
-                <PRow k="Track"
-                  v={tracks.find(t => t.track_id === sprintCard.track_id)?.label ?? sprintCard.track_id} />
-              )}
               {cardReleases.length > 0 && (
                 <PRow k="Релиз" v={cardReleases.join(', ')} color="var(--acc)" />
               )}
