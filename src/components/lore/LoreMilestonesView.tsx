@@ -198,10 +198,21 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
       {/* Master: simple cards — name, deadline, bar, projects */}
       <div style={S.cards}>
-        {rows.map(({ m, ids, done, status, dleft, projects }) => {
+        {rows.map(({ m, ids, done, open, status, dleft, projects }) => {
           const col = status === 'done' ? 'var(--suc)' : status === 'current' ? 'var(--acc)' : 'var(--t2)';
           const p = pct(done, ids.length);
           const isSel = selId === m.milestone_id;
+          // Risk block: нед_нужно = open / avgVelocity; дн_осталось = dleft; дефицит = нужно - осталось
+          const riskBlock = (() => {
+            if (status === 'done' || open === 0 || !avgVelocity || dleft == null) return null;
+            const weeksNeeded = open / avgVelocity;
+            const daysNeeded  = Math.round(weeksNeeded * 7);
+            const deficit     = daysNeeded - Math.max(0, dleft);
+            const riskLevel   = deficit > 7 ? 'high' : deficit > 0 ? 'mid' : 'ok';
+            const riskCol     = riskLevel === 'high' ? 'var(--dng)' : riskLevel === 'mid' ? 'var(--wrn)' : 'var(--suc)';
+            const riskLabel   = riskLevel === 'ok' ? '✓ в срок' : `⚠ −${deficit} дн`;
+            return { weeksNeeded, daysNeeded, deficit, riskLevel, riskCol, riskLabel };
+          })();
           return (
             <button key={m.milestone_id} onClick={() => selectMilestone(m)}
               style={{ ...S.card, borderColor: isSel ? 'var(--acc)' : status === 'current' ? 'color-mix(in srgb,var(--acc) 40%,var(--bd))' : 'var(--bd)',
@@ -210,13 +221,29 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                 <span style={{ fontSize: 12, color: col }}>{status === 'done' ? '✓' : status === 'current' ? '▶' : '○'}</span>
                 <span style={S.mLabel}>{m.label}</span>
                 {m.priority && <span style={{ ...S.prio, color: m.priority === 'P0' ? 'var(--dng)' : m.priority === 'P1' ? 'var(--wrn)' : 'var(--inf)' }}>{m.priority}</span>}
-                {dleft != null && <span style={{ ...S.dl, color: dleft < 0 ? 'var(--dng)' : dleft <= 7 ? 'var(--wrn)' : 'var(--t3)' }}>{dleft >= 0 ? `${dleft}д` : `+${-dleft}д`}</span>}
+                {dleft != null && <span style={{ ...S.dl, color: dleft < 0 ? 'var(--dng)' : dleft <= 7 ? 'var(--wrn)' : 'var(--t3)' }}>{dleft >= 0 ? `${dleft}д` : `просроч.`}</span>}
+                {riskBlock && (
+                  <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 600, color: riskBlock.riskCol,
+                    background: `color-mix(in srgb, ${riskBlock.riskCol} 12%, transparent)`,
+                    borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' as const }}>
+                    {riskBlock.riskLabel}
+                  </span>
+                )}
               </div>
               <div style={S.dim2}>{m.date_display}{m.week != null ? ` · w${m.week}` : ''}</div>
               <div style={S.progRow}>
                 <div style={S.bar}><div style={{ height: '100%', width: `${p}%`, background: col, borderRadius: 3 }} /></div>
                 <span style={S.progNum}>{done}/{ids.length} · {p}%</span>
               </div>
+              {riskBlock && (
+                <div style={{ marginTop: 4, fontSize: 9, color: 'var(--t3)', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                  <span>осталось <b style={{ color: 'var(--t2)' }}>{open} Sp</b></span>
+                  <span>нужно <b style={{ color: riskBlock.riskCol }}>{riskBlock.daysNeeded} дн</b> @ {avgVelocity.toFixed(1)} Sp/нед</span>
+                  {riskBlock.deficit > 0
+                    ? <span style={{ color: riskBlock.riskCol }}>дефицит <b>{riskBlock.deficit} дн</b></span>
+                    : <span style={{ color: 'var(--suc)' }}>запас <b>{-riskBlock.deficit} дн</b></span>}
+                </div>
+              )}
               {projects.length > 0 && <div style={S.projWrap}>{projects.map(pr => <span key={pr} style={S.projTag}>{pr}</span>)}</div>}
             </button>
           );
