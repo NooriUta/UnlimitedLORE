@@ -769,7 +769,7 @@ export default function LorePage() {
 
           {/* Sprints: detail or placeholder */}
           {section === 'sprints' && passport && (
-            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} />
+            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} />
           )}
           {section === 'sprints' && !passport && (
             <div style={S.placeholder}>Выберите спринт из списка слева</div>

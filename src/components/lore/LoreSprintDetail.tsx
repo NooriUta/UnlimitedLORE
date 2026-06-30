@@ -40,6 +40,7 @@ interface Props {
   sprintId: string;
   onError: (e: unknown) => void;
   onNavigateToComponent?: (componentId: string) => void;
+  onNavigateToSprint?: (sprintId: string) => void;
 }
 
 // A component is "linked" to a sprint by the same naming convention the component
@@ -545,7 +546,36 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   );
 }
 
-export default function LoreSprintDetail({ sprintId, onError, onNavigateToComponent }: Props) {
+function RelatedSprintRow({
+  id, meta, onNavigate, accent = 'var(--t2)',
+}: {
+  id: string;
+  meta?: { status_raw: string | null; task_total: number; task_done: number };
+  onNavigate?: (id: string) => void;
+  accent?: string;
+}) {
+  const tick = meta ? taskTick(meta.status_raw) : null;
+  const sm = tick ? statusMeta(tick.status) : null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+      <button
+        onClick={() => onNavigate?.(id)}
+        disabled={!onNavigate}
+        style={{ background: 'none', border: 'none', padding: 0, cursor: onNavigate ? 'pointer' : 'default',
+          fontFamily: 'var(--mono)', fontSize: 11, color: accent, textAlign: 'left' as const,
+          textDecoration: onNavigate ? 'underline' : 'none', textDecorationStyle: 'dotted' as const }}
+      >· {id}</button>
+      {sm && <GameIcon slug={sm.icon} size={10} style={{ color: sm.color, flexShrink: 0 }} />}
+      {meta && (
+        <span style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
+          {meta.task_done}/{meta.task_total}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function LoreSprintDetail({ sprintId, onError, onNavigateToComponent, onNavigateToSprint }: Props) {
   const [, setParams]         = useSearchParams();
   const [sprint,  setSprint]  = useState<SprintMeta | null>(null);
   const [allComps, setAllComps] = useState<CompRow[]>([]);
@@ -562,6 +592,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [msLinking, setMsLinking]     = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
   const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
+  const [relatedMeta, setRelatedMeta] = useState<Map<string, { status_raw: string | null; task_total: number; task_done: number }>>(new Map());
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -603,10 +634,31 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: sprintId }, ctrl.signal),
     ])
       .then(([metas, phaseRows, taskRows]) => {
-        setSprint(metas[0] ?? null);
+        const s = metas[0] ?? null;
+        setSprint(s);
         setPhases(phaseRows);
         setTasks(taskRows);
         setLoading(false);
+        // Load related sprint meta (depends_on + blocks): status + task counts
+        const relIds = [...(s?.depends_on ?? []), ...(s?.blocks ?? [])];
+        if (relIds.length > 0) {
+          Promise.all(relIds.map(id =>
+            Promise.all([
+              fetchLoreSlice<SprintMeta>('sprint_tree', { id }, ctrl.signal),
+              fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: id }, ctrl.signal),
+            ]).then(([mRow, tRows]) => {
+              const meta = mRow[0];
+              if (!meta) return null;
+              const task_total = tRows.length;
+              const task_done  = tRows.filter(t => taskTick(t.status_raw).done).length;
+              return { id, status_raw: meta.status_raw, task_total, task_done };
+            })
+          )).then(results => {
+            const m = new Map<string, { status_raw: string | null; task_total: number; task_done: number }>();
+            results.forEach(r => { if (r) m.set(r.id, r); });
+            setRelatedMeta(m);
+          }).catch(() => {});
+        }
       })
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
@@ -1060,18 +1112,14 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         {sprint.depends_on?.length ? (
           <div style={S.deps}>
             <div style={S.sectionLabel}>Зависит от</div>
-            {sprint.depends_on.map(d => (
-              <div key={d} style={S.depItem}>· {d}</div>
-            ))}
+            {sprint.depends_on.map(d => <RelatedSprintRow key={d} id={d} meta={relatedMeta.get(d)} onNavigate={onNavigateToSprint} />)}
           </div>
         ) : null}
 
         {sprint.blocks?.length ? (
           <div style={S.deps}>
             <div style={{ ...S.sectionLabel, color: 'var(--wrn)' }}>Блокирует</div>
-            {sprint.blocks.map(d => (
-              <div key={d} style={{ ...S.depItem, color: 'var(--wrn)' }}>· {d}</div>
-            ))}
+            {sprint.blocks.map(d => <RelatedSprintRow key={d} id={d} meta={relatedMeta.get(d)} onNavigate={onNavigateToSprint} accent="var(--wrn)" />)}
           </div>
         ) : null}
       </div>
