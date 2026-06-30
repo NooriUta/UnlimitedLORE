@@ -317,6 +317,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [sprintFilter, setSprintFilter] = useState<SprintFilter>('active');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
   const [chartProj,  setChartProj]  = useState<string>('all');  // project filter for burnup/cumulative
+  const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null }[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -334,11 +335,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       fetchLoreSlice<LoreQGViolation>('qg_violations', undefined, ctrl.signal),
       fetchLoreSlice<LoreQGPendingRec>('qg_pending_recs', undefined, ctrl.signal),
       fetchLoreSlice<LoreQGRoutineRun>('qg_routine_runs', undefined, ctrl.signal),
+      fetchLoreSlice<{ task_id: string; valid_from: string | null; states: number | number[] | null }>('task_done_dates', undefined, ctrl.signal),
     ])
-      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs]) => {
+      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone]) => {
         setData(d); setComponents(comps); setDoneDates(dones); setMilestoneList(ms);
         setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts); setBlockedRows(blocked);
-        setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs);
+        setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs); setTaskDone(tdone);
         setLoading(false);
       })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
@@ -621,6 +623,29 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     const nowBlocked = sprintRows.filter(s => classify(s.status_raw) === 'blocked').length;
     return { ever: everBlocked.size, total, nowBlocked, ids: [...everBlocked] };
   }, [blockedRows, sprintRows, data]);
+
+  // Task throughput by ISO week — real closures only:
+  // valid_from >= LORE go-live (12 июн; раньше = массовый импорт) AND states>1
+  // (>1 hist state = реальная прогрессия, а не «рождена done»/архивный дамп).
+  const TASK_THROUGHPUT_CUTOFF = '2026-06-12';
+  const taskThroughput = useMemo(() => {
+    const map = new Map<string, number>();
+    let counted = 0;
+    taskDone.forEach(t => {
+      const st = Array.isArray(t.states) ? t.states[0] : t.states;
+      const raw = String(t.valid_from ?? '');
+      if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;        // skip epoch/garbage
+      const day = raw.slice(0, 10);
+      if (day < TASK_THROUGHPUT_CUTOFF) return;            // skip import era
+      if (!st || st <= 1) return;                          // skip archived "born done"
+      const wk = isoWeekKey(new Date(day));
+      map.set(wk, (map.get(wk) ?? 0) + 1); counted++;
+    });
+    const weeks = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-12)
+      .map(([key, count]) => ({ key, label: `W${key.split('-W')[1]}`, count }));
+    const avg = weeks.length ? Math.round(counted / weeks.length) : 0;
+    return { weeks, counted, avg };
+  }, [taskDone]);
 
   // QG status breakdown + by component
   const qgStats = useMemo(() => {
@@ -1164,6 +1189,34 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   const tabFlow = (
     <>
+      {/* Task throughput */}
+      <section style={S.panel}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={S.panelTitle} title="Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done».">
+            Throughput задач <span style={S.dim}>· закрыто/нед</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+          </div>
+          <span style={{ fontSize: 10, color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн</span>
+        </div>
+        {taskThroughput.weeks.length === 0 ? <div style={S.empty}>Нет данных за период.</div> : (
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 90 }}>
+            {taskThroughput.weeks.map(w => {
+              const max = Math.max(...taskThroughput.weeks.map(x => x.count), 1);
+              return (
+                <div key={w.key} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
+                  <span style={{ fontSize: 9, color: 'var(--t2)', fontFamily: 'var(--mono)' }}>{w.count}</span>
+                  <div title={`${w.label}: ${w.count} задач`} style={{ width: '100%', height: Math.max(3, (w.count / max) * 64),
+                    background: 'color-mix(in srgb,var(--suc) 55%,var(--b3))', borderRadius: 3 }} />
+                  <span style={{ fontSize: 8, color: 'var(--t3)' }}>{w.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 6 }}>
+          Данные с 12 июн 2026 (запуск LORE). Ранее — массовый импорт; архивные задачи (сразу в финале) исключены.
+        </div>
+      </section>
+
       <div style={S.row2}>
         {/* Lead / cycle time */}
         <section style={S.panel}>

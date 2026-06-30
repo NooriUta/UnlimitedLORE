@@ -369,6 +369,15 @@ public final class LoreSlices {
             "FROM KnowSprintHist WHERE status_raw LIKE '%BLOCK%'",
             List.of(), Map.of(), "");
 
+        // Task done-transitions for throughput. valid_from = when task became DONE.
+        // states = total HAS_STATE rows of the task: states>1 means real progression
+        // (vs archived "born done" dump). Frontend also cuts pre-LORE import dates.
+        slice("task_done_dates",
+            "SELECT in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
+            "in('HAS_STATE').out('HAS_STATE').size() AS states " +
+            "FROM KnowTaskHist WHERE valid_to IS NULL AND status_raw LIKE '%DONE%' AND valid_from IS NOT NULL",
+            List.of(), Map.of(), "");
+
         slice("history_plan_item",
             "SELECT valid_from, valid_to, week_start, week_end, content_hash " +
             "FROM PlanItemHist WHERE in('HAS_STATE').item_id[0] = :id ORDER BY valid_from",
