@@ -203,7 +203,10 @@ function SprintRowItem({ s, onNavigate }: { s: LoreAnalyticsSprint; onNavigate?:
 
 // ── Velocity chart (SVG) ──────────────────────────────────────────────────
 
-function VelocityChart({ weeks }: { weeks: { key: string; label: string; count: number; isCurrent: boolean }[] }) {
+type VelocityWeek = { key: string; label: string; count: number; isCurrent: boolean };
+type VelocityStack = { label: string; color: string; counts: Record<string, number> }; // per-week counts
+
+function VelocityChart({ weeks, stacks }: { weeks: VelocityWeek[]; stacks?: VelocityStack[] }) {
   const maxVal = Math.max(...weeks.map(w => w.count), 1);
   const W = 600, H = 90, pad = 4;
   const barW = Math.floor((W - pad * (weeks.length + 1)) / weeks.length);
@@ -211,19 +214,39 @@ function VelocityChart({ weeks }: { weeks: { key: string; label: string; count: 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H + 24}`} style={{ display: 'block', overflow: 'visible' }}>
       {weeks.map((w, i) => {
-        const x    = pad + i * (barW + pad);
-        const barH = Math.max(2, Math.round((w.count / maxVal) * H));
-        const y    = H - barH;
-        const col  = w.isCurrent ? 'var(--acc)' : 'color-mix(in srgb,var(--acc) 30%,var(--b3))';
+        const x = pad + i * (barW + pad);
+        const totalH = Math.max(2, Math.round((w.count / maxVal) * H));
+        const baseCol = w.isCurrent ? 'var(--acc)' : 'color-mix(in srgb,var(--acc) 30%,var(--b3))';
+
+        if (!stacks || stacks.length === 0) {
+          const y = H - totalH;
+          return (
+            <g key={w.key}>
+              <rect x={x} y={y} width={barW} height={totalH} fill={baseCol} rx={2} />
+              {w.count > 0 && <text x={x + barW / 2} y={Math.max(y - 3, 10)} textAnchor="middle" fontSize={8} fill="var(--t2)">{w.count}</text>}
+              <text x={x + barW / 2} y={H + 14} textAnchor="middle" fontSize={7} fill={w.isCurrent ? 'var(--acc)' : 'var(--t3)'}>{w.label}</text>
+            </g>
+          );
+        }
+
+        // stacked rendering
+        let yOffset = H;
+        const segments = stacks.map(s => {
+          const cnt = s.counts[w.key] ?? 0;
+          const segH = cnt > 0 ? Math.max(1, Math.round((cnt / maxVal) * H)) : 0;
+          yOffset -= segH;
+          return { color: s.color, segH, y: yOffset };
+        }).filter(s => s.segH > 0);
+
+        const topY = segments.length ? segments[segments.length - 1].y : H - totalH;
         return (
           <g key={w.key}>
-            <rect x={x} y={y} width={barW} height={barH} fill={col} rx={2} />
-            {w.count > 0 && (
-              <text x={x + barW / 2} y={Math.max(y - 3, 10)} textAnchor="middle"
-                fontSize={8} fill="var(--t2)">{w.count}</text>
-            )}
-            <text x={x + barW / 2} y={H + 14} textAnchor="middle"
-              fontSize={7} fill={w.isCurrent ? 'var(--acc)' : 'var(--t3)'}>{w.label}</text>
+            {segments.map((seg, si) => (
+              <rect key={si} x={x} y={seg.y} width={barW} height={seg.segH} fill={seg.color}
+                rx={si === segments.length - 1 ? 2 : 0} />
+            ))}
+            {w.count > 0 && <text x={x + barW / 2} y={Math.max(topY - 3, 10)} textAnchor="middle" fontSize={8} fill="var(--t2)">{w.count}</text>}
+            <text x={x + barW / 2} y={H + 14} textAnchor="middle" fontSize={7} fill={w.isCurrent ? 'var(--acc)' : 'var(--t3)'}>{w.label}</text>
           </g>
         );
       })}
@@ -462,6 +485,32 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       key, label: `W${key.split('-W')[1]}`, count, isCurrent: key === todayKey,
     }));
   }, [chartDoneDates]);
+
+  // Velocity stacks by project for the stacked bar chart
+  const chartVelocityStacks = useMemo((): VelocityStack[] => {
+    // sprint_id → project
+    const sprintProj = new Map<string, string>();
+    chartSprints.forEach(s => sprintProj.set(s.sprint_id, projShort(s.git_projects?.[0])));
+    // collect unique projects in order of frequency
+    const projCount = new Map<string, number>();
+    chartDoneDates.forEach(d => {
+      const p = sprintProj.get(d.sprint_id) ?? 'other';
+      projCount.set(p, (projCount.get(p) ?? 0) + 1);
+    });
+    const projs = [...projCount.entries()].sort((a, b) => b[1] - a[1]).map(([p]) => p);
+    return projs.map((proj, idx) => {
+      const counts: Record<string, number> = {};
+      chartDoneDates.forEach(d => {
+        const p = sprintProj.get(d.sprint_id) ?? 'other';
+        if (p !== proj) return;
+        const dt = parseDoneDate(d.done_date);
+        if (!dt) return;
+        const key = isoWeekKey(dt);
+        counts[key] = (counts[key] ?? 0) + 1;
+      });
+      return { label: proj, color: PROJECT_COLORS[idx % PROJECT_COLORS.length], counts };
+    });
+  }, [chartSprints, chartDoneDates]);
 
   // Cumulative chart points — done sprints over time (respects project filter).
   const cumulativePoints = useMemo(() => {
@@ -1176,74 +1225,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   const tabProgress = (
     <>
-      {/* Velocity + burn stats */}
-      <div style={S.row2}>
-        <section style={S.panel}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={S.panelTitle} title="Спринтов, закрытых за каждую ISO-неделю (по done_date). Столбик = неделя, последняя подсвечена.">
-              Velocity <span style={S.dim}>· последние {velocityWeeks.length} нед</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span title="Среднее число закрытых спринтов в неделю за показанный период." style={{ fontSize: 10, color: 'var(--t2)', cursor: 'help' }}>avg <b style={{ color: 'var(--t1)' }}>{avgVelocity.toFixed(1)}</b>/нед</span>
-              {velocityTrend !== null && (
-                <span title="Тренд: средний velocity последних 4 недель vs предыдущих 4, в %." style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)', cursor: 'help',
-                  color: velocityTrend >= 0 ? 'var(--suc)' : 'var(--dng)',
-                  background: velocityTrend >= 0 ? 'color-mix(in srgb,var(--suc) 12%,transparent)' : 'color-mix(in srgb,var(--dng) 12%,transparent)',
-                }}>
-                  {velocityTrend >= 0 ? '↑' : '↓'}{Math.abs(velocityTrend)}%
-                </span>
-              )}
-              {velocityCV !== null && (
-                <span title="Стабильность темпа (коэф. вариации; ниже = ровнее)"
-                  style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)',
-                    color: velocityCV <= 0.4 ? 'var(--suc)' : velocityCV <= 0.7 ? 'var(--wrn)' : 'var(--dng)',
-                    background: 'var(--b3)' }}>
-                  σ {Math.round(velocityCV * 100)}%
-                </span>
-              )}
-            </div>
-          </div>
-          <VelocityChart weeks={chartVelocityWeeks.length ? chartVelocityWeeks : velocityWeeks} />
-        </section>
-
-        <section style={S.panel}>
-          <div style={S.panelTitle} title="Завершено за проект = все спринты с done_date. После M2 = завершённые с 03.06, ещё не вошедшие в релиз. Открыто = статус не done/cancelled.">Незарелиженное / burn <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
-          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-            {/* Done total */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>Завершено за проект</span>
-                <span style={{ fontSize: 10, color: 'var(--suc)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{doneDates.length} Sp</span>
-              </div>
-              <MiniBar done={doneDates.length} total={doneDates.length + openSprintCount} color="var(--suc)" wide />
-            </div>
-            {/* Since M2 (незарелиженное) */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>После M2 (c 3 июн) — незарелиженное</span>
-                <span style={{ fontSize: 10, color: 'var(--wrn)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{sinceM2Count} Sp</span>
-              </div>
-              <MiniBar done={sinceM2Count} total={doneDates.length} color="var(--wrn)" wide />
-            </div>
-            {/* Open */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>Открыто / в работе</span>
-                <span style={{ fontSize: 10, color: 'var(--dng)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{openSprintCount} Sp</span>
-              </div>
-              <MiniBar done={openSprintCount} total={doneDates.length + openSprintCount} color="var(--dng)" wide />
-            </div>
-            <div style={{ fontSize: 9, color: 'var(--t3)', borderTop: '1px solid var(--bd)', paddingTop: 8, lineHeight: 1.4 }}>
-              {deployLag.unreleased > 0
-                ? <><b style={{ color: 'var(--wrn)' }}>{deployLag.unreleased}</b> завершённых спринтов ещё не в релизе.<br /></>
-                : <>Все завершённые спринты вошли в релизы.<br /></>}
-              M3 (6 июл) — плановая дата следующего выпуска.
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* Filter bar: project + milestone + component */}
+      {/* Filter bar: project + milestone + component — top of tab */}
       <section style={{ ...S.panel, padding: '10px 14px', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
           <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проект</span>
@@ -1295,6 +1277,87 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           </div>
         )}
       </section>
+
+      {/* Velocity + burn stats */}
+      <div style={S.row2}>
+        <section style={S.panel}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap' as const, gap: 4 }}>
+            <div style={S.panelTitle} title="Спринтов, закрытых за каждую ISO-неделю (по done_date). Столбик = неделя, последняя подсвечена.">
+              Velocity <span style={S.dim}>· последние {(chartVelocityWeeks.length || velocityWeeks.length)} нед</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span title="Среднее число закрытых спринтов в неделю за показанный период." style={{ fontSize: 10, color: 'var(--t2)', cursor: 'help' }}>avg <b style={{ color: 'var(--t1)' }}>{avgVelocity.toFixed(1)}</b>/нед</span>
+              {velocityTrend !== null && (
+                <span title="Тренд: средний velocity последних 4 недель vs предыдущих 4, в %." style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)', cursor: 'help',
+                  color: velocityTrend >= 0 ? 'var(--suc)' : 'var(--dng)',
+                  background: velocityTrend >= 0 ? 'color-mix(in srgb,var(--suc) 12%,transparent)' : 'color-mix(in srgb,var(--dng) 12%,transparent)',
+                }}>
+                  {velocityTrend >= 0 ? '↑' : '↓'}{Math.abs(velocityTrend)}%
+                </span>
+              )}
+              {velocityCV !== null && (
+                <span title="Стабильность темпа (коэф. вариации; ниже = ровнее)"
+                  style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)',
+                    color: velocityCV <= 0.4 ? 'var(--suc)' : velocityCV <= 0.7 ? 'var(--wrn)' : 'var(--dng)',
+                    background: 'var(--b3)' }}>
+                  σ {Math.round(velocityCV * 100)}%
+                </span>
+              )}
+            </div>
+          </div>
+          {/* project legend */}
+          {chartVelocityStacks.length > 1 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 6 }}>
+              {chartVelocityStacks.map(s => (
+                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 9, color: 'var(--t3)' }}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <VelocityChart
+            weeks={chartVelocityWeeks.length ? chartVelocityWeeks : velocityWeeks}
+            stacks={chartVelocityStacks.length > 1 ? chartVelocityStacks : undefined}
+          />
+        </section>
+
+        <section style={S.panel}>
+          <div style={S.panelTitle} title="Завершено за проект = все спринты с done_date. После M2 = завершённые с 03.06, ещё не вошедшие в релиз. Открыто = статус не done/cancelled.">Незарелиженное / burn <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+            {/* Done total */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--t2)' }}>Завершено за проект</span>
+                <span style={{ fontSize: 10, color: 'var(--suc)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{doneDates.length} Sp</span>
+              </div>
+              <MiniBar done={doneDates.length} total={doneDates.length + openSprintCount} color="var(--suc)" wide />
+            </div>
+            {/* Since M2 (незарелиженное) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--t2)' }}>После M2 (c 3 июн) — незарелиженное</span>
+                <span style={{ fontSize: 10, color: 'var(--wrn)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{sinceM2Count} Sp</span>
+              </div>
+              <MiniBar done={sinceM2Count} total={doneDates.length} color="var(--wrn)" wide />
+            </div>
+            {/* Open */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: 'var(--t2)' }}>Открыто / в работе</span>
+                <span style={{ fontSize: 10, color: 'var(--dng)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{openSprintCount} Sp</span>
+              </div>
+              <MiniBar done={openSprintCount} total={doneDates.length + openSprintCount} color="var(--dng)" wide />
+            </div>
+            <div style={{ fontSize: 9, color: 'var(--t3)', borderTop: '1px solid var(--bd)', paddingTop: 8, lineHeight: 1.4 }}>
+              {deployLag.unreleased > 0
+                ? <><b style={{ color: 'var(--wrn)' }}>{deployLag.unreleased}</b> завершённых спринтов ещё не в релизе.<br /></>
+                : <>Все завершённые спринты вошли в релизы.<br /></>}
+              M3 (6 июл) — плановая дата следующего выпуска.
+            </div>
+          </div>
+        </section>
+      </div>
 
       {/* Burnup + Cumulative side by side */}
       <div style={S.row2}>
