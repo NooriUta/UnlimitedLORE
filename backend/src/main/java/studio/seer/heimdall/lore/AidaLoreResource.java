@@ -1320,11 +1320,15 @@ public class AidaLoreResource {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             if (remove) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE EDGE BELONGS_TO_PROJECT " +
-                    "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
-                    "TO   (SELECT FROM KnowGitProject WHERE slug=:gp)",
-                    Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
+                // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
+                List<Map<String, Object>> edges = ingestService.queryPublic(
+                    "SELECT @rid FROM BELONGS_TO_PROJECT WHERE @out.sprint_id=:sid AND @in.slug=:gp",
+                    Map.of("sid", req.sprint_id(), "gp", req.git_project()));
+                for (Map<String, Object> e : edges) {
+                    String rid = e.get("@rid").toString();
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM BELONGS_TO_PROJECT WHERE @rid=" + rid, null)).await().indefinitely();
+                }
             } else {
                 // Idempotent: create edge only if not already linked
                 List<Map<String, Object>> existing = ingestService.queryPublic(
