@@ -722,8 +722,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         </div>
       )}
 
+      {/* ── Two-column body: left sidebar (meta) + right main (tasks) ── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      {/* LEFT SIDEBAR */}
+      <div style={{ width: 220, flexShrink: 0, borderRight: '1px solid var(--bd)', overflowY: 'auto', display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
+
       {/* context_md — background / WHY section, editable inline */}
-      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+      <div style={{ padding: '6px 12px 8px', borderBottom: '1px solid var(--bd)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Контекст</span>
           {!ctxEdit && (
@@ -778,7 +783,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         const unlinked = allProjects.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         return (
-          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проекты</span>
             </div>
@@ -840,7 +845,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         const linked = sprint.milestone_ids ?? [];
         const unlinked = allMilestones.filter(m => !linked.includes(m.id));
         return (
-          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <GameIcon slug="crossed-axes" size={11} style={{ color: 'var(--t3)' }} />
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Вехи</span>
@@ -900,7 +905,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' };
         return (
-          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Модули</span>
               {linkedComps.length > 0 && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{linkedComps.length}</span>}
@@ -972,6 +977,10 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
+      </div>{/* END LEFT SIDEBAR */}
+
+      {/* RIGHT MAIN */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' as const }}>
       <div style={S.section}>
         {/* Phases (when present) each with their tasks */}
         {phases.length > 0 && (
@@ -1066,6 +1075,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           </div>
         ) : null}
       </div>
+      </div>{/* END RIGHT MAIN */}
+      </div>{/* END TWO-COLUMN BODY */}
     </div>
   );
 }
