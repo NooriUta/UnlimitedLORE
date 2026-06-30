@@ -24,7 +24,7 @@ const STATUS_ORDER = [
 
 type AnalyticsTab = 'overview' | 'progress' | 'flow' | 'sprints' | 'quality';
 type CompGroupBy  = 'area' | 'platform' | 'project';
-type SprintFilter = 'all' | 'active' | 'done' | 'empty';
+type SprintFilter = 'all' | 'active' | 'ready' | 'done' | 'empty';
 
 interface QGRow {
   qg_id: string; name: string; description: string | null;
@@ -80,10 +80,11 @@ const TABS: { key: AnalyticsTab; icon: string; label: string }[] = [
 ];
 
 const SPRINT_FILTERS: { key: SprintFilter; label: string }[] = [
-  { key: 'all',    label: 'Все'      },
-  { key: 'active', label: 'В работе' },
-  { key: 'done',   label: 'Готово'   },
-  { key: 'empty',  label: 'Без задач'},
+  { key: 'all',    label: 'Все'           },
+  { key: 'active', label: 'В работе'      },
+  { key: 'ready',  label: 'К деплою'      },
+  { key: 'done',   label: 'Готово'        },
+  { key: 'empty',  label: 'Без задач'     },
 ];
 
 function pct(done: number, total: number) { return total > 0 ? Math.round((100 * done) / total) : 0; }
@@ -108,8 +109,9 @@ function filterSprints(list: LoreAnalyticsSprint[], f: SprintFilter) {
   switch (f) {
     case 'active': return list.filter(s => {
       const k = classify(s.status_raw);
-      return k !== 'done' && k !== 'cancelled' && s.task_total > 0 && pct(s.task_done, s.task_total) < 100;
+      return k !== 'done' && k !== 'cancelled' && k !== 'ready_for_deploy' && s.task_total > 0 && pct(s.task_done, s.task_total) < 100;
     });
+    case 'ready': return list.filter(s => classify(s.status_raw) === 'ready_for_deploy');
     case 'done':  return list.filter(s =>
       classify(s.status_raw) === 'done' || (s.task_total > 0 && pct(s.task_done, s.task_total) === 100));
     case 'empty': return list.filter(s => s.task_total === 0);
