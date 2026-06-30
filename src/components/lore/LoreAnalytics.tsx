@@ -317,7 +317,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [sprintFilter, setSprintFilter] = useState<SprintFilter>('active');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
   const [chartProj,  setChartProj]  = useState<string>('all');  // project filter for burnup/cumulative
-  const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null }[]>([]);
+  const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }[]>([]);
+  const [taskStarts, setTaskStarts] = useState<{ task_id: string; valid_from: string | null }[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -335,12 +336,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       fetchLoreSlice<LoreQGViolation>('qg_violations', undefined, ctrl.signal),
       fetchLoreSlice<LoreQGPendingRec>('qg_pending_recs', undefined, ctrl.signal),
       fetchLoreSlice<LoreQGRoutineRun>('qg_routine_runs', undefined, ctrl.signal),
-      fetchLoreSlice<{ task_id: string; valid_from: string | null; states: number | number[] | null }>('task_done_dates', undefined, ctrl.signal),
+      fetchLoreSlice<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }>('task_done_dates', undefined, ctrl.signal),
+      fetchLoreSlice<{ task_id: string; valid_from: string | null }>('task_starts', undefined, ctrl.signal),
     ])
-      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone]) => {
+      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone, tstarts]) => {
         setData(d); setComponents(comps); setDoneDates(dones); setMilestoneList(ms);
         setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts); setBlockedRows(blocked);
-        setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs); setTaskDone(tdone);
+        setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs); setTaskDone(tdone); setTaskStarts(tstarts);
         setLoading(false);
       })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
@@ -646,6 +648,31 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     const avg = weeks.length ? Math.round(counted / weeks.length) : 0;
     return { weeks, counted, avg };
   }, [taskDone]);
+
+  // Effort accuracy — план (effort_days) vs факт (календарная длительность created→done).
+  // «Потраченное» = календарь (прокси, не чистые трудозатраты). Только реальные закрытия.
+  const effortAccuracy = useMemo(() => {
+    const created = new Map<string, string>();
+    taskStarts.forEach(r => {
+      const raw = String(r.valid_from ?? ''); if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;
+      const d = raw.slice(0, 10); const cur = created.get(r.task_id);
+      if (!cur || d < cur) created.set(r.task_id, d);
+    });
+    let plan = 0, act = 0, n = 0, under = 0, on = 0, over = 0;
+    taskDone.forEach(t => {
+      const st = Array.isArray(t.states) ? t.states[0] : t.states;
+      const ef = Array.isArray(t.effort_days) ? t.effort_days[0] : t.effort_days;
+      const raw = String(t.valid_from ?? ''); if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;
+      const done = raw.slice(0, 10);
+      if (done < TASK_THROUGHPUT_CUTOFF || !(st && st > 1) || !ef || ef <= 0) return;
+      const cr = created.get(t.task_id); if (!cr) return;
+      const dur = Math.max(0, Math.round((new Date(done).getTime() - new Date(cr).getTime()) / 86400000));
+      n++; plan += ef; act += dur;
+      const r = dur / ef;
+      if (r < 0.8) under++; else if (r <= 1.25) on++; else over++;
+    });
+    return { n, plan, act, ratio: plan ? act / plan : 0, under, on, over };
+  }, [taskDone, taskStarts]);
 
   // QG status breakdown + by component
   const qgStats = useMemo(() => {
@@ -1217,6 +1244,45 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         </div>
       </section>
 
+      {/* Effort accuracy — план vs факт (календарь) */}
+      <section style={S.panel}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={S.panelTitle} title="Точность оценок по закрытым задачам: план = effort_days, факт = календарная длительность (создано→закрыто). ⚠ «потраченное» = календарь (wall-clock), а не чистые трудозатраты. Только реальные закрытия (с 12 июн, states>1).">
+            Точность оценок <span style={S.dim}>· план vs факт (календарь)</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+          </div>
+          <span style={{ fontSize: 10, color: 'var(--t2)' }}>n=<b style={{ color: 'var(--t1)' }}>{effortAccuracy.n}</b></span>
+        </div>
+        {effortAccuracy.n === 0 ? <div style={S.empty}>Нет данных.</div> : (
+          <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' as const }}>
+            <div style={{ display: 'flex', flexDirection: 'column' as const }}>
+              <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1,
+                color: effortAccuracy.ratio <= 1.1 && effortAccuracy.ratio >= 0.9 ? 'var(--suc)' : effortAccuracy.ratio > 1.25 ? 'var(--dng)' : 'var(--wrn)' }}>
+                {Math.round(effortAccuracy.ratio * 100)}%
+              </span>
+              <span style={{ fontSize: 9, color: 'var(--t3)' }}>факт/план · Σ {effortAccuracy.act}/{effortAccuracy.plan} дн</span>
+            </div>
+            <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+              {[
+                { label: 'быстрее плана (<80%)', n: effortAccuracy.under, col: 'var(--suc)' },
+                { label: '~в плане (80–125%)',   n: effortAccuracy.on,    col: 'var(--inf)' },
+                { label: 'дольше (>125%)',        n: effortAccuracy.over,  col: 'var(--dng)' },
+              ].map(b => (
+                <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+                  <span style={{ color: 'var(--t2)', minWidth: 150 }}>{b.label}</span>
+                  <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--b3)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct(b.n, effortAccuracy.n)}%`, background: b.col, borderRadius: 3 }} />
+                  </div>
+                  <b style={{ color: 'var(--t1)', width: 30, textAlign: 'right' as const }}>{b.n}</b>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 6 }}>
+          ⚠ «Потраченное» считается как календарная длительность (создано→закрыто), а не чистые трудозатраты — реального учёта времени в графе нет.
+        </div>
+      </section>
+
       <div style={S.row2}>
         {/* Lead / cycle time */}
         <section style={S.panel}>
@@ -1610,6 +1676,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                       <span style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>{r.qg_id}</span>
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', marginBottom: 3 }}>{r.title}</div>
+                    {r.body_md && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5,
+                      whiteSpace: 'pre-wrap' as const, wordBreak: 'break-word' as const }}>{r.body_md}</div>}
                     {r.fix_cmd && <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--acc)',
                       background: 'var(--b2)', padding: '3px 7px', borderRadius: 4, marginTop: 4,
                       overflowX: 'auto' as const, whiteSpace: 'nowrap' as const }}>$ {r.fix_cmd}</div>}

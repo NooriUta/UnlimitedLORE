@@ -374,8 +374,16 @@ public final class LoreSlices {
         // (vs archived "born done" dump). Frontend also cuts pre-LORE import dates.
         slice("task_done_dates",
             "SELECT in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
-            "in('HAS_STATE').out('HAS_STATE').size() AS states " +
+            "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
+            "in('HAS_STATE').effort_days[0] AS effort_days " +
             "FROM KnowTaskHist WHERE valid_to IS NULL AND status_raw LIKE '%DONE%' AND valid_from IS NOT NULL",
+            List.of(), Map.of(), "");
+
+        // Every task state row (scalar valid_from). Frontend takes min per task = created date,
+        // for calendar duration (proxy «потраченного» в effort accuracy).
+        slice("task_starts",
+            "SELECT in('HAS_STATE').task_id[0] AS task_id, valid_from " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
         slice("history_plan_item",
