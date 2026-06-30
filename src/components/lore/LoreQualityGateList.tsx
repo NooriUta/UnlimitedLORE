@@ -19,9 +19,10 @@ interface QGMetricRow {
 
 const STATUS_META: Record<string, { color: string; label: string }> = {
   active:     { color: 'var(--suc)',    label: 'активен'  },
+  blocked:    { color: 'var(--danger)', label: 'заблокирован' },
   draft:      { color: 'var(--wrn)',    label: 'черновик' },
   archived:   { color: 'var(--t3)',     label: 'архив'    },
-  deprecated: { color: 'var(--danger)', label: 'устарел'  },
+  deprecated: { color: 'var(--t3)',     label: 'устарел'  },
 };
 
 function exportHtml(rows: QGRow[]) {

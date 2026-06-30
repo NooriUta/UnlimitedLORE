@@ -2302,18 +2302,75 @@ public class AidaLoreResource {
         if (req == null || req.rec_id() == null || req.rec_id().isBlank())
             return badParams("rec_id required");
         String sprintId = req.sprint_id() != null ? req.sprint_id() : "SPRINT_QG_VIOLATIONS";
-        String taskUid  = req.task_uid()  != null ? req.task_uid()
-                        : "QG/" + req.rec_id();
         String stateUid = java.util.UUID.randomUUID().toString();
         String nowTs    = java.time.Instant.now().toString();
         try {
-            String title = req.title() != null ? req.title() : taskUid;
-            String note  = req.note_md() != null ? req.note_md() : title;
-            // Upsert task vertex
+            // 1. Look up the recommendation to enrich the task
+            List<Map<String, Object>> recRows = ingestService.queryPublic(
+                "SELECT rec_id, title, body_md, priority, severity, effort_days, " +
+                "fix_cmd, how_to_verify, component_id, qg_id, inv_id, tags " +
+                "FROM QGRecommendation WHERE rec_id=:rid LIMIT 1",
+                Map.of("rid", req.rec_id()));
+            Map<String, Object> rec = recRows.isEmpty() ? Map.of() : recRows.get(0);
+
+            // 2. Derive task_id = next TNN in sprint
+            List<Map<String, Object>> existingTasks = ingestService.queryPublic(
+                "SELECT task_id FROM KnowTask WHERE task_id IS NOT NULL " +
+                "AND task_id LIKE 'T%' AND @in('PART_OF').sprint_id=:sid",
+                Map.of("sid", sprintId));
+            int maxN = existingTasks.stream()
+                .map(t -> t.getOrDefault("task_id", "T0").toString().replaceAll("[^0-9]", ""))
+                .filter(s -> !s.isBlank()).mapToInt(s -> { try { return Integer.parseInt(s); } catch (Exception e2) { return 0; } })
+                .max().orElse(0);
+            String taskId  = String.format("T%02d", maxN + 1);
+            String taskUid = req.task_uid() != null ? req.task_uid()
+                           : sprintId + "/" + taskId;
+
+            // 3. Build rich note_md from rec fields
+            String recTitle    = str(rec.get("title"));
+            String recBody     = str(rec.get("body_md"));
+            String recPri      = str(rec.get("priority"));
+            String recSev      = str(rec.get("severity"));
+            String recEffort   = str(rec.get("effort_days"));
+            String recFixCmd   = str(rec.get("fix_cmd"));
+            String recVerify   = str(rec.get("how_to_verify"));
+            String recQg       = str(rec.get("qg_id"));
+            String recInv      = str(rec.get("inv_id"));
+            String recTags     = str(rec.get("tags"));
+            String recComp     = str(rec.get("component_id"));
+
+            String title = req.title() != null ? req.title()
+                         : (!recTitle.isBlank() ? recTitle : taskUid);
+
+            String note;
+            if (req.note_md() != null) {
+                note = req.note_md();
+            } else {
+                StringBuilder sb = new StringBuilder();
+                sb.append("## ").append(title).append("\n\n");
+                if (!recQg.isBlank() || !recInv.isBlank())
+                    sb.append("**QG:** ").append(recQg).append(" · **INV:** ").append(recInv).append("\n");
+                if (!recPri.isBlank() || !recSev.isBlank())
+                    sb.append("**Priority:** ").append(recPri)
+                      .append(" · **Severity:** ").append(recSev);
+                if (!recEffort.isBlank()) sb.append(" · **Effort:** ").append(recEffort).append("d");
+                if (!recPri.isBlank() || !recSev.isBlank()) sb.append("\n");
+                if (!recTags.isBlank()) sb.append("**Tags:** ").append(recTags).append("\n");
+                sb.append("\n");
+                if (!recBody.isBlank()) sb.append(recBody).append("\n\n");
+                if (!recFixCmd.isBlank())
+                    sb.append("**Fix:**\n```bash\n").append(recFixCmd).append("\n```\n\n");
+                if (!recVerify.isBlank())
+                    sb.append("**Verify:**\n```bash\n").append(recVerify).append("\n```\n");
+                note = sb.toString().trim();
+            }
+
+            // 4. Upsert task vertex with task_id + component_id
+            String compId = recComp.isBlank() ? "AIDA" : recComp;
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowTask SET task_uid=:uid, title=:title, note_md=:note, src='qg' " +
-                "UPSERT WHERE task_uid=:uid",
-                mapOfNullable("uid", taskUid, "title", title, "note", note)))
+                "UPDATE KnowTask SET task_uid=:uid, task_id=:tid, title=:title, " +
+                "note_md=:note, src='qg', component_id=:cid UPSERT WHERE task_uid=:uid",
+                mapOfNullable("uid", taskUid, "tid", taskId, "title", title, "note", note, "cid", compId)))
                 .await().indefinitely();
             // Insert KnowTaskHist row with TODO status
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -2339,7 +2396,10 @@ public class AidaLoreResource {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE QGRecommendation SET status='promoted' WHERE rec_id=:rid",
                 Map.of("rid", req.rec_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "task_uid", taskUid, "sprint_id", sprintId)));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("task_uid", taskUid);
+            out.put("task_id", taskId); out.put("sprint_id", sprintId);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QG PROMOTE] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -2493,5 +2553,9 @@ public class AidaLoreResource {
 
     private static Response noStore(Response.ResponseBuilder builder) {
         return builder.type(MediaType.APPLICATION_JSON).header("Cache-Control", "no-store").build();
+    }
+
+    private static String str(Object o) {
+        return o == null ? "" : o.toString().trim();
     }
 }

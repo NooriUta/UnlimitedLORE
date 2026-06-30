@@ -229,6 +229,28 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_update_plan_item',
+    'Link (or unlink) a PlanItem to a KnowMilestone via a CONTRIBUTES_TO edge. ' +
+      'Architecture: Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint. ' +
+      'This is the canonical way to assign a sprint to a milestone when the sprint has a plan-item. ' +
+      'For sprints without a plan-item bridge use lore_link_sprint_milestone (TARGETS_MILESTONE direct edge). ' +
+      'Use action="remove" to unlink (omit milestone_id to remove ALL milestone links from this item). ' +
+      'Idempotent on add. Returns {ok, item_id, milestone_id, action}.',
+    {
+      item_id:      z.string().describe('plan-item id, e.g. "SPRINT_LORE_QG_INTEGRATION"'),
+      milestone_id: z.string().optional().describe('milestone id to link; omit only when action="remove" to clear all'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ item_id, milestone_id, action }) => {
+      try {
+        return json(await lorePost('/lore/plan-item/milestone', {
+          item_id, milestone_id: milestone_id ?? null, action: action ?? 'add',
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_batch_set_status',
     'Set the same status on multiple LORE entities in one call. ' +
       'Each item goes through the full SCD2 transition (closes old hist row, opens new one). ' +
@@ -588,6 +610,101 @@ export function registerLoreWrite(server: McpServer): void {
       try {
         return json(await lorePost('/lore/component/create', {
           component_id, full_name, area, team, game_icon, owner, parent_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_qg_job_task',
+    'Upsert a QGJobTask vertex and wire a YIELDED edge from the parent QualityGate. ' +
+      'Call after running a QG slice when an invariant FAILS. ' +
+      'severity: "blocker" | "major" | "minor". status: "open" (new failure) | "resolved" (pass after open). ' +
+      'Sets status="resolved" on previously open tasks for the same qg_id+inv_id when a PASS is recorded.',
+    {
+      job_id:   z.string().describe('unique run id, e.g. "QG-LINEAGE_INV-1_2026-06-30"'),
+      qg_id:    z.string().describe('parent QualityGate id, e.g. "QG-LINEAGE"'),
+      inv_id:   z.string().optional().describe('invariant id, e.g. "INV-1"'),
+      run_date: z.string().optional().describe('YYYY-MM-DD; defaults to today'),
+      severity: z.enum(['blocker', 'major', 'minor']).optional().default('major'),
+      status:   z.enum(['open', 'resolved']).optional().default('open'),
+      note_md:  z.string().optional().describe('failure details / evidence in Markdown'),
+    },
+    async ({ job_id, qg_id, inv_id, run_date, severity, status, note_md }) => {
+      try {
+        return json(await lorePost('/lore/qg/job-task', {
+          job_id, qg_id, inv_id: inv_id ?? null,
+          run_date: run_date ?? new Date().toISOString().slice(0, 10),
+          severity: severity ?? 'major', status: status ?? 'open',
+          note_md: note_md ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_recommendation',
+    'Upsert a QGRecommendation vertex and wire a PRODUCED edge from the parent QGJobTask. ' +
+      'Call after lore_create_qg_job_task when you want to suggest a remediation action. ' +
+      'Status starts as "pending" until the user confirms via lore_promote_recommendation. ' +
+      'Always fill priority, severity, effort_days, fix_cmd and how_to_verify — sparse recs are useless.',
+    {
+      rec_id:        z.string().describe('unique id, e.g. "REC-QG-SECURITY-INV9-2026-06-30"'),
+      job_id:        z.string().describe('parent QGJobTask job_id'),
+      title:         z.string().describe('short action title — include QG id and INV id'),
+      body_md:       z.string().optional().describe('## Проблема / ## Что сделать / ## Как проверить / ## Риск'),
+      status:        z.enum(['pending', 'dismissed', 'promoted']).optional().default('pending'),
+      priority:      z.enum(['P0', 'P1', 'P2']).optional().describe('P0=blocking, P1=this sprint, P2=backlog'),
+      severity:      z.enum(['critical', 'high', 'medium', 'low']).optional(),
+      effort_days:   z.number().optional().describe('estimated fix effort in days, e.g. 0.25'),
+      tags:          z.string().optional().describe('comma-separated, e.g. "security,credentials"'),
+      component_id:  z.string().optional().describe('LoreComponent component_id that owns the fix'),
+      qg_id:         z.string().optional().describe('source QualityGate qg_id'),
+      inv_id:        z.string().optional().describe('failed invariant id, e.g. "INV-9"'),
+      fix_cmd:       z.string().optional().describe('one-liner bash command to apply the fix'),
+      how_to_verify: z.string().optional().describe('bash command or check to confirm fix is done'),
+    },
+    async ({ rec_id, job_id, title, body_md, status, priority, severity, effort_days,
+             tags, component_id, qg_id, inv_id, fix_cmd, how_to_verify }) => {
+      try {
+        return json(await lorePost('/lore/qg/recommendation', {
+          rec_id, job_id, title,
+          body_md:       body_md       ?? null,
+          status:        status        ?? 'pending',
+          priority:      priority      ?? null,
+          severity:      severity      ?? null,
+          effort_days:   effort_days   ?? null,
+          tags:          tags          ?? null,
+          component_id:  component_id  ?? null,
+          qg_id:         qg_id         ?? null,
+          inv_id:        inv_id        ?? null,
+          fix_cmd:       fix_cmd       ?? null,
+          how_to_verify: how_to_verify ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_promote_recommendation',
+    'Confirm a QGRecommendation and promote it to a KnowTask in SPRINT_QG_VIOLATIONS. ' +
+      'Creates PROMOTED_TO edge (QGRecommendation → KnowTask) and marks rec as "promoted". ' +
+      'Backend auto-assigns task_id (T01, T02…), reads body_md/priority/severity/fix_cmd/' +
+      'how_to_verify/component_id from the recommendation and builds a rich note_md automatically. ' +
+      'Omit title/note_md to let the backend enrich from rec fields. ' +
+      'Use after the user explicitly says "да" / confirms the recommendation.',
+    {
+      rec_id:    z.string().describe('QGRecommendation rec_id to promote'),
+      sprint_id: z.string().optional().default('SPRINT_QG_VIOLATIONS').describe('target sprint; defaults to SPRINT_QG_VIOLATIONS'),
+      task_uid:  z.string().optional().describe('KnowTask uid; defaults to "<sprint_id>/T<NN>"'),
+      title:     z.string().optional().describe('override task title (default: rec title)'),
+      note_md:   z.string().optional().describe('override task description (default: auto-built from rec fields)'),
+    },
+    async ({ rec_id, sprint_id, task_uid, title, note_md }) => {
+      try {
+        return json(await lorePost('/lore/qg/promote', {
+          rec_id, sprint_id: sprint_id ?? 'SPRINT_QG_VIOLATIONS',
+          task_uid: task_uid ?? null, title: title ?? null, note_md: note_md ?? null,
         }));
       } catch (e) { return err(e); }
     },
