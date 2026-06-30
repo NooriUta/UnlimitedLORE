@@ -233,8 +233,9 @@ public final class LoreSlices {
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
             // Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint.
             // Sprints link via plan item (CONTRIBUTES_TO→REPRESENTS) OR directly
-            // (TARGETS_MILESTONE, set from the milestone-management UI). Frontend unions both.
-            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint'].sprint_id AS sprint_ids, " +
+            // (TARGETS_MILESTONE, set from the milestone-management UI).
+            // Direct edge takes priority: exclude from sprint_ids any sprint that has TARGETS_MILESTONE set.
+            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint' AND out('TARGETS_MILESTONE').size() = 0].sprint_id AS sprint_ids, " +
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");

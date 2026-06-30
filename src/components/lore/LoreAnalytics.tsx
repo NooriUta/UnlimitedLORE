@@ -966,7 +966,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return (data?.by_sprint ?? [])
       .filter(s => {
         const k = classify(s.status_raw);
-        return k !== 'done' && k !== 'cancelled' && (milestoneIds.size === 0 || milestoneIds.has(s.sprint_id));
+        const allTasksDone = s.task_total > 0 && s.task_done >= s.task_total;
+        return k !== 'done' && k !== 'cancelled' && !allTasksDone && (milestoneIds.size === 0 || milestoneIds.has(s.sprint_id));
       })
       .map(s => ({
         ...s,
