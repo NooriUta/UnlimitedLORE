@@ -805,9 +805,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return map;
   }, [qgViolations]);
 
-  const runHistory = useMemo(() =>
-    [...qgRoutineRuns].sort((a, b) => (a.run_date ?? '') < (b.run_date ?? '') ? -1 : 1).slice(-20),
-  [qgRoutineRuns]);
+  void qgRoutineRuns; // used directly in tabQuality grouped view
 
   // Per-routine latest metrics: Map<routine_name, Map<metric_key, QGMetricRow>>
   const qgMetricsByRoutine = useMemo(() => {
@@ -1666,36 +1664,79 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       </section>
 
       <section style={S.panel}>
-        <div style={S.panelTitle} title="ClRoutineRun WHERE routine_name LIKE qg-%, последние 20 по дате.">
+        <div style={S.panelTitle} title="Прогоны сгруппированы по run_id (или routine+дата). Время берётся из started_at/finished_at.">
           История прогонов <span style={S.dim}>· {qgRoutineRuns.length} записей</span>
         </div>
-        {runHistory.length === 0
-          ? <div style={S.empty}>Нет записей ClRoutineRun для qg-* рутин.</div>
-          : <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-              {runHistory.map((r, i) => {
-                const col = runColor(r.status);
+        {(() => {
+          // Group by run_id (if exists) else routine_name+run_date — one «session» per group
+          const groups = new Map<string, LoreQGRoutineRun[]>();
+          [...qgRoutineRuns]
+            .sort((a, b) => ((b.run_date ?? '') + (b.started_at ?? '')).localeCompare((a.run_date ?? '') + (a.started_at ?? '')))
+            .forEach(r => {
+              const key = r.run_id ?? `${r.routine_name}__${r.run_date ?? ''}`;
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key)!.push(r);
+            });
+          const sessions = [...groups.entries()].slice(0, 30);
+          if (sessions.length === 0) return <div style={S.empty}>Нет записей ClRoutineRun для qg-* рутин.</div>;
+          // Group sessions by date for date separators
+          let lastDate = '';
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 2 }}>
+              {sessions.map(([key, runs]) => {
+                const dateStr = (runs[0].run_date ?? '').slice(0, 10);
+                const timeStr = runs[0].started_at ? runs[0].started_at.slice(11, 16) : null;
+                const finStr  = runs[0].finished_at ? runs[0].finished_at.slice(11, 16) : null;
+                const showDate = dateStr !== lastDate;
+                lastDate = dateStr;
+                // worst status in group
+                const worstStatus = runs.reduce<string>((w, r) => {
+                  const rank = (s: string | null) => s === 'FAIL' ? 3 : s === 'WARN' ? 2 : s === 'PARTIAL' ? 1 : 0;
+                  return rank(r.status) > rank(w) ? (r.status ?? w) : w;
+                }, runs[0].status ?? '');
+                const col = runColor(worstStatus);
+                const icon = worstStatus === 'PASS' || worstStatus === 'OK' ? '✓' : worstStatus === 'FAIL' ? '✗' : worstStatus === 'WARN' ? '⚠' : '?';
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 6px', borderRadius: 5,
-                    background: `color-mix(in srgb,${col} 6%,transparent)` }}>
-                    <span style={{ fontSize: 10, color: col, width: 12, textAlign: 'center' as const }}>
-                      {r.status === 'PASS' ? '✓' : r.status === 'FAIL' ? '✗' : r.status === 'WARN' ? '⚠' : '?'}
-                    </span>
-                    <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', width: 84, flexShrink: 0 }}>
-                      {(r.run_date ?? '').slice(0, 10)}
-                    </span>
-                    <span style={{ fontSize: 10, color: col, fontFamily: 'var(--mono)', fontWeight: 600, minWidth: 80 }}>{r.routine_name}</span>
-                    <span style={{ flex: 1, fontSize: 9, color: 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                      {r.flags ?? ''}
-                    </span>
-                    <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, fontWeight: 600,
-                      color: col, background: `color-mix(in srgb,${col} 14%,transparent)`,
-                      border: `1px solid color-mix(in srgb,${col} 30%,transparent)` }}>
-                      {r.status ?? '—'}
-                    </span>
-                  </div>
+                  <React.Fragment key={key}>
+                    {showDate && (
+                      <div style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', padding: '5px 6px 2px',
+                        borderTop: showDate && lastDate !== dateStr ? '1px solid var(--bd)' : 'none', marginTop: 2 }}>
+                        {dateStr}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 6px', borderRadius: 5,
+                      background: `color-mix(in srgb,${col} 5%,transparent)`, borderLeft: `2px solid ${col}` }}>
+                      <span style={{ fontSize: 11, color: col, width: 14, textAlign: 'center' as const, paddingTop: 1 }}>{icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
+                          {runs.map((r, ri) => {
+                            const rc = runColor(r.status);
+                            return (
+                              <span key={ri} style={{ fontSize: 10, color: rc, fontFamily: 'var(--mono)', fontWeight: 600 }}>
+                                {r.routine_name.replace('qg-', '')}
+                                <span style={{ fontWeight: 400, color: `color-mix(in srgb,${rc} 60%,var(--t3))`, marginLeft: 2 }}>
+                                  {r.status === 'PASS' || r.status === 'OK' ? '✓' : r.status === 'FAIL' ? '✗' : r.status === 'WARN' ? '⚠' : '?'}
+                                </span>
+                              </span>
+                            );
+                          })}
+                          <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                            {timeStr ?? '—'}{finStr && finStr !== timeStr ? `→${finStr}` : ''}
+                          </span>
+                        </div>
+                        {runs[0].flags && (
+                          <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                            {runs[0].flags}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </React.Fragment>
                 );
               })}
-            </div>}
+            </div>
+          );
+        })()}
       </section>
 
       <section style={S.panel}>

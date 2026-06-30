@@ -622,8 +622,11 @@ export interface LoreQGPendingRec {
 }
 
 export interface LoreQGRoutineRun {
+  run_id: string | null;
   routine_name: string;
   run_date: string | null;
   status: string | null;
   flags: string | null;
+  started_at: string | null;
+  finished_at: string | null;
 }
