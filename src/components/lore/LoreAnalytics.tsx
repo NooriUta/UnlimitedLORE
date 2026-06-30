@@ -982,6 +982,15 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
 
+  // Must be before early returns (React rules of hooks)
+  const filteredSprintsForEffort = useMemo(() =>
+    data ? filterSprints(data.by_sprint, sprintFilter) : [],
+  [data, sprintFilter]);
+
+  const filteredEffortSumTop = useMemo(() =>
+    filteredSprintsForEffort.reduce((sum, s) => sum + (s.effort_days_sum ?? 0), 0),
+  [filteredSprintsForEffort]);
+
   if (loading) return <LoreSkeleton />;
   if (!data)   return <div style={S.empty}>Нет данных.</div>;
 
@@ -1703,10 +1712,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // ── Tab 4: Спринты ────────────────────────────────────────────────────────
 
   const filteredSprints = filterSprints(data.by_sprint, sprintFilter);
-
-  const filteredEffortSum = useMemo(() =>
-    filteredSprints.reduce((sum, s) => sum + (s.effort_days_sum ?? 0), 0),
-  [filteredSprints]);
+  const filteredEffortSum = filteredEffortSumTop;
 
   const tabSprints = (
     <>
