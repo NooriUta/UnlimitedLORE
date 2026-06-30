@@ -1012,9 +1012,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         <Kpi icon="cog"        label="Компоненты"     value={t.components} color="var(--wrn)"
              sub={`${data.by_component.length} со спринтами · ${pct(data.by_component.length, t.components)}%`}
              hint="Всего компонентов. Под значением — сколько из них имеют хотя бы один привязанный спринт (coverage)." />
-        <Kpi icon="hourglass"  label="Незакрытых Sp" value={openSprintCount} color="var(--dng)"
-             sub="не done / не выпущены" highlight
-             hint="Спринты, чей статус не done и не cancelled (классификация по status_raw). Это остаток работы." />
+        <Kpi icon="hourglass"  label="Незакрытых Sp" value={milestoneOpenCount} color="var(--dng)"
+             sub={milestoneOpenCount !== openSprintCount ? `вехи · всего ${openSprintCount}` : 'не done / не выпущены'} highlight
+             hint={`Незакрытые спринты текущей вехи: ${milestoneOpenCount}. Всего в системе незакрыто: ${openSprintCount}.`} />
       </div>
 
       <div style={S.row2}>
