@@ -592,4 +592,30 @@ export function registerLoreWrite(server: McpServer): void {
       } catch (e) { return err(e); }
     },
   );
+
+  server.tool(
+    'lore_update_component',
+    'Update metadata fields on an existing LoreComponent vertex (partial update — only supplied fields written). ' +
+      'Covers full_name, area, team, game_icon, owner, parent_id. ' +
+      'Use to rename, re-assign owner/team, fix icon slug, or reparent a component. ' +
+      'Does NOT create a new component — use lore_create_component for that.',
+    {
+      component_id: z.string().describe('ID of the component to update, e.g. "FORSETI"'),
+      full_name:    z.string().optional().describe('Human-readable full name'),
+      area:         z.string().optional().describe('Team area, e.g. platform, engine, frontend'),
+      team:         z.string().optional().describe('Team slug'),
+      game_icon:    z.string().optional().describe('game-icons.net slug, e.g. spell-book'),
+      owner:        z.string().optional().describe('Owner login'),
+      parent_id:    z.string().optional().describe('Parent component_id if this is a sub-component'),
+    },
+    async ({ component_id, full_name, area, team, game_icon, owner, parent_id }) => {
+      try {
+        return json(await lorePost('/lore/component/update', {
+          component_id, full_name: full_name ?? null, area: area ?? null,
+          team: team ?? null, game_icon: game_icon ?? null,
+          owner: owner ?? null, parent_id: parent_id ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
 }
