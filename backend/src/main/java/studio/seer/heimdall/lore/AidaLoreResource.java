@@ -173,12 +173,13 @@ public class AidaLoreResource {
             List<Map<String, Object>> sprints = ingestService.queryPublic(
                 "SELECT sprint_id, out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw FROM KnowSprint", Map.of());
             List<Map<String, Object>> taskRows = ingestService.queryPublic(
-                "SELECT in('HAS_STATE').task_uid AS tuid, status_raw FROM KnowTaskHist WHERE valid_to IS NULL", Map.of());
+                "SELECT in('HAS_STATE').task_uid AS tuid, status_raw, effort_days FROM KnowTaskHist WHERE valid_to IS NULL", Map.of());
             List<Map<String, Object>> releases = ingestService.queryPublic(
                 "SELECT git_tag, git_project, is_current FROM KnowRelease", Map.of());
 
             // ── Tasks: dedupe by task_uid (SCD2 may leave >1 open row), classify ──
             Map<String, String> taskStatus = new LinkedHashMap<>();
+            Map<String, Double> taskEffortMap = new LinkedHashMap<>(); // task_uid -> effort_days
             for (Map<String, Object> r : taskRows) {
                 String tuid = firstStr(r.get("tuid"));
                 if (tuid == null) continue;
@@ -186,9 +187,15 @@ public class AidaLoreResource {
                 // prefer a "done" classification on collision
                 String prev = taskStatus.get(tuid);
                 if (prev == null || (!"done".equals(prev) && "done".equals(cls))) taskStatus.put(tuid, cls);
+                // collect effort_days (first non-null wins)
+                if (!taskEffortMap.containsKey(tuid)) {
+                    Object ed = r.get("effort_days");
+                    if (ed instanceof Number n) taskEffortMap.put(tuid, n.doubleValue());
+                }
             }
             Map<String, Integer> tasksByStatus = new LinkedHashMap<>();
             Map<String, int[]> perSprint = new LinkedHashMap<>(); // sprint_id -> [total, done]
+            Map<String, double[]> perSprintEffort = new LinkedHashMap<>(); // sprint_id -> [effort_sum]
             for (Map.Entry<String, String> e : taskStatus.entrySet()) {
                 String tuid = e.getKey(), cls = e.getValue();
                 tasksByStatus.merge(cls, 1, Integer::sum);
@@ -198,6 +205,8 @@ public class AidaLoreResource {
                 int[] td = perSprint.computeIfAbsent(sid, k -> new int[2]);
                 td[0]++;
                 if ("done".equals(cls)) td[1]++;
+                Double ef = taskEffortMap.get(tuid);
+                if (ef != null) perSprintEffort.computeIfAbsent(sid, k -> new double[1])[0] += ef;
             }
 
             // ── Sprints by status ──
@@ -247,6 +256,8 @@ public class AidaLoreResource {
                 row.put("status_raw", sprintStatusMap.get(e.getKey()));
                 row.put("task_total", e.getValue()[0]);
                 row.put("task_done", e.getValue()[1]);
+                double[] ef = perSprintEffort.get(e.getKey());
+                if (ef != null) row.put("effort_days_sum", Math.round(ef[0] * 10.0) / 10.0);
                 bySprint.add(row);
             }
             bySprint.sort((a, b) -> ((Integer) b.get("task_total")) - ((Integer) a.get("task_total")));
@@ -2199,7 +2210,7 @@ public class AidaLoreResource {
     }
 
     // ── QG Run record (ClRoutineRun + ClRoutineMetric batch) ─────────────────
-    public record QGMetricEntry(String key, Double value, String unit, Double target, String status) {}
+    public record QGMetricEntry(String key, Double value, String unit, Double target, String status, String source) {}
     public record QGRunRequest(
         String run_id, String routine_name, String run_date, String status,
         String started_at, String finished_at, String flags,
@@ -2236,11 +2247,12 @@ public class AidaLoreResource {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "UPDATE ClRoutineMetric SET metric_id=:mid, run_id=:rid, " +
                         "routine_name=:rn, run_date=:rd, metric_key=:mk, value=:val, " +
-                        "unit=:unit, target=:tgt, status=:st " +
+                        "unit=:unit, target=:tgt, status=:st, source=:src " +
                         "UPSERT WHERE metric_id=:mid",
                         mapOfNullable("mid", mId, "rid", runId, "rn", req.routine_name(),
                             "rd", req.run_date(), "mk", m.key(), "val", m.value(),
-                            "unit", m.unit(), "tgt", m.target(), "st", m.status())))
+                            "unit", m.unit(), "tgt", m.target(), "st", m.status(),
+                            "src", m.source())))
                         .await().indefinitely();
                     written++;
                 }

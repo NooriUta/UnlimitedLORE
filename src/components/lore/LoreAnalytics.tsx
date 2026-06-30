@@ -1702,6 +1702,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   const filteredSprints = filterSprints(data.by_sprint, sprintFilter);
 
+  const filteredEffortSum = useMemo(() =>
+    filteredSprints.reduce((sum, s) => sum + (s.effort_days_sum ?? 0), 0),
+  [filteredSprints]);
+
   const tabSprints = (
     <>
       {/* Plan health strip — same as Overview */}
@@ -1865,6 +1869,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={{ ...S.panelTitle, marginBottom: 0 }}>
             Спринты <span style={S.dim}>· {data.by_sprint.length}</span>
             <span style={{ ...S.openChip, marginLeft: 8 }}>{openSprintCount} открытых</span>
+            {filteredEffortSum > 0 && (
+              <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--t2)', fontFamily: 'var(--mono)' }}>
+                Σ <b style={{ color: 'var(--acc)' }}>{filteredEffortSum}</b> д
+              </span>
+            )}
           </div>
           <div style={S.filterChips}>
             {SPRINT_FILTERS.map(f => {

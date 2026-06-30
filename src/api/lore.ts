@@ -83,6 +83,7 @@ export interface LoreAnalyticsSprint {
   status_raw: string | null;
   task_total: number;
   task_done: number;
+  effort_days_sum?: number;
 }
 export interface LoreAnalytics {
   totals: { sprints: number; tasks: number; tasks_done: number; releases: number; components: number };
