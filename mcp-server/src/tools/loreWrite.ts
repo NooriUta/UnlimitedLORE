@@ -721,12 +721,13 @@ export function registerLoreWrite(server: McpServer): void {
       flags:        z.string().optional().describe('Comma-separated flag strings, e.g. "coverage_low,shuttle_down"'),
       run_id:       z.string().optional().describe('Explicit run ID; auto-generated as routine_name+run_date if omitted'),
       metrics: z.array(z.object({
-        key:    z.string().describe('Metric key, e.g. "coverage_pct"'),
-        value:  z.number().describe('Numeric value'),
-        unit:   z.string().optional().describe('Unit: "%", "ms", "count", "bool"'),
+        key:    z.string().describe('Metric key, e.g. "inv_2_safecall_count" (one per invariant)'),
+        value:  z.number().describe('Numeric value (grep count / HTTP status / ms / ratio; -1 = SKIP/service down)'),
+        unit:   z.string().optional().describe('Unit: "count" | "ratio" | "ms" | "bool" | "lines" | "pct"'),
         target: z.number().optional().describe('Target/threshold value'),
-        status: z.enum(['PASS', 'WARN', 'FAIL']).optional().describe('Per-metric status vs target'),
-      })).optional().describe('List of measured metrics for this run'),
+        status: z.enum(['PASS', 'WARN', 'FAIL', 'SKIP']).optional().describe('Per-metric status vs target'),
+        source: z.string().optional().describe('Exact reproducer command + file:line evidence, e.g. "grep -n safeCall CompositeListener.java → lines 47,89 (=5, want 8)". Drives _qg_recommend.'),
+      })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
     async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id, metrics }) => {
       return json(await lorePost('/lore/qg/run', {
@@ -791,22 +792,4 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
-  // ── Link / unlink sprint ↔ milestone (TARGETS_MILESTONE direct edge) ──────
-  server.tool(
-    'lore_link_sprint_milestone',
-    'Link (or unlink) a sprint directly to a milestone via a TARGETS_MILESTONE edge. ' +
-    'Use to promote plan-only sprints to direct milestone members so they appear in ' +
-    'direct_sprint_ids and count toward milestone progress without going through a PlanItem. ' +
-    'action="add" (default) creates the edge if absent; action="remove" deletes it.',
-    {
-      sprint_id:    z.string().describe('Sprint ID, e.g. "SPRINT_AUTH_REDESIGN"'),
-      milestone_id: z.string().describe('Milestone ID, e.g. "M3"'),
-      action:       z.enum(['add', 'remove']).default('add'),
-    },
-    async ({ sprint_id, milestone_id, action }) => {
-      try {
-        return json(await lorePost('/lore/milestone/sprint', { sprint_id, milestone_id, action }));
-      } catch (e) { return err(e); }
-    },
-  );
 }
