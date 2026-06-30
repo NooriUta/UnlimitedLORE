@@ -360,6 +360,19 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     data?.by_sprint.filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; }).length ?? 0,
   [data]);
 
+  // open sprints belonging to the current milestone — used for forecast
+  const milestoneOpenCount = useMemo(() => {
+    if (!data || !milestoneList.length) return openSprintCount;
+    // find current milestone (first non-done)
+    const cur = milestoneList.find(m => !(m.goal_md?.includes('✅') ?? false));
+    if (!cur || !cur.sprint_ids?.length) return openSprintCount;
+    const ids = new Set(cur.sprint_ids);
+    return data.by_sprint.filter(s => {
+      const k = classify(s.status_raw);
+      return k !== 'done' && k !== 'cancelled' && ids.has(s.sprint_id);
+    }).length;
+  }, [data, milestoneList, openSprintCount]);
+
   // Velocity by ISO week (last 12 weeks)
   const velocityWeeks = useMemo(() => {
     const todayKey = isoWeekKey(new Date());
@@ -458,7 +471,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   }, [velocityWeeks, avgVelocity]);
 
   // Weeks needed to burn down open sprints at current pace
-  const weeksToFinish = avgVelocity > 0 ? openSprintCount / avgVelocity : null;
+  // weeksToFinish uses milestone-scoped open count, not all-system open count
+  const weeksToFinish = avgVelocity > 0 ? milestoneOpenCount / avgVelocity : null;
 
   // On-track: can we finish open work before the current milestone date?
   const onTrack = useMemo(() => {
@@ -947,13 +961,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             </div>
           )}
 
-          <div title="Спринты со статусом не done и не cancelled — остаток работы." style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
-            <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--dng)' }}>{openSprintCount}</span>
-            <span style={{ fontSize: 9, color: 'var(--t3)' }}>открытых Sp ⓘ</span>
+          <div title={`Незакрытые спринты вехи: ${milestoneOpenCount}. Всего в системе незакрыто: ${openSprintCount}.`}
+            style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
+            <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--dng)' }}>{milestoneOpenCount}</span>
+            <span style={{ fontSize: 9, color: 'var(--t3)', textAlign: 'center' as const }}>
+              open Sp вехи ⓘ
+              {milestoneOpenCount !== openSprintCount && <><br /><span style={{ opacity: 0.6 }}>всего {openSprintCount}</span></>}
+            </span>
           </div>
 
           {weeksToFinish !== null && (
-            <div title={`Прогноз: открытых спринтов (${openSprintCount}) ÷ средний velocity (${avgVelocity.toFixed(1)} Sp/нед за последние недели) = недель до закрытия остатка.`}
+            <div title={`Прогноз: незакрытых Sp вехи (${milestoneOpenCount}) ÷ velocity (${avgVelocity.toFixed(1)} Sp/нед) = недель до закрытия.`}
               style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
               <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--t1)' }}>~{Math.ceil(weeksToFinish)}</span>
               <span style={{ fontSize: 9, color: 'var(--t3)' }}>нед до закрытия ⓘ<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
@@ -1568,8 +1586,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'pointer',
               background: 'none', border: 'none', padding: 0 }}>
             <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--dng)',
-              textDecoration: showOpenDrilldown ? 'underline' : 'none' }}>{openSprintCount}</span>
-            <span style={{ fontSize: 9, color: 'var(--t3)' }}>открытых Sp {showOpenDrilldown ? '▲' : '▼'}</span>
+              textDecoration: showOpenDrilldown ? 'underline' : 'none' }}>{milestoneOpenCount}</span>
+            <span style={{ fontSize: 9, color: 'var(--t3)', textAlign: 'center' as const }}>
+              open Sp вехи {showOpenDrilldown ? '▲' : '▼'}
+              {milestoneOpenCount !== openSprintCount && (
+                <><br /><span style={{ color: 'var(--t3)', opacity: 0.7 }}>всего {openSprintCount}</span></>
+              )}
+            </span>
           </button>
           {weeksToFinish !== null && (
             <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
