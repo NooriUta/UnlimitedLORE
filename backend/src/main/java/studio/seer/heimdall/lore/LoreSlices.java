@@ -126,6 +126,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
+            "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
+            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
             "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id, " +
             "context_md " +
             "FROM KnowSprint",
@@ -229,8 +231,10 @@ public final class LoreSlices {
             "out('HAS_STATE').goal_md[0]      AS goal_md, " +
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
             // Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint.
-            // Sprints don't link to milestones directly; the plan item bridges them.
-            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint'].sprint_id AS sprint_ids " +
+            // Sprints link via plan item (CONTRIBUTES_TO→REPRESENTS) OR directly
+            // (TARGETS_MILESTONE, set from the milestone-management UI). Frontend unions both.
+            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint'].sprint_id AS sprint_ids, " +
+            "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
 

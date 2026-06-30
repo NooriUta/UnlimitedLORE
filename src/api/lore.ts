@@ -229,6 +229,7 @@ export interface LoreMilestone {
   date_display: string | null;
   goal_md: string | null;
   sprint_ids: string[] | null;
+  direct_sprint_ids?: string[] | null;
 }
 
 export interface LoreComponent {
@@ -457,6 +458,36 @@ export async function linkSprintProject(
   assertJson(res);
   if (!res.ok) return parseError(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string; git_project: string; action: string }>;
+}
+
+/** Link or unlink a KnowSprint to a KnowMilestone (POST /lore/milestone/sprint). */
+export async function linkSprintMilestone(
+  sprintId: string,
+  milestoneId: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }> {
+  const res = await fetch(`${LORE_BASE}/milestone/sprint`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ sprint_id: sprintId, milestone_id: milestoneId, action }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }>;
+}
+
+/** Create or edit a KnowMilestone (POST /lore/milestone). */
+export async function upsertMilestone(
+  m: { milestone_id: string; label?: string; week?: number | null; date_display?: string | null; goal_md?: string | null },
+): Promise<{ ok: boolean; milestone_id: string }> {
+  const res = await fetch(`${LORE_BASE}/milestone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(m),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; milestone_id: string }>;
 }
 
 /** Partial update of KnowSprint vertex fields (POST /lore/sprint/update). */

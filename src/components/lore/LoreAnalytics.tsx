@@ -4,6 +4,7 @@ import { statusMeta } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
+import LoreMilestoneManager from './LoreMilestoneManager';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -315,6 +316,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [sprintFilter, setSprintFilter] = useState<SprintFilter>('active');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
   const [chartProj,  setChartProj]  = useState<string>('all');  // project filter for burnup/cumulative
+  const [msManagerOpen, setMsManagerOpen] = useState(false);
+  const [reloadKey,  setReloadKey]  = useState(0);  // bump to re-fetch after milestone edits
 
   useEffect(() => {
     setLoading(true);
@@ -337,7 +340,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
     return () => ctrl.abort();
-  }, [onError]);
+  }, [onError, reloadKey]);
 
   // ── derived ───────────────────────────────────────────────────────────────
 
@@ -420,7 +423,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     );
     const map: Record<string, { total: number; done: number }> = {};
     milestoneList.forEach(m => {
-      const ids = [...new Set((m.sprint_ids ?? []).filter(Boolean))];
+      const ids = [...new Set([...(m.sprint_ids ?? []), ...(m.direct_sprint_ids ?? [])].filter(Boolean))];
       map[m.milestone_id] = { total: ids.length, done: ids.filter(i => doneSet.has(i)).length };
     });
     return map;
@@ -976,7 +979,15 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     <>
       {/* Milestone timeline */}
       <section style={S.panel}>
-        <div style={S.panelTitle}>Вехи проекта</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={S.panelTitle}>Вехи проекта</div>
+          <button style={{ fontSize: 10, padding: '3px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
+            border: '1px solid color-mix(in srgb,var(--acc) 35%,transparent)',
+            background: msManagerOpen ? 'color-mix(in srgb,var(--acc) 18%,transparent)' : 'transparent', color: 'var(--acc)' }}
+            onClick={() => setMsManagerOpen(o => !o)}>
+            {msManagerOpen ? '× Закрыть управление' : '✎ Управление вехами'}
+          </button>
+        </div>
         <div style={{ overflowX: 'auto' as const }}>
           <div style={{ display: 'flex', gap: 6, minWidth: 'max-content', paddingBottom: 6 }}>
             {milestoneStatuses.map(m => {
@@ -1065,6 +1076,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           </div>
         </div>
       </section>
+
+      {msManagerOpen && <LoreMilestoneManager onChange={() => setReloadKey(k => k + 1)} />}
 
       {/* Velocity + burn stats */}
       <div style={S.row2}>
