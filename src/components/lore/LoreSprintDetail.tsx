@@ -4,7 +4,7 @@ import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
-  linkSprintProject, linkSprintComponent, linkTaskComponent,
+  linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
@@ -555,7 +555,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [ctxSaving, setCtxSaving] = useState(false);
   const [projLinking, setProjLinking]   = useState(false);
   const [compLinking, setCompLinking] = useState(false);
+  const [msLinking, setMsLinking]     = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
+  const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -575,6 +577,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   useEffect(() => {
     fetchLoreSlice<CompRow>('components', {})
       .then(rows => setAllComps(rows ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Load milestones once (for the sprint↔milestone linker).
+  useEffect(() => {
+    fetchLoreSlice<{ milestone_id: string; label: string }>('milestones', {})
+      .then(rows => setAllMilestones((rows ?? []).map(r => ({ id: r.milestone_id, label: r.label }))))
       .catch(() => {});
   }, []);
 
@@ -810,6 +819,61 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 </select>
               )}
               {projLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Milestones section (sprint→milestone, TARGETS_MILESTONE) ──────────── */}
+      {(() => {
+        const linked = sprint.milestone_ids ?? [];
+        const unlinked = allMilestones.filter(m => !linked.includes(m.id));
+        return (
+          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <GameIcon slug="crossed-axes" size={11} style={{ color: 'var(--t3)' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Вехи</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+              {linked.map(mid => (
+                <span key={mid} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
+                  padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
+                  {mid}
+                  <button disabled={msLinking}
+                    onClick={async () => {
+                      setMsLinking(true);
+                      try {
+                        await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
+                        setSprint(s => s ? { ...s, milestone_ids: (s.milestone_ids ?? []).filter(x => x !== mid) } : s);
+                      } catch (e) { onError(e); } finally { setMsLinking(false); }
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 10, padding: 0, lineHeight: 1, opacity: 0.7 }}
+                    title={`Отвязать ${mid}`}>✕</button>
+                </span>
+              ))}
+              {unlinked.length > 0 && (
+                <select disabled={msLinking} value=""
+                  onChange={async e => {
+                    const mid = e.target.value;
+                    if (!mid) return;
+                    setMsLinking(true);
+                    try {
+                      await linkSprintMilestone(sprint.sprint_id, mid, 'add');
+                      setSprint(s => s ? { ...s, milestone_ids: [...(s.milestone_ids ?? []), mid] } : s);
+                    } catch (err) { onError(err); } finally { setMsLinking(false); }
+                  }}
+                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+                    background: 'var(--bg2)', border: '1px solid var(--bd)', color: 'var(--t2)', cursor: 'pointer',
+                    appearance: 'none' as const,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}>
+                  <option value="">+ привязать веху…</option>
+                  {unlinked.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
+                </select>
+              )}
+              {linked.length === 0 && unlinked.length === 0 && <span style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' }}>нет вех</span>}
+              {msLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
             </div>
           </div>
         );

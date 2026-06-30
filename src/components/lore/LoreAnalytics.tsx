@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { fetchLoreAnalytics, fetchLoreSlice, type LoreAnalytics, type LoreAnalyticsSprint, type LoreComponent, type LoreSprintDoneDate, type LoreMilestone, type LoreSprintRow, type LoreRelease } from '../../api/lore';
+import { fetchLoreAnalytics, fetchLoreSlice, type LoreAnalytics, type LoreAnalyticsSprint, type LoreComponent, type LoreSprintDoneDate, type LoreMilestone, type LoreSprintRow, type LoreRelease, type LoreQGViolation, type LoreQGPendingRec, type LoreQGRoutineRun } from '../../api/lore';
 import { statusMeta } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
-import LoreMilestoneManager from './LoreMilestoneManager';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -23,7 +22,7 @@ const STATUS_ORDER = [
   'todo', 'design', 'backlog', 'deferred', 'blocked', 'cancelled', 'none',
 ];
 
-type AnalyticsTab = 'overview' | 'progress' | 'flow' | 'sprints';
+type AnalyticsTab = 'overview' | 'progress' | 'flow' | 'sprints' | 'quality';
 type CompGroupBy  = 'area' | 'platform' | 'project';
 type SprintFilter = 'all' | 'active' | 'done' | 'empty';
 
@@ -37,6 +36,16 @@ const TODAY = new Date('2026-06-30');
 
 // Distinct colors for git-project groups.
 const PROJECT_COLORS = ['var(--acc)', 'var(--suc)', 'var(--inf)', 'var(--wrn)', 'var(--dng)', 'var(--t2)'];
+
+// QG severity / priority / run-status helpers (module-level to avoid closure issues).
+const SEV_ORDER = ['critical', 'major', 'high', 'medium', 'minor', 'low', 'unknown'];
+const sevColor = (s: string): string =>
+  s === 'critical' ? 'var(--dng)' : s === 'major' ? 'var(--dng)' : s === 'high' ? 'var(--wrn)' :
+  s === 'medium' ? 'var(--inf)' : s === 'minor' ? 'var(--inf)' : s === 'low' ? 'var(--suc)' : 'var(--t3)';
+const priColor = (p: string | null): string =>
+  p === 'P0' ? 'var(--dng)' : p === 'P1' ? 'var(--wrn)' : p === 'P2' ? 'var(--inf)' : 'var(--t3)';
+const runColor = (s: string | null): string =>
+  s === 'PASS' ? 'var(--suc)' : s === 'FAIL' ? 'var(--dng)' : s === 'WARN' ? 'var(--wrn)' : 'var(--t3)';
 
 function median(nums: number[]): number {
   if (!nums.length) return 0;
@@ -60,24 +69,13 @@ function projShort(p: string | null | undefined): string {
   return (p ?? 'unknown').split('/').pop() ?? 'unknown';
 }
 
-// Split a milestone goal_md into discrete deliverable items.
-function parseGoalItems(goal: string): { text: string; done: boolean }[] {
-  const cleaned = goal.replace(/🎯\s*Цель:\s*/i, '').trim();
-  return cleaned
-    .split(/\s*\+\s*|\n+|•|;/)
-    .map(s => s.trim())
-    .filter(Boolean)
-    .map(s => {
-      const done = /✅|✓|\bDONE\b|готов/i.test(s);
-      return { text: s.replace(/^[-*]\s*/, '').replace(/\s*✅|\s*✓/g, '').trim(), done };
-    });
-}
 
 const TABS: { key: AnalyticsTab; icon: string; label: string }[] = [
-  { key: 'overview',  icon: 'pie-chart',     label: 'Обзор'    },
-  { key: 'progress',  icon: 'hourglass',     label: 'Прогресс' },
-  { key: 'flow',      icon: 'split-arrows',  label: 'Поток'    },
-  { key: 'sprints',   icon: 'sprint',        label: 'Спринты'  },
+  { key: 'overview',   icon: 'pie-chart',     label: 'Обзор'    },
+  { key: 'progress',   icon: 'hourglass',     label: 'Прогресс' },
+  { key: 'flow',       icon: 'split-arrows',  label: 'Поток'    },
+  { key: 'sprints',    icon: 'sprint',        label: 'Спринты'  },
+  { key: 'quality',    icon: 'guards',        label: 'Quality'  },
 ];
 
 const SPRINT_FILTERS: { key: SprintFilter; label: string }[] = [
@@ -308,6 +306,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [sprintRows, setSprintRows] = useState<LoreSprintRow[]>([]);
   const [releases,   setReleases]   = useState<LoreRelease[]>([]);
   const [qgRows,     setQgRows]     = useState<QGRow[]>([]);
+  const [qgViolations, setQgViolations] = useState<LoreQGViolation[]>([]);
+  const [qgPendingRecs, setQgPendingRecs] = useState<LoreQGPendingRec[]>([]);
+  const [qgRoutineRuns, setQgRoutineRuns] = useState<LoreQGRoutineRun[]>([]);
   const [sprintStarts, setSprintStarts] = useState<{ sprint_id: string; valid_from: string | null }[]>([]);
   const [blockedRows, setBlockedRows] = useState<{ sprint_id: string }[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -316,8 +317,6 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [sprintFilter, setSprintFilter] = useState<SprintFilter>('active');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
   const [chartProj,  setChartProj]  = useState<string>('all');  // project filter for burnup/cumulative
-  const [msManagerOpen, setMsManagerOpen] = useState(false);
-  const [reloadKey,  setReloadKey]  = useState(0);  // bump to re-fetch after milestone edits
 
   useEffect(() => {
     setLoading(true);
@@ -332,15 +331,19 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       fetchLoreSlice<QGRow>('quality_gates', undefined, ctrl.signal),
       fetchLoreSlice<{ sprint_id: string; valid_from: string | null }>('sprint_starts', undefined, ctrl.signal),
       fetchLoreSlice<{ sprint_id: string }>('blocked_sprints', undefined, ctrl.signal),
+      fetchLoreSlice<LoreQGViolation>('qg_violations', undefined, ctrl.signal),
+      fetchLoreSlice<LoreQGPendingRec>('qg_pending_recs', undefined, ctrl.signal),
+      fetchLoreSlice<LoreQGRoutineRun>('qg_routine_runs', undefined, ctrl.signal),
     ])
-      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked]) => {
+      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs]) => {
         setData(d); setComponents(comps); setDoneDates(dones); setMilestoneList(ms);
         setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts); setBlockedRows(blocked);
+        setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs);
         setLoading(false);
       })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
     return () => ctrl.abort();
-  }, [onError, reloadKey]);
+  }, [onError]);
 
   // ── derived ───────────────────────────────────────────────────────────────
 
@@ -415,19 +418,6 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   }, [milestoneList]);
 
   const currentMilestone = milestoneStatuses.find(m => m.status === 'current');
-
-  // Real per-milestone sprint progress via milestones.sprint_ids (PlanItem→REPRESENTS→Sprint).
-  const milestoneProgress = useMemo(() => {
-    const doneSet = new Set(
-      sprintRows.filter(s => classify(s.status_raw) === 'done' || !!s.done_date).map(s => s.sprint_id),
-    );
-    const map: Record<string, { total: number; done: number }> = {};
-    milestoneList.forEach(m => {
-      const ids = [...new Set([...(m.sprint_ids ?? []), ...(m.direct_sprint_ids ?? [])].filter(Boolean))];
-      map[m.milestone_id] = { total: ids.length, done: ids.filter(i => doneSet.has(i)).length };
-    });
-    return map;
-  }, [milestoneList, sprintRows]);
 
   // Days until current milestone (parse date_display heuristically)
   const daysUntilCurrent = useMemo(() => {
@@ -736,6 +726,42 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     setCollapsed(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
   }
 
+  // QG-вкладка hooks — ДО ранних return (иначе React #310: меняется число хуков).
+  const latestRunByQg = useMemo(() => {
+    const map = new Map<string, string>();
+    const byName = new Map<string, LoreQGRoutineRun>();
+    qgRoutineRuns.forEach(r => {
+      const prev = byName.get(r.routine_name);
+      if (!prev || (r.run_date ?? '') > (prev.run_date ?? '')) byName.set(r.routine_name, r);
+    });
+    byName.forEach((r, name) => { map.set(name.toUpperCase(), r.status ?? 'unknown'); });
+    return map;
+  }, [qgRoutineRuns]);
+
+  const violsBySeverity = useMemo(() => {
+    const map: Record<string, LoreQGViolation[]> = {};
+    qgViolations.forEach(v => {
+      const sev = v.severity ?? 'unknown';
+      if (!map[sev]) map[sev] = [];
+      map[sev].push(v);
+    });
+    return map;
+  }, [qgViolations]);
+
+  const runHistory = useMemo(() =>
+    [...qgRoutineRuns].sort((a, b) => (a.run_date ?? '') < (b.run_date ?? '') ? -1 : 1).slice(-20),
+  [qgRoutineRuns]);
+
+  const qgByComponent = useMemo(() => {
+    const map = new Map<string, QGRow[]>();
+    qgRows.forEach(q => {
+      const cid = q.component_id ?? '—';
+      if (!map.has(cid)) map.set(cid, []);
+      map.get(cid)!.push(q);
+    });
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [qgRows]);
+
   if (loading) return <LoreSkeleton />;
   if (!data)   return <div style={S.empty}>Нет данных.</div>;
 
@@ -977,108 +1003,6 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   const tabProgress = (
     <>
-      {/* Milestone timeline */}
-      <section style={S.panel}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={S.panelTitle}>Вехи проекта</div>
-          <button style={{ fontSize: 10, padding: '3px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
-            border: '1px solid color-mix(in srgb,var(--acc) 35%,transparent)',
-            background: msManagerOpen ? 'color-mix(in srgb,var(--acc) 18%,transparent)' : 'transparent', color: 'var(--acc)' }}
-            onClick={() => setMsManagerOpen(o => !o)}>
-            {msManagerOpen ? '× Закрыть управление' : '✎ Управление вехами'}
-          </button>
-        </div>
-        <div style={{ overflowX: 'auto' as const }}>
-          <div style={{ display: 'flex', gap: 6, minWidth: 'max-content', paddingBottom: 6 }}>
-            {milestoneStatuses.map(m => {
-              const isDone    = m.status === 'done';
-              const isCurrent = m.status === 'current';
-              const isFuture  = m.status === 'future';
-              const bg =
-                isDone    ? 'color-mix(in srgb,var(--suc) 15%,var(--b3))' :
-                isCurrent ? 'color-mix(in srgb,var(--acc) 12%,var(--b2))' :
-                            'var(--b3)';
-              const border =
-                isDone    ? 'color-mix(in srgb,var(--suc) 35%,transparent)' :
-                isCurrent ? 'var(--acc)'  :
-                            'var(--bd)';
-              const textCol =
-                isDone    ? 'var(--suc)' :
-                isCurrent ? 'var(--acc)' :
-                            'var(--t3)';
-              return (
-                <div key={m.milestone_id} style={{
-                  padding: '8px 12px', borderRadius: 8, border: `1px solid ${border}`,
-                  background: bg, minWidth: isCurrent ? 250 : 110, position: 'relative' as const,
-                  opacity: isFuture ? 0.55 : 1,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                    {isDone && <span style={{ fontSize: 9, color: 'var(--suc)' }}>✓</span>}
-                    {isCurrent && <span style={{ fontSize: 9, color: 'var(--acc)' }}>▶</span>}
-                    <span style={{ fontSize: 11, fontWeight: 700, color: textCol }}>{m.label}</span>
-                  </div>
-                  <div style={{ fontSize: 9, color: isFuture ? 'var(--t3)' : 'var(--t2)', lineHeight: 1.3 }}>
-                    {m.date_display}
-                  </div>
-                  {(() => {
-                    const pr = milestoneProgress[m.milestone_id];
-                    if (!pr || pr.total === 0) return null;
-                    const p = pct(pr.done, pr.total);
-                    const left = pr.total - pr.done;
-                    return (
-                      <div style={{ marginTop: 5 }} title={`Спринтов вехи: ${pr.done} закрыто из ${pr.total} (через PlanItem→REPRESENTS→Sprint). Осталось ${left}.`}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8, color: 'var(--t3)', marginBottom: 2 }}>
-                          <span>{pr.done}/{pr.total} Sp</span>
-                          <span style={{ color: left === 0 ? 'var(--suc)' : 'var(--wrn)' }}>{left === 0 ? 'готово' : `−${left}`}</span>
-                        </div>
-                        <div style={{ height: 4, borderRadius: 2, background: 'var(--b3)', overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${p}%`, borderRadius: 2,
-                            background: left === 0 ? 'var(--suc)' : isCurrent ? 'var(--acc)' : 'var(--t2)' }} />
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  {isCurrent && daysUntilCurrent !== null && (
-                    <div style={{ marginTop: 5 }}>
-                      <span style={{
-                        fontSize: 8, padding: '1px 5px', borderRadius: 3,
-                        background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)',
-                        color: '#fff', fontWeight: 600,
-                      }}>
-                        {daysUntilCurrent >= 0 ? `${daysUntilCurrent}д до дедлайна` : `просрочен на ${-daysUntilCurrent}д`}
-                      </span>
-                    </div>
-                  )}
-                  {isCurrent && m.goal_md && (() => {
-                    const items = parseGoalItems(m.goal_md);
-                    const doneN = items.filter(i => i.done).length;
-                    return (
-                      <div style={{ marginTop: 6, maxWidth: 230 }}>
-                        <div title="Дельи́в-ераблы вехи из её цели (goal_md). Галочки — эвристика по тексту (✅/готово), т.к. пункты цели не привязаны к спринтам напрямую."
-                          style={{ fontSize: 8, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 3, cursor: 'help' }}>
-                          Цели вехи · {doneN}/{items.length} ⓘ
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 2 }}>
-                          {items.map((it, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 4, fontSize: 9, lineHeight: 1.3,
-                              color: it.done ? 'var(--t3)' : 'var(--t2)' }}>
-                              <span style={{ flexShrink: 0, color: it.done ? 'var(--suc)' : 'var(--wrn)' }}>{it.done ? '✓' : '○'}</span>
-                              <span style={{ textDecoration: it.done ? 'line-through' : 'none' }}>{it.text}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {msManagerOpen && <LoreMilestoneManager onChange={() => setReloadKey(k => k + 1)} />}
-
       {/* Velocity + burn stats */}
       <div style={S.row2}>
         <section style={S.panel}>
@@ -1470,13 +1394,197 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     </section>
   );
 
+  // ── Tab 6: Quality Gates dashboard ──────────────────────────────────────
+
+  const tabQuality = (
+    <>
+      <div style={S.cards}>
+        <Kpi icon="guards"     label="QG всего"       value={qgStats.total}      color="var(--acc)"
+          sub={`${qgStats.compsWithQg} компонентов`}
+          hint="Всего QualityGate вершин в LORE" />
+        <Kpi icon="warning"    label="Нарушения open" value={qgViolations.length} color="var(--dng)"
+          sub="QGJobTask status=open" highlight={qgViolations.length > 0}
+          hint="Открытые нарушения из последних прогонов" />
+        <Kpi icon="text"       label="Рекомендации"   value={qgPendingRecs.length} color="var(--wrn)"
+          sub="status=pending" highlight={qgPendingRecs.length > 0}
+          hint="Ожидающие рекомендации (QGRecommendation WHERE status=pending)" />
+        <Kpi icon="check-mark" label="Прогонов"       value={qgRoutineRuns.length} color="var(--inf)"
+          sub={`${qgRoutineRuns.filter(r => r.status === 'PASS').length} PASS`}
+          hint="ClRoutineRun WHERE routine_name LIKE qg-%" />
+      </div>
+
+      <div style={S.row2}>
+        <section style={S.panel}>
+          <div style={S.panelTitle} title="Цвет = статус последнего ClRoutineRun. Серый = нет прогонов.">
+            QG статус-сетка <span style={S.dim}>· {qgRows.length}</span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+            {qgRows.map(q => {
+              const runSt = latestRunByQg.get(q.qg_id) ?? null;
+              const col = runColor(runSt);
+              return (
+                <div key={q.qg_id} title={`${q.qg_id}\nПоследний прогон: ${runSt ?? 'нет'}`}
+                  style={{ padding: '5px 8px', borderRadius: 6, fontSize: 9, fontWeight: 600,
+                    background: `color-mix(in srgb,${col} 14%,var(--b3))`,
+                    border: `1px solid color-mix(in srgb,${col} 35%,transparent)`,
+                    color: col, maxWidth: 150 }}>
+                  <div style={{ fontSize: 7, color: 'var(--t3)', marginBottom: 2, fontFamily: 'var(--mono)' }}>{runSt ?? '—'}</div>
+                  {q.qg_id.replace(/^QG-/, '').replace(/-/g, ' ')}
+                </div>
+              );
+            })}
+            {qgRows.length === 0 && <div style={S.empty}>QG не найдены.</div>}
+          </div>
+        </section>
+
+        <section style={S.panel}>
+          <div style={S.panelTitle}>Здоровье по компонентам</div>
+          <div style={S.table}>
+            {qgByComponent.map(([cid, gates]) => {
+              const statuses = gates.map(g => latestRunByQg.get(g.qg_id) ?? 'norun');
+              const nPass = statuses.filter(s => s === 'PASS').length;
+              const nFail = statuses.filter(s => s === 'FAIL').length;
+              const nWarn = statuses.filter(s => s === 'WARN').length;
+              const compCol = nFail > 0 ? 'var(--dng)' : nWarn > 0 ? 'var(--wrn)' : nPass === gates.length ? 'var(--suc)' : 'var(--t3)';
+              return (
+                <div key={cid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 5, fontSize: 11 }}>
+                  <span style={{ ...S.compTag, color: compCol,
+                    borderColor: `color-mix(in srgb,${compCol} 30%,transparent)`,
+                    background: `color-mix(in srgb,${compCol} 12%,transparent)` }}>
+                    {cid}
+                  </span>
+                  <span style={{ flex: 1, color: 'var(--t2)', fontSize: 10 }}>{gates.length} QG</span>
+                  {nPass > 0 && <span style={{ fontSize: 9, color: 'var(--suc)', fontFamily: 'var(--mono)' }}>{nPass}✓</span>}
+                  {nWarn > 0 && <span style={{ fontSize: 9, color: 'var(--wrn)', fontFamily: 'var(--mono)' }}>{nWarn}⚠</span>}
+                  {nFail > 0 && <span style={{ fontSize: 9, color: 'var(--dng)', fontFamily: 'var(--mono)' }}>{nFail}✗</span>}
+                </div>
+              );
+            })}
+            {qgByComponent.length === 0 && <div style={S.empty}>Нет QG с компонентами.</div>}
+          </div>
+        </section>
+      </div>
+
+      <section style={S.panel}>
+        <div style={S.panelTitle} title="ClRoutineRun WHERE routine_name LIKE qg-%, последние 20 по дате.">
+          История прогонов <span style={S.dim}>· {qgRoutineRuns.length} записей</span>
+        </div>
+        {runHistory.length === 0
+          ? <div style={S.empty}>Нет записей ClRoutineRun для qg-* рутин.</div>
+          : <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+              {runHistory.map((r, i) => {
+                const col = runColor(r.status);
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 6px', borderRadius: 5,
+                    background: `color-mix(in srgb,${col} 6%,transparent)` }}>
+                    <span style={{ fontSize: 10, color: col, width: 12, textAlign: 'center' as const }}>
+                      {r.status === 'PASS' ? '✓' : r.status === 'FAIL' ? '✗' : r.status === 'WARN' ? '⚠' : '?'}
+                    </span>
+                    <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', width: 84, flexShrink: 0 }}>
+                      {(r.run_date ?? '').slice(0, 10)}
+                    </span>
+                    <span style={{ fontSize: 10, color: col, fontFamily: 'var(--mono)', fontWeight: 600, minWidth: 80 }}>{r.routine_name}</span>
+                    <span style={{ flex: 1, fontSize: 9, color: 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                      {r.flags ?? ''}
+                    </span>
+                    <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, fontWeight: 600,
+                      color: col, background: `color-mix(in srgb,${col} 14%,transparent)`,
+                      border: `1px solid color-mix(in srgb,${col} 30%,transparent)` }}>
+                      {r.status ?? '—'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>}
+      </section>
+
+      <section style={S.panel}>
+        <div style={S.panelTitle} title="QGJobTask WHERE status=open, по severity.">
+          Открытые нарушения <span style={S.dim}>· {qgViolations.length}</span>
+        </div>
+        {qgViolations.length === 0
+          ? <div style={S.empty}>✅ Открытых нарушений нет.</div>
+          : <div style={S.table}>
+              {SEV_ORDER.filter(s => violsBySeverity[s]).map(sev => {
+                const viols = violsBySeverity[sev];
+                const col = sevColor(sev);
+                return (
+                  <React.Fragment key={sev}>
+                    <div style={{ ...S.groupBucket, color: col, marginTop: 4 }}>{sev} · {viols.length}</div>
+                    {viols.slice(0, 10).map(v => (
+                      <div key={v.job_id} style={{ ...S.trow, cursor: 'default' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: col, flexShrink: 0 }} />
+                        <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)', flexShrink: 0, width: 80 }}>
+                          {(v.run_date ?? '').slice(0, 10)}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--t1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                          {v.qg_id ?? v.component_id ?? '—'} / {v.inv_id ?? v.job_id}
+                        </span>
+                        {v.note_md && <span style={{ fontSize: 9, color: 'var(--t3)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{v.note_md}</span>}
+                      </div>
+                    ))}
+                    {viols.length > 10 && <div style={{ fontSize: 9, color: 'var(--t3)', padding: '2px 6px' }}>…ещё {viols.length - 10}</div>}
+                  </React.Fragment>
+                );
+              })}
+            </div>}
+      </section>
+
+      <section style={S.panel}>
+        <div style={S.panelTitle} title="QGRecommendation WHERE status=pending, отсортированы P0→P1→P2.">
+          Рекомендации к выполнению <span style={S.dim}>· {qgPendingRecs.length}</span>
+        </div>
+        {qgPendingRecs.length === 0
+          ? <div style={S.empty}>✅ Нет pending рекомендаций.</div>
+          : <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+              {qgPendingRecs.map(r => {
+                const pc = priColor(r.priority);
+                const sc = sevColor(r.severity ?? '');
+                return (
+                  <div key={r.rec_id} style={{ padding: '8px 10px', borderRadius: 7, background: 'var(--b3)',
+                    border: `1px solid color-mix(in srgb,${pc} 25%,var(--bd))` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' as const }}>
+                      {r.priority && <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 600,
+                        color: pc, background: `color-mix(in srgb,${pc} 14%,transparent)`,
+                        border: `1px solid color-mix(in srgb,${pc} 30%,transparent)` }}>{r.priority}</span>}
+                      {r.severity && <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 600,
+                        color: sc, background: `color-mix(in srgb,${sc} 14%,transparent)`,
+                        border: `1px solid color-mix(in srgb,${sc} 30%,transparent)` }}>{r.severity}</span>}
+                      {r.effort_days != null && <span style={{ fontSize: 9, color: 'var(--t3)' }}>{r.effort_days}д</span>}
+                      {r.component_id && <span style={{ ...S.compTag, fontSize: 9, color: 'var(--inf)',
+                        borderColor: 'color-mix(in srgb,var(--inf) 25%,transparent)',
+                        background: 'color-mix(in srgb,var(--inf) 10%,transparent)' }}>{r.component_id}</span>}
+                      <span style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>{r.qg_id}</span>
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', marginBottom: 3 }}>{r.title}</div>
+                    {r.fix_cmd && <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--acc)',
+                      background: 'var(--b2)', padding: '3px 7px', borderRadius: 4, marginTop: 4,
+                      overflowX: 'auto' as const, whiteSpace: 'nowrap' as const }}>$ {r.fix_cmd}</div>}
+                    {r.how_to_verify && <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 4 }}>✓ {r.how_to_verify}</div>}
+                    {r.tags && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const, marginTop: 5 }}>
+                      {r.tags.split(',').map(tag => (
+                        <span key={tag} style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3,
+                          color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--bd)' }}>
+                          {tag.trim()}
+                        </span>
+                      ))}
+                    </div>}
+                  </div>
+                );
+              })}
+            </div>}
+      </section>
+    </>
+  );
+
   return (
     <div style={S.root}>
       {tabBar}
-      {tab === 'overview'  && tabOverview}
-      {tab === 'progress'  && tabProgress}
-      {tab === 'flow'      && tabFlow}
-      {tab === 'sprints'   && tabSprints}
+      {tab === 'overview'   && tabOverview}
+      {tab === 'progress'   && tabProgress}
+      {tab === 'flow'       && tabFlow}
+      {tab === 'sprints'    && tabSprints}
+      {tab === 'quality'    && tabQuality}
     </div>
   );
 }

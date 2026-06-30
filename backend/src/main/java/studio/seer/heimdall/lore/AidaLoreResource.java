@@ -1302,6 +1302,55 @@ public class AidaLoreResource {
         }
     }
 
+    // ── Write-path: link plan-item ↔ milestone (CONTRIBUTES_TO) ─────────────
+
+    public record PlanItemMilestoneRequest(String item_id, String milestone_id, String action) {}
+
+    @POST
+    @Path("plan-item/milestone")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updatePlanItemMilestone(PlanItemMilestoneRequest req,
+                                            @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.item_id() == null || req.item_id().isBlank())
+            return badParams("item_id required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
+            List<Map<String, Object>> edges = ingestService.queryPublic(
+                "SELECT @rid FROM CONTRIBUTES_TO WHERE @out.item_id=:iid" +
+                (req.milestone_id() != null ? " AND @in.milestone_id=:mid" : ""),
+                req.milestone_id() != null
+                    ? Map.of("iid", req.item_id(), "mid", req.milestone_id())
+                    : Map.of("iid", req.item_id()));
+            for (Map<String, Object> e : edges) {
+                String rid = e.get("@rid").toString();
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM CONTRIBUTES_TO WHERE @rid=" + rid, null)).await().indefinitely();
+            }
+            if (!remove && req.milestone_id() != null && !req.milestone_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                        "CREATE EDGE CONTRIBUTES_TO " +
+                        "FROM (SELECT FROM PlanItem WHERE item_id='%s' LIMIT 1) " +
+                        "TO   (SELECT FROM KnowMilestone WHERE milestone_id='%s' LIMIT 1)",
+                        req.item_id(), req.milestone_id()),
+                    null)).await().indefinitely();
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true); out.put("item_id", req.item_id());
+            out.put("milestone_id", req.milestone_id()); out.put("action", remove ? "removed" : "added");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE PLAN-ITEM MILESTONE] %s / %s: %s", req.item_id(), req.milestone_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Write-path: link sprint ↔ project ────────────────────────────────────
 
     public record SprintProjectRequest(String sprint_id, String git_project, String action) {}
@@ -1411,7 +1460,7 @@ public class AidaLoreResource {
     // ── Write-path: upsert milestone (create / edit label, week, date, goal) ──
 
     public record MilestoneRequest(String milestone_id, String label, Integer week,
-                                   String date_display, String goal_md) {}
+                                   String date_display, String goal_md, String priority) {}
 
     @POST
     @Path("milestone")
@@ -1428,10 +1477,10 @@ public class AidaLoreResource {
             // Upsert the milestone vertex (label / week / date_display).
             Map<String, Object> p = mapOfNullable(
                 "mid", req.milestone_id(), "lbl", req.label(),
-                "wk", req.week(), "dd", req.date_display());
+                "wk", req.week(), "dd", req.date_display(), "prio", req.priority());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowMilestone SET milestone_id=:mid, label=:lbl, week=:wk, " +
-                "date_display=:dd UPSERT WHERE milestone_id=:mid", p)).await().indefinitely();
+                "date_display=:dd, priority=:prio UPSERT WHERE milestone_id=:mid", p)).await().indefinitely();
             // Goal text lives in the current HAS_STATE hist row — update it if provided.
             if (req.goal_md() != null) {
                 List<Map<String, Object>> hist = ingestService.queryPublic(
@@ -2144,6 +2193,155 @@ public class AidaLoreResource {
             return noStore(Response.ok(Map.of("ok", true, "qg_id", req.qg_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── QGJobTask / QGRecommendation write ───────────────────────────────────
+    public record QGJobTaskRequest(
+        String job_id, String qg_id, String inv_id, String run_date,
+        String severity, String status, String note_md) {}
+
+    @POST
+    @Path("qg/job-task")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertQGJobTask(QGJobTaskRequest req,
+                                    @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.job_id() == null || req.job_id().isBlank())
+            return badParams("job_id required");
+        if (req.qg_id() == null || req.qg_id().isBlank())
+            return badParams("qg_id required");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "jid", req.job_id(), "qid", req.qg_id(), "inv", req.inv_id(),
+                "rd",  req.run_date(), "sev", req.severity(),
+                "st",  req.status(), "note", req.note_md());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE QGJobTask SET job_id=:jid, qg_id=:qid, inv_id=:inv, " +
+                "run_date=:rd, severity=:sev, status=:st, note_md=:note " +
+                "UPSERT WHERE job_id=:jid", p)).await().indefinitely();
+            // YIELDED edge: QualityGate → QGJobTask (idempotent)
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE YIELDED FROM (SELECT FROM QualityGate WHERE qg_id=:qid) " +
+                "TO (SELECT FROM QGJobTask WHERE job_id=:jid) IF NOT EXISTS",
+                Map.of("qid", req.qg_id(), "jid", req.job_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "job_id", req.job_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE QG JOB-TASK] %s: %s", req.job_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record QGRecommendationRequest(
+        String rec_id, String job_id, String title, String body_md, String status,
+        String priority, String severity, Double effort_days, String tags,
+        String component_id, String qg_id, String inv_id,
+        String fix_cmd, String how_to_verify) {}
+
+    @POST
+    @Path("qg/recommendation")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertQGRecommendation(QGRecommendationRequest req,
+                                           @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.rec_id() == null || req.rec_id().isBlank())
+            return badParams("rec_id required");
+        if (req.job_id() == null || req.job_id().isBlank())
+            return badParams("job_id required");
+        try {
+            Map<String, Object> p = mapOfNullable(
+                "rid",  req.rec_id(),    "jid",  req.job_id(),
+                "ttl",  req.title(),     "body", req.body_md(),
+                "st",   req.status() != null ? req.status() : "pending",
+                "pri",  req.priority(),  "sev",  req.severity(),
+                "eff",  req.effort_days(), "tags", req.tags(),
+                "cid",  req.component_id(), "qgid", req.qg_id(),
+                "inv",  req.inv_id(),    "fcmd", req.fix_cmd(),
+                "htv",  req.how_to_verify());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE QGRecommendation SET rec_id=:rid, job_id=:jid, " +
+                "title=:ttl, body_md=:body, status=:st, " +
+                "priority=:pri, severity=:sev, effort_days=:eff, tags=:tags, " +
+                "component_id=:cid, qg_id=:qgid, inv_id=:inv, " +
+                "fix_cmd=:fcmd, how_to_verify=:htv " +
+                "UPSERT WHERE rec_id=:rid", p)).await().indefinitely();
+            // PRODUCED edge: QGJobTask → QGRecommendation (idempotent)
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE PRODUCED FROM (SELECT FROM QGJobTask WHERE job_id=:jid) " +
+                "TO (SELECT FROM QGRecommendation WHERE rec_id=:rid) IF NOT EXISTS",
+                Map.of("jid", req.job_id(), "rid", req.rec_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "rec_id", req.rec_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE QG REC] %s: %s", req.rec_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record QGPromoteRequest(
+        String rec_id, String sprint_id, String task_uid, String title, String note_md) {}
+
+    @POST
+    @Path("qg/promote")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response promoteQGRecommendation(QGPromoteRequest req,
+                                            @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.rec_id() == null || req.rec_id().isBlank())
+            return badParams("rec_id required");
+        String sprintId = req.sprint_id() != null ? req.sprint_id() : "SPRINT_QG_VIOLATIONS";
+        String taskUid  = req.task_uid()  != null ? req.task_uid()
+                        : "QG/" + req.rec_id();
+        String stateUid = java.util.UUID.randomUUID().toString();
+        String nowTs    = java.time.Instant.now().toString();
+        try {
+            String title = req.title() != null ? req.title() : taskUid;
+            String note  = req.note_md() != null ? req.note_md() : title;
+            // Upsert task vertex
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowTask SET task_uid=:uid, title=:title, note_md=:note, src='qg' " +
+                "UPSERT WHERE task_uid=:uid",
+                mapOfNullable("uid", taskUid, "title", title, "note", note)))
+                .await().indefinitely();
+            // Insert KnowTaskHist row with TODO status
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='⬜ TODO', valid_from=:now",
+                Map.of("nsid", stateUid, "now", nowTs))).await().indefinitely();
+            // Link HAS_STATE: KnowTask → KnowTaskHist
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) " +
+                "TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid)",
+                Map.of("uid", taskUid, "nsid", stateUid))).await().indefinitely();
+            // Link PART_OF: KnowTask → KnowSprint
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) " +
+                "TO (SELECT FROM KnowSprint WHERE sprint_id=:sid) IF NOT EXISTS",
+                Map.of("uid", taskUid, "sid", sprintId))).await().indefinitely();
+            // PROMOTED_TO edge: QGRecommendation → KnowTask
+            Map<String, Object> ep = Map.of("rid", req.rec_id(), "uid", taskUid);
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE PROMOTED_TO FROM (SELECT FROM QGRecommendation WHERE rec_id=:rid) " +
+                "TO (SELECT FROM KnowTask WHERE task_uid=:uid) IF NOT EXISTS", ep))
+                .await().indefinitely();
+            // Mark recommendation as promoted
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE QGRecommendation SET status='promoted' WHERE rec_id=:rid",
+                Map.of("rid", req.rec_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "task_uid", taskUid, "sprint_id", sprintId)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE QG PROMOTE] %s: %s", req.rec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }

@@ -230,6 +230,7 @@ export interface LoreMilestone {
   goal_md: string | null;
   sprint_ids: string[] | null;
   direct_sprint_ids?: string[] | null;
+  priority?: string | null;
 }
 
 export interface LoreComponent {
@@ -478,7 +479,7 @@ export async function linkSprintMilestone(
 
 /** Create or edit a KnowMilestone (POST /lore/milestone). */
 export async function upsertMilestone(
-  m: { milestone_id: string; label?: string; week?: number | null; date_display?: string | null; goal_md?: string | null },
+  m: { milestone_id: string; label?: string; week?: number | null; date_display?: string | null; goal_md?: string | null; priority?: string | null },
 ): Promise<{ ok: boolean; milestone_id: string }> {
   const res = await fetch(`${LORE_BASE}/milestone`, {
     method: 'POST',
@@ -589,4 +590,40 @@ export async function fetchLoreDoc(
 ): Promise<LoreKnowDoc | null> {
   const rows = await fetchLoreSlice<LoreKnowDoc>('doc_by_id', { id: docId }, signal);
   return rows[0] ?? null;
+}
+
+// ── QG dashboard types ──────────────────────────────────────────────────────
+
+export interface LoreQGViolation {
+  job_id: string;
+  inv_id: string | null;
+  severity: string | null;
+  status: string | null;
+  run_date: string | null;
+  note_md: string | null;
+  qg_id: string | null;
+  component_id: string | null;
+}
+
+export interface LoreQGPendingRec {
+  rec_id: string;
+  title: string | null;
+  body_md: string | null;
+  status: string | null;
+  priority: string | null;
+  severity: string | null;
+  effort_days: number | null;
+  tags: string | null;
+  component_id: string | null;
+  qg_id: string | null;
+  inv_id: string | null;
+  fix_cmd: string | null;
+  how_to_verify: string | null;
+}
+
+export interface LoreQGRoutineRun {
+  routine_name: string;
+  run_date: string | null;
+  status: string | null;
+  flags: string | null;
 }

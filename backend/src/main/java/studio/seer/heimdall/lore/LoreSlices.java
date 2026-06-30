@@ -141,7 +141,8 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
-            "out('CONTRIBUTES_TO').milestone_id AS milestone_ids, " +
+            "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
+            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
             "out('DEPENDS_ON').sprint_id   AS depends_on, " +
             "in('DEPENDS_ON').sprint_id    AS blocks, " +
             "out('BELONGS_TO').component_id AS components, " +
@@ -227,7 +228,7 @@ public final class LoreSlices {
 
         // ── §3 Milestones ────────────────────────────────────────────────────
         slice("milestones",
-            "SELECT milestone_id, label, week, date_display, " +
+            "SELECT milestone_id, label, week, date_display, priority, " +
             "out('HAS_STATE').goal_md[0]      AS goal_md, " +
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
             // Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint.
@@ -438,6 +439,23 @@ public final class LoreSlices {
             "ORDER BY status",
             List.of("qg_id"), Map.of(), " LIMIT 100");
 
+        // ── §10b QG dashboard slices (no required params) ─────────────────────
+        slice("qg_violations",
+            "SELECT job_id, inv_id, severity, status, run_date, note_md, qg_id, component_id " +
+            "FROM QGJobTask WHERE status = 'open' ORDER BY run_date DESC",
+            List.of(), Map.of(), " LIMIT 300");
+
+        slice("qg_pending_recs",
+            "SELECT rec_id, title, body_md, status, priority, severity, effort_days, " +
+            "tags, component_id, qg_id, inv_id, fix_cmd, how_to_verify " +
+            "FROM QGRecommendation WHERE status = 'pending' ORDER BY priority ASC",
+            List.of(), Map.of(), " LIMIT 200");
+
+        slice("qg_routine_runs",
+            "SELECT routine_name, run_date, status, flags " +
+            "FROM ClRoutineRun WHERE routine_name LIKE 'qg-%' ORDER BY run_date DESC",
+            List.of(), Map.of(), " LIMIT 100");
+
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
         slice("git_projects",
             "SELECT slug, name FROM KnowGitProject",
@@ -536,6 +554,12 @@ public final class LoreSlices {
             "FROM ClRoutineOutput WHERE routine_name = :routine_name " +
             "AND output_type = :output_type ORDER BY run_date DESC LIMIT 1",
             List.of("routine_name", "output_type"), Map.of(), "");
+
+        slice("qg_run_history",
+            "SELECT routine_name, run_date, status, flags " +
+            "FROM ClRoutineRun WHERE routine_name = :routine_name " +
+            "ORDER BY run_date DESC",
+            List.of("routine_name"), Map.of(), " LIMIT 20");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }
