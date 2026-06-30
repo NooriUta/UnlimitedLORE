@@ -319,7 +319,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [groupBy,    setGroupBy]    = useState<CompGroupBy>('area');
   const [sprintFilter, setSprintFilter] = useState<SprintFilter>('active');
   const [collapsed,  setCollapsed]  = useState<Set<string>>(new Set());
-  const [chartProj,  setChartProj]  = useState<string>('all');  // project filter for burnup/cumulative
+  const [chartProj,       setChartProj]       = useState<string>('all');
+  const [chartMilestone,  setChartMilestone]  = useState<string>('all');
+  const [chartComp,       setChartComp]       = useState<string>('all');
   const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }[]>([]);
   const [taskStarts, setTaskStarts] = useState<{ task_id: string; valid_from: string | null }[]>([]);
 
@@ -408,10 +410,58 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return [...m.entries()].filter(([p]) => p !== 'unknown').sort((a, b) => b[1] - a[1]).map(([p]) => p);
   }, [sprintRows]);
 
-  // Sprints filtered by the selected chart project (all = everything).
-  const chartSprints = useMemo(() =>
-    chartProj === 'all' ? sprintRows : sprintRows.filter(s => projShort(s.git_projects?.[0]) === chartProj),
-  [sprintRows, chartProj]);
+  // Milestones list for filter (label → sprint_id set)
+  const chartMilestones = useMemo(() =>
+    milestoneList.map(m => ({
+      id: m.milestone_id,
+      label: m.label,
+      ids: new Set([...(m.sprint_ids ?? []), ...(m.direct_sprint_ids ?? [])]),
+    })),
+  [milestoneList]);
+
+  // Top components for filter chips (by sprint count, max 10)
+  const chartComps = useMemo(() => {
+    const m = new Map<string, number>();
+    sprintRows.forEach(s => (s.components ?? []).forEach(c => m.set(c, (m.get(c) ?? 0) + 1)));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([c]) => c);
+  }, [sprintRows]);
+
+  // Sprint id set for selected milestone
+  const chartMilestoneIds = useMemo(() => {
+    if (chartMilestone === 'all') return null;
+    return chartMilestones.find(m => m.id === chartMilestone)?.ids ?? null;
+  }, [chartMilestone, chartMilestones]);
+
+  // Sprints filtered by project + milestone + component.
+  const chartSprints = useMemo(() => sprintRows.filter(s => {
+    if (chartProj !== 'all' && projShort(s.git_projects?.[0]) !== chartProj) return false;
+    if (chartMilestoneIds !== null && !chartMilestoneIds.has(s.sprint_id)) return false;
+    if (chartComp !== 'all' && !(s.components ?? []).includes(chartComp)) return false;
+    return true;
+  }), [sprintRows, chartProj, chartMilestoneIds, chartComp]);
+
+  // Filtered doneDates (for velocity chart respecting all filters)
+  const chartDoneDates = useMemo(() => {
+    if (chartProj === 'all' && chartMilestoneIds === null && chartComp === 'all') return doneDates;
+    const ids = new Set(chartSprints.map(s => s.sprint_id));
+    return doneDates.filter(d => ids.has(d.sprint_id));
+  }, [doneDates, chartSprints, chartProj, chartMilestoneIds, chartComp]);
+
+  // Velocity weeks for the filtered set
+  const chartVelocityWeeks = useMemo(() => {
+    const todayKey = isoWeekKey(new Date());
+    const map = new Map<string, number>();
+    chartDoneDates.forEach(d => {
+      const dt = parseDoneDate(d.done_date);
+      if (!dt) return;
+      const key = isoWeekKey(dt);
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    const sorted = [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-13);
+    return sorted.map(([key, count]) => ({
+      key, label: `W${key.split('-W')[1]}`, count, isCurrent: key === todayKey,
+    }));
+  }, [chartDoneDates]);
 
   // Cumulative chart points — done sprints over time (respects project filter).
   const cumulativePoints = useMemo(() => {
@@ -1153,7 +1203,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               )}
             </div>
           </div>
-          <VelocityChart weeks={velocityWeeks} />
+          <VelocityChart weeks={chartVelocityWeeks.length ? chartVelocityWeeks : velocityWeeks} />
         </section>
 
         <section style={S.panel}>
@@ -1193,18 +1243,58 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         </section>
       </div>
 
-      {/* Project filter for the two trend charts */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-        <span style={{ fontSize: 10, color: 'var(--t3)' }}>Разрез по проекту:</span>
-        <div style={S.filterChips}>
-          {['all', ...chartProjects].map(p => (
-            <button key={p} style={{ ...S.chip, ...(chartProj === p ? S.chipActive : {}) }}
-              onClick={() => setChartProj(p)}>
-              {p === 'all' ? 'Все' : p}
-            </button>
-          ))}
+      {/* Filter bar: project + milestone + component */}
+      <section style={{ ...S.panel, padding: '10px 14px', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
+          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проект</span>
+          <div style={S.filterChips}>
+            {['all', ...chartProjects].map(p => (
+              <button key={p} style={{ ...S.chip, ...(chartProj === p ? S.chipActive : {}) }}
+                onClick={() => setChartProj(p)}>
+                {p === 'all' ? 'Все' : p}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
+          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Веха</span>
+          <div style={S.filterChips}>
+            {[{ id: 'all', label: 'Все' }, ...chartMilestones].map(m => (
+              <button key={m.id} style={{ ...S.chip, ...(chartMilestone === m.id ? S.chipActive : {}) }}
+                onClick={() => setChartMilestone(m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {chartComps.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
+            <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Компонент</span>
+            <div style={S.filterChips}>
+              <button style={{ ...S.chip, ...(chartComp === 'all' ? S.chipActive : {}) }}
+                onClick={() => setChartComp('all')}>Все</button>
+              {chartComps.map(c => (
+                <button key={c} style={{ ...S.chip, ...(chartComp === c ? S.chipActive : {}) }}
+                  onClick={() => setChartComp(c)}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {(chartProj !== 'all' || chartMilestone !== 'all' || chartComp !== 'all') && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 9, color: 'var(--t3)', width: 72 }} />
+            <button style={{ fontSize: 9, color: 'var(--acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              onClick={() => { setChartProj('all'); setChartMilestone('all'); setChartComp('all'); }}>
+              × сбросить фильтры
+            </button>
+            <span style={{ fontSize: 9, color: 'var(--t3)' }}>
+              {chartSprints.length} спринтов в выборке
+            </span>
+          </div>
+        )}
+      </section>
 
       {/* Burnup + Cumulative side by side */}
       <div style={S.row2}>
