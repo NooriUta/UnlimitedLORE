@@ -426,7 +426,7 @@ public final class LoreSlices {
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, component_id, status, date_created, sprint_id " +
+            "SELECT qg_id, name, description, component_id, status, last_run_status, date_created, sprint_id " +
             "FROM QualityGate",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -434,7 +434,7 @@ public final class LoreSlices {
             " ORDER BY qg_id LIMIT 100");
 
         slice("quality_gate_by_id",
-            "SELECT qg_id, name, description, component_id, status, date_created, content_md, sprint_id " +
+            "SELECT qg_id, name, description, component_id, status, last_run_status, date_created, content_md, sprint_id " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -468,10 +468,23 @@ public final class LoreSlices {
             "FROM QGRecommendation WHERE status = 'pending' ORDER BY priority ASC",
             List.of(), Map.of(), " LIMIT 200");
 
+        // All QG routine runs (latest first). Includes run_id for metric join.
         slice("qg_routine_runs",
-            "SELECT routine_name, run_date, status, flags " +
+            "SELECT run_id, routine_name, run_date, status, flags, started_at, finished_at " +
             "FROM ClRoutineRun WHERE routine_name LIKE 'qg-%' ORDER BY run_date DESC",
-            List.of(), Map.of(), " LIMIT 100");
+            List.of(), Map.of(), " LIMIT 200");
+
+        // Latest metric snapshot per routine — one row per metric_key.
+        slice("qg_metrics_latest",
+            "SELECT routine_name, run_date, metric_key, value, unit, target, status " +
+            "FROM ClRoutineMetric WHERE routine_name LIKE 'qg-%' ORDER BY routine_name, metric_key",
+            List.of(), Map.of(), " LIMIT 500");
+
+        // All metrics for a specific run (detail panel).
+        slice("qg_run_metrics",
+            "SELECT metric_key, value, unit, target, status " +
+            "FROM ClRoutineMetric WHERE run_id = :run_id ORDER BY metric_key",
+            List.of("run_id"), Map.of(), " LIMIT 100");
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
         slice("git_projects",

@@ -2198,6 +2198,61 @@ public class AidaLoreResource {
         }
     }
 
+    // ── QG Run record (ClRoutineRun + ClRoutineMetric batch) ─────────────────
+    public record QGMetricEntry(String key, Double value, String unit, Double target, String status) {}
+    public record QGRunRequest(
+        String run_id, String routine_name, String run_date, String status,
+        String started_at, String finished_at, String flags,
+        java.util.List<QGMetricEntry> metrics) {}
+
+    @POST
+    @Path("qg/run")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response recordQGRun(QGRunRequest req,
+                                @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.routine_name() == null || req.routine_name().isBlank())
+            return badParams("routine_name required");
+        String runId = req.run_id() != null ? req.run_id()
+            : req.routine_name() + "_" + (req.run_date() != null ? req.run_date() : "unknown");
+        try {
+            // Upsert ClRoutineRun
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE ClRoutineRun SET run_id=:rid, routine_name=:rn, run_date=:rd, " +
+                "status=:st, started_at=:sa, finished_at=:fa, flags=:fl " +
+                "UPSERT WHERE run_id=:rid",
+                mapOfNullable("rid", runId, "rn", req.routine_name(), "rd", req.run_date(),
+                    "st", req.status(), "sa", req.started_at(), "fa", req.finished_at(),
+                    "fl", req.flags()))).await().indefinitely();
+            // Upsert ClRoutineMetric entries
+            int written = 0;
+            if (req.metrics() != null) {
+                for (QGMetricEntry m : req.metrics()) {
+                    if (m.key() == null) continue;
+                    String mId = runId + "_" + m.key();
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "UPDATE ClRoutineMetric SET metric_id=:mid, run_id=:rid, " +
+                        "routine_name=:rn, run_date=:rd, metric_key=:mk, value=:val, " +
+                        "unit=:unit, target=:tgt, status=:st " +
+                        "UPSERT WHERE metric_id=:mid",
+                        mapOfNullable("mid", mId, "rid", runId, "rn", req.routine_name(),
+                            "rd", req.run_date(), "mk", m.key(), "val", m.value(),
+                            "unit", m.unit(), "tgt", m.target(), "st", m.status())))
+                        .await().indefinitely();
+                    written++;
+                }
+            }
+            return noStore(Response.ok(Map.of("ok", true, "run_id", runId, "metrics_written", written)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE QG RUN] %s: %s", runId, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── QGJobTask / QGRecommendation write ───────────────────────────────────
     public record QGJobTaskRequest(
         String job_id, String qg_id, String inv_id, String run_date,

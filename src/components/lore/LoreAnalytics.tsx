@@ -29,6 +29,7 @@ type SprintFilter = 'all' | 'active' | 'done' | 'empty';
 interface QGRow {
   qg_id: string; name: string; description: string | null;
   component_id: string | null; status: string | null;
+  last_run_status: string | null;
   date_created: string | null; sprint_id?: string | null;
 }
 
@@ -309,6 +310,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [qgViolations, setQgViolations] = useState<LoreQGViolation[]>([]);
   const [qgPendingRecs, setQgPendingRecs] = useState<LoreQGPendingRec[]>([]);
   const [qgRoutineRuns, setQgRoutineRuns] = useState<LoreQGRoutineRun[]>([]);
+  type QGMetricRow = { routine_name: string; run_date: string | null; metric_key: string; value: number | null; unit: string | null; target: number | null; status: string | null };
+  const [qgMetricsLatest, setQgMetricsLatest] = useState<QGMetricRow[]>([]);
   const [sprintStarts, setSprintStarts] = useState<{ sprint_id: string; valid_from: string | null }[]>([]);
   const [blockedRows, setBlockedRows] = useState<{ sprint_id: string }[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -338,11 +341,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       fetchLoreSlice<LoreQGRoutineRun>('qg_routine_runs', undefined, ctrl.signal),
       fetchLoreSlice<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }>('task_done_dates', undefined, ctrl.signal),
       fetchLoreSlice<{ task_id: string; valid_from: string | null }>('task_starts', undefined, ctrl.signal),
+      fetchLoreSlice<QGMetricRow>('qg_metrics_latest', undefined, ctrl.signal),
     ])
-      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone, tstarts]) => {
+      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone, tstarts, qgmet]) => {
         setData(d); setComponents(comps); setDoneDates(dones); setMilestoneList(ms);
         setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts); setBlockedRows(blocked);
         setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs); setTaskDone(tdone); setTaskStarts(tstarts);
+        setQgMetricsLatest(qgmet);
         setLoading(false);
       })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
@@ -803,6 +808,26 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const runHistory = useMemo(() =>
     [...qgRoutineRuns].sort((a, b) => (a.run_date ?? '') < (b.run_date ?? '') ? -1 : 1).slice(-20),
   [qgRoutineRuns]);
+
+  // Per-routine latest metrics: Map<routine_name, Map<metric_key, QGMetricRow>>
+  const qgMetricsByRoutine = useMemo(() => {
+    const map = new Map<string, Map<string, QGMetricRow>>();
+    qgMetricsLatest.forEach(m => {
+      if (!map.has(m.routine_name)) map.set(m.routine_name, new Map());
+      map.get(m.routine_name)!.set(m.metric_key, m);
+    });
+    return map;
+  }, [qgMetricsLatest]);
+
+  // Latest run per routine (full object, not just status)
+  const latestRunByRoutine = useMemo(() => {
+    const map = new Map<string, LoreQGRoutineRun>();
+    qgRoutineRuns.forEach(r => {
+      const prev = map.get(r.routine_name);
+      if (!prev || (r.run_date ?? '') > (prev.run_date ?? '')) map.set(r.routine_name, r);
+    });
+    return map;
+  }, [qgRoutineRuns]);
 
   const qgByComponent = useMemo(() => {
     const map = new Map<string, QGRow[]>();
@@ -1583,6 +1608,62 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           </div>
         </section>
       </div>
+
+      {/* ── Routine metrics dashboard ─────────────────────────────── */}
+      <section style={S.panel}>
+        <div style={S.panelTitle} title="Метрики последнего прогона каждой QG-рутины (ClRoutineMetric). Записываются через lore_record_qg_run MCP.">
+          Метрики прогонов <span style={S.dim}>· по рутинам</span>
+        </div>
+        {latestRunByRoutine.size === 0
+          ? <div style={S.empty}>Нет прогонов. Вызови <code>lore_record_qg_run</code> после завершения QG-рутины.</div>
+          : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 10 }}>
+              {[...latestRunByRoutine.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([rname, run]) => {
+                const col = runColor(run.status);
+                const metrics = qgMetricsByRoutine.get(rname);
+                const statusIcon = run.status === 'OK' || run.status === 'PASS' ? '✓' : run.status === 'FAIL' ? '✗' : run.status === 'WARN' ? '⚠' : '?';
+                return (
+                  <div key={rname} style={{ background: 'var(--bg1)', border: `1px solid var(--bd)`,
+                    borderLeft: `3px solid ${col}`, borderRadius: 6, padding: '8px 10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                      <span style={{ fontSize: 11, color: col, fontWeight: 700 }}>{statusIcon}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', flex: 1 }}>{rname.replace('qg-','').toUpperCase()}</span>
+                      <span style={{ fontSize: 9, color: 'var(--t3)' }}>{(run.run_date ?? '').slice(0,10)}</span>
+                    </div>
+                    {run.flags && <div style={{ fontSize: 9, color: 'var(--t3)', marginBottom: 4, lineHeight: 1.4 }}>
+                      {run.flags.split(',').map(f => {
+                        const [k,v] = f.split('=');
+                        const fc = v === 'PASS' ? 'var(--suc)' : v === 'FAIL' ? 'var(--dng)' : v === 'WARN' ? 'var(--wrn)' : 'var(--t3)';
+                        return <span key={k} style={{ marginRight: 5 }}>
+                          <span style={{ color: 'var(--t3)' }}>{k}</span>
+                          {v && <span style={{ color: fc, marginLeft: 2 }}>{v}</span>}
+                        </span>;
+                      })}
+                    </div>}
+                    {metrics && metrics.size > 0
+                      ? <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                          {[...metrics.entries()].map(([mk, m]) => {
+                            const mc = m.status === 'PASS' ? 'var(--suc)' : m.status === 'FAIL' ? 'var(--dng)' : m.status === 'WARN' ? 'var(--wrn)' : 'var(--t2)';
+                            const val = m.value != null ? (m.unit === '%' ? `${m.value.toFixed(1)}%` : `${m.value}${m.unit ? ' '+m.unit : ''}`) : '—';
+                            const tgt = m.target != null ? (m.unit === '%' ? `${m.target}%` : `${m.target}`) : null;
+                            return (
+                              <div key={mk} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+                                <span style={{ color: 'var(--t3)', flex: 1 }}>{mk}</span>
+                                <span style={{ color: mc, fontWeight: 600, fontFamily: 'var(--mono)' }}>{val}</span>
+                                {tgt && <span style={{ color: 'var(--t3)', fontSize: 9 }}>/ {tgt}</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      : <div style={{ fontSize: 9, color: 'var(--t3)', fontStyle: 'italic' }}>
+                          нет метрик — добавь metrics[] в lore_record_qg_run
+                        </div>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+        }
+      </section>
 
       <section style={S.panel}>
         <div style={S.panelTitle} title="ClRoutineRun WHERE routine_name LIKE qg-%, последние 20 по дате.">

@@ -686,6 +686,41 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_record_qg_run',
+    'Record a completed QG routine run with metrics into LORE (ClRoutineRun + ClRoutineMetric). ' +
+      'Call once at the end of each QG routine run. routine_name must match the QG slug pattern ' +
+      '(e.g. "qg-auth", "qg-security-demo", "qg-lineage"). ' +
+      'metrics[] is the list of measured values — include all key indicators so the Analytics QG tab can display them. ' +
+      'Common metric keys: coverage_pct, build_result (1/0), slo_p95_ms, violations_count, tests_passed, tests_failed, arch_enforced_pct.',
+    {
+      routine_name: z.string().describe('QG routine slug, e.g. "qg-auth"'),
+      run_date:     z.string().describe('ISO date YYYY-MM-DD'),
+      status:       z.enum(['OK', 'WARN', 'FAIL', 'PARTIAL']).describe('Overall run result'),
+      started_at:   z.string().optional().describe('ISO datetime when run started'),
+      finished_at:  z.string().optional().describe('ISO datetime when run finished'),
+      flags:        z.string().optional().describe('Comma-separated flag strings, e.g. "coverage_low,shuttle_down"'),
+      run_id:       z.string().optional().describe('Explicit run ID; auto-generated as routine_name+run_date if omitted'),
+      metrics: z.array(z.object({
+        key:    z.string().describe('Metric key, e.g. "coverage_pct"'),
+        value:  z.number().describe('Numeric value'),
+        unit:   z.string().optional().describe('Unit: "%", "ms", "count", "bool"'),
+        target: z.number().optional().describe('Target/threshold value'),
+        status: z.enum(['PASS', 'WARN', 'FAIL']).optional().describe('Per-metric status vs target'),
+      })).optional().describe('List of measured metrics for this run'),
+    },
+    async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id, metrics }) => {
+      return json(await lorePost('/lore/qg/run', {
+        routine_name, run_date, status,
+        started_at:  started_at  ?? null,
+        finished_at: finished_at ?? null,
+        flags:       flags       ?? null,
+        run_id:      run_id      ?? null,
+        metrics:     metrics     ?? [],
+      }));
+    },
+  );
+
+  server.tool(
     'lore_promote_recommendation',
     'Confirm a QGRecommendation and promote it to a KnowTask in SPRINT_QG_VIOLATIONS. ' +
       'Creates PROMOTED_TO edge (QGRecommendation → KnowTask) and marks rec as "promoted". ' +
