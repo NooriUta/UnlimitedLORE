@@ -130,7 +130,12 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
       else status = 'future';
       const dleft = status === 'done' ? null : daysLeftOf(m.date_display);
       const projects = [...new Set(ids.flatMap(id => (byId.get(id)?.git_projects ?? []).map(projShort)).filter(Boolean))];
-      return { m, ids, done, open, status, dleft, projects };
+      // plan vs direct breakdown
+      const planIds    = (m.sprint_ids        ?? []).filter(Boolean);
+      const directIds  = (m.direct_sprint_ids ?? []).filter(Boolean);
+      const planDone   = planIds.filter(i => doneSet.has(i)).length;
+      const directDone = directIds.filter(i => doneSet.has(i)).length;
+      return { m, ids, done, open, status, dleft, projects, planIds, directIds, planDone, directDone };
     });
   }, [milestones, doneSet, byId]);
 
@@ -198,7 +203,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
       {/* Master: simple cards — name, deadline, bar, projects */}
       <div style={S.cards}>
-        {rows.map(({ m, ids, done, open, status, dleft, projects }) => {
+        {rows.map(({ m, ids, done, open, status, dleft, projects, planIds, directIds, planDone, directDone }) => {
           const col = status === 'done' ? 'var(--suc)' : status === 'current' ? 'var(--acc)' : 'var(--t2)';
           const p = pct(done, ids.length);
           const isSel = selId === m.milestone_id;
@@ -235,6 +240,32 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                 <div style={S.bar}><div style={{ height: '100%', width: `${p}%`, background: col, borderRadius: 3 }} /></div>
                 <span style={S.progNum}>{done}/{ids.length} · {p}%</span>
               </div>
+              {(planIds.length > 0 || directIds.length > 0) && (
+                <div style={{ marginTop: 5, display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                  {planIds.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 8, color: 'var(--t3)', width: 32, textAlign: 'right' as const, flexShrink: 0 }}>plan</span>
+                      <div style={{ flex: 1, height: 4, background: 'var(--bg2)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct(planDone, planIds.length)}%`, background: col, borderRadius: 2, opacity: 0.7 }} />
+                      </div>
+                      <span style={{ fontSize: 8, color: 'var(--t3)', fontFamily: 'var(--mono)', width: 36, flexShrink: 0 }}>
+                        {planDone}/{planIds.length}
+                      </span>
+                    </div>
+                  )}
+                  {directIds.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 8, color: 'var(--t3)', width: 32, textAlign: 'right' as const, flexShrink: 0 }}>direct</span>
+                      <div style={{ flex: 1, height: 4, background: 'var(--bg2)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct(directDone, directIds.length)}%`, background: 'var(--acc)', borderRadius: 2, opacity: 0.7 }} />
+                      </div>
+                      <span style={{ fontSize: 8, color: 'var(--t3)', fontFamily: 'var(--mono)', width: 36, flexShrink: 0 }}>
+                        {directDone}/{directIds.length}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               {riskBlock && (
                 <div style={{ marginTop: 4, fontSize: 9, color: 'var(--t3)', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
                   <span>осталось <b style={{ color: 'var(--t2)' }}>{open} Sp</b></span>
