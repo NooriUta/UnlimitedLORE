@@ -220,6 +220,11 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY ClRoutineRun.flags            IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineRun.detail_md        IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineRun.gates_failed_ids IF NOT EXISTS STRING",
+        // SMART-QG run identity (lore_record_qg_run UPSERT WHERE run_id) — durable
+        "CREATE PROPERTY ClRoutineRun.run_id           IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineRun.started_at       IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineRun.finished_at      IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON ClRoutineRun (run_id) UNIQUE",
 
         "CREATE VERTEX TYPE ClRoutineMetric     IF NOT EXISTS",
         "CREATE PROPERTY ClRoutineMetric.routine_name  IF NOT EXISTS STRING",
@@ -229,6 +234,12 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY ClRoutineMetric.unit          IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineMetric.target        IF NOT EXISTS DOUBLE",
         "CREATE PROPERTY ClRoutineMetric.status        IF NOT EXISTS STRING",
+        // SMART-QG metric identity + evidence (lore_record_qg_run UPSERT WHERE metric_id) — durable
+        "CREATE PROPERTY ClRoutineMetric.metric_id     IF NOT EXISTS STRING",
+        "CREATE PROPERTY ClRoutineMetric.run_id        IF NOT EXISTS STRING",
+        // source = exact reproducer command + file:line evidence, drives _qg_recommend
+        "CREATE PROPERTY ClRoutineMetric.source        IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON ClRoutineMetric (metric_id) UNIQUE",
 
         "CREATE VERTEX TYPE ClRoutineSprintFlag IF NOT EXISTS",
         "CREATE PROPERTY ClRoutineSprintFlag.routine_name IF NOT EXISTS STRING",

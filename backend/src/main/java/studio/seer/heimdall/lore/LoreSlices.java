@@ -482,7 +482,7 @@ public final class LoreSlices {
 
         // All metrics for a specific run (detail panel).
         slice("qg_run_metrics",
-            "SELECT metric_key, value, unit, target, status " +
+            "SELECT metric_id, metric_key, value, unit, target, status, source " +
             "FROM ClRoutineMetric WHERE run_id = :run_id ORDER BY metric_key",
             List.of("run_id"), Map.of(), " LIMIT 100");
 
@@ -586,9 +586,9 @@ public final class LoreSlices {
             List.of("routine_name", "output_type"), Map.of(), "");
 
         slice("qg_run_history",
-            "SELECT routine_name, run_date, status, flags " +
+            "SELECT run_id, routine_name, run_date, status, flags, started_at, finished_at " +
             "FROM ClRoutineRun WHERE routine_name = :routine_name " +
-            "ORDER BY run_date DESC",
+            "ORDER BY started_at DESC, run_date DESC",
             List.of("routine_name"), Map.of(), " LIMIT 20");
     }
 
