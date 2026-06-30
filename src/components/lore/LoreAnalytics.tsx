@@ -838,24 +838,32 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   }, [qgRows]);
 
   // drilldown state — must be before early returns
-  const openSprints = useMemo(() =>
-    (data?.by_sprint ?? []).filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; })
+  // sprint name lookup from sprintRows
+  const sprintNameMap = useMemo(() => {
+    const m = new Map<string, string>();
+    sprintRows.forEach(s => { if (s.name) m.set(s.sprint_id, s.name); });
+    return m;
+  }, [sprintRows]);
+
+  // current milestone open sprints for drilldown
+  const milestoneOpenSprints = useMemo(() => {
+    const milestoneIds = new Set(currentMilestone?.sprint_ids ?? []);
+    return (data?.by_sprint ?? [])
+      .filter(s => {
+        const k = classify(s.status_raw);
+        return k !== 'done' && k !== 'cancelled' && (milestoneIds.size === 0 || milestoneIds.has(s.sprint_id));
+      })
+      .map(s => ({
+        ...s,
+        name: sprintNameMap.get(s.sprint_id) ?? s.sprint_id,
+        open_tasks: Math.max(0, s.task_total - s.task_done),
+        klass: classify(s.status_raw),
+      }))
       .sort((a, b) => {
         const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
-        return rank(classify(a.status_raw)) - rank(classify(b.status_raw));
-      }),
-  [data]);
-
-  const openSprintGroups = useMemo(() => {
-    const groups: { label: string; col: string; sprints: LoreAnalyticsSprint[] }[] = [
-      { label: 'Заблокированы',     col: 'var(--dng)', sprints: openSprints.filter(s => classify(s.status_raw) === 'blocked') },
-      { label: 'В работе',          col: 'var(--inf)', sprints: openSprints.filter(s => classify(s.status_raw) === 'in_progress') },
-      { label: 'Ready for deploy',  col: 'var(--suc)', sprints: openSprints.filter(s => classify(s.status_raw) === 'ready_for_deploy') },
-      { label: 'Частично',          col: 'var(--wrn)', sprints: openSprints.filter(s => classify(s.status_raw) === 'partial') },
-      { label: 'Запланированы',     col: 'var(--t3)',  sprints: openSprints.filter(s => { const k = classify(s.status_raw); return !['blocked','in_progress','ready_for_deploy','partial'].includes(k); }) },
-    ].filter(g => g.sprints.length > 0);
-    return groups;
-  }, [openSprints]);
+        return rank(a.klass) - rank(b.klass) || b.open_tasks - a.open_tasks;
+      });
+  }, [data, sprintRows, sprintNameMap, currentMilestone]);
 
   const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
 
@@ -1592,40 +1600,87 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Drilldown — открытые спринты по группам статуса */}
       {showOpenDrilldown && (
         <section style={S.panel}>
-          <div style={{ ...S.panelTitle, marginBottom: 10 }}>
-            Открытые спринты <span style={S.dim}>· {openSprintCount}</span>
-            <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 8 }}>кликни на спринт → перейти</span>
+          <div style={{ ...S.panelTitle, marginBottom: 2 }}>
+            Незакрытые спринты вехи{currentMilestone ? ` · ${currentMilestone.label}` : ''}
+            <span style={S.dim}> · {milestoneOpenSprints.length}</span>
           </div>
-          {openSprintGroups.map(g => (
-            <div key={g.label} style={{ marginBottom: 10 }}>
-              <div style={{ ...S.groupBucket, color: g.col, marginBottom: 4 }}>{g.label} · {g.sprints.length}</div>
-              {g.sprints.map(s => {
+          <div style={{ fontSize: 9, color: 'var(--t3)', marginBottom: 10 }}>
+            {milestoneOpenSprints.reduce((s, r) => s + r.open_tasks, 0)} незакрытых задач суммарно · нажми строку → открыть спринт
+          </div>
+
+          {/* header row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '12px 1fr 70px 70px 50px 16px', gap: '0 8px',
+            fontSize: 9, color: 'var(--t3)', fontWeight: 600, letterSpacing: '0.05em',
+            padding: '0 4px', marginBottom: 4 }}>
+            <span/>
+            <span>Спринт</span>
+            <span style={{ textAlign: 'right' as const }}>Задачи</span>
+            <span style={{ textAlign: 'right' as const }}>Open задач</span>
+            <span style={{ textAlign: 'right' as const }}>%</span>
+            <span/>
+          </div>
+
+          <div style={{ maxHeight: 380, overflowY: 'auto' as const }}>
+            {milestoneOpenSprints.length === 0
+              ? <div style={S.empty}>Нет открытых спринтов для этой вехи.</div>
+              : milestoneOpenSprints.map(s => {
+                const statusCol =
+                  s.klass === 'blocked'          ? 'var(--dng)' :
+                  s.klass === 'in_progress'      ? 'var(--inf)' :
+                  s.klass === 'ready_for_deploy' ? 'var(--suc)' :
+                  s.klass === 'partial'          ? 'var(--wrn)' : 'var(--t3)';
                 const taskPct = s.task_total > 0 ? pct(s.task_done, s.task_total) : null;
                 return (
                   <div key={s.sprint_id}
                     onClick={() => onNavigateToSprint?.(s.sprint_id)}
                     role={onNavigateToSprint ? 'button' : undefined}
-                    style={{ ...S.trow, cursor: onNavigateToSprint ? 'pointer' : 'default' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: g.col, flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 10, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                      {s.sprint_id}
+                    style={{ display: 'grid', gridTemplateColumns: '12px 1fr 70px 70px 50px 16px',
+                      gap: '0 8px', alignItems: 'center',
+                      padding: '5px 4px', borderRadius: 4,
+                      cursor: onNavigateToSprint ? 'pointer' : 'default',
+                      borderBottom: '1px solid color-mix(in srgb,var(--bd) 40%,transparent)' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: statusCol, flexShrink: 0, display: 'inline-block' }} />
+                    <span style={{ fontSize: 10, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}
+                      title={s.name}>{s.name}</span>
+                    <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', textAlign: 'right' as const }}>
+                      {s.task_total > 0 ? `${s.task_done}/${s.task_total}` : '—'}
                     </span>
-                    {taskPct !== null && (
-                      <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
-                        {s.task_done}/{s.task_total} задач · {taskPct}%
-                      </span>
-                    )}
-                    {s.task_total === 0 && (
-                      <span style={{ fontSize: 9, color: 'var(--t3)', flexShrink: 0 }}>нет задач</span>
-                    )}
-                    {onNavigateToSprint && (
-                      <span style={{ fontSize: 9, color: 'var(--acc)', flexShrink: 0, marginLeft: 4 }}>→</span>
-                    )}
+                    <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--mono)',
+                      color: s.open_tasks > 0 ? 'var(--dng)' : 'var(--suc)', textAlign: 'right' as const }}>
+                      {s.open_tasks > 0 ? `${s.open_tasks} open` : '✓'}
+                    </span>
+                    <span style={{ fontSize: 9, color: taskPct !== null && taskPct >= 75 ? 'var(--suc)' : 'var(--t3)',
+                      fontFamily: 'var(--mono)', textAlign: 'right' as const }}>
+                      {taskPct !== null ? `${taskPct}%` : '—'}
+                    </span>
+                    {onNavigateToSprint
+                      ? <span style={{ fontSize: 10, color: 'var(--acc)' }}>→</span>
+                      : <span/>}
                   </div>
                 );
-              })}
-            </div>
-          ))}
+              })
+            }
+          </div>
+
+          {/* totals footer */}
+          {milestoneOpenSprints.length > 0 && (() => {
+            const totalOpen = milestoneOpenSprints.reduce((s, r) => s + r.open_tasks, 0);
+            const totalTasks = milestoneOpenSprints.reduce((s, r) => s + r.task_total, 0);
+            const totalDone  = milestoneOpenSprints.reduce((s, r) => s + r.task_done, 0);
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '12px 1fr 70px 70px 50px 16px',
+                gap: '0 8px', padding: '6px 4px', borderTop: '1px solid var(--bd)',
+                fontSize: 9, color: 'var(--t2)', fontWeight: 600, marginTop: 4 }}>
+                <span/><span>Итого</span>
+                <span style={{ fontFamily: 'var(--mono)', textAlign: 'right' as const }}>{totalDone}/{totalTasks}</span>
+                <span style={{ fontFamily: 'var(--mono)', textAlign: 'right' as const, color: 'var(--dng)' }}>{totalOpen} open</span>
+                <span style={{ fontFamily: 'var(--mono)', textAlign: 'right' as const }}>{totalTasks > 0 ? `${pct(totalDone, totalTasks)}%` : '—'}</span>
+                <span/>
+              </div>
+            );
+          })()}
         </section>
       )}
 
