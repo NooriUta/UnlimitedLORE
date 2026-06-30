@@ -308,6 +308,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [releases,   setReleases]   = useState<LoreRelease[]>([]);
   const [qgRows,     setQgRows]     = useState<QGRow[]>([]);
   const [sprintStarts, setSprintStarts] = useState<{ sprint_id: string; valid_from: string | null }[]>([]);
+  const [blockedRows, setBlockedRows] = useState<{ sprint_id: string }[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [tab,        setTab]        = useState<AnalyticsTab>('overview');
   const [groupBy,    setGroupBy]    = useState<CompGroupBy>('area');
@@ -327,10 +328,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       fetchLoreSlice<LoreRelease>('releases', undefined, ctrl.signal),
       fetchLoreSlice<QGRow>('quality_gates', undefined, ctrl.signal),
       fetchLoreSlice<{ sprint_id: string; valid_from: string | null }>('sprint_starts', undefined, ctrl.signal),
+      fetchLoreSlice<{ sprint_id: string }>('blocked_sprints', undefined, ctrl.signal),
     ])
-      .then(([d, comps, dones, ms, sp, rel, qg, starts]) => {
+      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked]) => {
         setData(d); setComponents(comps); setDoneDates(dones); setMilestoneList(ms);
-        setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts);
+        setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts); setBlockedRows(blocked);
         setLoading(false);
       })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
@@ -618,6 +620,14 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     if (!lags.length) return { med: null, p75: null, unreleased, count: 0 };
     return { med: median(lags), p75: Math.round(quantile(lags, 0.75)), unreleased, count: lags.length };
   }, [sprintRows]);
+
+  // Blocked rate — sprints that EVER passed through a BLOCKED state (history).
+  const blockedStats = useMemo(() => {
+    const everBlocked = new Set(blockedRows.map(b => b.sprint_id).filter(Boolean));
+    const total = sprintRows.length || data?.totals.sprints || 0;
+    const nowBlocked = sprintRows.filter(s => classify(s.status_raw) === 'blocked').length;
+    return { ever: everBlocked.size, total, nowBlocked, ids: [...everBlocked] };
+  }, [blockedRows, sprintRows, data]);
 
   // QG status breakdown + by component
   const qgStats = useMemo(() => {
@@ -1296,6 +1306,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center' }}>
                 <span style={{ fontSize: 14, fontWeight: 700, color: deployLag.unreleased ? 'var(--wrn)' : 'var(--suc)' }}>{deployLag.unreleased}</span>
                 <span style={{ fontSize: 9, color: 'var(--t3)' }}>готово, ждёт релиза</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', marginLeft: 'auto', textAlign: 'right' as const, cursor: 'help' }}
+                title={`Спринтов, прошедших через статус BLOCKED (по истории состояний): ${blockedStats.ever} из ${blockedStats.total} (${pct(blockedStats.ever, blockedStats.total)}%). Сейчас заблокировано: ${blockedStats.nowBlocked}.`}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: blockedStats.nowBlocked ? 'var(--dng)' : 'var(--t1)' }}>
+                  {pct(blockedStats.ever, blockedStats.total)}%
+                </span>
+                <span style={{ fontSize: 9, color: 'var(--t3)' }}>через blocked ({blockedStats.ever}) · сейчас {blockedStats.nowBlocked} ⓘ</span>
               </div>
             </div>
           ) : <div style={S.empty}>Нет данных о связках спринт→релиз.</div>}

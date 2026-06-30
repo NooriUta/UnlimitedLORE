@@ -357,6 +357,13 @@ public final class LoreSlices {
             "FROM KnowSprintHist WHERE valid_from IS NOT NULL ORDER BY valid_from",
             List.of(), Map.of(), "");
 
+        // Sprints that ever passed through a BLOCKED state — for blocked/reopen rate.
+        // Frontend dedups by sprint_id and divides by total sprints.
+        slice("blocked_sprints",
+            "SELECT in('HAS_STATE').sprint_id[0] AS sprint_id " +
+            "FROM KnowSprintHist WHERE status_raw LIKE '%BLOCK%'",
+            List.of(), Map.of(), "");
+
         slice("history_plan_item",
             "SELECT valid_from, valid_to, week_start, week_end, content_hash " +
             "FROM PlanItemHist WHERE in('HAS_STATE').item_id[0] = :id ORDER BY valid_from",
