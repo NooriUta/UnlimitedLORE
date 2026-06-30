@@ -1560,18 +1560,19 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={S.panelTitle} title="Цвет = статус последнего ClRoutineRun. Серый = нет прогонов.">
             QG статус-сетка <span style={S.dim}>· {qgRows.length}</span>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 5 }}>
             {qgRows.map(q => {
               const runSt = latestRunByQg.get(q.qg_id) ?? null;
               const col = runColor(runSt);
+              const label = q.qg_id.replace(/^QG-/, '').replace(/-/g, ' ');
               return (
                 <div key={q.qg_id} title={`${q.qg_id}\nПоследний прогон: ${runSt ?? 'нет'}`}
-                  style={{ padding: '5px 8px', borderRadius: 6, fontSize: 9, fontWeight: 600,
-                    background: `color-mix(in srgb,${col} 14%,var(--b3))`,
-                    border: `1px solid color-mix(in srgb,${col} 35%,transparent)`,
-                    color: col, maxWidth: 150 }}>
-                  <div style={{ fontSize: 7, color: 'var(--t3)', marginBottom: 2, fontFamily: 'var(--mono)' }}>{runSt ?? '—'}</div>
-                  {q.qg_id.replace(/^QG-/, '').replace(/-/g, ' ')}
+                  style={{ padding: '4px 7px', borderRadius: 5, fontSize: 9, fontWeight: 600,
+                    background: `color-mix(in srgb,${col} 12%,var(--b3))`,
+                    border: `1px solid color-mix(in srgb,${col} 30%,transparent)`,
+                    color: col, overflow: 'hidden' }}>
+                  <div style={{ fontSize: 7, color: 'var(--t3)', fontFamily: 'var(--mono)', marginBottom: 2 }}>{runSt ?? '—'}</div>
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, lineHeight: 1.3 }}>{label}</div>
                 </div>
               );
             })}
