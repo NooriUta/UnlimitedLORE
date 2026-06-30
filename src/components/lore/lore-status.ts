@@ -84,7 +84,8 @@ export function taskTick(statusRaw: string | null | undefined): { status: string
   if (s.startsWith('🔬') || /^(DESIGN|ДИЗАЙН|ПРОЕКТ)/i.test(s)) return { status: 'design', done: false };
   if (s.startsWith('🟣') || /^(BACKLOG|БЭКЛОГ|БЭКЛ)/i.test(s)) return { status: 'backlog', done: false };
   if (s.startsWith('📋') || /^(PLANNED|ЗАПЛАН|ПЛАН)/i.test(s)) return { status: 'planned', done: false };
-  if (s.startsWith('⏸') || /^(CONDITION|HOLD|PAUSE|ON.?HOLD|УСЛОВН|ПАУ)/i.test(s)) return { status: 'deferred', done: false };
-  if (s.startsWith('⬜') || /^(DEFER|ОТЛОЖЕН|TODO|TO.?DO)/i.test(s)) return { status: 'deferred', done: false };
+  if (s.startsWith('⏸') || /^(CONDITION|HOLD|PAUSE|ON.?HOLD|DEFER|ОТЛОЖЕН|УСЛОВН|ПАУ)/i.test(s)) return { status: 'deferred', done: false };
+  // ⬜ is the canonical "todo" marker on the backend (SCD2_STATUS_RAW), not deferred.
+  if (s.startsWith('⬜') || /^(TODO|TO.?DO|НЕ.?НАЧАТ)/i.test(s)) return { status: 'todo', done: false };
   return { status: 'todo', done: false };
 }

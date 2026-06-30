@@ -61,14 +61,21 @@ const STATUS_RU: Record<string, string> = {
   blocked: 'блок', backlog: 'бэклог', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',
 };
 
-// Canonical token → status_raw (mirrors backend SCD2_STATUS_RAW), for optimistic
-// statusBySprint updates so a cycled sprint re-colours before the server round-trip.
+// Canonical token → status_raw (mirrors backend SCD2_STATUS_RAW exactly), for
+// optimistic statusBySprint updates so a cycled sprint re-colours before the server
+// round-trip — and round-trips cleanly back through taskTick.
 const STATUS_RAW: Record<string, string> = {
-  done: '✅ DONE', active: '🔄 IN PROGRESS', partial: '🟡 PARTIAL', todo: '📋 PLANNED',
-  blocked: '🔴 BLOCKED', high: '🔴 P0', cancelled: '🚫 CANCELLED',
+  todo: '⬜ TODO', planned: '📋 PLANNED', design: '🔬 DESIGN', backlog: '🟣 BACKLOG',
+  active: '🔄 IN PROGRESS', partial: '🟡 PARTIAL', ready_for_deploy: '🚀 READY FOR DEPLOY',
+  blocked: '🔴 BLOCKED', high: '🔴 P0', done: '✅ DONE', cancelled: '🚫 CANCELLED',
 };
 
-const STATUS_CYCLE: LorePlanItemStatus[] = ['todo', 'active', 'done'];
+// Full cycle over every status the /status endpoint accepts (PLAN_STATUSES), in a
+// natural workflow order — not just todo→active→done. Clicking a bar walks the lot.
+const STATUS_CYCLE: LorePlanItemStatus[] = [
+  'todo', 'planned', 'design', 'backlog', 'active', 'partial',
+  'ready_for_deploy', 'blocked', 'high', 'done', 'cancelled',
+];
 function cycleStatus(current: string | null): LorePlanItemStatus {
   const idx = STATUS_CYCLE.indexOf((current ?? 'todo') as LorePlanItemStatus);
   return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
@@ -590,51 +597,97 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       }
     }
 
-    if (showDeps) deps.forEach(dep => {
-      const fromItemId = sprintToItemId.get(dep.from_sprint);
-      const toItemId   = sprintToItemId.get(dep.to_sprint);
-      if (!fromItemId || !toItemId) return;
+    if (showDeps && cc) {
+      const ccRect  = cc.getBoundingClientRect();
+      const ccLeft  = ccRect.left  - svgRect.left;
+      const ccRight = ccRect.right - svgRect.left;
 
-      // dep.from_sprint DEPENDS ON dep.to_sprint (to_sprint is the prerequisite).
-      // Arrow direction: prerequisite (to_sprint) → dependent (from_sprint).
-      // Resolve DOM node via itemSet.items[id].dom.box (range) or .dom.point (dot).
-      function itemEl(id: string): HTMLElement | null {
+      // Resolve the DOM node for a rendered bar (range box or point).
+      const itemEl = (id: string): HTMLElement | null => {
         if (itemSet) {
           const d = itemSet.items[id]?.dom;
           if (d) return (d.box ?? d.point ?? null) as HTMLElement | null;
         }
-        // Fallback: class-based lookup injected via item className
         return host!.querySelector<HTMLElement>(`.vis-iid-${CSS.escape(id)}`);
-      }
-      const prereqEl = itemEl(toItemId);
-      const depEl    = itemEl(fromItemId);
-      if (!prereqEl || !depEl) return;
+      };
 
-      const pr = prereqEl.getBoundingClientRect();
-      const dr = depEl.getBoundingClientRect();
+      // Anchor point for a sprint's bar. On-screen → the bar's edge. Off-screen →
+      // the centre of its LANE row clamped to a board edge (`offX`): a prerequisite
+      // (upstream) clamps to the LEFT edge, a dependent (downstream) to the RIGHT —
+      // same vertical point as the lane, just pinned to the side it lives off toward.
+      const anchorFor = (sprint: string, side: 'left' | 'right', offX: number):
+          { x: number; y: number; off: boolean } | null => {
+        const itemId = sprintToItemId.get(sprint);
+        if (!itemId) return null;
+        const el = itemEl(itemId);
+        // Treat the bar as on-screen while ANY part of it overlaps the visible centre
+        // panel (not just its connecting edge) — then anchor to that edge, clamped
+        // into view. We only switch to the lane-edge once the bar is FULLY out of the
+        // panel, so the endpoint tracks the bar smoothly and never jumps mid-scroll.
+        if (el) {
+          const r        = el.getBoundingClientRect();
+          const barLeft  = r.left  - svgRect.left;
+          const barRight = r.right - svgRect.left;
+          const fullyOff = barRight < ccLeft || barLeft > ccRight;
+          if (!fullyOff) {
+            const edge = side === 'right' ? barRight : barLeft;
+            const x = Math.max(ccLeft, Math.min(ccRight, edge));  // clamp into view
+            return { x, y: (r.top + r.bottom) / 2 - svgRect.top, off: false };
+          }
+        }
+        // Fully off-screen (missing, or entirely outside the panel) → lane-row centre,
+        // pinned to the board edge it lives off toward (offX).
+        const laneId = board.laneOfItem.get(sprint);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const grp = laneId ? (itemSet?.groups?.[laneId] as any) : null;
+        const gel = grp?.dom?.foreground as HTMLElement | undefined;
+        if (gel) {
+          const gr = gel.getBoundingClientRect();
+          return { x: offX, y: (gr.top + gr.bottom) / 2 - svgRect.top, off: true };
+        }
+        // Last resort: bar element known but no lane row → keep its Y, clamp X.
+        if (el) {
+          const r = el.getBoundingClientRect();
+          return { x: offX, y: (r.top + r.bottom) / 2 - svgRect.top, off: true };
+        }
+        return null;
+      };
 
-      // Arrow: right-center of prerequisite bar → left-center of dependent bar
-      const x1 = pr.right  - svgRect.left;
-      const y1 = (pr.top + pr.bottom) / 2 - svgRect.top;
-      const x2 = dr.left   - svgRect.left;
-      const y2 = (dr.top + dr.bottom) / 2 - svgRect.top;
+      deps.forEach(dep => {
+        // prerequisite = to_sprint (right edge, off→left) → dependent = from_sprint (left edge, off→right)
+        const a = anchorFor(dep.to_sprint, 'right', ccLeft);
+        const b = anchorFor(dep.from_sprint, 'left', ccRight);
+        if (!a || !b) return;
+        if (a.off && b.off) return;       // both off-screen → nothing meaningful to show
 
-      const onCp   = criticalSprints.has(dep.from_sprint) && criticalSprints.has(dep.to_sprint);
-      const isHard = dep.kind === 'hard';
-      const cx     = (x1 + x2) / 2;
+        const x1 = a.x, y1 = a.y, x2 = b.x, y2 = b.y;
+        const onCp   = criticalSprints.has(dep.from_sprint) && criticalSprints.has(dep.to_sprint);
+        const isHard = dep.kind === 'hard';
+        // Control points a fixed short distance out of each end → tidy diagonal,
+        // never a giant arc across the board.
+        const span = Math.abs(x2 - x1);
+        const off  = Math.max(18, Math.min(70, span * 0.3));
+        const c1x  = x1 + off, c2x = x2 - off;
 
-      const stroke      = onCp ? 'var(--danger)' : isHard ? 'var(--t3)' : 'var(--bd)';
-      const strokeW     = onCp ? 2 : isHard ? 1.5 : 1;
-      const dash        = isHard || onCp ? '' : ` stroke-dasharray="4 3"`;
-      const filter      = onCp ? ' filter="url(#cp-glow)"' : '';
-      const markerEnd   = onCp ? 'url(#arr-cp)' : isHard ? 'url(#arr-hard)' : 'url(#arr-soft)';
+        const stroke    = onCp ? 'var(--danger)' : isHard ? 'var(--t3)' : 'var(--bd)';
+        const strokeW   = onCp ? 2 : isHard ? 1.5 : 1;
+        const dash      = isHard || onCp ? '' : ` stroke-dasharray="4 3"`;
+        const filter    = onCp ? ' filter="url(#cp-glow)"' : '';
+        // Off-screen ends get no arrowhead (it'd point at the void); only an on-screen
+        // dependent end carries the marker.
+        const markerEnd = b.off ? '' : ` marker-end="${onCp ? 'url(#arr-cp)' : isHard ? 'url(#arr-hard)' : 'url(#arr-soft)'}"`;
+        // A small hollow dot marks an off-screen endpoint sitting on the board edge.
+        const edgeDot = (p: { x: number; y: number; off: boolean }) => p.off
+          ? `<circle cx="${p.x}" cy="${p.y}" r="3" fill="none" stroke="${stroke}" stroke-width="1.2" opacity="0.7"/>` : '';
+        const opacity = (a.off || b.off) ? 0.45 : (span > 700 ? 0.5 : 0.85);
 
-      parts.push(
-        `<path d="M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}"` +
-        ` fill="none" stroke="${stroke}" stroke-width="${strokeW}"${dash}${filter}` +
-        ` marker-end="${markerEnd}" opacity="0.85"/>`
-      );
-    });
+        parts.push(
+          `<path d="M${x1},${y1} C${c1x},${y1} ${c2x},${y2} ${x2},${y2}"` +
+          ` fill="none" stroke="${stroke}" stroke-width="${strokeW}"${dash}${filter}${markerEnd}` +
+          ` opacity="${opacity}"/>` + edgeDot(a) + edgeDot(b)
+        );
+      });
+    }
 
     svg.innerHTML = `
       <defs>
@@ -654,7 +707,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       </defs>
       ${parts.join('\n')}
     `;
-  }, [deps, sprintToItemId, criticalSprints, showDeps, mss, w0]);
+  }, [deps, sprintToItemId, criticalSprints, showDeps, mss, w0, board]);
 
   // Re-draw on any change that shifts bar positions. `rangechange` fires
   // continuously during zoom/pan (unlike `rangechanged`, which only fires once at
@@ -678,13 +731,28 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     };
   }, [drawArrows]);
 
-  // Also re-draw when the SVG container resizes (panel open/close, window resize)
+  // Re-draw when the SVG container resizes (panel open/close, window resize).
+  // Firing drawArrows synchronously inside the ResizeObserver reads bar rects BEFORE
+  // vis-timeline has finished repositioning them → the critical-path/overlay glitches
+  // mid-resize. So we rAF-throttle (run after layout) AND schedule a trailing
+  // "settle" redraw once resizing stops, to lock onto the final positions.
   useEffect(() => {
     const svg = svgRef.current;
     if (!svg) return;
-    const ro = new ResizeObserver(drawArrows);
+    let raf = 0;
+    let settle = 0;
+    const redraw = () => {
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawArrows(); });
+      clearTimeout(settle);
+      settle = window.setTimeout(() => { drawArrows(); }, 120);
+    };
+    const ro = new ResizeObserver(redraw);
     ro.observe(svg);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+      clearTimeout(settle);
+    };
   }, [drawArrows]);
 
   // Milestone clicks — delegated on the SVG overlay (markers carry data-ms).

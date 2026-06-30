@@ -732,11 +732,7 @@ public class AidaLoreResource {
                     "UPDATE KnowTask SET title = :title, note_md = :note, effort_days = :eff WHERE task_uid = :uid",
                     mapOfNullable("title", req.title().trim(), "note", req.note_md(), "eff", req.effort_days(), "uid", req.task_uid())))
                     .await().indefinitely();
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowTaskHist SET note_md = :note " +
-                    "WHERE in('HAS_STATE').task_uid CONTAINS :uid AND valid_to IS NULL",
-                    mapOfNullable("note", req.note_md(), "uid", req.task_uid())))
-                    .await().indefinitely();
+                mirrorTaskHist(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely();
                 updated++;
             } catch (Exception e) {
                 errors.add(req.task_uid() + ": " + e.getMessage());
@@ -746,6 +742,25 @@ public class AidaLoreResource {
         out.put("ok", errors.isEmpty()); out.put("updated", updated);
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
+    }
+
+    /**
+     * Mirror note_md / effort_days onto a task's OPEN history row (KnowTaskHist,
+     * valid_to IS NULL) — the row the tasks_of_sprint / tasks_of_phase slices read.
+     * Only fields actually supplied (non-null) are written, so a title-only edit
+     * never wipes an existing note or effort. No-op (passthrough) when both are null.
+     */
+    private Uni<LoreCommandClient.LoreCommandResult> mirrorTaskHist(
+            String uid, String noteMd, Integer effortDays) {
+        StringBuilder set = new StringBuilder();
+        Map<String, Object> p = new LinkedHashMap<>();
+        p.put("uid", uid);
+        if (noteMd != null)     { set.append("note_md = :note, ");     p.put("note", noteMd); }
+        if (effortDays != null) { set.append("effort_days = :eff, ");  p.put("eff", effortDays); }
+        if (set.length() == 0) return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
+        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "UPDATE KnowTaskHist SET " + set.substring(0, set.length() - 2) +
+            " WHERE in('HAS_STATE').task_uid CONTAINS :uid AND valid_to IS NULL", p));
     }
 
     @POST
@@ -767,13 +782,11 @@ public class AidaLoreResource {
         return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowTask SET title = :title, note_md = :note, effort_days = :eff WHERE task_uid = :uid",
                 mapOfNullable("title", req.title().trim(), "note", req.note_md(), "eff", req.effort_days(), "uid", uid)))
-            // The vertex note_md above is a denormalisation the UI never reads.
-            // tasks_of_sprint / tasks_of_phase read note_md from the open KnowTaskHist row
-            // (out('HAS_STATE')[note_md IS NOT NULL].note_md[0]); mirror the write there too.
-            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowTaskHist SET note_md = :note " +
-                "WHERE in('HAS_STATE').task_uid CONTAINS :uid AND valid_to IS NULL",
-                mapOfNullable("note", req.note_md(), "uid", uid))))
+            // The vertex note_md/effort_days above are denormalisations the UI never reads.
+            // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
+            // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
+            // were actually supplied, so a title-only edit never wipes note/effort.
+            .chain(__ -> mirrorTaskHist(uid, req.note_md(), req.effort_days()))
             .map(__ -> noStore(Response.ok(new TaskWriteResponse(true, uid, null, null))))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK EDIT] %s: %s", uid, ex.getMessage());
