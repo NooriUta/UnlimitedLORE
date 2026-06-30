@@ -251,6 +251,26 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_sprint_milestone',
+    'Link (or unlink) a KnowSprint directly to a KnowMilestone via a TARGETS_MILESTONE edge. ' +
+      'Use this for sprints that do NOT have a PlanItem bridge (most sprints). ' +
+      'For sprints that DO have a PlanItem, prefer lore_update_plan_item (CONTRIBUTES_TO path). ' +
+      'Idempotent on add. Use action="remove" to unlink. Returns {ok, sprint_id, milestone_id, action}.',
+    {
+      sprint_id:    z.string().describe('sprint id, e.g. "SPRINT_LORE_QG_INTEGRATION"'),
+      milestone_id: z.string().describe('milestone id, e.g. "M3"'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ sprint_id, milestone_id, action }) => {
+      try {
+        return json(await lorePost('/lore/milestone/sprint', {
+          sprint_id, milestone_id, action: action ?? 'add',
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_batch_set_status',
     'Set the same status on multiple LORE entities in one call. ' +
       'Each item goes through the full SCD2 transition (closes old hist row, opens new one). ' +
@@ -767,6 +787,25 @@ export function registerLoreWrite(server: McpServer): void {
           team: team ?? null, game_icon: game_icon ?? null,
           owner: owner ?? null, parent_id: parent_id ?? null,
         }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // ── Link / unlink sprint ↔ milestone (TARGETS_MILESTONE direct edge) ──────
+  server.tool(
+    'lore_link_sprint_milestone',
+    'Link (or unlink) a sprint directly to a milestone via a TARGETS_MILESTONE edge. ' +
+    'Use to promote plan-only sprints to direct milestone members so they appear in ' +
+    'direct_sprint_ids and count toward milestone progress without going through a PlanItem. ' +
+    'action="add" (default) creates the edge if absent; action="remove" deletes it.',
+    {
+      sprint_id:    z.string().describe('Sprint ID, e.g. "SPRINT_AUTH_REDESIGN"'),
+      milestone_id: z.string().describe('Milestone ID, e.g. "M3"'),
+      action:       z.enum(['add', 'remove']).default('add'),
+    },
+    async ({ sprint_id, milestone_id, action }) => {
+      try {
+        return json(await lorePost('/lore/milestone/sprint', { sprint_id, milestone_id, action }));
       } catch (e) { return err(e); }
     },
   );
