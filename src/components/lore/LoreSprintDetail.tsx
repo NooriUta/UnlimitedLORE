@@ -774,60 +774,41 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         </div>
       )}
 
-      {/* ── Two-column body: left sidebar (meta) + right main (tasks) ── */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-      {/* LEFT SIDEBAR */}
-      <div style={{ width: 220, flexShrink: 0, borderRight: '1px solid var(--bd)', overflowY: 'auto', display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
+      {/* ── Top meta block: context (left) + projects/milestones/modules (right) ── */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
 
-      {/* context_md — background / WHY section, editable inline */}
-      <div style={{ padding: '6px 12px 8px', borderBottom: '1px solid var(--bd)' }}>
+      {/* CONTEXT — left, flexible */}
+      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Контекст</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Контекст</span>
           {!ctxEdit && (
-            <button
-              onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
-              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
-            >✎ ред.</button>
+            <button onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
+              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>✎ ред.</button>
           )}
         </div>
         {ctxEdit ? (
           <div>
-            <textarea
-              value={ctxDraft}
-              onChange={e => setCtxDraft(e.target.value)}
-              rows={8}
-              placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки, связанные спринты..."
-              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
-            />
+            <textarea value={ctxDraft} onChange={e => setCtxDraft(e.target.value)} rows={6}
+              placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки..."
+              style={{ width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }} />
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-              <button
-                disabled={ctxSaving}
-                onClick={async () => {
-                  setCtxSaving(true);
-                  try {
-                    await updateLoreSprint(sprint.sprint_id, { context_md: ctxDraft || null });
-                    setSprint(s => s ? { ...s, context_md: ctxDraft || null } : s);
-                    setCtxEdit(false);
-                  } catch (e) { onError(e); }
-                  finally { setCtxSaving(false); }
-                }}
-                style={{ fontSize: 11, padding: '2px 10px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer' }}
-              >{ctxSaving ? '…' : 'Сохранить'}</button>
-              <button
-                onClick={() => setCtxEdit(false)}
-                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
-              >Отмена</button>
+              <button disabled={ctxSaving} onClick={async () => {
+                setCtxSaving(true);
+                try { await updateLoreSprint(sprint.sprint_id, { context_md: ctxDraft || null }); setSprint(s => s ? { ...s, context_md: ctxDraft || null } : s); setCtxEdit(false); }
+                catch (e) { onError(e); } finally { setCtxSaving(false); }
+              }} style={{ fontSize: 11, padding: '2px 10px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer' }}>{ctxSaving ? '…' : 'Сохранить'}</button>
+              <button onClick={() => setCtxEdit(false)} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>Отмена</button>
             </div>
           </div>
         ) : sprint.context_md ? (
-          <div
-            style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }}
-            dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }}
-          />
+          <div style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }} />
         ) : (
           <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>Контекст не заполнен</div>
         )}
       </div>
+
+      {/* META RIGHT — projects + milestones + modules */}
+      <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, overflowY: 'auto' as const }}>
 
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {
@@ -1029,10 +1010,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
-      </div>{/* END LEFT SIDEBAR */}
+      </div>{/* END META RIGHT */}
+      </div>{/* END TOP META BLOCK */}
 
-      {/* RIGHT MAIN */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' as const }}>
+      {/* ── Tasks (full width, scrollable) ── */}
+      <div style={{ flex: 1, overflowY: 'auto' as const }}>
       <div style={S.section}>
         {/* Phases (when present) each with their tasks */}
         {phases.length > 0 && (
@@ -1123,8 +1105,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           </div>
         ) : null}
       </div>
-      </div>{/* END RIGHT MAIN */}
-      </div>{/* END TWO-COLUMN BODY */}
+      </div>{/* END TASKS SECTION */}
     </div>
   );
 }
