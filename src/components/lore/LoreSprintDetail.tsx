@@ -223,10 +223,14 @@ function PriorityPicker({ sprintId, current, onChanged, onError }: {
 
 // Status-count chips for the sprint header: one chip per present status (icon + count).
 // Multi-select: click chips to show only those statuses; click again to deselect.
-const STATUS_COUNT_ORDER = ['done', 'active', 'partial', 'todo', 'blocked', 'cancelled'] as const;
+const STATUS_COUNT_ORDER = [
+  'done', 'ready_for_deploy', 'active', 'partial', 'design',
+  'planned', 'todo', 'deferred', 'backlog', 'blocked', 'cancelled',
+] as const;
 const STATUS_COUNT_LABEL: Record<string, string> = {
-  done: 'Готово', active: 'В работе', partial: 'Частично', todo: 'В плане', blocked: 'Заблокировано',
-  cancelled: 'Отменено',
+  done: 'Готово', ready_for_deploy: 'К деплою', active: 'В работе', partial: 'Частично',
+  design: 'Дизайн', planned: 'Запланировано', todo: 'В плане', deferred: 'Отложено',
+  backlog: 'Беклог', blocked: 'Заблокировано', cancelled: 'Отменено',
 };
 
 function StatusCounts({ tasks, filter, onFilter }: {
@@ -673,6 +677,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           <>
             <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
             <span style={S.meta}>{doneTotal}/{tasks.length}</span>
+            {(() => {
+              const effortSum = visibleTasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
+              const label = filter.size > 0 ? 'выбр.' : 'Σ';
+              return effortSum > 0
+                ? <span style={S.meta} title="Сумма effort_days по отображаемым задачам">{label} <b style={{ color: 'var(--acc)' }}>{effortSum}</b> д</span>
+                : null;
+            })()}
           </>
         )}
         {sprint.milestone_ids?.length ? (
@@ -1004,6 +1015,22 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             ))}
           </div>
         )}
+
+        {/* Effort footer */}
+        {visibleTasks.length > 0 && (() => {
+          const effortSum = visibleTasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
+          const effortTotal = tasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
+          if (effortSum === 0) return null;
+          return (
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--t3)' }}>
+              <span>Итого effort:</span>
+              <b style={{ color: 'var(--acc)', fontFamily: 'var(--mono)' }}>{effortSum} д</b>
+              {filter.size > 0 && effortTotal !== effortSum && (
+                <span style={{ color: 'var(--t3)' }}>/ {effortTotal} д всего</span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Truly empty sprint */}
         {phases.length === 0 && tasks.length === 0 && (
