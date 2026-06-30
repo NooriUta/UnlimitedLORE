@@ -1501,39 +1501,167 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   const filteredSprints = filterSprints(data.by_sprint, sprintFilter);
 
-  const tabSprints = (
-    <section style={S.panel}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ ...S.panelTitle, marginBottom: 0 }}>
-          Спринты <span style={S.dim}>· {data.by_sprint.length}</span>
-          <span style={{ ...S.openChip, marginLeft: 8 }}>{openSprintCount} открытых</span>
-        </div>
-        <div style={S.filterChips}>
-          {SPRINT_FILTERS.map(f => {
-            const count = filterSprints(data.by_sprint, f.key).length;
-            return (
-              <button key={f.key}
-                style={{ ...S.chip, ...(sprintFilter === f.key ? S.chipActive : {}) }}
-                onClick={() => setSprintFilter(f.key)}>
-                {f.label} <span style={S.chipCount}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  // open sprints broken down by status group for drilldown
+  const openSprints = useMemo(() =>
+    data.by_sprint.filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; })
+      .sort((a, b) => {
+        const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
+        return rank(classify(a.status_raw)) - rank(classify(b.status_raw));
+      }),
+  [data]);
 
-      {sprintFilter === 'active' ? (
-        <SprintGroupedActive sprints={filteredSprints} onNavigate={onNavigateToSprint} />
-      ) : sprintFilter === 'done' ? (
-        <SprintGroupedDone sprints={filteredSprints} onNavigate={onNavigateToSprint} />
-      ) : (
-        <div style={{ ...S.table, maxHeight: 420, overflowY: 'auto' as const }}>
-          {filteredSprints.length === 0
-            ? <div style={S.empty}>Нет спринтов в этой группе.</div>
-            : filteredSprints.map(s => <SprintRowItem key={s.sprint_id} s={s} onNavigate={onNavigateToSprint} />)}
-        </div>
+  const openSprintGroups = useMemo(() => {
+    const groups: { label: string; col: string; sprints: LoreAnalyticsSprint[] }[] = [
+      { label: 'Заблокированы',     col: 'var(--dng)', sprints: openSprints.filter(s => classify(s.status_raw) === 'blocked') },
+      { label: 'В работе',          col: 'var(--inf)', sprints: openSprints.filter(s => classify(s.status_raw) === 'in_progress') },
+      { label: 'Ready for deploy',  col: 'var(--suc)', sprints: openSprints.filter(s => classify(s.status_raw) === 'ready_for_deploy') },
+      { label: 'Частично',          col: 'var(--wrn)', sprints: openSprints.filter(s => classify(s.status_raw) === 'partial') },
+      { label: 'Запланированы',     col: 'var(--t3)',  sprints: openSprints.filter(s => { const k = classify(s.status_raw); return !['blocked','in_progress','ready_for_deploy','partial'].includes(k); }) },
+    ].filter(g => g.sprints.length > 0);
+    return groups;
+  }, [openSprints]);
+
+  const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
+
+  const tabSprints = (
+    <>
+      {/* Plan health strip — same as Overview */}
+      {currentMilestone && (
+        <section style={{
+          ...S.panel,
+          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const,
+          background: onTrack
+            ? `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 6%,var(--b2))`
+            : 'var(--b2)',
+          borderColor: onTrack
+            ? `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 30%,transparent)`
+            : 'var(--bd)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <GameIcon slug="crossed-axes" size={16} style={{ color: 'var(--acc)' }} />
+            <div style={{ display: 'flex', flexDirection: 'column' as const }}>
+              <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Текущая веха</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+                {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 11 }}>· {currentMilestone.date_display}</span>
+              </span>
+            </div>
+          </div>
+          {daysUntilCurrent !== null && (
+            <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
+              <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1,
+                color: daysUntilCurrent < 0 ? 'var(--dng)' : daysUntilCurrent <= 7 ? 'var(--wrn)' : 'var(--t1)' }}>
+                {daysUntilCurrent >= 0 ? daysUntilCurrent : `+${-daysUntilCurrent}`}
+              </span>
+              <span style={{ fontSize: 9, color: 'var(--t3)' }}>{daysUntilCurrent >= 0 ? 'дней до дедлайна' : 'дней просрочки'}</span>
+            </div>
+          )}
+          {/* Clickable open Sp chip → opens drilldown */}
+          <button onClick={() => setShowOpenDrilldown(v => !v)}
+            style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'pointer',
+              background: 'none', border: 'none', padding: 0 }}>
+            <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--dng)',
+              textDecoration: showOpenDrilldown ? 'underline' : 'none' }}>{openSprintCount}</span>
+            <span style={{ fontSize: 9, color: 'var(--t3)' }}>открытых Sp {showOpenDrilldown ? '▲' : '▼'}</span>
+          </button>
+          {weeksToFinish !== null && (
+            <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
+              <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--t1)' }}>~{Math.ceil(weeksToFinish)}</span>
+              <span style={{ fontSize: 9, color: 'var(--t3)', textAlign: 'center' as const }}>нед до закрытия<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
+            </div>
+          )}
+          {onTrack && (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 8,
+              background: `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 14%,transparent)`,
+              border: `1px solid color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 35%,transparent)` }}>
+              <GameIcon slug={onTrack.ok ? 'check-mark' : 'padlock'} size={14}
+                style={{ color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column' as const }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }}>
+                  {onTrack.ok ? 'В графике' : 'Риск срыва'}
+                </span>
+                <span style={{ fontSize: 9, color: 'var(--t3)' }}>
+                  {onTrack.ok ? `запас ${onTrack.slack} дн` : `не хватает ${-onTrack.slack} дн`}
+                </span>
+              </div>
+            </div>
+          )}
+        </section>
       )}
-    </section>
+
+      {/* Drilldown — открытые спринты по группам статуса */}
+      {showOpenDrilldown && (
+        <section style={S.panel}>
+          <div style={{ ...S.panelTitle, marginBottom: 10 }}>
+            Открытые спринты <span style={S.dim}>· {openSprintCount}</span>
+            <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 8 }}>кликни на спринт → перейти</span>
+          </div>
+          {openSprintGroups.map(g => (
+            <div key={g.label} style={{ marginBottom: 10 }}>
+              <div style={{ ...S.groupBucket, color: g.col, marginBottom: 4 }}>{g.label} · {g.sprints.length}</div>
+              {g.sprints.map(s => {
+                const taskPct = s.task_total > 0 ? pct(s.task_done, s.task_total) : null;
+                return (
+                  <div key={s.sprint_id}
+                    onClick={() => onNavigateToSprint?.(s.sprint_id)}
+                    role={onNavigateToSprint ? 'button' : undefined}
+                    style={{ ...S.trow, cursor: onNavigateToSprint ? 'pointer' : 'default' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: g.col, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 10, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                      {s.sprint_id}
+                    </span>
+                    {taskPct !== null && (
+                      <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                        {s.task_done}/{s.task_total} задач · {taskPct}%
+                      </span>
+                    )}
+                    {s.task_total === 0 && (
+                      <span style={{ fontSize: 9, color: 'var(--t3)', flexShrink: 0 }}>нет задач</span>
+                    )}
+                    {onNavigateToSprint && (
+                      <span style={{ fontSize: 9, color: 'var(--acc)', flexShrink: 0, marginLeft: 4 }}>→</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section style={S.panel}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ ...S.panelTitle, marginBottom: 0 }}>
+            Спринты <span style={S.dim}>· {data.by_sprint.length}</span>
+            <span style={{ ...S.openChip, marginLeft: 8 }}>{openSprintCount} открытых</span>
+          </div>
+          <div style={S.filterChips}>
+            {SPRINT_FILTERS.map(f => {
+              const count = filterSprints(data.by_sprint, f.key).length;
+              return (
+                <button key={f.key}
+                  style={{ ...S.chip, ...(sprintFilter === f.key ? S.chipActive : {}) }}
+                  onClick={() => setSprintFilter(f.key)}>
+                  {f.label} <span style={S.chipCount}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {sprintFilter === 'active' ? (
+          <SprintGroupedActive sprints={filteredSprints} onNavigate={onNavigateToSprint} />
+        ) : sprintFilter === 'done' ? (
+          <SprintGroupedDone sprints={filteredSprints} onNavigate={onNavigateToSprint} />
+        ) : (
+          <div style={{ ...S.table, maxHeight: 420, overflowY: 'auto' as const }}>
+            {filteredSprints.length === 0
+              ? <div style={S.empty}>Нет спринтов в этой группе.</div>
+              : filteredSprints.map(s => <SprintRowItem key={s.sprint_id} s={s} onNavigate={onNavigateToSprint} />)}
+          </div>
+        )}
+      </section>
+    </>
   );
 
   // ── Tab 6: Quality Gates dashboard ──────────────────────────────────────
