@@ -777,8 +777,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       {/* ── Top meta block: context (left) + projects/milestones/modules (right) ── */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
 
-      {/* CONTEXT — left, flexible */}
-      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px' }}>
+      {/* CONTEXT — left, flexible. maxHeight+overflow caps its growth so a long
+          context_md can never crowd out the task list below (both this block and
+          the task list live in the same flex column; without a cap, a large
+          context — flexShrink:0 — pushes the flex:1 task list toward 0 height). */}
+      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px', maxHeight: 220, overflowY: 'auto' as const }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Контекст</span>
           {!ctxEdit && (
@@ -808,7 +811,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       </div>
 
       {/* META RIGHT — projects + milestones + modules */}
-      <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, overflowY: 'auto' as const }}>
+      <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: 220, overflowY: 'auto' as const }}>
 
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {

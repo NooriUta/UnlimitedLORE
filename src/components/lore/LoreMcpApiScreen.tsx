@@ -1,7 +1,8 @@
 // LoreMcpApiScreen — published API reference for the `aida-lore` MCP server.
-// Lives at /lore?section=mcp. Documents the 5 tools, the backend contract, env
-// and runbook, and pings the live backend to show health + the real slice
-// catalog that `lore_list_slices` exposes.
+// Lives at /lore?section=mcp. Documents the LORE write/read tools, the backend
+// contract, env and runbook, and pings the live backend to show health + the
+// real slice catalog that `lore_list_slices` exposes. bench_* (MUNINN) tools
+// live on the same server but are documented on /benchmark?tab=mcp instead.
 import { useEffect, useState } from 'react';
 import { fetchLoreSliceCatalog, type LoreSliceDescriptor } from '../../api/lore';
 
@@ -30,17 +31,26 @@ const TOOLS: ToolDoc[] = [
   { name: 'lore_update_sprint', kind: 'write', backend: 'POST /lore/sprint/update',
     params: 'sprint_id, name?, outcome_md?, context_md?, priority?, plan_id?, effort_days?',
     desc: 'Partial-update метаданных KnowSprint. Не меняет статус (для статуса — lore_set_status). Всегда заполнять context_md, если известен контекст.' },
+  { name: 'lore_update_sprint_refs', kind: 'write', backend: 'POST /lore/sprint/refs',
+    params: 'sprint_id, pr_numbers[], git_project?',
+    desc: 'Добавить PR-ссылки в pr_refs открытой KnowSprintHist строки. Пропускает уже присутствующие. Возвращает updated pr_refs.' },
   { name: 'lore_link_sprint_project', kind: 'write', backend: 'POST /lore/sprint/project',
     params: 'sprint_id, git_project, action?',
     desc: 'Добавить/убрать BELONGS_TO_PROJECT edge (KnowSprint → KnowGitProject). action = add | remove.' },
-  { name: 'lore_update_sprint_refs', kind: 'write', backend: 'POST /lore/sprint/refs',
-    params: 'sprint_id, pr_numbers, git_project?',
-    desc: 'Добавить PR-ссылки в pr_refs открытой KnowSprintHist строки. Пропускает уже присутствующие. Возвращает updated pr_refs.' },
+  { name: 'lore_link_sprint_dep', kind: 'write', backend: 'POST /lore/sprint/dep',
+    params: 'from_sprint, to_sprint, kind?, reason?, action?',
+    desc: 'DEPENDS_ON edge между спринтами. kind = hard|soft|gate|informs. Сервер отклоняет рёбра, создающие цикл. action = add | remove.' },
+  { name: 'lore_link_sprint_component', kind: 'write', backend: 'POST /lore/sprint/component',
+    params: 'sprint_id, component_id, action?',
+    desc: 'Явное BELONGS_TO edge (спринт → компонент) — перекрывает нечёткий матч по имени в component_sprints. action = add | remove.' },
+  { name: 'lore_link_sprint_milestone', kind: 'write', backend: 'POST /lore/milestone/sprint',
+    params: 'sprint_id, milestone_id, action?',
+    desc: 'Прямое TARGETS_MILESTONE edge для спринтов без PlanItem-моста. Для спринтов с PlanItem — предпочтительнее lore_update_plan_item. action = add | remove.' },
 
   // ── Status ─────────────────────────────────────────────────────────────────
   { name: 'lore_set_status', kind: 'write', backend: 'POST /lore/status',
     params: 'entity_type, id, status',
-    desc: 'Сменить статус (SCD2: закрыть старую hist-строку valid_to=now, открыть новую). entity_type: plan_item|sprint|task. status ∈ todo|active|partial|done|blocked|high|cancelled.' },
+    desc: 'Сменить статус (SCD2: закрыть старую hist-строку valid_to=now, открыть новую). entity_type: plan_item|sprint|task|checkpoint. status ∈ todo|planned|active|partial|done|blocked|high|cancelled|backlog|design|ready_for_deploy.' },
   { name: 'lore_batch_set_status', kind: 'write', backend: 'POST /lore/status/batch',
     params: 'entity_type, ids[], status',
     desc: 'Массово сменить статус: каждый id проходит полный SCD2-переход. Ошибки per-item, не прерывают остальных. Возвращает {ok, updated, errors[]}.' },
@@ -50,16 +60,66 @@ const TOOLS: ToolDoc[] = [
     params: 'sprint_id, task_id, title, note_md?',
     desc: 'Создать задачу в спринте (order_index = max+1, начальный статус PLANNED с HAS_STATE hist-строкой).' },
   { name: 'lore_edit_task', kind: 'write', backend: 'POST /lore/task/edit',
-    params: 'task_uid | tasks[]',
-    desc: 'Изменить заголовок/заметку задачи. Одиночный режим: task_uid + title. Batch-режим: tasks=[{task_uid, title, note_md?}].' },
+    params: 'task_uid+title | tasks[]',
+    desc: 'Изменить заголовок/заметку/effort_days задачи. Одиночный режим: task_uid + title (+ note_md?, effort_days?). Batch: tasks=[{task_uid, title, note_md?, effort_days?}].' },
+  { name: 'lore_link_task_component', kind: 'write', backend: 'POST /lore/task/component',
+    params: 'task_uid, component_id, action?',
+    desc: 'TAGGED_WITH edge между задачей и компонентом (many-to-many). action = add | remove.' },
+
+  // ── Plan item / milestone ─────────────────────────────────────────────────
+  { name: 'lore_update_plan_item', kind: 'write', backend: 'POST /lore/plan-item/milestone',
+    params: 'item_id, milestone_id?, action?',
+    desc: 'CONTRIBUTES_TO edge (PlanItem → Milestone). Канонический путь привязки спринта к вехе, когда у спринта есть plan-item. action="remove" без milestone_id снимает все связи.' },
 
   // ── ADR / Decision ─────────────────────────────────────────────────────────
   { name: 'lore_create_adr', kind: 'write', backend: 'POST /lore/adr',
-    params: 'adr_id, name, status?, date_created?, component_id?, context_md?, decision_md?, consequences_md?',
-    desc: 'Создать/обновить KnowADR (upsert by adr_id). Создаёт полную SCD2-структуру: вершина KnowADR + открытая KnowADRHist (valid_to=null) с context_md / decision_md / consequences_md + HAS_STATE edge. При повторном вызове обновляет тело открытой hist-строки.' },
+    params: 'adr_id, name, status?, date_created?, component_id(s)?, context_md?, decision_md?, consequences_md?, depends_on_ids?, supersedes_ids?, tags?',
+    desc: 'Создать/обновить KnowADR (upsert by adr_id). Полная SCD2-структура: вершина + открытая KnowADRHist + HAS_STATE edge. Партиальные вызовы БЕЗОПАСНЫ (LH-44, 2026-07): непереданные поля (context_md/decision_md/consequences_md/date_created/component_id) остаются нетронутыми, не обнуляются. depends_on_ids/supersedes_ids/component_ids/tags при передаче ЗАМЕНЯЮТ весь набор рёбер.' },
+  { name: 'lore_update_adr', kind: 'write', backend: 'POST /lore/adr',
+    params: 'adr_id, name, status?, date_created?, component_id(s)?, context_md?, decision_md?, consequences_md?, depends_on_ids?, supersedes_ids?, tags?',
+    desc: 'Тонкая обёртка над тем же эндпоинтом, что и lore_create_adr — сигнатура заточена под точечный amend: правь один раздел (например только decision_md), остальные секции гарантированно не тронутся. name всё ещё обязателен (бэкенд пишет его на каждый вызов).' },
   { name: 'lore_create_decision', kind: 'write', backend: 'POST /lore/decision',
     params: 'decision_id, title, body_md?, date_created?, refs_raw?',
     desc: 'Создать/обновить KnowDecision (upsert by decision_id). Для записи ключевых решений, принятых в ходе спринта или дизайн-сессии.' },
+
+  // ── Spec / QG / Runbook / Doc ─────────────────────────────────────────────
+  { name: 'lore_create_spec', kind: 'write', backend: 'POST /lore/spec',
+    params: 'spec_id, title, version?, component_id?, content_md?, file_path?',
+    desc: 'Создать/обновить KnowSpec (upsert by spec_id). Партиальные вызовы БЕЗОПАСНЫ (LH-44, 2026-07) — непереданные version/component_id/content_md/file_path не обнуляются. Годится и для точечного bump version/content_md.' },
+  { name: 'lore_delete_spec', kind: 'write', backend: 'POST /lore/spec/delete',
+    params: 'spec_id',
+    desc: 'Безвозвратно удалить вершину KnowSpec по spec_id.' },
+  { name: 'lore_create_quality_gate', kind: 'write', backend: 'POST /lore/quality-gate',
+    params: 'qg_id, name, description?, component_id?, status?, content_md?, sprint_id?',
+    desc: 'Создать/обновить QualityGate (upsert by qg_id).' },
+  { name: 'lore_create_runbook', kind: 'write', backend: 'POST /lore/runbook',
+    params: 'runbook_id, name, area?, date_created?, content_md?',
+    desc: 'Создать/обновить KnowRunbook (upsert by runbook_id).' },
+  { name: 'lore_create_doc', kind: 'write', backend: 'POST /lore/doc',
+    params: 'doc_id, title, kind?, has_ext_deps?, component_id?, file_path?, content_html?',
+    desc: 'Создать/обновить KnowDoc — HTML-документ/фрагмент (upsert by doc_id). content_html ≤100 КБ.' },
+
+  // ── QG рутина: прогон → job-task → рекомендация → задача ──────────────────
+  { name: 'lore_record_qg_run', kind: 'write', backend: 'POST /lore/qg/run',
+    params: 'routine_name, run_date, status, metrics[]?, started_at?, finished_at?, flags?, run_id?',
+    desc: 'Записать завершённый прогон QG-рутины (ClRoutineRun + ClRoutineMetric). Вызывать один раз в конце каждого прогона. metrics[] — SMART-метрики (ADR-QG-002): key/value/unit/target/status/source (file:line evidence).' },
+  { name: 'lore_create_qg_job_task', kind: 'write', backend: 'POST /lore/qg/job-task',
+    params: 'job_id, qg_id, inv_id?, run_date?, severity?, status?, note_md?',
+    desc: 'Upsert QGJobTask + YIELDED edge от родительской QualityGate. Вызывать после FAIL инварианта. При PASS того же qg_id+inv_id закрывает открытые job-task как resolved.' },
+  { name: 'lore_create_recommendation', kind: 'write', backend: 'POST /lore/qg/recommendation',
+    params: 'rec_id, job_id, title, body_md?, status?, priority?, severity?, effort_days?, tags?, component_id?, qg_id?, inv_id?, fix_cmd?, how_to_verify?',
+    desc: 'Upsert QGRecommendation + PRODUCED edge от QGJobTask. status стартует как pending, до подтверждения пользователем.' },
+  { name: 'lore_promote_recommendation', kind: 'write', backend: 'POST /lore/qg/promote',
+    params: 'rec_id, sprint_id?, task_uid?, title?, note_md?',
+    desc: 'Подтвердить рекомендацию → создать KnowTask в SPRINT_QG_VIOLATIONS (или указанном спринте). Бэкенд сам обогащает note_md из полей рекомендации, если не переданы. Использовать после явного «да» пользователя.' },
+
+  // ── Component ──────────────────────────────────────────────────────────────
+  { name: 'lore_create_component', kind: 'write', backend: 'POST /lore/component/create',
+    params: 'component_id, full_name?, area?, team?, game_icon?, owner?, parent_id?',
+    desc: 'Создать новый LoreComponent (upsert by component_id). Для компонентов, которых ещё нет в графе.' },
+  { name: 'lore_update_component', kind: 'write', backend: 'POST /lore/component/update',
+    params: 'component_id, full_name?, area?, team?, game_icon?, owner?, parent_id?',
+    desc: 'Partial-update существующего LoreComponent (только переданные поля). Переименование, смена владельца/команды/иконки, репарент.' },
 
   // ── Release ────────────────────────────────────────────────────────────────
   { name: 'lore_create_release', kind: 'write', backend: 'POST /lore/release',
@@ -178,7 +238,11 @@ export default function LoreMcpApiScreen() {
             <code style={S.code}>lore_create_adr</code> создаёт полную SCD2-структуру:
             вершина + KnowADRHist (valid_to=null) + HAS_STATE edge — тело ADR читается
             именно из hist-строки.{' '}
-            Из набора пока не реализован только <code style={S.code}>checkpoint</code> (бэкенд → 501).
+            Партиальные (amend) вызовы <code style={S.code}>/lore/adr</code> и{' '}
+            <code style={S.code}>/lore/spec</code> с 2026-07 безопасны — SQL SET собирается
+            динамически, непереданное поле не трогается (раньше пропущенный параметр
+            молча обнулялся). Из набора пока не реализован только{' '}
+            <code style={S.code}>checkpoint</code> (бэкенд → 501).
             Инструменты по <b>Исследованиям</b> (витрина RAGVSDL) — на отдельной странице
             «MCP API» в разделе «Исследования» (<code style={S.code}>/benchmark?tab=mcp</code>).
           </p>

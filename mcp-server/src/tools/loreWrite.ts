@@ -291,24 +291,70 @@ export function registerLoreWrite(server: McpServer): void {
   server.tool(
     'lore_create_adr',
     'Create or update a KnowADR (Architecture Decision Record). Idempotent — upserts by adr_id. ' +
-      'Default status is PROPOSED. Supports context_md / decision_md / consequences_md sections.',
+      'Default status is PROPOSED. Supports context_md / decision_md / consequences_md sections. ' +
+      'depends_on_ids/supersedes_ids/component_ids/tags each REPLACE the full edge set on every call ' +
+      '(diff against current, not additive) — omit a param to leave that edge set untouched.',
     {
       adr_id:           z.string().describe('e.g. "ADR-HND-022"'),
       name:             z.string().describe('short title'),
       status:           z.enum(['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED']).optional(),
       date_created:     z.string().optional().describe('YYYY-MM-DD, defaults to today'),
-      component_id:     z.string().optional().describe('e.g. "HND" for Hound'),
+      component_id:     z.string().optional().describe('e.g. "HND" for Hound — single legacy field, ignored if component_ids is set'),
+      component_ids:    z.array(z.string()).optional().describe('multiple components, e.g. ["HND", "SHT"] — wins over component_id'),
       context_md:       z.string().optional(),
       decision_md:      z.string().optional(),
       consequences_md:  z.string().optional(),
+      depends_on_ids:   z.array(z.string()).optional().describe('other adr_id this ADR depends on — creates DEPENDS_ON edges, replaces the full set'),
+      supersedes_ids:   z.array(z.string()).optional().describe('adr_id(s) this ADR supersedes — creates SUPERSEDES edges FROM this adr TO each listed one, replaces the full set. Pair with status="SUPERSEDED" on the OLD adr_id (separate lore_create_adr call) to mark it retired.'),
+      tags:             z.array(z.string()).optional().describe('free-text tags — upserts KnowTag + TAGGED_WITH edges, replaces the full set'),
     },
-    async ({ adr_id, name, status, date_created, component_id, context_md, decision_md, consequences_md }) => {
+    async ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags }) => {
       try {
         return json(await lorePost('/lore/adr', {
           adr_id, name,
           status: status ?? null, date_created: date_created ?? null,
-          component_id: component_id ?? null, context_md: context_md ?? null,
+          component_id: component_id ?? null, component_ids: component_ids ?? null,
+          context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
+          depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
+          tags: tags ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_update_adr',
+    'Amend an EXISTING KnowADR — thin wrapper over the same endpoint as lore_create_adr, ' +
+      'tailored for partial updates. name is still required (backend always writes it), everything ' +
+      'else is safe to omit: unset context_md/decision_md/consequences_md/date_created/component_id/status ' +
+      'are left UNTOUCHED (never wiped or reset to today). Use this to amend a single ADR section — ' +
+      'e.g. only decision_md to fix a typo, or only status to mark SUPERSEDED — without resending the ' +
+      'whole body. depends_on_ids/supersedes_ids/component_ids/tags still REPLACE the full edge set when passed.',
+    {
+      adr_id:           z.string().describe('existing ADR to amend, e.g. "ADR-HND-022"'),
+      name:             z.string().describe('current/updated title — required by the backend on every write'),
+      status:           z.enum(['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED']).optional(),
+      date_created:     z.string().optional().describe('YYYY-MM-DD — omit to leave the existing date untouched'),
+      component_id:     z.string().optional().describe('single legacy field — omit to leave untouched, ignored if component_ids is set'),
+      component_ids:    z.array(z.string()).optional().describe('multiple components — replaces the full set, omit to leave untouched'),
+      context_md:       z.string().optional().describe('omit to leave the existing section untouched'),
+      decision_md:      z.string().optional().describe('omit to leave the existing section untouched'),
+      consequences_md:  z.string().optional().describe('omit to leave the existing section untouched'),
+      depends_on_ids:   z.array(z.string()).optional().describe('replaces the full DEPENDS_ON edge set, omit to leave untouched'),
+      supersedes_ids:   z.array(z.string()).optional().describe('replaces the full SUPERSEDES edge set, omit to leave untouched. Pair with status="SUPERSEDED" on the OLD adr_id (separate call) to mark it retired.'),
+      tags:             z.array(z.string()).optional().describe('replaces the full tag set, omit to leave untouched'),
+    },
+    async ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags }) => {
+      try {
+        return json(await lorePost('/lore/adr', {
+          adr_id, name,
+          status: status ?? null, date_created: date_created ?? null,
+          component_id: component_id ?? null, component_ids: component_ids ?? null,
+          context_md: context_md ?? null,
+          decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
+          depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
+          tags: tags ?? null,
         }));
       } catch (e) { return err(e); }
     },
