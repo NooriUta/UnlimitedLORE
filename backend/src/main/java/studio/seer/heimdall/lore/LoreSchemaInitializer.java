@@ -166,25 +166,42 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowMilestone   (milestone_id) UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowPhase       (phase_uid)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowTask        (task_uid)     UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowTask        (task_id)",
+        // NB 2026-07-01: CREATE INDEX ... NOTUNIQUE (unlike UNIQUE) does NOT
+        // implicitly create the property — on a truly fresh DB it fails with
+        // "property does not exist". Explicit CREATE PROPERTY first, everywhere
+        // a NOTUNIQUE index follows. Confirmed by re-running backend/db-schema/
+        // bootstrap.sh against a live DB missing exactly these two properties.
+        "CREATE PROPERTY KnowTask.task_id IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowTask        (task_id) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanItem        (item_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanCheckpoint  (checkpoint_id) UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanVersion     (version_id)   UNIQUE",
 
         // ── Status valid_to index (current-row lookup for write-path SCD2) ─────
-        "CREATE INDEX IF NOT EXISTS ON StatusPlanItem    (valid_to)",
+        "CREATE PROPERTY StatusPlanItem.valid_to IF NOT EXISTS DATETIME",
+        "CREATE INDEX IF NOT EXISTS ON StatusPlanItem    (valid_to) NOTUNIQUE",
 
         // ── Hist valid_to indexes (current-row queries) ───────────────────────
-        "CREATE INDEX IF NOT EXISTS ON KnowDecisionHist  (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowADRHist       (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowSprintHist    (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowSpecHist      (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowFindingHist   (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowReleaseHist   (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowMilestoneHist (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowPhaseHist     (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON KnowTaskHist      (valid_to)",
-        "CREATE INDEX IF NOT EXISTS ON PlanItemHist      (valid_to)",
+        "CREATE PROPERTY KnowDecisionHist.valid_to  IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowADRHist.valid_to       IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowSprintHist.valid_to    IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowSpecHist.valid_to      IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowFindingHist.valid_to   IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowReleaseHist.valid_to   IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowMilestoneHist.valid_to IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowPhaseHist.valid_to     IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowTaskHist.valid_to      IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY PlanItemHist.valid_to      IF NOT EXISTS DATETIME",
+        "CREATE INDEX IF NOT EXISTS ON KnowDecisionHist  (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowADRHist       (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowSprintHist    (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowSpecHist      (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowFindingHist   (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowReleaseHist   (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowMilestoneHist (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowPhaseHist     (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowTaskHist      (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON PlanItemHist      (valid_to) NOTUNIQUE",
 
         // ── Phase 5 (v1.2): KnowRunbook + QualityGate + QGMetric ────────────────
         "CREATE VERTEX TYPE KnowRunbook     IF NOT EXISTS EXTENDS V",
@@ -207,7 +224,8 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON QualityGate   (qg_id)        UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON QGMetric      (metric_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDoc       (doc_id)       UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to)",
+        "CREATE PROPERTY KnowDocHist.valid_to IF NOT EXISTS DATETIME",
+        "CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to) NOTUNIQUE",
 
         // ── Phase 6 (v1.3): ClRoutine* — routine run outputs stored in LORE ──
         // ArcadeDB DDL: CREATE VERTEX/EDGE TYPE (no EXTENDS V/E via SQL),
