@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchLoreSlice } from '../../api/lore';
+import { parseRoutine, parseInvariants, parseGateSubtitle } from '../../lib/qgContentMd';
 
 interface QGDetail {
   qg_id: string;
@@ -43,19 +44,6 @@ interface RunMetric {
   source: string | null;
 }
 
-// Parsed from content_md per ADR-QG-002 INV blocks (ADR-QG-004 data contract).
-interface ParsedInv {
-  invNo: string;       // "01"
-  key: string;         // bare metric_key, e.g. "auth_timeout_ms"
-  unit: string | null;
-  target: number | null;
-  direction: string | null;   // gte | lte
-  source: string | null;
-  howToVerify: string | null;
-  condition: string | null;
-  descr: string | null;
-}
-
 const SEV_COLOR: Record<string, string> = {
   blocker: 'var(--danger)',
   major:   'var(--wrn)',
@@ -78,62 +66,6 @@ function statusColor(s: string | null): string {
     : s === 'WARN' ? 'var(--wrn)'
     : s === 'FAIL' ? 'var(--danger)'
     : 'var(--t3)';
-}
-
-// ── content_md parsing (ADR-QG-004 §contract) ────────────────────────────────
-function parseRoutine(md: string | null, fallback: string): string {
-  if (!md) return fallback;
-  const m = md.match(/\*\*Routine:\*\*\s*`([^`]+)`/);
-  return m ? m[1].trim() : fallback;
-}
-
-function parseInvariants(md: string | null): ParsedInv[] {
-  if (!md) return [];
-  const out: ParsedInv[] = [];
-  // Split on "### " headings; first chunk is title/intro.
-  const chunks = md.split(/^###\s+/m).slice(1);
-  for (const chunk of chunks) {
-    const lines = chunk.split('\n');
-    const head = lines[0] ?? '';
-    // "INV-01 · circuit_breaker_fires"
-    const hm = head.match(/INV-(\d+)\s*[·.\-]\s*([A-Za-z0-9_]+)/);
-    if (!hm) continue;
-    const invNo = hm[1];
-    const key = hm[2].trim();
-    // fenced block fields
-    const fence = chunk.match(/```([\s\S]*?)```/);
-    const block = fence ? fence[1] : '';
-    const field = (name: string): string | null => {
-      const r = block.match(new RegExp('^\\s*' + name + ':\\s*(.+)$', 'm'));
-      return r ? r[1].trim() : null;
-    };
-    const tRaw = field('target');
-    const target = tRaw != null && tRaw !== '' && !isNaN(Number(tRaw)) ? Number(tRaw) : null;
-    // description: text after the closing fence, until end of chunk
-    let descr: string | null = null;
-    if (fence) {
-      const after = chunk.slice((chunk.indexOf(fence[0]) ?? 0) + fence[0].length).trim();
-      descr = after ? after.split('\n').map(s => s.trim()).filter(Boolean).join(' ') : null;
-    }
-    out.push({
-      invNo,
-      key,
-      unit: field('unit'),
-      target,
-      direction: field('direction'),
-      source: field('source'),
-      howToVerify: field('how_to_verify'),
-      condition: field('condition'),
-      descr,
-    });
-  }
-  return out;
-}
-
-function parseGateSubtitle(md: string | null): string | null {
-  if (!md) return null;
-  const m = md.match(/\*\*Gate:\*\*\s*(.+)$/m);
-  return m ? m[1].trim() : null;
 }
 
 async function lorePost<T>(path: string, body: unknown): Promise<T> {

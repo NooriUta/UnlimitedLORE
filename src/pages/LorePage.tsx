@@ -219,6 +219,7 @@ export default function LorePage() {
   const navigateToAdr    = (id: string) => setParams(p => { p.set('section', 'adrs');    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('kind', kind); p.set('art', id); return p; });
   const closeArt  = () => setParams(p => { p.delete('kind'); p.delete('art'); return p; });
 
@@ -846,6 +847,7 @@ export default function LorePage() {
               onError={handleFetchError}
               onNavigateToSprint={navigateToSprint}
               onNavigateToComponent={navigateToComponent}
+              onNavigateToQG={navigateToQG}
             />
           )}
 

@@ -4,11 +4,13 @@ import { statusMeta } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
+import { parseRoutine, parseInvariants, type ParsedInv } from '../../lib/qgContentMd';
 
 interface Props {
   onError: (e: unknown) => void;
   onNavigateToSprint?: (id: string) => void;
   onNavigateToComponent?: (id: string) => void;
+  onNavigateToQG?: (id: string) => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,6 +33,16 @@ interface QGRow {
   component_id: string | null; status: string | null;
   last_run_status: string | null;
   date_created: string | null; sprint_id?: string | null;
+  content_md: string | null;
+}
+
+// One FAIL/WARN invariant surfaced fleet-wide, joined content_md × latest metric.
+// Status recomputed client-side via computeStatus (content_md is the authority per
+// ADR-QG-004 — ClRoutineMetric.status can drift from the gate's declared condition,
+// see QG-ALGORITHMIC-HEALTH loc_per_class 2026-06-30 incident).
+interface FleetInvariant {
+  qgId: string; qgName: string; routine: string; inv: ParsedInv;
+  value: number | null; status: string;
 }
 
 const TODAY = new Date('2026-06-30');
@@ -324,7 +336,7 @@ function BurnupChart({ points }: { points: { ms: number; scope: number; done: nu
 
 // ── main component ─────────────────────────────────────────────────────────
 
-export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavigateToComponent }: Props) {
+export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavigateToComponent, onNavigateToQG }: Props) {
   const [data,       setData]       = useState<LoreAnalytics | null>(null);
   const [components, setComponents] = useState<LoreComponent[]>([]);
   const [doneDates,  setDoneDates]  = useState<LoreSprintDoneDate[]>([]);
@@ -899,16 +911,89 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   }
 
   // QG-вкладка hooks — ДО ранних return (иначе React #310: меняется число хуков).
-  const latestRunByQg = useMemo(() => {
+
+  // routine_name resolved from content_md (ADR-QG-004 §contract) — NOT qg_id.toLowerCase()/
+  // toUpperCase(), which only accidentally matches gates whose qg_id equals their routine name.
+  const routineByQg = useMemo(() => {
     const map = new Map<string, string>();
-    const byName = new Map<string, LoreQGRoutineRun>();
-    qgRoutineRuns.forEach(r => {
-      const prev = byName.get(r.routine_name);
-      if (!prev || (r.run_date ?? '') > (prev.run_date ?? '')) byName.set(r.routine_name, r);
-    });
-    byName.forEach((r, name) => { map.set(name.toUpperCase(), r.status ?? 'unknown'); });
+    qgRows.forEach(q => map.set(q.qg_id, parseRoutine(q.content_md, q.qg_id.toLowerCase())));
     return map;
-  }, [qgRoutineRuns]);
+  }, [qgRows]);
+
+  const invariantsByQg = useMemo(() => {
+    const map = new Map<string, ParsedInv[]>();
+    qgRows.forEach(q => map.set(q.qg_id, parseInvariants(q.content_md)));
+    return map;
+  }, [qgRows]);
+
+  // Per-routine latest metrics: Map<routine_name, Map<metric_key, QGMetricRow>>
+  const qgMetricsByRoutine = useMemo(() => {
+    const map = new Map<string, Map<string, QGMetricRow>>();
+    qgMetricsLatest.forEach(m => {
+      if (!map.has(m.routine_name)) map.set(m.routine_name, new Map());
+      map.get(m.routine_name)!.set(m.metric_key, m);
+    });
+    return map;
+  }, [qgMetricsLatest]);
+
+  // Fleet join: every gate's declared invariants × its latest metric. Status comes from
+  // ClRoutineMetric.status (computed by the routine script at write time) — NOT recomputed
+  // from content_md's target/direction. content_md can drift from what the script actually
+  // implements (see QG-AUTH-RUNTIME/ropc_removed: content_md says target=404, but the script
+  // emits a bool with target=1 — recomputing against content_md's target would report a false
+  // FAIL for an invariant that is really PASS). content_md is used for display context
+  // (condition/how_to_verify/target label) only, matching LoreQGDetail.tsx's approach.
+  const fleetInvariants = useMemo(() => {
+    const out: FleetInvariant[] = [];
+    qgRows.forEach(q => {
+      if (q.status !== 'active') return;
+      const routine = routineByQg.get(q.qg_id)!;
+      const metrics = qgMetricsByRoutine.get(routine);
+      invariantsByQg.get(q.qg_id)!.forEach(inv => {
+        const m = metrics?.get(inv.key);
+        const value = m?.value ?? null;
+        const status = m?.status ?? 'SKIP';
+        out.push({ qgId: q.qg_id, qgName: q.name, routine, inv, value, status });
+      });
+    });
+    return out;
+  }, [qgRows, routineByQg, invariantsByQg, qgMetricsByRoutine]);
+
+  // Overall status per gate = worst of its invariants (FAIL > WARN > SKIP > PASS),
+  // mirrors ADR-QG-002 compute_status overall rule. Falls back to 'norun' when a
+  // gate has no parsed invariants or no metrics yet.
+  const overallByQg = useMemo(() => {
+    const rank: Record<string, number> = { FAIL: 3, WARN: 2, SKIP: 1, PASS: 0 };
+    const map = new Map<string, string>();
+    qgRows.forEach(q => {
+      const invs = fleetInvariants.filter(f => f.qgId === q.qg_id);
+      if (invs.length === 0) { map.set(q.qg_id, 'norun'); return; }
+      const worst = invs.reduce((w, f) => (rank[f.status] ?? 0) > (rank[w] ?? 0) ? f.status : w, 'PASS');
+      map.set(q.qg_id, worst);
+    });
+    return map;
+  }, [qgRows, fleetInvariants]);
+
+  // Fleet triage list — FAIL/WARN invariants only, FAIL first, grouped by routine downstream.
+  const attentionNeeded = useMemo(
+    () => fleetInvariants.filter(f => f.status === 'FAIL' || f.status === 'WARN')
+      .sort((a, b) => (a.status === b.status ? 0 : a.status === 'FAIL' ? -1 : 1)),
+    [fleetInvariants],
+  );
+
+  // Grouped by gate — gates with an active FAIL surface first.
+  const attentionByGate = useMemo(() => {
+    const map = new Map<string, FleetInvariant[]>();
+    attentionNeeded.forEach(f => {
+      if (!map.has(f.qgId)) map.set(f.qgId, []);
+      map.get(f.qgId)!.push(f);
+    });
+    return [...map.entries()].sort((a, b) => {
+      const aFail = a[1].some(f => f.status === 'FAIL') ? 1 : 0;
+      const bFail = b[1].some(f => f.status === 'FAIL') ? 1 : 0;
+      return bFail - aFail || b[1].length - a[1].length;
+    });
+  }, [attentionNeeded]);
 
   const violsBySeverity = useMemo(() => {
     const map: Record<string, LoreQGViolation[]> = {};
@@ -921,26 +1006,6 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   }, [qgViolations]);
 
   void qgRoutineRuns; // used directly in tabQuality grouped view
-
-  // Per-routine latest metrics: Map<routine_name, Map<metric_key, QGMetricRow>>
-  const qgMetricsByRoutine = useMemo(() => {
-    const map = new Map<string, Map<string, QGMetricRow>>();
-    qgMetricsLatest.forEach(m => {
-      if (!map.has(m.routine_name)) map.set(m.routine_name, new Map());
-      map.get(m.routine_name)!.set(m.metric_key, m);
-    });
-    return map;
-  }, [qgMetricsLatest]);
-
-  // Latest run per routine (full object, not just status)
-  const latestRunByRoutine = useMemo(() => {
-    const map = new Map<string, LoreQGRoutineRun>();
-    qgRoutineRuns.forEach(r => {
-      const prev = map.get(r.routine_name);
-      if (!prev || (r.run_date ?? '') > (prev.run_date ?? '')) map.set(r.routine_name, r);
-    });
-    return map;
-  }, [qgRoutineRuns]);
 
   const qgByComponent = useMemo(() => {
     const map = new Map<string, QGRow[]>();
@@ -1934,21 +1999,26 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
       <div style={S.row2}>
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Цвет = статус последнего ClRoutineRun. Серый = нет прогонов.">
+          <div style={S.panelTitle} title="Цвет = худший статус среди инвариантов гейта (content_md × latest metric, ADR-QG-002 compute_status). Серый = нет прогонов/метрик.">
             QG статус-сетка <span style={S.dim}>· {qgRows.length}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 5 }}>
             {qgRows.map(q => {
-              const runSt = latestRunByQg.get(q.qg_id) ?? null;
-              const col = runColor(runSt);
+              const runSt = overallByQg.get(q.qg_id) ?? null;
+              const col = runColor(runSt === 'norun' ? null : runSt);
               const label = q.qg_id.replace(/^QG-/, '').replace(/-/g, ' ');
+              const clickable = !!onNavigateToQG;
               return (
-                <div key={q.qg_id} title={`${q.qg_id}\nПоследний прогон: ${runSt ?? 'нет'}`}
+                <div key={q.qg_id}
+                  onClick={clickable ? () => onNavigateToQG!(q.qg_id) : undefined}
+                  title={`${q.qg_id}\nРутина: ${routineByQg.get(q.qg_id)}\nСтатус: ${runSt === 'norun' ? 'нет прогонов' : runSt}`}
                   style={{ padding: '4px 7px', borderRadius: 5, fontSize: 9, fontWeight: 600,
                     background: `color-mix(in srgb,${col} 12%,var(--b3))`,
                     border: `1px solid color-mix(in srgb,${col} 30%,transparent)`,
-                    color: col, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 7, color: 'var(--t3)', fontFamily: 'var(--mono)', marginBottom: 2 }}>{runSt ?? '—'}</div>
+                    color: col, overflow: 'hidden', cursor: clickable ? 'pointer' : 'default' }}>
+                  <div style={{ fontSize: 7, color: 'var(--t3)', fontFamily: 'var(--mono)', marginBottom: 2 }}>
+                    {runSt === 'norun' ? '—' : runSt}
+                  </div>
                   <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, lineHeight: 1.3 }}>{label}</div>
                 </div>
               );
@@ -1961,7 +2031,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={S.panelTitle}>Здоровье по компонентам</div>
           <div style={S.table}>
             {qgByComponent.map(([cid, gates]) => {
-              const statuses = gates.map(g => latestRunByQg.get(g.qg_id) ?? 'norun');
+              const statuses = gates.map(g => overallByQg.get(g.qg_id) ?? 'norun');
               const nPass = statuses.filter(s => s === 'PASS').length;
               const nFail = statuses.filter(s => s === 'FAIL').length;
               const nWarn = statuses.filter(s => s === 'WARN').length;
@@ -1985,55 +2055,52 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         </section>
       </div>
 
-      {/* ── Routine metrics dashboard ─────────────────────────────── */}
+      {/* ── ADR-QG-004 fleet triage: ЧТО+ПОЧЕМУ collapsed to a prioritized list; ────
+          детали (source/спарклайн/методика) — в LoreQGDetail по клику. ─────────── */}
       <section style={S.panel}>
-        <div style={S.panelTitle} title="Метрики последнего прогона каждой QG-рутины (ClRoutineMetric). Записываются через lore_record_qg_run MCP.">
-          Метрики прогонов <span style={S.dim}>· по рутинам</span>
+        <div style={S.panelTitle} title="FAIL/WARN инварианты по всему флоту (content_md × latest ClRoutineMetric, статус пересчитан через compute_status — ADR-QG-002/004). Полная детализация — по клику на гейт.">
+          Что требует внимания <span style={S.dim}>· {attentionNeeded.length} инвариантов в {attentionByGate.length} гейтах</span>
         </div>
-        {latestRunByRoutine.size === 0
-          ? <div style={S.empty}>Нет прогонов. Вызови <code>lore_record_qg_run</code> после завершения QG-рутины.</div>
-          : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 10 }}>
-              {[...latestRunByRoutine.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([rname, run]) => {
-                const col = runColor(run.status);
-                const metrics = qgMetricsByRoutine.get(rname);
-                const statusIcon = run.status === 'OK' || run.status === 'PASS' ? '✓' : run.status === 'FAIL' ? '✗' : run.status === 'WARN' ? '⚠' : '?';
+        {attentionByGate.length === 0
+          ? <div style={S.empty}>✅ Все инварианты в норме (PASS) или нет прогонов.</div>
+          : <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+              {attentionByGate.map(([qgId, invs]) => {
+                const worst = invs.some(f => f.status === 'FAIL') ? 'FAIL' : 'WARN';
+                const col = runColor(worst);
+                const clickable = !!onNavigateToQG;
                 return (
-                  <div key={rname} style={{ background: 'var(--bg1)', border: `1px solid var(--bd)`,
+                  <div key={qgId} style={{ background: 'var(--bg1)', border: '1px solid var(--bd)',
                     borderLeft: `3px solid ${col}`, borderRadius: 6, padding: '8px 10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                      <span style={{ fontSize: 11, color: col, fontWeight: 700 }}>{statusIcon}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', flex: 1 }}>{rname.replace('qg-','').toUpperCase()}</span>
-                      <span style={{ fontSize: 9, color: 'var(--t3)' }}>{(run.run_date ?? '').slice(0,10)}</span>
+                    <div
+                      onClick={clickable ? () => onNavigateToQG!(qgId) : undefined}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, cursor: clickable ? 'pointer' : 'default' }}>
+                      <span style={{ fontSize: 11, color: col, fontWeight: 700 }}>{worst === 'FAIL' ? '✗' : '⚠'}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', flex: 1, fontFamily: 'var(--mono)' }}>{qgId}</span>
+                      <span style={{ fontSize: 9, color: 'var(--t3)' }}>{invs[0].routine}</span>
+                      {clickable && <span style={{ fontSize: 10, color: 'var(--inf)' }}>→</span>}
                     </div>
-                    {run.flags && <div style={{ fontSize: 9, color: 'var(--t3)', marginBottom: 4, lineHeight: 1.4 }}>
-                      {run.flags.split(',').map(f => {
-                        const [k,v] = f.split('=');
-                        const fc = v === 'PASS' ? 'var(--suc)' : v === 'FAIL' ? 'var(--dng)' : v === 'WARN' ? 'var(--wrn)' : 'var(--t3)';
-                        return <span key={k} style={{ marginRight: 5 }}>
-                          <span style={{ color: 'var(--t3)' }}>{k}</span>
-                          {v && <span style={{ color: fc, marginLeft: 2 }}>{v}</span>}
-                        </span>;
-                      })}
-                    </div>}
-                    {metrics && metrics.size > 0
-                      ? <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
-                          {[...metrics.entries()].map(([mk, m]) => {
-                            const mc = m.status === 'PASS' ? 'var(--suc)' : m.status === 'FAIL' ? 'var(--dng)' : m.status === 'WARN' ? 'var(--wrn)' : 'var(--t2)';
-                            const val = m.value != null ? (m.unit === '%' ? `${m.value.toFixed(1)}%` : `${m.value}${m.unit ? ' '+m.unit : ''}`) : '—';
-                            const tgt = m.target != null ? (m.unit === '%' ? `${m.target}%` : `${m.target}`) : null;
-                            return (
-                              <div key={mk} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
-                                <span style={{ color: 'var(--t3)', flex: 1 }}>{mk}</span>
-                                <span style={{ color: mc, fontWeight: 600, fontFamily: 'var(--mono)' }}>{val}</span>
-                                {tgt && <span style={{ color: 'var(--t3)', fontSize: 9 }}>/ {tgt}</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+                      {invs.map(f => {
+                        const mc = f.status === 'FAIL' ? 'var(--dng)' : 'var(--wrn)';
+                        const vf = f.value == null || f.value === -1 ? '—' : (Number.isInteger(f.value) ? f.value : f.value.toFixed(1));
+                        const tf = f.inv.target == null ? null : (Number.isInteger(f.inv.target) ? f.inv.target : f.inv.target.toFixed(1));
+                        return (
+                          <div key={f.inv.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 10 }}>
+                            <span style={{ ...S.compTag, fontSize: 8, flexShrink: 0, color: mc,
+                              borderColor: `color-mix(in srgb,${mc} 30%,transparent)`,
+                              background: `color-mix(in srgb,${mc} 12%,transparent)` }}>{f.status}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{f.inv.key}</span>
+                                <span style={{ color: mc, fontWeight: 600, fontFamily: 'var(--mono)' }}>{vf}{f.inv.unit ? ` ${f.inv.unit}` : ''}</span>
+                                {tf != null && <span style={{ color: 'var(--t3)', fontSize: 9 }}>/ цель {f.inv.direction === 'lte' ? '≤' : '≥'}{tf}</span>}
                               </div>
-                            );
-                          })}
-                        </div>
-                      : <div style={{ fontSize: 9, color: 'var(--t3)', fontStyle: 'italic' }}>
-                          нет метрик — добавь metrics[] в lore_record_qg_run
-                        </div>
-                    }
+                              {f.inv.condition && <div style={{ color: 'var(--t3)', fontSize: 9, marginTop: 1 }}>{f.inv.condition}</div>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
@@ -2131,7 +2198,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   <React.Fragment key={sev}>
                     <div style={{ ...S.groupBucket, color: col, marginTop: 4 }}>{sev} · {viols.length}</div>
                     {viols.slice(0, 10).map(v => (
-                      <div key={v.job_id} style={{ ...S.trow, cursor: 'default' }}>
+                      <div key={v.job_id} style={{ ...S.trow, cursor: v.qg_id && onNavigateToQG ? 'pointer' : 'default' }}
+                        onClick={v.qg_id && onNavigateToQG ? () => onNavigateToQG!(v.qg_id!) : undefined}>
                         <span style={{ width: 8, height: 8, borderRadius: 2, background: col, flexShrink: 0 }} />
                         <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)', flexShrink: 0, width: 80 }}>
                           {(v.run_date ?? '').slice(0, 10)}
@@ -2173,7 +2241,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                       {r.component_id && <span style={{ ...S.compTag, fontSize: 9, color: 'var(--inf)',
                         borderColor: 'color-mix(in srgb,var(--inf) 25%,transparent)',
                         background: 'color-mix(in srgb,var(--inf) 10%,transparent)' }}>{r.component_id}</span>}
-                      <span style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>{r.qg_id}</span>
+                      <span
+                        onClick={r.qg_id && onNavigateToQG ? () => onNavigateToQG!(r.qg_id!) : undefined}
+                        style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--inf)',
+                          cursor: r.qg_id && onNavigateToQG ? 'pointer' : 'default' }}>{r.qg_id}{r.qg_id && onNavigateToQG ? ' →' : ''}</span>
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', marginBottom: 3 }}>{r.title}</div>
                     {r.body_md && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5,
@@ -2195,6 +2266,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               })}
             </div>}
       </section>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, padding: '4px 2px 0' }}>
+        <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Регламент:</span>
+        {['ADR-QG-001', 'ADR-QG-002', 'ADR-QG-004'].map(id => (
+          <span key={id} style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3,
+            color: 'var(--pro, #bc8cff)', background: 'color-mix(in srgb, var(--pro, #bc8cff) 9%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--pro, #bc8cff) 22%, transparent)' }}>{id}</span>
+        ))}
+        <span style={{ fontSize: 9, color: 'var(--t3)' }}>— полная методика и source-evidence: клик по гейту</span>
+      </div>
     </>
   );
 

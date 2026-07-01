@@ -2381,9 +2381,12 @@ public class AidaLoreResource {
             Map<String, Object> rec = recRows.isEmpty() ? Map.of() : recRows.get(0);
 
             // 2. Derive task_id = next TNN in sprint
+            // NB: in('PART_OF') is a traversal function call — NOT the @in.field property
+            // shorthand, so it must NOT be @-prefixed here (that throws "Unknown function
+            // name '@in'" in ArcadeDB and was the root cause of "Задача не создаётся").
             List<Map<String, Object>> existingTasks = ingestService.queryPublic(
                 "SELECT task_id FROM KnowTask WHERE task_id IS NOT NULL " +
-                "AND task_id LIKE 'T%' AND @in('PART_OF').sprint_id=:sid",
+                "AND task_id LIKE 'T%' AND in('PART_OF').sprint_id=:sid",
                 Map.of("sid", sprintId));
             int maxN = existingTasks.stream()
                 .map(t -> t.getOrDefault("task_id", "T0").toString().replaceAll("[^0-9]", ""))

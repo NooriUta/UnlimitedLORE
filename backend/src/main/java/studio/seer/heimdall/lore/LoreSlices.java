@@ -427,7 +427,7 @@ public final class LoreSlices {
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, component_id, status, last_run_status, date_created, sprint_id " +
+            "SELECT qg_id, name, description, component_id, status, last_run_status, date_created, sprint_id, content_md " +
             "FROM QualityGate",
             List.of(),
             new LinkedHashMap<>(Map.of(
