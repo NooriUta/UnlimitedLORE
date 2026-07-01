@@ -3,7 +3,7 @@
 // → boxes, releases → points, sections → background bands. Built-in zoom/pan
 // (Ctrl+wheel zoom, wheel/drag pan) replaces the old hand-rolled Gantt canvas.
 // Spec: PLAN_AS_DB_RENDER.md · write-path LAL-23a · time-travel LAL-25
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { marked } from 'marked';
 import { Timeline, DataSet } from 'vis-timeline/standalone';
 import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/standalone';
@@ -11,10 +11,11 @@ import 'vis-timeline/styles/vis-timeline-graph2d.css';
 import './lore-timeline.css';
 import {
   fetchLoreSlice, postLoreStatus, registerLoreSprint, updateLoreSprint,
-  type LorePlanConfig, type LorePlanTrack, type LorePlanSection,
+  type LorePlanConfig, type LorePlanSection,
   type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
-  type LorePlanItemStatus, type LorePlanVersion,
+  type LorePlanItemStatus, type LoreSprintDep,
   type LoreSprintDoneDate, type LoreSprintTask, type LoreSprintRow,
+  type LoreComponent,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
@@ -54,27 +55,35 @@ function statusFamily(status: string | null | undefined): StatusFamily {
 }
 
 // Legend ordering + RU labels (legend is built from statuses actually present).
-const STATUS_ORDER = ['active', 'high', 'planned', 'partial', 'blocked', 'todo', 'done', 'deferred', 'cancelled'];
+const STATUS_ORDER = ['active', 'high', 'planned', 'design', 'partial', 'blocked', 'backlog', 'todo', 'done', 'deferred', 'cancelled'];
 const STATUS_RU: Record<string, string> = {
-  active: 'в работе', high: 'важно', planned: 'план', partial: 'частично',
-  blocked: 'блок', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',
+  active: 'в работе', high: 'важно', planned: 'план', design: 'дизайн', partial: 'частично',
+  blocked: 'блок', backlog: 'бэклог', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',
 };
 
-// Canonical token → status_raw (mirrors backend SCD2_STATUS_RAW), for optimistic
-// statusBySprint updates so a cycled sprint re-colours before the server round-trip.
+// Canonical token → status_raw (mirrors backend SCD2_STATUS_RAW exactly), for
+// optimistic statusBySprint updates so a cycled sprint re-colours before the server
+// round-trip — and round-trips cleanly back through taskTick.
 const STATUS_RAW: Record<string, string> = {
-  done: '✅ DONE', active: '🔄 IN PROGRESS', partial: '🟡 PARTIAL', todo: '📋 PLANNED',
-  blocked: '🔴 BLOCKED', high: '🔴 P0', cancelled: '🚫 CANCELLED',
+  todo: '⬜ TODO', planned: '📋 PLANNED', design: '🔬 DESIGN', backlog: '🟣 BACKLOG',
+  active: '🔄 IN PROGRESS', partial: '🟡 PARTIAL', ready_for_deploy: '🚀 READY FOR DEPLOY',
+  blocked: '🔴 BLOCKED', high: '🔴 P0', done: '✅ DONE', cancelled: '🚫 CANCELLED',
 };
 
-const STATUS_CYCLE: LorePlanItemStatus[] = ['todo', 'active', 'done'];
+// Full cycle over every status the /status endpoint accepts (PLAN_STATUSES), in a
+// natural workflow order — not just todo→active→done. Clicking a bar walks the lot.
+const STATUS_CYCLE: LorePlanItemStatus[] = [
+  'todo', 'planned', 'design', 'backlog', 'active', 'partial',
+  'ready_for_deploy', 'blocked', 'high', 'done', 'cancelled',
+];
 function cycleStatus(current: string | null): LorePlanItemStatus {
   const idx = STATUS_CYCLE.indexOf((current ?? 'todo') as LorePlanItemStatus);
   return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
 }
 
-const MS_GROUP = '__ms__';
-const UNTRACKED = '__untracked__';
+
+const NO_PROJECT   = '__no_project__';
+const NO_COMPONENT = '__no_component__';
 const WEEK_MS = 7 * 86400 * 1000;
 function addWeeks(base: Date, w: number): Date {
   return new Date(base.getTime() + w * WEEK_MS);
@@ -83,23 +92,96 @@ function addWeeks(base: Date, w: number): Date {
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Props {
   onError: (e: unknown) => void;
+  /** Navigate to a sprint's passport (set when the board is wired into LorePage). */
+  onNavigateToSprint?: (sprintId: string) => void;
+}
+
+// Unique marker icon for placeholder bars (plan items with no real sprint behind
+// them). Real sprints inherit their component's game-icon instead.
+const STUB_ICON = 'cardboard-box';
+
+// ── Critical path (longest path on hard edges, weighted by sprint duration) ──
+function computeCriticalPath(
+  deps: LoreSprintDep[],
+  durationBySprint: Map<string, number>,   // sprint_id → weeks
+): Set<string> {
+  const hard = deps.filter(d => d.kind === 'hard');
+  if (!hard.length) return new Set();
+
+  // Collect all nodes
+  const nodes = new Set<string>();
+  hard.forEach(d => { nodes.add(d.from_sprint); nodes.add(d.to_sprint); });
+
+  // Build adjacency list (from → [to])
+  const adj = new Map<string, string[]>();
+  hard.forEach(d => {
+    if (!adj.has(d.from_sprint)) adj.set(d.from_sprint, []);
+    adj.get(d.from_sprint)!.push(d.to_sprint);
+  });
+
+  // Topological sort (Kahn's algorithm)
+  const inDeg = new Map<string, number>();
+  nodes.forEach(n => inDeg.set(n, 0));
+  hard.forEach(d => inDeg.set(d.to_sprint, (inDeg.get(d.to_sprint) ?? 0) + 1));
+  const queue: string[] = [];
+  inDeg.forEach((d, n) => { if (d === 0) queue.push(n); });
+  const topo: string[] = [];
+  while (queue.length) {
+    const n = queue.shift()!;
+    topo.push(n);
+    (adj.get(n) ?? []).forEach(m => {
+      const d = (inDeg.get(m) ?? 1) - 1;
+      inDeg.set(m, d);
+      if (d === 0) queue.push(m);
+    });
+  }
+
+  // DP: dist[n] = longest weighted distance ending at n
+  const dist = new Map<string, number>();
+  const prev = new Map<string, string>();
+  nodes.forEach(n => dist.set(n, durationBySprint.get(n) ?? 1));
+
+  topo.forEach(n => {
+    const dn = dist.get(n)!;
+    (adj.get(n) ?? []).forEach(m => {
+      const candidate = dn + (durationBySprint.get(m) ?? 1);
+      if (candidate > (dist.get(m) ?? 0)) {
+        dist.set(m, candidate);
+        prev.set(m, n);
+      }
+    });
+  });
+
+  // Find the sink with max distance and walk back
+  let maxDist = 0; let sink = '';
+  dist.forEach((d, n) => { if (d > maxDist) { maxDist = d; sink = n; } });
+
+  const critical = new Set<string>();
+  let cur: string | undefined = sink;
+  while (cur) { critical.add(cur); cur = prev.get(cur); }
+  return critical;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function LorePlanBoard({ onError }: Props) {
+export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const [config,   setConfig]   = useState<LorePlanConfig | null>(null);
-  const [tracks,   setTracks]   = useState<LorePlanTrack[]>([]);
+  const [comps,    setComps]    = useState<LoreComponent[]>([]);
   const [sections, setSections] = useState<LorePlanSection[]>([]);
   const [items,    setItems]    = useState<LorePlanItem[]>([]);
   const [cps,      setCps]      = useState<LorePlanCheckpoint[]>([]);
   const [mss,      setMss]      = useState<LoreMilestone[]>([]);
   const [releases, setReleases] = useState<LoreRelease[]>([]);
-  const [versions, setVersions] = useState<LorePlanVersion[]>([]);
+
   const [doneBySprint, setDoneBySprint] = useState<Map<string, string>>(new Map());
   // Real sprint status (status_raw) keyed by sprint_id — the bar's status source
   // for sprint bars, so the gantt matches the actual sprint state (not plan_item).
   const [statusBySprint, setStatusBySprint] = useState<Map<string, string>>(new Map());
   const [loading,  setLoading]  = useState(true);
+
+  // ── Sprint dependencies + SVG overlay ─────────────────────────────────────
+  const [deps,     setDeps]     = useState<LoreSprintDep[]>([]);
+  const [showDeps, setShowDeps] = useState(true);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   // ── Toggles ────────────────────────────────────────────────────────────────
   // Default to the "not the archive" view: done + past hidden. Toggles re-enable
@@ -110,10 +192,7 @@ export default function LorePlanBoard({ onError }: Props) {
   // A bar is a real sprint when it represents one; otherwise it's a standalone
   // plan-item / placeholder ("заглушка"). Both shown by default.
   const [showSprints, setShowSprints] = useState(true);
-  const [showStubs,   setShowStubs]   = useState(true);
-
-  // ── Time-travel (LAL-25) ───────────────────────────────────────────────────
-  const [selectedVer, setSelectedVer] = useState('');
+  const [showStubs,   setShowStubs]   = useState(false);
 
   // ── Panels ─────────────────────────────────────────────────────────────────
   const [sprintCard, setSprintCard] = useState<LorePlanItem | null>(null);
@@ -146,33 +225,40 @@ export default function LorePlanBoard({ onError }: Props) {
     const ctrl = new AbortController();
     Promise.all([
       fetchLoreSlice<LorePlanConfig>('plan_config',      undefined, ctrl.signal),
-      fetchLoreSlice<LorePlanTrack>('plan_tracks',       undefined, ctrl.signal),
       fetchLoreSlice<LorePlanSection>('plan_sections',   undefined, ctrl.signal),
       fetchLoreSlice<LorePlanItem>('plan_items',         undefined, ctrl.signal),
       fetchLoreSlice<LorePlanCheckpoint>('plan_checkpoints', undefined, ctrl.signal),
       fetchLoreSlice<LoreMilestone>('milestones',        undefined, ctrl.signal),
       fetchLoreSlice<LoreRelease>('releases',            undefined, ctrl.signal),
-      fetchLoreSlice<LorePlanVersion>('plan_versions',   undefined, ctrl.signal),
       fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
       fetchLoreSlice<LoreSprintRow>('sprints',            undefined, ctrl.signal),
+      fetchLoreSlice<LoreComponent>('components',         undefined, ctrl.signal),
     ])
-      .then(([cfgs, trks, secs, its, chkps, milestones, rels, vers, dones, sprints]) => {
+      .then(([cfgs, secs, its, chkps, milestones, rels, dones, sprints, components]) => {
         setConfig(cfgs[0] ?? null);
-        setTracks(trks);
+        setComps(components);
         setSections(secs);
-        setItems(its);
+        // The sprint is the source of truth for status: a plan item that represents
+        // a sprint inherits that sprint's (normalised) status, so plan_item.status
+        // never drifts from reality. Stubs (no sprint) keep their own status.
+        const sprintStatusRaw = new Map(
+          sprints.filter(s => s.status_raw).map(s => [s.sprint_id, s.status_raw as string]));
+        setItems(its.map(it =>
+          it.represents_sprint && sprintStatusRaw.has(it.represents_sprint)
+            ? { ...it, status: taskTick(sprintStatusRaw.get(it.represents_sprint)!).status }
+            : it));
         setCps(chkps);
         setMss(milestones);
         setReleases(rels.filter(r => r.week != null));
-        setVersions(vers);
         setDoneBySprint(new Map(
           dones.filter(d => d.done_date).map(d => [d.sprint_id, d.done_date as string])
         ));
-        setStatusBySprint(new Map(
-          sprints.filter(s => s.status_raw).map(s => [s.sprint_id, s.status_raw as string])
-        ));
-        if (vers[0]) setSelectedVer(vers[0].version_id);
+        setStatusBySprint(sprintStatusRaw);
         setLoading(false);
+        // Load deps in background — not blocking the main render
+        fetchLoreSlice<LoreSprintDep>('sprint_deps', undefined, ctrl.signal)
+          .then(d => setDeps(d))
+          .catch(() => {/* non-critical */});
       })
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
@@ -216,24 +302,145 @@ export default function LorePlanBoard({ onError }: Props) {
   const itemsWithPos = items.filter(it => it.week_start != null && it.week_end != null).length;
   const parityPct    = items.length > 0 ? Math.round(itemsWithPos / items.length * 100) : 0;
 
-  // Tracks that actually carry items (avoid a forest of empty swimlanes)
-  const usedTracks = useMemo(() => {
-    const ids = new Set(items.map(it => it.track_id ?? UNTRACKED));
-    const list = tracks.filter(t => ids.has(t.track_id));
-    if (ids.has(UNTRACKED)) list.push({ track_id: UNTRACKED, label: '— без дорожки —', type: null });
-    return list;
-  }, [tracks, items]);
+  // ── Component-tree resolver ───────────────────────────────────────────────
+  // The board groups by the real component tree: Project (root) → Component
+  // (project's direct child = lane) → bars. Deeper sub-components don't get their
+  // own lane — instead the bar carries the leaf component's game-icon.
+  const compById = useMemo(
+    () => new Map(comps.map(c => [c.component_id, c])), [comps]);
+
+  // Preferred top-level project order; unknown roots fall after.
+  const PROJECT_ORDER = useMemo(
+    () => ['AIDA', 'ODIN', 'OMILORE', 'BRAGI', 'HARPA', 'TYR'], []);
+
+  // Single source of truth for the board's grouping. Produces:
+  //  · laneOfItem  — final vis group id for each plan item's bar
+  //  · iconOfItem  — leaf component game-icon slug for each bar
+  //  · groupDescs  — ordered vis group descriptors (project parents + lanes)
+  // The lane comes from the *most specific* (deepest) linked component, so a sprint
+  // on [DALI, VERDANDI, LOOM] lands in SEIDR (LOOM's ancestor) with a LOOM icon.
+  // A project that ALSO carries sprints linked directly to its root gets a distinct
+  // `<pid>__self` child lane so the project id is never used twice (vis rejects dup ids).
+  const board = useMemo(() => {
+    const rootOf = (id: string): string => {
+      let cur = id, guard = 0;
+      while (compById.get(cur)?.parent_id && guard++ < 20) cur = compById.get(cur)!.parent_id!;
+      return cur;
+    };
+    const laneOf = (id: string): string => {
+      let cur = id, guard = 0;
+      while (guard++ < 20) {
+        const p = compById.get(cur)?.parent_id;
+        if (!p) return cur;                          // cur is a root project
+        if (!compById.get(p)?.parent_id) return cur; // parent is root → cur is lane
+        cur = p;
+      }
+      return cur;
+    };
+    const depth = (id: string): number => {
+      let d = 0, cur = id, guard = 0;
+      while (compById.get(cur)?.parent_id && guard++ < 20) { d++; cur = compById.get(cur)!.parent_id!; }
+      return d;
+    };
+
+    // raw resolution per item
+    const raw = new Map<string, { project: string; rawLane: string; icon: string | null }>();
+    items.forEach(it => {
+      const linked = (it.components ?? []).filter(c => compById.has(c));
+      if (!linked.length) {
+        raw.set(it.item_id, { project: NO_PROJECT, rawLane: NO_COMPONENT, icon: null });
+        return;
+      }
+      const primary = linked.reduce((a, b) => (depth(b) > depth(a) ? b : a));
+      raw.set(it.item_id, {
+        project: rootOf(primary), rawLane: laneOf(primary),
+        icon: compById.get(primary)?.game_icon ?? null,
+      });
+    });
+
+    // project → set of raw lanes
+    const projLanes = new Map<string, Set<string>>();
+    raw.forEach(({ project, rawLane }) => {
+      if (!projLanes.has(project)) projLanes.set(project, new Set());
+      projLanes.get(project)!.add(rawLane);
+    });
+
+    const projLabel = (pid: string) => pid === NO_PROJECT ? '— без проекта —'
+      : compById.get(pid)?.full_name ?? pid;
+    const laneLabel = (lid: string) => lid === NO_COMPONENT ? '— без компонента —'
+      : compById.get(lid)?.full_name ?? lid;
+    // A project is "flat" (single leaf row) when its only lane is the project itself.
+    const isFlat = (pid: string) => {
+      const s = projLanes.get(pid)!;
+      return s.size === 1 && s.has(pid);
+    };
+    // Final vis lane id for a (project, rawLane) pair.
+    const finalLane = (project: string, rawLane: string): string => {
+      if (isFlat(project)) return project;            // flat project → bar on the project row
+      return rawLane === project ? project + '__self' : rawLane;
+    };
+
+    const rank = (p: string) => {
+      const i = PROJECT_ORDER.indexOf(p);
+      return i < 0 ? PROJECT_ORDER.length + (p === NO_PROJECT ? 1 : 0) : i;
+    };
+    const projects = [...projLanes.keys()].sort((a, b) => rank(a) - rank(b));
+
+    // ordered group descriptors. vis-timeline can't always resolve a nested group's
+    // tree level → it tags them `vis-group-level-unknown-but-gte1`, whose stock skin
+    // is a bright-red warning border (vis-timeline-graph2d.css). lore-timeline.css
+    // overrides that class so no red leaks in any theme.
+    const groupDescs: { id: string; label: string; nested?: string[] }[] = [];
+    projects.forEach(pid => {
+      if (isFlat(pid)) {
+        groupDescs.push({ id: pid, label: projLabel(pid) });
+        return;
+      }
+      const lanes = [...projLanes.get(pid)!].sort((a, b) =>
+        laneLabel(a).localeCompare(laneLabel(b)));
+      const childIds = lanes.map(l => finalLane(pid, l));
+      groupDescs.push({ id: pid, label: projLabel(pid), nested: childIds });
+      lanes.forEach(l => {
+        const fid = finalLane(pid, l);
+        const label = l === pid ? `${projLabel(pid)} · общие` : laneLabel(l);
+        groupDescs.push({ id: fid, label });
+      });
+    });
+
+    const laneOfItem = new Map<string, string>();
+    const iconOfItem = new Map<string, string | null>();
+    raw.forEach((v, itemId) => {
+      laneOfItem.set(itemId, finalLane(v.project, v.rawLane));
+      iconOfItem.set(itemId, v.icon);
+    });
+
+    return { groupDescs, laneOfItem, iconOfItem };
+  }, [items, compById, PROJECT_ORDER]);
 
   // ── Create the Timeline once data is loaded ──────────────────────────────────
   useEffect(() => {
     if (loading || !config || !w0 || !hostRef.current) return;
 
+    // ── 2-level nested groups from the component tree: Project → Component lane.
+    // board.groupDescs is already ordered and de-duplicated; a parent carries
+    // `nested`, a leaf/flat row doesn't. Each label is prefixed with the component's
+    // game-icon (the `__self` lanes resolve to their project's icon).
+    const groupLabel = (id: string, label: string): string => {
+      const cid  = id.endsWith('__self') ? id.slice(0, -6) : id;
+      const slug = compById.get(cid)?.game_icon;
+      const icon = slug ? statusIconSvg(slug, 'var(--t2)') : '';
+      return icon + esc(label);
+    };
     const groups = new DataSet<TimelineGroup>([]);
-    if (mss.length) {
-      groups.add({ id: MS_GROUP, content: 'Вехи', order: -1 } as TimelineGroup);
-    }
-    usedTracks.forEach((tr, i) =>
-      groups.add({ id: tr.track_id, content: tr.label, order: i } as TimelineGroup));
+    board.groupDescs.forEach((g, i) => {
+      if (g.nested) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        groups.add({ id: g.id, content: groupLabel(g.id, g.label), order: i,
+          nestedGroups: g.nested, showNested: true } as any);
+      } else {
+        groups.add({ id: g.id, content: groupLabel(g.id, g.label), order: i } as TimelineGroup);
+      }
+    });
 
     const itemsDS = new DataSet<TimelineItem>([]);
     itemsDSRef.current = itemsDS;
@@ -261,11 +468,21 @@ export default function LorePlanBoard({ onError }: Props) {
     const tl = new Timeline(hostRef.current, itemsDS, groups, options);
     timelineRef.current = tl;
 
-    // Initial window: ~16 weeks around today so multiple sprints are visible on
-    // load without pressing any button. «Сжать» fits everything, «Раздвинуть»
-    // returns to this 8-week detail view.
-    const startW = Math.max(0, W_NOW - 2);
-    tl.setWindow(addWeeks(w0, startW), addWeeks(w0, startW + 16), { animation: false });
+    // Initial window start: the earliest STILL-OPEN sprint that's already in the
+    // past (an overdue bar) so it's never hidden off-screen to the left; otherwise
+    // just 3 days before today. End spans ~16 weeks forward from now.
+    let earliestOverdue = W_NOW;
+    for (const it of items) {
+      if (it.week_start == null || it.week_start >= W_NOW) continue;  // future/unpositioned
+      const raw = it.represents_sprint ? statusBySprint.get(it.represents_sprint) : undefined;
+      const st  = raw ? taskTick(raw).status : (it.status ?? 'todo');
+      if (st === 'done' || st === 'cancelled') continue;              // closed → not overdue
+      if (it.week_start < earliestOverdue) earliestOverdue = it.week_start;
+    }
+    const todayMargin = new Date(Date.now() - 3 * 86400 * 1000);
+    const overdueDate = addWeeks(w0, earliestOverdue);
+    const winStart = overdueDate < todayMargin ? overdueDate : todayMargin;
+    tl.setWindow(winStart, addWeeks(w0, W_NOW + 14), { animation: false });
     // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
     // force one redraw on the next frame so the first paint is never blank.
     requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });
@@ -279,7 +496,16 @@ export default function LorePlanBoard({ onError }: Props) {
         setSprintCard(null); setMsPanel(ms);
       } else {
         const it = itemByIdRef.current.get(sid) ?? null;
-        setMsPanel(null); setSprintCard(it);
+        setMsPanel(null);
+        // Click on a real sprint → jump to its passport; a placeholder (no sprint)
+        // has nowhere to navigate, so it still opens the inline card.
+        if (it?.represents_sprint && onNavigateToSprint) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (tl as any).setSelection([]);  // clear so re-clicking the same bar fires again
+          onNavigateToSprint(it.represents_sprint);
+        } else {
+          setSprintCard(it);
+        }
       }
     });
 
@@ -297,7 +523,251 @@ export default function LorePlanBoard({ onError }: Props) {
 
     return () => { ro.disconnect(); tl.destroy(); timelineRef.current = null; itemsDSRef.current = null; };
     // Re-create only when the structural inputs change.
-  }, [loading, config, w0, usedTracks, mss.length, releases.length]);
+  }, [loading, config, w0, board.groupDescs, mss.length, releases.length]);
+
+  // ── SVG dep arrows overlay ────────────────────────────────────────────────
+  // Map sprint_id → item_id for DOM lookup
+  const sprintToItemId = useMemo(() => {
+    const m = new Map<string, string>();
+    items.forEach(it => { if (it.represents_sprint) m.set(it.represents_sprint, it.item_id); });
+    return m;
+  }, [items]);
+
+  // Critical path (hard edges only)
+  const criticalSprints = useMemo(() => {
+    const dur = new Map<string, number>();
+    items.forEach(it => {
+      if (it.represents_sprint && it.week_start != null && it.week_end != null)
+        dur.set(it.represents_sprint, Math.max(1, it.week_end - it.week_start));
+    });
+    return computeCriticalPath(deps, dur);
+  }, [deps, items]);
+
+  const drawArrows = useCallback(() => {
+    const svg = svgRef.current;
+    const host = hostRef.current;
+    if (!svg || !host) { if (svg) svg.innerHTML = ''; return; }
+
+    // vis-timeline doesn't add data-id to DOM nodes; use internal itemSet API instead.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tlAny = timelineRef.current as any;
+    const itemSet = tlAny?.itemSet;
+
+    const svgRect = svg.getBoundingClientRect();
+    const parts: string[] = [];
+
+    // ── Milestone markers at top of SVG ──────────────────────────────────────
+    // centerContainer is the scrollable item area; use its bounding rect to map
+    // time → x pixel, then shift into SVG coordinate space.
+    const cc = tlAny?.dom?.centerContainer as HTMLElement | undefined;
+    const range = tlAny?.range as { start: number; end: number } | undefined;
+    if (cc && range && w0 && mss.length) {
+      const ccRect = cc.getBoundingClientRect();
+      const span   = range.end - range.start;
+      for (const ms of mss) {
+        if (ms.week == null) continue;
+        const msTime = addWeeks(w0, ms.week).getTime();
+        const frac   = (msTime - range.start) / span;
+        if (frac < -0.01 || frac > 1.01) continue;
+        const x = ccRect.left - svgRect.left + frac * ccRect.width;
+        const label = ms.milestone_id;
+        const tip   = `${ms.milestone_id}: ${ms.label}${ms.date_display ? ' · ' + ms.date_display : ''}`;
+        const labelW = label.length * 6 + 12;
+        parts.push(
+          // vertical guide line (full height, very subtle)
+          `<line x1="${x}" y1="0" x2="${x}" y2="${svgRect.height}"` +
+          ` stroke="var(--wrn)" stroke-width="1" stroke-dasharray="3 5" opacity="0.2"` +
+          ` style="pointer-events:none"/>` +
+          // diamond marker at top
+          `<polygon points="${x},0 ${x+5},7 ${x},14 ${x-5},7"` +
+          ` fill="var(--wrn)" opacity="0.9" style="pointer-events:none"><title>${tip}</title></polygon>` +
+          // short solid line below diamond
+          `<line x1="${x}" y1="14" x2="${x}" y2="28"` +
+          ` stroke="var(--wrn)" stroke-width="1.5" opacity="0.55" style="pointer-events:none"/>` +
+          // label to the right of diamond
+          `<text x="${x+7}" y="12" fill="var(--wrn)" font-size="9" font-weight="600"` +
+          ` font-family="var(--mono)" opacity="0.9" style="pointer-events:none">${label}</text>` +
+          // transparent clickable hit-area over diamond + label
+          `<rect x="${x-6}" y="0" width="${labelW + 12}" height="28" fill="transparent"` +
+          ` data-ms="${ms.milestone_id}" style="pointer-events:auto;cursor:pointer"><title>${tip}</title></rect>`
+        );
+      }
+    }
+
+    if (showDeps && cc) {
+      const ccRect  = cc.getBoundingClientRect();
+      const ccLeft  = ccRect.left  - svgRect.left;
+      const ccRight = ccRect.right - svgRect.left;
+
+      // Resolve the DOM node for a rendered bar (range box or point).
+      const itemEl = (id: string): HTMLElement | null => {
+        if (itemSet) {
+          const d = itemSet.items[id]?.dom;
+          if (d) return (d.box ?? d.point ?? null) as HTMLElement | null;
+        }
+        return host!.querySelector<HTMLElement>(`.vis-iid-${CSS.escape(id)}`);
+      };
+
+      // Anchor point for a sprint's bar. On-screen → the bar's edge. Off-screen →
+      // the centre of its LANE row clamped to a board edge (`offX`): a prerequisite
+      // (upstream) clamps to the LEFT edge, a dependent (downstream) to the RIGHT —
+      // same vertical point as the lane, just pinned to the side it lives off toward.
+      const anchorFor = (sprint: string, side: 'left' | 'right', offX: number):
+          { x: number; y: number; off: boolean } | null => {
+        const itemId = sprintToItemId.get(sprint);
+        if (!itemId) return null;
+        const el = itemEl(itemId);
+        // Treat the bar as on-screen while ANY part of it overlaps the visible centre
+        // panel (not just its connecting edge) — then anchor to that edge, clamped
+        // into view. We only switch to the lane-edge once the bar is FULLY out of the
+        // panel, so the endpoint tracks the bar smoothly and never jumps mid-scroll.
+        if (el) {
+          const r        = el.getBoundingClientRect();
+          const barLeft  = r.left  - svgRect.left;
+          const barRight = r.right - svgRect.left;
+          const fullyOff = barRight < ccLeft || barLeft > ccRight;
+          if (!fullyOff) {
+            const edge = side === 'right' ? barRight : barLeft;
+            const x = Math.max(ccLeft, Math.min(ccRight, edge));  // clamp into view
+            return { x, y: (r.top + r.bottom) / 2 - svgRect.top, off: false };
+          }
+        }
+        // Fully off-screen (missing, or entirely outside the panel) → lane-row centre,
+        // pinned to the board edge it lives off toward (offX).
+        const laneId = board.laneOfItem.get(sprint);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const grp = laneId ? (itemSet?.groups?.[laneId] as any) : null;
+        const gel = grp?.dom?.foreground as HTMLElement | undefined;
+        if (gel) {
+          const gr = gel.getBoundingClientRect();
+          return { x: offX, y: (gr.top + gr.bottom) / 2 - svgRect.top, off: true };
+        }
+        // Last resort: bar element known but no lane row → keep its Y, clamp X.
+        if (el) {
+          const r = el.getBoundingClientRect();
+          return { x: offX, y: (r.top + r.bottom) / 2 - svgRect.top, off: true };
+        }
+        return null;
+      };
+
+      deps.forEach(dep => {
+        // prerequisite = to_sprint (right edge, off→left) → dependent = from_sprint (left edge, off→right)
+        const a = anchorFor(dep.to_sprint, 'right', ccLeft);
+        const b = anchorFor(dep.from_sprint, 'left', ccRight);
+        if (!a || !b) return;
+        if (a.off && b.off) return;       // both off-screen → nothing meaningful to show
+
+        const x1 = a.x, y1 = a.y, x2 = b.x, y2 = b.y;
+        const onCp   = criticalSprints.has(dep.from_sprint) && criticalSprints.has(dep.to_sprint);
+        const isHard = dep.kind === 'hard';
+        // Control points a fixed short distance out of each end → tidy diagonal,
+        // never a giant arc across the board.
+        const span = Math.abs(x2 - x1);
+        const off  = Math.max(18, Math.min(70, span * 0.3));
+        const c1x  = x1 + off, c2x = x2 - off;
+
+        const stroke    = onCp ? 'var(--danger)' : isHard ? 'var(--t3)' : 'var(--bd)';
+        const strokeW   = onCp ? 2 : isHard ? 1.5 : 1;
+        const dash      = isHard || onCp ? '' : ` stroke-dasharray="4 3"`;
+        const filter    = onCp ? ' filter="url(#cp-glow)"' : '';
+        // Off-screen ends get no arrowhead (it'd point at the void); only an on-screen
+        // dependent end carries the marker.
+        const markerEnd = b.off ? '' : ` marker-end="${onCp ? 'url(#arr-cp)' : isHard ? 'url(#arr-hard)' : 'url(#arr-soft)'}"`;
+        // A small hollow dot marks an off-screen endpoint sitting on the board edge.
+        const edgeDot = (p: { x: number; y: number; off: boolean }) => p.off
+          ? `<circle cx="${p.x}" cy="${p.y}" r="3" fill="none" stroke="${stroke}" stroke-width="1.2" opacity="0.7"/>` : '';
+        const opacity = (a.off || b.off) ? 0.45 : (span > 700 ? 0.5 : 0.85);
+
+        parts.push(
+          `<path d="M${x1},${y1} C${c1x},${y1} ${c2x},${y2} ${x2},${y2}"` +
+          ` fill="none" stroke="${stroke}" stroke-width="${strokeW}"${dash}${filter}${markerEnd}` +
+          ` opacity="${opacity}"/>` + edgeDot(a) + edgeDot(b)
+        );
+      });
+    }
+
+    svg.innerHTML = `
+      <defs>
+        <filter id="cp-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <marker id="arr-soft" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--bd)" opacity="0.7"/>
+        </marker>
+        <marker id="arr-hard" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--t3)"/>
+        </marker>
+        <marker id="arr-cp" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+          <path d="M0,0 L7,3.5 L0,7 Z" fill="var(--danger)"/>
+        </marker>
+      </defs>
+      ${parts.join('\n')}
+    `;
+  }, [deps, sprintToItemId, criticalSprints, showDeps, mss, w0, board]);
+
+  // Re-draw on any change that shifts bar positions. `rangechange` fires
+  // continuously during zoom/pan (unlike `rangechanged`, which only fires once at
+  // the end) — binding it keeps the overlay glued to the bars through the whole
+  // animation instead of snapping back into place afterwards. We rAF-throttle so a
+  // burst of range events collapses to one redraw per frame.
+  useEffect(() => {
+    const tl = timelineRef.current;
+    if (!tl) return;
+    let raf = 0;
+    const draw = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawArrows(); }); };
+    tl.on('rangechange',  draw);
+    tl.on('rangechanged', drawArrows);
+    tl.on('changed',      drawArrows);
+    drawArrows();
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      tl.off('rangechange',  draw);
+      tl.off('rangechanged', drawArrows);
+      tl.off('changed',      drawArrows);
+    };
+  }, [drawArrows]);
+
+  // Re-draw when the SVG container resizes (panel open/close, window resize).
+  // Firing drawArrows synchronously inside the ResizeObserver reads bar rects BEFORE
+  // vis-timeline has finished repositioning them → the critical-path/overlay glitches
+  // mid-resize. So we rAF-throttle (run after layout) AND schedule a trailing
+  // "settle" redraw once resizing stops, to lock onto the final positions.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    let raf = 0;
+    let settle = 0;
+    const redraw = () => {
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawArrows(); });
+      clearTimeout(settle);
+      settle = window.setTimeout(() => { drawArrows(); }, 120);
+    };
+    const ro = new ResizeObserver(redraw);
+    ro.observe(svg);
+    return () => {
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+      clearTimeout(settle);
+    };
+  }, [drawArrows]);
+
+  // Milestone clicks — delegated on the SVG overlay (markers carry data-ms).
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onClick = (e: MouseEvent) => {
+      const target = (e.target as Element)?.closest('[data-ms]');
+      if (!target) return;
+      const id = target.getAttribute('data-ms');
+      if (!id) return;
+      const ms = msByIdRef.current.get(id) ?? null;
+      setSprintCard(null);
+      setMsPanel(ms);
+    };
+    svg.addEventListener('click', onClick);
+    return () => svg.removeEventListener('click', onClick);
+  }, []);
 
   // ── (Re)populate items whenever data / toggles change ────────────────────────
   useEffect(() => {
@@ -373,10 +843,15 @@ export default function LorePlanBoard({ onError }: Props) {
       // One bar per sprint: if done with a known close date, show actual span;
       // otherwise show planned span. Plan vs fact info surfaced in the tooltip.
       const displayEnd = (isDone && weAct != null) ? weAct : we;
+      // Lane + type icon: a real sprint inherits its leaf-component's game-icon;
+      // a placeholder (stub) gets the single unique STUB_ICON instead.
+      const laneId = board.laneOfItem.get(item.item_id) ?? NO_COMPONENT;
+      const typeIconSlug = isStub ? STUB_ICON : board.iconOfItem.get(item.item_id);
+      const compIcon = typeIconSlug ? statusIconSvg(typeIconSlug, 'var(--t2)') : '';
       next.push({
         id: item.item_id,
-        group: item.track_id ?? UNTRACKED,
-        content: statusIconSvg(iconSlug, iconColor) + esc(cleanLabel(item.label)),
+        group: laneId,
+        content: statusIconSvg(iconSlug, iconColor) + compIcon + esc(cleanLabel(item.label)),
         start: addWeeks(w0, ws),
         end:   addWeeks(w0, Math.max(ws + 1, displayEnd)),
         type: 'range',
@@ -389,21 +864,10 @@ export default function LorePlanBoard({ onError }: Props) {
 
     }
 
-    // Milestones (box) + their checkpoints count in the tooltip
+    // Milestones are now rendered as SVG overlay markers at the top (see drawArrows).
+    // We still populate msByIdRef for the click handler.
     for (const ms of mss) {
-      if (ms.week == null) continue;
       msById.set(ms.milestone_id, ms);
-      const grp = cps.filter(c => c.milestone === ms.milestone_id);
-      next.push({
-        id: 'ms_' + ms.milestone_id,
-        group: MS_GROUP,
-        content: ms.milestone_id,
-        start: addWeeks(w0, ms.week),
-        type: 'box',
-        className: 'ms',
-        title: `${ms.milestone_id}: ${ms.label}\nW${ms.week}${ms.date_display ? ' · ' + ms.date_display : ''}`
-          + (grp.length ? `\n⚑ ${grp.length} плашек` : ''),
-      } as TimelineItem);
     }
 
     // Release marker — only the CURRENT release, as one vertical guide-line.
@@ -426,7 +890,7 @@ export default function LorePlanBoard({ onError }: Props) {
     ds.clear();
     ds.add(next);
   }, [items, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
-      showDone, showActive, cropPast, showSprints, showStubs, W_NOW]);
+      showDone, showActive, cropPast, showSprints, showStubs, W_NOW, board]);
 
   // ── Drag-resize the bottom detail panel ──────────────────────────────────────
   useEffect(() => {
@@ -534,6 +998,11 @@ export default function LorePlanBoard({ onError }: Props) {
         <span style={S.divider} />
         <Tog active={showSprints} onClick={() => setShowSprints(v => !v)}>Спринты</Tog>
         <Tog active={showStubs}   onClick={() => setShowStubs(v => !v)}>Заглушки</Tog>
+        <span style={S.divider} />
+        <Tog active={showDeps && deps.length > 0} onClick={() => setShowDeps(v => !v)}
+          title={`Стрелки зависимостей (${deps.length}); красный = критический путь`}>
+          Зависимости{deps.length > 0 ? ` ${deps.length}` : ''}
+        </Tog>
         <button style={S.btn} onClick={() => timelineRef.current?.fit({ animation: true })}
           title="Уместить все бары в экран">
           Сжать
@@ -549,22 +1018,7 @@ export default function LorePlanBoard({ onError }: Props) {
 
         <span style={{ flex: 1 }} />
 
-        <span style={S.stat}>{shownBars} / {items.length} баров · {usedTracks.length} дорожек</span>
-
-        {versions.length > 0 && (
-          <select
-            value={selectedVer}
-            onChange={e => setSelectedVer(e.target.value)}
-            style={S.verSel}
-            title="Версия плана (time-travel LAL-25)"
-          >
-            {versions.map(v => (
-              <option key={v.version_id} value={v.version_id}>
-                {v.version_id}{v.version_date ? ' · ' + v.version_date.slice(0, 10) : ''}
-              </option>
-            ))}
-          </select>
-        )}
+        <span style={S.stat}>{shownBars} / {items.length} баров · {board.groupDescs.filter(g => !g.nested).length} дорожек</span>
 
         <span
           style={{ ...S.zlabel, color: 'var(--acc)', opacity: 0.85, fontWeight: 600 }}
@@ -607,6 +1061,8 @@ export default function LorePlanBoard({ onError }: Props) {
       {/* ── Main: timeline host + side panel ───────────────────────────────── */}
       <div style={S.main}>
         <div ref={hostRef} className="lore-tl" style={S.host} />
+        {/* SVG dep-arrow overlay — sits above the timeline, pointer-events: none */}
+        <svg ref={svgRef} style={S.depSvg} aria-hidden="true" />
 
         {/* Sprint card panel */}
         {sprintCard && (
@@ -654,10 +1110,6 @@ export default function LorePlanBoard({ onError }: Props) {
                 const c = wa < we ? 'var(--suc)' : wa > we ? 'var(--wrn)' : 'var(--t2)';
                 return <PRow k="Факт" v={`W${ws}–${wa} · ${dd.slice(0, 10)}`} color={c} />;
               })()}
-              {sprintCard.track_id && (
-                <PRow k="Track"
-                  v={tracks.find(t => t.track_id === sprintCard.track_id)?.label ?? sprintCard.track_id} />
-              )}
               {cardReleases.length > 0 && (
                 <PRow k="Релиз" v={cardReleases.join(', ')} color="var(--acc)" />
               )}
@@ -974,8 +1426,8 @@ function renderMsGroups(
   );
 }
 
-function Tog({ active, onClick, children }: {
-  active: boolean; onClick: () => void; children: ReactNode;
+function Tog({ active, onClick, children, title }: {
+  active: boolean; onClick: () => void; children: ReactNode; title?: string;
 }) {
   return (
     <button onClick={onClick} style={{
@@ -984,7 +1436,7 @@ function Tog({ active, onClick, children }: {
       fontSize: 10, cursor: 'pointer',
       background: active ? 'color-mix(in srgb, var(--acc) 20%, transparent)' : 'var(--b2)',
       color: active ? 'var(--acc)' : 'var(--t3)',
-    }}>
+    }} title={title}>
       {children}
     </button>
   );
@@ -1068,19 +1520,16 @@ const S = {
   legendGlyph: { fontSize: 10, color: 'var(--t2)', display: 'inline-flex', gap: 4, alignItems: 'center' },
   legendSep:   { width: 1, height: 14, background: 'var(--b3)' },
   legendDim:   { fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' },
-  verSel: {
-    height: 22, padding: '0 6px', fontSize: 10,
-    border: '1px solid var(--b3)', borderRadius: 3,
-    background: 'var(--b2)', color: 'var(--t2)',
-    fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
-    maxWidth: 200,
-  },
   // Timeline on top, detail panel as a full-width strip at the bottom.
   main: {
     flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
     position: 'relative' as const, minWidth: 0,
   },
   host: { flex: 1, minWidth: 0, minHeight: 0, width: '100%', overflow: 'hidden' },
+  depSvg: {
+    position: 'absolute' as const, top: 0, left: 0, width: '100%', height: '100%',
+    pointerEvents: 'none' as const, overflow: 'visible',
+  },
   panel: {
     flexShrink: 0, height: 232,
     borderTop: '1px solid var(--bd)',

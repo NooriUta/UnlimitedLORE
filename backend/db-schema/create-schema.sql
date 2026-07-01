@@ -1,0 +1,223 @@
+-- system_aida_lore — full schema bootstrap, standalone (no Quarkus/Java required)
+--
+-- Source of truth: backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaInitializer.java
+-- This file is a 1:1 extraction of that class's DDL list, kept in the same order.
+-- Regenerate by re-running the extraction whenever LoreSchemaInitializer.java changes —
+-- do NOT hand-edit divergently from the Java source, they must stay in sync.
+--
+-- Idempotent: every statement uses IF NOT EXISTS, safe to re-run against an existing DB.
+-- Run via db-schema/bootstrap.sh, or paste into ArcadeDB Studio's SQL console, or:
+--   arcadedb console
+--   > connect system_aida_lore root <password>
+--   > script sql db-schema/create-schema.sql
+--
+-- Snapshot date: 2026-07-01
+
+-- ── Vertex types: reference/lookup ──────────────────────────────────────────
+CREATE VERTEX TYPE LoreComponent    IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE LoreTechnology   IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE LoreTag          IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE StatusDecision   IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE StatusAdr        IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE StatusSprint     IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE StatusMilestone  IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE StatusTask       IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE StatusPhase      IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE StatusPlanItem   IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE TrackType        IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE PlanTrack        IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE PlanSection      IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE PlanConfig       IF NOT EXISTS EXTENDS V;
+
+-- ── Vertex types: core entities ──────────────────────────────────────────────
+CREATE VERTEX TYPE KnowDecision     IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowADR          IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowTag          IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowSprint       IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowSpec         IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowFinding      IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowRelease      IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowMilestone    IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowPhase        IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowTask         IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE PlanItem         IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE PlanCheckpoint   IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE PlanVersion      IF NOT EXISTS EXTENDS V;
+
+-- ── Vertex types: Hist (SCD2 — one per core entity with history) ────────────
+CREATE VERTEX TYPE KnowDecisionHist  IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowADRHist       IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowSprintHist    IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowSpecHist      IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowFindingHist   IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowReleaseHist   IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowMilestoneHist IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowPhaseHist     IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowTaskHist      IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE PlanItemHist      IF NOT EXISTS EXTENDS V;
+
+-- ── Edge types ────────────────────────────────────────────────────────────────
+CREATE EDGE TYPE DECIDED_IN        IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE FORMALIZED_AS     IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE IMPLEMENTED_IN    IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE DEPENDS_ON        IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE SUPERSEDES        IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE YIELDED           IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE VALIDATES         IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE BELONGS_TO        IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE DOCUMENTED_IN     IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE TAGGED_WITH       IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE CONTRIBUTES_TO    IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE RELEASED_IN       IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE INCLUDES          IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE GATES             IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE PART_OF           IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE IN_PHASE          IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE PARENT_OF         IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE USES              IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE ON_TRACK          IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE REPRESENTS        IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE ON_MILESTONE      IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE TARGETS_MILESTONE IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE OF_TYPE           IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE CHANGED_IN        IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE IMPLEMENTED_IN_RELEASE IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE HAS_STATE         IF NOT EXISTS EXTENDS E;
+CREATE EDGE TYPE HAS_STATUS        IF NOT EXISTS EXTENDS E;
+
+-- ── Unique indexes on PK fields (also implicitly creates the property) ───────
+CREATE INDEX IF NOT EXISTS ON LoreComponent   (component_id) UNIQUE;
+CREATE INDEX IF NOT EXISTS ON LoreTechnology  (tech_id)      UNIQUE;
+CREATE INDEX IF NOT EXISTS ON LoreTag         (tag_id)       UNIQUE;
+CREATE INDEX IF NOT EXISTS ON StatusDecision  (status_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON StatusAdr       (status_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON StatusSprint    (status_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON StatusMilestone (status_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON StatusTask      (status_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON StatusPhase     (status_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON StatusPlanItem  (status_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON TrackType       (type_id)      UNIQUE;
+CREATE INDEX IF NOT EXISTS ON PlanTrack       (track_id)     UNIQUE;
+CREATE INDEX IF NOT EXISTS ON PlanSection     (section_id)   UNIQUE;
+CREATE INDEX IF NOT EXISTS ON PlanConfig      (config_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowDecision    (decision_id)  UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowADR         (adr_id)       UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowTag         (tag_id)       UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowSprint      (sprint_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowSpec        (spec_id)      UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowFinding     (finding_id)   UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowRelease     (release_id)   UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowMilestone   (milestone_id) UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowPhase       (phase_uid)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowTask        (task_uid)     UNIQUE;
+-- NB 2026-07-01: CREATE INDEX ... NOTUNIQUE (unlike UNIQUE) does NOT implicitly
+-- create the property — on a truly fresh DB it fails "property does not exist".
+-- Explicit CREATE PROPERTY first, everywhere a NOTUNIQUE index follows.
+CREATE PROPERTY KnowTask.task_id IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON KnowTask        (task_id) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON PlanItem        (item_id)      UNIQUE;
+CREATE INDEX IF NOT EXISTS ON PlanCheckpoint  (checkpoint_id) UNIQUE;
+CREATE INDEX IF NOT EXISTS ON PlanVersion     (version_id)   UNIQUE;
+
+-- ── Status valid_to index (current-row lookup for write-path SCD2) ──────────
+CREATE PROPERTY StatusPlanItem.valid_to IF NOT EXISTS DATETIME;
+CREATE INDEX IF NOT EXISTS ON StatusPlanItem    (valid_to) NOTUNIQUE;
+
+-- ── Hist valid_to indexes (current-row queries) ──────────────────────────────
+CREATE PROPERTY KnowDecisionHist.valid_to  IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowADRHist.valid_to       IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowSprintHist.valid_to    IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowSpecHist.valid_to      IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowFindingHist.valid_to   IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowReleaseHist.valid_to   IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowMilestoneHist.valid_to IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowPhaseHist.valid_to     IF NOT EXISTS DATETIME;
+CREATE PROPERTY KnowTaskHist.valid_to      IF NOT EXISTS DATETIME;
+CREATE PROPERTY PlanItemHist.valid_to      IF NOT EXISTS DATETIME;
+CREATE INDEX IF NOT EXISTS ON KnowDecisionHist  (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowADRHist       (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowSprintHist    (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowSpecHist      (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowFindingHist   (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowReleaseHist   (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowMilestoneHist (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowPhaseHist     (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowTaskHist      (valid_to) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON PlanItemHist      (valid_to) NOTUNIQUE;
+
+-- ── Phase 5 (v1.2): KnowRunbook + QualityGate + QGMetric ─────────────────────
+CREATE VERTEX TYPE KnowRunbook     IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowRunbookHist IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE QualityGate     IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE QGMetric        IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowDoc         IF NOT EXISTS EXTENDS V;
+CREATE VERTEX TYPE KnowDocHist     IF NOT EXISTS EXTENDS V;
+
+CREATE EDGE TYPE MEASURED_BY       IF NOT EXISTS EXTENDS E;
+
+CREATE PROPERTY KnowRunbookHist.state_uid   IF NOT EXISTS STRING;
+CREATE PROPERTY KnowRunbookHist.valid_from  IF NOT EXISTS STRING;
+CREATE PROPERTY KnowRunbookHist.valid_to    IF NOT EXISTS STRING;
+CREATE PROPERTY KnowRunbookHist.content_md  IF NOT EXISTS STRING;
+
+CREATE INDEX IF NOT EXISTS ON KnowRunbook    (runbook_id)  UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (state_uid)  UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (valid_to)   NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON QualityGate   (qg_id)        UNIQUE;
+CREATE INDEX IF NOT EXISTS ON QGMetric      (metric_id)    UNIQUE;
+CREATE INDEX IF NOT EXISTS ON KnowDoc       (doc_id)       UNIQUE;
+CREATE PROPERTY KnowDocHist.valid_to IF NOT EXISTS DATETIME;
+CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to) NOTUNIQUE;
+
+-- ── Phase 6 (v1.3): ClRoutine* — routine run outputs stored in LORE ─────────
+-- NB: these use bare CREATE VERTEX/EDGE TYPE (no EXTENDS V/E) — ArcadeDB
+-- allows this; properties are declared explicitly via CREATE PROPERTY
+-- because these types are queried/written directly by MCP tools (need
+-- durable typed properties + UNIQUE indexes for UPSERT WHERE to work).
+CREATE VERTEX TYPE ClRoutineRun        IF NOT EXISTS;
+CREATE PROPERTY ClRoutineRun.routine_name     IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineRun.run_date         IF NOT EXISTS DATE;
+CREATE PROPERTY ClRoutineRun.run_ts           IF NOT EXISTS DATETIME;
+CREATE PROPERTY ClRoutineRun.status           IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineRun.flags            IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineRun.detail_md        IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineRun.gates_failed_ids IF NOT EXISTS STRING;
+-- SMART-QG run identity (lore_record_qg_run UPSERT WHERE run_id) — durable
+CREATE PROPERTY ClRoutineRun.run_id           IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineRun.started_at       IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineRun.finished_at      IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON ClRoutineRun (run_id) UNIQUE;
+
+CREATE VERTEX TYPE ClRoutineMetric     IF NOT EXISTS;
+CREATE PROPERTY ClRoutineMetric.routine_name  IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineMetric.run_date      IF NOT EXISTS DATE;
+CREATE PROPERTY ClRoutineMetric.metric_key    IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineMetric.value         IF NOT EXISTS DOUBLE;
+CREATE PROPERTY ClRoutineMetric.unit          IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineMetric.target        IF NOT EXISTS DOUBLE;
+CREATE PROPERTY ClRoutineMetric.status        IF NOT EXISTS STRING;
+-- SMART-QG metric identity + evidence (lore_record_qg_run UPSERT WHERE metric_id) — durable
+CREATE PROPERTY ClRoutineMetric.metric_id     IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineMetric.run_id        IF NOT EXISTS STRING;
+-- source = exact reproducer command + file:line evidence, drives _qg_recommend
+CREATE PROPERTY ClRoutineMetric.source        IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON ClRoutineMetric (metric_id) UNIQUE;
+
+CREATE VERTEX TYPE ClRoutineSprintFlag IF NOT EXISTS;
+CREATE PROPERTY ClRoutineSprintFlag.routine_name IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineSprintFlag.run_date     IF NOT EXISTS DATE;
+CREATE PROPERTY ClRoutineSprintFlag.sprint_id    IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineSprintFlag.flag         IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineSprintFlag.lore_status  IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineSprintFlag.git_status   IF NOT EXISTS STRING;
+
+CREATE VERTEX TYPE ClRoutineOutput     IF NOT EXISTS;
+CREATE PROPERTY ClRoutineOutput.routine_name  IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineOutput.run_date      IF NOT EXISTS DATE;
+CREATE PROPERTY ClRoutineOutput.output_type   IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineOutput.title         IF NOT EXISTS STRING;
+CREATE PROPERTY ClRoutineOutput.content_md    IF NOT EXISTS STRING;
+
+CREATE EDGE TYPE ClRoutineHasOutput    IF NOT EXISTS;
+
+CREATE INDEX IF NOT EXISTS ON ClRoutineOutput(routine_name, run_date, output_type) UNIQUE;

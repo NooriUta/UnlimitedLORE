@@ -45,6 +45,29 @@ export function statusMeta(status: string | null | undefined): StatusMeta {
 }
 
 /**
+ * Resolve status meta from EITHER a clean key ("accepted", "active") OR a raw
+ * marker line ("✅ DONE", "🟡 PARTIAL"). Plain keys hit STATUS_META directly;
+ * emoji/prefix-marked raw statuses are normalized via {@link taskTick} first.
+ * Avoids the silent FALLBACK (checkbox-tree) when given an emoji-prefixed status.
+ */
+export function resolveStatusMeta(status: string | null | undefined): StatusMeta {
+  const direct = STATUS_META[(status ?? '').toLowerCase().trim()];
+  if (direct) return direct;
+  return STATUS_META[taskTick(status).status] ?? FALLBACK;
+}
+
+/**
+ * Display label for a status chip: strips a leading emoji/marker so the chip's
+ * game-icon isn't duplicated by an inline emoji ("✅ DONE" → "DONE"). Clean keys
+ * pass through unchanged ("accepted" → "accepted").
+ */
+export function statusLabel(status: string | null | undefined): string {
+  const raw = (status ?? '').trim();
+  const stripped = raw.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  return stripped || raw;
+}
+
+/**
  * Task status tick from raw status_raw text. Prefix/leading-marker match so a marker
  * mentioned later in the line doesn't flip the result. Returns the normalized status key
  * (consumable by {@link statusMeta}) plus a done flag.
@@ -58,6 +81,11 @@ export function taskTick(statusRaw: string | null | undefined): { status: string
   if (s.startsWith('🚀') || /^(READY.?FOR.?DEPLOY|RFD|К.?ДЕПЛОЮ)/i.test(s)) return { status: 'ready_for_deploy', done: false };
   if (s.startsWith('🔴') || /^(BLOCK|ЗАБЛОК)/i.test(s)) return { status: 'blocked', done: false };
   if (s.startsWith('🚫') || /^(CANCEL|ОТМЕН)/i.test(s)) return { status: 'cancelled', done: false };
-  if (s.startsWith('⬜') || /^(DEFER|ОТЛОЖЕН)/i.test(s)) return { status: 'deferred', done: false };
+  if (s.startsWith('🔬') || /^(DESIGN|ДИЗАЙН|ПРОЕКТ)/i.test(s)) return { status: 'design', done: false };
+  if (s.startsWith('🟣') || /^(BACKLOG|БЭКЛОГ|БЭКЛ)/i.test(s)) return { status: 'backlog', done: false };
+  if (s.startsWith('📋') || /^(PLANNED|ЗАПЛАН|ПЛАН)/i.test(s)) return { status: 'planned', done: false };
+  if (s.startsWith('⏸') || /^(CONDITION|HOLD|PAUSE|ON.?HOLD|DEFER|ОТЛОЖЕН|УСЛОВН|ПАУ)/i.test(s)) return { status: 'deferred', done: false };
+  // ⬜ is the canonical "todo" marker on the backend (SCD2_STATUS_RAW), not deferred.
+  if (s.startsWith('⬜') || /^(TODO|TO.?DO|НЕ.?НАЧАТ)/i.test(s)) return { status: 'todo', done: false };
   return { status: 'todo', done: false };
 }

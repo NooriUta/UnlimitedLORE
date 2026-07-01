@@ -1,0 +1,1432 @@
+{
+  "_comment": "Live schema:types introspection snapshot of system_aida_lore. NOTE: ArcadeDB is schemaless-by-default for properties -- this only lists properties that were explicitly declared via CREATE PROPERTY (or implicitly via a UNIQUE index). Most fields on most types are set dynamically on INSERT/UPDATE without ever appearing here (e.g. KnowADR.name/status/context_md exist on every real record but are NOT in this dump's KnowADR.properties list). For the full set of fields the application actually reads/writes, see the backend Java slice/write code (LoreSlices.java, AidaLoreResource.java), not this file. This file documents indexes and explicitly-typed properties only -- the authoritative schema-creation source is create-schema.sql (extracted from LoreSchemaInitializer.java).",
+  "snapshot_date": "2026-07-01",
+  "database": "system_aida_lore",
+  "vertex_type_count": 51,
+  "edge_type_count": 36,
+  "vertex_types": [
+    {
+      "name": "ClRoutineMetric",
+      "records": 63,
+      "properties": [
+        {
+          "name": "metric_id",
+          "type": "STRING"
+        },
+        {
+          "name": "metric_key",
+          "type": "STRING"
+        },
+        {
+          "name": "routine_name",
+          "type": "STRING"
+        },
+        {
+          "name": "run_date",
+          "type": "DATE"
+        },
+        {
+          "name": "run_id",
+          "type": "STRING"
+        },
+        {
+          "name": "status",
+          "type": "STRING"
+        },
+        {
+          "name": "target",
+          "type": "FLOAT"
+        },
+        {
+          "name": "unit",
+          "type": "STRING"
+        },
+        {
+          "name": "value",
+          "type": "FLOAT"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "metric_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        },
+        {
+          "properties": [
+            "metric_key"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        },
+        {
+          "properties": [
+            "routine_name",
+            "run_date"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "ClRoutineOutput",
+      "records": 0,
+      "properties": [
+        {
+          "name": "content_md",
+          "type": "STRING"
+        },
+        {
+          "name": "output_type",
+          "type": "STRING"
+        },
+        {
+          "name": "routine_name",
+          "type": "STRING"
+        },
+        {
+          "name": "run_date",
+          "type": "DATE"
+        },
+        {
+          "name": "title",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "routine_name",
+            "run_date",
+            "output_type"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "ClRoutineRun",
+      "records": 57,
+      "properties": [
+        {
+          "name": "detail_md",
+          "type": "STRING"
+        },
+        {
+          "name": "finished_at",
+          "type": "STRING"
+        },
+        {
+          "name": "flags",
+          "type": "STRING"
+        },
+        {
+          "name": "gates_failed_ids",
+          "type": "STRING"
+        },
+        {
+          "name": "routine_name",
+          "type": "STRING"
+        },
+        {
+          "name": "run_date",
+          "type": "DATE"
+        },
+        {
+          "name": "run_id",
+          "type": "STRING"
+        },
+        {
+          "name": "run_ts",
+          "type": "DATETIME"
+        },
+        {
+          "name": "started_at",
+          "type": "STRING"
+        },
+        {
+          "name": "status",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "routine_name"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        },
+        {
+          "properties": [
+            "run_date"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        },
+        {
+          "properties": [
+            "run_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "ClRoutineSprintFlag",
+      "records": 1,
+      "properties": [
+        {
+          "name": "flag",
+          "type": "STRING"
+        },
+        {
+          "name": "git_status",
+          "type": "STRING"
+        },
+        {
+          "name": "lore_status",
+          "type": "STRING"
+        },
+        {
+          "name": "run_date",
+          "type": "DATE"
+        },
+        {
+          "name": "sprint_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "run_date"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        },
+        {
+          "properties": [
+            "sprint_id"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowADR",
+      "records": 65,
+      "properties": [
+        {
+          "name": "adr_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "adr_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowADRHist",
+      "records": 137,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowDecision",
+      "records": 130,
+      "properties": [
+        {
+          "name": "decision_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "decision_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowDecisionHist",
+      "records": 158,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowDoc",
+      "records": 84,
+      "properties": [
+        {
+          "name": "doc_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "doc_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowDocHist",
+      "records": 0,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowFinding",
+      "records": 31,
+      "properties": [
+        {
+          "name": "finding_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "finding_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowFindingHist",
+      "records": 0,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowGitProject",
+      "records": 7,
+      "properties": [
+        {
+          "name": "description",
+          "type": "STRING"
+        },
+        {
+          "name": "is_private",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "name",
+          "type": "STRING"
+        },
+        {
+          "name": "slug",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "slug"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowMilestone",
+      "records": 8,
+      "properties": [
+        {
+          "name": "milestone_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "milestone_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowMilestoneHist",
+      "records": 8,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowPR",
+      "records": 401,
+      "properties": [
+        {
+          "name": "git_project",
+          "type": "STRING"
+        },
+        {
+          "name": "pr_id",
+          "type": "STRING"
+        },
+        {
+          "name": "pr_number",
+          "type": "INTEGER"
+        },
+        {
+          "name": "pr_uid",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "pr_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        },
+        {
+          "properties": [
+            "pr_uid"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowPhase",
+      "records": 25,
+      "properties": [
+        {
+          "name": "phase_uid",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "phase_uid"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowPhaseHist",
+      "records": 55,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowRelease",
+      "records": 108,
+      "properties": [
+        {
+          "name": "git_project",
+          "type": "STRING"
+        },
+        {
+          "name": "release_id",
+          "type": "STRING"
+        },
+        {
+          "name": "release_uid",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "release_uid"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowReleaseHist",
+      "records": 99,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowRunbook",
+      "records": 12,
+      "properties": [
+        {
+          "name": "runbook_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "runbook_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowRunbookHist",
+      "records": 23,
+      "properties": [
+        {
+          "name": "content_md",
+          "type": "STRING"
+        },
+        {
+          "name": "state_uid",
+          "type": "STRING"
+        },
+        {
+          "name": "valid_from",
+          "type": "STRING"
+        },
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "state_uid"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        },
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowSpec",
+      "records": 168,
+      "properties": [
+        {
+          "name": "spec_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "spec_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowSpecHist",
+      "records": 164,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowSprint",
+      "records": 211,
+      "properties": [
+        {
+          "name": "context_md",
+          "type": "STRING"
+        },
+        {
+          "name": "sprint_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "sprint_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowSprintHist",
+      "records": 605,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowTag",
+      "records": 3,
+      "properties": [
+        {
+          "name": "tag_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "tag_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowTask",
+      "records": 2091,
+      "properties": [
+        {
+          "name": "task_uid",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "task_uid"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "KnowTaskHist",
+      "records": 3696,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "LoreComponent",
+      "records": 41,
+      "properties": [
+        {
+          "name": "component_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "component_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "LoreTag",
+      "records": 15,
+      "properties": [
+        {
+          "name": "tag_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "tag_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "LoreTechnology",
+      "records": 13,
+      "properties": [
+        {
+          "name": "tech_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "tech_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "PlanCheckpoint",
+      "records": 17,
+      "properties": [
+        {
+          "name": "checkpoint_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "checkpoint_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "PlanConfig",
+      "records": 1,
+      "properties": [
+        {
+          "name": "config_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "config_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "PlanItem",
+      "records": 328,
+      "properties": [
+        {
+          "name": "item_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "item_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "PlanItemHist",
+      "records": 696,
+      "properties": [
+        {
+          "name": "valid_to",
+          "type": "DATETIME"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "valid_to"
+          ],
+          "unique": false,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "PlanSection",
+      "records": 5,
+      "properties": [
+        {
+          "name": "section_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "section_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "PlanTrack",
+      "records": 18,
+      "properties": [
+        {
+          "name": "track_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "track_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "PlanVersion",
+      "records": 167,
+      "properties": [
+        {
+          "name": "version_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "version_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "QGJobTask",
+      "records": 31,
+      "properties": [
+        {
+          "name": "inv_id",
+          "type": "STRING"
+        },
+        {
+          "name": "job_id",
+          "type": "STRING"
+        },
+        {
+          "name": "note_md",
+          "type": "STRING"
+        },
+        {
+          "name": "qg_id",
+          "type": "STRING"
+        },
+        {
+          "name": "severity",
+          "type": "STRING"
+        },
+        {
+          "name": "status",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "job_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "QGMetric",
+      "records": 0,
+      "properties": [
+        {
+          "name": "metric_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "metric_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "QGRecommendation",
+      "records": 7,
+      "properties": [
+        {
+          "name": "body_md",
+          "type": "STRING"
+        },
+        {
+          "name": "job_id",
+          "type": "STRING"
+        },
+        {
+          "name": "rec_id",
+          "type": "STRING"
+        },
+        {
+          "name": "status",
+          "type": "STRING"
+        },
+        {
+          "name": "title",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "rec_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "QualityGate",
+      "records": 29,
+      "properties": [
+        {
+          "name": "qg_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "qg_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "StatusAdr",
+      "records": 5,
+      "properties": [
+        {
+          "name": "status_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "status_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "StatusDecision",
+      "records": 3,
+      "properties": [
+        {
+          "name": "status_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "status_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "StatusMilestone",
+      "records": 4,
+      "properties": [
+        {
+          "name": "status_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "status_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "StatusPhase",
+      "records": 5,
+      "properties": [
+        {
+          "name": "status_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "status_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "StatusPlanItem",
+      "records": 354,
+      "properties": [
+        {
+          "name": "status_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "status_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "StatusSprint",
+      "records": 12,
+      "properties": [
+        {
+          "name": "status_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "status_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "StatusTask",
+      "records": 5,
+      "properties": [
+        {
+          "name": "status_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "status_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    },
+    {
+      "name": "TrackType",
+      "records": 6,
+      "properties": [
+        {
+          "name": "type_id",
+          "type": "STRING"
+        }
+      ],
+      "indexes": [
+        {
+          "properties": [
+            "type_id"
+          ],
+          "unique": true,
+          "type": "LSM_TREE"
+        }
+      ]
+    }
+  ],
+  "edge_types": [
+    {
+      "name": "BELONGS_TO",
+      "records": 648,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "BELONGS_TO_PROJECT",
+      "records": 550,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "CHANGED_IN",
+      "records": 672,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "CONTRIBUTES_TO",
+      "records": 283,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "ClRoutineHasMetric",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "ClRoutineHasOutput",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "ClRoutineHasSprintFlag",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "DECIDED_IN",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "DEPENDS_ON",
+      "records": 98,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "DOCUMENTED_IN",
+      "records": 136,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "FORMALIZED_AS",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "GATES",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "HAS_PR",
+      "records": 159,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "HAS_STATE",
+      "records": 5410,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "HAS_STATUS",
+      "records": 2135,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "IMPLEMENTED_IN",
+      "records": 34,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "IMPLEMENTED_IN_RELEASE",
+      "records": 170,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "INCLUDES",
+      "records": 18,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "IN_PHASE",
+      "records": 65,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "MEASURED_BY",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "OF_TYPE",
+      "records": 18,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "ON_MILESTONE",
+      "records": 14,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "ON_TRACK",
+      "records": 249,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "PARENT_OF",
+      "records": 34,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "PART_OF",
+      "records": 2092,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "PRODUCED",
+      "records": 7,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "PROMOTED_TO",
+      "records": 3,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "RELEASED_IN",
+      "records": 19,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "REPRESENTS",
+      "records": 186,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "SHIPPED_IN",
+      "records": 415,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "SUPERSEDES",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "TAGGED_WITH",
+      "records": 830,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "TARGETS_MILESTONE",
+      "records": 78,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "USES",
+      "records": 23,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "VALIDATES",
+      "records": 0,
+      "properties": [],
+      "indexes": []
+    },
+    {
+      "name": "YIELDED",
+      "records": 54,
+      "properties": [],
+      "indexes": []
+    }
+  ]
+}

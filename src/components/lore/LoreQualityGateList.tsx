@@ -6,22 +6,23 @@ interface QGRow {
   name: string;
   description: string | null;
   component_id: string | null;
-  status: string | null;
+  status: string | null;          // lifecycle: active/draft/deprecated/closed
+  last_run_status: string | null; // run result: active/blocked
   date_created: string | null;
   sprint_id?: string | null;
-}
-
-interface QGMetricRow {
-  metric_id: string;
-  name: string;
-  threshold: string;
 }
 
 const STATUS_META: Record<string, { color: string; label: string }> = {
   active:     { color: 'var(--suc)',    label: 'активен'  },
   draft:      { color: 'var(--wrn)',    label: 'черновик' },
   archived:   { color: 'var(--t3)',     label: 'архив'    },
-  deprecated: { color: 'var(--danger)', label: 'устарел'  },
+  deprecated: { color: 'var(--t3)',     label: 'устарел'  },
+  closed:     { color: 'var(--t3)',     label: 'закрыт'   },
+};
+
+const RUN_META: Record<string, { color: string; label: string }> = {
+  active:  { color: 'var(--suc)',    label: '✓ pass' },
+  blocked: { color: 'var(--danger)', label: '✗ fail' },
 };
 
 function exportHtml(rows: QGRow[]) {
@@ -64,8 +65,6 @@ interface Props {
 export default function LoreQualityGateList({ onError, onOpen }: Props) {
   const [rows, setRows]           = useState<QGRow[]>([]);
   const [loading, setLoading]     = useState(true);
-  const [expanded, setExpanded]   = useState<string | null>(null);
-  const [metrics, setMetrics]     = useState<Record<string, QGMetricRow[]>>({});
   const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
   const [compSel, setCompSel]     = useState<Set<string>>(new Set());
 
@@ -77,17 +76,6 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
   }, [onError]);
-
-  const handleRowClick = (qgId: string) => {
-    if (onOpen) { onOpen(qgId); return; }
-    if (expanded === qgId) { setExpanded(null); return; }
-    setExpanded(qgId);
-    if (!metrics[qgId]) {
-      fetchLoreSlice<QGMetricRow>('qg_metrics', { qg_id: qgId })
-        .then(r => setMetrics(m => ({ ...m, [qgId]: r })))
-        .catch(onError);
-    }
-  };
 
   // Derived filter options
   const allStatuses = [...new Set(rows.map(r => r.status).filter(Boolean))] as string[];
@@ -117,11 +105,25 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
       <div style={S.statsBar}>
         <span style={S.statTotal}>{rows.length}</span>
         <span style={{ color: 'var(--t3)', fontSize: 10 }}>всего</span>
-        {statsByStatus.map(({ s, n, m }) => (
-          <span key={s} style={S.statBadge(m.color)}>
-            {m.label} <b>{n}</b>
-          </span>
-        ))}
+        {statsByStatus.map(({ s, n, m }) => {
+          const on = statusSel.has(s);
+          return (
+            <span
+              key={s}
+              onClick={() => toggleStatus(s)}
+              style={{
+                ...S.statBadge(m.color),
+                cursor: 'pointer',
+                background: on ? `color-mix(in srgb, ${m.color} 22%, transparent)` : `color-mix(in srgb, ${m.color} 10%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${m.color} ${on ? 45 : 25}%, transparent)`,
+                fontWeight: on ? 700 : 400,
+                opacity: statusSel.size > 0 && !on ? 0.45 : 1,
+              }}
+            >
+              {m.label} <b>{n}</b>
+            </span>
+          );
+        })}
         <span style={{ flex: 1 }} />
         <button style={S.exportBtn} onClick={() => exportHtml(rows)} title="Экспорт активных QG в HTML">
           ↓ HTML
@@ -163,52 +165,27 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
         </div>
       )}
 
-      {/* List */}
+      {/* List — selecting a row opens the full ADR-QG-004 report in LoreQGDetail */}
       <div style={S.list}>
         {shown.map(qg => (
-          <div key={qg.qg_id}>
-            <div style={S.row(expanded === qg.qg_id)} onClick={() => handleRowClick(qg.qg_id)}>
-              <span style={S.arrow}>{onOpen ? '→' : expanded === qg.qg_id ? '▾' : '▸'}</span>
-              {qg.status && (
-                <span style={S.statusChip(qg.status)}>
-                  {(STATUS_META[qg.status] ?? { label: qg.status }).label}
-                </span>
-              )}
-              <span style={S.id}>{qg.qg_id}</span>
-              <span style={S.name}>{qg.name}</span>
-              {qg.component_id && <span style={S.comp}>{qg.component_id}</span>}
-              <span style={S.date}>{qg.date_created?.slice(0, 10) ?? ''}</span>
-            </div>
-            {!onOpen && expanded === qg.qg_id && (
-              <div style={S.detail}>
-                {qg.description && <div style={S.desc}>{qg.description}</div>}
-                {qg.sprint_id && (
-                  <div style={S.sprint}>Спринт: <b>{qg.sprint_id}</b></div>
-                )}
-                {(metrics[qg.qg_id] ?? []).length > 0 ? (
-                  <table style={S.table}>
-                    <thead><tr>
-                      <th style={S.th}>Метрика</th>
-                      <th style={S.th}>Описание</th>
-                      <th style={S.th}>Порог</th>
-                    </tr></thead>
-                    <tbody>
-                      {(metrics[qg.qg_id] ?? []).map(m => (
-                        <tr key={m.metric_id}>
-                          <td style={S.tdCode}>{m.metric_id}</td>
-                          <td style={S.td}>{m.name}</td>
-                          <td style={S.tdThreshold}>{m.threshold}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : metrics[qg.qg_id] ? (
-                  <div style={S.noMetrics}>Метрики не найдены.</div>
-                ) : (
-                  <div style={S.noMetrics}>Загрузка метрик…</div>
-                )}
-              </div>
+          <div key={qg.qg_id} style={S.row} onClick={() => onOpen?.(qg.qg_id)}>
+            <span style={S.arrow}>→</span>
+            {qg.status && (
+              <span style={S.statusChip(qg.status)}>
+                {(STATUS_META[qg.status] ?? { label: qg.status }).label}
+              </span>
             )}
+            {qg.last_run_status && RUN_META[qg.last_run_status] && (
+              <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                color: RUN_META[qg.last_run_status].color,
+                background: `color-mix(in srgb,${RUN_META[qg.last_run_status].color} 12%,transparent)` }}>
+                {RUN_META[qg.last_run_status].label}
+              </span>
+            )}
+            <span style={S.id}>{qg.qg_id}</span>
+            <span style={S.name}>{qg.name}</span>
+            {qg.component_id && <span style={S.comp}>{qg.component_id}</span>}
+            <span style={S.date}>{qg.date_created?.slice(0, 10) ?? ''}</span>
           </div>
         ))}
         {shown.length === 0 && <div style={S.state}>Quality Gates не найдены.</div>}
@@ -252,12 +229,11 @@ const S = {
   }),
   reset: { fontSize: 10, color: 'var(--t3)', cursor: 'pointer', padding: '0 4px' },
   list:  { flex: 1, overflowY: 'auto' as const },
-  row: (expanded: boolean) => ({
+  row: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '7px 14px', borderBottom: '1px solid var(--bd)',
     fontSize: 12, cursor: 'pointer',
-    background: expanded ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent',
-  }),
+  },
   arrow:  { color: 'var(--t3)', fontSize: 11, width: 12, flexShrink: 0 },
   statusChip: (s: string) => {
     const m = STATUS_META[s] ?? { color: 'var(--t3)' };
@@ -272,20 +248,4 @@ const S = {
   name:        { flex: 1, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   comp:        { color: 'var(--acc)', fontSize: 11, flexShrink: 0 },
   date:        { color: 'var(--t3)', fontSize: 11, flexShrink: 0 },
-  detail: {
-    padding: '8px 14px 12px 38px',
-    background: 'color-mix(in srgb, var(--b2) 40%, transparent)',
-    borderBottom: '1px solid var(--bd)',
-  },
-  desc:        { color: 'var(--t2)', fontSize: 11, marginBottom: 6 },
-  sprint:      { color: 'var(--t3)', fontSize: 10, marginBottom: 6 },
-  noMetrics:   { color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' as const },
-  table:       { width: '100%', borderCollapse: 'collapse' as const, fontSize: 11 },
-  th: {
-    textAlign: 'left' as const, padding: '4px 8px',
-    color: 'var(--t3)', fontWeight: 600, borderBottom: '1px solid var(--bd)',
-  },
-  td:          { padding: '4px 8px', color: 'var(--t2)', verticalAlign: 'top' as const },
-  tdCode:      { padding: '4px 8px', color: 'var(--acc)', fontFamily: 'monospace', whiteSpace: 'nowrap' as const },
-  tdThreshold: { padding: '4px 8px', color: 'var(--t1)', whiteSpace: 'pre-wrap' as const, maxWidth: 240 },
 };

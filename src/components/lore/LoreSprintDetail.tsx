@@ -4,12 +4,13 @@ import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
-  linkSprintProject,
+  linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
+import { areaColor } from './LoreComponentList';
 
 interface SprintMeta {
   sprint_id: string;
@@ -20,6 +21,8 @@ interface SprintMeta {
   release_ids: string[] | null;
   milestone_ids: string[] | null;
   depends_on: string[] | null;
+  blocks: string[] | null;
+  components: string[] | null;
   context_md: string | null;
   git_projects: string[] | null;
 }
@@ -36,6 +39,25 @@ interface PhaseRow {
 interface Props {
   sprintId: string;
   onError: (e: unknown) => void;
+  onNavigateToComponent?: (componentId: string) => void;
+  onNavigateToSprint?: (sprintId: string) => void;
+}
+
+// A component is "linked" to a sprint by the same naming convention the component
+// passport uses in reverse (component_sprints: sprint_id LIKE '%<key>%'). Here we
+// derive each component's key and keep those whose key appears in the sprint_id.
+interface CompRow {
+  component_id: string;
+  full_name: string | null;
+  area: string | null;
+  game_icon: string | null;
+}
+
+function componentKey(c: CompRow): string {
+  // Mirror LoreComponentPassport: short ids fall back to the first full_name word.
+  return (c.component_id.length < 4
+    ? (c.full_name?.split(/\s+/)[0] ?? c.component_id)
+    : c.component_id).toUpperCase();
 }
 
 const NO_PHASE = '__no_phase__';
@@ -202,10 +224,14 @@ function PriorityPicker({ sprintId, current, onChanged, onError }: {
 
 // Status-count chips for the sprint header: one chip per present status (icon + count).
 // Multi-select: click chips to show only those statuses; click again to deselect.
-const STATUS_COUNT_ORDER = ['done', 'active', 'partial', 'todo', 'blocked', 'cancelled'] as const;
+const STATUS_COUNT_ORDER = [
+  'done', 'ready_for_deploy', 'active', 'partial', 'design',
+  'planned', 'todo', 'deferred', 'backlog', 'blocked', 'cancelled',
+] as const;
 const STATUS_COUNT_LABEL: Record<string, string> = {
-  done: 'Готово', active: 'В работе', partial: 'Частично', todo: 'В плане', blocked: 'Заблокировано',
-  cancelled: 'Отменено',
+  done: 'Готово', ready_for_deploy: 'К деплою', active: 'В работе', partial: 'Частично',
+  design: 'Дизайн', planned: 'Запланировано', todo: 'В плане', deferred: 'Отложено',
+  backlog: 'Беклог', blocked: 'Заблокировано', cancelled: 'Отменено',
 };
 
 function StatusCounts({ tasks, filter, onFilter }: {
@@ -349,8 +375,9 @@ function mdHtml(md: string | null | undefined): string {
   return md && md.trim() ? (marked.parse(md) as string) : '';
 }
 
-function TaskLine({ t, onChanged, onError }: {
+function TaskLine({ t, allComps, onChanged, onError }: {
   t: LoreSprintTask;
+  allComps: CompRow[];
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
@@ -361,6 +388,20 @@ function TaskLine({ t, onChanged, onError }: {
   const [title, setTitle]     = useState(t.title ?? '');
   const [note, setNote]       = useState(t.note_md ?? '');
   const [busy, setBusy]       = useState(false);
+  const [compPicker, setCompPicker] = useState(false);
+  const [compBusy, setCompBusy]     = useState<string | null>(null);
+  const linkedIds = new Set(t.component_ids ?? []);
+
+  async function toggleComp(componentId: string) {
+    if (compBusy) return;
+    const action = linkedIds.has(componentId) ? 'remove' : 'add';
+    setCompBusy(componentId);
+    try {
+      await linkTaskComponent(t.task_uid, componentId, action);
+      onChanged();
+    } catch (e) { onError(e); }
+    finally { setCompBusy(null); }
+  }
 
   async function save() {
     if (busy || !title.trim()) return;
@@ -387,6 +428,23 @@ function TaskLine({ t, onChanged, onError }: {
         {hasDetail && !editing && (
           <span style={{ fontSize: 9, color: 'var(--t3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
         )}
+        {/* Component tags */}
+        {Array.from(linkedIds).map(cid => {
+          const c = allComps.find(x => x.component_id === cid);
+          const color = areaColor(c?.area ?? '');
+          return (
+            <span key={cid}
+              title={c?.full_name ?? cid}
+              style={{
+                fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
+                color, fontFamily: 'var(--mono)', flexShrink: 0, cursor: 'default',
+              }}
+              onClick={e => e.stopPropagation()}
+            >{cid}</span>
+          );
+        })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           {t.effort_days != null && (
             <span style={{ color: 'var(--t3)', fontSize: 10 }}>{t.effort_days}d</span>
@@ -396,10 +454,36 @@ function TaskLine({ t, onChanged, onError }: {
             current={toToken(taskTick(t.status_raw).status)}
             onChanged={onChanged} onError={onError}
           />
+          <button type="button" style={iconBtn} title="Компоненты"
+            onClick={e => { e.stopPropagation(); setCompPicker(v => !v); }}>⊕</button>
           <button type="button" style={iconBtn} title="Редактировать"
             onClick={e => { e.stopPropagation(); setEditing(v => !v); }}>✎</button>
         </span>
       </div>
+
+      {compPicker && allComps.length > 0 && (
+        <div style={{ padding: '4px 8px 6px 26px', display: 'flex', flexWrap: 'wrap', gap: 4 }}
+          onClick={e => e.stopPropagation()}>
+          {allComps.map(c => {
+            const linked = linkedIds.has(c.component_id);
+            const color  = areaColor(c.area ?? '');
+            const loading = compBusy === c.component_id;
+            return (
+              <button key={c.component_id} type="button" disabled={!!compBusy}
+                title={c.full_name ?? c.component_id}
+                onClick={() => void toggleComp(c.component_id)}
+                style={{
+                  fontSize: 9, padding: '1px 5px', borderRadius: 3, cursor: compBusy ? 'default' : 'pointer',
+                  opacity: loading ? 0.5 : (linked ? 1 : 0.45),
+                  background: linked ? `color-mix(in srgb, ${color} 14%, transparent)` : 'transparent',
+                  border: `1px solid color-mix(in srgb, ${color} ${linked ? 40 : 25}%, transparent)`,
+                  color, fontFamily: 'var(--mono)',
+                }}
+              >{c.component_id}</button>
+            );
+          })}
+        </div>
+      )}
 
       {editing && (
         <div style={{ padding: '4px 8px 8px 26px', display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -462,9 +546,39 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   );
 }
 
-export default function LoreSprintDetail({ sprintId, onError }: Props) {
+function RelatedSprintRow({
+  id, meta, onNavigate, accent = 'var(--t2)',
+}: {
+  id: string;
+  meta?: { status_raw: string | null; task_total: number; task_done: number };
+  onNavigate?: (id: string) => void;
+  accent?: string;
+}) {
+  const tick = meta ? taskTick(meta.status_raw) : null;
+  const sm = tick ? statusMeta(tick.status) : null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+      <button
+        onClick={() => onNavigate?.(id)}
+        disabled={!onNavigate}
+        style={{ background: 'none', border: 'none', padding: 0, cursor: onNavigate ? 'pointer' : 'default',
+          fontFamily: 'var(--mono)', fontSize: 11, color: accent, textAlign: 'left' as const,
+          textDecoration: onNavigate ? 'underline' : 'none', textDecorationStyle: 'dotted' as const }}
+      >· {id}</button>
+      {sm && <GameIcon slug={sm.icon} size={10} style={{ color: sm.color, flexShrink: 0 }} />}
+      {meta && (
+        <span style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
+          {meta.task_done}/{meta.task_total}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function LoreSprintDetail({ sprintId, onError, onNavigateToComponent, onNavigateToSprint }: Props) {
   const [, setParams]         = useSearchParams();
   const [sprint,  setSprint]  = useState<SprintMeta | null>(null);
+  const [allComps, setAllComps] = useState<CompRow[]>([]);
   const [phases,  setPhases]  = useState<PhaseRow[]>([]);
   const [tasks,   setTasks]   = useState<LoreSprintTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -473,8 +587,12 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
   const [ctxEdit, setCtxEdit] = useState(false);
   const [ctxDraft, setCtxDraft] = useState('');
   const [ctxSaving, setCtxSaving] = useState(false);
-  const [projLinking, setProjLinking] = useState(false);
+  const [projLinking, setProjLinking]   = useState(false);
+  const [compLinking, setCompLinking] = useState(false);
+  const [msLinking, setMsLinking]     = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
+  const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
+  const [relatedMeta, setRelatedMeta] = useState<Map<string, { status_raw: string | null; task_total: number; task_done: number }>>(new Map());
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -490,6 +608,20 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
       .catch(() => {});
   }, []);
 
+  // Load all components once for the reverse sprint→modules badges.
+  useEffect(() => {
+    fetchLoreSlice<CompRow>('components', {})
+      .then(rows => setAllComps(rows ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Load milestones once (for the sprint↔milestone linker).
+  useEffect(() => {
+    fetchLoreSlice<{ milestone_id: string; label: string }>('milestones', {})
+      .then(rows => setAllMilestones((rows ?? []).map(r => ({ id: r.milestone_id, label: r.label }))))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     setLoading(true);
     setSprint(null);
@@ -502,10 +634,31 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
       fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: sprintId }, ctrl.signal),
     ])
       .then(([metas, phaseRows, taskRows]) => {
-        setSprint(metas[0] ?? null);
+        const s = metas[0] ?? null;
+        setSprint(s);
         setPhases(phaseRows);
         setTasks(taskRows);
         setLoading(false);
+        // Load related sprint meta (depends_on + blocks): status + task counts
+        const relIds = [...(s?.depends_on ?? []), ...(s?.blocks ?? [])];
+        if (relIds.length > 0) {
+          Promise.all(relIds.map(id =>
+            Promise.all([
+              fetchLoreSlice<SprintMeta>('sprint_tree', { id }, ctrl.signal),
+              fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: id }, ctrl.signal),
+            ]).then(([mRow, tRows]) => {
+              const meta = mRow[0];
+              if (!meta) return null;
+              const task_total = tRows.length;
+              const task_done  = tRows.filter(t => taskTick(t.status_raw).done).length;
+              return { id, status_raw: meta.status_raw, task_total, task_done };
+            })
+          )).then(results => {
+            const m = new Map<string, { status_raw: string | null; task_total: number; task_done: number }>();
+            results.forEach(r => { if (r) m.set(r.id, r); });
+            setRelatedMeta(m);
+          }).catch(() => {});
+        }
       })
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
@@ -525,6 +678,17 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
     ? sprint.release_ids
     : (fallbackVer ? [fallbackVer] : []);
   const prNums  = parsePrRefs(sprint.pr_refs);
+
+  // Modules for this sprint. Explicit BELONGS_TO links (sprint.components, from the
+  // sprint_tree slice) are authoritative — when present, show ONLY those. Otherwise
+  // fall back to the naming-convention reverse match (component key ⊂ sprint_id,
+  // key length ≥ 3 to avoid noisy 1–2 char matches).
+  const sprintIdUpper = sprint.sprint_id.toUpperCase();
+  const explicit = sprint.components ?? [];
+  const linkedComps = (explicit.length
+    ? allComps.filter(c => explicit.includes(c.component_id))
+    : allComps.filter(c => { const k = componentKey(c); return k.length >= 3 && sprintIdUpper.includes(k); })
+  ).sort((a, b) => componentKey(b).length - componentKey(a).length);
 
   function goToRelease(v: string) {
     setParams(p => { p.set('section', 'releases'); p.set('q', v); p.delete('passport'); return p; });
@@ -565,6 +729,13 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
           <>
             <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
             <span style={S.meta}>{doneTotal}/{tasks.length}</span>
+            {(() => {
+              const effortSum = visibleTasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
+              const label = filter.size > 0 ? 'выбр.' : 'Σ';
+              return effortSum > 0
+                ? <span style={S.meta} title="Сумма effort_days по отображаемым задачам">{label} <b style={{ color: 'var(--acc)' }}>{effortSum}</b> д</span>
+                : null;
+            })()}
           </>
         )}
         {sprint.milestone_ids?.length ? (
@@ -603,55 +774,44 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         </div>
       )}
 
-      {/* context_md — background / WHY section, editable inline */}
-      <div style={{ padding: '4px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+      {/* ── Top meta block: context (left) + projects/milestones/modules (right) ── */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+
+      {/* CONTEXT — left, flexible. maxHeight+overflow caps its growth so a long
+          context_md can never crowd out the task list below (both this block and
+          the task list live in the same flex column; without a cap, a large
+          context — flexShrink:0 — pushes the flex:1 task list toward 0 height). */}
+      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px', maxHeight: 220, overflowY: 'auto' as const }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Контекст</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Контекст</span>
           {!ctxEdit && (
-            <button
-              onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
-              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
-            >✎ ред.</button>
+            <button onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
+              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>✎ ред.</button>
           )}
         </div>
         {ctxEdit ? (
           <div>
-            <textarea
-              value={ctxDraft}
-              onChange={e => setCtxDraft(e.target.value)}
-              rows={8}
-              placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки, связанные спринты..."
-              style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }}
-            />
+            <textarea value={ctxDraft} onChange={e => setCtxDraft(e.target.value)} rows={6}
+              placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки..."
+              style={{ width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }} />
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-              <button
-                disabled={ctxSaving}
-                onClick={async () => {
-                  setCtxSaving(true);
-                  try {
-                    await updateLoreSprint(sprint.sprint_id, { context_md: ctxDraft || null });
-                    setSprint(s => s ? { ...s, context_md: ctxDraft || null } : s);
-                    setCtxEdit(false);
-                  } catch (e) { onError(e); }
-                  finally { setCtxSaving(false); }
-                }}
-                style={{ fontSize: 11, padding: '2px 10px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer' }}
-              >{ctxSaving ? '…' : 'Сохранить'}</button>
-              <button
-                onClick={() => setCtxEdit(false)}
-                style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}
-              >Отмена</button>
+              <button disabled={ctxSaving} onClick={async () => {
+                setCtxSaving(true);
+                try { await updateLoreSprint(sprint.sprint_id, { context_md: ctxDraft || null }); setSprint(s => s ? { ...s, context_md: ctxDraft || null } : s); setCtxEdit(false); }
+                catch (e) { onError(e); } finally { setCtxSaving(false); }
+              }} style={{ fontSize: 11, padding: '2px 10px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer' }}>{ctxSaving ? '…' : 'Сохранить'}</button>
+              <button onClick={() => setCtxEdit(false)} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>Отмена</button>
             </div>
           </div>
         ) : sprint.context_md ? (
-          <div
-            style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }}
-            dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }}
-          />
+          <div style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }} />
         ) : (
           <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>Контекст не заполнен</div>
         )}
       </div>
+
+      {/* META RIGHT — projects + milestones + modules */}
+      <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: 220, overflowY: 'auto' as const }}>
 
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {
@@ -659,7 +819,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         const unlinked = allProjects.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         return (
-          <div style={{ padding: '6px 16px 8px', borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проекты</span>
             </div>
@@ -716,6 +876,148 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         );
       })()}
 
+      {/* ── Milestones section (sprint→milestone, TARGETS_MILESTONE) ──────────── */}
+      {(() => {
+        const linked = sprint.milestone_ids ?? [];
+        const unlinked = allMilestones.filter(m => !linked.includes(m.id));
+        return (
+          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <GameIcon slug="crossed-axes" size={11} style={{ color: 'var(--t3)' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Вехи</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+              {linked.map(mid => (
+                <span key={mid} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
+                  padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
+                  {mid}
+                  <button disabled={msLinking}
+                    onClick={async () => {
+                      setMsLinking(true);
+                      try {
+                        await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
+                        setSprint(s => s ? { ...s, milestone_ids: (s.milestone_ids ?? []).filter(x => x !== mid) } : s);
+                      } catch (e) { onError(e); } finally { setMsLinking(false); }
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 10, padding: 0, lineHeight: 1, opacity: 0.7 }}
+                    title={`Отвязать ${mid}`}>✕</button>
+                </span>
+              ))}
+              {unlinked.length > 0 && (
+                <select disabled={msLinking} value=""
+                  onChange={async e => {
+                    const mid = e.target.value;
+                    if (!mid) return;
+                    setMsLinking(true);
+                    try {
+                      await linkSprintMilestone(sprint.sprint_id, mid, 'add');
+                      setSprint(s => s ? { ...s, milestone_ids: [...(s.milestone_ids ?? []), mid] } : s);
+                    } catch (err) { onError(err); } finally { setMsLinking(false); }
+                  }}
+                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+                    background: 'var(--bg2)', border: '1px solid var(--bd)', color: 'var(--t2)', cursor: 'pointer',
+                    appearance: 'none' as const,
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}>
+                  <option value="">+ привязать веху…</option>
+                  {unlinked.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
+                </select>
+              )}
+              {linked.length === 0 && unlinked.length === 0 && <span style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' }}>нет вех</span>}
+              {msLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Modules section (sprint→component links) ────────────────────────── */}
+      {(() => {
+        const unlinkedComps = allComps.filter(c => !explicit.includes(c.component_id));
+        const selectStyle = { fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+          background: 'var(--bg2)', border: '1px solid var(--bd)',
+          color: 'var(--t2)', cursor: 'pointer',
+          appearance: 'none' as const,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' };
+        return (
+          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Модули</span>
+              {linkedComps.length > 0 && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{linkedComps.length}</span>}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+              {linkedComps.map(c => {
+                const col = areaColor(c.area);
+                const isExplicit = explicit.includes(c.component_id);
+                return (
+                  <span key={c.component_id} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11,
+                    padding: '2px 4px 2px 8px', borderRadius: 10,
+                    background: `color-mix(in srgb, ${col} 14%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${col} 30%, transparent)`,
+                    color: col,
+                  }}>
+                    <button
+                      onClick={onNavigateToComponent ? () => onNavigateToComponent(c.component_id) : undefined}
+                      disabled={!onNavigateToComponent}
+                      title={onNavigateToComponent ? `Открыть ${c.full_name ?? c.component_id}` : (c.full_name ?? c.component_id)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
+                        color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
+                    >
+                      <GameIcon slug={c.game_icon} size={12} style={{ color: 'inherit' }} />
+                      {c.component_id}
+                    </button>
+                    {isExplicit && (
+                      <button
+                        disabled={compLinking}
+                        title={`Отвязать ${c.component_id}`}
+                        onClick={async () => {
+                          setCompLinking(true);
+                          try {
+                            await linkSprintComponent(sprint.sprint_id, c.component_id, 'remove');
+                            setSprint(s => s ? { ...s, components: (s.components ?? []).filter(x => x !== c.component_id) } : s);
+                          } catch (e) { onError(e); }
+                          finally { setCompLinking(false); }
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: compLinking ? 'default' : 'pointer',
+                          color: 'inherit', fontSize: 10, padding: '0 1px', lineHeight: 1, opacity: 0.65 }}
+                      >✕</button>
+                    )}
+                  </span>
+                );
+              })}
+              {unlinkedComps.length > 0 && (
+                <select
+                  disabled={compLinking}
+                  value=""
+                  onChange={async e => {
+                    const cid = e.target.value;
+                    if (!cid) return;
+                    setCompLinking(true);
+                    try {
+                      await linkSprintComponent(sprint.sprint_id, cid, 'add');
+                      setSprint(s => s ? { ...s, components: [...(s.components ?? []), cid] } : s);
+                    } catch (err) { onError(err); }
+                    finally { setCompLinking(false); }
+                  }}
+                  style={selectStyle}
+                >
+                  <option value="">+ привязать…</option>
+                  {unlinkedComps.map(c => <option key={c.component_id} value={c.component_id}>{c.component_id}</option>)}
+                </select>
+              )}
+              {compLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+            </div>
+          </div>
+        );
+      })()}
+
+      </div>{/* END META RIGHT */}
+      </div>{/* END TOP META BLOCK */}
+
+      {/* ── Tasks (full width, scrollable) ── */}
+      <div style={{ flex: 1, overflowY: 'auto' as const }}>
       <div style={S.section}>
         {/* Phases (when present) each with their tasks */}
         {phases.length > 0 && (
@@ -740,7 +1042,7 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
                   {phaseTasks.length > 0 && (
                     <div style={{ marginTop: 4 }}>
                       {phaseTasks.map(t => (
-                        <TaskLine key={t.task_uid} t={t} onChanged={reload} onError={onError} />
+                        <TaskLine key={t.task_uid} t={t} allComps={allComps} onChanged={reload} onError={onError} />
                       ))}
                     </div>
                   )}
@@ -755,10 +1057,26 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
           <div style={{ marginTop: phases.length > 0 ? 12 : 0 }}>
             <div style={S.sectionLabel}>Задачи ({orphanTasks.length})</div>
             {orphanTasks.map(t => (
-              <TaskLine key={t.task_uid} t={t} onChanged={reload} onError={onError} />
+              <TaskLine key={t.task_uid} t={t} allComps={allComps} onChanged={reload} onError={onError} />
             ))}
           </div>
         )}
+
+        {/* Effort footer */}
+        {visibleTasks.length > 0 && (() => {
+          const effortSum = visibleTasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
+          const effortTotal = tasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
+          if (effortSum === 0) return null;
+          return (
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--t3)' }}>
+              <span>Итого effort:</span>
+              <b style={{ color: 'var(--acc)', fontFamily: 'var(--mono)' }}>{effortSum} д</b>
+              {filter.size > 0 && effortTotal !== effortSum && (
+                <span style={{ color: 'var(--t3)' }}>/ {effortTotal} д всего</span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Truly empty sprint */}
         {phases.length === 0 && tasks.length === 0 && (
@@ -779,12 +1097,18 @@ export default function LoreSprintDetail({ sprintId, onError }: Props) {
         {sprint.depends_on?.length ? (
           <div style={S.deps}>
             <div style={S.sectionLabel}>Зависит от</div>
-            {sprint.depends_on.map(d => (
-              <div key={d} style={S.depItem}>· {d}</div>
-            ))}
+            {sprint.depends_on.map(d => <RelatedSprintRow key={d} id={d} meta={relatedMeta.get(d)} onNavigate={onNavigateToSprint} />)}
+          </div>
+        ) : null}
+
+        {sprint.blocks?.length ? (
+          <div style={S.deps}>
+            <div style={{ ...S.sectionLabel, color: 'var(--wrn)' }}>Блокирует</div>
+            {sprint.blocks.map(d => <RelatedSprintRow key={d} id={d} meta={relatedMeta.get(d)} onNavigate={onNavigateToSprint} accent="var(--wrn)" />)}
           </div>
         ) : null}
       </div>
+      </div>{/* END TASKS SECTION */}
     </div>
   );
 }

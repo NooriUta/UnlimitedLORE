@@ -17,34 +17,40 @@ import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
+import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
+import LoreMilestonesView  from '../components/lore/LoreMilestonesView';
 import LoreQualityGateList from '../components/lore/LoreQualityGateList';
+import LoreQGDetail        from '../components/lore/LoreQGDetail';
 import LoreRunbookList     from '../components/lore/LoreRunbookList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
-import { statusMeta }      from '../components/lore/lore-status';
+import { statusMeta, resolveStatusMeta, statusLabel } from '../components/lore/lore-status';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
-  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases'
-  | 'knowledge' | 'components'
-  | 'evolution' | 'timeline' | 'mcp';
+  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
+  | 'knowledge' | 'components' | 'qg'
+  | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; label: string }[] = [
+  { id: 'milestones', icon: 'crossed-axes',   label: 'Вехи'         },
   { id: 'plan',       icon: 'compass',        label: 'План'         },
   { id: 'sprints',    icon: 'sprint',         label: 'Спринты'      },
   { id: 'adrs',       icon: 'scroll-quill',   label: 'ADR'          },
   { id: 'decisions',  icon: 'vote',           label: 'Решения'      },
   { id: 'releases',   icon: 'open-book',      label: 'Релизы'       },
+  { id: 'qg',         icon: 'checkered-flag', label: 'QG'           },
   { id: 'knowledge',  icon: 'spell-book',     label: 'Знания'       },
   { id: 'components', icon: 'cog',            label: 'Компоненты'   },
   { id: 'evolution',  icon: 'hourglass',      label: 'История'      },
   { id: 'timeline',   icon: 'tied-scroll',    label: 'Лента'        },
+  { id: 'analytics',  icon: 'pie-chart',      label: 'Аналитика'    },
   { id: 'mcp',        icon: 'plug',           label: 'MCP API'      },
 ];
 
 // Sections that use master-detail layout (list panel + detail panel)
-const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge'];
+const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg'];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const LIST_W_DEFAULT = 260;
@@ -175,7 +181,6 @@ export default function LorePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adrStatusSel]);
   // Component filters
-  const [knowledgeKind, setKnowledgeKind] = useState<'qg' | 'runbook'>('qg');
   const [compQ, setCompQ]               = useState('');
   const [compAreaSel, setCompAreaSel]   = useState<Set<string>>(new Set());
   const [compAreaCounts, setCompAreaCounts] = useState<Record<string, number>>({});
@@ -210,10 +215,11 @@ export default function LorePage() {
 
   const selectItem    = (id: string) => setParams(p => { p.set('passport', id); p.delete('spec'); return p; });
   const clearItem     = ()           => setParams(p => { p.delete('passport'); p.delete('spec'); return p; });
-  const openSpec      = (id: string) => setParams(p => { p.set('spec', id); p.delete('passport'); return p; });
   const clearSpec     = ()           => setParams(p => { p.delete('spec'); return p; });
   const navigateToAdr    = (id: string) => setParams(p => { p.set('section', 'adrs');    p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('kind', kind); p.set('art', id); return p; });
   const closeArt  = () => setParams(p => { p.delete('kind'); p.delete('art'); return p; });
 
@@ -702,50 +708,17 @@ export default function LorePage() {
                 />
               </>
             )}
+            {section === 'qg' && (
+              <LoreQualityGateList
+                onError={handleFetchError}
+                onOpen={id => selectItem(id)}
+              />
+            )}
             {section === 'knowledge' && (
-              <>
-                {/* Knowledge sub-nav: QG | Runbooks */}
-                <div style={{
-                  display: 'flex', gap: 0, flexShrink: 0,
-                  borderBottom: '1px solid var(--bd)',
-                }}>
-                  {([
-                    { key: 'qg'      as const, label: 'Quality Gates', icon: 'checkered-flag' },
-                    { key: 'runbook' as const, label: 'Runbooks',       icon: 'papers'         },
-                  ] as const).map(tab => (
-                    <button
-                      key={tab.key}
-                      style={{
-                        flex: 1, height: 30, border: 'none', cursor: 'pointer',
-                        fontFamily: 'inherit', fontSize: 11,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                        background: knowledgeKind === tab.key
-                          ? 'color-mix(in srgb, var(--acc) 10%, transparent)'
-                          : 'transparent',
-                        color: knowledgeKind === tab.key ? 'var(--acc)' : 'var(--t3)',
-                        borderBottom: knowledgeKind === tab.key ? '2px solid var(--acc)' : '2px solid transparent',
-                        fontWeight: knowledgeKind === tab.key ? 600 : 400,
-                      }}
-                      onClick={() => { setKnowledgeKind(tab.key); closeArt(); }}
-                    >
-                      <GameIcon slug={tab.icon} size={12} style={{ color: 'inherit' }} />
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-                {knowledgeKind === 'qg' && (
-                  <LoreQualityGateList
-                    onError={handleFetchError}
-                    onOpen={id => openArt('qg', id)}
-                  />
-                )}
-                {knowledgeKind === 'runbook' && (
-                  <LoreRunbookList
-                    onError={handleFetchError}
-                    onOpen={id => openArt('runbook', id)}
-                  />
-                )}
-              </>
+              <LoreRunbookList
+                onError={handleFetchError}
+                onOpen={id => openArt('runbook', id)}
+              />
             )}
           </div>
           <div
@@ -759,7 +732,7 @@ export default function LorePage() {
         <div style={S.content}>
           <LoreErrorBoundary label={`Ошибка секции «${section}»`}>
           {/* Plan */}
-          {section === 'plan' && <LorePlanBoard onError={handleFetchError} />}
+          {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
 
           {/* ADR — new */}
           {section === 'adrs' && passport === '__new' && (
@@ -797,7 +770,7 @@ export default function LorePage() {
 
           {/* Sprints: detail or placeholder */}
           {section === 'sprints' && passport && (
-            <LoreSprintDetail sprintId={passport} onError={handleFetchError} />
+            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} />
           )}
           {section === 'sprints' && !passport && (
             <div style={S.placeholder}>Выберите спринт из списка слева</div>
@@ -816,16 +789,29 @@ export default function LorePage() {
             <LoreComponentPassport
               componentId={passport}
               onError={handleFetchError}
-              onNavigateAdr={navigateToAdr}
               onNavigateComponent={selectItem}
-              onOpenSpec={openSpec}
             />
           )}
           {section === 'components' && !spec && !passport && (
             <div style={S.placeholder}>Выберите компонент из списка слева</div>
           )}
 
-          {/* Knowledge — QG + Runbook master-detail (T01-T07) */}
+          {/* QG — master-detail: list left, detail right */}
+          {section === 'qg' && passport && (
+            <LoreQGDetail
+              qgId={passport}
+              onError={handleFetchError}
+              onBack={clearItem}
+            />
+          )}
+          {section === 'qg' && !passport && (
+            <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
+              <GameIcon slug="checkered-flag" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
+              <span>Выберите Quality Gate из списка слева</span>
+            </div>
+          )}
+
+          {/* Knowledge — Runbook master-detail */}
           {section === 'knowledge' && artKind && artId && (
             <LoreArtifactDoc
               kind={artKind as DocKind}
@@ -851,6 +837,20 @@ export default function LorePage() {
               onSelect={navigateToAdr} onSelectSprint={navigateToSprint} />
           )}
 
+          {/* Analytics — aggregated task/sprint/component/release stats */}
+          {section === 'milestones' && (
+            <LoreMilestonesView onError={handleFetchError} onNavigateToSprint={navigateToSprint} />
+          )}
+
+          {section === 'analytics' && (
+            <LoreAnalyticsView
+              onError={handleFetchError}
+              onNavigateToSprint={navigateToSprint}
+              onNavigateToComponent={navigateToComponent}
+              onNavigateToQG={navigateToQG}
+            />
+          )}
+
           {/* MCP API — published reference for the aida-lore MCP server */}
           {section === 'mcp' && <LoreMcpApiScreen />}
           </LoreErrorBoundary>
@@ -861,7 +861,11 @@ export default function LorePage() {
 }
 
 export function StatusChip({ status }: { status: string }) {
-  const { icon, color } = statusMeta(status);
+  // status may arrive raw ("✅ DONE", "🟡 PARTIAL") or as a clean key ("accepted").
+  // resolveStatusMeta normalizes both so we never fall back to the generic
+  // checkbox-tree icon; statusLabel strips the leading emoji so it isn't shown
+  // twice (chip icon + inline emoji).
+  const { icon, color } = resolveStatusMeta(status);
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -871,7 +875,7 @@ export function StatusChip({ status }: { status: string }) {
       whiteSpace: 'nowrap',
     }}>
       <GameIcon slug={icon} size={11} style={{ color: 'inherit' }} />
-      {status}
+      {statusLabel(status)}
     </span>
   );
 }
