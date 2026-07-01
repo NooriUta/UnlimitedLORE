@@ -1781,15 +1781,23 @@ public class AidaLoreResource {
             boolean isNewAdr = existingAdr == null || existingAdr.isEmpty();
             String resolvedStatus = (req.status() != null && !req.status().isBlank())
                 ? req.status() : (isNewAdr ? "PROPOSED" : null);
-            StringBuilder upsertSql = new StringBuilder(
-                "UPDATE KnowADR SET adr_id=:adr_id, name=:name, " +
-                "date_created=:date_created, component_id=:component_id");
-            Map<String, Object> upsertP = mapOfNullable(
-                "adr_id",       req.adr_id(),
-                "name",         req.name(),
-                "date_created", req.date_created() != null ? req.date_created()
-                                    : java.time.LocalDate.now().toString(),
-                "component_id", req.component_id());
+            // LH-44: date_created/component_id only SET when provided (or on first
+            // insert) — previously a partial amend call with neither field would reset
+            // date_created to today and null out component_id. Found alongside the
+            // context_md/decision_md/consequences_md bug fixed above, 2026-07-02.
+            StringBuilder upsertSql = new StringBuilder("UPDATE KnowADR SET adr_id=:adr_id, name=:name");
+            Map<String, Object> upsertP = mapOfNullable("adr_id", req.adr_id(), "name", req.name());
+            if (req.date_created() != null) {
+                upsertSql.append(", date_created=:date_created");
+                upsertP.put("date_created", req.date_created());
+            } else if (isNewAdr) {
+                upsertSql.append(", date_created=:date_created");
+                upsertP.put("date_created", java.time.LocalDate.now().toString());
+            }
+            if (req.component_id() != null) {
+                upsertSql.append(", component_id=:component_id");
+                upsertP.put("component_id", req.component_id());
+            }
             if (resolvedStatus != null) {
                 upsertSql.append(", status=:status");
                 upsertP.put("status", resolvedStatus);
@@ -1808,22 +1816,34 @@ public class AidaLoreResource {
                     Map.of("id", req.adr_id())))
                 .await().indefinitely().result();
 
-            Map<String, Object> histP = mapOfNullable(
-                "ctx", req.context_md(),
-                "dec", req.decision_md(),
-                "con", req.consequences_md());
-
             boolean histCreated;
             if (histRows != null && !histRows.isEmpty()) {
-                // Step 3a: update body fields on the existing open hist row (re-create / re-call)
+                // Step 3a: update body fields on the existing open hist row — SAME null-safe
+                // pattern as status above (LH-44): only SET fields that were actually provided.
+                // Previously this unconditionally SET context_md/decision_md/consequences_md to
+                // whatever was passed, including null — a partial amend call (e.g. only
+                // decision_md to fix a typo) would silently WIPE the other two sections. Found
+                // 2026-07-02 while wiring up an "amend ADR body" workflow.
                 String sid = String.valueOf(histRows.get(0).get("state_uid"));
-                histP.put("sid", sid);
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowADRHist SET context_md=:ctx, decision_md=:dec, consequences_md=:con" +
-                    " WHERE state_uid=:sid",
-                    histP)).await().indefinitely();
+                StringBuilder histSql = new StringBuilder("UPDATE KnowADRHist SET ");
+                Map<String, Object> histUpdP = new java.util.HashMap<>();
+                histUpdP.put("sid", sid);
+                boolean first = true;
+                if (req.context_md() != null)      { histSql.append(first ? "" : ", ").append("context_md=:ctx");       histUpdP.put("ctx", req.context_md());      first = false; }
+                if (req.decision_md() != null)     { histSql.append(first ? "" : ", ").append("decision_md=:dec");      histUpdP.put("dec", req.decision_md());     first = false; }
+                if (req.consequences_md() != null) { histSql.append(first ? "" : ", ").append("consequences_md=:con");  histUpdP.put("con", req.consequences_md()); first = false; }
+                if (!first) {
+                    histSql.append(" WHERE state_uid=:sid");
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        histSql.toString(), histUpdP)).await().indefinitely();
+                }
+                // else: no body fields provided at all (e.g. a pure status/edges-only call) — leave the hist row untouched.
                 histCreated = false;
             } else {
+                Map<String, Object> histP = mapOfNullable(
+                    "ctx", req.context_md(),
+                    "dec", req.decision_md(),
+                    "con", req.consequences_md());
                 // Step 3b: create the initial open hist row + HAS_STATE edge
                 histP.put("nsid", nsid);
                 histP.put("now",  now);
@@ -2127,17 +2147,20 @@ public class AidaLoreResource {
         if (!SAFE_ID.matcher(req.spec_id()).matches())
             return badParams("spec_id contains illegal characters");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "id",      req.spec_id(),
-                "title",   req.title(),
-                "version", req.version(),
-                "cid",     req.component_id(),
-                "content", req.content_md(),
-                "fp",      req.file_path());
+            // LH-44: only SET fields actually provided — a partial amend call (e.g. only
+            // content_md to bump a spec's body) must not wipe version/component_id/file_path
+            // to null. Same class of bug found and fixed on /lore/adr, 2026-07-02.
+            StringBuilder sql = new StringBuilder("UPDATE KnowSpec SET spec_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.spec_id());
+            if (req.title() != null)        { sql.append(", title=:title");             p.put("title", req.title()); }
+            if (req.version() != null)      { sql.append(", version=:version");         p.put("version", req.version()); }
+            if (req.component_id() != null) { sql.append(", component_id=:cid");        p.put("cid", req.component_id()); }
+            if (req.content_md() != null)   { sql.append(", content_md=:content");      p.put("content", req.content_md()); }
+            if (req.file_path() != null)    { sql.append(", file_path=:fp");            p.put("fp", req.file_path()); }
+            sql.append(" UPSERT WHERE spec_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowSpec SET spec_id=:id, title=:title, version=:version, " +
-                "component_id=:cid, content_md=:content, file_path=:fp " +
-                "UPSERT WHERE spec_id=:id", p)).await().indefinitely();
+                sql.toString(), p)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
