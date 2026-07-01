@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>QG-план — разрез по гейтам, метрики, методика, рекомендации</title>
+<style>
+  :root{
+    --bg0:#0d1117; --bg1:#12161d; --bg2:#161b22; --bg3:#1c2230;
+    --bd:#30363d; --bdh:#444c56;
+    --t1:#e6edf3; --t2:#9aa4b0; --t3:#6b7480;
+    --acc:#A8B860; --suc:#3fb950; --wrn:#d29922; --inf:#58a6ff; --danger:#f85149; --purple:#bc8cff;
+    --mono:'Cascadia Code','Fira Code',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg0);color:var(--t1);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.55}
+  .shell{max-width:1320px;margin:0 auto;padding:28px 22px 80px}
+  header{border-bottom:1px solid var(--bd);padding-bottom:18px;margin-bottom:14px}
+  h1{font-size:23px;font-weight:700;letter-spacing:.2px}
+  h1 span{color:var(--acc)}
+  .sub{color:var(--t3);font-size:12px;margin-top:6px}
+  nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 6px}
+  nav a{font-size:11.5px;color:var(--t2);text-decoration:none;background:var(--bg2);border:1px solid var(--bd);border-radius:6px;padding:5px 10px}
+  nav a:hover{color:var(--acc);border-color:var(--bdh)}
+  h2{font-size:16px;font-weight:650;margin:36px 0 6px;display:flex;align-items:center;gap:10px;scroll-margin-top:14px}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-size:13px;font-weight:700;flex-shrink:0}
+  h3{font-size:12.5px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px}
+  .lead{color:var(--t2);font-size:13px;margin:4px 0 14px;max-width:1000px}
+  section.card{background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;margin:6px 0}
+  th{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)}
+  td{padding:7px 8px;border-bottom:1px solid #1b2027;font-size:12px;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#161b22}
+  code{font-family:var(--mono);font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;color:#d6e0ea}
+  pre{font-family:var(--mono);font-size:11.5px;background:var(--bg0);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;overflow-x:auto;margin:8px 0;line-height:1.5;color:#cdd6e0}
+  .b{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:4px;font-size:9.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+  .keep{background:color-mix(in srgb,var(--suc) 15%,transparent);color:var(--suc);border:1px solid color-mix(in srgb,var(--suc) 35%,transparent)}
+  .merge{background:color-mix(in srgb,var(--inf) 15%,transparent);color:var(--inf);border:1px solid color-mix(in srgb,var(--inf) 35%,transparent)}
+  .drop{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 35%,transparent)}
+  .doc{background:color-mix(in srgb,var(--purple) 15%,transparent);color:var(--purple);border:1px solid color-mix(in srgb,var(--purple) 35%,transparent)}
+  .rescue{background:color-mix(in srgb,var(--wrn) 15%,transparent);color:var(--wrn);border:1px solid color-mix(in srgb,var(--wrn) 35%,transparent)}
+  .new{background:color-mix(in srgb,var(--inf) 18%,transparent);color:var(--inf);border:1px solid color-mix(in srgb,var(--inf) 40%,transparent)}
+  .pass{color:var(--suc);font-weight:600}.warn{color:var(--wrn);font-weight:600}.fail{color:var(--danger);font-weight:600}.skip{color:var(--t3);font-weight:600}
+  .qg{font-family:var(--mono);font-size:11px;color:var(--inf)}
+  ul.crit{list-style:none;margin:6px 0}
+  ul.crit li{padding:4px 0 4px 22px;position:relative;font-size:12.5px;color:var(--t2)}
+  ul.crit li::before{content:'▸';position:absolute;left:4px;color:var(--acc)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .kpi{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:12px 14px}
+  .kpi .v{font-size:24px;font-weight:700}
+  .kpi .l{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+  .muted{color:var(--t3);font-size:11.5px}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--wrn)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--t3);margin-top:10px}
+
+  /* per-QG cards */
+  .qgcard{border:1px solid var(--bd);border-radius:9px;margin:12px 0;overflow:hidden;background:var(--bg2)}
+  .qgcard>summary{list-style:none;cursor:pointer;padding:11px 14px;display:flex;align-items:center;gap:10px;background:var(--bg3)}
+  .qgcard>summary::-webkit-details-marker{display:none}
+  .qgcard>summary::before{content:'▸';color:var(--acc);font-size:12px;transition:transform .15s}
+  .qgcard[open]>summary::before{transform:rotate(90deg)}
+  .qgcard .ttl{font-family:var(--mono);font-size:12.5px;color:var(--inf);font-weight:600}
+  .qgcard .meta{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:10.5px;color:var(--t3)}
+  .slice{display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);padding:1px 7px;border-radius:4px}
+  .qgbody{padding:4px 14px 12px}
+  .dir{font-family:var(--mono);font-size:10.5px;color:var(--t2)}
+  .cond{font-size:11px;color:var(--t2)}
+  .src{font-family:var(--mono);font-size:10.5px;color:var(--t3)}
+  .keytd{font-family:var(--mono);font-size:11px;color:#cdd6e0;white-space:nowrap}
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--bd);color:var(--t3);font-size:11px;text-align:center}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <h1>QG-план для платформы <span>· LORE-native</span></h1>
+  <div class="sub">Черновик на ревью · компонент <code>QG</code> (OMILORE) · спринт <code>SPRINT_LORE_NEW_QG_FOR_PLATFORM</code> · ADR-QG-001 / 002 / LORE-011 · 2026-06-30</div>
+  <nav>
+    <a href="#m1">1 · Методика отбора</a>
+    <a href="#m2">2 · Целевой набор (15)</a>
+    <a href="#m3">3 · Разрез по каждому QG</a>
+    <a href="#m4">4 · Архитектурные метрики +</a>
+    <a href="#m5">5 · Расчёт статуса</a>
+    <a href="#m6">6 · Рекомендации</a>
+  </nav>
+</header>
+
+<div class="grid2" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px">
+  <div class="kpi"><div class="v" style="color:var(--suc)">15</div><div class="l">целевых QG</div></div>
+  <div class="kpi"><div class="v" style="color:var(--inf)">~105</div><div class="l">SMART-метрик всего</div></div>
+  <div class="kpi"><div class="v" style="color:var(--wrn)">14</div><div class="l">в QG-ARCH-STRUCTURE</div></div>
+  <div class="kpi"><div class="v" style="color:var(--danger)">10</div><div class="l">drop (разовые отчёты)</div></div>
+</div>
+
+<!-- ───────────── 1. МЕТОДИКА ОТБОРА ───────────── -->
+<h2 id="m1"><span class="n">1</span> Методика отбора: что считается рабочим QG</h2>
+<p class="lead">Статус <code>active/draft</code> в LORE — не критерий (часть draft новее и полнее). Решаем по <b>содержимому</b>. QG в наборе, только если проходит все 5 фильтров:</p>
+<section class="card">
+  <ul class="crit">
+    <li><b>Рекуррентность</b> — повторяется по триггеру (merge / weekly / pre-demo / re-harvest), не разовый отчёт.</li>
+    <li><b>Проверяемость</b> — детерминированный PASS/WARN/FAIL по инварианту, не описательный анализ.</li>
+    <li><b>Неизбыточность</b> — один канонический гейт на домен; дубли сливаем.</li>
+    <li><b>Привязка к срезу</b> — есть <code>routine_name</code> и место в одном из 5 срезов или в агрегате.</li>
+    <li><b>SMART-метрики</b> — каждый INV даёт <code>(key,value,unit,target,status,source)</code> с file:line evidence.</li>
+  </ul>
+  <h3>Решения по спорным (draft ≠ мусор — судим по содержимому)</h3>
+  <table>
+    <thead><tr><th>QG</th><th>LORE</th><th>решение</th><th>почему</th></tr></thead>
+    <tbody>
+      <tr><td class="qg">QG-CODE-REVIEW</td><td>draft</td><td><span class="b rescue">rescue</span></td><td>22 метрики delivery-пайплайна, weekly, data-contract review{}. Живой гейт.</td></tr>
+      <tr><td class="qg">QG-PERFORMANCE-WEEKLY</td><td>draft</td><td><span class="b rescue">rescue</span></td><td>22 SLO-таргета, weekly. Draft из-за отсутствия k6 — блокер тулинга, не гейта.</td></tr>
+      <tr><td class="qg">QG-PREDICATE-FLOW-CANARY</td><td>draft</td><td><span class="b rescue">rescue</span></td><td>5 SQL-инвариантов predicate-flow на re-harvest. Реальная канарейка.</td></tr>
+      <tr><td class="qg">QG-ALGORITHMIC-HEALTH · QG-ARCH-ENFORCEMENT</td><td>active</td><td><span class="b keep">→ агрегат</span></td><td>Кросс-платформенные (code-health / 27 arch-правил). Место — агрегат, не срез.</td></tr>
+      <tr><td class="qg">QG-DALI-YGG-WRITE → PERSISTENCE</td><td>draft</td><td><span class="b merge">merge</span></td><td>Суперсет write-проверок DALI; INV вливаем в PERSISTENCE.</td></tr>
+      <tr><td class="qg">QG-ARCH-INVARIANTS</td><td>draft</td><td><span class="b merge">merge</span></td><td>LOC→ALGO-HEALTH, secrets→SECURITY, ADR/startup→ENFORCEMENT.</td></tr>
+      <tr><td class="qg">QG-TEST-MATRIX-full · QG-ARCH-daily</td><td>draft</td><td><span class="b doc">→ doc</span></td><td>Эталон-инвентарь тестов / ручной плейбук. Остаются как spec/runbook.</td></tr>
+      <tr><td class="qg">QG-SITE-V2-COVERAGE</td><td>draft</td><td><span class="b keep">standalone</span></td><td>Playwright-сьют сайта (16/16). Вне 5 core-срезов.</td></tr>
+      <tr><td class="qg">PARSE-ECONOMICS · MIMIR-GONOGO · AUTH-REDESIGN · 7 dated-вершин</td><td>—</td><td><span class="b drop">drop</span></td><td>Разовые отчёты/замеры/go-no-go, ошибочно залитые как QG.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ───────────── 2. ЦЕЛЕВОЙ НАБОР ───────────── -->
+<h2 id="m2"><span class="n">2</span> Целевой набор — 15 QG по срезам</h2>
+<section class="card">
+  <table>
+    <thead><tr><th>Срез / routine</th><th>QG</th><th>компонент</th><th>что проверяет</th><th>метрик</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4"><span class="slice">qg-lineage</span></td>
+          <td class="qg">QG-HOUND-LISTENER-CHAIN</td><td>HND</td><td>изоляция listener-цепочки, throttle, fire&amp;forget</td><td>7</td></tr>
+      <tr><td class="qg">QG-DALI-PERSISTENCE <span class="b merge">+ygg</span></td><td>DALI</td><td>persistence + запись в YGG (counts, resolution%)</td><td>10</td></tr>
+      <tr><td class="qg">QG-CONTRACT-LINEAGE</td><td>HND/SHT</td><td>geoid-контракт, L2-drill&gt;0 (анти-регресс PR#319)</td><td>3</td></tr>
+      <tr><td class="qg">QG-PREDICATE-FLOW-CANARY <span class="b rescue">rescue</span></td><td>HND</td><td>FILTER/CONTROL_FLOW канарейка на re-harvest</td><td>5</td></tr>
+      <tr><td><span class="slice">qg-viz</span></td><td class="qg">QG-VERDANDI-VIZ</td><td>VERDANDI</td><td>prefsStore safe, FRIGG R/W, Anvil health</td><td>3</td></tr>
+      <tr><td rowspan="2"><span class="slice">qg-platform</span></td>
+          <td class="qg">QG-HEIMDALL-BACKEND-VALIDATION</td><td>HEIMDALL_BE</td><td>@Valid, HTTP-коды, graceful при FRIGG down</td><td>11</td></tr>
+      <tr><td class="qg">QG-CHUR-RESILIENCE</td><td>CHUR</td><td>timeout, fallback, KC down ≤6с, JWT</td><td>6</td></tr>
+      <tr><td rowspan="2"><span class="slice">qg-auth</span></td>
+          <td class="qg">QG-AUTH-RUNTIME</td><td>CHUR</td><td>PKCE redirect, ROPC→404, KC OIDC, ci-login</td><td>5</td></tr>
+      <tr><td class="qg">QG-TENANT-ISOLATION</td><td>FRIGG</td><td>A≠B данные, RBAC 403, HMAC, session-scope</td><td>5</td></tr>
+      <tr><td><span class="slice">qg-security-demo</span></td><td class="qg">QG-SECURITY-DEMO</td><td>SECURITY</td><td>порты 127.0.0.1, .env, пароли, TTL, CORS</td><td>11</td></tr>
+      <tr><td rowspan="5"><span class="slice">qg-aida-arch</span><br><span class="muted">агрегат</span></td>
+          <td class="qg">QG-ARCH-ENFORCEMENT</td><td>platform</td><td>27 arch-правил (ArchUnit/semgrep/dep-cruiser) — <i>запрещённые паттерны</i></td><td>11</td></tr>
+      <tr><td class="qg">QG-ALGORITHMIC-HEALTH</td><td>platform</td><td>cycles, bug-risks, complexity, LOC, async — <i>грязный код</i></td><td>6</td></tr>
+      <tr><td class="qg">QG-ARCH-STRUCTURE <span class="b new">new</span></td><td>platform</td><td>ADR-drift, coupling (Мартин D), schema-drift, deep-imports — <i>структура архитектуры</i></td><td>14</td></tr>
+      <tr><td class="qg">QG-CODE-REVIEW <span class="b rescue">rescue</span></td><td>pipeline</td><td>throughput, self-merge, XL-PR, coverage</td><td>8</td></tr>
+      <tr><td class="qg">QG-PERFORMANCE-WEEKLY <span class="b rescue">rescue</span></td><td>platform</td><td>SLO: parse, resolution, API p95, LOOM</td><td>7</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="margin-top:8px">+ standalone: <span class="qg">QG-SITE-V2-COVERAGE</span>. Доки (не гейты): <span class="qg">QG-TEST-MATRIX-full</span>, <span class="qg">QG-ARCH-daily</span>.</p>
+</section>
+
+<!-- ───────────── 3. РАЗРЕЗ ПО КАЖДОМУ QG ───────────── -->
+<h2 id="m3"><span class="n">3</span> Разрез по каждому QG — какие метрики, с каким условием</h2>
+<p class="lead">Каждая метрика: <code>key</code> · unit · target · направление (<code>gte</code>=больше лучше / <code>lte</code>=меньше лучше / <code>=</code>=точное равенство для HTTP) · условие статуса · <code>source</code> (команда-репродьюсер). Разверни гейт ↓</p>
+<section class="card">
+
+<!-- LINEAGE -->
+<details class="qgcard" open><summary><span class="ttl">QG-HOUND-LISTENER-CHAIN</span><span class="meta"><span class="slice">qg-lineage</span> · HND · 7</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_safecall_present</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">паттерн safeCall есть → PASS</td><td class="src">grep -c safeCall CompositeListener.java &gt;0</td></tr>
+<tr><td class="keytd">inv2_safecall_count</td><td>count</td><td>8</td><td class="dir">gte</td><td class="cond">=8 PASS · ≥7 WARN · &lt;7 FAIL</td><td class="src">grep -c safeCall CompositeListener.java</td></tr>
+<tr><td class="keytd">inv3_throttle_present</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">per-file throttle есть → PASS</td><td class="src">grep -nE "perFile|ConcurrentHashMap.*throttle"</td></tr>
+<tr><td class="keytd">inv4_async_fire_forget</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">sendAsync/CompletableFuture → PASS</td><td class="src">grep -nE "sendAsync|CompletableFuture"</td></tr>
+<tr><td class="keytd">inv5_emit_try_catch</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">emit() try/catch без re-throw → PASS</td><td class="src">grep -A6 "void emit" | grep -c catch</td></tr>
+<tr><td class="keytd">inv6_composite_in_parsejob</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">ParseJob.buildListener использует Composite</td><td class="src">grep -n CompositeListener ParseJob.java</td></tr>
+<tr><td class="keytd">inv7_atoms_extracted</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">&gt;0 PASS · 0 FAIL · down SKIP(-1)</td><td class="src">curl HEIMDALL/metrics/snapshot|jq .atomsExtracted</td></tr>
+</tbody></table></div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-DALI-PERSISTENCE (+ygg-write)</span><span class="meta"><span class="slice">qg-lineage</span> · DALI · 10</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_inmemory_provider</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">grep -rn InMemoryStorageProvider services/dali/</td></tr>
+<tr><td class="keytd">inv2_arcade_provider_refs</td><td>count</td><td>2</td><td class="dir">gte</td><td class="cond">≥2 PASS</td><td class="src">grep -nc arcadeDbStorageProvider JobRunrLifecycle</td></tr>
+<tr><td class="keytd">inv3_singleton_scope</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">@Singleton (не @ApplicationScoped)</td><td class="src">grep -n @Singleton ArcadeDbStorageProvider.java</td></tr>
+<tr><td class="keytd">inv4_persist_try_catch</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">persist() ловит исключения</td><td class="src">grep -A10 "persist(" | grep -c catch</td></tr>
+<tr><td class="keytd">inv5_session_survives_restart</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">после docker restart сессия жива · down SKIP</td><td class="src">docker restart dali; curl /api/sessions</td></tr>
+<tr><td class="keytd">inv6_frigg_archive_persisted</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">friggPersisted=true</td><td class="src">curl status|jq .friggPersisted</td></tr>
+<tr><td class="keytd">inv7_dali_table_count</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">&gt;0 PASS · 0 FAIL · down SKIP</td><td class="src">SELECT count(*) FROM DaliTable</td></tr>
+<tr><td class="keytd">inv8_dali_atom_count</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">&gt;0 PASS · 0 FAIL</td><td class="src">SELECT count(*) FROM DaliAtom</td></tr>
+<tr><td class="keytd">inv9_routine_dupes</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">SELECT routine,count(*) GROUP BY HAVING &gt;1</td></tr>
+<tr><td class="keytd">inv10_resolution_pct</td><td>%</td><td>98</td><td class="dir">gte</td><td class="cond">≥98 PASS · ≥88 WARN · &lt;88 FAIL</td><td class="src">SELECT resolved/total FROM DaliAtom</td></tr>
+</tbody></table></div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-CONTRACT-LINEAGE</span><span class="meta"><span class="slice">qg-lineage</span> · HND/SHT · 3</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_geoid_dbrooted</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">schema_geoid содержит $DEFAULT_DB$ префикс</td><td class="src">SELECT schema_geoid FROM DaliTable LIMIT 5</td></tr>
+<tr><td class="keytd">inv2_drill_nodes_count</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">&gt;0 PASS · 0 FAIL(регресс) · down SKIP</td><td class="src">curl SHUTTLE/graphql exploreRoutineAggregate</td></tr>
+<tr><td class="keytd">inv3_shuttle_shortname_eq</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">equality по short-name без $ = 0 (static, TODO)</td><td class="src">grep -rn "schema_geoid =" services/shuttle/src</td></tr>
+</tbody></table></div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-PREDICATE-FLOW-CANARY</span><span class="meta"><span class="slice">qg-lineage</span> · HND · re-harvest · 5</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_null_scope_edges</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">SELECT count(*) ...FLOW WHERE scope IS NULL</td></tr>
+<tr><td class="keytd">inv2_filter_partition</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">FILTER∈{WHERE,HAVING}, CONTROL={JOIN}</td><td class="src">SELECT DISTINCT predicate_ctx</td></tr>
+<tr><td class="keytd">inv3_type_partition</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">FILTER.type∈{direct,compute}</td><td class="src">SELECT DISTINCT type FROM FILTER_FLOW</td></tr>
+<tr><td class="keytd">inv4_filter_flow_count</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">FILTER+CONTROL &gt;0 (иначе регресс)</td><td class="src">SELECT count(*) FROM FILTER_FLOW</td></tr>
+<tr><td class="keytd">inv5_root_scope_nonempty</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">root-scope subset &gt;0</td><td class="src">SELECT count WHERE scope='root'</td></tr>
+</tbody></table></div></details>
+
+<!-- VIZ -->
+<details class="qgcard"><summary><span class="ttl">QG-VERDANDI-VIZ</span><span class="meta"><span class="slice">qg-viz</span> · VERDANDI · 3</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_prefs_throw_outside_catch</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL · файл не найден WARN</td><td class="src">grep -n "throw " prefsStore*|grep -v catch|wc -l</td></tr>
+<tr><td class="keytd">inv2_frigg_http</td><td>count</td><td>200</td><td class="dir">=</td><td class="cond">200 PASS · иное SKIP(WARN, не блокирует VIZ)</td><td class="src">curl -u root:pw FRIGG/api/v1/server -w%{http_code}</td></tr>
+<tr><td class="keytd">inv3_anvil_health</td><td>count</td><td>200</td><td class="dir">=</td><td class="cond">200 PASS · иное not_deployed SKIP</td><td class="src">curl ANVIL/q/health -w%{http_code}</td></tr>
+</tbody></table></div></details>
+
+<!-- PLATFORM -->
+<details class="qgcard"><summary><span class="ttl">QG-HEIMDALL-BACKEND-VALIDATION</span><span class="meta"><span class="slice">qg-platform</span> · HEIMDALL_BE · 11</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_valid_on_postevent</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">@Valid на postEvent → PASS</td><td class="src">grep -n "@Valid" EventResource.java</td></tr>
+<tr><td class="keytd">inv2_notnull_on_fields</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">@NotNull/@NotBlank на полях ≥1</td><td class="src">grep -cE "@NotNull|@NotBlank" HeimdallEvent.java</td></tr>
+<tr><td class="keytd">inv3_validator_dep</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">hibernate-validator в зависимостях</td><td class="src">grep -c hibernate-validator build.gradle</td></tr>
+<tr><td class="keytd">inv4_userprefs_try_catch</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">UserPrefsResource try/catch с дефолтами</td><td class="src">grep -A10 UserPrefsResource|grep -c catch</td></tr>
+<tr><td class="keytd">inv5_null_eventtype_http</td><td>count</td><td>400</td><td class="dir">=</td><td class="cond">400 PASS · иное FAIL · down SKIP</td><td class="src">curl POST /events -d'{type:null}' -w%{http_code}</td></tr>
+<tr><td class="keytd">inv6_blank_source_http</td><td>count</td><td>400</td><td class="dir">=</td><td class="cond">400 PASS · иное FAIL</td><td class="src">curl POST /events -d'{source:""}'</td></tr>
+<tr><td class="keytd">inv7_bad_json_http</td><td>count</td><td>400</td><td class="dir">=</td><td class="cond">400 PASS · иное FAIL</td><td class="src">curl POST /events -d'{bad'</td></tr>
+<tr><td class="keytd">inv8_valid_event_http</td><td>count</td><td>202</td><td class="dir">=</td><td class="cond">202 PASS · иное FAIL</td><td class="src">curl POST /events -d'{valid}'</td></tr>
+<tr><td class="keytd">inv9_batch_null_http</td><td>count</td><td>400</td><td class="dir">=</td><td class="cond">400 PASS (@Valid на List)</td><td class="src">curl POST /events/batch -d'[{type:null}]'</td></tr>
+<tr><td class="keytd">inv10_batch_valid_http</td><td>count</td><td>202</td><td class="dir">=</td><td class="cond">202 PASS</td><td class="src">curl POST /events/batch -d'[{valid}]'</td></tr>
+<tr><td class="keytd">inv11_frigg_down_graceful</td><td>count</td><td>200</td><td class="dir">=</td><td class="cond">200 с дефолтами PASS (не 500)</td><td class="src">stop frigg; curl GET /prefs -w%{http_code}</td></tr>
+</tbody></table></div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-CHUR-RESILIENCE</span><span class="meta"><span class="slice">qg-platform</span> · CHUR · 6</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_fetch_timeout_ratio</td><td>ratio</td><td>1.0</td><td class="dir">gte</td><td class="cond">timeouts/fetch =1.0 PASS · &lt;1 FAIL</td><td class="src">grep -c AbortSignal.timeout ÷ grep -c "fetch("</td></tr>
+<tr><td class="keytd">inv2_try_catch_fallback</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">catch+fallback на ключевых вызовах</td><td class="src">grep -A10 keycloakAdmin|grep -c catch</td></tr>
+<tr><td class="keytd">inv3_scopes_parse</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">scopes как string И array обработаны</td><td class="src">grep -nE "Array.isArray|split" scopes</td></tr>
+<tr><td class="keytd">inv4_tsc_errors</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">npx tsc --noEmit | grep -c error</td></tr>
+<tr><td class="keytd">inv5_kc_down_response_ms</td><td>ms</td><td>6000</td><td class="dir">lte</td><td class="cond">≤6000 PASS · ≤6600 WARN · &gt; FAIL</td><td class="src">docker stop kc; time curl CHUR/auth/me</td></tr>
+<tr><td class="keytd">inv6_jwt_scopes_format</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">sub+seer_roles присутствуют, scope=string</td><td class="src">decode JWT | jq .sub,.seer_roles</td></tr>
+</tbody></table></div></details>
+
+<!-- AUTH -->
+<details class="qgcard"><summary><span class="ttl">QG-AUTH-RUNTIME</span><span class="meta"><span class="slice">qg-auth</span> · CHUR · 5</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_pkce_login_http</td><td>count</td><td>302</td><td class="dir">=</td><td class="cond">302+code_challenge PASS · 200/500 FAIL · KC down WARN</td><td class="src">curl CHUR/auth/login -w%{http_code}:%{redirect_url}</td></tr>
+<tr><td class="keytd">inv2_ropc_removed_http</td><td>count</td><td>404</td><td class="dir">=</td><td class="cond">404 PASS · 200/401 FAIL (ROPC вернулся)</td><td class="src">curl POST CHUR/auth/login -d'{user,pass}'</td></tr>
+<tr><td class="keytd">inv3_kc_oidc_token_endpoint</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">≥1 PASS · 0 FAIL · down SKIP</td><td class="src">curl KC/.well-known/openid-configuration|grep -c token_endpoint</td></tr>
+<tr><td class="keytd">inv4_tenant_route_refs</td><td>count</td><td>1</td><td class="dir">gte</td><td class="cond">≥1 PASS · 0 WARN (есть REC)</td><td class="src">grep -rcE "getClaim|org_id" libraries/tenant-routing/</td></tr>
+<tr><td class="keytd">inv5_ci_login_gated_http</td><td>count</td><td>404</td><td class="dir">=</td><td class="cond">404 если CHUR_CI_LOGIN≠true · 200/401 FAIL</td><td class="src">curl POST CHUR/auth/ci-login</td></tr>
+</tbody></table></div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-TENANT-ISOLATION</span><span class="meta"><span class="slice">qg-auth</span> · FRIGG · 5</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_cross_tenant_leak</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL (утечка B в A)</td><td class="src">tenantA → query hound_B → rows</td></tr>
+<tr><td class="keytd">inv2_rbac_403_foreign</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">admin-эндпоинт чужого тенанта → 403</td><td class="src">curl admin?tenant=B (as A) -w%{http_code}</td></tr>
+<tr><td class="keytd">inv3_header_hmac_verified</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">подделанный X-Seer-Tenant-Alias → reject</td><td class="src">curl с поддельным header → 4xx</td></tr>
+<tr><td class="keytd">inv4_session_alias_scope</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">нет обхода scope через query-param</td><td class="src">curl ?alias=B при session=A → пусто</td></tr>
+<tr><td class="keytd">inv5_evict_no_orphan</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">eviction не оставляет orphan-данные (ADR-MT-007)</td><td class="src">evict B; query A → нет B-данных</td></tr>
+</tbody></table></div></details>
+
+<!-- SECURITY -->
+<details class="qgcard"><summary><span class="ttl">QG-SECURITY-DEMO</span><span class="meta"><span class="slice">qg-security-demo</span> · SECURITY · 11</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">inv1_kc_port_0000</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL (bind 0.0.0.0)</td><td class="src">grep 18180 compose|grep -v 127.0.0.1|grep -c 0.0.0.0</td></tr>
+<tr><td class="keytd">inv2_ygg_port_0000</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">grep 2480 compose|grep -vc 127.0.0.1</td></tr>
+<tr><td class="keytd">inv3_frigg_port_0000</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">grep 2481 compose|grep -vc 127.0.0.1</td></tr>
+<tr><td class="keytd">inv4_env_in_git</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">.env в .gitignore → 0 PASS</td><td class="src">git check-ignore .env</td></tr>
+<tr><td class="keytd">inv5_env_tracked</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL (.env закоммичен)</td><td class="src">git ls-files .env|wc -l</td></tr>
+<tr><td class="keytd">inv6_env_in_commits</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS</td><td class="src">git log --oneline -- .env|wc -l</td></tr>
+<tr><td class="keytd">inv7_api_key_demo</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">ANTHROPIC_API_KEY = demo, не prod</td><td class="src">grep ANTHROPIC_API_KEY .env</td></tr>
+<tr><td class="keytd">inv8_simple_pw_realm</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">grep -cE "playwithdata|changeme" realm.json</td></tr>
+<tr><td class="keytd">inv9_kc_admin_admin_blocked</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">admin/admin → НЕ 200 (401/400) PASS</td><td class="src">curl KC/token -d'user=admin&amp;pass=admin' -w%{http_code}</td></tr>
+<tr><td class="keytd">inv10_token_ttl_sec</td><td>count</td><td>14400</td><td class="dir">gte</td><td class="cond">≥14400 (4ч) PASS</td><td class="src">jq .accessTokenLifespan realm.json</td></tr>
+<tr><td class="keytd">inv11_cors_wildcard</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;5 WARN</td><td class="src">grep -rnE "allowedOrigin.*\*" services/ bff/</td></tr>
+</tbody></table></div></details>
+
+<!-- AGGREGATE -->
+<details class="qgcard"><summary><span class="ttl">QG-ARCH-ENFORCEMENT</span><span class="meta"><span class="slice">qg-aida-arch</span> · platform/CI · 11</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">arch_rules_enforced_pct</td><td>%</td><td>100</td><td class="dir">gte</td><td class="cond">enforced/total · сейчас 30/33=90.9 WARN</td><td class="src">кол-во enforced правил / 33</td></tr>
+<tr><td class="keytd">archunit_violations</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">./gradlew archUnitTest → failures</td></tr>
+<tr><td class="keytd">semgrep_errors</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS</td><td class="src">semgrep --config .semgrep.yml --severity ERROR</td></tr>
+<tr><td class="keytd">depcruise_violations</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS</td><td class="src">depcruise --config .dependency-cruiser.cjs</td></tr>
+<tr><td class="keytd">graphql_breaking_changes</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL (без label)</td><td class="src">graphql-inspector diff origin/main</td></tr>
+<tr><td class="keytd">openapi_breaking_changes</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS</td><td class="src">openapi-diff --fail-on-incompatible</td></tr>
+<tr><td class="keytd">event_unversioned</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">каждый HeimdallEvent @EventVersion</td><td class="src">grep events/*.java без @EventVersion</td></tr>
+<tr><td class="keytd">hardcoded_default_tenant</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 (без EXEMPT) PASS (MTN-04)</td><td class="src">grep -rn '"default"' …|grep tenant|grep -v EXEMPT</td></tr>
+<tr><td class="keytd">plaintext_secrets</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS</td><td class="src">semgrep no-plaintext-secret</td></tr>
+<tr><td class="keytd">direct_arcadedb_refs</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 вне tenant-routing PASS</td><td class="src">ArchUnit no_direct_arcadedb</td></tr>
+<tr><td class="keytd">sql_string_concat</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS (инъекции)</td><td class="src">semgrep sql-string-concat</td></tr>
+</tbody></table></div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-ALGORITHMIC-HEALTH</span><span class="meta"><span class="slice">qg-aida-arch</span> · platform · «грязный код» · 6</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">cyclic_deps</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS · &gt;0 FAIL</td><td class="src">ArchUnit slices().beFreeOfCycles()</td></tr>
+<tr><td class="keytd">blocker_bug_risks</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">null-deref/bounds/div0 blocker = 0</td><td class="src">semgrep bug-risk rules</td></tr>
+<tr><td class="keytd">loc_hard_violations</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">файлы &gt; hard-лимита = 0</td><td class="src">wc -l по *.tsx/*.java vs лимит</td></tr>
+<tr><td class="keytd">max_cyclomatic_complexity</td><td>count</td><td>15</td><td class="dir">lte</td><td class="cond">≤15 PASS · ≤17 WARN</td><td class="src">complexity analyzer per method</td></tr>
+<tr><td class="keytd">unhandled_promises</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">.then без .catch = 0</td><td class="src">grep .then без chained .catch</td></tr>
+<tr><td class="keytd">tx_without_rollback</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">begin→commit без try/rollback = 0</td><td class="src">grep db.begin без catch rollback</td></tr>
+</tbody></table>
+</div></details>
+
+<details class="qgcard" open><summary><span class="ttl">QG-ARCH-STRUCTURE</span><span class="meta"><span class="b new">new</span> <span class="slice">qg-aida-arch</span> · platform · «структура» · 14</span></summary>
+<div class="qgbody">
+<p class="muted" style="margin:6px 0">Отделён от ALGORITHMIC-HEALTH: тот меряет «грязный код», этот — структуру архитектуры как систему. <b>Фаза 1</b> (топ-4, сразу) выделена; <b>фаза 2</b> — по мере готовности тулинга.</p>
+<h3 style="margin-top:4px;color:var(--inf)">Фаза 1 — топ-4 (внедряем первыми)</h3><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>что ловит</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">adr_enforced_pct</td><td>%</td><td>80</td><td class="dir">gte</td><td class="cond">ADR-drift: % ACCEPTED ADR с ≥1 автоматич. инвариантом</td><td class="src">ADR с rule-ссылкой / всего ACCEPTED</td></tr>
+<tr><td class="keytd">adr_orphan_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">ACCEPTED ADR без реализующего кода/правила</td><td class="src">ADR без implemented_in &amp; без правила</td></tr>
+<tr><td class="keytd">archunit_service_coverage_pct</td><td>%</td><td>100</td><td class="dir">gte</td><td class="cond">сервисы без ArchitectureTest (дайджест: 2 нет)</td><td class="src">сервисы с *ArchitectureTest / всего</td></tr>
+<tr><td class="keytd">arch_distance_main_seq</td><td>score</td><td>0.3</td><td class="dir">lte</td><td class="cond">D=|A+I−1| по Мартину: zone of pain/uselessness</td><td class="src">abstractness A + instability I per package</td></tr>
+</tbody></table>
+<h3 style="color:var(--t3)">Фаза 2 — остальные 10</h3><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>что ловит</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">schema_drift_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">vertex/edge типы в коде ≠ в ArcadeDB</td><td class="src">declared types vs schema:types</td></tr>
+<tr><td class="keytd">deep_import_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">импорт в обход публичного API модуля</td><td class="src">import из internal/impl чужого модуля</td></tr>
+<tr><td class="keytd">layer_direction_violations</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">domain → infra/framework (инверсия слоёв)</td><td class="src">ArchUnit layeredArchitecture()</td></tr>
+<tr><td class="keytd">module_worst_instability</td><td>ratio</td><td>0.8</td><td class="dir">lte</td><td class="cond">нестабильный модуль с большим Ca</td><td class="src">Ce/(Ca+Ce) per module, max</td></tr>
+<tr><td class="keytd">god_module_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">класс &gt; N публ. методов (не только LOC)</td><td class="src">public method count per class</td></tr>
+<tr><td class="keytd">code_duplication_pct</td><td>%</td><td>3</td><td class="dir">lte</td><td class="cond">дублированные блоки (clone detection)</td><td class="src">jscpd / SourcererCC ratio</td></tr>
+<tr><td class="keytd">techdebt_density</td><td>ratio</td><td>5</td><td class="dir">lte</td><td class="cond">TODO+FIXME на KLOC + тренд 7д</td><td class="src">grep -rc TODO|FIXME ÷ KLOC</td></tr>
+<tr><td class="keytd">public_api_surface_delta</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">рост публичной поверхности без версии</td><td class="src">schema surface diff vs main</td></tr>
+<tr><td class="keytd">config_sprawl</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">хардкод портов/URL вне config-слоя</td><td class="src">grep ports/urls вне config/ &amp; bootstrap/</td></tr>
+<tr><td class="keytd">observability_coverage_pct</td><td>%</td><td>90</td><td class="dir">gte</td><td class="cond">% эндпоинтов с метрикой/трейсом (E4)</td><td class="src">instrumented endpoints / total</td></tr>
+</tbody></table>
+</div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-CODE-REVIEW</span><span class="meta"><span class="slice">qg-aida-arch</span> · pipeline · weekly · 8</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">merged_7d</td><td>count</td><td>10</td><td class="dir">gte</td><td class="cond">≥10 PASS · ≥9 WARN</td><td class="src">gh pr list --state merged --search 7d</td></tr>
+<tr><td class="keytd">open_now</td><td>count</td><td>10</td><td class="dir">lte</td><td class="cond">≤10 PASS</td><td class="src">gh pr list --state open|wc -l</td></tr>
+<tr><td class="keytd">self_merge_pct</td><td>%</td><td>5</td><td class="dir">lte</td><td class="cond">≤5 PASS · ≤5.5 WARN (bus-factor)</td><td class="src">self-merged / merged</td></tr>
+<tr><td class="keytd">xl_pr_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">0 PASS (PR &gt;1000 строк)</td><td class="src">gh pr list + diff size</td></tr>
+<tr><td class="keytd">p95_first_review_h</td><td>ms</td><td>48</td><td class="dir">lte</td><td class="cond">≤48ч PASS</td><td class="src">первый review − open time, p95</td></tr>
+<tr><td class="keytd">one_approve_pct</td><td>%</td><td>90</td><td class="dir">gte</td><td class="cond">≥90 PASS</td><td class="src">PR с ≥1 approve / merged</td></tr>
+<tr><td class="keytd">ci_green_pct</td><td>%</td><td>98</td><td class="dir">gte</td><td class="cond">≥98 PASS</td><td class="src">green checks / total</td></tr>
+<tr><td class="keytd">reviewer_max_load_pct</td><td>%</td><td>40</td><td class="dir">lte</td><td class="cond">никто &gt;40% ревью</td><td class="src">reviews по reviewer / total</td></tr>
+</tbody></table></div></details>
+
+<details class="qgcard"><summary><span class="ttl">QG-PERFORMANCE-WEEKLY</span><span class="meta"><span class="slice">qg-aida-arch</span> · platform · weekly · 7</span></summary>
+<div class="qgbody"><table>
+<thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>условие</th><th>source</th></tr></thead><tbody>
+<tr><td class="keytd">k6_available</td><td>bool</td><td>1</td><td class="dir">gte</td><td class="cond">k6 на PATH → 1 · иначе все perf = SKIP</td><td class="src">command -v k6</td></tr>
+<tr><td class="keytd">parse_time_s</td><td>ms</td><td>360000</td><td class="dir">lte</td><td class="cond">≤360с PASS · ≤396с WARN</td><td class="src">k6 run parse.js → p95</td></tr>
+<tr><td class="keytd">resolution_pct</td><td>%</td><td>98</td><td class="dir">gte</td><td class="cond">≥98 PASS</td><td class="src">DaliAtom resolved/total</td></tr>
+<tr><td class="keytd">preview_time_s</td><td>ms</td><td>120000</td><td class="dir">lte</td><td class="cond">≤120с PASS</td><td class="src">k6 preview endpoint p95</td></tr>
+<tr><td class="keytd">api_events_p95_ms</td><td>ms</td><td>200</td><td class="dir">lte</td><td class="cond">≤200 PASS</td><td class="src">k6 GET /api/events p95</td></tr>
+<tr><td class="keytd">api_batch_p95_ms</td><td>ms</td><td>500</td><td class="dir">lte</td><td class="cond">≤500 PASS · ≤550 WARN</td><td class="src">k6 POST /events/batch p95</td></tr>
+<tr><td class="keytd">loom_layout_ms</td><td>ms</td><td>2000</td><td class="dir">lte</td><td class="cond">≤2000 PASS (ELK layout)</td><td class="src">Chrome timing / perf mark</td></tr>
+</tbody></table></div></details>
+
+</section>
+
+<!-- ───────────── 4. АРХИТЕКТУРНЫЕ МЕТРИКИ ───────────── -->
+<h2 id="m4"><span class="n">4</span> Архитектурные метрики: текущее покрытие + что добавить</h2>
+<p class="lead"><b>Найдёт ли арх-гейт всё? — Нет, поэтому делим на три гейта.</b> Решение: чисто развести ответственность —
+<br>① <b>QG-ARCH-ENFORCEMENT</b> = «запрещённые паттерны» (27 правил ArchUnit/semgrep/dep-cruiser, CI-blocking);
+<br>② <b>QG-ALGORITHMIC-HEALTH</b> = «грязный код» (cycles/bug-risks/complexity/LOC/async);
+<br>③ <b>QG-ARCH-STRUCTURE</b> <span class="b new">new</span> = «структура архитектуры как система» (ADR-drift, coupling по Мартину, schema-drift, deep-imports, …) — раньше не мерилось вообще.</p>
+<section class="card">
+  <h3>Покрыто сейчас</h3>
+  <table>
+    <thead><tr><th>измерение</th><th>где</th><th>метрика</th></tr></thead><tbody>
+      <tr><td>запрещённые зависимости / паттерны</td><td>ARCH-ENFORCEMENT</td><td>archunit_violations, semgrep_errors, depcruise_violations</td></tr>
+      <tr><td>контракты (GraphQL/OpenAPI/event)</td><td>ARCH-ENFORCEMENT</td><td>graphql/openapi_breaking_changes, event_unversioned</td></tr>
+      <tr><td>tenant/secret guard-rails</td><td>ARCH-ENFORCEMENT</td><td>hardcoded_default_tenant, plaintext_secrets, direct_arcadedb_refs</td></tr>
+      <tr><td>циклы / размер / сложность</td><td>ALGORITHMIC-HEALTH</td><td>cyclic_deps, loc_hard_violations, max_cyclomatic_complexity</td></tr>
+      <tr><td>баг-риски / async / tx</td><td>ALGORITHMIC-HEALTH</td><td>blocker_bug_risks, unhandled_promises, tx_without_rollback</td></tr>
+    </tbody>
+  </table>
+  <h3 style="color:var(--inf)">Новый QG-ARCH-STRUCTURE — 14 метрик (полный разрез с фазами см. раздел 3)</h3>
+  <table>
+    <thead><tr><th>key</th><th>unit</th><th>target</th><th>dir</th><th>что ловит (пробел)</th><th>source</th></tr></thead><tbody>
+      <tr><td class="keytd">arch_distance_main_seq</td><td>score</td><td>0.3</td><td class="dir">lte</td><td class="cond">D=|A+I−1| по Мартину: модуль «zone of pain/uselessness»</td><td class="src">abstractness A + instability I per package</td></tr>
+      <tr><td class="keytd">module_worst_instability</td><td>ratio</td><td>0.8</td><td class="dir">lte</td><td class="cond">нестабильный модуль, от которого многое зависит</td><td class="src">Ce/(Ca+Ce) per module, max</td></tr>
+      <tr><td class="keytd">adr_enforced_pct</td><td>%</td><td>80</td><td class="dir">gte</td><td class="cond">ADR-drift: % ACCEPTED ADR с ≥1 автоматич. инвариантом</td><td class="src">ADR с rule-ссылкой / всего ACCEPTED</td></tr>
+      <tr><td class="keytd">adr_orphan_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">ACCEPTED ADR без реализующего кода/правила</td><td class="src">ADR без implemented_in + без правила</td></tr>
+      <tr><td class="keytd">archunit_service_coverage_pct</td><td>%</td><td>100</td><td class="dir">gte</td><td class="cond">сервисы без ArchitectureTest (дайджест: 2 нет)</td><td class="src">сервисы с *ArchitectureTest / всего</td></tr>
+      <tr><td class="keytd">deep_import_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">импорт в обход публичного API модуля (deep import)</td><td class="src">import из internal/impl-путей чужого модуля</td></tr>
+      <tr><td class="keytd">layer_direction_violations</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">domain импортирует infra/framework (инверсия слоёв)</td><td class="src">ArchUnit layeredArchitecture()</td></tr>
+      <tr><td class="keytd">schema_drift_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">vertex/edge типы в коде ≠ в ArcadeDB</td><td class="src">declared types vs SELECT FROM schema:types</td></tr>
+      <tr><td class="keytd">god_module_count</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">класс &gt; N публ. методов (god-class, не только LOC)</td><td class="src">public method count per class &gt; threshold</td></tr>
+      <tr><td class="keytd">code_duplication_pct</td><td>%</td><td>3</td><td class="dir">lte</td><td class="cond">дублированные блоки кода (clone detection)</td><td class="src">jscpd / SourcererCC ratio</td></tr>
+      <tr><td class="keytd">techdebt_density</td><td>ratio</td><td>5</td><td class="dir">lte</td><td class="cond">TODO+FIXME на KLOC + тренд 7д</td><td class="src">grep -rc TODO|FIXME ÷ KLOC</td></tr>
+      <tr><td class="keytd">public_api_surface_delta</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">рост публичной поверхности (GraphQL/REST) без версии</td><td class="src">schema surface diff vs main</td></tr>
+      <tr><td class="keytd">config_sprawl</td><td>count</td><td>0</td><td class="dir">lte</td><td class="cond">хардкод портов/URL вне config-слоя</td><td class="src">grep ports/urls вне config/ &amp; bootstrap/</td></tr>
+      <tr><td class="keytd">observability_coverage_pct</td><td>%</td><td>90</td><td class="dir">gte</td><td class="cond">% эндпоинтов с метрикой/трейсом (E4 ADR-ARCH)</td><td class="src">instrumented endpoints / total</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="margin-top:8px"><b>Фаза 1 (топ-4, сразу):</b> adr_enforced_pct, adr_orphan_count, archunit_service_coverage_pct, arch_distance_main_seq. <b>Фаза 2:</b> остальные 10 по мере готовности тулинга (jscpd, coupling-анализатор). Разбивку по фазам см. в карточке QG-ARCH-STRUCTURE раздела 3.</p>
+</section>
+
+<!-- ───────────── 5. РАСЧЁТ ───────────── -->
+<h2 id="m5"><span class="n">5</span> Методика расчёта статуса</h2>
+<section class="card">
+  <div class="grid2">
+    <div>
+      <h3>Статус метрики</h3>
+      <pre>def compute_status(value, target, direction="gte"):
+    if value == -1:            # источник недоступен
+        return "SKIP"
+    if direction == "gte":
+        if value >= target:        return "PASS"
+        if value >= target * 0.9:  return "WARN"
+        return "FAIL"
+    else:  # lte
+        if value <= target:        return "PASS"
+        if value <= target * 1.1:  return "WARN"
+        return "FAIL"
+# dir "=" (HTTP): value==target → PASS, иначе FAIL (down→SKIP)
+# unit bool: target=1, gte → 0=FAIL, 1=PASS</pre>
+    </div>
+    <div>
+      <h3>Статус всего прогона</h3>
+      <table><tbody>
+        <tr><td class="fail">FAIL</td><td>≥1 метрика FAIL (сервис жив, инвариант нарушен)</td></tr>
+        <tr><td class="warn">WARN</td><td>нет FAIL, но есть WARN или SKIP</td></tr>
+        <tr><td class="pass">PASS</td><td>все метрики PASS</td></tr>
+      </tbody></table>
+      <p class="muted" style="margin-top:8px"><b>SKIP:</b> сервис down (<code>value=-1</code>) → SKIP, не FAIL. Отделяет «у нас сломано» от «сервис был выключен».</p>
+      <p class="muted">Связи: <code>routine_name</code> = срез; <code>last_run_status</code> (active/blocked) ≠ lifecycle <code>status</code>; <code>flags</code> = summary + fallback для старых прогонов.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── 6. РЕКОМЕНДАЦИИ ───────────── -->
+<h2 id="m6"><span class="n">6</span> Как пишем рекомендации</h2>
+<section class="card">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0;font-size:12px">
+    <span style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:7px 11px">INV FAIL</span><span style="color:var(--acc);font-weight:700">→</span>
+    <span style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:7px 11px">QGJobTask (open)</span><span style="color:var(--acc);font-weight:700">→</span>
+    <span style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:7px 11px">QGRecommendation (pending)</span><span style="color:var(--acc);font-weight:700">→</span>
+    <span style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:7px 11px">подтверждение</span><span style="color:var(--acc);font-weight:700">→</span>
+    <span style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:7px 11px">KnowTask (спринт)</span><span style="color:var(--acc);font-weight:700">→</span>
+    <span style="background:color-mix(in srgb,var(--suc) 14%,transparent);border:1px solid var(--suc);border-radius:6px;padding:7px 11px;color:var(--suc)">PASS → resolved</span>
+  </div>
+  <p class="muted">Rolling-QG не засоряют спринты — задача создаётся только после подтверждения (ADR-LORE-011). Точность даёт <code>metric.source</code> (file:line).</p>
+  <h3>body_md рекомендации</h3>
+  <table><thead><tr><th>секция</th><th>содержание</th></tr></thead><tbody>
+    <tr><td><b>Root Cause</b></td><td>причина, не симптом</td></tr>
+    <tr><td><b>Evidence</b></td><td><span class="tag">file:line</span> + число из <code>metric.source</code></td></tr>
+    <tr><td><b>Impact</b></td><td>что сломано / рискует сломаться</td></tr>
+    <tr><td><b>Context</b></td><td>ADR / инцидент / PR</td></tr>
+    <tr><td><code>fix_cmd</code></td><td>команда/патч исправления</td></tr>
+    <tr><td><code>how_to_verify</code></td><td>команда, чей вывод докажет фикс</td></tr>
+  </tbody></table>
+  <h3>Пример: метрика → рекомендация</h3>
+  <pre>// метрика:
+{ key:"inv2_safecall_count", value:5, target:8, status:"FAIL",
+  source:"grep -n safeCall CompositeListener.java → lines 47,89,134 (=5, want 8)" }
+
+// рекомендация:
+title: "CompositeListener не изолирует 3 listener-вызова (safeCall 5/8)"
+## Root Cause  invoke() оборачивает в safeCall 5 из 8 точек (4 метода × 2 listener).
+## Evidence   safeCall на L47,89,134; ОТСУТСТВУЕТ в onFileStart(~L61), onRoutineEnd(~L102),
+             onError(~L150). grep -c = 5, want 8.
+## Impact     падение одного listener обрывает цепочку → остальные не получат событие.
+## Context    ADR-HND-003: каждый listener-вызов изолирован.
+fix_cmd:       обернуть 3 вызова в try{ l.invoke(e); }catch(Exception ex){ log.warn(...); }
+how_to_verify: grep -c safeCall CompositeListener.java → 8; EventListenerIsolationTest зелёный</pre>
+  <p class="muted">Без <code>source</code>=file:line было бы «safeCall FAIL» — неактионабельно. Поэтому в <code>ClRoutineMetric</code> добавлено поле <code>source</code>.</p>
+</section>
+
+<footer>Черновик QG-плана · для ревью · удалить после согласования · ADR-QG-001/002, ADR-LORE-011, 19 файлов docs/engine/quality-gates/, инвентарь LORE</footer>
+
+</div>
+</body>
+</html>
