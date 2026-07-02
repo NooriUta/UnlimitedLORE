@@ -57,8 +57,14 @@ const TOOLS: ToolDoc[] = [
 
   // ── Task ───────────────────────────────────────────────────────────────────
   { name: 'lore_create_task', kind: 'write', backend: 'POST /lore/task',
-    params: 'sprint_id, task_id, title, note_md?',
-    desc: 'Создать задачу в спринте (order_index = max+1, начальный статус PLANNED с HAS_STATE hist-строкой).' },
+    params: 'sprint_id, task_id, title, note_md?, phase_uid?',
+    desc: 'Создать задачу в спринте (order_index = max+1, начальный статус PLANNED с HAS_STATE hist-строкой). phase_uid? — сразу привязать к фазе (IN_PHASE).' },
+  { name: 'lore_create_phase', kind: 'write', backend: 'POST /lore/phase',
+    params: 'sprint_id, phase_key, name?, order_index?',
+    desc: 'Создать фазу спринта (KnowPhase): phase_uid = "<sprint>/PHASE_<KEY>", PART_OF → спринт, начальный PLANNED в KnowPhaseHist. Идемпотентно (created=false для существующей).' },
+  { name: 'lore_link_task_phase', kind: 'write', backend: 'POST /lore/task/phase',
+    params: 'task_uid, phase_uid?, action?',
+    desc: 'IN_PHASE edge задача → фаза (один спринт). action = add | remove; remove без phase_uid отвязывает от всех фаз. Слайс tasks_of_phase читает это ребро.' },
   { name: 'lore_edit_task', kind: 'write', backend: 'POST /lore/task/edit',
     params: 'task_uid+title | tasks[]',
     desc: 'Изменить заголовок/заметку/effort_days задачи. Одиночный режим: task_uid + title (+ note_md?, effort_days?). Batch: tasks=[{task_uid, title, note_md?, effort_days?}].' },

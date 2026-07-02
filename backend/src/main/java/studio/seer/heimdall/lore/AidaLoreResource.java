@@ -65,14 +65,20 @@ public class AidaLoreResource {
         List<String> component_ids, List<String> tags, String file_path) {}
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
         String date_created, String refs_raw) {}
-    public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md) {}
+    public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md,
+        String phase_uid) {}
     public record TaskEditRequest(String task_uid, String title, String note_md, Integer effort_days) {}
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index) {}
+    // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
+    public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index) {}
+    public record PhaseWriteResponse(boolean ok, String phase_uid, String phase_id,
+        Integer order_index, boolean created) {}
+    public record TaskPhaseRequest(String task_uid, String phase_uid, String action) {}
 
     // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
     private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
     private static final Set<String> ENTITY_TYPES =
-        Set.of("plan_item", "sprint", "task", "checkpoint", "adr");
+        Set.of("plan_item", "sprint", "task", "checkpoint", "adr", "phase");
     private static final Set<String> PLAN_STATUSES =
         Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled",
                "planned", "backlog", "design", "ready_for_deploy");
@@ -382,6 +388,9 @@ public class AidaLoreResource {
                                         .replaceWith(resp));
             case "task"      -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
                                     "task_uid", req.id(), req.status(), now, nsid);
+            // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
+            case "phase"     -> updateScd2Status("phase", "KnowPhase", "KnowPhaseHist",
+                                    "phase_uid", req.id(), req.status(), now, nsid);
             case "adr"       -> updateAdrStatusDirect(req.id(), req.status().toUpperCase(), now);
             default          -> Uni.createFrom().item(noStore(Response.status(501)
                                     .entity(new LoreError("NOT_IMPLEMENTED",
@@ -675,13 +684,23 @@ public class AidaLoreResource {
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.task_id()).matches()) {
             return Uni.createFrom().item(badParams("sprint_id / task_id contain illegal characters"));
         }
+        if (req.phase_uid() != null && !SAFE_ID.matcher(req.phase_uid()).matches()) {
+            return Uni.createFrom().item(badParams("phase_uid contains illegal characters"));
+        }
         final String sid   = req.sprint_id();
         final String tid   = req.task_id();
         final String uid   = sid + "/" + tid;
         final String title = req.title().trim();
         final String note  = req.note_md();
+        final String phase = req.phase_uid();
         final String now   = Instant.now().toString();
         final String nsid  = UUID.randomUUID().toString();
+
+        // MCP-PHASES: a phase must exist and belong to THIS sprint (phase_uid = "<sprint>/PHASE_x")
+        if (phase != null && !phase.startsWith(sid + "/")) {
+            return Uni.createFrom().item(badParams(
+                "phase_uid must belong to sprint " + sid + " (got: " + phase + ")"));
+        }
 
         // order_index = max existing for this sprint + 1 (tasks keyed task_uid = "<sprint>/<id>").
         // Exact-prefix match via substring, NOT LIKE: '_' in sprint ids is a LIKE wildcard
@@ -714,6 +733,13 @@ public class AidaLoreResource {
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
                         "TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid)",
                         Map.of("uid", uid, "nsid", nsid))))
+                    // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
+                    .chain(__ -> phase == null
+                        ? Uni.createFrom().item((LoreCommandClient.LoreCommandResult) null)
+                        : writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                            "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
+                            "TO (SELECT FROM KnowPhase WHERE phase_uid = :puid)",
+                            Map.of("uid", uid, "puid", phase))))
                     .map(__ -> noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order))));
             })
             .onFailure().recoverWithItem(ex -> {
@@ -721,6 +747,165 @@ public class AidaLoreResource {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
             });
+    }
+
+    // ── Write-path: sprint phases (MCP-PHASES, SPRINT_LORE_MCP_GAPS_2) ────────
+    // Read side already exists (phases_of_sprint / tasks_of_phase, LoreSlices): KnowPhase
+    // { phase_uid = "<sprint>/PHASE_<KEY>", phase_id = "Фаза <KEY>", order_index }
+    // + PART_OF → KnowSprint + HAS_STATE → KnowPhaseHist; task → phase via IN_PHASE.
+
+    @POST
+    @Path("phase")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response> createPhase(PhaseCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return Uni.createFrom().item(disabled());
+        Response guard = requireAdmin(role);
+        if (guard != null) return Uni.createFrom().item(guard);
+        if (req == null || req.sprint_id() == null || req.phase_key() == null || req.phase_key().isBlank()) {
+            return Uni.createFrom().item(badParams("sprint_id, phase_key required"));
+        }
+        final String key = req.phase_key().trim().toUpperCase();
+        if (!SAFE_ID.matcher(req.sprint_id()).matches()
+                || !key.matches("[A-Z0-9_\\-]{1,20}")) {
+            return Uni.createFrom().item(badParams(
+                "sprint_id / phase_key contain illegal characters (key: A-Z, 0-9, _, -)"));
+        }
+        final String sid     = req.sprint_id();
+        final String uid     = sid + "/PHASE_" + key;
+        final String display = "Фаза " + key;
+        final String name    = req.name();
+        final String now     = Instant.now().toString();
+        final String nsid    = UUID.randomUUID().toString();
+
+        MartQuery existingQ = new MartQuery("sql",
+            "SELECT phase_uid, order_index FROM KnowPhase WHERE phase_uid = :uid LIMIT 1",
+            Map.of("uid", uid), -1);
+
+        return client.query(db, basicAuth(), existingQ)
+            .chain(res -> {
+                List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
+                if (!rows.isEmpty()) {   // idempotent: phase already registered
+                    Object oi = rows.get(0).get("order_index");
+                    return Uni.createFrom().item(noStore(Response.ok(new PhaseWriteResponse(
+                        true, uid, display, oi instanceof Number n ? n.intValue() : null, false))));
+                }
+                MartQuery sprintQ = new MartQuery("sql",
+                    "SELECT sprint_id FROM KnowSprint WHERE sprint_id = :sid LIMIT 1",
+                    Map.of("sid", sid), -1);
+                return client.query(db, basicAuth(), sprintQ).chain(sres -> {
+                    if (sres.result() == null || sres.result().isEmpty()) {
+                        return Uni.createFrom().item(badParams("sprint not found: " + sid));
+                    }
+                    // order_index: explicit or max+1 among this sprint's phases (substring, not LIKE —
+                    // same '_'-wildcard pitfall as createTask)
+                    String prefix = sid + "/";
+                    MartQuery maxQ = new MartQuery("sql",
+                        "SELECT max(order_index) AS mx FROM KnowPhase WHERE phase_uid.substring(0, :plen) = :prefix",
+                        Map.of("prefix", prefix, "plen", prefix.length()), -1);
+                    return client.query(db, basicAuth(), maxQ).chain(mres -> {
+                        List<Map<String, Object>> mrows = mres.result() != null ? mres.result() : List.of();
+                        Object mxRaw = mrows.isEmpty() ? null : mrows.get(0).get("mx");
+                        final int order = req.order_index() != null ? req.order_index()
+                            : (mxRaw instanceof Number n ? n.intValue() : 0) + 1;
+                        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                                "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
+                                "order_index = :oi, src = 'manual'",
+                                mapOfNullable("uid", uid, "pid", display, "name", name, "oi", order)))
+                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                                "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
+                                "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
+                                Map.of("uid", uid, "sid", sid))))
+                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                                "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
+                                "valid_from = :now",
+                                Map.of("nsid", nsid, "now", now))))
+                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                                "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
+                                "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid)",
+                                Map.of("uid", uid, "nsid", nsid))))
+                            .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true))));
+                    });
+                });
+            })
+            .onFailure().recoverWithItem(ex -> {
+                LOG.warnf("[LORE PHASE CREATE] %s: %s", uid, ex.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
+            });
+    }
+
+    @POST
+    @Path("task/phase")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkTaskPhase(TaskPhaseRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.task_uid() == null)
+            return badParams("task_uid required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        if (req.phase_uid() == null && !remove)
+            return badParams("phase_uid required for action=add (omit only with action=remove to detach all)");
+        if (!SAFE_ID.matcher(req.task_uid()).matches()
+                || (req.phase_uid() != null && !SAFE_ID.matcher(req.phase_uid()).matches()))
+            return badParams("ids contain illegal characters");
+        try {
+            if (ingestService.queryPublic(
+                    "SELECT task_uid FROM KnowTask WHERE task_uid=:t LIMIT 1",
+                    Map.of("t", req.task_uid())).isEmpty())
+                return badParams("task not found: " + req.task_uid());
+            if (req.phase_uid() != null && ingestService.queryPublic(
+                    "SELECT phase_uid FROM KnowPhase WHERE phase_uid=:p LIMIT 1",
+                    Map.of("p", req.phase_uid())).isEmpty())
+                return badParams("phase not found: " + req.phase_uid());
+            // task and phase must share the sprint prefix ("SPRINT_X/…")
+            if (req.phase_uid() != null) {
+                String taskSprint  = req.task_uid().substring(0, Math.max(0, req.task_uid().indexOf('/')));
+                String phaseSprint = req.phase_uid().substring(0, Math.max(0, req.phase_uid().indexOf('/')));
+                if (!taskSprint.equals(phaseSprint))
+                    return badParams("task and phase belong to different sprints: "
+                        + taskSprint + " vs " + phaseSprint);
+            }
+            if (remove) {
+                String where = req.phase_uid() != null
+                    ? "@out.task_uid=:t AND @in.phase_uid=:p"
+                    : "@out.task_uid=:t";
+                Map<String, Object> params = req.phase_uid() != null
+                    ? Map.of("t", req.task_uid(), "p", req.phase_uid())
+                    : Map.of("t", req.task_uid());
+                List<Map<String, Object>> edges = ingestService.queryPublic(
+                    "SELECT @rid FROM IN_PHASE WHERE " + where, params);
+                for (Map<String, Object> e : edges) {
+                    String rid = e.get("@rid").toString();
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM IN_PHASE WHERE @rid=" + rid, null)).await().indefinitely();
+                }
+            } else {
+                List<Map<String, Object>> existing = ingestService.queryPublic(
+                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p",
+                    Map.of("t", req.task_uid(), "p", req.phase_uid()));
+                if (existing.isEmpty()) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        String.format(
+                            "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
+                            "TO (SELECT FROM KnowPhase WHERE phase_uid='%s')",
+                            req.task_uid(), req.phase_uid()),
+                        null)).await().indefinitely();
+                }
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("task_uid", req.task_uid());
+            out.put("phase_uid", req.phase_uid());
+            out.put("action", remove ? "removed" : "added");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE TASK PHASE] %s / %s: %s", req.task_uid(), req.phase_uid(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
     }
 
     @POST

@@ -11,8 +11,10 @@ directly, so all parameter whitelisting and SQL composition stay server-side.
 | `lore_list_slices` | read | `GET /lore/slices` |
 | `lore_query_slice` | read | `GET /lore/slice/{slice}` (+ params) |
 | `lore_set_status` | write | `POST /lore/status` (SCD2 transition) |
-| `lore_create_task` | write | `POST /lore/task` |
+| `lore_create_task` | write | `POST /lore/task` (+ optional `phase_uid` → IN_PHASE) |
 | `lore_edit_task` | write | `POST /lore/task/edit` |
+| `lore_create_phase` | write | `POST /lore/phase` (KnowPhase + PART_OF + hist) |
+| `lore_link_task_phase` | write | `POST /lore/task/phase` (IN_PHASE add/remove) |
 
 BENCHMARK tools are Phase 2 (`src/tools/bench.ts`), pending the bench spec.
 

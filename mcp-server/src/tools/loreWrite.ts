@@ -26,8 +26,8 @@ export function registerLoreWrite(server: McpServer): void {
     'Set the status of a LORE entity (SCD2 transition). Mutates the shared ' +
       'system_aida_lore — use deliberately. Returns the new revision.',
     {
-      entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint']),
-      id: z.string().describe('entity id (e.g. sprint_id, task_uid, item_id, checkpoint_id)'),
+      entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint', 'phase']),
+      id: z.string().describe('entity id (e.g. sprint_id, task_uid, item_id, phase_uid "SPRINT_X/PHASE_A")'),
       status: LORE_STATUS,
     },
     async ({ entity_type, id, status }) => {
@@ -42,16 +42,67 @@ export function registerLoreWrite(server: McpServer): void {
   server.tool(
     'lore_create_task',
     'Create a new task under a sprint (appends with the next order_index, opens an ' +
-      'initial PLANNED history state). Mutates the shared system_aida_lore.',
+      'initial PLANNED history state). Optionally attaches the task to a sprint phase ' +
+      '(IN_PHASE edge — the tasks_of_phase slice reads it). Mutates the shared system_aida_lore.',
     {
       sprint_id: z.string(),
       task_id: z.string().describe('short task id, unique within the sprint'),
       title: z.string(),
       note_md: z.string().optional().describe('optional Markdown note'),
+      phase_uid: z.string().optional()
+        .describe('optional phase to attach to, e.g. "SPRINT_X/PHASE_A" (must belong to the same sprint; create via lore_create_phase first)'),
     },
-    async ({ sprint_id, task_id, title, note_md }) => {
+    async ({ sprint_id, task_id, title, note_md, phase_uid }) => {
       try {
-        return json(await lorePost('/lore/task', { sprint_id, task_id, title, note_md: note_md ?? null }));
+        return json(await lorePost('/lore/task', {
+          sprint_id, task_id, title,
+          note_md: note_md ?? null, phase_uid: phase_uid ?? null,
+        }));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  server.tool(
+    'lore_create_phase',
+    'Create a sprint phase (KnowPhase): PART_OF → sprint, initial PLANNED history state. ' +
+      'phase_uid = "<sprint_id>/PHASE_<KEY>". Idempotent — an existing phase is returned ' +
+      'unchanged (created=false). Attach tasks via lore_create_task(phase_uid) or ' +
+      'lore_link_task_phase. Mutates the shared system_aida_lore.',
+    {
+      sprint_id: z.string().describe('e.g. "SPRINT_GEOID_STRUCTURAL_ID"'),
+      phase_key: z.string().describe('short phase key, e.g. "A", "B", "1" → phase_uid "SPRINT_X/PHASE_A", display "Фаза A"'),
+      name: z.string().optional().describe('optional human-readable phase name'),
+      order_index: z.number().int().optional().describe('explicit position; default = max existing + 1'),
+    },
+    async ({ sprint_id, phase_key, name, order_index }) => {
+      try {
+        return json(await lorePost('/lore/phase', {
+          sprint_id, phase_key,
+          name: name ?? null, order_index: order_index ?? null,
+        }));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  server.tool(
+    'lore_link_task_phase',
+    'Link (or unlink) a task to a sprint phase via an IN_PHASE edge. Task and phase must ' +
+      'belong to the same sprint. Idempotent on add. action="remove" detaches (omit ' +
+      'phase_uid with remove to detach the task from ALL phases). Mutates system_aida_lore.',
+    {
+      task_uid: z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
+      phase_uid: z.string().optional().describe('phase uid, e.g. "SPRINT_X/PHASE_B"; required for add'),
+      action: z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ task_uid, phase_uid, action }) => {
+      try {
+        return json(await lorePost('/lore/task/phase', {
+          task_uid, phase_uid: phase_uid ?? null, action: action ?? 'add',
+        }));
       } catch (e) {
         return err(e);
       }
@@ -277,7 +328,7 @@ export function registerLoreWrite(server: McpServer): void {
       'Errors are collected per-item without aborting the rest. ' +
       'Returns {ok, updated, errors[]}.',
     {
-      entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint']),
+      entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint', 'phase']),
       ids:         z.array(z.string()).describe('list of entity ids'),
       status:      LORE_STATUS,
     },
