@@ -6,6 +6,7 @@ import {
   type LoreAdrRow,
   type LoreComponent,
 } from '../../api/lore';
+import { adrStatusLabel } from './LoreAdrList';
 
 type AdrStatus = 'PROPOSED' | 'ACCEPTED' | 'DEPRECATED' | 'SUPERSEDED';
 const ADR_STATUSES: AdrStatus[] = ['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED'];
@@ -159,7 +160,7 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
             onChange={e => set('status')(e.target.value as AdrStatus)}
           >
             {ADR_STATUSES.map(s => (
-              <option key={s} value={s} style={{ color: STATUS_COLOR[s] }}>{s}</option>
+              <option key={s} value={s} style={{ color: STATUS_COLOR[s] }}>{adrStatusLabel(t, s)}</option>
             ))}
           </select>
         ))}

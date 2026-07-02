@@ -27,6 +27,13 @@ export const ADR_STATUS_FILTERS = [
 const STATUS_COLOR: Record<string, string> = Object.fromEntries(
   ADR_STATUS_FILTERS.map(f => [f.key, f.color])
 );
+// ADR_STATUS_FILTERS.label carries the raw English fallback (used before this
+// list is displayed, or when a caller has no i18n instance) — everywhere it's
+// actually rendered, go through this so the shared adrStatus.* namespace wins.
+export function adrStatusLabel(t: (key: string, fallback: string) => string, key: string): string {
+  const f = ADR_STATUS_FILTERS.find(x => x.key === key);
+  return t(`adrStatus.${key.toLowerCase()}`, f?.label ?? key);
+}
 
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, overflowX: 'hidden' as const, display: 'flex', flexDirection: 'column' as const },
@@ -160,7 +167,7 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
               </div>
               {(a.component || a.date_created || a.status) && (
                 <div style={S.line2}>
-                  {a.status && <span style={S.statusBadge(statusColor)}>{statusKey}</span>}
+                  {a.status && <span style={S.statusBadge(statusColor)}>{adrStatusLabel(t, statusKey)}</span>}
                   {a.component && <span style={S.component}>{a.component}</span>}
                   {a.date_created && <span style={S.date}>{a.date_created.slice(0, 10)}</span>}
                 </div>

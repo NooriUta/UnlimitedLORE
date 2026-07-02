@@ -1502,5 +1502,11 @@
     "planned": "Запланировано",
     "deferred": "Отложено",
     "todo": "К выполнению"
+  },
+  "adrStatus": {
+    "proposed": "Предложено",
+    "accepted": "Принято",
+    "deprecated": "Устарело",
+    "superseded": "Заменено"
   }
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreAdrPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import LoreAdrEditor from './LoreAdrEditor';
+import { adrStatusLabel } from './LoreAdrList';
 
 const STATUS_COLOR: Record<string, string> = {
   PROPOSED:   'var(--inf)',
@@ -117,7 +118,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
 
       <div style={S.header}>
         <span style={S.id}>{data.adr_id}</span>
-        {data.status && <span style={S.statusChip(data.status.toUpperCase())}>{data.status.toUpperCase()}</span>}
+        {data.status && <span style={S.statusChip(data.status.toUpperCase())}>{adrStatusLabel(t, data.status.toUpperCase())}</span>}
         {data.name && <span style={S.name}>{data.name}</span>}
         {components.map(c => <span key={c} style={S.compChip}>{c}</span>)}
         {data.date_created && <span style={S.date}>{data.date_created.slice(0, 10)}</span>}

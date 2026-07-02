@@ -1502,5 +1502,11 @@
     "planned": "Planned",
     "deferred": "Deferred",
     "todo": "To do"
+  },
+  "adrStatus": {
+    "proposed": "Proposed",
+    "accepted": "Accepted",
+    "deprecated": "Deprecated",
+    "superseded": "Superseded"
   }
 }

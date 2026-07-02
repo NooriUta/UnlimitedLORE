@@ -11,7 +11,7 @@ import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type D
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
@@ -589,7 +589,7 @@ export default function LorePage() {
                 onClick={() => setAdrStatusSel(prev => {
                   const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
                 })}
-                title={`${f.label}: ${cnt}`}
+                title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
@@ -599,7 +599,7 @@ export default function LorePage() {
                 }}
               >
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
-                {f.label}
+                {adrStatusLabel(t, f.key)}
                 <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
               </span>
             );
