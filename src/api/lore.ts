@@ -403,6 +403,23 @@ export async function uploadBragiAsset(file: File): Promise<{ ok: boolean; file_
   return res.json() as Promise<{ ok: boolean; file_url: string; size_bytes: number }>;
 }
 
+/** Register (or amend) a BragiAsset and optionally attach it to a publication/variant
+ * (POST /lore/bragi/asset) — the second half of the upload+attach cover-image flow;
+ * uploadBragiAsset() above only stores the file and returns its file_url. */
+export async function attachBragiAsset(p: {
+  asset_id: string; file_url?: string; asset_type?: string; alt?: string; size_bytes?: number;
+  attach_to_publication_id?: string; attach_to_variant_id?: string;
+}): Promise<{ ok: boolean; asset_id: string; attached_to: string }> {
+  const res = await fetch(`${LORE_BASE}/bragi/asset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(p),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; asset_id: string; attached_to: string }>;
+}
+
 export interface LoreTaskWriteResponse {
   ok: boolean;
   task_uid: string;

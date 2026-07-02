@@ -14,6 +14,7 @@ interface PublicationRow {
   main_text_md: string | null;
   type: string | null;
   status_general: string | null;
+  source_file_path: string | null;
   cover_asset_urls: string[];
   variant_ids: string[];
   variant_statuses: string[];
@@ -114,12 +115,18 @@ export default function LoreBragiPublications() {
       keyword_ids: editingRow.keyword_ids, variant_ids: editingRow.variant_ids,
       variant_channels: editingRow.variant_channels, variant_statuses: editingRow.variant_statuses,
       variant_urls: editingRow.variant_urls, variant_texts: editingRow.variant_texts,
-      rubric_ids: editingRow.rubric_ids,
+      rubric_ids: editingRow.rubric_ids, cover_asset_urls: editingRow.cover_asset_urls,
+      source_file_path: editingRow.source_file_path,
     };
+    // Status/date genuinely differ per channel (live on CH-TG, still draft on
+    // CH-HABR) — only lock the WHOLE form when every variant is already
+    // published; otherwise each variant locks individually inside the editor.
+    const allVariantsPublished = editingRow.variant_statuses.length > 0
+      && editingRow.variant_statuses.every(s => s === 'published');
     return (
       <LoreBragiPublicationEditor
         editing={editData}
-        readOnly={editingRow.status_general === 'published'}
+        readOnly={allVariantsPublished}
         onSaved={() => { setEditingRow(null); load(); }}
         onCancel={() => setEditingRow(null)}
       />
@@ -154,7 +161,8 @@ export default function LoreBragiPublications() {
               <div style={S.pubttlRow}>
                 <div style={S.pubttl}>{pub.title}</div>
                 <button style={S.editBtn} onClick={() => setEditingRow(pub)}>
-                  {pub.status_general === 'published' ? t('bragi.publications.viewBtn', '👁 просмотр') : t('bragi.publications.editBtn', '✎ редактировать')}
+                  {pub.variant_statuses.length > 0 && pub.variant_statuses.every(s => s === 'published')
+                    ? t('bragi.publications.viewBtn', '👁 просмотр') : t('bragi.publications.editBtn', '✎ редактировать')}
                 </button>
               </div>
               <div style={S.pubmeta}>
@@ -167,7 +175,7 @@ export default function LoreBragiPublications() {
                 )}
                 <span style={S.statusTag}>
                   <span style={statusDotStyle(STATUS_COLOR[pub.status_general ?? ''] ?? 'var(--t3)')} />
-                  {pub.status_general ?? '—'}
+                  {pub.status_general ? t('bragi.publicationEditor.status.' + pub.status_general, pub.status_general) : '—'}
                 </span>
               </div>
               {showMainText === pub.publication_id && (
@@ -188,7 +196,7 @@ export default function LoreBragiPublications() {
                     <div style={S.variantTop}>
                       {pub.variant_channels[i] ?? '—'} ·{' '}
                       <span style={{ color: STATUS_COLOR[pub.variant_statuses[i] ?? ''] ?? 'var(--t3)' }}>
-                        {pub.variant_statuses[i] ?? '—'}
+                        {pub.variant_statuses[i] ? t('bragi.publicationEditor.status.' + pub.variant_statuses[i], pub.variant_statuses[i]) : '—'}
                       </span>
                     </div>
                     <div style={S.variantMeta}>
@@ -259,8 +267,8 @@ const S: Record<string, React.CSSProperties> = {
   filters:   { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 },
   pubcard:   { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 },
   pubhead:   { display: 'flex', gap: 14, alignItems: 'flex-start' },
-  thumb:     { flex: 'none', width: 76, height: 54, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8 },
-  thumbSm:   { flex: 'none', width: 42, height: 32, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8, display: 'inline-block' },
+  thumb:     { flex: 'none', width: 128, height: 90, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8 },
+  thumbSm:   { flex: 'none', width: 64, height: 46, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8, display: 'inline-block' },
   pubttlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   pubttl:    { fontSize: 15, fontWeight: 500 },
   editBtn:   { flex: 'none', fontSize: 11, color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
