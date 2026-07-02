@@ -739,9 +739,8 @@ public class AidaLoreResource {
                 errors.add("skipped (illegal task_uid): " + req.task_uid()); continue;
             }
             try {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowTask SET title = :title, note_md = :note, effort_days = :eff WHERE task_uid = :uid",
-                    mapOfNullable("title", req.title().trim(), "note", req.note_md(), "eff", req.effort_days(), "uid", req.task_uid())))
+                writeClient.command(db, basicAuth(),
+                    taskVertexUpdate(req.task_uid(), req.title(), req.note_md(), req.effort_days()))
                     .await().indefinitely();
                 mirrorTaskHist(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely();
                 updated++;
@@ -753,6 +752,23 @@ public class AidaLoreResource {
         out.put("ok", errors.isEmpty()); out.put("updated", updated);
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
+    }
+
+    /**
+     * Dynamic vertex update for task edits — LH-44: only SET fields actually supplied,
+     * so a title-only edit never wipes note_md/effort_days denormalised on the vertex
+     * (the UI reads the hist row, but the vertex copy must stay consistent too).
+     */
+    private static LoreCommandClient.LoreCommand taskVertexUpdate(
+            String uid, String title, String noteMd, Integer effortDays) {
+        StringBuilder sql = new StringBuilder("UPDATE KnowTask SET title = :title");
+        Map<String, Object> p = new java.util.HashMap<>();
+        p.put("uid", uid);
+        p.put("title", title.trim());
+        if (noteMd != null)     { sql.append(", note_md = :note");     p.put("note", noteMd); }
+        if (effortDays != null) { sql.append(", effort_days = :eff");  p.put("eff", effortDays); }
+        sql.append(" WHERE task_uid = :uid");
+        return new LoreCommandClient.LoreCommand("sql", sql.toString(), p);
     }
 
     /**
@@ -790,9 +806,8 @@ public class AidaLoreResource {
             return Uni.createFrom().item(badParams("task_uid contains illegal characters"));
         }
         final String uid = req.task_uid();
-        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowTask SET title = :title, note_md = :note, effort_days = :eff WHERE task_uid = :uid",
-                mapOfNullable("title", req.title().trim(), "note", req.note_md(), "eff", req.effort_days(), "uid", uid)))
+        return writeClient.command(db, basicAuth(),
+                taskVertexUpdate(uid, req.title(), req.note_md(), req.effort_days()))
             // The vertex note_md/effort_days above are denormalisations the UI never reads.
             // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
@@ -1485,13 +1500,18 @@ public class AidaLoreResource {
         if (req == null || req.milestone_id() == null || req.milestone_id().isBlank())
             return badParams("milestone_id required");
         try {
-            // Upsert the milestone vertex (label / week / date_display).
-            Map<String, Object> p = mapOfNullable(
-                "mid", req.milestone_id(), "lbl", req.label(),
-                "wk", req.week(), "dd", req.date_display(), "prio", req.priority());
+            // Upsert the milestone vertex — LH-44: only SET fields actually provided,
+            // a partial call (e.g. priority-only) must not wipe label/week/date_display.
+            StringBuilder msql = new StringBuilder("UPDATE KnowMilestone SET milestone_id=:mid");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("mid", req.milestone_id());
+            if (req.label() != null)        { msql.append(", label=:lbl");       p.put("lbl",  req.label()); }
+            if (req.week() != null)         { msql.append(", week=:wk");         p.put("wk",   req.week()); }
+            if (req.date_display() != null) { msql.append(", date_display=:dd"); p.put("dd",   req.date_display()); }
+            if (req.priority() != null)     { msql.append(", priority=:prio");   p.put("prio", req.priority()); }
+            msql.append(" UPSERT WHERE milestone_id=:mid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowMilestone SET milestone_id=:mid, label=:lbl, week=:wk, " +
-                "date_display=:dd, priority=:prio UPSERT WHERE milestone_id=:mid", p)).await().indefinitely();
+                msql.toString(), p)).await().indefinitely();
             // Goal text lives in the current HAS_STATE hist row — update it if provided.
             if (req.goal_md() != null) {
                 List<Map<String, Object>> hist = ingestService.queryPublic(
@@ -2000,17 +2020,23 @@ public class AidaLoreResource {
         if (req.title() == null || req.title().isBlank())
             return badParams("title required");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "did",   req.decision_id(),
-                "title", req.title().trim(),
-                "body",  req.body_md(),
-                "date",  req.date_created() != null ? req.date_created()
-                             : java.time.LocalDate.now().toString(),
-                "refs",  req.refs_raw());
+            // LH-44: only SET provided fields — a title-only re-call must not wipe
+            // body_md/refs_raw or reset date_created to today.
+            StringBuilder dsql = new StringBuilder("UPDATE KnowDecision SET decision_id=:did, title=:title");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("did", req.decision_id());
+            p.put("title", req.title().trim());
+            if (req.body_md() != null)      { dsql.append(", body_md=:body");      p.put("body", req.body_md()); }
+            if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
+            if (req.refs_raw() != null)     { dsql.append(", refs_raw=:refs");     p.put("refs", req.refs_raw()); }
+            dsql.append(" UPSERT WHERE decision_id=:did");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowDecision SET decision_id=:did, title=:title, body_md=:body, " +
-                "date_created=:date, refs_raw=:refs UPSERT WHERE decision_id=:did",
-                p)).await().indefinitely();
+                dsql.toString(), p)).await().indefinitely();
+            // Default date_created=today only where missing (fresh insert without explicit date).
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowDecision SET date_created=:d WHERE decision_id=:did AND date_created IS NULL",
+                Map.of("d", java.time.LocalDate.now().toString(), "did", req.decision_id())))
+                .await().indefinitely();
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("decision_id", req.decision_id());
             return noStore(Response.ok(out));
@@ -2039,19 +2065,21 @@ public class AidaLoreResource {
         if (req == null || req.component_id() == null || req.component_id().isBlank())
             return badParams("component_id required");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "cid",       req.component_id(),
-                "owner",     req.owner(),
-                "team",      req.team(),
-                "full_name", req.full_name(),
-                "area",      req.area(),
-                "game_icon", req.game_icon(),
-                "parent_id", req.parent_id());
+            // LH-44: the MCP tool contract explicitly promises "partial update — only
+            // supplied fields written"; previously ALL six fields were SET unconditionally,
+            // so an owner-only call wiped team/full_name/area/game_icon/parent_id.
+            StringBuilder csql = new StringBuilder("UPDATE LoreComponent SET component_id=:cid");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("cid", req.component_id());
+            if (req.owner() != null)     { csql.append(", owner=:owner");         p.put("owner",     req.owner()); }
+            if (req.team() != null)      { csql.append(", team=:team");           p.put("team",      req.team()); }
+            if (req.full_name() != null) { csql.append(", full_name=:full_name"); p.put("full_name", req.full_name()); }
+            if (req.area() != null)      { csql.append(", area=:area");           p.put("area",      req.area()); }
+            if (req.game_icon() != null) { csql.append(", game_icon=:game_icon"); p.put("game_icon", req.game_icon()); }
+            if (req.parent_id() != null) { csql.append(", parent_id=:parent_id"); p.put("parent_id", req.parent_id()); }
+            csql.append(" WHERE component_id=:cid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE LoreComponent SET owner=:owner, team=:team, " +
-                "full_name=:full_name, area=:area, game_icon=:game_icon, parent_id=:parent_id " +
-                "WHERE component_id=:cid",
-                p)).await().indefinitely();
+                csql.toString(), p)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
@@ -2080,19 +2108,27 @@ public class AidaLoreResource {
         if (!SAFE_ID.matcher(req.component_id()).matches())
             return badParams("component_id contains illegal characters");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "cid",       req.component_id(),
-                "full_name", req.full_name(),
-                "area",      req.area(),
-                "team",      req.team(),
-                "game_icon", req.game_icon(),
-                "owner",     req.owner(),
-                "parent_id", req.parent_id());
+            // LH-44: dynamic SET — re-calling create on an existing component must not
+            // wipe unspecified fields nor reset children/tech arrays (initialised below
+            // only where still missing, i.e. genuinely new vertices).
+            StringBuilder csql = new StringBuilder("UPDATE LoreComponent SET component_id=:cid");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("cid", req.component_id());
+            if (req.full_name() != null) { csql.append(", full_name=:full_name"); p.put("full_name", req.full_name()); }
+            if (req.area() != null)      { csql.append(", area=:area");           p.put("area",      req.area()); }
+            if (req.team() != null)      { csql.append(", team=:team");           p.put("team",      req.team()); }
+            if (req.game_icon() != null) { csql.append(", game_icon=:game_icon"); p.put("game_icon", req.game_icon()); }
+            if (req.owner() != null)     { csql.append(", owner=:owner");         p.put("owner",     req.owner()); }
+            if (req.parent_id() != null) { csql.append(", parent_id=:parent_id"); p.put("parent_id", req.parent_id()); }
+            csql.append(" UPSERT WHERE component_id=:cid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE LoreComponent SET component_id=:cid, full_name=:full_name, " +
-                "area=:area, team=:team, game_icon=:game_icon, owner=:owner, parent_id=:parent_id, " +
-                "children=[], tech=[] UPSERT WHERE component_id=:cid",
-                p)).await().indefinitely();
+                csql.toString(), p)).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE LoreComponent SET children=[] WHERE component_id=:cid AND children IS NULL",
+                Map.of("cid", req.component_id()))).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE LoreComponent SET tech=[] WHERE component_id=:cid AND tech IS NULL",
+                Map.of("cid", req.component_id()))).await().indefinitely();
             if (req.parent_id() != null && !req.parent_id().isBlank()) {
                 Map<String, Object> ep = Map.of("cid", req.component_id(), "pid", req.parent_id());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -2226,18 +2262,20 @@ public class AidaLoreResource {
         if (!SAFE_ID.matcher(req.qg_id()).matches())
             return badParams("qg_id contains illegal characters");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "id",  req.qg_id(),
-                "nm",  req.name(),
-                "dsc", req.description(),
-                "cid", req.component_id(),
-                "st",  req.status(),
-                "cnt", req.content_md(),
-                "sid", req.sprint_id());
+            // LH-44: only SET provided fields — a status-only call (e.g. deprecate a gate)
+            // must not wipe curated content_md/description/routine links.
+            StringBuilder qsql = new StringBuilder("UPDATE QualityGate SET qg_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.qg_id());
+            if (req.name() != null)         { qsql.append(", name=:nm");          p.put("nm",  req.name()); }
+            if (req.description() != null)  { qsql.append(", description=:dsc");  p.put("dsc", req.description()); }
+            if (req.component_id() != null) { qsql.append(", component_id=:cid"); p.put("cid", req.component_id()); }
+            if (req.status() != null)       { qsql.append(", status=:st");        p.put("st",  req.status()); }
+            if (req.content_md() != null)   { qsql.append(", content_md=:cnt");   p.put("cnt", req.content_md()); }
+            if (req.sprint_id() != null)    { qsql.append(", sprint_id=:sid");    p.put("sid", req.sprint_id()); }
+            qsql.append(" UPSERT WHERE qg_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE QualityGate SET qg_id=:id, name=:nm, description=:dsc, " +
-                "component_id=:cid, status=:st, content_md=:cnt, sprint_id=:sid " +
-                "UPSERT WHERE qg_id=:id", p)).await().indefinitely();
+                qsql.toString(), p)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "qg_id", req.qg_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
@@ -2321,14 +2359,20 @@ public class AidaLoreResource {
         if (req.qg_id() == null || req.qg_id().isBlank())
             return badParams("qg_id required");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "jid", req.job_id(), "qid", req.qg_id(), "inv", req.inv_id(),
-                "rd",  req.run_date(), "sev", req.severity(),
-                "st",  req.status(), "note", req.note_md());
+            // LH-44: only SET provided fields — a status-only resolve call must not
+            // wipe note_md/severity/run_date evidence.
+            StringBuilder jsql = new StringBuilder("UPDATE QGJobTask SET job_id=:jid, qg_id=:qid");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("jid", req.job_id());
+            p.put("qid", req.qg_id());
+            if (req.inv_id() != null)   { jsql.append(", inv_id=:inv");    p.put("inv",  req.inv_id()); }
+            if (req.run_date() != null) { jsql.append(", run_date=:rd");   p.put("rd",   req.run_date()); }
+            if (req.severity() != null) { jsql.append(", severity=:sev");  p.put("sev",  req.severity()); }
+            if (req.status() != null)   { jsql.append(", status=:st");     p.put("st",   req.status()); }
+            if (req.note_md() != null)  { jsql.append(", note_md=:note");  p.put("note", req.note_md()); }
+            jsql.append(" UPSERT WHERE job_id=:jid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE QGJobTask SET job_id=:jid, qg_id=:qid, inv_id=:inv, " +
-                "run_date=:rd, severity=:sev, status=:st, note_md=:note " +
-                "UPSERT WHERE job_id=:jid", p)).await().indefinitely();
+                jsql.toString(), p)).await().indefinitely();
             // YIELDED edge: QualityGate → QGJobTask (idempotent)
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "CREATE EDGE YIELDED FROM (SELECT FROM QualityGate WHERE qg_id=:qid) " +
@@ -2362,22 +2406,32 @@ public class AidaLoreResource {
         if (req.job_id() == null || req.job_id().isBlank())
             return badParams("job_id required");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "rid",  req.rec_id(),    "jid",  req.job_id(),
-                "ttl",  req.title(),     "body", req.body_md(),
-                "st",   req.status() != null ? req.status() : "pending",
-                "pri",  req.priority(),  "sev",  req.severity(),
-                "eff",  req.effort_days(), "tags", req.tags(),
-                "cid",  req.component_id(), "qgid", req.qg_id(),
-                "inv",  req.inv_id(),    "fcmd", req.fix_cmd(),
-                "htv",  req.how_to_verify());
+            // LH-44: only SET provided fields. Two former hazards on partial re-calls:
+            // (1) body_md/fix_cmd/how_to_verify etc. wiped to null; (2) status forced
+            // back to 'pending' — silently un-promoting an already promoted rec.
+            // Default status='pending' now applies only where still missing (fresh insert).
+            StringBuilder rsql = new StringBuilder("UPDATE QGRecommendation SET rec_id=:rid, job_id=:jid");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("rid", req.rec_id());
+            p.put("jid", req.job_id());
+            if (req.title() != null)         { rsql.append(", title=:ttl");           p.put("ttl",  req.title()); }
+            if (req.body_md() != null)       { rsql.append(", body_md=:body");        p.put("body", req.body_md()); }
+            if (req.status() != null)        { rsql.append(", status=:st");           p.put("st",   req.status()); }
+            if (req.priority() != null)      { rsql.append(", priority=:pri");        p.put("pri",  req.priority()); }
+            if (req.severity() != null)      { rsql.append(", severity=:sev");        p.put("sev",  req.severity()); }
+            if (req.effort_days() != null)   { rsql.append(", effort_days=:eff");     p.put("eff",  req.effort_days()); }
+            if (req.tags() != null)          { rsql.append(", tags=:tags");           p.put("tags", req.tags()); }
+            if (req.component_id() != null)  { rsql.append(", component_id=:cid");    p.put("cid",  req.component_id()); }
+            if (req.qg_id() != null)         { rsql.append(", qg_id=:qgid");          p.put("qgid", req.qg_id()); }
+            if (req.inv_id() != null)        { rsql.append(", inv_id=:inv");          p.put("inv",  req.inv_id()); }
+            if (req.fix_cmd() != null)       { rsql.append(", fix_cmd=:fcmd");        p.put("fcmd", req.fix_cmd()); }
+            if (req.how_to_verify() != null) { rsql.append(", how_to_verify=:htv");   p.put("htv",  req.how_to_verify()); }
+            rsql.append(" UPSERT WHERE rec_id=:rid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE QGRecommendation SET rec_id=:rid, job_id=:jid, " +
-                "title=:ttl, body_md=:body, status=:st, " +
-                "priority=:pri, severity=:sev, effort_days=:eff, tags=:tags, " +
-                "component_id=:cid, qg_id=:qgid, inv_id=:inv, " +
-                "fix_cmd=:fcmd, how_to_verify=:htv " +
-                "UPSERT WHERE rec_id=:rid", p)).await().indefinitely();
+                rsql.toString(), p)).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE QGRecommendation SET status='pending' WHERE rec_id=:rid AND status IS NULL",
+                Map.of("rid", req.rec_id()))).await().indefinitely();
             // PRODUCED edge: QGJobTask → QGRecommendation (idempotent)
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "CREATE EDGE PRODUCED FROM (SELECT FROM QGJobTask WHERE job_id=:jid) " +
@@ -2535,16 +2589,21 @@ public class AidaLoreResource {
             String now  = Instant.now().toString();
             String nsid = UUID.randomUUID().toString();
 
-            // Step 1: upsert KnowRunbook vertex (metadata only — content lives in hist)
-            Map<String, Object> upsertP = mapOfNullable(
-                "id",   req.runbook_id(),
-                "name", req.name(),
-                "area", req.area(),
-                "date", req.date_created() != null ? req.date_created()
-                            : java.time.LocalDate.now().toString());
+            // Step 1: upsert KnowRunbook vertex (metadata only — content lives in hist).
+            // LH-44: only SET provided fields — a content-only re-call must not wipe
+            // area or reset date_created to today. Default date applies only where missing.
+            StringBuilder rbsql = new StringBuilder("UPDATE KnowRunbook SET runbook_id=:id, name=:name");
+            Map<String, Object> upsertP = new java.util.HashMap<>();
+            upsertP.put("id", req.runbook_id());
+            upsertP.put("name", req.name());
+            if (req.area() != null)         { rbsql.append(", area=:area");         upsertP.put("area", req.area()); }
+            if (req.date_created() != null) { rbsql.append(", date_created=:date"); upsertP.put("date", req.date_created()); }
+            rbsql.append(" UPSERT WHERE runbook_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowRunbook SET runbook_id=:id, name=:name, area=:area, " +
-                "date_created=:date UPSERT WHERE runbook_id=:id", upsertP))
+                rbsql.toString(), upsertP)).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowRunbook SET date_created=:d WHERE runbook_id=:id AND date_created IS NULL",
+                Map.of("d", java.time.LocalDate.now().toString(), "id", req.runbook_id())))
                 .await().indefinitely();
 
             // Step 2: check for an existing open SCD2 hist row
@@ -2611,18 +2670,20 @@ public class AidaLoreResource {
         if (!SAFE_ID.matcher(req.doc_id()).matches())
             return badParams("doc_id contains illegal characters");
         try {
-            Map<String, Object> p = mapOfNullable(
-                "id",       req.doc_id(),
-                "title",    req.title(),
-                "kind",     req.kind(),
-                "ext_deps", req.has_ext_deps(),
-                "cid",      req.component_id(),
-                "fp",       req.file_path(),
-                "content",  req.content_html());
+            // LH-44: only SET provided fields — a metadata-only re-call must not wipe
+            // content_html (up to 100 KB of page content) or the other attributes.
+            StringBuilder dcsql = new StringBuilder("UPDATE KnowDoc SET doc_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.doc_id());
+            if (req.title() != null)        { dcsql.append(", title=:title");           p.put("title",    req.title()); }
+            if (req.kind() != null)         { dcsql.append(", kind=:kind");             p.put("kind",     req.kind()); }
+            if (req.has_ext_deps() != null) { dcsql.append(", has_ext_deps=:ext_deps"); p.put("ext_deps", req.has_ext_deps()); }
+            if (req.component_id() != null) { dcsql.append(", component_id=:cid");      p.put("cid",      req.component_id()); }
+            if (req.file_path() != null)    { dcsql.append(", file_path=:fp");          p.put("fp",       req.file_path()); }
+            if (req.content_html() != null) { dcsql.append(", content_html=:content");  p.put("content",  req.content_html()); }
+            dcsql.append(" UPSERT WHERE doc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowDoc SET doc_id=:id, title=:title, kind=:kind, " +
-                "has_ext_deps=:ext_deps, component_id=:cid, file_path=:fp, content_html=:content " +
-                "UPSERT WHERE doc_id=:id", p)).await().indefinitely();
+                dcsql.toString(), p)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
