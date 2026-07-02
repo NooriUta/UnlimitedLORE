@@ -1061,7 +1061,9 @@
       "releaseBar": {
         "label": "Release",
         "goToRelease": "Go to release {{v}}",
-        "githubRelease": "GitHub Release {{v}}"
+        "githubRelease": "GitHub Release {{v}}",
+        "unlink": "Unlink {{v}}",
+        "linkPlaceholder": "+ link release…"
       },
       "prBar": {
         "label": "PR"
