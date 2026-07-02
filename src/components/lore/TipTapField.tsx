@@ -11,9 +11,11 @@
 // @tiptap/pm, tiptap-markdown.
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
 import { Markdown } from 'tiptap-markdown';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
+import { uploadBragiAsset } from '../../api/lore';
 
 // tiptap-markdown@0.9 (built for TipTap v2) doesn't ship v3-compatible Storage
 // type augmentation, so `editor.storage.markdown` isn't statically known —
@@ -29,15 +31,22 @@ export interface TipTapFieldProps {
   onChange: (markdown: string) => void;
   placeholder?: string;
   minHeight?: number;
+  /** PUB-VIEW-01: view-only mode for published content — no toolbar, no typing, no upload. */
+  editable?: boolean;
 }
 
-export default function TipTapField({ value, onChange, placeholder, minHeight = 100 }: TipTapFieldProps) {
+export default function TipTapField({ value, onChange, placeholder, minHeight = 100, editable = true }: TipTapFieldProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [source, setSource] = useState(false);   // TT-01: raw-markdown view toggle
+  const [draft, setDraft] = useState(value);
 
   const editor = useEditor({
-    extensions: [StarterKit, Markdown.configure({ html: false, tightLists: true })],
+    extensions: [StarterKit, Image, Markdown.configure({ html: false, tightLists: true })],
     content: value,
+    editable,
     editorProps: {
       attributes: { style: `min-height:${minHeight}px; outline: none;` },
     },
@@ -46,6 +55,10 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
     },
   });
 
+  useEffect(() => {
+    editor?.setEditable(editable);
+  }, [editable, editor]);
+
   // Sync external resets (e.g. form clear) without fighting the editor mid-typing.
   useEffect(() => {
     if (!editor) return;
@@ -53,24 +66,67 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
     if (value !== current && value === '') editor.commands.setContent('');
   }, [value, editor]);
 
+  const pickImage = () => fileInputRef.current?.click();
+
+  const onImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !editor) return;
+    setUploading(true);
+    try {
+      const { file_url } = await uploadBragiAsset(file);
+      editor.chain().focus().setImage({ src: file_url, alt: file.name }).run();
+    } catch {
+      // upload failure — nothing inserted, toolbar just stops spinning
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const toggleSource = () => {
+    if (!editor) return;
+    if (!source) {
+      setDraft(getMarkdown(editor));
+      setSource(true);
+    } else {
+      editor.commands.setContent(draft);
+      onChangeRef.current(draft);
+      setSource(false);
+    }
+  };
+
   return (
     <div style={S.wrap}>
-      <div style={S.toolbar}>
-        {editor && (
-          <>
-            <ToolBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>B</ToolBtn>
-            <ToolBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><i>i</i></ToolBtn>
-            <ToolBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</ToolBtn>
-            <ToolBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</ToolBtn>
-            <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolBtn>
-            <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>{'</>'}</ToolBtn>
-          </>
-        )}
-      </div>
-      <div style={S.editorBox}>
-        <EditorContent editor={editor} />
-        {editor?.isEmpty && placeholder && <div style={S.placeholder}>{placeholder}</div>}
-      </div>
+      {editable && (
+        <div style={S.toolbar}>
+          {editor && (
+            <>
+              <ToolBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>B</ToolBtn>
+              <ToolBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><i>i</i></ToolBtn>
+              <ToolBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</ToolBtn>
+              <ToolBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</ToolBtn>
+              <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolBtn>
+              <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>{'</>'}</ToolBtn>
+              <ToolBtn active={uploading} onClick={pickImage}>{uploading ? '…' : '🖼'}</ToolBtn>
+              <ToolBtn active={source} onClick={toggleSource}>{'</> md'}</ToolBtn>
+            </>
+          )}
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onImageSelected} />
+        </div>
+      )}
+      {source ? (
+        <textarea
+          style={{ ...S.sourceBox, minHeight }}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          placeholder={placeholder}
+        />
+      ) : (
+        <div style={S.editorBox}>
+          <EditorContent editor={editor} />
+          {editor?.isEmpty && placeholder && <div style={S.placeholder}>{placeholder}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -91,5 +147,8 @@ const S: Record<string, React.CSSProperties> = {
   wrap:       { border: '1px solid var(--b3)', borderRadius: 4, overflow: 'hidden' },
   toolbar:    { display: 'flex', gap: 3, padding: '4px 6px', background: 'var(--b2)', borderBottom: '1px solid var(--b3)' },
   editorBox:  { position: 'relative', background: 'var(--b1)', padding: '7px 9px', fontSize: 12, color: 'var(--t1)', lineHeight: 1.55 },
+  sourceBox:  { width: '100%', minHeight: 100, background: 'var(--b1)', color: 'var(--t1)', fontFamily: 'var(--mono)',
+                fontSize: 12, lineHeight: 1.55, padding: '7px 9px', border: 'none', outline: 'none', resize: 'vertical',
+                boxSizing: 'border-box' },
   placeholder:{ position: 'absolute', top: 7, left: 9, color: 'var(--t3)', pointerEvents: 'none', fontSize: 12 },
 };

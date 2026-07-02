@@ -390,6 +390,19 @@ export async function postLoreStatus(
   return res.json() as Promise<LoreStatusUpdateResponse>;
 }
 
+export async function uploadBragiAsset(file: File): Promise<{ ok: boolean; file_url: string; size_bytes: number }> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${LORE_BASE}/bragi/asset/upload`, {
+    method: 'POST',
+    headers: { 'X-Seer-Role': 'admin' },
+    body: form,
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; file_url: string; size_bytes: number }>;
+}
+
 export interface LoreTaskWriteResponse {
   ok: boolean;
   task_uid: string;

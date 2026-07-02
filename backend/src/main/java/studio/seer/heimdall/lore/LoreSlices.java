@@ -624,6 +624,7 @@ public final class LoreSlices {
 
         slice("bragi_publications",
             "SELECT publication_id, title, topic, main_text_md, type, status_general, " +
+            "out('HAS_ASSET').file_url AS cover_asset_urls, " +
             "out('HAS_VARIANT').variant_id AS variant_ids, " +
             "out('HAS_VARIANT').status AS variant_statuses, " +
             "out('HAS_VARIANT').url AS variant_urls, " +

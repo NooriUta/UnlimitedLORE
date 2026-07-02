@@ -62,6 +62,8 @@ export interface LoreBragiPublicationEditorProps {
   initialPublishedAt?: string;
   /** Present → edit this existing publication instead of creating a new one. */
   editing?: LoreBragiPublicationEditData;
+  /** PUB-VIEW-01: published items open view-only — no inputs, no Save, just Закрыть. */
+  readOnly?: boolean;
 }
 
 function variantsFromEditData(d: LoreBragiPublicationEditData): VariantDraft[] {
@@ -79,7 +81,7 @@ function variantsFromEditData(d: LoreBragiPublicationEditData): VariantDraft[] {
   }));
 }
 
-export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialPublishedAt, editing }: LoreBragiPublicationEditorProps) {
+export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialPublishedAt, editing, readOnly = false }: LoreBragiPublicationEditorProps) {
   const [publicationId, setPublicationId] = useState(editing?.publication_id ?? '');
   const [title, setTitle] = useState(editing?.title ?? '');
   const [topic, setTopic] = useState(editing?.topic ?? '');
@@ -146,12 +148,16 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   return (
     <div style={S.root}>
       <div style={S.head}>
-        <span style={S.title}>{editing ? 'Редактирование публикации' : 'Новая публикация'}</span>
+        <span style={S.title}>
+          {readOnly ? 'Просмотр публикации' : editing ? 'Редактирование публикации' : 'Новая публикация'}
+        </span>
         <div style={S.headBtns}>
-          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>Отмена</button>
-          <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
-          </button>
+          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>{readOnly ? 'Закрыть' : 'Отмена'}</button>
+          {!readOnly && (
+            <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
+              {saving ? 'Сохранение…' : 'Сохранить'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -160,74 +166,85 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       <div style={S.row4}>
         <Field label="Publication ID" grow={1}>
           <input
-            style={{ ...S.input, opacity: editing ? 0.6 : 1 }}
+            style={{ ...S.input, opacity: editing || readOnly ? 0.6 : 1 }}
             value={publicationId}
             placeholder="PUB-06"
-            disabled={!!editing}
+            disabled={!!editing || readOnly}
             onChange={e => setPublicationId(e.target.value)}
           />
         </Field>
         <Field label="Название" grow={3}>
-          <input style={S.input} value={title} placeholder="Заголовок публикации" onChange={e => setTitle(e.target.value)} />
+          <input style={S.input} value={title} placeholder="Заголовок публикации" disabled={readOnly} onChange={e => setTitle(e.target.value)} />
         </Field>
         <Field label="Тип" grow={1}>
-          <input style={S.input} value={type} onChange={e => setType(e.target.value)} />
+          <input style={S.input} value={type} disabled={readOnly} onChange={e => setType(e.target.value)} />
         </Field>
         <Field label="Статус" grow={1}>
-          <select style={S.input} value={status} onChange={e => setStatus(e.target.value)}>
+          <select style={S.input} value={status} disabled={readOnly} onChange={e => setStatus(e.target.value)}>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </Field>
       </div>
 
       <Field label="Ключ (тема)" grow={1}>
-        <input style={S.input} value={topic} placeholder="AI governance" onChange={e => setTopic(e.target.value)} />
+        <input style={S.input} value={topic} placeholder="AI governance" disabled={readOnly} onChange={e => setTopic(e.target.value)} />
       </Field>
 
       <Sec label="Main-текст">
-        <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder="Мастер-версия текста…" />
+        <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder="Мастер-версия текста…" editable={!readOnly} />
       </Sec>
 
       <Sec label="Ключевые слова">
-        <MultiChip
-          values={keywordIds}
-          onChange={setKeywordIds}
-          suggestions={keywords.map(k => k.keyword_id)}
-          suggestionLabels={Object.fromEntries(keywords.map(k => [k.keyword_id, k.phrase]))}
-          placeholder="KW-01, KW-05…"
-          freeForm={false}
-        />
+        {readOnly ? (
+          <div style={S.readOnlyChips}>
+            {keywordIds.length
+              ? keywordIds.map(k => <span key={k} style={S.readOnlyChip}>{keywords.find(kw => kw.keyword_id === k)?.phrase ?? k}</span>)
+              : <span style={{ color: 'var(--t3)' }}>—</span>}
+          </div>
+        ) : (
+          <MultiChip
+            values={keywordIds}
+            onChange={setKeywordIds}
+            suggestions={keywords.map(k => k.keyword_id)}
+            suggestionLabels={Object.fromEntries(keywords.map(k => [k.keyword_id, k.phrase]))}
+            placeholder="KW-01, KW-05…"
+            freeForm={false}
+          />
+        )}
       </Sec>
 
       <Sec label="Вариации по площадкам">
         {variants.map((v, i) => (
           <div key={i} style={S.variantBlock}>
             <div style={S.variantRow}>
-              <select style={S.variantSelect} value={v.channel_id} onChange={e => setVariant(i, { channel_id: e.target.value })}>
+              <select style={S.variantSelect} value={v.channel_id} disabled={readOnly} onChange={e => setVariant(i, { channel_id: e.target.value })}>
                 <option value="">— площадка —</option>
                 {channels.map(c => <option key={c.channel_id} value={c.channel_id}>{c.channel_id}</option>)}
               </select>
-              <select style={S.variantSelectSm} value={v.status} onChange={e => setVariant(i, { status: e.target.value })}>
+              <select style={S.variantSelectSm} value={v.status} disabled={readOnly} onChange={e => setVariant(i, { status: e.target.value })}>
                 {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <input style={S.variantInputSm} type="date" value={v.published_at}
+              <input style={S.variantInputSm} type="date" value={v.published_at} disabled={readOnly}
                 onChange={e => setVariant(i, { published_at: e.target.value })} />
-              <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>×</button>
+              {!readOnly && (
+                <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>×</button>
+              )}
             </div>
             <label style={S.sameAsMainLabel}>
               <input
                 type="checkbox"
                 checked={v.sameAsMain}
+                disabled={readOnly}
                 onChange={e => setVariant(i, { sameAsMain: e.target.checked })}
               />
               текст как в main-тексте
             </label>
             {!v.sameAsMain && (
-              <TipTapField value={v.text_md} onChange={t => setVariant(i, { text_md: t })} minHeight={60} placeholder="текст вариации…" />
+              <TipTapField value={v.text_md} onChange={t => setVariant(i, { text_md: t })} minHeight={60} placeholder="текст вариации…" editable={!readOnly} />
             )}
           </div>
         ))}
-        <button style={S.addVariantBtn} onClick={addVariant}>+ площадка</button>
+        {!readOnly && <button style={S.addVariantBtn} onClick={addVariant}>+ площадка</button>}
       </Sec>
     </div>
   );
@@ -265,6 +282,9 @@ const S: Record<string, React.CSSProperties> = {
               background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
               outline: 'none', width: '100%', boxSizing: 'border-box' },
   sLabel:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 },
+  readOnlyChips: { display: 'flex', gap: 6, flexWrap: 'wrap' },
+  readOnlyChip:  { fontSize: 11, color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--b3)',
+                   borderRadius: 4, padding: '3px 8px' },
   variantBlock: { border: '1px solid var(--b3)', borderRadius: 6, padding: 8, marginBottom: 8 },
   variantRow: { display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' },
   sameAsMainLabel: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--t2)', marginBottom: 6, cursor: 'pointer' },

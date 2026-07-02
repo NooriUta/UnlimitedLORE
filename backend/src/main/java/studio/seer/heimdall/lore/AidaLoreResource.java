@@ -17,9 +17,13 @@ import jakarta.ws.rs.core.UriInfo;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.RestForm;
+import org.jboss.resteasy.reactive.multipart.FileUpload;
 import studio.seer.heimdall.bench.MartClient;
 import studio.seer.heimdall.bench.MartQuery;
+import jakarta.ws.rs.BeanParam;
 
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
@@ -123,6 +127,9 @@ public class AidaLoreResource {
 
     @Inject
     LoreIngestService ingestService;
+
+    @Inject
+    BragiS3Service bragiS3;
 
     @GET
     @Path("slices")
@@ -3288,6 +3295,58 @@ public class AidaLoreResource {
             LOG.warnf("[BRAGI ASSET] %s: %s", req.asset_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── BRAGI asset upload — IMG-01/02: real image storage via S3 (MinIO) ─────
+    public static class BragiAssetUploadForm {
+        @RestForm("file")
+        public FileUpload file;
+    }
+
+    private static final Pattern SAFE_UPLOAD_NAME = Pattern.compile("[A-Za-z0-9_.\\-]{1,150}");
+
+    @POST
+    @Path("bragi/asset/upload")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response uploadBragiAsset(@BeanParam BragiAssetUploadForm form,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (form == null || form.file == null || form.file.fileName() == null)
+            return badParams("file required");
+        String original = form.file.fileName();
+        String ext = original.contains(".") ? original.substring(original.lastIndexOf('.')) : "";
+        if (ext.length() > 10) ext = ""; // reject implausible/garbage extensions rather than fail
+        String name = UUID.randomUUID() + ext.replaceAll("[^A-Za-z0-9.]", "");
+        try (InputStream in = java.nio.file.Files.newInputStream(form.file.uploadedFile())) {
+            long size = java.nio.file.Files.size(form.file.uploadedFile());
+            bragiS3.put("bragi/" + name, in, size, form.file.contentType());
+            return noStore(Response.ok(Map.of(
+                "ok", true, "file_url", "/lore/bragi/asset/file/" + name, "size_bytes", size)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI UPLOAD] %s: %s", original, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("S3_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @GET
+    @Path("bragi/asset/file/{name}")
+    public Response serveBragiAssetFile(@PathParam("name") String name) {
+        if (!enabled) return disabled();
+        if (!SAFE_UPLOAD_NAME.matcher(name).matches()) return badParams("invalid file name");
+        try {
+            byte[] data = bragiS3.get("bragi/" + name);
+            String contentType = bragiS3.contentType("bragi/" + name);
+            return Response.ok(data)
+                .type(contentType != null && !contentType.isBlank() ? contentType : "application/octet-stream")
+                .header("Cache-Control", "public, max-age=31536000, immutable")
+                .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
     }
 

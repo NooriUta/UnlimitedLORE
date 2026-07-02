@@ -13,6 +13,7 @@ interface PublicationRow {
   main_text_md: string | null;
   type: string | null;
   status_general: string | null;
+  cover_asset_urls: string[];
   variant_ids: string[];
   variant_statuses: string[];
   variant_urls: (string | null)[];
@@ -20,6 +21,16 @@ interface PublicationRow {
   variant_channels: string[];
   variant_asset_urls: (string | null)[];
   keyword_ids: string[];
+}
+
+// Seed data still carries illustrative filenames ("ai-gov.png") that don't
+// resolve anywhere; real uploads (IMG-02) are "/lore/bragi/asset/file/..."
+// same-origin paths. Try to render either — fall back to the placeholder box
+// on load failure instead of guessing which kind a given string is.
+function Thumb({ src, style }: { src: string | null | undefined; style: React.CSSProperties }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return <div style={style} />;
+  return <img src={src} alt="" style={{ ...style, objectFit: 'cover' }} onError={() => setFailed(true)} />;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -88,6 +99,7 @@ export default function LoreBragiPublications() {
     return (
       <LoreBragiPublicationEditor
         editing={editData}
+        readOnly={editingRow.status_general === 'published'}
         onSaved={() => { setEditingRow(null); load(); }}
         onCancel={() => setEditingRow(null)}
       />
@@ -111,11 +123,13 @@ export default function LoreBragiPublications() {
       {filtered.map(pub => (
         <div key={pub.publication_id} style={S.pubcard}>
           <div style={S.pubhead}>
-            <div style={S.thumb} />
+            <Thumb src={pub.cover_asset_urls?.[0] ?? pub.variant_asset_urls?.[0]} style={S.thumb} />
             <div style={{ flex: 1 }}>
               <div style={S.pubttlRow}>
                 <div style={S.pubttl}>{pub.title}</div>
-                <button style={S.editBtn} onClick={() => setEditingRow(pub)}>✎ редактировать</button>
+                <button style={S.editBtn} onClick={() => setEditingRow(pub)}>
+                  {pub.status_general === 'published' ? '👁 просмотр' : '✎ редактировать'}
+                </button>
               </div>
               <div style={S.pubmeta}>
                 {pub.topic && <span>ключ · {pub.topic}</span>}
@@ -142,7 +156,7 @@ export default function LoreBragiPublications() {
                   style={S.variantChip}
                   onClick={() => toggleVariant(vid, vid)}
                 >
-                  <span style={S.thumbSm} />
+                  <Thumb src={pub.variant_asset_urls[i]} style={S.thumbSm} />
                   <div>
                     <div style={S.variantTop}>
                       {pub.variant_channels[i] ?? '—'} ·{' '}
