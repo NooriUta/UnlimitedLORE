@@ -616,6 +616,58 @@ public final class LoreSlices {
             "FROM ClRoutineRun WHERE routine_name = :routine_name " +
             "ORDER BY started_at DESC, run_date DESC",
             List.of("routine_name"), Map.of(), " LIMIT 20");
+
+        // ── MCP-05: BRAGI content archive read slices (SPEC-BRAGI-ARCHIVE-001) ──
+        slice("bragi_overview",
+            "SELECT status_general, count(*) AS n FROM BragiPublication GROUP BY status_general",
+            List.of(), Map.of(), "");
+
+        slice("bragi_publications",
+            "SELECT publication_id, title, topic, type, status_general, " +
+            "out('HAS_VARIANT').variant_id AS variant_ids, " +
+            "out('HAS_VARIANT').status AS variant_statuses, " +
+            "out('HAS_VARIANT').url AS variant_urls, " +
+            "out('HAS_VARIANT').out('IN_CHANNEL').channel_id AS variant_channels, " +
+            "out('HAS_VARIANT').out('HAS_ASSET').file_url AS variant_asset_urls, " +
+            "out('TARGETS_KEY').keyword_id AS keyword_ids " +
+            "FROM BragiPublication",
+            List.of(), Map.of(), " ORDER BY publication_id");
+
+        // Calendar: variants that have a published_at date. No distinct "planned
+        // date" field exists yet (v0.4 spec only has published_at on Variant) —
+        // planned-but-undated variants are visible via bragi_publications instead.
+        slice("bragi_calendar",
+            "SELECT variant_id, status, published_at, url, " +
+            "in('HAS_VARIANT').publication_id AS publication_id, " +
+            "in('HAS_VARIANT').title AS title, " +
+            "out('IN_CHANNEL').channel_id AS channel_id " +
+            "FROM BragiVariant WHERE published_at IS NOT NULL",
+            List.of(), Map.of(), " ORDER BY published_at");
+
+        slice("bragi_keys",
+            "SELECT keyword_id, phrase, cluster, freq_exact, freq_broad, intent, source, measured_at, " +
+            "out('TARGETS_PAGE').page_id AS page_id, " +
+            "out('TARGETS_PAGE').url AS page_url " +
+            "FROM BragiKeyword",
+            List.of(), Map.of(), " ORDER BY freq_exact DESC");
+
+        // Recent metric feed — for filtered/aggregated queries use lore_query_metric
+        // (POST /lore/bragi/metric/query) instead; this slice is a flat recent-points
+        // feed for dashboard cards. object_type='probe' is a schema-verification
+        // artifact (ARC-02/ARC-03), always excluded.
+        slice("bragi_analytics",
+            "SELECT object_type, object_id, metric, value, ts, source, segment " +
+            "FROM MetricSnapshot WHERE object_type != 'probe'",
+            List.of(), Map.of(), " ORDER BY ts DESC LIMIT 100");
+
+        slice("bragi_competitors",
+            "SELECT competitor_id, name FROM BragiCompetitor",
+            List.of(), Map.of(), " ORDER BY competitor_id");
+
+        slice("bragi_integrations",
+            "SELECT integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at " +
+            "FROM BragiIntegration",
+            List.of(), Map.of(), " ORDER BY integration_id");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }
