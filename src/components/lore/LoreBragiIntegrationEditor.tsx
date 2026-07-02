@@ -22,19 +22,31 @@ async function post(path: string, body: unknown): Promise<{ ok: boolean; [k: str
 const PURPOSES = ['read', 'write', 'read/write'];
 const STATUSES = ['active', 'needs_admin', 'inactive'];
 
+/** Shape of an existing row (from the bragi_integrations slice) — passed in to edit. */
+export interface LoreBragiIntegrationEditData {
+  integration_id: string;
+  service: string | null;
+  purpose: string | null;
+  endpoint?: string | null;
+  scope?: string | null;
+  secret_ref: string | null;
+  status: string | null;
+}
+
 export interface LoreBragiIntegrationEditorProps {
   onSaved: (integrationId: string) => void;
   onCancel: () => void;
+  editing?: LoreBragiIntegrationEditData;
 }
 
-export default function LoreBragiIntegrationEditor({ onSaved, onCancel }: LoreBragiIntegrationEditorProps) {
-  const [integrationId, setIntegrationId] = useState('');
-  const [service, setService] = useState('');
-  const [purpose, setPurpose] = useState('read');
-  const [endpoint, setEndpoint] = useState('');
-  const [scope, setScope] = useState('');
-  const [secretRef, setSecretRef] = useState('');
-  const [status, setStatus] = useState('active');
+export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing }: LoreBragiIntegrationEditorProps) {
+  const [integrationId, setIntegrationId] = useState(editing?.integration_id ?? '');
+  const [service, setService] = useState(editing?.service ?? '');
+  const [purpose, setPurpose] = useState(editing?.purpose ?? 'read');
+  const [endpoint, setEndpoint] = useState(editing?.endpoint ?? '');
+  const [scope, setScope] = useState(editing?.scope ?? '');
+  const [secretRef, setSecretRef] = useState(editing?.secret_ref ?? '');
+  const [status, setStatus] = useState(editing?.status ?? 'active');
   const [saving, setSaving] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
@@ -65,7 +77,7 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel }: LoreBr
   return (
     <div style={S.root}>
       <div style={S.head}>
-        <span style={S.title}>Новая интеграция</span>
+        <span style={S.title}>{editing ? 'Редактирование интеграции' : 'Новая интеграция'}</span>
         <div style={S.headBtns}>
           <button style={S.btnGhost} onClick={onCancel} disabled={saving}>Отмена</button>
           <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
@@ -78,7 +90,13 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel }: LoreBr
 
       <div style={S.row4}>
         <Field label="Integration ID" grow={1}>
-          <input style={S.input} value={integrationId} placeholder="INT-METRIKA" onChange={e => setIntegrationId(e.target.value)} />
+          <input
+            style={{ ...S.input, opacity: editing ? 0.6 : 1 }}
+            value={integrationId}
+            placeholder="INT-METRIKA"
+            disabled={!!editing}
+            onChange={e => setIntegrationId(e.target.value)}
+          />
         </Field>
         <Field label="Сервис" grow={2}>
           <input style={S.input} value={service} placeholder="Яндекс.Метрика 110154828" onChange={e => setService(e.target.value)} />

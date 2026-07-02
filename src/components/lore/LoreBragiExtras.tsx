@@ -5,7 +5,8 @@
 // dedicated backend slice — see note below).
 import { useEffect, useState, useCallback } from 'react';
 import { fetchLoreSlice, fetchBragiMetrics } from '../../api/lore';
-import LoreBragiIntegrationEditor from './LoreBragiIntegrationEditor';
+import LoreBragiIntegrationEditor, { type LoreBragiIntegrationEditData } from './LoreBragiIntegrationEditor';
+import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBragiKeywordEditor';
 
 // ── Ключи ────────────────────────────────────────────────────────────────
 interface KeywordRow {
@@ -16,19 +17,46 @@ interface KeywordRow {
 export function LoreBragiKeys() {
   const [rows, setRows] = useState<KeywordRow[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    fetchLoreSlice<KeywordRow>('bragi_keys').then(r => { if (!cancelled) { setRows(r); setLoading(false); } })
-      .catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+  const [creating, setCreating] = useState(false);
+  const [editingRow, setEditingRow] = useState<KeywordRow | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    return fetchLoreSlice<KeywordRow>('bragi_keys')
+      .then(r => { setRows(r); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
+  useEffect(() => { load(); }, [load]);
+
+  if (creating) {
+    return (
+      <LoreBragiKeywordEditor
+        onSaved={() => { setCreating(false); load(); }}
+        onCancel={() => setCreating(false)}
+      />
+    );
+  }
+  if (editingRow) {
+    const editData: LoreBragiKeywordEditData = { ...editingRow };
+    return (
+      <LoreBragiKeywordEditor
+        editing={editData}
+        onSaved={() => { setEditingRow(null); load(); }}
+        onCancel={() => setEditingRow(null)}
+      />
+    );
+  }
   if (loading) return <div style={S.hint}>загрузка…</div>;
+
   return (
     <div>
-      <div style={S.desc}>семантическое ядро: кластеры, точная частота [!], интент, целевая страница.</div>
+      <div style={S.descRow}>
+        <div style={S.desc}>семантическое ядро: кластеры, точная частота [!], интент, целевая страница.</div>
+        <button style={S.newBtn} onClick={() => setCreating(true)}>+ новое ключевое слово</button>
+      </div>
       <div style={S.card}>
         <table style={S.table}>
-          <thead><tr><th style={S.th}>фраза</th><th style={S.th}>кластер</th><th style={S.thNum}>[!] /мес</th><th style={S.th}>интент</th><th style={S.th}>страница</th></tr></thead>
+          <thead><tr><th style={S.th}>фраза</th><th style={S.th}>кластер</th><th style={S.thNum}>[!] /мес</th><th style={S.th}>интент</th><th style={S.th}>страница</th><th style={S.th}></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.keyword_id}>
@@ -37,6 +65,7 @@ export function LoreBragiKeys() {
                 <td style={S.tdNum}>{r.freq_exact ?? '—'}</td>
                 <td style={S.td}>{r.intent ?? '—'}</td>
                 <td style={S.td}>{r.page_url[0] ?? '—'}</td>
+                <td style={S.td}><button style={S.editBtn} onClick={() => setEditingRow(r)}>✎ редактировать</button></td>
               </tr>
             ))}
           </tbody>
@@ -149,6 +178,7 @@ export function LoreBragiInsights() {
 // ── Интеграции ───────────────────────────────────────────────────────────
 interface IntegrationRow {
   integration_id: string; service: string | null; purpose: string | null;
+  endpoint: string | null; scope: string | null;
   secret_ref: string | null; status: string | null; last_called_at: string | null;
 }
 
@@ -156,6 +186,7 @@ export function LoreBragiIntegrations() {
   const [rows, setRows] = useState<IntegrationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [editingRow, setEditingRow] = useState<IntegrationRow | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -174,6 +205,16 @@ export function LoreBragiIntegrations() {
       />
     );
   }
+  if (editingRow) {
+    const editData: LoreBragiIntegrationEditData = { ...editingRow };
+    return (
+      <LoreBragiIntegrationEditor
+        editing={editData}
+        onSaved={() => { setEditingRow(null); load(); }}
+        onCancel={() => setEditingRow(null)}
+      />
+    );
+  }
 
   if (loading) return <div style={S.hint}>загрузка…</div>;
   return (
@@ -184,7 +225,7 @@ export function LoreBragiIntegrations() {
       </div>
       <div style={S.card}>
         <table style={S.table}>
-          <thead><tr><th style={S.th}>сервис</th><th style={S.th}>назначение</th><th style={S.th}>статус</th><th style={S.th}>секрет</th><th style={S.th}>последний вызов</th></tr></thead>
+          <thead><tr><th style={S.th}>сервис</th><th style={S.th}>назначение</th><th style={S.th}>статус</th><th style={S.th}>секрет</th><th style={S.th}>последний вызов</th><th style={S.th}></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.integration_id}>
@@ -196,6 +237,7 @@ export function LoreBragiIntegrations() {
                 </td>
                 <td style={S.td}><code style={{ fontSize: 11 }}>{r.secret_ref ?? '—'}</code></td>
                 <td style={S.td}>{r.last_called_at ?? '—'}</td>
+                <td style={S.td}><button style={S.editBtn} onClick={() => setEditingRow(r)}>✎ редактировать</button></td>
               </tr>
             ))}
           </tbody>
@@ -230,4 +272,6 @@ const S: Record<string, React.CSSProperties> = {
   insightLinks:{ marginTop: 9, display: 'flex', gap: 7, flexWrap: 'wrap' },
   chipAcc: { background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
              borderRadius: 6, padding: '1px 8px', fontSize: 11, color: 'var(--acc)' },
+  editBtn: { flex: 'none', fontSize: 11, color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
+             borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
 };

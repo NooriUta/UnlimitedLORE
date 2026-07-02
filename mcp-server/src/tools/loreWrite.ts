@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { lorePost, loreGet } from '../backend.js';
+import { lorePost, loreGet, loreUpload } from '../backend.js';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -1089,10 +1089,29 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_upload_asset',
+    'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +
+      'file_url ("/lore/bragi/asset/file/..."). This is the ONLY way to get a real, browser-loadable file_url — ' +
+      'there is no separate "presign" step. Call this FIRST, then pass its file_url into lore_attach_asset ' +
+      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself.',
+    {
+      filename:     z.string().describe('original filename, e.g. "cover.png" — extension is preserved'),
+      base64_data:  z.string().describe('raw file bytes, base64-encoded (no data: URI prefix)'),
+      content_type: z.string().optional().describe('e.g. "image/png" — defaults to application/octet-stream'),
+    },
+    async ({ filename, base64_data, content_type }) => {
+      try {
+        return json(await loreUpload('/lore/bragi/asset/upload', filename, base64_data, content_type));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_attach_asset',
     'BragiAsset: create/amend an image/media asset (upsert by asset_id, partial-safe) and optionally attach it ' +
       'via HAS_ASSET to an existing BragiPublication (cover) or BragiVariant (per-channel image) — pass exactly ' +
-      'one of attach_to_publication_id/attach_to_variant_id, not both. Mutates the shared system_aida_lore.',
+      'one of attach_to_publication_id/attach_to_variant_id, not both. file_url should come from lore_upload_asset ' +
+      'if you have raw image bytes rather than an already-hosted URL. Mutates the shared system_aida_lore.',
     {
       asset_id:                  z.string().describe('e.g. "AST-01"'),
       asset_type:                z.string().optional().describe('"cover" | "og-teaser" | "inline"'),
