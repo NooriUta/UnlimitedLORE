@@ -1,13 +1,13 @@
 // LoreBragiScreen — BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4).
-// Lives at /lore?section=bragi. FE-01: menu shell + AMBER theme, matching
-// C:\Маркетинг\bragi-archive-prototype.html section-for-section. Обзор is wired
-// to live data (bragi_overview/bragi_competitors/bragi_publications); the other
-// 7 sections are stubs filled in by FE-02..FE-05.
+// Lives at the top-level /bragi route. Shell (menu + AMBER theme) matching
+// C:\Маркетинг\bragi-archive-prototype.html section-for-section; each of the
+// 8 sections is a live-data view (FE-01..FE-05).
 import { useEffect, useState } from 'react';
 import { fetchLoreSlice } from '../../api/lore';
 import LoreBragiPublications from './LoreBragiPublications';
 import LoreBragiPlan from './LoreBragiPlan';
 import LoreBragiAnalytics from './LoreBragiAnalytics';
+import { LoreBragiKeys, LoreBragiArchive, LoreBragiInsights, LoreBragiIntegrations } from './LoreBragiExtras';
 
 type BragiSection =
   | 'obzor' | 'plan' | 'pubs' | 'keys' | 'analitika' | 'archive' | 'insights' | 'integrations';
@@ -114,13 +114,10 @@ export default function LoreBragiScreen() {
         {tab === 'pubs' && <LoreBragiPublications />}
         {tab === 'plan' && <LoreBragiPlan />}
         {tab === 'analitika' && <LoreBragiAnalytics />}
-
-        {tab !== 'obzor' && tab !== 'pubs' && tab !== 'plan' && tab !== 'analitika' && (
-          <div style={S.stub}>
-            <div style={S.stubIcon}>⏳</div>
-            <div>Раздел «{MENU.find(m => m.id === tab)?.label}» — в разработке (FE-05).</div>
-          </div>
-        )}
+        {tab === 'keys' && <LoreBragiKeys />}
+        {tab === 'archive' && <LoreBragiArchive />}
+        {tab === 'insights' && <LoreBragiInsights />}
+        {tab === 'integrations' && <LoreBragiIntegrations />}
       </div>
     </div>
   );
@@ -154,7 +151,4 @@ const S: Record<string, React.CSSProperties> = {
   meta:     { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 11, color: 'var(--t3)' },
   chip:     { background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 6, padding: '1px 8px',
               fontSize: 11, color: 'var(--t2)' },
-  stub:     { display: 'flex', alignItems: 'center', gap: 10, color: 'var(--t3)', fontSize: 13,
-              background: 'var(--b1)', border: '1px dashed var(--bd)', borderRadius: 10, padding: '18px 20px' },
-  stubIcon: { fontSize: 18 },
 };

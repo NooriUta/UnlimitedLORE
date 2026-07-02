@@ -665,6 +665,17 @@ public final class LoreSlices {
             "SELECT competitor_id, name FROM BragiCompetitor",
             List.of(), Map.of(), " ORDER BY competitor_id");
 
+        // FE-05: was missed in the original MCP-05 pass — Insights need a read
+        // slice too. out('LED_TO') fans out to both KnowTask and KnowADR; ArcadeDB
+        // returns whatever field exists on the target (adr_id null on a task row
+        // and vice versa), so both arrays below are safe to project together.
+        slice("bragi_insights",
+            "SELECT insight_id, statement_md, insight_date, evidence_ref, " +
+            "out('LED_TO').task_uid AS led_tasks, " +
+            "out('LED_TO').adr_id AS led_adrs " +
+            "FROM BragiInsight",
+            List.of(), Map.of(), " ORDER BY insight_date DESC");
+
         slice("bragi_integrations",
             "SELECT integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at " +
             "FROM BragiIntegration",
