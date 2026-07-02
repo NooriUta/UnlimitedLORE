@@ -559,6 +559,23 @@ export async function upsertTech(p: TechUpsertPayload): Promise<{ ok: boolean; s
   return res.json() as Promise<{ ok: boolean; spec_id: string }>;
 }
 
+/** Link or unlink a KnowSprint to a KnowRelease (POST /lore/release/link | /lore/release/unlink). */
+export async function linkSprintRelease(
+  sprintId: string,
+  releaseId: string,
+  gitProject: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${LORE_BASE}/release/${action === 'remove' ? 'unlink' : 'link'}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ release_id: releaseId, git_project: gitProject, sprint_ids: [sprintId] }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean }>;
+}
+
 /** Create or edit a KnowMilestone (POST /lore/milestone). */
 export async function upsertMilestone(
   m: { milestone_id: string; label?: string; week?: number | null; date_display?: string | null; goal_md?: string | null; priority?: string | null },

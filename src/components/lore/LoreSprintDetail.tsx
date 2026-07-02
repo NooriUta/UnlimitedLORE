@@ -5,7 +5,7 @@ import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
-  linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone,
+  linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
@@ -628,8 +628,10 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [projLinking, setProjLinking]   = useState(false);
   const [compLinking, setCompLinking] = useState(false);
   const [msLinking, setMsLinking]     = useState(false);
+  const [relLinking, setRelLinking]   = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
   const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
+  const [allReleases, setAllReleases] = useState<{ id: string; gitProject: string }[]>([]);
   const [relatedMeta, setRelatedMeta] = useState<Map<string, { status_raw: string | null; task_total: number; task_done: number }>>(new Map());
   const [metaRightW, setMetaRightW] = useState(320);
   const metaDragRef = useRef<{ x: number; w: number } | null>(null);
@@ -689,6 +691,17 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   useEffect(() => {
     fetchLoreSlice<{ milestone_id: string; label: string }>('milestones', {})
       .then(rows => setAllMilestones((rows ?? []).map(r => ({ id: r.milestone_id, label: r.label }))))
+      .catch(() => {});
+  }, []);
+
+  // Load releases once (for the sprint↔release linker) — release_uid is
+  // "<git_project>#<release_id>", split it since the slice has no separate
+  // git_project column.
+  useEffect(() => {
+    fetchLoreSlice<{ release_id: string; release_uid: string }>('releases', {})
+      .then(rows => setAllReleases((rows ?? []).map(r => ({
+        id: r.release_id, gitProject: r.release_uid?.split('#')[0] ?? 'NooriUta/AIDA',
+      }))))
       .catch(() => {});
   }, []);
 
@@ -815,23 +828,70 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
       {sprint.name && <div style={S.sprintName}>{sprint.name}</div>}
 
-      {releases.length > 0 && (
-        <div style={S.prBar}>
-          <span style={S.prLabel}>{t('lore.sprintDetail.releaseBar.label', 'Релиз')}</span>
-          {releases.map(v => (
-            <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={t('lore.sprintDetail.releaseBar.goToRelease', 'Перейти к релизу {{v}}', { v })}>
-                {v}
-              </button>
-              <a
-                href={`${ghBase}/releases/tag/${v}`}
-                target="_blank" rel="noopener noreferrer"
-                style={S.ghLink} title={t('lore.sprintDetail.releaseBar.githubRelease', 'GitHub Release {{v}}', { v })}
-              ><GhIcon /></a>
-            </span>
-          ))}
-        </div>
-      )}
+      {(() => {
+        // `releases` (top of render) falls back to a version string parsed out of
+        // status_raw when there's no real IMPLEMENTED_IN_RELEASE edge — only
+        // sprint.release_ids are real edges and thus unlinkable/addable here.
+        const linkedReleases = sprint.release_ids ?? [];
+        const displayReleases = releases; // real edges, else the parsed fallback
+        const sprintProjects = sprint.git_projects ?? [];
+        const releaseOptions = allReleases.filter(r =>
+          !linkedReleases.includes(r.id) &&
+          (sprintProjects.length === 0 || sprintProjects.includes(r.gitProject)));
+        if (displayReleases.length === 0 && releaseOptions.length === 0) return null;
+        return (
+          <div style={S.prBar}>
+            <span style={S.prLabel}>{t('lore.sprintDetail.releaseBar.label', 'Релиз')}</span>
+            {displayReleases.map(v => (
+              <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={t('lore.sprintDetail.releaseBar.goToRelease', 'Перейти к релизу {{v}}', { v })}>
+                  {v}
+                </button>
+                <a
+                  href={`${ghBase}/releases/tag/${v}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={S.ghLink} title={t('lore.sprintDetail.releaseBar.githubRelease', 'GitHub Release {{v}}', { v })}
+                ><GhIcon /></a>
+                {linkedReleases.includes(v) && (
+                  <button
+                    disabled={relLinking}
+                    title={t('lore.sprintDetail.releaseBar.unlink', 'Отвязать {{v}}', { v })}
+                    onClick={async () => {
+                      setRelLinking(true);
+                      try {
+                        await linkSprintRelease(sprint.sprint_id, v, sprintProjects[0] ?? ghSlug, 'remove');
+                        setSprint(s => s ? { ...s, release_ids: (s.release_ids ?? []).filter(x => x !== v) } : s);
+                      } catch (e) { onError(e); } finally { setRelLinking(false); }
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: relLinking ? 'default' : 'pointer',
+                      color: 'var(--t3)', fontSize: 10, padding: 0, lineHeight: 1, opacity: 0.7 }}
+                  >✕</button>
+                )}
+              </span>
+            ))}
+            {releaseOptions.length > 0 && (
+              <select
+                disabled={relLinking}
+                value=""
+                onChange={async e => {
+                  const opt = releaseOptions.find(r => r.id === e.target.value);
+                  if (!opt) return;
+                  setRelLinking(true);
+                  try {
+                    await linkSprintRelease(sprint.sprint_id, opt.id, opt.gitProject, 'add');
+                    setSprint(s => s ? { ...s, release_ids: [...(s.release_ids ?? []), opt.id] } : s);
+                  } catch (err) { onError(err); } finally { setRelLinking(false); }
+                }}
+                style={lookupSelectStyle}
+              >
+                <option value="">{t('lore.sprintDetail.releaseBar.linkPlaceholder', '+ привязать релиз…')}</option>
+                {releaseOptions.map(r => <option key={r.id} value={r.id}>{r.id}</option>)}
+              </select>
+            )}
+            {relLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+          </div>
+        );
+      })()}
 
       {prNums.length > 0 && (
         <div style={S.prBar}>
