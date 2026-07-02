@@ -1248,10 +1248,37 @@
         "qg": "QG",
         "knowledge": "Знания",
         "components": "Компоненты",
+        "tech": "Технологии",
         "evolution": "История",
         "timeline": "Лента",
         "analytics": "Аналитика",
         "mcp": "MCP API"
+      }
+    },
+    "techRegistry": {
+      "noArea": "без области",
+      "empty": "Компоненты не найдены.",
+      "addButton": "+ технология",
+      "noTech": "Технологии не зарегистрированы",
+      "staleTitle": "Не проверялось {{n}}+ месяцев",
+      "usagePrefix": "Использование:",
+      "col": {
+        "tech": "Технология",
+        "version": "Версия",
+        "releaseDate": "Дата релиза",
+        "ourRelease": "Наш релиз",
+        "license": "Лицензия",
+        "checkedAt": "Проверено"
+      },
+      "form": {
+        "techName": "Название",
+        "version": "Версия",
+        "releaseDate": "Дата релиза",
+        "ourRelease": "Наш релиз (v1.6.21)",
+        "license": "Лицензия",
+        "usage": "Использование (где/как используется)",
+        "source": "Источник",
+        "save": "Сохранить"
       }
     }
   },

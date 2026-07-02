@@ -14,6 +14,7 @@ import LoreSpecView           from '../components/lore/LoreSpecView';
 import { ADR_STATUS_FILTERS, adrStatusLabel } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
+import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreSprintEditor    from '../components/lore/LoreSprintEditor';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
@@ -31,7 +32,7 @@ import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../compone
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
-  | 'knowledge' | 'components' | 'qg'
+  | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
@@ -45,6 +46,7 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
   { id: 'components', icon: 'cog',            labelKey: 'lore.page.nav.components', fallback: 'Компоненты' },
+  { id: 'tech',       icon: 'gears',          labelKey: 'lore.page.nav.tech',       fallback: 'Технологии' },
   { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
@@ -968,6 +970,9 @@ export default function LorePage() {
 
           {/* Evolution */}
           {section === 'evolution' && <LoreEvolutionView onError={handleFetchError} />}
+
+          {/* Tech registry (SPRINT_TECH_REGISTRY) — version/date/license per component */}
+          {section === 'tech' && <LoreTechRegistry onError={handleFetchError} />}
 
           {/* Timeline */}
           {section === 'timeline' && (
