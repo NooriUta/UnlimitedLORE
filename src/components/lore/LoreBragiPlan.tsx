@@ -3,8 +3,9 @@
 // .cal/.cal-head layout. No reusable month-grid component exists in this repo
 // (vis-timeline, used by LorePlanBoard, is a horizontal Gantt — see FE-01 note)
 // so this is a small from-scratch grid over bragi_calendar.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { fetchLoreSlice } from '../../api/lore';
+import LoreBragiPublicationEditor from './LoreBragiPublicationEditor';
 
 interface CalendarRow {
   variant_id: string;
@@ -41,14 +42,16 @@ export default function LoreBragiPlan() {
   const [rows, setRows] = useState<CalendarRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState(() => new Date());
+  const [creatingDate, setCreatingDate] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchLoreSlice<CalendarRow>('bragi_calendar').then(rs => {
-      if (!cancelled) { setRows(rs); setLoading(false); }
-    }).catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+  const load = useCallback(() => {
+    setLoading(true);
+    return fetchLoreSlice<CalendarRow>('bragi_calendar')
+      .then(rs => { setRows(rs); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const byDate = useMemo(() => {
     const m = new Map<string, CalendarRow[]>();
@@ -81,6 +84,16 @@ export default function LoreBragiPlan() {
 
   const today = new Date();
 
+  if (creatingDate) {
+    return (
+      <LoreBragiPublicationEditor
+        initialPublishedAt={creatingDate}
+        onSaved={() => { setCreatingDate(null); load(); }}
+        onCancel={() => setCreatingDate(null)}
+      />
+    );
+  }
+
   if (loading) return <div style={S.hint}>загрузка…</div>;
 
   return (
@@ -106,16 +119,23 @@ export default function LoreBragiPlan() {
           </div>
           <div style={S.cal}>
             {cells.map((c, i) => {
-              const items = byDate.get(ymd(c.date)) ?? [];
+              const dateStr = ymd(c.date);
+              const items = byDate.get(dateStr) ?? [];
               const isToday = isSameDay(c.date, today) && !c.otherMonth;
               return (
-                <div key={i} style={cellStyle(c.otherMonth, isToday)}>
+                <div
+                  key={i}
+                  style={cellStyle(c.otherMonth, isToday)}
+                  onClick={() => setCreatingDate(dateStr)}
+                  title="Запланировать публикацию на эту дату"
+                >
                   <div style={dnumStyle(isToday)}>{c.date.getDate()}</div>
                   {items.map(it => (
                     <div key={it.variant_id} style={pchipStyle(CHANNEL_COLOR[it.channel_id[0]] ?? 'var(--t3)')}>
                       {it.channel_id[0] ?? '—'} · {it.title[0] ?? it.variant_id}
                     </div>
                   ))}
+                  {items.length === 0 && !c.otherMonth && <div style={S.addHint}>+</div>}
                 </div>
               );
             })}
@@ -142,6 +162,7 @@ function cellStyle(otherMonth: boolean, isToday: boolean): React.CSSProperties {
     minHeight: 78, background: 'var(--bg0)', border: `1px solid ${isToday ? 'var(--acc)' : 'var(--bd)'}`,
     borderRadius: 8, padding: 6, opacity: otherMonth ? 0.38 : 1,
     boxShadow: isToday ? 'inset 0 0 0 1px var(--acc)' : undefined,
+    cursor: otherMonth ? 'default' : 'pointer',
   };
 }
 function dnumStyle(isToday: boolean): React.CSSProperties {
@@ -169,4 +190,5 @@ const S: Record<string, React.CSSProperties> = {
   calHead:   { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6,
                fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' },
   cal:       { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 },
+  addHint:   { fontSize: 14, color: 'var(--t3)', textAlign: 'center', marginTop: 6 },
 };
