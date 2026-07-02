@@ -24,6 +24,7 @@ interface SprintMeta {
   depends_on: string[] | null;
   blocks: string[] | null;
   components: string[] | null;
+  adr_ids: string[] | null;
   context_md: string | null;
   git_projects: string[] | null;
 }
@@ -42,6 +43,7 @@ interface Props {
   onError: (e: unknown) => void;
   onNavigateToComponent?: (componentId: string) => void;
   onNavigateToSprint?: (sprintId: string) => void;
+  onNavigateToAdr?: (adrId: string) => void;
 }
 
 // A component is "linked" to a sprint by the same naming convention the component
@@ -599,7 +601,7 @@ function RelatedSprintRow({
   );
 }
 
-export default function LoreSprintDetail({ sprintId, onError, onNavigateToComponent, onNavigateToSprint }: Props) {
+export default function LoreSprintDetail({ sprintId, onError, onNavigateToComponent, onNavigateToSprint, onNavigateToAdr }: Props) {
   const { t } = useTranslation();
   const [, setParams]         = useSearchParams();
   const [sprint,  setSprint]  = useState<SprintMeta | null>(null);
@@ -1038,6 +1040,37 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
+      {/* ── ADR section (reverse of ADR's IMPLEMENTED_IN — which ADRs implement in this sprint) ── */}
+      {sprint.adr_ids != null && sprint.adr_ids.length > 0 && (
+        <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.adr.label', 'ADR')}</span>
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{sprint.adr_ids.length}</span>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+            {sprint.adr_ids.map(id => (
+              <button
+                key={id}
+                onClick={onNavigateToAdr ? () => onNavigateToAdr(id) : undefined}
+                disabled={!onNavigateToAdr}
+                title={onNavigateToAdr ? t('lore.sprintDetail.adr.openTitle', 'Открыть {{id}}', { id }) : id}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
+                  padding: '2px 8px', borderRadius: 10,
+                  background: 'color-mix(in srgb, #4a90d9 14%, transparent)',
+                  border: '1px solid color-mix(in srgb, #4a90d9 30%, transparent)',
+                  color: '#4a90d9', cursor: onNavigateToAdr ? 'pointer' : 'default',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <GameIcon slug="scroll-quill" size={12} style={{ color: 'inherit' }} />
+                {id}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       </div>{/* END META RIGHT */}
       </div>{/* END TOP META BLOCK */}
 
@@ -1051,9 +1084,25 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             {phases.map(p => {
               const phaseTasks = byPhase.get(p.phase_uid) ?? [];
               if (filter && phaseTasks.length === 0) return null;
+              // Phases carry no status field of their own (unlike tasks) — derive
+              // one from child tasks, same coloring/icon convention as TaskLine,
+              // so a phase header reads at a glance the way a task row does.
+              const phaseStatus = phaseTasks.length === 0 ? null : (() => {
+                const ticks = phaseTasks.map(tk => taskTick(tk.status_raw).status);
+                if (ticks.every(s => s === 'done')) return 'done';
+                if (ticks.includes('blocked')) return 'blocked';
+                if (ticks.some(s => s === 'active' || s === 'partial')) return 'active';
+                if (ticks.every(s => s === 'cancelled')) return 'cancelled';
+                if (ticks.some(s => s === 'planned' || s === 'design' || s === 'backlog')) return 'planned';
+                return 'todo';
+              })();
+              const phaseMeta = phaseStatus ? statusMeta(phaseStatus) : null;
               return (
                 <div key={p.phase_uid} style={S.phase}>
                   <div style={S.phaseId}>
+                    {phaseMeta && (
+                      <GameIcon slug={phaseMeta.icon} size={12} style={{ color: phaseMeta.color, marginRight: 5, verticalAlign: -1 }} />
+                    )}
                     {p.phase_id}
                     {p.title && <span style={{ color: 'var(--t1)', marginLeft: 6 }}>— {p.title}</span>}
                     {p.valid_from && (

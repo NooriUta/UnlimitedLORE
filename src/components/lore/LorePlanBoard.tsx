@@ -475,21 +475,28 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     const tl = new Timeline(hostRef.current, itemsDS, groups, options);
     timelineRef.current = tl;
 
-    // Initial window start: the earliest STILL-OPEN sprint that's already in the
-    // past (an overdue bar) so it's never hidden off-screen to the left; otherwise
-    // just 3 days before today. End spans ~16 weeks forward from now.
+    // Initial window: start pinned to today by default (an overdue-still-open bar
+    // pulls it a bit further left so it's never hidden off-screen), end stretched
+    // to the furthest-out sprint/milestone instead of a fixed +14-week guess —
+    // otherwise late items fall outside the initial view and the board looks
+    // half-empty on the left with nothing to fill the right.
     let earliestOverdue = W_NOW;
+    let latestWeek = W_NOW + 8;   // floor so a near-empty board still gets a sane span
     for (const it of items) {
+      if (it.week_end != null && it.week_end > latestWeek) latestWeek = it.week_end;
       if (it.week_start == null || it.week_start >= W_NOW) continue;  // future/unpositioned
       const raw = it.represents_sprint ? statusBySprint.get(it.represents_sprint) : undefined;
       const st  = raw ? taskTick(raw).status : (it.status ?? 'todo');
       if (st === 'done' || st === 'cancelled') continue;              // closed → not overdue
       if (it.week_start < earliestOverdue) earliestOverdue = it.week_start;
     }
-    const todayMargin = new Date(Date.now() - 3 * 86400 * 1000);
+    for (const ms of mss) {
+      if (ms.week != null && ms.week > latestWeek) latestWeek = ms.week;
+    }
+    const today = new Date();
     const overdueDate = addWeeks(w0, earliestOverdue);
-    const winStart = overdueDate < todayMargin ? overdueDate : todayMargin;
-    tl.setWindow(winStart, addWeeks(w0, W_NOW + 14), { animation: false });
+    const winStart = overdueDate < today ? overdueDate : today;
+    tl.setWindow(winStart, addWeeks(w0, latestWeek + 1), { animation: false });
     // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
     // force one redraw on the next frame so the first paint is never blank.
     requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });

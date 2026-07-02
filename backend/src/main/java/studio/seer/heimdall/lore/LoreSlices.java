@@ -147,6 +147,11 @@ public final class LoreSlices {
             "in('DEPENDS_ON').sprint_id    AS blocks, " +
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+            // reverse of ADR's IMPLEMENTED_IN (ADR → Sprint) — which ADRs this
+            // sprint implements. Was missing entirely; sprint detail had no way
+            // to surface the link even though lore_link_adr_sprint has always
+            // been able to create it.
+            "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
             "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
@@ -432,7 +437,9 @@ public final class LoreSlices {
 
         // ── §9 KnowRunbook (Phase 5 LAL-29) ─────────────────────────────────
         slice("runbooks",
-            "SELECT runbook_id, name, area, date_created FROM KnowRunbook",
+            "SELECT runbook_id, name, area, date_created, " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids " +
+            "FROM KnowRunbook",
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "area", " WHERE area = :area")),
@@ -441,7 +448,8 @@ public final class LoreSlices {
         slice("runbook_by_id",
             "SELECT runbook_id, name, area, date_created, " +
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
-            "out('HAS_STATE').valid_from[0] AS valid_from " +
+            "out('HAS_STATE').valid_from[0] AS valid_from, " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids " +
             "FROM KnowRunbook WHERE runbook_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 

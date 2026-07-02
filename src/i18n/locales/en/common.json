@@ -1079,6 +1079,10 @@
         "unlink": "Unlink {{g}}",
         "linkPlaceholder": "+ link…"
       },
+      "adr": {
+        "label": "ADR",
+        "openTitle": "Open {{id}}"
+      },
       "milestones": {
         "label": "Milestones",
         "unlink": "Unlink {{mid}}",
@@ -1189,6 +1193,10 @@
         "dateQuarter": "Quarter",
         "date90d": "90 days",
         "noRelease": "No release",
+        "projectsLabel": "Projects",
+        "componentsLabel": "Components",
+        "expandComponents": "Expand",
+        "collapseComponents": "Collapse",
         "stats": {
           "total": "total",
           "done": "done",

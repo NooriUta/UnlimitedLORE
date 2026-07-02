@@ -481,6 +481,24 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_runbook_adr',
+    'Link (or unlink) a KnowRunbook to the KnowADR it references via a REFERENCES_ADR edge (feeds the ' +
+      '"runbooks"/"runbook_by_id" slices\' adr_ids field). A runbook mentioning an ADR only as a text-only ' +
+      '[[ADR-ID]] wiki link inside content_md has NO real graph edge — this creates one. Idempotent on add. ' +
+      'Use action="remove" to unlink.',
+    {
+      runbook_id: z.string().describe('e.g. "RUNBOOK-INFISICAL-LOCAL-SETUP"'),
+      adr_id:     z.string().describe('e.g. "ADR-MT-011"'),
+      action:     z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ runbook_id, adr_id, action }) => {
+      try {
+        return json(await lorePost('/lore/runbook/adr', { runbook_id, adr_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_link_adr_release',
     'Link (or unlink) a KnowADR to the KnowRelease it shipped in via an IMPLEMENTED_IN_RELEASE edge. ' +
       'Feeds the adr slice release_ids field. Pass git_project for multi-repo safety ' +

@@ -7,7 +7,7 @@ import LoreTimeline        from '../components/lore/LoreTimeline';
 import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
 import LoreAdrEditor       from '../components/lore/LoreAdrEditor';
-import LoreSprintTree, { STATUS_FILTERS, type DatePeriod, type SprintStats } from '../components/lore/LoreSprintTree';
+import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type DatePeriod, type SprintStats, type FacetOption } from '../components/lore/LoreSprintTree';
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
@@ -157,6 +157,11 @@ export default function LorePage() {
   const [sprintNoRelease, setSprintNoRelease] = useState(() => params.get('snr') === '1');
   const [sprintDatePeriod, setSprintDatePeriod] = useState<DatePeriod>(null);
   const [sprintPriorityFilter, setSprintPriorityFilter] = useState<Set<string>>(new Set());
+  const [sprintProjSel, setSprintProjSel] = useState<Set<string>>(new Set());
+  const [sprintCompSel, setSprintCompSel] = useState<Set<string>>(new Set());
+  const [sprintProjFacets, setSprintProjFacets] = useState<FacetOption[]>([]);
+  const [sprintCompFacets, setSprintCompFacets] = useState<FacetOption[]>([]);
+  const [sprintCompCollapsed, setSprintCompCollapsed] = useState(true);
   const [sprintStats, setSprintStats] = useState<SprintStats>({ total: 0, done: 0, active: 0, p0Open: 0, noRelease: 0 });
   // ADR filters
   const [adrStatusSel, setAdrStatusSel] = useState<Set<string>>(() => {
@@ -448,15 +453,124 @@ export default function LorePage() {
           >{t('lore.page.sprints.noRelease', 'Без релиза')}</span>
 
           {/* Сброс */}
-          {(sprintStatusSel.size > 0 || sprintNoRelease || sprintDatePeriod || sprintPriorityFilter.size > 0) && (
+          {(sprintStatusSel.size > 0 || sprintNoRelease || sprintDatePeriod || sprintPriorityFilter.size > 0 || sprintProjSel.size > 0 || sprintCompSel.size > 0) && (
             <>
               <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
               <span
-                onClick={() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); }}
+                onClick={() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); setSprintProjSel(new Set()); setSprintCompSel(new Set()); }}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
                 title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
               >✕ {t('lore.page.filters.reset', 'сброс')}</span>
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── Sprint project filter bar — full-width, own row (moved out of the
+           narrow sidebar list per user feedback); faceted: counts reflect
+           whatever's already selected in the status/priority/date filter
+           above ─────────────────────────────────────────────────────────── */}
+      {section === 'sprints' && sprintProjFacets.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
+          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>
+            {t('lore.page.sprints.projectsLabel', 'Проекты')}
+          </span>
+          {sprintProjFacets.map(({ id, count }) => {
+            const on = sprintProjSel.has(id);
+            const color = projColor(id, sprintProjFacets.map(f => f.id));
+            const reachable = count > 0 || on;
+            return (
+              <span key={id}
+                onClick={() => setSprintProjSel(prev => {
+                  const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+                })}
+                title={`${id} (${count})`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? color : 'var(--b3)'}`,
+                  background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                  color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {projLabel(id)}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+              </span>
+            );
+          })}
+          {sprintProjSel.size > 0 && (
+            <span
+              onClick={() => setSprintProjSel(new Set())}
+              style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+              title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+            >✕ {t('lore.page.filters.reset', 'сброс')}</span>
+          )}
+        </div>
+      )}
+
+      {/* ── Sprint component filter bar — separate full-width row, collapsible
+           since the component list can get long; each chip's colour/icon is
+           unique per component (not one flat repeated icon) ──────────────── */}
+      {section === 'sprints' && sprintCompFacets.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 4, flexWrap: 'wrap',
+          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+        }}>
+          <span
+            onClick={() => setSprintCompCollapsed(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', userSelect: 'none',
+              fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2,
+            }}
+            title={sprintCompCollapsed ? t('lore.page.sprints.expandComponents', 'Развернуть') : t('lore.page.sprints.collapseComponents', 'Свернуть')}
+          >
+            <span style={{ display: 'inline-block', transform: sprintCompCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.12s' }}>▾</span>
+            {t('lore.page.sprints.componentsLabel', 'Компоненты')}
+            {sprintCompSel.size > 0 && <span style={{ color: 'var(--acc)', fontWeight: 600 }}>({sprintCompSel.size})</span>}
+          </span>
+          {!sprintCompCollapsed && sprintCompFacets.map(({ id, count, icon, area }) => {
+            const on = sprintCompSel.has(id);
+            // Real per-component icon + area colour when the components slice
+            // has loaded; fall back to a generated palette colour + generic
+            // icon so chips still render (and stay distinguishable) before
+            // that fetch resolves.
+            const color = area ? areaColor(area) : compColor(id, sprintCompFacets.map(f => f.id));
+            const reachable = count > 0 || on;
+            return (
+              <span key={id}
+                onClick={() => setSprintCompSel(prev => {
+                  const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+                })}
+                title={`${id} (${count})`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? color : 'var(--b3)'}`,
+                  background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                  color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
+                }}
+              >
+                <GameIcon slug={icon ?? 'puzzle'} size={11} style={{ color }} />
+                {id}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+              </span>
+            );
+          })}
+          {sprintCompCollapsed && sprintCompSel.size > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+              {[...sprintCompSel].join(', ')}
+            </span>
+          )}
+          {sprintCompSel.size > 0 && (
+            <span
+              onClick={() => setSprintCompSel(new Set())}
+              style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+              title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+            >✕ {t('lore.page.filters.reset', 'сброс')}</span>
           )}
         </div>
       )}
@@ -678,6 +792,8 @@ export default function LorePage() {
                   q={sprintQ}
                   statusFilter={sprintStatusSel}
                   priorityFilter={sprintPriorityFilter}
+                  projectFilter={sprintProjSel}
+                  componentFilter={sprintCompSel}
                   noRelease={sprintNoRelease}
                   datePeriod={sprintDatePeriod}
                   selectedId={passport === '__new' ? undefined : passport}
@@ -685,6 +801,8 @@ export default function LorePage() {
                   onSelect={selectItem}
                   onCounts={setSprintCounts}
                   onStats={setSprintStats}
+                  onProjectFacets={setSprintProjFacets}
+                  onComponentFacets={setSprintCompFacets}
                 />
               </>
             )}
@@ -789,7 +907,7 @@ export default function LorePage() {
             />
           )}
           {section === 'sprints' && passport && passport !== '__new' && (
-            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} />
+            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} onNavigateToAdr={navigateToAdr} />
           )}
           {section === 'sprints' && !passport && (
             <div style={S.placeholder}>{t('lore.page.sprints.emptySelectHint', 'Выберите спринт из списка слева')}</div>

@@ -2297,6 +2297,53 @@ public class AidaLoreResource {
         }
     }
 
+    // MG3-01 (SPRINT_LORE_MCP_GAPS_3): runbooks previously only referenced an
+    // ADR via a text-only [[ADR-ID]] wiki link inside content_md — no real
+    // graph edge existed, so nothing queryable connected the two. Real edge:
+    // REFERENCES (KnowRunbook → KnowADR), same add/remove pattern as adr/link.
+    public record RunbookAdrLinkRequest(String runbook_id, String adr_id, String action) {}
+
+    @POST
+    @Path("runbook/adr")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkRunbookAdr(RunbookAdrLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.runbook_id() == null || req.runbook_id().isBlank())
+            return badParams("runbook_id required");
+        if (req.adr_id() == null || req.adr_id().isBlank())
+            return badParams("adr_id required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('REFERENCES_ADR')) FROM KnowRunbook WHERE runbook_id=:id) " +
+                    "WHERE @in.adr_id = :aid",
+                    Map.of("id", req.runbook_id(), "aid", req.adr_id()))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                    "adr_id", req.adr_id(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE REFERENCES_ADR " +
+                    "FROM (SELECT FROM KnowRunbook WHERE runbook_id = :id) " +
+                    "TO   (SELECT FROM KnowADR     WHERE adr_id     = :aid) IF NOT EXISTS",
+                    Map.of("id", req.runbook_id(), "aid", req.adr_id())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                "adr_id", req.adr_id(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — check runbook_id/adr_id exist")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE RUNBOOK ADR LINK] %s: %s", req.runbook_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     @POST
     @Path("adr/rename")
     @Consumes(MediaType.APPLICATION_JSON)

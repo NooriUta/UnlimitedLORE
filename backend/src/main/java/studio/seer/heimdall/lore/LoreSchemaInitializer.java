@@ -140,6 +140,9 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE IMPLEMENTED_IN_RELEASE IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE HAS_STATE        IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE HAS_STATUS       IF NOT EXISTS EXTENDS E",
+        // MG3-01: Runbook → ADR — real graph edge, replaces the text-only
+        // [[ADR-ID]] wiki link some runbooks carried in content_md.
+        "CREATE EDGE TYPE REFERENCES_ADR   IF NOT EXISTS EXTENDS E",
 
         // ── Unique indexes on PK fields ───────────────────────────────────────
         "CREATE INDEX IF NOT EXISTS ON LoreComponent   (component_id) UNIQUE",
