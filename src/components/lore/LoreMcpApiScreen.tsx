@@ -15,10 +15,15 @@ interface ToolDoc {
   desc: string;
 }
 
-/** Split a params string like "a, b?, c[]" into [{name, optional}] for readable rendering. */
+/**
+ * Split a params string like "a, b?, c[]" into [{name, optional}] for readable rendering.
+ * Some tools document an alternate batch-call shape after "|" (e.g. "a, b | items: [{a, b}]") —
+ * that's prose for the description column, not additional param chips, so only the part
+ * before the first "|" is split into chips.
+ */
 function splitParams(params: string): { name: string; optional: boolean }[] {
   if (params === '—') return [];
-  return params.split(',').map(p => {
+  return params.split('|')[0].split(',').map(p => {
     const t = p.trim();
     return { name: t, optional: t.includes('?') };
   });
