@@ -224,7 +224,8 @@ function Sec({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 // ── MultiChip — inline chip input with typeahead ──────────────────────────────
-interface MultiChipProps {
+// Exported for reuse by other LORE editor forms (e.g. LoreSprintEditor).
+export interface MultiChipProps {
   values: string[];
   onChange: (v: string[]) => void;
   suggestions: string[];
@@ -233,7 +234,7 @@ interface MultiChipProps {
   freeForm: boolean;
 }
 
-function MultiChip({ values, onChange, suggestions, suggestionLabels, placeholder, freeForm }: MultiChipProps) {
+export function MultiChip({ values, onChange, suggestions, suggestionLabels, placeholder, freeForm }: MultiChipProps) {
   const [input, setInput]   = useState('');
   const [open, setOpen]     = useState(false);
   const [cursor, setCursor] = useState(0);

@@ -14,6 +14,7 @@ import { ADR_STATUS_FILTERS } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
+import LoreSprintEditor    from '../components/lore/LoreSprintEditor';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
@@ -659,6 +660,16 @@ export default function LorePage() {
                     <span onClick={() => setSprintQ('')}
                       style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>✕</span>
                   )}
+                  <button
+                    onClick={() => selectItem('__new')}
+                    title="Новый спринт"
+                    style={{
+                      flexShrink: 0, width: 20, height: 20, borderRadius: 4,
+                      border: '1px solid var(--bd)', background: 'transparent',
+                      color: 'var(--acc)', cursor: 'pointer', fontSize: 13, lineHeight: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >+</button>
                 </div>
                 <LoreSprintTree
                   module=""
@@ -667,7 +678,7 @@ export default function LorePage() {
                   priorityFilter={sprintPriorityFilter}
                   noRelease={sprintNoRelease}
                   datePeriod={sprintDatePeriod}
-                  selectedId={passport}
+                  selectedId={passport === '__new' ? undefined : passport}
                   onError={handleFetchError}
                   onSelect={selectItem}
                   onCounts={setSprintCounts}
@@ -768,8 +779,14 @@ export default function LorePage() {
             <LoreReleasesBoard q={debouncedQ} onClearQ={() => setParams(p => { p.delete('q'); return p; })} onError={handleFetchError} onNavigateToSprint={navigateToSprint} />
           )}
 
-          {/* Sprints: detail or placeholder */}
-          {section === 'sprints' && passport && (
+          {/* Sprints: new / detail / placeholder */}
+          {section === 'sprints' && passport === '__new' && (
+            <LoreSprintEditor
+              onSaved={id => navigateToSprint(id)}
+              onCancel={clearItem}
+            />
+          )}
+          {section === 'sprints' && passport && passport !== '__new' && (
             <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} />
           )}
           {section === 'sprints' && !passport && (
