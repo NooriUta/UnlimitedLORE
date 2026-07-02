@@ -1246,10 +1246,37 @@
         "qg": "QG",
         "knowledge": "Knowledge",
         "components": "Components",
+        "tech": "Tech",
         "evolution": "History",
         "timeline": "Feed",
         "analytics": "Analytics",
         "mcp": "MCP API"
+      }
+    },
+    "techRegistry": {
+      "noArea": "no area",
+      "empty": "No components found.",
+      "addButton": "+ technology",
+      "noTech": "No technologies registered",
+      "staleTitle": "Not checked in {{n}}+ months",
+      "usagePrefix": "Usage:",
+      "col": {
+        "tech": "Technology",
+        "version": "Version",
+        "releaseDate": "Release date",
+        "ourRelease": "Our release",
+        "license": "License",
+        "checkedAt": "Checked"
+      },
+      "form": {
+        "techName": "Name",
+        "version": "Version",
+        "releaseDate": "Release date",
+        "ourRelease": "Our release (v1.6.21)",
+        "license": "License",
+        "usage": "Usage (where/how it's used)",
+        "source": "Source",
+        "save": "Save"
       }
     }
   },

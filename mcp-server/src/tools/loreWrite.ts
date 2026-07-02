@@ -790,29 +790,33 @@ export function registerLoreWrite(server: McpServer): void {
   server.tool(
     'lore_upsert_tech',
     '(SPRINT_TECH_REGISTRY) Register or update one technology entry (version + release date + ' +
-      'license + source) for a component — e.g. "ArcadeDB 26.6.1" under YGG. Prevents re-verifying ' +
-      'facts already checked this session (the recurring pain this sprint exists for). Stored as one ' +
-      'KnowSpec per (component, tech) via the existing spec-upsert path — spec_id ' +
+      'license + source + our own release + usage) for a component — e.g. "ArcadeDB 26.6.1" under YGG. ' +
+      'Prevents re-verifying facts already checked this session (the recurring pain this sprint exists ' +
+      'for). Stored as one KnowSpec per (component, tech) via the existing spec-upsert path — spec_id ' +
       '"SPEC-TECH-<COMPONENT>-<TECH>", title=tech_name, version=tech version, content_md=a small ' +
-      'bullet list of release_date/license/source_url/checked_at. Idempotent — upserts by that id. ' +
-      'Read back via lore_query_slice(slice="tech_registry", params={component: "<ID>"}) (component ' +
-      'optional — omit for the full registry). Mutates system_aida_lore.',
+      'bullet list of release_date/our_release/license/usage/source_url/checked_at. Idempotent — ' +
+      'upserts by that id. Read back via lore_query_slice(slice="tech_registry", params={component: ' +
+      '"<ID>"}) (component optional — omit for the full registry). Mutates system_aida_lore.',
     {
       component_id: z.string().describe('e.g. "YGG", "SECURITY"'),
       tech_name:    z.string().describe('e.g. "ArcadeDB", "Vault", "Keycloak"'),
       version:      z.string().describe('e.g. "26.6.1"'),
-      release_date: z.string().optional().describe('YYYY-MM-DD, when this version was released'),
+      release_date: z.string().optional().describe('YYYY-MM-DD, when this version was released UPSTREAM (the tech\'s own release)'),
+      our_release:  z.string().optional().describe('which of OUR releases pinned/shipped this version, e.g. "v1.6.21"'),
       license:      z.string().optional().describe('e.g. "Business Source License 1.1"'),
+      usage:        z.string().optional().describe('free text — how/where this is actually used'),
       source_url:   z.string().optional().describe('where this was verified (LICENSE file, release notes, ...)'),
       checked_at:   z.string().optional().describe('YYYY-MM-DD this was last verified; defaults to today if omitted'),
     },
-    async ({ component_id, tech_name, version, release_date, license, source_url, checked_at }) => {
+    async ({ component_id, tech_name, version, release_date, our_release, license, usage, source_url, checked_at }) => {
       try {
         const specId = `SPEC-TECH-${component_id.toUpperCase()}-${tech_name.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
         const today = new Date().toISOString().slice(0, 10);
         const lines = [
           release_date && `- **Дата релиза:** ${release_date}`,
+          our_release && `- **Наш релиз:** ${our_release}`,
           license && `- **Лицензия:** ${license}`,
+          usage && `- **Использование:** ${usage}`,
           source_url && `- **Источник:** ${source_url}`,
           `- **Проверено:** ${checked_at ?? today}`,
         ].filter(Boolean);
