@@ -249,6 +249,26 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
 .lore-resize-handle { width: 4px; cursor: col-resize; flex-shrink: 0; background: transparent; transition: background 0.15s; user-select: none; }
 .lore-resize-handle:hover,
 .lore-resize-handle:active { background: var(--acc); opacity: 0.5; }
+.lore-resize-handle-h { height: 4px; cursor: row-resize; flex-shrink: 0; background: transparent; transition: background 0.15s; user-select: none; }
+.lore-resize-handle-h:hover,
+.lore-resize-handle-h:active { background: var(--acc); opacity: 0.5; }
+
+/* ── Inline rendered Markdown (sprint context_md / task note_md) ──────────
+   Incident 2026-07-01 (prod v1.6.21): raw marked.parse() + dangerouslySetInnerHTML
+   with no heading-size reset lets a `#`/`##` in user content render at the
+   browser default h1/h2 size, blowing out these small side-panel boxes and
+   shoving surrounding layout down. Same clamp pattern as MartProse's
+   .mart-prose, kept lightweight here since this stylesheet is global (no
+   runtime injection needed) and the lore/ module doesn't otherwise depend on
+   MartProse (mermaid + bench-only marked config). */
+.lore-md h1, .lore-md h2, .lore-md h3,
+.lore-md h4, .lore-md h5, .lore-md h6 {
+  font-size: 1.15em; font-weight: 600; color: var(--t1); margin: 0.6em 0 0.3em;
+}
+.lore-md h1:first-child, .lore-md h2:first-child, .lore-md h3:first-child { margin-top: 0; }
+.lore-md p { margin: 0 0 0.6em; }
+.lore-md p:last-child { margin-bottom: 0; }
+.lore-md ul, .lore-md ol { margin: 0 0 0.6em; padding-left: 1.4em; }
 
 /* ── Analytics cards ────────────────────────────────────────────────────── */
 .analytics-meta { font-size: 11px; color: var(--t3); margin: 0 0 20px; }

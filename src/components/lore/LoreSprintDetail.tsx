@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parsePrRefs, normalizeStatus } from './loreUtils';
@@ -375,6 +375,17 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)',
   fontFamily: 'inherit',
 };
+// Shared "+ link…" lookup combobox style — was duplicated 3x (projects/
+// milestones/modules), each independently editable and prone to drift.
+// One constant so they stay pixel-identical (общий стиль).
+const lookupSelectStyle: React.CSSProperties = {
+  fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
+  background: 'var(--bg2)', border: '1px solid var(--bd)',
+  color: 'var(--t2)', cursor: 'pointer',
+  appearance: 'none' as const,
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center',
+};
 const iconBtn: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   width: 20, height: 18, padding: 0, lineHeight: 0, fontSize: 11,
@@ -525,7 +536,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
       )}
 
       {hasDetail && !editing && expanded && (
-        <div style={mdBox} dangerouslySetInnerHTML={{ __html: mdHtml(task.note_md) }} />
+        <div className="lore-md" style={mdBox} dangerouslySetInnerHTML={{ __html: mdHtml(task.note_md) }} />
       )}
     </div>
   );
@@ -620,7 +631,39 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [allProjects, setAllProjects] = useState<string[]>([]);
   const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
   const [relatedMeta, setRelatedMeta] = useState<Map<string, { status_raw: string | null; task_total: number; task_done: number }>>(new Map());
+  const [metaRightW, setMetaRightW] = useState(320);
+  const metaDragRef = useRef<{ x: number; w: number } | null>(null);
+  const [topBlockH, setTopBlockH] = useState(220);
+  const topDragRef = useRef<{ y: number; h: number } | null>(null);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
+
+  // Drag-resize the right meta column (projects/milestones/modules/ADR) — same
+  // pattern as LorePage's list-panel resize handle.
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!metaDragRef.current) return;
+      const dx = metaDragRef.current.x - e.clientX; // dragging left grows the right column
+      setMetaRightW(Math.min(560, Math.max(200, metaDragRef.current.w + dx)));
+    };
+    const onUp = () => { metaDragRef.current = null; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+
+  // Drag-resize the top meta block's height (shared by CONTEXT + META RIGHT),
+  // which in turn grows/shrinks the task list below it.
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!topDragRef.current) return;
+      const dy = e.clientY - topDragRef.current.y;
+      setTopBlockH(Math.min(700, Math.max(100, topDragRef.current.h + dy)));
+    };
+    const onUp = () => { topDragRef.current = null; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
   }
@@ -808,7 +851,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           context_md can never crowd out the task list below (both this block and
           the task list live in the same flex column; without a cap, a large
           context — flexShrink:0 — pushes the flex:1 task list toward 0 height). */}
-      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px', maxHeight: 220, overflowY: 'auto' as const }}>
+      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px', maxHeight: topBlockH, overflowY: 'auto' as const }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.context.label', 'Контекст')}</span>
           {!ctxEdit && (
@@ -831,14 +874,20 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             </div>
           </div>
         ) : sprint.context_md ? (
-          <div style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }} />
+          <div className="lore-md" style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }} />
         ) : (
           <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>{t('lore.sprintDetail.context.empty', 'Контекст не заполнен')}</div>
         )}
       </div>
 
+      {/* Drag handle — resizes META RIGHT (mirrors LorePage's .lore-resize-handle) */}
+      <div
+        className="lore-resize-handle"
+        onMouseDown={e => { metaDragRef.current = { x: e.clientX, w: metaRightW }; e.preventDefault(); }}
+      />
+
       {/* META RIGHT — projects + milestones + modules */}
-      <div style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: 220, overflowY: 'auto' as const }}>
+      <div style={{ width: metaRightW, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: topBlockH, overflowY: 'auto' as const }}>
 
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {
@@ -886,12 +935,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     } catch (err) { onError(err); }
                     finally { setProjLinking(false); }
                   }}
-                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
-                    background: 'var(--bg2)', border: '1px solid var(--bd)',
-                    color: 'var(--t2)', cursor: 'pointer',
-                    appearance: 'none' as const,
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}
+                  style={lookupSelectStyle}
                 >
                   <option value="">{t('lore.sprintDetail.projects.linkPlaceholder', '+ привязать…')}</option>
                   {unlinked.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
@@ -942,11 +986,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                       setSprint(s => s ? { ...s, milestone_ids: [...(s.milestone_ids ?? []), mid] } : s);
                     } catch (err) { onError(err); } finally { setMsLinking(false); }
                   }}
-                  style={{ fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
-                    background: 'var(--bg2)', border: '1px solid var(--bd)', color: 'var(--t2)', cursor: 'pointer',
-                    appearance: 'none' as const,
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}>
+                  style={lookupSelectStyle}>
                   <option value="">{t('lore.sprintDetail.milestones.linkPlaceholder', '+ привязать веху…')}</option>
                   {unlinked.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
                 </select>
@@ -961,12 +1001,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       {/* ── Modules section (sprint→component links) ────────────────────────── */}
       {(() => {
         const unlinkedComps = allComps.filter(c => !explicit.includes(c.component_id));
-        const selectStyle = { fontSize: 11, padding: '2px 20px 2px 6px', borderRadius: 5,
-          background: 'var(--bg2)', border: '1px solid var(--bd)',
-          color: 'var(--t2)', cursor: 'pointer',
-          appearance: 'none' as const,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' };
         return (
           <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -1028,7 +1062,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     } catch (err) { onError(err); }
                     finally { setCompLinking(false); }
                   }}
-                  style={selectStyle}
+                  style={lookupSelectStyle}
                 >
                   <option value="">{t('lore.sprintDetail.modules.linkPlaceholder', '+ привязать…')}</option>
                   {unlinkedComps.map(c => <option key={c.component_id} value={c.component_id}>{c.component_id}</option>)}
@@ -1073,6 +1107,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
       </div>{/* END META RIGHT */}
       </div>{/* END TOP META BLOCK */}
+
+      {/* Drag handle — resizes the top meta block's height (grows/shrinks the
+          task list below it). Vertical counterpart of the META RIGHT handle. */}
+      <div
+        className="lore-resize-handle-h"
+        onMouseDown={e => { topDragRef.current = { y: e.clientY, h: topBlockH }; e.preventDefault(); }}
+      />
 
       {/* ── Tasks (full width, scrollable) ── */}
       <div style={{ flex: 1, overflowY: 'auto' as const }}>
