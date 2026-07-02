@@ -336,3 +336,10 @@ CREATE TIMESERIES TYPE MetricSnapshot
   TIMESTAMP ts
   TAGS (object_type STRING, object_id STRING, metric STRING, source STRING, segment STRING)
   FIELDS (value DOUBLE);
+
+-- ARC-03: secondary indexes (площадка — via IN_CHANNEL edge traversal, no
+-- property index needed; статус/дата/ключ are direct properties)
+CREATE INDEX IF NOT EXISTS ON BragiVariant     (status)       NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON BragiVariant     (published_at) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON BragiPublication (status_general) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON BragiKeyword     (cluster)      NOTUNIQUE;
