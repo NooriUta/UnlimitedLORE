@@ -3,8 +3,9 @@
 // one slice (bragi_keys/bragi_insights/bragi_integrations) or a small
 // client-side join over bragi_calendar + fetchBragiMetrics (Архив has no
 // dedicated backend slice — see note below).
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { fetchLoreSlice, fetchBragiMetrics } from '../../api/lore';
+import LoreBragiIntegrationEditor from './LoreBragiIntegrationEditor';
 
 // ── Ключи ────────────────────────────────────────────────────────────────
 interface KeywordRow {
@@ -154,16 +155,33 @@ interface IntegrationRow {
 export function LoreBragiIntegrations() {
   const [rows, setRows] = useState<IntegrationRow[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    fetchLoreSlice<IntegrationRow>('bragi_integrations').then(r => { if (!cancelled) { setRows(r); setLoading(false); } })
-      .catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+  const [creating, setCreating] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    return fetchLoreSlice<IntegrationRow>('bragi_integrations')
+      .then(r => { setRows(r); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (creating) {
+    return (
+      <LoreBragiIntegrationEditor
+        onSaved={() => { setCreating(false); load(); }}
+        onCancel={() => setCreating(false)}
+      />
+    );
+  }
+
   if (loading) return <div style={S.hint}>загрузка…</div>;
   return (
     <div>
-      <div style={S.desc}>коннекторы для сбора метрик и публикации. Токены — по ссылке на секрет, не значением.</div>
+      <div style={S.descRow}>
+        <div style={S.desc}>коннекторы для сбора метрик и публикации. Токены — по ссылке на секрет, не значением.</div>
+        <button style={S.newBtn} onClick={() => setCreating(true)}>+ новая интеграция</button>
+      </div>
       <div style={S.card}>
         <table style={S.table}>
           <thead><tr><th style={S.th}>сервис</th><th style={S.th}>назначение</th><th style={S.th}>статус</th><th style={S.th}>секрет</th><th style={S.th}>последний вызов</th></tr></thead>
@@ -193,6 +211,9 @@ function statusDotStyle(color: string): React.CSSProperties {
 }
 
 const S: Record<string, React.CSSProperties> = {
+  descRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  newBtn:  { flex: 'none', height: 28, padding: '0 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
+             background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
   desc:    { color: 'var(--t2)', fontSize: 14, marginBottom: 18 },
   hint:    { fontSize: 12, color: 'var(--t3)' },
   card:    { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '10px 18px' },
