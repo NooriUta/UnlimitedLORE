@@ -1317,7 +1317,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                                 </span>
                               </div>
                               {open && hasNote && (
-                                <div style={{
+                                <div className="lore-md" style={{
                                   fontSize: 11, color: 'var(--t2)', lineHeight: 1.6,
                                   padding: '4px 8px 8px 22px', overflowX: 'auto',
                                   background: 'color-mix(in srgb, var(--b2) 50%, transparent)',
