@@ -680,6 +680,16 @@ public final class LoreSlices {
             "SELECT integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at " +
             "FROM BragiIntegration",
             List.of(), Map.of(), " ORDER BY integration_id");
+
+        // FE-06: another gap found while building the create-forms — channel/page
+        // pickers need lookup slices too, not just the content-display ones.
+        slice("bragi_channels",
+            "SELECT channel_id, channel_type, url_handle, funnel_role FROM BragiChannel",
+            List.of(), Map.of(), " ORDER BY channel_id");
+
+        slice("bragi_pages",
+            "SELECT page_id, url, title FROM BragiPage",
+            List.of(), Map.of(), " ORDER BY page_id");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }

@@ -2,8 +2,9 @@
 // Card per BragiPublication grouping its BragiVariant children by channel,
 // matching bragi-archive-prototype.html's .pubcard/.variants layout. Clicking
 // a variant expands it (full text + live BragiMetric points for that variant).
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { fetchLoreSlice, fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
+import LoreBragiPublicationEditor from './LoreBragiPublicationEditor';
 
 interface PublicationRow {
   publication_id: string;
@@ -32,14 +33,16 @@ export default function LoreBragiPublications() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<BragiMetricPoint[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchLoreSlice<PublicationRow>('bragi_publications').then(rs => {
-      if (!cancelled) { setRows(rs); setLoading(false); }
-    }).catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+  const load = useCallback(() => {
+    setLoading(true);
+    return fetchLoreSlice<PublicationRow>('bragi_publications')
+      .then(rs => { setRows(rs); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const channels = useMemo(() => {
     const s = new Set<string>();
@@ -63,11 +66,23 @@ export default function LoreBragiPublications() {
       .finally(() => setMetricsLoading(false));
   };
 
+  if (creating) {
+    return (
+      <LoreBragiPublicationEditor
+        onSaved={() => { setCreating(false); load(); }}
+        onCancel={() => setCreating(false)}
+      />
+    );
+  }
+
   if (loading) return <div style={S.hint}>загрузка…</div>;
 
   return (
     <div>
-      <div style={S.desc}>main-текст + вариации под площадки: одна публикация группирует свои версии; у каждой — свой текст, статус и картинка.</div>
+      <div style={S.descRow}>
+        <div style={S.desc}>main-текст + вариации под площадки: одна публикация группирует свои версии; у каждой — свой текст, статус и картинка.</div>
+        <button style={S.newBtn} onClick={() => setCreating(true)}>+ новая публикация</button>
+      </div>
       <div style={S.filters}>
         {['все', ...channels, 'черновики'].map(f => (
           <span key={f} style={filterChipStyle(filter === f)} onClick={() => setFilter(f)}>{f}</span>
@@ -155,7 +170,10 @@ function statusDotStyle(color: string): React.CSSProperties {
 }
 
 const S: Record<string, React.CSSProperties> = {
-  desc:      { color: 'var(--t2)', fontSize: 14, marginBottom: 18 },
+  descRow:   { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18 },
+  newBtn:    { flex: 'none', height: 28, padding: '0 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
+               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+  desc:      { color: 'var(--t2)', fontSize: 14, margin: 0 },
   hint:      { fontSize: 12, color: 'var(--t3)' },
   filters:   { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 },
   pubcard:   { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 },
