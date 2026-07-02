@@ -3441,6 +3441,59 @@ public class AidaLoreResource {
         }
     }
 
+    // Standalone assignment — lets a caller attach/replace a rubric without
+    // re-supplying every other field of the target publication/keyword
+    // (unlike rubric_id on the full upsert endpoints).
+    public record BragiRubricLinkRequest(String entity_type, String entity_id, String rubric_id) {}
+
+    @POST
+    @Path("bragi/rubric/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkBragiRubric(BragiRubricLinkRequest req,
+                                    @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.entity_id() == null || req.entity_id().isBlank())
+            return badParams("entity_id required");
+        if (req.rubric_id() == null || req.rubric_id().isBlank())
+            return badParams("rubric_id required");
+        String entityType, idField;
+        if ("publication".equals(req.entity_type())) { entityType = "BragiPublication"; idField = "publication_id"; }
+        else if ("keyword".equals(req.entity_type())) { entityType = "BragiKeyword"; idField = "keyword_id"; }
+        else return badParams("entity_type must be \"publication\" or \"keyword\"");
+        try {
+            assignRubric(entityType, idField, req.entity_id(), req.rubric_id());
+            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(), "rubric_id", req.rubric_id())));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI RUBRIC LINK] %s: %s", req.entity_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // Search-then-update helper for agent callers — the write endpoints all
+    // require an already-known keyword_id; without this there's no way to
+    // resolve one from a phrase substring first.
+    @GET
+    @Path("bragi/keyword/search")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response searchBragiKeyword(@QueryParam("q") String q) {
+        if (!enabled) return disabled();
+        if (q == null || q.isBlank()) return badParams("q required");
+        try {
+            java.util.List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT keyword_id, phrase, cluster FROM BragiKeyword WHERE phrase.toLowerCase() LIKE :q LIMIT 20",
+                Map.of("q", "%" + q.toLowerCase() + "%"));
+            return noStore(Response.ok(Map.of("rows", rows)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI KEYWORD SEARCH] %s: %s", q, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     public record BragiPageRequest(
         String page_id, String url, String title, String description, String page_type, String deployed_at) {}
 

@@ -1059,6 +1059,39 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_rubric',
+    'Assigns (or replaces) ONE rubric on a BragiPublication or BragiKeyword via IN_RUBRIC, without re-supplying ' +
+      'every other field of the target — unlike the rubric_id param on lore_create_publication/lore_upsert_keyword, ' +
+      'this is a lightweight standalone call. Replaces any prior rubric on the target (single-assignment, not ' +
+      'additive). Mutates the shared system_aida_lore.',
+    {
+      entity_type: z.enum(['publication', 'keyword']),
+      entity_id:   z.string().describe('publication_id or keyword_id, matching entity_type'),
+      rubric_id:   z.string().describe('existing BragiRubric id'),
+    },
+    async ({ entity_type, entity_id, rubric_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/rubric/link', { entity_type, entity_id, rubric_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_find_keyword',
+    'Searches BragiKeyword by a case-insensitive substring of phrase, returning keyword_id/phrase/cluster for ' +
+      'matches (max 20). Use this to resolve a keyword_id from a phrase BEFORE calling lore_upsert_keyword, ' +
+      'lore_link_rubric, or the keyword_ids param on lore_create_publication — those all require an already-known id.',
+    {
+      q: z.string().describe('substring to search for, e.g. "data governance"'),
+    },
+    async ({ q }) => {
+      try {
+        return json(await loreGet('/lore/bragi/keyword/search', { q }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_create_publication',
     'BragiPublication: create/amend a content publication (upsert by publication_id, partial-safe). ' +
       'The main-text master version that groups per-channel variants (see lore_create_variant). ' +
