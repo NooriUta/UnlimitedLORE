@@ -1038,4 +1038,77 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  // ── BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4) ──────────────────
+  server.tool(
+    'lore_create_publication',
+    'BragiPublication: create/amend a content publication (upsert by publication_id, partial-safe). ' +
+      'The main-text master version that groups per-channel variants (see lore_create_variant). ' +
+      'Pass keyword_ids to link TARGETS_KEY edges to existing BragiKeyword rows (idempotent, additive-only — ' +
+      'does not unlink keys omitted on a re-call). Mutates the shared system_aida_lore.',
+    {
+      publication_id:  z.string().describe('e.g. "PUB-01"'),
+      title:           z.string().optional(),
+      topic:           z.string().optional(),
+      main_text_md:    z.string().optional().describe('master-version body in Markdown'),
+      type:            z.string().optional().describe('e.g. "article"'),
+      status_general:  z.string().optional().describe('e.g. "draft" | "ready" | "published"'),
+      keyword_ids:     z.array(z.string()).optional().describe('existing BragiKeyword ids to link via TARGETS_KEY'),
+    },
+    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids }) => {
+      try {
+        return json(await lorePost('/lore/bragi/publication', {
+          publication_id, title, topic, main_text_md, type, status_general, keyword_ids,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_variant',
+    'BragiVariant: create/amend a per-channel version of a publication (upsert by variant_id, partial-safe). ' +
+      'Pass publication_id to wire HAS_VARIANT from the parent BragiPublication, channel_id to wire IN_CHANNEL ' +
+      'to an existing BragiChannel, asset_id to attach an existing BragiAsset via HAS_ASSET — all idempotent, ' +
+      'edges only added when the corresponding id is supplied. Mutates the shared system_aida_lore.',
+    {
+      variant_id:     z.string().describe('e.g. "PUB-01-VC"'),
+      publication_id: z.string().optional().describe('parent publication — wires HAS_VARIANT'),
+      channel_id:     z.string().optional().describe('existing BragiChannel id — wires IN_CHANNEL'),
+      text_md:        z.string().optional().describe('this variant\'s adapted text'),
+      status:         z.string().optional().describe('e.g. "draft" | "ready" | "published" | "planned"'),
+      url:            z.string().optional().describe('published URL, once live'),
+      published_at:   z.string().optional().describe('YYYY-MM-DD'),
+      asset_id:       z.string().optional().describe('existing BragiAsset id — wires HAS_ASSET'),
+    },
+    async ({ variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/variant', {
+          variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_attach_asset',
+    'BragiAsset: create/amend an image/media asset (upsert by asset_id, partial-safe) and optionally attach it ' +
+      'via HAS_ASSET to an existing BragiPublication (cover) or BragiVariant (per-channel image) — pass exactly ' +
+      'one of attach_to_publication_id/attach_to_variant_id, not both. Mutates the shared system_aida_lore.',
+    {
+      asset_id:                  z.string().describe('e.g. "AST-01"'),
+      asset_type:                z.string().optional().describe('"cover" | "og-teaser" | "inline"'),
+      file_url:                  z.string().optional(),
+      alt:                       z.string().optional(),
+      size_bytes:                z.number().int().optional(),
+      attach_to_publication_id:  z.string().optional().describe('wires HAS_ASSET from this BragiPublication'),
+      attach_to_variant_id:      z.string().optional().describe('wires HAS_ASSET from this BragiVariant'),
+    },
+    async ({ asset_id, asset_type, file_url, alt, size_bytes, attach_to_publication_id, attach_to_variant_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/asset', {
+          asset_id, asset_type, file_url, alt, size_bytes, attach_to_publication_id, attach_to_variant_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
 }

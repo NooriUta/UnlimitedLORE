@@ -3129,6 +3129,168 @@ public class AidaLoreResource {
         }
     }
 
+    // ── BRAGI content archive write — MCP-01: publications, variants, assets ──
+    // Flat vertices (no SCD2/Hist twin, see LoreSchemaInitializer Phase 7) — LH-44
+    // partial-upsert still applies (re-calling with fewer fields must not wipe
+    // existing content), edges are idempotent CREATE ... IF NOT EXISTS.
+    public record BragiPublicationRequest(
+        String publication_id, String title, String topic, String main_text_md,
+        String type, String status_general, java.util.List<String> keyword_ids) {}
+
+    @POST
+    @Path("bragi/publication")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiPublication(BragiPublicationRequest req,
+                                           @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.publication_id() == null || req.publication_id().isBlank())
+            return badParams("publication_id required");
+        if (!SAFE_ID.matcher(req.publication_id()).matches())
+            return badParams("publication_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiPublication SET publication_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.publication_id());
+            if (req.title() != null)          { sql.append(", title=:title");         p.put("title", req.title()); }
+            if (req.topic() != null)          { sql.append(", topic=:topic");         p.put("topic", req.topic()); }
+            if (req.main_text_md() != null)   { sql.append(", main_text_md=:mt");     p.put("mt", req.main_text_md()); }
+            if (req.type() != null)           { sql.append(", type=:type");           p.put("type", req.type()); }
+            if (req.status_general() != null) { sql.append(", status_general=:sg");   p.put("sg", req.status_general()); }
+            sql.append(" UPSERT WHERE publication_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            int keysLinked = 0;
+            if (req.keyword_ids() != null) {
+                for (String kid : req.keyword_ids()) {
+                    if (kid == null || kid.isBlank()) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE TARGETS_KEY FROM (SELECT FROM BragiPublication WHERE publication_id=:pid) " +
+                        "TO (SELECT FROM BragiKeyword WHERE keyword_id=:kid) IF NOT EXISTS",
+                        Map.of("pid", req.publication_id(), "kid", kid))).await().indefinitely();
+                    keysLinked++;
+                }
+            }
+            return noStore(Response.ok(Map.of("ok", true, "publication_id", req.publication_id(), "keys_linked", keysLinked)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI PUBLICATION] %s: %s", req.publication_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record BragiVariantRequest(
+        String variant_id, String publication_id, String channel_id, String text_md,
+        String status, String url, String published_at, String asset_id) {}
+
+    @POST
+    @Path("bragi/variant")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiVariant(BragiVariantRequest req,
+                                       @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.variant_id() == null || req.variant_id().isBlank())
+            return badParams("variant_id required");
+        if (!SAFE_ID.matcher(req.variant_id()).matches())
+            return badParams("variant_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiVariant SET variant_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.variant_id());
+            if (req.text_md() != null)      { sql.append(", text_md=:tm");    p.put("tm", req.text_md()); }
+            if (req.status() != null)       { sql.append(", status=:st");     p.put("st", req.status()); }
+            if (req.url() != null)          { sql.append(", url=:url");      p.put("url", req.url()); }
+            if (req.published_at() != null) { sql.append(", published_at=:pa"); p.put("pa", req.published_at()); }
+            sql.append(" UPSERT WHERE variant_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            boolean linkedPub = false, linkedChannel = false, linkedAsset = false;
+            if (req.publication_id() != null && !req.publication_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_VARIANT FROM (SELECT FROM BragiPublication WHERE publication_id=:pid) " +
+                    "TO (SELECT FROM BragiVariant WHERE variant_id=:vid) IF NOT EXISTS",
+                    Map.of("pid", req.publication_id(), "vid", req.variant_id()))).await().indefinitely();
+                linkedPub = true;
+            }
+            if (req.channel_id() != null && !req.channel_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE IN_CHANNEL FROM (SELECT FROM BragiVariant WHERE variant_id=:vid) " +
+                    "TO (SELECT FROM BragiChannel WHERE channel_id=:cid) IF NOT EXISTS",
+                    Map.of("vid", req.variant_id(), "cid", req.channel_id()))).await().indefinitely();
+                linkedChannel = true;
+            }
+            if (req.asset_id() != null && !req.asset_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_ASSET FROM (SELECT FROM BragiVariant WHERE variant_id=:vid) " +
+                    "TO (SELECT FROM BragiAsset WHERE asset_id=:aid) IF NOT EXISTS",
+                    Map.of("vid", req.variant_id(), "aid", req.asset_id()))).await().indefinitely();
+                linkedAsset = true;
+            }
+            return noStore(Response.ok(Map.of("ok", true, "variant_id", req.variant_id(),
+                "linked_publication", linkedPub, "linked_channel", linkedChannel, "linked_asset", linkedAsset)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI VARIANT] %s: %s", req.variant_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record BragiAssetRequest(
+        String asset_id, String asset_type, String file_url, String alt, Long size_bytes,
+        String attach_to_publication_id, String attach_to_variant_id) {}
+
+    @POST
+    @Path("bragi/asset")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiAsset(BragiAssetRequest req,
+                                     @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.asset_id() == null || req.asset_id().isBlank())
+            return badParams("asset_id required");
+        if (!SAFE_ID.matcher(req.asset_id()).matches())
+            return badParams("asset_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiAsset SET asset_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.asset_id());
+            if (req.asset_type() != null) { sql.append(", asset_type=:at");  p.put("at", req.asset_type()); }
+            if (req.file_url() != null)   { sql.append(", file_url=:fu");    p.put("fu", req.file_url()); }
+            if (req.alt() != null)        { sql.append(", alt=:alt");        p.put("alt", req.alt()); }
+            if (req.size_bytes() != null) { sql.append(", size_bytes=:sz");  p.put("sz", req.size_bytes()); }
+            sql.append(" UPSERT WHERE asset_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            String attachedTo = null;
+            if (req.attach_to_publication_id() != null && !req.attach_to_publication_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_ASSET FROM (SELECT FROM BragiPublication WHERE publication_id=:pid) " +
+                    "TO (SELECT FROM BragiAsset WHERE asset_id=:aid) IF NOT EXISTS",
+                    Map.of("pid", req.attach_to_publication_id(), "aid", req.asset_id()))).await().indefinitely();
+                attachedTo = "publication:" + req.attach_to_publication_id();
+            } else if (req.attach_to_variant_id() != null && !req.attach_to_variant_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_ASSET FROM (SELECT FROM BragiVariant WHERE variant_id=:vid) " +
+                    "TO (SELECT FROM BragiAsset WHERE asset_id=:aid) IF NOT EXISTS",
+                    Map.of("vid", req.attach_to_variant_id(), "aid", req.asset_id()))).await().indefinitely();
+                attachedTo = "variant:" + req.attach_to_variant_id();
+            }
+            return noStore(Response.ok(Map.of("ok", true, "asset_id", req.asset_id(),
+                "attached_to", attachedTo == null ? "" : attachedTo)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI ASSET] %s: %s", req.asset_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     private Response requireAdmin(String role) {
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
