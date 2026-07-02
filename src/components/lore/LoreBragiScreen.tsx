@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { fetchLoreSlice } from '../../api/lore';
 import LoreBragiPublications from './LoreBragiPublications';
 import LoreBragiPlan from './LoreBragiPlan';
+import LoreBragiAnalytics from './LoreBragiAnalytics';
 
 type BragiSection =
   | 'obzor' | 'plan' | 'pubs' | 'keys' | 'analitika' | 'archive' | 'insights' | 'integrations';
@@ -112,11 +113,12 @@ export default function LoreBragiScreen() {
 
         {tab === 'pubs' && <LoreBragiPublications />}
         {tab === 'plan' && <LoreBragiPlan />}
+        {tab === 'analitika' && <LoreBragiAnalytics />}
 
-        {tab !== 'obzor' && tab !== 'pubs' && tab !== 'plan' && (
+        {tab !== 'obzor' && tab !== 'pubs' && tab !== 'plan' && tab !== 'analitika' && (
           <div style={S.stub}>
             <div style={S.stubIcon}>⏳</div>
-            <div>Раздел «{MENU.find(m => m.id === tab)?.label}» — в разработке (FE-04…FE-05).</div>
+            <div>Раздел «{MENU.find(m => m.id === tab)?.label}» — в разработке (FE-05).</div>
           </div>
         )}
       </div>
