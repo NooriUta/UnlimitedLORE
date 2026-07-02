@@ -128,7 +128,7 @@ function buildSprintPickOpts(t: (k: string, d: string) => string): PickOpt[] {
 const TASK_PICK_TOKENS = ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'];
 
 function StatusPicker({ entityType, id, current, onChanged, onError }: {
-  entityType: 'sprint' | 'task';
+  entityType: 'sprint' | 'task' | 'phase';
   id: string;
   current: LorePlanItemStatus;
   onChanged: () => void;
@@ -137,7 +137,7 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   const { t } = useTranslation();
   const sprintOpts = buildSprintPickOpts(t);
   const opts    = entityType === 'sprint' ? sprintOpts : sprintOpts.filter(o => TASK_PICK_TOKENS.includes(o.token));
-  const compact = entityType === 'task';
+  const compact = entityType !== 'sprint';
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
     if (next === current || busy) return;
@@ -1125,27 +1125,23 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             {phases.map(p => {
               const phaseTasks = byPhase.get(p.phase_uid) ?? [];
               if (filter && phaseTasks.length === 0) return null;
-              // Phases carry no status field of their own (unlike tasks) — derive
-              // one from child tasks, same coloring/icon convention as TaskLine,
-              // so a phase header reads at a glance the way a task row does.
-              const phaseStatus = phaseTasks.length === 0 ? null : (() => {
-                const ticks = phaseTasks.map(tk => taskTick(tk.status_raw).status);
-                if (ticks.every(s => s === 'done')) return 'done';
-                if (ticks.includes('blocked')) return 'blocked';
-                if (ticks.some(s => s === 'active' || s === 'partial')) return 'active';
-                if (ticks.every(s => s === 'cancelled')) return 'cancelled';
-                if (ticks.some(s => s === 'planned' || s === 'design' || s === 'backlog')) return 'planned';
-                return 'todo';
-              })();
-              const phaseMeta = phaseStatus ? statusMeta(phaseStatus) : null;
+              // p.title is NOT a human title — phases_of_sprint reads it straight
+              // from the phase's own HAS_STATE.status_raw (same SCD2 field task/
+              // sprint use). Editable via the same /lore/status endpoint + entity_type
+              // "phase" the backend has supported all along — this used to only be
+              // client-side-derived from child tasks and non-editable.
+              const phaseToken = toToken(taskTick(p.title).status);
               return (
                 <div key={p.phase_uid} style={S.phase}>
                   <div style={S.phaseId}>
-                    {phaseMeta && (
-                      <GameIcon slug={phaseMeta.icon} size={12} style={{ color: phaseMeta.color, marginRight: 5, verticalAlign: -1 }} />
-                    )}
                     {p.phase_id}
-                    {p.title && <span style={{ color: 'var(--t1)', marginLeft: 6 }}>— {p.title}</span>}
+                    <StatusPicker
+                      entityType="phase"
+                      id={p.phase_uid}
+                      current={phaseToken}
+                      onChanged={reload}
+                      onError={onError}
+                    />
                     {p.valid_from && (
                       <span style={{ ...S.meta, marginLeft: 8 }}>{p.valid_from.slice(0, 10)}</span>
                     )}

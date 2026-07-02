@@ -373,7 +373,7 @@ export interface LoreStatusUpdateResponse {
 }
 
 export async function postLoreStatus(
-  entityType: 'plan_item' | 'sprint' | 'task' | 'checkpoint',
+  entityType: 'plan_item' | 'sprint' | 'task' | 'checkpoint' | 'phase',
   id: string,
   status: LorePlanItemStatus,
 ): Promise<LoreStatusUpdateResponse> {
