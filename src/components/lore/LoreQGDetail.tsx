@@ -22,6 +22,11 @@ interface Recommendation {
   inv_id: string | null;
   severity: string | null;
   qg_id: string | null;
+  // Populated client-side right after a successful promote — the backend
+  // response carries where the task actually landed (qg/promote defaults to
+  // SPRINT_QG_VIOLATIONS unless the caller overrides sprint_id).
+  promoted_task_uid?: string;
+  promoted_sprint_id?: string;
 }
 
 interface RoutineRun {
@@ -118,9 +123,10 @@ interface Props {
   qgId: string;
   onError: (e: unknown) => void;
   onBack?: () => void;
+  onNavigateToSprint?: (id: string) => void;
 }
 
-export default function LoreQGDetail({ qgId, onError, onBack }: Props) {
+export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint }: Props) {
   const [qg, setQg]             = useState<QGDetail | null>(null);
   const [recs, setRecs]         = useState<Recommendation[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -195,8 +201,11 @@ export default function LoreQGDetail({ qgId, onError, onBack }: Props) {
   const handlePromote = async (rec: Recommendation) => {
     setPromoting(rec.rec_id);
     try {
-      await lorePost('qg/promote', { rec_id: rec.rec_id, title: rec.title });
-      setRecs(r => r.map(x => x.rec_id === rec.rec_id ? { ...x, status: 'promoted' } : x));
+      const res = await lorePost<{ ok: boolean; task_uid: string; task_id: string; sprint_id: string }>(
+        'qg/promote', { rec_id: rec.rec_id, title: rec.title });
+      setRecs(r => r.map(x => x.rec_id === rec.rec_id
+        ? { ...x, status: 'promoted', promoted_task_uid: res.task_uid, promoted_sprint_id: res.sprint_id }
+        : x));
     } catch (e) { onError(e); }
     finally { setPromoting(null); }
   };
@@ -490,7 +499,19 @@ export default function LoreQGDetail({ qgId, onError, onBack }: Props) {
                           </button>
                         </div>
                       )}
-                      {isPromoted && <div style={S.promotedNote}>→ добавлено в housekeeping-спринт</div>}
+                      {isPromoted && (
+                        rec.promoted_task_uid && rec.promoted_sprint_id ? (
+                          <button
+                            style={S.promotedLink}
+                            onClick={() => onNavigateToSprint?.(rec.promoted_sprint_id!)}
+                            title={`Открыть ${rec.promoted_sprint_id}`}
+                          >
+                            → задача {rec.promoted_task_uid}
+                          </button>
+                        ) : (
+                          <div style={S.promotedNote}>→ задача создана</div>
+                        )
+                      )}
                     </div>
                   );
                 })}
@@ -668,4 +689,9 @@ const S = {
     background: 'transparent', color: 'var(--t3)', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit',
   },
   promotedNote: { color: 'var(--suc)', fontSize: 10, marginTop: 4 },
+  promotedLink: {
+    color: 'var(--suc)', fontSize: 10, marginTop: 4, padding: 0,
+    background: 'transparent', border: 'none', cursor: 'pointer',
+    fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2,
+  },
 };

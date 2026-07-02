@@ -802,6 +802,7 @@ export default function LorePage() {
               qgId={passport}
               onError={handleFetchError}
               onBack={clearItem}
+              onNavigateToSprint={navigateToSprint}
             />
           )}
           {section === 'qg' && !passport && (

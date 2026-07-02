@@ -472,7 +472,9 @@ public final class LoreSlices {
         slice("qg_recommendations",
             "SELECT rec_id, title, body_md, status, " +
             "in('PRODUCED').inv_id[0] AS inv_id, in('PRODUCED').severity[0] AS severity, " +
-            "in('PRODUCED').qg_id[0] AS qg_id " +
+            "in('PRODUCED').qg_id[0] AS qg_id, " +
+            "out('PROMOTED_TO').task_uid[0]                     AS promoted_task_uid, " +
+            "out('PROMOTED_TO').out('PART_OF').sprint_id[0]     AS promoted_sprint_id " +
             "FROM QGRecommendation WHERE in('PRODUCED').qg_id CONTAINS :qg_id " +
             "ORDER BY status",
             List.of("qg_id"), Map.of(), " LIMIT 100");
