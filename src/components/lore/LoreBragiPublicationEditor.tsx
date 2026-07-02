@@ -3,9 +3,9 @@
 // Wraps lore_create_publication/lore_create_variant (MCP-01) via their
 // backend endpoints directly (same convention as LoreSprintEditor).
 import { useEffect, useState } from 'react';
-import { marked } from 'marked';
 import { fetchLoreSlice } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
+import TipTapField from './TipTapField';
 
 const LORE_BASE = '/lore';
 
@@ -135,7 +135,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       </Field>
 
       <Sec label="Main-текст">
-        <MdField value={mainText} onChange={setMainText} rows={4} placeholder="Мастер-версия текста…" />
+        <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder="Мастер-версия текста…" />
       </Sec>
 
       <Sec label="Ключевые слова">
@@ -164,7 +164,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
                 onChange={e => setVariant(i, { published_at: e.target.value })} />
               <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>×</button>
             </div>
-            <MdField value={v.text_md} onChange={t => setVariant(i, { text_md: t })} rows={3} placeholder="текст вариации…" />
+            <TipTapField value={v.text_md} onChange={t => setVariant(i, { text_md: t })} minHeight={60} placeholder="текст вариации…" />
           </div>
         ))}
         <button style={S.addVariantBtn} onClick={addVariant}>+ площадка</button>
@@ -190,38 +190,6 @@ function Sec({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Markdown field with a Написать/Просмотр toggle — no new dependency, reuses
- * `marked` (already used for context_md/note_md rendering elsewhere in this app,
- * e.g. LoreSprintDetail.tsx) instead of adding a rich-text editor library. */
-function MdField({ value, onChange, rows, placeholder }: {
-  value: string; onChange: (v: string) => void; rows: number; placeholder: string;
-}) {
-  const [preview, setPreview] = useState(false);
-  return (
-    <div>
-      <div style={S.mdTabs}>
-        <span style={mdTabStyle(!preview)} onClick={() => setPreview(false)}>Написать</span>
-        <span style={mdTabStyle(preview)} onClick={() => setPreview(true)}>Просмотр</span>
-      </div>
-      {preview ? (
-        <div style={{ ...S.ta, minHeight: rows * 20 }} dangerouslySetInnerHTML={{ __html: value.trim() ? (marked.parse(value) as string) : '<span style="color:var(--t3)">пусто</span>' }} />
-      ) : (
-        <textarea style={S.ta} rows={rows} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} />
-      )}
-    </div>
-  );
-}
-function mdTabStyle(active: boolean): React.CSSProperties {
-  const borderColor = active ? 'var(--b3)' : 'transparent';
-  return {
-    fontSize: 10, padding: '2px 8px', cursor: 'pointer', borderRadius: '4px 4px 0 0',
-    color: active ? 'var(--acc)' : 'var(--t3)',
-    background: active ? 'var(--b1)' : 'transparent',
-    borderTop: `1px solid ${borderColor}`, borderLeft: `1px solid ${borderColor}`,
-    borderRight: `1px solid ${borderColor}`, borderBottom: 'none',
-  };
-}
-
 const S: Record<string, React.CSSProperties> = {
   root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 12 },
   head:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10 },
@@ -237,12 +205,8 @@ const S: Record<string, React.CSSProperties> = {
               background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
               outline: 'none', width: '100%', boxSizing: 'border-box' },
   sLabel:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 },
-  ta:       { width: '100%', boxSizing: 'border-box', padding: '7px 9px', borderRadius: 4,
-              border: '1px solid var(--b3)', background: 'var(--b1)', color: 'var(--t1)',
-              fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 1.55, resize: 'vertical', outline: 'none' },
   variantBlock: { border: '1px solid var(--b3)', borderRadius: 6, padding: 8, marginBottom: 8 },
   variantRow: { display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' },
-  mdTabs:   { display: 'flex', gap: 2, marginBottom: -1, position: 'relative', zIndex: 1 },
   variantSelect:   { height: 28, borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--b1)',
                      color: 'var(--t1)', fontSize: 12, padding: '0 6px', width: 100 },
   variantSelectSm: { height: 28, borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--b1)',

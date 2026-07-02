@@ -12,6 +12,9 @@
     "@monaco-editor/react": "^4.7.0",
     "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
+    "@tiptap/pm": "^3.27.1",
+    "@tiptap/react": "^3.27.1",
+    "@tiptap/starter-kit": "^3.27.1",
     "@xyflow/react": "^12.11.0",
     "elkjs": "^0.11.1",
     "i18next": "^26.3.1",
@@ -23,6 +26,7 @@
     "react-i18next": "^17.0.8",
     "react-router-dom": "^6.28.0",
     "react-virtuoso": "^4.18.7",
+    "tiptap-markdown": "^0.9.0",
     "vis-data": "^8.0.4",
     "vis-timeline": "^8.5.1"
   },
