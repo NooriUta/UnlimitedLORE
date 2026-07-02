@@ -4,6 +4,7 @@
 // always supported it — this closes that gap. Same convention as
 // LoreBragiIntegrationEditor/LoreBragiPublicationEditor.
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import type { RubricRow } from './LoreBragiRubricManager';
 
@@ -43,6 +44,7 @@ export interface LoreBragiKeywordEditorProps {
 }
 
 export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rubrics }: LoreBragiKeywordEditorProps) {
+  const { t } = useTranslation();
   const [keywordId, setKeywordId] = useState(editing?.keyword_id ?? '');
   const [phrase, setPhrase] = useState(editing?.phrase ?? '');
   const [cluster, setCluster] = useState(editing?.cluster ?? '');
@@ -69,8 +71,8 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rub
 
   const handleSave = async () => {
     const id = keywordId.trim();
-    if (!id) { setErrMsg('Keyword ID обязателен'); return; }
-    if (!phrase.trim()) { setErrMsg('Фраза обязательна'); return; }
+    if (!id) { setErrMsg(t('bragi.keywordEditor.errKeywordId', 'Keyword ID обязателен')); return; }
+    if (!phrase.trim()) { setErrMsg(t('bragi.keywordEditor.errPhrase', 'Фраза обязательна')); return; }
     setSaving(true);
     setErrMsg(null);
     try {
@@ -92,11 +94,11 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rub
   return (
     <div style={S.root}>
       <div style={S.head}>
-        <span style={S.title}>{editing ? 'Редактирование ключа' : 'Новое ключевое слово'}</span>
+        <span style={S.title}>{editing ? t('bragi.keywordEditor.titleEdit', 'Редактирование ключа') : t('bragi.keywordEditor.titleNew', 'Новое ключевое слово')}</span>
         <div style={S.headBtns}>
-          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>Отмена</button>
+          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>{t('bragi.keywordEditor.cancel', 'Отмена')}</button>
           <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? t('bragi.keywordEditor.saving', 'Сохранение…') : t('bragi.keywordEditor.save', 'Сохранить')}
           </button>
         </div>
       </div>
@@ -104,7 +106,7 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rub
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
 
       <div style={S.row4}>
-        <Field label="Keyword ID" grow={1}>
+        <Field label={t('bragi.keywordEditor.keywordId', 'Keyword ID')} grow={1}>
           <input
             style={{ ...S.input, opacity: editing ? 0.6 : 1 }}
             value={keywordId}
@@ -113,34 +115,34 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rub
             onChange={e => setKeywordId(e.target.value)}
           />
         </Field>
-        <Field label="Фраза" grow={3}>
+        <Field label={t('bragi.keywordEditor.phrase', 'Фраза')} grow={3}>
           <input style={S.input} value={phrase} placeholder="data governance" onChange={e => setPhrase(e.target.value)} />
         </Field>
-        <Field label="Кластер" grow={1}>
+        <Field label={t('bragi.keywordEditor.cluster', 'Кластер')} grow={1}>
           <input style={S.input} value={cluster} placeholder="governance" onChange={e => setCluster(e.target.value)} />
         </Field>
       </div>
 
       <div style={S.row4}>
-        <Field label="[!] точная частота /мес" grow={1}>
+        <Field label={t('bragi.keywordEditor.freqExact', '[!] точная частота /мес')} grow={1}>
           <input style={S.input} type="number" value={freqExact} onChange={e => setFreqExact(e.target.value)} />
         </Field>
-        <Field label="Интент" grow={1}>
+        <Field label={t('bragi.keywordEditor.intentLabel', 'Интент')} grow={1}>
           <select style={S.input} value={intent} onChange={e => setIntent(e.target.value)}>
-            {INTENTS.map(i => <option key={i} value={i}>{i}</option>)}
+            {INTENTS.map(i => <option key={i} value={i}>{t('bragi.keywordEditor.intent.' + i, i)}</option>)}
           </select>
         </Field>
-        <Field label="Целевая страница" grow={2}>
+        <Field label={t('bragi.keywordEditor.targetPage', 'Целевая страница')} grow={2}>
           <select style={S.input} value={pageId} onChange={e => setPageId(e.target.value)}>
-            <option value="">— страница —</option>
+            <option value="">{t('bragi.keywordEditor.pagePlaceholder', '— страница —')}</option>
             {pages.map(p => <option key={p.page_id} value={p.page_id}>{p.url ?? p.page_id}</option>)}
           </select>
         </Field>
       </div>
 
-      <Field label="Рубрика" grow={1}>
+      <Field label={t('bragi.keywordEditor.rubric', 'Рубрика')} grow={1}>
         <select style={S.input} value={rubricId} onChange={e => setRubricId(e.target.value)}>
-          <option value="">— рубрика —</option>
+          <option value="">{t('bragi.keywordEditor.rubricPlaceholder', '— рубрика —')}</option>
           {rubrics.map(r => <option key={r.rubric_id} value={r.rubric_id}>{r.name}</option>)}
         </select>
       </Field>

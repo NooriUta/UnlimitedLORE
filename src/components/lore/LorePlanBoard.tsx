@@ -4,6 +4,7 @@
 // (Ctrl+wheel zoom, wheel/drag pan) replaces the old hand-rolled Gantt canvas.
 // Spec: PLAN_AS_DB_RENDER.md · write-path LAL-23a · time-travel LAL-25
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { marked } from 'marked';
 import { Timeline, DataSet } from 'vis-timeline/standalone';
 import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/standalone';
@@ -59,6 +60,10 @@ const STATUS_ORDER = ['active', 'high', 'planned', 'design', 'partial', 'blocked
 const STATUS_RU: Record<string, string> = {
   active: 'в работе', high: 'важно', planned: 'план', design: 'дизайн', partial: 'частично',
   blocked: 'блок', backlog: 'бэклог', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',
+};
+const STATUS_KEY: Record<string, string> = {
+  active: 'active', high: 'high', planned: 'planned', design: 'design', partial: 'partial',
+  blocked: 'blocked', backlog: 'backlog', todo: 'todo', done: 'done', deferred: 'deferred', cancelled: 'cancelled',
 };
 
 // Canonical token → status_raw (mirrors backend SCD2_STATUS_RAW exactly), for
@@ -164,6 +169,7 @@ function computeCriticalPath(
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
+  const { t } = useTranslation();
   const [config,   setConfig]   = useState<LorePlanConfig | null>(null);
   const [comps,    setComps]    = useState<LoreComponent[]>([]);
   const [sections, setSections] = useState<LorePlanSection[]>([]);
@@ -296,8 +302,9 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const nowLabel = useMemo(() => {
     if (!w0) return '';
     const d = addWeeks(w0, W_NOW);
-    return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  }, [w0, W_NOW]);
+    const monthKey = MONTH_KEYS[d.getMonth()];
+    return `${d.getDate()} ${t(`lore.planBoard.month.${monthKey}`, MONTHS[d.getMonth()])}`;
+  }, [w0, W_NOW, t]);
 
   const itemsWithPos = items.filter(it => it.week_start != null && it.week_end != null).length;
   const parityPct    = items.length > 0 ? Math.round(itemsWithPos / items.length * 100) : 0;
@@ -365,9 +372,9 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       projLanes.get(project)!.add(rawLane);
     });
 
-    const projLabel = (pid: string) => pid === NO_PROJECT ? '— без проекта —'
+    const projLabel = (pid: string) => pid === NO_PROJECT ? t('lore.planBoard.noProject', '— без проекта —')
       : compById.get(pid)?.full_name ?? pid;
-    const laneLabel = (lid: string) => lid === NO_COMPONENT ? '— без компонента —'
+    const laneLabel = (lid: string) => lid === NO_COMPONENT ? t('lore.planBoard.noComponent', '— без компонента —')
       : compById.get(lid)?.full_name ?? lid;
     // A project is "flat" (single leaf row) when its only lane is the project itself.
     const isFlat = (pid: string) => {
@@ -402,7 +409,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       groupDescs.push({ id: pid, label: projLabel(pid), nested: childIds });
       lanes.forEach(l => {
         const fid = finalLane(pid, l);
-        const label = l === pid ? `${projLabel(pid)} · общие` : laneLabel(l);
+        const label = l === pid ? t('lore.planBoard.commonLane', '{{project}} · общие', { project: projLabel(pid) }) : laneLabel(l);
         groupDescs.push({ id: fid, label });
       });
     });
@@ -415,7 +422,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     });
 
     return { groupDescs, laneOfItem, iconOfItem };
-  }, [items, compById, PROJECT_ORDER]);
+  }, [items, compById, PROJECT_ORDER, t]);
 
   // ── Create the Timeline once data is loaded ──────────────────────────────────
   useEffect(() => {
@@ -571,7 +578,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         if (frac < -0.01 || frac > 1.01) continue;
         const x = ccRect.left - svgRect.left + frac * ccRect.width;
         const label = ms.milestone_id;
-        const tip   = `${ms.milestone_id}: ${ms.label}${ms.date_display ? ' · ' + ms.date_display : ''}`;
+        const tip   = `${ms.milestone_id}: ${ms.label}` + (ms.date_display ? ' · ' + ms.date_display : '');
         const labelW = label.length * 6 + 12;
         parts.push(
           // vertical guide line (full height, very subtle)
@@ -856,10 +863,10 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         end:   addWeeks(w0, Math.max(ws + 1, displayEnd)),
         type: 'range',
         className: `it ${famClass}`,
-        title: `${item.label}\nплан W${ws}–${we}`
-          + (weAct != null ? `\nфакт W${ws}–${weAct}` : '')
+        title: `${item.label}\n` + t('lore.planBoard.tooltip.plan', 'план W{{ws}}–{{we}}', { ws, we })
+          + (weAct != null ? '\n' + t('lore.planBoard.tooltip.fact', 'факт W{{ws}}–{{we}}', { ws, we: weAct }) : '')
           + (item.represents_sprint ? `\n${item.represents_sprint}` : '')
-          + `\nстатус: ${effStatus}`,
+          + '\n' + t('lore.planBoard.tooltip.status', 'статус: {{status}}', { status: effStatus }),
       } as TimelineItem);
 
     }
@@ -962,8 +969,8 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     });
   }
 
-  if (loading) return <div style={S.empty}>Loading plan…</div>;
-  if (!config)  return <div style={S.empty}>Plan config not found in system_aida_lore.</div>;
+  if (loading) return <div style={S.empty}>{t('lore.planBoard.loading', 'Loading plan…')}</div>;
+  if (!config)  return <div style={S.empty}>{t('lore.planBoard.configNotFound', 'Plan config not found in system_aida_lore.')}</div>;
 
   // Effective status of an item (real sprint state for sprint bars).
   const effStatusOf = (it: LorePlanItem): string => {
@@ -992,70 +999,73 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
 
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
       <div style={S.toolbar}>
-        <Tog active={showActive} onClick={() => setShowActive(v => !v)}>Активные</Tog>
-        <Tog active={showDone}   onClick={() => setShowDone(v => !v)}>Done</Tog>
-        <Tog active={!cropPast}  onClick={() => setCropPast(v => !v)}>Прошлые</Tog>
+        <Tog active={showActive} onClick={() => setShowActive(v => !v)}>{t('lore.planBoard.toolbar.active', 'Активные')}</Tog>
+        <Tog active={showDone}   onClick={() => setShowDone(v => !v)}>{t('lore.planBoard.toolbar.done', 'Done')}</Tog>
+        <Tog active={!cropPast}  onClick={() => setCropPast(v => !v)}>{t('lore.planBoard.toolbar.past', 'Прошлые')}</Tog>
         <span style={S.divider} />
-        <Tog active={showSprints} onClick={() => setShowSprints(v => !v)}>Спринты</Tog>
-        <Tog active={showStubs}   onClick={() => setShowStubs(v => !v)}>Заглушки</Tog>
+        <Tog active={showSprints} onClick={() => setShowSprints(v => !v)}>{t('lore.planBoard.toolbar.sprints', 'Спринты')}</Tog>
+        <Tog active={showStubs}   onClick={() => setShowStubs(v => !v)}>{t('lore.planBoard.toolbar.stubs', 'Заглушки')}</Tog>
         <span style={S.divider} />
         <Tog active={showDeps && deps.length > 0} onClick={() => setShowDeps(v => !v)}
-          title={`Стрелки зависимостей (${deps.length}); красный = критический путь`}>
-          Зависимости{deps.length > 0 ? ` ${deps.length}` : ''}
+          title={t('lore.planBoard.toolbar.depsTooltip', 'Стрелки зависимостей ({{count}}); красный = критический путь', { count: deps.length })}>
+          {t('lore.planBoard.toolbar.deps', 'Зависимости')}{deps.length > 0 ? ` ${deps.length}` : ''}
         </Tog>
         <button style={S.btn} onClick={() => timelineRef.current?.fit({ animation: true })}
-          title="Уместить все бары в экран">
-          Сжать
+          title={t('lore.planBoard.toolbar.fitTooltip', 'Уместить все бары в экран')}>
+          {t('lore.planBoard.toolbar.fit', 'Сжать')}
         </button>
         <button style={S.btn} onClick={() => {
           if (!w0) return;
           // «Раздвинуть» → 8-week detail view starting just before today.
           timelineRef.current?.setWindow(
             addWeeks(w0, W_NOW - 0.3), addWeeks(w0, W_NOW + 8), { animation: true });
-        }} title="Раздвинуть — 8 недель вокруг сегодня">
-          Раздвинуть
+        }} title={t('lore.planBoard.toolbar.expandTooltip', 'Раздвинуть — 8 недель вокруг сегодня')}>
+          {t('lore.planBoard.toolbar.expand', 'Раздвинуть')}
         </button>
 
         <span style={{ flex: 1 }} />
 
-        <span style={S.stat}>{shownBars} / {items.length} баров · {board.groupDescs.filter(g => !g.nested).length} дорожек</span>
+        <span style={S.stat}>{t('lore.planBoard.toolbar.barsLanes', '{{shown}} / {{total}} баров · {{lanes}} дорожек', { shown: shownBars, total: items.length, lanes: board.groupDescs.filter(g => !g.nested).length })}</span>
 
         <span
           style={{ ...S.zlabel, color: 'var(--acc)', opacity: 0.85, fontWeight: 600 }}
-          title={`Текущая неделя плана (W0 = ${config.w0_date})`}
+          title={t('lore.planBoard.toolbar.currentWeekTooltip', 'Текущая неделя плана (W0 = {{w0}})', { w0: config.w0_date })}
         >
           W{W_NOW} · {nowLabel}
         </span>
-        <span style={S.stat} title="Паритет: доля баров с позицией (SAGA↔план)">
-          {parityPct}% parity
+        <span style={S.stat} title={t('lore.planBoard.toolbar.parityTooltip', 'Паритет: доля баров с позицией (SAGA↔план)')}>
+          {t('lore.planBoard.toolbar.parity', '{{pct}}% parity', { pct: parityPct })}
         </span>
-        <span style={{ ...S.zlabel, opacity: 0.6 }}>Ctrl+колесо = зум · тащить = листать</span>
+        <span style={{ ...S.zlabel, opacity: 0.6 }}>{t('lore.planBoard.toolbar.hint', 'Ctrl+колесо = зум · тащить = листать')}</span>
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────────── */}
       <div style={S.legend}>
-        <span style={S.legendCap}>заливка = статус:</span>
-        {presentStatuses.filter(s => s !== 'todo').map(s => <LegendStatus key={s} status={s} label={STATUS_RU[s] ?? s} />)}
+        <span style={S.legendCap}>{t('lore.planBoard.legend.caption', 'заливка = статус:')}</span>
+        {presentStatuses.filter(s => s !== 'todo').map(s => (
+          <LegendStatus key={s} status={s}
+            label={t(`lore.planBoard.status.${STATUS_KEY[s] ?? s}`, STATUS_RU[s] ?? s)} />
+        ))}
         {presentStatuses.includes('todo') && (
           <>
-            <span style={S.legendGlyph}><GameIcon slug="calendar" size={12} style={{ color: 'var(--acc)' }} /> планируется</span>
-            <span style={S.legendGlyph}><GameIcon slug="light-bulb" size={12} style={{ color: 'var(--t3)' }} /> заглушка</span>
+            <span style={S.legendGlyph}><GameIcon slug="calendar" size={12} style={{ color: 'var(--acc)' }} /> {t('lore.planBoard.legend.planned', 'планируется')}</span>
+            <span style={S.legendGlyph}><GameIcon slug="light-bulb" size={12} style={{ color: 'var(--t3)' }} /> {t('lore.planBoard.legend.stub', 'заглушка')}</span>
           </>
         )}
         <span style={S.legendSep} />
         <span style={S.legendGlyph}>
           <span style={{ width: 14, height: 11, borderRadius: 2, display: 'inline-block',
-            background: 'var(--bg3)', border: '2px solid var(--acc)' }} /> веха
+            background: 'var(--bg3)', border: '2px solid var(--acc)' }} /> {t('lore.planBoard.legend.milestone', 'веха')}
         </span>
         <span style={S.legendGlyph}>
           <span style={{ width: 2, height: 13, display: 'inline-block',
-            background: 'color-mix(in srgb, var(--wrn) 60%, transparent)' }} /> текущий релиз
+            background: 'color-mix(in srgb, var(--wrn) 60%, transparent)' }} /> {t('lore.planBoard.legend.currentRelease', 'текущий релиз')}
         </span>
         <span style={S.legendGlyph}>
           <span style={{ width: 16, height: 11, borderRadius: 2, display: 'inline-block',
-            background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid var(--b3)' }} /> фаза
+            background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid var(--b3)' }} /> {t('lore.planBoard.legend.phase', 'фаза')}
         </span>
-        <span style={S.legendDim}>клик по бару → карточка спринта</span>
+        <span style={S.legendDim}>{t('lore.planBoard.legend.clickHint', 'клик по бару → карточка спринта')}</span>
       </div>
 
       {/* ── Main: timeline host + side panel ───────────────────────────────── */}
@@ -1080,7 +1090,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                 <button
                   onClick={() => handleRegisterSprint(sprintCard)}
                   disabled={registering}
-                  title="Создать KnowSprint, связать план-элемент (REPRESENTS) и завести начальный статус"
+                  title={t('lore.planBoard.card.registerTooltip', 'Создать KnowSprint, связать план-элемент (REPRESENTS) и завести начальный статус')}
                   style={{
                     display: 'block', width: '100%', marginBottom: 10,
                     padding: '6px 8px', borderRadius: 4, cursor: registering ? 'default' : 'pointer',
@@ -1090,7 +1100,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                     opacity: registering ? 0.6 : 1,
                   }}
                 >
-                  {registering ? 'Регистрирую…' : '＋ Запланировать спринт'}
+                  {registering ? t('lore.planBoard.card.registering', 'Регистрирую…') : t('lore.planBoard.card.registerSprint', '＋ Запланировать спринт')}
                 </button>
               )}
               <PRow k="ID"     v={sprintCard.item_id} />
@@ -1098,7 +1108,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                 <PRow k="Sprint" v={sprintCard.represents_sprint} color="var(--acc)" />
               )}
               {(sprintCard.week_start != null || sprintCard.week_end != null) && (
-                <PRow k="План"  v={`W${sprintCard.week_start ?? '?'}–${sprintCard.week_end ?? '?'}`} />
+                <PRow k={t('lore.planBoard.card.plan', 'План')}  v={`W${sprintCard.week_start ?? '?'}–${sprintCard.week_end ?? '?'}`} />
               )}
               {(() => {
                 // Факт: actual close from the sprint's done-date (план vs факт).
@@ -1108,16 +1118,16 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                 const ws = sprintCard.week_start ?? 0, we = sprintCard.week_end ?? ws;
                 const wa = Math.max(ws + 1, Math.round((new Date(dd).getTime() - w0.getTime()) / WEEK_MS));
                 const c = wa < we ? 'var(--suc)' : wa > we ? 'var(--wrn)' : 'var(--t2)';
-                return <PRow k="Факт" v={`W${ws}–${wa} · ${dd.slice(0, 10)}`} color={c} />;
+                return <PRow k={t('lore.planBoard.card.fact', 'Факт')} v={`W${ws}–${wa} · ${dd.slice(0, 10)}`} color={c} />;
               })()}
               {cardReleases.length > 0 && (
-                <PRow k="Релиз" v={cardReleases.join(', ')} color="var(--acc)" />
+                <PRow k={t('lore.planBoard.card.release', 'Релиз')} v={cardReleases.join(', ')} color="var(--acc)" />
               )}
 
               {/* Priority picker — only for real sprints (not plan-item stubs) */}
               {sprintCard.represents_sprint && (
                 <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Приоритет</div>
+                  <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>{t('lore.planBoard.card.priority', 'Приоритет')}</div>
                   <div style={{ display: 'flex', gap: 4, opacity: priorityBusy ? 0.5 : 1 }}>
                     {[
                       { v: 'P0', c: '#E24B4A' },
@@ -1162,7 +1172,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                 const isCancelled = cs === 'cancelled';
                 return (
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Статус</div>
+                    <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>{t('lore.planBoard.card.status', 'Статус')}</div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => applyStatusCycle(sprintCard)}
@@ -1196,7 +1206,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                             border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
                           }}
                         >
-                          🚫 Отменить
+                          {t('lore.planBoard.card.cancel', '🚫 Отменить')}
                         </button>
                       )}
                     </div>
@@ -1219,7 +1229,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                     }
                     return (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, color: 'var(--t3)' }}>Задачи</span>
+                        <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.planBoard.card.tasks', 'Задачи')}</span>
                         {total > 0 && (
                           <span style={{ fontSize: 10, color: 'var(--t2)' }}>{done}/{total}</span>
                         )}
@@ -1256,9 +1266,9 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                     );
                   })()}
 
-                  {cardTasksLoading && <div style={{ fontSize: 11, color: 'var(--t3)' }}>Загрузка…</div>}
+                  {cardTasksLoading && <div style={{ fontSize: 11, color: 'var(--t3)' }}>{t('lore.planBoard.card.loading', 'Загрузка…')}</div>}
                   {!cardTasksLoading && cardTasks.length === 0 && (
-                    <div style={{ fontSize: 11, color: 'var(--t3)' }}>Задачи не заведены.</div>
+                    <div style={{ fontSize: 11, color: 'var(--t3)' }}>{t('lore.planBoard.card.noTasks', 'Задачи не заведены.')}</div>
                   )}
                   {!cardTasksLoading && cardTasks.length > 0 && (() => {
                     const filtered = taskStatusFilter.size === 0
@@ -1336,9 +1346,9 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                   W{msPanel.week} · {msPanel.date_display}
                 </div>
               )}
-              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11 }}>Что закрыть:</div>
+              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11 }}>{t('lore.planBoard.milestone.toClose', 'Что закрыть:')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', columnGap: 24 }}>
-                {renderMsGroups(msPanel, items, cps, setMsPanel, setSprintCard)}
+                {renderMsGroups(msPanel, items, cps, setMsPanel, setSprintCard, t)}
               </div>
             </div>
           </div>
@@ -1350,6 +1360,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 // Strip emoji (renders as boxes/CJK at small sizes on some systems)
 function cleanLabel(s: string): string {
@@ -1373,6 +1384,7 @@ function renderMsGroups(
   cps: LorePlanCheckpoint[],
   setMsPanel: (m: LoreMilestone | null) => void,
   setSprintCard: (i: LorePlanItem | null) => void,
+  t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
 ) {
   const msItems = items.filter(it => it.milestone_id === ms.milestone_id);
   const grouped = new Map<string, LorePlanItem[]>();
@@ -1386,7 +1398,7 @@ function renderMsGroups(
     <>
       {msItems.length === 0 && msCps.length === 0 && (
         <div style={{ color: 'var(--t3)', fontSize: 11, padding: '4px 0' }}>
-          Нет связанных задач.
+          {t('lore.planBoard.milestone.noTasks', 'Нет связанных задач.')}
         </div>
       )}
       {[...grouped.entries()].map(([st, grp]) => (
@@ -1411,7 +1423,7 @@ function renderMsGroups(
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
             color: 'var(--acc)', marginBottom: 3 }}>
-            Плашки ({msCps.length})
+            {t('lore.planBoard.milestone.checkpoints', 'Плашки')} ({msCps.length})
           </div>
           {msCps.map(cp => (
             <div key={cp.checkpoint_id}
@@ -1454,8 +1466,9 @@ function LegendStatus({ status, label }: { status: string; label: string }) {
 
 // Drag handle at the top edge of the bottom panel (resize its height).
 function ResizeGrip({ onDown }: { onDown: (e: React.MouseEvent) => void }) {
+  const { t } = useTranslation();
   return (
-    <div onMouseDown={onDown} title="Потянуть, чтобы изменить высоту панели"
+    <div onMouseDown={onDown} title={t('lore.planBoard.resizeGripTooltip', 'Потянуть, чтобы изменить высоту панели')}
       style={{
         height: 9, flexShrink: 0, cursor: 'ns-resize',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1467,6 +1480,7 @@ function ResizeGrip({ onDown }: { onDown: (e: React.MouseEvent) => void }) {
 }
 
 function TypeBadge({ isSprint }: { isSprint: boolean }) {
+  const { t } = useTranslation();
   const c = isSprint ? 'var(--acc)' : 'var(--t3)';
   return (
     <span style={{
@@ -1476,7 +1490,7 @@ function TypeBadge({ isSprint }: { isSprint: boolean }) {
       background: `color-mix(in srgb, ${c} 16%, transparent)`,
       color: c, border: `1px solid color-mix(in srgb, ${c} 35%, transparent)`,
     }}>
-      {isSprint ? 'Спринт' : 'План-элемент'}
+      {isSprint ? t('lore.planBoard.typeBadge.sprint', 'Спринт') : t('lore.planBoard.typeBadge.planItem', 'План-элемент')}
     </span>
   );
 }

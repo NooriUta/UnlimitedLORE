@@ -3,6 +3,7 @@
 // C:\Маркетинг\bragi-archive-prototype.html section-for-section; each of the
 // 8 sections is a live-data view (FE-01..FE-05).
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import LoreBragiPublications from './LoreBragiPublications';
 import LoreBragiPlan from './LoreBragiPlan';
@@ -12,15 +13,15 @@ import { LoreBragiKeys, LoreBragiArchive, LoreBragiInsights, LoreBragiIntegratio
 type BragiSection =
   | 'obzor' | 'plan' | 'pubs' | 'keys' | 'analitika' | 'archive' | 'insights' | 'integrations';
 
-const MENU: { id: BragiSection; label: string }[] = [
-  { id: 'obzor',        label: 'Обзор' },
-  { id: 'plan',         label: 'План' },
-  { id: 'pubs',         label: 'Публикации' },
-  { id: 'keys',         label: 'Ключи' },
-  { id: 'analitika',    label: 'Аналитика' },
-  { id: 'archive',      label: 'Архив' },
-  { id: 'insights',     label: 'Инсайты' },
-  { id: 'integrations', label: 'Интеграции' },
+const MENU: { id: BragiSection; labelKey: string; fallback: string }[] = [
+  { id: 'obzor',        labelKey: 'bragi.screen.menu.overview',      fallback: 'Обзор' },
+  { id: 'plan',         labelKey: 'bragi.screen.menu.plan',          fallback: 'План' },
+  { id: 'pubs',         labelKey: 'bragi.screen.menu.publications',  fallback: 'Публикации' },
+  { id: 'keys',         labelKey: 'bragi.screen.menu.keys',          fallback: 'Ключи' },
+  { id: 'analitika',    labelKey: 'bragi.screen.menu.analytics',     fallback: 'Аналитика' },
+  { id: 'archive',      labelKey: 'bragi.screen.menu.archive',       fallback: 'Архив' },
+  { id: 'insights',     labelKey: 'bragi.screen.menu.insights',      fallback: 'Инсайты' },
+  { id: 'integrations', labelKey: 'bragi.screen.menu.integrations',  fallback: 'Интеграции' },
 ];
 
 interface OverviewRow { status_general: string; n: number }
@@ -28,6 +29,7 @@ interface CompetitorRow { competitor_id: string; name: string }
 interface PublicationRow { publication_id: string; title: string; status_general: string }
 
 export default function LoreBragiScreen() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<BragiSection>('obzor');
   const [overview, setOverview]     = useState<OverviewRow[]>([]);
   const [competitors, setCompetitors] = useState<CompetitorRow[]>([]);
@@ -58,7 +60,7 @@ export default function LoreBragiScreen() {
       <div style={S.subhead}>
         <span style={S.torch} />
         <b style={S.h1}>BRAGI</b>
-        <span style={S.tagline}>маркетинг · контент · дистрибуция</span>
+        <span style={S.tagline}>{t('bragi.screen.tagline', 'маркетинг · контент · дистрибуция')}</span>
       </div>
       <div style={S.menu}>
         {MENU.map(m => (
@@ -67,43 +69,43 @@ export default function LoreBragiScreen() {
             style={menuItemStyle(tab === m.id)}
             onClick={() => setTab(m.id)}
           >
-            {m.label}
+            {t(m.labelKey, m.fallback)}
           </span>
         ))}
-        <span style={S.menuLink}>связи → Forseti</span>
+        <span style={S.menuLink}>{t('bragi.screen.menu.forsetiLink', 'связи → Forseti')}</span>
       </div>
 
       <div style={S.wrap}>
         {tab === 'obzor' && (
           <>
-            <div style={S.desc}>план, публикации и аналитика соцкапитала — в одном месте. Связи с задачами и релизами в Forseti.</div>
+            <div style={S.desc}>{t('bragi.screen.overview.desc', 'план, публикации и аналитика соцкапитала — в одном месте. Связи с задачами и релизами в Forseti.')}</div>
             {loading ? (
-              <div style={S.hint}>загрузка…</div>
+              <div style={S.hint}>{t('bragi.screen.loading', 'загрузка…')}</div>
             ) : (
               <>
                 <div style={S.kpis}>
                   <div style={S.kpi}>
-                    <div style={S.kpiLab}>публикаций</div>
+                    <div style={S.kpiLab}>{t('bragi.screen.overview.kpiPublications', 'публикаций')}</div>
                     <div style={S.kpiVal}>{total}</div>
                   </div>
                   <div style={S.kpi}>
-                    <div style={S.kpiLab}>опубликовано</div>
+                    <div style={S.kpiLab}>{t('bragi.screen.overview.kpiPublished', 'опубликовано')}</div>
                     <div style={S.kpiVal}>{published}</div>
                   </div>
                   <div style={S.kpi}>
-                    <div style={S.kpiLab}>конкурентов в срезе</div>
+                    <div style={S.kpiLab}>{t('bragi.screen.overview.kpiCompetitors', 'конкурентов в срезе')}</div>
                     <div style={S.kpiVal}>{competitors.length}</div>
                   </div>
                 </div>
                 <div style={S.card}>
-                  <h2 style={S.cardH2}>публикации <span style={S.meta}>→ Публикации</span></h2>
+                  <h2 style={S.cardH2}>{t('bragi.screen.overview.publicationsTitle', 'публикации')} <span style={S.meta}>{t('bragi.screen.overview.publicationsMeta', '→ Публикации')}</span></h2>
                   <div style={{ fontSize: 13, lineHeight: 2 }}>
                     {publications.slice(0, 5).map(p => (
                       <div key={p.publication_id}>
                         <span style={S.chip}>{p.status_general ?? '—'}</span> {p.title}
                       </div>
                     ))}
-                    {publications.length === 0 && <span style={S.hint}>публикаций пока нет</span>}
+                    {publications.length === 0 && <span style={S.hint}>{t('bragi.screen.overview.noPublications', 'публикаций пока нет')}</span>}
                   </div>
                 </div>
               </>

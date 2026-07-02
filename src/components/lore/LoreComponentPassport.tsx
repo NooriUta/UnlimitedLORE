@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchLoreSlice,
   updateLoreComponent,
@@ -45,12 +46,19 @@ type DocContent =
   | { type: 'sprint'; data: LoreSprintRow; tasks: LoreSprintTask[] };
 
 // QG status labels/colors (mirrors LoreQualityGateList)
-const QG_ST: Record<string, { color: string; label: string }> = {
-  active:     { color: 'var(--suc)',  label: 'активен'  },
-  draft:      { color: 'var(--wrn)',  label: 'черновик' },
-  archived:   { color: 'var(--t3)',   label: 'архив'    },
-  deprecated: { color: 'var(--dng)', label: 'устарел'  },
-};
+type TFn = ReturnType<typeof useTranslation>['t'];
+
+function qgStatusMeta(t: TFn, status: string): { color: string; label: string } {
+  const map: Record<string, { color: string; key: string; fallback: string }> = {
+    active:     { color: 'var(--suc)', key: 'lore.componentPassport.qgStatus.active',     fallback: 'активен'  },
+    draft:      { color: 'var(--wrn)', key: 'lore.componentPassport.qgStatus.draft',      fallback: 'черновик' },
+    archived:   { color: 'var(--t3)',  key: 'lore.componentPassport.qgStatus.archived',   fallback: 'архив'    },
+    deprecated: { color: 'var(--dng)', key: 'lore.componentPassport.qgStatus.deprecated', fallback: 'устарел'  },
+  };
+  const m = map[status];
+  if (!m) return { color: 'var(--t3)', label: status };
+  return { color: m.color, label: t(m.key, m.fallback) };
+}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S = {
@@ -269,6 +277,7 @@ function renderMd(md: string | null | undefined): ReactNode {
 
 let _mermaidId = 0;
 function MermaidBlock({ code }: { code: string }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -285,7 +294,7 @@ function MermaidBlock({ code }: { code: string }) {
   }, [code]);
   return (
     <div style={{ margin: '8px 0', padding: '8px', background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5, overflow: 'auto' }}>
-      <div ref={ref} style={{ fontSize: 11, color: 'var(--t3)' }}>Рендеринг диаграммы…</div>
+      <div ref={ref} style={{ fontSize: 11, color: 'var(--t3)' }}>{t('lore.componentPassport.mermaidRendering', 'Рендеринг диаграммы…')}</div>
     </div>
   );
 }
@@ -311,6 +320,7 @@ interface Props {
 export default function LoreComponentPassport({
   componentId, onError, onNavigateComponent,
 }: Props) {
+  const { t } = useTranslation();
   const [comp, setComp]       = useState<LoreComponentDetail | null>(null);
   const [adrs, setAdrs]       = useState<LoreAdrRow[]>([]);
   const [specs, setSpecs]     = useState<LoreSpecRow[]>([]);
@@ -441,18 +451,18 @@ export default function LoreComponentPassport({
     finally { setSaving(false); }
   };
 
-  if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>Загрузка {componentId}…</div>;
-  if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>Не найден: {componentId}</div>;
+  if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>{t('lore.componentPassport.loading', 'Загрузка')} {componentId}…</div>;
+  if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>{t('lore.componentPassport.notFound', 'Не найден:')} {componentId}</div>;
 
   const color   = areaColor(compArea(comp));
   const tech    = comp.tech ?? [];
   const children = comp.children ?? [];
 
   const tabList: { key: DocTab; label: string; count: number }[] = [
-    { key: 'adr',    label: 'ADR',     count: adrs.length    },
-    { key: 'spec',   label: 'Spec',    count: specs.length   },
-    { key: 'qg',     label: 'QG',      count: qgs.length     },
-    { key: 'sprint', label: 'Спринты', count: sprints.length },
+    { key: 'adr',    label: t('lore.componentPassport.tabs.adr', 'ADR'),     count: adrs.length    },
+    { key: 'spec',   label: t('lore.componentPassport.tabs.spec', 'Spec'),    count: specs.length   },
+    { key: 'qg',     label: t('lore.componentPassport.tabs.qg', 'QG'),      count: qgs.length     },
+    { key: 'sprint', label: t('lore.componentPassport.tabs.sprints', 'Спринты'), count: sprints.length },
   ];
 
   const docRows: { id: string; title: string; status: string | null; hint?: string | null; releases?: string[] | null }[] =
@@ -483,7 +493,7 @@ export default function LoreComponentPassport({
               ↑ {comp.parent_id}
             </button>
           )}
-          <button style={S.editBtn} onClick={openEdit}>✎</button>
+          <button style={S.editBtn} onClick={openEdit} title={t('lore.componentPassport.editButtonTitle', 'Редактировать')} aria-label={t('lore.componentPassport.editButtonTitle', 'Редактировать')}>✎</button>
         </div>
 
         {/* Meta row: owner, team, children */}
@@ -500,10 +510,10 @@ export default function LoreComponentPassport({
         {editing && (
           <div style={S.editPanel}>
             {[
-              { label: 'Название', val: editFullName, set: setEditFullName, ph: 'Full name' },
-              { label: 'Owner',    val: editOwner,    set: setEditOwner,    ph: 'owner' },
-              { label: 'Team',     val: editTeam,     set: setEditTeam,     ph: 'team' },
-              { label: 'Icon',     val: editIcon,     set: setEditIcon,     ph: 'game-icon slug' },
+              { label: t('lore.componentPassport.edit.nameLabel', 'Название'), val: editFullName, set: setEditFullName, ph: t('lore.componentPassport.edit.namePlaceholder', 'Full name') },
+              { label: t('lore.componentPassport.edit.ownerLabel', 'Owner'),    val: editOwner,    set: setEditOwner,    ph: t('lore.componentPassport.edit.ownerPlaceholder', 'owner') },
+              { label: t('lore.componentPassport.edit.teamLabel', 'Team'),     val: editTeam,     set: setEditTeam,     ph: t('lore.componentPassport.edit.teamPlaceholder', 'team') },
+              { label: t('lore.componentPassport.edit.iconLabel', 'Icon'),     val: editIcon,     set: setEditIcon,     ph: t('lore.componentPassport.edit.iconPlaceholder', 'game-icon slug') },
             ].map(f => (
               <div key={f.label} style={S.editRow}>
                 <span style={S.editLabel}>{f.label}</span>
@@ -511,13 +521,13 @@ export default function LoreComponentPassport({
               </div>
             ))}
             <div style={S.editRow}>
-              <span style={S.editLabel}>Родитель</span>
+              <span style={S.editLabel}>{t('lore.componentPassport.edit.parentLabel', 'Родитель')}</span>
               <select
                 style={{ ...S.editInput, cursor: 'pointer' }}
                 value={editParentId}
                 onChange={e => setEditParentId(e.target.value)}
               >
-                <option value="">— нет родителя —</option>
+                <option value="">{t('lore.componentPassport.edit.noParentOption', '— нет родителя —')}</option>
                 {allComponents
                   .filter(c => c.component_id !== comp.component_id)
                   .map(c => (
@@ -528,8 +538,8 @@ export default function LoreComponentPassport({
               </select>
             </div>
             <div style={S.editActions}>
-              <button style={S.cancelBtn} onClick={() => setEditing(false)}>Отмена</button>
-              <button style={S.saveBtn} disabled={saving} onClick={handleSave}>{saving ? '…' : 'Сохранить'}</button>
+              <button style={S.cancelBtn} onClick={() => setEditing(false)}>{t('lore.componentPassport.edit.cancel', 'Отмена')}</button>
+              <button style={S.saveBtn} disabled={saving} onClick={handleSave}>{saving ? '…' : t('lore.componentPassport.edit.save', 'Сохранить')}</button>
             </div>
           </div>
         )}
@@ -585,11 +595,11 @@ export default function LoreComponentPassport({
         {/* Doc list */}
         <div style={S.docList}>
           {docRows.length === 0
-            ? <div style={S.docEmpty}>Нет документов</div>
+            ? <div style={S.docEmpty}>{t('lore.componentPassport.docList.empty', 'Нет документов')}</div>
             : docRows.map(d => {
               const sm = d.status ? (
                 docTab === 'qg'
-                  ? { icon: statusMeta(d.status).icon, color: (QG_ST[d.status] ?? { color: 'var(--t3)' }).color }
+                  ? { icon: statusMeta(d.status).icon, color: qgStatusMeta(t, d.status).color }
                   : statusMeta(d.status)
               ) : null;
               return (
@@ -641,11 +651,11 @@ export default function LoreComponentPassport({
       {/* ── BOTTOM: reader ───────────────────────────────────────────────── */}
       <div style={S.reader}>
         {!selDocId ? (
-          <div style={S.placeholder}>Выберите документ выше</div>
+          <div style={S.placeholder}>{t('lore.componentPassport.reader.selectDoc', 'Выберите документ выше')}</div>
         ) : docLoading ? (
-          <div style={S.placeholder}>Загрузка…</div>
+          <div style={S.placeholder}>{t('lore.componentPassport.reader.loading', 'Загрузка…')}</div>
         ) : !docContent ? (
-          <div style={S.placeholder}>Нет содержимого</div>
+          <div style={S.placeholder}>{t('lore.componentPassport.reader.noContent', 'Нет содержимого')}</div>
         ) : (
           <>
             <div style={S.readerHdr}>
@@ -666,28 +676,28 @@ export default function LoreComponentPassport({
             <div style={S.readerScroll}>
               {docContent.type === 'adr' && (
                 <>
-                  <MdBlock md={docContent.data.context_md}      label="Контекст" />
-                  <MdBlock md={docContent.data.decision_md}     label="Решение" />
-                  <MdBlock md={docContent.data.consequences_md} label="Последствия" />
+                  <MdBlock md={docContent.data.context_md}      label={t('lore.componentPassport.reader.context', 'Контекст')} />
+                  <MdBlock md={docContent.data.decision_md}     label={t('lore.componentPassport.reader.decision', 'Решение')} />
+                  <MdBlock md={docContent.data.consequences_md} label={t('lore.componentPassport.reader.consequences', 'Последствия')} />
                   {!docContent.data.context_md && !docContent.data.decision_md && (
-                    <p style={S.rP}>Содержимое не заполнено.</p>
+                    <p style={S.rP}>{t('lore.componentPassport.reader.contentEmpty', 'Содержимое не заполнено.')}</p>
                   )}
                 </>
               )}
               {docContent.type === 'spec' && (
                 <>
-                  <MdBlock md={docContent.data.content_md} label="Содержимое" />
+                  <MdBlock md={docContent.data.content_md} label={t('lore.componentPassport.reader.content', 'Содержимое')} />
                   {!docContent.data.content_md && (
-                    <p style={S.rP}>Содержимое не заполнено.</p>
+                    <p style={S.rP}>{t('lore.componentPassport.reader.contentEmpty', 'Содержимое не заполнено.')}</p>
                   )}
                 </>
               )}
               {docContent.type === 'qg' && (
                 <>
                   {docContent.data.description && <p style={S.rP}>{docContent.data.description}</p>}
-                  <MdBlock md={docContent.data.content_md} label="Содержимое" />
+                  <MdBlock md={docContent.data.content_md} label={t('lore.componentPassport.reader.content', 'Содержимое')} />
                   {!docContent.data.description && !docContent.data.content_md && (
-                    <p style={S.rP}>Содержимое не заполнено.</p>
+                    <p style={S.rP}>{t('lore.componentPassport.reader.contentEmpty', 'Содержимое не заполнено.')}</p>
                   )}
                 </>
               )}
@@ -705,10 +715,10 @@ export default function LoreComponentPassport({
                         </span>
                       </div>
                     )}
-                    <MdBlock md={docContent.data.context_md} label="Контекст" />
+                    <MdBlock md={docContent.data.context_md} label={t('lore.componentPassport.reader.context', 'Контекст')} />
                     {tasks.length > 0 && (
                       <>
-                        <div style={S.rH2}>Задачи</div>
+                        <div style={S.rH2}>{t('lore.componentPassport.reader.tasks', 'Задачи')}</div>
                         {(() => {
                           const tc = new Map<string, number>();
                           tasks.forEach(t => { const { status } = taskTick(t.status_raw); tc.set(status, (tc.get(status) ?? 0) + 1); });
@@ -775,17 +785,17 @@ export default function LoreComponentPassport({
                           </div>
                           {/* note panel */}
                           {selTaskUid && (() => {
-                            const t = tasks.find(x => x.task_uid === selTaskUid);
-                            if (!t) return null;
-                            const { status: ts } = taskTick(t.status_raw);
+                            const activeTask = tasks.find(x => x.task_uid === selTaskUid);
+                            if (!activeTask) return null;
+                            const { status: ts } = taskTick(activeTask.status_raw);
                             const tsm = statusMeta(ts);
                             return (
                               <div style={{ flex: 1, minWidth: 0, borderLeft: `2px solid color-mix(in srgb, ${tsm.color} 35%, transparent)`, paddingLeft: 10 }}>
-                                <div style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{t.task_id}</div>
-                                <div style={{ fontSize: 11, color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{t.title}</div>
-                                {t.note_md?.trim()
-                                  ? renderMd(t.note_md)
-                                  : <span style={{ fontSize: 10, color: 'var(--t3)' }}>Заметки не заполнены</span>}
+                                <div style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{activeTask.task_id}</div>
+                                <div style={{ fontSize: 11, color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{activeTask.title}</div>
+                                {activeTask.note_md?.trim()
+                                  ? renderMd(activeTask.note_md)
+                                  : <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.componentPassport.reader.notesEmpty', 'Заметки не заполнены')}</span>}
                               </div>
                             );
                           })()}
@@ -793,7 +803,7 @@ export default function LoreComponentPassport({
                       </>
                     )}
                     {!docContent.data.context_md && tasks.length === 0 && (
-                      <p style={S.rP}>Содержимое спринта не заполнено.</p>
+                      <p style={S.rP}>{t('lore.componentPassport.reader.sprintContentEmpty', 'Содержимое спринта не заполнено.')}</p>
                     )}
                   </>
                 );

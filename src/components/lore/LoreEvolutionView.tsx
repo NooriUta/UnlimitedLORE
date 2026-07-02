@@ -2,6 +2,7 @@
 // LHR-01: no auto-load · LHR-03: status icon · LHR-04: HH:MM time
 // LHR-05: diff column  · LHR-06: master-detail · LHR-08: summary header
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreHistRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
@@ -53,6 +54,7 @@ function computeDiff(cur: LoreHistRow, prev: LoreHistRow): DiffRow {
 interface Props { onError: (e: unknown) => void; }
 
 export default function LoreEvolutionView({ onError }: Props) {
+  const { t } = useTranslation();
   const [kind,        setKind]        = useState<EntityKind>('sprint');
   const [rows,        setRows]        = useState<LoreHistRow[]>([]);
   const [loadedId,    setLoadedId]    = useState('');
@@ -115,18 +117,22 @@ export default function LoreEvolutionView({ onError }: Props) {
             style={{ ...S.kindBtn, ...(kind === k ? S.kindBtnActive : {}) }}
             onClick={() => setKind(k)}
           >
-            {k === 'sprint' ? 'Спринт' : k === 'plan_item' ? 'PlanItem' : 'ADR'}
+            {k === 'sprint' ? t('lore.evolutionView.kindSprint', 'Спринт') : k === 'plan_item' ? t('lore.evolutionView.kindPlanItem', 'PlanItem') : t('lore.evolutionView.kindAdr', 'ADR')}
           </button>
         ))}
         <span style={S.hint}>
-          {loadingList ? 'загрузка…' : pickerErr ? 'ошибка списка' : `${picker.length} сущностей`}
+          {loadingList
+            ? t('lore.evolutionView.loadingHint', 'загрузка…')
+            : pickerErr
+              ? t('lore.evolutionView.listErrorHint', 'ошибка списка')
+              : t('lore.evolutionView.entityCountHint', '{{count}} сущностей', { count: picker.length })}
         </span>
       </div>
 
       <div style={S.body}>
         {/* ── LHR-06: left entity list ─────────────────────────────────── */}
         <div style={S.listPane}>
-          {pickerErr && <div style={S.msg}>Ошибка загрузки списка.</div>}
+          {pickerErr && <div style={S.msg}>{t('lore.evolutionView.listLoadError', 'Ошибка загрузки списка.')}</div>}
           {picker.map(o => {
             const namePart = o.label !== o.id ? o.label.replace(/^[^·]+·\s*/, '') : '';
             return (
@@ -152,12 +158,12 @@ export default function LoreEvolutionView({ onError }: Props) {
           {/* LHR-01: empty state */}
           {!loadedId && !loading && (
             <div style={S.msg}>
-              Выберите сущность из списка слева для просмотра SCD2-истории.
+              {t('lore.evolutionView.selectEntityHint', 'Выберите сущность из списка слева для просмотра SCD2-истории.')}
             </div>
           )}
-          {loading && <div style={S.msg}>Загрузка…</div>}
+          {loading && <div style={S.msg}>{t('lore.evolutionView.loading', 'Загрузка…')}</div>}
           {!loading && loadedId && rows.length === 0 && (
-            <div style={S.msg}>История пуста для «{loadedId}».</div>
+            <div style={S.msg}>{t('lore.evolutionView.emptyHistory', 'История пуста для «{{id}}».', { id: loadedId })}</div>
           )}
 
           {/* LHR-08: summary header */}
@@ -165,17 +171,17 @@ export default function LoreEvolutionView({ onError }: Props) {
             <div style={S.summary}>
               <span style={S.sumId}>{loadedId}</span>
               <span style={S.sumDot}>·</span>
-              <span style={S.sumInfo}>{rows.length} ревизий</span>
+              <span style={S.sumInfo}>{t('lore.evolutionView.revisionsCount', '{{count}} ревизий', { count: rows.length })}</span>
               {firstRow?.valid_from && (
                 <>
                   <span style={S.sumDot}>·</span>
-                  <span style={S.sumInfo}>создано {firstRow.valid_from.slice(0, 10)}</span>
+                  <span style={S.sumInfo}>{t('lore.evolutionView.createdOn', 'создано {{date}}', { date: firstRow.valid_from.slice(0, 10) })}</span>
                 </>
               )}
               {curRow && curRow !== firstRow && curRow.valid_from && (
                 <>
                   <span style={S.sumDot}>·</span>
-                  <span style={S.sumInfo}>ред. {curRow.valid_from.slice(0, 10)}</span>
+                  <span style={S.sumInfo}>{t('lore.evolutionView.editedOn', 'ред. {{date}}', { date: curRow.valid_from.slice(0, 10) })}</span>
                 </>
               )}
               {curMeta && curStatus && (
@@ -197,8 +203,8 @@ export default function LoreEvolutionView({ onError }: Props) {
                   <th style={S.th}>#</th>
                   <th style={S.th}>valid_from</th>
                   <th style={S.th}>valid_to</th>
-                  {kind === 'sprint'    && <th style={S.th}>статус</th>}
-                  {kind === 'plan_item' && <th style={S.th}>недели</th>}
+                  {kind === 'sprint'    && <th style={S.th}>{t('lore.evolutionView.colStatus', 'статус')}</th>}
+                  {kind === 'plan_item' && <th style={S.th}>{t('lore.evolutionView.colWeeks', 'недели')}</th>}
                   <th style={S.th}>Δ</th>
                   <th style={S.th}>hash</th>
                   <th style={S.th}>commit</th>
@@ -221,7 +227,7 @@ export default function LoreEvolutionView({ onError }: Props) {
                       {/* LHR-04: date + HH:MM */}
                       <td style={S.td}>{fmtDate(r.valid_from)}</td>
                       <td style={{ ...S.td, color: isCurrent ? 'var(--suc)' : 'var(--t3)' }}>
-                        {isCurrent ? '✓ текущая' : fmtDate(r.valid_to)}
+                        {isCurrent ? t('lore.evolutionView.currentMarker', '✓ текущая') : fmtDate(r.valid_to)}
                       </td>
                       {/* LHR-03: status → icon + tooltip */}
                       {kind === 'sprint' && (

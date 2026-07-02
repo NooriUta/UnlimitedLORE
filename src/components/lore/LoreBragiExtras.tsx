@@ -4,6 +4,7 @@
 // client-side join over bragi_calendar + fetchBragiMetrics (Архив has no
 // dedicated backend slice — see note below).
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchBragiMetrics } from '../../api/lore';
 import LoreBragiIntegrationEditor, { type LoreBragiIntegrationEditData } from './LoreBragiIntegrationEditor';
 import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBragiKeywordEditor';
@@ -17,6 +18,7 @@ interface KeywordRow {
 }
 
 export function LoreBragiKeys() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<KeywordRow[]>([]);
   const [rubrics, setRubrics] = useState<RubricRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,18 +56,18 @@ export function LoreBragiKeys() {
       />
     );
   }
-  if (loading) return <div style={S.hint}>загрузка…</div>;
+  if (loading) return <div style={S.hint}>{t('bragi.extras.keys.loading', 'загрузка…')}</div>;
 
   return (
     <div>
       <div style={S.descRow}>
-        <div style={S.desc}>семантическое ядро: кластеры, точная частота [!], интент, целевая страница.</div>
-        <button style={S.newBtn} onClick={() => setCreating(true)}>+ новое ключевое слово</button>
+        <div style={S.desc}>{t('bragi.extras.keys.desc', 'семантическое ядро: кластеры, точная частота [!], интент, целевая страница.')}</div>
+        <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.extras.keys.newBtn', '+ новое ключевое слово')}</button>
       </div>
       <LoreBragiRubricManager rubrics={rubrics} onChanged={load} />
       <div style={S.card}>
         <table style={S.table}>
-          <thead><tr><th style={S.th}>фраза</th><th style={S.th}>кластер</th><th style={S.th}>рубрика</th><th style={S.thNum}>[!] /мес</th><th style={S.th}>интент</th><th style={S.th}>страница</th><th style={S.th}></th></tr></thead>
+          <thead><tr><th style={S.th}>{t('bragi.extras.keys.colPhrase', 'фраза')}</th><th style={S.th}>{t('bragi.extras.keys.colCluster', 'кластер')}</th><th style={S.th}>{t('bragi.extras.keys.colRubric', 'рубрика')}</th><th style={S.thNum}>{t('bragi.extras.keys.colFreq', '[!] /мес')}</th><th style={S.th}>{t('bragi.extras.keys.colIntent', 'интент')}</th><th style={S.th}>{t('bragi.extras.keys.colPage', 'страница')}</th><th style={S.th}></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.keyword_id}>
@@ -75,12 +77,12 @@ export function LoreBragiKeys() {
                 <td style={S.tdNum}>{r.freq_exact ?? '—'}</td>
                 <td style={S.td}>{r.intent ?? '—'}</td>
                 <td style={S.td}>{r.page_url[0] ?? '—'}</td>
-                <td style={S.td}><button style={S.editBtn} onClick={() => setEditingRow(r)}>✎ редактировать</button></td>
+                <td style={S.td}><button style={S.editBtn} onClick={() => setEditingRow(r)}>{t('bragi.extras.keys.editBtn', '✎ редактировать')}</button></td>
               </tr>
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div style={S.hint}>ключей пока нет</div>}
+        {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.keys.empty', 'ключей пока нет')}</div>}
       </div>
     </div>
   );
@@ -99,6 +101,7 @@ interface CalendarRow {
 interface ArchiveRow extends CalendarRow { views: number; clicks: number; demo: number }
 
 export function LoreBragiArchive() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<ArchiveRow[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -117,15 +120,15 @@ export function LoreBragiArchive() {
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
-  if (loading) return <div style={S.hint}>загрузка…</div>;
+  if (loading) return <div style={S.hint}>{t('bragi.extras.archive.loading', 'загрузка…')}</div>;
   return (
     <div>
-      <div style={S.desc}>ретроспектива: опубликованное и что оно дало.</div>
+      <div style={S.desc}>{t('bragi.extras.archive.desc', 'ретроспектива: опубликованное и что оно дало.')}</div>
       <div style={S.card}>
         <table style={S.table}>
           <thead><tr>
-            <th style={S.th}>публикация</th><th style={S.th}>канал</th><th style={S.th}>дата</th>
-            <th style={S.thNum}>просмотры</th><th style={S.thNum}>переходы</th><th style={S.thNum}>демо</th><th style={S.th}>вывод</th>
+            <th style={S.th}>{t('bragi.extras.archive.colPublication', 'публикация')}</th><th style={S.th}>{t('bragi.extras.archive.colChannel', 'канал')}</th><th style={S.th}>{t('bragi.extras.archive.colDate', 'дата')}</th>
+            <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th><th style={S.th}>{t('bragi.extras.archive.colTakeaway', 'вывод')}</th>
           </tr></thead>
           <tbody>
             {rows.map(r => (
@@ -141,7 +144,7 @@ export function LoreBragiArchive() {
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div style={S.hint}>опубликованных вариаций пока нет</div>}
+        {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyState', 'опубликованных вариаций пока нет')}</div>}
       </div>
     </div>
   );
@@ -154,6 +157,7 @@ interface InsightRow {
 }
 
 export function LoreBragiInsights() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<InsightRow[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -162,10 +166,10 @@ export function LoreBragiInsights() {
       .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
-  if (loading) return <div style={S.hint}>загрузка…</div>;
+  if (loading) return <div style={S.hint}>{t('bragi.extras.insights.loading', 'загрузка…')}</div>;
   return (
     <div>
-      <div style={S.desc}>выводы из данных → задачи и решения.</div>
+      <div style={S.desc}>{t('bragi.extras.insights.title', 'выводы из данных → задачи и решения.')}</div>
       <div style={S.card}>
         {rows.map(r => (
           <div key={r.insight_id} style={S.insight}>
@@ -173,13 +177,13 @@ export function LoreBragiInsights() {
             <div style={S.insightTxt}>{r.statement_md}</div>
             {(r.led_tasks.length > 0 || r.led_adrs.length > 0) && (
               <div style={S.insightLinks}>
-                {r.led_tasks.map(t => <span key={t} style={S.chipAcc}>→ Forseti · {t}</span>)}
-                {r.led_adrs.map(a => <span key={a} style={S.chipAcc}>→ ADR · {a}</span>)}
+                {r.led_tasks.map(tk => <span key={tk} style={S.chipAcc}>{t('bragi.extras.insights.linkTask', '→ Forseti · {{id}}', { id: tk })}</span>)}
+                {r.led_adrs.map(a => <span key={a} style={S.chipAcc}>{t('bragi.extras.insights.linkAdr', '→ ADR · {{id}}', { id: a })}</span>)}
               </div>
             )}
           </div>
         ))}
-        {rows.length === 0 && <div style={S.hint}>инсайтов пока нет</div>}
+        {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.insights.empty', 'инсайтов пока нет')}</div>}
       </div>
     </div>
   );
@@ -193,6 +197,7 @@ interface IntegrationRow {
 }
 
 export function LoreBragiIntegrations() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<IntegrationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -226,16 +231,16 @@ export function LoreBragiIntegrations() {
     );
   }
 
-  if (loading) return <div style={S.hint}>загрузка…</div>;
+  if (loading) return <div style={S.hint}>{t('bragi.extras.integrations.loading', 'загрузка…')}</div>;
   return (
     <div>
       <div style={S.descRow}>
-        <div style={S.desc}>коннекторы для сбора метрик и публикации. Токены — по ссылке на секрет, не значением.</div>
-        <button style={S.newBtn} onClick={() => setCreating(true)}>+ новая интеграция</button>
+        <div style={S.desc}>{t('bragi.extras.integrations.title', 'коннекторы для сбора метрик и публикации. Токены — по ссылке на секрет, не значением.')}</div>
+        <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.extras.integrations.newBtn', '+ новая интеграция')}</button>
       </div>
       <div style={S.card}>
         <table style={S.table}>
-          <thead><tr><th style={S.th}>сервис</th><th style={S.th}>назначение</th><th style={S.th}>статус</th><th style={S.th}>секрет</th><th style={S.th}>последний вызов</th><th style={S.th}></th></tr></thead>
+          <thead><tr><th style={S.th}>{t('bragi.extras.integrations.colService', 'сервис')}</th><th style={S.th}>{t('bragi.extras.integrations.colPurpose', 'назначение')}</th><th style={S.th}>{t('bragi.extras.integrations.colStatus', 'статус')}</th><th style={S.th}>{t('bragi.extras.integrations.colSecret', 'секрет')}</th><th style={S.th}>{t('bragi.extras.integrations.colLastCalled', 'последний вызов')}</th><th style={S.th}></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.integration_id}>
@@ -247,12 +252,12 @@ export function LoreBragiIntegrations() {
                 </td>
                 <td style={S.td}><code style={{ fontSize: 11 }}>{r.secret_ref ?? '—'}</code></td>
                 <td style={S.td}>{r.last_called_at ?? '—'}</td>
-                <td style={S.td}><button style={S.editBtn} onClick={() => setEditingRow(r)}>✎ редактировать</button></td>
+                <td style={S.td}><button style={S.editBtn} onClick={() => setEditingRow(r)}>{t('bragi.extras.integrations.editBtn', '✎ редактировать')}</button></td>
               </tr>
             ))}
           </tbody>
         </table>
-        {rows.length === 0 && <div style={S.hint}>интеграций пока нет</div>}
+        {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.integrations.empty', 'интеграций пока нет')}</div>}
       </div>
     </div>
   );

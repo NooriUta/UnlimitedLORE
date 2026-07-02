@@ -4,6 +4,7 @@
 // ADR relations, for the fields where several values are legitimate
 // (components, git projects, an initial batch of tasks).
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   createLoreSprint,
   createLoreTask,
@@ -39,6 +40,7 @@ export interface LoreSprintEditorProps {
 }
 
 export default function LoreSprintEditor({ onSaved, onCancel }: LoreSprintEditorProps) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FormState>({
     sprint_id: '', name: '', status: 'todo', priority: '',
     context_md: '', outcome_md: '', component_ids: [], git_projects: [], initial_tasks: [],
@@ -63,8 +65,8 @@ export default function LoreSprintEditor({ onSaved, onCancel }: LoreSprintEditor
   const handleSave = async () => {
     const id = form.sprint_id.trim();
     const nm = form.name.trim();
-    if (!id) { setErrMsg('Sprint ID обязателен'); return; }
-    if (!nm) { setErrMsg('Название обязательно'); return; }
+    if (!id) { setErrMsg(t('lore.sprintEditor.errSprintIdRequired', 'Sprint ID обязателен')); return; }
+    if (!nm) { setErrMsg(t('lore.sprintEditor.errNameRequired', 'Название обязательно')); return; }
     setSaving(true);
     setErrMsg(null);
     try {
@@ -99,11 +101,11 @@ export default function LoreSprintEditor({ onSaved, onCancel }: LoreSprintEditor
   return (
     <div style={S.root}>
       <div style={S.head}>
-        <span style={S.title}>Новый спринт</span>
+        <span style={S.title}>{t('lore.sprintEditor.title', 'Новый спринт')}</span>
         <div style={S.headBtns}>
-          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>Отмена</button>
+          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>{t('lore.sprintEditor.cancel', 'Отмена')}</button>
           <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? t('lore.sprintEditor.saving', 'Сохранение…') : t('lore.sprintEditor.save', 'Сохранить')}
           </button>
         </div>
       </div>
@@ -111,76 +113,76 @@ export default function LoreSprintEditor({ onSaved, onCancel }: LoreSprintEditor
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
 
       <div style={S.row4}>
-        {fieldRow('Sprint ID', (
+        {fieldRow(t('lore.sprintEditor.fields.sprintId', 'Sprint ID'), (
           <input
             style={S.input}
             value={form.sprint_id}
-            placeholder="SPRINT_MY_FEATURE"
+            placeholder={t('lore.sprintEditor.placeholders.sprintId', 'SPRINT_MY_FEATURE')}
             onChange={e => set('sprint_id')(e.target.value)}
           />
         ))}
-        {fieldRow('Название', (
+        {fieldRow(t('lore.sprintEditor.fields.name', 'Название'), (
           <input
             style={S.input}
             value={form.name}
-            placeholder="Краткое название"
+            placeholder={t('lore.sprintEditor.placeholders.name', 'Краткое название')}
             onChange={e => set('name')(e.target.value)}
           />
         ), 3)}
-        {fieldRow('Статус', (
+        {fieldRow(t('lore.sprintEditor.fields.status', 'Статус'), (
           <select style={S.input} value={form.status} onChange={e => set('status')(e.target.value)}>
             {SPRINT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         ))}
-        {fieldRow('Приоритет', (
-          <input style={S.input} value={form.priority} placeholder="high, critical…"
+        {fieldRow(t('lore.sprintEditor.fields.priority', 'Приоритет'), (
+          <input style={S.input} value={form.priority} placeholder={t('lore.sprintEditor.placeholders.priority', 'high, critical…')}
             onChange={e => set('priority')(e.target.value)} />
         ))}
       </div>
 
-      <Sec label="Контекст — зачем этот спринт">
+      <Sec label={t('lore.sprintEditor.sections.context', 'Контекст — зачем этот спринт')}>
         <textarea
           style={S.ta} rows={5}
-          placeholder="Проблема, ограничения, связанные спринты/ADR…"
+          placeholder={t('lore.sprintEditor.placeholders.contextMd', 'Проблема, ограничения, связанные спринты/ADR…')}
           value={form.context_md}
           onChange={e => set('context_md')(e.target.value)}
         />
       </Sec>
-      <Sec label="Ожидаемый результат">
+      <Sec label={t('lore.sprintEditor.sections.outcome', 'Ожидаемый результат')}>
         <textarea
           style={S.ta} rows={3}
-          placeholder="Что должно получиться на выходе…"
+          placeholder={t('lore.sprintEditor.placeholders.outcomeMd', 'Что должно получиться на выходе…')}
           value={form.outcome_md}
           onChange={e => set('outcome_md')(e.target.value)}
         />
       </Sec>
 
-      <Sec label="Компоненты (BELONGS_TO)">
+      <Sec label={t('lore.sprintEditor.sections.components', 'Компоненты (BELONGS_TO)')}>
         <MultiChip
           values={form.component_ids}
           onChange={set('component_ids')}
           suggestions={compList.map(c => c.id)}
           suggestionLabels={Object.fromEntries(compList.map(c => [c.id, c.label]))}
-          placeholder="HND, FE, …"
+          placeholder={t('lore.sprintEditor.placeholders.components', 'HND, FE, …')}
           freeForm={false}
         />
       </Sec>
-      <Sec label="Git-проекты (BELONGS_TO_PROJECT)">
+      <Sec label={t('lore.sprintEditor.sections.gitProjects', 'Git-проекты (BELONGS_TO_PROJECT)')}>
         <MultiChip
           values={form.git_projects}
           onChange={set('git_projects')}
           suggestions={projList.map(p => p.id)}
           suggestionLabels={Object.fromEntries(projList.map(p => [p.id, p.label]))}
-          placeholder="NooriUta/AIDA, …"
+          placeholder={t('lore.sprintEditor.placeholders.gitProjects', 'NooriUta/AIDA, …')}
           freeForm={false}
         />
       </Sec>
-      <Sec label="Начальные задачи (T01, T02… по порядку ввода)">
+      <Sec label={t('lore.sprintEditor.sections.initialTasks', 'Начальные задачи (T01, T02… по порядку ввода)')}>
         <MultiChip
           values={form.initial_tasks}
           onChange={set('initial_tasks')}
           suggestions={[]}
-          placeholder="заголовок задачи, Enter…"
+          placeholder={t('lore.sprintEditor.placeholders.initialTasks', 'заголовок задачи, Enter…')}
           freeForm
         />
       </Sec>

@@ -3,6 +3,7 @@
 // prevents navigation, popups, and form submission.
 // Height auto-fits via postMessage from inside the iframe (resize shim).
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   html: string;
@@ -43,6 +44,7 @@ function wrapHtml(html: string, title: string): string {
 }
 
 export default function SandboxedHtmlFrame({ html, title = '', minHeight = 120 }: Props) {
+  const { t } = useTranslation();
   const [height, setHeight] = useState(minHeight);
   const frameRef = useRef<HTMLIFrameElement>(null);
 
@@ -60,7 +62,7 @@ export default function SandboxedHtmlFrame({ html, title = '', minHeight = 120 }
     <iframe
       ref={frameRef}
       srcDoc={wrapHtml(html, title)}
-      title={title || 'KnowDoc'}
+      title={title || t('lore.sandboxedHtmlFrame.defaultTitle', 'KnowDoc')}
       sandbox="allow-scripts"
       style={{
         width: '100%', height,

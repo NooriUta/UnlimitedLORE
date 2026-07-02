@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
@@ -107,22 +108,22 @@ function toToken(key: string): LorePlanItemStatus {
 
 type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string; gi: string; c: string; abbr: string };
 
-const SPRINT_PICK_OPTS: PickOpt[] = [
-  { token: 'todo',             statusKey: 'todo',             label: 'TODO',          gi: 'checkbox-tree',  c: '#665C48', abbr: 'TODO' },
-  { token: 'planned',          statusKey: 'planned',          label: 'Запланировано', gi: 'calendar',        c: '#D4922A', abbr: 'PLN'  },
-  { token: 'backlog',          statusKey: 'backlog',          label: 'Беклог',        gi: 'tied-scroll',     c: '#9A8C6E', abbr: 'BL'   },
-  { token: 'design',           statusKey: 'design',           label: 'Дизайн',        gi: 'magic-swirl',     c: '#D4922A', abbr: 'DS'   },
-  { token: 'active',           statusKey: 'in_progress',      label: 'В работе',      gi: 'progression',     c: '#88B8A8', abbr: 'WIP'  },
-  { token: 'partial',          statusKey: 'partial',          label: 'Частично',      gi: 'battery-50',      c: '#D4922A', abbr: 'PART' },
-  { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: 'К деплою',      gi: 'wave-crest',      c: '#7DBF78', abbr: 'RD'   },
-  { token: 'done',             statusKey: 'done',             label: 'Готово',        gi: 'divided-spiral',  c: '#7DBF78', abbr: 'DONE' },
-  { token: 'blocked',          statusKey: 'blocked',          label: 'Заблокировано', gi: 'handcuffed',      c: '#C85848', abbr: 'BLK'  },
-  { token: 'cancelled',        statusKey: 'cancelled',        label: 'Отменено',      gi: 'cross-mark',      c: '#C85848', abbr: 'CNC'  },
-];
+function buildSprintPickOpts(t: (k: string, d: string) => string): PickOpt[] {
+  return [
+    { token: 'todo',             statusKey: 'todo',             label: t('lore.sprintDetail.status.todo', 'TODO'),          gi: 'checkbox-tree',  c: '#665C48', abbr: 'TODO' },
+    { token: 'planned',          statusKey: 'planned',          label: t('lore.sprintDetail.status.planned', 'Запланировано'), gi: 'calendar',        c: '#D4922A', abbr: 'PLN'  },
+    { token: 'backlog',          statusKey: 'backlog',          label: t('lore.sprintDetail.status.backlog', 'Беклог'),        gi: 'tied-scroll',     c: '#9A8C6E', abbr: 'BL'   },
+    { token: 'design',           statusKey: 'design',           label: t('lore.sprintDetail.status.design', 'Дизайн'),         gi: 'magic-swirl',     c: '#D4922A', abbr: 'DS'   },
+    { token: 'active',           statusKey: 'in_progress',      label: t('lore.sprintDetail.status.active', 'В работе'),       gi: 'progression',     c: '#88B8A8', abbr: 'WIP'  },
+    { token: 'partial',          statusKey: 'partial',          label: t('lore.sprintDetail.status.partial', 'Частично'),      gi: 'battery-50',      c: '#D4922A', abbr: 'PART' },
+    { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: t('lore.sprintDetail.status.readyForDeploy', 'К деплою'), gi: 'wave-crest',      c: '#7DBF78', abbr: 'RD'   },
+    { token: 'done',             statusKey: 'done',             label: t('lore.sprintDetail.status.done', 'Готово'),           gi: 'divided-spiral',  c: '#7DBF78', abbr: 'DONE' },
+    { token: 'blocked',          statusKey: 'blocked',          label: t('lore.sprintDetail.status.blocked', 'Заблокировано'), gi: 'handcuffed',      c: '#C85848', abbr: 'BLK'  },
+    { token: 'cancelled',        statusKey: 'cancelled',        label: t('lore.sprintDetail.status.cancelled', 'Отменено'),    gi: 'cross-mark',      c: '#C85848', abbr: 'CNC'  },
+  ];
+}
 
-const TASK_PICK_OPTS: PickOpt[] = SPRINT_PICK_OPTS.filter(o =>
-  ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'].includes(o.token)
-);
+const TASK_PICK_TOKENS = ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'];
 
 function StatusPicker({ entityType, id, current, onChanged, onError }: {
   entityType: 'sprint' | 'task';
@@ -131,7 +132,9 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
-  const opts    = entityType === 'sprint' ? SPRINT_PICK_OPTS : TASK_PICK_OPTS;
+  const { t } = useTranslation();
+  const sprintOpts = buildSprintPickOpts(t);
+  const opts    = entityType === 'sprint' ? sprintOpts : sprintOpts.filter(o => TASK_PICK_TOKENS.includes(o.token));
   const compact = entityType === 'task';
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
@@ -143,7 +146,7 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   }
   return (
     <span
-      role="group" aria-label="Изменить статус"
+      role="group" aria-label={t('lore.sprintDetail.statusPicker.ariaLabel', 'Изменить статус')}
       style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
     >
       {opts.map(o => {
@@ -177,11 +180,13 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
   );
 }
 
-const PRIORITY_OPTS = [
-  { value: 'P0', label: 'P0 — критично', color: '#E24B4A' },
-  { value: 'P1', label: 'P1 — высокий',  color: '#ef9f27' },
-  { value: 'P2', label: 'P2 — обычный',  color: 'var(--t3)' },
-];
+function buildPriorityOpts(t: (k: string, d: string) => string) {
+  return [
+    { value: 'P0', label: t('lore.sprintDetail.priority.p0', 'P0 — критично'), color: '#E24B4A' },
+    { value: 'P1', label: t('lore.sprintDetail.priority.p1', 'P1 — высокий'),  color: '#ef9f27' },
+    { value: 'P2', label: t('lore.sprintDetail.priority.p2', 'P2 — обычный'),  color: 'var(--t3)' },
+  ];
+}
 
 function PriorityPicker({ sprintId, current, onChanged, onError }: {
   sprintId: string;
@@ -189,6 +194,8 @@ function PriorityPicker({ sprintId, current, onChanged, onError }: {
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
+  const { t } = useTranslation();
+  const PRIORITY_OPTS = buildPriorityOpts(t);
   const [busy, setBusy] = useState(false);
   async function set(next: string | null) {
     if (busy) return;
@@ -199,7 +206,7 @@ function PriorityPicker({ sprintId, current, onChanged, onError }: {
     finally { setBusy(false); }
   }
   return (
-    <span role="group" aria-label="Приоритет" style={{ display: 'inline-flex', gap: 2, opacity: busy ? 0.5 : 1 }}>
+    <span role="group" aria-label={t('lore.sprintDetail.priority.ariaLabel', 'Приоритет')} style={{ display: 'inline-flex', gap: 2, opacity: busy ? 0.5 : 1 }}>
       {PRIORITY_OPTS.map(o => {
         const sel = o.value === current;
         return (
@@ -228,34 +235,49 @@ const STATUS_COUNT_ORDER = [
   'done', 'ready_for_deploy', 'active', 'partial', 'design',
   'planned', 'todo', 'deferred', 'backlog', 'blocked', 'cancelled',
 ] as const;
-const STATUS_COUNT_LABEL: Record<string, string> = {
-  done: 'Готово', ready_for_deploy: 'К деплою', active: 'В работе', partial: 'Частично',
-  design: 'Дизайн', planned: 'Запланировано', todo: 'В плане', deferred: 'Отложено',
-  backlog: 'Беклог', blocked: 'Заблокировано', cancelled: 'Отменено',
-};
+function buildStatusCountLabel(t: (k: string, d: string) => string): Record<string, string> {
+  return {
+    done: t('lore.sprintDetail.status.done', 'Готово'),
+    ready_for_deploy: t('lore.sprintDetail.status.readyForDeploy', 'К деплою'),
+    active: t('lore.sprintDetail.status.active', 'В работе'),
+    partial: t('lore.sprintDetail.status.partial', 'Частично'),
+    design: t('lore.sprintDetail.status.design', 'Дизайн'),
+    planned: t('lore.sprintDetail.status.planned', 'Запланировано'),
+    todo: t('lore.sprintDetail.status.todoPlan', 'В плане'),
+    deferred: t('lore.sprintDetail.status.deferred', 'Отложено'),
+    backlog: t('lore.sprintDetail.status.backlog', 'Беклог'),
+    blocked: t('lore.sprintDetail.status.blocked', 'Заблокировано'),
+    cancelled: t('lore.sprintDetail.status.cancelled', 'Отменено'),
+  };
+}
 
 function StatusCounts({ tasks, filter, onFilter }: {
   tasks: LoreSprintTask[];
   filter: Set<string>;
   onFilter: (key: string) => void;
 }) {
+  const { t } = useTranslation();
+  const STATUS_COUNT_LABEL = buildStatusCountLabel(t);
   const counts: Record<string, number> = {};
-  for (const t of tasks) {
-    const k = taskTick(t.status_raw).status;
+  for (const t2 of tasks) {
+    const k = taskTick(t2.status_raw).status;
     counts[k] = (counts[k] ?? 0) + 1;
   }
   const shown = STATUS_COUNT_ORDER.filter(k => counts[k]);
   if (shown.length === 0) return null;
   return (
-    <span role="group" aria-label="Задачи по статусам (мультивыбор)"
+    <span role="group" aria-label={t('lore.sprintDetail.statusCounts.ariaLabel', 'Задачи по статусам (мультивыбор)')}
       style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
       {shown.map(k => {
         const meta = statusMeta(k);
         const active = filter.has(k);
+        const actionLabel = active
+          ? t('lore.sprintDetail.statusCounts.unset', 'снять')
+          : t('lore.sprintDetail.statusCounts.filter', 'фильтровать');
         return (
           <button
             key={k} type="button" aria-pressed={active}
-            title={`${STATUS_COUNT_LABEL[k]}: ${counts[k]} — ${active ? 'снять' : 'фильтровать'}`}
+            title={`${STATUS_COUNT_LABEL[k]}: ${counts[k]} — ${actionLabel}`}
             aria-label={`${STATUS_COUNT_LABEL[k]}: ${counts[k]}`}
             onClick={() => onFilter(k)}
             style={{
@@ -375,29 +397,30 @@ function mdHtml(md: string | null | undefined): string {
   return md && md.trim() ? (marked.parse(md) as string) : '';
 }
 
-function TaskLine({ t, allComps, onChanged, onError }: {
+function TaskLine({ t: task, allComps, onChanged, onError }: {
   t: LoreSprintTask;
   allComps: CompRow[];
   onChanged: () => void;
   onError: (e: unknown) => void;
 }) {
-  const meta = statusMeta(taskTick(t.status_raw).status);
-  const hasDetail = !!(t.note_md && t.note_md.trim());
+  const { t } = useTranslation();
+  const meta = statusMeta(taskTick(task.status_raw).status);
+  const hasDetail = !!(task.note_md && task.note_md.trim());
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [title, setTitle]     = useState(t.title ?? '');
-  const [note, setNote]       = useState(t.note_md ?? '');
+  const [title, setTitle]     = useState(task.title ?? '');
+  const [note, setNote]       = useState(task.note_md ?? '');
   const [busy, setBusy]       = useState(false);
   const [compPicker, setCompPicker] = useState(false);
   const [compBusy, setCompBusy]     = useState<string | null>(null);
-  const linkedIds = new Set(t.component_ids ?? []);
+  const linkedIds = new Set(task.component_ids ?? []);
 
   async function toggleComp(componentId: string) {
     if (compBusy) return;
     const action = linkedIds.has(componentId) ? 'remove' : 'add';
     setCompBusy(componentId);
     try {
-      await linkTaskComponent(t.task_uid, componentId, action);
+      await linkTaskComponent(task.task_uid, componentId, action);
       onChanged();
     } catch (e) { onError(e); }
     finally { setCompBusy(null); }
@@ -406,14 +429,14 @@ function TaskLine({ t, allComps, onChanged, onError }: {
   async function save() {
     if (busy || !title.trim()) return;
     setBusy(true);
-    try { await editLoreTask(t.task_uid, title.trim(), note); setEditing(false); onChanged(); }
+    try { await editLoreTask(task.task_uid, title.trim(), note); setEditing(false); onChanged(); }
     catch (e) { onError(e); }
     finally { setBusy(false); }
   }
   function cancel() {
     setEditing(false);
-    setTitle(t.title ?? '');
-    setNote(t.note_md ?? '');
+    setTitle(task.title ?? '');
+    setNote(task.note_md ?? '');
   }
 
   return (
@@ -423,8 +446,8 @@ function TaskLine({ t, allComps, onChanged, onError }: {
         onClick={() => { if (hasDetail && !editing) setExpanded(v => !v); }}
       >
         <GameIcon slug={meta.icon} size={13} style={{ color: meta.color, alignSelf: 'center' }} />
-        <span style={S.taskId}>{t.task_id}</span>
-        {t.title && <span style={{ color: 'var(--t1)' }}>{t.title}</span>}
+        <span style={S.taskId}>{task.task_id}</span>
+        {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (
           <span style={{ fontSize: 9, color: 'var(--t3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
         )}
@@ -446,17 +469,17 @@ function TaskLine({ t, allComps, onChanged, onError }: {
           );
         })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {t.effort_days != null && (
-            <span style={{ color: 'var(--t3)', fontSize: 10 }}>{t.effort_days}d</span>
+          {task.effort_days != null && (
+            <span style={{ color: 'var(--t3)', fontSize: 10 }}>{task.effort_days}d</span>
           )}
           <StatusPicker
-            entityType="task" id={t.task_uid}
-            current={toToken(taskTick(t.status_raw).status)}
+            entityType="task" id={task.task_uid}
+            current={toToken(taskTick(task.status_raw).status)}
             onChanged={onChanged} onError={onError}
           />
-          <button type="button" style={iconBtn} title="Компоненты"
+          <button type="button" style={iconBtn} title={t('lore.sprintDetail.task.componentsTitle', 'Компоненты')}
             onClick={e => { e.stopPropagation(); setCompPicker(v => !v); }}>⊕</button>
-          <button type="button" style={iconBtn} title="Редактировать"
+          <button type="button" style={iconBtn} title={t('lore.sprintDetail.task.editTitle', 'Редактировать')}
             onClick={e => { e.stopPropagation(); setEditing(v => !v); }}>✎</button>
         </span>
       </div>
@@ -488,19 +511,19 @@ function TaskLine({ t, allComps, onChanged, onError }: {
       {editing && (
         <div style={{ padding: '4px 8px 8px 26px', display: 'flex', flexDirection: 'column', gap: 5 }}>
           <input value={title} onChange={e => setTitle(e.target.value)}
-            placeholder="Заголовок" style={inputStyle} />
+            placeholder={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')} style={inputStyle} />
           <textarea value={note} onChange={e => setNote(e.target.value)}
-            placeholder="Описание (Markdown)" rows={5}
+            placeholder={t('lore.sprintDetail.task.descriptionPlaceholder', 'Описание (Markdown)')} rows={5}
             style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--mono)' }} />
           <div style={{ display: 'flex', gap: 6 }}>
-            <button type="button" style={primaryBtn} disabled={busy} onClick={save}>Сохранить</button>
-            <button type="button" style={ghostBtn} onClick={cancel}>Отмена</button>
+            <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>
+            <button type="button" style={ghostBtn} onClick={cancel}>{t('lore.sprintDetail.task.cancel', 'Отмена')}</button>
           </div>
         </div>
       )}
 
       {hasDetail && !editing && expanded && (
-        <div style={mdBox} dangerouslySetInnerHTML={{ __html: mdHtml(t.note_md) }} />
+        <div style={mdBox} dangerouslySetInnerHTML={{ __html: mdHtml(task.note_md) }} />
       )}
     </div>
   );
@@ -512,6 +535,7 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   onAdded: () => void;
   onError: (e: unknown) => void;
 }) {
+  const { t } = useTranslation();
   const [show, setShow]   = useState(false);
   const [tid, setTid]     = useState('');
   const [title, setTitle] = useState('');
@@ -530,17 +554,17 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   if (!show) {
     return (
       <button type="button" style={{ ...ghostBtn, marginTop: 8 }} onClick={() => setShow(true)}>
-        + задача
+        {t('lore.sprintDetail.addTask.trigger', '+ задача')}
       </button>
     );
   }
   return (
     <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
       <input value={tid} onChange={e => setTid(e.target.value)}
-        placeholder="ID (SH-10)" style={{ ...inputStyle, width: 110, fontFamily: 'var(--mono)' }} />
+        placeholder={t('lore.sprintDetail.addTask.idPlaceholder', 'ID (SH-10)')} style={{ ...inputStyle, width: 110, fontFamily: 'var(--mono)' }} />
       <input value={title} onChange={e => setTitle(e.target.value)}
-        placeholder="Заголовок" style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
-      <button type="button" style={primaryBtn} disabled={busy} onClick={add}>Добавить</button>
+        placeholder={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')} style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
+      <button type="button" style={primaryBtn} disabled={busy} onClick={add}>{t('lore.sprintDetail.addTask.submit', 'Добавить')}</button>
       <button type="button" style={ghostBtn} onClick={() => setShow(false)}>×</button>
     </div>
   );
@@ -576,6 +600,7 @@ function RelatedSprintRow({
 }
 
 export default function LoreSprintDetail({ sprintId, onError, onNavigateToComponent, onNavigateToSprint }: Props) {
+  const { t } = useTranslation();
   const [, setParams]         = useSearchParams();
   const [sprint,  setSprint]  = useState<SprintMeta | null>(null);
   const [allComps, setAllComps] = useState<CompRow[]>([]);
@@ -664,8 +689,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
     return () => ctrl.abort();
   }, [sprintId, onError, reloadKey]);
 
-  if (loading) return <div style={S.empty}>Загрузка {sprintId}…</div>;
-  if (!sprint)  return <div style={S.empty}>Спринт {sprintId} не найден.</div>;
+  if (loading) return <div style={S.empty}>{t('lore.sprintDetail.loading', 'Загрузка {{sprintId}}…', { sprintId })}</div>;
+  if (!sprint)  return <div style={S.empty}>{t('lore.sprintDetail.notFound', 'Спринт {{sprintId}} не найден.', { sprintId })}</div>;
 
   const status  = normalizeStatus(sprint.status_raw);
   const ghSlug  = sprint.git_projects?.[0] ?? 'NooriUta/AIDA';
@@ -730,10 +755,10 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
             <span style={S.meta}>{doneTotal}/{tasks.length}</span>
             {(() => {
-              const effortSum = visibleTasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
-              const label = filter.size > 0 ? 'выбр.' : 'Σ';
+              const effortSum = visibleTasks.reduce((s, tk) => s + (tk.effort_days ?? 0), 0);
+              const label = filter.size > 0 ? t('lore.sprintDetail.header.effortSelected', 'выбр.') : 'Σ';
               return effortSum > 0
-                ? <span style={S.meta} title="Сумма effort_days по отображаемым задачам">{label} <b style={{ color: 'var(--acc)' }}>{effortSum}</b> д</span>
+                ? <span style={S.meta} title={t('lore.sprintDetail.header.effortSumTitle', 'Сумма effort_days по отображаемым задачам')}>{label} <b style={{ color: 'var(--acc)' }}>{effortSum}</b> {t('lore.sprintDetail.header.daysAbbr', 'д')}</span>
                 : null;
             })()}
           </>
@@ -747,16 +772,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
       {releases.length > 0 && (
         <div style={S.prBar}>
-          <span style={S.prLabel}>Релиз</span>
+          <span style={S.prLabel}>{t('lore.sprintDetail.releaseBar.label', 'Релиз')}</span>
           {releases.map(v => (
             <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={`Перейти к релизу ${v}`}>
+              <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={t('lore.sprintDetail.releaseBar.goToRelease', 'Перейти к релизу {{v}}', { v })}>
                 {v}
               </button>
               <a
                 href={`${ghBase}/releases/tag/${v}`}
                 target="_blank" rel="noopener noreferrer"
-                style={S.ghLink} title={`GitHub Release ${v}`}
+                style={S.ghLink} title={t('lore.sprintDetail.releaseBar.githubRelease', 'GitHub Release {{v}}', { v })}
               ><GhIcon /></a>
             </span>
           ))}
@@ -765,7 +790,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
       {prNums.length > 0 && (
         <div style={S.prBar}>
-          <span style={S.prLabel}>PR</span>
+          <span style={S.prLabel}>{t('lore.sprintDetail.prBar.label', 'PR')}</span>
           {prNums.map(n => (
             <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>
               #{n}
@@ -783,30 +808,30 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           context — flexShrink:0 — pushes the flex:1 task list toward 0 height). */}
       <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px', maxHeight: 220, overflowY: 'auto' as const }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Контекст</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.context.label', 'Контекст')}</span>
           {!ctxEdit && (
             <button onClick={() => { setCtxDraft(sprint.context_md ?? ''); setCtxEdit(true); }}
-              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>✎ ред.</button>
+              style={{ fontSize: 10, padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>{t('lore.sprintDetail.context.editButton', '✎ ред.')}</button>
           )}
         </div>
         {ctxEdit ? (
           <div>
             <textarea value={ctxDraft} onChange={e => setCtxDraft(e.target.value)} rows={6}
-              placeholder="Зачем этот спринт, ключевые решения, ссылки на ADR/доки..."
+              placeholder={t('lore.sprintDetail.context.placeholder', 'Зачем этот спринт, ключевые решения, ссылки на ADR/доки...')}
               style={{ width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }} />
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
               <button disabled={ctxSaving} onClick={async () => {
                 setCtxSaving(true);
                 try { await updateLoreSprint(sprint.sprint_id, { context_md: ctxDraft || null }); setSprint(s => s ? { ...s, context_md: ctxDraft || null } : s); setCtxEdit(false); }
                 catch (e) { onError(e); } finally { setCtxSaving(false); }
-              }} style={{ fontSize: 11, padding: '2px 10px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer' }}>{ctxSaving ? '…' : 'Сохранить'}</button>
-              <button onClick={() => setCtxEdit(false)} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>Отмена</button>
+              }} style={{ fontSize: 11, padding: '2px 10px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer' }}>{ctxSaving ? '…' : t('lore.sprintDetail.context.save', 'Сохранить')}</button>
+              <button onClick={() => setCtxEdit(false)} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>{t('lore.sprintDetail.context.cancel', 'Отмена')}</button>
             </div>
           </div>
         ) : sprint.context_md ? (
           <div style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: marked.parse(sprint.context_md) as string }} />
         ) : (
-          <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>Контекст не заполнен</div>
+          <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>{t('lore.sprintDetail.context.empty', 'Контекст не заполнен')}</div>
         )}
       </div>
 
@@ -821,7 +846,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         return (
           <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проекты</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.projects.label', 'Проекты')}</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
               {linked.map(g => (
@@ -841,7 +866,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
                       fontSize: 10, padding: 0, lineHeight: 1, opacity: 0.7 }}
-                    title={`Отвязать ${g}`}
+                    title={t('lore.sprintDetail.projects.unlink', 'Отвязать {{g}}', { g })}
                   >✕</button>
                 </span>
               ))}
@@ -866,7 +891,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}
                 >
-                  <option value="">+ привязать…</option>
+                  <option value="">{t('lore.sprintDetail.projects.linkPlaceholder', '+ привязать…')}</option>
                   {unlinked.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
                 </select>
               )}
@@ -884,7 +909,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <GameIcon slug="crossed-axes" size={11} style={{ color: 'var(--t3)' }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Вехи</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.milestones.label', 'Вехи')}</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
               {linked.map(mid => (
@@ -901,7 +926,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                       } catch (e) { onError(e); } finally { setMsLinking(false); }
                     }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 10, padding: 0, lineHeight: 1, opacity: 0.7 }}
-                    title={`Отвязать ${mid}`}>✕</button>
+                    title={t('lore.sprintDetail.milestones.unlink', 'Отвязать {{mid}}', { mid })}>✕</button>
                 </span>
               ))}
               {unlinked.length > 0 && (
@@ -920,11 +945,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     appearance: 'none' as const,
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath fill='%23888' d='M0 0l4 6 4-6z'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat', backgroundPosition: 'right 5px center' }}>
-                  <option value="">+ привязать веху…</option>
+                  <option value="">{t('lore.sprintDetail.milestones.linkPlaceholder', '+ привязать веху…')}</option>
                   {unlinked.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
                 </select>
               )}
-              {linked.length === 0 && unlinked.length === 0 && <span style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' }}>нет вех</span>}
+              {linked.length === 0 && unlinked.length === 0 && <span style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' }}>{t('lore.sprintDetail.milestones.empty', 'нет вех')}</span>}
               {msLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
             </div>
           </div>
@@ -943,7 +968,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         return (
           <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Модули</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.modules.label', 'Модули')}</span>
               {linkedComps.length > 0 && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{linkedComps.length}</span>}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
@@ -961,7 +986,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     <button
                       onClick={onNavigateToComponent ? () => onNavigateToComponent(c.component_id) : undefined}
                       disabled={!onNavigateToComponent}
-                      title={onNavigateToComponent ? `Открыть ${c.full_name ?? c.component_id}` : (c.full_name ?? c.component_id)}
+                      title={onNavigateToComponent ? t('lore.sprintDetail.modules.openTitle', 'Открыть {{name}}', { name: c.full_name ?? c.component_id }) : (c.full_name ?? c.component_id)}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
                         color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
                     >
@@ -971,7 +996,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     {isExplicit && (
                       <button
                         disabled={compLinking}
-                        title={`Отвязать ${c.component_id}`}
+                        title={t('lore.sprintDetail.modules.unlink', 'Отвязать {{cid}}', { cid: c.component_id })}
                         onClick={async () => {
                           setCompLinking(true);
                           try {
@@ -1003,7 +1028,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                   }}
                   style={selectStyle}
                 >
-                  <option value="">+ привязать…</option>
+                  <option value="">{t('lore.sprintDetail.modules.linkPlaceholder', '+ привязать…')}</option>
                   {unlinkedComps.map(c => <option key={c.component_id} value={c.component_id}>{c.component_id}</option>)}
                 </select>
               )}
@@ -1022,7 +1047,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         {/* Phases (when present) each with their tasks */}
         {phases.length > 0 && (
           <>
-            <div style={S.sectionLabel}>Фазы ({phases.length})</div>
+            <div style={S.sectionLabel}>{t('lore.sprintDetail.phases.sectionLabel', 'Фазы ({{count}})', { count: phases.length })}</div>
             {phases.map(p => {
               const phaseTasks = byPhase.get(p.phase_uid) ?? [];
               if (filter && phaseTasks.length === 0) return null;
@@ -1035,14 +1060,14 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                       <span style={{ ...S.meta, marginLeft: 8 }}>{p.valid_from.slice(0, 10)}</span>
                     )}
                     {phaseTasks.length > 0 && (
-                      <span style={{ ...S.meta, marginLeft: 6 }}>· {phaseTasks.length} задач</span>
+                      <span style={{ ...S.meta, marginLeft: 6 }}>{t('lore.sprintDetail.phases.taskCount', '· {{count}} задач', { count: phaseTasks.length })}</span>
                     )}
                   </div>
                   {p.summary_md && <p style={S.phaseSummary}>{p.summary_md}</p>}
                   {phaseTasks.length > 0 && (
                     <div style={{ marginTop: 4 }}>
-                      {phaseTasks.map(t => (
-                        <TaskLine key={t.task_uid} t={t} allComps={allComps} onChanged={reload} onError={onError} />
+                      {phaseTasks.map(tk => (
+                        <TaskLine key={tk.task_uid} t={tk} allComps={allComps} onChanged={reload} onError={onError} />
                       ))}
                     </div>
                   )}
@@ -1055,24 +1080,24 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         {/* Tasks not bound to any phase — the common case (most sprints have no phases) */}
         {orphanTasks.length > 0 && (
           <div style={{ marginTop: phases.length > 0 ? 12 : 0 }}>
-            <div style={S.sectionLabel}>Задачи ({orphanTasks.length})</div>
-            {orphanTasks.map(t => (
-              <TaskLine key={t.task_uid} t={t} allComps={allComps} onChanged={reload} onError={onError} />
+            <div style={S.sectionLabel}>{t('lore.sprintDetail.tasks.sectionLabel', 'Задачи ({{count}})', { count: orphanTasks.length })}</div>
+            {orphanTasks.map(tk => (
+              <TaskLine key={tk.task_uid} t={tk} allComps={allComps} onChanged={reload} onError={onError} />
             ))}
           </div>
         )}
 
         {/* Effort footer */}
         {visibleTasks.length > 0 && (() => {
-          const effortSum = visibleTasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
-          const effortTotal = tasks.reduce((s, t) => s + (t.effort_days ?? 0), 0);
+          const effortSum = visibleTasks.reduce((s, tk) => s + (tk.effort_days ?? 0), 0);
+          const effortTotal = tasks.reduce((s, tk) => s + (tk.effort_days ?? 0), 0);
           if (effortSum === 0) return null;
           return (
             <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--t3)' }}>
-              <span>Итого effort:</span>
-              <b style={{ color: 'var(--acc)', fontFamily: 'var(--mono)' }}>{effortSum} д</b>
+              <span>{t('lore.sprintDetail.effortFooter.label', 'Итого effort:')}</span>
+              <b style={{ color: 'var(--acc)', fontFamily: 'var(--mono)' }}>{t('lore.sprintDetail.effortFooter.days', '{{sum}} д', { sum: effortSum })}</b>
               {filter.size > 0 && effortTotal !== effortSum && (
-                <span style={{ color: 'var(--t3)' }}>/ {effortTotal} д всего</span>
+                <span style={{ color: 'var(--t3)' }}>{t('lore.sprintDetail.effortFooter.ofTotal', '/ {{total}} д всего', { total: effortTotal })}</span>
               )}
             </div>
           );
@@ -1080,15 +1105,15 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
         {/* Truly empty sprint */}
         {phases.length === 0 && tasks.length === 0 && (
-          <div style={S.empty}>Задачи не заведены.</div>
+          <div style={S.empty}>{t('lore.sprintDetail.tasks.emptyState', 'Задачи не заведены.')}</div>
         )}
 
         {/* Filter matched nothing (sprint has tasks, just none in the picked status) */}
         {filter.size > 0 && tasks.length > 0 && visibleTasks.length === 0 && (
           <div style={S.empty}>
-            Нет задач с выбранными статусами.{' '}
+            {t('lore.sprintDetail.tasks.filterEmpty', 'Нет задач с выбранными статусами.')}{' '}
             <button type="button" onClick={() => setFilter(new Set())}
-              style={{ ...ghostBtn, padding: '1px 6px' }}>сбросить фильтр</button>
+              style={{ ...ghostBtn, padding: '1px 6px' }}>{t('lore.sprintDetail.tasks.resetFilter', 'сбросить фильтр')}</button>
           </div>
         )}
 
@@ -1096,14 +1121,14 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
         {sprint.depends_on?.length ? (
           <div style={S.deps}>
-            <div style={S.sectionLabel}>Зависит от</div>
+            <div style={S.sectionLabel}>{t('lore.sprintDetail.deps.dependsOn', 'Зависит от')}</div>
             {sprint.depends_on.map(d => <RelatedSprintRow key={d} id={d} meta={relatedMeta.get(d)} onNavigate={onNavigateToSprint} />)}
           </div>
         ) : null}
 
         {sprint.blocks?.length ? (
           <div style={S.deps}>
-            <div style={{ ...S.sectionLabel, color: 'var(--wrn)' }}>Блокирует</div>
+            <div style={{ ...S.sectionLabel, color: 'var(--wrn)' }}>{t('lore.sprintDetail.deps.blocks', 'Блокирует')}</div>
             {sprint.blocks.map(d => <RelatedSprintRow key={d} id={d} meta={relatedMeta.get(d)} onNavigate={onNavigateToSprint} accent="var(--wrn)" />)}
           </div>
         ) : null}

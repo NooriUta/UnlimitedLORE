@@ -3,6 +3,7 @@
 // Wraps lore_create_publication/lore_create_variant (MCP-01) via their
 // backend endpoints directly (same convention as LoreSprintEditor).
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
 import TipTapField from './TipTapField';
@@ -84,6 +85,7 @@ function variantsFromEditData(d: LoreBragiPublicationEditData): VariantDraft[] {
 }
 
 export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialPublishedAt, editing, readOnly = false }: LoreBragiPublicationEditorProps) {
+  const { t } = useTranslation();
   const [publicationId, setPublicationId] = useState(editing?.publication_id ?? '');
   const [title, setTitle] = useState(editing?.title ?? '');
   const [topic, setTopic] = useState(editing?.topic ?? '');
@@ -117,8 +119,8 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
   const handleSave = async () => {
     const id = publicationId.trim();
-    if (!id) { setErrMsg('Publication ID обязателен'); return; }
-    if (!title.trim()) { setErrMsg('Название обязательно'); return; }
+    if (!id) { setErrMsg(t('bragi.publicationEditor.errPublicationIdRequired', 'Publication ID обязателен')); return; }
+    if (!title.trim()) { setErrMsg(t('bragi.publicationEditor.errTitleRequired', 'Название обязательно')); return; }
     setSaving(true);
     setErrMsg(null);
     try {
@@ -155,13 +157,19 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
     <div style={S.root}>
       <div style={S.head}>
         <span style={S.title}>
-          {readOnly ? 'Просмотр публикации' : editing ? 'Редактирование публикации' : 'Новая публикация'}
+          {readOnly
+            ? t('bragi.publicationEditor.titleView', 'Просмотр публикации')
+            : editing
+              ? t('bragi.publicationEditor.titleEdit', 'Редактирование публикации')
+              : t('bragi.publicationEditor.titleNew', 'Новая публикация')}
         </span>
         <div style={S.headBtns}>
-          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>{readOnly ? 'Закрыть' : 'Отмена'}</button>
+          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>
+            {readOnly ? t('bragi.publicationEditor.btnClose', 'Закрыть') : t('bragi.publicationEditor.btnCancel', 'Отмена')}
+          </button>
           {!readOnly && (
             <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
-              {saving ? 'Сохранение…' : 'Сохранить'}
+              {saving ? t('bragi.publicationEditor.btnSaving', 'Сохранение…') : t('bragi.publicationEditor.btnSave', 'Сохранить')}
             </button>
           )}
         </div>
@@ -170,7 +178,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
 
       <div style={S.row4}>
-        <Field label="Publication ID" grow={1}>
+        <Field label={t('bragi.publicationEditor.fieldPublicationId', 'Publication ID')} grow={1}>
           <input
             style={{ ...S.input, opacity: editing || readOnly ? 0.6 : 1 }}
             value={publicationId}
@@ -179,36 +187,36 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
             onChange={e => setPublicationId(e.target.value)}
           />
         </Field>
-        <Field label="Название" grow={3}>
-          <input style={S.input} value={title} placeholder="Заголовок публикации" disabled={readOnly} onChange={e => setTitle(e.target.value)} />
+        <Field label={t('bragi.publicationEditor.fieldTitle', 'Название')} grow={3}>
+          <input style={S.input} value={title} placeholder={t('bragi.publicationEditor.placeholderTitle', 'Заголовок публикации')} disabled={readOnly} onChange={e => setTitle(e.target.value)} />
         </Field>
-        <Field label="Тип" grow={1}>
+        <Field label={t('bragi.publicationEditor.fieldType', 'Тип')} grow={1}>
           <input style={S.input} value={type} disabled={readOnly} onChange={e => setType(e.target.value)} />
         </Field>
-        <Field label="Статус" grow={1}>
+        <Field label={t('bragi.publicationEditor.fieldStatus', 'Статус')} grow={1}>
           <select style={S.input} value={status} disabled={readOnly} onChange={e => setStatus(e.target.value)}>
-            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            {STATUSES.map(s => <option key={s} value={s}>{t('bragi.publicationEditor.status.' + s, s)}</option>)}
           </select>
         </Field>
       </div>
 
       <div style={S.row4}>
-        <Field label="Ключ (тема)" grow={2}>
+        <Field label={t('bragi.publicationEditor.fieldTopic', 'Ключ (тема)')} grow={2}>
           <input style={S.input} value={topic} placeholder="AI governance" disabled={readOnly} onChange={e => setTopic(e.target.value)} />
         </Field>
-        <Field label="Рубрика" grow={1}>
+        <Field label={t('bragi.publicationEditor.fieldRubric', 'Рубрика')} grow={1}>
           <select style={S.input} value={rubricId} disabled={readOnly} onChange={e => setRubricId(e.target.value)}>
-            <option value="">— рубрика —</option>
+            <option value="">{t('bragi.publicationEditor.rubricPlaceholder', '— рубрика —')}</option>
             {rubrics.map(r => <option key={r.rubric_id} value={r.rubric_id}>{r.name}</option>)}
           </select>
         </Field>
       </div>
 
-      <Sec label="Main-текст">
-        <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder="Мастер-версия текста…" editable={!readOnly} />
+      <Sec label={t('bragi.publicationEditor.sectionMainText', 'Main-текст')}>
+        <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder={t('bragi.publicationEditor.placeholderMainText', 'Мастер-версия текста…')} editable={!readOnly} />
       </Sec>
 
-      <Sec label="Ключевые слова">
+      <Sec label={t('bragi.publicationEditor.sectionKeywords', 'Ключевые слова')}>
         {readOnly ? (
           <div style={S.readOnlyChips}>
             {keywordIds.length
@@ -227,21 +235,21 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         )}
       </Sec>
 
-      <Sec label="Вариации по площадкам">
+      <Sec label={t('bragi.publicationEditor.sectionVariants', 'Вариации по площадкам')}>
         {variants.map((v, i) => (
           <div key={i} style={S.variantBlock}>
             <div style={S.variantRow}>
               <select style={S.variantSelect} value={v.channel_id} disabled={readOnly} onChange={e => setVariant(i, { channel_id: e.target.value })}>
-                <option value="">— площадка —</option>
+                <option value="">{t('bragi.publicationEditor.channelPlaceholder', '— площадка —')}</option>
                 {channels.map(c => <option key={c.channel_id} value={c.channel_id}>{c.channel_id}</option>)}
               </select>
               <select style={S.variantSelectSm} value={v.status} disabled={readOnly} onChange={e => setVariant(i, { status: e.target.value })}>
-                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                {STATUSES.map(s => <option key={s} value={s}>{t('bragi.publicationEditor.status.' + s, s)}</option>)}
               </select>
               <input style={S.variantInputSm} type="date" value={v.published_at} disabled={readOnly}
                 onChange={e => setVariant(i, { published_at: e.target.value })} />
               {!readOnly && (
-                <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>×</button>
+                <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>{t('bragi.publicationEditor.btnRemoveVariant', '×')}</button>
               )}
             </div>
             <label style={S.sameAsMainLabel}>
@@ -251,14 +259,14 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
                 disabled={readOnly}
                 onChange={e => setVariant(i, { sameAsMain: e.target.checked })}
               />
-              текст как в main-тексте
+              {t('bragi.publicationEditor.sameAsMainLabel', 'текст как в main-тексте')}
             </label>
             {!v.sameAsMain && (
-              <TipTapField value={v.text_md} onChange={t => setVariant(i, { text_md: t })} minHeight={60} placeholder="текст вариации…" editable={!readOnly} />
+              <TipTapField value={v.text_md} onChange={txt => setVariant(i, { text_md: txt })} minHeight={60} placeholder={t('bragi.publicationEditor.placeholderVariantText', 'текст вариации…')} editable={!readOnly} />
             )}
           </div>
         ))}
-        {!readOnly && <button style={S.addVariantBtn} onClick={addVariant}>+ площадка</button>}
+        {!readOnly && <button style={S.addVariantBtn} onClick={addVariant}>{t('bragi.publicationEditor.btnAddVariant', '+ площадка')}</button>}
       </Sec>
     </div>
   );

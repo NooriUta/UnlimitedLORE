@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreSprintRow } from '../../api/lore';
 import { statusMeta } from './lore-status';
 import { GameIcon } from './GameIcon';
@@ -28,17 +29,17 @@ function projColor(slug: string, allSlugs: string[]): string {
 type SortMode = 'date' | 'release' | 'project' | 'priority';
 
 export const STATUS_FILTERS = [
-  { key: 'done',             label: 'Готово'        },
-  { key: 'in_progress',      label: 'В работе'      },
-  { key: 'partial',          label: 'Частично'      },
-  { key: 'ready_for_deploy', label: 'К деплою'      },
-  { key: 'planned',          label: 'Запланировано' },
-  { key: 'todo',             label: 'TODO'          },
-  { key: 'design',           label: 'Дизайн'        },
-  { key: 'backlog',          label: 'Беклог'        },
-  { key: 'blocked',          label: 'Заблокировано' },
-  { key: 'deferred',         label: 'Отложено'      },
-  { key: 'cancelled',        label: 'Отменено'      },
+  { key: 'done',             label: 'Готово',        labelKey: 'lore.sprintTree.statusFilter.done'           },
+  { key: 'in_progress',      label: 'В работе',      labelKey: 'lore.sprintTree.statusFilter.inProgress'     },
+  { key: 'partial',          label: 'Частично',      labelKey: 'lore.sprintTree.statusFilter.partial'        },
+  { key: 'ready_for_deploy', label: 'К деплою',      labelKey: 'lore.sprintTree.statusFilter.readyForDeploy' },
+  { key: 'planned',          label: 'Запланировано', labelKey: 'lore.sprintTree.statusFilter.planned'        },
+  { key: 'todo',             label: 'TODO',          labelKey: 'lore.sprintTree.statusFilter.todo'           },
+  { key: 'design',           label: 'Дизайн',        labelKey: 'lore.sprintTree.statusFilter.design'         },
+  { key: 'backlog',          label: 'Беклог',        labelKey: 'lore.sprintTree.statusFilter.backlog'        },
+  { key: 'blocked',          label: 'Заблокировано', labelKey: 'lore.sprintTree.statusFilter.blocked'        },
+  { key: 'deferred',         label: 'Отложено',      labelKey: 'lore.sprintTree.statusFilter.deferred'       },
+  { key: 'cancelled',        label: 'Отменено',      labelKey: 'lore.sprintTree.statusFilter.cancelled'      },
 ];
 
 export interface SprintStats {
@@ -129,6 +130,7 @@ interface Props {
 }
 
 export default function LoreSprintTree({ module: _module, q, statusFilter, priorityFilter, noRelease, datePeriod, selectedId, onError, onSelect, onCounts, onStats }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]           = useState<LoreSprintRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -138,6 +140,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
   const statusSel   = statusFilter   ?? new Set<string>();
   const prioritySel = priorityFilter ?? new Set<string>();
   const [projSel, setProjSel]     = useState<Set<string>>(new Set());
+  const [compSel, setCompSel]     = useState<Set<string>>(new Set());
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -156,6 +159,13 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
   const allProjects = useMemo(() => {
     const set = new Set<string>();
     rows.forEach(s => s.git_projects?.forEach(g => set.add(g)));
+    return [...set].sort();
+  }, [rows]);
+
+  // All unique component ids present in the data
+  const allComponents = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach(s => s.components?.forEach(c => set.add(c)));
     return [...set].sort();
   }, [rows]);
 
@@ -183,6 +193,12 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
     return c;
   }, [rows]);
 
+  const compCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    rows.forEach(s => s.components?.forEach(comp => { c[comp] = (c[comp] || 0) + 1; }));
+    return c;
+  }, [rows]);
+
   const visible = useMemo(() => {
     const qLow = q?.toLowerCase() ?? '';
     const now = new Date();
@@ -200,6 +216,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
           !(s.context_md ?? '').toLowerCase().includes(qLow)) return false;
       if (statusSel.size > 0 && !statusSel.has(normalizeStatus(s.status_raw))) return false;
       if (projSel.size > 0 && !s.git_projects?.some(g => projSel.has(g))) return false;
+      if (compSel.size > 0 && !s.components?.some(c => compSel.has(c))) return false;
       if (prioritySel.size > 0 && !prioritySel.has(s.priority ?? '')) return false;
       if (noRelease && (s.release_ids?.length ?? 0) > 0) return false;
       if (cutoff) {
@@ -235,10 +252,13 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
       return sortDesc ? db.localeCompare(da) : da.localeCompare(db);
     });
     return v;
-  }, [rows, q, statusSel, prioritySel, projSel, noRelease, datePeriod, sortMode, sortDesc]);
+  }, [rows, q, statusSel, prioritySel, projSel, compSel, noRelease, datePeriod, sortMode, sortDesc]);
 
   const toggleProj = (g: string) => setProjSel(p => {
     const n = new Set(p); n.has(g) ? n.delete(g) : n.add(g); return n;
+  });
+  const toggleComp = (c: string) => setCompSel(p => {
+    const n = new Set(p); n.has(c) ? n.delete(c) : n.add(c); return n;
   });
   const cycleSort = (mode: SortMode) => {
     if (sortMode === mode) setSortDesc(d => !d);
@@ -248,33 +268,33 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
   const refresh = () => setReloadKey(k => k + 1);
 
   if (loading) return <LoreSkeleton />;
-  if (!rows.length) return <div style={S.empty}>Спринты не найдены.</div>;
+  if (!rows.length) return <div style={S.empty}>{t('lore.sprintTree.noSprints', 'Спринты не найдены.')}</div>;
 
   return (
     <div style={S.wrap}>
       {/* ── Toolbar: sort + refresh ────────────────────── */}
       <div style={S.toolbar}>
         <button style={S.sortBtn(sortMode === 'date')}
-          onClick={() => cycleSort('date')} title="Сортировка по дате">
-          Дата {sortMode === 'date' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('date')} title={t('lore.sprintTree.sortByDate', 'Сортировка по дате')}>
+          {t('lore.sprintTree.sortDate', 'Дата')} {sortMode === 'date' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
         <button style={S.sortBtn(sortMode === 'release')}
-          onClick={() => cycleSort('release')} title="Сортировка по релизу">
-          Релиз {sortMode === 'release' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('release')} title={t('lore.sprintTree.sortByRelease', 'Сортировка по релизу')}>
+          {t('lore.sprintTree.sortRelease', 'Релиз')} {sortMode === 'release' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
         <button style={S.sortBtn(sortMode === 'project')}
-          onClick={() => cycleSort('project')} title="Сортировка по проекту">
-          Проект {sortMode === 'project' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('project')} title={t('lore.sprintTree.sortByProject', 'Сортировка по проекту')}>
+          {t('lore.sprintTree.sortProject', 'Проект')} {sortMode === 'project' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
         <button style={S.sortBtn(sortMode === 'priority')}
-          onClick={() => cycleSort('priority')} title="Сортировка по приоритету">
-          Приоритет {sortMode === 'priority' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('priority')} title={t('lore.sprintTree.sortByPriority', 'Сортировка по приоритету')}>
+          {t('lore.sprintTree.sortPriority', 'Приоритет')} {sortMode === 'priority' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
 
         <button
           style={S.refreshBtn}
           onClick={refresh}
-          title="Обновить список спринтов"
+          title={t('lore.sprintTree.refreshTitle', 'Обновить список спринтов')}
           disabled={refreshing}
         >
           <span style={refreshing ? S.spinning : undefined}>↺</span>
@@ -297,6 +317,31 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
               </span>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Component filter pills ─────────────────────── */}
+      {allComponents.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '5px 8px 4px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+          {allComponents.map(comp => {
+            const on = compSel.has(comp);
+            return (
+              <span key={comp} style={S.projChip(on, 'var(--acc)')}
+                onClick={() => toggleComp(comp)}
+                title={`${comp} (${compCounts[comp] ?? 0})`}>
+                {comp}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{compCounts[comp] ?? 0}</span>
+              </span>
+            );
+          })}
+          {compSel.size > 0 && (
+            <span
+              onClick={() => setCompSel(new Set())}
+              style={{ fontSize: 10, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+            >
+              ✕ {t('lore.sprintTree.resetComponents', 'сброс компонентов')}
+            </span>
+          )}
         </div>
       )}
 
@@ -355,7 +400,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
             </div>
           );
         })}
-        {visible.length === 0 && <div style={S.empty}>Ничего не найдено.</div>}
+        {visible.length === 0 && <div style={S.empty}>{t('lore.sprintTree.nothingFound', 'Ничего не найдено.')}</div>}
       </div>
 
       <style>{`

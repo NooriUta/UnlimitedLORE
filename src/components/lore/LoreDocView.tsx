@@ -2,6 +2,7 @@
 // Docs slice (list): GET /lore/slice/docs
 // Doc detail (lazy): GET /lore/slice/doc_by_id?id=<doc_id>
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchLoreDoc, type LoreKnowDocRow, type LoreKnowDoc } from '../../api/lore';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function LoreDocView({ onError }: Props) {
+  const { t } = useTranslation();
   const [docs,       setDocs]       = useState<LoreKnowDocRow[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [selected,   setSelected]   = useState<LoreKnowDoc | null>(null);
@@ -46,15 +48,15 @@ export default function LoreDocView({ onError }: Props) {
           <input
             value={filter}
             onChange={e => setFilter(e.target.value)}
-            placeholder="Фильтр документов…"
+            placeholder={t('lore.docView.filterPlaceholder', 'Фильтр документов…')}
             style={S.filterInp}
           />
           <span style={S.listCount}>{filtered.length} / {docs.length}</span>
         </div>
-        {loading && <div style={S.msg}>Загрузка документов…</div>}
+        {loading && <div style={S.msg}>{t('lore.docView.loadingDocs', 'Загрузка документов…')}</div>}
         {!loading && docs.length === 0 && (
           <div style={S.msg}>
-            KnowDoc ещё не наполнен (Phase 5 LAL-30).
+            {t('lore.docView.emptyKnowDoc', 'KnowDoc ещё не наполнен (Phase 5 LAL-30).')}
           </div>
         )}
         {filtered.map(doc => (
@@ -73,8 +75,8 @@ export default function LoreDocView({ onError }: Props) {
             <div style={S.docMeta}>
               {doc.kind && <span style={S.kindChip(doc.kind)}>{doc.kind}</span>}
               {doc.has_ext_deps && (
-                <span style={S.extWarn} title="Документ содержит внешние зависимости (CDN)">
-                  ⚠ CDN
+                <span style={S.extWarn} title={t('lore.docView.extDepsTitle', 'Документ содержит внешние зависимости (CDN)')}>
+                  {t('lore.docView.extDepsBadge', '⚠ CDN')}
                 </span>
               )}
               {doc.component_id && (
@@ -89,10 +91,10 @@ export default function LoreDocView({ onError }: Props) {
       <div style={S.detail}>
         {!selected && !loadingDoc && (
           <div style={S.detailEmpty}>
-            Выберите документ из списка слева.
+            {t('lore.docView.selectPrompt', 'Выберите документ из списка слева.')}
           </div>
         )}
-        {loadingDoc && <div style={S.msg}>Загрузка документа…</div>}
+        {loadingDoc && <div style={S.msg}>{t('lore.docView.loadingDoc', 'Загрузка документа…')}</div>}
         {selected && !loadingDoc && (
           <>
             <div style={S.detailHdr}>
@@ -104,15 +106,14 @@ export default function LoreDocView({ onError }: Props) {
               </span>
               {selected.has_ext_deps && (
                 <div style={S.extBanner}>
-                  ⚠ Документ ссылается на внешние ресурсы (CDN). В air-gap среде они недоступны.
-                  CSP блокирует внешние загрузки — внешние стили/скрипты не применятся.
+                  {t('lore.docView.extDepsBanner', '⚠ Документ ссылается на внешние ресурсы (CDN). В air-gap среде они недоступны. CSP блокирует внешние загрузки — внешние стили/скрипты не применятся.')}
                 </div>
               )}
             </div>
             <div style={S.detailBody}>
               {selected.content_html
                 ? <SandboxedHtmlFrame html={selected.content_html} title={selected.title ?? selected.doc_id} />
-                : <div style={S.msg}>Документ не содержит HTML-контент.</div>
+                : <div style={S.msg}>{t('lore.docView.noHtmlContent', 'Документ не содержит HTML-контент.')}</div>
               }
             </div>
           </>

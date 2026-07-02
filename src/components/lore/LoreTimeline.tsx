@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreTimelineItem } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
@@ -6,9 +7,6 @@ import { GameIcon } from './GameIcon';
 // game-icons slugs per timeline kind (uniform with the sidebar sections)
 const KIND_ICON: Record<string, string> = {
   adr: 'scroll-quill', decision: 'vote', release: 'rocket', sprint: 'sprint',
-};
-const KIND_LABEL: Record<string, string> = {
-  adr: 'ADR', decision: 'Решения', release: 'Релизы', sprint: 'Спринты',
 };
 const ALL_KINDS = ['adr', 'decision', 'release', 'sprint'] as const;
 type Kind = typeof ALL_KINDS[number];
@@ -67,6 +65,13 @@ interface Props {
 }
 
 export default function LoreTimeline({ module, q, onError, onSelect, onSelectSprint }: Props) {
+  const { t } = useTranslation();
+  const KIND_LABEL: Record<string, string> = {
+    adr: 'ADR',
+    decision: t('lore.timeline.kindDecision', 'Решения'),
+    release: t('lore.timeline.kindRelease', 'Релизы'),
+    sprint: t('lore.timeline.kindSprint', 'Спринты'),
+  };
   const [allItems, setAllItems] = useState<LoreTimelineItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [kindSel, setKindSel]   = useState<Set<Kind>>(new Set());
@@ -156,13 +161,13 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
         })}
         {module && (
           <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 4 }}>
-            · фильтр по модулю {module} — только ADR
+            {t('lore.timeline.moduleFilter', '· фильтр по модулю {{module}} — только ADR', { module })}
           </span>
         )}
       </div>
       <div style={S.list}>
-        {loading && <div style={S.loading}>Загрузка событий…</div>}
-        {!loading && !items.length && <div style={S.empty}>Событий не найдено.</div>}
+        {loading && <div style={S.loading}>{t('lore.timeline.loading', 'Загрузка событий…')}</div>}
+        {!loading && !items.length && <div style={S.empty}>{t('lore.timeline.empty', 'Событий не найдено.')}</div>}
         {items.map((item, i) => {
           const isSprint  = item.kind === 'sprint';
           const clickable = item.kind === 'adr' || item.kind === 'decision'

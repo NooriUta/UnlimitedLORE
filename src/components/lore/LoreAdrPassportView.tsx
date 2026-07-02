@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreAdrPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import LoreAdrEditor from './LoreAdrEditor';
@@ -57,6 +58,7 @@ interface Props {
 }
 
 export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate }: Props) {
+  const { t } = useTranslation();
   const [data, setData]       = useState<LoreAdrPassport | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -73,8 +75,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adrId, reload]);
 
-  if (loading) return <div style={S.empty}>Загрузка {adrId}…</div>;
-  if (!data)   return <div style={S.empty}>ADR не найден: {adrId}</div>;
+  if (loading) return <div style={S.empty}>{t('lore.adrPassportView.loading', 'Загрузка {{adrId}}…', { adrId })}</div>;
+  if (!data)   return <div style={S.empty}>{t('lore.adrPassportView.notFound', 'ADR не найден: {{adrId}}', { adrId })}</div>;
 
   if (editing) {
     return (
@@ -109,8 +111,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   return (
     <div style={S.root}>
       <div style={S.topBar}>
-        <button style={S.back} onClick={onBack}>← К списку</button>
-        <button style={S.editBtn} onClick={() => setEditing(true)}>✎ Редактировать</button>
+        <button style={S.back} onClick={onBack}>{t('lore.adrPassportView.backToList', '← К списку')}</button>
+        <button style={S.editBtn} onClick={() => setEditing(true)}>{t('lore.adrPassportView.edit', '✎ Редактировать')}</button>
       </div>
 
       <div style={S.header}>
@@ -123,26 +125,26 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
 
       {data.context_md && (
         <div style={S.section}>
-          <div style={S.sLabel}>Context</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.context', 'Context')}</div>
           <MartProse text={data.context_md} />
         </div>
       )}
       {data.decision_md && (
         <div style={S.section}>
-          <div style={S.sLabel}>Decision</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.decision', 'Decision')}</div>
           <MartProse text={data.decision_md} />
         </div>
       )}
       {data.consequences_md && (
         <div style={S.section}>
-          <div style={S.sLabel}>Consequences</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.consequences', 'Consequences')}</div>
           <MartProse text={data.consequences_md} />
         </div>
       )}
 
       {dependsOn.length > 0 && (
         <div style={S.section}>
-          <div style={S.sLabel}>Depends on</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.dependsOn', 'Depends on')}</div>
           <div style={S.chips}>
             {dependsOn.map(id => (
               <span key={id} style={S.chip(true)} onClick={() => onNavigate(id)}>{id}</span>
@@ -152,7 +154,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       )}
       {supersedes.length > 0 && (
         <div style={S.section}>
-          <div style={S.sLabel}>Supersedes</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.supersedes', 'Supersedes')}</div>
           <div style={S.chips}>
             {supersedes.map(id => (
               <span key={id} style={S.chip(true)} onClick={() => onNavigate(id)}>{id}</span>
@@ -162,7 +164,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       )}
       {implementedIn.length > 0 && (
         <div style={S.section}>
-          <div style={S.sLabel}>Implemented in sprint</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.implementedInSprint', 'Implemented in sprint')}</div>
           <div style={S.chips}>
             {implementedIn.map(id => <span key={id} style={S.chip(false)}>{id}</span>)}
           </div>
@@ -170,7 +172,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       )}
       {releasedIn.length > 0 && (
         <div style={S.section}>
-          <div style={S.sLabel}>Released in</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.releasedIn', 'Released in')}</div>
           <div style={S.chips}>
             {releasedIn.map(id => <span key={id} style={S.chip(false)}>{id}</span>)}
           </div>
@@ -178,9 +180,9 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       )}
       {tags.length > 0 && (
         <div style={S.section}>
-          <div style={S.sLabel}>Tags</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.tags', 'Tags')}</div>
           <div style={S.chips}>
-            {tags.map(t => <span key={t} style={S.chip(false)}>{t}</span>)}
+            {tags.map(tag => <span key={tag} style={S.chip(false)}>{tag}</span>)}
           </div>
         </div>
       )}

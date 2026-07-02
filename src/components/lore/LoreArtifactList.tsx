@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchLoreSlice,
   type LoreAdrRow, type LoreSpecRow, type LoreKnowDocRow, type LoreComponent,
@@ -23,15 +24,14 @@ interface Artifact {
 interface RunbookRow { runbook_id: string; name: string | null; area: string | null; date_created: string | null; }
 interface QgRow { qg_id: string; name: string | null; component_id: string | null; status: string | null; date_created: string | null; }
 
-export const ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] = [
-  { kind: 'adr',     label: 'ADR',           color: '#4a90d9', icon: 'scroll-quill' },
-  { kind: 'spec',    label: 'Спеки',         color: '#4caf50', icon: 'white-book' },
-  { kind: 'runbook', label: 'Runbooks',      color: '#e8923a', icon: 'spell-book' },
-  { kind: 'doc',     label: 'Документы',     color: '#a974d6', icon: 'papers' },
-  { kind: 'qg',      label: 'Quality Gates', color: '#3fb8a0', icon: 'checkered-flag' },
+export const ARTIFACT_KINDS_META: { kind: ArtifactKind; color: string; icon: string }[] = [
+  { kind: 'adr',     color: '#4a90d9', icon: 'scroll-quill' },
+  { kind: 'spec',    color: '#4caf50', icon: 'white-book' },
+  { kind: 'runbook', color: '#e8923a', icon: 'spell-book' },
+  { kind: 'doc',     color: '#a974d6', icon: 'papers' },
+  { kind: 'qg',      color: '#3fb8a0', icon: 'checkered-flag' },
 ];
-const KIND_META  = Object.fromEntries(ARTIFACT_KINDS.map(k => [k.kind, k])) as Record<ArtifactKind, typeof ARTIFACT_KINDS[number]>;
-const KIND_ORDER = Object.fromEntries(ARTIFACT_KINDS.map((k, i) => [k.kind, i])) as Record<ArtifactKind, number>;
+const KIND_ORDER = Object.fromEntries(ARTIFACT_KINDS_META.map((k, i) => [k.kind, i])) as Record<ArtifactKind, number>;
 
 const S = {
   root:   { flex: 1, display: 'flex', flexDirection: 'column' as const, minWidth: 0, overflow: 'hidden' },
@@ -77,10 +77,19 @@ interface Props {
 }
 
 export default function LoreArtifactList({ onError, onOpen, selectedKind, selectedId }: Props) {
+  const { t } = useTranslation();
+  const ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] = [
+    { kind: 'adr',     label: 'ADR', color: '#4a90d9', icon: 'scroll-quill' },
+    { kind: 'spec',    label: t('lore.artifactList.kindSpec', 'Спеки'), color: '#4caf50', icon: 'white-book' },
+    { kind: 'runbook', label: t('lore.artifactList.kindRunbook', 'Runbooks'), color: '#e8923a', icon: 'spell-book' },
+    { kind: 'doc',     label: t('lore.artifactList.kindDoc', 'Документы'), color: '#a974d6', icon: 'papers' },
+    { kind: 'qg',      label: t('lore.artifactList.kindQg', 'Quality Gates'), color: '#3fb8a0', icon: 'checkered-flag' },
+  ];
+  const KIND_META = Object.fromEntries(ARTIFACT_KINDS.map(k => [k.kind, k])) as Record<ArtifactKind, typeof ARTIFACT_KINDS[number]>;
   const [items, setItems]     = useState<Artifact[]>([]);
   const [comps, setComps]     = useState<LoreComponent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enabled, setEnabled] = useState<Set<ArtifactKind>>(new Set(ARTIFACT_KINDS.map(k => k.kind)));
+  const [enabled, setEnabled] = useState<Set<ArtifactKind>>(new Set(ARTIFACT_KINDS_META.map(k => k.kind)));
   const [compSel, setCompSel] = useState<Set<string>>(new Set());
   const [q, setQ]             = useState('');
 
@@ -128,7 +137,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
       cnt[k] = (cnt[k] || 0) + 1;
     });
     return Object.entries(cnt)
-      .map(([id, n]) => ({ id, name: id === '∅' ? '— без компонента' : (nameOf[id] || id), n }))
+      .map(([id, n]) => ({ id, name: id === '∅' ? t('lore.artifactList.noComponent', '— без компонента') : (nameOf[id] || id), n }))
       .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
   }, [items, enabled, nameOf]);
 
@@ -164,13 +173,13 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
     return n;
   });
 
-  if (loading) return <div style={S.empty}>Загрузка артефактов…</div>;
+  if (loading) return <div style={S.empty}>{t('lore.artifactList.loading', 'Загрузка артефактов…')}</div>;
 
   return (
     <div style={S.root}>
       <div style={S.head}>
         <div style={S.chipRow}>
-          <span style={S.flabel}>Тип</span>
+          <span style={S.flabel}>{t('lore.artifactList.typeLabel', 'Тип')}</span>
           <div style={S.chips}>
             {ARTIFACT_KINDS.map(k => {
               const on = enabled.has(k.kind);
@@ -186,7 +195,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
         </div>
         {compChips.length > 1 && (
           <div style={S.chipRow}>
-            <span style={S.flabel}>Модуль</span>
+            <span style={S.flabel}>{t('lore.artifactList.moduleLabel', 'Модуль')}</span>
             <div style={S.chips}>
               {compChips.map(c => {
                 const on = compSel.has(c.id);
@@ -202,14 +211,14 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
         )}
         <input
           style={S.search}
-          placeholder="Поиск по названию…"
+          placeholder={t('lore.artifactList.searchPlaceholder', 'Поиск по названию…')}
           value={q}
           onChange={e => setQ(e.target.value)}
         />
       </div>
 
       <div style={S.list}>
-        {shown.length === 0 && <div style={S.empty}>Ничего не найдено.</div>}
+        {shown.length === 0 && <div style={S.empty}>{t('lore.artifactList.notFound', 'Ничего не найдено.')}</div>}
         {shown.map(a => {
           const meta = KIND_META[a.kind];
           const sel = selectedKind === a.kind && selectedId === a.id;

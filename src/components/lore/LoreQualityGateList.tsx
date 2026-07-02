@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 
 interface QGRow {
@@ -12,22 +13,42 @@ interface QGRow {
   sprint_id?: string | null;
 }
 
-const STATUS_META: Record<string, { color: string; label: string }> = {
-  active:     { color: 'var(--suc)',    label: 'активен'  },
-  draft:      { color: 'var(--wrn)',    label: 'черновик' },
-  archived:   { color: 'var(--t3)',     label: 'архив'    },
-  deprecated: { color: 'var(--t3)',     label: 'устарел'  },
-  closed:     { color: 'var(--t3)',     label: 'закрыт'   },
+type TFn = (key: string, fallback: string) => string;
+
+const STATUS_COLOR: Record<string, string> = {
+  active:     'var(--suc)',
+  draft:      'var(--wrn)',
+  archived:   'var(--t3)',
+  deprecated: 'var(--t3)',
+  closed:     'var(--t3)',
 };
 
-const RUN_META: Record<string, { color: string; label: string }> = {
-  active:  { color: 'var(--suc)',    label: '✓ pass' },
-  blocked: { color: 'var(--danger)', label: '✗ fail' },
+const statusMetaOf = (t: TFn, s: string): { color: string; label: string } => ({
+  color: STATUS_COLOR[s] ?? 'var(--t3)',
+  label: t(`lore.qualityGateList.status.${s}`, {
+    active: 'активен', draft: 'черновик', archived: 'архив', deprecated: 'устарел', closed: 'закрыт',
+  }[s] ?? s),
+});
+
+const RUN_COLOR: Record<string, string> = {
+  active:  'var(--suc)',
+  blocked: 'var(--danger)',
 };
 
-function exportHtml(rows: QGRow[]) {
+const runMetaOf = (t: TFn, s: string): { color: string; label: string } | undefined => {
+  if (!(s in RUN_COLOR)) return undefined;
+  return {
+    color: RUN_COLOR[s],
+    label: t(`lore.qualityGateList.run.${s}`, { active: '✓ pass', blocked: '✗ fail' }[s] ?? s),
+  };
+};
+
+function exportHtml(rows: QGRow[], t: TFn) {
   const active = rows.filter(r => r.status === 'active' || !r.status);
   const date   = new Date().toISOString().slice(0, 10);
+  const dateLabel   = t('lore.qualityGateList.export.date', 'Дата');
+  const activeLabel = t('lore.qualityGateList.export.active', 'Активных');
+  const totalLabel  = t('lore.qualityGateList.export.total', 'всего');
   const html = `<!DOCTYPE html>
 <html lang="ru">
 <head><meta charset="utf-8"><title>Quality Gates Report ${date}</title>
@@ -43,7 +64,7 @@ h1{font-size:16px;margin-bottom:4px;color:#fff}
 </style></head>
 <body>
 <h1>Quality Gates — Snapshot</h1>
-<div class="sub">Дата: ${date} · Активных: ${active.length} / всего: ${rows.length}</div>
+<div class="sub">${dateLabel}: ${date} · ${activeLabel}: ${active.length} / ${totalLabel}: ${rows.length}</div>
 ${active.map(qg => `<div class="gate">
   <div class="gate-id">${qg.qg_id}</div>
   <div class="gate-name">${qg.name}</div>
@@ -63,6 +84,7 @@ interface Props {
 }
 
 export default function LoreQualityGateList({ onError, onOpen }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]           = useState<QGRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
@@ -84,7 +106,7 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
   // Stats by status — T03
   const statsByStatus = allStatuses.map(s => ({
     s, n: rows.filter(r => r.status === s).length,
-    m: STATUS_META[s] ?? { color: 'var(--t3)', label: s },
+    m: statusMetaOf(t, s),
   }));
 
   const shown = rows.filter(r =>
@@ -97,14 +119,14 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
   const toggleComp = (c: string) =>
     setCompSel(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
 
-  if (loading) return <div style={S.state}>Загрузка quality gates…</div>;
+  if (loading) return <div style={S.state}>{t('lore.qualityGateList.loading', 'Загрузка quality gates…')}</div>;
 
   return (
     <div style={S.root}>
       {/* Stats bar — T03 */}
       <div style={S.statsBar}>
         <span style={S.statTotal}>{rows.length}</span>
-        <span style={{ color: 'var(--t3)', fontSize: 10 }}>всего</span>
+        <span style={{ color: 'var(--t3)', fontSize: 10 }}>{t('lore.qualityGateList.total', 'всего')}</span>
         {statsByStatus.map(({ s, n, m }) => {
           const on = statusSel.has(s);
           return (
@@ -125,17 +147,17 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
           );
         })}
         <span style={{ flex: 1 }} />
-        <button style={S.exportBtn} onClick={() => exportHtml(rows)} title="Экспорт активных QG в HTML">
-          ↓ HTML
+        <button style={S.exportBtn} onClick={() => exportHtml(rows, t)} title={t('lore.qualityGateList.exportTitle', 'Экспорт активных QG в HTML')}>
+          {t('lore.qualityGateList.exportBtn', '↓ HTML')}
         </button>
       </div>
 
       {/* Filters — T01: status chips */}
       {allStatuses.length > 1 && (
         <div style={S.filterRow}>
-          <span style={S.filterLabel}>Статус</span>
+          <span style={S.filterLabel}>{t('lore.qualityGateList.statusLabel', 'Статус')}</span>
           {allStatuses.map(s => {
-            const m  = STATUS_META[s] ?? { color: 'var(--t3)', label: s };
+            const m  = statusMetaOf(t, s);
             const on = statusSel.has(s);
             return (
               <span key={s} style={S.chip(on, m.color)} onClick={() => toggleStatus(s)}>
@@ -151,7 +173,7 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
       {/* Filters — T01: component chips */}
       {allComps.length > 1 && (
         <div style={S.filterRow}>
-          <span style={S.filterLabel}>Модуль</span>
+          <span style={S.filterLabel}>{t('lore.qualityGateList.moduleLabel', 'Модуль')}</span>
           {allComps.map(c => {
             const on = compSel.has(c);
             return (
@@ -172,14 +194,14 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
             <span style={S.arrow}>→</span>
             {qg.status && (
               <span style={S.statusChip(qg.status)}>
-                {(STATUS_META[qg.status] ?? { label: qg.status }).label}
+                {statusMetaOf(t, qg.status).label}
               </span>
             )}
-            {qg.last_run_status && RUN_META[qg.last_run_status] && (
+            {qg.last_run_status && runMetaOf(t, qg.last_run_status) && (
               <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
-                color: RUN_META[qg.last_run_status].color,
-                background: `color-mix(in srgb,${RUN_META[qg.last_run_status].color} 12%,transparent)` }}>
-                {RUN_META[qg.last_run_status].label}
+                color: runMetaOf(t, qg.last_run_status)!.color,
+                background: `color-mix(in srgb,${runMetaOf(t, qg.last_run_status)!.color} 12%,transparent)` }}>
+                {runMetaOf(t, qg.last_run_status)!.label}
               </span>
             )}
             <span style={S.id}>{qg.qg_id}</span>
@@ -188,7 +210,7 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
             <span style={S.date}>{qg.date_created?.slice(0, 10) ?? ''}</span>
           </div>
         ))}
-        {shown.length === 0 && <div style={S.state}>Quality Gates не найдены.</div>}
+        {shown.length === 0 && <div style={S.state}>{t('lore.qualityGateList.empty', 'Quality Gates не найдены.')}</div>}
       </div>
     </div>
   );
@@ -236,12 +258,12 @@ const S = {
   },
   arrow:  { color: 'var(--t3)', fontSize: 11, width: 12, flexShrink: 0 },
   statusChip: (s: string) => {
-    const m = STATUS_META[s] ?? { color: 'var(--t3)' };
+    const color = STATUS_COLOR[s] ?? 'var(--t3)';
     return {
       fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
-      background: `color-mix(in srgb, ${m.color} 16%, transparent)`,
-      color: m.color,
-      border: `1px solid color-mix(in srgb, ${m.color} 28%, transparent)`,
+      background: `color-mix(in srgb, ${color} 16%, transparent)`,
+      color,
+      border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
     };
   },
   id:          { color: 'var(--t3)', fontSize: 11, minWidth: 140, flexShrink: 0 },

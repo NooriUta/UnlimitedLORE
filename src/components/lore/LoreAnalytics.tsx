@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreAnalytics, fetchLoreSlice, type LoreAnalytics, type LoreAnalyticsSprint, type LoreComponent, type LoreSprintDoneDate, type LoreMilestone, type LoreSprintRow, type LoreRelease, type LoreQGViolation, type LoreQGPendingRec, type LoreQGRoutineRun } from '../../api/lore';
 import { statusMeta } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
@@ -152,12 +153,14 @@ function isoWeekKey(d: Date): string {
 // ── shared primitives ─────────────────────────────────────────────────────
 
 function StatusBar({ data, total }: { data: Record<string, number>; total: number }) {
+  const { t } = useTranslation();
   const keys = STATUS_ORDER.filter(k => data[k]);
+  const statusLabel = (k: string) => t(`lore.analytics.status.${k}`, STATUS_LABEL[k] ?? k);
   return (
     <div>
       <div style={S.segBar}>
         {keys.map(k => (
-          <div key={k} title={`${STATUS_LABEL[k] ?? k}: ${data[k]}`}
+          <div key={k} title={`${statusLabel(k)}: ${data[k]}`}
             style={{ width: `${(100 * data[k]) / total}%`, background: statusMeta(k).color, height: '100%' }} />
         ))}
       </div>
@@ -165,7 +168,7 @@ function StatusBar({ data, total }: { data: Record<string, number>; total: numbe
         {keys.map(k => (
           <span key={k} style={S.legendItem}>
             <span style={{ width: 8, height: 8, borderRadius: 2, background: statusMeta(k).color, flexShrink: 0 }} />
-            {STATUS_LABEL[k] ?? k} <b style={{ color: 'var(--t1)' }}>{data[k]}</b>
+            {statusLabel(k)} <b style={{ color: 'var(--t1)' }}>{data[k]}</b>
           </span>
         ))}
       </div>
@@ -337,6 +340,7 @@ function BurnupChart({ points }: { points: { ms: number; scope: number; done: nu
 // ── main component ─────────────────────────────────────────────────────────
 
 export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavigateToComponent, onNavigateToQG }: Props) {
+  const { t } = useTranslation();
   const [data,       setData]       = useState<LoreAnalytics | null>(null);
   const [components, setComponents] = useState<LoreComponent[]>([]);
   const [doneDates,  setDoneDates]  = useState<LoreSprintDoneDate[]>([]);
@@ -639,11 +643,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     if (!durations.length) return null;
     // histogram buckets: 0-3, 4-7, 8-14, 15-30, 30+
     const buckets = [
-      { label: '0–3д',  lo: 0,  hi: 3,   n: 0 },
-      { label: '4–7д',  lo: 4,  hi: 7,   n: 0 },
-      { label: '8–14д', lo: 8,  hi: 14,  n: 0 },
-      { label: '15–30д',lo: 15, hi: 30,  n: 0 },
-      { label: '30д+',  lo: 31, hi: 1e9, n: 0 },
+      { label: t('lore.analytics.flow.leadTime.bucket0to3', '0–3д'),  lo: 0,  hi: 3,   n: 0 },
+      { label: t('lore.analytics.flow.leadTime.bucket4to7', '4–7д'),  lo: 4,  hi: 7,   n: 0 },
+      { label: t('lore.analytics.flow.leadTime.bucket8to14', '8–14д'), lo: 8,  hi: 14,  n: 0 },
+      { label: t('lore.analytics.flow.leadTime.bucket15to30', '15–30д'),lo: 15, hi: 30,  n: 0 },
+      { label: t('lore.analytics.flow.leadTime.bucket30plus', '30д+'),  lo: 31, hi: 1e9, n: 0 },
     ];
     durations.forEach(d => { const b = buckets.find(b => d >= b.lo && d <= b.hi); if (b) b.n++; });
     return {
@@ -878,7 +882,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     if (!data) return [];
     const byId = new Map(components.map(c => [c.component_id, c]));
     const taskBySprint = new Map(data.by_sprint.map(s => [s.sprint_id, s]));
-    const NO_PROJ = '— без проекта', NO_COMP = '— без компонента';
+    const NO_PROJ = t('lore.analytics.overview.noProject', '— без проекта'), NO_COMP = t('lore.analytics.overview.noComponent', '— без компонента');
     // proj → comp → {sprints, task_total, task_done}
     const proj = new Map<string, Map<string, { sprints: number; task_total: number; task_done: number }>>();
     sprintRows.forEach(s => {
@@ -1058,9 +1062,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   [filteredSprintsForEffort]);
 
   if (loading) return <LoreSkeleton />;
-  if (!data)   return <div style={S.empty}>Нет данных.</div>;
+  if (!data)   return <div style={S.empty}>{t('lore.analytics.noData', 'Нет данных.')}</div>;
 
-  const t = data.totals;
+  const totals = data.totals;
 
   // ── tab bar ───────────────────────────────────────────────────────────────
 
@@ -1071,10 +1075,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           style={{ ...S.tabBtn, ...(tab === tb.key ? S.tabBtnActive : {}) }}
           onClick={() => setTab(tb.key)}>
           <GameIcon slug={tb.icon} size={12} style={{ color: 'inherit' }} />
-          {tb.label}
+          {t(`lore.analytics.tabs.${tb.key}`, tb.label)}
           {tb.key === 'progress' && currentMilestone && daysUntilCurrent !== null && daysUntilCurrent >= 0 && daysUntilCurrent <= 14 && (
             <span style={{ fontSize: 8, padding: '0 4px', borderRadius: 3, background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)', color: '#fff', marginLeft: 2 }}>
-              {daysUntilCurrent}д
+              {t('lore.analytics.daysSuffix', '{{n}}д', { n: daysUntilCurrent })}
             </span>
           )}
         </button>
@@ -1120,7 +1124,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <GameIcon slug="crossed-axes" size={16} style={{ color: 'var(--acc)' }} />
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Текущая веха</span>
+              <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
                 {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 11 }}>· {currentMilestone.date_display}</span>
               </span>
@@ -1128,34 +1132,34 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           </div>
 
           {daysUntilCurrent !== null && (
-            <div title="Календарных дней от сегодня до плановой даты текущей вехи (date_display)." style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
+            <div title={t('lore.analytics.planHealth.daysUntilHint', 'Календарных дней от сегодня до плановой даты текущей вехи (date_display).')} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
               <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1,
                 color: daysUntilCurrent < 0 ? 'var(--dng)' : daysUntilCurrent <= 7 ? 'var(--wrn)' : 'var(--t1)' }}>
                 {daysUntilCurrent >= 0 ? daysUntilCurrent : `+${-daysUntilCurrent}`}
               </span>
-              <span style={{ fontSize: 9, color: 'var(--t3)' }}>{daysUntilCurrent >= 0 ? 'дней до дедлайна ⓘ' : 'дней просрочки ⓘ'}</span>
+              <span style={{ fontSize: 9, color: 'var(--t3)' }}>{daysUntilCurrent >= 0 ? t('lore.analytics.planHealth.daysToDeadline', 'дней до дедлайна ⓘ') : t('lore.analytics.planHealth.daysOverdue', 'дней просрочки ⓘ')}</span>
             </div>
           )}
 
-          <div title={`Незакрытые спринты вехи: ${milestoneOpenCount}. Всего в системе незакрыто: ${openSprintCount}.`}
+          <div title={t('lore.analytics.planHealth.openSprintsHint', 'Незакрытые спринты вехи: {{open}}. Всего в системе незакрыто: {{total}}.', { open: milestoneOpenCount, total: openSprintCount })}
             style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
             <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--dng)' }}>{milestoneOpenCount}</span>
             <span style={{ fontSize: 9, color: 'var(--t3)', textAlign: 'center' as const }}>
-              open Sp вехи ⓘ
-              {milestoneOpenCount !== openSprintCount && <><br /><span style={{ opacity: 0.6 }}>всего {openSprintCount}</span></>}
+              {t('lore.analytics.planHealth.openSpMilestone', 'open Sp вехи ⓘ')}
+              {milestoneOpenCount !== openSprintCount && <><br /><span style={{ opacity: 0.6 }}>{t('lore.analytics.planHealth.total', 'всего {{n}}', { n: openSprintCount })}</span></>}
             </span>
           </div>
 
           {weeksToFinish !== null && (
-            <div title={`Прогноз: незакрытых Sp вехи (${milestoneOpenCount}) ÷ velocity (${avgVelocity.toFixed(1)} Sp/нед) = недель до закрытия.`}
+            <div title={t('lore.analytics.planHealth.forecastHint', 'Прогноз: незакрытых Sp вехи ({{open}}) ÷ velocity ({{vel}} Sp/нед) = недель до закрытия.', { open: milestoneOpenCount, vel: avgVelocity.toFixed(1) })}
               style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
               <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--t1)' }}>~{Math.ceil(weeksToFinish)}</span>
-              <span style={{ fontSize: 9, color: 'var(--t3)' }}>нед до закрытия ⓘ<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
+              <span style={{ fontSize: 9, color: 'var(--t3)' }}>{t('lore.analytics.planHealth.weeksToClose', 'нед до закрытия ⓘ')}<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
             </div>
           )}
 
           {onTrack && (
-            <div title={`Сравнение прогноза с дедлайном: нужно ~${onTrack.daysNeeded} дн на остаток, до вехи ${daysUntilCurrent} дн. ${onTrack.ok ? `Запас ${onTrack.slack} дн.` : `Дефицит ${-onTrack.slack} дн.`}`}
+            <div title={t('lore.analytics.planHealth.onTrackHint', 'Сравнение прогноза с дедлайном: нужно ~{{needed}} дн на остаток, до вехи {{days}} дн. {{detail}}', { needed: onTrack.daysNeeded, days: daysUntilCurrent, detail: onTrack.ok ? t('lore.analytics.planHealth.slack', 'Запас {{n}} дн.', { n: onTrack.slack }) : t('lore.analytics.planHealth.deficit', 'Дефицит {{n}} дн.', { n: -onTrack.slack }) })}
               style={{ marginLeft: 'auto', cursor: 'help', display: 'flex', alignItems: 'center', gap: 6,
               padding: '6px 12px', borderRadius: 8,
               background: `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 14%,transparent)`,
@@ -1164,10 +1168,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 style={{ color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }} />
               <div style={{ display: 'flex', flexDirection: 'column' as const }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }}>
-                  {onTrack.ok ? 'В графике' : 'Риск срыва'}
+                  {onTrack.ok ? t('lore.analytics.planHealth.onTrack', 'В графике') : t('lore.analytics.planHealth.atRisk', 'Риск срыва')}
                 </span>
                 <span style={{ fontSize: 9, color: 'var(--t3)' }}>
-                  {onTrack.ok ? `запас ${onTrack.slack} дн` : `не хватает ${-onTrack.slack} дн`}
+                  {onTrack.ok ? t('lore.analytics.planHealth.slackShort', 'запас {{n}} дн', { n: onTrack.slack }) : t('lore.analytics.planHealth.deficitShort', 'не хватает {{n}} дн', { n: -onTrack.slack })}
                 </span>
               </div>
             </div>
@@ -1176,31 +1180,31 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       )}
 
       <div style={S.cards}>
-        <Kpi icon="sprint"     label="Спринты"        value={t.sprints}    color="var(--acc)"
-             sub={`${data.sprints_by_status.done ?? 0} готово`}
-             hint="Всего спринтов в LORE (totals.sprints). Под значением — сколько в статусе done." />
-        <Kpi icon="check-mark" label="Задачи"         value={`${pct(t.tasks_done, t.tasks)}%`} color="var(--suc)"
-             sub={`${t.tasks_done} / ${t.tasks}`}
-             hint="Процент выполнения = задачи done / все задачи во всех спринтах (tasks_done / tasks × 100)." />
-        <Kpi icon="open-book"  label="Релизы"         value={t.releases}   color="var(--inf)"
+        <Kpi icon="sprint"     label={t('lore.analytics.overview.kpi.sprints', 'Спринты')}        value={totals.sprints}    color="var(--acc)"
+             sub={t('lore.analytics.overview.kpi.sprintsSub', '{{n}} готово', { n: data.sprints_by_status.done ?? 0 })}
+             hint={t('lore.analytics.overview.kpi.sprintsHint', 'Всего спринтов в LORE (totals.sprints). Под значением — сколько в статусе done.')} />
+        <Kpi icon="check-mark" label={t('lore.analytics.overview.kpi.tasks', 'Задачи')}         value={`${pct(totals.tasks_done, totals.tasks)}%`} color="var(--suc)"
+             sub={`${totals.tasks_done} / ${totals.tasks}`}
+             hint={t('lore.analytics.overview.kpi.tasksHint', 'Процент выполнения = задачи done / все задачи во всех спринтах (tasks_done / tasks × 100).')} />
+        <Kpi icon="open-book"  label={t('lore.analytics.overview.kpi.releases', 'Релизы')}         value={totals.releases}   color="var(--inf)"
              sub={data.current_releases.length ? `current: ${data.current_releases.length}` : ''}
-             hint="Всего релизов (KnowRelease, все проекты). current — помеченные is_current." />
-        <Kpi icon="cog"        label="Компоненты"     value={t.components} color="var(--wrn)"
-             sub={`${data.by_component.length} со спринтами · ${pct(data.by_component.length, t.components)}%`}
-             hint="Всего компонентов. Под значением — сколько из них имеют хотя бы один привязанный спринт (coverage)." />
-        <Kpi icon="hourglass"  label="Незакрытых Sp" value={milestoneOpenCount} color="var(--dng)"
-             sub={milestoneOpenCount !== openSprintCount ? `вехи · всего ${openSprintCount}` : 'не done / не выпущены'} highlight
-             hint={`Незакрытые спринты текущей вехи: ${milestoneOpenCount}. Всего в системе незакрыто: ${openSprintCount}.`} />
+             hint={t('lore.analytics.overview.kpi.releasesHint', 'Всего релизов (KnowRelease, все проекты). current — помеченные is_current.')} />
+        <Kpi icon="cog"        label={t('lore.analytics.overview.kpi.components', 'Компоненты')}     value={totals.components} color="var(--wrn)"
+             sub={`${data.by_component.length} ${t('lore.analytics.overview.kpi.withSprints', 'со спринтами')} · ${pct(data.by_component.length, totals.components)}%`}
+             hint={t('lore.analytics.overview.kpi.componentsHint', 'Всего компонентов. Под значением — сколько из них имеют хотя бы один привязанный спринт (coverage).')} />
+        <Kpi icon="hourglass"  label={t('lore.analytics.overview.kpi.openSprints', 'Незакрытых Sp')} value={milestoneOpenCount} color="var(--dng)"
+             sub={milestoneOpenCount !== openSprintCount ? t('lore.analytics.overview.kpi.openSprintsSub', 'вехи · всего {{n}}', { n: openSprintCount }) : t('lore.analytics.overview.kpi.openSprintsSubAlt', 'не done / не выпущены')} highlight
+             hint={t('lore.analytics.overview.kpi.openSprintsHint', 'Незакрытые спринты текущей вехи: {{open}}. Всего в системе незакрыто: {{total}}.', { open: milestoneOpenCount, total: openSprintCount })} />
       </div>
 
       <div style={S.row2}>
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Распределение всех задач по статусу (классификация status_raw). Длина сегмента = доля статуса.">Задачи по статусу <span style={S.dim}>· {t.tasks}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
-          <StatusBar data={data.tasks_by_status} total={t.tasks} />
+          <div style={S.panelTitle} title={t('lore.analytics.overview.tasksByStatusHint', 'Распределение всех задач по статусу (классификация status_raw). Длина сегмента = доля статуса.')}>{t('lore.analytics.overview.tasksByStatus', 'Задачи по статусу')} <span style={S.dim}>· {totals.tasks}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <StatusBar data={data.tasks_by_status} total={totals.tasks} />
         </section>
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Распределение всех спринтов по статусу (классификация status_raw). Длина сегмента = доля статуса.">Спринты по статусу <span style={S.dim}>· {t.sprints}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
-          <StatusBar data={data.sprints_by_status} total={t.sprints} />
+          <div style={S.panelTitle} title={t('lore.analytics.overview.sprintsByStatusHint', 'Распределение всех спринтов по статусу (классификация status_raw). Длина сегмента = доля статуса.')}>{t('lore.analytics.overview.sprintsByStatus', 'Спринты по статусу')} <span style={S.dim}>· {totals.sprints}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <StatusBar data={data.sprints_by_status} total={totals.sprints} />
         </section>
       </div>
 
@@ -1208,16 +1212,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ ...S.panelTitle, marginBottom: 0, cursor: 'help' }}
-            title="Компоненты со спринтами. Группировка: area (поле area) · платформа (корневой компонент-предок: AIDA/SEIDR…) · проект (доминирующий git-проект компонента, выведенный через его спринты: Component←BELONGS_TO←Sprint→BELONGS_TO_PROJECT). Числа: Sp = спринтов, X/Y = задачи done/всего, % = выполнение.">
-            Компоненты <span style={S.dim}>· {data.by_component.length}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+            title={t('lore.analytics.overview.componentsHint', 'Компоненты со спринтами. Группировка: area (поле area) · платформа (корневой компонент-предок: AIDA/SEIDR…) · проект (доминирующий git-проект компонента, выведенный через его спринты: Component←BELONGS_TO←Sprint→BELONGS_TO_PROJECT). Числа: Sp = спринтов, X/Y = задачи done/всего, % = выполнение.')}>
+            {t('lore.analytics.overview.components', 'Компоненты')} <span style={S.dim}>· {data.by_component.length}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>Группировка:</span>
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.analytics.overview.groupBy', 'Группировка:')}</span>
             <div style={S.toggle}>
               {(['area', 'platform', 'project'] as CompGroupBy[]).map(g => (
                 <button key={g} style={{ ...S.toggleBtn, ...(groupBy === g ? S.toggleBtnOn : {}) }}
                   onClick={() => setGroupBy(g)}>
-                  {g === 'area' ? 'По area' : g === 'platform' ? 'По платформе' : 'По проекту'}
+                  {g === 'area' ? t('lore.analytics.overview.groupByArea', 'По area') : g === 'platform' ? t('lore.analytics.overview.groupByPlatform', 'По платформе') : t('lore.analytics.overview.groupByProject', 'По проекту')}
                 </button>
               ))}
             </div>
@@ -1226,11 +1230,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
         {/* Column header row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 8px 6px', borderBottom: '1px solid var(--bd)', marginBottom: 4 }}>
-          <span style={{ flex: 1, fontSize: 8, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Компонент / группа</span>
-          <span title="Число привязанных спринтов" style={{ fontSize: 8, color: 'var(--t3)', width: 44, textAlign: 'right' as const, cursor: 'help' }}>Sp ⓘ</span>
+          <span style={{ flex: 1, fontSize: 8, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.overview.componentGroupCol', 'Компонент / группа')}</span>
+          <span title={t('lore.analytics.overview.sprintCountHint', 'Число привязанных спринтов')} style={{ fontSize: 8, color: 'var(--t3)', width: 44, textAlign: 'right' as const, cursor: 'help' }}>Sp ⓘ</span>
           <span style={{ width: 60 }} />
-          <span title="Задачи: выполнено / всего" style={{ fontSize: 8, color: 'var(--t3)', width: 56, textAlign: 'right' as const, cursor: 'help' }}>done/всего ⓘ</span>
-          <span title="Процент выполнения = done / всего × 100" style={{ fontSize: 8, color: 'var(--t3)', width: 38, textAlign: 'right' as const, cursor: 'help' }}>% ⓘ</span>
+          <span title={t('lore.analytics.overview.doneTotalHint', 'Задачи: выполнено / всего')} style={{ fontSize: 8, color: 'var(--t3)', width: 56, textAlign: 'right' as const, cursor: 'help' }}>{t('lore.analytics.overview.doneTotalCol', 'done/всего ⓘ')}</span>
+          <span title={t('lore.analytics.overview.pctHint', 'Процент выполнения = done / всего × 100')} style={{ fontSize: 8, color: 'var(--t3)', width: 38, textAlign: 'right' as const, cursor: 'help' }}>% ⓘ</span>
         </div>
 
         <div style={S.table}>
@@ -1250,12 +1254,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--t1)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>
                     {group.label}
                   </span>
-                  <span style={{ fontSize: 9, color: 'var(--t3)' }} title="Компонентов в группе">· {group.comps.length}</span>
-                  <div title={`Выполнение группы: ${doneTasks} из ${totTasks} задач`} style={{ width: 80, height: 4, borderRadius: 2, background: 'var(--b3)', overflow: 'hidden', margin: '0 6px', flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, color: 'var(--t3)' }} title={t('lore.analytics.overview.componentsInGroup', 'Компонентов в группе')}>· {group.comps.length}</span>
+                  <div title={t('lore.analytics.overview.groupDoneHint', 'Выполнение группы: {{done}} из {{total}} задач', { done: doneTasks, total: totTasks })} style={{ width: 80, height: 4, borderRadius: 2, background: 'var(--b3)', overflow: 'hidden', margin: '0 6px', flexShrink: 0 }}>
                     <div style={{ height: '100%', width: `${p}%`, background: group.color, borderRadius: 2 }} />
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', marginLeft: 'auto', cursor: 'help' }}
-                    title={`Сумма по группе: ${totSp} спринтов, ${doneTasks}/${totTasks} задач выполнено (${p}%)`}>
+                    title={t('lore.analytics.overview.groupSumHint', 'Сумма по группе: {{sp}} спринтов, {{done}}/{{total}} задач выполнено ({{pct}}%)', { sp: totSp, done: doneTasks, total: totTasks, pct: p })}>
                     {totSp}Sp · {p}%
                   </span>
                 </div>
@@ -1271,10 +1275,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                         {c.component_id}
                       </span>
                       <span style={S.compName}>{c.full_name ?? ''}</span>
-                      <span style={S.sprintChip} title={`${c.sprint_count} привязанных спринтов`}>{c.sprint_count}Sp</span>
+                      <span style={S.sprintChip} title={t('lore.analytics.overview.linkedSprintsHint', '{{n}} привязанных спринтов', { n: c.sprint_count })}>{c.sprint_count}Sp</span>
                       <MiniBar done={c.task_done} total={c.task_total} color={col} />
-                      <span style={S.count} title="Задачи: выполнено / всего">{c.task_done}/{c.task_total}</span>
-                      <span style={S.pctNum} title={`Выполнение: ${pct(c.task_done, c.task_total)}%`}>{pct(c.task_done, c.task_total)}%</span>
+                      <span style={S.count} title={t('lore.analytics.overview.doneTotalHint', 'Задачи: выполнено / всего')}>{c.task_done}/{c.task_total}</span>
+                      <span style={S.pctNum} title={t('lore.analytics.overview.doneHint', 'Выполнение: {{pct}}%', { pct: pct(c.task_done, c.task_total) })}>{pct(c.task_done, c.task_total)}%</span>
                     </div>
                   );
                 })}
@@ -1285,7 +1289,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       </section>
 
       <section style={S.panel}>
-        <div style={S.panelTitle} title="Число релизов (KnowRelease) в разрезе корневого git-проекта.">Релизы по проектам <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+        <div style={S.panelTitle} title={t('lore.analytics.overview.releasesByProjectHint', 'Число релизов (KnowRelease) в разрезе корневого git-проекта.')}>{t('lore.analytics.overview.releasesByProject', 'Релизы по проектам')} <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
         <div style={S.relRow}>
           {Object.entries(data.releases_by_project).sort((a, b) => b[1] - a[1]).map(([proj, n]) => (
             <div key={proj} style={S.relCard}>
@@ -1305,20 +1309,20 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Filter bar: project + milestone + component — top of tab */}
       <section style={{ ...S.panel, padding: '10px 14px', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Проект</span>
+          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterProject', 'Проект')}</span>
           <div style={S.filterChips}>
             {['all', ...chartProjects].map(p => (
               <button key={p} style={{ ...S.chip, ...(chartProj === p ? S.chipActive : {}) }}
                 onClick={() => setChartProj(p)}>
-                {p === 'all' ? 'Все' : p}
+                {p === 'all' ? t('lore.analytics.progress.filterAll', 'Все') : p}
               </button>
             ))}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Веха</span>
+          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterMilestone', 'Веха')}</span>
           <div style={S.filterChips}>
-            {[{ id: 'all', label: 'Все' }, ...chartMilestones].map(m => (
+            {[{ id: 'all', label: t('lore.analytics.progress.filterAll', 'Все') }, ...chartMilestones].map(m => (
               <button key={m.id} style={{ ...S.chip, ...(chartMilestone === m.id ? S.chipActive : {}) }}
                 onClick={() => setChartMilestone(m.id)}>
                 {m.label}
@@ -1328,10 +1332,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         </div>
         {chartComps.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-            <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Компонент</span>
+            <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterComponent', 'Компонент')}</span>
             <div style={S.filterChips}>
               <button style={{ ...S.chip, ...(chartComp === 'all' ? S.chipActive : {}) }}
-                onClick={() => setChartComp('all')}>Все</button>
+                onClick={() => setChartComp('all')}>{t('lore.analytics.progress.filterAll', 'Все')}</button>
               {chartComps.map(c => (
                 <button key={c} style={{ ...S.chip, ...(chartComp === c ? S.chipActive : {}) }}
                   onClick={() => setChartComp(c)}>
@@ -1346,10 +1350,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             <span style={{ fontSize: 9, color: 'var(--t3)', width: 72 }} />
             <button style={{ fontSize: 9, color: 'var(--acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               onClick={() => { setChartProj('all'); setChartMilestone('all'); setChartComp('all'); }}>
-              × сбросить фильтры
+              {t('lore.analytics.progress.resetFilters', '× сбросить фильтры')}
             </button>
             <span style={{ fontSize: 9, color: 'var(--t3)' }}>
-              {chartSprints.length} спринтов в выборке
+              {t('lore.analytics.progress.sprintsInSelection', '{{n}} спринтов в выборке', { n: chartSprints.length })}
             </span>
           </div>
         )}
@@ -1359,13 +1363,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <div style={S.row2}>
         <section style={S.panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap' as const, gap: 4 }}>
-            <div style={S.panelTitle} title="Спринтов, закрытых за каждую ISO-неделю (по done_date). Столбик = неделя, последняя подсвечена.">
-              Velocity <span style={S.dim}>· последние {(chartVelocityWeeks.length || velocityWeeks.length)} нед</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+            <div style={S.panelTitle} title={t('lore.analytics.progress.velocityHint', 'Спринтов, закрытых за каждую ISO-неделю (по done_date). Столбик = неделя, последняя подсвечена.')}>
+              Velocity <span style={S.dim}>· {t('lore.analytics.progress.lastNWeeks', 'последние {{n}} нед', { n: (chartVelocityWeeks.length || velocityWeeks.length) })}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span title="Среднее число закрытых спринтов в неделю за показанный период." style={{ fontSize: 10, color: 'var(--t2)', cursor: 'help' }}>avg <b style={{ color: 'var(--t1)' }}>{avgVelocity.toFixed(1)}</b>/нед</span>
+              <span title={t('lore.analytics.progress.avgVelocityHint', 'Среднее число закрытых спринтов в неделю за показанный период.')} style={{ fontSize: 10, color: 'var(--t2)', cursor: 'help' }}>avg <b style={{ color: 'var(--t1)' }}>{avgVelocity.toFixed(1)}</b>/нед</span>
               {velocityTrend !== null && (
-                <span title="Тренд: средний velocity последних 4 недель vs предыдущих 4, в %." style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)', cursor: 'help',
+                <span title={t('lore.analytics.progress.velocityTrendHint', 'Тренд: средний velocity последних 4 недель vs предыдущих 4, в %.')} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)', cursor: 'help',
                   color: velocityTrend >= 0 ? 'var(--suc)' : 'var(--dng)',
                   background: velocityTrend >= 0 ? 'color-mix(in srgb,var(--suc) 12%,transparent)' : 'color-mix(in srgb,var(--dng) 12%,transparent)',
                 }}>
@@ -1373,7 +1377,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 </span>
               )}
               {velocityCV !== null && (
-                <span title="Стабильность темпа (коэф. вариации; ниже = ровнее)"
+                <span title={t('lore.analytics.progress.velocityCVHint', 'Стабильность темпа (коэф. вариации; ниже = ровнее)')}
                   style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)',
                     color: velocityCV <= 0.4 ? 'var(--suc)' : velocityCV <= 0.7 ? 'var(--wrn)' : 'var(--dng)',
                     background: 'var(--b3)' }}>
@@ -1400,12 +1404,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         </section>
 
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Завершено за проект = все спринты с done_date. После M2 = завершённые с 03.06, ещё не вошедшие в релиз. Открыто = статус не done/cancelled.">Незарелиженное / burn <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.progress.unreleasedBurnHint', 'Завершено за проект = все спринты с done_date. После M2 = завершённые с 03.06, ещё не вошедшие в релиз. Открыто = статус не done/cancelled.')}>{t('lore.analytics.progress.unreleasedBurn', 'Незарелиженное / burn')} <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
             {/* Done total */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>Завершено за проект</span>
+                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.analytics.progress.doneForProject', 'Завершено за проект')}</span>
                 <span style={{ fontSize: 10, color: 'var(--suc)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{doneDates.length} Sp</span>
               </div>
               <MiniBar done={doneDates.length} total={doneDates.length + openSprintCount} color="var(--suc)" wide />
@@ -1413,7 +1417,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             {/* Since M2 (незарелиженное) */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>После M2 (c 3 июн) — незарелиженное</span>
+                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.analytics.progress.sinceM2', 'После M2 (c 3 июн) — незарелиженное')}</span>
                 <span style={{ fontSize: 10, color: 'var(--wrn)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{sinceM2Count} Sp</span>
               </div>
               <MiniBar done={sinceM2Count} total={doneDates.length} color="var(--wrn)" wide />
@@ -1421,16 +1425,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             {/* Open */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>Открыто / в работе</span>
+                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.analytics.progress.openInProgress', 'Открыто / в работе')}</span>
                 <span style={{ fontSize: 10, color: 'var(--dng)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{openSprintCount} Sp</span>
               </div>
               <MiniBar done={openSprintCount} total={doneDates.length + openSprintCount} color="var(--dng)" wide />
             </div>
             <div style={{ fontSize: 9, color: 'var(--t3)', borderTop: '1px solid var(--bd)', paddingTop: 8, lineHeight: 1.4 }}>
               {deployLag.unreleased > 0
-                ? <><b style={{ color: 'var(--wrn)' }}>{deployLag.unreleased}</b> завершённых спринтов ещё не в релизе.<br /></>
-                : <>Все завершённые спринты вошли в релизы.<br /></>}
-              M3 (6 июл) — плановая дата следующего выпуска.
+                ? <><b style={{ color: 'var(--wrn)' }}>{deployLag.unreleased}</b> {t('lore.analytics.progress.doneNotReleased', 'завершённых спринтов ещё не в релизе.')}<br /></>
+                : <>{t('lore.analytics.progress.allReleased', 'Все завершённые спринты вошли в релизы.')}<br /></>}
+              {t('lore.analytics.progress.m3Date', 'M3 (6 июл) — плановая дата следующего выпуска.')}
             </div>
           </div>
         </section>
@@ -1440,7 +1444,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <div style={S.row2}>
         <section style={S.panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap' as const, gap: 4 }}>
-            <div style={S.panelTitle} title="Две накопленные линии по неделям: scope = спринты, созданные к дате (по valid_from); done = закрытые к дате (по done_date). Разрыв = backlog (scope creep). Учитывает фильтр проекта.">Burnup <span style={S.dim}>· scope vs done</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+            <div style={S.panelTitle} title={t('lore.analytics.progress.burnupHint', 'Две накопленные линии по неделям: scope = спринты, созданные к дате (по valid_from); done = закрытые к дате (по done_date). Разрыв = backlog (scope creep). Учитывает фильтр проекта.')}>Burnup <span style={S.dim}>· scope vs done</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
             {burnup && (
               <div style={{ display: 'flex', gap: 10, fontSize: 9 }}>
                 <span style={{ color: 'var(--acc)' }}>scope <b>{burnup.totalScope}</b></span>
@@ -1451,12 +1455,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           </div>
           {burnup
             ? <BurnupChart points={burnup.points} />
-            : <div style={S.empty}>Мало данных по проекту.</div>}
+            : <div style={S.empty}>{t('lore.analytics.progress.notEnoughData', 'Мало данных по проекту.')}</div>}
         </section>
 
         <section style={S.panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap' as const, gap: 4 }}>
-            <div style={S.panelTitle} title="Нарастающий итог закрытых спринтов по дням (по done_date). Крутизна = темп. Учитывает фильтр проекта.">Накопленное выполнение <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+            <div style={S.panelTitle} title={t('lore.analytics.progress.cumulativeHint', 'Нарастающий итог закрытых спринтов по дням (по done_date). Крутизна = темп. Учитывает фильтр проекта.')}>{t('lore.analytics.progress.cumulativeDone', 'Накопленное выполнение')} <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
             <span style={{ fontSize: 10, color: 'var(--t2)' }}>
               <b style={{ color: 'var(--suc)', fontSize: 13 }}>{cumulativePoints.length}</b> Sp
             </span>
@@ -1465,10 +1469,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             ? <>
                 <CumulativeChart points={cumulativePoints} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 9, color: 'var(--t3)' }}>
-                  <span>19 апр</span><span>сегодня</span>
+                  <span>{t('lore.analytics.progress.apr19', '19 апр')}</span><span>{t('lore.analytics.progress.today', 'сегодня')}</span>
                 </div>
               </>
-            : <div style={S.empty}>Мало данных по проекту.</div>}
+            : <div style={S.empty}>{t('lore.analytics.progress.notEnoughData', 'Мало данных по проекту.')}</div>}
         </section>
       </div>
 
@@ -1797,7 +1801,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <GameIcon slug="crossed-axes" size={16} style={{ color: 'var(--acc)' }} />
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Текущая веха</span>
+              <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
                 {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 11 }}>· {currentMilestone.date_display}</span>
               </span>

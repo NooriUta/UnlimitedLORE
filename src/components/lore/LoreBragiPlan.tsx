@@ -4,6 +4,7 @@
 // (vis-timeline, used by LorePlanBoard, is a horizontal Gantt — see FE-01 note)
 // so this is a small from-scratch grid over bragi_calendar.
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import LoreBragiPublicationEditor from './LoreBragiPublicationEditor';
 
@@ -20,12 +21,13 @@ interface CalendarRow {
 const CHANNEL_COLOR: Record<string, string> = {
   'CH-VC': 'var(--acc)', 'CH-HABR': 'var(--inf)', 'CH-TG': 'var(--suc)', 'CH-SITE': 'var(--wrn)',
 };
-const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const CADENCE: { channel: string; rule: string }[] = [
-  { channel: 'VC.ru',    rule: '1 лонгрид / 1.5–2 нед' },
-  { channel: 'Habr',     rule: '1 техничка / 2–3 нед' },
-  { channel: 'Telegram', rule: '2 поста/нед (якорь + тёплый)' },
-  { channel: 'посев',    rule: 'после VC/Habr' },
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const WEEKDAY_FALLBACK: Record<string, string> = { mon: 'Пн', tue: 'Вт', wed: 'Ср', thu: 'Чт', fri: 'Пт', sat: 'Сб', sun: 'Вс' };
+const CADENCE_KEYS: { key: string; channel: string; rule: string }[] = [
+  { key: 'vc',       channel: 'VC.ru',    rule: '1 лонгрид / 1.5–2 нед' },
+  { key: 'habr',     channel: 'Habr',     rule: '1 техничка / 2–3 нед' },
+  { key: 'telegram', channel: 'Telegram', rule: '2 поста/нед (якорь + тёплый)' },
+  { key: 'seed',     channel: 'посев',    rule: 'после VC/Habr' },
 ];
 
 function monthLabel(d: Date): string {
@@ -39,6 +41,7 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 export default function LoreBragiPlan() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<CalendarRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState(() => new Date());
@@ -94,20 +97,20 @@ export default function LoreBragiPlan() {
     );
   }
 
-  if (loading) return <div style={S.hint}>загрузка…</div>;
+  if (loading) return <div style={S.hint}>{t('bragi.plan.loading', 'загрузка…')}</div>;
 
   return (
     <div>
-      <div style={S.desc}>2-месячный контент-пуш · VC + Habr + Telegram · стадия соцкапитала.</div>
+      <div style={S.desc}>{t('bragi.plan.desc', '2-месячный контент-пуш · VC + Habr + Telegram · стадия соцкапитала.')}</div>
       <div style={S.grid2}>
         <div style={S.card}>
           <h2 style={S.cardH2}>
-            календарь публикаций <span style={S.meta}>{monthLabel(cursor)}</span>
+            {t('bragi.plan.calendarTitle', 'календарь публикаций')} <span style={S.meta}>{monthLabel(cursor)}</span>
           </h2>
           <div style={S.monthNav}>
-            <span style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}>‹ пред.</span>
-            <span style={S.navBtn} onClick={() => setCursor(new Date())}>сегодня</span>
-            <span style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}>след. ›</span>
+            <span style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}>{t('bragi.plan.navPrev', '‹ пред.')}</span>
+            <span style={S.navBtn} onClick={() => setCursor(new Date())}>{t('bragi.plan.navToday', 'сегодня')}</span>
+            <span style={S.navBtn} onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}>{t('bragi.plan.navNext', 'след. ›')}</span>
           </div>
           <div style={S.legend}>
             {Object.entries(CHANNEL_COLOR).map(([ch, col]) => (
@@ -115,7 +118,7 @@ export default function LoreBragiPlan() {
             ))}
           </div>
           <div style={S.calHead}>
-            {WEEKDAYS.map(w => <span key={w}>{w}</span>)}
+            {WEEKDAY_KEYS.map(w => <span key={w}>{t('bragi.plan.weekday.' + w, WEEKDAY_FALLBACK[w])}</span>)}
           </div>
           <div style={S.cal}>
             {cells.map((c, i) => {
@@ -127,7 +130,7 @@ export default function LoreBragiPlan() {
                   key={i}
                   style={cellStyle(c.otherMonth, isToday)}
                   onClick={() => setCreatingDate(dateStr)}
-                  title="Запланировать публикацию на эту дату"
+                  title={t('bragi.plan.cellTitle', 'Запланировать публикацию на эту дату')}
                 >
                   <div style={dnumStyle(isToday)}>{c.date.getDate()}</div>
                   {items.map(it => (
@@ -142,10 +145,10 @@ export default function LoreBragiPlan() {
           </div>
         </div>
         <div style={S.card}>
-          <h2 style={S.cardH2}>ритм</h2>
+          <h2 style={S.cardH2}>{t('bragi.plan.cadenceTitle', 'ритм')}</h2>
           <div style={{ fontSize: 13, lineHeight: 1.9, color: 'var(--t2)' }}>
-            {CADENCE.map(c => (
-              <div key={c.channel}><b style={{ color: 'var(--t1)' }}>{c.channel}</b> — {c.rule}</div>
+            {CADENCE_KEYS.map(c => (
+              <div key={c.key}><b style={{ color: 'var(--t1)' }}>{c.channel}</b> — {t('bragi.plan.cadence.' + c.key, c.rule)}</div>
             ))}
           </div>
         </div>

@@ -3,6 +3,7 @@
 // matching bragi-archive-prototype.html's .pubcard/.variants layout. Clicking
 // a variant expands it (full text + live BragiMetric points for that variant).
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
 import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData } from './LoreBragiPublicationEditor';
 
@@ -31,10 +32,11 @@ interface PublicationRow {
 // image" placeholder (not a blank box) on load failure, since a plain empty
 // div reads as broken UI rather than "nothing uploaded here yet".
 function Thumb({ src, style }: { src: string | null | undefined; style: React.CSSProperties }) {
+  const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return (
-      <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={src ?? 'нет изображения'}>
+      <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={src ?? t('bragi.publications.noImage', 'нет изображения')}>
         <span style={{ fontSize: Math.max(12, Math.min(style.width as number ?? 20, style.height as number ?? 20) * 0.4), opacity: 0.35 }}>🖼</span>
       </div>
     );
@@ -47,6 +49,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function LoreBragiPublications() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<PublicationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('все');
@@ -123,17 +126,23 @@ export default function LoreBragiPublications() {
     );
   }
 
-  if (loading) return <div style={S.hint}>загрузка…</div>;
+  if (loading) return <div style={S.hint}>{t('bragi.publications.loading', 'загрузка…')}</div>;
+
+  const filterLabel = (f: string): string => {
+    if (f === 'все') return t('bragi.publications.filterAll', 'все');
+    if (f === 'черновики') return t('bragi.publications.filterDrafts', 'черновики');
+    return f;
+  };
 
   return (
     <div>
       <div style={S.descRow}>
-        <div style={S.desc}>main-текст + вариации под площадки: одна публикация группирует свои версии; у каждой — свой текст, статус и картинка.</div>
-        <button style={S.newBtn} onClick={() => setCreating(true)}>+ новая публикация</button>
+        <div style={S.desc}>{t('bragi.publications.desc', 'main-текст + вариации под площадки: одна публикация группирует свои версии; у каждой — свой текст, статус и картинка.')}</div>
+        <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.publications.newPublication', '+ новая публикация')}</button>
       </div>
       <div style={S.filters}>
         {['все', ...channels, ...rubricNames, 'черновики'].map(f => (
-          <span key={f} style={filterChipStyle(filter === f)} onClick={() => setFilter(f)}>{f}</span>
+          <span key={f} style={filterChipStyle(filter === f)} onClick={() => setFilter(f)}>{filterLabel(f)}</span>
         ))}
       </div>
 
@@ -145,15 +154,15 @@ export default function LoreBragiPublications() {
               <div style={S.pubttlRow}>
                 <div style={S.pubttl}>{pub.title}</div>
                 <button style={S.editBtn} onClick={() => setEditingRow(pub)}>
-                  {pub.status_general === 'published' ? '👁 просмотр' : '✎ редактировать'}
+                  {pub.status_general === 'published' ? t('bragi.publications.viewBtn', '👁 просмотр') : t('bragi.publications.editBtn', '✎ редактировать')}
                 </button>
               </div>
               <div style={S.pubmeta}>
                 {pub.rubric_names[0] && <span style={S.rubricChip}>{pub.rubric_names[0]}</span>}
-                {pub.topic && <span>ключ · {pub.topic}</span>}
+                {pub.topic && <span>{t('bragi.publications.keywordPrefix', 'ключ ·')} {pub.topic}</span>}
                 {pub.main_text_md && (
                   <span style={S.mainTextLink} onClick={() => setShowMainText(showMainText === pub.publication_id ? null : pub.publication_id)}>
-                    main-текст {showMainText === pub.publication_id ? '▲' : '▼'}
+                    {t('bragi.publications.mainTextToggle', 'main-текст')} {showMainText === pub.publication_id ? '▲' : '▼'}
                   </span>
                 )}
                 <span style={S.statusTag}>
@@ -193,22 +202,22 @@ export default function LoreBragiPublications() {
                       <div style={S.expandText}>{pub.variant_texts[i]}</div>
                     ) : (
                       <>
-                        <div style={S.sameAsMainTag}>как в main-тексте</div>
-                        <div style={S.expandText}>{pub.main_text_md ?? 'текст не задан'}</div>
+                        <div style={S.sameAsMainTag}>{t('bragi.publications.sameAsMainText', 'как в main-тексте')}</div>
+                        <div style={S.expandText}>{pub.main_text_md ?? t('bragi.publications.textNotSet', 'текст не задан')}</div>
                       </>
                     )}
                     {pub.variant_urls[i] && (
                       <div style={S.hint}>
                         <a href={pub.variant_urls[i]!} target="_blank" rel="noreferrer" style={S.link} onClick={e => e.stopPropagation()}>
-                          → перейти к опубликованному
+                          {t('bragi.publications.goToPublished', '→ перейти к опубликованному')}
                         </a>
                       </div>
                     )}
-                    <div style={S.expandMetricsLabel}>метрики площадки</div>
+                    <div style={S.expandMetricsLabel}>{t('bragi.publications.channelMetricsLabel', 'метрики площадки')}</div>
                     {metricsLoading ? (
-                      <div style={S.hint}>загрузка метрик…</div>
+                      <div style={S.hint}>{t('bragi.publications.loadingMetrics', 'загрузка метрик…')}</div>
                     ) : metrics.length === 0 ? (
-                      <div style={S.hint}>замеров пока нет</div>
+                      <div style={S.hint}>{t('bragi.publications.noMetricsYet', 'замеров пока нет')}</div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {metrics.map((m, mi) => (
@@ -220,11 +229,11 @@ export default function LoreBragiPublications() {
                 )}
               </div>
             ))}
-            <div style={S.addSlot}>+ площадка</div>
+            <div style={S.addSlot}>{t('bragi.publications.addChannelSlot', '+ площадка')}</div>
           </div>
         </div>
       ))}
-      {filtered.length === 0 && <div style={S.hint}>ничего не найдено под этим фильтром</div>}
+      {filtered.length === 0 && <div style={S.hint}>{t('bragi.publications.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
     </div>
   );
 }

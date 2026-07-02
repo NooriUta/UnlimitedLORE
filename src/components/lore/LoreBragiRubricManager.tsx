@@ -7,6 +7,7 @@
 // 8-item BRAGI menu mirrors the prototype 1:1 — adding a 9th tab for a
 // rarely-touched admin list isn't worth breaking that).
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const LORE_BASE = '/lore';
 
@@ -29,6 +30,7 @@ export interface LoreBragiRubricManagerProps {
 }
 
 export default function LoreBragiRubricManager({ rubrics, onChanged }: LoreBragiRubricManagerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [id, setId] = useState('');
   const [name, setName] = useState('');
@@ -40,8 +42,8 @@ export default function LoreBragiRubricManager({ rubrics, onChanged }: LoreBragi
 
   const handleAdd = async () => {
     const rid = id.trim();
-    if (!rid) { setErrMsg('ID рубрики обязателен'); return; }
-    if (!name.trim()) { setErrMsg('Название обязательно'); return; }
+    if (!rid) { setErrMsg(t('bragi.rubricManager.errId', 'ID рубрики обязателен')); return; }
+    if (!name.trim()) { setErrMsg(t('bragi.rubricManager.errName', 'Название обязательно')); return; }
     setSaving(true);
     setErrMsg(null);
     try {
@@ -61,22 +63,22 @@ export default function LoreBragiRubricManager({ rubrics, onChanged }: LoreBragi
   return (
     <div style={S.card}>
       <div style={S.head}>
-        <span style={S.title}>рубрикатор</span>
-        <button style={S.addBtn} onClick={() => setOpen(o => !o)}>{open ? 'отмена' : '+ рубрика'}</button>
+        <span style={S.title}>{t('bragi.rubricManager.header', 'рубрикатор')}</span>
+        <button style={S.addBtn} onClick={() => setOpen(o => !o)}>{open ? t('bragi.rubricManager.cancel', 'отмена') : t('bragi.rubricManager.addToggle', '+ рубрика')}</button>
       </div>
       <div style={S.chips}>
         {rubrics.map(r => (
           <span key={r.rubric_id} style={S.chip} title={r.description ?? undefined}>{r.name}</span>
         ))}
-        {rubrics.length === 0 && !open && <span style={S.hint}>рубрик пока нет — можно добавить в форме публикации/ключа</span>}
+        {rubrics.length === 0 && !open && <span style={S.hint}>{t('bragi.rubricManager.emptyHint', 'рубрик пока нет — можно добавить в форме публикации/ключа')}</span>}
       </div>
       {open && (
         <div style={S.form}>
           {errMsg && <div style={S.err}>{errMsg}</div>}
-          <input style={S.input} value={id} placeholder="RUB-XXX" onChange={e => setId(e.target.value)} />
-          <input style={S.input} value={name} placeholder="Название рубрики" onChange={e => setName(e.target.value)} />
-          <input style={S.input} value={description} placeholder="Описание (опц.)" onChange={e => setDescription(e.target.value)} />
-          <button style={S.saveBtn} onClick={handleAdd} disabled={saving}>{saving ? '…' : 'добавить'}</button>
+          <input style={S.input} value={id} placeholder={t('bragi.rubricManager.idPlaceholder', 'RUB-XXX')} onChange={e => setId(e.target.value)} />
+          <input style={S.input} value={name} placeholder={t('bragi.rubricManager.namePlaceholder', 'Название рубрики')} onChange={e => setName(e.target.value)} />
+          <input style={S.input} value={description} placeholder={t('bragi.rubricManager.descPlaceholder', 'Описание (опц.)')} onChange={e => setDescription(e.target.value)} />
+          <button style={S.saveBtn} onClick={handleAdd} disabled={saving}>{saving ? '…' : t('bragi.rubricManager.addBtn', 'добавить')}</button>
         </div>
       )}
     </div>

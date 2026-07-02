@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import { parseRoutine, parseInvariants, parseGateSubtitle } from '../../lib/qgContentMd';
 
@@ -86,9 +87,10 @@ async function lorePost<T>(path: string, body: unknown): Promise<T> {
 
 // ── Sparkline (ADR-QG-004 §2 dynamics) ───────────────────────────────────────
 function Sparkline({ hist, target }: { hist: { v: number; status: string | null }[]; target: number | null }) {
+  const { t } = useTranslation();
   const pres = hist.filter(h => h.v !== -1 && h.v != null);
   if (pres.length < 2) {
-    return <div style={S.sparkEmpty}>нет данных</div>;
+    return <div style={S.sparkEmpty}>{t('lore.qgDetail.sparkline.noData', 'нет данных')}</div>;
   }
   const w = 104, h = 28, pad = 4;
   const vals = pres.map(p => p.v);
@@ -128,6 +130,7 @@ interface Props {
 }
 
 export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint }: Props) {
+  const { t } = useTranslation();
   const [qg, setQg]             = useState<QGDetail | null>(null);
   const [recs, setRecs]         = useState<Recommendation[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -220,8 +223,8 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
     finally { setDismissing(null); }
   };
 
-  if (loading) return <div style={S.empty}>Загрузка…</div>;
-  if (!qg) return <div style={S.empty}>QG «{qgId}» не найден.</div>;
+  if (loading) return <div style={S.empty}>{t('lore.qgDetail.loading', 'Загрузка…')}</div>;
+  if (!qg) return <div style={S.empty}>{t('lore.qgDetail.notFound', 'QG «{{qgId}}» не найден.', { qgId })}</div>;
 
   const stColor = STATUS_COLOR[qg.status ?? ''] ?? 'var(--t3)';
   const pendingRecs = recs.filter(r => r.status === 'pending');
@@ -267,7 +270,9 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
             <span style={S.statusBadge(stColor)}>{qg.status ?? '—'}</span>
             {qg.last_run_status && (
               <span style={S.statusBadge(RUN_COLOR[qg.last_run_status] ?? 'var(--t3)')}>
-                {qg.last_run_status === 'blocked' ? '✗ last fail' : '✓ last pass'}
+                {qg.last_run_status === 'blocked'
+                  ? t('lore.qgDetail.header.lastFail', '✗ last fail')
+                  : t('lore.qgDetail.header.lastPass', '✓ last pass')}
               </span>
             )}
             {qg.component_id && <span style={S.compBadge}>{qg.component_id}</span>}
@@ -277,10 +282,16 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
           {(qg.description || gateSubtitle) && <div style={S.desc}>{qg.description ?? gateSubtitle}</div>}
           {/* §4 РЕГЛАМЕНТ — provenance */}
           <div style={S.provRow}>
-            <span style={S.provLabel}>Регламент:</span>
-            <span style={S.provChip} title="Архитектура рутин">ADR-QG-001 рутина</span>
-            <span style={S.provChip} title="Стандарт SMART-метрик (compute_status)">ADR-QG-002 SMART</span>
-            <span style={S.provChip} title="Формат этого отчёта">ADR-QG-004 формат</span>
+            <span style={S.provLabel}>{t('lore.qgDetail.header.provenanceLabel', 'Регламент:')}</span>
+            <span style={S.provChip} title={t('lore.qgDetail.header.provRoutineTitle', 'Архитектура рутин')}>
+              {t('lore.qgDetail.header.provRoutineChip', 'ADR-QG-001 рутина')}
+            </span>
+            <span style={S.provChip} title={t('lore.qgDetail.header.provSmartTitle', 'Стандарт SMART-метрик (compute_status)')}>
+              {t('lore.qgDetail.header.provSmartChip', 'ADR-QG-002 SMART')}
+            </span>
+            <span style={S.provChip} title={t('lore.qgDetail.header.provFormatTitle', 'Формат этого отчёта')}>
+              {t('lore.qgDetail.header.provFormatChip', 'ADR-QG-004 формат')}
+            </span>
           </div>
         </div>
       </div>
@@ -289,11 +300,15 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
         {/* §2 ДИНАМИКА — run history */}
         <section style={S.section}>
           <div style={S.secLabel}>
-            История прогонов
-            {runs.length > 0 && <span style={S.muted}>{runs.length} записей</span>}
+            {t('lore.qgDetail.runHistory.title', 'История прогонов')}
+            {runs.length > 0 && (
+              <span style={S.muted}>{t('lore.qgDetail.runHistory.recordsCount', '{{count}} записей', { count: runs.length })}</span>
+            )}
           </div>
           {runs.length === 0 ? (
-            <div style={S.emptySection}>Прогонов не найдено (routine: {routineName}).</div>
+            <div style={S.emptySection}>
+              {t('lore.qgDetail.runHistory.empty', 'Прогонов не найдено (routine: {{routineName}}).', { routineName })}
+            </div>
           ) : (
             <div style={S.runList}>
               {runs.map((r, i) => {
@@ -307,7 +322,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                     </span>
                     {r.run_id
                       ? <span style={S.runId}>{r.run_id.slice(-20)}</span>
-                      : <span style={S.runLegacy}>legacy flags</span>}
+                      : <span style={S.runLegacy}>{t('lore.qgDetail.runHistory.legacyFlags', 'legacy flags')}</span>}
                     {!r.run_id && r.flags && <span style={S.runFlags}>{r.flags}</span>}
                   </div>
                 );
@@ -320,16 +335,40 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
         <section style={S.section}>
           <button style={S.methToggle} onClick={() => setMethOpen(o => !o)}>
             <span style={S.methCaret}>{methOpen ? '▾' : '▸'}</span>
-            <span style={S.secLabelInline}>Методика расчёта статуса</span>
-            <span style={S.muted}>ADR-QG-002 SMART-QG</span>
+            <span style={S.secLabelInline}>{t('lore.qgDetail.methodology.title', 'Методика расчёта статуса')}</span>
+            <span style={S.muted}>{t('lore.qgDetail.methodology.subtitle', 'ADR-QG-002 SMART-QG')}</span>
           </button>
           {methOpen && (
             <div style={S.methBody}>
-              <div style={S.methLine}><code style={S.methDir}>gte</code> (больше=лучше): ≥ цель → PASS · ≥ цель×0.9 → WARN · иначе FAIL</div>
-              <div style={S.methLine}><code style={S.methDir}>lte</code> (меньше=лучше): ≤ цель → PASS · ≤ цель×1.1 → WARN · иначе FAIL</div>
-              <div style={S.methLine}><code style={S.methSkip}>value = −1</code> → SKIP (сервис недоступен). <b style={S.methStrong}>SKIP ≠ FAIL</b> — не штрафует гейт.</div>
-              <div style={S.methLine}>Overall: FAIL если ≥1 FAIL · WARN если есть WARN/SKIP · все SKIP → SKIP · иначе PASS.</div>
-              <div style={S.methNote}>Кастомные WARN-полосы заданы в <code style={S.methDir}>condition</code> каждого инварианта ниже.</div>
+              <div style={S.methLine}>
+                <code style={S.methDir}>gte</code>
+                {' '}
+                {t('lore.qgDetail.methodology.gteLine', '(больше=лучше): ≥ цель → PASS · ≥ цель×0.9 → WARN · иначе FAIL')}
+              </div>
+              <div style={S.methLine}>
+                <code style={S.methDir}>lte</code>
+                {' '}
+                {t('lore.qgDetail.methodology.lteLine', '(меньше=лучше): ≤ цель → PASS · ≤ цель×1.1 → WARN · иначе FAIL')}
+              </div>
+              <div style={S.methLine}>
+                <code style={S.methSkip}>{t('lore.qgDetail.methodology.skipValue', 'value = −1')}</code>
+                {' '}
+                {t('lore.qgDetail.methodology.skipDesc', '→ SKIP (сервис недоступен).')}
+                {' '}
+                <b style={S.methStrong}>{t('lore.qgDetail.methodology.skipNeFail', 'SKIP ≠ FAIL')}</b>
+                {' '}
+                {t('lore.qgDetail.methodology.skipNote', '— не штрафует гейт.')}
+              </div>
+              <div style={S.methLine}>
+                {t('lore.qgDetail.methodology.overallLine', 'Overall: FAIL если ≥1 FAIL · WARN если есть WARN/SKIP · все SKIP → SKIP · иначе PASS.')}
+              </div>
+              <div style={S.methNote}>
+                {t('lore.qgDetail.methodology.conditionNotePrefix', 'Кастомные WARN-полосы заданы в')}
+                {' '}
+                <code style={S.methDir}>condition</code>
+                {' '}
+                {t('lore.qgDetail.methodology.conditionNoteSuffix', 'каждого инварианта ниже.')}
+              </div>
             </div>
           )}
         </section>
@@ -337,9 +376,9 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
         {/* §2 «что изменилось» */}
         {hasStructured && (
           <section style={S.section}>
-            <div style={S.secLabel}>Изменилось с прошлого прогона</div>
+            <div style={S.secLabel}>{t('lore.qgDetail.changes.title', 'Изменилось с прошлого прогона')}</div>
             {changes.length === 0 ? (
-              <div style={S.emptySection}>Без изменений статусов.</div>
+              <div style={S.emptySection}>{t('lore.qgDetail.changes.empty', 'Без изменений статусов.')}</div>
             ) : (
               <div style={S.changeRow}>
                 {changes.map(c => (
@@ -357,7 +396,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
         {/* §1+§3 ИНВАРИАНТЫ (что + почему + динамика + рекомендация) */}
         <section style={S.section}>
           <div style={S.secLabel}>
-            Инварианты
+            {t('lore.qgDetail.invariants.title', 'Инварианты')}
             {gateMetrics.length > 0 && (
               <span style={S.countRow}>
                 {(['PASS', 'WARN', 'FAIL', 'SKIP'] as const).map(s =>
@@ -367,7 +406,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
             )}
           </div>
           {invariants.length === 0 ? (
-            <div style={S.emptySection}>В content_md нет распознанных INV-блоков.</div>
+            <div style={S.emptySection}>{t('lore.qgDetail.invariants.empty', 'В content_md нет распознанных INV-блоков.')}</div>
           ) : (
             <div style={S.invList}>
               {invariants.map(inv => {
@@ -388,17 +427,17 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                       <span style={S.invNo}>{inv.invNo}</span>
                       <div style={S.invContent}>
                         <div style={S.invHeadRow}>
-                          <span style={S.badge(sc)}>{st ?? 'нет прогона'}</span>
+                          <span style={S.badge(sc)}>{st ?? t('lore.qgDetail.invariants.noRun', 'нет прогона')}</span>
                           <span style={S.invKey(sk)}>{inv.key}</span>
                           {inv.direction && <span style={S.dirBadge}>{inv.direction}</span>}
                         </div>
                         {inv.descr && <div style={S.invDescr}>{inv.descr}</div>}
                         {/* §3 ПОЧЕМУ: condition + how_to_verify (методология из content_md) */}
                         {inv.condition && (
-                          <div style={S.ruleLine}><span style={S.ruleTag}>правило</span>{inv.condition}</div>
+                          <div style={S.ruleLine}><span style={S.ruleTag}>{t('lore.qgDetail.invariants.ruleTag', 'правило')}</span>{inv.condition}</div>
                         )}
                         {inv.howToVerify && (
-                          <div style={S.ruleLine}><span style={S.ruleTag}>проверка</span>{inv.howToVerify}</div>
+                          <div style={S.ruleLine}><span style={S.ruleTag}>{t('lore.qgDetail.invariants.verifyTag', 'проверка')}</span>{inv.howToVerify}</div>
                         )}
                         {/* §1 ЧТО: source evidence */}
                         {(m?.source || inv.source) && (
@@ -407,7 +446,9 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                               style={S.srcToggle}
                               onClick={() => setExpandedSource(expandedSource === inv.key ? null : inv.key)}
                             >
-                              {expandedSource === inv.key ? '▾ source' : '▸ source'}
+                              {expandedSource === inv.key
+                                ? t('lore.qgDetail.invariants.sourceExpanded', '▾ source')
+                                : t('lore.qgDetail.invariants.sourceCollapsed', '▸ source')}
                             </span>
                             {expandedSource === inv.key && (
                               <pre style={S.srcPre}>{m?.source || inv.source}</pre>
@@ -418,12 +459,14 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                       {/* value / target */}
                       <div style={S.valBox}>
                         {sk ? (
-                          <span style={S.valSkip}>— недоступно</span>
+                          <span style={S.valSkip}>{t('lore.qgDetail.invariants.unavailable', '— недоступно')}</span>
                         ) : (
                           <>
                             <span style={S.valNum(sc)}>{valStr}</span>
                             {inv.target != null && (
-                              <div style={S.valTgt}>цель {inv.direction === 'lte' ? '≤' : '≥'}{inv.target}</div>
+                              <div style={S.valTgt}>
+                                {t('lore.qgDetail.invariants.targetLabel', 'цель')} {inv.direction === 'lte' ? '≤' : '≥'}{inv.target}
+                              </div>
                             )}
                           </>
                         )}
@@ -431,7 +474,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                       {/* §2 ДИНАМИКА: sparkline */}
                       <div style={S.sparkBox}>
                         <Sparkline hist={hist} target={inv.target} />
-                        <div style={S.sparkLabel}>динамика</div>
+                        <div style={S.sparkLabel}>{t('lore.qgDetail.invariants.dynamicsLabel', 'динамика')}</div>
                       </div>
                     </div>
                     {/* inline recommendation under failing invariant */}
@@ -445,10 +488,10 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                         {rec.body_md && <div style={S.recBody}>{rec.body_md}</div>}
                         <div style={S.recActions}>
                           <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
-                            {promoting === rec.rec_id ? '…' : '✅ Создать задачу'}
+                            {promoting === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.createTask', '✅ Создать задачу')}
                           </button>
                           <button style={S.dismissBtn} disabled={dismissing === rec.rec_id} onClick={() => handleDismiss(rec)}>
-                            {dismissing === rec.rec_id ? '…' : '✕ Отклонить'}
+                            {dismissing === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.dismiss', '✕ Отклонить')}
                           </button>
                         </div>
                       </div>
@@ -471,8 +514,12 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
           return (
             <section style={S.section}>
               <div style={S.secLabel}>
-                Прочие рекомендации
-                {pendingRecs.length > 0 && <span style={S.badge('var(--wrn)')}>{pendingRecs.length} pending</span>}
+                {t('lore.qgDetail.otherRecs.title', 'Прочие рекомендации')}
+                {pendingRecs.length > 0 && (
+                  <span style={S.badge('var(--wrn)')}>
+                    {t('lore.qgDetail.otherRecs.pendingCount', '{{count}} pending', { count: pendingRecs.length })}
+                  </span>
+                )}
               </div>
               <div style={S.recList}>
                 {orphan.map(rec => {
@@ -493,10 +540,10 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                       {isPending && (
                         <div style={S.recActions}>
                           <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
-                            {promoting === rec.rec_id ? '…' : '✅ Подтвердить → housekeeping'}
+                            {promoting === rec.rec_id ? '…' : t('lore.qgDetail.otherRecs.confirmToHousekeeping', '✅ Подтвердить → housekeeping')}
                           </button>
                           <button style={S.dismissBtn} disabled={dismissing === rec.rec_id} onClick={() => handleDismiss(rec)}>
-                            {dismissing === rec.rec_id ? '…' : '✕ Отклонить'}
+                            {dismissing === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.dismiss', '✕ Отклонить')}
                           </button>
                         </div>
                       )}
@@ -505,12 +552,12 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                           <button
                             style={S.promotedLink}
                             onClick={() => onNavigateToSprint?.(rec.promoted_sprint_id!)}
-                            title={`Открыть ${rec.promoted_sprint_id}`}
+                            title={t('lore.qgDetail.otherRecs.openSprintTitle', 'Открыть {{sprintId}}', { sprintId: rec.promoted_sprint_id })}
                           >
-                            → задача {rec.promoted_task_uid}
+                            {t('lore.qgDetail.otherRecs.taskLink', '→ задача {{taskUid}}', { taskUid: rec.promoted_task_uid })}
                           </button>
                         ) : (
-                          <div style={S.promotedNote}>→ задача создана</div>
+                          <div style={S.promotedNote}>{t('lore.qgDetail.otherRecs.taskCreated', '→ задача создана')}</div>
                         )
                       )}
                     </div>

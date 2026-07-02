@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreComponentDetail, type LoreSpecRow, type LoreAdrRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { specTitle } from './LoreSpecView';
@@ -58,6 +59,7 @@ interface Props {
 export default function LoreModulePassport({
   componentId, selectedAdr, selectedSpec, onError, onOpenAdr, onOpenSpec, onSelectComponent,
 }: Props) {
+  const { t } = useTranslation();
   const [meta, setMeta]   = useState<LoreComponentDetail | null>(null);
   const [adrs, setAdrs]   = useState<LoreAdrRow[]>([]);
   const [specs, setSpecs] = useState<LoreSpecRow[]>([]);
@@ -76,8 +78,8 @@ export default function LoreModulePassport({
     return () => ctrl.abort();
   }, [componentId, onError]);
 
-  if (loading) return <div style={S.empty}>Загрузка модуля…</div>;
-  if (!meta)   return <div style={S.empty}>Модуль не найден: {componentId}</div>;
+  if (loading) return <div style={S.empty}>{t('lore.modulePassport.loading', 'Загрузка модуля…')}</div>;
+  if (!meta)   return <div style={S.empty}>{t('lore.modulePassport.notFound', 'Модуль не найден: {{componentId}}', { componentId })}</div>;
 
   const tech     = meta.tech ?? [];
   const children = meta.children ?? [];
@@ -93,27 +95,27 @@ export default function LoreModulePassport({
         <div style={S.metaLine}>
           <span style={S.sid}>{meta.component_id}</span>
           {meta.parent_id && (
-            <span>· родитель <span style={S.link} onClick={() => onSelectComponent(meta.parent_id!)}>{meta.parent_id}</span></span>
+            <span>{t('lore.modulePassport.parentPrefix', '· родитель')} <span style={S.link} onClick={() => onSelectComponent(meta.parent_id!)}>{meta.parent_id}</span></span>
           )}
-          <span>· {adrs.length} ADR</span>
-          <span>· {specs.length} спек</span>
-          {children.length > 0 && <span>· {children.length} дочерних</span>}
+          <span>{t('lore.modulePassport.adrCount', '· {{count}} ADR', { count: adrs.length })}</span>
+          <span>{t('lore.modulePassport.specCount', '· {{count}} спек', { count: specs.length })}</span>
+          {children.length > 0 && <span>{t('lore.modulePassport.childrenCount', '· {{count}} дочерних', { count: children.length })}</span>}
         </div>
         {(meta.owner || meta.team) && (
           <div style={S.attrRow}>
-            {meta.owner && <><span style={S.attrLabel}>Владелец</span><span style={S.tech}>{meta.owner}</span></>}
-            {meta.team  && <><span style={{ ...S.attrLabel, marginLeft: meta.owner ? 12 : 0 }}>Команда</span><span style={S.tech}>{meta.team}</span></>}
+            {meta.owner && <><span style={S.attrLabel}>{t('lore.modulePassport.ownerLabel', 'Владелец')}</span><span style={S.tech}>{meta.owner}</span></>}
+            {meta.team  && <><span style={{ ...S.attrLabel, marginLeft: meta.owner ? 12 : 0 }}>{t('lore.modulePassport.teamLabel', 'Команда')}</span><span style={S.tech}>{meta.team}</span></>}
           </div>
         )}
         {tech.length > 0 && (
           <div style={S.attrRow}>
-            <span style={S.attrLabel}>Технологии</span>
-            <div style={S.chips}>{tech.map(t => <span key={t} style={S.tech}>{t}</span>)}</div>
+            <span style={S.attrLabel}>{t('lore.modulePassport.techLabel', 'Технологии')}</span>
+            <div style={S.chips}>{tech.map(tc => <span key={tc} style={S.tech}>{tc}</span>)}</div>
           </div>
         )}
         {children.length > 0 && (
           <div style={S.attrRow}>
-            <span style={S.attrLabel}>Дочерние</span>
+            <span style={S.attrLabel}>{t('lore.modulePassport.childrenLabel', 'Дочерние')}</span>
             <div style={S.chips}>{children.map(c => (
               <span key={c} style={S.childChip} onClick={() => onSelectComponent(c)}>{c}</span>
             ))}</div>
@@ -123,9 +125,9 @@ export default function LoreModulePassport({
 
       <div style={S.cols}>
         <div style={S.col}>
-          <div style={S.colHead}>ADR · {adrs.length}</div>
+          <div style={S.colHead}>{t('lore.modulePassport.adrColumnHead', 'ADR · {{count}}', { count: adrs.length })}</div>
           <div style={S.specList}>
-            {adrs.length === 0 && <div style={S.empty}>ADR нет.</div>}
+            {adrs.length === 0 && <div style={S.empty}>{t('lore.modulePassport.noAdrs', 'ADR нет.')}</div>}
             {adrs.map(a => (
               <div key={a.adr_id} style={S.specRow(selectedAdr === a.adr_id)} onClick={() => onOpenAdr(a.adr_id)} title={a.adr_id}>
                 <span style={S.adrId}>{a.adr_id}</span>
@@ -137,9 +139,9 @@ export default function LoreModulePassport({
           </div>
         </div>
         <div style={{ ...S.col, ...S.colDivider }}>
-          <div style={S.colHead}>Спецификации · {specs.length}</div>
+          <div style={S.colHead}>{t('lore.modulePassport.specColumnHead', 'Спецификации · {{count}}', { count: specs.length })}</div>
           <div style={S.specList}>
-            {specs.length === 0 && <div style={S.empty}>Спек нет.</div>}
+            {specs.length === 0 && <div style={S.empty}>{t('lore.modulePassport.noSpecs', 'Спек нет.')}</div>}
             {specs.map(s => (
               <div key={s.spec_id} style={S.specRow(selectedSpec === s.spec_id)} onClick={() => onOpenSpec(s.spec_id)} title={s.spec_id}>
                 <GameIcon slug="white-book" size={13} />

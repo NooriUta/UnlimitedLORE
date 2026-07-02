@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
 
 type DatePreset = null | '3m' | '6m' | '1y';
-const DATE_PRESETS: { key: DatePreset; label: string }[] = [
-  { key: null, label: 'Все' },
-  { key: '3m', label: '3м' },
-  { key: '6m', label: '6м' },
-  { key: '1y', label: 'Год' },
+const DATE_PRESETS: { key: DatePreset; labelKey: string; labelFallback: string }[] = [
+  { key: null, labelKey: 'lore.adrList.datePreset.all', labelFallback: 'Все' },
+  { key: '3m', labelKey: 'lore.adrList.datePreset.3m',  labelFallback: '3м' },
+  { key: '6m', labelKey: 'lore.adrList.datePreset.6m',  labelFallback: '6м' },
+  { key: '1y', labelKey: 'lore.adrList.datePreset.1y',  labelFallback: 'Год' },
 ];
 function cutoffDate(preset: DatePreset): string | null {
   if (!preset) return null;
@@ -91,6 +92,7 @@ interface Props {
 }
 
 export default function LoreAdrList({ module, q, statusSel, selectedId, onError, onOpen, onNew, onCounts }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
   const [datePreset, setDatePreset] = useState<DatePreset>(null);
@@ -127,17 +129,17 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
 
   return (
     <div style={S.root}>
-      <button style={S.newBtn} onClick={onNew}>+ Новый ADR</button>
+      <button style={S.newBtn} onClick={onNew}>{t('lore.adrList.newButton', '+ Новый ADR')}</button>
       <div style={S.dateLine}>
         {DATE_PRESETS.map(p => (
           <button key={String(p.key)} style={S.dateBtn(datePreset === p.key)} onClick={() => setDatePreset(p.key)}>
-            {p.label}
+            {t(p.labelKey, p.labelFallback)}
           </button>
         ))}
       </div>
       <div style={S.list}>
-        {loading && <div style={S.empty}>Загрузка ADR…</div>}
-        {!loading && !shown.length && <div style={S.empty}>ADR не найдены.</div>}
+        {loading && <div style={S.empty}>{t('lore.adrList.loading', 'Загрузка ADR…')}</div>}
+        {!loading && !shown.length && <div style={S.empty}>{t('lore.adrList.empty', 'ADR не найдены.')}</div>}
         {shown.map(a => {
           const statusKey   = (a.status ?? 'PROPOSED').toUpperCase();
           const statusColor = STATUS_COLOR[statusKey] ?? 'var(--t3)';

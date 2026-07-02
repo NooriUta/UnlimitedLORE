@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 
@@ -63,6 +64,7 @@ interface Props {
 }
 
 export default function LoreRunbookList({ onError, onOpen }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]       = useState<RunbookRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [area, setArea]       = useState('');
@@ -94,11 +96,11 @@ export default function LoreRunbookList({ onError, onOpen }: Props) {
                 )}
                 {a}
               </>
-            ) : 'все'}
+            ) : t('lore.runbookList.allFilter', 'все')}
           </button>
         ))}
         <span style={{ flex: 1 }} />
-        <button style={S.exportBtn} onClick={() => exportMd(rows, area)} title="Экспорт чеклиста в Markdown">
+        <button style={S.exportBtn} onClick={() => exportMd(rows, area)} title={t('lore.runbookList.exportTitle', 'Экспорт чеклиста в Markdown')}>
           ↓ MD
         </button>
       </div>
@@ -112,7 +114,7 @@ export default function LoreRunbookList({ onError, onOpen }: Props) {
       </div>
 
       {loading ? (
-        <div style={S.state}>Загрузка runbooks…</div>
+        <div style={S.state}>{t('lore.runbookList.loading', 'Загрузка runbooks…')}</div>
       ) : (
         <div style={S.list}>
           {shown.map(r => (
@@ -133,7 +135,7 @@ export default function LoreRunbookList({ onError, onOpen }: Props) {
               <span style={S.date}>{r.date_created?.slice(0, 10) ?? ''}</span>
             </div>
           ))}
-          {shown.length === 0 && <div style={S.state}>Runbooks не найдены.</div>}
+          {shown.length === 0 && <div style={S.state}>{t('lore.runbookList.empty', 'Runbooks не найдены.')}</div>}
         </div>
       )}
     </div>

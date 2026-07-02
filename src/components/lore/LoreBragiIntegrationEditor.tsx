@@ -4,6 +4,7 @@
 // secret_ref guard (^(env|vault|oauth|secret):.+) client-side so the user
 // gets an inline hint before submitting, not just a 400 after the fact.
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const LORE_BASE = '/lore';
 const SECRET_REF_RE = /^(env|vault|oauth|secret):.+/;
@@ -40,6 +41,7 @@ export interface LoreBragiIntegrationEditorProps {
 }
 
 export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing }: LoreBragiIntegrationEditorProps) {
+  const { t } = useTranslation();
   const [integrationId, setIntegrationId] = useState(editing?.integration_id ?? '');
   const [service, setService] = useState(editing?.service ?? '');
   const [purpose, setPurpose] = useState(editing?.purpose ?? 'read');
@@ -54,9 +56,9 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing 
 
   const handleSave = async () => {
     const id = integrationId.trim();
-    if (!id) { setErrMsg('Integration ID обязателен'); return; }
+    if (!id) { setErrMsg(t('bragi.integrationEditor.errIntegrationId', 'Integration ID обязателен')); return; }
     if (secretRef && !secretValid) {
-      setErrMsg('secret_ref должен быть ссылкой: "env:X" / "vault:X" / "oauth:X" / "secret:X" — не значением токена');
+      setErrMsg(t('bragi.integrationEditor.errSecretRef', 'secret_ref должен быть ссылкой: "env:X" / "vault:X" / "oauth:X" / "secret:X" — не значением токена'));
       return;
     }
     setSaving(true);
@@ -77,11 +79,11 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing 
   return (
     <div style={S.root}>
       <div style={S.head}>
-        <span style={S.title}>{editing ? 'Редактирование интеграции' : 'Новая интеграция'}</span>
+        <span style={S.title}>{editing ? t('bragi.integrationEditor.titleEdit', 'Редактирование интеграции') : t('bragi.integrationEditor.titleNew', 'Новая интеграция')}</span>
         <div style={S.headBtns}>
-          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>Отмена</button>
+          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>{t('bragi.integrationEditor.cancel', 'Отмена')}</button>
           <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? t('bragi.integrationEditor.saving', 'Сохранение…') : t('bragi.integrationEditor.save', 'Сохранить')}
           </button>
         </div>
       </div>
@@ -89,7 +91,7 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing 
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
 
       <div style={S.row4}>
-        <Field label="Integration ID" grow={1}>
+        <Field label={t('bragi.integrationEditor.integrationId', 'Integration ID')} grow={1}>
           <input
             style={{ ...S.input, opacity: editing ? 0.6 : 1 }}
             value={integrationId}
@@ -98,31 +100,31 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing 
             onChange={e => setIntegrationId(e.target.value)}
           />
         </Field>
-        <Field label="Сервис" grow={2}>
+        <Field label={t('bragi.integrationEditor.service', 'Сервис')} grow={2}>
           <input style={S.input} value={service} placeholder="Яндекс.Метрика 110154828" onChange={e => setService(e.target.value)} />
         </Field>
-        <Field label="Назначение" grow={1}>
+        <Field label={t('bragi.integrationEditor.purposeLabel', 'Назначение')} grow={1}>
           <select style={S.input} value={purpose} onChange={e => setPurpose(e.target.value)}>
-            {PURPOSES.map(p => <option key={p} value={p}>{p}</option>)}
+            {PURPOSES.map(p => <option key={p} value={p}>{t('bragi.integrationEditor.purpose.' + p.replace('/', '_'), p)}</option>)}
           </select>
         </Field>
-        <Field label="Статус" grow={1}>
+        <Field label={t('bragi.integrationEditor.statusLabel', 'Статус')} grow={1}>
           <select style={S.input} value={status} onChange={e => setStatus(e.target.value)}>
-            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            {STATUSES.map(s => <option key={s} value={s}>{t('bragi.integrationEditor.status.' + s, s)}</option>)}
           </select>
         </Field>
       </div>
 
       <div style={S.row4}>
-        <Field label="Endpoint" grow={1}>
+        <Field label={t('bragi.integrationEditor.endpoint', 'Endpoint')} grow={1}>
           <input style={S.input} value={endpoint} onChange={e => setEndpoint(e.target.value)} />
         </Field>
-        <Field label="Scope" grow={1}>
+        <Field label={t('bragi.integrationEditor.scope', 'Scope')} grow={1}>
           <input style={S.input} value={scope} onChange={e => setScope(e.target.value)} />
         </Field>
       </div>
 
-      <Field label="Секрет — ссылка, НЕ значение" grow={1}>
+      <Field label={t('bragi.integrationEditor.secretLabel', 'Секрет — ссылка, НЕ значение')} grow={1}>
         <input
           style={{ ...S.input, borderColor: secretValid ? 'var(--b3)' : 'var(--dng)' }}
           value={secretRef}
@@ -131,8 +133,8 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing 
         />
         <div style={secretValid ? S.secretHint : S.secretHintWarn}>
           {secretValid
-            ? '⚠️ Никогда не вставлять сам токен — только ссылку вида env:X / vault:X / oauth:X / secret:X'
-            : '✕ Похоже на значение, а не на ссылку. Формат: env:X / vault:X / oauth:X / secret:X'}
+            ? t('bragi.integrationEditor.secretHintOk', '⚠️ Никогда не вставлять сам токен — только ссылку вида env:X / vault:X / oauth:X / secret:X')
+            : t('bragi.integrationEditor.secretHintWarn', '✕ Похоже на значение, а не на ссылку. Формат: env:X / vault:X / oauth:X / secret:X')}
         </div>
       </Field>
     </div>

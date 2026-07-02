@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
 import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
 import LoreTimeline        from '../components/lore/LoreTimeline';
@@ -25,7 +26,7 @@ import LoreQGDetail        from '../components/lore/LoreQGDetail';
 import LoreRunbookList     from '../components/lore/LoreRunbookList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
-import { statusMeta, resolveStatusMeta, statusLabel } from '../components/lore/lore-status';
+import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
@@ -34,20 +35,20 @@ type Section =
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
-const SECTIONS: { id: Section; icon: string; label: string }[] = [
-  { id: 'milestones', icon: 'crossed-axes',   label: 'Вехи'         },
-  { id: 'plan',       icon: 'compass',        label: 'План'         },
-  { id: 'sprints',    icon: 'sprint',         label: 'Спринты'      },
-  { id: 'adrs',       icon: 'scroll-quill',   label: 'ADR'          },
-  { id: 'decisions',  icon: 'vote',           label: 'Решения'      },
-  { id: 'releases',   icon: 'open-book',      label: 'Релизы'       },
-  { id: 'qg',         icon: 'checkered-flag', label: 'QG'           },
-  { id: 'knowledge',  icon: 'spell-book',     label: 'Знания'       },
-  { id: 'components', icon: 'cog',            label: 'Компоненты'   },
-  { id: 'evolution',  icon: 'hourglass',      label: 'История'      },
-  { id: 'timeline',   icon: 'tied-scroll',    label: 'Лента'        },
-  { id: 'analytics',  icon: 'pie-chart',      label: 'Аналитика'    },
-  { id: 'mcp',        icon: 'plug',           label: 'MCP API'      },
+const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string }[] = [
+  { id: 'milestones', icon: 'crossed-axes',   labelKey: 'lore.page.nav.milestones', fallback: 'Вехи'       },
+  { id: 'plan',       icon: 'compass',        labelKey: 'lore.page.nav.plan',       fallback: 'План'       },
+  { id: 'sprints',    icon: 'sprint',         labelKey: 'lore.page.nav.sprints',    fallback: 'Спринты'    },
+  { id: 'adrs',       icon: 'scroll-quill',   labelKey: 'lore.page.nav.adrs',       fallback: 'ADR'        },
+  { id: 'decisions',  icon: 'vote',           labelKey: 'lore.page.nav.decisions',  fallback: 'Решения'    },
+  { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
+  { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
+  { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
+  { id: 'components', icon: 'cog',            labelKey: 'lore.page.nav.components', fallback: 'Компоненты' },
+  { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
+  { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
+  { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
+  { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
 ];
 
 // Sections that use master-detail layout (list panel + detail panel)
@@ -127,6 +128,7 @@ const S = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LorePage() {
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
 
   const section   = (params.get('section') as Section) || 'plan';
@@ -270,10 +272,10 @@ export default function LorePage() {
           key={s.id}
           style={S.navItem(section === s.id)}
           onClick={() => go(s.id)}
-          title={s.label}
+          title={t(s.labelKey, s.fallback)}
         >
           {s.icon && <GameIcon slug={s.icon} size={15} style={{ color: 'inherit' }} />}
-          <span>{s.label}</span>
+          <span>{t(s.labelKey, s.fallback)}</span>
         </button>
       ))}
     </nav>
@@ -283,8 +285,8 @@ export default function LorePage() {
     <div style={S.root}>
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>📚</span>
-        <span>LORE отключён в этой среде.</span>
-        <span style={{ fontSize: 11 }}>Установить <code>lore.enabled=true</code> в lore-backend (:9100).</span>
+        <span>{t('lore.page.disabled.message', 'LORE отключён в этой среде.')}</span>
+        <span style={{ fontSize: 11 }}>{t('lore.page.disabled.hint', 'Установить lore.enabled=true в lore-backend (:9100).')}</span>
       </div>
     </div>
   );
@@ -293,9 +295,9 @@ export default function LorePage() {
     <div style={S.root}>
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>⚠️</span>
-        <span>LORE недоступен — lore-backend (:9100) не отвечает.</span>
+        <span>{t('lore.page.unreachable.message', 'LORE недоступен — lore-backend (:9100) не отвечает.')}</span>
         <button style={{ fontSize: 11, marginTop: 8, cursor: 'pointer' }} onClick={() => setLoreUnreachable(false)}>
-          Повторить
+          {t('lore.page.unreachable.retry', 'Повторить')}
         </button>
       </div>
     </div>
@@ -309,8 +311,8 @@ export default function LorePage() {
           <span style={S.searchIcon}>🔍</span>
           <input
             style={S.searchInput}
-            placeholder="поиск по базе знаний…"
-            aria-label="поиск по базе знаний"
+            placeholder={t('lore.page.search.knowledgePlaceholder', 'поиск по базе знаний…')}
+            aria-label={t('lore.page.search.knowledgeAriaLabel', 'поиск по базе знаний')}
             value={search}
             onChange={e => onSearchChange(e.target.value)}
           />
@@ -346,7 +348,7 @@ export default function LorePage() {
                 }}
               >
                 <GameIcon slug={meta.icon} size={11} style={{ color: meta.color }} />
-                {f.label}
+                {f.label /* status label sourced from STATUS_FILTERS in LoreSprintTree, not this file */}
                 <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
               </span>
             );
@@ -361,7 +363,7 @@ export default function LorePage() {
               if (sprintPresetWorking) { setSprintStatusSel(new Set()); }
               else { setSprintStatusSel(new Set(['in_progress', 'partial'])); setSprintNoRelease(false); }
             }}
-            title="В работе + Частично"
+            title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
               userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
@@ -369,7 +371,7 @@ export default function LorePage() {
               background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
             }}
-          >⚡ В работе</span>
+          >⚡ {t('lore.page.sprints.presetWorking', 'В работе')}</span>
 
           {/* Пресет: Нужно внимание */}
           <span
@@ -377,7 +379,7 @@ export default function LorePage() {
               if (sprintPresetAttention) { setSprintStatusSel(new Set()); setSprintNoRelease(false); }
               else { setSprintStatusSel(new Set(['in_progress'])); setSprintNoRelease(true); }
             }}
-            title="В работе без привязки к релизу"
+            title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
               userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
@@ -385,7 +387,7 @@ export default function LorePage() {
               background: sprintPresetAttention ? 'color-mix(in srgb, #E24B4A 16%, transparent)' : 'transparent',
               color: sprintPresetAttention ? '#E24B4A' : 'var(--t3)',
             }}
-          >⚠ Внимание</span>
+          >⚠ {t('lore.page.sprints.presetAttention', 'Внимание')}</span>
 
           {/* Распорка */}
           <span style={{ flex: 1 }} />
@@ -415,7 +417,7 @@ export default function LorePage() {
 
           {/* Даты */}
           {(['month', 'quarter', '90d'] as DatePeriod[]).map(p => {
-            const label = p === 'month' ? 'Этот месяц' : p === 'quarter' ? 'Квартал' : '90 дней';
+            const label = p === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : p === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней');
             const on    = sprintDatePeriod === p;
             return (
               <span key={p!}
@@ -443,7 +445,7 @@ export default function LorePage() {
               background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
             }}
-          >Без релиза</span>
+          >{t('lore.page.sprints.noRelease', 'Без релиза')}</span>
 
           {/* Сброс */}
           {(sprintStatusSel.size > 0 || sprintNoRelease || sprintDatePeriod || sprintPriorityFilter.size > 0) && (
@@ -452,8 +454,8 @@ export default function LorePage() {
               <span
                 onClick={() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); }}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title="Сбросить фильтры"
-              >✕ сброс</span>
+                title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
             </>
           )}
         </div>
@@ -494,15 +496,15 @@ export default function LorePage() {
               <span
                 onClick={() => setAdrStatusSel(new Set())}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title="Сбросить фильтры"
-              >✕ сброс</span>
+                title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
             </>
           )}
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 10, color: 'var(--t3)' }}>
             {adrStatusSel.size === 0
-              ? `${Object.values(adrCounts).reduce((a, b) => a + b, 0)} ADR всего`
-              : `${ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0)} из ${Object.values(adrCounts).reduce((a, b) => a + b, 0)}`}
+              ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
+              : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
           </span>
         </div>
       )}
@@ -543,13 +545,13 @@ export default function LorePage() {
               <span
                 onClick={() => setCompAreaSel(new Set())}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title="Сбросить фильтр по area"
-              >✕ сброс</span>
+                title={t('lore.page.components.resetAreaFilterTitle', 'Сбросить фильтр по area')}
+              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
             </>
           )}
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 10, color: 'var(--t3)' }}>
-            {Object.values(compAreaCounts).reduce((a, b) => a + b, 0)} компонентов
+            {t('lore.page.components.totalCount', '{{count}} компонентов', { count: Object.values(compAreaCounts).reduce((a, b) => a + b, 0) })}
           </span>
         </div>
       )}
@@ -561,12 +563,12 @@ export default function LorePage() {
           borderBottom: '1px solid var(--bd)', flexShrink: 0, overflowX: 'auto',
         }}>
           {([
-            { label: 'всего',      value: sprintStats.total,     color: 'var(--t1)' },
-            { label: 'завершено',  value: sprintStats.done,      color: '#4dc9a0'   },
-            { label: 'активных',   value: sprintStats.active,    color: 'var(--acc)'},
-            { label: 'P0 открыто', value: sprintStats.p0Open,    color: '#E24B4A'   },
-            { label: 'без релиза', value: sprintStats.noRelease, color: 'var(--t3)' },
-          ] as const).map((s, i) => (
+            { label: t('lore.page.sprints.stats.total', 'всего'),      value: sprintStats.total,     color: 'var(--t1)' },
+            { label: t('lore.page.sprints.stats.done', 'завершено'),  value: sprintStats.done,      color: '#4dc9a0'   },
+            { label: t('lore.page.sprints.stats.active', 'активных'),   value: sprintStats.active,    color: 'var(--acc)'},
+            { label: t('lore.page.sprints.stats.p0Open', 'P0 открыто'), value: sprintStats.p0Open,    color: '#E24B4A'   },
+            { label: t('lore.page.sprints.stats.noRelease', 'без релиза'), value: sprintStats.noRelease, color: 'var(--t3)' },
+          ]).map((s, i) => (
             <div key={i} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '3px 14px', flexShrink: 0,
@@ -591,7 +593,7 @@ export default function LorePage() {
                 height: '100%', background: '#4dc9a0', borderRadius: 2,
               }} />
             </div>
-            <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>выполнено</span>
+            <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{t('lore.page.sprints.stats.percentDone', 'выполнено')}</span>
           </div>
           ); })()}
         </div>
@@ -609,7 +611,7 @@ export default function LorePage() {
                 🔍
                 <input
                   style={S.listPanelSearch}
-                  placeholder="ADR-..."
+                  placeholder={t('lore.page.adrs.searchPlaceholder', 'ADR-...')}
                   value={listSearch}
                   onChange={e => setListSearch(e.target.value)}
                 />
@@ -618,7 +620,7 @@ export default function LorePage() {
                     onClick={clearItem}
                     style={{ background: 'none', border: 'none', cursor: 'pointer',
                              color: 'var(--t3)', fontSize: 11, padding: '0 2px' }}
-                    title="Сбросить выбор"
+                    title={t('lore.page.adrs.clearSelectionTitle', 'Сбросить выбор')}
                   >✕</button>
                 )}
               </div>
@@ -651,8 +653,8 @@ export default function LorePage() {
                       flex: 1, background: 'transparent', border: 'none', outline: 'none',
                       color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
                     }}
-                    placeholder="спринт…"
-                    aria-label="поиск по имени спринта"
+                    placeholder={t('lore.page.sprints.searchPlaceholder', 'спринт…')}
+                    aria-label={t('lore.page.sprints.searchAriaLabel', 'поиск по имени спринта')}
                     value={sprintQ}
                     onChange={e => setSprintQ(e.target.value)}
                   />
@@ -662,7 +664,7 @@ export default function LorePage() {
                   )}
                   <button
                     onClick={() => selectItem('__new')}
-                    title="Новый спринт"
+                    title={t('lore.page.sprints.newSprintTitle', 'Новый спринт')}
                     style={{
                       flexShrink: 0, width: 20, height: 20, borderRadius: 4,
                       border: '1px solid var(--bd)', background: 'transparent',
@@ -699,8 +701,8 @@ export default function LorePage() {
                       flex: 1, background: 'transparent', border: 'none', outline: 'none',
                       color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
                     }}
-                    placeholder="компонент…"
-                    aria-label="поиск по компонентам"
+                    placeholder={t('lore.page.components.searchPlaceholder', 'компонент…')}
+                    aria-label={t('lore.page.components.searchAriaLabel', 'поиск по компонентам')}
                     value={compQ}
                     onChange={e => setCompQ(e.target.value)}
                   />
@@ -741,7 +743,7 @@ export default function LorePage() {
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
         <div style={S.content}>
-          <LoreErrorBoundary label={`Ошибка секции «${section}»`}>
+          <LoreErrorBoundary label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
 
@@ -764,8 +766,8 @@ export default function LorePage() {
           {section === 'adrs' && !passport && (
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="scroll-quill" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
-              <span>Выберите ADR из списка слева</span>
-              <span style={{ fontSize: 10, color: 'var(--t3)' }}>или нажмите «+ новый ADR» чтобы создать</span>
+              <span>{t('lore.page.adrs.emptySelectHint', 'Выберите ADR из списка слева')}</span>
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.page.adrs.emptyCreateHint', 'или нажмите «+ новый ADR» чтобы создать')}</span>
             </div>
           )}
 
@@ -790,7 +792,7 @@ export default function LorePage() {
             <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} />
           )}
           {section === 'sprints' && !passport && (
-            <div style={S.placeholder}>Выберите спринт из списка слева</div>
+            <div style={S.placeholder}>{t('lore.page.sprints.emptySelectHint', 'Выберите спринт из списка слева')}</div>
           )}
 
           {/* Components — master-detail: component list → component passport */}
@@ -810,7 +812,7 @@ export default function LorePage() {
             />
           )}
           {section === 'components' && !spec && !passport && (
-            <div style={S.placeholder}>Выберите компонент из списка слева</div>
+            <div style={S.placeholder}>{t('lore.page.components.emptySelectHint', 'Выберите компонент из списка слева')}</div>
           )}
 
           {/* QG — master-detail: list left, detail right */}
@@ -825,7 +827,7 @@ export default function LorePage() {
           {section === 'qg' && !passport && (
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="checkered-flag" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
-              <span>Выберите Quality Gate из списка слева</span>
+              <span>{t('lore.page.qg.emptySelectHint', 'Выберите Quality Gate из списка слева')}</span>
             </div>
           )}
 
@@ -842,7 +844,7 @@ export default function LorePage() {
           {section === 'knowledge' && !(artKind && artId) && (
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="spell-book" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
-              <span>Выберите элемент из списка слева</span>
+              <span>{t('lore.page.knowledge.emptySelectHint', 'Выберите элемент из списка слева')}</span>
             </div>
           )}
 
@@ -881,9 +883,13 @@ export default function LorePage() {
 export function StatusChip({ status }: { status: string }) {
   // status may arrive raw ("✅ DONE", "🟡 PARTIAL") or as a clean key ("accepted").
   // resolveStatusMeta normalizes both so we never fall back to the generic
-  // checkbox-tree icon; statusLabel strips the leading emoji so it isn't shown
-  // twice (chip icon + inline emoji).
+  // checkbox-tree icon. Displayed text goes through the shared "status.*" i18n
+  // namespace keyed by the SAME normalized taskTick key — statusLabel's
+  // marker-stripped raw text is only the fallback for an unmapped status.
+  const { t } = useTranslation();
   const { icon, color } = resolveStatusMeta(status);
+  const normalized = taskTick(status).status;
+  const label = t(`status.${normalized}`, statusLabel(status));
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -893,7 +899,7 @@ export function StatusChip({ status }: { status: string }) {
       whiteSpace: 'nowrap',
     }}>
       <GameIcon slug={icon} size={11} style={{ color: 'inherit' }} />
-      {statusLabel(status)}
+      {label}
     </span>
   );
 }

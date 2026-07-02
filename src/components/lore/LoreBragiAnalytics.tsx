@@ -3,6 +3,7 @@
 // metric feed. Hand-rolled (div-width bars, like LoreAnalytics.tsx elsewhere
 // in this app) — no charting library dependency in this repo.
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
 
 interface AggRow { object_type: string; object_id: string; metric: string; agg_value: number; n: number }
@@ -18,6 +19,7 @@ async function sumMetric(metric: string): Promise<number> {
 }
 
 export default function LoreBragiAnalytics() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [views, setViews] = useState(0);
   const [clicks, setClicks] = useState(0);
@@ -46,23 +48,23 @@ export default function LoreBragiAnalytics() {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading) return <div style={S.hint}>загрузка…</div>;
+  if (loading) return <div style={S.hint}>{t('bragi.analytics.loading', 'загрузка…')}</div>;
 
   const maxShare = Math.max(1, ...aiShare.map(r => r.agg_value));
 
   return (
     <div>
-      <div style={S.desc}>воронка (Метрика), позиции (Keys.so), доля в ИИ (Трекер ИИ), конкуренты.</div>
+      <div style={S.desc}>{t('bragi.analytics.desc', 'воронка (Метрика), позиции (Keys.so), доля в ИИ (Трекер ИИ), конкуренты.')}</div>
       <div style={S.kpis}>
-        <div style={S.kpi}><div style={S.kpiLab}>показы/просмотры</div><div style={S.kpiVal}>{views.toLocaleString('ru-RU')}</div></div>
-        <div style={S.kpi}><div style={S.kpiLab}>переходы</div><div style={S.kpiVal}>{clicks.toLocaleString('ru-RU')}</div></div>
-        <div style={S.kpi}><div style={S.kpiLab}>демо</div><div style={S.kpiVal}>{demo}</div></div>
-        <div style={S.kpi}><div style={S.kpiLab}>ср. позиция бренда</div><div style={S.kpiVal}>{position ?? '—'}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.views', 'показы/просмотры')}</div><div style={S.kpiVal}>{views.toLocaleString('ru-RU')}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.clicks', 'переходы')}</div><div style={S.kpiVal}>{clicks.toLocaleString('ru-RU')}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.demo', 'демо')}</div><div style={S.kpiVal}>{demo}</div></div>
+        <div style={S.kpi}><div style={S.kpiLab}>{t('bragi.analytics.kpi.position', 'ср. позиция бренда')}</div><div style={S.kpiVal}>{position ?? '—'}</div></div>
       </div>
 
       <div style={S.card}>
-        <h2 style={S.cardH2}>доля в ИИ vs конкуренты</h2>
-        {aiShare.length === 0 ? <div style={S.hint}>замеров пока нет</div> : aiShare.map(r => {
+        <h2 style={S.cardH2}>{t('bragi.analytics.aiShare.title', 'доля в ИИ vs конкуренты')}</h2>
+        {aiShare.length === 0 ? <div style={S.hint}>{t('bragi.analytics.aiShare.empty', 'замеров пока нет')}</div> : aiShare.map(r => {
           const isBrand = r.object_id === 'COMP-SEIDR';
           return (
             <div key={r.object_id} style={S.shareRow}>
@@ -79,11 +81,11 @@ export default function LoreBragiAnalytics() {
       </div>
 
       <div style={S.card}>
-        <h2 style={S.cardH2}>последние замеры <span style={S.meta}>{recent.length}</span></h2>
-        {recent.length === 0 ? <div style={S.hint}>замеров пока нет</div> : (
+        <h2 style={S.cardH2}>{t('bragi.analytics.recent.title', 'последние замеры')} <span style={S.meta}>{recent.length}</span></h2>
+        {recent.length === 0 ? <div style={S.hint}>{t('bragi.analytics.recent.empty', 'замеров пока нет')}</div> : (
           <table style={S.table}>
             <thead>
-              <tr><th style={S.th}>объект</th><th style={S.th}>метрика</th><th style={S.thNum}>значение</th><th style={S.th}>источник</th></tr>
+              <tr><th style={S.th}>{t('bragi.analytics.recent.colObject', 'объект')}</th><th style={S.th}>{t('bragi.analytics.recent.colMetric', 'метрика')}</th><th style={S.thNum}>{t('bragi.analytics.recent.colValue', 'значение')}</th><th style={S.th}>{t('bragi.analytics.recent.colSource', 'источник')}</th></tr>
             </thead>
             <tbody>
               {recent.map((r, i) => (
