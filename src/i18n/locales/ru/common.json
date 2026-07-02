@@ -1061,7 +1061,9 @@
       "releaseBar": {
         "label": "Релиз",
         "goToRelease": "Перейти к релизу {{v}}",
-        "githubRelease": "GitHub-релиз {{v}}"
+        "githubRelease": "GitHub-релиз {{v}}",
+        "unlink": "Отвязать {{v}}",
+        "linkPlaceholder": "+ привязать релиз…"
       },
       "prBar": {
         "label": "PR"
