@@ -1811,7 +1811,7 @@ public class AidaLoreResource {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "SELECT state_uid FROM KnowADRHist " +
+                    "SELECT @rid as rid, state_uid FROM KnowADRHist " +
                     "WHERE in('HAS_STATE').adr_id[0] = :id AND valid_to IS NULL LIMIT 1",
                     Map.of("id", req.adr_id())))
                 .await().indefinitely().result();
@@ -1824,16 +1824,30 @@ public class AidaLoreResource {
                 // whatever was passed, including null — a partial amend call (e.g. only
                 // decision_md to fix a typo) would silently WIPE the other two sections. Found
                 // 2026-07-02 while wiring up an "amend ADR body" workflow.
-                String sid = String.valueOf(histRows.get(0).get("state_uid"));
+                //
+                // Match by @rid, not state_uid: 59/83 open KnowADRHist rows (bulk-imported
+                // pre-MCP, e.g. ADR-HND-STMTGEOID-STABILITY, ADR-HND-019/021, ADR-SHT-001)
+                // have state_uid=null. WHERE state_uid=:sid with a null business key bound
+                // String.valueOf(null)="null" — matched zero rows, so every amend call on
+                // those ADRs silently no-op'd with no error. @rid is always non-null/unique.
+                // Found 2026-07-02 debugging why body edits weren't landing on real ADRs.
+                Object rid = histRows.get(0).get("rid");
+                Object existingSid = histRows.get(0).get("state_uid");
                 StringBuilder histSql = new StringBuilder("UPDATE KnowADRHist SET ");
                 Map<String, Object> histUpdP = new java.util.HashMap<>();
-                histUpdP.put("sid", sid);
+                histUpdP.put("rid", rid);
                 boolean first = true;
+                if (existingSid == null) {
+                    // Backfill the missing business key while we're touching this row anyway.
+                    histSql.append("state_uid=:nsid");
+                    histUpdP.put("nsid", nsid);
+                    first = false;
+                }
                 if (req.context_md() != null)      { histSql.append(first ? "" : ", ").append("context_md=:ctx");       histUpdP.put("ctx", req.context_md());      first = false; }
                 if (req.decision_md() != null)     { histSql.append(first ? "" : ", ").append("decision_md=:dec");      histUpdP.put("dec", req.decision_md());     first = false; }
                 if (req.consequences_md() != null) { histSql.append(first ? "" : ", ").append("consequences_md=:con");  histUpdP.put("con", req.consequences_md()); first = false; }
                 if (!first) {
-                    histSql.append(" WHERE state_uid=:sid");
+                    histSql.append(" WHERE @rid=:rid");
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         histSql.toString(), histUpdP)).await().indefinitely();
                 }
