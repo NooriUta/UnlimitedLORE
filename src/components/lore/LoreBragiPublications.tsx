@@ -4,7 +4,7 @@
 // a variant expands it (full text + live BragiMetric points for that variant).
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { fetchLoreSlice, fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
-import LoreBragiPublicationEditor from './LoreBragiPublicationEditor';
+import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData } from './LoreBragiPublicationEditor';
 
 interface PublicationRow {
   publication_id: string;
@@ -34,6 +34,8 @@ export default function LoreBragiPublications() {
   const [metrics, setMetrics] = useState<BragiMetricPoint[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editingRow, setEditingRow] = useState<PublicationRow | null>(null);
+  const [showMainText, setShowMainText] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -75,6 +77,23 @@ export default function LoreBragiPublications() {
     );
   }
 
+  if (editingRow) {
+    const editData: LoreBragiPublicationEditData = {
+      publication_id: editingRow.publication_id, title: editingRow.title, topic: editingRow.topic,
+      main_text_md: editingRow.main_text_md, type: editingRow.type, status_general: editingRow.status_general,
+      keyword_ids: editingRow.keyword_ids, variant_ids: editingRow.variant_ids,
+      variant_channels: editingRow.variant_channels, variant_statuses: editingRow.variant_statuses,
+      variant_urls: editingRow.variant_urls, variant_texts: editingRow.variant_texts,
+    };
+    return (
+      <LoreBragiPublicationEditor
+        editing={editData}
+        onSaved={() => { setEditingRow(null); load(); }}
+        onCancel={() => setEditingRow(null)}
+      />
+    );
+  }
+
   if (loading) return <div style={S.hint}>загрузка…</div>;
 
   return (
@@ -94,15 +113,25 @@ export default function LoreBragiPublications() {
           <div style={S.pubhead}>
             <div style={S.thumb} />
             <div style={{ flex: 1 }}>
-              <div style={S.pubttl}>{pub.title}</div>
+              <div style={S.pubttlRow}>
+                <div style={S.pubttl}>{pub.title}</div>
+                <button style={S.editBtn} onClick={() => setEditingRow(pub)}>✎ редактировать</button>
+              </div>
               <div style={S.pubmeta}>
                 {pub.topic && <span>ключ · {pub.topic}</span>}
-                {pub.main_text_md && <span>main-текст · {pub.main_text_md}</span>}
+                {pub.main_text_md && (
+                  <span style={S.mainTextLink} onClick={() => setShowMainText(showMainText === pub.publication_id ? null : pub.publication_id)}>
+                    main-текст {showMainText === pub.publication_id ? '▲' : '▼'}
+                  </span>
+                )}
                 <span style={S.statusTag}>
                   <span style={statusDotStyle(STATUS_COLOR[pub.status_general ?? ''] ?? 'var(--t3)')} />
                   {pub.status_general ?? '—'}
                 </span>
               </div>
+              {showMainText === pub.publication_id && (
+                <div style={S.mainTextBox}>{pub.main_text_md}</div>
+              )}
             </div>
           </div>
 
@@ -128,9 +157,20 @@ export default function LoreBragiPublications() {
                 </div>
                 {expanded === vid && (
                   <div style={S.expandBox}>
-                    <div style={S.expandText}>{pub.variant_texts[i] ?? 'текст не задан'}</div>
+                    {pub.variant_texts[i] ? (
+                      <div style={S.expandText}>{pub.variant_texts[i]}</div>
+                    ) : (
+                      <>
+                        <div style={S.sameAsMainTag}>как в main-тексте</div>
+                        <div style={S.expandText}>{pub.main_text_md ?? 'текст не задан'}</div>
+                      </>
+                    )}
                     {pub.variant_urls[i] && (
-                      <div style={S.hint}>url: {pub.variant_urls[i]}</div>
+                      <div style={S.hint}>
+                        <a href={pub.variant_urls[i]!} target="_blank" rel="noreferrer" style={S.link} onClick={e => e.stopPropagation()}>
+                          → перейти к опубликованному
+                        </a>
+                      </div>
                     )}
                     <div style={S.expandMetricsLabel}>метрики площадки</div>
                     {metricsLoading ? (
@@ -180,8 +220,15 @@ const S: Record<string, React.CSSProperties> = {
   pubhead:   { display: 'flex', gap: 14, alignItems: 'flex-start' },
   thumb:     { flex: 'none', width: 76, height: 54, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8 },
   thumbSm:   { flex: 'none', width: 42, height: 32, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8, display: 'inline-block' },
+  pubttlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   pubttl:    { fontSize: 15, fontWeight: 500 },
+  editBtn:   { flex: 'none', fontSize: 11, color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
+               borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
   pubmeta:   { fontSize: 12, color: 'var(--t3)', marginTop: 5, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
+  mainTextLink: { color: 'var(--acc)', cursor: 'pointer' },
+  mainTextBox:  { marginTop: 8, padding: '8px 10px', background: 'var(--bg0)', border: '1px solid var(--bd)',
+                  borderRadius: 6, fontSize: 12.5, lineHeight: 1.55, color: 'var(--t1)' },
+  link:      { color: 'var(--acc)', textDecoration: 'none' },
   statusTag: { fontSize: 12, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' },
   variants:  { display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--bd)' },
   variantChip: { display: 'flex', gap: 9, alignItems: 'center', background: 'var(--bg0)', border: '1px solid var(--bd)',
@@ -193,6 +240,7 @@ const S: Record<string, React.CSSProperties> = {
   expandBox: { marginTop: 6, marginBottom: 4, padding: '10px 12px', background: 'var(--bg0)', border: '1px solid var(--bd)',
                borderRadius: 8 },
   expandText: { fontSize: 13, lineHeight: 1.55, marginBottom: 8 },
+  sameAsMainTag: { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 },
   expandMetricsLabel: { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '6px 0' },
   metricChip: { background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 6, padding: '2px 8px',
                 fontSize: 11, color: 'var(--t2)', fontFamily: 'var(--mono)' },

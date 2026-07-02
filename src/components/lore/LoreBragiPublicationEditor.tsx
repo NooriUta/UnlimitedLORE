@@ -24,8 +24,12 @@ interface KeywordRow { keyword_id: string; phrase: string }
 interface ChannelRow { channel_id: string; channel_type: string | null }
 
 interface VariantDraft {
+  /** Set when editing an existing variant — reused on save instead of
+   * generating a new id from channel_id, so re-saving amends in place. */
+  variant_id?: string;
   channel_id: string;
   text_md: string;
+  sameAsMain: boolean;
   status: string;
   url: string;
   published_at: string;
@@ -33,24 +37,60 @@ interface VariantDraft {
 
 const STATUSES = ['draft', 'ready', 'published', 'planned'];
 
+/** Shape of an existing publication row (from the bragi_publications slice) —
+ * passed in to switch the form into edit mode. */
+export interface LoreBragiPublicationEditData {
+  publication_id: string;
+  title: string;
+  topic: string | null;
+  main_text_md: string | null;
+  type: string | null;
+  status_general: string | null;
+  keyword_ids: string[];
+  variant_ids: string[];
+  variant_channels: string[];
+  variant_statuses: string[];
+  variant_urls: (string | null)[];
+  variant_texts: (string | null)[];
+  variant_published_at?: (string | null)[];
+}
+
 export interface LoreBragiPublicationEditorProps {
   onSaved: (publicationId: string) => void;
   onCancel: () => void;
   /** Prefill the first variant's date (FE-07: calendar quick-add). */
   initialPublishedAt?: string;
+  /** Present → edit this existing publication instead of creating a new one. */
+  editing?: LoreBragiPublicationEditData;
 }
 
-export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialPublishedAt }: LoreBragiPublicationEditorProps) {
-  const [publicationId, setPublicationId] = useState('');
-  const [title, setTitle] = useState('');
-  const [topic, setTopic] = useState('');
-  const [mainText, setMainText] = useState('');
-  const [type, setType] = useState('article');
-  const [status, setStatus] = useState('draft');
-  const [keywordIds, setKeywordIds] = useState<string[]>([]);
-  const [variants, setVariants] = useState<VariantDraft[]>([
-    { channel_id: '', text_md: '', status: 'draft', url: '', published_at: initialPublishedAt ?? '' },
-  ]);
+function variantsFromEditData(d: LoreBragiPublicationEditData): VariantDraft[] {
+  if (d.variant_ids.length === 0) {
+    return [{ channel_id: '', text_md: '', sameAsMain: true, status: 'draft', url: '', published_at: '' }];
+  }
+  return d.variant_ids.map((vid, i) => ({
+    variant_id: vid,
+    channel_id: d.variant_channels[i] ?? '',
+    text_md: d.variant_texts[i] ?? '',
+    sameAsMain: !d.variant_texts[i],
+    status: d.variant_statuses[i] ?? 'draft',
+    url: d.variant_urls[i] ?? '',
+    published_at: d.variant_published_at?.[i] ?? '',
+  }));
+}
+
+export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialPublishedAt, editing }: LoreBragiPublicationEditorProps) {
+  const [publicationId, setPublicationId] = useState(editing?.publication_id ?? '');
+  const [title, setTitle] = useState(editing?.title ?? '');
+  const [topic, setTopic] = useState(editing?.topic ?? '');
+  const [mainText, setMainText] = useState(editing?.main_text_md ?? '');
+  const [type, setType] = useState(editing?.type ?? 'article');
+  const [status, setStatus] = useState(editing?.status_general ?? 'draft');
+  const [keywordIds, setKeywordIds] = useState<string[]>(editing?.keyword_ids ?? []);
+  const [variants, setVariants] = useState<VariantDraft[]>(
+    editing ? variantsFromEditData(editing)
+      : [{ channel_id: '', text_md: '', sameAsMain: true, status: 'draft', url: '', published_at: initialPublishedAt ?? '' }],
+  );
 
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
   const [channels, setChannels] = useState<ChannelRow[]>([]);
@@ -65,7 +105,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   const setVariant = (i: number, patch: Partial<VariantDraft>) =>
     setVariants(vs => vs.map((v, vi) => (vi === i ? { ...v, ...patch } : v)));
   const addVariant = () =>
-    setVariants(vs => [...vs, { channel_id: '', text_md: '', status: 'draft', url: '', published_at: '' }]);
+    setVariants(vs => [...vs, { channel_id: '', text_md: '', sameAsMain: true, status: 'draft', url: '', published_at: '' }]);
   const removeVariant = (i: number) => setVariants(vs => vs.filter((_, vi) => vi !== i));
 
   const handleSave = async () => {
@@ -81,16 +121,20 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         type: type || undefined, status_general: status || undefined,
         keyword_ids: keywordIds.length ? keywordIds : undefined,
       });
-      let i = 1;
       for (const v of variants) {
         if (!v.channel_id) continue; // skip empty rows
-        const variantId = `${id}-${v.channel_id.replace(/^CH-/, '')}`;
+        const variantId = v.variant_id ?? `${id}-${v.channel_id.replace(/^CH-/, '')}`;
         await post('/bragi/variant', {
           variant_id: variantId, publication_id: id, channel_id: v.channel_id,
-          text_md: v.text_md || undefined, status: v.status || undefined,
+          // sameAsMain: explicit '' (not undefined) — the backend's partial-upsert
+          // treats an omitted field as "leave untouched", so undefined wouldn't
+          // clear a distinct text_md set before sameAsMain was (re-)checked
+          // during an edit. Display falls back to main_text_md when text_md is
+          // falsy either way (see LoreBragiPublications.tsx).
+          text_md: v.sameAsMain ? '' : (v.text_md || undefined),
+          status: v.status || undefined,
           url: v.url || undefined, published_at: v.published_at || undefined,
         });
-        i++;
       }
       onSaved(id);
     } catch (e) {
@@ -102,7 +146,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   return (
     <div style={S.root}>
       <div style={S.head}>
-        <span style={S.title}>Новая публикация</span>
+        <span style={S.title}>{editing ? 'Редактирование публикации' : 'Новая публикация'}</span>
         <div style={S.headBtns}>
           <button style={S.btnGhost} onClick={onCancel} disabled={saving}>Отмена</button>
           <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
@@ -115,7 +159,13 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
       <div style={S.row4}>
         <Field label="Publication ID" grow={1}>
-          <input style={S.input} value={publicationId} placeholder="PUB-06" onChange={e => setPublicationId(e.target.value)} />
+          <input
+            style={{ ...S.input, opacity: editing ? 0.6 : 1 }}
+            value={publicationId}
+            placeholder="PUB-06"
+            disabled={!!editing}
+            onChange={e => setPublicationId(e.target.value)}
+          />
         </Field>
         <Field label="Название" grow={3}>
           <input style={S.input} value={title} placeholder="Заголовок публикации" onChange={e => setTitle(e.target.value)} />
@@ -164,7 +214,17 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
                 onChange={e => setVariant(i, { published_at: e.target.value })} />
               <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>×</button>
             </div>
-            <TipTapField value={v.text_md} onChange={t => setVariant(i, { text_md: t })} minHeight={60} placeholder="текст вариации…" />
+            <label style={S.sameAsMainLabel}>
+              <input
+                type="checkbox"
+                checked={v.sameAsMain}
+                onChange={e => setVariant(i, { sameAsMain: e.target.checked })}
+              />
+              текст как в main-тексте
+            </label>
+            {!v.sameAsMain && (
+              <TipTapField value={v.text_md} onChange={t => setVariant(i, { text_md: t })} minHeight={60} placeholder="текст вариации…" />
+            )}
           </div>
         ))}
         <button style={S.addVariantBtn} onClick={addVariant}>+ площадка</button>
@@ -207,6 +267,7 @@ const S: Record<string, React.CSSProperties> = {
   sLabel:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 },
   variantBlock: { border: '1px solid var(--b3)', borderRadius: 6, padding: 8, marginBottom: 8 },
   variantRow: { display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' },
+  sameAsMainLabel: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--t2)', marginBottom: 6, cursor: 'pointer' },
   variantSelect:   { height: 28, borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--b1)',
                      color: 'var(--t1)', fontSize: 12, padding: '0 6px', width: 100 },
   variantSelectSm: { height: 28, borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--b1)',
