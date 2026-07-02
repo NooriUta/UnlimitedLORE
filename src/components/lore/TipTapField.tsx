@@ -13,6 +13,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import { Markdown } from 'tiptap-markdown';
+import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { uploadBragiAsset } from '../../api/lore';
@@ -40,7 +41,7 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
   onChangeRef.current = onChange;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [source, setSource] = useState(false);   // TT-01: raw-markdown view toggle
+  const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');   // TT-01: raw-source view toggle
   const [draft, setDraft] = useState(value);
 
   const editor = useEditor({
@@ -83,16 +84,42 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
     }
   };
 
-  const toggleSource = () => {
+  // Applies whatever is currently in `draft` back into the editor doc, leaving
+  // raw mode. The two raw modes need genuinely different parsers, not just
+  // different displays:
+  //  - md:   editor.commands.setContent — tiptap-markdown overrides this to
+  //          parse the string as Markdown.
+  //  - html: tiptap-markdown ALSO overrides insertContent/insertContentAt
+  //          (insertContent calls insertContentAt internally) to parse as
+  //          Markdown too — there's no "give me real HTML parsing" command
+  //          left once the extension is loaded. So HTML bypasses TipTap's
+  //          content commands entirely and goes straight through
+  //          ProseMirror's own DOMParser + a raw transaction, which is the
+  //          only path that treats the string as actual HTML.
+  const applyDraftBack = () => {
     if (!editor) return;
-    if (!source) {
-      setDraft(getMarkdown(editor));
-      setSource(true);
-    } else {
+    if (mode === 'md') {
       editor.commands.setContent(draft);
-      onChangeRef.current(draft);
-      setSource(false);
+    } else if (mode === 'html') {
+      const dom = document.createElement('div');
+      dom.innerHTML = draft;
+      const doc = PMDOMParser.fromSchema(editor.schema).parse(dom);
+      const tr = editor.state.tr.replaceWith(0, editor.state.doc.content.size, doc.content);
+      editor.view.dispatch(tr);
     }
+    onChangeRef.current(getMarkdown(editor));
+  };
+
+  const toggleMode = (target: 'md' | 'html') => {
+    if (!editor) return;
+    if (mode === target) {
+      applyDraftBack();
+      setMode('wysiwyg');
+      return;
+    }
+    if (mode !== 'wysiwyg') applyDraftBack();
+    setDraft(target === 'md' ? getMarkdown(editor) : editor.getHTML());
+    setMode(target);
   };
 
   return (
@@ -108,13 +135,14 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
               <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolBtn>
               <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>{'</>'}</ToolBtn>
               <ToolBtn active={uploading} onClick={pickImage}>{uploading ? '…' : '🖼'}</ToolBtn>
-              <ToolBtn active={source} onClick={toggleSource}>{'</> md'}</ToolBtn>
+              <ToolBtn active={mode === 'md'} onClick={() => toggleMode('md')}>{'</> md'}</ToolBtn>
+              <ToolBtn active={mode === 'html'} onClick={() => toggleMode('html')}>{'</> html'}</ToolBtn>
             </>
           )}
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onImageSelected} />
         </div>
       )}
-      {source ? (
+      {mode !== 'wysiwyg' ? (
         <textarea
           style={{ ...S.sourceBox, minHeight }}
           value={draft}
