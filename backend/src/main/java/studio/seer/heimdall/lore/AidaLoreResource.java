@@ -3421,6 +3421,105 @@ public class AidaLoreResource {
         }
     }
 
+    // ── BRAGI content archive write/read — MCP-03: MetricSnapshot (TIMESERIES) ─
+    public record BragiMetricRequest(
+        String object_type, String object_id, String metric, Double value,
+        String ts, String source, String segment) {}
+
+    @POST
+    @Path("bragi/metric")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response recordBragiMetric(BragiMetricRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.object_type() == null || req.object_type().isBlank())
+            return badParams("object_type required");
+        if (req.object_id() == null || req.object_id().isBlank())
+            return badParams("object_id required");
+        if (req.metric() == null || req.metric().isBlank())
+            return badParams("metric required");
+        if (req.value() == null)
+            return badParams("value required");
+        try {
+            // TIMESERIES ts field is epoch millis (LONG) — accept ISO-8601 or bare millis.
+            long tsMillis;
+            if (req.ts() == null || req.ts().isBlank()) {
+                tsMillis = System.currentTimeMillis();
+            } else {
+                try {
+                    tsMillis = Long.parseLong(req.ts());
+                } catch (NumberFormatException nfe) {
+                    tsMillis = java.time.Instant.parse(req.ts()).toEpochMilli();
+                }
+            }
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "INSERT INTO MetricSnapshot SET ts=:ts, object_type=:ot, object_id=:oid, " +
+                "metric=:m, value=:v, source=:src, segment=:seg",
+                mapOfNullable("ts", tsMillis, "ot", req.object_type(), "oid", req.object_id(),
+                    "m", req.metric(), "v", req.value(), "src", req.source(), "seg", req.segment())))
+                .await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "object_id", req.object_id(),
+                "metric", req.metric(), "ts", tsMillis)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI METRIC] %s/%s: %s", req.object_id(), req.metric(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @GET
+    @Path("bragi/metric/query")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response queryBragiMetric(
+            @QueryParam("object_type") String objectType,
+            @QueryParam("object_id")   String objectId,
+            @QueryParam("metric")      String metric,
+            @QueryParam("from")        String from,
+            @QueryParam("to")          String to,
+            @QueryParam("agg")         String agg,
+            @QueryParam("limit")       Integer limit) {
+        if (!enabled) return disabled();
+        try {
+            StringBuilder where = new StringBuilder(" WHERE 1=1");
+            Map<String, Object> p = new java.util.HashMap<>();
+            if (objectType != null && !objectType.isBlank()) { where.append(" AND object_type=:ot"); p.put("ot", objectType); }
+            if (objectId != null && !objectId.isBlank())     { where.append(" AND object_id=:oid");  p.put("oid", objectId); }
+            if (metric != null && !metric.isBlank())         { where.append(" AND metric=:m");       p.put("m", metric); }
+            if (from != null && !from.isBlank())             { where.append(" AND ts >= :from");     p.put("from", Long.parseLong(from)); }
+            if (to != null && !to.isBlank())                 { where.append(" AND ts <= :to");       p.put("to", Long.parseLong(to)); }
+            // object_type='probe' is a one-off schema-verification artifact (ARC-02/ARC-03) —
+            // never a real BRAGI measurement, always excluded.
+            where.append(" AND object_type != 'probe'");
+
+            String sql;
+            if (agg != null && !agg.isBlank()) {
+                String fn = switch (agg.toLowerCase()) {
+                    case "avg" -> "avg(value)";
+                    case "sum" -> "sum(value)";
+                    case "min" -> "min(value)";
+                    case "max" -> "max(value)";
+                    case "count" -> "count(*)";
+                    default -> null;
+                };
+                if (fn == null) return badParams("agg must be one of avg|sum|min|max|count");
+                sql = "SELECT object_type, object_id, metric, " + fn + " AS agg_value, count(*) AS n " +
+                    "FROM MetricSnapshot" + where + " GROUP BY object_type, object_id, metric";
+            } else {
+                sql = "SELECT object_type, object_id, metric, value, ts, source, segment " +
+                    "FROM MetricSnapshot" + where + " ORDER BY ts DESC LIMIT " + (limit != null ? Math.min(limit, 1000) : 200);
+            }
+            List<Map<String, Object>> rows = ingestService.queryPublic(sql, p);
+            return noStore(Response.ok(Map.of("ok", true, "rows", rows)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI METRIC QUERY] %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     private Response requireAdmin(String role) {
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)

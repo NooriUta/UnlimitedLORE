@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { lorePost } from '../backend.js';
+import { lorePost, loreGet } from '../backend.js';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -1177,6 +1177,60 @@ export function registerLoreWrite(server: McpServer): void {
         return json(await lorePost('/lore/bragi/campaign', {
           campaign_id, utm_source, utm_medium, utm_campaign, target_url, period, variant_id,
         }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_record_metric',
+    'MetricSnapshot: append one measurement to the BRAGI TIMESERIES store (native ArcadeDB time-series, ' +
+      'not a graph vertex — no edges, referenced by object_type+object_id tags). ts accepts ISO-8601 ' +
+      '(e.g. "2026-07-02T09:00:00Z") or epoch millis; omit for now(). This is append-only — there is no ' +
+      'delete/amend path (TIMESERIES sealed storage). Mutates the shared system_aida_lore.',
+    {
+      object_type: z.string().describe('e.g. "publication" | "variant" | "keyword" | "competitor" | "channel"'),
+      object_id:   z.string().describe('id of the referenced BRAGI entity'),
+      metric:      z.string().describe('e.g. "views" | "clicks" | "demo_conv" | "position" | "ai_share"'),
+      value:       z.number(),
+      ts:          z.string().optional().describe('ISO-8601 or epoch millis; defaults to now'),
+      source:      z.string().optional().describe('e.g. "yandex-metrika" | "keys-so" | "tg-stats"'),
+      segment:     z.string().optional(),
+    },
+    async ({ object_type, object_id, metric, value, ts, source, segment }) => {
+      try {
+        return json(await lorePost('/lore/bragi/metric', {
+          object_type, object_id, metric, value, ts, source, segment,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_query_metric',
+    'Read BRAGI MetricSnapshot points with optional filters (object_type/object_id/metric, from/to as epoch ' +
+      'millis) and optional server-side aggregation (agg: avg|sum|min|max|count, grouped by object_type+' +
+      'object_id+metric). Without agg, returns up to `limit` raw points ordered newest-first. Always excludes ' +
+      'the object_type="probe" schema-verification artifact.',
+    {
+      object_type: z.string().optional(),
+      object_id:   z.string().optional(),
+      metric:      z.string().optional(),
+      from:        z.string().optional().describe('epoch millis, inclusive'),
+      to:          z.string().optional().describe('epoch millis, inclusive'),
+      agg:         z.enum(['avg', 'sum', 'min', 'max', 'count']).optional(),
+      limit:       z.number().int().optional().describe('max raw points when agg is not set (default 200, capped at 1000)'),
+    },
+    async ({ object_type, object_id, metric, from, to, agg, limit }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (object_type) params.object_type = object_type;
+        if (object_id) params.object_id = object_id;
+        if (metric) params.metric = metric;
+        if (from) params.from = from;
+        if (to) params.to = to;
+        if (agg) params.agg = agg;
+        if (limit !== undefined) params.limit = String(limit);
+        return json(await loreGet('/lore/bragi/metric/query', params));
       } catch (e) { return err(e); }
     },
   );

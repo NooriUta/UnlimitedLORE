@@ -65,6 +65,17 @@ export async function muninnStatus(): Promise<unknown> {
   return res.json();
 }
 
+/** GET an arbitrary LORE read endpoint (not a whitelisted named slice) with query params. */
+export async function loreGet(path: string, params?: Record<string, string>): Promise<unknown> {
+  const qs =
+    params && Object.keys(params).length > 0
+      ? '?' + new URLSearchParams(params).toString()
+      : '';
+  const res = await fetch(`${BASE}${path}${qs}`);
+  if (!res.ok) throw new Error(`GET ${path} → ${res.status} ${await detail(res)}`);
+  return res.json();
+}
+
 /** POST a LORE write endpoint with the admin role header. */
 export async function lorePost(path: string, body: unknown): Promise<unknown> {
   const res = await fetch(`${BASE}${path}`, {
