@@ -3455,6 +3455,43 @@ public class AidaLoreResource {
     // ── Рубрикатор — фиксированный список рубрик, ручное присвоение публикациям
     // и ключевым словам (assignRubric, вызывается из upsertBragiPublication /
     // upsertBragiKeyword). CRUD самих рубрик — отдельный эндпоинт.
+    // Gap found 2026-07-03: BragiChannel (bragi_channels slice) had no write path —
+    // CH-TG's seed url_handle "t.me/seidr" was stale (real channel is t.me/SampleofOne,
+    // per INT-TG-BOT) and there was no tool to fix it. Same flat-vertex upsert shape
+    // as BragiRubric above (no SCD2 hist — channels are reference data, not versioned).
+    public record BragiChannelRequest(String channel_id, String channel_type, String url_handle, String funnel_role) {}
+
+    @POST
+    @Path("bragi/channel")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiChannel(BragiChannelRequest req,
+                                       @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.channel_id() == null || req.channel_id().isBlank())
+            return badParams("channel_id required");
+        if (!SAFE_ID.matcher(req.channel_id()).matches())
+            return badParams("channel_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiChannel SET channel_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.channel_id());
+            if (req.channel_type() != null) { sql.append(", channel_type=:ct"); p.put("ct", req.channel_type()); }
+            if (req.url_handle() != null)   { sql.append(", url_handle=:uh");   p.put("uh", req.url_handle()); }
+            if (req.funnel_role() != null)  { sql.append(", funnel_role=:fr");  p.put("fr", req.funnel_role()); }
+            sql.append(" UPSERT WHERE channel_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "channel_id", req.channel_id())));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI CHANNEL] %s: %s", req.channel_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     public record BragiRubricRequest(String rubric_id, String name, String description, Integer order_index) {}
 
     @POST

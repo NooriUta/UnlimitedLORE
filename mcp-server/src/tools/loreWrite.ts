@@ -1114,6 +1114,26 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_upsert_channel',
+    'BragiChannel: create/amend a distribution channel (e.g. CH-TG, CH-SITE) — upsert by channel_id, ' +
+      'partial-safe (omitted fields left untouched). Gap found 2026-07-03: there was no write path for ' +
+      'this type — CH-TG\'s seeded url_handle ("t.me/seidr") was stale, no tool existed to fix it. Check ' +
+      'lore_query_slice "bragi_channels" for existing channels before creating a new one. Mutates the ' +
+      'shared system_aida_lore.',
+    {
+      channel_id:   z.string().describe('e.g. "CH-TG", "CH-SITE"'),
+      channel_type: z.string().optional().describe('e.g. "social", "owned", "platform"'),
+      url_handle:   z.string().optional().describe('e.g. "t.me/SampleofOne", "seidrstudio.pro/blog"'),
+      funnel_role:  z.string().optional().describe('e.g. "nurture", "conversion", "awareness", "authority"'),
+    },
+    async ({ channel_id, channel_type, url_handle, funnel_role }) => {
+      try {
+        return json(await lorePost('/lore/bragi/channel', { channel_id, channel_type, url_handle, funnel_role }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_link_rubric',
     'Assigns (or replaces) ONE rubric on a BragiPublication or BragiKeyword via IN_RUBRIC, without re-supplying ' +
       'every other field of the target — unlike the rubric_id param on lore_create_publication/lore_upsert_keyword, ' +
