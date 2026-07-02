@@ -132,7 +132,7 @@ const TOOLS: ToolDoc[] = [
     desc: 'Upsert QGRecommendation + PRODUCED edge от QGJobTask. status стартует как pending, до подтверждения пользователем.' },
   { name: 'lore_promote_recommendation', kind: 'write', backend: 'POST /lore/qg/promote',
     params: 'rec_id, sprint_id?, task_uid?, title?, note_md?',
-    desc: 'Подтвердить рекомендацию → создать KnowTask в SPRINT_QG_VIOLATIONS (или указанном спринте). Бэкенд сам обогащает note_md из полей рекомендации, если не переданы. Использовать после явного «да» пользователя.' },
+    desc: 'Подтвердить рекомендацию → создать KnowTask. По умолчанию — в недельный housekeeping-спринт SPRINT_QG_HOUSEKEEPING_<ISO-неделя> (auto-create при первом использовании за неделю, виден на План/Gantt); явный sprint_id — override. Бэкенд сам обогащает note_md из полей рекомендации, если не переданы. Использовать после явного «да» пользователя.' },
 
   // ── Component ──────────────────────────────────────────────────────────────
   { name: 'lore_create_component', kind: 'write', backend: 'POST /lore/component/create',
