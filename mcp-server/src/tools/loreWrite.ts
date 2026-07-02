@@ -1235,4 +1235,66 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  server.tool(
+    'lore_create_integration',
+    'BragiIntegration: create/amend a read/write connector (upsert by integration_id, partial-safe). ' +
+      '⚠️ secret_ref MUST be a reference, not a value — "env:METRIKA_TOKEN", "vault:seidr-telegraph", ' +
+      '"oauth:gsc"; the backend rejects anything else. Never pass an actual token/API key. ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      integration_id: z.string().describe('e.g. "INT-METRIKA"'),
+      service:        z.string().optional().describe('e.g. "Яндекс.Метрика 110154828"'),
+      purpose:        z.string().optional().describe('"read" | "write" | "read/write"'),
+      endpoint:       z.string().optional(),
+      scope:          z.string().optional(),
+      secret_ref:     z.string().optional().describe('reference only, e.g. "env:METRIKA_TOKEN" — never a raw secret'),
+      status:         z.string().optional().describe('e.g. "active" | "needs_admin"'),
+      last_called_at: z.string().optional(),
+    },
+    async ({ integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at }) => {
+      try {
+        return json(await lorePost('/lore/bragi/integration', {
+          integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_insight',
+    'BragiInsight: create/amend a data-driven conclusion (upsert by insight_id, partial-safe). ' +
+      'evidence_ref is a freeform pointer to the supporting measurement/date-range (MetricSnapshot rows ' +
+      'don\'t carry graph edges, so this is text, not an edge). Use lore_link_insight to connect it to a ' +
+      'Forseti task/ADR. Mutates the shared system_aida_lore.',
+    {
+      insight_id:    z.string().describe('e.g. "INS-01"'),
+      statement_md:  z.string().optional(),
+      insight_date:  z.string().optional().describe('YYYY-MM-DD'),
+      evidence_ref:  z.string().optional().describe('freeform pointer to supporting metrics/source'),
+    },
+    async ({ insight_id, statement_md, insight_date, evidence_ref }) => {
+      try {
+        return json(await lorePost('/lore/bragi/insight', {
+          insight_id, statement_md, insight_date, evidence_ref,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_insight',
+    'Wire a LED_TO edge from an existing BragiInsight to a Forseti KnowTask or KnowADR — records that this ' +
+      'insight drove a concrete follow-up. Idempotent.',
+    {
+      insight_id:  z.string(),
+      target_type: z.enum(['task', 'adr']),
+      target_id:   z.string().describe('task_uid if target_type="task", adr_id if target_type="adr"'),
+    },
+    async ({ insight_id, target_type, target_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/insight/link', { insight_id, target_type, target_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
 }

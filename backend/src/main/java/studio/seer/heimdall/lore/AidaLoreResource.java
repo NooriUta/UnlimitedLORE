@@ -3520,6 +3520,120 @@ public class AidaLoreResource {
         }
     }
 
+    // ── BRAGI content archive write — MCP-04: integrations + insights ─────────
+    private static final Pattern SECRET_REF = Pattern.compile("^(env|vault|oauth|secret):.+");
+
+    public record BragiIntegrationRequest(
+        String integration_id, String service, String purpose, String endpoint,
+        String scope, String secret_ref, String status, String last_called_at) {}
+
+    @POST
+    @Path("bragi/integration")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiIntegration(BragiIntegrationRequest req,
+                                           @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.integration_id() == null || req.integration_id().isBlank())
+            return badParams("integration_id required");
+        if (!SAFE_ID.matcher(req.integration_id()).matches())
+            return badParams("integration_id contains illegal characters");
+        // Spec-mandated guard: secret_ref must be a reference (env:/vault:/oauth:/secret:
+        // prefix), never a raw token value — this is the one field in the whole BRAGI
+        // module the spec explicitly forbids storing as plain content.
+        if (req.secret_ref() != null && !req.secret_ref().isBlank() && !SECRET_REF.matcher(req.secret_ref()).matches())
+            return badParams("secret_ref must be a reference, e.g. \"env:METRIKA_TOKEN\" or \"vault:seidr-telegraph\" — not a raw secret value");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiIntegration SET integration_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.integration_id());
+            if (req.service() != null)       { sql.append(", service=:sv");        p.put("sv", req.service()); }
+            if (req.purpose() != null)       { sql.append(", purpose=:pu");        p.put("pu", req.purpose()); }
+            if (req.endpoint() != null)      { sql.append(", endpoint=:ep");       p.put("ep", req.endpoint()); }
+            if (req.scope() != null)         { sql.append(", scope=:sc");         p.put("sc", req.scope()); }
+            if (req.secret_ref() != null)    { sql.append(", secret_ref=:sr");    p.put("sr", req.secret_ref()); }
+            if (req.status() != null)        { sql.append(", status=:st");        p.put("st", req.status()); }
+            if (req.last_called_at() != null){ sql.append(", last_called_at=:lc"); p.put("lc", req.last_called_at()); }
+            sql.append(" UPSERT WHERE integration_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "integration_id", req.integration_id())));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI INTEGRATION] %s: %s", req.integration_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record BragiInsightRequest(
+        String insight_id, String statement_md, String insight_date, String evidence_ref) {}
+
+    @POST
+    @Path("bragi/insight")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiInsight(BragiInsightRequest req,
+                                       @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.insight_id() == null || req.insight_id().isBlank())
+            return badParams("insight_id required");
+        if (!SAFE_ID.matcher(req.insight_id()).matches())
+            return badParams("insight_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiInsight SET insight_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.insight_id());
+            if (req.statement_md() != null) { sql.append(", statement_md=:sm"); p.put("sm", req.statement_md()); }
+            if (req.insight_date() != null) { sql.append(", insight_date=:idt"); p.put("idt", req.insight_date()); }
+            if (req.evidence_ref() != null) { sql.append(", evidence_ref=:er"); p.put("er", req.evidence_ref()); }
+            sql.append(" UPSERT WHERE insight_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "insight_id", req.insight_id())));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI INSIGHT] %s: %s", req.insight_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record BragiInsightLinkRequest(String insight_id, String target_type, String target_id) {}
+
+    @POST
+    @Path("bragi/insight/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkBragiInsight(BragiInsightLinkRequest req,
+                                     @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.insight_id() == null || req.insight_id().isBlank())
+            return badParams("insight_id required");
+        if (req.target_type() == null || (!req.target_type().equals("task") && !req.target_type().equals("adr")))
+            return badParams("target_type must be \"task\" or \"adr\"");
+        if (req.target_id() == null || req.target_id().isBlank())
+            return badParams("target_id required");
+        try {
+            String targetType = req.target_type().equals("task") ? "KnowTask" : "KnowADR";
+            String targetField = req.target_type().equals("task") ? "task_uid" : "adr_id";
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE LED_TO FROM (SELECT FROM BragiInsight WHERE insight_id=:iid) " +
+                "TO (SELECT FROM " + targetType + " WHERE " + targetField + "=:tid) IF NOT EXISTS",
+                Map.of("iid", req.insight_id(), "tid", req.target_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "insight_id", req.insight_id(),
+                "target_type", req.target_type(), "target_id", req.target_id())));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI INSIGHT LINK] %s -> %s: %s", req.insight_id(), req.target_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     private Response requireAdmin(String role) {
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
