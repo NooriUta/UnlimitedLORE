@@ -5,6 +5,7 @@
 // 7 sections are stubs filled in by FE-02..FE-05.
 import { useEffect, useState } from 'react';
 import { fetchLoreSlice } from '../../api/lore';
+import LoreBragiPublications from './LoreBragiPublications';
 
 type BragiSection =
   | 'obzor' | 'plan' | 'pubs' | 'keys' | 'analitika' | 'archive' | 'insights' | 'integrations';
@@ -108,10 +109,12 @@ export default function LoreBragiScreen() {
           </>
         )}
 
-        {tab !== 'obzor' && (
+        {tab === 'pubs' && <LoreBragiPublications />}
+
+        {tab !== 'obzor' && tab !== 'pubs' && (
           <div style={S.stub}>
             <div style={S.stubIcon}>⏳</div>
-            <div>Раздел «{MENU.find(m => m.id === tab)?.label}» — в разработке (FE-02…FE-05).</div>
+            <div>Раздел «{MENU.find(m => m.id === tab)?.label}» — в разработке (FE-03…FE-05).</div>
           </div>
         )}
       </div>

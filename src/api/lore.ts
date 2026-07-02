@@ -53,6 +53,25 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+// BRAGI metric query (GET /lore/bragi/metric/query) — not a whitelisted slice,
+// filter/agg shape doesn't fit the generic template (see MCP-03).
+export interface BragiMetricPoint {
+  object_type: string; object_id: string; metric: string;
+  value: number; ts: string; source?: string; segment?: string;
+}
+export async function fetchBragiMetrics(
+  params: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<BragiMetricPoint[]> {
+  const url = new URL(`${LORE_BASE}/bragi/metric/query`, location.origin);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), { signal });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  const body = (await res.json()) as { rows?: BragiMetricPoint[] };
+  return body.rows ?? [];
+}
+
 // Slice catalog (GET /lore/slices) — the whitelist the MCP `lore_list_slices`
 // tool exposes. Used by the MCP API screen to show the live catalog.
 export interface LoreSliceDescriptor {
