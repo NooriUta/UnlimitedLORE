@@ -25,11 +25,18 @@ interface PublicationRow {
 
 // Seed data still carries illustrative filenames ("ai-gov.png") that don't
 // resolve anywhere; real uploads (IMG-02) are "/lore/bragi/asset/file/..."
-// same-origin paths. Try to render either — fall back to the placeholder box
-// on load failure instead of guessing which kind a given string is.
+// same-origin paths. Try to render either — fall back to a labeled "no
+// image" placeholder (not a blank box) on load failure, since a plain empty
+// div reads as broken UI rather than "nothing uploaded here yet".
 function Thumb({ src, style }: { src: string | null | undefined; style: React.CSSProperties }) {
   const [failed, setFailed] = useState(false);
-  if (!src || failed) return <div style={style} />;
+  if (!src || failed) {
+    return (
+      <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center' }} title={src ?? 'нет изображения'}>
+        <span style={{ fontSize: Math.max(12, Math.min(style.width as number ?? 20, style.height as number ?? 20) * 0.4), opacity: 0.35 }}>🖼</span>
+      </div>
+    );
+  }
   return <img src={src} alt="" style={{ ...style, objectFit: 'cover' }} onError={() => setFailed(true)} />;
 }
 
