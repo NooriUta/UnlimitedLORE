@@ -2551,19 +2551,23 @@ public class AidaLoreResource {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "SELECT state_uid FROM KnowRunbookHist " +
+                    "SELECT @rid as rid FROM KnowRunbookHist " +
                     "WHERE in('HAS_STATE').runbook_id[0] = :id AND valid_to IS NULL LIMIT 1",
                     Map.of("id", req.runbook_id())))
                 .await().indefinitely().result();
 
             boolean histCreated;
             if (histRows != null && !histRows.isEmpty()) {
-                // Step 3a: update content on the existing open hist row
-                String sid = String.valueOf(histRows.get(0).get("state_uid"));
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowRunbookHist SET content_md=:cnt WHERE state_uid=:sid",
-                    mapOfNullable("cnt", req.content_md(), "sid", sid)))
-                    .await().indefinitely();
+                // Step 3a: update content on the existing open hist row. Match by @rid
+                // (state_uid can be null on legacy rows — same silent-no-op class as the
+                // ADR fix above), and only SET content_md when provided (LH-44) — a
+                // metadata-only upsert must not wipe the runbook body.
+                if (req.content_md() != null) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "UPDATE KnowRunbookHist SET content_md=:cnt WHERE @rid=:rid",
+                        Map.of("cnt", req.content_md(), "rid", histRows.get(0).get("rid"))))
+                        .await().indefinitely();
+                }
                 histCreated = false;
             } else {
                 // Step 3b: create the initial open hist row + HAS_STATE edge
