@@ -3142,7 +3142,7 @@ public class AidaLoreResource {
     // existing content), edges are idempotent CREATE ... IF NOT EXISTS.
     public record BragiPublicationRequest(
         String publication_id, String title, String topic, String main_text_md,
-        String type, String status_general, java.util.List<String> keyword_ids) {}
+        String type, String status_general, java.util.List<String> keyword_ids, String rubric_id) {}
 
     @POST
     @Path("bragi/publication")
@@ -3179,6 +3179,9 @@ public class AidaLoreResource {
                         Map.of("pid", req.publication_id(), "kid", kid))).await().indefinitely();
                     keysLinked++;
                 }
+            }
+            if (req.rubric_id() != null && !req.rubric_id().isBlank()) {
+                assignRubric("BragiPublication", "publication_id", req.publication_id(), req.rubric_id());
             }
             return noStore(Response.ok(Map.of("ok", true, "publication_id", req.publication_id(), "keys_linked", keysLinked)));
         } catch (Exception e) {
@@ -3353,7 +3356,7 @@ public class AidaLoreResource {
     // ── BRAGI content archive write — MCP-02: keywords, pages, campaigns ──────
     public record BragiKeywordRequest(
         String keyword_id, String phrase, String cluster, Integer freq_exact, Integer freq_broad,
-        String source, String intent, String region_engine, String measured_at, String page_id) {}
+        String source, String intent, String region_engine, String measured_at, String page_id, String rubric_id) {}
 
     @POST
     @Path("bragi/keyword")
@@ -3391,9 +3394,48 @@ public class AidaLoreResource {
                     Map.of("kid", req.keyword_id(), "pgid", req.page_id()))).await().indefinitely();
                 linkedPage = true;
             }
+            if (req.rubric_id() != null && !req.rubric_id().isBlank()) {
+                assignRubric("BragiKeyword", "keyword_id", req.keyword_id(), req.rubric_id());
+            }
             return noStore(Response.ok(Map.of("ok", true, "keyword_id", req.keyword_id(), "linked_page", linkedPage)));
         } catch (Exception e) {
             LOG.warnf("[BRAGI KEYWORD] %s: %s", req.keyword_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Рубрикатор — фиксированный список рубрик, ручное присвоение публикациям
+    // и ключевым словам (assignRubric, вызывается из upsertBragiPublication /
+    // upsertBragiKeyword). CRUD самих рубрик — отдельный эндпоинт.
+    public record BragiRubricRequest(String rubric_id, String name, String description, Integer order_index) {}
+
+    @POST
+    @Path("bragi/rubric")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiRubric(BragiRubricRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.rubric_id() == null || req.rubric_id().isBlank())
+            return badParams("rubric_id required");
+        if (!SAFE_ID.matcher(req.rubric_id()).matches())
+            return badParams("rubric_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiRubric SET rubric_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.rubric_id());
+            if (req.name() != null)        { sql.append(", name=:nm");         p.put("nm", req.name()); }
+            if (req.description() != null) { sql.append(", description=:ds"); p.put("ds", req.description()); }
+            if (req.order_index() != null) { sql.append(", order_index=:oi"); p.put("oi", req.order_index()); }
+            sql.append(" UPSERT WHERE rubric_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "rubric_id", req.rubric_id())));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI RUBRIC] %s: %s", req.rubric_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
@@ -3765,6 +3807,19 @@ public class AidaLoreResource {
     private Response badParams(String msg) {
         return noStore(Response.status(Response.Status.BAD_REQUEST)
             .entity(new LoreError("BAD_PARAMS", msg)));
+    }
+
+    /** Классификатор — рубрика одна на сущность, не аддитивно: сперва снимаем
+     * прежнее IN_RUBRIC-ребро (если было), затем ставим новое. entityIdField
+     * is bound via SQL param, never concatenated. */
+    private void assignRubric(String entityType, String entityIdField, String entityId, String rubricId) {
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "DELETE FROM IN_RUBRIC WHERE @out." + entityIdField + " = :id",
+            Map.of("id", entityId))).await().indefinitely();
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "CREATE EDGE IN_RUBRIC FROM (SELECT FROM " + entityType + " WHERE " + entityIdField + "=:id) " +
+            "TO (SELECT FROM BragiRubric WHERE rubric_id=:rid) IF NOT EXISTS",
+            Map.of("id", entityId, "rid", rubricId))).await().indefinitely();
     }
 
     /** ISO-week id for the rotating QG-housekeeping sprint, e.g. "SPRINT_QG_HOUSEKEEPING_2026W27". */

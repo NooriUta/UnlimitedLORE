@@ -5,6 +5,7 @@
 // LoreBragiIntegrationEditor/LoreBragiPublicationEditor.
 import { useEffect, useState } from 'react';
 import { fetchLoreSlice } from '../../api/lore';
+import type { RubricRow } from './LoreBragiRubricManager';
 
 const LORE_BASE = '/lore';
 
@@ -31,20 +32,23 @@ export interface LoreBragiKeywordEditData {
   freq_exact: number | null;
   intent: string | null;
   page_url: string[];
+  rubric_ids?: string[];
 }
 
 export interface LoreBragiKeywordEditorProps {
   onSaved: (keywordId: string) => void;
   onCancel: () => void;
   editing?: LoreBragiKeywordEditData;
+  rubrics: RubricRow[];
 }
 
-export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing }: LoreBragiKeywordEditorProps) {
+export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rubrics }: LoreBragiKeywordEditorProps) {
   const [keywordId, setKeywordId] = useState(editing?.keyword_id ?? '');
   const [phrase, setPhrase] = useState(editing?.phrase ?? '');
   const [cluster, setCluster] = useState(editing?.cluster ?? '');
   const [freqExact, setFreqExact] = useState(editing?.freq_exact != null ? String(editing.freq_exact) : '');
   const [intent, setIntent] = useState(editing?.intent ?? 'инфо');
+  const [rubricId, setRubricId] = useState(editing?.rubric_ids?.[0] ?? '');
   const [pages, setPages] = useState<PageRow[]>([]);
   const [pageId, setPageId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -76,6 +80,7 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing }: L
         freq_exact: freqExact ? Number(freqExact) : undefined,
         intent: intent || undefined,
         page_id: pageId || undefined,
+        rubric_id: rubricId || undefined,
       });
       onSaved(id);
     } catch (e) {
@@ -132,6 +137,13 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing }: L
           </select>
         </Field>
       </div>
+
+      <Field label="Рубрика" grow={1}>
+        <select style={S.input} value={rubricId} onChange={e => setRubricId(e.target.value)}>
+          <option value="">— рубрика —</option>
+          {rubrics.map(r => <option key={r.rubric_id} value={r.rubric_id}>{r.name}</option>)}
+        </select>
+      </Field>
     </div>
   );
 }

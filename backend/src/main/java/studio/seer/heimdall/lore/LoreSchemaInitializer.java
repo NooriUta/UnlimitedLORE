@@ -373,8 +373,19 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY BragiIntegration.last_called_at   IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON BragiIntegration (integration_id) UNIQUE",
 
+        // Рубрикатор (SPRINT_BRAGI_ARCHIVE_FOLLOWUP): фиксированный список
+        // рубрик, вручную назначаемых на публикации и ключевые слова
+        // (IN_RUBRIC от обоих типов) — отдельная таксономия поверх
+        // произвольного BragiKeyword.cluster, не заменяет его.
+        "CREATE VERTEX TYPE BragiRubric IF NOT EXISTS",
+        "CREATE PROPERTY BragiRubric.rubric_id    IF NOT EXISTS STRING",
+        "CREATE PROPERTY BragiRubric.name         IF NOT EXISTS STRING",
+        "CREATE PROPERTY BragiRubric.description  IF NOT EXISTS STRING",
+        "CREATE PROPERTY BragiRubric.order_index  IF NOT EXISTS INTEGER",
+        "CREATE INDEX IF NOT EXISTS ON BragiRubric (rubric_id) UNIQUE",
+
         // Edges — 7 из заметки ARC-01 + 2 доп. для полноты ER-модели спеки v0.4
-        // (Keyword→Page целевая страница, Campaign→Variant вариация)
+        // (Keyword→Page целевая страница, Campaign→Variant вариация) + IN_RUBRIC
         "CREATE EDGE TYPE HAS_VARIANT      IF NOT EXISTS",
         "CREATE EDGE TYPE HAS_ASSET        IF NOT EXISTS",
         "CREATE EDGE TYPE TARGETS_KEY      IF NOT EXISTS",
@@ -384,6 +395,7 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE LED_TO           IF NOT EXISTS",
         "CREATE EDGE TYPE TARGETS_PAGE     IF NOT EXISTS",
         "CREATE EDGE TYPE FOR_VARIANT      IF NOT EXISTS",
+        "CREATE EDGE TYPE IN_RUBRIC        IF NOT EXISTS",
 
         // ── ARC-02: MetricSnapshot — native ArcadeDB time-series (not a graph
         // vertex/edge; separate storage engine, hence no HAS_STATE/edges to it).

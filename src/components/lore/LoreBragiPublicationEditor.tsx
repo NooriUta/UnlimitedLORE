@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { fetchLoreSlice } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
 import TipTapField from './TipTapField';
+import type { RubricRow } from './LoreBragiRubricManager';
 
 const LORE_BASE = '/lore';
 
@@ -53,6 +54,7 @@ export interface LoreBragiPublicationEditData {
   variant_urls: (string | null)[];
   variant_texts: (string | null)[];
   variant_published_at?: (string | null)[];
+  rubric_ids?: string[];
 }
 
 export interface LoreBragiPublicationEditorProps {
@@ -96,12 +98,15 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
   const [channels, setChannels] = useState<ChannelRow[]>([]);
+  const [rubrics, setRubrics] = useState<RubricRow[]>([]);
+  const [rubricId, setRubricId] = useState(editing?.rubric_ids?.[0] ?? '');
   const [saving, setSaving] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLoreSlice<KeywordRow>('bragi_keys').then(setKeywords).catch(() => {});
     fetchLoreSlice<ChannelRow>('bragi_channels').then(setChannels).catch(() => {});
+    fetchLoreSlice<RubricRow>('bragi_rubrics').then(setRubrics).catch(() => {});
   }, []);
 
   const setVariant = (i: number, patch: Partial<VariantDraft>) =>
@@ -122,6 +127,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         topic: topic || undefined, main_text_md: mainText || undefined,
         type: type || undefined, status_general: status || undefined,
         keyword_ids: keywordIds.length ? keywordIds : undefined,
+        rubric_id: rubricId || undefined,
       });
       for (const v of variants) {
         if (!v.channel_id) continue; // skip empty rows
@@ -186,9 +192,17 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         </Field>
       </div>
 
-      <Field label="Ключ (тема)" grow={1}>
-        <input style={S.input} value={topic} placeholder="AI governance" disabled={readOnly} onChange={e => setTopic(e.target.value)} />
-      </Field>
+      <div style={S.row4}>
+        <Field label="Ключ (тема)" grow={2}>
+          <input style={S.input} value={topic} placeholder="AI governance" disabled={readOnly} onChange={e => setTopic(e.target.value)} />
+        </Field>
+        <Field label="Рубрика" grow={1}>
+          <select style={S.input} value={rubricId} disabled={readOnly} onChange={e => setRubricId(e.target.value)}>
+            <option value="">— рубрика —</option>
+            {rubrics.map(r => <option key={r.rubric_id} value={r.rubric_id}>{r.name}</option>)}
+          </select>
+        </Field>
+      </div>
 
       <Sec label="Main-текст">
         <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder="Мастер-версия текста…" editable={!readOnly} />

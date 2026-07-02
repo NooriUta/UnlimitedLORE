@@ -1040,11 +1040,31 @@ export function registerLoreWrite(server: McpServer): void {
 
   // ── BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4) ──────────────────
   server.tool(
+    'lore_upsert_rubric',
+    'BragiRubric: create/amend a rubric — the fixed classifier list assigned to publications ' +
+      '(lore_create_publication) and keywords (lore_upsert_keyword) via rubric_id (upsert by rubric_id, ' +
+      'partial-safe). This is a single, editorially-curated list, not a freeform tag — check lore_query_slice ' +
+      '"bragi_rubrics" before creating a new one to avoid near-duplicate rubrics. Mutates the shared system_aida_lore.',
+    {
+      rubric_id:    z.string().describe('e.g. "RUB-GOV"'),
+      name:         z.string().optional(),
+      description:  z.string().optional(),
+      order_index:  z.number().int().optional().describe('display order in pickers'),
+    },
+    async ({ rubric_id, name, description, order_index }) => {
+      try {
+        return json(await lorePost('/lore/bragi/rubric', { rubric_id, name, description, order_index }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_create_publication',
     'BragiPublication: create/amend a content publication (upsert by publication_id, partial-safe). ' +
       'The main-text master version that groups per-channel variants (see lore_create_variant). ' +
       'Pass keyword_ids to link TARGETS_KEY edges to existing BragiKeyword rows (idempotent, additive-only — ' +
-      'does not unlink keys omitted on a re-call). Mutates the shared system_aida_lore.',
+      'does not unlink keys omitted on a re-call). rubric_id assigns ONE rubric via IN_RUBRIC — replaces any ' +
+      'prior rubric on this publication (not additive, unlike keyword_ids). Mutates the shared system_aida_lore.',
     {
       publication_id:  z.string().describe('e.g. "PUB-01"'),
       title:           z.string().optional(),
@@ -1053,11 +1073,12 @@ export function registerLoreWrite(server: McpServer): void {
       type:            z.string().optional().describe('e.g. "article"'),
       status_general:  z.string().optional().describe('e.g. "draft" | "ready" | "published"'),
       keyword_ids:     z.array(z.string()).optional().describe('existing BragiKeyword ids to link via TARGETS_KEY'),
+      rubric_id:       z.string().optional().describe('existing BragiRubric id — replaces prior rubric via IN_RUBRIC'),
     },
-    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids }) => {
+    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id }) => {
       try {
         return json(await lorePost('/lore/bragi/publication', {
-          publication_id, title, topic, main_text_md, type, status_general, keyword_ids,
+          publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id,
         }));
       } catch (e) { return err(e); }
     },
@@ -1133,8 +1154,8 @@ export function registerLoreWrite(server: McpServer): void {
   server.tool(
     'lore_upsert_keyword',
     'BragiKeyword: create/amend a semantic-core keyword (upsert by keyword_id, partial-safe). ' +
-      'Pass page_id to wire TARGETS_PAGE to an existing BragiPage (idempotent, additive-only). ' +
-      'Mutates the shared system_aida_lore.',
+      'Pass page_id to wire TARGETS_PAGE to an existing BragiPage (idempotent, additive-only). rubric_id assigns ' +
+      'ONE rubric via IN_RUBRIC — replaces any prior rubric on this keyword. Mutates the shared system_aida_lore.',
     {
       keyword_id:    z.string().describe('e.g. "KW-01"'),
       phrase:        z.string().optional(),
@@ -1146,11 +1167,12 @@ export function registerLoreWrite(server: McpServer): void {
       region_engine: z.string().optional().describe('region/search-engine, e.g. "yandex-ru"'),
       measured_at:   z.string().optional().describe('YYYY-MM-DD'),
       page_id:       z.string().optional().describe('existing BragiPage id — wires TARGETS_PAGE'),
+      rubric_id:     z.string().optional().describe('existing BragiRubric id — replaces prior rubric via IN_RUBRIC'),
     },
-    async ({ keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id }) => {
+    async ({ keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id, rubric_id }) => {
       try {
         return json(await lorePost('/lore/bragi/keyword', {
-          keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id,
+          keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id, rubric_id,
         }));
       } catch (e) { return err(e); }
     },

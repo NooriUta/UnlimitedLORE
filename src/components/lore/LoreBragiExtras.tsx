@@ -7,23 +7,29 @@ import { useEffect, useState, useCallback } from 'react';
 import { fetchLoreSlice, fetchBragiMetrics } from '../../api/lore';
 import LoreBragiIntegrationEditor, { type LoreBragiIntegrationEditData } from './LoreBragiIntegrationEditor';
 import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBragiKeywordEditor';
+import LoreBragiRubricManager, { type RubricRow } from './LoreBragiRubricManager';
 
 // ── Ключи ────────────────────────────────────────────────────────────────
 interface KeywordRow {
   keyword_id: string; phrase: string; cluster: string | null;
   freq_exact: number | null; intent: string | null; page_url: string[];
+  rubric_ids: string[]; rubric_names: string[];
 }
 
 export function LoreBragiKeys() {
   const [rows, setRows] = useState<KeywordRow[]>([]);
+  const [rubrics, setRubrics] = useState<RubricRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [editingRow, setEditingRow] = useState<KeywordRow | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    return fetchLoreSlice<KeywordRow>('bragi_keys')
-      .then(r => { setRows(r); setLoading(false); })
+    return Promise.all([
+      fetchLoreSlice<KeywordRow>('bragi_keys'),
+      fetchLoreSlice<RubricRow>('bragi_rubrics'),
+    ])
+      .then(([r, rub]) => { setRows(r); setRubrics(rub); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -31,6 +37,7 @@ export function LoreBragiKeys() {
   if (creating) {
     return (
       <LoreBragiKeywordEditor
+        rubrics={rubrics}
         onSaved={() => { setCreating(false); load(); }}
         onCancel={() => setCreating(false)}
       />
@@ -41,6 +48,7 @@ export function LoreBragiKeys() {
     return (
       <LoreBragiKeywordEditor
         editing={editData}
+        rubrics={rubrics}
         onSaved={() => { setEditingRow(null); load(); }}
         onCancel={() => setEditingRow(null)}
       />
@@ -54,14 +62,16 @@ export function LoreBragiKeys() {
         <div style={S.desc}>семантическое ядро: кластеры, точная частота [!], интент, целевая страница.</div>
         <button style={S.newBtn} onClick={() => setCreating(true)}>+ новое ключевое слово</button>
       </div>
+      <LoreBragiRubricManager rubrics={rubrics} onChanged={load} />
       <div style={S.card}>
         <table style={S.table}>
-          <thead><tr><th style={S.th}>фраза</th><th style={S.th}>кластер</th><th style={S.thNum}>[!] /мес</th><th style={S.th}>интент</th><th style={S.th}>страница</th><th style={S.th}></th></tr></thead>
+          <thead><tr><th style={S.th}>фраза</th><th style={S.th}>кластер</th><th style={S.th}>рубрика</th><th style={S.thNum}>[!] /мес</th><th style={S.th}>интент</th><th style={S.th}>страница</th><th style={S.th}></th></tr></thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.keyword_id}>
                 <td style={S.td}>{r.phrase}</td>
                 <td style={S.td}>{r.cluster ?? '—'}</td>
+                <td style={S.td}>{r.rubric_names[0] ?? '—'}</td>
                 <td style={S.tdNum}>{r.freq_exact ?? '—'}</td>
                 <td style={S.td}>{r.intent ?? '—'}</td>
                 <td style={S.td}>{r.page_url[0] ?? '—'}</td>

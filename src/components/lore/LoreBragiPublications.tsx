@@ -21,6 +21,8 @@ interface PublicationRow {
   variant_channels: string[];
   variant_asset_urls: (string | null)[];
   keyword_ids: string[];
+  rubric_ids: string[];
+  rubric_names: string[];
 }
 
 // Seed data still carries illustrative filenames ("ai-gov.png") that don't
@@ -70,11 +72,18 @@ export default function LoreBragiPublications() {
     return Array.from(s).sort();
   }, [rows]);
 
+  const rubricNames = useMemo(() => {
+    const s = new Set<string>();
+    rows.forEach(r => r.rubric_names.forEach(n => n && s.add(n)));
+    return Array.from(s).sort();
+  }, [rows]);
+
   const filtered = useMemo(() => {
     if (filter === 'все') return rows;
     if (filter === 'черновики') return rows.filter(r => r.status_general === 'draft');
+    if (rubricNames.includes(filter)) return rows.filter(r => r.rubric_names.includes(filter));
     return rows.filter(r => r.variant_channels.includes(filter));
-  }, [rows, filter]);
+  }, [rows, filter, rubricNames]);
 
   const toggleVariant = (variantId: string, objectId: string) => {
     if (expanded === variantId) { setExpanded(null); return; }
@@ -102,6 +111,7 @@ export default function LoreBragiPublications() {
       keyword_ids: editingRow.keyword_ids, variant_ids: editingRow.variant_ids,
       variant_channels: editingRow.variant_channels, variant_statuses: editingRow.variant_statuses,
       variant_urls: editingRow.variant_urls, variant_texts: editingRow.variant_texts,
+      rubric_ids: editingRow.rubric_ids,
     };
     return (
       <LoreBragiPublicationEditor
@@ -122,7 +132,7 @@ export default function LoreBragiPublications() {
         <button style={S.newBtn} onClick={() => setCreating(true)}>+ новая публикация</button>
       </div>
       <div style={S.filters}>
-        {['все', ...channels, 'черновики'].map(f => (
+        {['все', ...channels, ...rubricNames, 'черновики'].map(f => (
           <span key={f} style={filterChipStyle(filter === f)} onClick={() => setFilter(f)}>{f}</span>
         ))}
       </div>
@@ -139,6 +149,7 @@ export default function LoreBragiPublications() {
                 </button>
               </div>
               <div style={S.pubmeta}>
+                {pub.rubric_names[0] && <span style={S.rubricChip}>{pub.rubric_names[0]}</span>}
                 {pub.topic && <span>ключ · {pub.topic}</span>}
                 {pub.main_text_md && (
                   <span style={S.mainTextLink} onClick={() => setShowMainText(showMainText === pub.publication_id ? null : pub.publication_id)}>
@@ -247,6 +258,8 @@ const S: Record<string, React.CSSProperties> = {
                borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
   pubmeta:   { fontSize: 12, color: 'var(--t3)', marginTop: 5, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
   mainTextLink: { color: 'var(--acc)', cursor: 'pointer' },
+  rubricChip: { fontSize: 11, color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', borderRadius: 6, padding: '1px 8px' },
   mainTextBox:  { marginTop: 8, padding: '8px 10px', background: 'var(--bg0)', border: '1px solid var(--bd)',
                   borderRadius: 6, fontSize: 12.5, lineHeight: 1.55, color: 'var(--t1)' },
   link:      { color: 'var(--acc)', textDecoration: 'none' },

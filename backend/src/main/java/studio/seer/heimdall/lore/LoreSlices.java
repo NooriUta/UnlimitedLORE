@@ -631,7 +631,9 @@ public final class LoreSlices {
             "out('HAS_VARIANT').text_md AS variant_texts, " +
             "out('HAS_VARIANT').out('IN_CHANNEL').channel_id AS variant_channels, " +
             "out('HAS_VARIANT').out('HAS_ASSET').file_url AS variant_asset_urls, " +
-            "out('TARGETS_KEY').keyword_id AS keyword_ids " +
+            "out('TARGETS_KEY').keyword_id AS keyword_ids, " +
+            "out('IN_RUBRIC').rubric_id AS rubric_ids, " +
+            "out('IN_RUBRIC').name AS rubric_names " +
             "FROM BragiPublication",
             List.of(), Map.of(), " ORDER BY publication_id");
 
@@ -649,9 +651,15 @@ public final class LoreSlices {
         slice("bragi_keys",
             "SELECT keyword_id, phrase, cluster, freq_exact, freq_broad, intent, source, measured_at, " +
             "out('TARGETS_PAGE').page_id AS page_id, " +
-            "out('TARGETS_PAGE').url AS page_url " +
+            "out('TARGETS_PAGE').url AS page_url, " +
+            "out('IN_RUBRIC').rubric_id AS rubric_ids, " +
+            "out('IN_RUBRIC').name AS rubric_names " +
             "FROM BragiKeyword",
             List.of(), Map.of(), " ORDER BY freq_exact DESC");
+
+        slice("bragi_rubrics",
+            "SELECT rubric_id, name, description, order_index FROM BragiRubric",
+            List.of(), Map.of(), " ORDER BY order_index, name");
 
         // Recent metric feed — for filtered/aggregated queries use lore_query_metric
         // (POST /lore/bragi/metric/query) instead; this slice is a flat recent-points
