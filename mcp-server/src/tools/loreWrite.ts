@@ -363,6 +363,74 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_adr_sprint',
+    'Link (or unlink) a KnowADR to the KnowSprint that implements it via an IMPLEMENTED_IN edge. ' +
+      'Feeds the adr slice implemented_in_ids field. Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:    z.string().describe('e.g. "ADR-HND-022"'),
+      sprint_id: z.string().describe('implementing sprint, e.g. "SPRINT_GEOID_STRUCTURAL_ID"'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, sprint_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/link', { adr_id, sprint_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_adr_release',
+    'Link (or unlink) a KnowADR to the KnowRelease it shipped in via an IMPLEMENTED_IN_RELEASE edge. ' +
+      'Feeds the adr slice release_ids field. Pass git_project for multi-repo safety ' +
+      '(matches release_uid = "{git_project}#{release_id}"; without it matches bare release_id). ' +
+      'Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:      z.string().describe('e.g. "ADR-HND-022"'),
+      release_id:  z.string().describe('e.g. "v1.0.24"'),
+      git_project: z.string().optional().describe('GitHub project slug, e.g. "NooriUta/AIDA"'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, release_id, git_project, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/link', {
+          adr_id, release_id, git_project: git_project ?? null, action: action ?? 'add',
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_rename_adr',
+    'Rename an existing KnowADR to a new adr_id IN PLACE — all edges (DEPENDS_ON/SUPERSEDES/' +
+      'BELONGS_TO/TAGGED_WITH/IMPLEMENTED_IN*/HAS_STATE) hang off the vertex and survive untouched; ' +
+      'no orphan, no tombstone. Fails if new_adr_id already exists. ' +
+      'Remember callers referencing the old id by string (docs, .md files) are NOT updated.',
+    {
+      adr_id:     z.string().describe('current id, e.g. "ADR-HND-022"'),
+      new_adr_id: z.string().describe('new id, e.g. "ADR-HND-SCD2-MIGRATIONS"'),
+    },
+    async ({ adr_id, new_adr_id }) => {
+      try {
+        return json(await lorePost('/lore/adr/rename', { adr_id, new_adr_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_delete_adr',
+    'PERMANENTLY delete a KnowADR: cascades edges first (ArcadeDB cannot DELETE VERTEX with edges), ' +
+      'then its KnowADRHist rows, then the vertex. Irreversible — prefer status="DEPRECATED"/' +
+      '"SUPERSEDED" via lore_update_adr for anything that was ever real; delete is for test ' +
+      'artifacts and mistaken creations only.',
+    { adr_id: z.string() },
+    async ({ adr_id }) => {
+      try {
+        return json(await lorePost('/lore/adr/delete', { adr_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_create_decision',
     'Create or update a KnowDecision (logged decision/verdict). Idempotent — upserts by decision_id. ' +
       'Use for recording key decisions made during a sprint or design session.',

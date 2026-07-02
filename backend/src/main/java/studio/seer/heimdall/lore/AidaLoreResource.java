@@ -2026,6 +2026,168 @@ public class AidaLoreResource {
         }
     }
 
+    // ── Write-path: ADR ↔ sprint/release links, rename, delete ──────────────
+    public record AdrLinkRequest(String adr_id, String sprint_id, String release_id,
+                                 String git_project, String action) {}
+    public record AdrRenameRequest(String adr_id, String new_adr_id) {}
+    public record AdrDeleteRequest(String adr_id) {}
+
+    @POST
+    @Path("adr/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkAdr(AdrLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.adr_id() == null || req.adr_id().isBlank())
+            return badParams("adr_id required");
+        boolean toSprint  = req.sprint_id()  != null && !req.sprint_id().isBlank();
+        boolean toRelease = req.release_id() != null && !req.release_id().isBlank();
+        if (toSprint == toRelease)
+            return badParams("exactly one of sprint_id / release_id required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (toSprint) {
+                if (remove) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM (SELECT expand(outE('IMPLEMENTED_IN')) FROM KnowADR WHERE adr_id=:id) " +
+                        "WHERE @in.sprint_id = :sid",
+                        Map.of("id", req.adr_id(), "sid", req.sprint_id()))).await().indefinitely();
+                    return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
+                        "sprint_id", req.sprint_id(), "action", "removed")));
+                }
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> created = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE IMPLEMENTED_IN " +
+                        "FROM (SELECT FROM KnowADR    WHERE adr_id   = :id) " +
+                        "TO   (SELECT FROM KnowSprint WHERE sprint_id = :sid) IF NOT EXISTS",
+                        Map.of("id", req.adr_id(), "sid", req.sprint_id())))
+                    .await().indefinitely().result();
+                // CREATE EDGE into an empty FROM/TO set is a silent no-op — surface it.
+                boolean linked = created != null && !created.isEmpty();
+                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "sprint_id", req.sprint_id(), "action", "added", "linked", linked,
+                    "hint", linked ? "" : "no edge created — check adr_id/sprint_id exist")));
+            }
+            // Release target: prefer release_uid (git_project#release_id) for multi-repo
+            // safety; fall back to bare release_id when git_project is not supplied.
+            String relField = (req.git_project() != null && !req.git_project().isBlank())
+                ? "release_uid" : "release_id";
+            String relKey = "release_uid".equals(relField)
+                ? req.git_project() + "#" + req.release_id() : req.release_id();
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('IMPLEMENTED_IN_RELEASE')) FROM KnowADR WHERE adr_id=:id) " +
+                    "WHERE @in." + relField + " = :rkey",
+                    Map.of("id", req.adr_id(), "rkey", relKey))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "release_id", req.release_id(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE IMPLEMENTED_IN_RELEASE " +
+                    "FROM (SELECT FROM KnowADR     WHERE adr_id = :id) " +
+                    "TO   (SELECT FROM KnowRelease WHERE " + relField + " = :rkey) IF NOT EXISTS",
+                    Map.of("id", req.adr_id(), "rkey", relKey)))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
+                "release_id", req.release_id(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — release not found by " + relField + "='" + relKey
+                    + "' (register it via lore_create_release, or pass git_project)")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ADR LINK] %s: %s", req.adr_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @POST
+    @Path("adr/rename")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response renameAdr(AdrRenameRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.adr_id() == null || req.adr_id().isBlank()
+                || req.new_adr_id() == null || req.new_adr_id().isBlank())
+            return badParams("adr_id and new_adr_id required");
+        if (!SAFE_ID.matcher(req.new_adr_id()).matches())
+            return badParams("new_adr_id contains illegal characters");
+        try {
+            // Edges hang off the vertex @rid, not the business key — renaming adr_id
+            // in place keeps every DEPENDS_ON/SUPERSEDES/BELONGS_TO/TAGGED_WITH/
+            // IMPLEMENTED_IN*/HAS_STATE edge intact. No tombstone needed.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> clash = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT adr_id FROM KnowADR WHERE adr_id=:nid",
+                    Map.of("nid", req.new_adr_id()))).await().indefinitely().result();
+            if (clash != null && !clash.isEmpty())
+                return badParams("new_adr_id already exists: " + req.new_adr_id());
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> hit = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowADR SET adr_id=:nid WHERE adr_id=:oid",
+                    Map.of("nid", req.new_adr_id(), "oid", req.adr_id())))
+                .await().indefinitely().result();
+            Object count = (hit != null && !hit.isEmpty()) ? hit.get(0).get("count") : 0;
+            return noStore(Response.ok(Map.of("ok", true,
+                "adr_id", req.new_adr_id(), "renamed_from", req.adr_id(), "updated", count)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ADR RENAME] %s → %s: %s", req.adr_id(), req.new_adr_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @POST
+    @Path("adr/delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteAdr(AdrDeleteRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.adr_id() == null || req.adr_id().isBlank())
+            return badParams("adr_id required");
+        try {
+            // Cascade order matters (ArcadeDB: DELETE VERTEX unsupported, edges first):
+            // 1) collect hist rids while HAS_STATE still exists, 2) drop all edges,
+            // 3) drop hist rows by rid, 4) drop the vertex.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> histRids = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT @rid as rid FROM KnowADRHist WHERE in('HAS_STATE').adr_id[0]=:id",
+                    Map.of("id", req.adr_id()))).await().indefinitely().result();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(bothE()) FROM KnowADR WHERE adr_id=:id)",
+                Map.of("id", req.adr_id()))).await().indefinitely();
+            int histDeleted = 0;
+            if (histRids != null) {
+                for (Map<String, Object> r : histRids) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM KnowADRHist WHERE @rid=:rid",
+                        Map.of("rid", r.get("rid")))).await().indefinitely();
+                    histDeleted++;
+                }
+            }
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM KnowADR WHERE adr_id=:id",
+                Map.of("id", req.adr_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
+                "hist_deleted", histDeleted)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ADR DELETE] %s: %s", req.adr_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Write-path: create / upsert KnowDecision ─────────────────────────────
 
     @POST
