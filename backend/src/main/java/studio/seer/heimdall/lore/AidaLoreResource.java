@@ -2692,7 +2692,22 @@ public class AidaLoreResource {
         if (guard != null) return guard;
         if (req == null || req.rec_id() == null || req.rec_id().isBlank())
             return badParams("rec_id required");
-        String sprintId = req.sprint_id() != null ? req.sprint_id() : "SPRINT_QG_VIOLATIONS";
+        // Default target: a weekly rotating housekeeping sprint (ISO week), not one
+        // never-closing bucket. Explicit req.sprint_id() still wins (backward-compat
+        // override). Found 2026-07-02: SPRINT_QG_VIOLATIONS accumulated every promoted
+        // recommendation across every gate/run forever — no velocity signal, no closure.
+        String sprintId = req.sprint_id() != null ? req.sprint_id() : weeklyHousekeepingSprintId();
+        if (req.sprint_id() == null) {
+            java.time.temporal.WeekFields wf = java.time.temporal.WeekFields.ISO;
+            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
+            ingestService.createSprint(
+                sprintId,
+                String.format("QG Housekeeping — Week %02d %d",
+                    today.get(wf.weekOfWeekBasedYear()), today.get(wf.weekBasedYear())),
+                "active", null, null, null, null,
+                "Автосоздан при первом промоуте QG-рекомендации на этой ISO-неделе " +
+                "(lore/qg/promote). Явный sprint_id в вызове переопределяет этот дефолт.");
+        }
         String stateUid = java.util.UUID.randomUUID().toString();
         String nowTs    = java.time.Instant.now().toString();
         try {
@@ -2704,13 +2719,17 @@ public class AidaLoreResource {
                 Map.of("rid", req.rec_id()));
             Map<String, Object> rec = recRows.isEmpty() ? Map.of() : recRows.get(0);
 
-            // 2. Derive task_id = next TNN in sprint
-            // NB: in('PART_OF') is a traversal function call — NOT the @in.field property
-            // shorthand, so it must NOT be @-prefixed here (that throws "Unknown function
-            // name '@in'" in ArcadeDB and was the root cause of "Задача не создаётся").
+            // 2. Derive task_id = next TNN in sprint.
+            // PART_OF edge direction is Task --PART_OF--> Sprint (CREATE EDGE PART_OF FROM
+            // KnowTask TO KnowSprint, below) — so from a KnowTask row the OWN edge is
+            // out('PART_OF'), not in(). Using in() here always returned zero matches,
+            // silently resetting maxN to 0 → every 2nd+ promotion into the same sprint
+            // recomputed task_id="T01" and UPSERT-overwrote the FIRST task's title/note_md.
+            // Found + fixed live 2026-07-02 (test promote clobbered the real T01 in
+            // SPRINT_QG_VIOLATIONS — restored from history after this fix landed).
             List<Map<String, Object>> existingTasks = ingestService.queryPublic(
                 "SELECT task_id FROM KnowTask WHERE task_id IS NOT NULL " +
-                "AND task_id LIKE 'T%' AND in('PART_OF').sprint_id=:sid",
+                "AND task_id LIKE 'T%' AND out('PART_OF').sprint_id=:sid",
                 Map.of("sid", sprintId));
             int maxN = existingTasks.stream()
                 .map(t -> t.getOrDefault("task_id", "T0").toString().replaceAll("[^0-9]", ""))
@@ -2936,6 +2955,15 @@ public class AidaLoreResource {
     private Response badParams(String msg) {
         return noStore(Response.status(Response.Status.BAD_REQUEST)
             .entity(new LoreError("BAD_PARAMS", msg)));
+    }
+
+    /** ISO-week id for the rotating QG-housekeeping sprint, e.g. "SPRINT_QG_HOUSEKEEPING_2026W27". */
+    private static String weeklyHousekeepingSprintId() {
+        java.time.temporal.WeekFields wf = java.time.temporal.WeekFields.ISO;
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
+        int isoWeek = today.get(wf.weekOfWeekBasedYear());
+        int isoYear = today.get(wf.weekBasedYear());
+        return String.format("SPRINT_QG_HOUSEKEEPING_%dW%02d", isoYear, isoWeek);
     }
 
     /** Param map that tolerates null values (Map.of forbids them) — used for nullable note_md. */

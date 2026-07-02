@@ -24,7 +24,8 @@ interface Recommendation {
   qg_id: string | null;
   // Populated client-side right after a successful promote — the backend
   // response carries where the task actually landed (qg/promote defaults to
-  // SPRINT_QG_VIOLATIONS unless the caller overrides sprint_id).
+  // this week's rotating SPRINT_QG_HOUSEKEEPING_<ISO week> unless the caller
+  // overrides sprint_id).
   promoted_task_uid?: string;
   promoted_sprint_id?: string;
 }

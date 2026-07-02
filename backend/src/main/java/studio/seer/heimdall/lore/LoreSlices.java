@@ -514,9 +514,12 @@ public final class LoreSlices {
             "SELECT slug, name FROM KnowGitProject",
             List.of(), Map.of(), " ORDER BY slug");
 
+        // Fixed 2026-07-02: PART_OF is Task --PART_OF--> Sprint (out from the task), so
+        // in('PART_OF') on KnowTask always returns empty — the old query classified EVERY
+        // task as backlog regardless of sprint membership.
         slice("backlog_tasks",
             "SELECT task_uid, task_id, title, status_raw, priority, component_id " +
-            "FROM KnowTask WHERE in('PART_OF') IS NULL",
+            "FROM KnowTask WHERE out('PART_OF').size() = 0",
             List.of(), Map.of(), " ORDER BY task_uid LIMIT 200");
 
         slice("all_tasks",

@@ -884,15 +884,18 @@ export function registerLoreWrite(server: McpServer): void {
 
   server.tool(
     'lore_promote_recommendation',
-    'Confirm a QGRecommendation and promote it to a KnowTask in SPRINT_QG_VIOLATIONS. ' +
-      'Creates PROMOTED_TO edge (QGRecommendation → KnowTask) and marks rec as "promoted". ' +
-      'Backend auto-assigns task_id (T01, T02…), reads body_md/priority/severity/fix_cmd/' +
-      'how_to_verify/component_id from the recommendation and builds a rich note_md automatically. ' +
-      'Omit title/note_md to let the backend enrich from rec fields. ' +
+    'Confirm a QGRecommendation and promote it to a KnowTask. Default target is a rotating ' +
+      'weekly housekeeping sprint derived from the ISO calendar week — "SPRINT_QG_HOUSEKEEPING_' +
+      '<year>W<week>" (e.g. SPRINT_QG_HOUSEKEEPING_2026W27) — auto-created (active, on the Plan ' +
+      'board) the first time it is used that week, so tasks don\'t pile up forever in one bucket. ' +
+      'Pass sprint_id to override. Creates PROMOTED_TO edge (QGRecommendation → KnowTask) and ' +
+      'marks rec as "promoted". Backend auto-assigns task_id (T01, T02…), reads body_md/priority/' +
+      'severity/fix_cmd/how_to_verify/component_id from the recommendation and builds a rich ' +
+      'note_md automatically. Omit title/note_md to let the backend enrich from rec fields. ' +
       'Use after the user explicitly says "да" / confirms the recommendation.',
     {
       rec_id:    z.string().describe('QGRecommendation rec_id to promote'),
-      sprint_id: z.string().optional().default('SPRINT_QG_VIOLATIONS').describe('target sprint; defaults to SPRINT_QG_VIOLATIONS'),
+      sprint_id: z.string().optional().describe('target sprint; omit to use/auto-create this week\'s SPRINT_QG_HOUSEKEEPING_<ISO week>'),
       task_uid:  z.string().optional().describe('KnowTask uid; defaults to "<sprint_id>/T<NN>"'),
       title:     z.string().optional().describe('override task title (default: rec title)'),
       note_md:   z.string().optional().describe('override task description (default: auto-built from rec fields)'),
@@ -900,7 +903,7 @@ export function registerLoreWrite(server: McpServer): void {
     async ({ rec_id, sprint_id, task_uid, title, note_md }) => {
       try {
         return json(await lorePost('/lore/qg/promote', {
-          rec_id, sprint_id: sprint_id ?? 'SPRINT_QG_VIOLATIONS',
+          rec_id, sprint_id: sprint_id ?? null,
           task_uid: task_uid ?? null, title: title ?? null, note_md: note_md ?? null,
         }));
       } catch (e) { return err(e); }
