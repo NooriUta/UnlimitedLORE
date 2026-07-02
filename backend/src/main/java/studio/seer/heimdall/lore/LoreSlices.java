@@ -375,6 +375,24 @@ public final class LoreSlices {
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
+        // SPRINT_TECH_REGISTRY / TR-06+08: version+date+license registry per
+        // component tech, stored as one KnowSpec per (component, tech) —
+        // spec_id "SPEC-TECH-<COMPONENT>-<TECH>", title=tech name, version=tech
+        // version, content_md=small bullet list (release_date/license/source/
+        // checked_at). Piggybacks the existing /lore/spec upsert path (no new
+        // backend write endpoint needed) — this slice is the read side.
+        slice("tech_registry",
+            "SELECT spec_id, title AS tech_name, " +
+            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS checked_at, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%'",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "component", " AND (out('BELONGS_TO').component_id[0] = :component OR component_id = :component)")),
+            " ORDER BY spec_id LIMIT 200");
+
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
         slice("history_sprint",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw " +
