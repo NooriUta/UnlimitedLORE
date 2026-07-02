@@ -302,6 +302,57 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_create_milestone',
+    'Create a KnowMilestone (upsert by milestone_id) — was previously ONLY reachable via raw HTTP ' +
+      'or the UI form, no MCP tool existed. Partial calls are safe: unset label/week/date_display/' +
+      'priority are left untouched (LH-44). goal_md is written to the open KnowMilestoneHist row ' +
+      '(created on first fill). To attach sprints, use lore_link_sprint_milestone or ' +
+      'lore_update_plan_item (PlanItem bridge) — this tool only creates the milestone itself.',
+    {
+      milestone_id: z.string().describe('e.g. "M4"'),
+      label:        z.string().optional().describe('short display label'),
+      week:         z.number().int().optional().describe('plan week number (relative to W0)'),
+      date_display: z.string().optional().describe('human-readable date/range, e.g. "Aug W2"'),
+      goal_md:      z.string().optional().describe('milestone goal in Markdown — written to the open history row'),
+      priority:     z.string().optional().describe('e.g. "high", "critical"'),
+    },
+    async ({ milestone_id, label, week, date_display, goal_md, priority }) => {
+      try {
+        return json(await lorePost('/lore/milestone', {
+          milestone_id,
+          label: label ?? null, week: week ?? null, date_display: date_display ?? null,
+          goal_md: goal_md ?? null, priority: priority ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_update_milestone',
+    'Amend an EXISTING KnowMilestone — same endpoint as lore_create_milestone, signature tailored ' +
+      'for partial updates (mirror of lore_update_adr/lore_update_spec). Omitted fields are left ' +
+      'untouched, never wiped — e.g. pass only goal_md to fix the goal text without resending ' +
+      'label/week/date_display/priority.',
+    {
+      milestone_id: z.string().describe('existing milestone to amend, e.g. "M4"'),
+      label:        z.string().optional().describe('omit to leave untouched'),
+      week:         z.number().int().optional().describe('omit to leave untouched'),
+      date_display: z.string().optional().describe('omit to leave untouched'),
+      goal_md:      z.string().optional().describe('omit to leave the existing goal text untouched'),
+      priority:     z.string().optional().describe('omit to leave untouched'),
+    },
+    async ({ milestone_id, label, week, date_display, goal_md, priority }) => {
+      try {
+        return json(await lorePost('/lore/milestone', {
+          milestone_id,
+          label: label ?? null, week: week ?? null, date_display: date_display ?? null,
+          goal_md: goal_md ?? null, priority: priority ?? null,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_link_sprint_milestone',
     'Link (or unlink) a KnowSprint directly to a KnowMilestone via a TARGETS_MILESTONE edge. ' +
       'Use this for sprints that do NOT have a PlanItem bridge (most sprints). ' +
