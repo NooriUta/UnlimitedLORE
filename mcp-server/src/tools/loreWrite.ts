@@ -1111,4 +1111,74 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  server.tool(
+    'lore_upsert_keyword',
+    'BragiKeyword: create/amend a semantic-core keyword (upsert by keyword_id, partial-safe). ' +
+      'Pass page_id to wire TARGETS_PAGE to an existing BragiPage (idempotent, additive-only). ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      keyword_id:    z.string().describe('e.g. "KW-01"'),
+      phrase:        z.string().optional(),
+      cluster:       z.string().optional(),
+      freq_exact:    z.number().int().optional().describe('точная частота [!]'),
+      freq_broad:    z.number().int().optional(),
+      source:        z.string().optional().describe('e.g. "wordstat" | "yandex-serp"'),
+      intent:        z.string().optional().describe('e.g. "инфо" | "комм" | "бренд"'),
+      region_engine: z.string().optional().describe('region/search-engine, e.g. "yandex-ru"'),
+      measured_at:   z.string().optional().describe('YYYY-MM-DD'),
+      page_id:       z.string().optional().describe('existing BragiPage id — wires TARGETS_PAGE'),
+    },
+    async ({ keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/keyword', {
+          keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_upsert_page',
+    'BragiPage: create/amend a target landing/article page (upsert by page_id, partial-safe). ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      page_id:      z.string().describe('e.g. "PG-LINEAGE"'),
+      url:          z.string().optional(),
+      title:        z.string().optional(),
+      description:  z.string().optional(),
+      page_type:    z.string().optional().describe('e.g. "landing" | "article" | "docs"'),
+      deployed_at:  z.string().optional().describe('YYYY-MM-DD'),
+    },
+    async ({ page_id, url, title, description, page_type, deployed_at }) => {
+      try {
+        return json(await lorePost('/lore/bragi/page', {
+          page_id, url, title, description, page_type, deployed_at,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_campaign',
+    'BragiCampaign: create/amend a UTM tracking campaign (upsert by campaign_id, partial-safe). ' +
+      'Pass variant_id to wire FOR_VARIANT to an existing BragiVariant (idempotent). ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      campaign_id: z.string().describe('e.g. "CMP-01"'),
+      utm_source:  z.string().optional(),
+      utm_medium:  z.string().optional(),
+      utm_campaign: z.string().optional(),
+      target_url:  z.string().optional(),
+      period:      z.string().optional().describe('freeform date range, e.g. "2026-07"'),
+      variant_id:  z.string().optional().describe('existing BragiVariant id — wires FOR_VARIANT'),
+    },
+    async ({ campaign_id, utm_source, utm_medium, utm_campaign, target_url, period, variant_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/campaign', {
+          campaign_id, utm_source, utm_medium, utm_campaign, target_url, period, variant_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
 }

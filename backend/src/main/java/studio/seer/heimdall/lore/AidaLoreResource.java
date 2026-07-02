@@ -3291,6 +3291,136 @@ public class AidaLoreResource {
         }
     }
 
+    // ── BRAGI content archive write — MCP-02: keywords, pages, campaigns ──────
+    public record BragiKeywordRequest(
+        String keyword_id, String phrase, String cluster, Integer freq_exact, Integer freq_broad,
+        String source, String intent, String region_engine, String measured_at, String page_id) {}
+
+    @POST
+    @Path("bragi/keyword")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiKeyword(BragiKeywordRequest req,
+                                       @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.keyword_id() == null || req.keyword_id().isBlank())
+            return badParams("keyword_id required");
+        if (!SAFE_ID.matcher(req.keyword_id()).matches())
+            return badParams("keyword_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiKeyword SET keyword_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.keyword_id());
+            if (req.phrase() != null)        { sql.append(", phrase=:ph");         p.put("ph", req.phrase()); }
+            if (req.cluster() != null)       { sql.append(", cluster=:cl");        p.put("cl", req.cluster()); }
+            if (req.freq_exact() != null)    { sql.append(", freq_exact=:fe");     p.put("fe", req.freq_exact()); }
+            if (req.freq_broad() != null)    { sql.append(", freq_broad=:fb");     p.put("fb", req.freq_broad()); }
+            if (req.source() != null)        { sql.append(", source=:src");       p.put("src", req.source()); }
+            if (req.intent() != null)        { sql.append(", intent=:in");        p.put("in", req.intent()); }
+            if (req.region_engine() != null) { sql.append(", region_engine=:re"); p.put("re", req.region_engine()); }
+            if (req.measured_at() != null)   { sql.append(", measured_at=:ma");   p.put("ma", req.measured_at()); }
+            sql.append(" UPSERT WHERE keyword_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            boolean linkedPage = false;
+            if (req.page_id() != null && !req.page_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE TARGETS_PAGE FROM (SELECT FROM BragiKeyword WHERE keyword_id=:kid) " +
+                    "TO (SELECT FROM BragiPage WHERE page_id=:pgid) IF NOT EXISTS",
+                    Map.of("kid", req.keyword_id(), "pgid", req.page_id()))).await().indefinitely();
+                linkedPage = true;
+            }
+            return noStore(Response.ok(Map.of("ok", true, "keyword_id", req.keyword_id(), "linked_page", linkedPage)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI KEYWORD] %s: %s", req.keyword_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record BragiPageRequest(
+        String page_id, String url, String title, String description, String page_type, String deployed_at) {}
+
+    @POST
+    @Path("bragi/page")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiPage(BragiPageRequest req,
+                                    @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.page_id() == null || req.page_id().isBlank())
+            return badParams("page_id required");
+        if (!SAFE_ID.matcher(req.page_id()).matches())
+            return badParams("page_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiPage SET page_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.page_id());
+            if (req.url() != null)         { sql.append(", url=:url");         p.put("url", req.url()); }
+            if (req.title() != null)       { sql.append(", title=:title");     p.put("title", req.title()); }
+            if (req.description() != null) { sql.append(", description=:d");   p.put("d", req.description()); }
+            if (req.page_type() != null)   { sql.append(", page_type=:pt");    p.put("pt", req.page_type()); }
+            if (req.deployed_at() != null) { sql.append(", deployed_at=:da");  p.put("da", req.deployed_at()); }
+            sql.append(" UPSERT WHERE page_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "page_id", req.page_id())));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI PAGE] %s: %s", req.page_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    public record BragiCampaignRequest(
+        String campaign_id, String utm_source, String utm_medium, String utm_campaign,
+        String target_url, String period, String variant_id) {}
+
+    @POST
+    @Path("bragi/campaign")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertBragiCampaign(BragiCampaignRequest req,
+                                        @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.campaign_id() == null || req.campaign_id().isBlank())
+            return badParams("campaign_id required");
+        if (!SAFE_ID.matcher(req.campaign_id()).matches())
+            return badParams("campaign_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE BragiCampaign SET campaign_id=:id");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("id", req.campaign_id());
+            if (req.utm_source() != null)   { sql.append(", utm_source=:us");   p.put("us", req.utm_source()); }
+            if (req.utm_medium() != null)   { sql.append(", utm_medium=:um");   p.put("um", req.utm_medium()); }
+            if (req.utm_campaign() != null) { sql.append(", utm_campaign=:uc"); p.put("uc", req.utm_campaign()); }
+            if (req.target_url() != null)   { sql.append(", target_url=:tu");   p.put("tu", req.target_url()); }
+            if (req.period() != null)       { sql.append(", period=:pe");       p.put("pe", req.period()); }
+            sql.append(" UPSERT WHERE campaign_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            boolean linkedVariant = false;
+            if (req.variant_id() != null && !req.variant_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE FOR_VARIANT FROM (SELECT FROM BragiCampaign WHERE campaign_id=:cid) " +
+                    "TO (SELECT FROM BragiVariant WHERE variant_id=:vid) IF NOT EXISTS",
+                    Map.of("cid", req.campaign_id(), "vid", req.variant_id()))).await().indefinitely();
+                linkedVariant = true;
+            }
+            return noStore(Response.ok(Map.of("ok", true, "campaign_id", req.campaign_id(), "linked_variant", linkedVariant)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI CAMPAIGN] %s: %s", req.campaign_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     private Response requireAdmin(String role) {
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
