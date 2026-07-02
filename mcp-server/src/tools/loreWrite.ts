@@ -1297,4 +1297,29 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  server.tool(
+    'lore_sync_integration',
+    'BragiIntegration manual sync (scaffold — no real cron): given an integration_id and a batch of ' +
+      'ALREADY-FETCHED metrics, writes them to MetricSnapshot and bumps the integration\'s last_called_at. ' +
+      'This does NOT call any third-party API itself — the caller (a real connector, or a human pasting ' +
+      'numbers from a dashboard) is responsible for fetching from Яндекс.Метрика/Keys.so/GSC/Telegram and ' +
+      'mapping source fields to metric names before calling this. Fails 404 if integration_id is unknown.',
+    {
+      integration_id: z.string().describe('existing BragiIntegration id, e.g. "INT-METRIKA"'),
+      metrics: z.array(z.object({
+        object_type: z.string(),
+        object_id:   z.string(),
+        metric:      z.string(),
+        value:       z.number(),
+        ts:          z.string().optional().describe('ISO-8601 or epoch millis; defaults to now'),
+        segment:     z.string().optional(),
+      })).describe('batch of points to write'),
+    },
+    async ({ integration_id, metrics }) => {
+      try {
+        return json(await lorePost('/lore/bragi/integration/sync', { integration_id, metrics }));
+      } catch (e) { return err(e); }
+    },
+  );
+
 }

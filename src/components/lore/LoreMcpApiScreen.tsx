@@ -224,6 +224,9 @@ const TOOLS: ToolDoc[] = [
   { name: 'lore_link_insight', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/insight/link',
     params: 'insight_id, target_type, target_id',
     desc: 'Ребро LED_TO от существующего BragiInsight к KnowTask или KnowADR (target_type = task | adr, target_id = task_uid | adr_id) — зафиксировать, что инсайт привёл к конкретному действию. Идемпотентно.' },
+  { name: 'lore_sync_integration', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/integration/sync',
+    params: 'integration_id, metrics[]',
+    desc: 'Каркас ручной синхронизации (без крона): пишет уже полученные извне метрики в MetricSnapshot и обновляет last_called_at интеграции. Сам к внешнему API НЕ обращается — маппинг источник→метрика и реальный HTTP-вызов (Яндекс.Метрика/Keys.so/GSC/Telegram) остаются на вызывающей стороне (реальный коннектор или человек, вставляющий цифры вручную). 404, если integration_id не существует. Живой опрос по расписанию отложен до появления реальных ключей (SPRINT_BRAGI_ARCHIVE_IMPL/INT-01,02).' },
 ];
 
 const ENV_ROWS: [string, string, string][] = [

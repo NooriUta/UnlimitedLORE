@@ -3634,6 +3634,67 @@ public class AidaLoreResource {
         }
     }
 
+    // ── BRAGI content archive — INT-01/02: manual integration sync (scaffold) ──
+    // No real cron/scheduled polling here — that needs live credentials for
+    // Яндекс.Метрика/Keys.so/GSC/Telegram, which don't exist anywhere in this
+    // repo (SPRINT_BRAGI_ARCHIVE_IMPL/INT-01,INT-02 — deferred pending real
+    // secrets, per explicit user decision 2026-07-02). This endpoint is the
+    // reusable ingestion interface a real scheduled connector would call: given
+    // an integration_id and a batch of already-fetched metrics, write them to
+    // MetricSnapshot and bump last_called_at. The source→metric mapping and the
+    // actual HTTP calls to the third-party API are the caller's job.
+    public record BragiSyncMetric(String object_type, String object_id, String metric, Double value, String ts, String segment) {}
+    public record BragiIntegrationSyncRequest(String integration_id, java.util.List<BragiSyncMetric> metrics) {}
+
+    @POST
+    @Path("bragi/integration/sync")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response syncBragiIntegration(BragiIntegrationSyncRequest req,
+                                         @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.integration_id() == null || req.integration_id().isBlank())
+            return badParams("integration_id required");
+        try {
+            List<Map<String, Object>> found = ingestService.queryPublic(
+                "SELECT integration_id, service, status FROM BragiIntegration WHERE integration_id=:id",
+                Map.of("id", req.integration_id()));
+            if (found.isEmpty())
+                return noStore(Response.status(Response.Status.NOT_FOUND)
+                    .entity(new LoreError("NOT_FOUND", "no BragiIntegration with integration_id=" + req.integration_id())));
+            int written = 0;
+            if (req.metrics() != null) {
+                for (BragiSyncMetric m : req.metrics()) {
+                    if (m.object_type() == null || m.object_id() == null || m.metric() == null || m.value() == null) continue;
+                    long tsMillis;
+                    if (m.ts() == null || m.ts().isBlank()) tsMillis = System.currentTimeMillis();
+                    else {
+                        try { tsMillis = Long.parseLong(m.ts()); }
+                        catch (NumberFormatException nfe) { tsMillis = java.time.Instant.parse(m.ts()).toEpochMilli(); }
+                    }
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "INSERT INTO MetricSnapshot SET ts=:ts, object_type=:ot, object_id=:oid, " +
+                        "metric=:m, value=:v, source=:src, segment=:seg",
+                        mapOfNullable("ts", tsMillis, "ot", m.object_type(), "oid", m.object_id(),
+                            "m", m.metric(), "v", m.value(), "src", (String) found.get(0).get("service"), "seg", m.segment())))
+                        .await().indefinitely();
+                    written++;
+                }
+            }
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE BragiIntegration SET last_called_at=:lc UPSERT WHERE integration_id=:id",
+                Map.of("lc", java.time.Instant.now().toString(), "id", req.integration_id())))
+                .await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "integration_id", req.integration_id(), "metrics_written", written)));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI INTEGRATION SYNC] %s: %s", req.integration_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     private Response requireAdmin(String role) {
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return noStore(Response.status(Response.Status.FORBIDDEN)
