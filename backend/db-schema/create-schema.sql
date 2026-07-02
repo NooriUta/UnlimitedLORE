@@ -327,3 +327,12 @@ CREATE EDGE TYPE SHIPPED_IN       IF NOT EXISTS;
 CREATE EDGE TYPE LED_TO           IF NOT EXISTS;
 CREATE EDGE TYPE TARGETS_PAGE     IF NOT EXISTS;
 CREATE EDGE TYPE FOR_VARIANT      IF NOT EXISTS;
+
+-- ARC-02: MetricSnapshot — native ArcadeDB time-series (not a graph
+-- vertex/edge; separate storage engine, hence no HAS_STATE/edges to it).
+-- Real syntax confirmed against ArcadeDB docs — spec's "LSM_TIMESERIES"
+-- literal does not exist, actual keyword is CREATE TIMESERIES TYPE.
+CREATE TIMESERIES TYPE MetricSnapshot
+  TIMESTAMP ts
+  TAGS (object_type STRING, object_id STRING, metric STRING, source STRING, segment STRING)
+  FIELDS (value DOUBLE);
