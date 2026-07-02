@@ -73,10 +73,10 @@ const TOOLS: ToolDoc[] = [
 
   // ── ADR / Decision ─────────────────────────────────────────────────────────
   { name: 'lore_create_adr', kind: 'write', backend: 'POST /lore/adr',
-    params: 'adr_id, name, status?, date_created?, component_id(s)?, context_md?, decision_md?, consequences_md?, depends_on_ids?, supersedes_ids?, tags?',
+    params: 'adr_id, name, status?, date_created?, component_id(s)?, context_md?, decision_md?, consequences_md?, depends_on_ids?, supersedes_ids?, tags?, file_path?',
     desc: 'Создать/обновить KnowADR (upsert by adr_id). Полная SCD2-структура: вершина + открытая KnowADRHist + HAS_STATE edge. Партиальные вызовы БЕЗОПАСНЫ (LH-44, 2026-07): непереданные поля (context_md/decision_md/consequences_md/date_created/component_id) остаются нетронутыми, не обнуляются. depends_on_ids/supersedes_ids/component_ids/tags при передаче ЗАМЕНЯЮТ весь набор рёбер.' },
   { name: 'lore_update_adr', kind: 'write', backend: 'POST /lore/adr',
-    params: 'adr_id, name, status?, date_created?, component_id(s)?, context_md?, decision_md?, consequences_md?, depends_on_ids?, supersedes_ids?, tags?',
+    params: 'adr_id, name, status?, date_created?, component_id(s)?, context_md?, decision_md?, consequences_md?, depends_on_ids?, supersedes_ids?, tags?, file_path?',
     desc: 'Тонкая обёртка над тем же эндпоинтом, что и lore_create_adr — сигнатура заточена под точечный amend: правь один раздел (например только decision_md), остальные секции гарантированно не тронутся. name всё ещё обязателен (бэкенд пишет его на каждый вызов).' },
   { name: 'lore_create_decision', kind: 'write', backend: 'POST /lore/decision',
     params: 'decision_id, title, body_md?, date_created?, refs_raw?',
@@ -84,8 +84,11 @@ const TOOLS: ToolDoc[] = [
 
   // ── Spec / QG / Runbook / Doc ─────────────────────────────────────────────
   { name: 'lore_create_spec', kind: 'write', backend: 'POST /lore/spec',
-    params: 'spec_id, title, version?, component_id?, content_md?, file_path?',
-    desc: 'Создать/обновить KnowSpec (upsert by spec_id). Партиальные вызовы БЕЗОПАСНЫ (LH-44, 2026-07) — непереданные version/component_id/content_md/file_path не обнуляются. Годится и для точечного bump version/content_md.' },
+    params: 'spec_id, title, version?, component_id?, content_md?, summary?, file_path?',
+    desc: 'Создать/обновить KnowSpec + SCD2 hist (upsert by spec_id). Body-поля (content_md/version/summary) пишутся в ОТКРЫТУЮ KnowSpecHist-строку (создаётся при отсутствии) — именно её читает spec_by_id. Партиальные вызовы БЕЗОПАСНЫ — непереданные поля не обнуляются.' },
+  { name: 'lore_update_spec', kind: 'write', backend: 'POST /lore/spec',
+    params: 'spec_id, title, version?, component_id?, content_md?, summary?, file_path?',
+    desc: 'Тонкая обёртка над тем же эндпоинтом — сигнатура под точечный amend (зеркало lore_update_adr): bump version или правка content_md без пересылки всей спеки; остальные поля не тронутся. title обязателен на каждый вызов.' },
   { name: 'lore_delete_spec', kind: 'write', backend: 'POST /lore/spec/delete',
     params: 'spec_id',
     desc: 'Безвозвратно удалить вершину KnowSpec по spec_id.' },

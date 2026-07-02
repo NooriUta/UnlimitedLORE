@@ -62,7 +62,7 @@ public class AidaLoreResource {
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
         String component_id, String context_md, String decision_md, String consequences_md,
         List<String> depends_on_ids, List<String> supersedes_ids,
-        List<String> component_ids, List<String> tags) {}
+        List<String> component_ids, List<String> tags, String file_path) {}
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
         String date_created, String refs_raw) {}
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md) {}
@@ -683,10 +683,13 @@ public class AidaLoreResource {
         final String now   = Instant.now().toString();
         final String nsid  = UUID.randomUUID().toString();
 
-        // order_index = max existing for this sprint + 1 (tasks keyed task_uid = "<sprint>/<id>")
+        // order_index = max existing for this sprint + 1 (tasks keyed task_uid = "<sprint>/<id>").
+        // Exact-prefix match via substring, NOT LIKE: '_' in sprint ids is a LIKE wildcard
+        // ("any one char"), so LIKE :prefix could count same-shaped uids from OTHER sprints.
+        String prefix = sid + "/";
         MartQuery maxQ = new MartQuery("sql",
-            "SELECT max(order_index) AS mx FROM KnowTask WHERE task_uid LIKE :prefix",
-            Map.of("prefix", sid + "/%"), -1);
+            "SELECT max(order_index) AS mx FROM KnowTask WHERE task_uid.substring(0, :plen) = :prefix",
+            Map.of("prefix", prefix, "plen", prefix.length()), -1);
 
         return client.query(db, basicAuth(), maxQ)
             .chain(res -> {
@@ -1275,6 +1278,16 @@ public class AidaLoreResource {
         try {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 set + " WHERE sprint_id=:sid", p)).await().indefinitely();
+            // SCD2 write contract: the sprints slice reads priority ONLY from the hist
+            // chain (out('HAS_STATE')[priority IS NOT NULL].priority[0]) — a vertex-only
+            // write is never visible. Mirror it onto the open hist row (same pattern as
+            // pr_refs). Matched by HAS_STATE + valid_to, not state_uid (legacy-null safe).
+            if (req.priority() != null) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowSprintHist SET priority=:prio " +
+                    "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL",
+                    Map.of("prio", req.priority(), "sid", req.sprint_id()))).await().indefinitely();
+            }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
             return noStore(Response.ok(out));
@@ -1818,6 +1831,10 @@ public class AidaLoreResource {
                 upsertSql.append(", component_id=:component_id");
                 upsertP.put("component_id", req.component_id());
             }
+            if (req.file_path() != null) {
+                upsertSql.append(", file_path=:file_path");
+                upsertP.put("file_path", req.file_path());
+            }
             if (resolvedStatus != null) {
                 upsertSql.append(", status=:status");
                 upsertP.put("status", resolvedStatus);
@@ -1996,6 +2013,11 @@ public class AidaLoreResource {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("adr_id", req.adr_id());
             out.put("hist_created", histCreated);
+            // Explicit body signal — hist_created:false alone reads ambiguously
+            // ("did my body land?"); body_written says whether any of the three
+            // body sections was actually persisted this call.
+            out.put("body_written", req.context_md() != null
+                || req.decision_md() != null || req.consequences_md() != null);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());
@@ -2180,7 +2202,7 @@ public class AidaLoreResource {
 
     // ── Spec write ───────────────────────────────────────────────────────────
     public record SpecUpsertRequest(String spec_id, String title, String version,
-        String component_id, String content_md, String file_path) {}
+        String component_id, String content_md, String file_path, String summary) {}
     public record SpecDeleteRequest(String spec_id) {}
 
     @POST
@@ -2200,6 +2222,12 @@ public class AidaLoreResource {
             // LH-44: only SET fields actually provided — a partial amend call (e.g. only
             // content_md to bump a spec's body) must not wipe version/component_id/file_path
             // to null. Same class of bug found and fixed on /lore/adr, 2026-07-02.
+            //
+            // SCD2 write contract: spec_by_id reads content_md/version/summary through
+            // COALESCE(out('HAS_STATE')...[0], <vertex>) — the hist row WINS whenever one
+            // exists (164 KnowSpecHist rows do). A vertex-only write is therefore invisible
+            // for every ingested spec. Body fields go to the open hist row (created here
+            // when missing); the vertex keeps title/file_path/component_id + a fallback copy.
             StringBuilder sql = new StringBuilder("UPDATE KnowSpec SET spec_id=:id");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("id", req.spec_id());
@@ -2211,7 +2239,50 @@ public class AidaLoreResource {
             sql.append(" UPSERT WHERE spec_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id())));
+
+            boolean bodyProvided = req.content_md() != null || req.version() != null || req.summary() != null;
+            boolean histWritten = false;
+            if (bodyProvided) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> histRows = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "SELECT @rid as rid FROM KnowSpecHist " +
+                        "WHERE in('HAS_STATE').spec_id[0] = :id AND valid_to IS NULL LIMIT 1",
+                        Map.of("id", req.spec_id())))
+                    .await().indefinitely().result();
+                if (histRows != null && !histRows.isEmpty()) {
+                    // Match by @rid — state_uid can be null on legacy rows (same silent
+                    // no-op class as the ADR fix, 162cc18).
+                    StringBuilder hsql = new StringBuilder("UPDATE KnowSpecHist SET spec_id=:id");
+                    Map<String, Object> hp = new java.util.HashMap<>();
+                    hp.put("id", req.spec_id());
+                    hp.put("rid", histRows.get(0).get("rid"));
+                    if (req.content_md() != null) { hsql.append(", content_md=:content"); hp.put("content", req.content_md()); }
+                    if (req.version() != null)    { hsql.append(", version=:version");    hp.put("version", req.version()); }
+                    if (req.summary() != null)    { hsql.append(", summary=:summary");    hp.put("summary", req.summary()); }
+                    hsql.append(" WHERE @rid=:rid");
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        hsql.toString(), hp)).await().indefinitely();
+                } else {
+                    String nsid = UUID.randomUUID().toString();
+                    Map<String, Object> hp = mapOfNullable(
+                        "content", req.content_md(), "version", req.version(), "summary", req.summary());
+                    hp.put("id", req.spec_id());
+                    hp.put("nsid", nsid);
+                    hp.put("now", Instant.now().toString());
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
+                        "content_md=:content, version=:version, summary=:summary", hp)).await().indefinitely();
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE HAS_STATE " +
+                        "FROM (SELECT FROM KnowSpec     WHERE spec_id   = :id) " +
+                        "TO   (SELECT FROM KnowSpecHist WHERE state_uid = :nsid)",
+                        Map.of("id", req.spec_id(), "nsid", nsid))).await().indefinitely();
+                }
+                histWritten = true;
+            }
+            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id(),
+                "body_written", histWritten)));
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

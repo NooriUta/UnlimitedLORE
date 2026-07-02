@@ -240,12 +240,32 @@ public final class LoreSlices {
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
 
-        // ── §4 Search — full-text index required ─────────────────────────────
-        // Falls back gracefully if FT index is absent (returns empty)
+        // ── §4 Search — cross-entity, case-insensitive substring ─────────────
+        // pattern is wrapped in %…% server-side (callers pass a bare term, e.g. "geoid").
+        // Matches id + title/name; for ADRs also the body sections on the OPEN hist row.
         slice("search",
-            "SELECT 'adr' AS type, adr_id AS ref_id, adr_id AS title " +
-            "FROM KnowADR WHERE adr_id LIKE :pattern " +
-            "LIMIT 20",
+            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c)) LET " +
+            "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
+            "      WHERE adr_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR out('HAS_STATE')[valid_to IS NULL].context_md[0] ILIKE ('%' + :pattern + '%') " +
+            "      OR out('HAS_STATE')[valid_to IS NULL].decision_md[0] ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "$s = (SELECT 'spec' AS type, spec_id AS ref_id, title FROM KnowSpec " +
+            "      WHERE spec_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR COALESCE(out('HAS_STATE').content_md[0], content_md) ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "$p = (SELECT 'sprint' AS type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
+            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "$t = (SELECT 'task' AS type, task_uid AS ref_id, title FROM KnowTask " +
+            "      WHERE task_uid ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "$q = (SELECT 'quality_gate' AS type, qg_id AS ref_id, name AS title FROM QualityGate " +
+            "      WHERE qg_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR content_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "$r = (SELECT 'runbook' AS type, runbook_id AS ref_id, name AS title FROM KnowRunbook " +
+            "      WHERE runbook_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "$d = (SELECT 'doc' AS type, doc_id AS ref_id, title FROM KnowDoc " +
+            "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
+            "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10)",
             List.of("pattern"), Map.of(), "");
 
         // ── §5 Plan ──────────────────────────────────────────────────────────

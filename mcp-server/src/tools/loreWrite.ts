@@ -307,8 +307,9 @@ export function registerLoreWrite(server: McpServer): void {
       depends_on_ids:   z.array(z.string()).optional().describe('other adr_id this ADR depends on — creates DEPENDS_ON edges, replaces the full set'),
       supersedes_ids:   z.array(z.string()).optional().describe('adr_id(s) this ADR supersedes — creates SUPERSEDES edges FROM this adr TO each listed one, replaces the full set. Pair with status="SUPERSEDED" on the OLD adr_id (separate lore_create_adr call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('free-text tags — upserts KnowTag + TAGGED_WITH edges, replaces the full set'),
+      file_path:        z.string().optional().describe('source .md path relative to docs root, e.g. "engine/specs/adr/ADR-HND-022.md"'),
     },
-    async ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags }) => {
+    async ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => {
       try {
         return json(await lorePost('/lore/adr', {
           adr_id, name,
@@ -317,7 +318,7 @@ export function registerLoreWrite(server: McpServer): void {
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null,
+          tags: tags ?? null, file_path: file_path ?? null,
         }));
       } catch (e) { return err(e); }
     },
@@ -344,8 +345,9 @@ export function registerLoreWrite(server: McpServer): void {
       depends_on_ids:   z.array(z.string()).optional().describe('replaces the full DEPENDS_ON edge set, omit to leave untouched'),
       supersedes_ids:   z.array(z.string()).optional().describe('replaces the full SUPERSEDES edge set, omit to leave untouched. Pair with status="SUPERSEDED" on the OLD adr_id (separate call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('replaces the full tag set, omit to leave untouched'),
+      file_path:        z.string().optional().describe('source .md path relative to docs root — omit to leave untouched'),
     },
-    async ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags }) => {
+    async ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => {
       try {
         return json(await lorePost('/lore/adr', {
           adr_id, name,
@@ -354,7 +356,7 @@ export function registerLoreWrite(server: McpServer): void {
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null,
+          tags: tags ?? null, file_path: file_path ?? null,
         }));
       } catch (e) { return err(e); }
     },
@@ -546,15 +548,40 @@ export function registerLoreWrite(server: McpServer): void {
 
   server.tool(
     'lore_create_spec',
-    'Create or update a specification document (KnowSpec vertex). ' +
-      'Idempotent — upserts by spec_id. Mutates system_aida_lore.',
+    'Create or update a specification document (KnowSpec + SCD2 hist). Idempotent — upserts by ' +
+      'spec_id. Body fields (content_md/version/summary) are written to the OPEN KnowSpecHist row ' +
+      '(created when missing) — the row spec_by_id actually reads. Partial calls are SAFE: omitted ' +
+      'fields are left untouched, never wiped. Mutates system_aida_lore.',
     {
       spec_id:      z.string().describe('unique spec id, e.g. "SPEC-AUTH-001"'),
       title:        z.string(),
       version:      z.string().optional().describe('e.g. "1.0.0"'),
       component_id: z.string().optional().describe('e.g. "AUTH"'),
       content_md:   z.string().optional().describe('spec body in Markdown'),
+      summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
+    },
+    async (p) => {
+      try { return json(await lorePost('/lore/spec', p)); }
+      catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_update_spec',
+    'Amend an EXISTING KnowSpec — same endpoint as lore_create_spec, signature tailored for ' +
+      'partial updates (mirror of lore_update_adr). title required by the backend on every write; ' +
+      'everything else safe to omit — unset content_md/version/summary/component_id/file_path are ' +
+      'left UNTOUCHED. Body fields land on the OPEN KnowSpecHist row (the one spec_by_id reads), ' +
+      'not just the vertex. Use for version bumps and body amends without resending the whole spec.',
+    {
+      spec_id:      z.string().describe('existing spec to amend, e.g. "HOUND_GEOID_SPEC"'),
+      title:        z.string().describe('current/updated title — required by the backend on every write'),
+      version:      z.string().optional().describe('omit to leave untouched'),
+      component_id: z.string().optional().describe('omit to leave untouched'),
+      content_md:   z.string().optional().describe('omit to leave the existing body untouched'),
+      summary:      z.string().optional().describe('omit to leave untouched'),
+      file_path:    z.string().optional().describe('omit to leave untouched'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
