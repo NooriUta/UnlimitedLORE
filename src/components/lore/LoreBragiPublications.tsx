@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
-import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData } from './LoreBragiPublicationEditor';
+import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData, countOpenTodos } from './LoreBragiPublicationEditor';
 
 interface PublicationRow {
   publication_id: string;
@@ -28,6 +28,11 @@ interface PublicationRow {
   produced_by_task_ids?: string[];
   produced_by_sprint_ids?: string[];
   shipped_in_release_ids?: string[];
+  // V2-02: editorial meta / TODO checklist — never rendered into a preview.
+  annotation_md?: string | null;
+  todo_md?: string | null;
+  variant_annotation_texts?: (string | null)[];
+  variant_todo_texts?: (string | null)[];
 }
 
 // Seed data still carries illustrative filenames ("ai-gov.png") that don't
@@ -123,6 +128,9 @@ export default function LoreBragiPublications() {
       produced_by_task_ids: editingRow.produced_by_task_ids ?? [],
       produced_by_sprint_ids: editingRow.produced_by_sprint_ids ?? [],
       shipped_in_release_ids: editingRow.shipped_in_release_ids ?? [],
+      annotation_md: editingRow.annotation_md, todo_md: editingRow.todo_md,
+      variant_annotation_texts: editingRow.variant_annotation_texts,
+      variant_todo_texts: editingRow.variant_todo_texts,
     };
     // Status/date genuinely differ per channel (live on CH-TG, still draft on
     // CH-HABR) — only lock the WHOLE form when every variant is already
@@ -159,7 +167,9 @@ export default function LoreBragiPublications() {
         ))}
       </div>
 
-      {filtered.map(pub => (
+      {filtered.map(pub => {
+        const openTodos = countOpenTodos(pub.todo_md) + (pub.variant_todo_texts ?? []).reduce((sum, v) => sum + countOpenTodos(v), 0);
+        return (
         <div key={pub.publication_id} style={S.pubcard}>
           <div style={S.pubhead}>
             <Thumb src={pub.cover_asset_urls?.[0] ?? pub.variant_asset_urls?.[0]} style={S.thumb} />
@@ -172,6 +182,7 @@ export default function LoreBragiPublications() {
                 </button>
               </div>
               <div style={S.pubmeta}>
+                {openTodos > 0 && <span style={S.todoBadge}>{t('bragi.publications.todoBadge', '{{n}} todo', { n: openTodos })}</span>}
                 {pub.rubric_names[0] && <span style={S.rubricChip}>{pub.rubric_names[0]}</span>}
                 {pub.topic && <span>{t('bragi.publications.keywordPrefix', 'ключ ·')} {pub.topic}</span>}
                 {pub.main_text_md && (
@@ -246,7 +257,8 @@ export default function LoreBragiPublications() {
             <div style={S.addSlot}>{t('bragi.publications.addChannelSlot', '+ площадка')}</div>
           </div>
         </div>
-      ))}
+        );
+      })}
       {filtered.length === 0 && <div style={S.hint}>{t('bragi.publications.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
     </div>
   );
@@ -283,6 +295,8 @@ const S: Record<string, React.CSSProperties> = {
   mainTextLink: { color: 'var(--acc)', cursor: 'pointer' },
   rubricChip: { fontSize: 11, color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', borderRadius: 6, padding: '1px 8px' },
+  todoBadge:  { fontSize: 11, color: 'var(--wrn)', background: 'color-mix(in srgb, var(--wrn) 14%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--wrn) 30%, transparent)', borderRadius: 6, padding: '1px 8px' },
   mainTextBox:  { marginTop: 8, padding: '8px 10px', background: 'var(--bg0)', border: '1px solid var(--bd)',
                   borderRadius: 6, fontSize: 12.5, lineHeight: 1.55, color: 'var(--t1)' },
   link:      { color: 'var(--acc)', textDecoration: 'none' },

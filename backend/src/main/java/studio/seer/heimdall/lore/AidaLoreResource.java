@@ -3205,10 +3205,17 @@ public class AidaLoreResource {
     // "C:\Маркетинг\habr-h1-sql-dedup.md") — was only ever embedded as plain
     // text inside main_text_md ("Черновик — полный текст: <path>"), with no
     // real attribute to query/display it separately from the rendered body.
+    // annotation_md/todo_md (V2-02): main_text_md is the article body ONLY —
+    // editorial metadata used to leak into it (master-source pointers, "final
+    // replaces this before publish", teaser-vs-longread notes). annotation_md
+    // is permanent context (source of the master, replacement rule, release
+    // context); todo_md is a transient markdown checklist ("- [ ] ..."). Both
+    // are deliberately excluded from whatever feeds BragiSkinPreview — they're
+    // editor-only, never rendered into a platform skin.
     public record BragiPublicationRequest(
         String publication_id, String title, String topic, String main_text_md,
         String type, String status_general, java.util.List<String> keyword_ids, String rubric_id,
-        String source_file_path) {}
+        String source_file_path, String annotation_md, String todo_md) {}
 
     @POST
     @Path("bragi/publication")
@@ -3233,6 +3240,8 @@ public class AidaLoreResource {
             if (req.type() != null)           { sql.append(", type=:type");           p.put("type", req.type()); }
             if (req.status_general() != null) { sql.append(", status_general=:sg");   p.put("sg", req.status_general()); }
             if (req.source_file_path() != null) { sql.append(", source_file_path=:sfp"); p.put("sfp", req.source_file_path()); }
+            if (req.annotation_md() != null)  { sql.append(", annotation_md=:ann");   p.put("ann", req.annotation_md()); }
+            if (req.todo_md() != null)        { sql.append(", todo_md=:todo");        p.put("todo", req.todo_md()); }
             sql.append(" UPSERT WHERE publication_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
@@ -3260,7 +3269,8 @@ public class AidaLoreResource {
 
     public record BragiVariantRequest(
         String variant_id, String publication_id, String channel_id, String text_md,
-        String status, String url, String published_at, String asset_id) {}
+        String status, String url, String published_at, String asset_id,
+        String annotation_md, String todo_md) {}
 
     @POST
     @Path("bragi/variant")
@@ -3283,6 +3293,8 @@ public class AidaLoreResource {
             if (req.status() != null)       { sql.append(", status=:st");     p.put("st", req.status()); }
             if (req.url() != null)          { sql.append(", url=:url");      p.put("url", req.url()); }
             if (req.published_at() != null) { sql.append(", published_at=:pa"); p.put("pa", req.published_at()); }
+            if (req.annotation_md() != null) { sql.append(", annotation_md=:ann"); p.put("ann", req.annotation_md()); }
+            if (req.todo_md() != null)      { sql.append(", todo_md=:todo");  p.put("todo", req.todo_md()); }
             sql.append(" UPSERT WHERE variant_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
