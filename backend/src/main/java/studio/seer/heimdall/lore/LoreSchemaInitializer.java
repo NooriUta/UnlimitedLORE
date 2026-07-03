@@ -293,6 +293,7 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY BragiPublication.main_text_md      IF NOT EXISTS STRING",
         "CREATE PROPERTY BragiPublication.type              IF NOT EXISTS STRING",
         "CREATE PROPERTY BragiPublication.status_general    IF NOT EXISTS STRING",
+        "CREATE PROPERTY BragiPublication.source_file_path  IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON BragiPublication (publication_id) UNIQUE",
 
         "CREATE VERTEX TYPE BragiVariant IF NOT EXISTS",

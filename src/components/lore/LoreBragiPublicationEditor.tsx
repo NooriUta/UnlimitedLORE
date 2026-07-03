@@ -2,9 +2,9 @@
 // variants, modeled on LoreAdrEditor/LoreSprintEditor's create-form pattern.
 // Wraps lore_create_publication/lore_create_variant (MCP-01) via their
 // backend endpoints directly (same convention as LoreSprintEditor).
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice } from '../../api/lore';
+import { fetchLoreSlice, uploadBragiAsset, attachBragiAsset } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
 import TipTapField from './TipTapField';
 import type { RubricRow } from './LoreBragiRubricManager';
@@ -56,6 +56,8 @@ export interface LoreBragiPublicationEditData {
   variant_texts: (string | null)[];
   variant_published_at?: (string | null)[];
   rubric_ids?: string[];
+  source_file_path?: string | null;
+  cover_asset_urls?: string[];
 }
 
 export interface LoreBragiPublicationEditorProps {
@@ -92,6 +94,10 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   const [mainText, setMainText] = useState(editing?.main_text_md ?? '');
   const [type, setType] = useState(editing?.type ?? 'article');
   const [status, setStatus] = useState(editing?.status_general ?? 'draft');
+  const [sourceFilePath, setSourceFilePath] = useState(editing?.source_file_path ?? '');
+  const [coverUrl, setCoverUrl] = useState(editing?.cover_asset_urls?.[0] ?? null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [keywordIds, setKeywordIds] = useState<string[]>(editing?.keyword_ids ?? []);
   const [variants, setVariants] = useState<VariantDraft[]>(
     editing ? variantsFromEditData(editing)
@@ -117,6 +123,32 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
     setVariants(vs => [...vs, { channel_id: '', text_md: '', sameAsMain: true, status: 'draft', url: '', published_at: '' }]);
   const removeVariant = (i: number) => setVariants(vs => vs.filter((_, vi) => vi !== i));
 
+  // Cover image: gap reported 2026-07-03 — lore_attach_asset/lore_upload_asset
+  // existed as MCP-only capabilities, no UI control ever called them for a
+  // publication's own cover (only inline TipTap images, IMG-04). Requires the
+  // publication to already have an id (new + unsaved has nowhere to attach to
+  // yet — save the publication first).
+  const handleCoverUpload = async (file: File) => {
+    const id = publicationId.trim();
+    if (!id) { setErrMsg(t('bragi.publicationEditor.errPublicationIdRequired', 'Publication ID обязателен')); return; }
+    setCoverUploading(true);
+    setErrMsg(null);
+    try {
+      const { file_url, size_bytes } = await uploadBragiAsset(file);
+      const assetId = `ASSET-${id}-COVER-${Date.now()}`;
+      await attachBragiAsset({
+        asset_id: assetId, file_url, asset_type: 'cover', size_bytes,
+        attach_to_publication_id: id,
+      });
+      setCoverUrl(file_url);
+    } catch (e) {
+      setErrMsg(String((e as Error).message ?? e));
+    } finally {
+      setCoverUploading(false);
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    }
+  };
+
   const handleSave = async () => {
     const id = publicationId.trim();
     if (!id) { setErrMsg(t('bragi.publicationEditor.errPublicationIdRequired', 'Publication ID обязателен')); return; }
@@ -130,6 +162,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         type: type || undefined, status_general: status || undefined,
         keyword_ids: keywordIds.length ? keywordIds : undefined,
         rubric_id: rubricId || undefined,
+        source_file_path: sourceFilePath || undefined,
       });
       for (const v of variants) {
         if (!v.channel_id) continue; // skip empty rows
@@ -210,7 +243,44 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
             {rubrics.map(r => <option key={r.rubric_id} value={r.rubric_id}>{r.name}</option>)}
           </select>
         </Field>
+        <Field label={t('bragi.publicationEditor.fieldSourcePath', 'Файл на диске')} grow={2}>
+          <input
+            style={S.input} value={sourceFilePath}
+            placeholder="C:\Маркетинг\habr-h1-sql-dedup.md"
+            disabled={readOnly}
+            onChange={e => setSourceFilePath(e.target.value)}
+          />
+        </Field>
       </div>
+
+      <Sec label={t('bragi.publicationEditor.sectionCover', 'Обложка')}>
+        <div style={S.coverRow}>
+          {coverUrl ? (
+            <img src={coverUrl} alt="" style={S.coverPreview} />
+          ) : (
+            <div style={S.coverPlaceholder}>{t('bragi.publications.noImage', 'нет изображения')}</div>
+          )}
+          {!readOnly && (
+            <div>
+              <input
+                ref={coverInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) void handleCoverUpload(f); }}
+              />
+              <button
+                style={S.btnGhost} disabled={coverUploading}
+                onClick={() => coverInputRef.current?.click()}
+              >
+                {coverUploading ? t('bragi.publicationEditor.coverUploading', 'Загрузка…')
+                  : coverUrl ? t('bragi.publicationEditor.coverReplace', 'Заменить обложку')
+                  : t('bragi.publicationEditor.coverUpload', 'Загрузить обложку')}
+              </button>
+              {!publicationId.trim() && (
+                <div style={S.coverHint}>{t('bragi.publicationEditor.coverNeedsId', 'сначала укажите Publication ID')}</div>
+              )}
+            </div>
+          )}
+        </div>
+      </Sec>
 
       <Sec label={t('bragi.publicationEditor.sectionMainText', 'Main-текст')}>
         <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder={t('bragi.publicationEditor.placeholderMainText', 'Мастер-версия текста…')} editable={!readOnly} />
@@ -236,10 +306,19 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       </Sec>
 
       <Sec label={t('bragi.publicationEditor.sectionVariants', 'Вариации по площадкам')}>
-        {variants.map((v, i) => (
+        {/* Status/publish date genuinely differ per channel — a post live on
+            CH-TG can still be draft on CH-HABR. Locking the WHOLE form once
+            status_general said "published" (old readOnly behavior) blocked
+            editing every other still-unpublished variant too. Lock only the
+            content of a variant that is itself already published — channel
+            pick, text, and removal — status/date stay editable everywhere so
+            you can still correct a date or bump status forward. */}
+        {variants.map((v, i) => {
+          const variantLocked = readOnly || v.status === 'published';
+          return (
           <div key={i} style={S.variantBlock}>
             <div style={S.variantRow}>
-              <select style={S.variantSelect} value={v.channel_id} disabled={readOnly} onChange={e => setVariant(i, { channel_id: e.target.value })}>
+              <select style={S.variantSelect} value={v.channel_id} disabled={variantLocked} onChange={e => setVariant(i, { channel_id: e.target.value })}>
                 <option value="">{t('bragi.publicationEditor.channelPlaceholder', '— площадка —')}</option>
                 {channels.map(c => <option key={c.channel_id} value={c.channel_id}>{c.channel_id}</option>)}
               </select>
@@ -248,7 +327,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
               </select>
               <input style={S.variantInputSm} type="date" value={v.published_at} disabled={readOnly}
                 onChange={e => setVariant(i, { published_at: e.target.value })} />
-              {!readOnly && (
+              {!variantLocked && (
                 <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>{t('bragi.publicationEditor.btnRemoveVariant', '×')}</button>
               )}
             </div>
@@ -256,16 +335,17 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
               <input
                 type="checkbox"
                 checked={v.sameAsMain}
-                disabled={readOnly}
+                disabled={variantLocked}
                 onChange={e => setVariant(i, { sameAsMain: e.target.checked })}
               />
               {t('bragi.publicationEditor.sameAsMainLabel', 'текст как в main-тексте')}
             </label>
             {!v.sameAsMain && (
-              <TipTapField value={v.text_md} onChange={txt => setVariant(i, { text_md: txt })} minHeight={60} placeholder={t('bragi.publicationEditor.placeholderVariantText', 'текст вариации…')} editable={!readOnly} />
+              <TipTapField value={v.text_md} onChange={txt => setVariant(i, { text_md: txt })} minHeight={60} placeholder={t('bragi.publicationEditor.placeholderVariantText', 'текст вариации…')} editable={!variantLocked} />
             )}
           </div>
-        ))}
+          );
+        })}
         {!readOnly && <button style={S.addVariantBtn} onClick={addVariant}>{t('bragi.publicationEditor.btnAddVariant', '+ площадка')}</button>}
       </Sec>
     </div>
@@ -299,6 +379,11 @@ const S: Record<string, React.CSSProperties> = {
               color: 'var(--dng)', border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)' },
   row4:     { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 },
   field:    { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 110 },
+  coverRow:  { display: 'flex', gap: 12, alignItems: 'center' },
+  coverPreview: { width: 128, height: 90, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--b3)', background: 'var(--b1)' },
+  coverPlaceholder: { width: 128, height: 90, borderRadius: 8, border: '1px dashed var(--b3)', background: 'var(--b1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--t3)', textAlign: 'center', padding: 6 },
+  coverHint: { fontSize: 10, color: 'var(--t3)', marginTop: 4 },
   label:    { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input:    { height: 28, padding: '0 8px', borderRadius: 4, border: '1px solid var(--b3)',
               background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',

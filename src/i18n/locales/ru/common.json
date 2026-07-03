@@ -1369,14 +1369,14 @@
       "secretHintOk": "⚠️ Никогда не вставлять сам токен — только ссылку вида env:X / vault:X / oauth:X / secret:X",
       "secretHintWarn": "✕ Похоже на значение, а не на ссылку. Формат: env:X / vault:X / oauth:X / secret:X",
       "purpose": {
-        "read": "read",
-        "write": "write",
-        "read_write": "read/write"
+        "read": "чтение",
+        "write": "запись",
+        "read_write": "чтение/запись"
       },
       "status": {
-        "active": "active",
-        "needs_admin": "needs_admin",
-        "inactive": "inactive"
+        "active": "активна",
+        "needs_admin": "нужен админ",
+        "inactive": "неактивна"
       }
     },
     "keywordEditor": {
@@ -1446,6 +1446,12 @@
       "fieldTopic": "Ключ (тема)",
       "fieldRubric": "Рубрика",
       "rubricPlaceholder": "— рубрика —",
+      "fieldSourcePath": "Файл на диске",
+      "sectionCover": "Обложка",
+      "coverUpload": "Загрузить обложку",
+      "coverReplace": "Заменить обложку",
+      "coverUploading": "Загрузка…",
+      "coverNeedsId": "сначала укажите Publication ID",
       "sectionMainText": "Main-текст",
       "placeholderMainText": "Мастер-версия текста…",
       "sectionKeywords": "Ключевые слова",
@@ -1456,10 +1462,10 @@
       "placeholderVariantText": "текст вариации…",
       "btnAddVariant": "+ площадка",
       "status": {
-        "draft": "draft",
-        "ready": "ready",
-        "published": "published",
-        "planned": "planned"
+        "draft": "черновик",
+        "ready": "готово",
+        "published": "опубликовано",
+        "planned": "запланировано"
       }
     },
     "publications": {

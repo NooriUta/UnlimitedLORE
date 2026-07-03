@@ -3187,9 +3187,14 @@ public class AidaLoreResource {
     // Flat vertices (no SCD2/Hist twin, see LoreSchemaInitializer Phase 7) — LH-44
     // partial-upsert still applies (re-calling with fewer fields must not wipe
     // existing content), edges are idempotent CREATE ... IF NOT EXISTS.
+    // source_file_path: where the full draft actually lives on disk (e.g.
+    // "C:\Маркетинг\habr-h1-sql-dedup.md") — was only ever embedded as plain
+    // text inside main_text_md ("Черновик — полный текст: <path>"), with no
+    // real attribute to query/display it separately from the rendered body.
     public record BragiPublicationRequest(
         String publication_id, String title, String topic, String main_text_md,
-        String type, String status_general, java.util.List<String> keyword_ids, String rubric_id) {}
+        String type, String status_general, java.util.List<String> keyword_ids, String rubric_id,
+        String source_file_path) {}
 
     @POST
     @Path("bragi/publication")
@@ -3213,6 +3218,7 @@ public class AidaLoreResource {
             if (req.main_text_md() != null)   { sql.append(", main_text_md=:mt");     p.put("mt", req.main_text_md()); }
             if (req.type() != null)           { sql.append(", type=:type");           p.put("type", req.type()); }
             if (req.status_general() != null) { sql.append(", status_general=:sg");   p.put("sg", req.status_general()); }
+            if (req.source_file_path() != null) { sql.append(", source_file_path=:sfp"); p.put("sfp", req.source_file_path()); }
             sql.append(" UPSERT WHERE publication_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();

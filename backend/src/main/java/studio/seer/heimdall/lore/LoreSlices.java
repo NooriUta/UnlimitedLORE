@@ -649,7 +649,7 @@ public final class LoreSlices {
             List.of(), Map.of(), "");
 
         slice("bragi_publications",
-            "SELECT publication_id, title, topic, main_text_md, type, status_general, " +
+            "SELECT publication_id, title, topic, main_text_md, type, status_general, source_file_path, " +
             "out('HAS_ASSET').file_url AS cover_asset_urls, " +
             "out('HAS_VARIANT').variant_id AS variant_ids, " +
             "out('HAS_VARIANT').status AS variant_statuses, " +
