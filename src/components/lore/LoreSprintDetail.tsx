@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { parsePrRefs, normalizeStatus } from './loreUtils';
+import { parsePrRefs, normalizeStatus, formatEffortDays } from './loreUtils';
 import { marked } from 'marked';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
@@ -488,7 +488,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           {task.effort_days != null && (
-            <span style={{ color: 'var(--t3)', fontSize: 10 }}>{task.effort_days}d</span>
+            <span style={{ color: 'var(--t3)', fontSize: 10 }}>{formatEffortDays(task.effort_days)}</span>
           )}
           <StatusPicker
             entityType="task" id={task.task_uid}
@@ -822,7 +822,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               const effortSum = visibleTasks.reduce((s, tk) => s + (tk.effort_days ?? 0), 0);
               const label = filter.size > 0 ? t('lore.sprintDetail.header.effortSelected', 'выбр.') : 'Σ';
               return effortSum > 0
-                ? <span style={S.meta} title={t('lore.sprintDetail.header.effortSumTitle', 'Сумма effort_days по отображаемым задачам')}>{label} <b style={{ color: 'var(--acc)' }}>{effortSum}</b> {t('lore.sprintDetail.header.daysAbbr', 'д')}</span>
+                ? <span style={S.meta} title={t('lore.sprintDetail.header.effortSumTitle', 'Сумма effort_days по отображаемым задачам')}>{label} <b style={{ color: 'var(--acc)' }}>{formatEffortDays(effortSum)}</b></span>
                 : null;
             })()}
           </>
@@ -1321,9 +1321,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           return (
             <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--t3)' }}>
               <span>{t('lore.sprintDetail.effortFooter.label', 'Итого effort:')}</span>
-              <b style={{ color: 'var(--acc)', fontFamily: 'var(--mono)' }}>{t('lore.sprintDetail.effortFooter.days', '{{sum}} д', { sum: effortSum })}</b>
+              <b style={{ color: 'var(--acc)', fontFamily: 'var(--mono)' }}>{formatEffortDays(effortSum)}</b>
               {filter.size > 0 && effortTotal !== effortSum && (
-                <span style={{ color: 'var(--t3)' }}>{t('lore.sprintDetail.effortFooter.ofTotal', '/ {{total}} д всего', { total: effortTotal })}</span>
+                <span style={{ color: 'var(--t3)' }}>{t('lore.sprintDetail.effortFooter.ofTotalFmt', '/ {{total}} всего', { total: formatEffortDays(effortTotal) })}</span>
               )}
             </div>
           );
