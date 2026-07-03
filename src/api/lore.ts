@@ -228,6 +228,7 @@ export interface LoreSprintRow {
   planned_end_date: string | null;
   planned_milestone_id: string | null;
   milestone_ids?: string[] | null;
+  no_release_required: boolean | null;
 }
 
 export interface LoreSprintDoneDate {
@@ -648,7 +649,7 @@ export async function upsertMilestone(
 
 export async function updateLoreSprint(
   sprintId: string,
-  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null },
+  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null },
 ): Promise<{ ok: boolean; sprint_id: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/update`, {
     method: 'POST',

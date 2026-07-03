@@ -62,8 +62,11 @@ public class AidaLoreResource {
         String git_project, String repo_url) {}
     // priority moved to SprintPlanRequest/POST /lore/sprint/plan — it's SCD2-tracked
     // (lives on KnowSprintHist), unlike the vertex-only fields below.
+    // no_release_required: sprints that never ship a versioned release (docs-only,
+    // research spikes, internal tooling) — excluded from deploy-lag/unreleased-burn
+    // metrics in LoreAnalytics, which would otherwise flag them as perpetually overdue.
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
-        String context_md, String plan_id, Integer effort_days) {}
+        String context_md, String plan_id, Integer effort_days, Boolean no_release_required) {}
     public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
         String component_id, String context_md, String decision_md, String consequences_md,
@@ -1562,6 +1565,7 @@ public class AidaLoreResource {
         if (req.context_md() != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        req.context_md()); }
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
         if (req.effort_days()!= null) { sb.append("effort_days=:effort, ");  p.put("effort",     req.effort_days()); }
+        if (req.no_release_required() != null) { sb.append("no_release_required=:nrr, "); p.put("nrr", req.no_release_required()); }
         String set = sb.toString().replaceAll(",\\s*$", "");
         if (set.equals("UPDATE KnowSprint SET"))
             return badParams("at least one field required");

@@ -426,6 +426,10 @@ public class LoreSchemaInitializer {
         // deliberately NOT on the hist chain (must survive every SCD2 transition
         // unchanged, so it can't live on a row that gets replaced).
         "CREATE PROPERTY KnowSprint.created_date          IF NOT EXISTS STRING",
+        // Vertex-only flag (no history needed) — excluded from deploy-lag/
+        // unreleased-burn metrics when true (docs-only/research/tooling sprints
+        // that never ship a versioned release).
+        "CREATE PROPERTY KnowSprint.no_release_required   IF NOT EXISTS BOOLEAN",
         "CREATE PROPERTY KnowSprintHist.planned_start_date IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.planned_end_date   IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.planned_milestone_id IF NOT EXISTS STRING",

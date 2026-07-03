@@ -1097,7 +1097,9 @@
         "start": "Planned start date",
         "end": "Planned end date",
         "milestone": "Planned milestone",
-        "milestonePlaceholder": "— planned milestone —"
+        "milestonePlaceholder": "— planned milestone —",
+        "noReleaseRequired": "No release required",
+        "noReleaseHint": "Excluded from unreleased/deploy-lag metrics (docs, research, internal tooling — never ships as a versioned release)"
       },
       "modules": {
         "label": "Modules",

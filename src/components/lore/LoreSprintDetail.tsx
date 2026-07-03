@@ -31,6 +31,7 @@ interface SprintMeta {
   planned_start_date: string | null;
   planned_end_date: string | null;
   planned_milestone_id: string | null;
+  no_release_required: boolean | null;
 }
 
 interface PhaseRow {
@@ -1067,6 +1068,20 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— планируемая веха —')}</option>
             {allMilestones.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
           </select>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t2)', cursor: planBusy ? 'default' : 'pointer' }}>
+            <input type="checkbox" disabled={planBusy}
+              checked={!!sprint.no_release_required}
+              title={t('lore.sprintDetail.plan.noReleaseHint', 'Не учитывать в метриках незарелиженности/deploy-lag (доки, research, внутренний тулинг — никогда не выходит отдельным релизом)')}
+              onChange={async e => {
+                const v = e.target.checked;
+                setPlanBusy(true);
+                try {
+                  await updateLoreSprint(sprint.sprint_id, { no_release_required: v });
+                  setSprint(s => s ? { ...s, no_release_required: v } : s);
+                } catch (err) { onError(err); } finally { setPlanBusy(false); }
+              }} />
+            {t('lore.sprintDetail.plan.noReleaseRequired', 'Не требует релиза')}
+          </label>
         </div>
       </div>
 
