@@ -415,6 +415,20 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON BragiVariant     (status)       NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON BragiVariant     (published_at) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON BragiPublication (status_general) NOTUNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON BragiKeyword     (cluster)      NOTUNIQUE"
+        "CREATE INDEX IF NOT EXISTS ON BragiKeyword     (cluster)      NOTUNIQUE",
+
+        // ── SPRINT_PLANITEM_RETIRE: planning fields move from PlanItem onto
+        // KnowSprint/KnowSprintHist directly (see ADR + memory lore_milestone_
+        // sprint_via_planitem for the "why"). planned_start_date/planned_end_date/
+        // planned_milestone_id/track_id are SCD2-tracked (same read pattern as
+        // priority: out('HAS_STATE')[field IS NOT NULL].field[0]) — hence on
+        // KnowSprintHist, not the vertex. created_date is a one-time vertex stamp,
+        // deliberately NOT on the hist chain (must survive every SCD2 transition
+        // unchanged, so it can't live on a row that gets replaced).
+        "CREATE PROPERTY KnowSprint.created_date          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSprintHist.planned_start_date IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSprintHist.planned_end_date   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSprintHist.planned_milestone_id IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSprintHist.track_id           IF NOT EXISTS STRING"
     );
 }

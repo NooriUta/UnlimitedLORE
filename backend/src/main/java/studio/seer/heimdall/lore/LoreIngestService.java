@@ -108,6 +108,8 @@ public class LoreIngestService {
             exec("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sp) " +
                     "TO (SELECT FROM KnowSprintHist WHERE state_uid = :su)",
                 Map.of("sp", sprintId, "su", stateUid));
+            exec("UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp",
+                Map.of("now", now, "sp", sprintId));
         }
         exec("CREATE EDGE REPRESENTS FROM (SELECT FROM PlanItem WHERE item_id = :item) " +
                 "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
@@ -158,6 +160,11 @@ public class LoreIngestService {
             exec("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
                     "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su)",
                 Map.of("sp", sprintId, "su", stateUid));
+            // created_date: stamped exactly once, here — unlike valid_from (which
+            // moves on every SCD2 transition), this must survive untouched so
+            // lead/cycle-time analytics have a real creation timestamp to anchor on.
+            exec("UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp",
+                Map.of("now", now, "sp", sprintId));
         }
 
         // 3. Upsert PlanItem so the sprint appears on the Gantt

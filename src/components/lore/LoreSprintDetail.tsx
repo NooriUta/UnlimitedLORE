@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { parsePrRefs, normalizeStatus } from './loreUtils';
 import { marked } from 'marked';
 import {
-  fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint,
+  fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
@@ -27,6 +27,10 @@ interface SprintMeta {
   adr_ids: string[] | null;
   context_md: string | null;
   git_projects: string[] | null;
+  created_date: string | null;
+  planned_start_date: string | null;
+  planned_end_date: string | null;
+  planned_milestone_id: string | null;
 }
 
 interface PhaseRow {
@@ -203,7 +207,7 @@ function PriorityPicker({ sprintId, current, onChanged, onError }: {
     if (busy) return;
     const val = next === current ? null : next; // повторный клик — сброс
     setBusy(true);
-    try { await updateLoreSprint(sprintId, { priority: val }); onChanged(); }
+    try { await updateSprintPlan(sprintId, { priority: val }); onChanged(); }
     catch (err) { onError(err); }
     finally { setBusy(false); }
   }
@@ -628,6 +632,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [projLinking, setProjLinking]   = useState(false);
   const [compLinking, setCompLinking] = useState(false);
   const [msLinking, setMsLinking]     = useState(false);
+  const [planBusy, setPlanBusy]       = useState(false);
   const [relLinking, setRelLinking]   = useState(false);
   const [allProjects, setAllProjects] = useState<string[]>([]);
   const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
@@ -1007,7 +1012,67 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
-      {/* ── Milestones section (sprint→milestone, TARGETS_MILESTONE) ──────────── */}
+      {/* ── Planning section (planned_start/end date, planned milestone, created_date)
+          — plain SCD2-tracked KnowSprintHist fields, edited via /lore/sprint/plan.
+          Not to be confused with the "Вехи" section below, which is the ACTUAL
+          milestone (TARGETS_MILESTONE edge) — that one already existed. */}
+      <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <GameIcon slug="compass" size={11} style={{ color: 'var(--t3)' }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.plan.label', 'Планирование')}</span>
+          {planBusy && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 5 }}>
+          {sprint.created_date && (
+            <div style={{ fontSize: 10, color: 'var(--t3)' }}>
+              {t('lore.sprintDetail.plan.created', 'Создан')}: <span style={{ color: 'var(--t2)', fontFamily: 'var(--mono)' }}>{sprint.created_date.slice(0, 10)}</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input type="date" disabled={planBusy} style={lookupSelectStyle}
+              value={sprint.planned_start_date ?? ''}
+              title={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
+              onChange={async e => {
+                const v = e.target.value || null;
+                setPlanBusy(true);
+                try {
+                  await updateSprintPlan(sprint.sprint_id, { planned_start_date: v });
+                  setSprint(s => s ? { ...s, planned_start_date: v } : s);
+                } catch (err) { onError(err); } finally { setPlanBusy(false); }
+              }} />
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>→</span>
+            <input type="date" disabled={planBusy} style={lookupSelectStyle}
+              value={sprint.planned_end_date ?? ''}
+              title={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
+              onChange={async e => {
+                const v = e.target.value || null;
+                setPlanBusy(true);
+                try {
+                  await updateSprintPlan(sprint.sprint_id, { planned_end_date: v });
+                  setSprint(s => s ? { ...s, planned_end_date: v } : s);
+                } catch (err) { onError(err); } finally { setPlanBusy(false); }
+              }} />
+          </div>
+          <select disabled={planBusy} style={lookupSelectStyle}
+            value={sprint.planned_milestone_id ?? ''}
+            title={t('lore.sprintDetail.plan.milestone', 'Планируемая веха')}
+            onChange={async e => {
+              const v = e.target.value || null;
+              setPlanBusy(true);
+              try {
+                await updateSprintPlan(sprint.sprint_id, { planned_milestone_id: v });
+                setSprint(s => s ? { ...s, planned_milestone_id: v } : s);
+              } catch (err) { onError(err); } finally { setPlanBusy(false); }
+            }}>
+            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— планируемая веха —')}</option>
+            {allMilestones.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* ── Milestones section (sprint→milestone, TARGETS_MILESTONE) — this is the
+          ACTUAL milestone the sprint landed in, as opposed to planned_milestone_id
+          above. Reused as-is: this UI already existed before SPRINT_PLANITEM_RETIRE. */}
       {(() => {
         const linked = sprint.milestone_ids ?? [];
         const unlinked = allMilestones.filter(m => !linked.includes(m.id));
@@ -1015,7 +1080,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <GameIcon slug="crossed-axes" size={11} style={{ color: 'var(--t3)' }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.milestones.label', 'Вехи')}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.milestones.label', 'Вехи (факт.)')}</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
               {linked.map(mid => (

@@ -11,7 +11,7 @@ import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/
 import 'vis-timeline/styles/vis-timeline-graph2d.css';
 import './lore-timeline.css';
 import {
-  fetchLoreSlice, postLoreStatus, registerLoreSprint, updateLoreSprint,
+  fetchLoreSlice, postLoreStatus, registerLoreSprint, updateSprintPlan,
   type LorePlanConfig, type LorePlanSection,
   type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
   type LorePlanItemStatus, type LoreSprintDep,
@@ -1161,7 +1161,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                             const prev = cardSprintPriority;
                             setCardSprintPriority(next);
                             setPriorityBusy(true);
-                            updateLoreSprint(sid, { priority: next })
+                            updateSprintPlan(sid, { priority: next })
                               .catch(() => setCardSprintPriority(prev))
                               .finally(() => setPriorityBusy(false));
                           }}

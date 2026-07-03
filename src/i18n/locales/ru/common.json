@@ -1086,10 +1086,18 @@
         "openTitle": "Открыть {{id}}"
       },
       "milestones": {
-        "label": "Вехи",
+        "label": "Вехи (факт.)",
         "unlink": "Отвязать {{mid}}",
         "linkPlaceholder": "+ привязать веху…",
         "empty": "нет вех"
+      },
+      "plan": {
+        "label": "Планирование",
+        "created": "Создан",
+        "start": "Плановая дата старта",
+        "end": "Плановая дата завершения",
+        "milestone": "Планируемая веха",
+        "milestonePlaceholder": "— планируемая веха —"
       },
       "modules": {
         "label": "Модули",

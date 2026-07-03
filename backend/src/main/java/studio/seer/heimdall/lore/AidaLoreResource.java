@@ -60,8 +60,10 @@ public class AidaLoreResource {
         String old_status, String new_status, StatusRevision revision) {}
     public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers,
         String git_project, String repo_url) {}
+    // priority moved to SprintPlanRequest/POST /lore/sprint/plan — it's SCD2-tracked
+    // (lives on KnowSprintHist), unlike the vertex-only fields below.
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
-        String context_md, String priority, String plan_id, Integer effort_days) {}
+        String context_md, String plan_id, Integer effort_days) {}
     public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
         String component_id, String context_md, String decision_md, String consequences_md,
@@ -387,12 +389,16 @@ public class AidaLoreResource {
             // Sprint is the source of truth: after flipping the sprint's status, push
             // the same status token onto every plan_item that REPRESENTS it, so plan
             // bars never drift (covers both MCP lore_set_status and the UI).
-            case "sprint"    -> updateScd2Status("sprint", "KnowSprint", "KnowSprintHist",
+            // Read the currently-open row's plan fields (priority/planned_*/track_id)
+            // BEFORE the SCD2 flip, then restore them onto the freshly-opened row —
+            // updateScd2Status's INSERT only carries state_uid/status_raw/valid_from,
+            // so without this a status change would silently wipe planning data.
+            case "sprint"    -> readSprintPlanFields(req.id())
+                                  .chain(fields -> updateScd2Status("sprint", "KnowSprint", "KnowSprintHist",
                                     "sprint_id", req.id(), req.status(), now, nsid)
                                   .chain(resp -> resp.getStatus() >= 300
                                     ? Uni.createFrom().item(resp)
-                                    : propagateSprintStatusToPlanItems(req.id(), req.status(), now)
-                                        .replaceWith(resp));
+                                    : restoreSprintPlanFields(req.id(), fields).replaceWith(resp)));
             case "task"      -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
                                     "task_uid", req.id(), req.status(), now, nsid);
             // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
@@ -465,6 +471,127 @@ public class AidaLoreResource {
             });
     }
 
+    // ── SPRINT_PLANITEM_RETIRE: sprint plan-field carry-forward helpers ──────
+    // priority/planned_start_date/planned_end_date/planned_milestone_id/track_id
+    // all live on the open KnowSprintHist row. Any SCD2 transition that inserts a
+    // fresh row (status flip via updateScd2Status, or an explicit plan edit via
+    // /lore/sprint/plan) must carry these forward, or they silently disappear.
+    private static final List<String> SPRINT_PLAN_FIELDS = List.of(
+        "priority", "planned_start_date", "planned_end_date", "planned_milestone_id", "track_id");
+
+    private Uni<Map<String, Object>> readSprintPlanFields(String sprintId) {
+        MartQuery q = new MartQuery("sql",
+            "SELECT priority, planned_start_date, planned_end_date, planned_milestone_id, track_id " +
+            "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
+            Map.of("sid", sprintId), -1);
+        return client.query(db, basicAuth(), q).map(res -> {
+            List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
+            return rows.isEmpty() ? Map.<String, Object>of() : rows.get(0);
+        });
+    }
+
+    private Uni<LoreCommandClient.LoreCommandResult> restoreSprintPlanFields(
+            String sprintId, Map<String, Object> fields) {
+        if (fields.isEmpty()) return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
+        StringBuilder sb = new StringBuilder("UPDATE KnowSprintHist SET ");
+        Map<String, Object> p = new LinkedHashMap<>();
+        for (String f : SPRINT_PLAN_FIELDS) {
+            if (fields.get(f) != null) { sb.append(f).append("=:").append(f).append(", "); p.put(f, fields.get(f)); }
+        }
+        String set = sb.toString().replaceAll(",\\s*$", "");
+        if (set.equals("UPDATE KnowSprintHist SET"))
+            return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
+        p.put("sid", sprintId);
+        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            set + " WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL", p));
+    }
+
+    // ── Write-path: real-SCD2 edit of sprint plan fields ─────────────────────
+    // Unlike updateSprint() (in-place vertex mutation, no history), this closes
+    // the open KnowSprintHist row and opens a new one — same contract as
+    // updateScd2Status — carrying forward every SPRINT_PLAN_FIELDS value the
+    // caller didn't explicitly override. priority moves here exclusively;
+    // updateSprint() no longer accepts it (see its handler).
+
+    public record SprintPlanRequest(String sprint_id, String priority, String planned_start_date,
+        String planned_end_date, String planned_milestone_id, String track_id) {}
+
+    @POST
+    @Path("sprint/plan")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Uni<Response> updateSprintPlan(SprintPlanRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return Uni.createFrom().item(disabled());
+        Response guard = requireAdmin(role);
+        if (guard != null) return Uni.createFrom().item(guard);
+        if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
+            return Uni.createFrom().item(badParams("sprint_id required"));
+        if (!SAFE_ID.matcher(req.sprint_id()).matches())
+            return Uni.createFrom().item(badParams("sprint_id contains illegal characters"));
+        if (req.priority() == null && req.planned_start_date() == null && req.planned_end_date() == null
+                && req.planned_milestone_id() == null && req.track_id() == null)
+            return Uni.createFrom().item(badParams("at least one field required"));
+
+        final String sid  = req.sprint_id();
+        final String now  = Instant.now().toString();
+        final String nsid = UUID.randomUUID().toString();
+
+        MartQuery readQ = new MartQuery("sql",
+            "SELECT @rid AS rid, status_raw, priority, planned_start_date, planned_end_date, " +
+            "planned_milestone_id, track_id FROM KnowSprintHist " +
+            "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
+            Map.of("sid", sid), -1);
+
+        return client.query(db, basicAuth(), readQ).chain(res -> {
+            List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
+            if (rows.isEmpty())
+                return Uni.createFrom().item(badParams("sprint has no open hist row: " + sid));
+            Map<String, Object> cur = rows.get(0);
+            String oldRid = String.valueOf(cur.getOrDefault("rid", ""));
+
+            Map<String, Object> next = new LinkedHashMap<>();
+            next.put("status_raw",           cur.get("status_raw"));
+            next.put("priority",             req.priority()             != null ? req.priority()             : cur.get("priority"));
+            next.put("planned_start_date",   req.planned_start_date()   != null ? req.planned_start_date()   : cur.get("planned_start_date"));
+            next.put("planned_end_date",     req.planned_end_date()     != null ? req.planned_end_date()     : cur.get("planned_end_date"));
+            next.put("planned_milestone_id", req.planned_milestone_id() != null ? req.planned_milestone_id() : cur.get("planned_milestone_id"));
+            next.put("track_id",             req.track_id()             != null ? req.track_id()             : cur.get("track_id"));
+
+            Uni<LoreCommandClient.LoreCommandResult> closeOld = oldRid.startsWith("#")
+                ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowSprintHist SET valid_to = :now WHERE @rid = :rid",
+                    Map.of("now", now, "rid", oldRid)))
+                : Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
+
+            Map<String, Object> insertParams = new LinkedHashMap<>(next);
+            insertParams.put("nsid", nsid);
+            insertParams.put("now", now);
+
+            return closeOld
+                .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
+                    "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
+                    "planned_end_date = :planned_end_date, planned_milestone_id = :planned_milestone_id, " +
+                    "track_id = :track_id",
+                    insertParams)))
+                .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) " +
+                    "TO (SELECT FROM KnowSprintHist WHERE state_uid = :nsid)",
+                    Map.of("sid", sid, "nsid", nsid))))
+                .map(__ -> {
+                    Map<String, Object> out = new LinkedHashMap<>(next);
+                    out.put("ok", true);
+                    out.put("sprint_id", sid);
+                    out.remove("status_raw");
+                    return noStore(Response.ok(out));
+                });
+        }).onFailure().recoverWithItem(ex -> {
+            LOG.warnf("[LORE SPRINT PLAN] %s: %s", sid, ex.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
+        });
+    }
+
     // LH-44: direct status setter for KnowADR (no SCD2 hist row — status is a plain field)
     private Uni<Response> updateAdrStatusDirect(String adrId, String status, String now) {
         return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -520,33 +647,6 @@ public class AidaLoreResource {
                 LOG.warnf("[LORE STATUS] item=%s: %s", itemId, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
-            });
-    }
-
-    /**
-     * Mirror a sprint's new status token onto every PlanItem that REPRESENTS it.
-     * Best-effort: a failure here is logged but never fails the sprint update — the
-     * sprint stays the source of truth and the board's read-time sync covers any gap.
-     */
-    private Uni<Void> propagateSprintStatusToPlanItems(String sprintId, String token, String now) {
-        MartQuery q = new MartQuery("sql",
-            "SELECT item_id FROM PlanItem WHERE out('REPRESENTS').sprint_id CONTAINS :sid",
-            Map.of("sid", sprintId), -1);
-        return client.query(db, basicAuth(), q)
-            .chain(res -> {
-                List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
-                Uni<Void> chain = Uni.createFrom().voidItem();
-                for (Map<String, Object> r : rows) {
-                    final String itemId = String.valueOf(r.get("item_id"));
-                    if (itemId == null || itemId.isEmpty() || "null".equals(itemId)) continue;
-                    chain = chain.chain(__ -> updatePlanItemStatus(
-                        itemId, token, now, UUID.randomUUID().toString()).replaceWithVoid());
-                }
-                return chain;
-            })
-            .onFailure().recoverWithItem(ex -> {
-                LOG.warnf("[LORE STATUS] propagate sprint=%s → plan_item failed: %s", sprintId, ex.getMessage());
-                return null;
             });
     }
 
@@ -1460,7 +1560,6 @@ public class AidaLoreResource {
         if (req.name()       != null) { sb.append("name=:name, ");            p.put("name",       req.name()); }
         if (req.outcome_md() != null) { sb.append("outcome_md=:outcome, ");  p.put("outcome",    req.outcome_md()); }
         if (req.context_md() != null) { sb.append("context_md=:ctx, ");      p.put("ctx",        req.context_md()); }
-        if (req.priority()   != null) { sb.append("priority=:priority, ");   p.put("priority",   req.priority()); }
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
         if (req.effort_days()!= null) { sb.append("effort_days=:effort, ");  p.put("effort",     req.effort_days()); }
         String set = sb.toString().replaceAll(",\\s*$", "");
@@ -1470,16 +1569,6 @@ public class AidaLoreResource {
         try {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 set + " WHERE sprint_id=:sid", p)).await().indefinitely();
-            // SCD2 write contract: the sprints slice reads priority ONLY from the hist
-            // chain (out('HAS_STATE')[priority IS NOT NULL].priority[0]) — a vertex-only
-            // write is never visible. Mirror it onto the open hist row (same pattern as
-            // pr_refs). Matched by HAS_STATE + valid_to, not state_uid (legacy-null safe).
-            if (req.priority() != null) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowSprintHist SET priority=:prio " +
-                    "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL",
-                    Map.of("prio", req.priority(), "sid", req.sprint_id()))).await().indefinitely();
-            }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
             return noStore(Response.ok(out));
@@ -1490,97 +1579,15 @@ public class AidaLoreResource {
         }
     }
 
-    // ── Write-path: set sprint track (ON_TRACK edge on KnowPlanItem) ─────────
-
-    public record SprintTrackRequest(String sprint_id, String track_id) {}
-
-    @POST
-    @Path("sprint/track")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response setSprintTrack(SprintTrackRequest req, @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
-            return badParams("sprint_id required");
-        try {
-            // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
-            List<Map<String, Object>> edges = ingestService.queryPublic(
-                "SELECT @rid FROM ON_TRACK WHERE @out.represents_sprint = :sid",
-                Map.of("sid", req.sprint_id()));
-            for (Map<String, Object> e : edges) {
-                String rid = e.get("@rid").toString();
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM ON_TRACK WHERE @rid=" + rid, null)).await().indefinitely();
-            }
-            if (req.track_id() != null && !req.track_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    String.format(
-                        "CREATE EDGE ON_TRACK " +
-                        "FROM (SELECT FROM KnowPlanItem WHERE represents_sprint='%s' LIMIT 1) " +
-                        "TO (SELECT FROM PlanTrack WHERE track_id='%s' LIMIT 1)",
-                        req.sprint_id(), req.track_id()),
-                    null)).await().indefinitely();
-            }
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("ok", true); out.put("sprint_id", req.sprint_id()); out.put("track_id", req.track_id());
-            return noStore(Response.ok(out));
-        } catch (Exception e) {
-            LOG.warnf("[LORE SPRINT TRACK] %s: %s", req.sprint_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── Write-path: link plan-item ↔ milestone (CONTRIBUTES_TO) ─────────────
-
-    public record PlanItemMilestoneRequest(String item_id, String milestone_id, String action) {}
-
-    @POST
-    @Path("plan-item/milestone")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response updatePlanItemMilestone(PlanItemMilestoneRequest req,
-                                            @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.item_id() == null || req.item_id().isBlank())
-            return badParams("item_id required");
-        boolean remove = "remove".equalsIgnoreCase(req.action());
-        try {
-            // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
-            List<Map<String, Object>> edges = ingestService.queryPublic(
-                "SELECT @rid FROM CONTRIBUTES_TO WHERE @out.item_id=:iid" +
-                (req.milestone_id() != null ? " AND @in.milestone_id=:mid" : ""),
-                req.milestone_id() != null
-                    ? Map.of("iid", req.item_id(), "mid", req.milestone_id())
-                    : Map.of("iid", req.item_id()));
-            for (Map<String, Object> e : edges) {
-                String rid = e.get("@rid").toString();
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM CONTRIBUTES_TO WHERE @rid=" + rid, null)).await().indefinitely();
-            }
-            if (!remove && req.milestone_id() != null && !req.milestone_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    String.format(
-                        "CREATE EDGE CONTRIBUTES_TO " +
-                        "FROM (SELECT FROM PlanItem WHERE item_id='%s' LIMIT 1) " +
-                        "TO   (SELECT FROM KnowMilestone WHERE milestone_id='%s' LIMIT 1)",
-                        req.item_id(), req.milestone_id()),
-                    null)).await().indefinitely();
-            }
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("ok", true); out.put("item_id", req.item_id());
-            out.put("milestone_id", req.milestone_id()); out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
-        } catch (Exception e) {
-            LOG.warnf("[LORE PLAN-ITEM MILESTONE] %s / %s: %s", req.item_id(), req.milestone_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
+    // NB SPRINT_PLANITEM_RETIRE: removed POST /lore/sprint/track (setSprintTrack)
+    // and POST /lore/plan-item/milestone (updatePlanItemMilestone). Both targeted
+    // PlanItem, which is being retired — track_id and planned_milestone_id are now
+    // plain SCD2-tracked fields set via POST /lore/sprint/plan. setSprintTrack was
+    // additionally dead code: it queried a nonexistent type `KnowPlanItem` (schema
+    // only ever had `PlanItem`) and a nonexistent property `represents_sprint` on
+    // PlanItem (that was only ever a slice-level SQL alias) — it could never
+    // actually create the ON_TRACK edge it claimed to. updatePlanItemMilestone had
+    // zero frontend callers (confirmed by repo-wide grep before removal).
 
     // ── Write-path: link sprint ↔ project ────────────────────────────────────
 
