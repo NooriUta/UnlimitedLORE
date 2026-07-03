@@ -1,3 +1,15 @@
+// effort_days is fractional, granular to the hour (1 day = 8 working hours —
+// smallest meaningful increment 0.125). Bare "0.125d" reads poorly for small
+// tasks, so render sub-day amounts in hours and mixed amounts as "Xд Yч".
+export function formatEffortDays(days: number): string {
+  const totalHours = Math.round(days * 8);
+  if (totalHours === 0) return '0ч';
+  if (totalHours < 8) return `${totalHours}ч`;
+  const d = Math.floor(totalHours / 8);
+  const h = totalHours % 8;
+  return h === 0 ? `${d}д` : `${d}д ${h}ч`;
+}
+
 export function parsePrRefs(s: string | string[] | null | undefined): string[] {
   if (!s) return [];
   const parts = Array.isArray(s) ? s : [s];

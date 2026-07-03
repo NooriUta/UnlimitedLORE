@@ -22,6 +22,7 @@ import { areaColor, compArea } from './LoreComponentList';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
+import { formatEffortDays } from './loreUtils';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 
 // ── Status helpers ───────────────────────────────────────────────────────────
@@ -1318,7 +1319,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 4,
                                   alignItems: 'center', flexShrink: 0 }}>
                                   {t.effort_days != null && (
-                                    <span style={{ color: 'var(--t3)', fontSize: 9 }}>{t.effort_days}d</span>
+                                    <span style={{ color: 'var(--t3)', fontSize: 9 }}>{formatEffortDays(t.effort_days)}</span>
                                   )}
                                   {hasNote && (
                                     <span style={{ fontSize: 9, color: 'var(--t3)' }}>{open ? '▲' : '▼'}</span>

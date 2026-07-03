@@ -561,9 +561,14 @@ public final class LoreSlices {
             "SELECT task_uid, task_id, title, status_raw, priority, component_id, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask",
-            List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 500");
+            // No frontend consumer as of this writing (grep-confirmed) — LIMIT is a
+            // defensive cap, not a UX pagination boundary. Raised 500→5000 so a full
+            // task-effort export (e.g. the fractional-hours migration) doesn't
+            // silently truncate; still bounded to avoid an unbounded query.
+            List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 5000");
 
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",

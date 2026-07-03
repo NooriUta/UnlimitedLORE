@@ -180,7 +180,7 @@ export function registerLoreWrite(server: McpServer): void {
       context_md:  z.string().optional().describe('background context — WHY the sprint exists, key decisions, links to ADRs/docs, related sprints. Fill whenever you have this information.'),
       priority:    z.string().optional().describe('e.g. "high", "critical"'),
       plan_id:     z.string().optional(),
-      effort_days: z.number().int().optional().describe('actual effort in person-days'),
+      effort_days: z.number().optional().describe('actual effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
     },
     async ({ sprint_id, name, outcome_md, context_md, priority, plan_id, effort_days }) => {
       try {
@@ -894,12 +894,12 @@ export function registerLoreWrite(server: McpServer): void {
       task_uid:    z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
       title:       z.string().optional().describe('single-mode: new title'),
       note_md:     z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
-      effort_days: z.number().int().optional().describe('single-mode: estimated effort in person-days'),
+      effort_days: z.number().optional().describe('single-mode: estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
       tasks: z.array(z.object({
         task_uid:    z.string(),
         title:       z.string(),
         note_md:     z.string().optional(),
-        effort_days: z.number().int().optional(),
+        effort_days: z.number().optional(),
       })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?}'),
     },
     async ({ task_uid, title, note_md, effort_days, tasks }) => {

@@ -66,7 +66,7 @@ public class AidaLoreResource {
     // research spikes, internal tooling) — excluded from deploy-lag/unreleased-burn
     // metrics in LoreAnalytics, which would otherwise flag them as perpetually overdue.
     public record SprintUpdateRequest(String sprint_id, String name, String outcome_md,
-        String context_md, String plan_id, Integer effort_days, Boolean no_release_required) {}
+        String context_md, String plan_id, Double effort_days, Boolean no_release_required) {}
     public record BatchStatusRequest(String entity_type, List<String> ids, String status) {}
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
         String component_id, String context_md, String decision_md, String consequences_md,
@@ -76,7 +76,10 @@ public class AidaLoreResource {
         String date_created, String refs_raw) {}
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md,
         String phase_uid) {}
-    public record TaskEditRequest(String task_uid, String title, String note_md, Integer effort_days) {}
+    // effort_days: fractional, granular to the hour (1 day = 8 working hours,
+    // so the smallest meaningful increment is 0.125). Was Integer — too coarse
+    // to estimate sub-day tasks.
+    public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days) {}
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index) {}
     // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
     public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index) {}
@@ -1058,7 +1061,7 @@ public class AidaLoreResource {
      * (the UI reads the hist row, but the vertex copy must stay consistent too).
      */
     private static LoreCommandClient.LoreCommand taskVertexUpdate(
-            String uid, String title, String noteMd, Integer effortDays) {
+            String uid, String title, String noteMd, Double effortDays) {
         StringBuilder sql = new StringBuilder("UPDATE KnowTask SET title = :title");
         Map<String, Object> p = new java.util.HashMap<>();
         p.put("uid", uid);
@@ -1076,7 +1079,7 @@ public class AidaLoreResource {
      * never wipes an existing note or effort. No-op (passthrough) when both are null.
      */
     private Uni<LoreCommandClient.LoreCommandResult> mirrorTaskHist(
-            String uid, String noteMd, Integer effortDays) {
+            String uid, String noteMd, Double effortDays) {
         StringBuilder set = new StringBuilder();
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("uid", uid);
