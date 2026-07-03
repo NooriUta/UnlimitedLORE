@@ -28,6 +28,7 @@ import LoreRunbookList     from '../components/lore/LoreRunbookList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
+import { useIsNarrow } from '../hooks/useMediaQuery';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
@@ -52,6 +53,15 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
 ];
+
+// MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
+// section nav collapses to icons only, so colour is what tells the types apart.
+const SECTION_COLORS: Record<Section, string> = {
+  milestones: '#E0A13D', plan: '#6AB3F3', sprints: '#7DBF78', adrs: '#B48EAD',
+  decisions: '#D9A05B', releases: '#57C7D4', qg: '#A8C062', knowledge: '#E06C9F',
+  components: '#88B8A8', tech: '#C0A36E', evolution: '#9A8CDB', timeline: '#6FB0A0',
+  analytics: '#D98E73', mcp: '#8FA0C0',
+};
 
 // Sections that use master-detail layout (list panel + detail panel)
 const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg'];
@@ -96,6 +106,14 @@ const S = {
     color: active ? 'var(--acc)' : 'var(--t2)',
     fontWeight: active ? 600 : 400,
     transition: 'background 0.1s',
+  }),
+  // Narrow: icon-only, tinted by the section's type colour.
+  navItemNarrow: (active: boolean, col: string) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '6px 8px', height: 32, minWidth: 38, cursor: 'pointer', borderRadius: 6,
+    border: active ? `1px solid ${col}` : '1px solid transparent',
+    background: active ? `color-mix(in srgb, ${col} 20%, transparent)` : 'transparent',
+    flexShrink: 0,
   }),
   // List panel (master-detail) — width applied dynamically via listW state
   listPanel: {
@@ -203,6 +221,8 @@ export default function LorePage() {
   // Sections where the global search bar is actually passed to children
   const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
   const showGlobalSearch = SEARCH_SECTIONS.includes(section);
+  // MOB: collapse the section nav to type-coloured icons on narrow screens.
+  const narrow = useIsNarrow(720);
 
   // LH-26: seed local search fields from global q when switching sections (once, if empty)
   useEffect(() => {
@@ -274,17 +294,21 @@ export default function LorePage() {
   // ── Section nav — horizontal bar (План · Спринты · ADR · …) ──────────────────
   const sectionNav = (
     <nav style={S.navBar} className="lore-nav-scroll">
-      {SECTIONS.map(s => (
-        <button
-          key={s.id}
-          style={S.navItem(section === s.id)}
-          onClick={() => go(s.id)}
-          title={t(s.labelKey, s.fallback)}
-        >
-          {s.icon && <GameIcon slug={s.icon} size={15} style={{ color: 'inherit' }} />}
-          <span>{t(s.labelKey, s.fallback)}</span>
-        </button>
-      ))}
+      {SECTIONS.map(s => {
+        const isActive = section === s.id;
+        const col = SECTION_COLORS[s.id];
+        return (
+          <button
+            key={s.id}
+            style={narrow ? S.navItemNarrow(isActive, col) : S.navItem(isActive)}
+            onClick={() => go(s.id)}
+            title={t(s.labelKey, s.fallback)}
+          >
+            {s.icon && <GameIcon slug={s.icon} size={narrow ? 18 : 15} style={{ color: narrow ? col : 'inherit' }} />}
+            {!narrow && <span>{t(s.labelKey, s.fallback)}</span>}
+          </button>
+        );
+      })}
     </nav>
   );
 
