@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 
 // REN-00 (SPRINT_BRAGI_PLATFORM_RENDER) — shared render engine for the BRAGI
@@ -98,6 +98,9 @@ const SKIN_CSS = `
 .bsk-tgraph img { max-width:100%; border-radius:6px; }
 .bsk-tgraph .byline { font-size:13.5px; color:#999; font-family:-apple-system,'Segoe UI',sans-serif; margin-bottom:18px; }
 .bsk-tgraph .byline a { color:#999; }
+/* Real teaser/cover image (replaces the placeholder box when the asset is a loadable URL). */
+.bsk-tg .tzimg { display:block; width:100%; max-width:430px; margin:0 auto 2px; border-radius:12px 12px 0 0; object-fit:cover; max-height:260px; }
+.bsk-vc .tzimg, .bsk-habr .tzimg, .bsk-site .tzimg, .bsk-tgraph .tzimg, .bsk-main .tzimg { display:block; width:100%; margin:0 0 16px; border-radius:8px; object-fit:cover; max-height:340px; }
 `;
 
 let cssInjected = false;
@@ -119,6 +122,17 @@ function Body({ html }: { html: string }) {
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+/** Teaser/cover slot: renders the real asset as an <img> when it's a loadable
+ * URL (http/blob/data/root-relative), else a labelled placeholder box — so a
+ * `repo:…` local ref or a bare filename degrades gracefully instead of showing
+ * a broken image (mirrors the Thumb onError fallback in LoreBragiPublications). */
+function Teaser({ tz, box, label }: { tz: string; box: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+  const loadable = /^(https?:\/\/|blob:|data:|\/)/.test(tz.trim());
+  if (loadable && !failed) return <img className="tzimg" src={tz} alt="" onError={() => setFailed(true)} />;
+  return <div className={box}>{label}{tz}</div>;
+}
+
 export default function BragiSkinPreview({ skin, textMd, teaser, siteTheme = 'dark', meta }: BragiSkinPreviewProps) {
   useEffect(() => { injectCssOnce(); }, []);
   const html = useMemo(() => md(textMd), [textMd]);
@@ -129,7 +143,7 @@ export default function BragiSkinPreview({ skin, textMd, teaser, siteTheme = 'da
     case 'tg':
       return (
         <div className="bsk-wrap"><div className="bsk-tg">
-          {tz && <div className="img">тизер: {tz}</div>}
+          {tz && <Teaser tz={tz} box="img" label="тизер: " />}
           <div className={`bub${tz ? '' : ' noimg'}`}>
             {meta?.channelName && <div className="ch">{meta.channelName}</div>}
             <Body html={html} />
@@ -141,7 +155,7 @@ export default function BragiSkinPreview({ skin, textMd, teaser, siteTheme = 'da
       return (
         <div className="bsk-wrap"><div className="bsk-vc">
           <div className="vch"><span className="a" />{meta?.channelName ?? 'Автор'} · {date || 'не назначена'}</div>
-          <div className="cover">тизер: {tz ?? 'нет — возьмётся cover публикации'}</div>
+          {tz ? <Teaser tz={tz} box="cover" label="тизер: " /> : <div className="cover">тизер: нет — возьмётся cover публикации</div>}
           <Body html={html} />
         </div></div>
       );
@@ -149,21 +163,21 @@ export default function BragiSkinPreview({ skin, textMd, teaser, siteTheme = 'da
       return (
         <div className="bsk-wrap"><div className="bsk-habr"><div className="card">
           <div className="kick">Data Engineering · Блог Seiðr Studio</div>
-          {tz && <div className="timg">тизер: {tz}</div>}
+          {tz && <Teaser tz={tz} box="timg" label="тизер: " />}
           <Body html={html} />
         </div></div></div>
       );
     case 'site':
       return (
         <div className="bsk-wrap"><div className={`bsk-site${siteTheme === 'light' ? ' light' : ''}`}>
-          {tz && <div className="timg">обложка темы: {siteTheme === 'light' ? 'og-light.png' : 'og-dark.png'}</div>}
+          {tz && <Teaser tz={tz} box="timg" label={`обложка (${siteTheme === 'light' ? 'светлая' : 'тёмная'}): `} />}
           <Body html={html} />
         </div></div>
       );
     case 'tgraph':
       return (
         <div className="bsk-wrap"><div className="bsk-tgraph"><div className="inner">
-          {tz && <div className="timg">header: {tz}</div>}
+          {tz && <Teaser tz={tz} box="timg" label="header: " />}
           <Body html={html} />
           <div className="byline" style={{ marginTop: 18 }}>Seiðr Studio · <a href="#">seidrstudio.pro</a> · Instant View</div>
         </div></div></div>
@@ -173,6 +187,7 @@ export default function BragiSkinPreview({ skin, textMd, teaser, siteTheme = 'da
       return (
         <div className="bsk-wrap"><div className="bsk-site bsk-main">
           <div className="mhead">MAIN · мастер-версия (MD) — сателлиты наследуют или переопределяют</div>
+          {tz && <Teaser tz={tz} box="timg" label="обложка: " />}
           <Body html={html} />
         </div></div>
       );

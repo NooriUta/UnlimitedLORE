@@ -377,7 +377,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
               skin={previewSkin}
               textMd={mainText}
               siteTheme={previewSiteTheme}
-              teaser={previewSkin === 'main' ? null : 'cover публикации'}
+              teaser={coverUrl || undefined}
               meta={{ channelName: title || undefined }}
             />
           </div>
