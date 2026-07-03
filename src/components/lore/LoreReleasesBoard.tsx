@@ -447,15 +447,15 @@ const S = {
   },
   sprintBlock: { marginBottom: 4 },
   sprintRef: {
-    display: 'flex', alignItems: 'center', gap: 8,
+    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const,
     padding: '3px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)',
     cursor: 'pointer',
   },
   sprintId: {
     fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
-    fontWeight: 700, flexShrink: 0,
+    fontWeight: 700, minWidth: 0, overflowWrap: 'anywhere' as const,
   },
-  sprintName: { fontSize: 11, color: 'var(--t2)', flex: 1 },
+  sprintName: { fontSize: 11, color: 'var(--t2)', flex: '1 1 120px', minWidth: 0 },
   taskCount: {
     fontSize: 9, padding: '1px 4px', borderRadius: 2, flexShrink: 0,
     background: 'color-mix(in srgb, var(--acc) 8%, transparent)',
