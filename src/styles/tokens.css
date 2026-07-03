@@ -325,6 +325,17 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
   .btn-sm, .btn-xs { min-height: 30px; }
 }
 
+/* MOB-10 (SPRINT_LORE_MOBILE_UX): app shell height. 100vh on mobile includes
+   the area under the browser chrome (address bar) — the bottom ~60-100px of
+   the UI (last list rows, buttons) ends up hidden. dvh tracks the ACTUAL
+   visible viewport; the plain-vh line stays as the fallback for engines
+   without dvh. safe-area inset covers phones with home-indicator bars. */
+.shell-dvh {
+  height: 100vh;
+  height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
 /* MOB-06 (SPRINT_LORE_MOBILE_UX): wide data tables (BRAGI Ключи 609px /
    Интеграции 714px / Архив / Аналитика, MUNINN 519px, bench data-table…) were
    CLIPPED by the shell's overflow:hidden on narrow screens. display:block +
@@ -337,5 +348,15 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
     max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* MOB-09: iOS Safari force-zooms the page when a focused input's font-size
+     is <16px — every input in the app is 11-13px via INLINE styles, hence the
+     !important. Applies only below 768px, desktop density untouched. */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  .ProseMirror, [contenteditable='true'] {
+    font-size: 16px !important;
   }
 }
