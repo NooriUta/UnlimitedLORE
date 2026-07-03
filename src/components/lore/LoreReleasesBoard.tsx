@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 
 interface Props {
   q: string;
@@ -62,6 +63,10 @@ function GhIcon() {
 
 export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSprint }: Props) {
   const { t } = useTranslation();
+  // MOB-13: below ~720px the version|body|date three-column row squeezes the
+  // body to ~100px so the description/detail render 1-2 words per line. Restack
+  // vertically: version+date on line 1, badges/desc/detail full-width below.
+  const narrow = useIsNarrow(720);
   const [rows,           setRows]           = useState<LoreRelease[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [expanded,       setExpanded]       = useState<string | null>(null);
@@ -205,7 +210,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
               return (
                 <div
                   key={uid}
-                  style={{ ...S.row, background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
+                  style={{ ...S.row, ...(narrow ? S.rowNarrow : null), background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
                   onClick={() => toggle(uid, tag, ruid, r.git_tag ?? null)}
                 >
                   <div style={S.tagCell}>
@@ -214,7 +219,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                     </span>
                     {r.is_current && <span style={S.currentBadge}>CURRENT</span>}
                   </div>
-                  <div style={S.body}>
+                  <div style={{ ...S.body, ...(narrow ? S.bodyNarrow : null) }}>
                     {projectFilter === 'all' && projects.length > 2 && (
                       <span style={S.repoBadge} title={gp}>{gp.split('/')[1]}</span>
                     )}
@@ -226,7 +231,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                     {(r.pr_count != null && r.pr_count > 0) && (
                       <span style={S.countBadge} title={t('lore.releasesBoard.linkedPrsTitle', 'Привязанных PR')}>PR {r.pr_count}</span>
                     )}
-                    {r.description_md && <span style={S.desc}>{r.description_md.slice(0, 110)}</span>}
+                    {r.description_md && <span style={{ ...S.desc, ...(narrow ? S.descNarrow : null) }}>{r.description_md.slice(0, 110)}</span>}
                     {isOpen && (
                       <div style={S.detail} onClick={e => e.stopPropagation()}>
                         {loadingDetail === uid && <span style={S.meta}>{t('lore.releasesBoard.loading', 'Загрузка…')}</span>}
@@ -318,7 +323,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                       </div>
                     )}
                   </div>
-                  <div style={S.rowRight}>
+                  <div style={{ ...S.rowRight, ...(narrow ? S.rowRightNarrow : null) }}>
                     {r.release_date && <span style={S.date}>{r.release_date.slice(0, 10)}</span>}
                     <a
                       href={ghUrl}
@@ -394,6 +399,13 @@ const S = {
     padding: '7px 16px', borderBottom: '1px solid var(--bd)',
     cursor: 'pointer', transition: 'background 0.1s',
   },
+  // MOB-13 narrow: wrap into a vertical card — version+date share line 1
+  // (rowRight pushed right + reordered before body), badges/desc/detail drop
+  // to full-width lines below.
+  rowNarrow: { flexWrap: 'wrap' as const, alignItems: 'center' as const, columnGap: 8, rowGap: 6 },
+  bodyNarrow: { order: 2, flexBasis: '100%', width: '100%' },
+  rowRightNarrow: { order: 1, marginLeft: 'auto' as const },
+  descNarrow: { flexBasis: '100%', width: '100%' },
   tagCell: { display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 },
   tag: {
     fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,

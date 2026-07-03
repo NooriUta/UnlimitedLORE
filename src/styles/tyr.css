@@ -2097,3 +2097,42 @@ button.primary.big {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* =============================================================
+   MOB-07: mobile (<=768px). TYR is a wide two/three-pane desktop
+   editor — its grids fix a ~840px min-width (browse = two
+   minmax(420px) columns), which distends the whole .app past the
+   viewport so an overflow:hidden ancestor clips the topbar buttons
+   and second pane off-screen. Collapse every multi-column pane grid
+   to a single stacked column and let the topbar wrap onto its own
+   auto-height row.
+   ============================================================= */
+@media (max-width: 768px) {
+  /* topbar may wrap → give it an auto row instead of the fixed 42px */
+  .app { grid-template-rows: auto 1fr 26px; }
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 8px;
+    height: auto;
+  }
+  .mode-toggle { margin-left: 0; }
+
+  /* sub-tabs scroll horizontally rather than forcing width */
+  .plan-subtabs { overflow-x: auto; flex-wrap: nowrap; }
+  .plan-subtabs button { flex: 0 0 auto; }
+
+  /* multi-column panes → single stacked column (list on top, editor below) */
+  .layout-plan,
+  .layout-reports,
+  .layout-plan-browse {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .cat-list-pane {
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid var(--bd);
+    overflow-y: auto;
+  }
+}
