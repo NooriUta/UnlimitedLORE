@@ -378,9 +378,10 @@ export default function LorePage() {
                   color: on ? 'var(--t1)' : 'var(--t3)',
                 }}
               >
-                <GameIcon slug={meta.icon} size={11} style={{ color: meta.color }} />
-                {f.label /* status label sourced from STATUS_FILTERS in LoreSprintTree, not this file */}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                <GameIcon slug={meta.icon} size={narrow ? 14 : 11} style={{ color: meta.color }} />
+                {/* MOB: icon-only chips on narrow — label+count live in the title tooltip */}
+                {!narrow && f.label}
+                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>}
               </span>
             );
           })}
@@ -402,7 +403,7 @@ export default function LorePage() {
               background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
             }}
-          >⚡ {t('lore.page.sprints.presetWorking', 'В работе')}</span>
+          >⚡{!narrow && <> {t('lore.page.sprints.presetWorking', 'В работе')}</>}</span>
 
           {/* Пресет: Нужно внимание */}
           <span
@@ -418,7 +419,7 @@ export default function LorePage() {
               background: sprintPresetAttention ? 'color-mix(in srgb, #E24B4A 16%, transparent)' : 'transparent',
               color: sprintPresetAttention ? '#E24B4A' : 'var(--t3)',
             }}
-          >⚠ {t('lore.page.sprints.presetAttention', 'Внимание')}</span>
+          >⚠{!narrow && <> {t('lore.page.sprints.presetAttention', 'Внимание')}</>}</span>
 
           {/* Распорка */}
           <span style={{ flex: 1 }} />
@@ -522,9 +523,9 @@ export default function LorePage() {
                   color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
                 }}
               >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                {projLabel(id)}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+                <span style={{ width: narrow ? 10 : 6, height: narrow ? 10 : 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {!narrow && projLabel(id)}
+                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
               </span>
             );
           })}
@@ -580,9 +581,9 @@ export default function LorePage() {
                   color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
                 }}
               >
-                <GameIcon slug={icon ?? 'puzzle'} size={11} style={{ color }} />
-                {id}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+                <GameIcon slug={icon ?? 'puzzle'} size={narrow ? 14 : 11} style={{ color }} />
+                {!narrow && id}
+                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
               </span>
             );
           })}
@@ -742,9 +743,12 @@ export default function LorePage() {
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div style={S.body}>
         {/* ── Master-detail layout ─────────────────────────────────────────── */}
-        {isMasterDetail && (
+        {/* MOB-04: on narrow screens the side-by-side pair becomes a two-step
+            flow — list full-width until something is selected, then the detail
+            takes the whole screen with a "← к списку" bar (clearItem). */}
+        {isMasterDetail && (!narrow || !passport) && (
           <>
-          <div style={{ ...S.listPanel, width: listW }} className="lore-panel-scroll">
+          <div style={{ ...S.listPanel, width: narrow ? '100%' : listW }} className="lore-panel-scroll">
             {/* List panel header — search only for ADRs; sprints use the full-width bar above */}
             {section === 'adrs' && (
               <div style={S.listPanelHeader}>
@@ -878,15 +882,29 @@ export default function LorePage() {
               />
             )}
           </div>
-          <div
-            className="lore-resize-handle"
-            onMouseDown={e => { dragRef.current = { x: e.clientX, w: listW }; e.preventDefault(); }}
-          />
+          {!narrow && (
+            <div
+              className="lore-resize-handle"
+              onMouseDown={e => { dragRef.current = { x: e.clientX, w: listW }; e.preventDefault(); }}
+            />
+          )}
           </>
         )}
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
+        {!(narrow && isMasterDetail && !passport) && (
         <div style={S.content}>
+          {narrow && isMasterDetail && passport && (
+            <button
+              onClick={clearItem}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                padding: '7px 12px', border: 'none', borderBottom: '1px solid var(--bd)',
+                background: 'var(--bg1)', color: 'var(--acc)', fontSize: 12,
+                fontFamily: 'var(--mono)', cursor: 'pointer', textAlign: 'left', flexShrink: 0,
+              }}
+            >← {t('lore.page.backToList', 'к списку')}</button>
+          )}
           <LoreErrorBoundary label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
@@ -1022,6 +1040,7 @@ export default function LorePage() {
           {section === 'mcp' && <LoreMcpApiScreen />}
           </LoreErrorBoundary>
         </div>
+        )}
       </div>
     </div>
   );
