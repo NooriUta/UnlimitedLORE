@@ -1056,16 +1056,19 @@ export function StatusChip({ status }: { status: string }) {
   const { icon, color } = resolveStatusMeta(status);
   const normalized = taskTick(status).status;
   const label = t(`status.${normalized}`, statusLabel(status));
+  // MOB: on narrow screens the badge was often wider than the row's own text —
+  // collapse to icon-only, the label moves to the tooltip.
+  const narrow = useIsNarrow(720);
   return (
-    <span style={{
+    <span title={label} style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
-      fontSize: 10, padding: '1px 5px 1px 4px', borderRadius: 3,
+      fontSize: 10, padding: narrow ? '2px 3px' : '1px 5px 1px 4px', borderRadius: 3,
       background: `color-mix(in srgb, ${color} 16%, transparent)`,
       color, border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
-      whiteSpace: 'nowrap',
+      whiteSpace: 'nowrap', flexShrink: 0,
     }}>
-      <GameIcon slug={icon} size={11} style={{ color: 'inherit' }} />
-      {label}
+      <GameIcon slug={icon} size={narrow ? 13 : 11} style={{ color: 'inherit' }} />
+      {!narrow && label}
     </span>
   );
 }
