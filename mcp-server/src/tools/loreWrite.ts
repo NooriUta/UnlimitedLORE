@@ -1216,11 +1216,13 @@ export function registerLoreWrite(server: McpServer): void {
       status_general:  z.string().optional().describe('e.g. "draft" | "ready" | "published"'),
       keyword_ids:     z.array(z.string()).optional().describe('existing BragiKeyword ids to link via TARGETS_KEY'),
       rubric_id:       z.string().optional().describe('existing BragiRubric id — replaces prior rubric via IN_RUBRIC'),
+      annotation_md:   z.string().optional().describe('permanent editorial meta (master source, replacement rule, release context) — NEVER rendered into a platform skin, editor-only'),
+      todo_md:         z.string().optional().describe('transient markdown checklist, e.g. "- [ ] insert Telegraph URL\\n- [x] done item" — NEVER rendered into a platform skin, editor-only'),
     },
-    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id }) => {
+    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id, annotation_md, todo_md }) => {
       try {
         return json(await lorePost('/lore/bragi/publication', {
-          publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id,
+          publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id, annotation_md, todo_md,
         }));
       } catch (e) { return err(e); }
     },
@@ -1241,11 +1243,13 @@ export function registerLoreWrite(server: McpServer): void {
       url:            z.string().optional().describe('published URL, once live'),
       published_at:   z.string().optional().describe('YYYY-MM-DD'),
       asset_id:       z.string().optional().describe('existing BragiAsset id — wires HAS_ASSET'),
+      annotation_md:  z.string().optional().describe('permanent editorial meta for this variant specifically — NEVER rendered into a platform skin, editor-only'),
+      todo_md:        z.string().optional().describe('transient markdown checklist for this variant, e.g. "- [ ] ..." — NEVER rendered into a platform skin, editor-only'),
     },
-    async ({ variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id }) => {
+    async ({ variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id, annotation_md, todo_md }) => {
       try {
         return json(await lorePost('/lore/bragi/variant', {
-          variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id,
+          variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id, annotation_md, todo_md,
         }));
       } catch (e) { return err(e); }
     },

@@ -49,6 +49,9 @@ interface VariantDraft {
   utmMedium?: string;
   utmCampaign?: string;
   campaignUrl?: string;
+  /** V2-02: this variant's own editorial meta / TODO checklist. */
+  annotationMd?: string;
+  todoMd?: string;
 }
 
 // EDIT-02: seed text for a satellite created from the main-preview — TG gets
@@ -109,6 +112,25 @@ function statusDot(s: string): string {
   return s === 'published' ? '#6fae5a' : s === 'ready' ? 'var(--acc)' : 'var(--t3)';
 }
 
+// V2-02: todo_md is a plain markdown checklist ("- [ ] text" / "- [x] text").
+// Parsed client-side for the interactive list; re-serialized back to markdown
+// on every toggle/add/remove so the stored field stays a normal, portable
+// markdown string (readable outside this editor too, not a proprietary JSON shape).
+export interface TodoItem { checked: boolean; text: string }
+export function parseTodoMd(md: string | null | undefined): TodoItem[] {
+  return (md || '').split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+    const m = line.match(/^-\s*\[([ xX])\]\s*(.*)$/);
+    if (m) return { checked: m[1].toLowerCase() === 'x', text: m[2] };
+    return { checked: false, text: line.replace(/^-\s*/, '') };
+  });
+}
+export function serializeTodoMd(items: TodoItem[]): string {
+  return items.map(i => `- [${i.checked ? 'x' : ' '}] ${i.text}`).join('\n');
+}
+export function countOpenTodos(md: string | null | undefined): number {
+  return parseTodoMd(md).filter(i => !i.checked).length;
+}
+
 /** Shape of an existing publication row (from the bragi_publications slice) —
  * passed in to switch the form into edit mode. */
 export interface LoreBragiPublicationEditData {
@@ -128,6 +150,12 @@ export interface LoreBragiPublicationEditData {
   rubric_ids?: string[];
   source_file_path?: string | null;
   cover_asset_urls?: string[];
+  /** V2-02: permanent editorial meta / transient TODO checklist — never rendered
+   * into a platform skin. Publication-level + parallel per-variant arrays. */
+  annotation_md?: string | null;
+  todo_md?: string | null;
+  variant_annotation_texts?: (string | null)[];
+  variant_todo_texts?: (string | null)[];
   /** EDIT-05: existing Forseti graph edges (out('PRODUCED_BY')/out('SHIPPED_IN')). */
   produced_by_task_ids?: string[];
   produced_by_sprint_ids?: string[];
@@ -157,6 +185,8 @@ function variantsFromEditData(d: LoreBragiPublicationEditData): VariantDraft[] {
     status: d.variant_statuses[i] ?? 'draft',
     url: d.variant_urls[i] ?? '',
     published_at: d.variant_published_at?.[i] ?? '',
+    annotationMd: d.variant_annotation_texts?.[i] ?? '',
+    todoMd: d.variant_todo_texts?.[i] ?? '',
   }));
 }
 
@@ -199,6 +229,11 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   const [shippedInReleases, setShippedInReleases] = useState<string[]>(editing?.shipped_in_release_ids ?? []);
   const [sprints, setSprints] = useState<LoreSprintRow[]>([]);
   const [releases, setReleases] = useState<LoreRelease[]>([]);
+
+  // V2-02: publication-level editorial meta / TODO checklist — never fed
+  // into mainText or any variant text, so it can never leak into a preview.
+  const [annotationMd, setAnnotationMd] = useState(editing?.annotation_md ?? '');
+  const [todoMd, setTodoMd] = useState(editing?.todo_md ?? '');
 
   useEffect(() => {
     fetchLoreSlice<KeywordRow>('bragi_keys').then(setKeywords).catch(() => {});
@@ -297,6 +332,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         keyword_ids: keywordIds.length ? keywordIds : undefined,
         rubric_id: rubricId || undefined,
         source_file_path: sourceFilePath || undefined,
+        annotation_md: annotationMd || undefined, todo_md: todoMd || undefined,
       });
       // Computed ids captured back into state below — a brand-new variant's
       // variant_id is otherwise never set locally, which would leave the
@@ -317,6 +353,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
           text_md: v.sameAsMain ? '' : (v.text_md || undefined),
           status: v.status || undefined,
           url: v.url || undefined, published_at: v.published_at || undefined,
+          annotation_md: v.annotationMd || undefined, todo_md: v.todoMd || undefined,
         });
         savedVariantIds.push(variantId);
       }
@@ -538,6 +575,28 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         </div>
       </Sec>
 
+      {/* V2-02: editorial meta / TODO — deliberately separate from mainText,
+          never passed into TipTapField/BragiSkinPreview, so they can never
+          leak into a rendered skin. */}
+      <Sec label={t('bragi.publicationEditor.sectionAnnotation', 'Указание')}>
+        {readOnly ? (
+          <div style={{ fontSize: 12, color: annotationMd ? 'var(--t2)' : 'var(--t3)', whiteSpace: 'pre-wrap' }}>{annotationMd || '—'}</div>
+        ) : (
+          <textarea
+            style={S.textarea} value={annotationMd}
+            placeholder={t('bragi.publicationEditor.annotationPlaceholder', 'постоянная мета: мастер-источник, правило замены, контекст релиза…')}
+            onChange={e => setAnnotationMd(e.target.value)}
+          />
+        )}
+      </Sec>
+
+      <Sec label={t('bragi.publicationEditor.sectionTodo', 'TODO')}>
+        <TodoChecklist
+          value={todoMd} onChange={setTodoMd} disabled={readOnly}
+          addPlaceholder={t('bragi.publicationEditor.todoAddPlaceholder', 'новый пункт…')}
+        />
+      </Sec>
+
       <Sec label={t('bragi.publicationEditor.sectionMainText', 'Main-текст')}>
         <TipTapField value={mainText} onChange={setMainText} minHeight={90} placeholder={t('bragi.publicationEditor.placeholderMainText', 'Мастер-версия текста…')} editable={!readOnly} />
       </Sec>
@@ -679,6 +738,17 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
                 )}
                 {/* EDIT-06: read-only metrics once the variant is live */}
                 {v.status === 'published' && v.variant_id && <VariantMetrics variantId={v.variant_id} />}
+                {/* V2-02: this variant's own editorial meta / TODO — same
+                    exclusion-from-preview rule as the publication-level fields. */}
+                <textarea
+                  style={{ ...S.textarea, minHeight: 32, fontSize: 11 }} value={v.annotationMd ?? ''}
+                  placeholder={t('bragi.publicationEditor.variantAnnotationPlaceholder', 'указание для этой вариации…')}
+                  onChange={e => setVariant(i, { annotationMd: e.target.value })}
+                />
+                <TodoChecklist
+                  value={v.todoMd ?? ''} onChange={val => setVariant(i, { todoMd: val })}
+                  addPlaceholder={t('bragi.publicationEditor.todoAddPlaceholder', 'новый пункт…')}
+                />
               </div>
             )}
           </div>
@@ -773,6 +843,48 @@ function Sec({ label, children }: { label: string; children: React.ReactNode }) 
     <div style={{ marginTop: 14 }}>
       <div style={S.sLabel}>{label}</div>
       {children}
+    </div>
+  );
+}
+
+// V2-02: interactive markdown checklist. Re-serializes to `- [ ]`/`- [x]`
+// markdown on every change so todo_md stays a plain, portable string.
+function TodoChecklist({ value, onChange, disabled, addPlaceholder }: {
+  value: string; onChange: (v: string) => void; disabled?: boolean; addPlaceholder: string;
+}) {
+  const items = parseTodoMd(value);
+  const [draft, setDraft] = useState('');
+  const commit = (next: TodoItem[]) => onChange(serializeTodoMd(next));
+  const addItem = () => {
+    const text = draft.trim();
+    if (!text) return;
+    commit([...items, { checked: false, text }]);
+    setDraft('');
+  };
+  return (
+    <div style={S.todoList}>
+      {items.map((it, i) => (
+        <div key={i} style={S.todoRow}>
+          <input
+            type="checkbox" checked={it.checked} disabled={disabled}
+            onChange={e => commit(items.map((x, xi) => (xi === i ? { ...x, checked: e.target.checked } : x)))}
+          />
+          <span style={{ ...S.todoText, ...(it.checked ? S.todoTextDone : {}) }}>{it.text}</span>
+          {!disabled && (
+            <button type="button" style={S.removeBtn} onClick={() => commit(items.filter((_, xi) => xi !== i))}>×</button>
+          )}
+        </div>
+      ))}
+      {!disabled && (
+        <div style={S.todoAddRow}>
+          <input
+            style={S.variantInput} value={draft} placeholder={addPlaceholder}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+          />
+          <button type="button" style={S.btnGhost} onClick={addItem}>+</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -884,6 +996,15 @@ const S: Record<string, React.CSSProperties> = {
 
   forsetiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 },
   forsetiLabel: { fontSize: 10, color: 'var(--t3)', marginBottom: 4 },
+
+  textarea: { width: '100%', minHeight: 52, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--b3)',
+              background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
+              outline: 'none', boxSizing: 'border-box', resize: 'vertical' },
+  todoList: { display: 'flex', flexDirection: 'column', gap: 4 },
+  todoRow: { display: 'flex', alignItems: 'center', gap: 6 },
+  todoText: { fontSize: 12, color: 'var(--t1)', flex: 1 },
+  todoTextDone: { color: 'var(--t3)', textDecoration: 'line-through' },
+  todoAddRow: { display: 'flex', gap: 6, marginTop: 4 },
 
   variantExtras: { marginTop: 6, paddingTop: 6, borderTop: '1px dashed var(--b3)', display: 'flex', flexDirection: 'column', gap: 6 },
   variantImgRow: { display: 'flex', alignItems: 'center', gap: 10 },

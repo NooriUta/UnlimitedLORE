@@ -664,11 +664,18 @@ public final class LoreSlices {
 
         slice("bragi_publications",
             "SELECT publication_id, title, topic, main_text_md, type, status_general, source_file_path, " +
+            // V2-02: annotation_md (permanent editorial meta) / todo_md (transient
+            // "- [ ]" checklist) — editor-only fields, deliberately never fed into
+            // BragiSkinPreview. Publication + per-variant (parallel arrays, same
+            // index convention as variant_texts/variant_channels below).
+            "annotation_md, todo_md, " +
             "out('HAS_ASSET').file_url AS cover_asset_urls, " +
             "out('HAS_VARIANT').variant_id AS variant_ids, " +
             "out('HAS_VARIANT').status AS variant_statuses, " +
             "out('HAS_VARIANT').url AS variant_urls, " +
             "out('HAS_VARIANT').text_md AS variant_texts, " +
+            "out('HAS_VARIANT').annotation_md AS variant_annotation_texts, " +
+            "out('HAS_VARIANT').todo_md AS variant_todo_texts, " +
             "out('HAS_VARIANT').out('IN_CHANNEL').channel_id AS variant_channels, " +
             "out('HAS_VARIANT').out('HAS_ASSET').file_url AS variant_asset_urls, " +
             "out('TARGETS_KEY').keyword_id AS keyword_ids, " +
