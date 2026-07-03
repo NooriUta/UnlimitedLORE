@@ -65,7 +65,9 @@ export default function AppShell() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    // MOB-10: height via .shell-dvh (100dvh + vh fallback + safe-area) — inline
+    // 100vh hid the bottom of the UI under mobile browser chrome.
+    <div className="shell-dvh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header
         style={{
           height: HEADER_H,
