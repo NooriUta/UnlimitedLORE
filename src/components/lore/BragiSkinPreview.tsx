@@ -68,15 +68,21 @@ const SKIN_CSS = `
 .bsk-habr code { background:#f3f3f3; border:1px solid #e5e5e5; border-radius:3px; padding:0 4px; font-size:13px; color:#c7254e; }
 .bsk-habr a { color:#548eaa; }
 .bsk-habr img { max-width:100%; border-radius:6px; }
-/* ── Site (our own — follows LORE theme) — dark + light ───── */
-.bsk-site { background:var(--bg0); border:1px solid var(--bd); border-radius:12px; padding:24px 28px; min-height:100%; }
-.bsk-site .timg { background:var(--bg1); border:1px dashed var(--bd); border-radius:8px; color:var(--t3); text-align:center; padding:40px 8px; font-size:11px; margin-bottom:16px; font-family:var(--mono),monospace; }
-.bsk-site h1 { font-family:var(--font); font-weight:700; font-size:20px; color:var(--t1); margin:0 0 13px; }
-.bsk-site h2 { font-weight:600; font-size:16px; color:var(--acc); margin:18px 0 8px; }
-.bsk-site p { font-size:14.5px; line-height:1.65; color:var(--t2); margin:0 0 11px; }
-.bsk-site strong { color:var(--t1); }
-.bsk-site code { font-family:var(--mono); background:var(--bg2); border-radius:4px; padding:0 5px; font-size:12.5px; color:var(--acc); }
-.bsk-site a { color:var(--acc); }
+/* ── Site (seidrstudio.pro's own skin) — FIXED dark/light, independent of
+   the LORE app's own theme. Previously the "dark" variant used var(--bg0)
+   etc (LORE's active theme tokens), so switching the LORE app itself to
+   light mode silently broke the dark-theme preview — it rendered with
+   light colors instead. Both variants are now hardcoded, same as .light
+   already was, so the toggle always shows two genuinely different themes
+   regardless of the surrounding app's palette/mode. ───────────────────── */
+.bsk-site { background:#15130d; border:1px solid #332d1f; border-radius:12px; padding:24px 28px; min-height:100%; }
+.bsk-site .timg { background:#1c1810; border:1px dashed #332d1f; border-radius:8px; color:#665c48; text-align:center; padding:40px 8px; font-size:11px; margin-bottom:16px; font-family:var(--mono),monospace; }
+.bsk-site h1 { font-family:var(--font); font-weight:700; font-size:20px; color:#ede5d0; margin:0 0 13px; }
+.bsk-site h2 { font-weight:600; font-size:16px; color:#c9a227; margin:18px 0 8px; }
+.bsk-site p { font-size:14.5px; line-height:1.65; color:#9a8c6e; margin:0 0 11px; }
+.bsk-site strong { color:#ede5d0; }
+.bsk-site code { font-family:var(--mono); background:#252019; border-radius:4px; padding:0 5px; font-size:12.5px; color:#c9a227; }
+.bsk-site a { color:#c9a227; }
 .bsk-site img { max-width:100%; border-radius:8px; }
 .bsk-site.light { background:#faf7ef; border-color:#e2dccc; }
 .bsk-site.light h1 { color:#2c2717; }
@@ -85,6 +91,18 @@ const SKIN_CSS = `
 .bsk-site.light strong { color:#2c2717; }
 .bsk-site.light code { background:#f0ead8; color:#8a6b14; }
 .bsk-site.light .timg { background:#f3efe3; border-color:#e2dccc; color:#a09878; }
+/* Master/"мастер" tab is the editorial source-of-truth view (not a
+   real-platform preview) — it intentionally keeps following the LORE app's
+   own active theme/palette, same specificity as .bsk-site so source order
+   decides; placed after the fixed-dark rules above to win. */
+.bsk-main { background:var(--bg0); border-color:var(--bd); }
+.bsk-main .timg { background:var(--bg1); border-color:var(--bd); color:var(--t3); }
+.bsk-main h1 { color:var(--t1); }
+.bsk-main h2 { color:var(--acc); }
+.bsk-main p { color:var(--t2); }
+.bsk-main strong { color:var(--t1); }
+.bsk-main code { background:var(--bg2); color:var(--acc); }
+.bsk-main a { color:var(--acc); }
 .bsk-main .mhead { font-size:11px; color:var(--t3); font-family:var(--mono); margin-bottom:12px; }
 /* ── Telegraph (Instant View) ─────────────────────────────── */
 .bsk-tgraph { background:#fff; border-radius:12px; padding:30px 26px; min-height:100%; font-family:Georgia,'Times New Roman',serif; color:#222; }
