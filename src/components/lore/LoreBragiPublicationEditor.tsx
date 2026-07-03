@@ -45,6 +45,19 @@ const SKIN_CHIPS: [BragiSkin, string][] = [
   ['main', 'мастер'], ['tg', 'TG'], ['vc', 'VC'], ['habr', 'Habr'], ['site', 'сайт'], ['tgraph', 'Telegraph'],
 ];
 
+// REN-00: map a channel id to its preview skin (more-specific patterns first).
+const CHANNEL_SKIN: [RegExp, BragiSkin][] = [
+  [/TELEGRAPH|TGRAPH/i, 'tgraph'], [/TG|TELEGRAM/i, 'tg'], [/VC/i, 'vc'],
+  [/HABR/i, 'habr'], [/SITE|BLOG/i, 'site'],
+];
+function channelToSkin(channelId: string): BragiSkin {
+  for (const [re, skin] of CHANNEL_SKIN) if (re.test(channelId)) return skin;
+  return 'main';
+}
+function statusDot(s: string): string {
+  return s === 'published' ? '#6fae5a' : s === 'ready' ? 'var(--acc)' : 'var(--t3)';
+}
+
 /** Shape of an existing publication row (from the bragi_publications slice) —
  * passed in to switch the form into edit mode. */
 export interface LoreBragiPublicationEditData {
@@ -119,6 +132,9 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   // REN-00: which platform skin the right-hand preview renders the master text in.
   const [previewSkin, setPreviewSkin] = useState<BragiSkin>('main');
   const [previewSiteTheme, setPreviewSiteTheme] = useState<'dark' | 'light'>('dark');
+  // REN-00: preview target — 'main' (master text, skin chosen by chips) or a
+  // variant index (its effective text in its own channel's skin).
+  const [previewTarget, setPreviewTarget] = useState<'main' | number>('main');
 
   useEffect(() => {
     fetchLoreSlice<KeywordRow>('bragi_keys').then(setKeywords).catch(() => {});
@@ -194,6 +210,14 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       setSaving(false);
     }
   };
+
+  // REN-00: resolve what the preview renders based on the selected tab.
+  const activeVariant = typeof previewTarget === 'number' && previewTarget < variants.length ? variants[previewTarget] : null;
+  const previewIsMain = activeVariant == null;
+  const previewSkinEff: BragiSkin = previewIsMain ? previewSkin : channelToSkin(activeVariant!.channel_id);
+  const previewTextEff = previewIsMain ? mainText : (activeVariant!.sameAsMain ? mainText : activeVariant!.text_md);
+  const previewChannelName = previewIsMain ? (title || undefined) : (activeVariant!.channel_id || undefined);
+  const previewDate = previewIsMain ? undefined : (activeVariant!.published_at || undefined);
 
   return (
     <div style={S.shell}>
@@ -362,23 +386,45 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         </div>
 
         <aside style={S.rightPane}>
+          {/* Variant tab bar: master + one tab per channel variant. Selecting a
+              variant previews its effective text (own or inherited) in its
+              channel's skin. */}
+          <div style={S.previewTabs}>
+            <button type="button" style={previewIsMain ? S.pvTabOn : S.pvTab} onClick={() => setPreviewTarget('main')}>
+              {t('bragi.publicationEditor.previewMaster', 'мастер')}
+            </button>
+            {variants.map((v, i) => v.channel_id ? (
+              <button key={i} type="button" style={(!previewIsMain && previewTarget === i) ? S.pvTabOn : S.pvTab} onClick={() => setPreviewTarget(i)}>
+                <span style={{ ...S.pvDot, background: statusDot(v.status) }} />
+                {v.channel_id.replace(/^CH-/, '')}
+              </button>
+            ) : null)}
+          </div>
           <div style={S.previewHead}>
-            <span>{t('bragi.publicationEditor.previewLabel', 'ПРЕДПРОСМОТР')} ·</span>
-            {SKIN_CHIPS.map(([key, label]) => (
-              <button key={key} type="button" style={previewSkin === key ? S.skinChipOn : S.skinChip} onClick={() => setPreviewSkin(key)}>{label}</button>
-            ))}
-            {previewSkin === 'site' && (['dark', 'light'] as const).map(th => (
-              <button key={th} type="button" style={previewSiteTheme === th ? S.skinChipOn : S.skinChip} onClick={() => setPreviewSiteTheme(th)}>{th === 'dark' ? '🌑' : '☀'}</button>
-            ))}
-            <span style={S.counter}>{mainText.length.toLocaleString('ru')} зн</span>
+            {previewIsMain ? (
+              <>
+                {SKIN_CHIPS.map(([key, label]) => (
+                  <button key={key} type="button" style={previewSkin === key ? S.skinChipOn : S.skinChip} onClick={() => setPreviewSkin(key)}>{label}</button>
+                ))}
+                {previewSkin === 'site' && (['dark', 'light'] as const).map(th => (
+                  <button key={th} type="button" style={previewSiteTheme === th ? S.skinChipOn : S.skinChip} onClick={() => setPreviewSiteTheme(th)}>{th === 'dark' ? '🌑' : '☀'}</button>
+                ))}
+              </>
+            ) : (
+              <span style={S.pvSkinName}>
+                {t('bragi.publicationEditor.previewSkinLabel', 'скин')}: {previewSkinEff}
+                {activeVariant?.sameAsMain ? ' · ' + t('bragi.publicationEditor.inheritsMain', 'наследует main') : ''}
+              </span>
+            )}
+            <span style={S.counter}>{(previewTextEff || '').length.toLocaleString('ru')} зн</span>
           </div>
           <div style={S.previewBody}>
             <BragiSkinPreview
-              skin={previewSkin}
-              textMd={mainText}
+              skin={previewSkinEff}
+              textMd={previewTextEff || ''}
               siteTheme={previewSiteTheme}
               teaser={coverUrl || undefined}
-              meta={{ channelName: title || undefined }}
+              meta={{ channelName: previewChannelName, date: previewDate }}
             />
           </div>
         </aside>
@@ -415,6 +461,11 @@ const S: Record<string, React.CSSProperties> = {
   panes:    { flex: 1, display: 'flex', minHeight: 0, borderTop: '1px solid var(--b3)' },
   leftPane: { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', minWidth: 0 },
   rightPane:{ width: '44%', minWidth: 320, borderLeft: '1px solid var(--b3)', display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--bg1)' },
+  previewTabs: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', padding: '8px 12px 0' },
+  pvTab:     { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, padding: '4px 9px', borderRadius: '6px 6px 0 0', borderTop: '1px solid var(--b3)', borderLeft: '1px solid var(--b3)', borderRight: '1px solid var(--b3)', borderBottom: 'none', background: 'transparent', color: 'var(--t3)', cursor: 'pointer' },
+  pvTabOn:   { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, padding: '4px 9px', borderRadius: '6px 6px 0 0', borderTop: '1px solid var(--acc)', borderLeft: '1px solid var(--acc)', borderRight: '1px solid var(--acc)', borderBottom: 'none', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', cursor: 'pointer' },
+  pvDot:     { width: 7, height: 7, borderRadius: '50%', flex: 'none' },
+  pvSkinName:{ fontSize: 10, color: 'var(--t2)', textTransform: 'none', letterSpacing: 0, fontFamily: 'var(--mono)' },
   previewHead: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', padding: '8px 12px', borderBottom: '1px solid var(--b3)', fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
   previewBody: { flex: 1, overflowY: 'auto', padding: 16, minHeight: 0 },
   counter:  { marginLeft: 'auto', fontFamily: 'var(--mono)', color: 'var(--t2)', textTransform: 'none', letterSpacing: 0 },
