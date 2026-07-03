@@ -324,3 +324,18 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
   .toast { left: 12px; right: 12px; max-width: unset; }
   .btn-sm, .btn-xs { min-height: 30px; }
 }
+
+/* MOB-06 (SPRINT_LORE_MOBILE_UX): wide data tables (BRAGI Ключи 609px /
+   Интеграции 714px / Архив / Аналитика, MUNINN 519px, bench data-table…) were
+   CLIPPED by the shell's overflow:hidden on narrow screens. display:block +
+   overflow-x:auto makes every table scroll horizontally inside itself instead
+   of being cut — one global rule instead of wrapping ~30 render sites.
+   768px (not 640) so it also covers small tablets where these tables clip. */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
