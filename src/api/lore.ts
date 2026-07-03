@@ -420,6 +420,40 @@ export async function attachBragiAsset(p: {
   return res.json() as Promise<{ ok: boolean; asset_id: string; attached_to: string }>;
 }
 
+/** Create/amend a BragiCampaign and optionally link it to a variant (POST
+ * /lore/bragi/campaign) — EDIT-04. UPSERT by campaign_id, partial-safe. */
+export async function createBragiCampaign(p: {
+  campaign_id: string; utm_source?: string; utm_medium?: string; utm_campaign?: string;
+  target_url?: string; period?: string; variant_id?: string;
+}): Promise<{ ok: boolean; campaign_id: string; linked_variant: boolean }> {
+  const res = await fetch(`${LORE_BASE}/bragi/campaign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(p),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; campaign_id: string; linked_variant: boolean }>;
+}
+
+/** Link (or unlink) a BragiPublication/BragiVariant into the Forseti work graph
+ * (POST /lore/bragi/link) — EDIT-05. PRODUCED_BY→task|sprint, SHIPPED_IN→release. */
+export async function linkBragiForseti(p: {
+  entity_type: 'publication' | 'variant'; entity_id: string;
+  edge_type: 'PRODUCED_BY' | 'SHIPPED_IN';
+  target_type: 'task' | 'sprint' | 'release'; target_id: string;
+  git_project?: string; action?: 'add' | 'remove';
+}): Promise<{ ok: boolean; entity_id: string; target_id: string; action: string }> {
+  const res = await fetch(`${LORE_BASE}/bragi/link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(p),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; entity_id: string; target_id: string; action: string }>;
+}
+
 export interface LoreTaskWriteResponse {
   ok: boolean;
   task_uid: string;
