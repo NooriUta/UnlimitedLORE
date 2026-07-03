@@ -104,9 +104,10 @@ export default function AppShell() {
 
         <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px' }} />
 
-        {/* Tabs */}
+        {/* Tabs — on narrow these relocate to the bottom tab bar (MOB-12);
+            here the nav stays as a flex spacer that pushes the toggles right. */}
         <nav style={{ display: 'flex', gap: 4, flex: 1, minWidth: 0, overflowX: 'auto' }}>
-          {SHELL_TABS.map(tab => {
+          {!narrow && SHELL_TABS.map(tab => {
             const isActive = tab.id === active;
             return (
               <button
@@ -179,6 +180,54 @@ export default function AppShell() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Outlet />
       </div>
+
+      {/* MOB-12: bottom tab bar for the 5 hypostases in the thumb zone. Only on
+          narrow — the top nav drops its tabs there. Rendered as a flex sibling
+          (not fixed) so it never overlaps content or BRAGI's top-of-content
+          subtabs; safe-area padding keeps it clear of the home indicator. */}
+      {narrow && (
+        <nav
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            background: 'var(--bg0)',
+            borderTop: '1px solid var(--bd)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0)',
+            zIndex: 100,
+          }}
+        >
+          {SHELL_TABS.map(tab => {
+            const isActive = tab.id === active;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
+                title={t(tab.labelKey, tab.fallback)}
+                onClick={() => navigate(tab.to)}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 3,
+                  padding: '7px 0 5px',
+                  border: 'none',
+                  borderTop: `2px solid ${isActive ? 'var(--acc)' : 'transparent'}`,
+                  background: isActive ? accentSoft : 'transparent',
+                  cursor: 'pointer',
+                  color: isActive ? 'var(--acc)' : 'var(--t2)',
+                  transition: 'background 120ms, color 120ms',
+                }}
+              >
+                <GameIcon slug={tab.icon} size={20} style={{ color: 'inherit', transform: tab.flipX ? 'scaleX(-1)' : undefined }} />
+                <span style={{ fontSize: 9, letterSpacing: '0.02em', lineHeight: 1 }}>{t(tab.labelKey, tab.fallback)}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }
