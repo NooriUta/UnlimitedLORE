@@ -3465,7 +3465,8 @@ public class AidaLoreResource {
     // CH-TG's seed url_handle "t.me/seidr" was stale (real channel is t.me/SampleofOne,
     // per INT-TG-BOT) and there was no tool to fix it. Same flat-vertex upsert shape
     // as BragiRubric above (no SCD2 hist — channels are reference data, not versioned).
-    public record BragiChannelRequest(String channel_id, String channel_type, String url_handle, String funnel_role) {}
+    public record BragiChannelRequest(String channel_id, String channel_type, String url_handle,
+                                      String funnel_role, String rules_md) {}
 
     @POST
     @Path("bragi/channel")
@@ -3487,6 +3488,7 @@ public class AidaLoreResource {
             if (req.channel_type() != null) { sql.append(", channel_type=:ct"); p.put("ct", req.channel_type()); }
             if (req.url_handle() != null)   { sql.append(", url_handle=:uh");   p.put("uh", req.url_handle()); }
             if (req.funnel_role() != null)  { sql.append(", funnel_role=:fr");  p.put("fr", req.funnel_role()); }
+            if (req.rules_md() != null)     { sql.append(", rules_md=:rm");     p.put("rm", req.rules_md()); }
             sql.append(" UPSERT WHERE channel_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
@@ -3660,6 +3662,76 @@ public class AidaLoreResource {
             return noStore(Response.ok(Map.of("ok", true, "campaign_id", req.campaign_id(), "linked_variant", linkedVariant)));
         } catch (Exception e) {
             LOG.warnf("[BRAGI CAMPAIGN] %s: %s", req.campaign_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── EDIT-05: BRAGI ↔ Forseti graph edges ────────────────────────────────
+    // PRODUCED_BY (publication|variant → task|sprint) and SHIPPED_IN
+    // (publication|variant → release) both already exist as edge types in the
+    // schema but had no write path — publications lived disconnected from the
+    // work graph. Release target resolves release_uid the same way ADR/PR
+    // linking does (git_project#release_id when known, bare release_id else).
+    public record BragiLinkRequest(String entity_type, String entity_id, String edge_type,
+                                   String target_type, String target_id, String git_project, String action) {}
+
+    @POST
+    @Path("bragi/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkBragiEntity(BragiLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.entity_id() == null || req.entity_id().isBlank())
+            return badParams("entity_id required");
+        if (req.target_id() == null || req.target_id().isBlank())
+            return badParams("target_id required");
+        String sourceType = "variant".equals(req.entity_type()) ? "BragiVariant"
+            : "publication".equals(req.entity_type()) ? "BragiPublication" : null;
+        if (sourceType == null) return badParams("entity_type must be 'publication' or 'variant'");
+        String sourceField = "variant".equals(req.entity_type()) ? "variant_id" : "publication_id";
+
+        boolean isProducedBy = "PRODUCED_BY".equals(req.edge_type());
+        boolean isShippedIn  = "SHIPPED_IN".equals(req.edge_type());
+        if (!isProducedBy && !isShippedIn) return badParams("edge_type must be 'PRODUCED_BY' or 'SHIPPED_IN'");
+
+        String targetType, targetField, targetKey = req.target_id();
+        if (isProducedBy) {
+            if ("task".equals(req.target_type()))        { targetType = "KnowTask";   targetField = "task_uid"; }
+            else if ("sprint".equals(req.target_type()))  { targetType = "KnowSprint"; targetField = "sprint_id"; }
+            else return badParams("PRODUCED_BY target_type must be 'task' or 'sprint'");
+        } else {
+            if (!"release".equals(req.target_type())) return badParams("SHIPPED_IN target_type must be 'release'");
+            targetType = "KnowRelease";
+            if (req.git_project() != null && !req.git_project().isBlank()) {
+                targetField = "release_uid";
+                targetKey = req.git_project() + "#" + req.target_id();
+            } else {
+                targetField = "release_id";
+            }
+        }
+
+        boolean remove = "remove".equals(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('" + req.edge_type() + "')) FROM " + sourceType +
+                    " WHERE " + sourceField + "=:sid) WHERE @in." + targetField + "=:tkey",
+                    Map.of("sid", req.entity_id(), "tkey", targetKey))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
+                    "target_id", req.target_id(), "action", "removed")));
+            }
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE " + req.edge_type() + " FROM (SELECT FROM " + sourceType +
+                " WHERE " + sourceField + "=:sid) TO (SELECT FROM " + targetType +
+                " WHERE " + targetField + "=:tkey) IF NOT EXISTS",
+                Map.of("sid", req.entity_id(), "tkey", targetKey))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
+                "target_id", req.target_id(), "action", "added")));
+        } catch (Exception e) {
+            LOG.warnf("[BRAGI LINK] %s -%s-> %s: %s", req.entity_id(), req.edge_type(), req.target_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }

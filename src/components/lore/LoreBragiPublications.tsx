@@ -25,6 +25,9 @@ interface PublicationRow {
   keyword_ids: string[];
   rubric_ids: string[];
   rubric_names: string[];
+  produced_by_task_ids?: string[];
+  produced_by_sprint_ids?: string[];
+  shipped_in_release_ids?: string[];
 }
 
 // Seed data still carries illustrative filenames ("ai-gov.png") that don't
@@ -117,6 +120,9 @@ export default function LoreBragiPublications() {
       variant_urls: editingRow.variant_urls, variant_texts: editingRow.variant_texts,
       rubric_ids: editingRow.rubric_ids, cover_asset_urls: editingRow.cover_asset_urls,
       source_file_path: editingRow.source_file_path,
+      produced_by_task_ids: editingRow.produced_by_task_ids ?? [],
+      produced_by_sprint_ids: editingRow.produced_by_sprint_ids ?? [],
+      shipped_in_release_ids: editingRow.shipped_in_release_ids ?? [],
     };
     // Status/date genuinely differ per channel (live on CH-TG, still draft on
     // CH-HABR) — only lock the WHOLE form when every variant is already

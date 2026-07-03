@@ -659,7 +659,10 @@ public final class LoreSlices {
             "out('HAS_VARIANT').out('HAS_ASSET').file_url AS variant_asset_urls, " +
             "out('TARGETS_KEY').keyword_id AS keyword_ids, " +
             "out('IN_RUBRIC').rubric_id AS rubric_ids, " +
-            "out('IN_RUBRIC').name AS rubric_names " +
+            "out('IN_RUBRIC').name AS rubric_names, " +
+            "out('PRODUCED_BY').task_uid AS produced_by_task_ids, " +
+            "out('PRODUCED_BY').sprint_id AS produced_by_sprint_ids, " +
+            "out('SHIPPED_IN').release_id AS shipped_in_release_ids " +
             "FROM BragiPublication",
             List.of(), Map.of(), " ORDER BY publication_id");
 
@@ -719,7 +722,7 @@ public final class LoreSlices {
         // FE-06: another gap found while building the create-forms — channel/page
         // pickers need lookup slices too, not just the content-display ones.
         slice("bragi_channels",
-            "SELECT channel_id, channel_type, url_handle, funnel_role FROM BragiChannel",
+            "SELECT channel_id, channel_type, url_handle, funnel_role, rules_md FROM BragiChannel",
             List.of(), Map.of(), " ORDER BY channel_id");
 
         slice("bragi_pages",

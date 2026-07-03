@@ -1121,18 +1121,21 @@ export function registerLoreWrite(server: McpServer): void {
     'lore_upsert_channel',
     'BragiChannel: create/amend a distribution channel (e.g. CH-TG, CH-SITE) — upsert by channel_id, ' +
       'partial-safe (omitted fields left untouched). Gap found 2026-07-03: there was no write path for ' +
-      'this type — CH-TG\'s seeded url_handle ("t.me/seidr") was stale, no tool existed to fix it. Check ' +
-      'lore_query_slice "bragi_channels" for existing channels before creating a new one. Mutates the ' +
-      'shared system_aida_lore.',
+      'this type — CH-TG\'s seeded url_handle ("t.me/seidr") was stale, no tool existed to fix it. ' +
+      '`rules_md` (VAL-00, added 2026-07-03) holds the platform\'s structural limits/style rules as free-text ' +
+      'markdown — VAL-01\'s validator engine reads it to check drafts before publish (e.g. TG caption/post/poll ' +
+      'char limits, VC footer-link policy, Habr code-block rules). Check lore_query_slice "bragi_channels" for ' +
+      'existing channels before creating a new one. Mutates the shared system_aida_lore.',
     {
       channel_id:   z.string().describe('e.g. "CH-TG", "CH-SITE"'),
       channel_type: z.string().optional().describe('e.g. "social", "owned", "platform"'),
       url_handle:   z.string().optional().describe('e.g. "t.me/SampleofOne", "seidrstudio.pro/blog"'),
       funnel_role:  z.string().optional().describe('e.g. "nurture", "conversion", "awareness", "authority"'),
+      rules_md:     z.string().optional().describe('structural limits/style rules as markdown, e.g. "- caption: 1024\\n- post: 4096\\n- poll_option: 100"'),
     },
-    async ({ channel_id, channel_type, url_handle, funnel_role }) => {
+    async ({ channel_id, channel_type, url_handle, funnel_role, rules_md }) => {
       try {
-        return json(await lorePost('/lore/bragi/channel', { channel_id, channel_type, url_handle, funnel_role }));
+        return json(await lorePost('/lore/bragi/channel', { channel_id, channel_type, url_handle, funnel_role, rules_md }));
       } catch (e) { return err(e); }
     },
   );
@@ -1151,6 +1154,33 @@ export function registerLoreWrite(server: McpServer): void {
     async ({ entity_type, entity_id, rubric_id }) => {
       try {
         return json(await lorePost('/lore/bragi/rubric/link', { entity_type, entity_id, rubric_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_bragi_forseti',
+    'Link (or unlink) a BragiPublication/BragiVariant into the Forseti work graph — PRODUCED_BY (which ' +
+      'task/sprint made it) or SHIPPED_IN (which release carried it). Both edge types existed in the schema ' +
+      'with no write path (EDIT-05, 2026-07-03) — publications lived disconnected from work/releases. For ' +
+      'SHIPPED_IN, pass git_project for multi-repo release safety (matches release_uid = ' +
+      '"{git_project}#{target_id}"; without it matches bare release_id). Idempotent on add. ' +
+      'Use action="remove" to unlink. Mutates the shared system_aida_lore.',
+    {
+      entity_type: z.enum(['publication', 'variant']),
+      entity_id:   z.string().describe('publication_id or variant_id, matching entity_type'),
+      edge_type:   z.enum(['PRODUCED_BY', 'SHIPPED_IN']),
+      target_type: z.enum(['task', 'sprint', 'release']).describe('task|sprint for PRODUCED_BY, release for SHIPPED_IN'),
+      target_id:   z.string().describe('task_uid, sprint_id, or release_id/tag matching target_type'),
+      git_project: z.string().optional().describe('GitHub project slug for release_uid resolution, e.g. "NooriUta/UnlimitedLORE" (SHIPPED_IN only)'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ entity_type, entity_id, edge_type, target_type, target_id, git_project, action }) => {
+      try {
+        return json(await lorePost('/lore/bragi/link', {
+          entity_type, entity_id, edge_type, target_type, target_id,
+          git_project: git_project ?? null, action: action ?? 'add',
+        }));
       } catch (e) { return err(e); }
     },
   );
