@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, uploadBragiAsset, attachBragiAsset } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
 import TipTapField from './TipTapField';
+import BragiSkinPreview, { type BragiSkin } from './BragiSkinPreview';
 import type { RubricRow } from './LoreBragiRubricManager';
 
 const LORE_BASE = '/lore';
@@ -38,6 +39,11 @@ interface VariantDraft {
 }
 
 const STATUSES = ['draft', 'ready', 'published', 'planned'];
+
+// REN-00: master-preview skin switcher — "MAIN in the skin of any channel".
+const SKIN_CHIPS: [BragiSkin, string][] = [
+  ['main', 'мастер'], ['tg', 'TG'], ['vc', 'VC'], ['habr', 'Habr'], ['site', 'сайт'], ['tgraph', 'Telegraph'],
+];
 
 /** Shape of an existing publication row (from the bragi_publications slice) —
  * passed in to switch the form into edit mode. */
@@ -110,6 +116,9 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   const [rubricId, setRubricId] = useState(editing?.rubric_ids?.[0] ?? '');
   const [saving, setSaving] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  // REN-00: which platform skin the right-hand preview renders the master text in.
+  const [previewSkin, setPreviewSkin] = useState<BragiSkin>('main');
+  const [previewSiteTheme, setPreviewSiteTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     fetchLoreSlice<KeywordRow>('bragi_keys').then(setKeywords).catch(() => {});
@@ -187,7 +196,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   };
 
   return (
-    <div style={S.root}>
+    <div style={S.shell}>
       <div style={S.head}>
         <span style={S.title}>
           {readOnly
@@ -210,6 +219,8 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
 
+      <div style={S.panes}>
+        <div style={S.leftPane}>
       <div style={S.row4}>
         <Field label={t('bragi.publicationEditor.fieldPublicationId', 'Publication ID')} grow={1}>
           <input
@@ -348,6 +359,30 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         })}
         {!readOnly && <button style={S.addVariantBtn} onClick={addVariant}>{t('bragi.publicationEditor.btnAddVariant', '+ площадка')}</button>}
       </Sec>
+        </div>
+
+        <aside style={S.rightPane}>
+          <div style={S.previewHead}>
+            <span>{t('bragi.publicationEditor.previewLabel', 'ПРЕДПРОСМОТР')} ·</span>
+            {SKIN_CHIPS.map(([key, label]) => (
+              <button key={key} type="button" style={previewSkin === key ? S.skinChipOn : S.skinChip} onClick={() => setPreviewSkin(key)}>{label}</button>
+            ))}
+            {previewSkin === 'site' && (['dark', 'light'] as const).map(th => (
+              <button key={th} type="button" style={previewSiteTheme === th ? S.skinChipOn : S.skinChip} onClick={() => setPreviewSiteTheme(th)}>{th === 'dark' ? '🌑' : '☀'}</button>
+            ))}
+            <span style={S.counter}>{mainText.length.toLocaleString('ru')} зн</span>
+          </div>
+          <div style={S.previewBody}>
+            <BragiSkinPreview
+              skin={previewSkin}
+              textMd={mainText}
+              siteTheme={previewSiteTheme}
+              teaser={previewSkin === 'main' ? null : 'cover публикации'}
+              meta={{ channelName: title || undefined }}
+            />
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -370,13 +405,21 @@ function Sec({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 const S: Record<string, React.CSSProperties> = {
-  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 12 },
-  head:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10 },
+  shell:    { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, fontFamily: 'var(--font)', fontSize: 12 },
+  head:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 20px' },
   title:    { fontSize: 14, fontWeight: 600, color: 'var(--t1)' },
   headBtns: { display: 'flex', gap: 8 },
-  errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 11,
+  errBanner:{ margin: '0 20px 10px', padding: '6px 10px', borderRadius: 5, fontSize: 11,
               background: 'color-mix(in srgb, var(--dng) 12%, transparent)',
               color: 'var(--dng)', border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)' },
+  panes:    { flex: 1, display: 'flex', minHeight: 0, borderTop: '1px solid var(--b3)' },
+  leftPane: { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', minWidth: 0 },
+  rightPane:{ width: '44%', minWidth: 320, borderLeft: '1px solid var(--b3)', display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--bg1)' },
+  previewHead: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', padding: '8px 12px', borderBottom: '1px solid var(--b3)', fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  previewBody: { flex: 1, overflowY: 'auto', padding: 16, minHeight: 0 },
+  counter:  { marginLeft: 'auto', fontFamily: 'var(--mono)', color: 'var(--t2)', textTransform: 'none', letterSpacing: 0 },
+  skinChip:  { fontSize: 11, padding: '2px 8px', borderRadius: 5, border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t2)', cursor: 'pointer', textTransform: 'none', letterSpacing: 0 },
+  skinChipOn:{ fontSize: 11, padding: '2px 8px', borderRadius: 5, border: '1px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 14%, transparent)', color: 'var(--acc)', cursor: 'pointer', textTransform: 'none', letterSpacing: 0 },
   row4:     { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 },
   field:    { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 110 },
   coverRow:  { display: 'flex', gap: 12, alignItems: 'center' },
