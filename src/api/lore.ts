@@ -53,6 +53,25 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+// BRAGI metric query (GET /lore/bragi/metric/query) — not a whitelisted slice,
+// filter/agg shape doesn't fit the generic template (see MCP-03).
+export interface BragiMetricPoint {
+  object_type: string; object_id: string; metric: string;
+  value: number; ts: string; source?: string; segment?: string;
+}
+export async function fetchBragiMetrics(
+  params: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<BragiMetricPoint[]> {
+  const url = new URL(`${LORE_BASE}/bragi/metric/query`, location.origin);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString(), { signal });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  const body = (await res.json()) as { rows?: BragiMetricPoint[] };
+  return body.rows ?? [];
+}
+
 // Slice catalog (GET /lore/slices) — the whitelist the MCP `lore_list_slices`
 // tool exposes. Used by the MCP API screen to show the live catalog.
 export interface LoreSliceDescriptor {
@@ -354,7 +373,7 @@ export interface LoreStatusUpdateResponse {
 }
 
 export async function postLoreStatus(
-  entityType: 'plan_item' | 'sprint' | 'task' | 'checkpoint',
+  entityType: 'plan_item' | 'sprint' | 'task' | 'checkpoint' | 'phase',
   id: string,
   status: LorePlanItemStatus,
 ): Promise<LoreStatusUpdateResponse> {
@@ -369,6 +388,19 @@ export async function postLoreStatus(
   assertJson(res);
   if (!res.ok) return parseError(res);
   return res.json() as Promise<LoreStatusUpdateResponse>;
+}
+
+export async function uploadBragiAsset(file: File): Promise<{ ok: boolean; file_url: string; size_bytes: number }> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${LORE_BASE}/bragi/asset/upload`, {
+    method: 'POST',
+    headers: { 'X-Seer-Role': 'admin' },
+    body: form,
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; file_url: string; size_bytes: number }>;
 }
 
 export interface LoreTaskWriteResponse {
@@ -476,6 +508,72 @@ export async function linkSprintMilestone(
   assertJson(res);
   if (!res.ok) return parseError(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }>;
+}
+
+// ── Tech registry (SPRINT_TECH_REGISTRY) ───────────────────────────────────
+// Stored as one KnowSpec per (component, tech) pair via the existing /lore/spec
+// upsert path — spec_id "SPEC-TECH-<COMPONENT>-<TECH>" — same convention as the
+// lore_upsert_tech MCP tool. Read side is the tech_registry slice.
+export interface LoreTechRow {
+  spec_id: string;
+  tech_name: string;
+  version: string | null;
+  content_md: string | null;
+  checked_at: string | null;
+  component_id: string | null;
+}
+
+export interface TechUpsertPayload {
+  component_id: string;
+  tech_name: string;
+  version: string;
+  release_date?: string;    // when the TECH ITSELF was released upstream
+  license?: string;
+  source_url?: string;
+  checked_at?: string;
+  our_release?: string;     // which of OUR releases pinned/shipped this version
+  usage?: string;           // how/where it's actually used (free text)
+}
+
+export async function upsertTech(p: TechUpsertPayload): Promise<{ ok: boolean; spec_id: string }> {
+  const specId = `SPEC-TECH-${p.component_id.toUpperCase()}-${p.tech_name.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
+  const today = new Date().toISOString().slice(0, 10);
+  const lines = [
+    p.release_date && `- **Дата релиза:** ${p.release_date}`,
+    p.our_release && `- **Наш релиз:** ${p.our_release}`,
+    p.license && `- **Лицензия:** ${p.license}`,
+    p.usage && `- **Использование:** ${p.usage}`,
+    p.source_url && `- **Источник:** ${p.source_url}`,
+    `- **Проверено:** ${p.checked_at ?? today}`,
+  ].filter(Boolean);
+  const res = await fetch(`${LORE_BASE}/spec`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({
+      spec_id: specId, title: p.tech_name, version: p.version, component_id: p.component_id,
+      content_md: lines.join('\n'),
+    }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; spec_id: string }>;
+}
+
+/** Link or unlink a KnowSprint to a KnowRelease (POST /lore/release/link | /lore/release/unlink). */
+export async function linkSprintRelease(
+  sprintId: string,
+  releaseId: string,
+  gitProject: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${LORE_BASE}/release/${action === 'remove' ? 'unlink' : 'link'}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ release_id: releaseId, git_project: gitProject, sprint_ids: [sprintId] }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean }>;
 }
 
 /** Create or edit a KnowMilestone (POST /lore/milestone). */

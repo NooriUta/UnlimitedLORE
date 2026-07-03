@@ -1,4 +1,20 @@
 services:
+  # Object storage for BRAGI asset uploads (images) — follows the naming
+  # convention already agreed for Dali in DALI_FILE_UPLOAD_SPEC.md (Decision
+  # #22), so a future Dali/Heimdall S3 rollout can reuse the same env-var
+  # shape even though no service currently runs this in the monorepo.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_USER:-aida}
+      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD:-aidapassword}
+    volumes:
+      - lore-minio-data:/data
+
   # Independent Quarkus backend — copied lore+bench logic, talks to the SAME
   # ArcadeDB (:2480 on the host) as the main project. Replaces heimdall-backend :9093.
   lore-backend:
@@ -9,12 +25,19 @@ services:
       - "9100:9100"                    # published so the host-side MCP server can reach it
     extra_hosts:
       - "arcade:host-gateway"          # ArcadeDB runs on the host :2480
+    depends_on:
+      - minio
     environment:
       - MART_ARCADE_URL=http://arcade:2480
       - ARCADEDB_USER=${ARCADEDB_USER:-root}
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs
+      - S3_ENDPOINT=http://minio:9000
+      - S3_BUCKET=${S3_BUCKET:-bragi-assets}
+      - S3_ACCESS_KEY=${MINIO_USER:-aida}
+      - S3_SECRET_KEY=${MINIO_PASSWORD:-aidapassword}
+      - S3_REGION=us-east-1
     volumes:
       - C:/AIDA/rag-vs-parse:/bench-data:ro   # STATUS.json + report html
       - C:/AIDA/docs:/team-docs:ro            # ingestion source (opt-in)
@@ -27,4 +50,7 @@ services:
       - lore-backend
     volumes:
       - C:/AIDA/TestPlayGround/runs:/tyr-runs:ro
+
+volumes:
+  lore-minio-data:
 

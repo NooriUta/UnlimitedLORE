@@ -221,3 +221,137 @@ CREATE PROPERTY ClRoutineOutput.content_md    IF NOT EXISTS STRING;
 CREATE EDGE TYPE ClRoutineHasOutput    IF NOT EXISTS;
 
 CREATE INDEX IF NOT EXISTS ON ClRoutineOutput(routine_name, run_date, output_type) UNIQUE;
+
+-- ── Phase 7 (SPEC-BRAGI-ARCHIVE-001 v0.4): BRAGI content archive ────────────
+-- Facts+metrics dataset ("Этот архив = факты и метрики"), distinct from the
+-- Forseti planning graph — flat vertices, no SCD2/Hist twins. MetricSnapshot
+-- itself is ARC-02 (LSM_TIMESERIES, separate storage engine — no graph edges
+-- to it; consumers reference it by object_type+object_id tags).
+CREATE VERTEX TYPE BragiPublication IF NOT EXISTS;
+CREATE PROPERTY BragiPublication.publication_id  IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPublication.title            IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPublication.topic             IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPublication.main_text_md      IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPublication.type              IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPublication.status_general    IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiPublication (publication_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiVariant IF NOT EXISTS;
+CREATE PROPERTY BragiVariant.variant_id      IF NOT EXISTS STRING;
+CREATE PROPERTY BragiVariant.text_md         IF NOT EXISTS STRING;
+CREATE PROPERTY BragiVariant.status          IF NOT EXISTS STRING;
+CREATE PROPERTY BragiVariant.url             IF NOT EXISTS STRING;
+CREATE PROPERTY BragiVariant.published_at    IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiVariant (variant_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiAsset IF NOT EXISTS;
+CREATE PROPERTY BragiAsset.asset_id     IF NOT EXISTS STRING;
+CREATE PROPERTY BragiAsset.asset_type   IF NOT EXISTS STRING;
+CREATE PROPERTY BragiAsset.file_url     IF NOT EXISTS STRING;
+CREATE PROPERTY BragiAsset.alt          IF NOT EXISTS STRING;
+CREATE PROPERTY BragiAsset.size_bytes   IF NOT EXISTS LONG;
+CREATE INDEX IF NOT EXISTS ON BragiAsset (asset_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiChannel IF NOT EXISTS;
+CREATE PROPERTY BragiChannel.channel_id    IF NOT EXISTS STRING;
+CREATE PROPERTY BragiChannel.channel_type  IF NOT EXISTS STRING;
+CREATE PROPERTY BragiChannel.url_handle    IF NOT EXISTS STRING;
+CREATE PROPERTY BragiChannel.funnel_role   IF NOT EXISTS STRING;
+CREATE PROPERTY BragiChannel.rules_md      IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiChannel (channel_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiKeyword IF NOT EXISTS;
+CREATE PROPERTY BragiKeyword.keyword_id    IF NOT EXISTS STRING;
+CREATE PROPERTY BragiKeyword.phrase        IF NOT EXISTS STRING;
+CREATE PROPERTY BragiKeyword.cluster       IF NOT EXISTS STRING;
+CREATE PROPERTY BragiKeyword.freq_exact    IF NOT EXISTS INTEGER;
+CREATE PROPERTY BragiKeyword.freq_broad    IF NOT EXISTS INTEGER;
+CREATE PROPERTY BragiKeyword.source        IF NOT EXISTS STRING;
+CREATE PROPERTY BragiKeyword.intent        IF NOT EXISTS STRING;
+CREATE PROPERTY BragiKeyword.region_engine IF NOT EXISTS STRING;
+CREATE PROPERTY BragiKeyword.measured_at   IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiKeyword (keyword_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiPage IF NOT EXISTS;
+CREATE PROPERTY BragiPage.page_id       IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPage.url           IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPage.title         IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPage.description   IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPage.page_type     IF NOT EXISTS STRING;
+CREATE PROPERTY BragiPage.deployed_at   IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiPage (page_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiCampaign IF NOT EXISTS;
+CREATE PROPERTY BragiCampaign.campaign_id    IF NOT EXISTS STRING;
+CREATE PROPERTY BragiCampaign.utm_source     IF NOT EXISTS STRING;
+CREATE PROPERTY BragiCampaign.utm_medium     IF NOT EXISTS STRING;
+CREATE PROPERTY BragiCampaign.utm_campaign   IF NOT EXISTS STRING;
+CREATE PROPERTY BragiCampaign.target_url     IF NOT EXISTS STRING;
+CREATE PROPERTY BragiCampaign.period         IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiCampaign (campaign_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiCompetitor IF NOT EXISTS;
+CREATE PROPERTY BragiCompetitor.competitor_id IF NOT EXISTS STRING;
+CREATE PROPERTY BragiCompetitor.name          IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiCompetitor (competitor_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiInsight IF NOT EXISTS;
+CREATE PROPERTY BragiInsight.insight_id     IF NOT EXISTS STRING;
+CREATE PROPERTY BragiInsight.statement_md   IF NOT EXISTS STRING;
+CREATE PROPERTY BragiInsight.insight_date   IF NOT EXISTS STRING;
+-- Обоснование (замеры) — MetricSnapshot живёт в отдельном TIMESERIES-движке и
+-- не участвует в графовых рёбрах; ссылка на обоснование хранится текстом.
+CREATE PROPERTY BragiInsight.evidence_ref   IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiInsight (insight_id) UNIQUE;
+
+CREATE VERTEX TYPE BragiIntegration IF NOT EXISTS;
+CREATE PROPERTY BragiIntegration.integration_id  IF NOT EXISTS STRING;
+CREATE PROPERTY BragiIntegration.service          IF NOT EXISTS STRING;
+CREATE PROPERTY BragiIntegration.purpose          IF NOT EXISTS STRING;
+CREATE PROPERTY BragiIntegration.endpoint         IF NOT EXISTS STRING;
+CREATE PROPERTY BragiIntegration.scope            IF NOT EXISTS STRING;
+-- Ссылка на секрет (env/vault key name) — НИКОГДА значение токена.
+CREATE PROPERTY BragiIntegration.secret_ref       IF NOT EXISTS STRING;
+CREATE PROPERTY BragiIntegration.status           IF NOT EXISTS STRING;
+CREATE PROPERTY BragiIntegration.last_called_at   IF NOT EXISTS STRING;
+CREATE INDEX IF NOT EXISTS ON BragiIntegration (integration_id) UNIQUE;
+
+-- Рубрикатор (SPRINT_BRAGI_ARCHIVE_FOLLOWUP): фиксированный список рубрик,
+-- вручную назначаемых на публикации и ключевые слова (IN_RUBRIC от обоих
+-- типов) — отдельная таксономия поверх произвольного BragiKeyword.cluster,
+-- не заменяет его.
+CREATE VERTEX TYPE BragiRubric IF NOT EXISTS;
+CREATE PROPERTY BragiRubric.rubric_id    IF NOT EXISTS STRING;
+CREATE PROPERTY BragiRubric.name         IF NOT EXISTS STRING;
+CREATE PROPERTY BragiRubric.description  IF NOT EXISTS STRING;
+CREATE PROPERTY BragiRubric.order_index  IF NOT EXISTS INTEGER;
+CREATE INDEX IF NOT EXISTS ON BragiRubric (rubric_id) UNIQUE;
+
+-- Edges — 7 из заметки ARC-01 + 2 доп. для полноты ER-модели спеки v0.4
+-- (Keyword→Page целевая страница, Campaign→Variant вариация) + IN_RUBRIC
+CREATE EDGE TYPE HAS_VARIANT      IF NOT EXISTS;
+CREATE EDGE TYPE HAS_ASSET        IF NOT EXISTS;
+CREATE EDGE TYPE TARGETS_KEY      IF NOT EXISTS;
+CREATE EDGE TYPE IN_CHANNEL       IF NOT EXISTS;
+CREATE EDGE TYPE PRODUCED_BY      IF NOT EXISTS;
+CREATE EDGE TYPE SHIPPED_IN       IF NOT EXISTS;
+CREATE EDGE TYPE LED_TO           IF NOT EXISTS;
+CREATE EDGE TYPE TARGETS_PAGE     IF NOT EXISTS;
+CREATE EDGE TYPE FOR_VARIANT      IF NOT EXISTS;
+CREATE EDGE TYPE IN_RUBRIC        IF NOT EXISTS;
+
+-- ARC-02: MetricSnapshot — native ArcadeDB time-series (not a graph
+-- vertex/edge; separate storage engine, hence no HAS_STATE/edges to it).
+-- Real syntax confirmed against ArcadeDB docs — spec's "LSM_TIMESERIES"
+-- literal does not exist, actual keyword is CREATE TIMESERIES TYPE.
+CREATE TIMESERIES TYPE MetricSnapshot
+  TIMESTAMP ts
+  TAGS (object_type STRING, object_id STRING, metric STRING, source STRING, segment STRING)
+  FIELDS (value DOUBLE);
+
+-- ARC-03: secondary indexes (площадка — via IN_CHANNEL edge traversal, no
+-- property index needed; статус/дата/ключ are direct properties)
+CREATE INDEX IF NOT EXISTS ON BragiVariant     (status)       NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON BragiVariant     (published_at) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON BragiPublication (status_general) NOTUNIQUE;
+CREATE INDEX IF NOT EXISTS ON BragiKeyword     (cluster)      NOTUNIQUE;

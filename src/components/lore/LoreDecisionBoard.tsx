@@ -1,6 +1,7 @@
 // Composite feed view for KnowDecision — all records in a scrollable list.
 // No master-detail split: decisions are short notes, not large documents.
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreDecisionRow, type LoreDecisionPassport } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
@@ -37,6 +38,7 @@ function inferDecisionStatus(title: string | null): string | null {
 const STATUS_ORDER = ['fixed', 'accepted', 'done', 'deferred', 'rejected', 'superseded'];
 
 export default function LoreDecisionBoard({ q, onError }: Props) {
+  const { t } = useTranslation();
   const [rows,           setRows]           = useState<LoreDecisionRow[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [expanded,       setExpanded]       = useState<string | null>(null);
@@ -128,13 +130,13 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
           <span style={S.title}>{d.title}</span>
           {isOpen && (
             <div style={S.detail} onClick={e => e.stopPropagation()}>
-              {loadingDetail === d.decision_id && <span style={S.meta}>Загрузка…</span>}
+              {loadingDetail === d.decision_id && <span style={S.meta}>{t('lore.decisionBoard.loading', 'Загрузка…')}</span>}
               {det && (
                 <>
                   {det.body_md && <MartProse text={det.body_md} />}
                   {det.rationale_md && (
                     <div style={S.rationaleWrap}>
-                      <span style={S.rationaleLabel}>Обоснование</span>
+                      <span style={S.rationaleLabel}>{t('lore.decisionBoard.rationaleLabel', 'Обоснование')}</span>
                       <MartProse text={det.rationale_md} />
                     </div>
                   )}
@@ -158,7 +160,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
                     </div>
                   ) : null}
                   {!det.body_md && !det.rationale_md && !hasLinks && (
-                    <span style={S.meta}>Дополнительных данных нет.</span>
+                    <span style={S.meta}>{t('lore.decisionBoard.noAdditionalData', 'Дополнительных данных нет.')}</span>
                   )}
                 </>
               )}
@@ -176,8 +178,8 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
   return (
     <div style={S.root}>
       <div style={S.header}>
-        <span style={S.count}>{filtered.length} решений</span>
-        {q && <span style={S.filterNote}>фильтр: «{q}»</span>}
+        <span style={S.count}>{t('lore.decisionBoard.countSuffix', '{{count}} решений', { count: filtered.length })}</span>
+        {q && <span style={S.filterNote}>{t('lore.decisionBoard.filterNote', 'фильтр: «{{q}}»', { q })}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center' }}>
           <div style={S.pillGroup}>
             <button
@@ -187,7 +189,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
               }}
               style={{ ...S.ctrl, ...(sortBy === 'id' ? S.ctrlActive : {}), borderRadius: '4px 0 0 4px', borderRight: 'none' }}
             >
-              по ID {sortBy === 'id' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+              {t('lore.decisionBoard.sortById', 'по ID')} {sortBy === 'id' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </button>
             <button
               onClick={() => {
@@ -196,20 +198,20 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
               }}
               style={{ ...S.ctrl, ...(sortBy === 'date' ? S.ctrlActive : {}), borderRadius: '0 4px 4px 0' }}
             >
-              по дате {sortBy === 'date' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+              {t('lore.decisionBoard.sortByDate', 'по дате')} {sortBy === 'date' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
             </button>
           </div>
           <button
             onClick={() => setGroupByStatus(v => !v)}
             style={{ ...S.ctrl, ...(groupByStatus ? S.ctrlActive : {}) }}
-            title={groupByStatus ? 'Убрать группировку' : 'Группировать по статусу'}
+            title={groupByStatus ? t('lore.decisionBoard.ungroupTitle', 'Убрать группировку') : t('lore.decisionBoard.groupTitle', 'Группировать по статусу')}
           >
-            группировать
+            {t('lore.decisionBoard.groupButton', 'группировать')}
           </button>
         </div>
       </div>
       <div style={S.list}>
-        {filtered.length === 0 && <div style={S.empty}>Решений не найдено.</div>}
+        {filtered.length === 0 && <div style={S.empty}>{t('lore.decisionBoard.noneFound', 'Решений не найдено.')}</div>}
         {sections.map(sec => {
           const isCollapsed = sec.status ? collapsedGroups.has(sec.status) : false;
           return (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
@@ -60,6 +61,7 @@ function GhIcon() {
 }
 
 export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSprint }: Props) {
+  const { t } = useTranslation();
   const [rows,           setRows]           = useState<LoreRelease[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [expanded,       setExpanded]       = useState<string | null>(null);
@@ -142,15 +144,15 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
   return (
     <div style={S.root}>
       <div style={S.header}>
-        <span style={S.count}>{filtered.length} релизов</span>
+        <span style={S.count}>{t('lore.releasesBoard.releaseCount', '{{count}} релизов', { count: filtered.length })}</span>
 
         {/* Current filter chip */}
         <span
           style={{ ...S.projectTab, ...(onlyCurrent ? S.currentTabActive : {}) }}
           onClick={() => setOnlyCurrent(v => !v)}
-          title="Показать только текущие релизы каждого модуля"
+          title={t('lore.releasesBoard.showOnlyCurrentTitle', 'Показать только текущие релизы каждого модуля')}
         >
-          ● CURRENT
+          {t('lore.releasesBoard.currentChip', '● CURRENT')}
         </span>
 
         {/* Project tabs — always visible when >1 project */}
@@ -160,7 +162,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
             style={{ ...S.projectTab, ...(projectFilter === p ? S.projectTabActive : {}) }}
             onClick={() => setProjectFilter(p)}
           >
-            {p === 'all' ? 'Все' : p.split('/')[1]}
+            {p === 'all' ? t('lore.releasesBoard.allProjects', 'Все') : p.split('/')[1]}
           </span>
         ))}
 
@@ -170,22 +172,22 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
             style={S.resetBtn}
             onClick={() => { setProjectFilter('all'); setOnlyCurrent(false); onClearQ?.(); }}
           >
-            ✕ сбросить
+            {t('lore.releasesBoard.reset', '✕ сбросить')}
           </span>
         )}
         {q && (
           <span style={S.filterNote}>
-            «{q}»{onClearQ && <span style={S.clearQ} onClick={onClearQ}>✕</span>}
+            {t('lore.releasesBoard.quotedQuery', '«{{query}}»', { query: q })}{onClearQ && <span style={S.clearQ} onClick={onClearQ}>✕</span>}
           </span>
         )}
       </div>
       <div style={S.list} className="lore-panel-scroll">
-        {filtered.length === 0 && <div style={S.empty}>Релизы не найдены.</div>}
+        {filtered.length === 0 && <div style={S.empty}>{t('lore.releasesBoard.noReleasesFound', 'Релизы не найдены.')}</div>}
         {[...groups.entries()].map(([minor, releases]) => (
           <div key={minor}>
             <div style={S.groupHeader}>
               <span style={S.groupLabel}>{minor}</span>
-              <span style={S.groupCount}>{releases.length} релизов</span>
+              <span style={S.groupCount}>{t('lore.releasesBoard.releaseCount', '{{count}} релизов', { count: releases.length })}</span>
             </div>
             {releases.map(r => {
               const id     = r.release_id;
@@ -219,20 +221,20 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                     {type && <span style={S.typeBadge}>{TYPE_LABEL[type] ?? type}</span>}
                     {r.week != null && <span style={S.weekBadge}>wk {r.week}</span>}
                     {(r.sprint_count != null && r.sprint_count > 0) && (
-                      <span style={S.countBadge} title="Привязанных спринтов">↗ {r.sprint_count}</span>
+                      <span style={S.countBadge} title={t('lore.releasesBoard.linkedSprintsTitle', 'Привязанных спринтов')}>↗ {r.sprint_count}</span>
                     )}
                     {(r.pr_count != null && r.pr_count > 0) && (
-                      <span style={S.countBadge} title="Привязанных PR">PR {r.pr_count}</span>
+                      <span style={S.countBadge} title={t('lore.releasesBoard.linkedPrsTitle', 'Привязанных PR')}>PR {r.pr_count}</span>
                     )}
                     {r.description_md && <span style={S.desc}>{r.description_md.slice(0, 110)}</span>}
                     {isOpen && (
                       <div style={S.detail} onClick={e => e.stopPropagation()}>
-                        {loadingDetail === uid && <span style={S.meta}>Загрузка…</span>}
+                        {loadingDetail === uid && <span style={S.meta}>{t('lore.releasesBoard.loading', 'Загрузка…')}</span>}
 
                         {/* Sprints + Tasks */}
                         {sprints && sprints.length > 0 && (
                           <>
-                            <span style={S.refLabel}>Спринты ({sprints.length})</span>
+                            <span style={S.refLabel}>{t('lore.releasesBoard.sprintsLabel', 'Спринты ({{count}})', { count: sprints.length })}</span>
                             {sprints.map(s => {
                               const sTasks = tasks?.[s.sprint_id];
                               return (
@@ -240,14 +242,14 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                                   <div
                                     style={S.sprintRef}
                                     onClick={() => onNavigateToSprint(s.sprint_id)}
-                                    title={`Открыть спринт ${s.sprint_id}`}
+                                    title={t('lore.releasesBoard.openSprintTitle', 'Открыть спринт {{id}}', { id: s.sprint_id })}
                                   >
                                     <span style={S.sprintId}>{s.sprint_id}</span>
                                     {s.name && s.name !== s.sprint_id && (
                                       <span style={S.sprintName}>{s.name}</span>
                                     )}
                                     {s.status_raw && <StatusChip status={s.status_raw} />}
-                                    {sTasks && <span style={S.taskCount}>{sTasks.length} tasks</span>}
+                                    {sTasks && <span style={S.taskCount}>{t('lore.releasesBoard.taskCount', '{{count}} tasks', { count: sTasks.length })}</span>}
                                   </div>
                                   {sTasks && sTasks.length > 0 && (
                                     <div style={S.taskList}>
@@ -272,7 +274,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                         {/* PRs (via SHIPPED_IN edge) */}
                         {prs && prs.length > 0 && (
                           <>
-                            <span style={{ ...S.refLabel, marginTop: sprints?.length ? 8 : 0 }}>PR</span>
+                            <span style={{ ...S.refLabel, marginTop: sprints?.length ? 8 : 0 }}>{t('lore.releasesBoard.prLabel', 'PR')}</span>
                             {prs.map(p => {
                               const prGp  = p.git_project ?? 'NooriUta/AIDA';
                               const prUrl = p.url ?? `https://github.com/${prGp}/pull/${p.pr_number}`;
@@ -288,7 +290,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                                     rel="noopener noreferrer"
                                     onClick={e => e.stopPropagation()}
                                     style={S.ghLink}
-                                    title={`PR #${p.pr_number} · ${prGp}`}
+                                    title={t('lore.releasesBoard.prTitle', 'PR #{{number}} · {{project}}', { number: p.pr_number, project: prGp })}
                                   ><GhIcon /></a>
                                 </div>
                               );
@@ -299,7 +301,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                         {/* Decisions */}
                         {decs && decs.length > 0 && (
                           <>
-                            <span style={{ ...S.refLabel, marginTop: (sprints?.length || prs?.length) ? 8 : 0 }}>Решения</span>
+                            <span style={{ ...S.refLabel, marginTop: (sprints?.length || prs?.length) ? 8 : 0 }}>{t('lore.releasesBoard.decisionsLabel', 'Решения')}</span>
                             {decs.map(d => (
                               <div key={d.decision_id} style={S.decisionRef}>
                                 <span style={S.decisionNum}>#{d.decision_id}</span>
@@ -311,7 +313,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                         )}
 
                         {decs && decs.length === 0 && (!sprints || sprints.length === 0) && (!prs || prs.length === 0) && (
-                          <span style={S.meta}>Связанных записей не найдено.</span>
+                          <span style={S.meta}>{t('lore.releasesBoard.noLinkedRecords', 'Связанных записей не найдено.')}</span>
                         )}
                       </div>
                     )}
@@ -324,7 +326,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                       rel="noopener noreferrer"
                       onClick={e => e.stopPropagation()}
                       style={S.ghLink}
-                      title={`GitHub Release ${tag}`}
+                      title={t('lore.releasesBoard.githubReleaseTitle', 'GitHub Release {{tag}}', { tag })}
                     ><GhIcon /></a>
                   </div>
                 </div>

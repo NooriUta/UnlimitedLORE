@@ -147,6 +147,11 @@ public final class LoreSlices {
             "in('DEPENDS_ON').sprint_id    AS blocks, " +
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
+            // reverse of ADR's IMPLEMENTED_IN (ADR → Sprint) — which ADRs this
+            // sprint implements. Was missing entirely; sprint detail had no way
+            // to surface the link even though lore_link_adr_sprint has always
+            // been able to create it.
+            "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
             "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
@@ -370,6 +375,24 @@ public final class LoreSlices {
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
+        // SPRINT_TECH_REGISTRY / TR-06+08: version+date+license registry per
+        // component tech, stored as one KnowSpec per (component, tech) —
+        // spec_id "SPEC-TECH-<COMPONENT>-<TECH>", title=tech name, version=tech
+        // version, content_md=small bullet list (release_date/license/source/
+        // checked_at). Piggybacks the existing /lore/spec upsert path (no new
+        // backend write endpoint needed) — this slice is the read side.
+        slice("tech_registry",
+            "SELECT spec_id, title AS tech_name, " +
+            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS checked_at, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%'",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "component", " AND (out('BELONGS_TO').component_id[0] = :component OR component_id = :component)")),
+            " ORDER BY spec_id LIMIT 200");
+
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
         slice("history_sprint",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw " +
@@ -432,7 +455,9 @@ public final class LoreSlices {
 
         // ── §9 KnowRunbook (Phase 5 LAL-29) ─────────────────────────────────
         slice("runbooks",
-            "SELECT runbook_id, name, area, date_created FROM KnowRunbook",
+            "SELECT runbook_id, name, area, date_created, " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids " +
+            "FROM KnowRunbook",
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "area", " WHERE area = :area")),
@@ -441,7 +466,8 @@ public final class LoreSlices {
         slice("runbook_by_id",
             "SELECT runbook_id, name, area, date_created, " +
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
-            "out('HAS_STATE').valid_from[0] AS valid_from " +
+            "out('HAS_STATE').valid_from[0] AS valid_from, " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids " +
             "FROM KnowRunbook WHERE runbook_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -616,6 +642,89 @@ public final class LoreSlices {
             "FROM ClRoutineRun WHERE routine_name = :routine_name " +
             "ORDER BY started_at DESC, run_date DESC",
             List.of("routine_name"), Map.of(), " LIMIT 20");
+
+        // ── MCP-05: BRAGI content archive read slices (SPEC-BRAGI-ARCHIVE-001) ──
+        slice("bragi_overview",
+            "SELECT status_general, count(*) AS n FROM BragiPublication GROUP BY status_general",
+            List.of(), Map.of(), "");
+
+        slice("bragi_publications",
+            "SELECT publication_id, title, topic, main_text_md, type, status_general, " +
+            "out('HAS_ASSET').file_url AS cover_asset_urls, " +
+            "out('HAS_VARIANT').variant_id AS variant_ids, " +
+            "out('HAS_VARIANT').status AS variant_statuses, " +
+            "out('HAS_VARIANT').url AS variant_urls, " +
+            "out('HAS_VARIANT').text_md AS variant_texts, " +
+            "out('HAS_VARIANT').out('IN_CHANNEL').channel_id AS variant_channels, " +
+            "out('HAS_VARIANT').out('HAS_ASSET').file_url AS variant_asset_urls, " +
+            "out('TARGETS_KEY').keyword_id AS keyword_ids, " +
+            "out('IN_RUBRIC').rubric_id AS rubric_ids, " +
+            "out('IN_RUBRIC').name AS rubric_names " +
+            "FROM BragiPublication",
+            List.of(), Map.of(), " ORDER BY publication_id");
+
+        // Calendar: variants that have a published_at date. No distinct "planned
+        // date" field exists yet (v0.4 spec only has published_at on Variant) —
+        // planned-but-undated variants are visible via bragi_publications instead.
+        slice("bragi_calendar",
+            "SELECT variant_id, status, published_at, url, " +
+            "in('HAS_VARIANT').publication_id AS publication_id, " +
+            "in('HAS_VARIANT').title AS title, " +
+            "out('IN_CHANNEL').channel_id AS channel_id " +
+            "FROM BragiVariant WHERE published_at IS NOT NULL",
+            List.of(), Map.of(), " ORDER BY published_at");
+
+        slice("bragi_keys",
+            "SELECT keyword_id, phrase, cluster, freq_exact, freq_broad, intent, source, measured_at, " +
+            "out('TARGETS_PAGE').page_id AS page_id, " +
+            "out('TARGETS_PAGE').url AS page_url, " +
+            "out('IN_RUBRIC').rubric_id AS rubric_ids, " +
+            "out('IN_RUBRIC').name AS rubric_names " +
+            "FROM BragiKeyword",
+            List.of(), Map.of(), " ORDER BY freq_exact DESC");
+
+        slice("bragi_rubrics",
+            "SELECT rubric_id, name, description, order_index FROM BragiRubric",
+            List.of(), Map.of(), " ORDER BY order_index, name");
+
+        // Recent metric feed — for filtered/aggregated queries use lore_query_metric
+        // (POST /lore/bragi/metric/query) instead; this slice is a flat recent-points
+        // feed for dashboard cards. object_type='probe' is a schema-verification
+        // artifact (ARC-02/ARC-03), always excluded.
+        slice("bragi_analytics",
+            "SELECT object_type, object_id, metric, value, ts, source, segment " +
+            "FROM MetricSnapshot WHERE object_type != 'probe'",
+            List.of(), Map.of(), " ORDER BY ts DESC LIMIT 100");
+
+        slice("bragi_competitors",
+            "SELECT competitor_id, name FROM BragiCompetitor",
+            List.of(), Map.of(), " ORDER BY competitor_id");
+
+        // FE-05: was missed in the original MCP-05 pass — Insights need a read
+        // slice too. out('LED_TO') fans out to both KnowTask and KnowADR; ArcadeDB
+        // returns whatever field exists on the target (adr_id null on a task row
+        // and vice versa), so both arrays below are safe to project together.
+        slice("bragi_insights",
+            "SELECT insight_id, statement_md, insight_date, evidence_ref, " +
+            "out('LED_TO').task_uid AS led_tasks, " +
+            "out('LED_TO').adr_id AS led_adrs " +
+            "FROM BragiInsight",
+            List.of(), Map.of(), " ORDER BY insight_date DESC");
+
+        slice("bragi_integrations",
+            "SELECT integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at " +
+            "FROM BragiIntegration",
+            List.of(), Map.of(), " ORDER BY integration_id");
+
+        // FE-06: another gap found while building the create-forms — channel/page
+        // pickers need lookup slices too, not just the content-display ones.
+        slice("bragi_channels",
+            "SELECT channel_id, channel_type, url_handle, funnel_role FROM BragiChannel",
+            List.of(), Map.of(), " ORDER BY channel_id");
+
+        slice("bragi_pages",
+            "SELECT page_id, url, title FROM BragiPage",
+            List.of(), Map.of(), " ORDER BY page_id");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }

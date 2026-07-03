@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { lorePost } from '../backend.js';
+import { lorePost, loreGet, loreUpload } from '../backend.js';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -481,6 +481,24 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_runbook_adr',
+    'Link (or unlink) a KnowRunbook to the KnowADR it references via a REFERENCES_ADR edge (feeds the ' +
+      '"runbooks"/"runbook_by_id" slices\' adr_ids field). A runbook mentioning an ADR only as a text-only ' +
+      '[[ADR-ID]] wiki link inside content_md has NO real graph edge — this creates one. Idempotent on add. ' +
+      'Use action="remove" to unlink.',
+    {
+      runbook_id: z.string().describe('e.g. "RUNBOOK-INFISICAL-LOCAL-SETUP"'),
+      adr_id:     z.string().describe('e.g. "ADR-MT-011"'),
+      action:     z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ runbook_id, adr_id, action }) => {
+      try {
+        return json(await lorePost('/lore/runbook/adr', { runbook_id, adr_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_link_adr_release',
     'Link (or unlink) a KnowADR to the KnowRelease it shipped in via an IMPLEMENTED_IN_RELEASE edge. ' +
       'Feeds the adr slice release_ids field. Pass git_project for multi-repo safety ' +
@@ -770,6 +788,47 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_upsert_tech',
+    '(SPRINT_TECH_REGISTRY) Register or update one technology entry (version + release date + ' +
+      'license + source + our own release + usage) for a component — e.g. "ArcadeDB 26.6.1" under YGG. ' +
+      'Prevents re-verifying facts already checked this session (the recurring pain this sprint exists ' +
+      'for). Stored as one KnowSpec per (component, tech) via the existing spec-upsert path — spec_id ' +
+      '"SPEC-TECH-<COMPONENT>-<TECH>", title=tech_name, version=tech version, content_md=a small ' +
+      'bullet list of release_date/our_release/license/usage/source_url/checked_at. Idempotent — ' +
+      'upserts by that id. Read back via lore_query_slice(slice="tech_registry", params={component: ' +
+      '"<ID>"}) (component optional — omit for the full registry). Mutates system_aida_lore.',
+    {
+      component_id: z.string().describe('e.g. "YGG", "SECURITY"'),
+      tech_name:    z.string().describe('e.g. "ArcadeDB", "Vault", "Keycloak"'),
+      version:      z.string().describe('e.g. "26.6.1"'),
+      release_date: z.string().optional().describe('YYYY-MM-DD, when this version was released UPSTREAM (the tech\'s own release)'),
+      our_release:  z.string().optional().describe('which of OUR releases pinned/shipped this version, e.g. "v1.6.21"'),
+      license:      z.string().optional().describe('e.g. "Business Source License 1.1"'),
+      usage:        z.string().optional().describe('free text — how/where this is actually used'),
+      source_url:   z.string().optional().describe('where this was verified (LICENSE file, release notes, ...)'),
+      checked_at:   z.string().optional().describe('YYYY-MM-DD this was last verified; defaults to today if omitted'),
+    },
+    async ({ component_id, tech_name, version, release_date, our_release, license, usage, source_url, checked_at }) => {
+      try {
+        const specId = `SPEC-TECH-${component_id.toUpperCase()}-${tech_name.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
+        const today = new Date().toISOString().slice(0, 10);
+        const lines = [
+          release_date && `- **Дата релиза:** ${release_date}`,
+          our_release && `- **Наш релиз:** ${our_release}`,
+          license && `- **Лицензия:** ${license}`,
+          usage && `- **Использование:** ${usage}`,
+          source_url && `- **Источник:** ${source_url}`,
+          `- **Проверено:** ${checked_at ?? today}`,
+        ].filter(Boolean);
+        return json(await lorePost('/lore/spec', {
+          spec_id: specId, title: tech_name, version, component_id,
+          content_md: lines.join('\n'),
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_create_quality_gate',
     'Create or update a QualityGate vertex. ' +
       'Idempotent — upserts by qg_id. Mutates system_aida_lore.',
@@ -1034,6 +1093,384 @@ export function registerLoreWrite(server: McpServer): void {
           team: team ?? null, game_icon: game_icon ?? null,
           owner: owner ?? null, parent_id: parent_id ?? null,
         }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // ── BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4) ──────────────────
+  server.tool(
+    'lore_upsert_rubric',
+    'BragiRubric: create/amend a rubric — the fixed classifier list assigned to publications ' +
+      '(lore_create_publication) and keywords (lore_upsert_keyword) via rubric_id (upsert by rubric_id, ' +
+      'partial-safe). This is a single, editorially-curated list, not a freeform tag — check lore_query_slice ' +
+      '"bragi_rubrics" before creating a new one to avoid near-duplicate rubrics. Mutates the shared system_aida_lore.',
+    {
+      rubric_id:    z.string().describe('e.g. "RUB-GOV"'),
+      name:         z.string().optional(),
+      description:  z.string().optional(),
+      order_index:  z.number().int().optional().describe('display order in pickers'),
+    },
+    async ({ rubric_id, name, description, order_index }) => {
+      try {
+        return json(await lorePost('/lore/bragi/rubric', { rubric_id, name, description, order_index }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_upsert_channel',
+    'BragiChannel: create/amend a distribution channel (e.g. CH-TG, CH-SITE) — upsert by channel_id, ' +
+      'partial-safe (omitted fields left untouched). Gap found 2026-07-03: there was no write path for ' +
+      'this type — CH-TG\'s seeded url_handle ("t.me/seidr") was stale, no tool existed to fix it. Check ' +
+      'lore_query_slice "bragi_channels" for existing channels before creating a new one. Mutates the ' +
+      'shared system_aida_lore.',
+    {
+      channel_id:   z.string().describe('e.g. "CH-TG", "CH-SITE"'),
+      channel_type: z.string().optional().describe('e.g. "social", "owned", "platform"'),
+      url_handle:   z.string().optional().describe('e.g. "t.me/SampleofOne", "seidrstudio.pro/blog"'),
+      funnel_role:  z.string().optional().describe('e.g. "nurture", "conversion", "awareness", "authority"'),
+    },
+    async ({ channel_id, channel_type, url_handle, funnel_role }) => {
+      try {
+        return json(await lorePost('/lore/bragi/channel', { channel_id, channel_type, url_handle, funnel_role }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_rubric',
+    'Assigns (or replaces) ONE rubric on a BragiPublication or BragiKeyword via IN_RUBRIC, without re-supplying ' +
+      'every other field of the target — unlike the rubric_id param on lore_create_publication/lore_upsert_keyword, ' +
+      'this is a lightweight standalone call. Replaces any prior rubric on the target (single-assignment, not ' +
+      'additive). Mutates the shared system_aida_lore.',
+    {
+      entity_type: z.enum(['publication', 'keyword']),
+      entity_id:   z.string().describe('publication_id or keyword_id, matching entity_type'),
+      rubric_id:   z.string().describe('existing BragiRubric id'),
+    },
+    async ({ entity_type, entity_id, rubric_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/rubric/link', { entity_type, entity_id, rubric_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_find_keyword',
+    'Searches BragiKeyword by a case-insensitive substring of phrase, returning keyword_id/phrase/cluster for ' +
+      'matches (max 20). Use this to resolve a keyword_id from a phrase BEFORE calling lore_upsert_keyword, ' +
+      'lore_link_rubric, or the keyword_ids param on lore_create_publication — those all require an already-known id.',
+    {
+      q: z.string().describe('substring to search for, e.g. "data governance"'),
+    },
+    async ({ q }) => {
+      try {
+        return json(await loreGet('/lore/bragi/keyword/search', { q }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_publication',
+    'BragiPublication: create/amend a content publication (upsert by publication_id, partial-safe). ' +
+      'The main-text master version that groups per-channel variants (see lore_create_variant). ' +
+      'Pass keyword_ids to link TARGETS_KEY edges to existing BragiKeyword rows (idempotent, additive-only — ' +
+      'does not unlink keys omitted on a re-call). rubric_id assigns ONE rubric via IN_RUBRIC — replaces any ' +
+      'prior rubric on this publication (not additive, unlike keyword_ids). Mutates the shared system_aida_lore.',
+    {
+      publication_id:  z.string().describe('e.g. "PUB-01"'),
+      title:           z.string().optional(),
+      topic:           z.string().optional(),
+      main_text_md:    z.string().optional().describe('master-version body in Markdown'),
+      type:            z.string().optional().describe('e.g. "article"'),
+      status_general:  z.string().optional().describe('e.g. "draft" | "ready" | "published"'),
+      keyword_ids:     z.array(z.string()).optional().describe('existing BragiKeyword ids to link via TARGETS_KEY'),
+      rubric_id:       z.string().optional().describe('existing BragiRubric id — replaces prior rubric via IN_RUBRIC'),
+    },
+    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/publication', {
+          publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_variant',
+    'BragiVariant: create/amend a per-channel version of a publication (upsert by variant_id, partial-safe). ' +
+      'Pass publication_id to wire HAS_VARIANT from the parent BragiPublication, channel_id to wire IN_CHANNEL ' +
+      'to an existing BragiChannel, asset_id to attach an existing BragiAsset via HAS_ASSET — all idempotent, ' +
+      'edges only added when the corresponding id is supplied. Mutates the shared system_aida_lore.',
+    {
+      variant_id:     z.string().describe('e.g. "PUB-01-VC"'),
+      publication_id: z.string().optional().describe('parent publication — wires HAS_VARIANT'),
+      channel_id:     z.string().optional().describe('existing BragiChannel id — wires IN_CHANNEL'),
+      text_md:        z.string().optional().describe('this variant\'s adapted text'),
+      status:         z.string().optional().describe('e.g. "draft" | "ready" | "published" | "planned"'),
+      url:            z.string().optional().describe('published URL, once live'),
+      published_at:   z.string().optional().describe('YYYY-MM-DD'),
+      asset_id:       z.string().optional().describe('existing BragiAsset id — wires HAS_ASSET'),
+    },
+    async ({ variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/variant', {
+          variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_upload_asset',
+    'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +
+      'file_url ("/lore/bragi/asset/file/..."). This is the ONLY way to get a real, browser-loadable file_url — ' +
+      'there is no separate "presign" step. Call this FIRST, then pass its file_url into lore_attach_asset ' +
+      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself.',
+    {
+      filename:     z.string().describe('original filename, e.g. "cover.png" — extension is preserved'),
+      base64_data:  z.string().describe('raw file bytes, base64-encoded (no data: URI prefix)'),
+      content_type: z.string().optional().describe('e.g. "image/png" — defaults to application/octet-stream'),
+    },
+    async ({ filename, base64_data, content_type }) => {
+      try {
+        return json(await loreUpload('/lore/bragi/asset/upload', filename, base64_data, content_type));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_attach_asset',
+    'BragiAsset: create/amend an image/media asset (upsert by asset_id, partial-safe) and optionally attach it ' +
+      'via HAS_ASSET to an existing BragiPublication (cover) or BragiVariant (per-channel image) — pass exactly ' +
+      'one of attach_to_publication_id/attach_to_variant_id, not both. file_url should come from lore_upload_asset ' +
+      'if you have raw image bytes rather than an already-hosted URL. Mutates the shared system_aida_lore.',
+    {
+      asset_id:                  z.string().describe('e.g. "AST-01"'),
+      asset_type:                z.string().optional().describe('"cover" | "og-teaser" | "inline"'),
+      file_url:                  z.string().optional(),
+      alt:                       z.string().optional(),
+      size_bytes:                z.number().int().optional(),
+      attach_to_publication_id:  z.string().optional().describe('wires HAS_ASSET from this BragiPublication'),
+      attach_to_variant_id:      z.string().optional().describe('wires HAS_ASSET from this BragiVariant'),
+    },
+    async ({ asset_id, asset_type, file_url, alt, size_bytes, attach_to_publication_id, attach_to_variant_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/asset', {
+          asset_id, asset_type, file_url, alt, size_bytes, attach_to_publication_id, attach_to_variant_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_upsert_keyword',
+    'BragiKeyword: create/amend a semantic-core keyword (upsert by keyword_id, partial-safe). ' +
+      'Pass page_id to wire TARGETS_PAGE to an existing BragiPage (idempotent, additive-only). rubric_id assigns ' +
+      'ONE rubric via IN_RUBRIC — replaces any prior rubric on this keyword. Mutates the shared system_aida_lore.',
+    {
+      keyword_id:    z.string().describe('e.g. "KW-01"'),
+      phrase:        z.string().optional(),
+      cluster:       z.string().optional(),
+      freq_exact:    z.number().int().optional().describe('точная частота [!]'),
+      freq_broad:    z.number().int().optional(),
+      source:        z.string().optional().describe('e.g. "wordstat" | "yandex-serp"'),
+      intent:        z.string().optional().describe('e.g. "инфо" | "комм" | "бренд"'),
+      region_engine: z.string().optional().describe('region/search-engine, e.g. "yandex-ru"'),
+      measured_at:   z.string().optional().describe('YYYY-MM-DD'),
+      page_id:       z.string().optional().describe('existing BragiPage id — wires TARGETS_PAGE'),
+      rubric_id:     z.string().optional().describe('existing BragiRubric id — replaces prior rubric via IN_RUBRIC'),
+    },
+    async ({ keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id, rubric_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/keyword', {
+          keyword_id, phrase, cluster, freq_exact, freq_broad, source, intent, region_engine, measured_at, page_id, rubric_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_upsert_page',
+    'BragiPage: create/amend a target landing/article page (upsert by page_id, partial-safe). ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      page_id:      z.string().describe('e.g. "PG-LINEAGE"'),
+      url:          z.string().optional(),
+      title:        z.string().optional(),
+      description:  z.string().optional(),
+      page_type:    z.string().optional().describe('e.g. "landing" | "article" | "docs"'),
+      deployed_at:  z.string().optional().describe('YYYY-MM-DD'),
+    },
+    async ({ page_id, url, title, description, page_type, deployed_at }) => {
+      try {
+        return json(await lorePost('/lore/bragi/page', {
+          page_id, url, title, description, page_type, deployed_at,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_campaign',
+    'BragiCampaign: create/amend a UTM tracking campaign (upsert by campaign_id, partial-safe). ' +
+      'Pass variant_id to wire FOR_VARIANT to an existing BragiVariant (idempotent). ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      campaign_id: z.string().describe('e.g. "CMP-01"'),
+      utm_source:  z.string().optional(),
+      utm_medium:  z.string().optional(),
+      utm_campaign: z.string().optional(),
+      target_url:  z.string().optional(),
+      period:      z.string().optional().describe('freeform date range, e.g. "2026-07"'),
+      variant_id:  z.string().optional().describe('existing BragiVariant id — wires FOR_VARIANT'),
+    },
+    async ({ campaign_id, utm_source, utm_medium, utm_campaign, target_url, period, variant_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/campaign', {
+          campaign_id, utm_source, utm_medium, utm_campaign, target_url, period, variant_id,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_record_metric',
+    'MetricSnapshot: append one measurement to the BRAGI TIMESERIES store (native ArcadeDB time-series, ' +
+      'not a graph vertex — no edges, referenced by object_type+object_id tags). ts accepts ISO-8601 ' +
+      '(e.g. "2026-07-02T09:00:00Z") or epoch millis; omit for now(). This is append-only — there is no ' +
+      'delete/amend path (TIMESERIES sealed storage). Mutates the shared system_aida_lore.',
+    {
+      object_type: z.string().describe('e.g. "publication" | "variant" | "keyword" | "competitor" | "channel"'),
+      object_id:   z.string().describe('id of the referenced BRAGI entity'),
+      metric:      z.string().describe('e.g. "views" | "clicks" | "demo_conv" | "position" | "ai_share"'),
+      value:       z.number(),
+      ts:          z.string().optional().describe('ISO-8601 or epoch millis; defaults to now'),
+      source:      z.string().optional().describe('e.g. "yandex-metrika" | "keys-so" | "tg-stats"'),
+      segment:     z.string().optional(),
+    },
+    async ({ object_type, object_id, metric, value, ts, source, segment }) => {
+      try {
+        return json(await lorePost('/lore/bragi/metric', {
+          object_type, object_id, metric, value, ts, source, segment,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_query_metric',
+    'Read BRAGI MetricSnapshot points with optional filters (object_type/object_id/metric, from/to as epoch ' +
+      'millis) and optional server-side aggregation (agg: avg|sum|min|max|count, grouped by object_type+' +
+      'object_id+metric). Without agg, returns up to `limit` raw points ordered newest-first. Always excludes ' +
+      'the object_type="probe" schema-verification artifact.',
+    {
+      object_type: z.string().optional(),
+      object_id:   z.string().optional(),
+      metric:      z.string().optional(),
+      from:        z.string().optional().describe('epoch millis, inclusive'),
+      to:          z.string().optional().describe('epoch millis, inclusive'),
+      agg:         z.enum(['avg', 'sum', 'min', 'max', 'count']).optional(),
+      limit:       z.number().int().optional().describe('max raw points when agg is not set (default 200, capped at 1000)'),
+    },
+    async ({ object_type, object_id, metric, from, to, agg, limit }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (object_type) params.object_type = object_type;
+        if (object_id) params.object_id = object_id;
+        if (metric) params.metric = metric;
+        if (from) params.from = from;
+        if (to) params.to = to;
+        if (agg) params.agg = agg;
+        if (limit !== undefined) params.limit = String(limit);
+        return json(await loreGet('/lore/bragi/metric/query', params));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_integration',
+    'BragiIntegration: create/amend a read/write connector (upsert by integration_id, partial-safe). ' +
+      '⚠️ secret_ref MUST be a reference, not a value — "env:METRIKA_TOKEN", "vault:seidr-telegraph", ' +
+      '"oauth:gsc"; the backend rejects anything else. Never pass an actual token/API key. ' +
+      'Mutates the shared system_aida_lore.',
+    {
+      integration_id: z.string().describe('e.g. "INT-METRIKA"'),
+      service:        z.string().optional().describe('e.g. "Яндекс.Метрика 110154828"'),
+      purpose:        z.string().optional().describe('"read" | "write" | "read/write"'),
+      endpoint:       z.string().optional(),
+      scope:          z.string().optional(),
+      secret_ref:     z.string().optional().describe('reference only, e.g. "env:METRIKA_TOKEN" — never a raw secret'),
+      status:         z.string().optional().describe('e.g. "active" | "needs_admin"'),
+      last_called_at: z.string().optional(),
+    },
+    async ({ integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at }) => {
+      try {
+        return json(await lorePost('/lore/bragi/integration', {
+          integration_id, service, purpose, endpoint, scope, secret_ref, status, last_called_at,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_create_insight',
+    'BragiInsight: create/amend a data-driven conclusion (upsert by insight_id, partial-safe). ' +
+      'evidence_ref is a freeform pointer to the supporting measurement/date-range (MetricSnapshot rows ' +
+      'don\'t carry graph edges, so this is text, not an edge). Use lore_link_insight to connect it to a ' +
+      'Forseti task/ADR. Mutates the shared system_aida_lore.',
+    {
+      insight_id:    z.string().describe('e.g. "INS-01"'),
+      statement_md:  z.string().optional(),
+      insight_date:  z.string().optional().describe('YYYY-MM-DD'),
+      evidence_ref:  z.string().optional().describe('freeform pointer to supporting metrics/source'),
+    },
+    async ({ insight_id, statement_md, insight_date, evidence_ref }) => {
+      try {
+        return json(await lorePost('/lore/bragi/insight', {
+          insight_id, statement_md, insight_date, evidence_ref,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_insight',
+    'Wire a LED_TO edge from an existing BragiInsight to a Forseti KnowTask or KnowADR — records that this ' +
+      'insight drove a concrete follow-up. Idempotent.',
+    {
+      insight_id:  z.string(),
+      target_type: z.enum(['task', 'adr']),
+      target_id:   z.string().describe('task_uid if target_type="task", adr_id if target_type="adr"'),
+    },
+    async ({ insight_id, target_type, target_id }) => {
+      try {
+        return json(await lorePost('/lore/bragi/insight/link', { insight_id, target_type, target_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_sync_integration',
+    'BragiIntegration manual sync (scaffold — no real cron): given an integration_id and a batch of ' +
+      'ALREADY-FETCHED metrics, writes them to MetricSnapshot and bumps the integration\'s last_called_at. ' +
+      'This does NOT call any third-party API itself — the caller (a real connector, or a human pasting ' +
+      'numbers from a dashboard) is responsible for fetching from Яндекс.Метрика/Keys.so/GSC/Telegram and ' +
+      'mapping source fields to metric names before calling this. Fails 404 if integration_id is unknown.',
+    {
+      integration_id: z.string().describe('existing BragiIntegration id, e.g. "INT-METRIKA"'),
+      metrics: z.array(z.object({
+        object_type: z.string(),
+        object_id:   z.string(),
+        metric:      z.string(),
+        value:       z.number(),
+        ts:          z.string().optional().describe('ISO-8601 or epoch millis; defaults to now'),
+        segment:     z.string().optional(),
+      })).describe('batch of points to write'),
+    },
+    async ({ integration_id, metrics }) => {
+      try {
+        return json(await lorePost('/lore/bragi/integration/sync', { integration_id, metrics }));
       } catch (e) { return err(e); }
     },
   );

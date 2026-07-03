@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
@@ -23,10 +24,10 @@ interface RawRow {
 
 interface QgMetricRow { metric_id: string; name: string; threshold: string; }
 
-const SLICE: Record<DocKind, { slice: string; label: string }> = {
-  runbook: { slice: 'runbook_by_id',      label: 'Runbook' },
-  doc:     { slice: 'doc_by_id',          label: 'Документ' },
-  qg:      { slice: 'quality_gate_by_id', label: 'Quality Gate' },
+const SLICE: Record<DocKind, { slice: string; labelKey: string; labelFallback: string }> = {
+  runbook: { slice: 'runbook_by_id',      labelKey: 'lore.artifactDoc.kind.runbook', labelFallback: 'Runbook' },
+  doc:     { slice: 'doc_by_id',          labelKey: 'lore.artifactDoc.kind.doc',     labelFallback: 'Документ' },
+  qg:      { slice: 'quality_gate_by_id', labelKey: 'lore.artifactDoc.kind.qg',      labelFallback: 'Quality Gate' },
 };
 
 const S = {
@@ -64,6 +65,7 @@ interface Props {
 }
 
 export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateSprint }: Props) {
+  const { t } = useTranslation();
   const [row, setRow]         = useState<RawRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<QgMetricRow[] | null>(null);
@@ -87,8 +89,8 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
     return () => ctrl.abort();
   }, [kind, id]);
 
-  if (loading) return <div style={S.empty}>Загрузка {id}…</div>;
-  if (!row)    return <div style={S.empty}>Не найдено: {id}</div>;
+  if (loading) return <div style={S.empty}>{t('lore.artifactDoc.loading', 'Загрузка {{id}}…', { id })}</div>;
+  if (!row)    return <div style={S.empty}>{t('lore.artifactDoc.notFound', 'Не найдено: {{id}}', { id })}</div>;
 
   const title = row.name || row.title || id;
   const date  = row.date_created || row.valid_from;
@@ -99,9 +101,9 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
   return (
     <div style={S.root}>
-      <button style={S.back} onClick={onBack}>← К списку</button>
+      <button style={S.back} onClick={onBack}>{t('lore.artifactDoc.backToList', '← К списку')}</button>
       <div style={S.header}>
-        <span style={S.kindTag}>{SLICE[kind].label}</span>
+        <span style={S.kindTag}>{t(SLICE[kind].labelKey, SLICE[kind].labelFallback)}</span>
         {row.status && <span style={S.statusChip}>{row.status}</span>}
         <span style={S.title}>{title}</span>
         {row.component_id && <span style={S.comp}>{row.component_id}</span>}
@@ -111,7 +113,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
       {/* T08: QG ↔ Sprint cross-link */}
       {kind === 'qg' && row.sprint_id && (
         <div style={S.sprintLink}>
-          Спринт:{' '}
+          {t('lore.artifactDoc.sprintLabel', 'Спринт:')}{' '}
           {onNavigateSprint ? (
             <span style={S.sprintAnchor} onClick={() => onNavigateSprint(row.sprint_id!)}>
               {row.sprint_id}
@@ -124,8 +126,10 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
       {row.has_ext_deps && (
         <div style={S.cdnBanner}>
-          ⚠ Документ ссылается на внешние ресурсы (CDN). В air-gap среде они недоступны —
-          CSP блокирует внешние загрузки, внешние стили/скрипты не применятся.
+          {t(
+            'lore.artifactDoc.cdnWarning',
+            '⚠ Документ ссылается на внешние ресурсы (CDN). В air-gap среде они недоступны — CSP блокирует внешние загрузки, внешние стили/скрипты не применятся.'
+          )}
         </div>
       )}
 
@@ -135,12 +139,16 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
         ? <SandboxedHtmlFrame html={row.content_html} title={title} />
         : row.content_md
           ? <MartProse text={row.content_md} />
-          : <div style={S.empty}>Контент пуст.</div>}
+          : <div style={S.empty}>{t('lore.artifactDoc.emptyContent', 'Контент пуст.')}</div>}
 
       {kind === 'qg' && metrics && metrics.length > 0 && (
         <table style={S.table}>
           <thead>
-            <tr><th style={S.th}>Метрика</th><th style={S.th}>Описание</th><th style={S.th}>Порог</th></tr>
+            <tr>
+              <th style={S.th}>{t('lore.artifactDoc.table.metric', 'Метрика')}</th>
+              <th style={S.th}>{t('lore.artifactDoc.table.description', 'Описание')}</th>
+              <th style={S.th}>{t('lore.artifactDoc.table.threshold', 'Порог')}</th>
+            </tr>
           </thead>
           <tbody>
             {metrics.map(m => (

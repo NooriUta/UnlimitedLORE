@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
 import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
 import LoreTimeline        from '../components/lore/LoreTimeline';
 import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
 import LoreAdrEditor       from '../components/lore/LoreAdrEditor';
-import LoreSprintTree, { STATUS_FILTERS, type DatePeriod, type SprintStats } from '../components/lore/LoreSprintTree';
+import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type DatePeriod, type SprintStats, type FacetOption } from '../components/lore/LoreSprintTree';
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
+import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreSprintEditor    from '../components/lore/LoreSprintEditor';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
@@ -25,29 +27,30 @@ import LoreQGDetail        from '../components/lore/LoreQGDetail';
 import LoreRunbookList     from '../components/lore/LoreRunbookList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
-import { statusMeta, resolveStatusMeta, statusLabel } from '../components/lore/lore-status';
+import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
-  | 'knowledge' | 'components' | 'qg'
+  | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
-const SECTIONS: { id: Section; icon: string; label: string }[] = [
-  { id: 'milestones', icon: 'crossed-axes',   label: 'Вехи'         },
-  { id: 'plan',       icon: 'compass',        label: 'План'         },
-  { id: 'sprints',    icon: 'sprint',         label: 'Спринты'      },
-  { id: 'adrs',       icon: 'scroll-quill',   label: 'ADR'          },
-  { id: 'decisions',  icon: 'vote',           label: 'Решения'      },
-  { id: 'releases',   icon: 'open-book',      label: 'Релизы'       },
-  { id: 'qg',         icon: 'checkered-flag', label: 'QG'           },
-  { id: 'knowledge',  icon: 'spell-book',     label: 'Знания'       },
-  { id: 'components', icon: 'cog',            label: 'Компоненты'   },
-  { id: 'evolution',  icon: 'hourglass',      label: 'История'      },
-  { id: 'timeline',   icon: 'tied-scroll',    label: 'Лента'        },
-  { id: 'analytics',  icon: 'pie-chart',      label: 'Аналитика'    },
-  { id: 'mcp',        icon: 'plug',           label: 'MCP API'      },
+const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string }[] = [
+  { id: 'milestones', icon: 'crossed-axes',   labelKey: 'lore.page.nav.milestones', fallback: 'Вехи'       },
+  { id: 'plan',       icon: 'compass',        labelKey: 'lore.page.nav.plan',       fallback: 'План'       },
+  { id: 'sprints',    icon: 'sprint',         labelKey: 'lore.page.nav.sprints',    fallback: 'Спринты'    },
+  { id: 'adrs',       icon: 'scroll-quill',   labelKey: 'lore.page.nav.adrs',       fallback: 'ADR'        },
+  { id: 'decisions',  icon: 'vote',           labelKey: 'lore.page.nav.decisions',  fallback: 'Решения'    },
+  { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
+  { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
+  { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
+  { id: 'components', icon: 'cog',            labelKey: 'lore.page.nav.components', fallback: 'Компоненты' },
+  { id: 'tech',       icon: 'gears',          labelKey: 'lore.page.nav.tech',       fallback: 'Технологии' },
+  { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
+  { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
+  { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
+  { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
 ];
 
 // Sections that use master-detail layout (list panel + detail panel)
@@ -127,6 +130,7 @@ const S = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LorePage() {
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
 
   const section   = (params.get('section') as Section) || 'plan';
@@ -155,6 +159,11 @@ export default function LorePage() {
   const [sprintNoRelease, setSprintNoRelease] = useState(() => params.get('snr') === '1');
   const [sprintDatePeriod, setSprintDatePeriod] = useState<DatePeriod>(null);
   const [sprintPriorityFilter, setSprintPriorityFilter] = useState<Set<string>>(new Set());
+  const [sprintProjSel, setSprintProjSel] = useState<Set<string>>(new Set());
+  const [sprintCompSel, setSprintCompSel] = useState<Set<string>>(new Set());
+  const [sprintProjFacets, setSprintProjFacets] = useState<FacetOption[]>([]);
+  const [sprintCompFacets, setSprintCompFacets] = useState<FacetOption[]>([]);
+  const [sprintCompCollapsed, setSprintCompCollapsed] = useState(true);
   const [sprintStats, setSprintStats] = useState<SprintStats>({ total: 0, done: 0, active: 0, p0Open: 0, noRelease: 0 });
   // ADR filters
   const [adrStatusSel, setAdrStatusSel] = useState<Set<string>>(() => {
@@ -270,10 +279,10 @@ export default function LorePage() {
           key={s.id}
           style={S.navItem(section === s.id)}
           onClick={() => go(s.id)}
-          title={s.label}
+          title={t(s.labelKey, s.fallback)}
         >
           {s.icon && <GameIcon slug={s.icon} size={15} style={{ color: 'inherit' }} />}
-          <span>{s.label}</span>
+          <span>{t(s.labelKey, s.fallback)}</span>
         </button>
       ))}
     </nav>
@@ -283,8 +292,8 @@ export default function LorePage() {
     <div style={S.root}>
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>📚</span>
-        <span>LORE отключён в этой среде.</span>
-        <span style={{ fontSize: 11 }}>Установить <code>lore.enabled=true</code> в lore-backend (:9100).</span>
+        <span>{t('lore.page.disabled.message', 'LORE отключён в этой среде.')}</span>
+        <span style={{ fontSize: 11 }}>{t('lore.page.disabled.hint', 'Установить lore.enabled=true в lore-backend (:9100).')}</span>
       </div>
     </div>
   );
@@ -293,9 +302,9 @@ export default function LorePage() {
     <div style={S.root}>
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>⚠️</span>
-        <span>LORE недоступен — lore-backend (:9100) не отвечает.</span>
+        <span>{t('lore.page.unreachable.message', 'LORE недоступен — lore-backend (:9100) не отвечает.')}</span>
         <button style={{ fontSize: 11, marginTop: 8, cursor: 'pointer' }} onClick={() => setLoreUnreachable(false)}>
-          Повторить
+          {t('lore.page.unreachable.retry', 'Повторить')}
         </button>
       </div>
     </div>
@@ -309,8 +318,8 @@ export default function LorePage() {
           <span style={S.searchIcon}>🔍</span>
           <input
             style={S.searchInput}
-            placeholder="поиск по базе знаний…"
-            aria-label="поиск по базе знаний"
+            placeholder={t('lore.page.search.knowledgePlaceholder', 'поиск по базе знаний…')}
+            aria-label={t('lore.page.search.knowledgeAriaLabel', 'поиск по базе знаний')}
             value={search}
             onChange={e => onSearchChange(e.target.value)}
           />
@@ -346,7 +355,7 @@ export default function LorePage() {
                 }}
               >
                 <GameIcon slug={meta.icon} size={11} style={{ color: meta.color }} />
-                {f.label}
+                {f.label /* status label sourced from STATUS_FILTERS in LoreSprintTree, not this file */}
                 <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
               </span>
             );
@@ -361,7 +370,7 @@ export default function LorePage() {
               if (sprintPresetWorking) { setSprintStatusSel(new Set()); }
               else { setSprintStatusSel(new Set(['in_progress', 'partial'])); setSprintNoRelease(false); }
             }}
-            title="В работе + Частично"
+            title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
               userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
@@ -369,7 +378,7 @@ export default function LorePage() {
               background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
             }}
-          >⚡ В работе</span>
+          >⚡ {t('lore.page.sprints.presetWorking', 'В работе')}</span>
 
           {/* Пресет: Нужно внимание */}
           <span
@@ -377,7 +386,7 @@ export default function LorePage() {
               if (sprintPresetAttention) { setSprintStatusSel(new Set()); setSprintNoRelease(false); }
               else { setSprintStatusSel(new Set(['in_progress'])); setSprintNoRelease(true); }
             }}
-            title="В работе без привязки к релизу"
+            title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
               userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
@@ -385,7 +394,7 @@ export default function LorePage() {
               background: sprintPresetAttention ? 'color-mix(in srgb, #E24B4A 16%, transparent)' : 'transparent',
               color: sprintPresetAttention ? '#E24B4A' : 'var(--t3)',
             }}
-          >⚠ Внимание</span>
+          >⚠ {t('lore.page.sprints.presetAttention', 'Внимание')}</span>
 
           {/* Распорка */}
           <span style={{ flex: 1 }} />
@@ -415,7 +424,7 @@ export default function LorePage() {
 
           {/* Даты */}
           {(['month', 'quarter', '90d'] as DatePeriod[]).map(p => {
-            const label = p === 'month' ? 'Этот месяц' : p === 'quarter' ? 'Квартал' : '90 дней';
+            const label = p === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : p === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней');
             const on    = sprintDatePeriod === p;
             return (
               <span key={p!}
@@ -443,18 +452,127 @@ export default function LorePage() {
               background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
             }}
-          >Без релиза</span>
+          >{t('lore.page.sprints.noRelease', 'Без релиза')}</span>
 
           {/* Сброс */}
-          {(sprintStatusSel.size > 0 || sprintNoRelease || sprintDatePeriod || sprintPriorityFilter.size > 0) && (
+          {(sprintStatusSel.size > 0 || sprintNoRelease || sprintDatePeriod || sprintPriorityFilter.size > 0 || sprintProjSel.size > 0 || sprintCompSel.size > 0) && (
             <>
               <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
               <span
-                onClick={() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); }}
+                onClick={() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); setSprintProjSel(new Set()); setSprintCompSel(new Set()); }}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title="Сбросить фильтры"
-              >✕ сброс</span>
+                title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── Sprint project filter bar — full-width, own row (moved out of the
+           narrow sidebar list per user feedback); faceted: counts reflect
+           whatever's already selected in the status/priority/date filter
+           above ─────────────────────────────────────────────────────────── */}
+      {section === 'sprints' && sprintProjFacets.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
+          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>
+            {t('lore.page.sprints.projectsLabel', 'Проекты')}
+          </span>
+          {sprintProjFacets.map(({ id, count }) => {
+            const on = sprintProjSel.has(id);
+            const color = projColor(id, sprintProjFacets.map(f => f.id));
+            const reachable = count > 0 || on;
+            return (
+              <span key={id}
+                onClick={() => setSprintProjSel(prev => {
+                  const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+                })}
+                title={`${id} (${count})`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? color : 'var(--b3)'}`,
+                  background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                  color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {projLabel(id)}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+              </span>
+            );
+          })}
+          {sprintProjSel.size > 0 && (
+            <span
+              onClick={() => setSprintProjSel(new Set())}
+              style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+              title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+            >✕ {t('lore.page.filters.reset', 'сброс')}</span>
+          )}
+        </div>
+      )}
+
+      {/* ── Sprint component filter bar — separate full-width row, collapsible
+           since the component list can get long; each chip's colour/icon is
+           unique per component (not one flat repeated icon) ──────────────── */}
+      {section === 'sprints' && sprintCompFacets.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 4, flexWrap: 'wrap',
+          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+        }}>
+          <span
+            onClick={() => setSprintCompCollapsed(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', userSelect: 'none',
+              fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2,
+            }}
+            title={sprintCompCollapsed ? t('lore.page.sprints.expandComponents', 'Развернуть') : t('lore.page.sprints.collapseComponents', 'Свернуть')}
+          >
+            <span style={{ display: 'inline-block', transform: sprintCompCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.12s' }}>▾</span>
+            {t('lore.page.sprints.componentsLabel', 'Компоненты')}
+            {sprintCompSel.size > 0 && <span style={{ color: 'var(--acc)', fontWeight: 600 }}>({sprintCompSel.size})</span>}
+          </span>
+          {!sprintCompCollapsed && sprintCompFacets.map(({ id, count, icon, area }) => {
+            const on = sprintCompSel.has(id);
+            // Real per-component icon + area colour when the components slice
+            // has loaded; fall back to a generated palette colour + generic
+            // icon so chips still render (and stay distinguishable) before
+            // that fetch resolves.
+            const color = area ? areaColor(area) : compColor(id, sprintCompFacets.map(f => f.id));
+            const reachable = count > 0 || on;
+            return (
+              <span key={id}
+                onClick={() => setSprintCompSel(prev => {
+                  const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+                })}
+                title={`${id} (${count})`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${on ? color : 'var(--b3)'}`,
+                  background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                  color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
+                }}
+              >
+                <GameIcon slug={icon ?? 'puzzle'} size={11} style={{ color }} />
+                {id}
+                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+              </span>
+            );
+          })}
+          {sprintCompCollapsed && sprintCompSel.size > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+              {[...sprintCompSel].join(', ')}
+            </span>
+          )}
+          {sprintCompSel.size > 0 && (
+            <span
+              onClick={() => setSprintCompSel(new Set())}
+              style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
+              title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+            >✕ {t('lore.page.filters.reset', 'сброс')}</span>
           )}
         </div>
       )}
@@ -473,7 +591,7 @@ export default function LorePage() {
                 onClick={() => setAdrStatusSel(prev => {
                   const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
                 })}
-                title={`${f.label}: ${cnt}`}
+                title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
@@ -483,7 +601,7 @@ export default function LorePage() {
                 }}
               >
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
-                {f.label}
+                {adrStatusLabel(t, f.key)}
                 <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
               </span>
             );
@@ -494,15 +612,15 @@ export default function LorePage() {
               <span
                 onClick={() => setAdrStatusSel(new Set())}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title="Сбросить фильтры"
-              >✕ сброс</span>
+                title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
+              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
             </>
           )}
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 10, color: 'var(--t3)' }}>
             {adrStatusSel.size === 0
-              ? `${Object.values(adrCounts).reduce((a, b) => a + b, 0)} ADR всего`
-              : `${ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0)} из ${Object.values(adrCounts).reduce((a, b) => a + b, 0)}`}
+              ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
+              : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
           </span>
         </div>
       )}
@@ -543,13 +661,13 @@ export default function LorePage() {
               <span
                 onClick={() => setCompAreaSel(new Set())}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title="Сбросить фильтр по area"
-              >✕ сброс</span>
+                title={t('lore.page.components.resetAreaFilterTitle', 'Сбросить фильтр по area')}
+              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
             </>
           )}
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 10, color: 'var(--t3)' }}>
-            {Object.values(compAreaCounts).reduce((a, b) => a + b, 0)} компонентов
+            {t('lore.page.components.totalCount', '{{count}} компонентов', { count: Object.values(compAreaCounts).reduce((a, b) => a + b, 0) })}
           </span>
         </div>
       )}
@@ -561,12 +679,12 @@ export default function LorePage() {
           borderBottom: '1px solid var(--bd)', flexShrink: 0, overflowX: 'auto',
         }}>
           {([
-            { label: 'всего',      value: sprintStats.total,     color: 'var(--t1)' },
-            { label: 'завершено',  value: sprintStats.done,      color: '#4dc9a0'   },
-            { label: 'активных',   value: sprintStats.active,    color: 'var(--acc)'},
-            { label: 'P0 открыто', value: sprintStats.p0Open,    color: '#E24B4A'   },
-            { label: 'без релиза', value: sprintStats.noRelease, color: 'var(--t3)' },
-          ] as const).map((s, i) => (
+            { label: t('lore.page.sprints.stats.total', 'всего'),      value: sprintStats.total,     color: 'var(--t1)' },
+            { label: t('lore.page.sprints.stats.done', 'завершено'),  value: sprintStats.done,      color: '#4dc9a0'   },
+            { label: t('lore.page.sprints.stats.active', 'активных'),   value: sprintStats.active,    color: 'var(--acc)'},
+            { label: t('lore.page.sprints.stats.p0Open', 'P0 открыто'), value: sprintStats.p0Open,    color: '#E24B4A'   },
+            { label: t('lore.page.sprints.stats.noRelease', 'без релиза'), value: sprintStats.noRelease, color: 'var(--t3)' },
+          ]).map((s, i) => (
             <div key={i} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               padding: '3px 14px', flexShrink: 0,
@@ -591,7 +709,7 @@ export default function LorePage() {
                 height: '100%', background: '#4dc9a0', borderRadius: 2,
               }} />
             </div>
-            <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>выполнено</span>
+            <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{t('lore.page.sprints.stats.percentDone', 'выполнено')}</span>
           </div>
           ); })()}
         </div>
@@ -609,7 +727,7 @@ export default function LorePage() {
                 🔍
                 <input
                   style={S.listPanelSearch}
-                  placeholder="ADR-..."
+                  placeholder={t('lore.page.adrs.searchPlaceholder', 'ADR-...')}
                   value={listSearch}
                   onChange={e => setListSearch(e.target.value)}
                 />
@@ -618,7 +736,7 @@ export default function LorePage() {
                     onClick={clearItem}
                     style={{ background: 'none', border: 'none', cursor: 'pointer',
                              color: 'var(--t3)', fontSize: 11, padding: '0 2px' }}
-                    title="Сбросить выбор"
+                    title={t('lore.page.adrs.clearSelectionTitle', 'Сбросить выбор')}
                   >✕</button>
                 )}
               </div>
@@ -651,8 +769,8 @@ export default function LorePage() {
                       flex: 1, background: 'transparent', border: 'none', outline: 'none',
                       color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
                     }}
-                    placeholder="спринт…"
-                    aria-label="поиск по имени спринта"
+                    placeholder={t('lore.page.sprints.searchPlaceholder', 'спринт…')}
+                    aria-label={t('lore.page.sprints.searchAriaLabel', 'поиск по имени спринта')}
                     value={sprintQ}
                     onChange={e => setSprintQ(e.target.value)}
                   />
@@ -662,7 +780,7 @@ export default function LorePage() {
                   )}
                   <button
                     onClick={() => selectItem('__new')}
-                    title="Новый спринт"
+                    title={t('lore.page.sprints.newSprintTitle', 'Новый спринт')}
                     style={{
                       flexShrink: 0, width: 20, height: 20, borderRadius: 4,
                       border: '1px solid var(--bd)', background: 'transparent',
@@ -676,6 +794,8 @@ export default function LorePage() {
                   q={sprintQ}
                   statusFilter={sprintStatusSel}
                   priorityFilter={sprintPriorityFilter}
+                  projectFilter={sprintProjSel}
+                  componentFilter={sprintCompSel}
                   noRelease={sprintNoRelease}
                   datePeriod={sprintDatePeriod}
                   selectedId={passport === '__new' ? undefined : passport}
@@ -683,6 +803,8 @@ export default function LorePage() {
                   onSelect={selectItem}
                   onCounts={setSprintCounts}
                   onStats={setSprintStats}
+                  onProjectFacets={setSprintProjFacets}
+                  onComponentFacets={setSprintCompFacets}
                 />
               </>
             )}
@@ -699,8 +821,8 @@ export default function LorePage() {
                       flex: 1, background: 'transparent', border: 'none', outline: 'none',
                       color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
                     }}
-                    placeholder="компонент…"
-                    aria-label="поиск по компонентам"
+                    placeholder={t('lore.page.components.searchPlaceholder', 'компонент…')}
+                    aria-label={t('lore.page.components.searchAriaLabel', 'поиск по компонентам')}
                     value={compQ}
                     onChange={e => setCompQ(e.target.value)}
                   />
@@ -741,7 +863,7 @@ export default function LorePage() {
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
         <div style={S.content}>
-          <LoreErrorBoundary label={`Ошибка секции «${section}»`}>
+          <LoreErrorBoundary label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
 
@@ -764,8 +886,8 @@ export default function LorePage() {
           {section === 'adrs' && !passport && (
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="scroll-quill" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
-              <span>Выберите ADR из списка слева</span>
-              <span style={{ fontSize: 10, color: 'var(--t3)' }}>или нажмите «+ новый ADR» чтобы создать</span>
+              <span>{t('lore.page.adrs.emptySelectHint', 'Выберите ADR из списка слева')}</span>
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.page.adrs.emptyCreateHint', 'или нажмите «+ новый ADR» чтобы создать')}</span>
             </div>
           )}
 
@@ -787,10 +909,10 @@ export default function LorePage() {
             />
           )}
           {section === 'sprints' && passport && passport !== '__new' && (
-            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} />
+            <LoreSprintDetail sprintId={passport} onError={handleFetchError} onNavigateToComponent={navigateToComponent} onNavigateToSprint={navigateToSprint} onNavigateToAdr={navigateToAdr} />
           )}
           {section === 'sprints' && !passport && (
-            <div style={S.placeholder}>Выберите спринт из списка слева</div>
+            <div style={S.placeholder}>{t('lore.page.sprints.emptySelectHint', 'Выберите спринт из списка слева')}</div>
           )}
 
           {/* Components — master-detail: component list → component passport */}
@@ -810,7 +932,7 @@ export default function LorePage() {
             />
           )}
           {section === 'components' && !spec && !passport && (
-            <div style={S.placeholder}>Выберите компонент из списка слева</div>
+            <div style={S.placeholder}>{t('lore.page.components.emptySelectHint', 'Выберите компонент из списка слева')}</div>
           )}
 
           {/* QG — master-detail: list left, detail right */}
@@ -825,7 +947,7 @@ export default function LorePage() {
           {section === 'qg' && !passport && (
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="checkered-flag" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
-              <span>Выберите Quality Gate из списка слева</span>
+              <span>{t('lore.page.qg.emptySelectHint', 'Выберите Quality Gate из списка слева')}</span>
             </div>
           )}
 
@@ -842,12 +964,15 @@ export default function LorePage() {
           {section === 'knowledge' && !(artKind && artId) && (
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="spell-book" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
-              <span>Выберите элемент из списка слева</span>
+              <span>{t('lore.page.knowledge.emptySelectHint', 'Выберите элемент из списка слева')}</span>
             </div>
           )}
 
           {/* Evolution */}
           {section === 'evolution' && <LoreEvolutionView onError={handleFetchError} />}
+
+          {/* Tech registry (SPRINT_TECH_REGISTRY) — version/date/license per component */}
+          {section === 'tech' && <LoreTechRegistry onError={handleFetchError} />}
 
           {/* Timeline */}
           {section === 'timeline' && (
@@ -881,9 +1006,13 @@ export default function LorePage() {
 export function StatusChip({ status }: { status: string }) {
   // status may arrive raw ("✅ DONE", "🟡 PARTIAL") or as a clean key ("accepted").
   // resolveStatusMeta normalizes both so we never fall back to the generic
-  // checkbox-tree icon; statusLabel strips the leading emoji so it isn't shown
-  // twice (chip icon + inline emoji).
+  // checkbox-tree icon. Displayed text goes through the shared "status.*" i18n
+  // namespace keyed by the SAME normalized taskTick key — statusLabel's
+  // marker-stripped raw text is only the fallback for an unmapped status.
+  const { t } = useTranslation();
   const { icon, color } = resolveStatusMeta(status);
+  const normalized = taskTick(status).status;
+  const label = t(`status.${normalized}`, statusLabel(status));
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -893,7 +1022,7 @@ export function StatusChip({ status }: { status: string }) {
       whiteSpace: 'nowrap',
     }}>
       <GameIcon slug={icon} size={11} style={{ color: 'inherit' }} />
-      {statusLabel(status)}
+      {label}
     </span>
   );
 }

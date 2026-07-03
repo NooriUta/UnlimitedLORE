@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSpec, type LoreSpecPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export default function LoreSpecView({ specId, onError, onBack, onNavigateComponent }: Props) {
+  const { t } = useTranslation();
   const [data, setData]       = useState<LoreSpecPassport | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,12 +52,12 @@ export default function LoreSpecView({ specId, onError, onBack, onNavigateCompon
     return () => ctrl.abort();
   }, [specId, onError]);
 
-  if (loading) return <div style={S.empty}>Загрузка {specId}…</div>;
-  if (!data)   return <div style={S.empty}>Спека не найдена: {specId}</div>;
+  if (loading) return <div style={S.empty}>{t('lore.specView.loading', 'Загрузка {{specId}}…', { specId })}</div>;
+  if (!data)   return <div style={S.empty}>{t('lore.specView.notFound', 'Спека не найдена: {{specId}}', { specId })}</div>;
 
   return (
     <div style={S.root}>
-      <button style={S.back} onClick={onBack}>← К списку</button>
+      <button style={S.back} onClick={onBack}>{t('lore.specView.backButton', '← К списку')}</button>
 
       <div style={S.header}>
         <span style={S.title}>{specTitle(data)}</span>
@@ -75,7 +77,7 @@ export default function LoreSpecView({ specId, onError, onBack, onNavigateCompon
 
       {data.content_md
         ? <MartProse text={data.content_md} />
-        : <div style={S.empty}>Контент пуст.</div>}
+        : <div style={S.empty}>{t('lore.specView.emptyContent', 'Контент пуст.')}</div>}
 
       {data.file_path && <div style={S.path}>{data.file_path}</div>}
     </div>

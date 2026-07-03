@@ -65,12 +65,44 @@ export async function muninnStatus(): Promise<unknown> {
   return res.json();
 }
 
+/** GET an arbitrary LORE read endpoint (not a whitelisted named slice) with query params. */
+export async function loreGet(path: string, params?: Record<string, string>): Promise<unknown> {
+  const qs =
+    params && Object.keys(params).length > 0
+      ? '?' + new URLSearchParams(params).toString()
+      : '';
+  const res = await fetch(`${BASE}${path}${qs}`);
+  if (!res.ok) throw new Error(`GET ${path} → ${res.status} ${await detail(res)}`);
+  return res.json();
+}
+
 /** POST a LORE write endpoint with the admin role header. */
 export async function lorePost(path: string, body: unknown): Promise<unknown> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': ROLE },
     body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
+  return res.json();
+}
+
+/** POST a base64-encoded file to a multipart LORE upload endpoint (e.g. BRAGI
+ * asset uploads) — agent-driven callers have no filesystem/browser file
+ * picker, so they send base64 bytes + filename instead. */
+export async function loreUpload(
+  path: string,
+  filename: string,
+  base64Data: string,
+  contentType?: string,
+): Promise<unknown> {
+  const bytes = Buffer.from(base64Data, 'base64');
+  const form = new FormData();
+  form.append('file', new Blob([bytes], { type: contentType ?? 'application/octet-stream' }), filename);
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'X-Seer-Role': ROLE },
+    body: form,
   });
   if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
   return res.json();

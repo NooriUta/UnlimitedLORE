@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   createLoreAdr,
   fetchLoreSlice,
   type LoreAdrRow,
   type LoreComponent,
 } from '../../api/lore';
+import { adrStatusLabel } from './LoreAdrList';
 
 type AdrStatus = 'PROPOSED' | 'ACCEPTED' | 'DEPRECATED' | 'SUPERSEDED';
 const ADR_STATUSES: AdrStatus[] = ['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED'];
@@ -41,6 +43,7 @@ function todayStr() {
 }
 
 export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: LoreAdrEditorProps) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<FormState>({
     adr_id:          initial?.adr_id          ?? '',
     name:            initial?.name            ?? '',
@@ -75,8 +78,8 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
   const handleSave = async () => {
     const id = form.adr_id.trim();
     const nm = form.name.trim();
-    if (!id) { setErrMsg('ADR ID обязателен'); return; }
-    if (!nm) { setErrMsg('Название обязательно'); return; }
+    if (!id) { setErrMsg(t('lore.adrEditor.errIdRequired', 'ADR ID обязателен')); return; }
+    if (!nm) { setErrMsg(t('lore.adrEditor.errNameRequired', 'Название обязательно')); return; }
     setSaving(true);
     setErrMsg(null);
     try {
@@ -120,11 +123,11 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
     <div style={S.root}>
       {/* Header */}
       <div style={S.head}>
-        <span style={S.title}>{lockId ? `Редактирование ${form.adr_id}` : 'Новый ADR'}</span>
+        <span style={S.title}>{lockId ? t('lore.adrEditor.editingTitle', 'Редактирование {{id}}', { id: form.adr_id }) : t('lore.adrEditor.newTitle', 'Новый ADR')}</span>
         <div style={S.headBtns}>
-          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>Отмена</button>
+          <button style={S.btnGhost} onClick={onCancel} disabled={saving}>{t('lore.adrEditor.cancel', 'Отмена')}</button>
           <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? t('lore.adrEditor.saving', 'Сохранение…') : t('lore.adrEditor.save', 'Сохранить')}
           </button>
         </div>
       </div>
@@ -133,7 +136,7 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
 
       {/* Row 1: ID · Name · Status · Date */}
       <div style={S.row4}>
-        {fieldRow('ADR ID', (
+        {fieldRow(t('lore.adrEditor.fieldAdrId', 'ADR ID'), (
           <input
             style={{ ...S.input, ...(lockId ? S.inputLock : {}) }}
             value={form.adr_id}
@@ -142,71 +145,71 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
             onChange={e => set('adr_id')(e.target.value)}
           />
         ))}
-        {fieldRow('Название', (
+        {fieldRow(t('lore.adrEditor.fieldName', 'Название'), (
           <input
             style={S.input}
             value={form.name}
-            placeholder="Краткое название решения"
+            placeholder={t('lore.adrEditor.namePlaceholder', 'Краткое название решения')}
             onChange={e => set('name')(e.target.value)}
           />
         ), 3)}
-        {fieldRow('Статус', (
+        {fieldRow(t('lore.adrEditor.fieldStatus', 'Статус'), (
           <select
             style={{ ...S.input, color: STATUS_COLOR[form.status] }}
             value={form.status}
             onChange={e => set('status')(e.target.value as AdrStatus)}
           >
             {ADR_STATUSES.map(s => (
-              <option key={s} value={s} style={{ color: STATUS_COLOR[s] }}>{s}</option>
+              <option key={s} value={s} style={{ color: STATUS_COLOR[s] }}>{adrStatusLabel(t, s)}</option>
             ))}
           </select>
         ))}
-        {fieldRow('Дата', (
+        {fieldRow(t('lore.adrEditor.fieldDate', 'Дата'), (
           <input style={S.input} type="date" value={form.date_created}
             onChange={e => set('date_created')(e.target.value)} />
         ))}
       </div>
 
       {/* Markdown sections */}
-      <Sec label="Context — почему это решение нужно">{ta('context_md', 'Опишите проблему, ограничения, исходные данные…')}</Sec>
-      <Sec label="Decision — что именно решили">{ta('decision_md', 'Опишите принятое решение…')}</Sec>
-      <Sec label="Consequences — следствия и trade-offs">{ta('consequences_md', 'Положительные и отрицательные последствия…', 4)}</Sec>
+      <Sec label={t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно')}>{ta('context_md', t('lore.adrEditor.contextPlaceholder', 'Опишите проблему, ограничения, исходные данные…'))}</Sec>
+      <Sec label={t('lore.adrEditor.sectionDecision', 'Decision — что именно решили')}>{ta('decision_md', t('lore.adrEditor.decisionPlaceholder', 'Опишите принятое решение…'))}</Sec>
+      <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), 4)}</Sec>
 
       {/* Relations */}
-      <Sec label="Зависит от других ADR (DEPENDS_ON)">
+      <Sec label={t('lore.adrEditor.sectionDependsOn', 'Зависит от других ADR (DEPENDS_ON)')}>
         <MultiChip
           values={form.depends_on_ids}
           onChange={set('depends_on_ids')}
           suggestions={adrList.filter(id => id !== form.adr_id)}
-          placeholder="ADR-XXX-NNN…"
+          placeholder={t('lore.multiChip.adrIdPlaceholder', 'ADR-XXX-NNN…')}
           freeForm={false}
         />
       </Sec>
-      <Sec label="Заменяет ADR (SUPERSEDES)">
+      <Sec label={t('lore.adrEditor.sectionSupersedes', 'Заменяет ADR (SUPERSEDES)')}>
         <MultiChip
           values={form.supersedes_ids}
           onChange={set('supersedes_ids')}
           suggestions={adrList.filter(id => id !== form.adr_id)}
-          placeholder="ADR-XXX-NNN…"
+          placeholder={t('lore.multiChip.adrIdPlaceholder', 'ADR-XXX-NNN…')}
           freeForm={false}
         />
       </Sec>
-      <Sec label="Модули / компоненты (BELONGS_TO)">
+      <Sec label={t('lore.adrEditor.sectionComponents', 'Модули / компоненты (BELONGS_TO)')}>
         <MultiChip
           values={form.component_ids}
           onChange={set('component_ids')}
           suggestions={compList.map(c => c.id)}
           suggestionLabels={Object.fromEntries(compList.map(c => [c.id, c.label]))}
-          placeholder="HND, FE, …"
+          placeholder={t('lore.multiChip.componentPlaceholder', 'HND, FE, …')}
           freeForm={false}
         />
       </Sec>
-      <Sec label="Теги">
+      <Sec label={t('lore.adrEditor.sectionTags', 'Теги')}>
         <MultiChip
           values={form.tags}
           onChange={set('tags')}
           suggestions={[]}
-          placeholder="тег, Enter…"
+          placeholder={t('lore.multiChip.tagPlaceholder', 'тег, Enter…')}
           freeForm
         />
       </Sec>

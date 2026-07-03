@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreComponent, type LoreSpecRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { specTitle } from './LoreSpecView';
@@ -61,6 +62,7 @@ interface Props {
 }
 
 export default function LoreComponentTree({ onError, selectedId, selectedSpec, onSelect, onSelectSpec }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]   = useState<LoreComponent[]>([]);
   const [specs, setSpecs] = useState<LoreSpecRow[]>([]);
   const [open, setOpen]   = useState<Set<string>>(new Set());
@@ -83,8 +85,8 @@ export default function LoreComponentTree({ onError, selectedId, selectedSpec, o
     if (selectedId) setOpen(p => (p.has(selectedId) ? p : new Set(p).add(selectedId)));
   }, [selectedId]);
 
-  if (loading) return <div style={S.empty}>Загрузка компонентов…</div>;
-  if (!rows.length) return <div style={S.empty}>Компоненты не найдены.</div>;
+  if (loading) return <div style={S.empty}>{t('lore.componentTree.loading', 'Загрузка компонентов…')}</div>;
+  if (!rows.length) return <div style={S.empty}>{t('lore.componentTree.empty', 'Компоненты не найдены.')}</div>;
 
   const byParent: Record<string, LoreComponent[]> = {};
   rows.forEach(c => {

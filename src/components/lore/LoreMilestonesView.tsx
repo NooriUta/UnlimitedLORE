@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchLoreSlice, linkSprintMilestone, upsertMilestone, createLoreTask,
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
@@ -60,7 +61,7 @@ function msIds(m: LoreMilestone): string[] {
 }
 function pct(d: number, t: number) { return t > 0 ? Math.round((100 * d) / t) : 0; }
 
-// Captioned field wrapper.
+// Captioned field wrapper. `caption` is passed pre-translated by callers.
 function Field({ caption, w, children }: { caption: string; w: number | string; children: ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 2, width: w, flexShrink: 0 }}>
@@ -74,6 +75,7 @@ interface Props { onError: (e: unknown) => void; onNavigateToSprint?: (id: strin
 interface EditState { label: string; date_display: string; week: string; priority: string; goal_md: string }
 
 export default function LoreMilestonesView({ onError, onNavigateToSprint }: Props) {
+  const { t } = useTranslation();
   const [milestones, setMilestones] = useState<LoreMilestone[]>([]);
   const [sprints, setSprints]       = useState<LoreSprintRow[]>([]);
   const [doneDates, setDoneDates]   = useState<LoreSprintDoneDate[]>([]);
@@ -171,32 +173,32 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
     <div style={S.root}>
       <div style={S.header}>
         <GameIcon slug="crossed-axes" size={18} style={{ color: 'var(--acc)' }} />
-        <span style={S.h1}>Вехи проекта</span>
-        <span style={S.dim}>· {milestones.length} вех · avg velocity {avgVelocity.toFixed(1)} Sp/нед</span>
-        <button style={{ ...S.btnPrimary, marginLeft: 'auto' }} onClick={() => setAddOpen(o => !o)}>{addOpen ? '× Отмена' : '+ Веха'}</button>
+        <span style={S.h1}>{t('lore.milestonesView.title', 'Вехи проекта')}</span>
+        <span style={S.dim}>· {t('lore.milestonesView.countSummary', '{{count}} вех · avg velocity {{velocity}} Sp/нед', { count: milestones.length, velocity: avgVelocity.toFixed(1) })}</span>
+        <button style={{ ...S.btnPrimary, marginLeft: 'auto' }} onClick={() => setAddOpen(o => !o)}>{addOpen ? t('lore.milestonesView.cancel', '× Отмена') : t('lore.milestonesView.addMilestone', '+ Веха')}</button>
       </div>
       {err && <div style={S.err}>{err}</div>}
 
       {addOpen && (
         <div style={S.editBox}>
           <div style={S.row}>
-            <Field caption="ID вехи" w={110}><input style={{ ...S.in, width: '100%' }} placeholder="M8" value={draft.milestone_id} onChange={e => setDraft({ ...draft, milestone_id: e.target.value })} /></Field>
-            <Field caption="Название" w={180}><input style={{ ...S.in, width: '100%' }} value={draft.label} onChange={e => setDraft({ ...draft, label: e.target.value })} /></Field>
-            <Field caption="Неделя" w={56}><input style={{ ...S.in, width: '100%' }} value={draft.week} onChange={e => setDraft({ ...draft, week: e.target.value })} /></Field>
-            <Field caption="Дата" w={150}>
+            <Field caption={t('lore.milestonesView.field.milestoneId', 'ID вехи')} w={110}><input style={{ ...S.in, width: '100%' }} placeholder="M8" value={draft.milestone_id} onChange={e => setDraft({ ...draft, milestone_id: e.target.value })} /></Field>
+            <Field caption={t('lore.milestonesView.field.name', 'Название')} w={180}><input style={{ ...S.in, width: '100%' }} value={draft.label} onChange={e => setDraft({ ...draft, label: e.target.value })} /></Field>
+            <Field caption={t('lore.milestonesView.field.week', 'Неделя')} w={56}><input style={{ ...S.in, width: '100%' }} value={draft.week} onChange={e => setDraft({ ...draft, week: e.target.value })} /></Field>
+            <Field caption={t('lore.milestonesView.field.date', 'Дата')} w={150}>
               <div style={{ display: 'flex', gap: 3 }}>
-                <input style={{ ...S.in, flex: 1, minWidth: 0 }} placeholder="6 июл" value={draft.date_display} onChange={e => setDraft({ ...draft, date_display: e.target.value })} />
-                <input type="date" title="выбрать из календаря" style={{ ...S.in, width: 26, padding: 2 }} onChange={e => e.target.value && setDraft({ ...draft, date_display: fmtRuDate(e.target.value) })} />
+                <input style={{ ...S.in, flex: 1, minWidth: 0 }} placeholder={t('lore.milestonesView.field.datePlaceholder', '6 июл')} value={draft.date_display} onChange={e => setDraft({ ...draft, date_display: e.target.value })} />
+                <input type="date" title={t('lore.milestonesView.field.pickFromCalendar', 'выбрать из календаря')} style={{ ...S.in, width: 26, padding: 2 }} onChange={e => e.target.value && setDraft({ ...draft, date_display: fmtRuDate(e.target.value) })} />
               </div>
             </Field>
-            <Field caption="Приоритет" w={80}><select style={{ ...S.in, width: '100%' }} value={draft.priority} onChange={e => setDraft({ ...draft, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p} value={p}>{p || '—'}</option>)}</select></Field>
+            <Field caption={t('lore.milestonesView.field.priority', 'Приоритет')} w={80}><select style={{ ...S.in, width: '100%' }} value={draft.priority} onChange={e => setDraft({ ...draft, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p} value={p}>{p || '—'}</option>)}</select></Field>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button style={S.btnPrimary} disabled={!draft.milestone_id.trim() || busy === 'create'}
               onClick={() => run('create', async () => {
                 await upsertMilestone({ milestone_id: draft.milestone_id.trim(), label: draft.label || draft.milestone_id, week: draft.week ? parseInt(draft.week) : null, date_display: draft.date_display || null, priority: draft.priority || null });
                 setAddOpen(false); setDraft({ milestone_id: '', label: '', date_display: '', week: '', priority: '', goal_md: '' });
-              })}>{busy === 'create' ? '…' : 'Создать веху'}</button>
+              })}>{busy === 'create' ? '…' : t('lore.milestonesView.createMilestone', 'Создать веху')}</button>
           </div>
         </div>
       )}
@@ -215,7 +217,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
             const deficit     = daysNeeded - Math.max(0, dleft);
             const riskLevel   = deficit > 7 ? 'high' : deficit > 0 ? 'mid' : 'ok';
             const riskCol     = riskLevel === 'high' ? 'var(--dng)' : riskLevel === 'mid' ? 'var(--wrn)' : 'var(--suc)';
-            const riskLabel   = riskLevel === 'ok' ? '✓ в срок' : `⚠ −${deficit} дн`;
+            const riskLabel   = riskLevel === 'ok' ? t('lore.milestonesView.risk.onTime', '✓ в срок') : t('lore.milestonesView.risk.deficitDays', '⚠ −{{days}} дн', { days: deficit });
             return { weeksNeeded, daysNeeded, deficit, riskLevel, riskCol, riskLabel };
           })();
           return (
@@ -226,7 +228,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                 <span style={{ fontSize: 12, color: col }}>{status === 'done' ? '✓' : status === 'current' ? '▶' : '○'}</span>
                 <span style={S.mLabel}>{m.label}</span>
                 {m.priority && <span style={{ ...S.prio, color: m.priority === 'P0' ? 'var(--dng)' : m.priority === 'P1' ? 'var(--wrn)' : 'var(--inf)' }}>{m.priority}</span>}
-                {dleft != null && <span style={{ ...S.dl, color: dleft < 0 ? 'var(--dng)' : dleft <= 7 ? 'var(--wrn)' : 'var(--t3)' }}>{dleft >= 0 ? `${dleft}д` : `просроч.`}</span>}
+                {dleft != null && <span style={{ ...S.dl, color: dleft < 0 ? 'var(--dng)' : dleft <= 7 ? 'var(--wrn)' : 'var(--t3)' }}>{dleft >= 0 ? t('lore.milestonesView.daysLeft', '{{days}}д', { days: dleft }) : t('lore.milestonesView.overdue', 'просроч.')}</span>}
                 {riskBlock && (
                   <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 600, color: riskBlock.riskCol,
                     background: `color-mix(in srgb, ${riskBlock.riskCol} 12%, transparent)`,
@@ -268,11 +270,11 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               )}
               {riskBlock && (
                 <div style={{ marginTop: 4, fontSize: 9, color: 'var(--t3)', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-                  <span>осталось <b style={{ color: 'var(--t2)' }}>{open} Sp</b></span>
-                  <span>нужно <b style={{ color: riskBlock.riskCol }}>{riskBlock.daysNeeded} дн</b> @ {avgVelocity.toFixed(1)} Sp/нед</span>
+                  <span>{t('lore.milestonesView.risk.remaining', 'осталось')} <b style={{ color: 'var(--t2)' }}>{t('lore.milestonesView.risk.sp', '{{count}} Sp', { count: open })}</b></span>
+                  <span>{t('lore.milestonesView.risk.needed', 'нужно')} <b style={{ color: riskBlock.riskCol }}>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: riskBlock.daysNeeded })}</b> @ {t('lore.milestonesView.risk.spPerWeek', '{{velocity}} Sp/нед', { velocity: avgVelocity.toFixed(1) })}</span>
                   {riskBlock.deficit > 0
-                    ? <span style={{ color: riskBlock.riskCol }}>дефицит <b>{riskBlock.deficit} дн</b></span>
-                    : <span style={{ color: 'var(--suc)' }}>запас <b>{-riskBlock.deficit} дн</b></span>}
+                    ? <span style={{ color: riskBlock.riskCol }}>{t('lore.milestonesView.risk.deficit', 'дефицит')} <b>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: riskBlock.deficit })}</b></span>
+                    : <span style={{ color: 'var(--suc)' }}>{t('lore.milestonesView.risk.buffer', 'запас')} <b>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: -riskBlock.deficit })}</b></span>}
                 </div>
               )}
               {projects.length > 0 && <div style={S.projWrap}>{projects.map(pr => <span key={pr} style={S.projTag}>{pr}</span>)}</div>}
@@ -292,32 +294,32 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               {selM.priority && <span style={{ ...S.prio, color: selM.priority === 'P0' ? 'var(--dng)' : selM.priority === 'P1' ? 'var(--wrn)' : 'var(--inf)' }}>{selM.priority}</span>}
               <span style={S.dim}>{selM.date_display}{selM.week != null ? ` · w${selM.week}` : ''}</span>
               <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
-                <button style={S.btnPrimary} onClick={() => setEditMode(true)}>✎ Редактировать</button>
-                <button style={S.btn} onClick={() => setSelId(null)}>× закрыть</button>
+                <button style={S.btnPrimary} onClick={() => setEditMode(true)}>{t('lore.milestonesView.edit', '✎ Редактировать')}</button>
+                <button style={S.btn} onClick={() => setSelId(null)}>{t('lore.milestonesView.close', '× закрыть')}</button>
               </div>
             </div>
           ) : (
             <>
               <div style={S.detailHead}>
                 <span style={S.detMid}>{selM.milestone_id}</span>
-                <Field caption="Название" w={200}><input style={{ ...S.in, width: '100%' }} value={edit.label} onChange={e => setEdit({ ...edit, label: e.target.value })} /></Field>
-                <Field caption="Неделя" w={56}><input style={{ ...S.in, width: '100%' }} value={edit.week} onChange={e => setEdit({ ...edit, week: e.target.value })} /></Field>
-                <Field caption="Дата" w={150}>
+                <Field caption={t('lore.milestonesView.field.name', 'Название')} w={200}><input style={{ ...S.in, width: '100%' }} value={edit.label} onChange={e => setEdit({ ...edit, label: e.target.value })} /></Field>
+                <Field caption={t('lore.milestonesView.field.week', 'Неделя')} w={56}><input style={{ ...S.in, width: '100%' }} value={edit.week} onChange={e => setEdit({ ...edit, week: e.target.value })} /></Field>
+                <Field caption={t('lore.milestonesView.field.date', 'Дата')} w={150}>
                   <div style={{ display: 'flex', gap: 3 }}>
-                    <input style={{ ...S.in, flex: 1, minWidth: 0 }} value={edit.date_display} placeholder="напр. 6 июл" onChange={e => setEdit({ ...edit, date_display: e.target.value })} />
-                    <input type="date" title="выбрать из календаря" style={{ ...S.in, width: 26, padding: 2 }} onChange={e => e.target.value && setEdit({ ...edit, date_display: fmtRuDate(e.target.value) })} />
+                    <input style={{ ...S.in, flex: 1, minWidth: 0 }} value={edit.date_display} placeholder={t('lore.milestonesView.field.dateExamplePlaceholder', 'напр. 6 июл')} onChange={e => setEdit({ ...edit, date_display: e.target.value })} />
+                    <input type="date" title={t('lore.milestonesView.field.pickFromCalendar', 'выбрать из календаря')} style={{ ...S.in, width: 26, padding: 2 }} onChange={e => e.target.value && setEdit({ ...edit, date_display: fmtRuDate(e.target.value) })} />
                   </div>
                 </Field>
-                <Field caption="Приоритет" w={80}><select style={{ ...S.in, width: '100%' }} value={edit.priority} onChange={e => setEdit({ ...edit, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p} value={p}>{p || '—'}</option>)}</select></Field>
+                <Field caption={t('lore.milestonesView.field.priority', 'Приоритет')} w={80}><select style={{ ...S.in, width: '100%' }} value={edit.priority} onChange={e => setEdit({ ...edit, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p} value={p}>{p || '—'}</option>)}</select></Field>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', marginLeft: 'auto' }}>
                   <button style={S.btnPrimary} disabled={busy === 'edit'}
                     onClick={() => run('edit', async () => { await upsertMilestone({ milestone_id: selM.milestone_id, label: edit.label, week: edit.week ? parseInt(edit.week) : null, date_display: edit.date_display || null, priority: edit.priority || null, goal_md: edit.goal_md || null }); setEditMode(false); })}>
-                    {busy === 'edit' ? '…' : 'Сохранить'}
+                    {busy === 'edit' ? '…' : t('lore.milestonesView.save', 'Сохранить')}
                   </button>
-                  <button style={S.btn} onClick={() => setEditMode(false)}>отмена</button>
+                  <button style={S.btn} onClick={() => setEditMode(false)}>{t('lore.milestonesView.cancelLower', 'отмена')}</button>
                 </div>
               </div>
-              <Field caption="Описание / цель вехи" w={'100%'}>
+              <Field caption={t('lore.milestonesView.field.goalDescription', 'Описание / цель вехи')} w={'100%'}>
                 <textarea style={{ ...S.ta, width: '100%' }} value={edit.goal_md} onChange={e => setEdit({ ...edit, goal_md: e.target.value })} />
               </Field>
             </>
@@ -326,9 +328,9 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
           <div style={S.twoCol}>
             {/* Sprints */}
             <div style={S.col}>
-              <div style={S.colTitle}>Спринты вехи · {selIds.length}</div>
+              <div style={S.colTitle}>{t('lore.milestonesView.milestoneSprints', 'Спринты вехи · {{count}}', { count: selIds.length })}</div>
               <div style={S.sprList}>
-                {selIds.length === 0 && <div style={S.muted}>нет — добавьте справа</div>}
+                {selIds.length === 0 && <div style={S.muted}>{t('lore.milestonesView.noneAddOnRight', 'нет — добавьте справа')}</div>}
                 {selIds.map(sid => {
                   const s = byId.get(sid); const k = classify(s?.status_raw ?? null); const proj = projShort(s?.git_projects?.[0]);
                   return (
@@ -344,7 +346,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               </div>
               <select style={{ ...S.in, marginTop: 6 }} value={pick}
                 onChange={e => { const sid = e.target.value; if (sid) run('link', async () => { await linkSprintMilestone(sid, selM.milestone_id, 'add'); setPick(''); }); }}>
-                <option value="">+ привязать спринт…</option>
+                <option value="">{t('lore.milestonesView.linkSprintPlaceholder', '+ привязать спринт…')}</option>
                 {sprints.filter(s => !selIds.includes(s.sprint_id)).map(s =>
                   <option key={s.sprint_id} value={s.sprint_id}>{s.sprint_id}{s.git_projects?.[0] ? ` · ${projShort(s.git_projects[0])}` : ''} · {classify(s.status_raw)}</option>)}
               </select>
@@ -352,9 +354,9 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
             {/* Planned tasks */}
             <div style={S.col}>
-              <div style={S.colTitle}>Задачи вехи · {tasks.length}</div>
+              <div style={S.colTitle}>{t('lore.milestonesView.milestoneTasks', 'Задачи вехи · {{count}}', { count: tasks.length })}</div>
               <div style={S.sprList}>
-                {tasks.length === 0 && <div style={S.muted}>нет задач</div>}
+                {tasks.length === 0 && <div style={S.muted}>{t('lore.milestonesView.noTasks', 'нет задач')}</div>}
                 {tasks.map(t => {
                   const k = classify(t.status_raw ?? null);
                   return (
@@ -369,16 +371,16 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               {selIds.length > 0 && (
                 <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
                   <select style={{ ...S.in, width: 130 }} value={newTask.sprint_id} onChange={e => setNewTask({ ...newTask, sprint_id: e.target.value })}>
-                    <option value="">в спринт…</option>
+                    <option value="">{t('lore.milestonesView.intoSprintPlaceholder', 'в спринт…')}</option>
                     {selIds.map(sid => <option key={sid} value={sid}>{sid}</option>)}
                   </select>
-                  <input style={{ ...S.in, flex: 1 }} placeholder="новая задача" value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} />
+                  <input style={{ ...S.in, flex: 1 }} placeholder={t('lore.milestonesView.newTaskPlaceholder', 'новая задача')} value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} />
                   <button style={S.btn} disabled={!newTask.sprint_id || !newTask.title.trim() || busy === 'task'}
                     onClick={() => run('task', async () => {
                       const tid = (newTask.title.trim().slice(0, 18).replace(/[^\w]+/g, '_').toUpperCase() || 'TASK') + '_' + Math.random().toString(36).slice(2, 5);
                       await createLoreTask(newTask.sprint_id, tid, newTask.title.trim());
                       setNewTask({ sprint_id: '', title: '' });
-                    })}>+ задача</button>
+                    })}>{t('lore.milestonesView.addTask', '+ задача')}</button>
                 </div>
               )}
             </div>
@@ -390,10 +392,10 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
       <section style={{ ...S.detail, borderColor: orphans.length ? 'color-mix(in srgb,var(--wrn) 40%,var(--bd))' : 'var(--bd)' }}>
         <div style={{ ...S.colTitle, color: orphans.length ? 'var(--wrn)' : 'var(--t3)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <GameIcon slug="hourglass" size={12} style={{ color: orphans.length ? 'var(--wrn)' : 'var(--t3)' }} />
-          Спринты без вех · {orphans.length}
+          {t('lore.milestonesView.sprintsWithoutMilestones', 'Спринты без вех · {{count}}', { count: orphans.length })}
         </div>
         {orphans.length === 0
-          ? <div style={{ fontSize: 11, color: 'var(--suc)' }}>Все спринты привязаны к вехам ✓</div>
+          ? <div style={{ fontSize: 11, color: 'var(--suc)' }}>{t('lore.milestonesView.allSprintsLinked', 'Все спринты привязаны к вехам ✓')}</div>
           : (
             <div style={{ ...S.sprList, maxHeight: 320 }}>
               {orphans.map(s => {
@@ -406,7 +408,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                     {proj && <span style={S.projTag}>{proj}</span>}
                     <select style={{ ...S.in, fontSize: 9, padding: '2px 4px', flexShrink: 0 }} value=""
                       onChange={e => { const mid = e.target.value; if (mid) run('assign' + s.sprint_id, () => linkSprintMilestone(s.sprint_id, mid, 'add')); }}>
-                      <option value="">→ в веху…</option>
+                      <option value="">{t('lore.milestonesView.intoMilestonePlaceholder', '→ в веху…')}</option>
                       {milestones.map(m => <option key={m.milestone_id} value={m.milestone_id}>{m.milestone_id}</option>)}
                     </select>
                   </div>

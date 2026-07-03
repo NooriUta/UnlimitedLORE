@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchLoreSlice, type LoreSprintRow } from '../../api/lore';
+import { useTranslation } from 'react-i18next';
+import { fetchLoreSlice, type LoreSprintRow, type LoreComponent } from '../../api/lore';
 import { statusMeta } from './lore-status';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
@@ -12,33 +13,46 @@ function releaseKey(id: string | null | undefined): string {
 }
 
 // Short label for a git_project slug: "NooriUta/AIDA" → "AIDA"
-function projLabel(slug: string): string {
+export function projLabel(slug: string): string {
   return slug.split('/').pop() ?? slug;
 }
 
-// Colour palette per project slug (consistent per session)
+// Colour palette per project slug (consistent per session) — exported so
+// LorePage's full-width project filter chips use the exact same colours as
+// the per-row project dots rendered here.
 const PROJ_COLORS = [
   '#7c83fd', '#4dc9a0', '#e8884f', '#c47af5', '#f5c842', '#5ab4e8',
 ];
-function projColor(slug: string, allSlugs: string[]): string {
+export function projColor(slug: string, allSlugs: string[]): string {
   const i = allSlugs.indexOf(slug);
   return PROJ_COLORS[i % PROJ_COLORS.length];
+}
+
+// Separate palette for components so their chips read as visually distinct
+// from project chips (and from each other) instead of all sharing one flat
+// accent colour with an identical icon.
+const COMP_COLORS = [
+  '#e8617a', '#59c2c9', '#d9a441', '#8d9bff', '#6fbf73', '#c77dd1',
+];
+export function compColor(id: string, allIds: string[]): string {
+  const i = allIds.indexOf(id);
+  return COMP_COLORS[i % COMP_COLORS.length];
 }
 
 type SortMode = 'date' | 'release' | 'project' | 'priority';
 
 export const STATUS_FILTERS = [
-  { key: 'done',             label: 'Готово'        },
-  { key: 'in_progress',      label: 'В работе'      },
-  { key: 'partial',          label: 'Частично'      },
-  { key: 'ready_for_deploy', label: 'К деплою'      },
-  { key: 'planned',          label: 'Запланировано' },
-  { key: 'todo',             label: 'TODO'          },
-  { key: 'design',           label: 'Дизайн'        },
-  { key: 'backlog',          label: 'Беклог'        },
-  { key: 'blocked',          label: 'Заблокировано' },
-  { key: 'deferred',         label: 'Отложено'      },
-  { key: 'cancelled',        label: 'Отменено'      },
+  { key: 'done',             label: 'Готово',        labelKey: 'lore.sprintTree.statusFilter.done'           },
+  { key: 'in_progress',      label: 'В работе',      labelKey: 'lore.sprintTree.statusFilter.inProgress'     },
+  { key: 'partial',          label: 'Частично',      labelKey: 'lore.sprintTree.statusFilter.partial'        },
+  { key: 'ready_for_deploy', label: 'К деплою',      labelKey: 'lore.sprintTree.statusFilter.readyForDeploy' },
+  { key: 'planned',          label: 'Запланировано', labelKey: 'lore.sprintTree.statusFilter.planned'        },
+  { key: 'todo',             label: 'TODO',          labelKey: 'lore.sprintTree.statusFilter.todo'           },
+  { key: 'design',           label: 'Дизайн',        labelKey: 'lore.sprintTree.statusFilter.design'         },
+  { key: 'backlog',          label: 'Беклог',        labelKey: 'lore.sprintTree.statusFilter.backlog'        },
+  { key: 'blocked',          label: 'Заблокировано', labelKey: 'lore.sprintTree.statusFilter.blocked'        },
+  { key: 'deferred',         label: 'Отложено',      labelKey: 'lore.sprintTree.statusFilter.deferred'       },
+  { key: 'cancelled',        label: 'Отменено',      labelKey: 'lore.sprintTree.statusFilter.cancelled'      },
 ];
 
 export interface SprintStats {
@@ -113,12 +127,18 @@ const S = {
 };
 
 export type DatePeriod = 'month' | 'quarter' | '90d' | null;
+// icon/area are only populated for components (sourced from the `components`
+// slice) so LorePage can render each component's real game-icon + area
+// colour instead of one flat repeated icon.
+export interface FacetOption { id: string; count: number; icon?: string | null; area?: string | null }
 
 interface Props {
   module: string;
   q?: string;
   statusFilter?: Set<string>;
   priorityFilter?: Set<string>;
+  projectFilter?: Set<string>;
+  componentFilter?: Set<string>;
   noRelease?: boolean;
   datePeriod?: DatePeriod;
   selectedId?: string;
@@ -126,19 +146,27 @@ interface Props {
   onSelect?: (id: string) => void;
   onCounts?: (counts: Record<string, number>) => void;
   onStats?: (stats: SprintStats) => void;
+  // Faceted: count reflects rows matching every OTHER active filter, so the
+  // chip lists in LorePage's full-width filter bar stay dependent on
+  // whichever filters are already set (клик по фильтру сужает соседние).
+  onProjectFacets?: (list: FacetOption[]) => void;
+  onComponentFacets?: (list: FacetOption[]) => void;
 }
 
-export default function LoreSprintTree({ module: _module, q, statusFilter, priorityFilter, noRelease, datePeriod, selectedId, onError, onSelect, onCounts, onStats }: Props) {
+export default function LoreSprintTree({ module: _module, q, statusFilter, priorityFilter, projectFilter, componentFilter, noRelease, datePeriod, selectedId, onError, onSelect, onCounts, onStats, onProjectFacets, onComponentFacets }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]           = useState<LoreSprintRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [sortMode, setSortMode]   = useState<SortMode>('date');
   const [sortDesc, setSortDesc]   = useState(true);
-  const statusSel   = statusFilter   ?? new Set<string>();
-  const prioritySel = priorityFilter ?? new Set<string>();
-  const [projSel, setProjSel]     = useState<Set<string>>(new Set());
+  const statusSel   = statusFilter    ?? new Set<string>();
+  const prioritySel = priorityFilter  ?? new Set<string>();
+  const projSel     = projectFilter   ?? new Set<string>();
+  const compSel     = componentFilter ?? new Set<string>();
   const abortRef = useRef<AbortController | null>(null);
+  const [compMeta, setCompMeta] = useState<Map<string, LoreComponent>>(new Map());
 
   useEffect(() => {
     abortRef.current?.abort();
@@ -152,6 +180,17 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
     return () => ctrl.abort();
   }, [reloadKey, onError]);
 
+  // Component icon/area lookup — sprints only carry component IDs, so fetch
+  // the components slice once to render real per-component icons in the
+  // faceted filter chips instead of one flat repeated icon.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal)
+      .then(list => setCompMeta(new Map(list.map(c => [c.component_id, c]))))
+      .catch(() => { /* icons are cosmetic — silently fall back to a generic icon */ });
+    return () => ctrl.abort();
+  }, []);
+
   // All unique project slugs present in the data
   const allProjects = useMemo(() => {
     const set = new Set<string>();
@@ -159,13 +198,89 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
     return [...set].sort();
   }, [rows]);
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    rows.forEach(s => { const k = normalizeStatus(s.status_raw); if (k) c[k] = (c[k] || 0) + 1; });
-    return c;
+  // All unique component ids present in the data
+  const allComponents = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach(s => s.components?.forEach(c => set.add(c)));
+    return [...set].sort();
   }, [rows]);
 
-  useEffect(() => { onCounts?.(counts); }, [counts, onCounts]);
+  // Single-pass filter + facet computation. `matches(s, exclude)` applies every
+  // active filter EXCEPT the given dimension, so each dimension's chip counts
+  // reflect "how many sprints would match if I only add this chip" given
+  // whatever's already selected elsewhere — the faceted/dependent-filter UX.
+  const facets = useMemo(() => {
+    const qLow = q?.toLowerCase() ?? '';
+    const now = new Date();
+    const cutoff: string | null = (() => {
+      if (!datePeriod) return null;
+      const d = new Date(now);
+      if (datePeriod === 'month')   { d.setDate(1); }
+      if (datePeriod === 'quarter') { d.setMonth(Math.floor(d.getMonth() / 3) * 3, 1); }
+      if (datePeriod === '90d')     { d.setDate(d.getDate() - 90); }
+      return d.toISOString().slice(0, 10);
+    })();
+
+    const matches = (s: LoreSprintRow, exclude: 'status' | 'project' | 'component' | 'priority' | null) => {
+      if (qLow && !s.sprint_id.toLowerCase().includes(qLow) &&
+          !(s.name ?? '').toLowerCase().includes(qLow) &&
+          !(s.context_md ?? '').toLowerCase().includes(qLow)) return false;
+      if (exclude !== 'status'    && statusSel.size   > 0 && !statusSel.has(normalizeStatus(s.status_raw))) return false;
+      if (exclude !== 'project'   && projSel.size     > 0 && !s.git_projects?.some(g => projSel.has(g))) return false;
+      if (exclude !== 'component' && compSel.size     > 0 && !s.components?.some(c => compSel.has(c))) return false;
+      if (exclude !== 'priority'  && prioritySel.size > 0 && !prioritySel.has(s.priority ?? '')) return false;
+      if (noRelease && (s.release_ids?.length ?? 0) > 0) return false;
+      if (cutoff) {
+        const date = (s.done_date ?? s.valid_from ?? '').slice(0, 10);
+        if (!date || date < cutoff) return false;
+      }
+      return true;
+    };
+
+    const visible = rows.filter(s => matches(s, null));
+
+    const statusCounts: Record<string, number> = {};
+    rows.filter(s => matches(s, 'status')).forEach(s => {
+      const k = normalizeStatus(s.status_raw); if (k) statusCounts[k] = (statusCounts[k] || 0) + 1;
+    });
+
+    const projCounts: Record<string, number> = {};
+    rows.filter(s => matches(s, 'project')).forEach(s => s.git_projects?.forEach(g => { projCounts[g] = (projCounts[g] || 0) + 1; }));
+
+    const compCounts: Record<string, number> = {};
+    rows.filter(s => matches(s, 'component')).forEach(s => s.components?.forEach(c => { compCounts[c] = (compCounts[c] || 0) + 1; }));
+
+    return { visible, statusCounts, projCounts, compCounts };
+  }, [rows, q, statusSel, prioritySel, projSel, compSel, noRelease, datePeriod]);
+
+  useEffect(() => { onCounts?.(facets.statusCounts); }, [facets.statusCounts, onCounts]);
+
+  // Guarded by content, not just reference: the parent stores these lists in
+  // state, so an effect that re-fires with an array that's merely a *new*
+  // object but identical in content would still push a state update every
+  // render — parent re-renders, child re-renders, effect fires again. Compare
+  // serialized content and skip the callback when nothing actually changed.
+  const projFacetKeyRef = useRef('');
+  useEffect(() => {
+    const list = allProjects.map(id => ({ id, count: facets.projCounts[id] ?? 0 }));
+    const key = JSON.stringify(list);
+    if (key === projFacetKeyRef.current) return;
+    projFacetKeyRef.current = key;
+    onProjectFacets?.(list);
+  }, [allProjects, facets.projCounts, onProjectFacets]);
+
+  const compFacetKeyRef = useRef('');
+  useEffect(() => {
+    const list = allComponents.map(id => ({
+      id, count: facets.compCounts[id] ?? 0,
+      icon: compMeta.get(id)?.game_icon ?? null,
+      area: compMeta.get(id)?.area ?? null,
+    }));
+    const key = JSON.stringify(list);
+    if (key === compFacetKeyRef.current) return;
+    compFacetKeyRef.current = key;
+    onComponentFacets?.(list);
+  }, [allComponents, facets.compCounts, compMeta, onComponentFacets]);
 
   const stats = useMemo<SprintStats>(() => ({
     total:     rows.length,
@@ -177,37 +292,8 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
 
   useEffect(() => { onStats?.(stats); }, [stats, onStats]);
 
-  const projCounts = useMemo(() => {
-    const c: Record<string, number> = {};
-    rows.forEach(s => s.git_projects?.forEach(g => { c[g] = (c[g] || 0) + 1; }));
-    return c;
-  }, [rows]);
-
   const visible = useMemo(() => {
-    const qLow = q?.toLowerCase() ?? '';
-    const now = new Date();
-    const cutoff: string | null = (() => {
-      if (!datePeriod) return null;
-      const d = new Date(now);
-      if (datePeriod === 'month')   { d.setDate(1); }
-      if (datePeriod === 'quarter') { d.setMonth(Math.floor(d.getMonth() / 3) * 3, 1); }
-      if (datePeriod === '90d')     { d.setDate(d.getDate() - 90); }
-      return d.toISOString().slice(0, 10);
-    })();
-    let v = rows.filter(s => {
-      if (qLow && !s.sprint_id.toLowerCase().includes(qLow) &&
-          !(s.name ?? '').toLowerCase().includes(qLow) &&
-          !(s.context_md ?? '').toLowerCase().includes(qLow)) return false;
-      if (statusSel.size > 0 && !statusSel.has(normalizeStatus(s.status_raw))) return false;
-      if (projSel.size > 0 && !s.git_projects?.some(g => projSel.has(g))) return false;
-      if (prioritySel.size > 0 && !prioritySel.has(s.priority ?? '')) return false;
-      if (noRelease && (s.release_ids?.length ?? 0) > 0) return false;
-      if (cutoff) {
-        const date = (s.done_date ?? s.valid_from ?? '').slice(0, 10);
-        if (!date || date < cutoff) return false;
-      }
-      return true;
-    });
+    let v = facets.visible;
 
     v = [...v].sort((a, b) => {
       if (sortMode === 'release') {
@@ -235,11 +321,8 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
       return sortDesc ? db.localeCompare(da) : da.localeCompare(db);
     });
     return v;
-  }, [rows, q, statusSel, prioritySel, projSel, noRelease, datePeriod, sortMode, sortDesc]);
+  }, [facets.visible, sortMode, sortDesc]);
 
-  const toggleProj = (g: string) => setProjSel(p => {
-    const n = new Set(p); n.has(g) ? n.delete(g) : n.add(g); return n;
-  });
   const cycleSort = (mode: SortMode) => {
     if (sortMode === mode) setSortDesc(d => !d);
     else { setSortMode(mode); setSortDesc(true); }
@@ -248,33 +331,33 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
   const refresh = () => setReloadKey(k => k + 1);
 
   if (loading) return <LoreSkeleton />;
-  if (!rows.length) return <div style={S.empty}>Спринты не найдены.</div>;
+  if (!rows.length) return <div style={S.empty}>{t('lore.sprintTree.noSprints', 'Спринты не найдены.')}</div>;
 
   return (
     <div style={S.wrap}>
       {/* ── Toolbar: sort + refresh ────────────────────── */}
       <div style={S.toolbar}>
         <button style={S.sortBtn(sortMode === 'date')}
-          onClick={() => cycleSort('date')} title="Сортировка по дате">
-          Дата {sortMode === 'date' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('date')} title={t('lore.sprintTree.sortByDate', 'Сортировка по дате')}>
+          {t('lore.sprintTree.sortDate', 'Дата')} {sortMode === 'date' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
         <button style={S.sortBtn(sortMode === 'release')}
-          onClick={() => cycleSort('release')} title="Сортировка по релизу">
-          Релиз {sortMode === 'release' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('release')} title={t('lore.sprintTree.sortByRelease', 'Сортировка по релизу')}>
+          {t('lore.sprintTree.sortRelease', 'Релиз')} {sortMode === 'release' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
         <button style={S.sortBtn(sortMode === 'project')}
-          onClick={() => cycleSort('project')} title="Сортировка по проекту">
-          Проект {sortMode === 'project' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('project')} title={t('lore.sprintTree.sortByProject', 'Сортировка по проекту')}>
+          {t('lore.sprintTree.sortProject', 'Проект')} {sortMode === 'project' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
         <button style={S.sortBtn(sortMode === 'priority')}
-          onClick={() => cycleSort('priority')} title="Сортировка по приоритету">
-          Приоритет {sortMode === 'priority' ? (sortDesc ? '↓' : '↑') : ''}
+          onClick={() => cycleSort('priority')} title={t('lore.sprintTree.sortByPriority', 'Сортировка по приоритету')}>
+          {t('lore.sprintTree.sortPriority', 'Приоритет')} {sortMode === 'priority' ? (sortDesc ? '↓' : '↑') : ''}
         </button>
 
         <button
           style={S.refreshBtn}
           onClick={refresh}
-          title="Обновить список спринтов"
+          title={t('lore.sprintTree.refreshTitle', 'Обновить список спринтов')}
           disabled={refreshing}
         >
           <span style={refreshing ? S.spinning : undefined}>↺</span>
@@ -282,23 +365,9 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
       </div>
 
 
-      {/* ── Project filter pills — прямо над списком ─── */}
-      {allProjects.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '5px 8px 4px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
-          {allProjects.map(slug => {
-            const color = projColor(slug, allProjects);
-            const on = projSel.has(slug);
-            return (
-              <span key={slug} style={S.projChip(on, color)}
-                onClick={() => toggleProj(slug)}
-                title={`${slug} (${projCounts[slug] ?? 0})`}>
-                {projLabel(slug)}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{projCounts[slug] ?? 0}</span>
-              </span>
-            );
-          })}
-        </div>
-      )}
+      {/* Project + component filter chips moved to LorePage's full-width sprint
+          filter bar (they're rendered there now, faceted via onProjectFacets/
+          onComponentFacets) so they aren't cramped in this sidebar column. */}
 
       {/* ── List ──────────────────────────────────────── */}
       <div style={S.root}>
@@ -355,7 +424,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
             </div>
           );
         })}
-        {visible.length === 0 && <div style={S.empty}>Ничего не найдено.</div>}
+        {visible.length === 0 && <div style={S.empty}>{t('lore.sprintTree.nothingFound', 'Ничего не найдено.')}</div>}
       </div>
 
       <style>{`

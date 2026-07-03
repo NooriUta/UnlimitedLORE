@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   fetchLoreSlice, linkSprintMilestone, upsertMilestone,
   type LoreMilestone, type LoreSprintRow,
@@ -35,6 +36,7 @@ interface EditState { label: string; date_display: string; week: string; goal_md
 const PRIORITIES = ['', 'P0', 'P1', 'P2', 'P3'];
 
 export default function LoreMilestoneManager({ onChange }: { onChange?: () => void }) {
+  const { t } = useTranslation();
   const [milestones, setMilestones] = useState<(LoreMilestone & { direct_sprint_ids?: string[] | null })[]>([]);
   const [sprints, setSprints]       = useState<LoreSprintRow[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -81,34 +83,34 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
     setEdit({ label: m.label ?? '', date_display: m.date_display ?? '', week: m.week != null ? String(m.week) : '', goal_md: m.goal_md ?? '', priority: m.priority ?? '' });
   }
 
-  if (loading) return <div style={S.note}>Загрузка вех…</div>;
+  if (loading) return <div style={S.note}>{t('lore.milestoneManager.loading', 'Загрузка вех…')}</div>;
 
   return (
     <section style={S.panel}>
       <div style={S.head}>
-        <div style={S.title}><GameIcon slug="crossed-axes" size={14} style={{ color: 'var(--acc)' }} /> Управление вехами <span style={S.dim}>· {milestones.length}</span></div>
-        <button style={S.btnPrimary} onClick={() => setAddOpen(o => !o)}>{addOpen ? '× Отмена' : '+ Веха'}</button>
+        <div style={S.title}><GameIcon slug="crossed-axes" size={14} style={{ color: 'var(--acc)' }} /> {t('lore.milestoneManager.title', 'Управление вехами')} <span style={S.dim}>· {milestones.length}</span></div>
+        <button style={S.btnPrimary} onClick={() => setAddOpen(o => !o)}>{addOpen ? t('lore.milestoneManager.cancel', '× Отмена') : t('lore.milestoneManager.addMilestone', '+ Веха')}</button>
       </div>
       {err && <div style={S.err}>{err}</div>}
 
       {addOpen && (
         <div style={S.editBox}>
           <div style={S.row}>
-            <input style={S.in} placeholder="milestone_id (напр. M8)" value={draft.milestone_id}
+            <input style={S.in} placeholder={t('lore.milestoneManager.placeholder.milestoneId', 'milestone_id (напр. M8)')} value={draft.milestone_id}
               onChange={e => setDraft({ ...draft, milestone_id: e.target.value })} />
-            <input style={S.in} placeholder="label" value={draft.label}
+            <input style={S.in} placeholder={t('lore.milestoneManager.placeholder.label', 'label')} value={draft.label}
               onChange={e => setDraft({ ...draft, label: e.target.value })} />
-            <input style={{ ...S.in, width: 70 }} placeholder="week" value={draft.week}
+            <input style={{ ...S.in, width: 70 }} placeholder={t('lore.milestoneManager.placeholder.week', 'week')} value={draft.week}
               onChange={e => setDraft({ ...draft, week: e.target.value })} />
-            <input type="date" style={{ ...S.in, width: 130 }} title="Выбрать дату"
+            <input type="date" style={{ ...S.in, width: 130 }} title={t('lore.milestoneManager.pickDate', 'Выбрать дату')}
               onChange={e => e.target.value && setDraft({ ...draft, date_display: fmtRuDate(e.target.value) })} />
-            <input style={{ ...S.in, width: 120 }} placeholder="дата (текст)" value={draft.date_display}
+            <input style={{ ...S.in, width: 120 }} placeholder={t('lore.milestoneManager.placeholder.dateText', 'дата (текст)')} value={draft.date_display}
               onChange={e => setDraft({ ...draft, date_display: e.target.value })} />
             <select style={{ ...S.in, width: 90 }} value={draft.priority} onChange={e => setDraft({ ...draft, priority: e.target.value })}>
-              {PRIORITIES.map(p => <option key={p} value={p}>{p || 'приоритет'}</option>)}
+              {PRIORITIES.map(p => <option key={p} value={p}>{p || t('lore.milestoneManager.placeholder.priority', 'приоритет')}</option>)}
             </select>
           </div>
-          <textarea style={S.ta} placeholder="Описание / цель вехи (goal_md)" value={draft.goal_md}
+          <textarea style={S.ta} placeholder={t('lore.milestoneManager.placeholder.goal', 'Описание / цель вехи (goal_md)')} value={draft.goal_md}
             onChange={e => setDraft({ ...draft, goal_md: e.target.value })} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
             <button style={S.btnPrimary} disabled={!draft.milestone_id.trim() || busy === 'create'}
@@ -120,7 +122,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                 });
                 setAddOpen(false); setDraft({ milestone_id: '', label: '', date_display: '', week: '', goal_md: '', priority: '' });
               })}>
-              {busy === 'create' ? '…' : 'Создать'}
+              {busy === 'create' ? '…' : t('lore.milestoneManager.create', 'Создать')}
             </button>
           </div>
         </div>
@@ -141,7 +143,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                 <span style={S.dim}>{m.date_display}{m.week != null ? ` · w${m.week}` : ''}</span>
                 <span style={S.spCount}>{ids.length} Sp</span>
                 {isOpen && (
-                  <button style={S.btn} onClick={e => { e.stopPropagation(); isEdit ? setEditId(null) : startEdit(m); }}>{isEdit ? 'Закрыть' : '✎ правка'}</button>
+                  <button style={S.btn} onClick={e => { e.stopPropagation(); isEdit ? setEditId(null) : startEdit(m); }}>{isEdit ? t('lore.milestoneManager.close', 'Закрыть') : t('lore.milestoneManager.edit', '✎ правка')}</button>
                 )}
               </div>
 
@@ -150,16 +152,16 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
               {isEdit && (
                 <div style={S.editBox}>
                   <div style={S.row}>
-                    <input style={S.in} value={edit.label} placeholder="label" onChange={e => setEdit({ ...edit, label: e.target.value })} />
-                    <input style={{ ...S.in, width: 70 }} value={edit.week} placeholder="week" onChange={e => setEdit({ ...edit, week: e.target.value })} />
-                    <input type="date" style={{ ...S.in, width: 130 }} title="Выбрать дату → заполнит поле справа"
+                    <input style={S.in} value={edit.label} placeholder={t('lore.milestoneManager.placeholder.label', 'label')} onChange={e => setEdit({ ...edit, label: e.target.value })} />
+                    <input style={{ ...S.in, width: 70 }} value={edit.week} placeholder={t('lore.milestoneManager.placeholder.week', 'week')} onChange={e => setEdit({ ...edit, week: e.target.value })} />
+                    <input type="date" style={{ ...S.in, width: 130 }} title={t('lore.milestoneManager.pickDateFill', 'Выбрать дату → заполнит поле справа')}
                       onChange={e => e.target.value && setEdit({ ...edit, date_display: fmtRuDate(e.target.value) })} />
-                    <input style={{ ...S.in, width: 120 }} value={edit.date_display} placeholder="дата (текст)" onChange={e => setEdit({ ...edit, date_display: e.target.value })} />
+                    <input style={{ ...S.in, width: 120 }} value={edit.date_display} placeholder={t('lore.milestoneManager.placeholder.dateText', 'дата (текст)')} onChange={e => setEdit({ ...edit, date_display: e.target.value })} />
                     <select style={{ ...S.in, width: 90 }} value={edit.priority} onChange={e => setEdit({ ...edit, priority: e.target.value })}>
-                      {PRIORITIES.map(p => <option key={p} value={p}>{p || 'приоритет'}</option>)}
+                      {PRIORITIES.map(p => <option key={p} value={p}>{p || t('lore.milestoneManager.placeholder.priority', 'приоритет')}</option>)}
                     </select>
                   </div>
-                  <textarea style={S.ta} value={edit.goal_md} placeholder="Описание / цель вехи (goal_md)" onChange={e => setEdit({ ...edit, goal_md: e.target.value })} />
+                  <textarea style={S.ta} value={edit.goal_md} placeholder={t('lore.milestoneManager.placeholder.goal', 'Описание / цель вехи (goal_md)')} onChange={e => setEdit({ ...edit, goal_md: e.target.value })} />
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button style={S.btnPrimary} disabled={busy === 'edit'} onClick={() => run('edit', async () => {
                       await upsertMilestone({
@@ -169,17 +171,17 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                         priority: edit.priority || null,
                       });
                       setEditId(null);
-                    })}>{busy === 'edit' ? '…' : 'Сохранить'}</button>
+                    })}>{busy === 'edit' ? '…' : t('lore.milestoneManager.save', 'Сохранить')}</button>
                   </div>
                 </div>
               )}
 
               {/* Linked sprints — rows with status + project */}
               <div style={{ fontSize: 8, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '8px 0 3px' }}>
-                Привязанные спринты · {ids.length}
+                {t('lore.milestoneManager.linkedSprints', 'Привязанные спринты')} · {ids.length}
               </div>
               <div style={S.sprList}>
-                {ids.length === 0 && <div style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic', padding: '2px 0' }}>пока нет — добавьте ниже</div>}
+                {ids.length === 0 && <div style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic', padding: '2px 0' }}>{t('lore.milestoneManager.noneYet', 'пока нет — добавьте ниже')}</div>}
                 {ids.map(sid => {
                   const s = sprintMeta.get(sid);
                   const k = classifySprint(s?.status_raw ?? null);
@@ -190,7 +192,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                       <span style={S.sprId}>{sid}</span>
                       <span style={S.sprName}>{s?.name ?? ''}</span>
                       {proj && <span style={S.projTag}>{proj}</span>}
-                      <button style={S.x} title="Отвязать" disabled={busy === 'unlink-' + sid}
+                      <button style={S.x} title={t('lore.milestoneManager.unlink', 'Отвязать')} disabled={busy === 'unlink-' + sid}
                         onClick={() => run('unlink-' + sid, () => linkSprintMilestone(sid, m.milestone_id, 'remove'))}>×</button>
                     </div>
                   );
@@ -207,7 +209,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                       setPick({ ...pick, [m.milestone_id]: '' });
                     });
                   }}>
-                  <option value="">+ привязать спринт…</option>
+                  <option value="">{t('lore.milestoneManager.linkSprintOption', '+ привязать спринт…')}</option>
                   {sprintIds.filter(s => !ids.includes(s)).map(s => {
                     const sm = sprintMeta.get(s);
                     const proj = projShort(sm?.git_projects?.[0]);
@@ -227,10 +229,10 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
       <div style={{ marginTop: 14, borderTop: '1px solid var(--bd)', paddingTop: 10 }}>
         <div style={{ ...S.title, marginBottom: 6, color: orphans.length ? 'var(--wrn)' : 'var(--t3)' }}>
           <GameIcon slug="hourglass" size={12} style={{ color: orphans.length ? 'var(--wrn)' : 'var(--t3)' }} />
-          Спринты без вех <span style={S.dim}>· {orphans.length}</span>
+          {t('lore.milestoneManager.sprintsWithoutMilestones', 'Спринты без вех')} <span style={S.dim}>· {orphans.length}</span>
         </div>
         {orphans.length === 0
-          ? <div style={{ fontSize: 10, color: 'var(--suc)' }}>Все спринты привязаны к вехам ✓</div>
+          ? <div style={{ fontSize: 10, color: 'var(--suc)' }}>{t('lore.milestoneManager.allSprintsLinked', 'Все спринты привязаны к вехам ✓')}</div>
           : (
             <div style={{ ...S.sprList, maxHeight: 300, overflowY: 'auto' as const, gap: 2 }}>
               {orphans.map(s => {
@@ -248,7 +250,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                         if (!mid) return;
                         run('assign-' + s.sprint_id, () => linkSprintMilestone(s.sprint_id, mid, 'add'));
                       }}>
-                      <option value="">→ в веху…</option>
+                      <option value="">{t('lore.milestoneManager.assignToMilestoneOption', '→ в веху…')}</option>
                       {milestones.map(m => <option key={m.milestone_id} value={m.milestone_id}>{m.milestone_id}</option>)}
                     </select>
                   </div>

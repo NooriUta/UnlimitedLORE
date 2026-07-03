@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreComponent } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
@@ -88,6 +89,7 @@ interface Props {
 }
 
 export default function LoreComponentList({ q, areaSel, selectedId, onSelect, onCounts, onError }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]         = useState<LoreComponent[]>([]);
   const [loading, setLoading]   = useState(true);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -191,7 +193,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
           {name && <span style={S.compName}>{name}</span>}
         </div>
         {(r.sprint_count != null && r.sprint_count > 0) && (
-          <span style={S.sprintBadge} title="Привязанных спринтов">{r.sprint_count}Sp</span>
+          <span style={S.sprintBadge} title={t('lore.componentList.sprintCountTitle', 'Привязанных спринтов')}>{r.sprint_count}Sp</span>
         )}
         {(r.spec_count != null && r.spec_count > 0) && (
           <span style={S.countBadge}>{r.spec_count}S</span>
@@ -240,11 +242,11 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
       <div style={S.list}>
         {treeOrder !== null ? (
           treeOrder.length === 0
-            ? <div style={S.empty}>Компоненты не найдены.</div>
+            ? <div style={S.empty}>{t('lore.componentList.empty', 'Компоненты не найдены.')}</div>
             : renderWithGroups(treeOrder)
         ) : (
           shown.length === 0
-            ? <div style={S.empty}>Компоненты не найдены.</div>
+            ? <div style={S.empty}>{t('lore.componentList.empty', 'Компоненты не найдены.')}</div>
             : shown.map(r => renderRow(r, 0))
         )}
         <div style={{ height: 4 }} />

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
 
 type DatePreset = null | '3m' | '6m' | '1y';
-const DATE_PRESETS: { key: DatePreset; label: string }[] = [
-  { key: null, label: 'Все' },
-  { key: '3m', label: '3м' },
-  { key: '6m', label: '6м' },
-  { key: '1y', label: 'Год' },
+const DATE_PRESETS: { key: DatePreset; labelKey: string; labelFallback: string }[] = [
+  { key: null, labelKey: 'lore.adrList.datePreset.all', labelFallback: 'Все' },
+  { key: '3m', labelKey: 'lore.adrList.datePreset.3m',  labelFallback: '3м' },
+  { key: '6m', labelKey: 'lore.adrList.datePreset.6m',  labelFallback: '6м' },
+  { key: '1y', labelKey: 'lore.adrList.datePreset.1y',  labelFallback: 'Год' },
 ];
 function cutoffDate(preset: DatePreset): string | null {
   if (!preset) return null;
@@ -26,6 +27,13 @@ export const ADR_STATUS_FILTERS = [
 const STATUS_COLOR: Record<string, string> = Object.fromEntries(
   ADR_STATUS_FILTERS.map(f => [f.key, f.color])
 );
+// ADR_STATUS_FILTERS.label carries the raw English fallback (used before this
+// list is displayed, or when a caller has no i18n instance) — everywhere it's
+// actually rendered, go through this so the shared adrStatus.* namespace wins.
+export function adrStatusLabel(t: (key: string, fallback: string) => string, key: string): string {
+  const f = ADR_STATUS_FILTERS.find(x => x.key === key);
+  return t(`adrStatus.${key.toLowerCase()}`, f?.label ?? key);
+}
 
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, overflowX: 'hidden' as const, display: 'flex', flexDirection: 'column' as const },
@@ -91,6 +99,7 @@ interface Props {
 }
 
 export default function LoreAdrList({ module, q, statusSel, selectedId, onError, onOpen, onNew, onCounts }: Props) {
+  const { t } = useTranslation();
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
   const [datePreset, setDatePreset] = useState<DatePreset>(null);
@@ -127,17 +136,17 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
 
   return (
     <div style={S.root}>
-      <button style={S.newBtn} onClick={onNew}>+ Новый ADR</button>
+      <button style={S.newBtn} onClick={onNew}>{t('lore.adrList.newButton', '+ Новый ADR')}</button>
       <div style={S.dateLine}>
         {DATE_PRESETS.map(p => (
           <button key={String(p.key)} style={S.dateBtn(datePreset === p.key)} onClick={() => setDatePreset(p.key)}>
-            {p.label}
+            {t(p.labelKey, p.labelFallback)}
           </button>
         ))}
       </div>
       <div style={S.list}>
-        {loading && <div style={S.empty}>Загрузка ADR…</div>}
-        {!loading && !shown.length && <div style={S.empty}>ADR не найдены.</div>}
+        {loading && <div style={S.empty}>{t('lore.adrList.loading', 'Загрузка ADR…')}</div>}
+        {!loading && !shown.length && <div style={S.empty}>{t('lore.adrList.empty', 'ADR не найдены.')}</div>}
         {shown.map(a => {
           const statusKey   = (a.status ?? 'PROPOSED').toUpperCase();
           const statusColor = STATUS_COLOR[statusKey] ?? 'var(--t3)';
@@ -158,7 +167,7 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
               </div>
               {(a.component || a.date_created || a.status) && (
                 <div style={S.line2}>
-                  {a.status && <span style={S.statusBadge(statusColor)}>{statusKey}</span>}
+                  {a.status && <span style={S.statusBadge(statusColor)}>{adrStatusLabel(t, statusKey)}</span>}
                   {a.component && <span style={S.component}>{a.component}</span>}
                   {a.date_created && <span style={S.date}>{a.date_created.slice(0, 10)}</span>}
                 </div>

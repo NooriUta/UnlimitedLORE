@@ -4,6 +4,7 @@
 // real slice catalog that `lore_list_slices` exposes. bench_* (MUNINN) tools
 // live on the same server but are documented on /benchmark?tab=mcp instead.
 import { Fragment, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSliceCatalog, type LoreSliceDescriptor } from '../../api/lore';
 
 interface ToolDoc {
@@ -194,6 +195,56 @@ const TOOLS: ToolDoc[] = [
   { name: 'lore_move_to_project', kind: 'write', entity: 'Release', backend: 'POST /lore/project/move',
     params: 'entity_type, id, git_project',
     desc: 'Исправить git_project у PR или релиза, ошибочно привязанного не к тому репозиторию: перевешивает ребро BELONGS_TO_PROJECT, обновляет pr_uid или release_uid. entity_type = pr | release.' },
+
+  // ── BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4) ────────────────────
+  { name: 'lore_upsert_rubric', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/rubric',
+    params: 'rubric_id, name?, description?, order_index?',
+    desc: 'BragiRubric: создать/дополнить рубрику — фиксированный список классификатора, назначаемого публикациям и ключам через rubric_id (upsert по rubric_id). Единый редакторский список, не свободные теги — сверяться со срезом bragi_rubrics перед созданием новой, чтобы не плодить дубли.' },
+  { name: 'lore_link_rubric', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/rubric/link',
+    params: 'entity_type ("publication"|"keyword"), entity_id, rubric_id',
+    desc: 'Лёгкое присвоение/замена ОДНОЙ рубрики публикации или ключу через IN_RUBRIC — без пересылки остальных полей (в отличие от rubric_id на полном upsert). Заменяет прежнюю рубрику, не аддитивно.' },
+  { name: 'lore_find_keyword', kind: 'read', entity: 'BRAGI', backend: 'GET /lore/bragi/keyword/search',
+    params: 'q',
+    desc: 'Поиск BragiKeyword по подстроке phrase (без учёта регистра), до 20 совпадений (keyword_id/phrase/cluster). Использовать перед lore_upsert_keyword/lore_link_rubric/keyword_ids на публикации — все требуют уже известный id.' },
+  { name: 'lore_create_publication', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/publication',
+    params: 'publication_id, title?, topic?, main_text_md?, type?, status_general?, keyword_ids?[], rubric_id?',
+    desc: 'BragiPublication: создать/дополнить публикацию (upsert по publication_id, только переданные поля). Мастер-версия, группирующая вариации по площадкам (lore_create_variant). keyword_ids — рёбра TARGETS_KEY на существующие BragiKeyword (аддитивно, не отвязывает пропущенные при повторном вызове). rubric_id — ОДНА рубрика через IN_RUBRIC, заменяет прежнюю (не аддитивно).' },
+  { name: 'lore_create_variant', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/variant',
+    params: 'variant_id, publication_id?, channel_id?, text_md?, status?, url?, published_at?, asset_id?',
+    desc: 'BragiVariant: создать/дополнить версию публикации под конкретную площадку (upsert по variant_id). publication_id → ребро HAS_VARIANT, channel_id → IN_CHANNEL (на существующий BragiChannel), asset_id → HAS_ASSET (на существующий BragiAsset) — рёбра создаются только если id передан.' },
+  { name: 'lore_upload_asset', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/asset/upload',
+    params: 'filename, base64_data, content_type?',
+    desc: 'Загружает base64-файл в S3-хранилище (MinIO) BRAGI, возвращает same-origin file_url ("/lore/bragi/asset/file/..."). Единственный способ получить рабочий file_url — вызывать ПЕРВЫМ, затем передавать результат в lore_attach_asset.' },
+  { name: 'lore_attach_asset', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/asset',
+    params: 'asset_id, asset_type?, file_url?, alt?, size_bytes?, attach_to_publication_id?, attach_to_variant_id?',
+    desc: 'BragiAsset: создать/дополнить изображение/медиа (upsert по asset_id) и опционально привязать через HAS_ASSET к существующей BragiPublication (обложка) или BragiVariant (картинка вариации) — передавать ровно одно из attach_to_*. file_url — из lore_upload_asset, если файла ещё нет в хранилище.' },
+  { name: 'lore_upsert_keyword', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/keyword',
+    params: 'keyword_id, phrase?, cluster?, freq_exact?, freq_broad?, source?, intent?, region_engine?, measured_at?, page_id?, rubric_id?',
+    desc: 'BragiKeyword: создать/дополнить ключевую фразу (upsert по keyword_id). page_id → ребро TARGETS_PAGE на существующую BragiPage. rubric_id — ОДНА рубрика через IN_RUBRIC, заменяет прежнюю (не аддитивно).' },
+  { name: 'lore_upsert_page', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/page',
+    params: 'page_id, url?, title?, description?, page_type?, deployed_at?',
+    desc: 'BragiPage: создать/дополнить целевую страницу (upsert по page_id).' },
+  { name: 'lore_create_campaign', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/campaign',
+    params: 'campaign_id, utm_source?, utm_medium?, utm_campaign?, target_url?, period?, variant_id?',
+    desc: 'BragiCampaign: создать/дополнить UTM-кампанию (upsert по campaign_id). variant_id → ребро FOR_VARIANT на существующую BragiVariant.' },
+  { name: 'lore_record_metric', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/metric',
+    params: 'object_type, object_id, metric, value, ts?, source?, segment?',
+    desc: 'MetricSnapshot: добавить одно измерение в TIMESERIES-хранилище BRAGI (нативный ArcadeDB time-series, не граф-вершина — без рёбер, привязка через теги object_type+object_id). ts принимает ISO-8601 или epoch millis, по умолчанию now(). Только запись — удаления/правки нет (immutable sealed-store).' },
+  { name: 'lore_query_metric', kind: 'read', entity: 'BRAGI', backend: 'GET /lore/bragi/metric/query',
+    params: 'object_type?, object_id?, metric?, from?, to?, agg?, limit?',
+    desc: 'Чтение точек MetricSnapshot с фильтрами и опциональной агрегацией (agg: avg|sum|min|max|count, группировка по object_type+object_id+metric). Без agg — до limit сырых точек, новые сверху. object_type="probe" (артефакт проверки схемы ARC-02/03) всегда исключён.' },
+  { name: 'lore_create_integration', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/integration',
+    params: 'integration_id, service?, purpose?, endpoint?, scope?, secret_ref?, status?, last_called_at?',
+    desc: 'BragiIntegration: создать/дополнить коннектор (upsert по integration_id). ⚠️ secret_ref обязан быть ссылкой ("env:X" / "vault:X" / "oauth:X" / "secret:X") — бэкенд отклоняет любое другое значение (400), значение токена в граф не попадает никогда.' },
+  { name: 'lore_create_insight', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/insight',
+    params: 'insight_id, statement_md?, insight_date?, evidence_ref?',
+    desc: 'BragiInsight: создать/дополнить вывод из данных (upsert по insight_id). evidence_ref — свободный текст-указатель на замеры (у MetricSnapshot нет графовых рёбер). Для связи с задачей/ADR — lore_link_insight.' },
+  { name: 'lore_link_insight', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/insight/link',
+    params: 'insight_id, target_type, target_id',
+    desc: 'Ребро LED_TO от существующего BragiInsight к KnowTask или KnowADR (target_type = task | adr, target_id = task_uid | adr_id) — зафиксировать, что инсайт привёл к конкретному действию. Идемпотентно.' },
+  { name: 'lore_sync_integration', kind: 'write', entity: 'BRAGI', backend: 'POST /lore/bragi/integration/sync',
+    params: 'integration_id, metrics[]',
+    desc: 'Каркас ручной синхронизации (без крона): пишет уже полученные извне метрики в MetricSnapshot и обновляет last_called_at интеграции. Сам к внешнему API НЕ обращается — маппинг источник→метрика и реальный HTTP-вызов (Яндекс.Метрика/Keys.so/GSC/Telegram) остаются на вызывающей стороне (реальный коннектор или человек, вставляющий цифры вручную). 404, если integration_id не существует. Живой опрос по расписанию отложен до появления реальных ключей (SPRINT_BRAGI_ARCHIVE_IMPL/INT-01,02).' },
 ];
 
 const ENV_ROWS: [string, string, string][] = [
@@ -226,6 +277,7 @@ const MCP_JSON = `{
 const ENTITIES = Array.from(new Set(TOOLS.map(t => t.entity)));
 
 export default function LoreMcpApiScreen() {
+  const { t } = useTranslation();
   const [slices, setSlices]   = useState<LoreSliceDescriptor[] | null>(null);
   const [health, setHealth]   = useState<'checking' | 'up' | 'down'>('checking');
   const [filter, setFilter]   = useState('');
@@ -253,15 +305,11 @@ export default function LoreMcpApiScreen() {
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div style={S.head}>
-          <h1 style={S.h1}>MCP-сервер <span style={{ color: 'var(--acc)' }}>aida-lore</span></h1>
+          <h1 style={S.h1}>{t('lore.mcpApi.headerTitle', 'MCP-сервер')} <span style={{ color: 'var(--acc)' }}>aida-lore</span></h1>
           <HealthPill health={health} count={slices?.length} />
         </div>
         <p style={S.lead}>
-          Прямой доступ ИИ-агента (Claude Desktop / Claude Code / Cursor) к движку
-          LORE по протоколу MCP: читать план / спринты / ADR / решения / релизы и
-          писать статусы и задачи — без ручного SQL. Сервер — тонкая обёртка над
-          backend <code style={S.code}>:9100</code>; вся композиция SQL-слайсов и
-          whitelisting остаётся на сервере.
+          {t('lore.mcpApi.lead', 'Прямой доступ ИИ-агента (Claude Desktop / Claude Code / Cursor) к движку LORE по протоколу MCP: читать план / спринты / ADR / решения / релизы и писать статусы и задачи — без ручного SQL. Сервер — тонкая обёртка над backend :9100; вся композиция SQL-слайсов и whitelisting остаётся на сервере.')}
         </p>
 
         {/* ── Pipeline ───────────────────────────────────────────────────────── */}
@@ -273,12 +321,16 @@ export default function LoreMcpApiScreen() {
         </div>
 
         {/* ── Tools ──────────────────────────────────────────────────────────── */}
-        <Section title={`Инструменты (${shownTools.length}${shownTools.length !== TOOLS.length ? ` из ${TOOLS.length}` : ''})`}>
+        <Section title={
+          shownTools.length !== TOOLS.length
+            ? t('lore.mcpApi.toolsTitleFiltered', 'Инструменты ({{shown}} из {{total}})', { shown: shownTools.length, total: TOOLS.length })
+            : t('lore.mcpApi.toolsTitle', 'Инструменты ({{count}})', { count: shownTools.length })
+        }>
           <div style={S.entityChips}>
             <span
               style={entityChipStyle(entityFilter === null)}
               onClick={() => setEntityFilter(null)}
-            >Все</span>
+            >{t('lore.mcpApi.entityAll', 'Все')}</span>
             {ENTITIES.map(e => (
               <span
                 key={e}
@@ -289,7 +341,7 @@ export default function LoreMcpApiScreen() {
             <span style={S.kindToggle}>
               {(['all', 'read', 'write'] as const).map(k => (
                 <span key={k} style={kindChipStyle(kindFilter === k)} onClick={() => setKindFilter(k)}>
-                  {k === 'all' ? 'read+write' : k}
+                  {k === 'all' ? t('lore.mcpApi.kindReadWrite', 'read+write') : k}
                 </span>
               ))}
             </span>
@@ -298,7 +350,7 @@ export default function LoreMcpApiScreen() {
             <table style={S.table}>
               <thead>
                 <tr>
-                  <Th>Инструмент</Th><Th>Тип</Th><Th>Backend-вызов</Th><Th>Параметры</Th><Th>Назначение</Th>
+                  <Th>{t('lore.mcpApi.colTool', 'Инструмент')}</Th><Th>{t('lore.mcpApi.colType', 'Тип')}</Th><Th>{t('lore.mcpApi.colBackendCall', 'Backend-вызов')}</Th><Th>{t('lore.mcpApi.colParams', 'Параметры')}</Th><Th>{t('lore.mcpApi.colPurpose', 'Назначение')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -330,60 +382,48 @@ export default function LoreMcpApiScreen() {
                   );
                 })}
                 {shownTools.length === 0 && (
-                  <tr><td colSpan={5} style={{ ...S.td, color: 'var(--t3)', textAlign: 'center' }}>Ничего не найдено под текущим фильтром.</td></tr>
+                  <tr><td colSpan={5} style={{ ...S.td, color: 'var(--t3)', textAlign: 'center' }}>{t('lore.mcpApi.toolsEmpty', 'Ничего не найдено под текущим фильтром.')}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
           <p style={S.note}>
-            Write-инструменты идут с заголовком <code style={S.code}>X-Seer-Role: admin</code>,
-            версионны (SCD2 — история не теряется) и мутируют общую{' '}
-            <code style={S.code}>system_aida_lore</code> — применять осознанно.
-            <code style={S.code}>lore_create_adr</code> создаёт полную SCD2-структуру:
-            вершина + KnowADRHist (valid_to=null) + HAS_STATE edge — тело ADR читается
-            именно из hist-строки.{' '}
-            Партиальные (amend) вызовы у всех upsert-инструментов с 2026-07 безопасны — SQL SET
-            собирается динамически, непереданное поле не трогается (раньше пропущенный параметр
-            молча обнулялся).{' '}
-            <b>Удаление:</b> штатный путь — soft-delete через статус (<code style={S.code}>lore_set_status</code>
-            {' '}со status="cancelled"/"deprecated"/"archived" — история сохраняется). Настоящий
-            hard-delete есть только у <code style={S.code}>lore_delete_adr</code> и{' '}
-            <code style={S.code}>lore_delete_spec</code>, оба явно помечены как «только для
-            тестовых артефактов». Остальные типы (Sprint/Task/Release/Component/Milestone/
-            QualityGate/Runbook/Doc) осознанно без hard-delete тула — реальные данные не удаляются,
-            только архивируются статусом.{' '}
-            Из набора пока не реализован только <code style={S.code}>checkpoint</code> (бэкенд → 501).
-            Инструменты по <b>Исследованиям</b> (витрина RAGVSDL) — на отдельной странице
-            «MCP API» в разделе «Исследования» (<code style={S.code}>/benchmark?tab=mcp</code>).
+            {t('lore.mcpApi.toolsNote1', 'Write-инструменты идут с заголовком')} <code style={S.code}>X-Seer-Role: admin</code>,
+            {t('lore.mcpApi.toolsNote2', 'версионны (SCD2 — история не теряется) и мутируют общую')}{' '}
+            <code style={S.code}>system_aida_lore</code> {t('lore.mcpApi.toolsNote3', '— применять осознанно.')}
+            <code style={S.code}>lore_create_adr</code> {t('lore.mcpApi.toolsNote4', 'создаёт полную SCD2-структуру: вершина + KnowADRHist (valid_to=null) + HAS_STATE edge — тело ADR читается именно из hist-строки.')}{' '}
+            {t('lore.mcpApi.toolsNote5', 'Партиальные (amend) вызовы у всех upsert-инструментов с 2026-07 безопасны — SQL SET собирается динамически, непереданное поле не трогается (раньше пропущенный параметр молча обнулялся).')}{' '}
+            <b>{t('lore.mcpApi.toolsNoteDeletionLabel', 'Удаление:')}</b> {t('lore.mcpApi.toolsNote6', 'штатный путь — soft-delete через статус (')}<code style={S.code}>lore_set_status</code>
+            {t('lore.mcpApi.toolsNote7', ' со status="cancelled"/"deprecated"/"archived" — история сохраняется). Настоящий hard-delete есть только у ')}<code style={S.code}>lore_delete_adr</code> {t('lore.mcpApi.toolsNote8', 'и')}{' '}
+            <code style={S.code}>lore_delete_spec</code>, {t('lore.mcpApi.toolsNote9', 'оба явно помечены как «только для тестовых артефактов». Остальные типы (Sprint/Task/Release/Component/Milestone/ QualityGate/Runbook/Doc) осознанно без hard-delete тула — реальные данные не удаляются, только архивируются статусом.')}{' '}
+            {t('lore.mcpApi.toolsNote10', 'Из набора пока не реализован только ')}<code style={S.code}>checkpoint</code> {t('lore.mcpApi.toolsNote11', '(бэкенд → 501). Инструменты по ')}<b>{t('lore.mcpApi.researchLabel', 'Исследованиям')}</b> {t('lore.mcpApi.toolsNote12', '(витрина RAGVSDL) — на отдельной странице «MCP API» в разделе «Исследования» (')}<code style={S.code}>/benchmark?tab=mcp</code>{t('lore.mcpApi.toolsNote13', ').')}
           </p>
         </Section>
 
         {/* ── Live slice catalog ─────────────────────────────────────────────── */}
-        <Section title={`Каталог слайсов${slices ? ` · ${slices.length}` : ''}`}>
+        <Section title={slices ? t('lore.mcpApi.sliceCatalogTitleCount', 'Каталог слайсов · {{count}}', { count: slices.length }) : t('lore.mcpApi.sliceCatalogTitle', 'Каталог слайсов')}>
           <p style={S.note}>
-            То, что отдаёт <code style={S.codeAcc}>lore_list_slices</code> — живой
-            whitelist параметризованных запросов. Каждый слайс зовётся через{' '}
+            {t('lore.mcpApi.sliceCatalogNote1', 'То, что отдаёт')} <code style={S.codeAcc}>lore_list_slices</code> {t('lore.mcpApi.sliceCatalogNote2', '— живой whitelist параметризованных запросов. Каждый слайс зовётся через')}{' '}
             <code style={S.codeAcc}>lore_query_slice</code>.
           </p>
           {health === 'down' && (
             <div style={S.down}>
-              backend <code style={S.code}>:9100</code> не отвечает — каталог
-              недоступен. Поднять backend (см. «Эксплуатация» ниже).
+              {t('lore.mcpApi.backendDown', 'backend')} <code style={S.code}>:9100</code> {t('lore.mcpApi.backendDownRest', 'не отвечает — каталог недоступен. Поднять backend (см. «Эксплуатация» ниже).')}
             </div>
           )}
-          {health === 'checking' && <div style={S.note}>Загрузка каталога…</div>}
+          {health === 'checking' && <div style={S.note}>{t('lore.mcpApi.catalogLoading', 'Загрузка каталога…')}</div>}
           {slices && slices.length > 0 && (
             <>
               <input
                 style={S.filter}
-                placeholder="фильтр по имени слайса…"
-                aria-label="фильтр слайсов"
+                placeholder={t('lore.mcpApi.sliceFilterPlaceholder', 'фильтр по имени слайса…')}
+                aria-label={t('lore.mcpApi.sliceFilterAriaLabel', 'фильтр слайсов')}
                 value={filter}
                 onChange={e => setFilter(e.target.value)}
               />
               <div style={S.chips}>
                 {shownSlices.map(s => (
-                  <span key={s.id} style={S.chip} title={paramHint(s)}>
+                  <span key={s.id} style={S.chip} title={paramHint(s, t)}>
                     <code style={S.codeAcc}>{s.id}</code>
                     {s.required.length > 0 && (
                       <span style={S.req}>({s.required.join(', ')})</span>
@@ -393,17 +433,17 @@ export default function LoreMcpApiScreen() {
                     )}
                   </span>
                 ))}
-                {shownSlices.length === 0 && <span style={S.note}>Ничего не найдено.</span>}
+                {shownSlices.length === 0 && <span style={S.note}>{t('lore.mcpApi.slicesEmpty', 'Ничего не найдено.')}</span>}
               </div>
             </>
           )}
         </Section>
 
         {/* ── Config ─────────────────────────────────────────────────────────── */}
-        <Section title="Конфиг (env)">
+        <Section title={t('lore.mcpApi.configTitle', 'Конфиг (env)')}>
           <div style={S.tableWrap}>
             <table style={S.table}>
-              <thead><tr><Th>Переменная</Th><Th>Дефолт</Th><Th>Назначение</Th></tr></thead>
+              <thead><tr><Th>{t('lore.mcpApi.colVariable', 'Переменная')}</Th><Th>{t('lore.mcpApi.colDefault', 'Дефолт')}</Th><Th>{t('lore.mcpApi.colPurpose', 'Назначение')}</Th></tr></thead>
               <tbody>
                 {ENV_ROWS.map(([k, v, d]) => (
                   <tr key={k} style={S.tr}>
@@ -415,44 +455,42 @@ export default function LoreMcpApiScreen() {
               </tbody>
             </table>
           </div>
-          <p style={S.note}>Регистрация у клиента (Claude Code) — <code style={S.code}>.mcp.json</code> в корне репо:</p>
+          <p style={S.note}>{t('lore.mcpApi.clientRegNote', 'Регистрация у клиента (Claude Code) —')} <code style={S.code}>.mcp.json</code> {t('lore.mcpApi.clientRegNoteRest', 'в корне репо:')}</p>
           <Pre>{MCP_JSON}</Pre>
         </Section>
 
         {/* ── Ops ────────────────────────────────────────────────────────────── */}
-        <Section title="Эксплуатация — поднять / поднять если упал">
+        <Section title={t('lore.mcpApi.opsTitle', 'Эксплуатация — поднять / поднять если упал')}>
           <ol style={S.ol}>
-            <li>Проверить backend (частая причина «MCP не отвечает»):
+            <li>{t('lore.mcpApi.opsStep1', 'Проверить backend (частая причина «MCP не отвечает»):')}
               <Pre>curl http://localhost:9100/lore/slices   # ждём 200 + JSON-каталог</Pre>
             </li>
-            <li>Если backend лежит — поднять его (Docker — рекомендуется):
+            <li>{t('lore.mcpApi.opsStep2', 'Если backend лежит — поднять его (Docker — рекомендуется):')}
               <Pre>{`cd C:/AIDA/UnlimitedLORE
 $env:ARCADEDB_ROOT_PASSWORD='...'
 docker compose up -d lore-backend     # backend на :9100`}</Pre>
             </li>
-            <li>Собрать MCP-сервер (если не собран):
+            <li>{t('lore.mcpApi.opsStep3', 'Собрать MCP-сервер (если не собран):')}
               <Pre>{`cd C:/AIDA/UnlimitedLORE/mcp-server
 npm install && npm run build          # → dist/index.js`}</Pre>
             </li>
-            <li>Клиент сам запускает процесс по stdio — отдельно «держать живым» не
-              нужно. После правок <code style={S.code}>.mcp.json</code> или пересборки —
-              перезапустить клиент.</li>
+            <li>{t('lore.mcpApi.opsStep4', 'Клиент сам запускает процесс по stdio — отдельно «держать живым» не нужно. После правок')} <code style={S.code}>.mcp.json</code> {t('lore.mcpApi.opsStep4Rest', 'или пересборки — перезапустить клиент.')}</li>
           </ol>
-          <p style={S.note}>Смоук-тест без клиента (прямой stdio JSON-RPC):</p>
+          <p style={S.note}>{t('lore.mcpApi.smokeTestNote', 'Смоук-тест без клиента (прямой stdio JSON-RPC):')}</p>
           <Pre>{SMOKE}</Pre>
         </Section>
 
         {/* ── Diagnostics ────────────────────────────────────────────────────── */}
-        <Section title="Диагностика">
+        <Section title={t('lore.mcpApi.diagnosticsTitle', 'Диагностика')}>
           <div style={S.tableWrap}>
             <table style={S.table}>
-              <thead><tr><Th>Симптом</Th><Th>Причина</Th><Th>Что делать</Th></tr></thead>
+              <thead><tr><Th>{t('lore.mcpApi.colSymptom', 'Симптом')}</Th><Th>{t('lore.mcpApi.colCause', 'Причина')}</Th><Th>{t('lore.mcpApi.colFix', 'Что делать')}</Th></tr></thead>
               <tbody>
                 {([
-                  ['Инструменты есть, любой вызов = ошибка', 'backend :9100 не поднят', 'поднять backend'],
-                  ['403 на write', 'нет/неверный X-Seer-Role', 'env LORE_SEER_ROLE=admin'],
-                  ['MART_UPSTREAM / 500', 'ArcadeDB недоступен или неверный пароль', 'проверить :2480 и ARCADEDB_ROOT_PASSWORD'],
-                  ['Сервер не стартует под клиентом', 'не собран dist/', 'npm run build в mcp-server'],
+                  [t('lore.mcpApi.diag1a', 'Инструменты есть, любой вызов = ошибка'), t('lore.mcpApi.diag1b', 'backend :9100 не поднят'), t('lore.mcpApi.diag1c', 'поднять backend')],
+                  [t('lore.mcpApi.diag2a', '403 на write'), t('lore.mcpApi.diag2b', 'нет/неверный X-Seer-Role'), t('lore.mcpApi.diag2c', 'env LORE_SEER_ROLE=admin')],
+                  [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 500'), t('lore.mcpApi.diag3b', 'ArcadeDB недоступен или неверный пароль'), t('lore.mcpApi.diag3c', 'проверить :2480 и ARCADEDB_ROOT_PASSWORD')],
+                  [t('lore.mcpApi.diag4a', 'Сервер не стартует под клиентом'), t('lore.mcpApi.diag4b', 'не собран dist/'), t('lore.mcpApi.diag4c', 'npm run build в mcp-server')],
                 ] as [string, string, string][]).map(([a, b, c]) => (
                   <tr key={a} style={S.tr}>
                     <Td style={{ color: 'var(--t1)' }}>{a}</Td>
@@ -466,8 +504,8 @@ npm install && npm run build          # → dist/index.js`}</Pre>
         </Section>
 
         <p style={S.foot}>
-          Полный runbook: <code style={S.code}>C:/AIDA/docs/change/sprints/MCP_AIDA_LORE_SERVER.md</code>
-          {' · '}код: <code style={S.code}>C:/AIDA/UnlimitedLORE/mcp-server/</code>
+          {t('lore.mcpApi.footRunbook', 'Полный runbook:')} <code style={S.code}>C:/AIDA/docs/change/sprints/MCP_AIDA_LORE_SERVER.md</code>
+          {' · '}{t('lore.mcpApi.footCode', 'код:')} <code style={S.code}>C:/AIDA/UnlimitedLORE/mcp-server/</code>
         </p>
       </div>
     </div>
@@ -475,17 +513,20 @@ npm install && npm run build          # → dist/index.js`}</Pre>
 }
 
 // ── Small building blocks ─────────────────────────────────────────────────────
-function paramHint(s: LoreSliceDescriptor): string {
-  const r = s.required.length ? `обяз: ${s.required.join(', ')}` : '';
-  const o = s.optional.length ? `опц: ${s.optional.join(', ')}` : '';
-  return [r, o].filter(Boolean).join(' · ') || 'без параметров';
+function paramHint(s: LoreSliceDescriptor, t: (key: string, fallback: string, opts?: Record<string, unknown>) => string): string {
+  const r = s.required.length ? t('lore.mcpApi.hintRequired', 'обяз: {{list}}', { list: s.required.join(', ') }) : '';
+  const o = s.optional.length ? t('lore.mcpApi.hintOptional', 'опц: {{list}}', { list: s.optional.join(', ') }) : '';
+  return [r, o].filter(Boolean).join(' · ') || t('lore.mcpApi.hintNoParams', 'без параметров');
 }
 
 function HealthPill({ health, count }: { health: 'checking' | 'up' | 'down'; count?: number }) {
+  const { t } = useTranslation();
   const map = {
-    checking: { c: 'var(--t3)', t: 'проверка…' },
-    up:       { c: 'var(--suc)', t: `backend :9100 жив${count != null ? ` · ${count} слайсов` : ''}` },
-    down:     { c: 'var(--dng)', t: 'backend :9100 не отвечает' },
+    checking: { c: 'var(--t3)', t: t('lore.mcpApi.healthChecking', 'проверка…') },
+    up:       { c: 'var(--suc)', t: count != null
+      ? t('lore.mcpApi.healthUpWithCount', 'backend :9100 жив · {{count}} слайсов', { count })
+      : t('lore.mcpApi.healthUp', 'backend :9100 жив') },
+    down:     { c: 'var(--dng)', t: t('lore.mcpApi.healthDown', 'backend :9100 не отвечает') },
   }[health];
   return (
     <span style={{
