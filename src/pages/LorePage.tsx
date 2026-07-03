@@ -110,7 +110,7 @@ const S = {
   // Narrow: icon-only, tinted by the section's type colour.
   navItemNarrow: (active: boolean, col: string) => ({
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: '6px 8px', height: 32, minWidth: 38, cursor: 'pointer', borderRadius: 6,
+    padding: '6px 8px', height: 40, minWidth: 44, cursor: 'pointer', borderRadius: 6,
     border: active ? `1px solid ${col}` : '1px solid transparent',
     background: active ? `color-mix(in srgb, ${col} 20%, transparent)` : 'transparent',
     flexShrink: 0,
@@ -223,6 +223,9 @@ export default function LorePage() {
   const showGlobalSearch = SEARCH_SECTIONS.includes(section);
   // MOB: collapse the section nav to type-coloured icons on narrow screens.
   const narrow = useIsNarrow(720);
+  // MOB-08: touch targets — icon-only chips get taller padding on narrow so
+  // the tap zone approaches the 44px guideline without desktop bloat.
+  const chipPad = narrow ? '9px 10px' : '2px 8px';
 
   // LH-26: seed local search fields from global q when switching sections (once, if empty)
   useEffect(() => {
@@ -372,7 +375,7 @@ export default function LorePage() {
                 title={`${f.label}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? meta.color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
                   color: on ? 'var(--t1)' : 'var(--t3)',
@@ -398,7 +401,7 @@ export default function LorePage() {
             title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
               border: `1px solid ${sprintPresetWorking ? 'var(--acc)' : 'var(--b3)'}`,
               background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
@@ -414,7 +417,7 @@ export default function LorePage() {
             title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
               border: `1px solid ${sprintPresetAttention ? '#E24B4A' : 'var(--b3)'}`,
               background: sprintPresetAttention ? 'color-mix(in srgb, #E24B4A 16%, transparent)' : 'transparent',
               color: sprintPresetAttention ? '#E24B4A' : 'var(--t3)',
@@ -436,7 +439,7 @@ export default function LorePage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, fontWeight: on ? 600 : 400,
-                  padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
                   color: on ? color : 'var(--t3)',
@@ -456,7 +459,7 @@ export default function LorePage() {
                 onClick={() => setSprintDatePeriod(on ? null : p)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
                   background: on ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
                   color: on ? 'var(--acc)' : 'var(--t3)',
@@ -472,7 +475,7 @@ export default function LorePage() {
             onClick={() => setSprintNoRelease(v => !v)}
             style={{
               display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
               border: `1px solid ${sprintNoRelease ? 'var(--acc)' : 'var(--b3)'}`,
               background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
@@ -517,7 +520,7 @@ export default function LorePage() {
                 title={`${id} (${count})`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                   color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
@@ -575,7 +578,7 @@ export default function LorePage() {
                 title={`${id} (${count})`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                   color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
@@ -602,6 +605,66 @@ export default function LorePage() {
         </div>
       )}
 
+      {/* ── MOB-08: active-filters strip (narrow only). The icon-only chips rely
+           on title tooltips, which DON'T EXIST on touch — this strip is the
+           readable feedback: every active filter as a labelled chip, tap × to
+           remove. Desktop keeps labels inline, so the strip is narrow-only. ── */}
+      {narrow && section === 'sprints' &&
+        (sprintStatusSel.size > 0 || sprintPriorityFilter.size > 0 || sprintProjSel.size > 0 ||
+         sprintCompSel.size > 0 || sprintDatePeriod || sprintNoRelease) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+          padding: '6px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+        }}>
+          {[...sprintStatusSel].map(k => {
+            const meta = statusMeta(k);
+            const label = STATUS_FILTERS.find(f => f.key === k)?.label ?? k;
+            return (
+              <span key={'s' + k}
+                onClick={() => setSprintStatusSel(prev => { const n = new Set(prev); n.delete(k); return n; })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                         padding: '5px 9px', borderRadius: 12, whiteSpace: 'nowrap',
+                         background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
+                         border: `1px solid color-mix(in srgb, ${meta.color} 30%, transparent)`, color: 'var(--t1)' }}
+              >{label} ✕</span>
+            );
+          })}
+          {[...sprintPriorityFilter].map(p => (
+            <span key={'p' + p}
+              onClick={() => setSprintPriorityFilter(prev => { const n = new Set(prev); n.delete(p); return n; })}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{p} ✕</span>
+          ))}
+          {[...sprintProjSel].map(id => (
+            <span key={'pr' + id}
+              onClick={() => setSprintProjSel(prev => { const n = new Set(prev); n.delete(id); return n; })}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{projLabel(id)} ✕</span>
+          ))}
+          {[...sprintCompSel].map(id => (
+            <span key={'c' + id}
+              onClick={() => setSprintCompSel(prev => { const n = new Set(prev); n.delete(id); return n; })}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{id} ✕</span>
+          ))}
+          {sprintDatePeriod && (
+            <span onClick={() => setSprintDatePeriod(null)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{sprintDatePeriod === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : sprintDatePeriod === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней')} ✕</span>
+          )}
+          {sprintNoRelease && (
+            <span onClick={() => setSprintNoRelease(false)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{t('lore.page.sprints.noRelease', 'Без релиза')} ✕</span>
+          )}
+        </div>
+      )}
+
       {/* ── ADR filter bar ──────────────────────────────────────────────────── */}
       {section === 'adrs' && (
         <div style={{
@@ -619,7 +682,7 @@ export default function LorePage() {
                 title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? f.color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
                   color: on ? 'var(--t1)' : 'var(--t3)',
@@ -669,7 +732,7 @@ export default function LorePage() {
                   title={`${area}: ${cnt}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                    userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                    userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                     border: `1px solid ${on ? color : 'var(--b3)'}`,
                     background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                     color: on ? 'var(--t1)' : 'var(--t3)',
