@@ -956,8 +956,13 @@ export default function LorePage() {
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
         {!(narrow && isMasterDetail && !passport) && (
-        <div style={S.content}>
-          {narrow && isMasterDetail && passport && (
+        // S.content is a ROW flex — with the narrow back-button (width:100%)
+        // inside it, the button ate the row and pushed the detail out of view
+        // (blank ADR page bug). Column direction when the back bar is shown.
+        <div style={narrow && isMasterDetail && passport ? { ...S.content, flexDirection: 'column' } : S.content}>
+          {/* adrs' own passport view already renders a "← К списку" — skip the
+              generic bar there to avoid two stacked back controls. */}
+          {narrow && isMasterDetail && passport && section !== 'adrs' && (
             <button
               onClick={clearItem}
               style={{
