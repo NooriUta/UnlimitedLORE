@@ -8,6 +8,7 @@ import { fetchLoreSlice, uploadBragiAsset, attachBragiAsset } from '../../api/lo
 import { MultiChip } from './LoreAdrEditor';
 import TipTapField from './TipTapField';
 import BragiSkinPreview, { type BragiSkin } from './BragiSkinPreview';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 import type { RubricRow } from './LoreBragiRubricManager';
 
 const LORE_BASE = '/lore';
@@ -211,6 +212,14 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
     }
   };
 
+  // MOB-02: below the narrow breakpoint the two panes stack vertically (form
+  // on top, preview capped below) instead of the 320px preview crushing the form.
+  const narrow = useIsNarrow(760);
+  const panesStyle = narrow ? { ...S.panes, flexDirection: 'column' as const } : S.panes;
+  const rightPaneStyle = narrow
+    ? { ...S.rightPane, width: 'auto', minWidth: 0, flex: 'none', maxHeight: '55vh', borderLeft: 'none', borderTop: '1px solid var(--b3)' }
+    : S.rightPane;
+
   // REN-00: resolve what the preview renders based on the selected tab.
   const activeVariant = typeof previewTarget === 'number' && previewTarget < variants.length ? variants[previewTarget] : null;
   const previewIsMain = activeVariant == null;
@@ -243,7 +252,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
       {errMsg && <div style={S.errBanner}>{errMsg}</div>}
 
-      <div style={S.panes}>
+      <div style={panesStyle}>
         <div style={S.leftPane}>
       <div style={S.row4}>
         <Field label={t('bragi.publicationEditor.fieldPublicationId', 'Publication ID')} grow={1}>
@@ -385,7 +394,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       </Sec>
         </div>
 
-        <aside style={S.rightPane}>
+        <aside style={rightPaneStyle}>
           {/* Variant tab bar: master + one tab per channel variant. Selecting a
               variant previews its effective text (own or inherited) in its
               channel's skin. */}
