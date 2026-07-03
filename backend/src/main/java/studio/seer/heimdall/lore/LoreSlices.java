@@ -116,7 +116,7 @@ public final class LoreSlices {
         // ── §3 Sprints ───────────────────────────────────────────────────────
         // [field IS NOT NULL] filter: skip sparse hist entries where field absent
         slice("sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, name, created_date, no_release_required, " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0] AS valid_from, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
@@ -127,8 +127,13 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
-            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
-            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id, " +
+            // SPRINT_PLANITEM_RETIRE: planned_milestone_id/planned_start_date/
+            // planned_end_date/track_id are now plain SCD2-tracked fields on
+            // KnowSprintHist (set via /lore/sprint/plan) — no more PlanItem hop.
+            "out('HAS_STATE')[planned_milestone_id IS NOT NULL].planned_milestone_id[0] AS planned_milestone_id, " +
+            "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0]     AS planned_start_date, " +
+            "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]         AS planned_end_date, " +
+            "out('HAS_STATE')[track_id IS NOT NULL].track_id[0]                         AS track_id, " +
             "context_md " +
             "FROM KnowSprint",
             List.of(),
@@ -137,12 +142,14 @@ public final class LoreSlices {
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
-            "SELECT sprint_id, name, context_md, " +
+            "SELECT sprint_id, name, context_md, created_date, no_release_required, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
-            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
+            "out('HAS_STATE')[planned_milestone_id IS NOT NULL].planned_milestone_id[0] AS planned_milestone_id, " +
+            "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0]     AS planned_start_date, " +
+            "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]         AS planned_end_date, " +
             "out('DEPENDS_ON').sprint_id   AS depends_on, " +
             "in('DEPENDS_ON').sprint_id    AS blocks, " +
             "out('BELONGS_TO').component_id AS components, " +
@@ -152,7 +159,7 @@ public final class LoreSlices {
             // to surface the link even though lore_link_adr_sprint has always
             // been able to create it.
             "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
-            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id " +
+            "out('HAS_STATE')[track_id IS NOT NULL].track_id[0] AS track_id " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
 

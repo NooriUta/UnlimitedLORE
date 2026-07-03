@@ -223,6 +223,12 @@ export interface LoreSprintRow {
   components: string[] | null;
   track_id: string | null;
   context_md: string | null;
+  created_date: string | null;
+  planned_start_date: string | null;
+  planned_end_date: string | null;
+  planned_milestone_id: string | null;
+  milestone_ids?: string[] | null;
+  no_release_required: boolean | null;
 }
 
 export interface LoreSprintDoneDate {
@@ -641,26 +647,34 @@ export async function upsertMilestone(
   return res.json() as Promise<{ ok: boolean; milestone_id: string }>;
 }
 
-/** Partial update of KnowSprint vertex fields (POST /lore/sprint/update). */
-export async function setSprintTrack(
+export async function updateLoreSprint(
   sprintId: string,
-  trackId: string | null,
-): Promise<{ ok: boolean; sprint_id: string; track_id: string | null }> {
-  const res = await fetch(`${LORE_BASE}/sprint/track`, {
+  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null },
+): Promise<{ ok: boolean; sprint_id: string }> {
+  const res = await fetch(`${LORE_BASE}/sprint/update`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify({ sprint_id: sprintId, track_id: trackId }),
+    body: JSON.stringify({ sprint_id: sprintId, ...fields }),
   });
   assertJson(res);
   if (!res.ok) return parseError(res);
-  return res.json() as Promise<{ ok: boolean; sprint_id: string; track_id: string | null }>;
+  return res.json() as Promise<{ ok: boolean; sprint_id: string }>;
 }
 
-export async function updateLoreSprint(
+/**
+ * Real-SCD2 edit of sprint plan fields (POST /lore/sprint/plan) — unlike
+ * updateLoreSprint (in-place vertex mutation), this closes the open
+ * KnowSprintHist row and opens a new one, carrying forward any of these
+ * fields the caller doesn't pass. priority lives here now, not on updateLoreSprint.
+ */
+export async function updateSprintPlan(
   sprintId: string,
-  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; priority?: string | null },
+  fields: {
+    priority?: string | null; planned_start_date?: string | null; planned_end_date?: string | null;
+    planned_milestone_id?: string | null; track_id?: string | null;
+  },
 ): Promise<{ ok: boolean; sprint_id: string }> {
-  const res = await fetch(`${LORE_BASE}/sprint/update`, {
+  const res = await fetch(`${LORE_BASE}/sprint/plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),

@@ -543,11 +543,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return sorted.map((d, i) => ({ dateMs: d.getTime(), total: i + 1 }));
   }, [chartSprints]);
 
+  // Sprints flagged as never shipping a versioned release (docs/research/tooling)
+  // — excluded from unreleased-burn/deploy-lag so they don't read as perpetually overdue.
+  const noReleaseSprintIds = useMemo(() =>
+    new Set(sprintRows.filter(s => s.no_release_required).map(s => s.sprint_id)),
+  [sprintRows]);
+
   // Unreleased: sprints done after M2 (Jun 3)
   const M2_DATE = '2026-06-03';
   const sinceM2Count = useMemo(() =>
-    doneDates.filter(d => (d.done_date ?? '').slice(0, 10) >= M2_DATE).length,
-  [doneDates]);
+    doneDates.filter(d => (d.done_date ?? '').slice(0, 10) >= M2_DATE && !noReleaseSprintIds.has(d.sprint_id)).length,
+  [doneDates, noReleaseSprintIds]);
 
   // Milestone classification
   const milestoneStatuses = useMemo(() => {
@@ -752,8 +758,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       const relDates = s.release_dates.map(parseDoneDate).filter((d): d is Date => !!d && d >= done);
       if (relDates.length) lags.push(daysBetween(done, new Date(Math.min(...relDates.map(d => d.getTime())))));
     });
-    // done but not yet released
-    const unreleased = sprintRows.filter(s => parseDoneDate(s.done_date) && !s.release_dates?.length).length;
+    // done but not yet released — excludes sprints flagged no_release_required
+    // (docs/research/tooling that never ships a versioned release; otherwise
+    // they'd sit in this count forever as a false "overdue" signal).
+    const unreleased = sprintRows.filter(s =>
+      parseDoneDate(s.done_date) && !s.release_dates?.length && !s.no_release_required).length;
     if (!lags.length) return { med: null, p75: null, unreleased, count: 0 };
     return { med: median(lags), p75: Math.round(quantile(lags, 0.75)), unreleased, count: lags.length };
   }, [sprintRows]);
