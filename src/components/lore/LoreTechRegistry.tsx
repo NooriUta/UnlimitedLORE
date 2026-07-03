@@ -9,7 +9,7 @@ import LoreSkeleton from './LoreSkeleton';
 // "не разово, а по регламенту" (a registry with no upkeep signal rots).
 const STALE_MONTHS = 6;
 
-function isStale(checkedAt: string | null): boolean {
+export function isStale(checkedAt: string | null): boolean {
   if (!checkedAt) return true;
   const d = new Date(checkedAt);
   if (Number.isNaN(d.getTime())) return true;
@@ -20,7 +20,7 @@ function isStale(checkedAt: string | null): boolean {
 
 // content_md is a small "- **Label:** value" bullet list (see upsertTech) —
 // pull out the fields we want to show as columns instead of dumping raw MD.
-function parseFields(md: string | null): {
+export function parseFields(md: string | null): {
   license: string | null; releaseDate: string | null; source: string | null;
   ourRelease: string | null; usage: string | null;
 } {
