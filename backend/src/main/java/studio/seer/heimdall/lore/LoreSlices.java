@@ -243,11 +243,13 @@ public final class LoreSlices {
             "SELECT milestone_id, label, week, date_display, priority, " +
             "out('HAS_STATE').goal_md[0]      AS goal_md, " +
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
-            // Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint.
-            // Sprints link via plan item (CONTRIBUTES_TO→REPRESENTS) OR directly
-            // (TARGETS_MILESTONE, set from the milestone-management UI).
-            // Direct edge takes priority: exclude from sprint_ids any sprint that has TARGETS_MILESTONE set.
-            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint' AND out('TARGETS_MILESTONE').size() = 0].sprint_id AS sprint_ids, " +
+            // SPRINT_PLANITEM_RETIRE (T-21): the "planned" bucket used to come from
+            // a CONTRIBUTES_TO←PlanItem→REPRESENTS hop; that data now lives as
+            // KnowSprintHist.planned_milestone_id (a plain property, no graph edge
+            // to join on here) — the frontend computes the planned-sprint list by
+            // filtering its already-fetched `sprints` slice on that field instead
+            // (see LoreMilestonesView.tsx msIds()). direct_sprint_ids (the "actual"
+            // bucket, TARGETS_MILESTONE) is a real edge and stays a plain traversal.
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");

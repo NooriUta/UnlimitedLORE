@@ -254,7 +254,11 @@ export interface LoreMilestone {
   week: number | null;
   date_display: string | null;
   goal_md: string | null;
-  sprint_ids: string[] | null;
+  // SPRINT_PLANITEM_RETIRE (T-21): the "planned" bucket is no longer returned
+  // by the backend slice — derive it client-side from the already-fetched
+  // `sprints` list, filtered on planned_milestone_id (see LoreMilestonesView's
+  // msIds()). direct_sprint_ids (TARGETS_MILESTONE, the "actual" bucket) is
+  // still a real edge and still comes from the slice.
   direct_sprint_ids?: string[] | null;
   priority?: string | null;
 }
