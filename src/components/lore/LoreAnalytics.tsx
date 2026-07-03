@@ -407,18 +407,32 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     data?.by_sprint.filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; }).length ?? 0,
   [data]);
 
+  // SPRINT_PLANITEM_RETIRE (T-21): "planned" milestone membership no longer
+  // comes from the backend slice (retired PlanItem hop) — derive it from
+  // sprintRows.planned_milestone_id instead, same pattern as LoreMilestonesView.
+  const plannedByMilestone = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const s of sprintRows) {
+      if (!s.planned_milestone_id) continue;
+      const arr = map.get(s.planned_milestone_id);
+      if (arr) arr.push(s.sprint_id); else map.set(s.planned_milestone_id, [s.sprint_id]);
+    }
+    return map;
+  }, [sprintRows]);
+
   // open sprints belonging to the current milestone — used for forecast
   const milestoneOpenCount = useMemo(() => {
     if (!data || !milestoneList.length) return openSprintCount;
     // find current milestone (first non-done)
     const cur = milestoneList.find(m => !(m.goal_md?.includes('✅') ?? false));
-    if (!cur || !cur.sprint_ids?.length) return openSprintCount;
-    const ids = new Set(cur.sprint_ids);
+    const curPlanIds = cur ? (plannedByMilestone.get(cur.milestone_id) ?? []) : [];
+    if (!cur || !curPlanIds.length) return openSprintCount;
+    const ids = new Set(curPlanIds);
     return data.by_sprint.filter(s => {
       const k = classify(s.status_raw);
       return k !== 'done' && k !== 'cancelled' && ids.has(s.sprint_id);
     }).length;
-  }, [data, milestoneList, openSprintCount]);
+  }, [data, milestoneList, openSprintCount, plannedByMilestone]);
 
   // Velocity by ISO week (last 12 weeks)
   const velocityWeeks = useMemo(() => {
@@ -460,9 +474,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     milestoneList.map(m => ({
       id: m.milestone_id,
       label: m.label,
-      ids: new Set([...(m.sprint_ids ?? []), ...(m.direct_sprint_ids ?? [])]),
+      ids: new Set([...(plannedByMilestone.get(m.milestone_id) ?? []), ...(m.direct_sprint_ids ?? [])]),
     })),
-  [milestoneList]);
+  [milestoneList, plannedByMilestone]);
 
   // Top components for filter chips (by sprint count, max 10)
   const chartComps = useMemo(() => {
@@ -1044,7 +1058,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   // current milestone open sprints for drilldown
   const milestoneOpenSprints = useMemo(() => {
-    const milestoneIds = new Set(currentMilestone?.sprint_ids ?? []);
+    const milestoneIds = new Set(currentMilestone ? (plannedByMilestone.get(currentMilestone.milestone_id) ?? []) : []);
     return (data?.by_sprint ?? [])
       .filter(s => {
         const k = classify(s.status_raw);
@@ -1061,7 +1075,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
         return rank(a.klass) - rank(b.klass) || b.open_tasks - a.open_tasks;
       });
-  }, [data, sprintRows, sprintNameMap, currentMilestone]);
+  }, [data, sprintRows, sprintNameMap, currentMilestone, plannedByMilestone]);
 
   const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
 
