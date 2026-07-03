@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { GameIcon } from '../lore/GameIcon';
 import { SHELL_TABS, type ShellTab } from './shellNav';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
@@ -24,6 +25,10 @@ export default function AppShell() {
   const { t, i18n } = useTranslation();
   const active = activeTabId(pathname);
   const lang = i18n.language?.startsWith('en') ? 'en' : 'ru';
+  // MOB-01: below ~720px the tab labels + text toggles overflow the header
+  // (~447px at 375px). Go icon-only for tabs and symbol-only for the palette
+  // toggle so everything fits without clipping.
+  const narrow = useIsNarrow(720);
 
   const [palette, setPalette] = useState<Palette>(() => {
     const saved = localStorage.getItem('lore-palette') ?? localStorage.getItem('lore-theme');
@@ -69,8 +74,8 @@ export default function AppShell() {
           borderBottom: '1px solid var(--bd)',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: '0 14px',
+          gap: narrow ? 4 : 10,
+          padding: narrow ? '0 8px' : '0 14px',
           zIndex: 100,
         }}
       >
@@ -98,7 +103,7 @@ export default function AppShell() {
         <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px' }} />
 
         {/* Tabs */}
-        <nav style={{ display: 'flex', gap: 4, flex: 1 }}>
+        <nav style={{ display: 'flex', gap: 4, flex: 1, minWidth: 0, overflowX: 'auto' }}>
           {SHELL_TABS.map(tab => {
             const isActive = tab.id === active;
             return (
@@ -106,12 +111,14 @@ export default function AppShell() {
                 key={tab.id}
                 type="button"
                 aria-current={isActive ? 'page' : undefined}
+                title={t(tab.labelKey, tab.fallback)}
                 onClick={() => navigate(tab.to)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 7,
-                  padding: '6px 12px',
+                  padding: narrow ? '6px 8px' : '6px 12px',
+                  flex: 'none',
                   border: 'none',
                   borderRadius: 'var(--seer-radius-md, 6px)',
                   cursor: 'pointer',
@@ -130,7 +137,7 @@ export default function AppShell() {
                 }}
               >
                 <GameIcon slug={tab.icon} size={15} style={{ color: 'inherit', transform: tab.flipX ? 'scaleX(-1)' : undefined }} />
-                <span>{t(tab.labelKey, tab.fallback)}</span>
+                {!narrow && <span>{t(tab.labelKey, tab.fallback)}</span>}
               </button>
             );
           })}
@@ -143,7 +150,7 @@ export default function AppShell() {
           title={`Палитра: ${palette}`}
           style={btnStyle}
         >
-          {palette === 'amber' ? '◑' : '◐'} {palette}
+          {palette === 'amber' ? '◑' : '◐'}{narrow ? '' : ` ${palette}`}
         </button>
 
         {/* Dark / light toggle */}
