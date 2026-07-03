@@ -68,29 +68,40 @@ const SKIN_CSS = `
 .bsk-habr code { background:#f3f3f3; border:1px solid #e5e5e5; border-radius:3px; padding:0 4px; font-size:13px; color:#c7254e; }
 .bsk-habr a { color:#548eaa; }
 .bsk-habr img { max-width:100%; border-radius:6px; }
-/* ── Site (seidrstudio.pro's own skin) — FIXED dark/light, independent of
-   the LORE app's own theme. Previously the "dark" variant used var(--bg0)
-   etc (LORE's active theme tokens), so switching the LORE app itself to
-   light mode silently broke the dark-theme preview — it rendered with
-   light colors instead. Both variants are now hardcoded, same as .light
-   already was, so the toggle always shows two genuinely different themes
-   regardless of the surrounding app's palette/mode. ───────────────────── */
-.bsk-site { background:#15130d; border:1px solid #332d1f; border-radius:12px; padding:24px 28px; min-height:100%; }
-.bsk-site .timg { background:#1c1810; border:1px dashed #332d1f; border-radius:8px; color:#665c48; text-align:center; padding:40px 8px; font-size:11px; margin-bottom:16px; font-family:var(--mono),monospace; }
-.bsk-site h1 { font-family:var(--font); font-weight:700; font-size:20px; color:#ede5d0; margin:0 0 13px; }
-.bsk-site h2 { font-weight:600; font-size:16px; color:#c9a227; margin:18px 0 8px; }
-.bsk-site p { font-size:14.5px; line-height:1.65; color:#9a8c6e; margin:0 0 11px; }
+/* ── Site (seidrstudio.pro's own skin) — colors + typography copied
+   VERBATIM from the real site repo (C:\AIDA\seidr-site), not approximated:
+   src/styles/globals.css ":root"/"[data-theme=light]" for the two palettes,
+   src/styles/article.css ".article-content" for headings/body/code/quote.
+   Both variants hardcoded (not var(--…)) so the preview stays independent
+   of the LORE app's own theme/mode — switching LORE itself to light mode
+   must not affect what "dark site theme" looks like. Unbounded/Manrope/
+   IBM Plex Mono are already loaded app-wide (tokens.css @import, same
+   Google Fonts URL the site itself uses), so referencing them directly
+   here needs no extra font loading. */
+.bsk-site {
+  background:#141108; border:1px solid #42382a; border-radius:12px; padding:24px 28px; min-height:100%;
+  font-family:'Manrope',sans-serif;
+}
+.bsk-site .timg { background:#1c1810; border:1px dashed #42382a; border-radius:8px; color:#8a7e66; text-align:center; padding:40px 8px; font-size:11px; margin-bottom:16px; font-family:'IBM Plex Mono',monospace; }
+.bsk-site h1 { font-family:'Unbounded',sans-serif; font-weight:700; font-size:22px; line-height:1.2; color:#ede5d0; margin:0 0 16px; }
+.bsk-site h2 { font-family:'Unbounded',sans-serif; font-weight:600; font-size:17px; color:#ede5d0; margin:24px 0 10px; }
+.bsk-site p { font-size:14.5px; line-height:1.7; color:#9a8c6e; margin:0 0 12px; }
 .bsk-site strong { color:#ede5d0; }
-.bsk-site code { font-family:var(--mono); background:#252019; border-radius:4px; padding:0 5px; font-size:12.5px; color:#c9a227; }
-.bsk-site a { color:#c9a227; }
+.bsk-site code { font-family:'IBM Plex Mono',monospace; background:#1c1810; border:1px solid #42382a; border-radius:4px; padding:1px 5px; font-size:0.875em; color:#ede5d0; }
+.bsk-site pre { background:#1c1810; border:1px solid #42382a; border-radius:8px; padding:14px 16px; margin:16px 0; overflow-x:auto; }
+.bsk-site pre code { background:none; border:none; padding:0; }
+.bsk-site blockquote { border-left:3px solid #A8B860; padding-left:14px; margin:16px 0; color:#9a8c6e; font-style:italic; }
+.bsk-site a { color:#A8B860; text-decoration:underline; text-decoration-color:#A8B86066; }
 .bsk-site img { max-width:100%; border-radius:8px; }
-.bsk-site.light { background:#faf7ef; border-color:#e2dccc; }
-.bsk-site.light h1 { color:#2c2717; }
-.bsk-site.light h2 { color:#8a6b14; }
-.bsk-site.light p { color:#5c5440; }
-.bsk-site.light strong { color:#2c2717; }
-.bsk-site.light code { background:#f0ead8; color:#8a6b14; }
-.bsk-site.light .timg { background:#f3efe3; border-color:#e2dccc; color:#a09878; }
+.bsk-site.light { background:#f5f3ee; border-color:#d4ccb8; }
+.bsk-site.light .timg { background:#faf8f3; border-color:#d4ccb8; color:#9a8a6e; }
+.bsk-site.light h1, .bsk-site.light h2 { color:#1e1a12; }
+.bsk-site.light p { color:#5c5240; }
+.bsk-site.light strong { color:#1e1a12; }
+.bsk-site.light code { background:#faf8f3; border-color:#d4ccb8; color:#1e1a12; }
+.bsk-site.light pre { background:#faf8f3; border-color:#d4ccb8; }
+.bsk-site.light blockquote { border-left-color:#6b7a2a; color:#5c5240; }
+.bsk-site.light a { color:#6b7a2a; text-decoration-color:#6b7a2a66; }
 /* Master/"мастер" tab is the editorial source-of-truth view (not a
    real-platform preview) — it intentionally keeps following the LORE app's
    own active theme/palette, same specificity as .bsk-site so source order
