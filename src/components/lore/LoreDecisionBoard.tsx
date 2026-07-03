@@ -6,6 +6,7 @@ import { fetchLoreSlice, type LoreDecisionRow, type LoreDecisionPassport } from 
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
 import { MartProse } from '../bench/MartProse';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 
 interface Props {
   q: string;
@@ -39,6 +40,8 @@ const STATUS_ORDER = ['fixed', 'accepted', 'done', 'deferred', 'rejected', 'supe
 
 export default function LoreDecisionBoard({ q, onError }: Props) {
   const { t } = useTranslation();
+  // MOB: compact date (MM-DD) on narrow — frees width for the decision text.
+  const narrow = useIsNarrow(720);
   const [rows,           setRows]           = useState<LoreDecisionRow[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [expanded,       setExpanded]       = useState<string | null>(null);
@@ -168,7 +171,11 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
           )}
         </div>
         {!groupByStatus && status && <StatusChip status={status} />}
-        {d.date_created && <span style={S.date}>{d.date_created.slice(0, 10)}</span>}
+        {d.date_created && (
+          <span style={S.date} title={d.date_created.slice(0, 10)}>
+            {narrow ? d.date_created.slice(5, 10) : d.date_created.slice(0, 10)}
+          </span>
+        )}
       </div>
     );
   }
