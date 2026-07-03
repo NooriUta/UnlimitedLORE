@@ -359,4 +359,21 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
   .ProseMirror, [contenteditable='true'] {
     font-size: 16px !important;
   }
+
+  /* MOB-11: horizontal-scroll affordance. Classic background-attachment
+     trick — the two `local` cover layers ride with the content and sit flush
+     at each end (hiding the shadow when there's nothing more that way), while
+     the two `scroll` shadow layers are pinned to the box and reveal depth only
+     while more content exists to scroll toward. Pure CSS, no JS, and it shows
+     nothing on tables/panes that already fit. Applies to mobile tables
+     (MOB-06) and any opt-in `.lore-hscroll` container (section-nav, filter
+     bars, Gantt controls). */
+  table,
+  .lore-hscroll {
+    background:
+      linear-gradient(to right, var(--bg1), transparent) 0 0 / 24px 100% no-repeat local,
+      linear-gradient(to left,  var(--bg1), transparent) 100% 0 / 24px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%,  color-mix(in srgb, var(--acc) 28%, transparent), transparent) 0 0 / 11px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--acc) 28%, transparent), transparent) 100% 0 / 11px 100% no-repeat scroll;
+  }
 }
