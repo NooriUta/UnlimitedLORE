@@ -130,16 +130,19 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   const saveEdit = async () => {
     setSaving(true);
     try {
-      // Only send a field if it actually has content — draftEn/draftRu are
-      // seeded with '' for a language that was never filled in, and the
-      // backend's partial-upsert treats '' as "set this", not "leave alone"
-      // (only a JSON-absent/null field is skipped), so sending both
-      // unconditionally would overwrite an untouched null field with ''.
+      // `row` still holds the pre-edit values here (only updated after a
+      // successful save below), so it doubles as "was this field ever set".
+      // Send a field when either it now has content, or it HAD content and
+      // the user cleared it (an intentional clear) — only skip it when both
+      // the draft and the original were empty (never touched, don't turn a
+      // never-set null into ''). The backend's partial-upsert only skips a
+      // JSON-absent field, so sending both unconditionally regardless of
+      // prior state would overwrite an untouched null field with ''.
       await updateLoreDoc(id, {
-        ...(draftEn ? { content_md_en: draftEn } : {}),
-        ...(draftRu ? { content_md_ru: draftRu } : {}),
+        ...(draftEn || row.content_md_en ? { content_md_en: draftEn } : {}),
+        ...(draftRu || row.content_md_ru ? { content_md_ru: draftRu } : {}),
       });
-      setRow(r => (r ? { ...r, content_md_en: draftEn || r.content_md_en, content_md_ru: draftRu || r.content_md_ru } : r));
+      setRow(r => (r ? { ...r, content_md_en: draftEn, content_md_ru: draftRu } : r));
       setEditing(false);
     } catch (e) {
       onError(e);
