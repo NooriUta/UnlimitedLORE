@@ -107,7 +107,7 @@ function pct(done: number, total: number) { return total > 0 ? Math.round((100 *
 function classify(s: string | null): string {
   if (!s || !s.trim()) return 'none';
   const u = s.toUpperCase();
-  if (/DONE|CLOSED|ЗАВЕРШ/.test(u))  return 'done';
+  if (/DONE|CLOSED|ЗАВЕРШ|ЗАКРЫТ/.test(u)) return 'done';
   if (/PROGRESS|WIP/.test(u))         return 'in_progress';
   if (/PARTIAL|ЧАСТИЧ/.test(u))       return 'partial';
   if (/READY|ДЕПЛО/.test(u))          return 'ready_for_deploy';
@@ -118,6 +118,19 @@ function classify(s: string | null): string {
   if (/BACKLOG/.test(u))              return 'backlog';
   if (/DEFER|ОТЛОЖ/.test(u))          return 'deferred';
   return 'todo';
+}
+
+// A sprint only counts as "open" if its status isn't done/cancelled AND its
+// tasks aren't all complete. Status text is frequently stale (never flipped
+// to a recognized DONE/ЗАКРЫТ string) while every task underneath it is long
+// finished — counting those as open makes header KPIs diverge from any
+// drilldown that also excludes them, which reads as a bug (a number with
+// nothing behind it). Every "open sprint" count in this file must use this
+// same definition so header and drilldown numbers can't disagree.
+function isGenuinelyOpen(s: LoreAnalyticsSprint): boolean {
+  const k = classify(s.status_raw);
+  if (k === 'done' || k === 'cancelled') return false;
+  return !(s.task_total > 0 && s.task_done >= s.task_total);
 }
 
 function filterSprints(list: LoreAnalyticsSprint[], f: SprintFilter) {
@@ -404,7 +417,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // ── derived ───────────────────────────────────────────────────────────────
 
   const openSprintCount = useMemo(() =>
-    data?.by_sprint.filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; }).length ?? 0,
+    data?.by_sprint.filter(isGenuinelyOpen).length ?? 0,
   [data]);
 
   // SPRINT_PLANITEM_RETIRE (T-21): "planned" milestone membership no longer
@@ -428,17 +441,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // idiom (used to guard against an empty PlanItem-derived list meaning "not
   // loaded"), but with the plain planned_milestone_id field, empty just as
   // often means "really zero" — that's what caused this header to show a
-  // stale "3" while the drilldown below it correctly showed 0.
+  // stale "3" while the drilldown below it correctly showed 0. Must use
+  // isGenuinelyOpen (not raw classify) or it diverges again whenever a
+  // sprint's status text lags behind its actually-completed tasks.
   const milestoneOpenCount = useMemo(() => {
     if (!data || !milestoneList.length) return openSprintCount;
     // find current milestone (first non-done)
     const cur = milestoneList.find(m => !(m.goal_md?.includes('✅') ?? false));
     if (!cur) return openSprintCount;
     const ids = new Set(plannedByMilestone.get(cur.milestone_id) ?? []);
-    return data.by_sprint.filter(s => {
-      const k = classify(s.status_raw);
-      return k !== 'done' && k !== 'cancelled' && ids.has(s.sprint_id);
-    }).length;
+    return data.by_sprint.filter(s => isGenuinelyOpen(s) && ids.has(s.sprint_id)).length;
   }, [data, milestoneList, openSprintCount, plannedByMilestone]);
 
   // Velocity by ISO week (last 12 weeks)
@@ -1072,11 +1084,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const milestoneOpenSprints = useMemo(() => {
     const milestoneIds = currentMilestone ? new Set(plannedByMilestone.get(currentMilestone.milestone_id) ?? []) : null;
     return (data?.by_sprint ?? [])
-      .filter(s => {
-        const k = classify(s.status_raw);
-        const allTasksDone = s.task_total > 0 && s.task_done >= s.task_total;
-        return k !== 'done' && k !== 'cancelled' && !allTasksDone && (milestoneIds === null || milestoneIds.has(s.sprint_id));
-      })
+      .filter(s => isGenuinelyOpen(s) && (milestoneIds === null || milestoneIds.has(s.sprint_id)))
       .map(s => ({
         ...s,
         name: sprintNameMap.get(s.sprint_id) ?? s.sprint_id,
