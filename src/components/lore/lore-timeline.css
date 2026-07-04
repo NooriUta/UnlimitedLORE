@@ -131,10 +131,8 @@
 .lore-tl .vis-item.fam-warn    { background-color: color-mix(in srgb, var(--wrn) 32%, var(--bg1));    border-color: var(--wrn); }
 .lore-tl .vis-item.fam-blocked { background-color: color-mix(in srgb, var(--danger) 34%, var(--bg1)); border-color: var(--danger); }
 .lore-tl .vis-item.fam-muted   { background-color: var(--bg3); border-color: var(--bdh); color: var(--t2); }
-/* Planned sprint (todo + has sprint) — own colour (accent/olive), solid-ish. */
+/* Planned sprint (todo) — own colour (accent/olive), solid-ish. */
 .lore-tl .vis-item.fam-planned { background-color: color-mix(in srgb, var(--acc) 26%, var(--bg1)); border-color: var(--acc); color: var(--t1); }
-/* Placeholder / «заглушка» (todo + no sprint) — hollow, dashed, muted. */
-.lore-tl .vis-item.fam-stub    { background-color: transparent; border: 1px dashed var(--t3); color: var(--t2); }
 
 /* Actual-span baseline (план vs факт): thin dashed outline under the plan bar.
    early = finished before plan (green), late = ran over (amber). */
