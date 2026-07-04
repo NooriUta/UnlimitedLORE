@@ -221,6 +221,11 @@ export default function LorePage() {
   const dragRef = useRef<{ x: number; w: number } | null>(null);
 
   const isMasterDetail = MASTER_DETAIL.includes(section);
+  // The narrow-screen master-detail flow below keys off `passport`, but
+  // «Знания» selects its detail view via `kind`+`art` (openArt) instead —
+  // without this, selecting a runbook/doc on a narrow screen never revealed
+  // the detail pane (passport stayed empty forever).
+  const hasDetailSelection = section === 'knowledge' ? !!(artKind && artId) : !!passport;
 
   // Sections where the global search bar is actually passed to children
   const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
@@ -813,7 +818,7 @@ export default function LorePage() {
         {/* MOB-04: on narrow screens the side-by-side pair becomes a two-step
             flow — list full-width until something is selected, then the detail
             takes the whole screen with a "← к списку" bar (clearItem). */}
-        {isMasterDetail && (!narrow || !passport) && (
+        {isMasterDetail && (!narrow || !hasDetailSelection) && (
           <>
           <div style={{ ...S.listPanel, width: narrow ? '100%' : listW }} className="lore-panel-scroll">
             {/* List panel header — search only for ADRs; sprints use the full-width bar above */}
@@ -962,14 +967,15 @@ export default function LorePage() {
         )}
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
-        {!(narrow && isMasterDetail && !passport) && (
+        {!(narrow && isMasterDetail && !hasDetailSelection) && (
         // S.content is a ROW flex — with the narrow back-button (width:100%)
         // inside it, the button ate the row and pushed the detail out of view
         // (blank ADR page bug). Column direction when the back bar is shown.
-        <div style={narrow && isMasterDetail && passport ? { ...S.content, flexDirection: 'column' } : S.content}>
+        <div style={narrow && isMasterDetail && hasDetailSelection ? { ...S.content, flexDirection: 'column' } : S.content}>
           {/* adrs' own passport view already renders a "← К списку" — skip the
-              generic bar there to avoid two stacked back controls. */}
-          {narrow && isMasterDetail && passport && section !== 'adrs' && (
+              generic bar there to avoid two stacked back controls; knowledge's
+              LoreArtifactDoc has its own back button too. */}
+          {narrow && isMasterDetail && hasDetailSelection && section !== 'adrs' && section !== 'knowledge' && (
             <button
               onClick={clearItem}
               style={{
