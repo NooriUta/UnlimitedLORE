@@ -227,7 +227,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   // Two ways to see edit+preview together: 'side' (both panes at once, preview
   // widened to a realistic reading column) or 'tabs' (full-width Редактирование/
   // Просмотр, switch instead of splitting the screen down to a narrow strip).
-  const [viewMode, setViewMode] = useState<'side' | 'tabs'>('side');
+  const [viewMode, setViewMode] = useState<'side' | 'tabs'>('tabs');
   const [tabPane, setTabPane] = useState<'edit' | 'preview'>('edit');
 
   // EDIT-05: Forseti graph links, prefilled from the publication's existing
