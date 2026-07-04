@@ -170,25 +170,26 @@ export function registerLoreWrite(server: McpServer): void {
   server.tool(
     'lore_update_sprint',
     'Update metadata fields on a KnowSprint vertex (partial update — only supplied fields written). ' +
-      'Covers name, outcome_md, context_md, priority, plan_id, effort_days. ' +
+      'Covers name, outcome_md, context_md, plan_id, effort_days. ' +
       'Does NOT change status — use lore_set_status for that. ' +
+      'Does NOT change priority — priority lives on the SCD2-tracked KnowSprintHist row, not this ' +
+      'vertex-only endpoint; there is currently no MCP tool wired to it (backend: POST /lore/sprint/plan). ' +
       'RULE: always fill context_md when you know WHY the sprint exists, key decisions, or related sprints.',
     {
       sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
       name:        z.string().optional(),
       outcome_md:  z.string().optional().describe('sprint outcome / retrospective in Markdown'),
       context_md:  z.string().optional().describe('background context — WHY the sprint exists, key decisions, links to ADRs/docs, related sprints. Fill whenever you have this information.'),
-      priority:    z.string().optional().describe('e.g. "high", "critical"'),
       plan_id:     z.string().optional(),
       effort_days: z.number().optional().describe('actual effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
     },
-    async ({ sprint_id, name, outcome_md, context_md, priority, plan_id, effort_days }) => {
+    async ({ sprint_id, name, outcome_md, context_md, plan_id, effort_days }) => {
       try {
         return json(await lorePost('/lore/sprint/update', {
           sprint_id,
           name: name ?? null, outcome_md: outcome_md ?? null,
           context_md: context_md ?? null,
-          priority: priority ?? null, plan_id: plan_id ?? null,
+          plan_id: plan_id ?? null,
           effort_days: effort_days ?? null,
         }));
       } catch (e) { return err(e); }
