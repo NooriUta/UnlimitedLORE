@@ -7,6 +7,7 @@ import {
   type LoreComponent,
 } from '../../api/lore';
 import { adrStatusLabel } from './LoreAdrList';
+import TipTapField from './TipTapField';
 
 type AdrStatus = 'PROPOSED' | 'ACCEPTED' | 'DEPRECATED' | 'SUPERSEDED';
 const ADR_STATUSES: AdrStatus[] = ['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED'];
@@ -110,12 +111,13 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
   );
 
   const ta = (key: 'context_md' | 'decision_md' | 'consequences_md', placeholder: string, rows = 5) => (
-    <textarea
-      style={S.ta}
-      rows={rows}
-      placeholder={placeholder}
+    <TipTapField
       value={form[key]}
-      onChange={e => set(key)(e.target.value)}
+      onChange={v => set(key)(v)}
+      placeholder={placeholder}
+      minHeight={rows * 20}
+      enableImages={false}
+      enableHtmlMode={false}
     />
   );
 

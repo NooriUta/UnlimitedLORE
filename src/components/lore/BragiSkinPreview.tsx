@@ -142,8 +142,20 @@ function injectCssOnce(): void {
   cssInjected = true;
 }
 
+// TipTapField's resize handle persists a chosen width through the markdown
+// round-trip as a `title="w:NN"` marker (NN = percent) — valid CommonMark,
+// so it survives save/reload/copy-paste anywhere, but marked has no idea
+// what it means and would otherwise just render it as a literal tooltip.
+// Translate it into the width the editor actually showed before display.
+function applyImageWidths(html: string): string {
+  return html.replace(/<img([^>]*?)\stitle="w:(\d{1,3})"([^>]*)>/g, (_m, pre: string, pct: string, post: string) => {
+    const clamped = Math.max(5, Math.min(100, parseInt(pct, 10)));
+    return `<img${pre} style="width:${clamped}%;height:auto"${post}>`;
+  });
+}
+
 function md(text: string): string {
-  return text && text.trim() ? (marked.parse(text) as string) : '';
+  return text && text.trim() ? applyImageWidths(marked.parse(text) as string) : '';
 }
 
 /** Inner body — the markdown rendered to HTML. Shared by every skin. */

@@ -14,6 +14,7 @@ import {
   type LoreComponent,
 } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
+import TipTapField from './TipTapField';
 
 const SPRINT_STATUSES = [
   'todo', 'planned', 'backlog', 'design', 'active', 'partial',
@@ -141,19 +142,17 @@ export default function LoreSprintEditor({ onSaved, onCancel }: LoreSprintEditor
       </div>
 
       <Sec label={t('lore.sprintEditor.sections.context', 'Контекст — зачем этот спринт')}>
-        <textarea
-          style={S.ta} rows={5}
+        <TipTapField
+          value={form.context_md} onChange={v => set('context_md')(v)} minHeight={100}
           placeholder={t('lore.sprintEditor.placeholders.contextMd', 'Проблема, ограничения, связанные спринты/ADR…')}
-          value={form.context_md}
-          onChange={e => set('context_md')(e.target.value)}
+          enableImages={false} enableHtmlMode={false}
         />
       </Sec>
       <Sec label={t('lore.sprintEditor.sections.outcome', 'Ожидаемый результат')}>
-        <textarea
-          style={S.ta} rows={3}
+        <TipTapField
+          value={form.outcome_md} onChange={v => set('outcome_md')(v)} minHeight={60}
           placeholder={t('lore.sprintEditor.placeholders.outcomeMd', 'Что должно получиться на выходе…')}
-          value={form.outcome_md}
-          onChange={e => set('outcome_md')(e.target.value)}
+          enableImages={false} enableHtmlMode={false}
         />
       </Sec>
 

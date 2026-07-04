@@ -12,6 +12,7 @@ import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor } from './LoreComponentList';
+import TipTapField from './TipTapField';
 
 interface SprintMeta {
   sprint_id: string;
@@ -530,9 +531,9 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         <div style={{ padding: '4px 8px 8px 26px', display: 'flex', flexDirection: 'column', gap: 5 }}>
           <input value={title} onChange={e => setTitle(e.target.value)}
             placeholder={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')} style={inputStyle} />
-          <textarea value={note} onChange={e => setNote(e.target.value)}
-            placeholder={t('lore.sprintDetail.task.descriptionPlaceholder', 'Описание (Markdown)')} rows={5}
-            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'var(--mono)' }} />
+          <TipTapField value={note} onChange={setNote} minHeight={100}
+            placeholder={t('lore.sprintDetail.task.descriptionPlaceholder', 'Описание (Markdown)')}
+            enableImages={false} enableHtmlMode={false} />
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>
             <button type="button" style={ghostBtn} onClick={cancel}>{t('lore.sprintDetail.task.cancel', 'Отмена')}</button>
@@ -927,9 +928,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         </div>
         {ctxEdit ? (
           <div>
-            <textarea value={ctxDraft} onChange={e => setCtxDraft(e.target.value)} rows={6}
+            <TipTapField value={ctxDraft} onChange={setCtxDraft} minHeight={120}
               placeholder={t('lore.sprintDetail.context.placeholder', 'Зачем этот спринт, ключевые решения, ссылки на ADR/доки...')}
-              style={{ width: '100%', boxSizing: 'border-box' as const, resize: 'vertical' as const, fontSize: 12, fontFamily: 'monospace', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t1)', padding: 8 }} />
+              enableImages={false} enableHtmlMode={false} />
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
               <button disabled={ctxSaving} onClick={async () => {
                 setCtxSaving(true);

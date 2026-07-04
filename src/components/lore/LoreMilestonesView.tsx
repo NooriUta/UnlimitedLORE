@@ -7,6 +7,7 @@ import {
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import LoreSkeleton from './LoreSkeleton';
+import TipTapField from './TipTapField';
 
 const TODAY = new Date('2026-06-30');
 const RU_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -336,7 +337,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                 </div>
               </div>
               <Field caption={t('lore.milestonesView.field.goalDescription', 'Описание / цель вехи')} w={'100%'}>
-                <textarea style={{ ...S.ta, width: '100%' }} value={edit.goal_md} onChange={e => setEdit({ ...edit, goal_md: e.target.value })} />
+                <TipTapField value={edit.goal_md} onChange={v => setEdit({ ...edit, goal_md: v })} minHeight={60}
+                  enableImages={false} enableHtmlMode={false} />
               </Field>
             </>
           )}
