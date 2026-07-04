@@ -207,6 +207,9 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
     editing ? variantsFromEditData(editing)
       : [{ channel_id: '', text_md: '', sameAsMain: true, status: 'draft', url: '', published_at: initialPublishedAt ?? '' }],
   );
+  // Channel tabs for "Вариации по площадкам" — switch between variants
+  // instead of scrolling through every one stacked vertically.
+  const [activeVariantIdx, setActiveVariantIdx] = useState(0);
 
   const [keywords, setKeywords] = useState<KeywordRow[]>([]);
   const [channels, setChannels] = useState<ChannelRow[]>([]);
@@ -220,6 +223,12 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   // REN-00: preview target — 'main' (master text, skin chosen by chips) or a
   // variant index (its effective text in its own channel's skin).
   const [previewTarget, setPreviewTarget] = useState<'main' | number>('main');
+
+  // Two ways to see edit+preview together: 'side' (both panes at once, preview
+  // widened to a realistic reading column) or 'tabs' (full-width Редактирование/
+  // Просмотр, switch instead of splitting the screen down to a narrow strip).
+  const [viewMode, setViewMode] = useState<'side' | 'tabs'>('side');
+  const [tabPane, setTabPane] = useState<'edit' | 'preview'>('edit');
 
   // EDIT-05: Forseti graph links, prefilled from the publication's existing
   // PRODUCED_BY/SHIPPED_IN edges when editing. Diffed against these initial
@@ -269,9 +278,14 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
   const setVariant = (i: number, patch: Partial<VariantDraft>) =>
     setVariants(vs => vs.map((v, vi) => (vi === i ? { ...v, ...patch } : v)));
-  const addVariant = () =>
+  const addVariant = () => {
     setVariants(vs => [...vs, { channel_id: '', text_md: '', sameAsMain: true, status: 'draft', url: '', published_at: '' }]);
-  const removeVariant = (i: number) => setVariants(vs => vs.filter((_, vi) => vi !== i));
+    setActiveVariantIdx(variants.length); // jump straight to the new tab
+  };
+  const removeVariant = (i: number) => {
+    setVariants(vs => vs.filter((_, vi) => vi !== i));
+    setActiveVariantIdx(ai => (ai > i ? ai - 1 : ai)); // clamped to valid range on render via editVariantIdx
+  };
 
   // Cover image: gap reported 2026-07-03 — lore_attach_asset/lore_upload_asset
   // existed as MCP-only capabilities, no UI control ever called them for a
@@ -437,11 +451,19 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
 
   // MOB-02: below the narrow breakpoint the two panes stack vertically (form
   // on top, preview capped below) instead of the 320px preview crushing the form.
+  // viewMode==='tabs' stacks the same way, but only one pane is ever mounted
+  // (showEditPane/showPreviewPane below), so it gets the full height, not a
+  // 55vh cap — that cap exists only for the "both visible, one scrolls below
+  // the other" narrow-side case.
   const narrow = useIsNarrow(760);
-  const panesStyle = narrow ? { ...S.panes, flexDirection: 'column' as const } : S.panes;
-  const rightPaneStyle = narrow
-    ? { ...S.rightPane, width: 'auto', minWidth: 0, flex: 'none', maxHeight: '55vh', borderLeft: 'none', borderTop: '1px solid var(--b3)' }
-    : S.rightPane;
+  const tabsMode = viewMode === 'tabs';
+  const panesStyle = (narrow || tabsMode) ? { ...S.panes, flexDirection: 'column' as const } : S.panes;
+  const leftPaneStyle = tabsMode ? { ...S.leftPane, flex: 1 } : S.leftPane;
+  const rightPaneStyle = tabsMode
+    ? { ...S.rightPane, width: 'auto', minWidth: 0, flex: 1, maxHeight: 'none', borderLeft: 'none', borderTop: 'none' }
+    : narrow
+      ? { ...S.rightPane, width: 'auto', minWidth: 0, flex: 'none', maxHeight: '55vh', borderLeft: 'none', borderTop: '1px solid var(--b3)' }
+      : S.rightPane;
 
   // REN-00: resolve what the preview renders based on the selected tab.
   const activeVariant = typeof previewTarget === 'number' && previewTarget < variants.length ? variants[previewTarget] : null;
@@ -466,6 +488,16 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
   const overLimit = previewCharLimit != null && (previewTextEff || '').length > previewCharLimit;
   const canCreateSatellite = previewIsMain && !!SKIN_TO_CHANNEL[previewSkin] && !variants.some(v => v.channel_id === SKIN_TO_CHANNEL[previewSkin]);
 
+  // Channel tabs (edit pane): clamp in case the active tab's variant was just removed.
+  const editVariantIdx = Math.min(activeVariantIdx, variants.length - 1);
+  const editVariant = variants[editVariantIdx];
+  const editVariantLocked = readOnly || editVariant?.status === 'published';
+
+  // viewMode==='tabs': only one pane is mounted at a time (full width); 'side'
+  // keeps both, so leftPane/rightPane's own widths take over.
+  const showEditPane = viewMode === 'side' || tabPane === 'edit';
+  const showPreviewPane = viewMode === 'side' || tabPane === 'preview';
+
   return (
     <div style={S.shell}>
       <div style={S.head}>
@@ -477,6 +509,16 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
               : t('bragi.publicationEditor.titleNew', 'Новая публикация')}
         </span>
         <div style={S.headBtns}>
+          <div style={S.viewModeGroup}>
+            <button
+              type="button" style={viewMode === 'side' ? S.viewModeBtnOn : S.viewModeBtn}
+              title={t('bragi.publicationEditor.viewModeSide', 'рядом')} onClick={() => setViewMode('side')}
+            >⬌</button>
+            <button
+              type="button" style={viewMode === 'tabs' ? S.viewModeBtnOn : S.viewModeBtn}
+              title={t('bragi.publicationEditor.viewModeTabs', 'вкладками')} onClick={() => setViewMode('tabs')}
+            >▤</button>
+          </div>
           <button style={S.btnGhost} onClick={onCancel} disabled={saving}>
             {readOnly ? t('bragi.publicationEditor.btnClose', 'Закрыть') : t('bragi.publicationEditor.btnCancel', 'Отмена')}
           </button>
@@ -501,8 +543,20 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
         </div>
       )}
 
+      {tabsMode && (
+        <div style={S.paneTabs}>
+          <button type="button" style={tabPane === 'edit' ? S.paneTabOn : S.paneTab} onClick={() => setTabPane('edit')}>
+            {t('bragi.publicationEditor.paneTabEdit', 'Редактирование')}
+          </button>
+          <button type="button" style={tabPane === 'preview' ? S.paneTabOn : S.paneTab} onClick={() => setTabPane('preview')}>
+            {t('bragi.publicationEditor.paneTabPreview', 'Просмотр')}
+          </button>
+        </div>
+      )}
+
       <div style={panesStyle}>
-        <div style={S.leftPane}>
+        {showEditPane && (
+        <div style={leftPaneStyle}>
       <div style={S.row4}>
         <Field label={t('bragi.publicationEditor.fieldPublicationId', 'Publication ID')} grow={1}>
           <input
@@ -660,6 +714,26 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       </Sec>
 
       <Sec label={t('bragi.publicationEditor.sectionVariants', 'Вариации по площадкам')}>
+        {/* Channel tabs instead of scrolling through every variant stacked
+            vertically — a status dot per tab, click switches which one is
+            being edited below. "+" adds a variant and jumps straight to it. */}
+        <div style={S.editVarTabs}>
+          {variants.map((v, i) => (
+            <button
+              key={i} type="button"
+              style={editVariantIdx === i ? S.editVarTabOn : S.editVarTab}
+              onClick={() => setActiveVariantIdx(i)}
+            >
+              <span style={{ ...S.pvDot, background: statusDot(v.status) }} />
+              {v.channel_id ? v.channel_id.replace(/^CH-/, '') : `#${i + 1}`}
+            </button>
+          ))}
+          {!readOnly && (
+            <button type="button" style={S.editVarTabAdd} onClick={addVariant}>
+              {t('bragi.publicationEditor.btnAddVariant', '+ площадка')}
+            </button>
+          )}
+        </div>
         {/* Status/publish date genuinely differ per channel — a post live on
             CH-TG can still be draft on CH-HABR. Locking the WHOLE form once
             status_general said "published" (old readOnly behavior) blocked
@@ -667,97 +741,95 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
             content of a variant that is itself already published — channel
             pick, text, and removal — status/date stay editable everywhere so
             you can still correct a date or bump status forward. */}
-        {variants.map((v, i) => {
-          const variantLocked = readOnly || v.status === 'published';
-          return (
-          <div key={i} style={S.variantBlock}>
+        {editVariant && (
+          <div style={S.variantBlock}>
             <div style={S.variantRow}>
-              <select style={S.variantSelect} value={v.channel_id} disabled={variantLocked} onChange={e => setVariant(i, { channel_id: e.target.value })}>
+              <select style={S.variantSelect} value={editVariant.channel_id} disabled={editVariantLocked} onChange={e => setVariant(editVariantIdx, { channel_id: e.target.value })}>
                 <option value="">{t('bragi.publicationEditor.channelPlaceholder', '— площадка —')}</option>
                 {channels.map(c => <option key={c.channel_id} value={c.channel_id}>{c.channel_id}</option>)}
               </select>
-              <select style={S.variantSelectSm} value={v.status} disabled={readOnly} onChange={e => setVariant(i, { status: e.target.value })}>
+              <select style={S.variantSelectSm} value={editVariant.status} disabled={readOnly} onChange={e => setVariant(editVariantIdx, { status: e.target.value })}>
                 {STATUSES.map(s => <option key={s} value={s}>{t('bragi.publicationEditor.status.' + s, s)}</option>)}
               </select>
-              <input style={S.variantInputSm} type="date" value={v.published_at} disabled={readOnly}
-                onChange={e => setVariant(i, { published_at: e.target.value })} />
-              {!variantLocked && (
-                <button style={S.removeBtn} onClick={() => removeVariant(i)} disabled={variants.length === 1}>{t('bragi.publicationEditor.btnRemoveVariant', '×')}</button>
+              <input style={S.variantInputSm} type="date" value={editVariant.published_at} disabled={readOnly}
+                onChange={e => setVariant(editVariantIdx, { published_at: e.target.value })} />
+              {!editVariantLocked && (
+                <button style={S.removeBtn} onClick={() => removeVariant(editVariantIdx)} disabled={variants.length === 1}>{t('bragi.publicationEditor.btnRemoveVariant', '×')}</button>
               )}
             </div>
             {/* EDIT-03: URL опубликованного материала — field already existed
                 on VariantDraft/backend but had no input control. */}
             <input
-              style={{ ...S.variantInput, marginBottom: 6 }} type="url" value={v.url} disabled={readOnly}
+              style={{ ...S.variantInput, marginBottom: 6 }} type="url" value={editVariant.url} disabled={readOnly}
               placeholder={t('bragi.publicationEditor.variantUrlPlaceholder', 'URL опубликованного материала…')}
-              onChange={e => setVariant(i, { url: e.target.value })}
+              onChange={e => setVariant(editVariantIdx, { url: e.target.value })}
             />
             <label style={S.sameAsMainLabel}>
               <input
                 type="checkbox"
-                checked={v.sameAsMain}
-                disabled={variantLocked}
-                onChange={e => setVariant(i, { sameAsMain: e.target.checked })}
+                checked={editVariant.sameAsMain}
+                disabled={editVariantLocked}
+                onChange={e => setVariant(editVariantIdx, { sameAsMain: e.target.checked })}
               />
               {t('bragi.publicationEditor.sameAsMainLabel', 'текст как в main-тексте')}
             </label>
-            {!v.sameAsMain && (
-              <TipTapField value={v.text_md} onChange={txt => setVariant(i, { text_md: txt })} minHeight={60} placeholder={t('bragi.publicationEditor.placeholderVariantText', 'текст вариации…')} editable={!variantLocked} />
+            {!editVariant.sameAsMain && (
+              <TipTapField value={editVariant.text_md} onChange={txt => setVariant(editVariantIdx, { text_md: txt })} minHeight={60} placeholder={t('bragi.publicationEditor.placeholderVariantText', 'текст вариации…')} editable={!editVariantLocked} />
             )}
             {!readOnly && (
               <div style={S.variantExtras}>
                 {/* EDIT-03: variant teaser/og image */}
                 <div style={S.variantImgRow}>
-                  {v.imageUrl ? <img src={v.imageUrl} alt="" style={S.variantImgThumb} /> : <div style={S.variantImgPlaceholder}>{t('bragi.publications.noImage', 'нет изображения')}</div>}
+                  {editVariant.imageUrl ? <img src={editVariant.imageUrl} alt="" style={S.variantImgThumb} /> : <div style={S.variantImgPlaceholder}>{t('bragi.publications.noImage', 'нет изображения')}</div>}
                   <VariantFileInput
-                    disabled={!v.variant_id || variantImgUploadingIdx === i}
-                    uploading={variantImgUploadingIdx === i}
-                    hint={!v.variant_id ? t('bragi.publicationEditor.variantImgNeedsSave', 'сначала сохраните') : undefined}
-                    label={v.imageUrl ? t('bragi.publicationEditor.coverReplace', 'Заменить обложку') : t('bragi.publicationEditor.variantImgUpload', 'изображение вариации')}
-                    onFile={f => void handleVariantImageUpload(i, f)}
+                    disabled={!editVariant.variant_id || variantImgUploadingIdx === editVariantIdx}
+                    uploading={variantImgUploadingIdx === editVariantIdx}
+                    hint={!editVariant.variant_id ? t('bragi.publicationEditor.variantImgNeedsSave', 'сначала сохраните') : undefined}
+                    label={editVariant.imageUrl ? t('bragi.publicationEditor.coverReplace', 'Заменить обложку') : t('bragi.publicationEditor.variantImgUpload', 'изображение вариации')}
+                    onFile={f => void handleVariantImageUpload(editVariantIdx, f)}
                   />
                 </div>
                 {/* EDIT-04: UTM campaign block */}
                 <div style={S.utmRow}>
-                  <input style={S.utmInput} value={v.utmSource ?? ''} placeholder="utm_source" onChange={e => setVariant(i, { utmSource: e.target.value })} />
-                  <input style={S.utmInput} value={v.utmMedium ?? ''} placeholder="utm_medium" onChange={e => setVariant(i, { utmMedium: e.target.value })} />
-                  <input style={S.utmInput} value={v.utmCampaign ?? ''} placeholder="utm_campaign" onChange={e => setVariant(i, { utmCampaign: e.target.value })} />
+                  <input style={S.utmInput} value={editVariant.utmSource ?? ''} placeholder="utm_source" onChange={e => setVariant(editVariantIdx, { utmSource: e.target.value })} />
+                  <input style={S.utmInput} value={editVariant.utmMedium ?? ''} placeholder="utm_medium" onChange={e => setVariant(editVariantIdx, { utmMedium: e.target.value })} />
+                  <input style={S.utmInput} value={editVariant.utmCampaign ?? ''} placeholder="utm_campaign" onChange={e => setVariant(editVariantIdx, { utmCampaign: e.target.value })} />
                   <button
-                    type="button" style={S.btnGhost} disabled={!v.variant_id || campaignGeneratingIdx === i}
-                    title={!v.variant_id ? t('bragi.publicationEditor.variantImgNeedsSave', 'сначала сохраните') : undefined}
-                    onClick={() => void handleGenerateCampaign(i)}
+                    type="button" style={S.btnGhost} disabled={!editVariant.variant_id || campaignGeneratingIdx === editVariantIdx}
+                    title={!editVariant.variant_id ? t('bragi.publicationEditor.variantImgNeedsSave', 'сначала сохраните') : undefined}
+                    onClick={() => void handleGenerateCampaign(editVariantIdx)}
                   >
-                    {campaignGeneratingIdx === i ? '…' : t('bragi.publicationEditor.utmGenerate', 'сгенерировать ссылку')}
+                    {campaignGeneratingIdx === editVariantIdx ? '…' : t('bragi.publicationEditor.utmGenerate', 'сгенерировать ссылку')}
                   </button>
                 </div>
-                {v.campaignUrl && (
+                {editVariant.campaignUrl && (
                   <div style={S.campaignUrlRow}>
-                    <code style={S.campaignUrlText}>{v.campaignUrl}</code>
-                    <button type="button" style={S.copyBtnSm} onClick={() => { void navigator.clipboard.writeText(v.campaignUrl!); }}>⧉</button>
+                    <code style={S.campaignUrlText}>{editVariant.campaignUrl}</code>
+                    <button type="button" style={S.copyBtnSm} onClick={() => { void navigator.clipboard.writeText(editVariant.campaignUrl!); }}>⧉</button>
                   </div>
                 )}
                 {/* EDIT-06: read-only metrics once the variant is live */}
-                {v.status === 'published' && v.variant_id && <VariantMetrics variantId={v.variant_id} />}
+                {editVariant.status === 'published' && editVariant.variant_id && <VariantMetrics variantId={editVariant.variant_id} />}
                 {/* V2-02: this variant's own editorial meta / TODO — same
                     exclusion-from-preview rule as the publication-level fields. */}
                 <textarea
-                  style={{ ...S.textarea, minHeight: 32, fontSize: 11 }} value={v.annotationMd ?? ''}
+                  style={{ ...S.textarea, minHeight: 32, fontSize: 11 }} value={editVariant.annotationMd ?? ''}
                   placeholder={t('bragi.publicationEditor.variantAnnotationPlaceholder', 'указание для этой вариации…')}
-                  onChange={e => setVariant(i, { annotationMd: e.target.value })}
+                  onChange={e => setVariant(editVariantIdx, { annotationMd: e.target.value })}
                 />
                 <TodoChecklist
-                  value={v.todoMd ?? ''} onChange={val => setVariant(i, { todoMd: val })}
+                  value={editVariant.todoMd ?? ''} onChange={val => setVariant(editVariantIdx, { todoMd: val })}
                   addPlaceholder={t('bragi.publicationEditor.todoAddPlaceholder', 'новый пункт…')}
                 />
               </div>
             )}
           </div>
-          );
-        })}
-        {!readOnly && <button style={S.addVariantBtn} onClick={addVariant}>{t('bragi.publicationEditor.btnAddVariant', '+ площадка')}</button>}
+        )}
       </Sec>
         </div>
+        )}
 
+        {showPreviewPane && (
         <aside style={rightPaneStyle}>
           {/* Variant tab bar: master + one tab per channel variant. Selecting a
               variant previews its effective text (own or inherited) in its
@@ -825,6 +897,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
             />
           </div>
         </aside>
+        )}
       </div>
     </div>
   );
@@ -943,7 +1016,20 @@ const S: Record<string, React.CSSProperties> = {
               color: 'var(--dng)', border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)' },
   panes:    { flex: 1, display: 'flex', minHeight: 0, borderTop: '1px solid var(--b3)' },
   leftPane: { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', minWidth: 0 },
-  rightPane:{ width: '44%', minWidth: 320, borderLeft: '1px solid var(--b3)', display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--bg1)' },
+  // Widened from an earlier 44%/320px — cramped enough that the site skin's
+  // own realistic padding read as huge empty margins around a tiny text
+  // column. 60%/620px puts the preview closer to the real site's reading width.
+  rightPane:{ width: '60%', minWidth: 620, borderLeft: '1px solid var(--b3)', display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--bg1)' },
+  viewModeGroup: { display: 'flex', gap: 2, marginRight: 4 },
+  viewModeBtn:   { height: 28, width: 30, borderRadius: 5, border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t3)', cursor: 'pointer', fontSize: 13 },
+  viewModeBtnOn: { height: 28, width: 30, borderRadius: 5, border: '1px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 14%, transparent)', color: 'var(--acc)', cursor: 'pointer', fontSize: 13 },
+  paneTabs: { display: 'flex', gap: 4, padding: '0 20px', borderTop: '1px solid var(--b3)' },
+  paneTab:   { fontSize: 12, padding: '8px 14px', border: 'none', borderBottom: '2px solid transparent', background: 'transparent', color: 'var(--t3)', cursor: 'pointer' },
+  paneTabOn: { fontSize: 12, padding: '8px 14px', border: 'none', borderBottom: '2px solid var(--acc)', background: 'transparent', color: 'var(--acc)', fontWeight: 600, cursor: 'pointer' },
+  editVarTabs: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginBottom: 8 },
+  editVarTab:   { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t3)', cursor: 'pointer' },
+  editVarTabOn: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', cursor: 'pointer' },
+  editVarTabAdd: { fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px dashed var(--bd)', background: 'transparent', color: 'var(--t3)', cursor: 'pointer' },
   previewTabs: { display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', padding: '8px 12px 0' },
   pvTab:     { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, padding: '4px 9px', borderRadius: '6px 6px 0 0', borderTop: '1px solid var(--b3)', borderLeft: '1px solid var(--b3)', borderRight: '1px solid var(--b3)', borderBottom: 'none', background: 'transparent', color: 'var(--t3)', cursor: 'pointer' },
   pvTabOn:   { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, padding: '4px 9px', borderRadius: '6px 6px 0 0', borderTop: '1px solid var(--acc)', borderLeft: '1px solid var(--acc)', borderRight: '1px solid var(--acc)', borderBottom: 'none', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', cursor: 'pointer' },
