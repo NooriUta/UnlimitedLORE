@@ -138,8 +138,8 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
       // never-set null into ''). The backend's partial-upsert only skips a
       // JSON-absent field, so sending both unconditionally regardless of
       // prior state would overwrite an untouched null field with ''.
-      const sendEn = draftEn || row.content_md_en;
-      const sendRu = draftRu || row.content_md_ru;
+      const sendEn = draftEn !== '' || !!row.content_md_en;
+      const sendRu = draftRu !== '' || !!row.content_md_ru;
       await updateLoreDoc(id, {
         ...(sendEn ? { content_md_en: draftEn } : {}),
         ...(sendRu ? { content_md_ru: draftRu } : {}),
