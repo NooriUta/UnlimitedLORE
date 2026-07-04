@@ -3092,8 +3092,12 @@ public class AidaLoreResource {
     }
 
     // ── KnowDoc write ────────────────────────────────────────────────────────
+    // content_html is legacy (pre-existing HTML-fragment docs, rendered sandboxed);
+    // content_md_en/content_md_ru are the current authoring path — clean Markdown
+    // per language, rendered in-DOM (inherits app font, supports mermaid fences).
     public record DocUpsertRequest(String doc_id, String title, String kind,
-        Boolean has_ext_deps, String component_id, String file_path, String content_html) {}
+        Boolean has_ext_deps, String component_id, String file_path, String content_html,
+        String content_md_en, String content_md_ru) {}
 
     @POST
     @Path("doc")
@@ -3120,6 +3124,8 @@ public class AidaLoreResource {
             if (req.component_id() != null) { dcsql.append(", component_id=:cid");      p.put("cid",      req.component_id()); }
             if (req.file_path() != null)    { dcsql.append(", file_path=:fp");          p.put("fp",       req.file_path()); }
             if (req.content_html() != null) { dcsql.append(", content_html=:content");  p.put("content",  req.content_html()); }
+            if (req.content_md_en() != null) { dcsql.append(", content_md_en=:md_en");  p.put("md_en",    req.content_md_en()); }
+            if (req.content_md_ru() != null) { dcsql.append(", content_md_ru=:md_ru");  p.put("md_ru",    req.content_md_ru()); }
             dcsql.append(" UPSERT WHERE doc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dcsql.toString(), p)).await().indefinitely();

@@ -446,8 +446,13 @@ public final class LoreSlices {
             " ORDER BY doc_id LIMIT 200");
 
         slice("doc_by_id",
-            "SELECT doc_id, title, kind, has_ext_deps, content_html, " +
-            "out('HAS_HIST').valid_from[0] AS valid_from " +
+            // NB: KnowDoc has no SCD2 write path (flat vertex, see KnowDocParser
+            // comment) — no HAS_STATE edge is ever created, so valid_from is
+            // always null today regardless of edge name. Named HAS_STATE for
+            // consistency with every other *_by_id slice (was HAS_HIST, a type
+            // never declared in the schema) in case doc history is added later.
+            "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
+            "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowDoc WHERE doc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
