@@ -663,6 +663,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   const doneStatus = (s: LoreSprintRow) => classify(s.status_raw) === 'done' || !!s.done_date;
 
+  // LoreSprintRow (sprintRows) carries no task_total/task_done of its own —
+  // cross-reference the analytics slice's by_sprint (LoreAnalyticsSprint) so
+  // agingWIP can apply the same "all tasks done" exclusion as isGenuinelyOpen,
+  // instead of only checking status text like doneStatus does.
+  const taskTotalsBySprintId = useMemo(() => {
+    const m = new Map<string, { total: number; done: number }>();
+    (data?.by_sprint ?? []).forEach(s => m.set(s.sprint_id, { total: s.task_total, done: s.task_done }));
+    return m;
+  }, [data]);
+
   // Real sprint start = earliest HAS_STATE valid_from (from sprint_starts slice).
   const startBySprint = useMemo(() => {
     const m = new Map<string, Date>();
@@ -706,14 +716,18 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // Aging WIP — open sprints sorted by age (today − real start)
   const agingWIP = useMemo(() => {
     return sprintRows
-      .filter(s => !doneStatus(s) && classify(s.status_raw) !== 'cancelled')
+      .filter(s => {
+        if (doneStatus(s) || classify(s.status_raw) === 'cancelled') return false;
+        const t = taskTotalsBySprintId.get(s.sprint_id);
+        return !(t && t.total > 0 && t.done >= t.total);
+      })
       .map(s => {
         const start = startBySprint.get(s.sprint_id) ?? parseDoneDate(s.valid_from);
         return { ...s, age: start ? daysBetween(start, TODAY) : null };
       })
       .filter(s => s.age !== null)
       .sort((a, b) => (b.age ?? 0) - (a.age ?? 0));
-  }, [sprintRows, startBySprint]);
+  }, [sprintRows, startBySprint, taskTotalsBySprintId]);
 
   // Burnup — cumulative scope (sprints created by valid_from) vs done (by done_date).
   // Respects the project filter so each project's scope-creep is visible separately.
