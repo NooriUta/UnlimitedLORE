@@ -1591,7 +1591,13 @@ public class AidaLoreResource {
         if (req.plan_id()    != null) { sb.append("plan_id=:plan_id, ");     p.put("plan_id",    req.plan_id()); }
         if (req.effort_days()!= null) { sb.append("effort_days=:effort, ");  p.put("effort",     req.effort_days()); }
         if (req.no_release_required() != null) { sb.append("no_release_required=:nrr, "); p.put("nrr", req.no_release_required()); }
-        String set = sb.toString().replaceAll(",\\s*$", "");
+        // trim() is load-bearing: the base StringBuilder is seeded with a
+        // trailing space ("...SET "), so when zero fields are appended the
+        // regex below (which only strips a trailing comma) leaves that space
+        // in place and this equals-check against the untrimmed literal never
+        // matched — the empty SET clause then reached ArcadeDB as invalid SQL
+        // and came back as a 500 wrapped into our own 502.
+        String set = sb.toString().replaceAll(",\\s*$", "").trim();
         if (set.equals("UPDATE KnowSprint SET"))
             return badParams("at least one field required");
         p.put("sid", req.sprint_id());
