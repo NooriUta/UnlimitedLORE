@@ -39,11 +39,8 @@ const TOOLS: ToolDoc[] = [
 
   // ── Sprint (KnowSprint) ──────────────────────────────────────────────────
   { name: 'lore_create_sprint', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint/create',
-    params: 'sprint_id, name, status?, item_id?, plan_id?, priority?, outcome_md?, context_md?',
-    desc: 'KnowSprint: создать напрямую, без plan-item. Идемпотентен — upsert по sprint_id. Сеет начальную открытую KnowSprintHist-строку (HAS_STATE).' },
-  { name: 'lore_register_sprint', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint',
-    params: 'item_id, sprint_id?, name?, status?',
-    desc: 'KnowSprint: зарегистрировать реальный спринт для уже существующего placeholder plan-item — создаёт вершину и линкует REPRESENTS (бар на доске «План» переключается с плейсхолдера на спринт). Использовать вместо lore_create_sprint, когда plan-item уже заведён.' },
+    params: 'sprint_id, name, status?, plan_id?, priority?, outcome_md?, context_md?',
+    desc: 'KnowSprint: создать напрямую. Идемпотентен — upsert по sprint_id. Сеет начальную открытую KnowSprintHist-строку (HAS_STATE).' },
   { name: 'lore_update_sprint', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint/update',
     params: 'sprint_id, name?, outcome_md?, context_md?, priority?, plan_id?, effort_days?',
     desc: 'KnowSprint: частичное обновление метаданных — пишутся только переданные поля, остальные не трогаются. Статус этим тулом не меняется (для статуса, вкл. soft-delete через status="cancelled" — lore_set_status). Правило: всегда заполнять context_md, если известно, зачем спринт существует.' },
@@ -61,12 +58,12 @@ const TOOLS: ToolDoc[] = [
     desc: 'Явное ребро BELONGS_TO (спринт → компонент) — перекрывает нечёткий матч по имени (sprint_id LIKE %component_key%) в слайсе component_sprints и на бейджах модулей в паспорте спринта. action = add | remove.' },
   { name: 'lore_link_sprint_milestone', kind: 'write', entity: 'Sprint', backend: 'POST /lore/milestone/sprint',
     params: 'sprint_id, milestone_id, action?',
-    desc: 'Прямое ребро TARGETS_MILESTONE (спринт → веха) — для спринтов без PlanItem-моста (большинство). Если у спринта есть PlanItem, предпочтительнее lore_update_plan_item (путь через CONTRIBUTES_TO). action = add | remove.' },
+    desc: 'Прямое ребро TARGETS_MILESTONE (спринт → веха) — канонический путь факт. привязки. Отдельно есть план. привязка (sprints.planned_milestone_id через POST /lore/sprint/plan) — MCP-тула на неё пока нет. action = add | remove.' },
 
   // ── Status (SCD2-переходы, общие для нескольких типов) ────────────────────
   { name: 'lore_set_status', kind: 'write', entity: 'Status', backend: 'POST /lore/status',
     params: 'entity_type, id, status',
-    desc: 'Сменить статус одной сущности через полный SCD2-переход: закрыть текущую открытую hist-строку (valid_to=now), открыть новую. entity_type = plan_item | sprint | task | checkpoint | phase. status ∈ todo|planned|active|partial|done|blocked|high|cancelled|backlog|design|ready_for_deploy — status="cancelled" это и есть штатный soft-delete для этих типов, отдельного hard-delete тула для них нет и не планируется.' },
+    desc: 'Сменить статус одной сущности через полный SCD2-переход: закрыть текущую открытую hist-строку (valid_to=now), открыть новую. entity_type = sprint | task | checkpoint | phase. status ∈ todo|planned|active|partial|done|blocked|high|cancelled|backlog|design|ready_for_deploy — status="cancelled" это и есть штатный soft-delete для этих типов, отдельного hard-delete тула для них нет и не планируется.' },
   { name: 'lore_batch_set_status', kind: 'write', entity: 'Status', backend: 'POST /lore/status/batch',
     params: 'entity_type, ids[], status',
     desc: 'То же самое (SCD2-переход), но сразу для списка id одного entity_type. Ошибки собираются по каждому элементу отдельно и не прерывают остальные. Возвращает {ok, updated, errors[]}.' },
@@ -96,12 +93,7 @@ const TOOLS: ToolDoc[] = [
     desc: 'KnowMilestone: создать веху (upsert по milestone_id). Партиальные вызовы безопасны — непереданные поля не обнуляются. goal_md пишется в открытую KnowMilestoneHist-строку (создаётся при первом заполнении), остальные поля — на вершину.' },
   { name: 'lore_update_milestone', kind: 'write', entity: 'Milestone', backend: 'POST /lore/milestone',
     params: 'milestone_id, label?, week?, date_display?, goal_md?, priority?',
-    desc: 'KnowMilestone: тот же эндпоинт, что и lore_create_milestone, для точечной правки существующей вехи — например, только goal_md, не трогая label/week. Спринты к вехе привязываются отдельно — lore_link_sprint_milestone (прямое ребро) или lore_update_plan_item (через PlanItem-мост).' },
-
-  // ── Plan item ────────────────────────────────────────────────────────────
-  { name: 'lore_update_plan_item', kind: 'write', entity: 'Plan item', backend: 'POST /lore/plan-item/milestone',
-    params: 'item_id, milestone_id?, action?',
-    desc: 'Ребро CONTRIBUTES_TO (PlanItem → Milestone). Канонический путь привязки спринта к вехе, когда у спринта есть plan-item (цепочка Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint). action="remove" без milestone_id снимает вообще все привязки этого plan-item к вехам.' },
+    desc: 'KnowMilestone: тот же эндпоинт, что и lore_create_milestone, для точечной правки существующей вехи — например, только goal_md, не трогая label/week. Спринты к вехе привязываются отдельно — lore_link_sprint_milestone (прямое ребро TARGETS_MILESTONE).' },
 
   // ── ADR (KnowADR) ─────────────────────────────────────────────────────────
   { name: 'lore_create_adr', kind: 'write', entity: 'ADR', backend: 'POST /lore/adr',

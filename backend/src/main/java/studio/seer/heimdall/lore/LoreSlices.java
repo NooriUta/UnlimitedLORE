@@ -294,21 +294,10 @@ public final class LoreSlices {
         slice("plan_sections",
             "SELECT section_id, label, start_week, end_week, color FROM PlanSection ORDER BY start_week");
 
-        slice("plan_items",
-            "SELECT item_id, label, " +
-            "out('ON_TRACK').track_id[0]      AS track_id, " +
-            "out('HAS_STATE').week_start[0]   AS week_start, " +
-            "out('HAS_STATE').week_end[0]     AS week_end, " +
-            "out('HAS_STATE').bar_color[0]    AS bar_color, " +
-            "out('HAS_STATUS').status[0]      AS status, " +
-            "out('REPRESENTS').sprint_id[0]        AS represents_sprint, " +
-            // Component links of the represented sprint (PlanItem→REPRESENTS→KnowSprint
-            // →BELONGS_TO→LoreComponent). A list; the frontend resolves project/group/
-            // icon from the `components` slice and picks the lane (primary = leaf).
-            "out('REPRESENTS').out('BELONGS_TO').component_id AS components, " +
-            "out('CONTRIBUTES_TO').milestone_id[0] AS milestone_id " +
-            "FROM PlanItem ORDER BY item_id",
-            List.of(), Map.of(), " LIMIT 300");
+        // SPRINT_PLANITEM_RETIRE/T-14: plan_items removed — PlanItem is retired
+        // (LorePlanBoard.tsx now reads the `sprints` slice directly, T-12/T-13).
+        // Historical PlanItem/PlanItemHist/StatusPlanItem data archived to
+        // docs/archive/planitem_archive_20260704.json before the type drop.
 
         slice("plan_checkpoints",
             "SELECT checkpoint_id, label, desc_md, " +

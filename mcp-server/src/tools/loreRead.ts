@@ -30,12 +30,12 @@ export function registerLoreRead(server: McpServer): void {
   server.tool(
     'lore_query_slice',
     'Run a named LORE read slice against system_aida_lore and return its rows. ' +
-      'Examples: slice="plan_items" (roadmap bars), "sprints", "adrs", "adr" with ' +
+      'Examples: slice="sprints" (Gantt bars), "adrs", "adr" with ' +
       'params {"id":"ADR-FE-001"}, "spec_by_id" with params {"id":"..."}, ' +
       '"search" with params {"pattern":"..."}. Use lore_list_slices for the full ' +
       'catalog and each slice\'s required params.',
     {
-      slice: z.string().describe('slice id from lore_list_slices, e.g. "plan_items"'),
+      slice: z.string().describe('slice id from lore_list_slices, e.g. "sprints"'),
       params: z
         .record(z.string())
         .optional()

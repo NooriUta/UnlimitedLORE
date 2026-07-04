@@ -502,13 +502,6 @@ export async function editLoreTask(
   return res.json() as Promise<LoreTaskWriteResponse>;
 }
 
-export interface LoreSprintRegisterResponse {
-  ok: boolean;
-  item_id: string;
-  sprint_id: string;
-  created: boolean;
-}
-
 /** Link or unlink a KnowSprint to a KnowGitProject (POST /lore/sprint/project). */
 export async function linkTaskComponent(
   taskUid: string,
@@ -688,11 +681,11 @@ export async function updateSprintPlan(
   return res.json() as Promise<{ ok: boolean; sprint_id: string }>;
 }
 
-/** Create a KnowSprint directly — no plan-item required (POST /lore/sprint/create). */
+/** Create a KnowSprint directly (POST /lore/sprint/create). */
 export async function createLoreSprint(payload: {
-  sprint_id: string; name: string; status?: string; item_id?: string; plan_id?: string;
+  sprint_id: string; name: string; status?: string; plan_id?: string;
   priority?: string; outcome_md?: string; context_md?: string;
-}): Promise<{ ok: boolean; sprint_id: string; item_id: string | null; created: boolean }> {
+}): Promise<{ ok: boolean; sprint_id: string; created: boolean }> {
   const res = await fetch(`${LORE_BASE}/sprint/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
@@ -700,27 +693,7 @@ export async function createLoreSprint(payload: {
   });
   assertJson(res);
   if (!res.ok) return parseError(res);
-  return res.json() as Promise<{ ok: boolean; sprint_id: string; item_id: string | null; created: boolean }>;
-}
-
-/** Register a real sprint for a standalone plan-item placeholder (POST /lore/sprint). */
-export async function registerLoreSprint(
-  itemId: string,
-  opts?: { sprintId?: string; name?: string; status?: string },
-): Promise<LoreSprintRegisterResponse> {
-  const res = await fetch(`${LORE_BASE}/sprint`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify({
-      item_id: itemId,
-      sprint_id: opts?.sprintId ?? null,
-      name: opts?.name ?? null,
-      status: opts?.status ?? 'active',
-    }),
-  });
-  assertJson(res);
-  if (!res.ok) return parseError(res);
-  return res.json() as Promise<LoreSprintRegisterResponse>;
+  return res.json() as Promise<{ ok: boolean; sprint_id: string; created: boolean }>;
 }
 
 export interface LoreRelease {
