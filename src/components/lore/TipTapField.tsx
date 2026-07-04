@@ -9,14 +9,104 @@
 // one); this is the first, chosen for React 19 support + markdown-native
 // serialization. Fresh install: @tiptap/react, @tiptap/starter-kit,
 // @tiptap/pm, tiptap-markdown.
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import { Markdown } from 'tiptap-markdown';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { useEffect, useRef, useState } from 'react';
-import type { Editor } from '@tiptap/react';
+import type { Editor, NodeViewProps } from '@tiptap/react';
 import { uploadBragiAsset } from '../../api/lore';
+
+// Resizable image: the stock Image node has no size handle at all — once
+// inserted, a picture is stuck at whatever pixel size it came in at, full
+// stop. Drag-resize needs somewhere to persist the chosen width that
+// survives the markdown round-trip (tiptap-markdown serializes only
+// src/alt/title for an image, nothing custom), so width rides in the
+// existing `title` attribute as "w:NN" (NN = percent of the editor's own
+// width) — valid CommonMark `![alt](src "w:50")`, degrades harmlessly to a
+// literal tooltip anywhere else it's pasted, and round-trips for free
+// through tiptap-markdown/marked without a custom serializer.
+function parseWidthPercent(title: string | null | undefined): number {
+  const m = /^w:(\d{1,3})$/.exec(title || '');
+  if (!m) return 100;
+  return Math.max(5, Math.min(100, parseInt(m[1], 10)));
+}
+
+function ResizableImageView({ node, updateAttributes, selected, editor }: NodeViewProps) {
+  const wrapRef = useRef<HTMLElement | null>(null);
+  const widthPct = parseWidthPercent(node.attrs.title as string | null);
+
+  const onHandleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const container = wrap.closest('.ProseMirror') as HTMLElement | null;
+    const containerWidthPx = container?.clientWidth || wrap.parentElement?.clientWidth || wrap.clientWidth;
+    const startX = e.clientX;
+    const startWidthPx = wrap.getBoundingClientRect().width;
+    const onMove = (ev: MouseEvent) => {
+      const newWidthPx = Math.max(40, startWidthPx + (ev.clientX - startX));
+      const pct = Math.max(5, Math.min(100, Math.round((newWidthPx / containerWidthPx) * 100)));
+      updateAttributes({ title: `w:${pct}` });
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  return (
+    <NodeViewWrapper
+      as="span" ref={wrapRef as React.RefObject<HTMLElement>}
+      style={{ display: 'inline-block', position: 'relative', width: `${widthPct}%`, maxWidth: '100%', lineHeight: 0, verticalAlign: 'top' }}
+      data-drag-handle
+    >
+      <img
+        src={node.attrs.src as string} alt={(node.attrs.alt as string) || ''}
+        style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 6 }}
+        draggable={false}
+      />
+      {editor.isEditable && selected && (
+        <span
+          onMouseDown={onHandleMouseDown}
+          title="изменить размер"
+          style={{
+            position: 'absolute', right: -5, bottom: -5, width: 13, height: 13,
+            background: 'var(--acc)', border: '2px solid var(--bg0)', borderRadius: '50%',
+            cursor: 'nwse-resize',
+          }}
+        />
+      )}
+    </NodeViewWrapper>
+  );
+}
+
+const ResizableImage = Image.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(ResizableImageView);
+  },
+});
+
+// The Image node renders a bare <img> straight into the ProseMirror doc (it's
+// a block-level node here, not wrapped in a <p> we control), so there's no
+// React-styleable element to cap its size. Without this, an inserted image
+// renders at its native pixel width — routinely wider than the editor column
+// — and silently overflows past S.wrap's `overflow: hidden`, i.e. gets
+// clipped on the right rather than scaled to fit. One-time global rule,
+// same injectCssOnce pattern as BragiSkinPreview's SKIN_CSS.
+let tiptapCssInjected = false;
+function injectTiptapCssOnce(): void {
+  if (tiptapCssInjected || typeof document === 'undefined') return;
+  const style = document.createElement('style');
+  style.dataset.bragiTiptap = '1';
+  style.textContent = '.bragi-tiptap .ProseMirror img { max-width: 100%; height: auto; display: block; margin: 8px 0; border-radius: 6px; }';
+  document.head.appendChild(style);
+  tiptapCssInjected = true;
+}
 
 // tiptap-markdown@0.9 (built for TipTap v2) doesn't ship v3-compatible Storage
 // type augmentation, so `editor.storage.markdown` isn't statically known —
@@ -34,9 +124,20 @@ export interface TipTapFieldProps {
   minHeight?: number;
   /** PUB-VIEW-01: view-only mode for published content — no toolbar, no typing, no upload. */
   editable?: boolean;
+  /** Image insertion + resize — on by default (Bragi's marketing/publication
+   * content), off for the plainer prose fields (ADR/sprint/milestone bodies)
+   * that don't need it yet. */
+  enableImages?: boolean;
+  /** Raw-HTML source view (`</> html`) — on by default for Bragi, off
+   * elsewhere: outside marketing content there's no reason to hand-author
+   * HTML into a markdown field, and it's one less button to explain. */
+  enableHtmlMode?: boolean;
 }
 
-export default function TipTapField({ value, onChange, placeholder, minHeight = 100, editable = true }: TipTapFieldProps) {
+export default function TipTapField({
+  value, onChange, placeholder, minHeight = 100, editable = true,
+  enableImages = true, enableHtmlMode = true,
+}: TipTapFieldProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +146,11 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
   const [draft, setDraft] = useState(value);
 
   const editor = useEditor({
-    extensions: [StarterKit, Image, Markdown.configure({ html: false, tightLists: true })],
+    extensions: [
+      StarterKit,
+      ...(enableImages ? [ResizableImage] : []),
+      Markdown.configure({ html: false, tightLists: true }),
+    ],
     content: value,
     editable,
     editorProps: {
@@ -59,6 +164,8 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
   useEffect(() => {
     editor?.setEditable(editable);
   }, [editable, editor]);
+
+  useEffect(() => { injectTiptapCssOnce(); }, []);
 
   // Sync external resets (e.g. form clear) without fighting the editor mid-typing.
   useEffect(() => {
@@ -123,7 +230,7 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
   };
 
   return (
-    <div style={S.wrap}>
+    <div style={S.wrap} className="bragi-tiptap">
       {editable && (
         <div style={S.toolbar}>
           {editor && (
@@ -134,12 +241,12 @@ export default function TipTapField({ value, onChange, placeholder, minHeight = 
               <ToolBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</ToolBtn>
               <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolBtn>
               <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>{'</>'}</ToolBtn>
-              <ToolBtn active={uploading} onClick={pickImage}>{uploading ? '…' : '🖼'}</ToolBtn>
+              {enableImages && <ToolBtn active={uploading} onClick={pickImage}>{uploading ? '…' : '🖼'}</ToolBtn>}
               <ToolBtn active={mode === 'md'} onClick={() => toggleMode('md')}>{'</> md'}</ToolBtn>
-              <ToolBtn active={mode === 'html'} onClick={() => toggleMode('html')}>{'</> html'}</ToolBtn>
+              {enableHtmlMode && <ToolBtn active={mode === 'html'} onClick={() => toggleMode('html')}>{'</> html'}</ToolBtn>}
             </>
           )}
-          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onImageSelected} />
+          {enableImages && <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onImageSelected} />}
         </div>
       )}
       {mode !== 'wysiwyg' ? (

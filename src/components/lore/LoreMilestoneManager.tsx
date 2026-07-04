@@ -6,6 +6,7 @@ import {
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
+import TipTapField from './TipTapField';
 
 // Union of a milestone's sprints: planned (planned_milestone_id property,
 // SPRINT_PLANITEM_RETIRE T-21 — no longer a backend PlanItem hop, see caller)
@@ -124,8 +125,9 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
               {PRIORITIES.map(p => <option key={p} value={p}>{p || t('lore.milestoneManager.placeholder.priority', 'приоритет')}</option>)}
             </select>
           </div>
-          <textarea style={S.ta} placeholder={t('lore.milestoneManager.placeholder.goal', 'Описание / цель вехи (goal_md)')} value={draft.goal_md}
-            onChange={e => setDraft({ ...draft, goal_md: e.target.value })} />
+          <TipTapField value={draft.goal_md} onChange={v => setDraft({ ...draft, goal_md: v })} minHeight={48}
+            placeholder={t('lore.milestoneManager.placeholder.goal', 'Описание / цель вехи (goal_md)')}
+            enableImages={false} enableHtmlMode={false} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
             <button style={S.btnPrimary} disabled={!draft.milestone_id.trim() || busy === 'create'}
               onClick={() => run('create', async () => {
@@ -175,7 +177,9 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                       {PRIORITIES.map(p => <option key={p} value={p}>{p || t('lore.milestoneManager.placeholder.priority', 'приоритет')}</option>)}
                     </select>
                   </div>
-                  <textarea style={S.ta} value={edit.goal_md} placeholder={t('lore.milestoneManager.placeholder.goal', 'Описание / цель вехи (goal_md)')} onChange={e => setEdit({ ...edit, goal_md: e.target.value })} />
+                  <TipTapField value={edit.goal_md} onChange={v => setEdit({ ...edit, goal_md: v })} minHeight={48}
+                    placeholder={t('lore.milestoneManager.placeholder.goal', 'Описание / цель вехи (goal_md)')}
+                    enableImages={false} enableHtmlMode={false} />
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button style={S.btnPrimary} disabled={busy === 'edit'} onClick={() => run('edit', async () => {
                       await upsertMilestone({
