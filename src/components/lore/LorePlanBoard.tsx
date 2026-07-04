@@ -417,33 +417,14 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     const tl = new Timeline(hostRef.current, itemsDS, groups, options);
     timelineRef.current = tl;
 
-    // Initial window: start pinned to today by default (an overdue-still-open bar
-    // pulls it a bit further left so it's never hidden off-screen), end stretched
-    // to the furthest-out sprint/milestone instead of a fixed +14-week guess —
-    // otherwise late items fall outside the initial view and the board looks
-    // half-empty on the left with nothing to fill the right.
-    const today = new Date();
-    let earliestOverdueDate = today;
-    let latestDate = addWeeks(w0, W_NOW + 8);   // floor so a near-empty board still gets a sane span
-    for (const s of sprints) {
-      if (s.planned_end_date) {
-        const endD = new Date(s.planned_end_date);
-        if (endD > latestDate) latestDate = endD;
-      }
-      if (!s.planned_start_date) continue;
-      const startD = new Date(s.planned_start_date);
-      if (startD >= today) continue;                              // future/unpositioned
-      const raw = statusBySprint.get(s.sprint_id);
-      const st  = raw ? taskTick(raw).status : 'todo';
-      if (st === 'done' || st === 'cancelled') continue;           // closed → not overdue
-      if (startD < earliestOverdueDate) earliestOverdueDate = startD;
-    }
-    for (const ms of mss) {
-      if (ms.week == null) continue;
-      const msDate = addWeeks(w0, ms.week);
-      if (msDate > latestDate) latestDate = msDate;
-    }
-    tl.setWindow(earliestOverdueDate, new Date(latestDate.getTime() + WEEK_MS), { animation: false });
+    // Initial window: always an 8-week view centred just before today (same
+    // span "Раздвинуть" jumps to on click) — overdue bars from further back
+    // are still on the board, just off-screen to the left until scrolled to,
+    // same as any other bar outside the current view. Previously this instead
+    // stretched all the way back to the earliest overdue open sprint, which
+    // could open the board on a mostly-empty multi-month span with nothing to
+    // orient on.
+    tl.setWindow(addWeeks(w0, W_NOW - 0.3), addWeeks(w0, W_NOW + 8), { animation: false });
     // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
     // force one redraw on the next frame so the first paint is never blank.
     requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });
