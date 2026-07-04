@@ -138,11 +138,20 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
       // never-set null into ''). The backend's partial-upsert only skips a
       // JSON-absent field, so sending both unconditionally regardless of
       // prior state would overwrite an untouched null field with ''.
+      const sendEn = draftEn || row.content_md_en;
+      const sendRu = draftRu || row.content_md_ru;
       await updateLoreDoc(id, {
-        ...(draftEn || row.content_md_en ? { content_md_en: draftEn } : {}),
-        ...(draftRu || row.content_md_ru ? { content_md_ru: draftRu } : {}),
+        ...(sendEn ? { content_md_en: draftEn } : {}),
+        ...(sendRu ? { content_md_ru: draftRu } : {}),
       });
-      setRow(r => (r ? { ...r, content_md_en: draftEn, content_md_ru: draftRu } : r));
+      // Mirror the send condition exactly — a field the backend was told to
+      // skip (never touched) must stay whatever it already was locally too,
+      // not silently become '' just because the draft box started empty.
+      setRow(r => (r ? {
+        ...r,
+        content_md_en: sendEn ? draftEn : r.content_md_en,
+        content_md_ru: sendRu ? draftRu : r.content_md_ru,
+      } : r));
       setEditing(false);
     } catch (e) {
       onError(e);
