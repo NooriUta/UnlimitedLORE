@@ -130,8 +130,16 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   const saveEdit = async () => {
     setSaving(true);
     try {
-      await updateLoreDoc(id, { content_md_en: draftEn, content_md_ru: draftRu });
-      setRow(r => (r ? { ...r, content_md_en: draftEn, content_md_ru: draftRu } : r));
+      // Only send a field if it actually has content — draftEn/draftRu are
+      // seeded with '' for a language that was never filled in, and the
+      // backend's partial-upsert treats '' as "set this", not "leave alone"
+      // (only a JSON-absent/null field is skipped), so sending both
+      // unconditionally would overwrite an untouched null field with ''.
+      await updateLoreDoc(id, {
+        ...(draftEn ? { content_md_en: draftEn } : {}),
+        ...(draftRu ? { content_md_ru: draftRu } : {}),
+      });
+      setRow(r => (r ? { ...r, content_md_en: draftEn || r.content_md_en, content_md_ru: draftRu || r.content_md_ru } : r));
       setEditing(false);
     } catch (e) {
       onError(e);
@@ -188,6 +196,14 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
       {kind === 'doc' && editing ? (
         <>
+          {row.content_html && !row.content_md_en && !row.content_md_ru && (
+            <div style={S.cdnBanner}>
+              {t(
+                'lore.artifactDoc.htmlLegacyWarning',
+                '⚠ Этот документ сейчас хранится как HTML. Если вы сохраните текст здесь (даже в одном из полей), отображение переключится на Markdown и текущий HTML-контент перестанет показываться (он не удаляется, просто больше не используется).'
+              )}
+            </div>
+          )}
           <div style={S.editField}>
             <div style={S.editLabel}>EN</div>
             <TipTapField value={draftEn} onChange={setDraftEn} placeholder="English Markdown…" enableImages={false} enableHtmlMode={false} />
