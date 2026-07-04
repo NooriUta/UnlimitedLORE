@@ -439,10 +439,10 @@ public final class LoreSlices {
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
-        // SPRINT_PLANITEM_RETIRE/T-23: history_plan_item removed — PlanItem is
-        // deprecated (T-14) and this slice's only consumer (LoreEvolutionView.tsx)
-        // was removed in T-22. Sprint plan-field history now lives on
-        // KnowSprintHist, queryable via history_sprint.
+        slice("history_plan_item",
+            "SELECT valid_from, valid_to, week_start, week_end, content_hash " +
+            "FROM PlanItemHist WHERE in('HAS_STATE').item_id[0] = :id ORDER BY valid_from",
+            List.of("id"), Map.of(), "");
 
         // ── §8 KnowDoc — HTML/MD document fragments (Phase 5 LAL-30) ────────
         // Schema added in Phase 5; slices registered now so the frontend can

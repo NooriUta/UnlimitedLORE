@@ -744,6 +744,8 @@ export interface LoreHistRow {
   content_hash: string | null;
   source_commit: string | null;
   status_raw?: string | null;
+  week_start?: number | null;
+  week_end?: number | null;
 }
 
 export interface LorePlanVersion {
