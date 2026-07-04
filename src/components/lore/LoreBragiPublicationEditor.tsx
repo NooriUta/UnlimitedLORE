@@ -96,7 +96,7 @@ const STATUSES = ['draft', 'ready', 'published', 'planned'];
 
 // REN-00: master-preview skin switcher — "MAIN in the skin of any channel".
 const SKIN_CHIPS: [BragiSkin, string][] = [
-  ['main', 'мастер'], ['tg', 'TG'], ['vc', 'VC'], ['habr', 'Habr'], ['site', 'сайт'], ['tgraph', 'Telegraph'],
+  ['main', 'мастер'], ['site', 'сайт'], ['tg', 'TG'], ['tgraph', 'Telegraph'], ['vc', 'VC'], ['habr', 'Habr'],
 ];
 
 // REN-00: map a channel id to its preview skin (more-specific patterns first).
