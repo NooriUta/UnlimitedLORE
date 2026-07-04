@@ -19,6 +19,7 @@ interface RawRow {
   kind?: string | null; has_ext_deps?: boolean | null;
   date_created?: string | null; valid_from?: string | null;
   content_md?: string | null; content_html?: string | null;
+  content_md_en?: string | null; content_md_ru?: string | null;
   component_id?: string | null; sprint_id?: string | null;
 }
 
@@ -54,6 +55,13 @@ const S = {
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
   sprintLink: { fontSize: 11, color: 'var(--t3)', marginBottom: 10 },
   sprintAnchor: { color: 'var(--acc)', cursor: 'pointer', textDecoration: 'underline' },
+  langToggle: { display: 'flex', gap: 4, marginBottom: 10 },
+  langBtn: (on: boolean) => ({
+    fontSize: 10, fontWeight: 600, padding: '2px 9px', borderRadius: 12, cursor: 'pointer',
+    border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
+    background: on ? 'color-mix(in srgb, var(--acc) 18%, transparent)' : 'transparent',
+    color: on ? 'var(--t1)' : 'var(--t3)',
+  }),
 };
 
 interface Props {
@@ -65,10 +73,11 @@ interface Props {
 }
 
 export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateSprint }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [row, setRow]         = useState<RawRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<QgMetricRow[] | null>(null);
+  const [lang, setLang]       = useState<'en' | 'ru'>(i18n.language?.startsWith('ru') ? 'ru' : 'en');
 
   useEffect(() => {
     setLoading(true); setRow(null); setMetrics(null);
@@ -135,11 +144,27 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
       {row.description && <div style={S.desc}>{row.description}</div>}
 
-      {row.content_html
-        ? <SandboxedHtmlFrame html={row.content_html} title={title} />
-        : row.content_md
-          ? <MartProse text={row.content_md} />
-          : <div style={S.empty}>{t('lore.artifactDoc.emptyContent', 'Контент пуст.')}</div>}
+      {(() => {
+        const hasEn = !!row.content_md_en;
+        const hasRu = !!row.content_md_ru;
+        if (hasEn || hasRu) {
+          const shown = (lang === 'ru' ? row.content_md_ru : row.content_md_en) ?? row.content_md_en ?? row.content_md_ru;
+          return (
+            <>
+              {hasEn && hasRu && (
+                <div style={S.langToggle}>
+                  <button style={S.langBtn(lang === 'en')} onClick={() => setLang('en')}>EN</button>
+                  <button style={S.langBtn(lang === 'ru')} onClick={() => setLang('ru')}>RU</button>
+                </div>
+              )}
+              <MartProse text={shown ?? ''} />
+            </>
+          );
+        }
+        if (row.content_html) return <SandboxedHtmlFrame html={row.content_html} title={title} />;
+        if (row.content_md)   return <MartProse text={row.content_md} />;
+        return <div style={S.empty}>{t('lore.artifactDoc.emptyContent', 'Контент пуст.')}</div>;
+      })()}
 
       {kind === 'qg' && metrics && metrics.length > 0 && (
         <table style={S.table}>

@@ -744,8 +744,6 @@ export interface LoreHistRow {
   content_hash: string | null;
   source_commit: string | null;
   status_raw?: string | null;
-  week_start?: number | null;
-  week_end?: number | null;
 }
 
 export interface LorePlanVersion {
@@ -757,13 +755,16 @@ export interface LorePlanVersion {
 export interface LoreKnowDocRow {
   doc_id: string;
   title: string | null;
-  kind: 'fragment' | 'page' | null;
+  // e.g. "page", "fragment", "guide", "reference", "research", "product", "site", "prompt"
+  kind: string | null;
   has_ext_deps: boolean | null;
   component_id: string | null;
 }
 
 export interface LoreKnowDoc extends LoreKnowDocRow {
   content_html: string | null;
+  content_md_en: string | null;
+  content_md_ru: string | null;
   valid_from: string | null;
 }
 

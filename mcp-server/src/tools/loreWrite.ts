@@ -867,16 +867,21 @@ export function registerLoreWrite(server: McpServer): void {
 
   server.tool(
     'lore_create_doc',
-    'Create or update a KnowDoc vertex (HTML documentation page or fragment). ' +
-      'Idempotent — upserts by doc_id. Mutates system_aida_lore.',
+    'Create or update a KnowDoc vertex (documentation page or fragment). ' +
+      'Idempotent — upserts by doc_id (only provided fields are set; omitted fields keep their ' +
+      'existing value). Mutates system_aida_lore. ' +
+      'Prefer content_md_en/content_md_ru (clean Markdown, rendered in-DOM with mermaid support) ' +
+      'over content_html, which is a legacy field kept for pre-existing HTML-fragment docs.',
     {
-      doc_id:       z.string().describe('unique id, e.g. "engine_specs_auth" (/ → _)'),
-      title:        z.string(),
-      kind:         z.string().optional().describe('e.g. "page", "fragment", "guide", "reference", "research", "product", "site", "prompt"'),
-      has_ext_deps: z.boolean().optional().describe('true when content references external CDN'),
-      component_id: z.string().optional(),
-      file_path:    z.string().optional(),
-      content_html: z.string().optional().describe('HTML content (100 KB max)'),
+      doc_id:         z.string().describe('unique id, e.g. "engine_specs_auth" (/ → _)'),
+      title:          z.string(),
+      kind:           z.string().optional().describe('e.g. "page", "fragment", "guide", "reference", "research", "product", "site", "prompt"'),
+      has_ext_deps:   z.boolean().optional().describe('true when content_html references external CDN'),
+      component_id:   z.string().optional(),
+      file_path:      z.string().optional(),
+      content_md_en:  z.string().optional().describe('English Markdown body (preferred over content_html)'),
+      content_md_ru:  z.string().optional().describe('Russian Markdown body (preferred over content_html)'),
+      content_html:   z.string().optional().describe('Legacy: HTML content (100 KB max), rendered sandboxed'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/doc', p)); }

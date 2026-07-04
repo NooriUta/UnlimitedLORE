@@ -238,6 +238,12 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON QualityGate   (qg_id)        UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON QGMetric      (metric_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDoc       (doc_id)       UNIQUE",
+        // Bilingual Markdown body — content_html stays as a legacy field for the
+        // pre-existing HTML-fragment docs (rendered sandboxed); new/updated docs
+        // author clean Markdown per language instead (rendered in-DOM via
+        // MartProse — inherits the app's font, supports mermaid fences).
+        "CREATE PROPERTY KnowDoc.content_md_en IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDoc.content_md_ru IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowDocHist.valid_to IF NOT EXISTS DATETIME",
         "CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to) NOTUNIQUE",
 
