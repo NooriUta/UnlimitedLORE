@@ -12,11 +12,26 @@
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
+import { TableKit } from '@tiptap/extension-table';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
 import { Markdown } from 'tiptap-markdown';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { useEffect, useRef, useState } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
 import { uploadBragiAsset } from '../../api/lore';
+
+// Table/TaskList/Link/Strike all have built-in markdown serializers inside
+// tiptap-markdown itself (it matches extensions by node name against its own
+// bundled spec — confirmed by reading node_modules/tiptap-markdown/dist),
+// so installing the *official* @tiptap packages here is enough to get GFM
+// tables and `- [ ]` task lists round-tripping through plain markdown for
+// free — no custom serializer needed. Underline is deliberately NOT added:
+// CommonMark/GFM has no underline syntax, tiptap-markdown has no serializer
+// for it either, so it would silently vanish on save instead of just not
+// being offered.
+const TABLE_EXTENSIONS = [TableKit.configure({ table: { resizable: false } })];
+const TASKLIST_EXTENSIONS = [TaskList, TaskItem.configure({ nested: true })];
 
 // Resizable image: the stock Image node has no size handle at all — once
 // inserted, a picture is stuck at whatever pixel size it came in at, full
@@ -103,7 +118,19 @@ function injectTiptapCssOnce(): void {
   if (tiptapCssInjected || typeof document === 'undefined') return;
   const style = document.createElement('style');
   style.dataset.bragiTiptap = '1';
-  style.textContent = '.bragi-tiptap .ProseMirror img { max-width: 100%; height: auto; display: block; margin: 8px 0; border-radius: 6px; }';
+  style.textContent = `
+    .bragi-tiptap .ProseMirror img { max-width: 100%; height: auto; display: block; margin: 8px 0; border-radius: 6px; }
+    .bragi-tiptap .ProseMirror table { border-collapse: collapse; margin: 8px 0; width: 100%; table-layout: fixed; }
+    .bragi-tiptap .ProseMirror th, .bragi-tiptap .ProseMirror td { border: 1px solid var(--b3); padding: 4px 7px; vertical-align: top; text-align: left; }
+    .bragi-tiptap .ProseMirror th { background: var(--b2); font-weight: 600; }
+    .bragi-tiptap .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 4px; }
+    .bragi-tiptap .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 6px; }
+    .bragi-tiptap .ProseMirror ul[data-type="taskList"] li > label { flex: none; margin-top: 3px; }
+    .bragi-tiptap .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+    .bragi-tiptap .ProseMirror blockquote { border-left: 3px solid var(--acc); margin: 8px 0; padding: 2px 12px; color: var(--t2); }
+    .bragi-tiptap .ProseMirror hr { border: none; border-top: 1px solid var(--b3); margin: 12px 0; }
+    .bragi-tiptap .ProseMirror a { color: var(--acc); }
+  `;
   document.head.appendChild(style);
   tiptapCssInjected = true;
 }
@@ -149,6 +176,8 @@ export default function TipTapField({
     extensions: [
       StarterKit,
       ...(enableImages ? [ResizableImage] : []),
+      ...TABLE_EXTENSIONS,
+      ...TASKLIST_EXTENSIONS,
       Markdown.configure({ html: false, tightLists: true }),
     ],
     content: value,
@@ -173,6 +202,13 @@ export default function TipTapField({
     const current = getMarkdown(editor);
     if (value !== current && value === '') editor.commands.setContent('');
   }, [value, editor]);
+
+  const toggleLink = () => {
+    if (!editor) return;
+    if (editor.isActive('link')) { editor.chain().focus().unsetLink().run(); return; }
+    const url = window.prompt('URL ссылки:', 'https://');
+    if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  };
 
   const pickImage = () => fileInputRef.current?.click();
 
@@ -235,13 +271,34 @@ export default function TipTapField({
         <div style={S.toolbar}>
           {editor && (
             <>
+              <ToolBtn active={false} onClick={() => editor.chain().focus().undo().run()} title="отменить (Ctrl+Z)">↺</ToolBtn>
+              <ToolBtn active={false} onClick={() => editor.chain().focus().redo().run()} title="повторить (Ctrl+Y)">↻</ToolBtn>
+              <Sep />
               <ToolBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>B</ToolBtn>
               <ToolBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><i>i</i></ToolBtn>
+              <ToolBtn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}><s>S</s></ToolBtn>
+              <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>{'</>'}</ToolBtn>
+              <ToolBtn active={editor.isActive('link')} onClick={toggleLink} title="ссылка">🔗</ToolBtn>
+              <Sep />
+              <ToolBtn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>H1</ToolBtn>
+              <ToolBtn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</ToolBtn>
+              <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolBtn>
+              <Sep />
               <ToolBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</ToolBtn>
               <ToolBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</ToolBtn>
-              <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolBtn>
-              <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>{'</>'}</ToolBtn>
+              <ToolBtn active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()} title="чек-лист">☑</ToolBtn>
+              <ToolBtn active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="цитата">❝</ToolBtn>
+              <ToolBtn active={false} onClick={() => editor.chain().focus().setHorizontalRule().run()} title="разделитель">—</ToolBtn>
+              <Sep />
+              {editor.isActive('table')
+                ? <>
+                    <ToolBtn active={false} onClick={() => editor.chain().focus().addColumnAfter().run()} title="+ столбец">+▏</ToolBtn>
+                    <ToolBtn active={false} onClick={() => editor.chain().focus().addRowAfter().run()} title="+ строка">+▁</ToolBtn>
+                    <ToolBtn active={false} onClick={() => editor.chain().focus().deleteTable().run()} title="удалить таблицу">⊞×</ToolBtn>
+                  </>
+                : <ToolBtn active={false} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="вставить таблицу">⊞</ToolBtn>}
               {enableImages && <ToolBtn active={uploading} onClick={pickImage}>{uploading ? '…' : '🖼'}</ToolBtn>}
+              <Sep />
               <ToolBtn active={mode === 'md'} onClick={() => toggleMode('md')}>{'</> md'}</ToolBtn>
               {enableHtmlMode && <ToolBtn active={mode === 'html'} onClick={() => toggleMode('html')}>{'</> html'}</ToolBtn>}
             </>
@@ -266,8 +323,11 @@ export default function TipTapField({
   );
 }
 
-function ToolBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" style={toolBtnStyle(active)} onClick={onClick}>{children}</button>;
+function ToolBtn({ active, onClick, children, title }: { active: boolean; onClick: () => void; children: React.ReactNode; title?: string }) {
+  return <button type="button" style={toolBtnStyle(active)} onClick={onClick} title={title}>{children}</button>;
+}
+function Sep() {
+  return <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--b3)', margin: '2px 1px' }} />;
 }
 function toolBtnStyle(active: boolean): React.CSSProperties {
   return {
@@ -280,7 +340,7 @@ function toolBtnStyle(active: boolean): React.CSSProperties {
 
 const S: Record<string, React.CSSProperties> = {
   wrap:       { border: '1px solid var(--b3)', borderRadius: 4, overflow: 'hidden' },
-  toolbar:    { display: 'flex', gap: 3, padding: '4px 6px', background: 'var(--b2)', borderBottom: '1px solid var(--b3)' },
+  toolbar:    { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 3, padding: '4px 6px', background: 'var(--b2)', borderBottom: '1px solid var(--b3)' },
   editorBox:  { position: 'relative', background: 'var(--b1)', padding: '7px 9px', fontSize: 12, color: 'var(--t1)', lineHeight: 1.55 },
   sourceBox:  { width: '100%', minHeight: 100, background: 'var(--b1)', color: 'var(--t1)', fontFamily: 'var(--mono)',
                 fontSize: 12, lineHeight: 1.55, padding: '7px 9px', border: 'none', outline: 'none', resize: 'vertical',
