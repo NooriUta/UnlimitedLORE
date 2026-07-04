@@ -184,6 +184,17 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY StatusPlanItem.valid_to IF NOT EXISTS DATETIME",
         "CREATE INDEX IF NOT EXISTS ON StatusPlanItem    (valid_to) NOTUNIQUE",
 
+        // SPRINT_PLANITEM_RETIRE: valid_from had no formal property (unlike valid_to
+        // below) — different write paths stored it as different internal types
+        // across the table (String vs DATETIME, different precisions), and
+        // ORDER BY valid_from eventually threw "Comparison method violates its
+        // general contract!" (Java TimSort on an inconsistent comparator), taking
+        // down sprint_starts and /lore/analytics. Declaring the property doesn't
+        // retroactively fix already-stored rows (fixed separately, one-off,
+        // rewriting each value through a bind-parameter command) but prevents new
+        // writes from drifting again.
+        "CREATE PROPERTY KnowSprintHist.valid_from  IF NOT EXISTS DATETIME",
+
         // ── Hist valid_to indexes (current-row queries) ───────────────────────
         "CREATE PROPERTY KnowDecisionHist.valid_to  IF NOT EXISTS DATETIME",
         "CREATE PROPERTY KnowADRHist.valid_to       IF NOT EXISTS DATETIME",

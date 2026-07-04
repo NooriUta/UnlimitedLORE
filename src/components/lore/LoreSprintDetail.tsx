@@ -61,6 +61,13 @@ interface CompRow {
   game_icon: string | null;
 }
 
+// Milestone labels are frequently just the id repeated (e.g. label:"M0" for
+// milestone_id:"M0") -- showing "M0 — M0" in a picker reads as a bug even
+// though it's a data gap. Only append the label when it adds information.
+function milestoneOptionLabel(m: { id: string; label: string }): string {
+  return m.label && m.label !== m.id ? `${m.id} — ${m.label}` : m.id;
+}
+
 function componentKey(c: CompRow): string {
   // Mirror LoreComponentPassport: short ids fall back to the first full_name word.
   return (c.component_id.length < 4
@@ -1066,7 +1073,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               } catch (err) { onError(err); } finally { setPlanBusy(false); }
             }}>
             <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— планируемая веха —')}</option>
-            {allMilestones.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
+            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
           </select>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t2)', cursor: planBusy ? 'default' : 'pointer' }}>
             <input type="checkbox" disabled={planBusy}
@@ -1128,7 +1135,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                   }}
                   style={lookupSelectStyle}>
                   <option value="">{t('lore.sprintDetail.milestones.linkPlaceholder', '+ привязать веху…')}</option>
-                  {unlinked.map(m => <option key={m.id} value={m.id}>{m.id} — {m.label}</option>)}
+                  {unlinked.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
                 </select>
               )}
               {linked.length === 0 && unlinked.length === 0 && <span style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' }}>{t('lore.sprintDetail.milestones.empty', 'нет вех')}</span>}
