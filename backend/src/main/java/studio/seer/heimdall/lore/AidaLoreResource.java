@@ -3857,6 +3857,19 @@ public class AidaLoreResource {
             // object_type='probe' is a one-off schema-verification artifact (ARC-02/ARC-03) —
             // never a real BRAGI measurement, always excluded.
             where.append(" AND object_type != 'probe'");
+            // V2-01 (SPRINT_BRAGI_ARCHIVE_V2): pre-policy seed/test artifacts, filtered at
+            // read time — MetricSnapshot is TIMESERIES (sealed storage): DELETE reports
+            // success but the row physically stays, so there is no real purge path.
+            // qa-e2e/test-mcp03/PUB-QA-E2E are test-only labels, safe to exclude outright.
+            // The 27.06 demo package and the 02.07 ai_share/KW-08 batch used real ongoing
+            // source labels (yandex-metrika/tg-stats/habr-stats/ai-tracker-3549/yandex-serp)
+            // that WILL carry real future data too, so those are pinned to their exact
+            // whole-second seed timestamp instead — a real capture always has sub-second
+            // precision, so this can never collide with genuine future measurements.
+            where.append(" AND object_id != 'PUB-QA-E2E'");
+            where.append(" AND source NOT IN ['qa-e2e', 'test-mcp03']");
+            where.append(" AND NOT (ts = '2026-06-27 12:00:00' AND object_id IN ['PUB-04', 'PUB-04-VC', 'PUB-04-TG', 'PUB-05', 'PUB-05-HABR'])");
+            where.append(" AND NOT (ts = '2026-07-02 09:00:00' AND (object_type = 'competitor' OR object_id = 'KW-08'))");
 
             String sql;
             if (agg != null && !agg.isBlank()) {

@@ -714,10 +714,16 @@ public final class LoreSlices {
         // Recent metric feed — for filtered/aggregated queries use lore_query_metric
         // (POST /lore/bragi/metric/query) instead; this slice is a flat recent-points
         // feed for dashboard cards. object_type='probe' is a schema-verification
-        // artifact (ARC-02/ARC-03), always excluded.
+        // artifact (ARC-02/ARC-03), always excluded. The remaining exclusions
+        // (V2-01, SPRINT_BRAGI_ARCHIVE_V2) mirror queryBragiMetric's filter —
+        // MetricSnapshot is TIMESERIES/sealed, so pre-policy seed/test points can't
+        // be physically deleted and are filtered at every read path instead.
         slice("bragi_analytics",
             "SELECT object_type, object_id, metric, value, ts, source, segment " +
-            "FROM MetricSnapshot WHERE object_type != 'probe'",
+            "FROM MetricSnapshot WHERE object_type != 'probe' " +
+            "AND object_id != 'PUB-QA-E2E' AND source NOT IN ['qa-e2e', 'test-mcp03'] " +
+            "AND NOT (ts = '2026-06-27 12:00:00' AND object_id IN ['PUB-04', 'PUB-04-VC', 'PUB-04-TG', 'PUB-05', 'PUB-05-HABR']) " +
+            "AND NOT (ts = '2026-07-02 09:00:00' AND (object_type = 'competitor' OR object_id = 'KW-08'))",
             List.of(), Map.of(), " ORDER BY ts DESC LIMIT 100");
 
         slice("bragi_competitors",
