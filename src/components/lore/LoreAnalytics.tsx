@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreAnalytics, fetchLoreSlice, type LoreAnalytics, type LoreAnalyticsSprint, type LoreComponent, type LoreSprintDoneDate, type LoreMilestone, type LoreSprintRow, type LoreRelease, type LoreQGViolation, type LoreQGPendingRec, type LoreQGRoutineRun } from '../../api/lore';
+import { fetchLoreAnalytics, fetchLoreSlice, type LoreAnalytics, type LoreAnalyticsSprint, type LoreComponent, type LoreSprintDoneDate, type LoreMilestone, type LoreSprintRow, type LoreRelease, type LoreQGViolation, type LoreQGPendingRec, type LoreQGRoutineRun, type LoreTechRow } from '../../api/lore';
 import { statusMeta } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
 import { parseRoutine, parseInvariants, type ParsedInv } from '../../lib/qgContentMd';
+import { isStale as isTechStale, parseFields as parseTechFields } from './LoreTechRegistry';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -25,7 +26,7 @@ const STATUS_ORDER = [
   'todo', 'design', 'backlog', 'deferred', 'blocked', 'cancelled', 'none',
 ];
 
-type AnalyticsTab = 'overview' | 'progress' | 'flow' | 'sprints' | 'quality';
+type AnalyticsTab = 'overview' | 'progress' | 'flow' | 'sprints' | 'quality' | 'tech';
 type CompGroupBy  = 'area' | 'platform' | 'project';
 type SprintFilter = 'all' | 'active' | 'ready' | 'done' | 'empty';
 
@@ -90,6 +91,7 @@ const TABS: { key: AnalyticsTab; icon: string; label: string }[] = [
   { key: 'flow',       icon: 'split-arrows',  label: 'Поток'    },
   { key: 'sprints',    icon: 'sprint',        label: 'Спринты'  },
   { key: 'quality',    icon: 'guards',        label: 'Quality'  },
+  { key: 'tech',       icon: 'cog',           label: 'Технологии' },
 ];
 
 const SPRINT_FILTERS: { key: SprintFilter; label: string }[] = [
@@ -365,6 +367,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const [chartComp,       setChartComp]       = useState<string>('all');
   const [taskDone,   setTaskDone]   = useState<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }[]>([]);
   const [taskStarts, setTaskStarts] = useState<{ task_id: string; valid_from: string | null }[]>([]);
+  const [techRows,   setTechRows]   = useState<LoreTechRow[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -385,12 +388,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       fetchLoreSlice<{ task_id: string; valid_from: string | null; states: number | number[] | null; effort_days: number | number[] | null }>('task_done_dates', undefined, ctrl.signal),
       fetchLoreSlice<{ task_id: string; valid_from: string | null }>('task_starts', undefined, ctrl.signal),
       fetchLoreSlice<QGMetricRow>('qg_metrics_latest', undefined, ctrl.signal),
+      fetchLoreSlice<LoreTechRow>('tech_registry', undefined, ctrl.signal),
     ])
-      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone, tstarts, qgmet]) => {
+      .then(([d, comps, dones, ms, sp, rel, qg, starts, blocked, viols, recs, runs, tdone, tstarts, qgmet, tech]) => {
         setData(d); setComponents(comps); setDoneDates(dones); setMilestoneList(ms);
         setSprintRows(sp); setReleases(rel); setQgRows(qg); setSprintStarts(starts); setBlockedRows(blocked);
         setQgViolations(viols); setQgPendingRecs(recs); setQgRoutineRuns(runs); setTaskDone(tdone); setTaskStarts(tstarts);
-        setQgMetricsLatest(qgmet);
+        setQgMetricsLatest(qgmet); setTechRows(tech);
         setLoading(false);
       })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
@@ -403,18 +407,32 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     data?.by_sprint.filter(s => { const k = classify(s.status_raw); return k !== 'done' && k !== 'cancelled'; }).length ?? 0,
   [data]);
 
+  // SPRINT_PLANITEM_RETIRE (T-21): "planned" milestone membership no longer
+  // comes from the backend slice (retired PlanItem hop) — derive it from
+  // sprintRows.planned_milestone_id instead, same pattern as LoreMilestonesView.
+  const plannedByMilestone = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const s of sprintRows) {
+      if (!s.planned_milestone_id) continue;
+      const arr = map.get(s.planned_milestone_id);
+      if (arr) arr.push(s.sprint_id); else map.set(s.planned_milestone_id, [s.sprint_id]);
+    }
+    return map;
+  }, [sprintRows]);
+
   // open sprints belonging to the current milestone — used for forecast
   const milestoneOpenCount = useMemo(() => {
     if (!data || !milestoneList.length) return openSprintCount;
     // find current milestone (first non-done)
     const cur = milestoneList.find(m => !(m.goal_md?.includes('✅') ?? false));
-    if (!cur || !cur.sprint_ids?.length) return openSprintCount;
-    const ids = new Set(cur.sprint_ids);
+    const curPlanIds = cur ? (plannedByMilestone.get(cur.milestone_id) ?? []) : [];
+    if (!cur || !curPlanIds.length) return openSprintCount;
+    const ids = new Set(curPlanIds);
     return data.by_sprint.filter(s => {
       const k = classify(s.status_raw);
       return k !== 'done' && k !== 'cancelled' && ids.has(s.sprint_id);
     }).length;
-  }, [data, milestoneList, openSprintCount]);
+  }, [data, milestoneList, openSprintCount, plannedByMilestone]);
 
   // Velocity by ISO week (last 12 weeks)
   const velocityWeeks = useMemo(() => {
@@ -456,9 +474,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     milestoneList.map(m => ({
       id: m.milestone_id,
       label: m.label,
-      ids: new Set([...(m.sprint_ids ?? []), ...(m.direct_sprint_ids ?? [])]),
+      ids: new Set([...(plannedByMilestone.get(m.milestone_id) ?? []), ...(m.direct_sprint_ids ?? [])]),
     })),
-  [milestoneList]);
+  [milestoneList, plannedByMilestone]);
 
   // Top components for filter chips (by sprint count, max 10)
   const chartComps = useMemo(() => {
@@ -539,11 +557,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return sorted.map((d, i) => ({ dateMs: d.getTime(), total: i + 1 }));
   }, [chartSprints]);
 
+  // Sprints flagged as never shipping a versioned release (docs/research/tooling)
+  // — excluded from unreleased-burn/deploy-lag so they don't read as perpetually overdue.
+  const noReleaseSprintIds = useMemo(() =>
+    new Set(sprintRows.filter(s => s.no_release_required).map(s => s.sprint_id)),
+  [sprintRows]);
+
   // Unreleased: sprints done after M2 (Jun 3)
   const M2_DATE = '2026-06-03';
   const sinceM2Count = useMemo(() =>
-    doneDates.filter(d => (d.done_date ?? '').slice(0, 10) >= M2_DATE).length,
-  [doneDates]);
+    doneDates.filter(d => (d.done_date ?? '').slice(0, 10) >= M2_DATE && !noReleaseSprintIds.has(d.sprint_id)).length,
+  [doneDates, noReleaseSprintIds]);
 
   // Milestone classification
   const milestoneStatuses = useMemo(() => {
@@ -748,8 +772,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       const relDates = s.release_dates.map(parseDoneDate).filter((d): d is Date => !!d && d >= done);
       if (relDates.length) lags.push(daysBetween(done, new Date(Math.min(...relDates.map(d => d.getTime())))));
     });
-    // done but not yet released
-    const unreleased = sprintRows.filter(s => parseDoneDate(s.done_date) && !s.release_dates?.length).length;
+    // done but not yet released — excludes sprints flagged no_release_required
+    // (docs/research/tooling that never ships a versioned release; otherwise
+    // they'd sit in this count forever as a false "overdue" signal).
+    const unreleased = sprintRows.filter(s =>
+      parseDoneDate(s.done_date) && !s.release_dates?.length && !s.no_release_required).length;
     if (!lags.length) return { med: null, p75: null, unreleased, count: 0 };
     return { med: median(lags), p75: Math.round(quantile(lags, 0.75)), unreleased, count: lags.length };
   }, [sprintRows]);
@@ -1031,7 +1058,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
   // current milestone open sprints for drilldown
   const milestoneOpenSprints = useMemo(() => {
-    const milestoneIds = new Set(currentMilestone?.sprint_ids ?? []);
+    const milestoneIds = new Set(currentMilestone ? (plannedByMilestone.get(currentMilestone.milestone_id) ?? []) : []);
     return (data?.by_sprint ?? [])
       .filter(s => {
         const k = classify(s.status_raw);
@@ -1048,7 +1075,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
         return rank(a.klass) - rank(b.klass) || b.open_tasks - a.open_tasks;
       });
-  }, [data, sprintRows, sprintNameMap, currentMilestone]);
+  }, [data, sprintRows, sprintNameMap, currentMilestone, plannedByMilestone]);
 
   const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
 
@@ -1060,6 +1087,29 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   const filteredEffortSumTop = useMemo(() =>
     filteredSprintsForEffort.reduce((sum, s) => sum + (s.effort_days_sum ?? 0), 0),
   [filteredSprintsForEffort]);
+
+  // Tech × component matrix — rows are distinct technologies, columns are the
+  // components that actually have a tech_registry entry (empty components add
+  // no signal to a matrix, so they're left out rather than padding it with dashes).
+  const techMatrix = useMemo(() => {
+    const compIds = [...new Set(techRows.map(r => r.component_id).filter((c): c is string => !!c))];
+    const compById = new Map(components.map(c => [c.component_id, c]));
+    const cols = compIds
+      .map(id => compById.get(id) ?? { component_id: id, full_name: id, area: '', parent_id: null, game_icon: null, children: [], tech: [] } as LoreComponent)
+      .sort((a, b) => compArea(a).localeCompare(compArea(b)) || (a.full_name ?? a.component_id).localeCompare(b.full_name ?? b.component_id));
+
+    const byTech = new Map<string, Map<string, LoreTechRow>>();
+    techRows.forEach(r => {
+      if (!r.component_id) return;
+      if (!byTech.has(r.tech_name)) byTech.set(r.tech_name, new Map());
+      byTech.get(r.tech_name)!.set(r.component_id, r);
+    });
+    const techRowsSorted = [...byTech.entries()]
+      .map(([tech, byComp]) => ({ tech, byComp, usageCount: byComp.size }))
+      .sort((a, b) => b.usageCount - a.usageCount || a.tech.localeCompare(b.tech));
+
+    return { cols, rows: techRowsSorted };
+  }, [techRows, components]);
 
   if (loading) return <LoreSkeleton />;
   if (!data)   return <div style={S.empty}>{t('lore.analytics.noData', 'Нет данных.')}</div>;
@@ -2283,6 +2333,67 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     </>
   );
 
+  // ── Tab: Технологии (tech × component matrix) ───────────────────────────────
+
+  const tabTech = (
+    <>
+      {techMatrix.rows.length === 0 ? (
+        <div style={S.empty}>{t('lore.analytics.tech.empty', 'Технологии не зарегистрированы ни для одного компонента.')}</div>
+      ) : (
+        <section style={S.panel}>
+          <div style={S.panelTitle}>
+            {t('lore.analytics.tech.title', 'Матрица технологии × компоненты')}
+            <span style={{ ...S.dim, marginLeft: 6, fontSize: 10 }}>
+              {t('lore.analytics.tech.subtitle', '{{techs}} технологий · {{comps}} компонентов', { techs: techMatrix.rows.length, comps: techMatrix.cols.length })}
+            </span>
+          </div>
+          <div style={{ overflowX: 'auto' as const }}>
+            <table style={{ ...S.matrixTable }}>
+              <thead>
+                <tr>
+                  <th style={{ ...S.matrixCornerCell }}>{t('lore.analytics.tech.col.tech', 'Технология')}</th>
+                  {techMatrix.cols.map(c => (
+                    <th key={c.component_id} style={{ ...S.matrixColHead, color: areaColor(compArea(c)) }} title={c.full_name ?? c.component_id}>
+                      <span style={S.matrixColHeadLabel}>{c.full_name ?? c.component_id}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {techMatrix.rows.map(({ tech, byComp, usageCount }) => (
+                  <tr key={tech}>
+                    <td style={S.matrixRowHead}>
+                      {tech}
+                      <span style={{ ...S.dim, marginLeft: 5, fontSize: 9 }}>{usageCount}</span>
+                    </td>
+                    {techMatrix.cols.map(c => {
+                      const row = byComp.get(c.component_id);
+                      if (!row) return <td key={c.component_id} style={S.matrixCellEmpty}>·</td>;
+                      const f = parseTechFields(row.content_md);
+                      const stale = isTechStale(row.checked_at);
+                      const hint = [
+                        `${tech} ${row.version ?? ''}`.trim(),
+                        f.license && `Лицензия: ${f.license}`,
+                        f.ourRelease && `Наш релиз: ${f.ourRelease}`,
+                        f.usage && `Использование: ${f.usage}`,
+                        row.checked_at ? `Проверено: ${row.checked_at.slice(0, 10)}` : null,
+                      ].filter(Boolean).join('\n');
+                      return (
+                        <td key={c.component_id} style={{ ...S.matrixCell, color: stale ? 'var(--wrn)' : 'var(--t1)' }} title={hint}>
+                          {row.version ?? '✓'}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </>
+  );
+
   return (
     <div style={S.root}>
       {tabBar}
@@ -2291,6 +2402,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {tab === 'flow'       && tabFlow}
       {tab === 'sprints'    && tabSprints}
       {tab === 'quality'    && tabQuality}
+      {tab === 'tech'       && tabTech}
     </div>
   );
 }
@@ -2393,4 +2505,12 @@ const S = {
       color: col, background: `color-mix(in srgb,${col} 14%,transparent)`,
       border: `1px solid color-mix(in srgb,${col} 30%,transparent)` };
   },
+
+  matrixTable:        { borderCollapse: 'collapse' as const, fontSize: 11, width: 'max-content' },
+  matrixCornerCell:   { position: 'sticky' as const, left: 0, zIndex: 1, background: 'var(--b2)', textAlign: 'left' as const, padding: '4px 10px 4px 4px', fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', borderBottom: '1px solid var(--bd)' },
+  matrixColHead:      { padding: '4px 8px', fontSize: 10, fontWeight: 600, borderBottom: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', writingMode: 'vertical-rl' as const, transform: 'rotate(180deg)', maxHeight: 110, whiteSpace: 'nowrap' as const, verticalAlign: 'bottom' as const },
+  matrixColHeadLabel: { display: 'inline-block', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' as const },
+  matrixRowHead:      { position: 'sticky' as const, left: 0, background: 'var(--b2)', padding: '4px 10px 4px 4px', fontSize: 11, color: 'var(--t1)', fontWeight: 500, whiteSpace: 'nowrap' as const, borderTop: '1px solid var(--bd)' },
+  matrixCell:         { padding: '4px 8px', fontSize: 10, fontFamily: 'var(--mono)', textAlign: 'center' as const, borderTop: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', cursor: 'help' as const },
+  matrixCellEmpty:    { padding: '4px 8px', fontSize: 10, textAlign: 'center' as const, color: 'var(--t4, var(--t3))', borderTop: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', opacity: 0.35 },
 };

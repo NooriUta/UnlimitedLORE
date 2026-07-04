@@ -223,6 +223,12 @@ export interface LoreSprintRow {
   components: string[] | null;
   track_id: string | null;
   context_md: string | null;
+  created_date: string | null;
+  planned_start_date: string | null;
+  planned_end_date: string | null;
+  planned_milestone_id: string | null;
+  milestone_ids?: string[] | null;
+  no_release_required: boolean | null;
 }
 
 export interface LoreSprintDoneDate {
@@ -248,7 +254,11 @@ export interface LoreMilestone {
   week: number | null;
   date_display: string | null;
   goal_md: string | null;
-  sprint_ids: string[] | null;
+  // SPRINT_PLANITEM_RETIRE (T-21): the "planned" bucket is no longer returned
+  // by the backend slice — derive it client-side from the already-fetched
+  // `sprints` list, filtered on planned_milestone_id (see LoreMilestonesView's
+  // msIds()). direct_sprint_ids (TARGETS_MILESTONE, the "actual" bucket) is
+  // still a real edge and still comes from the slice.
   direct_sprint_ids?: string[] | null;
   priority?: string | null;
 }
@@ -373,7 +383,7 @@ export interface LoreStatusUpdateResponse {
 }
 
 export async function postLoreStatus(
-  entityType: 'plan_item' | 'sprint' | 'task' | 'checkpoint',
+  entityType: 'plan_item' | 'sprint' | 'task' | 'checkpoint' | 'phase',
   id: string,
   status: LorePlanItemStatus,
 ): Promise<LoreStatusUpdateResponse> {
@@ -401,6 +411,57 @@ export async function uploadBragiAsset(file: File): Promise<{ ok: boolean; file_
   assertJson(res);
   if (!res.ok) return parseError(res);
   return res.json() as Promise<{ ok: boolean; file_url: string; size_bytes: number }>;
+}
+
+/** Register (or amend) a BragiAsset and optionally attach it to a publication/variant
+ * (POST /lore/bragi/asset) — the second half of the upload+attach cover-image flow;
+ * uploadBragiAsset() above only stores the file and returns its file_url. */
+export async function attachBragiAsset(p: {
+  asset_id: string; file_url?: string; asset_type?: string; alt?: string; size_bytes?: number;
+  attach_to_publication_id?: string; attach_to_variant_id?: string;
+}): Promise<{ ok: boolean; asset_id: string; attached_to: string }> {
+  const res = await fetch(`${LORE_BASE}/bragi/asset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(p),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; asset_id: string; attached_to: string }>;
+}
+
+/** Create/amend a BragiCampaign and optionally link it to a variant (POST
+ * /lore/bragi/campaign) — EDIT-04. UPSERT by campaign_id, partial-safe. */
+export async function createBragiCampaign(p: {
+  campaign_id: string; utm_source?: string; utm_medium?: string; utm_campaign?: string;
+  target_url?: string; period?: string; variant_id?: string;
+}): Promise<{ ok: boolean; campaign_id: string; linked_variant: boolean }> {
+  const res = await fetch(`${LORE_BASE}/bragi/campaign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(p),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; campaign_id: string; linked_variant: boolean }>;
+}
+
+/** Link (or unlink) a BragiPublication/BragiVariant into the Forseti work graph
+ * (POST /lore/bragi/link) — EDIT-05. PRODUCED_BY→task|sprint, SHIPPED_IN→release. */
+export async function linkBragiForseti(p: {
+  entity_type: 'publication' | 'variant'; entity_id: string;
+  edge_type: 'PRODUCED_BY' | 'SHIPPED_IN';
+  target_type: 'task' | 'sprint' | 'release'; target_id: string;
+  git_project?: string; action?: 'add' | 'remove';
+}): Promise<{ ok: boolean; entity_id: string; target_id: string; action: string }> {
+  const res = await fetch(`${LORE_BASE}/bragi/link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(p),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; entity_id: string; target_id: string; action: string }>;
 }
 
 export interface LoreTaskWriteResponse {
@@ -510,6 +571,72 @@ export async function linkSprintMilestone(
   return res.json() as Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }>;
 }
 
+// ── Tech registry (SPRINT_TECH_REGISTRY) ───────────────────────────────────
+// Stored as one KnowSpec per (component, tech) pair via the existing /lore/spec
+// upsert path — spec_id "SPEC-TECH-<COMPONENT>-<TECH>" — same convention as the
+// lore_upsert_tech MCP tool. Read side is the tech_registry slice.
+export interface LoreTechRow {
+  spec_id: string;
+  tech_name: string;
+  version: string | null;
+  content_md: string | null;
+  checked_at: string | null;
+  component_id: string | null;
+}
+
+export interface TechUpsertPayload {
+  component_id: string;
+  tech_name: string;
+  version: string;
+  release_date?: string;    // when the TECH ITSELF was released upstream
+  license?: string;
+  source_url?: string;
+  checked_at?: string;
+  our_release?: string;     // which of OUR releases pinned/shipped this version
+  usage?: string;           // how/where it's actually used (free text)
+}
+
+export async function upsertTech(p: TechUpsertPayload): Promise<{ ok: boolean; spec_id: string }> {
+  const specId = `SPEC-TECH-${p.component_id.toUpperCase()}-${p.tech_name.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
+  const today = new Date().toISOString().slice(0, 10);
+  const lines = [
+    p.release_date && `- **Дата релиза:** ${p.release_date}`,
+    p.our_release && `- **Наш релиз:** ${p.our_release}`,
+    p.license && `- **Лицензия:** ${p.license}`,
+    p.usage && `- **Использование:** ${p.usage}`,
+    p.source_url && `- **Источник:** ${p.source_url}`,
+    `- **Проверено:** ${p.checked_at ?? today}`,
+  ].filter(Boolean);
+  const res = await fetch(`${LORE_BASE}/spec`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({
+      spec_id: specId, title: p.tech_name, version: p.version, component_id: p.component_id,
+      content_md: lines.join('\n'),
+    }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; spec_id: string }>;
+}
+
+/** Link or unlink a KnowSprint to a KnowRelease (POST /lore/release/link | /lore/release/unlink). */
+export async function linkSprintRelease(
+  sprintId: string,
+  releaseId: string,
+  gitProject: string,
+  action: 'add' | 'remove' = 'add',
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${LORE_BASE}/release/${action === 'remove' ? 'unlink' : 'link'}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ release_id: releaseId, git_project: gitProject, sprint_ids: [sprintId] }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean }>;
+}
+
 /** Create or edit a KnowMilestone (POST /lore/milestone). */
 export async function upsertMilestone(
   m: { milestone_id: string; label?: string; week?: number | null; date_display?: string | null; goal_md?: string | null; priority?: string | null },
@@ -524,26 +651,34 @@ export async function upsertMilestone(
   return res.json() as Promise<{ ok: boolean; milestone_id: string }>;
 }
 
-/** Partial update of KnowSprint vertex fields (POST /lore/sprint/update). */
-export async function setSprintTrack(
+export async function updateLoreSprint(
   sprintId: string,
-  trackId: string | null,
-): Promise<{ ok: boolean; sprint_id: string; track_id: string | null }> {
-  const res = await fetch(`${LORE_BASE}/sprint/track`, {
+  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; no_release_required?: boolean | null },
+): Promise<{ ok: boolean; sprint_id: string }> {
+  const res = await fetch(`${LORE_BASE}/sprint/update`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify({ sprint_id: sprintId, track_id: trackId }),
+    body: JSON.stringify({ sprint_id: sprintId, ...fields }),
   });
   assertJson(res);
   if (!res.ok) return parseError(res);
-  return res.json() as Promise<{ ok: boolean; sprint_id: string; track_id: string | null }>;
+  return res.json() as Promise<{ ok: boolean; sprint_id: string }>;
 }
 
-export async function updateLoreSprint(
+/**
+ * Real-SCD2 edit of sprint plan fields (POST /lore/sprint/plan) — unlike
+ * updateLoreSprint (in-place vertex mutation), this closes the open
+ * KnowSprintHist row and opens a new one, carrying forward any of these
+ * fields the caller doesn't pass. priority lives here now, not on updateLoreSprint.
+ */
+export async function updateSprintPlan(
   sprintId: string,
-  fields: { context_md?: string | null; outcome_md?: string | null; name?: string | null; priority?: string | null },
+  fields: {
+    priority?: string | null; planned_start_date?: string | null; planned_end_date?: string | null;
+    planned_milestone_id?: string | null; track_id?: string | null;
+  },
 ): Promise<{ ok: boolean; sprint_id: string }> {
-  const res = await fetch(`${LORE_BASE}/sprint/update`, {
+  const res = await fetch(`${LORE_BASE}/sprint/plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),

@@ -245,10 +245,10 @@ export function LoreBragiIntegrations() {
             {rows.map(r => (
               <tr key={r.integration_id}>
                 <td style={S.td}>{r.service ?? r.integration_id}</td>
-                <td style={S.td}>{r.purpose ?? '—'}</td>
+                <td style={S.td}>{r.purpose ? t('bragi.integrationEditor.purpose.' + r.purpose.replace('/', '_'), r.purpose) : '—'}</td>
                 <td style={S.td}>
                   <span style={statusDotStyle(r.status === 'active' ? 'var(--suc)' : 'var(--wrn)')} />
-                  {r.status ?? '—'}
+                  {r.status ? t('bragi.integrationEditor.status.' + r.status, r.status) : '—'}
                 </td>
                 <td style={S.td}><code style={{ fontSize: 11 }}>{r.secret_ref ?? '—'}</code></td>
                 <td style={S.td}>{r.last_called_at ?? '—'}</td>

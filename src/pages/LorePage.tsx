@@ -14,6 +14,7 @@ import LoreSpecView           from '../components/lore/LoreSpecView';
 import { ADR_STATUS_FILTERS, adrStatusLabel } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
+import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreSprintEditor    from '../components/lore/LoreSprintEditor';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
@@ -27,11 +28,12 @@ import LoreRunbookList     from '../components/lore/LoreRunbookList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
+import { useIsNarrow } from '../hooks/useMediaQuery';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
-  | 'knowledge' | 'components' | 'qg'
+  | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
@@ -45,11 +47,21 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
   { id: 'components', icon: 'cog',            labelKey: 'lore.page.nav.components', fallback: 'Компоненты' },
+  { id: 'tech',       icon: 'gears',          labelKey: 'lore.page.nav.tech',       fallback: 'Технологии' },
   { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
 ];
+
+// MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
+// section nav collapses to icons only, so colour is what tells the types apart.
+const SECTION_COLORS: Record<Section, string> = {
+  milestones: '#E0A13D', plan: '#6AB3F3', sprints: '#7DBF78', adrs: '#B48EAD',
+  decisions: '#D9A05B', releases: '#57C7D4', qg: '#A8C062', knowledge: '#E06C9F',
+  components: '#88B8A8', tech: '#C0A36E', evolution: '#9A8CDB', timeline: '#6FB0A0',
+  analytics: '#D98E73', mcp: '#8FA0C0',
+};
 
 // Sections that use master-detail layout (list panel + detail panel)
 const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg'];
@@ -94,6 +106,14 @@ const S = {
     color: active ? 'var(--acc)' : 'var(--t2)',
     fontWeight: active ? 600 : 400,
     transition: 'background 0.1s',
+  }),
+  // Narrow: icon-only, tinted by the section's type colour.
+  navItemNarrow: (active: boolean, col: string) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '6px 8px', height: 40, minWidth: 44, cursor: 'pointer', borderRadius: 6,
+    border: active ? `1px solid ${col}` : '1px solid transparent',
+    background: active ? `color-mix(in srgb, ${col} 20%, transparent)` : 'transparent',
+    flexShrink: 0,
   }),
   // List panel (master-detail) — width applied dynamically via listW state
   listPanel: {
@@ -201,6 +221,11 @@ export default function LorePage() {
   // Sections where the global search bar is actually passed to children
   const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
   const showGlobalSearch = SEARCH_SECTIONS.includes(section);
+  // MOB: collapse the section nav to type-coloured icons on narrow screens.
+  const narrow = useIsNarrow(720);
+  // MOB-08: touch targets — icon-only chips get taller padding on narrow so
+  // the tap zone approaches the 44px guideline without desktop bloat.
+  const chipPad = narrow ? '9px 10px' : '2px 8px';
 
   // LH-26: seed local search fields from global q when switching sections (once, if empty)
   useEffect(() => {
@@ -272,17 +297,21 @@ export default function LorePage() {
   // ── Section nav — horizontal bar (План · Спринты · ADR · …) ──────────────────
   const sectionNav = (
     <nav style={S.navBar} className="lore-nav-scroll">
-      {SECTIONS.map(s => (
-        <button
-          key={s.id}
-          style={S.navItem(section === s.id)}
-          onClick={() => go(s.id)}
-          title={t(s.labelKey, s.fallback)}
-        >
-          {s.icon && <GameIcon slug={s.icon} size={15} style={{ color: 'inherit' }} />}
-          <span>{t(s.labelKey, s.fallback)}</span>
-        </button>
-      ))}
+      {SECTIONS.map(s => {
+        const isActive = section === s.id;
+        const col = SECTION_COLORS[s.id];
+        return (
+          <button
+            key={s.id}
+            style={narrow ? S.navItemNarrow(isActive, col) : S.navItem(isActive)}
+            onClick={() => go(s.id)}
+            title={t(s.labelKey, s.fallback)}
+          >
+            {s.icon && <GameIcon slug={s.icon} size={narrow ? 18 : 15} style={{ color: narrow ? col : 'inherit' }} />}
+            {!narrow && <span>{t(s.labelKey, s.fallback)}</span>}
+          </button>
+        );
+      })}
     </nav>
   );
 
@@ -346,15 +375,16 @@ export default function LorePage() {
                 title={`${f.label}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? meta.color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
                   color: on ? 'var(--t1)' : 'var(--t3)',
                 }}
               >
-                <GameIcon slug={meta.icon} size={11} style={{ color: meta.color }} />
-                {f.label /* status label sourced from STATUS_FILTERS in LoreSprintTree, not this file */}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                <GameIcon slug={meta.icon} size={narrow ? 14 : 11} style={{ color: meta.color }} />
+                {/* MOB: icon-only chips on narrow — label+count live in the title tooltip */}
+                {!narrow && f.label}
+                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>}
               </span>
             );
           })}
@@ -371,12 +401,12 @@ export default function LorePage() {
             title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
               border: `1px solid ${sprintPresetWorking ? 'var(--acc)' : 'var(--b3)'}`,
               background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
             }}
-          >⚡ {t('lore.page.sprints.presetWorking', 'В работе')}</span>
+          >⚡{!narrow && <> {t('lore.page.sprints.presetWorking', 'В работе')}</>}</span>
 
           {/* Пресет: Нужно внимание */}
           <span
@@ -387,12 +417,12 @@ export default function LorePage() {
             title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
               border: `1px solid ${sprintPresetAttention ? '#E24B4A' : 'var(--b3)'}`,
               background: sprintPresetAttention ? 'color-mix(in srgb, #E24B4A 16%, transparent)' : 'transparent',
               color: sprintPresetAttention ? '#E24B4A' : 'var(--t3)',
             }}
-          >⚠ {t('lore.page.sprints.presetAttention', 'Внимание')}</span>
+          >⚠{!narrow && <> {t('lore.page.sprints.presetAttention', 'Внимание')}</>}</span>
 
           {/* Распорка */}
           <span style={{ flex: 1 }} />
@@ -409,7 +439,7 @@ export default function LorePage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, fontWeight: on ? 600 : 400,
-                  padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
                   color: on ? color : 'var(--t3)',
@@ -429,7 +459,7 @@ export default function LorePage() {
                 onClick={() => setSprintDatePeriod(on ? null : p)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
                   background: on ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
                   color: on ? 'var(--acc)' : 'var(--t3)',
@@ -445,7 +475,7 @@ export default function LorePage() {
             onClick={() => setSprintNoRelease(v => !v)}
             style={{
               display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
               border: `1px solid ${sprintNoRelease ? 'var(--acc)' : 'var(--b3)'}`,
               background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
               color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
@@ -490,15 +520,15 @@ export default function LorePage() {
                 title={`${id} (${count})`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                   color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
                 }}
               >
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                {projLabel(id)}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+                <span style={{ width: narrow ? 10 : 6, height: narrow ? 10 : 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {!narrow && projLabel(id)}
+                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
               </span>
             );
           })}
@@ -548,15 +578,15 @@ export default function LorePage() {
                 title={`${id} (${count})`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                   color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
                 }}
               >
-                <GameIcon slug={icon ?? 'puzzle'} size={11} style={{ color }} />
-                {id}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>
+                <GameIcon slug={icon ?? 'puzzle'} size={narrow ? 14 : 11} style={{ color }} />
+                {!narrow && id}
+                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
               </span>
             );
           })}
@@ -571,6 +601,66 @@ export default function LorePage() {
               style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
               title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
             >✕ {t('lore.page.filters.reset', 'сброс')}</span>
+          )}
+        </div>
+      )}
+
+      {/* ── MOB-08: active-filters strip (narrow only). The icon-only chips rely
+           on title tooltips, which DON'T EXIST on touch — this strip is the
+           readable feedback: every active filter as a labelled chip, tap × to
+           remove. Desktop keeps labels inline, so the strip is narrow-only. ── */}
+      {narrow && section === 'sprints' &&
+        (sprintStatusSel.size > 0 || sprintPriorityFilter.size > 0 || sprintProjSel.size > 0 ||
+         sprintCompSel.size > 0 || sprintDatePeriod || sprintNoRelease) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+          padding: '6px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
+        }}>
+          {[...sprintStatusSel].map(k => {
+            const meta = statusMeta(k);
+            const label = STATUS_FILTERS.find(f => f.key === k)?.label ?? k;
+            return (
+              <span key={'s' + k}
+                onClick={() => setSprintStatusSel(prev => { const n = new Set(prev); n.delete(k); return n; })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                         padding: '5px 9px', borderRadius: 12, whiteSpace: 'nowrap',
+                         background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
+                         border: `1px solid color-mix(in srgb, ${meta.color} 30%, transparent)`, color: 'var(--t1)' }}
+              >{label} ✕</span>
+            );
+          })}
+          {[...sprintPriorityFilter].map(p => (
+            <span key={'p' + p}
+              onClick={() => setSprintPriorityFilter(prev => { const n = new Set(prev); n.delete(p); return n; })}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{p} ✕</span>
+          ))}
+          {[...sprintProjSel].map(id => (
+            <span key={'pr' + id}
+              onClick={() => setSprintProjSel(prev => { const n = new Set(prev); n.delete(id); return n; })}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{projLabel(id)} ✕</span>
+          ))}
+          {[...sprintCompSel].map(id => (
+            <span key={'c' + id}
+              onClick={() => setSprintCompSel(prev => { const n = new Set(prev); n.delete(id); return n; })}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{id} ✕</span>
+          ))}
+          {sprintDatePeriod && (
+            <span onClick={() => setSprintDatePeriod(null)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{sprintDatePeriod === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : sprintDatePeriod === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней')} ✕</span>
+          )}
+          {sprintNoRelease && (
+            <span onClick={() => setSprintNoRelease(false)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
+                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
+            >{t('lore.page.sprints.noRelease', 'Без релиза')} ✕</span>
           )}
         </div>
       )}
@@ -592,7 +682,7 @@ export default function LorePage() {
                 title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${on ? f.color : 'var(--b3)'}`,
                   background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
                   color: on ? 'var(--t1)' : 'var(--t3)',
@@ -642,7 +732,7 @@ export default function LorePage() {
                   title={`${area}: ${cnt}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                    userSelect: 'none', fontSize: 11, padding: '2px 8px', borderRadius: 12, whiteSpace: 'nowrap',
+                    userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                     border: `1px solid ${on ? color : 'var(--b3)'}`,
                     background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                     color: on ? 'var(--t1)' : 'var(--t3)',
@@ -716,9 +806,12 @@ export default function LorePage() {
       {/* ── Body ───────────────────────────────────────────────────────────── */}
       <div style={S.body}>
         {/* ── Master-detail layout ─────────────────────────────────────────── */}
-        {isMasterDetail && (
+        {/* MOB-04: on narrow screens the side-by-side pair becomes a two-step
+            flow — list full-width until something is selected, then the detail
+            takes the whole screen with a "← к списку" bar (clearItem). */}
+        {isMasterDetail && (!narrow || !passport) && (
           <>
-          <div style={{ ...S.listPanel, width: listW }} className="lore-panel-scroll">
+          <div style={{ ...S.listPanel, width: narrow ? '100%' : listW }} className="lore-panel-scroll">
             {/* List panel header — search only for ADRs; sprints use the full-width bar above */}
             {section === 'adrs' && (
               <div style={S.listPanelHeader}>
@@ -852,15 +945,34 @@ export default function LorePage() {
               />
             )}
           </div>
-          <div
-            className="lore-resize-handle"
-            onMouseDown={e => { dragRef.current = { x: e.clientX, w: listW }; e.preventDefault(); }}
-          />
+          {!narrow && (
+            <div
+              className="lore-resize-handle"
+              onMouseDown={e => { dragRef.current = { x: e.clientX, w: listW }; e.preventDefault(); }}
+            />
+          )}
           </>
         )}
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
-        <div style={S.content}>
+        {!(narrow && isMasterDetail && !passport) && (
+        // S.content is a ROW flex — with the narrow back-button (width:100%)
+        // inside it, the button ate the row and pushed the detail out of view
+        // (blank ADR page bug). Column direction when the back bar is shown.
+        <div style={narrow && isMasterDetail && passport ? { ...S.content, flexDirection: 'column' } : S.content}>
+          {/* adrs' own passport view already renders a "← К списку" — skip the
+              generic bar there to avoid two stacked back controls. */}
+          {narrow && isMasterDetail && passport && section !== 'adrs' && (
+            <button
+              onClick={clearItem}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                padding: '7px 12px', border: 'none', borderBottom: '1px solid var(--bd)',
+                background: 'var(--bg1)', color: 'var(--acc)', fontSize: 12,
+                fontFamily: 'var(--mono)', cursor: 'pointer', textAlign: 'left', flexShrink: 0,
+              }}
+            >← {t('lore.page.backToList', 'к списку')}</button>
+          )}
           <LoreErrorBoundary label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
@@ -969,6 +1081,9 @@ export default function LorePage() {
           {/* Evolution */}
           {section === 'evolution' && <LoreEvolutionView onError={handleFetchError} />}
 
+          {/* Tech registry (SPRINT_TECH_REGISTRY) — version/date/license per component */}
+          {section === 'tech' && <LoreTechRegistry onError={handleFetchError} />}
+
           {/* Timeline */}
           {section === 'timeline' && (
             <LoreTimeline module="" q={debouncedQ} onError={handleFetchError}
@@ -993,6 +1108,7 @@ export default function LorePage() {
           {section === 'mcp' && <LoreMcpApiScreen />}
           </LoreErrorBoundary>
         </div>
+        )}
       </div>
     </div>
   );
@@ -1008,16 +1124,19 @@ export function StatusChip({ status }: { status: string }) {
   const { icon, color } = resolveStatusMeta(status);
   const normalized = taskTick(status).status;
   const label = t(`status.${normalized}`, statusLabel(status));
+  // MOB: on narrow screens the badge was often wider than the row's own text —
+  // collapse to icon-only, the label moves to the tooltip.
+  const narrow = useIsNarrow(720);
   return (
-    <span style={{
+    <span title={label} style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
-      fontSize: 10, padding: '1px 5px 1px 4px', borderRadius: 3,
+      fontSize: 10, padding: narrow ? '2px 3px' : '1px 5px 1px 4px', borderRadius: 3,
       background: `color-mix(in srgb, ${color} 16%, transparent)`,
       color, border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
-      whiteSpace: 'nowrap',
+      whiteSpace: 'nowrap', flexShrink: 0,
     }}>
-      <GameIcon slug={icon} size={11} style={{ color: 'inherit' }} />
-      {label}
+      <GameIcon slug={icon} size={narrow ? 13 : 11} style={{ color: 'inherit' }} />
+      {!narrow && label}
     </span>
   );
 }

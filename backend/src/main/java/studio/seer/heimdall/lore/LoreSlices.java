@@ -116,7 +116,7 @@ public final class LoreSlices {
         // ── §3 Sprints ───────────────────────────────────────────────────────
         // [field IS NOT NULL] filter: skip sparse hist entries where field absent
         slice("sprints",
-            "SELECT sprint_id, name, " +
+            "SELECT sprint_id, name, created_date, no_release_required, " +
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0] AS valid_from, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
@@ -127,8 +127,13 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
-            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
-            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id, " +
+            // SPRINT_PLANITEM_RETIRE: planned_milestone_id/planned_start_date/
+            // planned_end_date/track_id are now plain SCD2-tracked fields on
+            // KnowSprintHist (set via /lore/sprint/plan) — no more PlanItem hop.
+            "out('HAS_STATE')[planned_milestone_id IS NOT NULL].planned_milestone_id[0] AS planned_milestone_id, " +
+            "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0]     AS planned_start_date, " +
+            "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]         AS planned_end_date, " +
+            "out('HAS_STATE')[track_id IS NOT NULL].track_id[0]                         AS track_id, " +
             "context_md " +
             "FROM KnowSprint",
             List.of(),
@@ -137,12 +142,14 @@ public final class LoreSlices {
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
-            "SELECT sprint_id, name, context_md, " +
+            "SELECT sprint_id, name, context_md, created_date, no_release_required, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
-            "in('REPRESENTS').out('CONTRIBUTES_TO').milestone_id AS milestone_ids_plan, " +
+            "out('HAS_STATE')[planned_milestone_id IS NOT NULL].planned_milestone_id[0] AS planned_milestone_id, " +
+            "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0]     AS planned_start_date, " +
+            "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]         AS planned_end_date, " +
             "out('DEPENDS_ON').sprint_id   AS depends_on, " +
             "in('DEPENDS_ON').sprint_id    AS blocks, " +
             "out('BELONGS_TO').component_id AS components, " +
@@ -152,7 +159,7 @@ public final class LoreSlices {
             // to surface the link even though lore_link_adr_sprint has always
             // been able to create it.
             "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
-            "in('REPRESENTS').out('ON_TRACK').track_id[0] AS track_id " +
+            "out('HAS_STATE')[track_id IS NOT NULL].track_id[0] AS track_id " +
             "FROM KnowSprint WHERE sprint_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -236,11 +243,13 @@ public final class LoreSlices {
             "SELECT milestone_id, label, week, date_display, priority, " +
             "out('HAS_STATE').goal_md[0]      AS goal_md, " +
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
-            // Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint.
-            // Sprints link via plan item (CONTRIBUTES_TO→REPRESENTS) OR directly
-            // (TARGETS_MILESTONE, set from the milestone-management UI).
-            // Direct edge takes priority: exclude from sprint_ids any sprint that has TARGETS_MILESTONE set.
-            "in('CONTRIBUTES_TO').out('REPRESENTS')[@this INSTANCEOF 'KnowSprint' AND out('TARGETS_MILESTONE').size() = 0].sprint_id AS sprint_ids, " +
+            // SPRINT_PLANITEM_RETIRE (T-21): the "planned" bucket used to come from
+            // a CONTRIBUTES_TO←PlanItem→REPRESENTS hop; that data now lives as
+            // KnowSprintHist.planned_milestone_id (a plain property, no graph edge
+            // to join on here) — the frontend computes the planned-sprint list by
+            // filtering its already-fetched `sprints` slice on that field instead
+            // (see LoreMilestonesView.tsx msIds()). direct_sprint_ids (the "actual"
+            // bucket, TARGETS_MILESTONE) is a real edge and stays a plain traversal.
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
@@ -374,6 +383,24 @@ public final class LoreSlices {
             "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
+
+        // SPRINT_TECH_REGISTRY / TR-06+08: version+date+license registry per
+        // component tech, stored as one KnowSpec per (component, tech) —
+        // spec_id "SPEC-TECH-<COMPONENT>-<TECH>", title=tech name, version=tech
+        // version, content_md=small bullet list (release_date/license/source/
+        // checked_at). Piggybacks the existing /lore/spec upsert path (no new
+        // backend write endpoint needed) — this slice is the read side.
+        slice("tech_registry",
+            "SELECT spec_id, title AS tech_name, " +
+            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
+            "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
+            "out('HAS_STATE').valid_from[0] AS checked_at, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%'",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "component", " AND (out('BELONGS_TO').component_id[0] = :component OR component_id = :component)")),
+            " ORDER BY spec_id LIMIT 200");
 
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
         slice("history_sprint",
@@ -534,9 +561,14 @@ public final class LoreSlices {
             "SELECT task_uid, task_id, title, status_raw, priority, component_id, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
-            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md " +
+            "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask",
-            List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 500");
+            // No frontend consumer as of this writing (grep-confirmed) — LIMIT is a
+            // defensive cap, not a UX pagination boundary. Raised 500→5000 so a full
+            // task-effort export (e.g. the fractional-hours migration) doesn't
+            // silently truncate; still bounded to avoid an unbounded query.
+            List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 5000");
 
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
@@ -631,17 +663,27 @@ public final class LoreSlices {
             List.of(), Map.of(), "");
 
         slice("bragi_publications",
-            "SELECT publication_id, title, topic, main_text_md, type, status_general, " +
+            "SELECT publication_id, title, topic, main_text_md, type, status_general, source_file_path, " +
+            // V2-02: annotation_md (permanent editorial meta) / todo_md (transient
+            // "- [ ]" checklist) — editor-only fields, deliberately never fed into
+            // BragiSkinPreview. Publication + per-variant (parallel arrays, same
+            // index convention as variant_texts/variant_channels below).
+            "annotation_md, todo_md, " +
             "out('HAS_ASSET').file_url AS cover_asset_urls, " +
             "out('HAS_VARIANT').variant_id AS variant_ids, " +
             "out('HAS_VARIANT').status AS variant_statuses, " +
             "out('HAS_VARIANT').url AS variant_urls, " +
             "out('HAS_VARIANT').text_md AS variant_texts, " +
+            "out('HAS_VARIANT').annotation_md AS variant_annotation_texts, " +
+            "out('HAS_VARIANT').todo_md AS variant_todo_texts, " +
             "out('HAS_VARIANT').out('IN_CHANNEL').channel_id AS variant_channels, " +
             "out('HAS_VARIANT').out('HAS_ASSET').file_url AS variant_asset_urls, " +
             "out('TARGETS_KEY').keyword_id AS keyword_ids, " +
             "out('IN_RUBRIC').rubric_id AS rubric_ids, " +
-            "out('IN_RUBRIC').name AS rubric_names " +
+            "out('IN_RUBRIC').name AS rubric_names, " +
+            "out('PRODUCED_BY').task_uid AS produced_by_task_ids, " +
+            "out('PRODUCED_BY').sprint_id AS produced_by_sprint_ids, " +
+            "out('SHIPPED_IN').release_id AS shipped_in_release_ids " +
             "FROM BragiPublication",
             List.of(), Map.of(), " ORDER BY publication_id");
 
@@ -701,7 +743,7 @@ public final class LoreSlices {
         // FE-06: another gap found while building the create-forms — channel/page
         // pickers need lookup slices too, not just the content-display ones.
         slice("bragi_channels",
-            "SELECT channel_id, channel_type, url_handle, funnel_role FROM BragiChannel",
+            "SELECT channel_id, channel_type, url_handle, funnel_role, rules_md FROM BragiChannel",
             List.of(), Map.of(), " ORDER BY channel_id");
 
         slice("bragi_pages",

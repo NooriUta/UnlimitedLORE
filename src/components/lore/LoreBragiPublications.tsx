@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
-import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData } from './LoreBragiPublicationEditor';
+import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData, countOpenTodos } from './LoreBragiPublicationEditor';
 
 interface PublicationRow {
   publication_id: string;
@@ -14,6 +14,7 @@ interface PublicationRow {
   main_text_md: string | null;
   type: string | null;
   status_general: string | null;
+  source_file_path: string | null;
   cover_asset_urls: string[];
   variant_ids: string[];
   variant_statuses: string[];
@@ -24,6 +25,14 @@ interface PublicationRow {
   keyword_ids: string[];
   rubric_ids: string[];
   rubric_names: string[];
+  produced_by_task_ids?: string[];
+  produced_by_sprint_ids?: string[];
+  shipped_in_release_ids?: string[];
+  // V2-02: editorial meta / TODO checklist — never rendered into a preview.
+  annotation_md?: string | null;
+  todo_md?: string | null;
+  variant_annotation_texts?: (string | null)[];
+  variant_todo_texts?: (string | null)[];
 }
 
 // Seed data still carries illustrative filenames ("ai-gov.png") that don't
@@ -114,12 +123,24 @@ export default function LoreBragiPublications() {
       keyword_ids: editingRow.keyword_ids, variant_ids: editingRow.variant_ids,
       variant_channels: editingRow.variant_channels, variant_statuses: editingRow.variant_statuses,
       variant_urls: editingRow.variant_urls, variant_texts: editingRow.variant_texts,
-      rubric_ids: editingRow.rubric_ids,
+      rubric_ids: editingRow.rubric_ids, cover_asset_urls: editingRow.cover_asset_urls,
+      source_file_path: editingRow.source_file_path,
+      produced_by_task_ids: editingRow.produced_by_task_ids ?? [],
+      produced_by_sprint_ids: editingRow.produced_by_sprint_ids ?? [],
+      shipped_in_release_ids: editingRow.shipped_in_release_ids ?? [],
+      annotation_md: editingRow.annotation_md, todo_md: editingRow.todo_md,
+      variant_annotation_texts: editingRow.variant_annotation_texts,
+      variant_todo_texts: editingRow.variant_todo_texts,
     };
+    // Status/date genuinely differ per channel (live on CH-TG, still draft on
+    // CH-HABR) — only lock the WHOLE form when every variant is already
+    // published; otherwise each variant locks individually inside the editor.
+    const allVariantsPublished = editingRow.variant_statuses.length > 0
+      && editingRow.variant_statuses.every(s => s === 'published');
     return (
       <LoreBragiPublicationEditor
         editing={editData}
-        readOnly={editingRow.status_general === 'published'}
+        readOnly={allVariantsPublished}
         onSaved={() => { setEditingRow(null); load(); }}
         onCancel={() => setEditingRow(null)}
       />
@@ -146,7 +167,9 @@ export default function LoreBragiPublications() {
         ))}
       </div>
 
-      {filtered.map(pub => (
+      {filtered.map(pub => {
+        const openTodos = countOpenTodos(pub.todo_md) + (pub.variant_todo_texts ?? []).reduce((sum, v) => sum + countOpenTodos(v), 0);
+        return (
         <div key={pub.publication_id} style={S.pubcard}>
           <div style={S.pubhead}>
             <Thumb src={pub.cover_asset_urls?.[0] ?? pub.variant_asset_urls?.[0]} style={S.thumb} />
@@ -154,10 +177,12 @@ export default function LoreBragiPublications() {
               <div style={S.pubttlRow}>
                 <div style={S.pubttl}>{pub.title}</div>
                 <button style={S.editBtn} onClick={() => setEditingRow(pub)}>
-                  {pub.status_general === 'published' ? t('bragi.publications.viewBtn', '👁 просмотр') : t('bragi.publications.editBtn', '✎ редактировать')}
+                  {pub.variant_statuses.length > 0 && pub.variant_statuses.every(s => s === 'published')
+                    ? t('bragi.publications.viewBtn', '👁 просмотр') : t('bragi.publications.editBtn', '✎ редактировать')}
                 </button>
               </div>
               <div style={S.pubmeta}>
+                {openTodos > 0 && <span style={S.todoBadge}>{t('bragi.publications.todoBadge', '{{n}} todo', { n: openTodos })}</span>}
                 {pub.rubric_names[0] && <span style={S.rubricChip}>{pub.rubric_names[0]}</span>}
                 {pub.topic && <span>{t('bragi.publications.keywordPrefix', 'ключ ·')} {pub.topic}</span>}
                 {pub.main_text_md && (
@@ -167,7 +192,7 @@ export default function LoreBragiPublications() {
                 )}
                 <span style={S.statusTag}>
                   <span style={statusDotStyle(STATUS_COLOR[pub.status_general ?? ''] ?? 'var(--t3)')} />
-                  {pub.status_general ?? '—'}
+                  {pub.status_general ? t('bragi.publicationEditor.status.' + pub.status_general, pub.status_general) : '—'}
                 </span>
               </div>
               {showMainText === pub.publication_id && (
@@ -188,7 +213,7 @@ export default function LoreBragiPublications() {
                     <div style={S.variantTop}>
                       {pub.variant_channels[i] ?? '—'} ·{' '}
                       <span style={{ color: STATUS_COLOR[pub.variant_statuses[i] ?? ''] ?? 'var(--t3)' }}>
-                        {pub.variant_statuses[i] ?? '—'}
+                        {pub.variant_statuses[i] ? t('bragi.publicationEditor.status.' + pub.variant_statuses[i], pub.variant_statuses[i]) : '—'}
                       </span>
                     </div>
                     <div style={S.variantMeta}>
@@ -232,7 +257,8 @@ export default function LoreBragiPublications() {
             <div style={S.addSlot}>{t('bragi.publications.addChannelSlot', '+ площадка')}</div>
           </div>
         </div>
-      ))}
+        );
+      })}
       {filtered.length === 0 && <div style={S.hint}>{t('bragi.publications.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
     </div>
   );
@@ -259,8 +285,8 @@ const S: Record<string, React.CSSProperties> = {
   filters:   { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 },
   pubcard:   { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 },
   pubhead:   { display: 'flex', gap: 14, alignItems: 'flex-start' },
-  thumb:     { flex: 'none', width: 76, height: 54, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8 },
-  thumbSm:   { flex: 'none', width: 42, height: 32, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8, display: 'inline-block' },
+  thumb:     { flex: 'none', width: 128, height: 90, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8 },
+  thumbSm:   { flex: 'none', width: 64, height: 46, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8, display: 'inline-block' },
   pubttlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   pubttl:    { fontSize: 15, fontWeight: 500 },
   editBtn:   { flex: 'none', fontSize: 11, color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
@@ -269,6 +295,8 @@ const S: Record<string, React.CSSProperties> = {
   mainTextLink: { color: 'var(--acc)', cursor: 'pointer' },
   rubricChip: { fontSize: 11, color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', borderRadius: 6, padding: '1px 8px' },
+  todoBadge:  { fontSize: 11, color: 'var(--wrn)', background: 'color-mix(in srgb, var(--wrn) 14%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--wrn) 30%, transparent)', borderRadius: 6, padding: '1px 8px' },
   mainTextBox:  { marginTop: 8, padding: '8px 10px', background: 'var(--bg0)', border: '1px solid var(--bd)',
                   borderRadius: 6, fontSize: 12.5, lineHeight: 1.55, color: 'var(--t1)' },
   link:      { color: 'var(--acc)', textDecoration: 'none' },

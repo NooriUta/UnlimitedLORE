@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { GameIcon } from '../lore/GameIcon';
 import { SHELL_TABS, type ShellTab } from './shellNav';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
@@ -24,6 +25,10 @@ export default function AppShell() {
   const { t, i18n } = useTranslation();
   const active = activeTabId(pathname);
   const lang = i18n.language?.startsWith('en') ? 'en' : 'ru';
+  // MOB-01: below ~720px the tab labels + text toggles overflow the header
+  // (~447px at 375px). Go icon-only for tabs and symbol-only for the palette
+  // toggle so everything fits without clipping.
+  const narrow = useIsNarrow(720);
 
   const [palette, setPalette] = useState<Palette>(() => {
     const saved = localStorage.getItem('lore-palette') ?? localStorage.getItem('lore-theme');
@@ -60,7 +65,9 @@ export default function AppShell() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    // MOB-10: height via .shell-dvh (100dvh + vh fallback + safe-area) — inline
+    // 100vh hid the bottom of the UI under mobile browser chrome.
+    <div className="shell-dvh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header
         style={{
           height: HEADER_H,
@@ -69,8 +76,8 @@ export default function AppShell() {
           borderBottom: '1px solid var(--bd)',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: '0 14px',
+          gap: narrow ? 4 : 10,
+          padding: narrow ? '0 8px' : '0 14px',
           zIndex: 100,
         }}
       >
@@ -97,21 +104,24 @@ export default function AppShell() {
 
         <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px' }} />
 
-        {/* Tabs */}
-        <nav style={{ display: 'flex', gap: 4, flex: 1 }}>
-          {SHELL_TABS.map(tab => {
+        {/* Tabs — on narrow these relocate to the bottom tab bar (MOB-12);
+            here the nav stays as a flex spacer that pushes the toggles right. */}
+        <nav style={{ display: 'flex', gap: 4, flex: 1, minWidth: 0, overflowX: 'auto' }}>
+          {!narrow && SHELL_TABS.map(tab => {
             const isActive = tab.id === active;
             return (
               <button
                 key={tab.id}
                 type="button"
                 aria-current={isActive ? 'page' : undefined}
+                title={t(tab.labelKey, tab.fallback)}
                 onClick={() => navigate(tab.to)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 7,
-                  padding: '6px 12px',
+                  padding: narrow ? '6px 8px' : '6px 12px',
+                  flex: 'none',
                   border: 'none',
                   borderRadius: 'var(--seer-radius-md, 6px)',
                   cursor: 'pointer',
@@ -130,7 +140,7 @@ export default function AppShell() {
                 }}
               >
                 <GameIcon slug={tab.icon} size={15} style={{ color: 'inherit', transform: tab.flipX ? 'scaleX(-1)' : undefined }} />
-                <span>{t(tab.labelKey, tab.fallback)}</span>
+                {!narrow && <span>{t(tab.labelKey, tab.fallback)}</span>}
               </button>
             );
           })}
@@ -143,7 +153,7 @@ export default function AppShell() {
           title={`Палитра: ${palette}`}
           style={btnStyle}
         >
-          {palette === 'amber' ? '◑' : '◐'} {palette}
+          {palette === 'amber' ? '◑' : '◐'}{narrow ? '' : ` ${palette}`}
         </button>
 
         {/* Dark / light toggle */}
@@ -170,6 +180,54 @@ export default function AppShell() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Outlet />
       </div>
+
+      {/* MOB-12: bottom tab bar for the 5 hypostases in the thumb zone. Only on
+          narrow — the top nav drops its tabs there. Rendered as a flex sibling
+          (not fixed) so it never overlaps content or BRAGI's top-of-content
+          subtabs; safe-area padding keeps it clear of the home indicator. */}
+      {narrow && (
+        <nav
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            background: 'var(--bg0)',
+            borderTop: '1px solid var(--bd)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0)',
+            zIndex: 100,
+          }}
+        >
+          {SHELL_TABS.map(tab => {
+            const isActive = tab.id === active;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
+                title={t(tab.labelKey, tab.fallback)}
+                onClick={() => navigate(tab.to)}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 3,
+                  padding: '7px 0 5px',
+                  border: 'none',
+                  borderTop: `2px solid ${isActive ? 'var(--acc)' : 'transparent'}`,
+                  background: isActive ? accentSoft : 'transparent',
+                  cursor: 'pointer',
+                  color: isActive ? 'var(--acc)' : 'var(--t2)',
+                  transition: 'background 120ms, color 120ms',
+                }}
+              >
+                <GameIcon slug={tab.icon} size={20} style={{ color: 'inherit', transform: tab.flipX ? 'scaleX(-1)' : undefined }} />
+                <span style={{ fontSize: 9, letterSpacing: '0.02em', lineHeight: 1 }}>{t(tab.labelKey, tab.fallback)}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }

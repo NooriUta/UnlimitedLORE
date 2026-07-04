@@ -7,6 +7,7 @@ import {
 import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import LoreSkeleton from './LoreSkeleton';
+import TipTapField from './TipTapField';
 
 const TODAY = new Date('2026-06-30');
 const RU_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -56,8 +57,12 @@ async function fetchTasksChunked(ids: string[]): Promise<(LoreSprintTask & { spr
   return results.flat();
 }
 
-function msIds(m: LoreMilestone): string[] {
-  return [...new Set([...(m.sprint_ids ?? []), ...(m.direct_sprint_ids ?? [])].filter(Boolean))];
+// SPRINT_PLANITEM_RETIRE (T-21): "planned" ids no longer come from the
+// backend slice (retired PlanItem hop) — callers pass the pre-computed
+// per-milestone list derived from the already-fetched `sprints` state
+// (see plannedByMilestone below), keeping this a pure function.
+function msIds(planIds: string[], m: LoreMilestone): string[] {
+  return [...new Set([...planIds, ...(m.direct_sprint_ids ?? [])].filter(Boolean))];
 }
 function pct(d: number, t: number) { return t > 0 ? Math.round((100 * d) / t) : 0; }
 
@@ -105,12 +110,24 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 
   const doneSet = useMemo(() => new Set(sprints.filter(isDone).map(s => s.sprint_id)), [sprints]);
   const byId    = useMemo(() => new Map(sprints.map(s => [s.sprint_id, s])), [sprints]);
+  // SPRINT_PLANITEM_RETIRE (T-21): sprint.planned_milestone_id is the new
+  // source of truth for "which milestone is this sprint planned under" —
+  // group once here instead of a backend PlanItem-hop per milestone row.
+  const plannedByMilestone = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const s of sprints) {
+      if (!s.planned_milestone_id) continue;
+      const arr = map.get(s.planned_milestone_id);
+      if (arr) arr.push(s.sprint_id); else map.set(s.planned_milestone_id, [s.sprint_id]);
+    }
+    return map;
+  }, [sprints]);
   const selM    = useMemo(() => milestones.find(m => m.milestone_id === selId) ?? null, [milestones, selId]);
   const orphans = useMemo(() => {
     const linked = new Set<string>();
-    milestones.forEach(m => msIds(m).forEach(id => linked.add(id)));
+    milestones.forEach(m => msIds(plannedByMilestone.get(m.milestone_id) ?? [], m).forEach(id => linked.add(id)));
     return sprints.filter(s => !linked.has(s.sprint_id)).sort((a, b) => a.sprint_id.localeCompare(b.sprint_id));
-  }, [milestones, sprints]);
+  }, [milestones, sprints, plannedByMilestone]);
 
   const avgVelocity = useMemo(() => {
     const wk = new Map<string, number>();
@@ -122,7 +139,10 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   const rows = useMemo(() => {
     let foundCurrent = false;
     return [...milestones].sort((a, b) => (a.week ?? 0) - (b.week ?? 0)).map(m => {
-      const ids = msIds(m);
+      // plan vs direct breakdown
+      const planIds    = plannedByMilestone.get(m.milestone_id) ?? [];
+      const directIds  = (m.direct_sprint_ids ?? []).filter(Boolean);
+      const ids = msIds(planIds, m);
       const done = ids.filter(i => doneSet.has(i)).length;
       const open = ids.length - done;
       const goalDone = (m.goal_md ?? '').includes('✅');
@@ -132,21 +152,18 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
       else status = 'future';
       const dleft = status === 'done' ? null : daysLeftOf(m.date_display);
       const projects = [...new Set(ids.flatMap(id => (byId.get(id)?.git_projects ?? []).map(projShort)).filter(Boolean))];
-      // plan vs direct breakdown
-      const planIds    = (m.sprint_ids        ?? []).filter(Boolean);
-      const directIds  = (m.direct_sprint_ids ?? []).filter(Boolean);
       const planDone   = planIds.filter(i => doneSet.has(i)).length;
       const directDone = directIds.filter(i => doneSet.has(i)).length;
       return { m, ids, done, open, status, dleft, projects, planIds, directIds, planDone, directDone };
     });
-  }, [milestones, doneSet, byId]);
+  }, [milestones, doneSet, byId, plannedByMilestone]);
 
   function selectMilestone(m: LoreMilestone) {
     if (selId === m.milestone_id) { setSelId(null); return; }
     setSelId(m.milestone_id); setEditMode(false);
     setEdit({ label: m.label ?? '', date_display: m.date_display ?? '', week: m.week != null ? String(m.week) : '', priority: m.priority ?? '', goal_md: m.goal_md ?? '' });
     setPick(''); setNewTask({ sprint_id: '', title: '' }); setTasks([]);
-    const ids = msIds(m);
+    const ids = msIds(plannedByMilestone.get(m.milestone_id) ?? [], m);
     if (ids.length) fetchTasksChunked(ids).then(setTasks).catch(() => {});
   }
   async function run(key: string, fn: () => Promise<unknown>) {
@@ -158,7 +175,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   // Re-sync edit form + tasks after reload when a milestone stays selected.
   useEffect(() => {
     if (selM) {
-      const ids = msIds(selM);
+      const ids = msIds(plannedByMilestone.get(selM.milestone_id) ?? [], selM);
       if (ids.length) fetchTasksChunked(ids).then(setTasks).catch(() => {});
       else setTasks([]);
     }
@@ -167,7 +184,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
   if (loading) return <LoreSkeleton />;
 
   const sel = selM ? rows.find(r => r.m.milestone_id === selM.milestone_id) : null;
-  const selIds = selM ? msIds(selM) : [];
+  const selIds = selM ? msIds(plannedByMilestone.get(selM.milestone_id) ?? [], selM) : [];
 
   return (
     <div style={S.root}>
@@ -320,7 +337,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                 </div>
               </div>
               <Field caption={t('lore.milestonesView.field.goalDescription', 'Описание / цель вехи')} w={'100%'}>
-                <textarea style={{ ...S.ta, width: '100%' }} value={edit.goal_md} onChange={e => setEdit({ ...edit, goal_md: e.target.value })} />
+                <TipTapField value={edit.goal_md} onChange={v => setEdit({ ...edit, goal_md: v })} minHeight={60}
+                  enableImages={false} enableHtmlMode={false} />
               </Field>
             </>
           )}

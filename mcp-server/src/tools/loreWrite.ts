@@ -180,7 +180,7 @@ export function registerLoreWrite(server: McpServer): void {
       context_md:  z.string().optional().describe('background context — WHY the sprint exists, key decisions, links to ADRs/docs, related sprints. Fill whenever you have this information.'),
       priority:    z.string().optional().describe('e.g. "high", "critical"'),
       plan_id:     z.string().optional(),
-      effort_days: z.number().int().optional().describe('actual effort in person-days'),
+      effort_days: z.number().optional().describe('actual effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
     },
     async ({ sprint_id, name, outcome_md, context_md, priority, plan_id, effort_days }) => {
       try {
@@ -788,6 +788,47 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_upsert_tech',
+    '(SPRINT_TECH_REGISTRY) Register or update one technology entry (version + release date + ' +
+      'license + source + our own release + usage) for a component — e.g. "ArcadeDB 26.6.1" under YGG. ' +
+      'Prevents re-verifying facts already checked this session (the recurring pain this sprint exists ' +
+      'for). Stored as one KnowSpec per (component, tech) via the existing spec-upsert path — spec_id ' +
+      '"SPEC-TECH-<COMPONENT>-<TECH>", title=tech_name, version=tech version, content_md=a small ' +
+      'bullet list of release_date/our_release/license/usage/source_url/checked_at. Idempotent — ' +
+      'upserts by that id. Read back via lore_query_slice(slice="tech_registry", params={component: ' +
+      '"<ID>"}) (component optional — omit for the full registry). Mutates system_aida_lore.',
+    {
+      component_id: z.string().describe('e.g. "YGG", "SECURITY"'),
+      tech_name:    z.string().describe('e.g. "ArcadeDB", "Vault", "Keycloak"'),
+      version:      z.string().describe('e.g. "26.6.1"'),
+      release_date: z.string().optional().describe('YYYY-MM-DD, when this version was released UPSTREAM (the tech\'s own release)'),
+      our_release:  z.string().optional().describe('which of OUR releases pinned/shipped this version, e.g. "v1.6.21"'),
+      license:      z.string().optional().describe('e.g. "Business Source License 1.1"'),
+      usage:        z.string().optional().describe('free text — how/where this is actually used'),
+      source_url:   z.string().optional().describe('where this was verified (LICENSE file, release notes, ...)'),
+      checked_at:   z.string().optional().describe('YYYY-MM-DD this was last verified; defaults to today if omitted'),
+    },
+    async ({ component_id, tech_name, version, release_date, our_release, license, usage, source_url, checked_at }) => {
+      try {
+        const specId = `SPEC-TECH-${component_id.toUpperCase()}-${tech_name.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
+        const today = new Date().toISOString().slice(0, 10);
+        const lines = [
+          release_date && `- **Дата релиза:** ${release_date}`,
+          our_release && `- **Наш релиз:** ${our_release}`,
+          license && `- **Лицензия:** ${license}`,
+          usage && `- **Использование:** ${usage}`,
+          source_url && `- **Источник:** ${source_url}`,
+          `- **Проверено:** ${checked_at ?? today}`,
+        ].filter(Boolean);
+        return json(await lorePost('/lore/spec', {
+          spec_id: specId, title: tech_name, version, component_id,
+          content_md: lines.join('\n'),
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_create_quality_gate',
     'Create or update a QualityGate vertex. ' +
       'Idempotent — upserts by qg_id. Mutates system_aida_lore.',
@@ -853,12 +894,12 @@ export function registerLoreWrite(server: McpServer): void {
       task_uid:    z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
       title:       z.string().optional().describe('single-mode: new title'),
       note_md:     z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
-      effort_days: z.number().int().optional().describe('single-mode: estimated effort in person-days'),
+      effort_days: z.number().optional().describe('single-mode: estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
       tasks: z.array(z.object({
         task_uid:    z.string(),
         title:       z.string(),
         note_md:     z.string().optional(),
-        effort_days: z.number().int().optional(),
+        effort_days: z.number().optional(),
       })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?}'),
     },
     async ({ task_uid, title, note_md, effort_days, tasks }) => {
@@ -1077,6 +1118,29 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_upsert_channel',
+    'BragiChannel: create/amend a distribution channel (e.g. CH-TG, CH-SITE) — upsert by channel_id, ' +
+      'partial-safe (omitted fields left untouched). Gap found 2026-07-03: there was no write path for ' +
+      'this type — CH-TG\'s seeded url_handle ("t.me/seidr") was stale, no tool existed to fix it. ' +
+      '`rules_md` (VAL-00, added 2026-07-03) holds the platform\'s structural limits/style rules as free-text ' +
+      'markdown — VAL-01\'s validator engine reads it to check drafts before publish (e.g. TG caption/post/poll ' +
+      'char limits, VC footer-link policy, Habr code-block rules). Check lore_query_slice "bragi_channels" for ' +
+      'existing channels before creating a new one. Mutates the shared system_aida_lore.',
+    {
+      channel_id:   z.string().describe('e.g. "CH-TG", "CH-SITE"'),
+      channel_type: z.string().optional().describe('e.g. "social", "owned", "platform"'),
+      url_handle:   z.string().optional().describe('e.g. "t.me/SampleofOne", "seidrstudio.pro/blog"'),
+      funnel_role:  z.string().optional().describe('e.g. "nurture", "conversion", "awareness", "authority"'),
+      rules_md:     z.string().optional().describe('structural limits/style rules as markdown, e.g. "- caption: 1024\\n- post: 4096\\n- poll_option: 100"'),
+    },
+    async ({ channel_id, channel_type, url_handle, funnel_role, rules_md }) => {
+      try {
+        return json(await lorePost('/lore/bragi/channel', { channel_id, channel_type, url_handle, funnel_role, rules_md }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_link_rubric',
     'Assigns (or replaces) ONE rubric on a BragiPublication or BragiKeyword via IN_RUBRIC, without re-supplying ' +
       'every other field of the target — unlike the rubric_id param on lore_create_publication/lore_upsert_keyword, ' +
@@ -1090,6 +1154,33 @@ export function registerLoreWrite(server: McpServer): void {
     async ({ entity_type, entity_id, rubric_id }) => {
       try {
         return json(await lorePost('/lore/bragi/rubric/link', { entity_type, entity_id, rubric_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_bragi_forseti',
+    'Link (or unlink) a BragiPublication/BragiVariant into the Forseti work graph — PRODUCED_BY (which ' +
+      'task/sprint made it) or SHIPPED_IN (which release carried it). Both edge types existed in the schema ' +
+      'with no write path (EDIT-05, 2026-07-03) — publications lived disconnected from work/releases. For ' +
+      'SHIPPED_IN, pass git_project for multi-repo release safety (matches release_uid = ' +
+      '"{git_project}#{target_id}"; without it matches bare release_id). Idempotent on add. ' +
+      'Use action="remove" to unlink. Mutates the shared system_aida_lore.',
+    {
+      entity_type: z.enum(['publication', 'variant']),
+      entity_id:   z.string().describe('publication_id or variant_id, matching entity_type'),
+      edge_type:   z.enum(['PRODUCED_BY', 'SHIPPED_IN']),
+      target_type: z.enum(['task', 'sprint', 'release']).describe('task|sprint for PRODUCED_BY, release for SHIPPED_IN'),
+      target_id:   z.string().describe('task_uid, sprint_id, or release_id/tag matching target_type'),
+      git_project: z.string().optional().describe('GitHub project slug for release_uid resolution, e.g. "NooriUta/UnlimitedLORE" (SHIPPED_IN only)'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ entity_type, entity_id, edge_type, target_type, target_id, git_project, action }) => {
+      try {
+        return json(await lorePost('/lore/bragi/link', {
+          entity_type, entity_id, edge_type, target_type, target_id,
+          git_project: git_project ?? null, action: action ?? 'add',
+        }));
       } catch (e) { return err(e); }
     },
   );
@@ -1125,11 +1216,13 @@ export function registerLoreWrite(server: McpServer): void {
       status_general:  z.string().optional().describe('e.g. "draft" | "ready" | "published"'),
       keyword_ids:     z.array(z.string()).optional().describe('existing BragiKeyword ids to link via TARGETS_KEY'),
       rubric_id:       z.string().optional().describe('existing BragiRubric id — replaces prior rubric via IN_RUBRIC'),
+      annotation_md:   z.string().optional().describe('permanent editorial meta (master source, replacement rule, release context) — NEVER rendered into a platform skin, editor-only'),
+      todo_md:         z.string().optional().describe('transient markdown checklist, e.g. "- [ ] insert Telegraph URL\\n- [x] done item" — NEVER rendered into a platform skin, editor-only'),
     },
-    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id }) => {
+    async ({ publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id, annotation_md, todo_md }) => {
       try {
         return json(await lorePost('/lore/bragi/publication', {
-          publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id,
+          publication_id, title, topic, main_text_md, type, status_general, keyword_ids, rubric_id, annotation_md, todo_md,
         }));
       } catch (e) { return err(e); }
     },
@@ -1150,11 +1243,13 @@ export function registerLoreWrite(server: McpServer): void {
       url:            z.string().optional().describe('published URL, once live'),
       published_at:   z.string().optional().describe('YYYY-MM-DD'),
       asset_id:       z.string().optional().describe('existing BragiAsset id — wires HAS_ASSET'),
+      annotation_md:  z.string().optional().describe('permanent editorial meta for this variant specifically — NEVER rendered into a platform skin, editor-only'),
+      todo_md:        z.string().optional().describe('transient markdown checklist for this variant, e.g. "- [ ] ..." — NEVER rendered into a platform skin, editor-only'),
     },
-    async ({ variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id }) => {
+    async ({ variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id, annotation_md, todo_md }) => {
       try {
         return json(await lorePost('/lore/bragi/variant', {
-          variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id,
+          variant_id, publication_id, channel_id, text_md, status, url, published_at, asset_id, annotation_md, todo_md,
         }));
       } catch (e) { return err(e); }
     },

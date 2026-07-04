@@ -62,15 +62,18 @@ export default function LoreBragiScreen() {
         <b style={S.h1}>BRAGI</b>
         <span style={S.tagline}>{t('bragi.screen.tagline', 'маркетинг · контент · дистрибуция')}</span>
       </div>
-      <div style={S.menu}>
+      <div style={S.menu} role="tablist">
         {MENU.map(m => (
-          <span
+          <button
             key={m.id}
-            style={menuItemStyle(tab === m.id)}
+            type="button"
+            role="tab"
+            aria-selected={tab === m.id}
+            style={{ ...menuItemStyle(tab === m.id), background: 'transparent', border: 'none', font: 'inherit', padding: 0, paddingBottom: 10 }}
             onClick={() => setTab(m.id)}
           >
             {t(m.labelKey, m.fallback)}
-          </span>
+          </button>
         ))}
         <span style={S.menuLink}>{t('bragi.screen.menu.forsetiLink', 'связи → Forseti')}</span>
       </div>

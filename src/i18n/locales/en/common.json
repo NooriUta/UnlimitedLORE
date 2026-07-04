@@ -1061,7 +1061,9 @@
       "releaseBar": {
         "label": "Release",
         "goToRelease": "Go to release {{v}}",
-        "githubRelease": "GitHub Release {{v}}"
+        "githubRelease": "GitHub Release {{v}}",
+        "unlink": "Unlink {{v}}",
+        "linkPlaceholder": "+ link release…"
       },
       "prBar": {
         "label": "PR"
@@ -1084,10 +1086,20 @@
         "openTitle": "Open {{id}}"
       },
       "milestones": {
-        "label": "Milestones",
+        "label": "Milestones (actual)",
         "unlink": "Unlink {{mid}}",
         "linkPlaceholder": "+ link milestone…",
         "empty": "no milestones"
+      },
+      "plan": {
+        "label": "Planning",
+        "created": "Created",
+        "start": "Planned start date",
+        "end": "Planned end date",
+        "milestone": "Planned milestone",
+        "milestonePlaceholder": "— planned milestone —",
+        "noReleaseRequired": "No release required",
+        "noReleaseHint": "Excluded from unreleased/deploy-lag metrics (docs, research, internal tooling — never ships as a versioned release)"
       },
       "modules": {
         "label": "Modules",
@@ -1246,10 +1258,37 @@
         "qg": "QG",
         "knowledge": "Knowledge",
         "components": "Components",
+        "tech": "Tech",
         "evolution": "History",
         "timeline": "Feed",
         "analytics": "Analytics",
         "mcp": "MCP API"
+      }
+    },
+    "techRegistry": {
+      "noArea": "no area",
+      "empty": "No components found.",
+      "addButton": "+ technology",
+      "noTech": "No technologies registered",
+      "staleTitle": "Not checked in {{n}}+ months",
+      "usagePrefix": "Usage:",
+      "col": {
+        "tech": "Technology",
+        "version": "Version",
+        "releaseDate": "Release date",
+        "ourRelease": "Our release",
+        "license": "License",
+        "checkedAt": "Checked"
+      },
+      "form": {
+        "techName": "Name",
+        "version": "Version",
+        "releaseDate": "Release date",
+        "ourRelease": "Our release (v1.6.21)",
+        "license": "License",
+        "usage": "Usage (where/how it's used)",
+        "source": "Source",
+        "save": "Save"
       }
     }
   },
@@ -1417,6 +1456,12 @@
       "fieldTopic": "Key (topic)",
       "fieldRubric": "Rubric",
       "rubricPlaceholder": "— rubric —",
+      "fieldSourcePath": "File on disk",
+      "sectionCover": "Cover",
+      "coverUpload": "Upload cover",
+      "coverReplace": "Replace cover",
+      "coverUploading": "Uploading…",
+      "coverNeedsId": "set a Publication ID first",
       "sectionMainText": "Main text",
       "placeholderMainText": "Master version of the text…",
       "sectionKeywords": "Keywords",

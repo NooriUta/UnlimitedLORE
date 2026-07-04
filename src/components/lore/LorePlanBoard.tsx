@@ -11,15 +11,18 @@ import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/
 import 'vis-timeline/styles/vis-timeline-graph2d.css';
 import './lore-timeline.css';
 import {
-  fetchLoreSlice, postLoreStatus, registerLoreSprint, updateLoreSprint,
+  fetchLoreSlice, postLoreStatus, registerLoreSprint, updateSprintPlan,
   type LorePlanConfig, type LorePlanSection,
   type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
   type LorePlanItemStatus, type LoreSprintDep,
   type LoreSprintDoneDate, type LoreSprintTask, type LoreSprintRow,
   type LoreComponent,
 } from '../../api/lore';
+import { areaColor, compArea } from './LoreComponentList';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
+import { formatEffortDays } from './loreUtils';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 
 // ── Status helpers ───────────────────────────────────────────────────────────
@@ -309,6 +312,10 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const itemsWithPos = items.filter(it => it.week_start != null && it.week_end != null).length;
   const parityPct    = items.length > 0 ? Math.round(itemsWithPos / items.length * 100) : 0;
 
+  // MOB: on narrow screens the swimlane group labels collapse to icons only,
+  // tinted by the component's area (type) colour — same idea as the section nav.
+  const narrow = useIsNarrow(720);
+
   // ── Component-tree resolver ───────────────────────────────────────────────
   // The board groups by the real component tree: Project (root) → Component
   // (project's direct child = lane) → bars. Deeper sub-components don't get their
@@ -434,9 +441,12 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     // game-icon (the `__self` lanes resolve to their project's icon).
     const groupLabel = (id: string, label: string): string => {
       const cid  = id.endsWith('__self') ? id.slice(0, -6) : id;
-      const slug = compById.get(cid)?.game_icon;
-      const icon = slug ? statusIconSvg(slug, 'var(--t2)') : '';
-      return icon + esc(label);
+      const comp = compById.get(cid);
+      const slug = comp?.game_icon;
+      // Narrow: colour the icon by the component's area (type) and drop the label.
+      const color = narrow ? areaColor(compArea(comp ?? {})) : 'var(--t2)';
+      const icon = slug ? statusIconSvg(slug, color) : '';
+      return narrow ? (icon || `<span title="${esc(label)}">•</span>`) : icon + esc(label);
     };
     const groups = new DataSet<TimelineGroup>([]);
     board.groupDescs.forEach((g, i) => {
@@ -537,7 +547,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
 
     return () => { ro.disconnect(); tl.destroy(); timelineRef.current = null; itemsDSRef.current = null; };
     // Re-create only when the structural inputs change.
-  }, [loading, config, w0, board.groupDescs, mss.length, releases.length]);
+  }, [loading, config, w0, board.groupDescs, mss.length, releases.length, narrow]);
 
   // ── SVG dep arrows overlay ────────────────────────────────────────────────
   // Map sprint_id → item_id for DOM lookup
@@ -1152,7 +1162,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                             const prev = cardSprintPriority;
                             setCardSprintPriority(next);
                             setPriorityBusy(true);
-                            updateLoreSprint(sid, { priority: next })
+                            updateSprintPlan(sid, { priority: next })
                               .catch(() => setCardSprintPriority(prev))
                               .finally(() => setPriorityBusy(false));
                           }}
@@ -1309,7 +1319,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 4,
                                   alignItems: 'center', flexShrink: 0 }}>
                                   {t.effort_days != null && (
-                                    <span style={{ color: 'var(--t3)', fontSize: 9 }}>{t.effort_days}d</span>
+                                    <span style={{ color: 'var(--t3)', fontSize: 9 }}>{formatEffortDays(t.effort_days)}</span>
                                   )}
                                   {hasNote && (
                                     <span style={{ fontSize: 9, color: 'var(--t3)' }}>{open ? '▲' : '▼'}</span>
@@ -1317,7 +1327,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
                                 </span>
                               </div>
                               {open && hasNote && (
-                                <div style={{
+                                <div className="lore-md" style={{
                                   fontSize: 11, color: 'var(--t2)', lineHeight: 1.6,
                                   padding: '4px 8px 8px 22px', overflowX: 'auto',
                                   background: 'color-mix(in srgb, var(--b2) 50%, transparent)',
