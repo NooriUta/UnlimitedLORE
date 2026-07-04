@@ -8,25 +8,22 @@ import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import { normalizeStatus } from './loreUtils';
 
-type EntityKind = 'sprint' | 'plan_item' | 'adr';
+type EntityKind = 'sprint' | 'adr';
 
 const SLICE: Record<EntityKind, string> = {
-  sprint:    'history_sprint',
-  plan_item: 'history_plan_item',
-  adr:       'adr_history',
+  sprint: 'history_sprint',
+  adr:    'adr_history',
 };
 
 const ENTITY: Record<EntityKind, { slice: string; id: string; label?: string }> = {
-  sprint:    { slice: 'sprints',    id: 'sprint_id', label: 'name' },
-  plan_item: { slice: 'plan_items', id: 'item_id',   label: 'label' },
-  adr:       { slice: 'adrs',       id: 'adr_id' },
+  sprint: { slice: 'sprints', id: 'sprint_id', label: 'name' },
+  adr:    { slice: 'adrs',    id: 'adr_id' },
 };
 
 interface EntityOpt { id: string; label: string; }
 
 interface DiffRow {
   status?: string;
-  weeks?: string;
 }
 
 function fmtDate(iso: string | null | undefined): string {
@@ -43,11 +40,6 @@ function computeDiff(cur: LoreHistRow, prev: LoreHistRow): DiffRow {
   const cs = normalizeStatus(cur.status_raw ?? null);
   const ps = normalizeStatus(prev.status_raw ?? null);
   if (cs && ps && cs !== ps) d.status = `${ps} → ${cs}`;
-  if (cur.week_start !== prev.week_start || cur.week_end !== prev.week_end) {
-    const pw = prev.week_start != null ? `W${prev.week_start}–${prev.week_end}` : '—';
-    const cw = cur.week_start  != null ? `W${cur.week_start}–${cur.week_end}`  : '—';
-    if (pw !== cw) d.weeks = `${pw} → ${cw}`;
-  }
   return d;
 }
 
@@ -111,13 +103,13 @@ export default function LoreEvolutionView({ onError }: Props) {
     <div style={S.root}>
       {/* ── Kind selector ────────────────────────────────────────────────── */}
       <div style={S.topBar}>
-        {(['sprint', 'plan_item', 'adr'] as EntityKind[]).map(k => (
+        {(['sprint', 'adr'] as EntityKind[]).map(k => (
           <button
             key={k}
             style={{ ...S.kindBtn, ...(kind === k ? S.kindBtnActive : {}) }}
             onClick={() => setKind(k)}
           >
-            {k === 'sprint' ? t('lore.evolutionView.kindSprint', 'Спринт') : k === 'plan_item' ? t('lore.evolutionView.kindPlanItem', 'PlanItem') : t('lore.evolutionView.kindAdr', 'ADR')}
+            {k === 'sprint' ? t('lore.evolutionView.kindSprint', 'Спринт') : t('lore.evolutionView.kindAdr', 'ADR')}
           </button>
         ))}
         <span style={S.hint}>
@@ -203,8 +195,7 @@ export default function LoreEvolutionView({ onError }: Props) {
                   <th style={S.th}>#</th>
                   <th style={S.th}>valid_from</th>
                   <th style={S.th}>valid_to</th>
-                  {kind === 'sprint'    && <th style={S.th}>{t('lore.evolutionView.colStatus', 'статус')}</th>}
-                  {kind === 'plan_item' && <th style={S.th}>{t('lore.evolutionView.colWeeks', 'недели')}</th>}
+                  {kind === 'sprint' && <th style={S.th}>{t('lore.evolutionView.colStatus', 'статус')}</th>}
                   <th style={S.th}>Δ</th>
                   <th style={S.th}>hash</th>
                   <th style={S.th}>commit</th>
@@ -242,15 +233,9 @@ export default function LoreEvolutionView({ onError }: Props) {
                           )}
                         </td>
                       )}
-                      {kind === 'plan_item' && (
-                        <td style={S.td}>
-                          {r.week_start != null ? `W${r.week_start}–${r.week_end}` : '—'}
-                        </td>
-                      )}
                       {/* LHR-05: diff markers */}
                       <td style={S.tdDiff}>
                         {diff?.status && <span style={S.diffBadge}>{diff.status}</span>}
-                        {diff?.weeks  && <span style={{ ...S.diffBadge, marginLeft: 4 }}>{diff.weeks}</span>}
                       </td>
                       <td style={{ ...S.tdMono, color: 'var(--t3)' }}>
                         {r.content_hash?.slice(0, 8) ?? '—'}

@@ -1,28 +1,36 @@
 // LorePlanBoard — renders system_aida_lore plan data as a readable swimlane
-// timeline (vis-timeline). Tracks → groups, plan items → range bars, milestones
-// → boxes, releases → points, sections → background bands. Built-in zoom/pan
-// (Ctrl+wheel zoom, wheel/drag pan) replaces the old hand-rolled Gantt canvas.
+// timeline (vis-timeline). Sprints (planned_start/end_date) → range bars,
+// milestones → markers, releases → points, sections → background bands.
+// Built-in zoom/pan (Ctrl+wheel zoom, wheel/drag pan) replaces the old
+// hand-rolled Gantt canvas.
 // Spec: PLAN_AS_DB_RENDER.md · write-path LAL-23a · time-travel LAL-25
+// SPRINT_PLANITEM_RETIRE/T-12: bars now come straight from the `sprints`
+// slice (planned_start_date/planned_end_date, real calendar dates) instead
+// of `plan_items` (week-indexed). The placeholder/stub concept (a bar not
+// backed by a real KnowSprint) is gone — every bar IS a sprint from
+// creation (T-13: "＋ Спринт" navigates to the existing create-sprint
+// screen instead of registering a sprint against a plan-item placeholder).
+// Milestones/sections/releases stay week-indexed (their own slices haven't
+// migrated), so `w0`/`W_NOW` remain for those; sprint bars compare real
+// Date objects directly.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { marked } from 'marked';
 import { Timeline, DataSet } from 'vis-timeline/standalone';
 import type { TimelineOptions, TimelineItem, TimelineGroup } from 'vis-timeline/standalone';
 import 'vis-timeline/styles/vis-timeline-graph2d.css';
 import './lore-timeline.css';
 import {
-  fetchLoreSlice, postLoreStatus, registerLoreSprint, updateSprintPlan,
+  fetchLoreSlice,
   type LorePlanConfig, type LorePlanSection,
-  type LorePlanItem, type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
-  type LorePlanItemStatus, type LoreSprintDep,
-  type LoreSprintDoneDate, type LoreSprintTask, type LoreSprintRow,
+  type LorePlanCheckpoint, type LoreMilestone, type LoreRelease,
+  type LoreSprintDep,
+  type LoreSprintDoneDate, type LoreSprintRow,
   type LoreComponent,
 } from '../../api/lore';
 import { areaColor, compArea } from './LoreComponentList';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
-import { formatEffortDays } from './loreUtils';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 
 // ── Status helpers ───────────────────────────────────────────────────────────
@@ -69,30 +77,10 @@ const STATUS_KEY: Record<string, string> = {
   blocked: 'blocked', backlog: 'backlog', todo: 'todo', done: 'done', deferred: 'deferred', cancelled: 'cancelled',
 };
 
-// Canonical token → status_raw (mirrors backend SCD2_STATUS_RAW exactly), for
-// optimistic statusBySprint updates so a cycled sprint re-colours before the server
-// round-trip — and round-trips cleanly back through taskTick.
-const STATUS_RAW: Record<string, string> = {
-  todo: '⬜ TODO', planned: '📋 PLANNED', design: '🔬 DESIGN', backlog: '🟣 BACKLOG',
-  active: '🔄 IN PROGRESS', partial: '🟡 PARTIAL', ready_for_deploy: '🚀 READY FOR DEPLOY',
-  blocked: '🔴 BLOCKED', high: '🔴 P0', done: '✅ DONE', cancelled: '🚫 CANCELLED',
-};
-
-// Full cycle over every status the /status endpoint accepts (PLAN_STATUSES), in a
-// natural workflow order — not just todo→active→done. Clicking a bar walks the lot.
-const STATUS_CYCLE: LorePlanItemStatus[] = [
-  'todo', 'planned', 'design', 'backlog', 'active', 'partial',
-  'ready_for_deploy', 'blocked', 'high', 'done', 'cancelled',
-];
-function cycleStatus(current: string | null): LorePlanItemStatus {
-  const idx = STATUS_CYCLE.indexOf((current ?? 'todo') as LorePlanItemStatus);
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-}
-
-
 const NO_PROJECT   = '__no_project__';
 const NO_COMPONENT = '__no_component__';
 const WEEK_MS = 7 * 86400 * 1000;
+const DAY_MS = 86400 * 1000;
 function addWeeks(base: Date, w: number): Date {
   return new Date(base.getTime() + w * WEEK_MS);
 }
@@ -104,14 +92,10 @@ interface Props {
   onNavigateToSprint?: (sprintId: string) => void;
 }
 
-// Unique marker icon for placeholder bars (plan items with no real sprint behind
-// them). Real sprints inherit their component's game-icon instead.
-const STUB_ICON = 'cardboard-box';
-
 // ── Critical path (longest path on hard edges, weighted by sprint duration) ──
 function computeCriticalPath(
   deps: LoreSprintDep[],
-  durationBySprint: Map<string, number>,   // sprint_id → weeks
+  durationBySprint: Map<string, number>,   // sprint_id → days
 ): Set<string> {
   const hard = deps.filter(d => d.kind === 'hard');
   if (!hard.length) return new Set();
@@ -176,14 +160,12 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const [config,   setConfig]   = useState<LorePlanConfig | null>(null);
   const [comps,    setComps]    = useState<LoreComponent[]>([]);
   const [sections, setSections] = useState<LorePlanSection[]>([]);
-  const [items,    setItems]    = useState<LorePlanItem[]>([]);
+  const [sprints,  setSprints]  = useState<LoreSprintRow[]>([]);
   const [cps,      setCps]      = useState<LorePlanCheckpoint[]>([]);
   const [mss,      setMss]      = useState<LoreMilestone[]>([]);
   const [releases, setReleases] = useState<LoreRelease[]>([]);
 
   const [doneBySprint, setDoneBySprint] = useState<Map<string, string>>(new Map());
-  // Real sprint status (status_raw) keyed by sprint_id — the bar's status source
-  // for sprint bars, so the gantt matches the actual sprint state (not plan_item).
   const [statusBySprint, setStatusBySprint] = useState<Map<string, string>>(new Map());
   const [loading,  setLoading]  = useState(true);
 
@@ -198,36 +180,19 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const [showDone,   setShowDone]   = useState(false);
   const [showActive, setShowActive] = useState(true);
   const [cropPast,   setCropPast]   = useState(true);
-  // A bar is a real sprint when it represents one; otherwise it's a standalone
-  // plan-item / placeholder ("заглушка"). Both shown by default.
-  const [showSprints, setShowSprints] = useState(true);
-  const [showStubs,   setShowStubs]   = useState(false);
 
   // ── Panels ─────────────────────────────────────────────────────────────────
-  const [sprintCard, setSprintCard] = useState<LorePlanItem | null>(null);
   const [msPanel,    setMsPanel]    = useState<LoreMilestone | null>(null);
-  const [registering, setRegistering] = useState(false);
   const [panelH,     setPanelH]     = useState(238);          // resizable bottom panel
   const panelDragRef = useRef<{ y: number; h: number } | null>(null);
-
-  // Tasks of the sprint behind the selected card (lazy, keyed by represents_sprint)
-  const [cardTasks,          setCardTasks]          = useState<LoreSprintTask[]>([]);
-  const [cardTasksLoading,   setCardTasksLoading]   = useState(false);
-  const [cardSprintStatus,   setCardSprintStatus]   = useState<string | null>(null);
-  const [cardReleases,       setCardReleases]       = useState<string[]>([]);
-  const [cardSprintPriority, setCardSprintPriority] = useState<string | null>(null);
-  const [priorityBusy,       setPriorityBusy]       = useState(false);
-  // Task list filter + selected note
-  const [taskStatusFilter, setTaskStatusFilter] = useState<Set<string>>(new Set());
-  const [selectedTaskUid,  setSelectedTaskUid]  = useState<string | null>(null);
 
   // ── Timeline plumbing ────────────────────────────────────────────────────────
   const hostRef     = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<Timeline | null>(null);
   const itemsDSRef  = useRef<DataSet<TimelineItem> | null>(null);
   // id → source object lookups for the select handler
-  const itemByIdRef = useRef<Map<string, LorePlanItem>>(new Map());
-  const msByIdRef   = useRef<Map<string, LoreMilestone>>(new Map());
+  const sprintByIdRef = useRef<Map<string, LoreSprintRow>>(new Map());
+  const msByIdRef     = useRef<Map<string, LoreMilestone>>(new Map());
 
   // ── Load all plan slices ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -235,7 +200,6 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     Promise.all([
       fetchLoreSlice<LorePlanConfig>('plan_config',      undefined, ctrl.signal),
       fetchLoreSlice<LorePlanSection>('plan_sections',   undefined, ctrl.signal),
-      fetchLoreSlice<LorePlanItem>('plan_items',         undefined, ctrl.signal),
       fetchLoreSlice<LorePlanCheckpoint>('plan_checkpoints', undefined, ctrl.signal),
       fetchLoreSlice<LoreMilestone>('milestones',        undefined, ctrl.signal),
       fetchLoreSlice<LoreRelease>('releases',            undefined, ctrl.signal),
@@ -243,26 +207,20 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       fetchLoreSlice<LoreSprintRow>('sprints',            undefined, ctrl.signal),
       fetchLoreSlice<LoreComponent>('components',         undefined, ctrl.signal),
     ])
-      .then(([cfgs, secs, its, chkps, milestones, rels, dones, sprints, components]) => {
+      .then(([cfgs, secs, chkps, milestones, rels, dones, sprintRows, components]) => {
         setConfig(cfgs[0] ?? null);
         setComps(components);
         setSections(secs);
-        // The sprint is the source of truth for status: a plan item that represents
-        // a sprint inherits that sprint's (normalised) status, so plan_item.status
-        // never drifts from reality. Stubs (no sprint) keep their own status.
-        const sprintStatusRaw = new Map(
-          sprints.filter(s => s.status_raw).map(s => [s.sprint_id, s.status_raw as string]));
-        setItems(its.map(it =>
-          it.represents_sprint && sprintStatusRaw.has(it.represents_sprint)
-            ? { ...it, status: taskTick(sprintStatusRaw.get(it.represents_sprint)!).status }
-            : it));
+        setSprints(sprintRows);
         setCps(chkps);
         setMss(milestones);
         setReleases(rels.filter(r => r.week != null));
         setDoneBySprint(new Map(
           dones.filter(d => d.done_date).map(d => [d.sprint_id, d.done_date as string])
         ));
-        setStatusBySprint(sprintStatusRaw);
+        setStatusBySprint(new Map(
+          sprintRows.filter(s => s.status_raw).map(s => [s.sprint_id, s.status_raw as string])
+        ));
         setLoading(false);
         // Load deps in background — not blocking the main render
         fetchLoreSlice<LoreSprintDep>('sprint_deps', undefined, ctrl.signal)
@@ -272,32 +230,6 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
   }, [onError]);
-
-  // ── Lazy-load tasks of the sprint behind the selected card ───────────────────
-  useEffect(() => {
-    const sprintId = sprintCard?.represents_sprint;
-    if (!sprintId) {
-      setCardTasks([]); setCardSprintStatus(null); setCardReleases([]); setCardSprintPriority(null);
-      return;
-    }
-    setCardTasksLoading(true);
-    const ctrl = new AbortController();
-    Promise.all([
-      fetchLoreSlice<LoreSprintTask>('tasks_of_sprint', { sprint_id: sprintId }, ctrl.signal),
-      fetchLoreSlice<{ status_raw: string | null; release_ids: string[] | null; priority: string | null }>('sprint_tree', { id: sprintId }, ctrl.signal),
-    ])
-      .then(([tasks, trees]) => {
-        setCardTasks(tasks);
-        setCardSprintStatus(trees[0]?.status_raw ?? null);
-        setCardReleases(trees[0]?.release_ids ?? []);
-        setCardSprintPriority(trees[0]?.priority ?? null);
-        setCardTasksLoading(false);
-      })
-      .catch(() => { setCardTasks([]); setCardTasksLoading(false); });
-    setTaskStatusFilter(new Set());
-    setSelectedTaskUid(null);
-    return () => ctrl.abort();
-  }, [sprintCard?.represents_sprint]);
 
   // ── Derived scalars ──────────────────────────────────────────────────────────
   const w0 = useMemo(() => config ? new Date(config.w0_date) : null, [config]);
@@ -309,8 +241,8 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     return `${d.getDate()} ${t(`lore.planBoard.month.${monthKey}`, MONTHS[d.getMonth()])}`;
   }, [w0, W_NOW, t]);
 
-  const itemsWithPos = items.filter(it => it.week_start != null && it.week_end != null).length;
-  const parityPct    = items.length > 0 ? Math.round(itemsWithPos / items.length * 100) : 0;
+  const sprintsWithPos = sprints.filter(s => s.planned_start_date != null && s.planned_end_date != null).length;
+  const parityPct      = sprints.length > 0 ? Math.round(sprintsWithPos / sprints.length * 100) : 0;
 
   // MOB: on narrow screens the swimlane group labels collapse to icons only,
   // tinted by the component's area (type) colour — same idea as the section nav.
@@ -328,7 +260,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     () => ['AIDA', 'ODIN', 'OMILORE', 'BRAGI', 'HARPA', 'TYR'], []);
 
   // Single source of truth for the board's grouping. Produces:
-  //  · laneOfItem  — final vis group id for each plan item's bar
+  //  · laneOfItem  — final vis group id for each sprint's bar
   //  · iconOfItem  — leaf component game-icon slug for each bar
   //  · groupDescs  — ordered vis group descriptors (project parents + lanes)
   // The lane comes from the *most specific* (deepest) linked component, so a sprint
@@ -357,16 +289,16 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       return d;
     };
 
-    // raw resolution per item
+    // raw resolution per sprint
     const raw = new Map<string, { project: string; rawLane: string; icon: string | null }>();
-    items.forEach(it => {
-      const linked = (it.components ?? []).filter(c => compById.has(c));
+    sprints.forEach(s => {
+      const linked = (s.components ?? []).filter(c => compById.has(c));
       if (!linked.length) {
-        raw.set(it.item_id, { project: NO_PROJECT, rawLane: NO_COMPONENT, icon: null });
+        raw.set(s.sprint_id, { project: NO_PROJECT, rawLane: NO_COMPONENT, icon: null });
         return;
       }
       const primary = linked.reduce((a, b) => (depth(b) > depth(a) ? b : a));
-      raw.set(it.item_id, {
+      raw.set(s.sprint_id, {
         project: rootOf(primary), rawLane: laneOf(primary),
         icon: compById.get(primary)?.game_icon ?? null,
       });
@@ -423,13 +355,13 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
 
     const laneOfItem = new Map<string, string>();
     const iconOfItem = new Map<string, string | null>();
-    raw.forEach((v, itemId) => {
-      laneOfItem.set(itemId, finalLane(v.project, v.rawLane));
-      iconOfItem.set(itemId, v.icon);
+    raw.forEach((v, sprintId) => {
+      laneOfItem.set(sprintId, finalLane(v.project, v.rawLane));
+      iconOfItem.set(sprintId, v.icon);
     });
 
     return { groupDescs, laneOfItem, iconOfItem };
-  }, [items, compById, PROJECT_ORDER, t]);
+  }, [sprints, compById, PROJECT_ORDER, t]);
 
   // ── Create the Timeline once data is loaded ──────────────────────────────────
   useEffect(() => {
@@ -490,46 +422,45 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     // to the furthest-out sprint/milestone instead of a fixed +14-week guess —
     // otherwise late items fall outside the initial view and the board looks
     // half-empty on the left with nothing to fill the right.
-    let earliestOverdue = W_NOW;
-    let latestWeek = W_NOW + 8;   // floor so a near-empty board still gets a sane span
-    for (const it of items) {
-      if (it.week_end != null && it.week_end > latestWeek) latestWeek = it.week_end;
-      if (it.week_start == null || it.week_start >= W_NOW) continue;  // future/unpositioned
-      const raw = it.represents_sprint ? statusBySprint.get(it.represents_sprint) : undefined;
-      const st  = raw ? taskTick(raw).status : (it.status ?? 'todo');
-      if (st === 'done' || st === 'cancelled') continue;              // closed → not overdue
-      if (it.week_start < earliestOverdue) earliestOverdue = it.week_start;
+    const today = new Date();
+    let earliestOverdueDate = today;
+    let latestDate = addWeeks(w0, W_NOW + 8);   // floor so a near-empty board still gets a sane span
+    for (const s of sprints) {
+      if (s.planned_end_date) {
+        const endD = new Date(s.planned_end_date);
+        if (endD > latestDate) latestDate = endD;
+      }
+      if (!s.planned_start_date) continue;
+      const startD = new Date(s.planned_start_date);
+      if (startD >= today) continue;                              // future/unpositioned
+      const raw = statusBySprint.get(s.sprint_id);
+      const st  = raw ? taskTick(raw).status : 'todo';
+      if (st === 'done' || st === 'cancelled') continue;           // closed → not overdue
+      if (startD < earliestOverdueDate) earliestOverdueDate = startD;
     }
     for (const ms of mss) {
-      if (ms.week != null && ms.week > latestWeek) latestWeek = ms.week;
+      if (ms.week == null) continue;
+      const msDate = addWeeks(w0, ms.week);
+      if (msDate > latestDate) latestDate = msDate;
     }
-    const today = new Date();
-    const overdueDate = addWeeks(w0, earliestOverdue);
-    const winStart = overdueDate < today ? overdueDate : today;
-    tl.setWindow(winStart, addWeeks(w0, latestWeek + 1), { animation: false });
+    tl.setWindow(earliestOverdueDate, new Date(latestDate.getTime() + WEEK_MS), { animation: false });
     // Belt-and-suspenders against a 0×0 construction (flex sizes after layout):
     // force one redraw on the next frame so the first paint is never blank.
     requestAnimationFrame(() => { if (timelineRef.current === tl) tl.redraw(); });
 
     tl.on('select', (props: { items: Array<string | number> }) => {
       const id = props.items[0];
-      if (id == null) { setSprintCard(null); setMsPanel(null); return; }
+      if (id == null) { setMsPanel(null); return; }
       const sid = String(id);
       if (sid.startsWith('ms_')) {
         const ms = msByIdRef.current.get(sid.slice(3)) ?? null;
-        setSprintCard(null); setMsPanel(ms);
+        setMsPanel(ms);
       } else {
-        const it = itemByIdRef.current.get(sid) ?? null;
+        const sprint = sprintByIdRef.current.get(sid) ?? null;
         setMsPanel(null);
-        // Click on a real sprint → jump to its passport; a placeholder (no sprint)
-        // has nowhere to navigate, so it still opens the inline card.
-        if (it?.represents_sprint && onNavigateToSprint) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (tl as any).setSelection([]);  // clear so re-clicking the same bar fires again
-          onNavigateToSprint(it.represents_sprint);
-        } else {
-          setSprintCard(it);
-        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (tl as any).setSelection([]);  // clear so re-clicking the same bar fires again
+        if (sprint) onNavigateToSprint?.(sprint.sprint_id);
       }
     });
 
@@ -550,22 +481,18 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   }, [loading, config, w0, board.groupDescs, mss.length, releases.length, narrow]);
 
   // ── SVG dep arrows overlay ────────────────────────────────────────────────
-  // Map sprint_id → item_id for DOM lookup
-  const sprintToItemId = useMemo(() => {
-    const m = new Map<string, string>();
-    items.forEach(it => { if (it.represents_sprint) m.set(it.represents_sprint, it.item_id); });
-    return m;
-  }, [items]);
-
   // Critical path (hard edges only)
   const criticalSprints = useMemo(() => {
     const dur = new Map<string, number>();
-    items.forEach(it => {
-      if (it.represents_sprint && it.week_start != null && it.week_end != null)
-        dur.set(it.represents_sprint, Math.max(1, it.week_end - it.week_start));
+    sprints.forEach(s => {
+      if (s.planned_start_date && s.planned_end_date) {
+        const days = Math.round(
+          (new Date(s.planned_end_date).getTime() - new Date(s.planned_start_date).getTime()) / DAY_MS);
+        dur.set(s.sprint_id, Math.max(1, days));
+      }
     });
     return computeCriticalPath(deps, dur);
-  }, [deps, items]);
+  }, [deps, sprints]);
 
   const drawArrows = useCallback(() => {
     const svg = svgRef.current;
@@ -636,11 +563,9 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       // the centre of its LANE row clamped to a board edge (`offX`): a prerequisite
       // (upstream) clamps to the LEFT edge, a dependent (downstream) to the RIGHT —
       // same vertical point as the lane, just pinned to the side it lives off toward.
-      const anchorFor = (sprint: string, side: 'left' | 'right', offX: number):
+      const anchorFor = (sprintId: string, side: 'left' | 'right', offX: number):
           { x: number; y: number; off: boolean } | null => {
-        const itemId = sprintToItemId.get(sprint);
-        if (!itemId) return null;
-        const el = itemEl(itemId);
+        const el = itemEl(sprintId);
         // Treat the bar as on-screen while ANY part of it overlaps the visible centre
         // panel (not just its connecting edge) — then anchor to that edge, clamped
         // into view. We only switch to the lane-edge once the bar is FULLY out of the
@@ -658,7 +583,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         }
         // Fully off-screen (missing, or entirely outside the panel) → lane-row centre,
         // pinned to the board edge it lives off toward (offX).
-        const laneId = board.laneOfItem.get(sprint);
+        const laneId = board.laneOfItem.get(sprintId);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const grp = laneId ? (itemSet?.groups?.[laneId] as any) : null;
         const gel = grp?.dom?.foreground as HTMLElement | undefined;
@@ -728,7 +653,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       </defs>
       ${parts.join('\n')}
     `;
-  }, [deps, sprintToItemId, criticalSprints, showDeps, mss, w0, board]);
+  }, [deps, criticalSprints, showDeps, mss, w0, board]);
 
   // Re-draw on any change that shifts bar positions. `rangechange` fires
   // continuously during zoom/pan (unlike `rangechanged`, which only fires once at
@@ -786,7 +711,6 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       const id = target.getAttribute('data-ms');
       if (!id) return;
       const ms = msByIdRef.current.get(id) ?? null;
-      setSprintCard(null);
       setMsPanel(ms);
     };
     svg.addEventListener('click', onClick);
@@ -798,7 +722,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     const ds = itemsDSRef.current;
     if (!ds || !w0) return;
 
-    const itemById = new Map<string, LorePlanItem>();
+    const sprintById = new Map<string, LoreSprintRow>();
     const msById   = new Map<string, LoreMilestone>();
     const next: TimelineItem[] = [];
 
@@ -815,48 +739,32 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       } as TimelineItem);
     }
 
-    // Plan-item bars — real sprints first so stubs never displace them during dedup.
-    const seenSprints = new Set<string>();
-    const sortedItems = [...items].sort((a, b) =>
-      (a.represents_sprint ? 0 : 1) - (b.represents_sprint ? 0 : 1));
-    for (const item of sortedItems) {
-      const ws = item.week_start;
-      const we = item.week_end;
-      if (ws == null || we == null) continue;                 // unpositioned → skip
-      if (cropPast && we < W_NOW) continue;
-      const isStub = item.represents_sprint == null;           // placeholder, not a sprint
-      if (!isStub && item.represents_sprint) {
-        if (seenSprints.has(item.represents_sprint)) continue; // already rendered this sprint
-        seenSprints.add(item.represents_sprint);
-      }
-      if (!showStubs && isStub) continue;
-      if (!showSprints && !isStub) continue;
-      // Effective status: for sprint bars use the REAL sprint state (status_raw
-      // parsed by taskTick), not plan_item.status which drifts from reality.
-      const sprintRaw = item.represents_sprint
-        ? statusBySprint.get(item.represents_sprint) : undefined;
-      const effStatus = sprintRaw ? taskTick(sprintRaw).status : (item.status ?? 'todo');
+    // Sprint bars.
+    const today = new Date();
+    for (const sprint of sprints) {
+      if (!sprint.planned_start_date || !sprint.planned_end_date) continue;  // unpositioned → skip
+      const start = new Date(sprint.planned_start_date);
+      const end   = new Date(sprint.planned_end_date);
+      if (cropPast && end < today) continue;
+
+      const raw = statusBySprint.get(sprint.sprint_id);
+      const effStatus = raw ? taskTick(raw).status : 'todo';
       if (effStatus === 'cancelled') continue;
       const isDone = effStatus === 'done';
       if (!showDone && isDone) continue;
       if (!showActive && !isDone) continue;
 
-      itemById.set(item.item_id, item);
+      sprintById.set(sprint.sprint_id, sprint);
 
-      // Actual close week from the sprint's SCD2 done-date, when known.
-      const doneIso = isDone && item.represents_sprint
-        ? doneBySprint.get(item.represents_sprint) : undefined;
-      const weAct = doneIso != null
-        ? Math.max(ws + 1, Math.round((new Date(doneIso).getTime() - w0.getTime()) / WEEK_MS))
-        : null;
-      // Split the "todo" bucket so planned sprints ≠ placeholders:
-      //  · todo + has sprint  → planned (acc colour, calendar icon)
-      //  · todo + no sprint   → stub/placeholder (hollow dashed, light-bulb)
-      //  · everything else    → by real status (done/active/blocked/partial)
+      // Actual close date from the sprint's SCD2 done-date, when known.
+      const doneIso = isDone ? doneBySprint.get(sprint.sprint_id) : undefined;
+      const actualEnd = doneIso != null ? new Date(doneIso) : null;
+      // One bar per sprint: if done with a known close date, show actual span;
+      // otherwise show planned span. Plan vs fact info surfaced in the tooltip.
+      const displayEnd = (isDone && actualEnd && actualEnd > start) ? actualEnd : end;
+
       let famClass: string, iconSlug: string, iconColor: string;
-      if (effStatus === 'todo' && isStub) {
-        famClass = 'fam-stub'; iconSlug = 'light-bulb'; iconColor = 'var(--t3)';
-      } else if (effStatus === 'todo') {
+      if (effStatus === 'todo') {
         famClass = 'fam-planned'; iconSlug = 'calendar'; iconColor = 'var(--acc)';
       } else {
         const m = statusMeta(effStatus);
@@ -864,28 +772,23 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         iconSlug = m.icon; iconColor = m.color;
       }
 
-      // One bar per sprint: if done with a known close date, show actual span;
-      // otherwise show planned span. Plan vs fact info surfaced in the tooltip.
-      const displayEnd = (isDone && weAct != null) ? weAct : we;
-      // Lane + type icon: a real sprint inherits its leaf-component's game-icon;
-      // a placeholder (stub) gets the single unique STUB_ICON instead.
-      const laneId = board.laneOfItem.get(item.item_id) ?? NO_COMPONENT;
-      const typeIconSlug = isStub ? STUB_ICON : board.iconOfItem.get(item.item_id);
+      const laneId = board.laneOfItem.get(sprint.sprint_id) ?? NO_COMPONENT;
+      const typeIconSlug = board.iconOfItem.get(sprint.sprint_id);
       const compIcon = typeIconSlug ? statusIconSvg(typeIconSlug, 'var(--t2)') : '';
       next.push({
-        id: item.item_id,
+        id: sprint.sprint_id,
         group: laneId,
-        content: statusIconSvg(iconSlug, iconColor) + compIcon + esc(cleanLabel(item.label)),
-        start: addWeeks(w0, ws),
-        end:   addWeeks(w0, Math.max(ws + 1, displayEnd)),
+        content: statusIconSvg(iconSlug, iconColor) + compIcon + esc(cleanLabel(sprint.name)),
+        start,
+        end: displayEnd > start ? displayEnd : new Date(start.getTime() + DAY_MS),
         type: 'range',
         className: `it ${famClass}`,
-        title: `${item.label}\n` + t('lore.planBoard.tooltip.plan', 'план W{{ws}}–{{we}}', { ws, we })
-          + (weAct != null ? '\n' + t('lore.planBoard.tooltip.fact', 'факт W{{ws}}–{{we}}', { ws, we: weAct }) : '')
-          + (item.represents_sprint ? `\n${item.represents_sprint}` : '')
+        title: `${sprint.name}\n` + t('lore.planBoard.tooltip.plan', 'план {{start}} – {{end}}',
+            { start: sprint.planned_start_date, end: sprint.planned_end_date })
+          + (doneIso ? '\n' + t('lore.planBoard.tooltip.fact', 'факт {{date}}', { date: doneIso.slice(0, 10) }) : '')
+          + `\n${sprint.sprint_id}`
           + '\n' + t('lore.planBoard.tooltip.status', 'статус: {{status}}', { status: effStatus }),
       } as TimelineItem);
-
     }
 
     // Milestones are now rendered as SVG overlay markers at the top (see drawArrows).
@@ -909,12 +812,12 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       } as TimelineItem);
     }
 
-    itemByIdRef.current = itemById;
-    msByIdRef.current   = msById;
+    sprintByIdRef.current = sprintById;
+    msByIdRef.current     = msById;
     ds.clear();
     ds.add(next);
-  }, [items, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
-      showDone, showActive, cropPast, showSprints, showStubs, W_NOW, board]);
+  }, [sprints, sections, mss, cps, releases, doneBySprint, statusBySprint, w0,
+      showDone, showActive, cropPast, board, t]);
 
   // ── Drag-resize the bottom detail panel ──────────────────────────────────────
   useEffect(() => {
@@ -929,87 +832,34 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
 
-  // ── Register a real sprint for a plan-item placeholder ───────────────────────
-  function handleRegisterSprint(item: LorePlanItem) {
-    setRegistering(true);
-    registerLoreSprint(item.item_id, { name: item.label, status: 'active' })
-      .then(r => {
-        // Optimistically link the bar → it flips from placeholder to sprint, and
-        // its colour follows the new sprint's status (active → 🔄 IN PROGRESS).
-        setItems(prev => prev.map(it =>
-          it.item_id === item.item_id ? { ...it, represents_sprint: r.sprint_id } : it));
-        setSprintCard(prev => prev && prev.item_id === item.item_id
-          ? { ...prev, represents_sprint: r.sprint_id } : prev);
-        setStatusBySprint(prev => {
-          const m = new Map(prev); m.set(r.sprint_id, '🔄 IN PROGRESS'); return m;
-        });
-      })
-      .catch(e => onError(e))
-      .finally(() => setRegistering(false));
-  }
-
   function startPanelDrag(e: React.MouseEvent) {
     panelDragRef.current = { y: e.clientY, h: panelH };
     document.body.style.userSelect = 'none';
     e.preventDefault();
   }
 
-  // ── Status cycling helper (panel button) ─────────────────────────────────────
-  function applyStatusCycle(target: LorePlanItem) {
-    const sid = target.represents_sprint;
-    if (sid) {
-      // Sprint bar → cycle the REAL sprint status (status_raw); update
-      // statusBySprint so the bar re-colours immediately (no reload).
-      const prevRaw = statusBySprint.get(sid);
-      const cur  = prevRaw ? taskTick(prevRaw).status : 'todo';
-      const next = cycleStatus(cur);
-      setStatusBySprint(m => { const n = new Map(m); n.set(sid, STATUS_RAW[next] ?? next); return n; });
-      postLoreStatus('sprint', sid, next).catch(err => {
-        console.error('[lore status cycle]', err);
-        setStatusBySprint(m => { const n = new Map(m); if (prevRaw == null) n.delete(sid); else n.set(sid, prevRaw); return n; });
-      });
-      return;
-    }
-    // Placeholder (no sprint) → cycle plan_item.status.
-    const newStatus = cycleStatus(target.status);
-    const prevStatus = target.status;
-    setItems(prev => prev.map(it =>
-      it.item_id === target.item_id ? { ...it, status: newStatus } : it));
-    setSprintCard(prev => prev && prev.item_id === target.item_id
-      ? { ...prev, status: newStatus } : prev);
-    postLoreStatus('plan_item', target.item_id, newStatus).catch(err => {
-      console.error('[lore status cycle]', err);
-      setItems(prev => prev.map(it =>
-        it.item_id === target.item_id ? { ...it, status: prevStatus } : it));
-      setSprintCard(prev => prev && prev.item_id === target.item_id
-        ? { ...prev, status: prevStatus } : prev);
-    });
-  }
-
   if (loading) return <div style={S.empty}>{t('lore.planBoard.loading', 'Loading plan…')}</div>;
   if (!config)  return <div style={S.empty}>{t('lore.planBoard.configNotFound', 'Plan config not found in system_aida_lore.')}</div>;
 
-  // Effective status of an item (real sprint state for sprint bars).
-  const effStatusOf = (it: LorePlanItem): string => {
-    const raw = it.represents_sprint ? statusBySprint.get(it.represents_sprint) : undefined;
-    return raw ? taskTick(raw).status : (it.status ?? 'todo');
+  // Effective status of a sprint bar.
+  const effStatusOf = (s: LoreSprintRow): string => {
+    const raw = statusBySprint.get(s.sprint_id);
+    return raw ? taskTick(raw).status : 'todo';
   };
 
-  const shownBars = items.filter(it => {
-    if (it.week_start == null || it.week_end == null) return false;
-    if (effStatusOf(it) === 'cancelled') return false;
-    if (cropPast && it.week_end < W_NOW) return false;
-    const isStub = it.represents_sprint == null;
-    if (!showStubs && isStub) return false;
-    if (!showSprints && !isStub) return false;
-    const isDone = effStatusOf(it) === 'done';
+  const today = new Date();
+  const shownBars = sprints.filter(s => {
+    if (s.planned_start_date == null || s.planned_end_date == null) return false;
+    if (effStatusOf(s) === 'cancelled') return false;
+    if (cropPast && new Date(s.planned_end_date) < today) return false;
+    const isDone = effStatusOf(s) === 'done';
     if (!showDone && isDone) return false;
     if (!showActive && !isDone) return false;
     return true;
   }).length;
 
   // Legend shows only statuses that actually occur (avoids advertising phantoms).
-  const presentStatuses = STATUS_ORDER.filter(s => items.some(it => effStatusOf(it) === s));
+  const presentStatuses = STATUS_ORDER.filter(s => sprints.some(sp => effStatusOf(sp) === s));
 
   return (
     <div style={S.root}>
@@ -1020,13 +870,15 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         <Tog active={showDone}   onClick={() => setShowDone(v => !v)}>{t('lore.planBoard.toolbar.done', 'Done')}</Tog>
         <Tog active={!cropPast}  onClick={() => setCropPast(v => !v)}>{t('lore.planBoard.toolbar.past', 'Прошлые')}</Tog>
         <span style={S.divider} />
-        <Tog active={showSprints} onClick={() => setShowSprints(v => !v)}>{t('lore.planBoard.toolbar.sprints', 'Спринты')}</Tog>
-        <Tog active={showStubs}   onClick={() => setShowStubs(v => !v)}>{t('lore.planBoard.toolbar.stubs', 'Заглушки')}</Tog>
-        <span style={S.divider} />
         <Tog active={showDeps && deps.length > 0} onClick={() => setShowDeps(v => !v)}
           title={t('lore.planBoard.toolbar.depsTooltip', 'Стрелки зависимостей ({{count}}); красный = критический путь', { count: deps.length })}>
           {t('lore.planBoard.toolbar.deps', 'Зависимости')}{deps.length > 0 ? ` ${deps.length}` : ''}
         </Tog>
+        <span style={S.divider} />
+        <button style={S.btn} onClick={() => onNavigateToSprint?.('__new')}
+          title={t('lore.planBoard.toolbar.newSprintTooltip', 'Создать новый KnowSprint (переход на форму создания)')}>
+          {t('lore.planBoard.toolbar.newSprint', '＋ Спринт')}
+        </button>
         <button style={S.btn} onClick={() => timelineRef.current?.fit({ animation: true })}
           title={t('lore.planBoard.toolbar.fitTooltip', 'Уместить все бары в экран')}>
           {t('lore.planBoard.toolbar.fit', 'Сжать')}
@@ -1042,7 +894,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
 
         <span style={{ flex: 1 }} />
 
-        <span style={S.stat}>{t('lore.planBoard.toolbar.barsLanes', '{{shown}} / {{total}} баров · {{lanes}} дорожек', { shown: shownBars, total: items.length, lanes: board.groupDescs.filter(g => !g.nested).length })}</span>
+        <span style={S.stat}>{t('lore.planBoard.toolbar.barsLanes', '{{shown}} / {{total}} баров · {{lanes}} дорожек', { shown: shownBars, total: sprints.length, lanes: board.groupDescs.filter(g => !g.nested).length })}</span>
 
         <span
           style={{ ...S.zlabel, color: 'var(--acc)', opacity: 0.85, fontWeight: 600 }}
@@ -1050,7 +902,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         >
           W{W_NOW} · {nowLabel}
         </span>
-        <span style={S.stat} title={t('lore.planBoard.toolbar.parityTooltip', 'Паритет: доля баров с позицией (SAGA↔план)')}>
+        <span style={S.stat} title={t('lore.planBoard.toolbar.parityTooltip', 'Паритет: доля спринтов с плановыми датами')}>
           {t('lore.planBoard.toolbar.parity', '{{pct}}% parity', { pct: parityPct })}
         </span>
         <span style={{ ...S.zlabel, opacity: 0.6 }}>{t('lore.planBoard.toolbar.hint', 'Ctrl+колесо = зум · тащить = листать')}</span>
@@ -1064,10 +916,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
             label={t(`lore.planBoard.status.${STATUS_KEY[s] ?? s}`, STATUS_RU[s] ?? s)} />
         ))}
         {presentStatuses.includes('todo') && (
-          <>
-            <span style={S.legendGlyph}><GameIcon slug="calendar" size={12} style={{ color: 'var(--acc)' }} /> {t('lore.planBoard.legend.planned', 'планируется')}</span>
-            <span style={S.legendGlyph}><GameIcon slug="light-bulb" size={12} style={{ color: 'var(--t3)' }} /> {t('lore.planBoard.legend.stub', 'заглушка')}</span>
-          </>
+          <span style={S.legendGlyph}><GameIcon slug="calendar" size={12} style={{ color: 'var(--acc)' }} /> {t('lore.planBoard.legend.planned', 'планируется')}</span>
         )}
         <span style={S.legendSep} />
         <span style={S.legendGlyph}>
@@ -1082,7 +931,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
           <span style={{ width: 16, height: 11, borderRadius: 2, display: 'inline-block',
             background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid var(--b3)' }} /> {t('lore.planBoard.legend.phase', 'фаза')}
         </span>
-        <span style={S.legendDim}>{t('lore.planBoard.legend.clickHint', 'клик по бару → карточка спринта')}</span>
+        <span style={S.legendDim}>{t('lore.planBoard.legend.clickHint', 'клик по бару → паспорт спринта')}</span>
       </div>
 
       {/* ── Main: timeline host + side panel ───────────────────────────────── */}
@@ -1090,262 +939,6 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         <div ref={hostRef} className="lore-tl" style={S.host} />
         {/* SVG dep-arrow overlay — sits above the timeline, pointer-events: none */}
         <svg ref={svgRef} style={S.depSvg} aria-hidden="true" />
-
-        {/* Sprint card panel */}
-        {sprintCard && (
-          <div style={{ ...S.panel, height: panelH }}>
-            <ResizeGrip onDown={startPanelDrag} />
-            <div style={S.panelHdr}>
-              <TypeBadge isSprint={sprintCard.represents_sprint != null} />
-              <span style={S.panelTitle}>{sprintCard.label}</span>
-              <button style={S.closeBtn} onClick={() => setSprintCard(null)}>✕</button>
-            </div>
-            <div style={S.panelBody}>
-             <div style={S.panelCol}>
-              {/* Placeholder → register a real sprint */}
-              {!sprintCard.represents_sprint && (
-                <button
-                  onClick={() => handleRegisterSprint(sprintCard)}
-                  disabled={registering}
-                  title={t('lore.planBoard.card.registerTooltip', 'Создать KnowSprint, связать план-элемент (REPRESENTS) и завести начальный статус')}
-                  style={{
-                    display: 'block', width: '100%', marginBottom: 10,
-                    padding: '6px 8px', borderRadius: 4, cursor: registering ? 'default' : 'pointer',
-                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                    background: 'color-mix(in srgb, var(--acc) 16%, transparent)',
-                    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 40%, transparent)',
-                    opacity: registering ? 0.6 : 1,
-                  }}
-                >
-                  {registering ? t('lore.planBoard.card.registering', 'Регистрирую…') : t('lore.planBoard.card.registerSprint', '＋ Запланировать спринт')}
-                </button>
-              )}
-              <PRow k="ID"     v={sprintCard.item_id} />
-              {sprintCard.represents_sprint && (
-                <PRow k="Sprint" v={sprintCard.represents_sprint} color="var(--acc)" />
-              )}
-              {(sprintCard.week_start != null || sprintCard.week_end != null) && (
-                <PRow k={t('lore.planBoard.card.plan', 'План')}  v={`W${sprintCard.week_start ?? '?'}–${sprintCard.week_end ?? '?'}`} />
-              )}
-              {(() => {
-                // Факт: actual close from the sprint's done-date (план vs факт).
-                const sp = sprintCard.represents_sprint;
-                const dd = sp && w0 ? doneBySprint.get(sp) : undefined;
-                if (!dd || !w0) return null;
-                const ws = sprintCard.week_start ?? 0, we = sprintCard.week_end ?? ws;
-                const wa = Math.max(ws + 1, Math.round((new Date(dd).getTime() - w0.getTime()) / WEEK_MS));
-                const c = wa < we ? 'var(--suc)' : wa > we ? 'var(--wrn)' : 'var(--t2)';
-                return <PRow k={t('lore.planBoard.card.fact', 'Факт')} v={`W${ws}–${wa} · ${dd.slice(0, 10)}`} color={c} />;
-              })()}
-              {cardReleases.length > 0 && (
-                <PRow k={t('lore.planBoard.card.release', 'Релиз')} v={cardReleases.join(', ')} color="var(--acc)" />
-              )}
-
-              {/* Priority picker — only for real sprints (not plan-item stubs) */}
-              {sprintCard.represents_sprint && (
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>{t('lore.planBoard.card.priority', 'Приоритет')}</div>
-                  <div style={{ display: 'flex', gap: 4, opacity: priorityBusy ? 0.5 : 1 }}>
-                    {[
-                      { v: 'P0', c: '#E24B4A' },
-                      { v: 'P1', c: '#ef9f27' },
-                      { v: 'P2', c: 'var(--t3)' },
-                    ].map(({ v, c }) => {
-                      const sel = cardSprintPriority === v;
-                      return (
-                        <button
-                          key={v} type="button" disabled={priorityBusy}
-                          title={v} aria-pressed={sel}
-                          onClick={() => {
-                            const sid = sprintCard.represents_sprint!;
-                            const next = sel ? null : v;
-                            const prev = cardSprintPriority;
-                            setCardSprintPriority(next);
-                            setPriorityBusy(true);
-                            updateSprintPlan(sid, { priority: next })
-                              .catch(() => setCardSprintPriority(prev))
-                              .finally(() => setPriorityBusy(false));
-                          }}
-                          style={{
-                            padding: '0 7px', height: 18, borderRadius: 3, fontSize: 10,
-                            fontWeight: sel ? 600 : 400, cursor: priorityBusy ? 'default' : 'pointer',
-                            fontFamily: 'var(--mono)',
-                            color: sel ? c : 'var(--t3)',
-                            background: sel ? `color-mix(in srgb, ${c} 15%, transparent)` : 'transparent',
-                            border: sel ? `1px solid ${c}` : '1px solid var(--bd)',
-                          }}
-                        >{v}</button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Status cycling badge — reflects the EFFECTIVE status (real sprint
-                  status for sprint bars), and updates the board live on click. */}
-              {(() => {
-                const cs = effStatusOf(sprintCard);
-                const m = statusMeta(cs);
-                const isCancelled = cs === 'cancelled';
-                return (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>{t('lore.planBoard.card.status', 'Статус')}</div>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => applyStatusCycle(sprintCard)}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          padding: '3px 8px', borderRadius: 3, cursor: 'pointer',
-                          fontSize: 11, fontWeight: 600,
-                          background: `color-mix(in srgb, ${m.color} 18%, transparent)`,
-                          color: m.color, border: `1px solid ${m.color}`,
-                        }}
-                      >
-                        <GameIcon slug={m.icon} size={12} style={{ color: 'inherit' }} />
-                        {cs}
-                        <span style={{ opacity: 0.7, fontSize: 9 }}>→ {cycleStatus(cs)}</span>
-                      </button>
-                      {!sprintCard.represents_sprint && !isCancelled && (
-                        <button
-                          onClick={() => {
-                            const prev = sprintCard.status;
-                            setItems(p => p.map(it => it.item_id === sprintCard.item_id ? { ...it, status: 'cancelled' } : it));
-                            setSprintCard(p => p && p.item_id === sprintCard.item_id ? { ...p, status: 'cancelled' } : p);
-                            postLoreStatus('plan_item', sprintCard.item_id, 'cancelled').catch(err => {
-                              console.error('[lore cancel]', err);
-                              setItems(p => p.map(it => it.item_id === sprintCard.item_id ? { ...it, status: prev } : it));
-                              setSprintCard(p => p && p.item_id === sprintCard.item_id ? { ...p, status: prev } : p);
-                            });
-                          }}
-                          style={{
-                            fontSize: 10, padding: '2px 7px', borderRadius: 3, cursor: 'pointer',
-                            background: 'transparent', color: 'var(--danger)',
-                            border: '1px solid color-mix(in srgb, var(--danger) 40%, transparent)',
-                          }}
-                        >
-                          {t('lore.planBoard.card.cancel', '🚫 Отменить')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-             </div>{/* /panelCol */}
-
-              {/* Tasks of the represented sprint */}
-              {sprintCard.represents_sprint && (
-                <div style={S.panelTasks}>
-                  {/* Header: count + status filter chips */}
-                  {(() => {
-                    const total = cardTasks.length;
-                    const done  = cardTasks.filter(t => taskTick(t.status_raw).done).length;
-                    const counts: Record<string, number> = {};
-                    for (const t of cardTasks) {
-                      const k = taskTick(t.status_raw).status;
-                      counts[k] = (counts[k] ?? 0) + 1;
-                    }
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.planBoard.card.tasks', 'Задачи')}</span>
-                        {total > 0 && (
-                          <span style={{ fontSize: 10, color: 'var(--t2)' }}>{done}/{total}</span>
-                        )}
-                        {Object.entries(counts).map(([k, n]) => {
-                          const m = statusMeta(k);
-                          const active = taskStatusFilter.has(k);
-                          return (
-                            <button key={k} type="button"
-                              title={`${k}: ${n}`}
-                              onClick={() => setTaskStatusFilter(prev => {
-                                const s = new Set(prev); s.has(k) ? s.delete(k) : s.add(k); return s;
-                              })}
-                              style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 3,
-                                padding: '0 5px', height: 16, borderRadius: 9, cursor: 'pointer',
-                                fontSize: 10, fontWeight: 700, lineHeight: 1, color: m.color,
-                                background: active ? `color-mix(in srgb, ${m.color} 22%, transparent)` : 'transparent',
-                                border: `1px solid color-mix(in srgb, ${m.color} ${active ? 90 : 35}%, transparent)`,
-                              }}
-                            >
-                              <GameIcon slug={m.icon} size={10} style={{ color: m.color }} />
-                              {n}
-                            </button>
-                          );
-                        })}
-                        {cardSprintStatus && (
-                          <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 'auto',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 130 }}
-                            title={cardSprintStatus}>
-                            {cardSprintStatus}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {cardTasksLoading && <div style={{ fontSize: 11, color: 'var(--t3)' }}>{t('lore.planBoard.card.loading', 'Загрузка…')}</div>}
-                  {!cardTasksLoading && cardTasks.length === 0 && (
-                    <div style={{ fontSize: 11, color: 'var(--t3)' }}>{t('lore.planBoard.card.noTasks', 'Задачи не заведены.')}</div>
-                  )}
-                  {!cardTasksLoading && cardTasks.length > 0 && (() => {
-                    const filtered = taskStatusFilter.size === 0
-                      ? cardTasks
-                      : cardTasks.filter(t => taskStatusFilter.has(taskTick(t.status_raw).status));
-                    return (
-                      <div style={{ overflowY: 'auto' }}>
-                        {filtered.map(t => {
-                          const meta    = statusMeta(taskTick(t.status_raw).status);
-                          const hasNote = !!(t.note_md && t.note_md.trim());
-                          const open    = selectedTaskUid === t.task_uid;
-                          return (
-                            <div key={t.task_uid}
-                              style={{ borderBottom: '1px solid color-mix(in srgb, var(--b2) 40%, transparent)' }}>
-                              <div
-                                onClick={() => hasNote && setSelectedTaskUid(open ? null : t.task_uid)}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 5,
-                                  fontSize: 11, lineHeight: 1.7, color: 'var(--t2)', minWidth: 0,
-                                  cursor: hasNote ? 'pointer' : 'default', padding: '0 2px',
-                                }}
-                              >
-                                <GameIcon slug={meta.icon} size={12} style={{ color: meta.color, flexShrink: 0 }} />
-                                <span style={{ color: 'var(--acc)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
-                                  {t.task_id}
-                                </span>
-                                {t.title && (
-                                  <span style={{ color: 'var(--t1)', flex: 1, overflow: 'hidden',
-                                    textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</span>
-                                )}
-                                <span style={{ marginLeft: 'auto', display: 'flex', gap: 4,
-                                  alignItems: 'center', flexShrink: 0 }}>
-                                  {t.effort_days != null && (
-                                    <span style={{ color: 'var(--t3)', fontSize: 9 }}>{formatEffortDays(t.effort_days)}</span>
-                                  )}
-                                  {hasNote && (
-                                    <span style={{ fontSize: 9, color: 'var(--t3)' }}>{open ? '▲' : '▼'}</span>
-                                  )}
-                                </span>
-                              </div>
-                              {open && hasNote && (
-                                <div className="lore-md" style={{
-                                  fontSize: 11, color: 'var(--t2)', lineHeight: 1.6,
-                                  padding: '4px 8px 8px 22px', overflowX: 'auto',
-                                  background: 'color-mix(in srgb, var(--b2) 50%, transparent)',
-                                }}
-                                  dangerouslySetInnerHTML={{ __html: marked.parse(t.note_md!) as string }}
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Milestone panel — "Что закрыть" */}
         {msPanel && (
@@ -1365,7 +958,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
               )}
               <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11 }}>{t('lore.planBoard.milestone.toClose', 'Что закрыть:')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', columnGap: 24 }}>
-                {renderMsGroups(msPanel, items, cps, setMsPanel, setSprintCard, t)}
+                {renderMsGroups(msPanel, sprints, cps, setMsPanel, onNavigateToSprint, t)}
               </div>
             </div>
           </div>
@@ -1384,36 +977,26 @@ function cleanLabel(s: string): string {
   return s.replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim();
 }
 
-// Infer status from label when HAS_STATUS edges are not populated (LAL-23a deferred)
-function inferStatus(item: LorePlanItem): string {
-  if (item.status) return item.status;
-  const l = item.label ?? '';
-  if (/DONE|✅|CLOSED|FINISHED/i.test(l)) return 'done';
-  if (/ACTIVE|IN.?PROGRESS|WIP/i.test(l)) return 'active';
-  if (/PARTIAL|ЧАСТИЧ|🟡/i.test(l)) return 'partial';
-  if (/BACKLOG|postpone|ОТЛОЖЕН|blocked|DEFERRED/i.test(l)) return 'blocked';
-  return 'todo';
-}
-
 function renderMsGroups(
   ms: LoreMilestone,
-  items: LorePlanItem[],
+  sprints: LoreSprintRow[],
   cps: LorePlanCheckpoint[],
   setMsPanel: (m: LoreMilestone | null) => void,
-  setSprintCard: (i: LorePlanItem | null) => void,
+  onNavigateToSprint: ((sprintId: string) => void) | undefined,
   t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
 ) {
-  const msItems = items.filter(it => it.milestone_id === ms.milestone_id);
-  const grouped = new Map<string, LorePlanItem[]>();
-  for (const item of msItems) {
-    const st = inferStatus(item);
+  const msSprints = sprints.filter(s => s.planned_milestone_id === ms.milestone_id);
+  const grouped = new Map<string, LoreSprintRow[]>();
+  for (const sprint of msSprints) {
+    const raw = sprint.status_raw;
+    const st = raw ? taskTick(raw).status : 'todo';
     if (!grouped.has(st)) grouped.set(st, []);
-    grouped.get(st)!.push(item);
+    grouped.get(st)!.push(sprint);
   }
   const msCps = cps.filter(cp => cp.milestone === ms.milestone_id);
   return (
     <>
-      {msItems.length === 0 && msCps.length === 0 && (
+      {msSprints.length === 0 && msCps.length === 0 && (
         <div style={{ color: 'var(--t3)', fontSize: 11, padding: '4px 0' }}>
           {t('lore.planBoard.milestone.noTasks', 'Нет связанных задач.')}
         </div>
@@ -1426,12 +1009,12 @@ function renderMsGroups(
             <GameIcon slug={statusMeta(st).icon} size={11} style={{ color: 'inherit' }} />
             {st} ({grp.length})
           </div>
-          {grp.map(it => (
-            <div key={it.item_id}
-              onClick={() => { setMsPanel(null); setSprintCard(it); }}
+          {grp.map(s => (
+            <div key={s.sprint_id}
+              onClick={() => { setMsPanel(null); onNavigateToSprint?.(s.sprint_id); }}
               style={{ paddingLeft: 8, color: 'var(--t2)', lineHeight: '1.7',
                 fontSize: 11, cursor: 'pointer' }}>
-              · {cleanLabel(it.label)}
+              · {cleanLabel(s.name)}
             </div>
           ))}
         </div>
@@ -1496,31 +1079,6 @@ function ResizeGrip({ onDown }: { onDown: (e: React.MouseEvent) => void }) {
   );
 }
 
-function TypeBadge({ isSprint }: { isSprint: boolean }) {
-  const { t } = useTranslation();
-  const c = isSprint ? 'var(--acc)' : 'var(--t3)';
-  return (
-    <span style={{
-      flexShrink: 0, alignSelf: 'flex-start', marginTop: 1,
-      fontSize: 9, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase',
-      padding: '2px 7px', borderRadius: 3,
-      background: `color-mix(in srgb, ${c} 16%, transparent)`,
-      color: c, border: `1px solid color-mix(in srgb, ${c} 35%, transparent)`,
-    }}>
-      {isSprint ? t('lore.planBoard.typeBadge.sprint', 'Спринт') : t('lore.planBoard.typeBadge.planItem', 'План-элемент')}
-    </span>
-  );
-}
-
-function PRow({ k, v, color }: { k: string; v: string; color?: string }) {
-  return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 5, fontSize: 11 }}>
-      <span style={{ color: 'var(--t3)', minWidth: 52, flexShrink: 0 }}>{k}</span>
-      <span style={{ color: color ?? 'var(--t1)', wordBreak: 'break-all' }}>{v}</span>
-    </div>
-  );
-}
-
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S = {
   root: {
@@ -1576,10 +1134,7 @@ const S = {
     flex: 1, fontWeight: 600, fontSize: 13, lineHeight: 1.35, color: 'var(--t1)',
     overflowWrap: 'anywhere' as const,
   },
-  panelBody:    { flex: 1, overflowY: 'auto' as const, padding: '12px 16px', display: 'flex', gap: 24, alignItems: 'stretch' },
   panelBodyCol: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
-  panelCol:     { flexShrink: 0, width: 286, borderRight: '1px solid var(--bd)', paddingRight: 22 },
-  panelTasks:   { flex: 1, minWidth: 0 },
   closeBtn: {
     background: 'transparent', border: 'none', cursor: 'pointer',
     color: 'var(--t3)', fontSize: 13, padding: '0 4px', flexShrink: 0,

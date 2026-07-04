@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice } from '../../api/lore';
+import { fetchLoreSlice, updateLoreDoc } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
+import TipTapField from './TipTapField';
 
 // Generic single-artifact viewer for runbooks / docs / quality-gates opened from
 // the unified list. Markdown bodies render via MartProse; KnowDoc HTML fragments
@@ -19,6 +20,7 @@ interface RawRow {
   kind?: string | null; has_ext_deps?: boolean | null;
   date_created?: string | null; valid_from?: string | null;
   content_md?: string | null; content_html?: string | null;
+  content_md_en?: string | null; content_md_ru?: string | null;
   component_id?: string | null; sprint_id?: string | null;
 }
 
@@ -54,6 +56,28 @@ const S = {
   empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
   sprintLink: { fontSize: 11, color: 'var(--t3)', marginBottom: 10 },
   sprintAnchor: { color: 'var(--acc)', cursor: 'pointer', textDecoration: 'underline' },
+  langToggle: { display: 'flex', gap: 4, marginBottom: 10 },
+  langBtn: (on: boolean) => ({
+    fontSize: 10, fontWeight: 600, padding: '2px 9px', borderRadius: 12, cursor: 'pointer',
+    border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
+    background: on ? 'color-mix(in srgb, var(--acc) 18%, transparent)' : 'transparent',
+    color: on ? 'var(--t1)' : 'var(--t3)',
+  }),
+  editBtn: {
+    marginLeft: 'auto', fontSize: 11, padding: '3px 10px', borderRadius: 3, cursor: 'pointer',
+    border: '1px solid var(--b3)', background: 'var(--b2)', color: 'var(--t2)',
+  },
+  editField: { marginBottom: 10 },
+  editLabel: { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.4, marginBottom: 4 },
+  editActions: { display: 'flex', gap: 8, marginTop: 10 },
+  saveBtn: {
+    fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 3, cursor: 'pointer',
+    border: '1px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 18%, transparent)', color: 'var(--acc)',
+  },
+  cancelBtn: {
+    fontSize: 11, padding: '4px 12px', borderRadius: 3, cursor: 'pointer',
+    border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t3)',
+  },
 };
 
 interface Props {
@@ -65,13 +89,18 @@ interface Props {
 }
 
 export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateSprint }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [row, setRow]         = useState<RawRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<QgMetricRow[] | null>(null);
+  const [lang, setLang]       = useState<'en' | 'ru'>(i18n.language?.startsWith('ru') ? 'ru' : 'en');
+  const [editing, setEditing] = useState(false);
+  const [draftEn, setDraftEn] = useState('');
+  const [draftRu, setDraftRu] = useState('');
+  const [saving, setSaving]   = useState(false);
 
   useEffect(() => {
-    setLoading(true); setRow(null); setMetrics(null);
+    setLoading(true); setRow(null); setMetrics(null); setEditing(false);
     const ctrl = new AbortController();
     fetchLoreSlice<RawRow>(SLICE[kind].slice, { id }, ctrl.signal)
       .then(rows => { if (!ctrl.signal.aborted) { setRow(rows[0] ?? null); setLoading(false); } })
@@ -92,6 +121,45 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   if (loading) return <div style={S.empty}>{t('lore.artifactDoc.loading', 'Загрузка {{id}}…', { id })}</div>;
   if (!row)    return <div style={S.empty}>{t('lore.artifactDoc.notFound', 'Не найдено: {{id}}', { id })}</div>;
 
+  const startEdit = () => {
+    setDraftEn(row.content_md_en ?? '');
+    setDraftRu(row.content_md_ru ?? '');
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      // `row` still holds the pre-edit values here (only updated after a
+      // successful save below), so it doubles as "was this field ever set".
+      // Send a field when either it now has content, or it HAD content and
+      // the user cleared it (an intentional clear) — only skip it when both
+      // the draft and the original were empty (never touched, don't turn a
+      // never-set null into ''). The backend's partial-upsert only skips a
+      // JSON-absent field, so sending both unconditionally regardless of
+      // prior state would overwrite an untouched null field with ''.
+      const sendEn = draftEn !== '' || !!row.content_md_en;
+      const sendRu = draftRu !== '' || !!row.content_md_ru;
+      await updateLoreDoc(id, {
+        ...(sendEn ? { content_md_en: draftEn } : {}),
+        ...(sendRu ? { content_md_ru: draftRu } : {}),
+      });
+      // Mirror the send condition exactly — a field the backend was told to
+      // skip (never touched) must stay whatever it already was locally too,
+      // not silently become '' just because the draft box started empty.
+      setRow(r => (r ? {
+        ...r,
+        content_md_en: sendEn ? draftEn : r.content_md_en,
+        content_md_ru: sendRu ? draftRu : r.content_md_ru,
+      } : r));
+      setEditing(false);
+    } catch (e) {
+      onError(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const title = row.name || row.title || id;
   const date  = row.date_created || row.valid_from;
   const metaBits: string[] = [];
@@ -107,6 +175,9 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
         {row.status && <span style={S.statusChip}>{row.status}</span>}
         <span style={S.title}>{title}</span>
         {row.component_id && <span style={S.comp}>{row.component_id}</span>}
+        {kind === 'doc' && !editing && (
+          <button style={S.editBtn} onClick={startEdit}>{t('lore.artifactDoc.edit', '✎ Редактировать')}</button>
+        )}
       </div>
       {metaBits.length > 0 && <div style={S.meta}>{metaBits.join(' · ')}</div>}
 
@@ -135,11 +206,55 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
       {row.description && <div style={S.desc}>{row.description}</div>}
 
-      {row.content_html
-        ? <SandboxedHtmlFrame html={row.content_html} title={title} />
-        : row.content_md
-          ? <MartProse text={row.content_md} />
-          : <div style={S.empty}>{t('lore.artifactDoc.emptyContent', 'Контент пуст.')}</div>}
+      {kind === 'doc' && editing ? (
+        <>
+          {row.content_html && !row.content_md_en && !row.content_md_ru && (
+            <div style={S.cdnBanner}>
+              {t(
+                'lore.artifactDoc.htmlLegacyWarning',
+                '⚠ Этот документ сейчас хранится как HTML. Если вы сохраните текст здесь (даже в одном из полей), отображение переключится на Markdown и текущий HTML-контент перестанет показываться (он не удаляется, просто больше не используется).'
+              )}
+            </div>
+          )}
+          <div style={S.editField}>
+            <div style={S.editLabel}>EN</div>
+            <TipTapField value={draftEn} onChange={setDraftEn} placeholder="English Markdown…" enableImages={false} enableHtmlMode={false} />
+          </div>
+          <div style={S.editField}>
+            <div style={S.editLabel}>RU</div>
+            <TipTapField value={draftRu} onChange={setDraftRu} placeholder="Русский Markdown…" enableImages={false} enableHtmlMode={false} />
+          </div>
+          <div style={S.editActions}>
+            <button style={S.saveBtn} disabled={saving} onClick={saveEdit}>
+              {saving ? t('lore.artifactDoc.saving', 'Сохранение…') : t('lore.artifactDoc.save', 'Сохранить')}
+            </button>
+            <button style={S.cancelBtn} disabled={saving} onClick={() => setEditing(false)}>
+              {t('lore.artifactDoc.cancel', 'Отмена')}
+            </button>
+          </div>
+        </>
+      ) : (() => {
+        const hasEn = !!row.content_md_en;
+        const hasRu = !!row.content_md_ru;
+        if (hasEn || hasRu) {
+          const preferred = lang === 'ru' ? row.content_md_ru : row.content_md_en;
+          const shown = preferred ?? row.content_md_en ?? row.content_md_ru;
+          return (
+            <>
+              {hasEn && hasRu && (
+                <div style={S.langToggle}>
+                  <button style={S.langBtn(lang === 'en')} onClick={() => setLang('en')}>EN</button>
+                  <button style={S.langBtn(lang === 'ru')} onClick={() => setLang('ru')}>RU</button>
+                </div>
+              )}
+              <MartProse text={shown ?? ''} />
+            </>
+          );
+        }
+        if (row.content_html) return <SandboxedHtmlFrame html={row.content_html} title={title} />;
+        if (row.content_md)   return <MartProse text={row.content_md} />;
+        return <div style={S.empty}>{t('lore.artifactDoc.emptyContent', 'Контент пуст.')}</div>;
+      })()}
 
       {kind === 'qg' && metrics && metrics.length > 0 && (
         <table style={S.table}>

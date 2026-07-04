@@ -81,7 +81,6 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE StatusMilestone  IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE StatusTask       IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE StatusPhase      IF NOT EXISTS EXTENDS V",
-        "CREATE VERTEX TYPE StatusPlanItem   IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE TrackType        IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE PlanTrack        IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE PlanSection      IF NOT EXISTS EXTENDS V",
@@ -97,7 +96,6 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE KnowMilestone    IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowPhase        IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowTask         IF NOT EXISTS EXTENDS V",
-        "CREATE VERTEX TYPE PlanItem         IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE PlanCheckpoint   IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE PlanVersion      IF NOT EXISTS EXTENDS V",
         // Hist (SCD2)
@@ -110,7 +108,6 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE KnowMilestoneHist IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowPhaseHist     IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowTaskHist      IF NOT EXISTS EXTENDS V",
-        "CREATE VERTEX TYPE PlanItemHist      IF NOT EXISTS EXTENDS V",
 
         // ── Edge types ────────────────────────────────────────────────────────
         "CREATE EDGE TYPE DECIDED_IN       IF NOT EXISTS EXTENDS E",
@@ -123,7 +120,6 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE BELONGS_TO       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE DOCUMENTED_IN    IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE TAGGED_WITH      IF NOT EXISTS EXTENDS E",
-        "CREATE EDGE TYPE CONTRIBUTES_TO   IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE RELEASED_IN      IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE INCLUDES         IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE GATES            IF NOT EXISTS EXTENDS E",
@@ -131,8 +127,6 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE IN_PHASE         IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE PARENT_OF        IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE USES             IF NOT EXISTS EXTENDS E",
-        "CREATE EDGE TYPE ON_TRACK         IF NOT EXISTS EXTENDS E",
-        "CREATE EDGE TYPE REPRESENTS       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE ON_MILESTONE     IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE TARGETS_MILESTONE IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE OF_TYPE          IF NOT EXISTS EXTENDS E",
@@ -154,7 +148,6 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON StatusMilestone (status_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON StatusTask      (status_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON StatusPhase     (status_id)    UNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON StatusPlanItem  (status_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON TrackType       (type_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanTrack       (track_id)     UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanSection     (section_id)   UNIQUE",
@@ -176,13 +169,8 @@ public class LoreSchemaInitializer {
         // bootstrap.sh against a live DB missing exactly these two properties.
         "CREATE PROPERTY KnowTask.task_id IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowTask        (task_id) NOTUNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON PlanItem        (item_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanCheckpoint  (checkpoint_id) UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanVersion     (version_id)   UNIQUE",
-
-        // ── Status valid_to index (current-row lookup for write-path SCD2) ─────
-        "CREATE PROPERTY StatusPlanItem.valid_to IF NOT EXISTS DATETIME",
-        "CREATE INDEX IF NOT EXISTS ON StatusPlanItem    (valid_to) NOTUNIQUE",
 
         // SPRINT_PLANITEM_RETIRE: valid_from had no formal property (unlike valid_to
         // below) — different write paths stored it as different internal types
@@ -205,7 +193,6 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowMilestoneHist.valid_to IF NOT EXISTS DATETIME",
         "CREATE PROPERTY KnowPhaseHist.valid_to     IF NOT EXISTS DATETIME",
         "CREATE PROPERTY KnowTaskHist.valid_to      IF NOT EXISTS DATETIME",
-        "CREATE PROPERTY PlanItemHist.valid_to      IF NOT EXISTS DATETIME",
         "CREATE INDEX IF NOT EXISTS ON KnowDecisionHist  (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowADRHist       (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSprintHist    (valid_to) NOTUNIQUE",
@@ -215,7 +202,6 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowMilestoneHist (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowPhaseHist     (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowTaskHist      (valid_to) NOTUNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON PlanItemHist      (valid_to) NOTUNIQUE",
 
         // ── Phase 5 (v1.2): KnowRunbook + QualityGate + QGMetric ────────────────
         "CREATE VERTEX TYPE KnowRunbook     IF NOT EXISTS EXTENDS V",
@@ -238,6 +224,12 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON QualityGate   (qg_id)        UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON QGMetric      (metric_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDoc       (doc_id)       UNIQUE",
+        // Bilingual Markdown body — content_html stays as a legacy field for the
+        // pre-existing HTML-fragment docs (rendered sandboxed); new/updated docs
+        // author clean Markdown per language instead (rendered in-DOM via
+        // MartProse — inherits the app's font, supports mermaid fences).
+        "CREATE PROPERTY KnowDoc.content_md_en IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDoc.content_md_ru IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowDocHist.valid_to IF NOT EXISTS DATETIME",
         "CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to) NOTUNIQUE",
 

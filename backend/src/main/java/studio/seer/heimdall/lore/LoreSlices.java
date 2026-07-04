@@ -294,21 +294,10 @@ public final class LoreSlices {
         slice("plan_sections",
             "SELECT section_id, label, start_week, end_week, color FROM PlanSection ORDER BY start_week");
 
-        slice("plan_items",
-            "SELECT item_id, label, " +
-            "out('ON_TRACK').track_id[0]      AS track_id, " +
-            "out('HAS_STATE').week_start[0]   AS week_start, " +
-            "out('HAS_STATE').week_end[0]     AS week_end, " +
-            "out('HAS_STATE').bar_color[0]    AS bar_color, " +
-            "out('HAS_STATUS').status[0]      AS status, " +
-            "out('REPRESENTS').sprint_id[0]        AS represents_sprint, " +
-            // Component links of the represented sprint (PlanItem→REPRESENTS→KnowSprint
-            // →BELONGS_TO→LoreComponent). A list; the frontend resolves project/group/
-            // icon from the `components` slice and picks the lane (primary = leaf).
-            "out('REPRESENTS').out('BELONGS_TO').component_id AS components, " +
-            "out('CONTRIBUTES_TO').milestone_id[0] AS milestone_id " +
-            "FROM PlanItem ORDER BY item_id",
-            List.of(), Map.of(), " LIMIT 300");
+        // SPRINT_PLANITEM_RETIRE/T-14: plan_items removed — PlanItem is retired
+        // (LorePlanBoard.tsx now reads the `sprints` slice directly, T-12/T-13).
+        // Historical PlanItem/PlanItemHist/StatusPlanItem data archived to
+        // docs/archive/planitem_archive_20260704.json before the type drop.
 
         slice("plan_checkpoints",
             "SELECT checkpoint_id, label, desc_md, " +
@@ -439,10 +428,10 @@ public final class LoreSlices {
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
-        slice("history_plan_item",
-            "SELECT valid_from, valid_to, week_start, week_end, content_hash " +
-            "FROM PlanItemHist WHERE in('HAS_STATE').item_id[0] = :id ORDER BY valid_from",
-            List.of("id"), Map.of(), "");
+        // SPRINT_PLANITEM_RETIRE/T-23: history_plan_item removed — PlanItem is
+        // deprecated (T-14) and this slice's only consumer (LoreEvolutionView.tsx)
+        // was removed in T-22. Sprint plan-field history now lives on
+        // KnowSprintHist, queryable via history_sprint.
 
         // ── §8 KnowDoc — HTML/MD document fragments (Phase 5 LAL-30) ────────
         // Schema added in Phase 5; slices registered now so the frontend can
@@ -457,8 +446,13 @@ public final class LoreSlices {
             " ORDER BY doc_id LIMIT 200");
 
         slice("doc_by_id",
-            "SELECT doc_id, title, kind, has_ext_deps, content_html, " +
-            "out('HAS_HIST').valid_from[0] AS valid_from " +
+            // NB: KnowDoc has no SCD2 write path (flat vertex, see KnowDocParser
+            // comment) — no HAS_STATE edge is ever created, so valid_from is
+            // always null today regardless of edge name. Named HAS_STATE for
+            // consistency with every other *_by_id slice (was HAS_HIST, a type
+            // never declared in the schema) in case doc history is added later.
+            "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
+            "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowDoc WHERE doc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 

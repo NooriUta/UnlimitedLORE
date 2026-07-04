@@ -391,10 +391,6 @@ public class AidaLoreResource {
         String now  = Instant.now().toString();
         String nsid = UUID.randomUUID().toString();
         return switch (req.entity_type()) {
-            case "plan_item" -> updatePlanItemStatus(req.id(), req.status(), now, nsid);
-            // Sprint is the source of truth: after flipping the sprint's status, push
-            // the same status token onto every plan_item that REPRESENTS it, so plan
-            // bars never drift (covers both MCP lore_set_status and the UI).
             // Read the currently-open row's plan fields (priority/planned_*/track_id)
             // BEFORE the SCD2 flip, then restore them onto the freshly-opened row —
             // updateScd2Status's INSERT only carries state_uid/status_raw/valid_from,
@@ -632,52 +628,6 @@ public class AidaLoreResource {
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
     }
 
-    private Uni<Response> updatePlanItemStatus(String itemId, String newStatus,
-                                                String now, String nsid) {
-        MartQuery readQ = new MartQuery("sql",
-            "SELECT status_id, status FROM StatusPlanItem " +
-            "WHERE in('HAS_STATUS').item_id[0] = :id AND valid_to IS NULL LIMIT 1",
-            Map.of("id", itemId), -1);
-
-        return client.query(db, basicAuth(), readQ)
-            .chain(res -> {
-                List<Map<String, Object>> rows =
-                    res.result() != null ? res.result() : List.of();
-                final String oldSoid   = rows.isEmpty() ? null
-                    : String.valueOf(rows.get(0).getOrDefault("status_id", ""));
-                final String oldStatus = rows.isEmpty() ? null
-                    : (String) rows.get(0).get("status");
-
-                Uni<LoreCommandClient.LoreCommandResult> step2 =
-                    (oldSoid != null && !oldSoid.isEmpty())
-                        ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            "UPDATE StatusPlanItem SET valid_to = :now WHERE status_id = :soid",
-                            Map.of("now", now, "soid", oldSoid)))
-                        : Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
-
-                return step2
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "INSERT INTO StatusPlanItem " +
-                            "SET status_id = :nsid, status = :nstatus, valid_from = :now",
-                            Map.of("nsid", nsid, "nstatus", newStatus, "now", now))))
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "CREATE EDGE HAS_STATUS " +
-                            "FROM (SELECT FROM PlanItem WHERE item_id = :id) " +
-                            "TO (SELECT FROM StatusPlanItem WHERE status_id = :nsid)",
-                            Map.of("id", itemId, "nsid", nsid))))
-                    .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
-                        true, "plan_item", itemId, oldStatus, newStatus,
-                        new StatusRevision(now, null)))));
-            })
-            .onFailure().recoverWithItem(ex -> {
-                LOG.warnf("[LORE STATUS] item=%s: %s", itemId, ex.getMessage());
-                return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
-            });
-    }
-
     // ── Admin: ingest pipeline (Phase 2, LAL-13) ─────────────────────────────
 
     @POST
@@ -708,8 +658,6 @@ public class AidaLoreResource {
         return noStore(Response.ok(result));
     }
 
-    // ── Write-path: register a sprint for a plan-item placeholder ────────────
-
     // ── Release write-path records ────────────────────────────────────────────
     public record ReleaseCreateRequest(
         String release_id, String release_date, String git_tag,
@@ -722,51 +670,10 @@ public class AidaLoreResource {
         String release_id, List<Integer> pr_numbers, List<String> sprint_ids,
         String git_project) {}
 
-    public record SprintRegisterRequest(String item_id, String sprint_id, String name, String status) {}
     public record SprintCreateRequest(String sprint_id, String name, String status,
-        String item_id, String plan_id, String priority, String outcome_md, String context_md) {}
+        String plan_id, String priority, String outcome_md, String context_md) {}
 
-    @POST
-    @Path("sprint")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response registerSprint(SprintRegisterRequest req, @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.item_id() == null || req.item_id().isBlank()) {
-            return badParams("item_id required");
-        }
-        if (!SAFE_ID.matcher(req.item_id()).matches()
-                || (req.sprint_id() != null && !req.sprint_id().isBlank()
-                    && !SAFE_ID.matcher(req.sprint_id()).matches())) {
-            return badParams("item_id / sprint_id contain illegal characters");
-        }
-        String status = (req.status() == null || req.status().isBlank()) ? "active" : req.status();
-        if (!PLAN_STATUSES.contains(status)) {
-            return badParams("status must be one of: " + PLAN_STATUSES);
-        }
-        try {
-            LoreIngestService.RegisterSprintResult r =
-                ingestService.registerSprint(req.item_id(), req.sprint_id(), req.name(), status);
-            if (!r.ok()) {
-                return noStore(Response.status(Response.Status.NOT_FOUND)
-                    .entity(new LoreError("NOT_FOUND", r.error())));
-            }
-            java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
-            out.put("ok", true);
-            out.put("item_id", r.itemId());
-            out.put("sprint_id", r.sprintId());
-            out.put("created", r.created());
-            return noStore(Response.ok(out));
-        } catch (Exception e) {
-            LOG.warnf("[LORE SPRINT REGISTER] %s: %s", req.item_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── Write-path: create sprint directly (no plan-item required) ──────────
+    // ── Write-path: create sprint directly ───────────────────────────────────
 
     @POST
     @Path("sprint/create")
@@ -788,11 +695,10 @@ public class AidaLoreResource {
         }
         try {
             LoreIngestService.CreateSprintResult r = ingestService.createSprint(
-                req.sprint_id(), req.name(), status, req.item_id(), req.plan_id(), req.priority(), req.outcome_md(), req.context_md());
+                req.sprint_id(), req.name(), status, req.plan_id(), req.priority(), req.outcome_md(), req.context_md());
             java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
-            out.put("item_id", r.itemId());
             out.put("created", r.created());
             return noStore(Response.ok(out));
         } catch (Exception e) {
@@ -2985,7 +2891,7 @@ public class AidaLoreResource {
                 sprintId,
                 String.format("QG Housekeeping — Week %02d %d",
                     today.get(wf.weekOfWeekBasedYear()), today.get(wf.weekBasedYear())),
-                "active", null, null, null, null,
+                "active", null, null, null,
                 "Автосоздан при первом промоуте QG-рекомендации на этой ISO-неделе " +
                 "(lore/qg/promote). Явный sprint_id в вызове переопределяет этот дефолт.");
         }
@@ -3186,8 +3092,12 @@ public class AidaLoreResource {
     }
 
     // ── KnowDoc write ────────────────────────────────────────────────────────
+    // content_html is legacy (pre-existing HTML-fragment docs, rendered sandboxed);
+    // content_md_en/content_md_ru are the current authoring path — clean Markdown
+    // per language, rendered in-DOM (inherits app font, supports mermaid fences).
     public record DocUpsertRequest(String doc_id, String title, String kind,
-        Boolean has_ext_deps, String component_id, String file_path, String content_html) {}
+        Boolean has_ext_deps, String component_id, String file_path, String content_html,
+        String content_md_en, String content_md_ru) {}
 
     @POST
     @Path("doc")
@@ -3214,6 +3124,8 @@ public class AidaLoreResource {
             if (req.component_id() != null) { dcsql.append(", component_id=:cid");      p.put("cid",      req.component_id()); }
             if (req.file_path() != null)    { dcsql.append(", file_path=:fp");          p.put("fp",       req.file_path()); }
             if (req.content_html() != null) { dcsql.append(", content_html=:content");  p.put("content",  req.content_html()); }
+            if (req.content_md_en() != null) { dcsql.append(", content_md_en=:md_en");  p.put("md_en",    req.content_md_en()); }
+            if (req.content_md_ru() != null) { dcsql.append(", content_md_ru=:md_ru");  p.put("md_ru",    req.content_md_ru()); }
             dcsql.append(" UPSERT WHERE doc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dcsql.toString(), p)).await().indefinitely();

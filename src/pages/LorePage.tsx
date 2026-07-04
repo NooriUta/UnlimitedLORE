@@ -24,7 +24,7 @@ import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
 import LoreMilestonesView  from '../components/lore/LoreMilestonesView';
 import LoreQualityGateList from '../components/lore/LoreQualityGateList';
 import LoreQGDetail        from '../components/lore/LoreQGDetail';
-import LoreRunbookList     from '../components/lore/LoreRunbookList';
+import LoreArtifactList, { type ArtifactKind } from '../components/lore/LoreArtifactList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
@@ -35,6 +35,10 @@ type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
   | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
+
+// Module-scope constant (not recreated per render) — ADR/QG already have their
+// own top-level nav sections, so «Знания» only needs runbook+doc.
+const KNOWLEDGE_ARTIFACT_KINDS: ArtifactKind[] = ['runbook', 'doc'];
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string }[] = [
@@ -217,6 +221,11 @@ export default function LorePage() {
   const dragRef = useRef<{ x: number; w: number } | null>(null);
 
   const isMasterDetail = MASTER_DETAIL.includes(section);
+  // The narrow-screen master-detail flow below keys off `passport`, but
+  // «Знания» selects its detail view via `kind`+`art` (openArt) instead —
+  // without this, selecting a runbook/doc on a narrow screen never revealed
+  // the detail pane (passport stayed empty forever).
+  const hasDetailSelection = section === 'knowledge' ? !!(artKind && artId) : !!passport;
 
   // Sections where the global search bar is actually passed to children
   const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
@@ -809,7 +818,7 @@ export default function LorePage() {
         {/* MOB-04: on narrow screens the side-by-side pair becomes a two-step
             flow — list full-width until something is selected, then the detail
             takes the whole screen with a "← к списку" bar (clearItem). */}
-        {isMasterDetail && (!narrow || !passport) && (
+        {isMasterDetail && (!narrow || !hasDetailSelection) && (
           <>
           <div style={{ ...S.listPanel, width: narrow ? '100%' : listW }} className="lore-panel-scroll">
             {/* List panel header — search only for ADRs; sprints use the full-width bar above */}
@@ -939,9 +948,12 @@ export default function LorePage() {
               />
             )}
             {section === 'knowledge' && (
-              <LoreRunbookList
+              <LoreArtifactList
+                kinds={KNOWLEDGE_ARTIFACT_KINDS}
                 onError={handleFetchError}
-                onOpen={id => openArt('runbook', id)}
+                onOpen={(kind, id) => { if (kind === 'runbook' || kind === 'doc') openArt(kind, id); }}
+                selectedKind={artKind}
+                selectedId={artId}
               />
             )}
           </div>
@@ -955,14 +967,15 @@ export default function LorePage() {
         )}
 
         {/* ── Content area ─────────────────────────────────────────────────── */}
-        {!(narrow && isMasterDetail && !passport) && (
+        {!(narrow && isMasterDetail && !hasDetailSelection) && (
         // S.content is a ROW flex — with the narrow back-button (width:100%)
         // inside it, the button ate the row and pushed the detail out of view
         // (blank ADR page bug). Column direction when the back bar is shown.
-        <div style={narrow && isMasterDetail && passport ? { ...S.content, flexDirection: 'column' } : S.content}>
+        <div style={narrow && isMasterDetail && hasDetailSelection ? { ...S.content, flexDirection: 'column' } : S.content}>
           {/* adrs' own passport view already renders a "← К списку" — skip the
-              generic bar there to avoid two stacked back controls. */}
-          {narrow && isMasterDetail && passport && section !== 'adrs' && (
+              generic bar there to avoid two stacked back controls; knowledge's
+              LoreArtifactDoc has its own back button too. */}
+          {narrow && isMasterDetail && hasDetailSelection && section !== 'adrs' && section !== 'knowledge' && (
             <button
               onClick={clearItem}
               style={{

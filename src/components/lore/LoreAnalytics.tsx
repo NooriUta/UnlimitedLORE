@@ -47,7 +47,7 @@ interface FleetInvariant {
   value: number | null; status: string;
 }
 
-const TODAY = new Date('2026-06-30');
+const TODAY = new Date();
 
 // Distinct colors for git-project groups.
 const PROJECT_COLORS = ['var(--acc)', 'var(--suc)', 'var(--inf)', 'var(--wrn)', 'var(--dng)', 'var(--t2)'];
@@ -614,8 +614,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     const month = RU_MONTHS[m[2].toLowerCase()];
     if (month === undefined) return null;
     const target = new Date(2026, month, parseInt(m[1]));
-    const today  = new Date('2026-06-30');
-    return Math.round((target.getTime() - today.getTime()) / 86400000);
+    return Math.round((target.getTime() - TODAY.getTime()) / 86400000);
   }, [currentMilestone]);
 
   // ── Plan health / forecast (must run before early returns — hooks order) ────

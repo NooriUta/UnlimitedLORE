@@ -502,13 +502,6 @@ export async function editLoreTask(
   return res.json() as Promise<LoreTaskWriteResponse>;
 }
 
-export interface LoreSprintRegisterResponse {
-  ok: boolean;
-  item_id: string;
-  sprint_id: string;
-  created: boolean;
-}
-
 /** Link or unlink a KnowSprint to a KnowGitProject (POST /lore/sprint/project). */
 export async function linkTaskComponent(
   taskUid: string,
@@ -688,11 +681,11 @@ export async function updateSprintPlan(
   return res.json() as Promise<{ ok: boolean; sprint_id: string }>;
 }
 
-/** Create a KnowSprint directly — no plan-item required (POST /lore/sprint/create). */
+/** Create a KnowSprint directly (POST /lore/sprint/create). */
 export async function createLoreSprint(payload: {
-  sprint_id: string; name: string; status?: string; item_id?: string; plan_id?: string;
+  sprint_id: string; name: string; status?: string; plan_id?: string;
   priority?: string; outcome_md?: string; context_md?: string;
-}): Promise<{ ok: boolean; sprint_id: string; item_id: string | null; created: boolean }> {
+}): Promise<{ ok: boolean; sprint_id: string; created: boolean }> {
   const res = await fetch(`${LORE_BASE}/sprint/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
@@ -700,27 +693,7 @@ export async function createLoreSprint(payload: {
   });
   assertJson(res);
   if (!res.ok) return parseError(res);
-  return res.json() as Promise<{ ok: boolean; sprint_id: string; item_id: string | null; created: boolean }>;
-}
-
-/** Register a real sprint for a standalone plan-item placeholder (POST /lore/sprint). */
-export async function registerLoreSprint(
-  itemId: string,
-  opts?: { sprintId?: string; name?: string; status?: string },
-): Promise<LoreSprintRegisterResponse> {
-  const res = await fetch(`${LORE_BASE}/sprint`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify({
-      item_id: itemId,
-      sprint_id: opts?.sprintId ?? null,
-      name: opts?.name ?? null,
-      status: opts?.status ?? 'active',
-    }),
-  });
-  assertJson(res);
-  if (!res.ok) return parseError(res);
-  return res.json() as Promise<LoreSprintRegisterResponse>;
+  return res.json() as Promise<{ ok: boolean; sprint_id: string; created: boolean }>;
 }
 
 export interface LoreRelease {
@@ -744,8 +717,6 @@ export interface LoreHistRow {
   content_hash: string | null;
   source_commit: string | null;
   status_raw?: string | null;
-  week_start?: number | null;
-  week_end?: number | null;
 }
 
 export interface LorePlanVersion {
@@ -757,13 +728,16 @@ export interface LorePlanVersion {
 export interface LoreKnowDocRow {
   doc_id: string;
   title: string | null;
-  kind: 'fragment' | 'page' | null;
+  // e.g. "page", "fragment", "guide", "reference", "research", "product", "site", "prompt"
+  kind: string | null;
   has_ext_deps: boolean | null;
   component_id: string | null;
 }
 
 export interface LoreKnowDoc extends LoreKnowDocRow {
   content_html: string | null;
+  content_md_en: string | null;
+  content_md_ru: string | null;
   valid_from: string | null;
 }
 
@@ -773,6 +747,22 @@ export async function fetchLoreDoc(
 ): Promise<LoreKnowDoc | null> {
   const rows = await fetchLoreSlice<LoreKnowDoc>('doc_by_id', { id: docId }, signal);
   return rows[0] ?? null;
+}
+
+// Partial upsert — only supplied fields are set (same semantics as
+// lore_create_doc/POST /lore/doc), so an EN-only save doesn't clear RU.
+export async function updateLoreDoc(
+  docId: string,
+  fields: { title?: string; content_md_en?: string; content_md_ru?: string },
+): Promise<{ ok: boolean; doc_id: string }> {
+  const res = await fetch(`${LORE_BASE}/doc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ doc_id: docId, ...fields }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; doc_id: string }>;
 }
 
 // ── QG dashboard types ──────────────────────────────────────────────────────

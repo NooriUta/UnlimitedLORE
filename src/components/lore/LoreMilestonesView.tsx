@@ -9,7 +9,7 @@ import { statusMeta } from './lore-status';
 import LoreSkeleton from './LoreSkeleton';
 import TipTapField from './TipTapField';
 
-const TODAY = new Date('2026-06-30');
+const TODAY = new Date();
 const RU_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 const RU_MONTHS: Record<string, number> = {
   'янв': 0, 'фев': 1, 'мар': 2, 'апр': 3, 'май': 4, 'мая': 4, 'июн': 5,
