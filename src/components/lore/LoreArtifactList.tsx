@@ -74,22 +74,29 @@ interface Props {
   onOpen: (kind: ArtifactKind, id: string) => void;
   selectedKind?: string;
   selectedId?: string;
+  // Restrict which artifact types are fetched/shown. Omit to show all five —
+  // pass a subset when this list is embedded somewhere that already has its
+  // own dedicated section for some kinds (e.g. ADR and QG each have a
+  // top-level nav section, so the «Знания» embedding only wants runbook+doc).
+  kinds?: ArtifactKind[];
 }
 
-export default function LoreArtifactList({ onError, onOpen, selectedKind, selectedId }: Props) {
+export default function LoreArtifactList({ onError, onOpen, selectedKind, selectedId, kinds }: Props) {
   const { t } = useTranslation();
-  const ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] = [
+  const ALL_ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] = [
     { kind: 'adr',     label: 'ADR', color: '#4a90d9', icon: 'scroll-quill' },
     { kind: 'spec',    label: t('lore.artifactList.kindSpec', 'Спеки'), color: '#4caf50', icon: 'white-book' },
     { kind: 'runbook', label: t('lore.artifactList.kindRunbook', 'Runbooks'), color: '#e8923a', icon: 'spell-book' },
     { kind: 'doc',     label: t('lore.artifactList.kindDoc', 'Документы'), color: '#a974d6', icon: 'papers' },
     { kind: 'qg',      label: t('lore.artifactList.kindQg', 'Quality Gates'), color: '#3fb8a0', icon: 'checkered-flag' },
   ];
-  const KIND_META = Object.fromEntries(ARTIFACT_KINDS.map(k => [k.kind, k])) as Record<ArtifactKind, typeof ARTIFACT_KINDS[number]>;
+  const kindsFilter = useMemo(() => (kinds ? new Set(kinds) : null), [kinds]);
+  const ARTIFACT_KINDS = kindsFilter ? ALL_ARTIFACT_KINDS.filter(k => kindsFilter.has(k.kind)) : ALL_ARTIFACT_KINDS;
+  const KIND_META = Object.fromEntries(ALL_ARTIFACT_KINDS.map(k => [k.kind, k])) as Record<ArtifactKind, typeof ALL_ARTIFACT_KINDS[number]>;
   const [items, setItems]     = useState<Artifact[]>([]);
   const [comps, setComps]     = useState<LoreComponent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enabled, setEnabled] = useState<Set<ArtifactKind>>(new Set(ARTIFACT_KINDS_META.map(k => k.kind)));
+  const [enabled, setEnabled] = useState<Set<ArtifactKind>>(new Set(ARTIFACT_KINDS.map(k => k.kind)));
   const [compSel, setCompSel] = useState<Set<string>>(new Set());
   const [q, setQ]             = useState('');
 
@@ -99,12 +106,13 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
     // Resilient load: a slice that errors (e.g. a not-yet-ingested type → 502)
     // contributes nothing rather than failing the whole list.
     const safe = <T,>(p: Promise<T[]>): Promise<T[]> => p.catch(() => [] as T[]);
+    const want = (k: ArtifactKind) => !kindsFilter || kindsFilter.has(k);
     Promise.all([
-      safe(fetchLoreSlice<LoreAdrRow>('adrs', undefined, ctrl.signal)),
-      safe(fetchLoreSlice<LoreSpecRow>('specs', undefined, ctrl.signal)),
-      safe(fetchLoreSlice<RunbookRow>('runbooks', undefined, ctrl.signal)),
-      safe(fetchLoreSlice<LoreKnowDocRow>('docs', undefined, ctrl.signal)),
-      safe(fetchLoreSlice<QgRow>('quality_gates', undefined, ctrl.signal)),
+      want('adr')     ? safe(fetchLoreSlice<LoreAdrRow>('adrs', undefined, ctrl.signal))          : Promise.resolve([]),
+      want('spec')    ? safe(fetchLoreSlice<LoreSpecRow>('specs', undefined, ctrl.signal))         : Promise.resolve([]),
+      want('runbook') ? safe(fetchLoreSlice<RunbookRow>('runbooks', undefined, ctrl.signal))        : Promise.resolve([]),
+      want('doc')     ? safe(fetchLoreSlice<LoreKnowDocRow>('docs', undefined, ctrl.signal))        : Promise.resolve([]),
+      want('qg')      ? safe(fetchLoreSlice<QgRow>('quality_gates', undefined, ctrl.signal))        : Promise.resolve([]),
       safe(fetchLoreSlice<LoreComponent>('components', undefined, ctrl.signal)),
     ])
       .then(([adrs, specs, runbooks, docs, qgs, components]) => {
@@ -120,7 +128,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
       })
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
-  }, [onError]);
+  }, [onError, kindsFilter]);
 
   const nameOf = useMemo(() => {
     const m: Record<string, string> = {};

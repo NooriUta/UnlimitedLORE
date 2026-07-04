@@ -24,7 +24,7 @@ import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
 import LoreMilestonesView  from '../components/lore/LoreMilestonesView';
 import LoreQualityGateList from '../components/lore/LoreQualityGateList';
 import LoreQGDetail        from '../components/lore/LoreQGDetail';
-import LoreRunbookList     from '../components/lore/LoreRunbookList';
+import LoreArtifactList    from '../components/lore/LoreArtifactList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
@@ -939,9 +939,12 @@ export default function LorePage() {
               />
             )}
             {section === 'knowledge' && (
-              <LoreRunbookList
+              <LoreArtifactList
+                kinds={['runbook', 'doc']}
                 onError={handleFetchError}
-                onOpen={id => openArt('runbook', id)}
+                onOpen={(kind, id) => openArt(kind as DocKind, id)}
+                selectedKind={artKind}
+                selectedId={artId}
               />
             )}
           </div>
