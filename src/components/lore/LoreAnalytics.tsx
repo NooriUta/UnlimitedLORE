@@ -420,14 +420,21 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return map;
   }, [sprintRows]);
 
-  // open sprints belonging to the current milestone — used for forecast
+  // open sprints belonging to the current milestone — used for forecast.
+  // Only falls back to the system-wide openSprintCount when there's no
+  // resolvable current milestone at all (data not loaded yet). A resolved
+  // milestone with genuinely zero planned sprints must flow through to 0 —
+  // substituting the global count there was a leftover pre-SPRINT_PLANITEM_RETIRE
+  // idiom (used to guard against an empty PlanItem-derived list meaning "not
+  // loaded"), but with the plain planned_milestone_id field, empty just as
+  // often means "really zero" — that's what caused this header to show a
+  // stale "3" while the drilldown below it correctly showed 0.
   const milestoneOpenCount = useMemo(() => {
     if (!data || !milestoneList.length) return openSprintCount;
     // find current milestone (first non-done)
     const cur = milestoneList.find(m => !(m.goal_md?.includes('✅') ?? false));
-    const curPlanIds = cur ? (plannedByMilestone.get(cur.milestone_id) ?? []) : [];
-    if (!cur || !curPlanIds.length) return openSprintCount;
-    const ids = new Set(curPlanIds);
+    if (!cur) return openSprintCount;
+    const ids = new Set(plannedByMilestone.get(cur.milestone_id) ?? []);
     return data.by_sprint.filter(s => {
       const k = classify(s.status_raw);
       return k !== 'done' && k !== 'cancelled' && ids.has(s.sprint_id);
@@ -1056,14 +1063,19 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return m;
   }, [sprintRows]);
 
-  // current milestone open sprints for drilldown
+  // current milestone open sprints for drilldown. Falls back to "show every
+  // open sprint" only when there's no resolvable current milestone at all —
+  // a resolved milestone with genuinely zero planned sprints must show zero,
+  // not every open sprint system-wide (the inverse of milestoneOpenCount's
+  // bug above: that one over-counted via a stale fallback, this one would
+  // over-list via the same stale "empty means not loaded" assumption).
   const milestoneOpenSprints = useMemo(() => {
-    const milestoneIds = new Set(currentMilestone ? (plannedByMilestone.get(currentMilestone.milestone_id) ?? []) : []);
+    const milestoneIds = currentMilestone ? new Set(plannedByMilestone.get(currentMilestone.milestone_id) ?? []) : null;
     return (data?.by_sprint ?? [])
       .filter(s => {
         const k = classify(s.status_raw);
         const allTasksDone = s.task_total > 0 && s.task_done >= s.task_total;
-        return k !== 'done' && k !== 'cancelled' && !allTasksDone && (milestoneIds.size === 0 || milestoneIds.has(s.sprint_id));
+        return k !== 'done' && k !== 'cancelled' && !allTasksDone && (milestoneIds === null || milestoneIds.has(s.sprint_id));
       })
       .map(s => ({
         ...s,
