@@ -26,8 +26,8 @@ export function registerLoreWrite(server: McpServer): void {
     'Set the status of a LORE entity (SCD2 transition). Mutates the shared ' +
       'system_aida_lore — use deliberately. Returns the new revision.',
     {
-      entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint', 'phase']),
-      id: z.string().describe('entity id (e.g. sprint_id, task_uid, item_id, phase_uid "SPRINT_X/PHASE_A")'),
+      entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
+      id: z.string().describe('entity id (e.g. sprint_id, task_uid, phase_uid "SPRINT_X/PHASE_A")'),
       status: LORE_STATUS,
     },
     async ({ entity_type, id, status }) => {
@@ -111,59 +111,28 @@ export function registerLoreWrite(server: McpServer): void {
 
   server.tool(
     'lore_create_sprint',
-    'Create a new KnowSprint vertex directly — no plan-item required. ' +
-      'Idempotent (upsert by sprint_id). Seeds an initial HAS_STATE history row. ' +
-      'Use lore_register_sprint instead when a plan-item placeholder already exists ' +
-      '(it also wires the Gantt bar). Mutates system_aida_lore.',
+    'Create a new KnowSprint vertex directly. Idempotent (upsert by sprint_id). ' +
+      'Seeds an initial HAS_STATE history row. Mutates system_aida_lore.',
     {
       sprint_id:  z.string().describe('unique sprint id, e.g. "SPRINT_SITE_EXTRACT"'),
       name:       z.string().describe('human-readable sprint name'),
       status:     LORE_STATUS.optional().default('todo'),
-      item_id:    z.string().optional()
-                   .describe('plan-item id for the Gantt bar; default = sprint_id with SPRINT_ stripped'),
       plan_id:    z.string().optional().describe('optional plan this sprint belongs to'),
       priority:   z.string().optional().describe('e.g. "high", "critical"'),
       outcome_md: z.string().optional().describe('sprint goal / outcome in Markdown'),
       context_md: z.string().optional().describe('background context for the sprint — WHY it exists, key decisions, related sprints, links to docs. Shown in sprint detail panel.'),
     },
-    async ({ sprint_id, name, status, item_id, plan_id, priority, outcome_md, context_md }) => {
+    async ({ sprint_id, name, status, plan_id, priority, outcome_md, context_md }) => {
       try {
         return json(await lorePost('/lore/sprint/create', {
           sprint_id, name,
           status: status ?? 'todo',
-          item_id: item_id ?? null,
           plan_id: plan_id ?? null,
           priority: priority ?? null,
           outcome_md: outcome_md ?? null,
           context_md: context_md ?? null,
         }));
       } catch (e) { return err(e); }
-    },
-  );
-
-  server.tool(
-    'lore_register_sprint',
-    'Register a real sprint for a standalone plan-item placeholder: create a ' +
-      'KnowSprint, seed its initial status, and link the plan-item via REPRESENTS ' +
-      '(the bar flips from placeholder to sprint). Idempotent — a plan-item that ' +
-      'already represents a sprint is returned unchanged. Mutates system_aida_lore.',
-    {
-      item_id: z.string().describe('plan-item id (from plan_items) to back with a sprint'),
-      sprint_id: z.string().optional().describe('explicit sprint id; default SPRINT_<ITEM_ID>'),
-      name: z.string().optional().describe('sprint name; default the plan-item label'),
-      status: z
-        .enum(['todo', 'active', 'partial', 'done', 'blocked', 'high', 'cancelled'])
-        .optional()
-        .describe('initial status, default "active"'),
-    },
-    async ({ item_id, sprint_id, name, status }) => {
-      try {
-        return json(await lorePost('/lore/sprint', {
-          item_id, sprint_id: sprint_id ?? null, name: name ?? null, status: status ?? 'active',
-        }));
-      } catch (e) {
-        return err(e);
-      }
     },
   );
 
@@ -281,34 +250,12 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
-    'lore_update_plan_item',
-    'Link (or unlink) a PlanItem to a KnowMilestone via a CONTRIBUTES_TO edge. ' +
-      'Architecture: Milestone ← CONTRIBUTES_TO ← PlanItem → REPRESENTS → KnowSprint. ' +
-      'This is the canonical way to assign a sprint to a milestone when the sprint has a plan-item. ' +
-      'For sprints without a plan-item bridge use lore_link_sprint_milestone (TARGETS_MILESTONE direct edge). ' +
-      'Use action="remove" to unlink (omit milestone_id to remove ALL milestone links from this item). ' +
-      'Idempotent on add. Returns {ok, item_id, milestone_id, action}.',
-    {
-      item_id:      z.string().describe('plan-item id, e.g. "SPRINT_LORE_QG_INTEGRATION"'),
-      milestone_id: z.string().optional().describe('milestone id to link; omit only when action="remove" to clear all'),
-      action:       z.enum(['add', 'remove']).optional().default('add'),
-    },
-    async ({ item_id, milestone_id, action }) => {
-      try {
-        return json(await lorePost('/lore/plan-item/milestone', {
-          item_id, milestone_id: milestone_id ?? null, action: action ?? 'add',
-        }));
-      } catch (e) { return err(e); }
-    },
-  );
-
-  server.tool(
     'lore_create_milestone',
     'Create a KnowMilestone (upsert by milestone_id) — was previously ONLY reachable via raw HTTP ' +
       'or the UI form, no MCP tool existed. Partial calls are safe: unset label/week/date_display/' +
       'priority are left untouched (LH-44). goal_md is written to the open KnowMilestoneHist row ' +
-      '(created on first fill). To attach sprints, use lore_link_sprint_milestone or ' +
-      'lore_update_plan_item (PlanItem bridge) — this tool only creates the milestone itself.',
+      '(created on first fill). To attach sprints, use lore_link_sprint_milestone — this tool only ' +
+      'creates the milestone itself.',
     {
       milestone_id: z.string().describe('e.g. "M4"'),
       label:        z.string().optional().describe('short display label'),
@@ -355,9 +302,10 @@ export function registerLoreWrite(server: McpServer): void {
 
   server.tool(
     'lore_link_sprint_milestone',
-    'Link (or unlink) a KnowSprint directly to a KnowMilestone via a TARGETS_MILESTONE edge. ' +
-      'Use this for sprints that do NOT have a PlanItem bridge (most sprints). ' +
-      'For sprints that DO have a PlanItem, prefer lore_update_plan_item (CONTRIBUTES_TO path). ' +
+    'Link (or unlink) a KnowSprint directly to a KnowMilestone via a TARGETS_MILESTONE edge — ' +
+      'the canonical way to assign a sprint to a milestone (factual attachment; for the separately-' +
+      'tracked "planned" attachment use lore_update_sprint\'s planned_milestone_id via ' +
+      'POST /lore/sprint/plan, no MCP tool wired to it yet). ' +
       'Idempotent on add. Use action="remove" to unlink. Returns {ok, sprint_id, milestone_id, action}.',
     {
       sprint_id:    z.string().describe('sprint id, e.g. "SPRINT_LORE_QG_INTEGRATION"'),
@@ -380,7 +328,7 @@ export function registerLoreWrite(server: McpServer): void {
       'Errors are collected per-item without aborting the rest. ' +
       'Returns {ok, updated, errors[]}.',
     {
-      entity_type: z.enum(['plan_item', 'sprint', 'task', 'checkpoint', 'phase']),
+      entity_type: z.enum(['sprint', 'task', 'checkpoint', 'phase']),
       ids:         z.array(z.string()).describe('list of entity ids'),
       status:      LORE_STATUS,
     },

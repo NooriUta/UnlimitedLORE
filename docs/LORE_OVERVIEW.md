@@ -69,7 +69,6 @@ ArcadeDB (граф), читается/пишется через собствен
 | `KnowRunbook` | Плейбук/раннбук | `runbook_id` | `KnowRunbookHist` |
 | `KnowDoc` | Прочий документ | `doc_id` | `KnowDocHist` |
 | `LoreComponent` | Компонент платформы (HND, DALI, CHUR, …) | `component_id` | — |
-| `PlanItem` | Элемент дорожной карты (Plan board) | `item_id` | `PlanItemHist` |
 | `QualityGate` | Quality Gate (проверяемый инвариант-набор) | `qg_id` | — |
 | `ClRoutineRun` / `ClRoutineMetric` | Прогон QG-рутины / метрика прогона | `run_id` / `metric_id` | — (durable, не SCD2) |
 

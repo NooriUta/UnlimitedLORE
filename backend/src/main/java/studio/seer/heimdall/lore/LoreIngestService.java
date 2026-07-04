@@ -55,9 +55,7 @@ public class LoreIngestService {
         int tasks, int findings, int releases,
         List<String> errors) {}
 
-    public record RegisterSprintResult(
-        boolean ok, String sprintId, String itemId, boolean created, String error) {}
-    public record CreateSprintResult(String sprintId, String itemId, boolean created) {}
+    public record CreateSprintResult(String sprintId, boolean created) {}
 
     // Canonical status token → status_raw, mirrors AidaLoreResource.SCD2_STATUS_RAW.
     private static final Map<String, String> SPRINT_STATUS_RAW = Map.of(
@@ -66,70 +64,15 @@ public class LoreIngestService {
         "cancelled", "🚫 CANCELLED");
 
     /**
-     * Register a real sprint for a standalone plan-item placeholder:
-     * upsert KnowSprint, seed an initial KnowSprintHist + HAS_STATE state row,
-     * and link the PlanItem via a REPRESENTS edge. Idempotent — a plan-item that
-     * already represents a sprint is returned unchanged.
-     */
-    public RegisterSprintResult registerSprint(String itemId, String sprintIdOverride,
-                                               String name, String status) {
-        List<Map<String, Object>> rows = queryRows(
-            "SELECT label, out('REPRESENTS').sprint_id AS rep FROM PlanItem WHERE item_id = :item",
-            Map.of("item", itemId));
-        if (rows.isEmpty()) {
-            return new RegisterSprintResult(false, null, itemId, false, "plan item not found: " + itemId);
-        }
-        Object rep = rows.get(0).get("rep");
-        if (rep instanceof List<?> l && !l.isEmpty()) {
-            return new RegisterSprintResult(true, String.valueOf(l.get(0)), itemId, false, null);
-        }
-        Object labelObj = rows.get(0).get("label");
-        String label = labelObj != null ? labelObj.toString() : itemId;
-
-        String sprintId = (sprintIdOverride != null && !sprintIdOverride.isBlank())
-            ? sprintIdOverride
-            : "SPRINT_" + itemId.toUpperCase(java.util.Locale.ROOT).replaceAll("[^A-Z0-9_]", "_");
-        String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "active" : status, "🔄 IN PROGRESS");
-        String nm = (name != null && !name.isBlank()) ? name : label;
-
-        exec("UPDATE KnowSprint SET sprint_id = :sid, name = :name, status_raw = :sraw " +
-                "UPSERT WHERE sprint_id = :sid",
-            Map.of("sid", sprintId, "name", nm, "sraw", statusRaw));
-
-        List<Map<String, Object>> st = queryRows(
-            "SELECT out('HAS_STATE').size() AS n FROM KnowSprint WHERE sprint_id = :sid",
-            Map.of("sid", sprintId));
-        long stateN = (!st.isEmpty() && st.get(0).get("n") instanceof Number num) ? num.longValue() : 0;
-        if (stateN == 0) {
-            String stateUid = java.util.UUID.randomUUID().toString();
-            String now = java.time.Instant.now().toString();
-            exec("INSERT INTO KnowSprintHist SET state_uid = :su, status_raw = :sraw, valid_from = :now",
-                Map.of("su", stateUid, "sraw", statusRaw, "now", now));
-            exec("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sp) " +
-                    "TO (SELECT FROM KnowSprintHist WHERE state_uid = :su)",
-                Map.of("sp", sprintId, "su", stateUid));
-            exec("UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp",
-                Map.of("now", now, "sp", sprintId));
-        }
-        exec("CREATE EDGE REPRESENTS FROM (SELECT FROM PlanItem WHERE item_id = :item) " +
-                "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
-            Map.of("item", itemId, "sid", sprintId));
-        LOG.infof("[LORE] registered sprint %s for plan-item %s", sprintId, itemId);
-        return new RegisterSprintResult(true, sprintId, itemId, true, null);
-    }
-
-    /**
-     * Create a KnowSprint directly without a plan-item. Idempotent — if the sprint
-     * already exists its fields are updated but no duplicate HAS_STATE row is created.
-     */
-    /**
-     * Create a KnowSprint + PlanItem simultaneously, then link them via REPRESENTS.
-     * This makes the sprint appear on the Gantt without a pre-existing plan-item.
-     * item_id defaults to sprint_id with "SPRINT_" prefix stripped.
-     * All operations are idempotent — safe to call multiple times.
+     * Create a KnowSprint directly — no plan-item involved (SPRINT_PLANITEM_RETIRE/T-14:
+     * this used to also upsert a PlanItem + REPRESENTS edge "so the sprint appears on
+     * the Gantt", but LorePlanBoard reads the sprints slice directly since T-12/T-13,
+     * so that side effect only kept growing PlanItem's row count for no reason).
+     * Idempotent — if the sprint already exists its fields are updated but no
+     * duplicate HAS_STATE row is created.
      */
     public CreateSprintResult createSprint(String sprintId, String name, String status,
-                                           String itemIdOverride, String planId,
+                                           String planId,
                                            String priority, String outcomeMd, String contextMd) {
         String statusRaw = SPRINT_STATUS_RAW.getOrDefault(status == null ? "todo" : status, "📋 PLANNED");
         String nm = (name != null && !name.isBlank()) ? name : sprintId;
@@ -167,32 +110,8 @@ public class LoreIngestService {
                 Map.of("now", now, "sp", sprintId));
         }
 
-        // 3. Upsert PlanItem so the sprint appears on the Gantt
-        String itemId = (itemIdOverride != null && !itemIdOverride.isBlank())
-            ? itemIdOverride
-            : sprintId.replaceFirst("(?i)^SPRINT_", "");
-        java.util.Map<String, Object> piP = new java.util.LinkedHashMap<>();
-        piP.put("iid", itemId); piP.put("lbl", nm);
-        StringBuilder piSet = new StringBuilder(
-            "UPDATE PlanItem SET item_id=:iid, label=:lbl");
-        if (planId != null) { piSet.append(", plan_id=:pid"); piP.put("pid", planId); }
-        if (status != null) { piSet.append(", status=:st");   piP.put("st",  status); }
-        piSet.append(" UPSERT WHERE item_id=:iid");
-        exec(piSet.toString(), piP);
-
-        // 4. REPRESENTS edge (idempotent — skip if already exists)
-        List<Map<String, Object>> rep = queryRows(
-            "SELECT out('REPRESENTS').size() AS n FROM PlanItem WHERE item_id=:iid",
-            Map.of("iid", itemId));
-        long repN = (!rep.isEmpty() && rep.get(0).get("n") instanceof Number num) ? num.longValue() : 0;
-        if (repN == 0) {
-            exec("CREATE EDGE REPRESENTS FROM (SELECT FROM PlanItem WHERE item_id=:iid) " +
-                    "TO (SELECT FROM KnowSprint WHERE sprint_id=:sid)",
-                Map.of("iid", itemId, "sid", sprintId));
-        }
-
-        LOG.infof("[LORE] created sprint %s + plan-item %s (new=%b)", sprintId, itemId, created);
-        return new CreateSprintResult(sprintId, itemId, created);
+        LOG.infof("[LORE] created sprint %s (new=%b)", sprintId, created);
+        return new CreateSprintResult(sprintId, created);
     }
 
     public List<Map<String, Object>> queryPublic(String sql, Map<String, Object> params) {
