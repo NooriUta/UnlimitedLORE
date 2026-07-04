@@ -404,7 +404,18 @@ public class AidaLoreResource {
                                     "sprint_id", req.id(), req.status(), now, nsid)
                                   .chain(resp -> resp.getStatus() >= 300
                                     ? Uni.createFrom().item(resp)
-                                    : restoreSprintPlanFields(req.id(), fields).replaceWith(resp)));
+                                    // Best-effort: the status flip above already succeeded and is
+                                    // the primary outcome the caller asked for. A failure restoring
+                                    // plan fields (priority/planned_*/track_id/pr_refs) onto the new
+                                    // hist row is a secondary consistency nicety — surface it in
+                                    // logs, but don't turn an already-successful status change into
+                                    // an opaque 500 for the caller.
+                                    : restoreSprintPlanFields(nsid, fields)
+                                        .onFailure().invoke(ex -> LOG.warnf(
+                                            "[LORE STATUS] sprint=%s plan-field restore failed (status flip itself succeeded): %s",
+                                            req.id(), ex.getMessage()))
+                                        .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
+                                        .replaceWith(resp)));
             case "task"      -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
                                     "task_uid", req.id(), req.status(), now, nsid);
             // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
@@ -482,12 +493,15 @@ public class AidaLoreResource {
     // all live on the open KnowSprintHist row. Any SCD2 transition that inserts a
     // fresh row (status flip via updateScd2Status, or an explicit plan edit via
     // /lore/sprint/plan) must carry these forward, or they silently disappear.
+    // pr_refs joined this list after a live bug: a status flip right after
+    // lore_update_sprint_refs wiped the just-added PR links, because the
+    // freshly-opened hist row only ever inherited the plan fields above.
     private static final List<String> SPRINT_PLAN_FIELDS = List.of(
-        "priority", "planned_start_date", "planned_end_date", "planned_milestone_id", "track_id");
+        "priority", "planned_start_date", "planned_end_date", "planned_milestone_id", "track_id", "pr_refs");
 
     private Uni<Map<String, Object>> readSprintPlanFields(String sprintId) {
         MartQuery q = new MartQuery("sql",
-            "SELECT priority, planned_start_date, planned_end_date, planned_milestone_id, track_id " +
+            "SELECT priority, planned_start_date, planned_end_date, planned_milestone_id, track_id, pr_refs " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sprintId), -1);
         return client.query(db, basicAuth(), q).map(res -> {
@@ -496,8 +510,15 @@ public class AidaLoreResource {
         });
     }
 
+    // Targets the new hist row by state_uid (the same value used to CREATE EDGE
+    // HAS_STATE moments earlier in updateScd2Status) rather than re-traversing
+    // in('HAS_STATE') — a live bug showed that traversal-based UPDATE right
+    // after a CREATE EDGE on the same connection can find zero rows (the edge
+    // not yet visible to a fresh traversal query), silently failing to carry
+    // pr_refs forward and surfacing as an opaque 500. state_uid is a plain
+    // indexed property lookup, no edge traversal required, so it can't miss.
     private Uni<LoreCommandClient.LoreCommandResult> restoreSprintPlanFields(
-            String sprintId, Map<String, Object> fields) {
+            String nsid, Map<String, Object> fields) {
         if (fields.isEmpty()) return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
         StringBuilder sb = new StringBuilder("UPDATE KnowSprintHist SET ");
         Map<String, Object> p = new LinkedHashMap<>();
@@ -507,9 +528,9 @@ public class AidaLoreResource {
         String set = sb.toString().replaceAll(",\\s*$", "");
         if (set.equals("UPDATE KnowSprintHist SET"))
             return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
-        p.put("sid", sprintId);
+        p.put("nsid", nsid);
         return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-            set + " WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL", p));
+            set + " WHERE state_uid = :nsid", p));
     }
 
     // ── Write-path: real-SCD2 edit of sprint plan fields ─────────────────────
@@ -544,7 +565,7 @@ public class AidaLoreResource {
 
         MartQuery readQ = new MartQuery("sql",
             "SELECT @rid AS rid, status_raw, priority, planned_start_date, planned_end_date, " +
-            "planned_milestone_id, track_id FROM KnowSprintHist " +
+            "planned_milestone_id, track_id, pr_refs FROM KnowSprintHist " +
             "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sid), -1);
 
@@ -562,6 +583,7 @@ public class AidaLoreResource {
             next.put("planned_end_date",     req.planned_end_date()     != null ? req.planned_end_date()     : cur.get("planned_end_date"));
             next.put("planned_milestone_id", req.planned_milestone_id() != null ? req.planned_milestone_id() : cur.get("planned_milestone_id"));
             next.put("track_id",             req.track_id()             != null ? req.track_id()             : cur.get("track_id"));
+            next.put("pr_refs",              cur.get("pr_refs"));
 
             Uni<LoreCommandClient.LoreCommandResult> closeOld = oldRid.startsWith("#")
                 ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -578,7 +600,7 @@ public class AidaLoreResource {
                     "INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
                     "planned_end_date = :planned_end_date, planned_milestone_id = :planned_milestone_id, " +
-                    "track_id = :track_id",
+                    "track_id = :track_id, pr_refs = :pr_refs",
                     insertParams)))
                 .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) " +
@@ -3835,6 +3857,19 @@ public class AidaLoreResource {
             // object_type='probe' is a one-off schema-verification artifact (ARC-02/ARC-03) —
             // never a real BRAGI measurement, always excluded.
             where.append(" AND object_type != 'probe'");
+            // V2-01 (SPRINT_BRAGI_ARCHIVE_V2): pre-policy seed/test artifacts, filtered at
+            // read time — MetricSnapshot is TIMESERIES (sealed storage): DELETE reports
+            // success but the row physically stays, so there is no real purge path.
+            // qa-e2e/test-mcp03/PUB-QA-E2E are test-only labels, safe to exclude outright.
+            // The 27.06 demo package and the 02.07 ai_share/KW-08 batch used real ongoing
+            // source labels (yandex-metrika/tg-stats/habr-stats/ai-tracker-3549/yandex-serp)
+            // that WILL carry real future data too, so those are pinned to their exact
+            // whole-second seed timestamp instead — a real capture always has sub-second
+            // precision, so this can never collide with genuine future measurements.
+            where.append(" AND object_id != 'PUB-QA-E2E'");
+            where.append(" AND source NOT IN ['qa-e2e', 'test-mcp03']");
+            where.append(" AND NOT (ts = '2026-06-27 12:00:00' AND object_id IN ['PUB-04', 'PUB-04-VC', 'PUB-04-TG', 'PUB-05', 'PUB-05-HABR'])");
+            where.append(" AND NOT (ts = '2026-07-02 09:00:00' AND (object_type = 'competitor' OR object_id = 'KW-08'))");
 
             String sql;
             if (agg != null && !agg.isBlank()) {
