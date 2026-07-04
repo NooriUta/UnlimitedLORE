@@ -778,6 +778,22 @@ export async function fetchLoreDoc(
   return rows[0] ?? null;
 }
 
+// Partial upsert — only supplied fields are set (same semantics as
+// lore_create_doc/POST /lore/doc), so an EN-only save doesn't clear RU.
+export async function updateLoreDoc(
+  docId: string,
+  fields: { title?: string; content_md_en?: string; content_md_ru?: string },
+): Promise<{ ok: boolean; doc_id: string }> {
+  const res = await fetch(`${LORE_BASE}/doc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify({ doc_id: docId, ...fields }),
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return res.json() as Promise<{ ok: boolean; doc_id: string }>;
+}
+
 // ── QG dashboard types ──────────────────────────────────────────────────────
 
 export interface LoreQGViolation {

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice } from '../../api/lore';
+import { fetchLoreSlice, updateLoreDoc } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
+import TipTapField from './TipTapField';
 
 // Generic single-artifact viewer for runbooks / docs / quality-gates opened from
 // the unified list. Markdown bodies render via MartProse; KnowDoc HTML fragments
@@ -62,6 +63,21 @@ const S = {
     background: on ? 'color-mix(in srgb, var(--acc) 18%, transparent)' : 'transparent',
     color: on ? 'var(--t1)' : 'var(--t3)',
   }),
+  editBtn: {
+    marginLeft: 'auto', fontSize: 11, padding: '3px 10px', borderRadius: 3, cursor: 'pointer',
+    border: '1px solid var(--b3)', background: 'var(--b2)', color: 'var(--t2)',
+  },
+  editField: { marginBottom: 10 },
+  editLabel: { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.4, marginBottom: 4 },
+  editActions: { display: 'flex', gap: 8, marginTop: 10 },
+  saveBtn: {
+    fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 3, cursor: 'pointer',
+    border: '1px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 18%, transparent)', color: 'var(--acc)',
+  },
+  cancelBtn: {
+    fontSize: 11, padding: '4px 12px', borderRadius: 3, cursor: 'pointer',
+    border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t3)',
+  },
 };
 
 interface Props {
@@ -78,9 +94,13 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<QgMetricRow[] | null>(null);
   const [lang, setLang]       = useState<'en' | 'ru'>(i18n.language?.startsWith('ru') ? 'ru' : 'en');
+  const [editing, setEditing] = useState(false);
+  const [draftEn, setDraftEn] = useState('');
+  const [draftRu, setDraftRu] = useState('');
+  const [saving, setSaving]   = useState(false);
 
   useEffect(() => {
-    setLoading(true); setRow(null); setMetrics(null);
+    setLoading(true); setRow(null); setMetrics(null); setEditing(false);
     const ctrl = new AbortController();
     fetchLoreSlice<RawRow>(SLICE[kind].slice, { id }, ctrl.signal)
       .then(rows => { if (!ctrl.signal.aborted) { setRow(rows[0] ?? null); setLoading(false); } })
@@ -101,6 +121,25 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   if (loading) return <div style={S.empty}>{t('lore.artifactDoc.loading', 'Загрузка {{id}}…', { id })}</div>;
   if (!row)    return <div style={S.empty}>{t('lore.artifactDoc.notFound', 'Не найдено: {{id}}', { id })}</div>;
 
+  const startEdit = () => {
+    setDraftEn(row.content_md_en ?? '');
+    setDraftRu(row.content_md_ru ?? '');
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      await updateLoreDoc(id, { content_md_en: draftEn, content_md_ru: draftRu });
+      setRow(r => (r ? { ...r, content_md_en: draftEn, content_md_ru: draftRu } : r));
+      setEditing(false);
+    } catch (e) {
+      onError(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const title = row.name || row.title || id;
   const date  = row.date_created || row.valid_from;
   const metaBits: string[] = [];
@@ -116,6 +155,9 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
         {row.status && <span style={S.statusChip}>{row.status}</span>}
         <span style={S.title}>{title}</span>
         {row.component_id && <span style={S.comp}>{row.component_id}</span>}
+        {kind === 'doc' && !editing && (
+          <button style={S.editBtn} onClick={startEdit}>{t('lore.artifactDoc.edit', '✎ Редактировать')}</button>
+        )}
       </div>
       {metaBits.length > 0 && <div style={S.meta}>{metaBits.join(' · ')}</div>}
 
@@ -144,7 +186,26 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
       {row.description && <div style={S.desc}>{row.description}</div>}
 
-      {(() => {
+      {kind === 'doc' && editing ? (
+        <>
+          <div style={S.editField}>
+            <div style={S.editLabel}>EN</div>
+            <TipTapField value={draftEn} onChange={setDraftEn} placeholder="English Markdown…" enableImages={false} enableHtmlMode={false} />
+          </div>
+          <div style={S.editField}>
+            <div style={S.editLabel}>RU</div>
+            <TipTapField value={draftRu} onChange={setDraftRu} placeholder="Русский Markdown…" enableImages={false} enableHtmlMode={false} />
+          </div>
+          <div style={S.editActions}>
+            <button style={S.saveBtn} disabled={saving} onClick={saveEdit}>
+              {saving ? t('lore.artifactDoc.saving', 'Сохранение…') : t('lore.artifactDoc.save', 'Сохранить')}
+            </button>
+            <button style={S.cancelBtn} disabled={saving} onClick={() => setEditing(false)}>
+              {t('lore.artifactDoc.cancel', 'Отмена')}
+            </button>
+          </div>
+        </>
+      ) : (() => {
         const hasEn = !!row.content_md_en;
         const hasRu = !!row.content_md_ru;
         if (hasEn || hasRu) {
