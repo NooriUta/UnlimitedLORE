@@ -24,7 +24,7 @@ import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
 import LoreMilestonesView  from '../components/lore/LoreMilestonesView';
 import LoreQualityGateList from '../components/lore/LoreQualityGateList';
 import LoreQGDetail        from '../components/lore/LoreQGDetail';
-import LoreArtifactList    from '../components/lore/LoreArtifactList';
+import LoreArtifactList, { type ArtifactKind } from '../components/lore/LoreArtifactList';
 import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDoc';
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
@@ -35,6 +35,10 @@ type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
   | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
+
+// Module-scope constant (not recreated per render) — ADR/QG already have their
+// own top-level nav sections, so «Знания» only needs runbook+doc.
+const KNOWLEDGE_ARTIFACT_KINDS: ArtifactKind[] = ['runbook', 'doc'];
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string }[] = [
@@ -940,9 +944,9 @@ export default function LorePage() {
             )}
             {section === 'knowledge' && (
               <LoreArtifactList
-                kinds={['runbook', 'doc']}
+                kinds={KNOWLEDGE_ARTIFACT_KINDS}
                 onError={handleFetchError}
-                onOpen={(kind, id) => openArt(kind as DocKind, id)}
+                onOpen={(kind, id) => { if (kind === 'runbook' || kind === 'doc') openArt(kind, id); }}
                 selectedKind={artKind}
                 selectedId={artId}
               />

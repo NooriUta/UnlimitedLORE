@@ -874,7 +874,7 @@ export function registerLoreWrite(server: McpServer): void {
       'over content_html, which is a legacy field kept for pre-existing HTML-fragment docs.',
     {
       doc_id:         z.string().describe('unique id, e.g. "engine_specs_auth" (/ → _)'),
-      title:          z.string(),
+      title:          z.string().optional().describe('required on first creation; omit on a content-only update to leave the existing title unchanged'),
       kind:           z.string().optional().describe('e.g. "page", "fragment", "guide", "reference", "research", "product", "site", "prompt"'),
       has_ext_deps:   z.boolean().optional().describe('true when content_html references external CDN'),
       component_id:   z.string().optional(),

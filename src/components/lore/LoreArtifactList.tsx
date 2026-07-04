@@ -22,6 +22,21 @@ interface Artifact {
 }
 
 interface RunbookRow { runbook_id: string; name: string | null; area: string | null; date_created: string | null; }
+
+function exportRunbooksMd(rows: { id: string; title: string; component: string | null }[]) {
+  const byArea: Record<string, typeof rows> = {};
+  rows.forEach(r => { (byArea[r.component ?? '—'] ??= []).push(r); });
+  const date = new Date().toISOString().slice(0, 10);
+  const lines = [`# Runbook Checklist — ${date}`, ''];
+  Object.entries(byArea).sort(([a], [b]) => a.localeCompare(b)).forEach(([area, rbs]) => {
+    lines.push(`\n## ${area.toUpperCase()}\n`);
+    rbs.forEach(r => lines.push(`- [ ] **${r.title}** \`${r.id}\``));
+  });
+  const a = document.createElement('a');
+  a.href = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(lines.join('\n'));
+  a.download = `runbooks-checklist-${date}.md`;
+  a.click();
+}
 interface QgRow { qg_id: string; name: string | null; component_id: string | null; status: string | null; date_created: string | null; }
 
 export const ARTIFACT_KINDS_META: { kind: ArtifactKind; color: string; icon: string }[] = [
@@ -67,6 +82,10 @@ const S = {
   noComp: { fontSize: 9, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
   date:   { color: 'var(--t3)', fontSize: 10, flexShrink: 0, width: 72, textAlign: 'right' as const },
   empty:  { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  exportBtn: {
+    flexShrink: 0, height: 24, padding: '0 8px', border: '1px solid var(--b3)', borderRadius: 3,
+    cursor: 'pointer', fontSize: 10, background: 'var(--b2)', color: 'var(--t2)', fontFamily: 'inherit',
+  },
 };
 
 interface Props {
@@ -90,7 +109,12 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
     { kind: 'doc',     label: t('lore.artifactList.kindDoc', 'Документы'), color: '#a974d6', icon: 'papers' },
     { kind: 'qg',      label: t('lore.artifactList.kindQg', 'Quality Gates'), color: '#3fb8a0', icon: 'checkered-flag' },
   ];
-  const kindsFilter = useMemo(() => (kinds ? new Set(kinds) : null), [kinds]);
+  // kinds is typically passed as a fresh array literal on every parent render
+  // (e.g. kinds={['runbook','doc']}) — keying on the array reference would
+  // recreate kindsFilter (and retrigger the fetch effect) on every render.
+  // Key on its contents instead.
+  const kindsKey = kinds ? kinds.join(',') : '';
+  const kindsFilter = useMemo(() => (kinds ? new Set(kinds) : null), [kindsKey]);
   const ARTIFACT_KINDS = kindsFilter ? ALL_ARTIFACT_KINDS.filter(k => kindsFilter.has(k.kind)) : ALL_ARTIFACT_KINDS;
   const KIND_META = Object.fromEntries(ALL_ARTIFACT_KINDS.map(k => [k.kind, k])) as Record<ArtifactKind, typeof ALL_ARTIFACT_KINDS[number]>;
   const [items, setItems]     = useState<Artifact[]>([]);
@@ -99,6 +123,12 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
   const [enabled, setEnabled] = useState<Set<ArtifactKind>>(new Set(ARTIFACT_KINDS.map(k => k.kind)));
   const [compSel, setCompSel] = useState<Set<string>>(new Set());
   const [q, setQ]             = useState('');
+
+  // Keep `enabled` in sync if the set of kinds this instance shows ever changes.
+  useEffect(() => {
+    setEnabled(new Set(kindsFilter ? ALL_ARTIFACT_KINDS.filter(k => kindsFilter.has(k.kind)).map(k => k.kind) : ALL_ARTIFACT_KINDS.map(k => k.kind)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kindsKey]);
 
   useEffect(() => {
     setLoading(true);
@@ -120,7 +150,10 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
         const all: Artifact[] = [
           ...adrs.map(r => ({ kind: 'adr' as const, id: r.adr_id, title: r.adr_id, component: r.component ?? null, date: r.date_created ?? null })),
           ...specs.map(r => ({ kind: 'spec' as const, id: r.spec_id, title: (r.title && r.title.trim()) || r.spec_id.replace(/[_-]+/g, ' '), component: r.component_id ?? null, date: null })),
-          ...runbooks.map(r => ({ kind: 'runbook' as const, id: r.runbook_id, title: r.name || r.runbook_id, component: null, date: r.date_created ?? null })),
+          // Runbooks have no component_id — reuse the `component` slot for
+          // `area` so the existing "Модуль" facet also restores the
+          // area-based filtering the old LoreRunbookList had.
+          ...runbooks.map(r => ({ kind: 'runbook' as const, id: r.runbook_id, title: r.name || r.runbook_id, component: r.area ?? null, date: r.date_created ?? null })),
           ...docs.map(r => ({ kind: 'doc' as const, id: r.doc_id, title: (r.title && r.title.trim()) || r.doc_id, component: r.component_id ?? null, date: null })),
           ...qgs.map(r => ({ kind: 'qg' as const, id: r.qg_id, title: r.name || r.qg_id, component: r.component_id ?? null, date: r.date_created ?? null })),
         ];
@@ -217,12 +250,23 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
             </div>
           </div>
         )}
-        <input
-          style={S.search}
-          placeholder={t('lore.artifactList.searchPlaceholder', 'Поиск по названию…')}
-          value={q}
-          onChange={e => setQ(e.target.value)}
-        />
+        <div style={S.chipRow}>
+          <input
+            style={S.search}
+            placeholder={t('lore.artifactList.searchPlaceholder', 'Поиск по названию…')}
+            value={q}
+            onChange={e => setQ(e.target.value)}
+          />
+          {enabled.has('runbook') && shown.some(a => a.kind === 'runbook') && (
+            <button
+              style={S.exportBtn}
+              title={t('lore.artifactList.exportRunbooksTitle', 'Экспорт чеклиста runbooks в Markdown')}
+              onClick={() => exportRunbooksMd(shown.filter(a => a.kind === 'runbook'))}
+            >
+              ↓ MD
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={S.list}>

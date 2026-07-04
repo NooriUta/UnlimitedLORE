@@ -148,7 +148,8 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
         const hasEn = !!row.content_md_en;
         const hasRu = !!row.content_md_ru;
         if (hasEn || hasRu) {
-          const shown = (lang === 'ru' ? row.content_md_ru : row.content_md_en) ?? row.content_md_en ?? row.content_md_ru;
+          const preferred = lang === 'ru' ? row.content_md_ru : row.content_md_en;
+          const shown = preferred ?? row.content_md_en ?? row.content_md_ru;
           return (
             <>
               {hasEn && hasRu && (
