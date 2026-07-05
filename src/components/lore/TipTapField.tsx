@@ -130,6 +130,9 @@ function injectTiptapCssOnce(): void {
     .bragi-tiptap .ProseMirror blockquote { border-left: 3px solid var(--acc); margin: 8px 0; padding: 2px 12px; color: var(--t2); }
     .bragi-tiptap .ProseMirror hr { border: none; border-top: 1px solid var(--b3); margin: 12px 0; }
     .bragi-tiptap .ProseMirror a { color: var(--acc); }
+    .bragi-tiptap .ProseMirror pre { background: var(--b2); border: 1px solid var(--b3); border-radius: 6px; padding: 8px 10px; margin: 8px 0; overflow-x: auto; }
+    .bragi-tiptap .ProseMirror pre code { background: none; border: none; padding: 0; }
+    .bragi-tiptap .ProseMirror code { background: var(--b2); border: 1px solid var(--b3); border-radius: 3px; padding: 0 4px; }
   `;
   document.head.appendChild(style);
   tiptapCssInjected = true;
