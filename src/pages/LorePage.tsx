@@ -219,6 +219,14 @@ export default function LorePage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [listW, setListW] = useState(LIST_W_DEFAULT);
   const dragRef = useRef<{ x: number; w: number } | null>(null);
+  // «Знания»: LoreArtifactList's Тип/Модуль chip header portals into this
+  // full-width slot instead of staying confined to the narrow resizable list
+  // column — same "full-width bar above the master-detail row" layout the
+  // sprints filter bar already uses, without lifting that list's fetch/state
+  // ownership out of the component (a callback ref, not prop-drilling,
+  // because the portal target must exist as a real DOM node before
+  // LoreArtifactList can render into it).
+  const [knowledgeFilterBar, setKnowledgeFilterBar] = useState<HTMLDivElement | null>(null);
 
   const isMasterDetail = MASTER_DETAIL.includes(section);
   // The narrow-screen master-detail flow below keys off `passport`, but
@@ -364,6 +372,12 @@ export default function LorePage() {
 
       {/* ── Horizontal section nav ─────────────────────────────────────────── */}
       {sectionNav}
+
+      {/* ── Knowledge filter bar: Тип/Модуль chips portal in here from
+          LoreArtifactList's own header (see knowledgeFilterBar above) ─── */}
+      {section === 'knowledge' && (
+        <div ref={setKnowledgeFilterBar} style={{ flexShrink: 0, borderBottom: '1px solid var(--bd)' }} />
+      )}
 
       {/* ── Sprint filter bar: статусы + пресеты + приоритет + даты + без релиза ─ */}
       {section === 'sprints' && (
@@ -954,6 +968,7 @@ export default function LorePage() {
                 onOpen={(kind, id) => { if (kind === 'runbook' || kind === 'doc') openArt(kind, id); }}
                 selectedKind={artKind}
                 selectedId={artId}
+                headerContainer={knowledgeFilterBar}
               />
             )}
           </div>
