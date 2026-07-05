@@ -737,6 +737,9 @@ export interface LoreKnowDocRow {
   sort_order: number | null;
   parent_doc_id: string | null;
   child_ids: string[] | null;
+  // Same edges ADR uses: BELONGS_TO (component_id above, edge-backed via
+  // COALESCE with the legacy plain field) and IMPLEMENTED_IN (sprint_ids).
+  sprint_ids: string[] | null;
 }
 
 export interface LoreKnowDoc extends LoreKnowDocRow {

@@ -931,6 +931,38 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_doc_component',
+    'Link (or unlink) a KnowDoc to a LoreComponent via a BELONGS_TO edge, same pattern as ' +
+      'lore_link_adr_component. Idempotent on add. Use action="remove" to unlink.',
+    {
+      doc_id:       z.string().describe('e.g. "guide_onboarding"'),
+      component_id: z.string().describe('e.g. "HOUND"'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ doc_id, component_id, action }) => {
+      try {
+        return json(await lorePost('/lore/doc/component', { doc_id, component_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_doc_sprint',
+    'Link (or unlink) a KnowDoc to a KnowSprint via an IMPLEMENTED_IN edge, same pattern as ' +
+      'lore_link_adr\'s sprint branch. Idempotent on add. Use action="remove" to unlink.',
+    {
+      doc_id:    z.string().describe('e.g. "guide_onboarding"'),
+      sprint_id: z.string().describe('e.g. "SPRINT_LORE_KNOWDOC_TREE"'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ doc_id, sprint_id, action }) => {
+      try {
+        return json(await lorePost('/lore/doc/sprint', { doc_id, sprint_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_delete_doc',
     'PERMANENTLY delete a KnowDoc: cascades edges first (ArcadeDB cannot DELETE VERTEX with edges), ' +
       'then any KnowDocHist rows, then the vertex. Irreversible — for stale duplicates and empty ' +
