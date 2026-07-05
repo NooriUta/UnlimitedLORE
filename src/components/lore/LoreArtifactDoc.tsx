@@ -94,6 +94,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<QgMetricRow[] | null>(null);
   const [lang, setLang]       = useState<'en' | 'ru'>(i18n.language?.startsWith('ru') ? 'ru' : 'en');
+  const [editLang, setEditLang] = useState<'en' | 'ru'>('en');
   const [editing, setEditing] = useState(false);
   const [draftEn, setDraftEn] = useState('');
   const [draftRu, setDraftRu] = useState('');
@@ -124,6 +125,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   const startEdit = () => {
     setDraftEn(row.content_md_en ?? '');
     setDraftRu(row.content_md_ru ?? '');
+    setEditLang(lang);
     setEditing(true);
   };
 
@@ -216,12 +218,21 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
               )}
             </div>
           )}
-          <div style={S.editField}>
-            <div style={S.editLabel}>EN</div>
+          <div style={S.langToggle}>
+            <button style={S.langBtn(editLang === 'en')} onClick={() => setEditLang('en')}>
+              EN{draftEn ? '' : ' (пусто)'}
+            </button>
+            <button style={S.langBtn(editLang === 'ru')} onClick={() => setEditLang('ru')}>
+              RU{draftRu ? '' : ' (пусто)'}
+            </button>
+          </div>
+          {/* Both editors stay mounted (each keeps its own TipTap instance/undo
+              history) — only visibility toggles, so switching tabs never
+              re-parses draft state through the markdown round-trip. */}
+          <div style={{ ...S.editField, display: editLang === 'en' ? 'block' : 'none' }}>
             <TipTapField value={draftEn} onChange={setDraftEn} placeholder="English Markdown…" enableImages={false} enableHtmlMode={false} />
           </div>
-          <div style={S.editField}>
-            <div style={S.editLabel}>RU</div>
+          <div style={{ ...S.editField, display: editLang === 'ru' ? 'block' : 'none' }}>
             <TipTapField value={draftRu} onChange={setDraftRu} placeholder="Русский Markdown…" enableImages={false} enableHtmlMode={false} />
           </div>
           <div style={S.editActions}>
