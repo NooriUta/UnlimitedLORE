@@ -732,6 +732,11 @@ export interface LoreKnowDocRow {
   kind: string | null;
   has_ext_deps: boolean | null;
   component_id: string | null;
+  // DeepWiki-style page tree (DOC_CHILD_OF edge, child→parent) — not yet
+  // rendered as a tree in the UI, just exposed for future use.
+  sort_order: number | null;
+  parent_doc_id: string | null;
+  child_ids: string[] | null;
 }
 
 export interface LoreKnowDoc extends LoreKnowDocRow {

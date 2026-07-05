@@ -230,6 +230,16 @@ public class LoreSchemaInitializer {
         // MartProse — inherits the app's font, supports mermaid fences).
         "CREATE PROPERTY KnowDoc.content_md_en IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowDoc.content_md_ru IF NOT EXISTS STRING",
+        // DeepWiki-style page tree: DOC_CHILD_OF (child → parent) mirrors every
+        // other relationship in this schema (BELONGS_TO/DEPENDS_ON/SUPERSEDES/
+        // TAGGED_WITH/TARGETS_MILESTONE) being an edge, not a plain foreign-key
+        // field — a doc has at most one parent, enforced in code (doc/parent
+        // replaces any existing outgoing edge before creating the new one), not
+        // in the schema. sort_order is a genuine intrinsic property (position
+        // among siblings), same pattern as KnowTask.order_index.
+        // ArcadeDB DDL note (see Phase 6 comment below): no EXTENDS V/E via SQL.
+        "CREATE EDGE TYPE DOC_CHILD_OF IF NOT EXISTS",
+        "CREATE PROPERTY KnowDoc.sort_order IF NOT EXISTS INTEGER",
         "CREATE PROPERTY KnowDocHist.valid_to IF NOT EXISTS DATETIME",
         "CREATE INDEX IF NOT EXISTS ON KnowDocHist   (valid_to) NOTUNIQUE",
 

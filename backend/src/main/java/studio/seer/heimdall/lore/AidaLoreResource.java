@@ -3273,9 +3273,15 @@ public class AidaLoreResource {
     // content_html is legacy (pre-existing HTML-fragment docs, rendered sandboxed);
     // content_md_en/content_md_ru are the current authoring path — clean Markdown
     // per language, rendered in-DOM (inherits app font, supports mermaid fences).
+    // parent_doc_id/sort_order: DeepWiki-style page tree. parent_doc_id here is
+    // a convenience for the common "create + place in the tree in one call"
+    // case — it replaces any existing DOC_CHILD_OF edge (single parent), same
+    // as the dedicated doc/parent endpoint below. Pass "" (empty string, not
+    // omitted) to detach from a parent via this endpoint; omit entirely to
+    // leave the current parent untouched.
     public record DocUpsertRequest(String doc_id, String title, String kind,
         Boolean has_ext_deps, String component_id, String file_path, String content_html,
-        String content_md_en, String content_md_ru) {}
+        String content_md_en, String content_md_ru, String parent_doc_id, Integer sort_order) {}
 
     @POST
     @Path("doc")
@@ -3304,9 +3310,22 @@ public class AidaLoreResource {
             if (req.content_html() != null) { dcsql.append(", content_html=:content");  p.put("content",  req.content_html()); }
             if (req.content_md_en() != null) { dcsql.append(", content_md_en=:md_en");  p.put("md_en",    req.content_md_en()); }
             if (req.content_md_ru() != null) { dcsql.append(", content_md_ru=:md_ru");  p.put("md_ru",    req.content_md_ru()); }
+            if (req.sort_order() != null)    { dcsql.append(", sort_order=:sort_order"); p.put("sort_order", req.sort_order()); }
             dcsql.append(" UPSERT WHERE doc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dcsql.toString(), p)).await().indefinitely();
+            if (req.parent_doc_id() != null) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id=:id)",
+                    Map.of("id", req.doc_id()))).await().indefinitely();
+                if (!req.parent_doc_id().isBlank()) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE DOC_CHILD_OF " +
+                        "FROM (SELECT FROM KnowDoc WHERE doc_id = :id) " +
+                        "TO   (SELECT FROM KnowDoc WHERE doc_id = :pid) IF NOT EXISTS",
+                        Map.of("id", req.doc_id(), "pid", req.parent_doc_id()))).await().indefinitely();
+                }
+            }
             return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
@@ -3358,6 +3377,52 @@ public class AidaLoreResource {
                 "hist_deleted", histDeleted)));
         } catch (Exception e) {
             LOG.warnf("[LORE DOC DELETE] %s: %s", req.doc_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── KnowDoc page tree: standalone reparent/detach ────────────────────────
+    // DeepWiki-style hierarchy. A doc has at most one parent — 'add' always
+    // clears any existing DOC_CHILD_OF edge first, then links the new one (so
+    // moving a page to a different parent is one call, not detach-then-attach).
+    // Use action="remove" to detach entirely (move the page to the top level).
+    public record DocParentLinkRequest(String doc_id, String parent_doc_id, String action) {}
+
+    @POST
+    @Path("doc/parent")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkDocParent(DocParentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.doc_id() == null || req.doc_id().isBlank())
+            return badParams("doc_id required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        if (!remove && (req.parent_doc_id() == null || req.parent_doc_id().isBlank()))
+            return badParams("parent_doc_id required unless action=remove");
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(outE('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id=:id)",
+                Map.of("id", req.doc_id()))).await().indefinitely();
+            if (remove) {
+                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE DOC_CHILD_OF " +
+                    "FROM (SELECT FROM KnowDoc WHERE doc_id = :id) " +
+                    "TO   (SELECT FROM KnowDoc WHERE doc_id = :pid) IF NOT EXISTS",
+                    Map.of("id", req.doc_id(), "pid", req.parent_doc_id())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                "parent_doc_id", req.parent_doc_id(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — check both doc_id values exist")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOC PARENT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
