@@ -19,6 +19,31 @@ interface Artifact {
   title: string;
   component: string | null;
   date: string | null;
+  // DeepWiki-style page tree (doc kind only, from DOC_CHILD_OF/sort_order) —
+  // undefined for every other kind.
+  parentId?: string | null;
+  sortOrder?: number | null;
+}
+
+// Path key for tree ordering: [own sort_order, parent's sort_order, ...] read
+// root-to-leaf, e.g. deepwiki_5_1_1 -> [5, 1, 1]. Comparing these arrays
+// lexicographically reproduces the exact "01, 01.1, 01.2, 02, ..." document
+// order the tree represents, without needing a real recursive render.
+// depthCap guards against a parent cycle (client-side only — the backend
+// blocks direct self-parenting, but not longer cycles across docs) turning
+// this into an infinite loop.
+function docPath(id: string, byId: Map<string, Artifact>, depthCap = 12): number[] {
+  const seen = new Set<string>();
+  const path: number[] = [];
+  let cur: string | undefined = id;
+  while (cur && !seen.has(cur) && path.length < depthCap) {
+    seen.add(cur);
+    const a = byId.get(cur);
+    if (!a) break;
+    path.unshift(a.sortOrder ?? 0);
+    cur = a.parentId ?? undefined;
+  }
+  return path;
 }
 
 interface RunbookRow { runbook_id: string; name: string | null; area: string | null; date_created: string | null; }
@@ -68,19 +93,27 @@ const S = {
     color: 'var(--t1)', fontSize: 11, fontFamily: 'inherit', padding: '4px 8px', outline: 'none',
   },
   list:   { flex: 1, overflowY: 'auto' as const },
-  row: (sel: boolean) => ({
-    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px',
-    borderBottom: '1px solid var(--bd)', fontSize: 12, cursor: 'pointer',
+  // Two lines per row: title gets the full row width and can wrap (no more
+  // single-line ellipsis truncating it to a few characters at narrow
+  // widths); the component badge + date move to a second, smaller-font
+  // line underneath instead of competing with the title for horizontal
+  // space.
+  row: (sel: boolean, indent: number) => ({
+    display: 'flex', flexDirection: 'column' as const, gap: 3, padding: '6px 14px',
+    paddingLeft: 14 + indent * 14,
+    borderBottom: '1px solid var(--bd)', cursor: 'pointer',
     background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
   }),
+  rowMain: { display: 'flex', alignItems: 'flex-start', gap: 8 },
+  rowMeta: { display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 26 },
   badge: (color: string) => ({
     flexShrink: 0, width: 18, height: 18, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
     color, background: `color-mix(in srgb, ${color} 16%, transparent)`,
   }),
-  title:  { flex: 1, minWidth: 0, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  comp:   { fontSize: 9, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
-  noComp: { fontSize: 9, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
-  date:   { color: 'var(--t3)', fontSize: 10, flexShrink: 0, width: 72, textAlign: 'right' as const },
+  title:  { flex: 1, minWidth: 0, color: 'var(--t1)', fontSize: 11.5, lineHeight: 1.3, wordBreak: 'break-word' as const },
+  comp:   { fontSize: 8, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
+  noComp: { fontSize: 8, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
+  date:   { color: 'var(--t3)', fontSize: 9, marginLeft: 'auto' as const },
   empty:  { padding: 24, color: 'var(--t3)', fontSize: 12 },
   exportBtn: {
     flexShrink: 0, height: 24, padding: '0 8px', border: '1px solid var(--b3)', borderRadius: 3,
@@ -154,7 +187,11 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
           // `area` so the existing "Модуль" facet also restores the
           // area-based filtering the old LoreRunbookList had.
           ...runbooks.map(r => ({ kind: 'runbook' as const, id: r.runbook_id, title: r.name || r.runbook_id, component: r.area ?? null, date: r.date_created ?? null })),
-          ...docs.map(r => ({ kind: 'doc' as const, id: r.doc_id, title: (r.title && r.title.trim()) || r.doc_id, component: r.component_id ?? null, date: null })),
+          ...docs.map(r => ({
+            kind: 'doc' as const, id: r.doc_id, title: (r.title && r.title.trim()) || r.doc_id,
+            component: r.component_id ?? null, date: null,
+            parentId: r.parent_doc_id, sortOrder: r.sort_order,
+          })),
           ...qgs.map(r => ({ kind: 'qg' as const, id: r.qg_id, title: r.name || r.qg_id, component: r.component_id ?? null, date: r.date_created ?? null })),
         ];
         setItems(all); setComps(components); setLoading(false);
@@ -188,6 +225,14 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
     return c;
   }, [items]);
 
+  // doc-id -> Artifact, built from the unfiltered set so a page's tree
+  // position is stable even when search/component filters hide its parent.
+  const docById = useMemo(() => {
+    const m = new Map<string, Artifact>();
+    items.forEach(a => { if (a.kind === 'doc') m.set(a.id, a); });
+    return m;
+  }, [items]);
+
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return items
@@ -199,9 +244,23 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
         const cb = b.component ? (nameOf[b.component] || b.component) : '￿';
         if (ca !== cb) return ca.localeCompare(cb);
         if (a.kind !== b.kind) return KIND_ORDER[a.kind] - KIND_ORDER[b.kind];
+        // DeepWiki-style page tree: order docs by path (root sort_order,
+        // then each ancestor's, root-to-leaf) so a parent is immediately
+        // followed by its children instead of pure alphabetical — same idea
+        // as LoreComponentTree's byParent recursion, but flattened into a
+        // sort key since this list has no per-row expand/collapse state.
+        if (a.kind === 'doc' && b.kind === 'doc') {
+          const pa = docPath(a.id, docById);
+          const pb = docPath(b.id, docById);
+          const len = Math.min(pa.length, pb.length);
+          for (let i = 0; i < len; i++) {
+            if (pa[i] !== pb[i]) return pa[i] - pb[i];
+          }
+          if (pa.length !== pb.length) return pa.length - pb.length;
+        }
         return a.title.localeCompare(b.title);
       });
-  }, [items, enabled, compSel, q, nameOf]);
+  }, [items, enabled, compSel, q, nameOf, docById]);
 
   const toggle = (k: ArtifactKind) => setEnabled(p => {
     const n = new Set(p);
@@ -274,14 +333,19 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
         {shown.map(a => {
           const meta = KIND_META[a.kind];
           const sel = selectedKind === a.kind && selectedId === a.id;
+          const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
           return (
-            <div key={`${a.kind}:${a.id}`} style={S.row(sel)} onClick={() => onOpen(a.kind, a.id)} title={`${meta.label} · ${a.id}`}>
-              <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
-              <span style={S.title}>{a.title}</span>
-              {a.component
-                ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
-                : <span style={S.noComp}>—</span>}
-              <span style={S.date}>{a.date?.slice(0, 10) ?? ''}</span>
+            <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} onClick={() => onOpen(a.kind, a.id)} title={`${meta.label} · ${a.id}`}>
+              <div style={S.rowMain}>
+                <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
+                <span style={S.title}>{a.title}</span>
+              </div>
+              <div style={S.rowMeta}>
+                {a.component
+                  ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
+                  : <span style={S.noComp}>—</span>}
+                {a.date && <span style={S.date}>{a.date.slice(0, 10)}</span>}
+              </div>
             </div>
           );
         })}
