@@ -3440,6 +3440,103 @@ public class AidaLoreResource {
         }
     }
 
+    // ── KnowDoc ↔ component/sprint links — same edges/pattern as ADR's
+    // adr/component and adr/link (sprint branch): BELONGS_TO for component,
+    // IMPLEMENTED_IN for sprint. component_id also lives as a plain field on
+    // KnowDoc (legacy) — the docs/doc_by_id slices already prefer the real
+    // BELONGS_TO edge via COALESCE, so linking here is additive, not a
+    // breaking migration of existing plain-field data.
+    public record DocComponentLinkRequest(String doc_id, String component_id, String action) {}
+    public record DocSprintLinkRequest(String doc_id, String sprint_id, String action) {}
+
+    @POST
+    @Path("doc/component")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkDocComponent(DocComponentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.doc_id() == null || req.doc_id().isBlank()
+                || req.component_id() == null || req.component_id().isBlank())
+            return badParams("doc_id and component_id required");
+        if (!SAFE_ID.matcher(req.doc_id()).matches())
+            return badParams("doc_id contains illegal characters");
+        if (!SAFE_ID.matcher(req.component_id()).matches())
+            return badParams("component_id contains illegal characters");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('BELONGS_TO')) FROM KnowDoc WHERE doc_id=:id) " +
+                    "WHERE @in.component_id = :cid",
+                    Map.of("id", req.doc_id(), "cid", req.component_id()))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                    "component_id", req.component_id(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO " +
+                    "FROM (SELECT FROM KnowDoc       WHERE doc_id       = :id) " +
+                    "TO   (SELECT FROM LoreComponent WHERE component_id = :cid) IF NOT EXISTS",
+                    Map.of("id", req.doc_id(), "cid", req.component_id())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                "component_id", req.component_id(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — check doc_id/component_id exist")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOC COMPONENT] %s: %s", req.doc_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @POST
+    @Path("doc/sprint")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkDocSprint(DocSprintLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.doc_id() == null || req.doc_id().isBlank()
+                || req.sprint_id() == null || req.sprint_id().isBlank())
+            return badParams("doc_id and sprint_id required");
+        if (!SAFE_ID.matcher(req.doc_id()).matches())
+            return badParams("doc_id contains illegal characters");
+        if (!SAFE_ID.matcher(req.sprint_id()).matches())
+            return badParams("sprint_id contains illegal characters");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('IMPLEMENTED_IN')) FROM KnowDoc WHERE doc_id=:id) " +
+                    "WHERE @in.sprint_id = :sid",
+                    Map.of("id", req.doc_id(), "sid", req.sprint_id()))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                    "sprint_id", req.sprint_id(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE IMPLEMENTED_IN " +
+                    "FROM (SELECT FROM KnowDoc    WHERE doc_id    = :id) " +
+                    "TO   (SELECT FROM KnowSprint WHERE sprint_id = :sid) IF NOT EXISTS",
+                    Map.of("id", req.doc_id(), "sid", req.sprint_id())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                "sprint_id", req.sprint_id(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — check doc_id/sprint_id exist")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOC SPRINT] %s: %s", req.doc_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── BRAGI content archive write — MCP-01: publications, variants, assets ──
     // Flat vertices (no SCD2/Hist twin, see LoreSchemaInitializer Phase 7) — LH-44
     // partial-upsert still applies (re-calling with fewer fields must not wipe

@@ -444,7 +444,8 @@ public final class LoreSlices {
             "SELECT doc_id, title, kind, has_ext_deps, sort_order, " +
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
-            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
+            "out('IMPLEMENTED_IN').sprint_id AS sprint_ids " +
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -461,6 +462,8 @@ public final class LoreSlices {
             "sort_order, " +
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
+            "out('IMPLEMENTED_IN').sprint_id AS sprint_ids, " +
             "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowDoc WHERE doc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
