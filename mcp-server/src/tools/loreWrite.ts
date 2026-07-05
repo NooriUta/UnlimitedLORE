@@ -593,18 +593,24 @@ export function registerLoreWrite(server: McpServer): void {
   server.tool(
     'lore_update_sprint_refs',
     'Append PR numbers to a sprint\'s pr_refs field (stored on the open KnowSprintHist row ' +
-      'as a markdown link string). Skips PRs already present. ' +
+      'as a markdown link string). Skips PRs already present. Pass replace=true to discard the ' +
+      'existing pr_refs first instead of appending — use this to fix entries baked with the wrong ' +
+      'git_project/repo_url (there is no per-entry edit otherwise). ' +
       'Returns the updated pr_refs string and count of newly added links.',
     {
       sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
       pr_numbers:  z.array(z.number().int()).describe('PR numbers to append, e.g. [420, 421]'),
       git_project: z.string().optional()
-        .describe('GitHub project slug, e.g. "NooriUta/aida-documentation" (default: NooriUta/AIDA)'),
+        .describe('GitHub project slug, e.g. "NooriUta/aida-documentation" (default: NooriUta/AIDA). Ignored if repo_url is set.'),
+      repo_url:    z.string().optional()
+        .describe('Full base URL for PR links, e.g. "https://github.com/NooriUta/UnlimitedLORE/pull" — takes precedence over git_project.'),
+      replace:     z.boolean().optional().describe('Discard existing pr_refs before adding these, instead of appending.'),
     },
-    async ({ sprint_id, pr_numbers, git_project }) => {
+    async ({ sprint_id, pr_numbers, git_project, repo_url, replace }) => {
       try {
         return json(await lorePost('/lore/sprint/refs', {
           sprint_id, pr_numbers, git_project: git_project ?? null,
+          repo_url: repo_url ?? null, replace: replace ?? false,
         }));
       } catch (e) { return err(e); }
     },

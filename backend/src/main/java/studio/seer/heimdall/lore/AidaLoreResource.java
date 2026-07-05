@@ -59,7 +59,7 @@ public class AidaLoreResource {
         boolean ok, String entity_type, String id,
         String old_status, String new_status, StatusRevision revision) {}
     public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers,
-        String git_project, String repo_url) {}
+        String git_project, String repo_url, Boolean replace) {}
     // priority moved to SprintPlanRequest/POST /lore/sprint/plan — it's SCD2-tracked
     // (lives on KnowSprintHist), unlike the vertex-only fields below.
     // no_release_required: sprints that never ship a versioned release (docs-only,
@@ -1442,10 +1442,16 @@ public class AidaLoreResource {
                 return noStore(Response.status(Response.Status.NOT_FOUND)
                     .entity(new LoreError("NOT_FOUND", "no open hist row for sprint: " + req.sprint_id())));
 
-            // pr_refs is a markdown string; build the new entries and append.
+            // pr_refs is a markdown string; build the new entries and append —
+            // unless replace=true, which discards whatever was there before
+            // (for fixing a wrong git_project/repo_url baked into earlier
+            // entries, since there's no per-entry edit otherwise).
+            boolean replace = Boolean.TRUE.equals(req.replace());
             String existing = "";
-            Object raw = rows.get(0).get("pr_refs");
-            if (raw != null) existing = raw.toString().trim();
+            if (!replace) {
+                Object raw = rows.get(0).get("pr_refs");
+                if (raw != null) existing = raw.toString().trim();
+            }
             String rid = rows.get(0).get("@rid").toString();
 
             StringBuilder sb = new StringBuilder(existing);
