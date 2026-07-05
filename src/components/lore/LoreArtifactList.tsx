@@ -93,20 +93,27 @@ const S = {
     color: 'var(--t1)', fontSize: 11, fontFamily: 'inherit', padding: '4px 8px', outline: 'none',
   },
   list:   { flex: 1, overflowY: 'auto' as const },
+  // Two lines per row: title gets the full row width and can wrap (no more
+  // single-line ellipsis truncating it to a few characters at narrow
+  // widths); the component badge + date move to a second, smaller-font
+  // line underneath instead of competing with the title for horizontal
+  // space.
   row: (sel: boolean, indent: number) => ({
-    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px',
+    display: 'flex', flexDirection: 'column' as const, gap: 3, padding: '6px 14px',
     paddingLeft: 14 + indent * 14,
-    borderBottom: '1px solid var(--bd)', fontSize: 12, cursor: 'pointer',
+    borderBottom: '1px solid var(--bd)', cursor: 'pointer',
     background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
   }),
+  rowMain: { display: 'flex', alignItems: 'flex-start', gap: 8 },
+  rowMeta: { display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 26 },
   badge: (color: string) => ({
     flexShrink: 0, width: 18, height: 18, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
     color, background: `color-mix(in srgb, ${color} 16%, transparent)`,
   }),
-  title:  { flex: 1, minWidth: 0, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  comp:   { fontSize: 9, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
-  noComp: { fontSize: 9, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
-  date:   { color: 'var(--t3)', fontSize: 10, flexShrink: 0, width: 72, textAlign: 'right' as const },
+  title:  { flex: 1, minWidth: 0, color: 'var(--t1)', fontSize: 11.5, lineHeight: 1.3, wordBreak: 'break-word' as const },
+  comp:   { fontSize: 8, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
+  noComp: { fontSize: 8, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
+  date:   { color: 'var(--t3)', fontSize: 9, marginLeft: 'auto' as const },
   empty:  { padding: 24, color: 'var(--t3)', fontSize: 12 },
   exportBtn: {
     flexShrink: 0, height: 24, padding: '0 8px', border: '1px solid var(--b3)', borderRadius: 3,
@@ -329,12 +336,16 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
           const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
           return (
             <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} onClick={() => onOpen(a.kind, a.id)} title={`${meta.label} · ${a.id}`}>
-              <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
-              <span style={S.title}>{a.title}</span>
-              {a.component
-                ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
-                : <span style={S.noComp}>—</span>}
-              <span style={S.date}>{a.date?.slice(0, 10) ?? ''}</span>
+              <div style={S.rowMain}>
+                <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
+                <span style={S.title}>{a.title}</span>
+              </div>
+              <div style={S.rowMeta}>
+                {a.component
+                  ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
+                  : <span style={S.noComp}>—</span>}
+                {a.date && <span style={S.date}>{a.date.slice(0, 10)}</span>}
+              </div>
             </div>
           );
         })}
