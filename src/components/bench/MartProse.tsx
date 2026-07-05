@@ -10,46 +10,32 @@ import elkLayouts from '@mermaid-js/layout-elk';
 
 marked.setOptions({ gfm: true, breaks: false });
 
-mermaid.registerLayoutLoaders(elkLayouts);
-
 // DocsPage initializes mermaid on its module load, but it is lazy — initialize
 // here too so prose diagrams work without ever visiting /docs (idempotent).
+//
+// Was a hand-tuned 'base' theme with our own themeVariables — kept missing
+// individual sequence-diagram variables (alt/loop section fill, actor boxes,
+// notes) one at a time as each surfaced as a fresh light-on-light bug. Using
+// the built-in 'forest' theme instead means every diagram element's contrast
+// is already a matched, tested set — not something we assemble field by
+// field. Note: forest is a light-background theme (see the wrapper div in
+// MermaidDiagram below, which matches it).
+//
+// layout: 'elk' as a GLOBAL default was tried and reverted — setting it at
+// this top level applies to every diagram type, including ones (e.g.
+// sequence) that don't support ELK layout, and it hung mermaid.render()
+// silently (no thrown error, no console output, promise never settles) for
+// every diagram on the page, not just the incompatible ones. The loader is
+// still registered below so individual diagrams can opt in per-diagram via
+// a %%{init: {"layout": "elk"}}%% frontmatter directive, which scopes the
+// choice to diagram types that actually support it.
+mermaid.registerLayoutLoaders(elkLayouts);
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'base',
+  theme: 'forest',
   themeVariables: {
-    primaryColor: '#2d6a4f',
-    primaryTextColor: '#f0f4f0',
-    primaryBorderColor: '#40916c',
-    lineColor: '#74c69d',
-    background: '#1a1e1a',
-    mainBkg: '#1e2a1e',
-    nodeBorder: '#40916c',
-    clusterBkg: '#1e2a1e',
-    titleColor: '#b7e4c7',
-    edgeLabelBackground: '#1a1e1a',
     fontFamily: 'monospace',
     fontSize: '13px',
-    // Sequence diagrams derive these from the vars above when unset, and the
-    // 'base' theme's derivation can land light-text-on-light-box for the
-    // alt/loop tab, notes, and actor boxes in a dark theme — pin them
-    // explicitly instead of trusting the derived contrast.
-    actorBkg: '#1e2a1e',
-    actorBorder: '#40916c',
-    actorTextColor: '#f0f4f0',
-    actorLineColor: '#74c69d',
-    signalColor: '#f0f4f0',
-    signalTextColor: '#f0f4f0',
-    labelBoxBkgColor: '#2d6a4f',
-    labelBoxBorderColor: '#40916c',
-    labelTextColor: '#f0f4f0',
-    loopTextColor: '#f0f4f0',
-    noteBkgColor: '#3a3a1e',
-    noteBorderColor: '#7a7a40',
-    noteTextColor: '#f0f4f0',
-    activationBkgColor: '#2d6a4f',
-    activationBorderColor: '#40916c',
-    sequenceNumberColor: '#1a1e1a',
   },
   securityLevel: 'loose',
 });
@@ -134,10 +120,13 @@ function MermaidDiagram({ def }: { def: string }) {
     // sequence-diagram arrows/labels have no background rect of their own,
     // so on a light-themed host page (e.g. the docs viewer) they inherit the
     // page background and become invisible. Force the dark backdrop here
-    // instead of relying on the host page's theme.
+    // instead of relying on the host page's theme. 'forest' is a light-
+    // background theme (its own line/text colors assume a light backdrop) —
+    // give it one explicitly rather than the dark background the old 'base'
+    // theme needed, or its own arrows/labels wash out to low-contrast grey.
     return (
       <div
-        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: '#1a1e1a', borderRadius: 6, padding: 10 }}
+        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: '#f4f4f4', borderRadius: 6, padding: 10 }}
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     );
