@@ -646,6 +646,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [ctxSaving, setCtxSaving] = useState(false);
   const [projLinking, setProjLinking]   = useState(false);
   const [compLinking, setCompLinking] = useState(false);
+  const [compQuery, setCompQuery]     = useState('');
+  const [compPickerOpen, setCompPickerOpen] = useState(false);
   const [msLinking, setMsLinking]     = useState(false);
   const [planBusy, setPlanBusy]       = useState(false);
   const [relLinking, setRelLinking]   = useState(false);
@@ -1076,18 +1078,29 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 } catch (err) { onError(err); } finally { setPlanBusy(false); }
               }} />
           </div>
-          <select disabled={planBusy} style={lookupSelectStyle}
-            value={sprint.planned_milestone_id ?? ''}
-            title={t('lore.sprintDetail.plan.milestone', 'Планируемая веха')}
+          {/* Planned vs. actual milestone used to be two separate controls
+              (planned_milestone_id plain field vs. TARGETS_MILESTONE edge) —
+              in practice they're always the same value, so one control now
+              drives both: it links/unlinks the actual edge AND keeps
+              planned_milestone_id in sync for the forecast/analytics that
+              still read it. */}
+          <select disabled={planBusy || msLinking} style={lookupSelectStyle}
+            value={(sprint.milestone_ids ?? [])[0] ?? sprint.planned_milestone_id ?? ''}
+            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
             onChange={async e => {
               const v = e.target.value || null;
-              setPlanBusy(true);
+              setPlanBusy(true); setMsLinking(true);
               try {
+                const prevLinked = sprint.milestone_ids ?? [];
+                for (const mid of prevLinked) {
+                  if (mid !== v) await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
+                }
+                if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
                 await updateSprintPlan(sprint.sprint_id, { planned_milestone_id: v });
-                setSprint(s => s ? { ...s, planned_milestone_id: v } : s);
-              } catch (err) { onError(err); } finally { setPlanBusy(false); }
+                setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [], planned_milestone_id: v } : s);
+              } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
             }}>
-            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— планируемая веха —')}</option>
+            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
             {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
           </select>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--t2)', cursor: planBusy ? 'default' : 'pointer' }}>
@@ -1107,62 +1120,23 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         </div>
       </div>
 
-      {/* ── Milestones section (sprint→milestone, TARGETS_MILESTONE) — this is the
-          ACTUAL milestone the sprint landed in, as opposed to planned_milestone_id
-          above. Reused as-is: this UI already existed before SPRINT_PLANITEM_RETIRE. */}
-      {(() => {
-        const linked = sprint.milestone_ids ?? [];
-        const unlinked = allMilestones.filter(m => !linked.includes(m.id));
-        return (
-          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <GameIcon slug="crossed-axes" size={11} style={{ color: 'var(--t3)' }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.milestones.label', 'Вехи (факт.)')}</span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-              {linked.map(mid => (
-                <span key={mid} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
-                  padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
-                  {mid}
-                  <button disabled={msLinking}
-                    onClick={async () => {
-                      setMsLinking(true);
-                      try {
-                        await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
-                        setSprint(s => s ? { ...s, milestone_ids: (s.milestone_ids ?? []).filter(x => x !== mid) } : s);
-                      } catch (e) { onError(e); } finally { setMsLinking(false); }
-                    }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 10, padding: 0, lineHeight: 1, opacity: 0.7 }}
-                    title={t('lore.sprintDetail.milestones.unlink', 'Отвязать {{mid}}', { mid })}>✕</button>
-                </span>
-              ))}
-              {unlinked.length > 0 && (
-                <select disabled={msLinking} value=""
-                  onChange={async e => {
-                    const mid = e.target.value;
-                    if (!mid) return;
-                    setMsLinking(true);
-                    try {
-                      await linkSprintMilestone(sprint.sprint_id, mid, 'add');
-                      setSprint(s => s ? { ...s, milestone_ids: [...(s.milestone_ids ?? []), mid] } : s);
-                    } catch (err) { onError(err); } finally { setMsLinking(false); }
-                  }}
-                  style={lookupSelectStyle}>
-                  <option value="">{t('lore.sprintDetail.milestones.linkPlaceholder', '+ привязать веху…')}</option>
-                  {unlinked.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
-                </select>
-              )}
-              {linked.length === 0 && unlinked.length === 0 && <span style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' }}>{t('lore.sprintDetail.milestones.empty', 'нет вех')}</span>}
-              {msLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
-            </div>
-          </div>
-        );
-      })()}
-
       {/* ── Modules section (sprint→component links) ────────────────────────── */}
       {(() => {
         const unlinkedComps = allComps.filter(c => !explicit.includes(c.component_id));
+        const q = compQuery.trim().toLowerCase();
+        const filteredUnlinked = q
+          ? unlinkedComps.filter(c =>
+              c.component_id.toLowerCase().includes(q) || (c.full_name ?? '').toLowerCase().includes(q))
+          : unlinkedComps;
+        const addComp = async (cid: string) => {
+          setCompLinking(true);
+          try {
+            await linkSprintComponent(sprint.sprint_id, cid, 'add');
+            setSprint(s => s ? { ...s, components: [...(s.components ?? []), cid] } : s);
+            setCompQuery(''); setCompPickerOpen(false);
+          } catch (err) { onError(err); }
+          finally { setCompLinking(false); }
+        };
         return (
           <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -1189,7 +1163,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                         color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
                     >
                       <GameIcon slug={c.game_icon} size={12} style={{ color: 'inherit' }} />
-                      {c.component_id}
+                      {c.full_name || c.component_id}
                     </button>
                     {isExplicit && (
                       <button
@@ -1211,24 +1185,39 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 );
               })}
               {unlinkedComps.length > 0 && (
-                <select
-                  disabled={compLinking}
-                  value=""
-                  onChange={async e => {
-                    const cid = e.target.value;
-                    if (!cid) return;
-                    setCompLinking(true);
-                    try {
-                      await linkSprintComponent(sprint.sprint_id, cid, 'add');
-                      setSprint(s => s ? { ...s, components: [...(s.components ?? []), cid] } : s);
-                    } catch (err) { onError(err); }
-                    finally { setCompLinking(false); }
-                  }}
-                  style={lookupSelectStyle}
-                >
-                  <option value="">{t('lore.sprintDetail.modules.linkPlaceholder', '+ привязать…')}</option>
-                  {unlinkedComps.map(c => <option key={c.component_id} value={c.component_id}>{c.component_id}</option>)}
-                </select>
+                <div style={{ position: 'relative' as const }}>
+                  <input
+                    type="text"
+                    disabled={compLinking}
+                    value={compQuery}
+                    placeholder={t('lore.sprintDetail.modules.linkPlaceholder', '+ привязать…')}
+                    onFocus={() => setCompPickerOpen(true)}
+                    onChange={e => { setCompQuery(e.target.value); setCompPickerOpen(true); }}
+                    onBlur={() => setTimeout(() => setCompPickerOpen(false), 150)}
+                    style={{ ...lookupSelectStyle, width: 140 }}
+                  />
+                  {compPickerOpen && filteredUnlinked.length > 0 && (
+                    <div style={{
+                      position: 'absolute' as const, top: '100%', left: 0, marginTop: 2, zIndex: 20,
+                      minWidth: 180, maxHeight: 200, overflowY: 'auto' as const,
+                      background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 4,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                    }}>
+                      {filteredUnlinked.map(c => (
+                        <div
+                          key={c.component_id}
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => addComp(c.component_id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px',
+                            fontSize: 11, color: 'var(--t1)', cursor: 'pointer' }}
+                        >
+                          <GameIcon slug={c.game_icon} size={12} style={{ color: areaColor(c.area) }} />
+                          {c.full_name || c.component_id}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
               {compLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
             </div>
