@@ -1174,7 +1174,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 const name = c.full_name || c.component_id;
                 return (
                   <span key={c.component_id} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11,
+                    display: 'inline-flex', alignItems: 'center', gap: 2,
                     padding: '3px', borderRadius: 10,
                     background: `color-mix(in srgb, ${col} 14%, transparent)`,
                     border: `1px solid color-mix(in srgb, ${col} 30%, transparent)`,
@@ -1184,6 +1184,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                       onClick={onNavigateToComponent ? () => onNavigateToComponent(c.component_id) : undefined}
                       disabled={!onNavigateToComponent}
                       title={onNavigateToComponent ? t('lore.sprintDetail.modules.openTitle', 'Открыть {{name}}', { name }) : name}
+                      aria-label={onNavigateToComponent ? t('lore.sprintDetail.modules.openTitle', 'Открыть {{name}}', { name }) : name}
                       style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none',
                         color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, lineHeight: 0 }}
                     >
