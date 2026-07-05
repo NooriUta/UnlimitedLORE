@@ -907,6 +907,21 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_delete_doc',
+    'PERMANENTLY delete a KnowDoc: cascades edges first (ArcadeDB cannot DELETE VERTEX with edges), ' +
+      'then any KnowDocHist rows, then the vertex. Irreversible — for stale duplicates and empty ' +
+      'placeholder docs only (e.g. legacy DOC-* entries superseded by a newer guide_*/product_*/ref_* ' +
+      'doc with real content). Check content_html/content_md_en/content_md_ru are actually empty ' +
+      '(via the doc_by_id slice) before deleting anything that might have real content.',
+    { doc_id: z.string() },
+    async ({ doc_id }) => {
+      try {
+        return json(await lorePost('/lore/doc/delete', { doc_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_edit_task',
     'Edit one task OR a batch of tasks (title, note_md, effort_days). Updates the vertex and its ' +
       'open history row. Mutates the shared system_aida_lore.\n\n' +
