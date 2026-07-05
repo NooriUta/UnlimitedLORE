@@ -3315,6 +3315,10 @@ public class AidaLoreResource {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dcsql.toString(), p)).await().indefinitely();
             if (req.parent_doc_id() != null) {
+                if (!req.parent_doc_id().isBlank() && !SAFE_ID.matcher(req.parent_doc_id()).matches())
+                    return badParams("parent_doc_id contains illegal characters");
+                if (req.parent_doc_id().equals(req.doc_id()))
+                    return badParams("parent_doc_id cannot equal doc_id");
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id=:id)",
                     Map.of("id", req.doc_id()))).await().indefinitely();
@@ -3399,9 +3403,17 @@ public class AidaLoreResource {
         if (guard != null) return guard;
         if (req == null || req.doc_id() == null || req.doc_id().isBlank())
             return badParams("doc_id required");
+        if (!SAFE_ID.matcher(req.doc_id()).matches())
+            return badParams("doc_id contains illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         if (!remove && (req.parent_doc_id() == null || req.parent_doc_id().isBlank()))
             return badParams("parent_doc_id required unless action=remove");
+        if (!remove) {
+            if (!SAFE_ID.matcher(req.parent_doc_id()).matches())
+                return badParams("parent_doc_id contains illegal characters");
+            if (req.parent_doc_id().equals(req.doc_id()))
+                return badParams("parent_doc_id cannot equal doc_id");
+        }
         try {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "DELETE FROM (SELECT expand(outE('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id=:id)",

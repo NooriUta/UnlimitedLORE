@@ -903,7 +903,7 @@ export function registerLoreWrite(server: McpServer): void {
         'DeepWiki-style page tree: set this doc\'s parent page in the same call (replaces any existing ' +
         'parent — a doc has at most one). Pass "" (empty string) to detach/move to top level; omit to ' +
         'leave the current parent untouched. For reparenting without touching content, use lore_link_doc_parent instead.'),
-      sort_order: z.number().optional().describe(
+      sort_order: z.number().int().optional().describe(
         'Position among sibling pages under the same parent (used for tree ordering and prev/next navigation).'),
     },
     async (p) => {
