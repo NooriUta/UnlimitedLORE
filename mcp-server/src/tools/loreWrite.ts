@@ -469,6 +469,75 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_adr_component',
+    'Link (or unlink) a KnowADR to a LoreComponent via a BELONGS_TO edge, one at a time. ' +
+      'For adding/removing a single component without touching the rest — lore_create_adr\'s ' +
+      'component_ids is full-replace (deletes and recreates the whole set), which is risky for ' +
+      'incremental edits. Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:       z.string().describe('e.g. "ADR-HND-022"'),
+      component_id: z.string().describe('e.g. "HOUND"'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, component_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/component', { adr_id, component_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_adr_depends_on',
+    'Link (or unlink) a KnowADR→KnowADR DEPENDS_ON edge, one at a time. For adding/removing a single ' +
+      'dependency without touching the rest — lore_create_adr\'s depends_on_ids is full-replace. ' +
+      'Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:     z.string().describe('the dependent ADR, e.g. "ADR-HND-022"'),
+      dep_adr_id: z.string().describe('the ADR it depends on, e.g. "ADR-HND-GEOID-IDENTITY"'),
+      action:     z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, dep_adr_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/depends_on', { adr_id, dep_adr_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_adr_supersedes',
+    'Link (or unlink) a KnowADR→KnowADR SUPERSEDES edge, one at a time. For adding/removing a single ' +
+      'supersession without touching the rest — lore_create_adr\'s supersedes_ids is full-replace. ' +
+      'Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:            z.string().describe('the newer ADR, e.g. "ADR-HND-GEOID-IDENTITY"'),
+      superseded_adr_id: z.string().describe('the older ADR it supersedes, e.g. "ADR-HND-GEOID-V1"'),
+      action:            z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, superseded_adr_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/supersedes', { adr_id, superseded_adr_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_adr_tag',
+    'Link (or unlink) a KnowADR to a freeform tag via a TAGGED_WITH edge, one at a time (upserts the ' +
+      'KnowTag vertex if it does not exist yet). For adding/removing a single tag without touching the ' +
+      'rest — lore_create_adr\'s tags is full-replace. Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id: z.string().describe('e.g. "ADR-HND-022"'),
+      tag_id: z.string().describe('e.g. "scd2"'),
+      action: z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, tag_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/tag', { adr_id, tag_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_rename_adr',
     'Rename an existing KnowADR to a new adr_id IN PLACE — all edges (DEPENDS_ON/SUPERSEDES/' +
       'BELONGS_TO/TAGGED_WITH/IMPLEMENTED_IN*/HAS_STATE) hang off the vertex and survive untouched; ' +
