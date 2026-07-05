@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parsePrRefs, normalizeStatus, formatEffortDays } from './loreUtils';
@@ -648,6 +649,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [compLinking, setCompLinking] = useState(false);
   const [compQuery, setCompQuery]     = useState('');
   const [compPickerOpen, setCompPickerOpen] = useState(false);
+  const compInputRef = useRef<HTMLInputElement>(null);
   const [msLinking, setMsLinking]     = useState(false);
   const [planBusy, setPlanBusy]       = useState(false);
   const [relLinking, setRelLinking]   = useState(false);
@@ -1187,6 +1189,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               {unlinkedComps.length > 0 && (
                 <div style={{ position: 'relative' as const }}>
                   <input
+                    ref={compInputRef}
                     type="text"
                     disabled={compLinking}
                     value={compQuery}
@@ -1196,9 +1199,17 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     onBlur={() => setTimeout(() => setCompPickerOpen(false), 150)}
                     style={{ ...lookupSelectStyle, width: 140 }}
                   />
-                  {compPickerOpen && filteredUnlinked.length > 0 && (
+                  {/* Portaled to <body> with position:fixed anchored to the input's
+                      real screen rect — this sidebar column scrolls
+                      (overflowY:auto), and an absolutely-positioned popup here
+                      would get clipped/unclickable as soon as Модули isn't the
+                      last visible section (the bug this replaced). */}
+                  {compPickerOpen && filteredUnlinked.length > 0 && compInputRef.current && createPortal(
                     <div style={{
-                      position: 'absolute' as const, top: '100%', left: 0, marginTop: 2, zIndex: 20,
+                      position: 'fixed' as const,
+                      top: compInputRef.current.getBoundingClientRect().bottom + 2,
+                      left: compInputRef.current.getBoundingClientRect().left,
+                      zIndex: 1000,
                       minWidth: 180, maxHeight: 200, overflowY: 'auto' as const,
                       background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 4,
                       boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
@@ -1215,7 +1226,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                           {c.full_name || c.component_id}
                         </div>
                       ))}
-                    </div>
+                    </div>,
+                    document.body,
                   )}
                 </div>
               )}
