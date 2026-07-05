@@ -899,10 +899,34 @@ export function registerLoreWrite(server: McpServer): void {
       content_md_en:  z.string().optional().describe('English Markdown body (preferred over content_html)'),
       content_md_ru:  z.string().optional().describe('Russian Markdown body (preferred over content_html)'),
       content_html:   z.string().optional().describe('Legacy: HTML content (100 KB max), rendered sandboxed'),
+      parent_doc_id:  z.string().optional().describe(
+        'DeepWiki-style page tree: set this doc\'s parent page in the same call (replaces any existing ' +
+        'parent — a doc has at most one). Pass "" (empty string) to detach/move to top level; omit to ' +
+        'leave the current parent untouched. For reparenting without touching content, use lore_link_doc_parent instead.'),
+      sort_order: z.number().int().optional().describe(
+        'Position among sibling pages under the same parent (used for tree ordering and prev/next navigation).'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/doc', p)); }
       catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_doc_parent',
+    'Set (or clear) a KnowDoc\'s parent page via a DOC_CHILD_OF edge, for building a DeepWiki-style page ' +
+      'tree. A doc has at most one parent — action="add" always replaces any existing parent edge first ' +
+      '(so moving a page to a different parent is one call). Use action="remove" to detach (move to top ' +
+      'level). Idempotent on add.',
+    {
+      doc_id:        z.string().describe('the child page, e.g. "deepwiki_1_1"'),
+      parent_doc_id: z.string().optional().describe('the parent page, e.g. "deepwiki_1" — required unless action="remove"'),
+      action:        z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ doc_id, parent_doc_id, action }) => {
+      try {
+        return json(await lorePost('/lore/doc/parent', { doc_id, parent_doc_id: parent_doc_id ?? null, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
     },
   );
 

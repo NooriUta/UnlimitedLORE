@@ -437,7 +437,13 @@ public final class LoreSlices {
         // Schema added in Phase 5; slices registered now so the frontend can
         // query gracefully (returns [] until KnowDoc vertices are ingested).
         slice("docs",
-            "SELECT doc_id, title, kind, has_ext_deps, " +
+            // parent_doc_id/sort_order/child_ids: DeepWiki-style page tree
+            // (DOC_CHILD_OF edge, child→parent) — frontend builds the tree +
+            // prev/next sequence client-side from these three fields, same
+            // pattern as component/milestone facets elsewhere in this app.
+            "SELECT doc_id, title, kind, has_ext_deps, sort_order, " +
+            "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
+            "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
             "FROM KnowDoc",
             List.of(),
@@ -452,6 +458,9 @@ public final class LoreSlices {
             // consistency with every other *_by_id slice (was HAS_HIST, a type
             // never declared in the schema) in case doc history is added later.
             "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
+            "sort_order, " +
+            "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
+            "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowDoc WHERE doc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
