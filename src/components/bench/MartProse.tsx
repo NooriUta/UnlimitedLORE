@@ -30,6 +30,26 @@ mermaid.initialize({
     edgeLabelBackground: '#1a1e1a',
     fontFamily: 'monospace',
     fontSize: '13px',
+    // Sequence diagrams derive these from the vars above when unset, and the
+    // 'base' theme's derivation can land light-text-on-light-box for the
+    // alt/loop tab, notes, and actor boxes in a dark theme — pin them
+    // explicitly instead of trusting the derived contrast.
+    actorBkg: '#1e2a1e',
+    actorBorder: '#40916c',
+    actorTextColor: '#f0f4f0',
+    actorLineColor: '#74c69d',
+    signalColor: '#f0f4f0',
+    signalTextColor: '#f0f4f0',
+    labelBoxBkgColor: '#2d6a4f',
+    labelBoxBorderColor: '#40916c',
+    labelTextColor: '#f0f4f0',
+    loopTextColor: '#f0f4f0',
+    noteBkgColor: '#3a3a1e',
+    noteBorderColor: '#7a7a40',
+    noteTextColor: '#f0f4f0',
+    activationBkgColor: '#2d6a4f',
+    activationBorderColor: '#40916c',
+    sequenceNumberColor: '#1a1e1a',
   },
   securityLevel: 'loose',
 });
@@ -110,7 +130,17 @@ function MermaidDiagram({ def }: { def: string }) {
     return <div style={{ color: '#e06c75', fontSize: 12, fontFamily: 'var(--mono)', margin: '0 0 0.8em' }}>⚠ mermaid: {err}</div>;
   }
   if (svg) {
-    return <div style={{ margin: '0 0 0.8em', overflowX: 'auto' }} dangerouslySetInnerHTML={{ __html: svg }} />;
+    // The diagram's colors (themeVariables above) assume a dark backdrop —
+    // sequence-diagram arrows/labels have no background rect of their own,
+    // so on a light-themed host page (e.g. the docs viewer) they inherit the
+    // page background and become invisible. Force the dark backdrop here
+    // instead of relying on the host page's theme.
+    return (
+      <div
+        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: '#1a1e1a', borderRadius: 6, padding: 10 }}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+    );
   }
   return <div style={{ minHeight: 24, margin: '0 0 0.8em' }} aria-hidden />;
 }

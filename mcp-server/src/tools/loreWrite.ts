@@ -469,6 +469,75 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
+    'lore_link_adr_component',
+    'Link (or unlink) a KnowADR to a LoreComponent via a BELONGS_TO edge, one at a time. ' +
+      'For adding/removing a single component without touching the rest — lore_create_adr\'s ' +
+      'component_ids is full-replace (deletes and recreates the whole set), which is risky for ' +
+      'incremental edits. Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:       z.string().describe('e.g. "ADR-HND-022"'),
+      component_id: z.string().describe('e.g. "HOUND"'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, component_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/component', { adr_id, component_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_adr_depends_on',
+    'Link (or unlink) a KnowADR→KnowADR DEPENDS_ON edge, one at a time. For adding/removing a single ' +
+      'dependency without touching the rest — lore_create_adr\'s depends_on_ids is full-replace. ' +
+      'Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:     z.string().describe('the dependent ADR, e.g. "ADR-HND-022"'),
+      dep_adr_id: z.string().describe('the ADR it depends on, e.g. "ADR-HND-GEOID-IDENTITY"'),
+      action:     z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, dep_adr_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/depends_on', { adr_id, dep_adr_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_adr_supersedes',
+    'Link (or unlink) a KnowADR→KnowADR SUPERSEDES edge, one at a time. For adding/removing a single ' +
+      'supersession without touching the rest — lore_create_adr\'s supersedes_ids is full-replace. ' +
+      'Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id:            z.string().describe('the newer ADR, e.g. "ADR-HND-GEOID-IDENTITY"'),
+      superseded_adr_id: z.string().describe('the older ADR it supersedes, e.g. "ADR-HND-GEOID-V1"'),
+      action:            z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, superseded_adr_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/supersedes', { adr_id, superseded_adr_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_adr_tag',
+    'Link (or unlink) a KnowADR to a freeform tag via a TAGGED_WITH edge, one at a time (upserts the ' +
+      'KnowTag vertex if it does not exist yet). For adding/removing a single tag without touching the ' +
+      'rest — lore_create_adr\'s tags is full-replace. Idempotent on add. Use action="remove" to unlink.',
+    {
+      adr_id: z.string().describe('e.g. "ADR-HND-022"'),
+      tag_id: z.string().describe('e.g. "scd2"'),
+      action: z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ adr_id, tag_id, action }) => {
+      try {
+        return json(await lorePost('/lore/adr/tag', { adr_id, tag_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
     'lore_rename_adr',
     'Rename an existing KnowADR to a new adr_id IN PLACE — all edges (DEPENDS_ON/SUPERSEDES/' +
       'BELONGS_TO/TAGGED_WITH/IMPLEMENTED_IN*/HAS_STATE) hang off the vertex and survive untouched; ' +
@@ -830,10 +899,81 @@ export function registerLoreWrite(server: McpServer): void {
       content_md_en:  z.string().optional().describe('English Markdown body (preferred over content_html)'),
       content_md_ru:  z.string().optional().describe('Russian Markdown body (preferred over content_html)'),
       content_html:   z.string().optional().describe('Legacy: HTML content (100 KB max), rendered sandboxed'),
+      parent_doc_id:  z.string().optional().describe(
+        'DeepWiki-style page tree: set this doc\'s parent page in the same call (replaces any existing ' +
+        'parent — a doc has at most one). Pass "" (empty string) to detach/move to top level; omit to ' +
+        'leave the current parent untouched. For reparenting without touching content, use lore_link_doc_parent instead.'),
+      sort_order: z.number().int().optional().describe(
+        'Position among sibling pages under the same parent (used for tree ordering and prev/next navigation).'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/doc', p)); }
       catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_doc_parent',
+    'Set (or clear) a KnowDoc\'s parent page via a DOC_CHILD_OF edge, for building a DeepWiki-style page ' +
+      'tree. A doc has at most one parent — action="add" always replaces any existing parent edge first ' +
+      '(so moving a page to a different parent is one call). Use action="remove" to detach (move to top ' +
+      'level). Idempotent on add.',
+    {
+      doc_id:        z.string().describe('the child page, e.g. "deepwiki_1_1"'),
+      parent_doc_id: z.string().optional().describe('the parent page, e.g. "deepwiki_1" — required unless action="remove"'),
+      action:        z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ doc_id, parent_doc_id, action }) => {
+      try {
+        return json(await lorePost('/lore/doc/parent', { doc_id, parent_doc_id: parent_doc_id ?? null, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_doc_component',
+    'Link (or unlink) a KnowDoc to a LoreComponent via a BELONGS_TO edge, same pattern as ' +
+      'lore_link_adr_component. Idempotent on add. Use action="remove" to unlink.',
+    {
+      doc_id:       z.string().describe('e.g. "guide_onboarding"'),
+      component_id: z.string().describe('e.g. "HOUND"'),
+      action:       z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ doc_id, component_id, action }) => {
+      try {
+        return json(await lorePost('/lore/doc/component', { doc_id, component_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_link_doc_sprint',
+    'Link (or unlink) a KnowDoc to a KnowSprint via an IMPLEMENTED_IN edge, same pattern as ' +
+      'lore_link_adr\'s sprint branch. Idempotent on add. Use action="remove" to unlink.',
+    {
+      doc_id:    z.string().describe('e.g. "guide_onboarding"'),
+      sprint_id: z.string().describe('e.g. "SPRINT_LORE_KNOWDOC_TREE"'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ doc_id, sprint_id, action }) => {
+      try {
+        return json(await lorePost('/lore/doc/sprint', { doc_id, sprint_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  server.tool(
+    'lore_delete_doc',
+    'PERMANENTLY delete a KnowDoc: cascades edges first (ArcadeDB cannot DELETE VERTEX with edges), ' +
+      'then any KnowDocHist rows, then the vertex. Irreversible — for stale duplicates and empty ' +
+      'placeholder docs only (e.g. legacy DOC-* entries superseded by a newer guide_*/product_*/ref_* ' +
+      'doc with real content). Check content_html/content_md_en/content_md_ru are actually empty ' +
+      '(via the doc_by_id slice) before deleting anything that might have real content.',
+    { doc_id: z.string() },
+    async ({ doc_id }) => {
+      try {
+        return json(await lorePost('/lore/doc/delete', { doc_id }));
+      } catch (e) { return err(e); }
     },
   );
 
