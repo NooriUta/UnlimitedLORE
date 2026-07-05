@@ -1171,10 +1171,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               {linkedComps.map(c => {
                 const col = areaColor(c.area);
                 const isExplicit = explicit.includes(c.component_id);
+                const name = c.full_name || c.component_id;
                 return (
                   <span key={c.component_id} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11,
-                    padding: '2px 4px 2px 8px', borderRadius: 10,
+                    display: 'inline-flex', alignItems: 'center', gap: 2,
+                    padding: '3px', borderRadius: 10,
                     background: `color-mix(in srgb, ${col} 14%, transparent)`,
                     border: `1px solid color-mix(in srgb, ${col} 30%, transparent)`,
                     color: col,
@@ -1182,12 +1183,12 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     <button
                       onClick={onNavigateToComponent ? () => onNavigateToComponent(c.component_id) : undefined}
                       disabled={!onNavigateToComponent}
-                      title={onNavigateToComponent ? t('lore.sprintDetail.modules.openTitle', 'Открыть {{name}}', { name: c.full_name ?? c.component_id }) : (c.full_name ?? c.component_id)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
-                        color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, fontFamily: 'inherit', fontSize: 'inherit' }}
+                      title={onNavigateToComponent ? t('lore.sprintDetail.modules.openTitle', 'Открыть {{name}}', { name }) : name}
+                      aria-label={onNavigateToComponent ? t('lore.sprintDetail.modules.openTitle', 'Открыть {{name}}', { name }) : name}
+                      style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none',
+                        color: 'inherit', cursor: onNavigateToComponent ? 'pointer' : 'default', padding: 0, lineHeight: 0 }}
                     >
-                      <GameIcon slug={c.game_icon} size={12} style={{ color: 'inherit' }} />
-                      {c.full_name || c.component_id}
+                      <GameIcon slug={c.game_icon} size={13} style={{ color: 'inherit' }} />
                     </button>
                     {isExplicit && (
                       <button
