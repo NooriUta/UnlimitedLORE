@@ -1085,19 +1085,13 @@
         "label": "ADR",
         "openTitle": "Open {{id}}"
       },
-      "milestones": {
-        "label": "Milestones (actual)",
-        "unlink": "Unlink {{mid}}",
-        "linkPlaceholder": "+ link milestone…",
-        "empty": "no milestones"
-      },
       "plan": {
         "label": "Planning",
         "created": "Created",
         "start": "Planned start date",
         "end": "Planned end date",
-        "milestone": "Planned milestone",
-        "milestonePlaceholder": "— planned milestone —",
+        "milestone": "Milestone",
+        "milestonePlaceholder": "— milestone —",
         "noReleaseRequired": "No release required",
         "noReleaseHint": "Excluded from unreleased/deploy-lag metrics (docs, research, internal tooling — never ships as a versioned release)"
       },
