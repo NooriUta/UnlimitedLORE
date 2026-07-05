@@ -3315,6 +3315,54 @@ public class AidaLoreResource {
         }
     }
 
+    public record DocDeleteRequest(String doc_id) {}
+
+    @POST
+    @Path("doc/delete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deleteDoc(DocDeleteRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        Response guard = requireAdmin(role);
+        if (guard != null) return guard;
+        if (req == null || req.doc_id() == null || req.doc_id().isBlank())
+            return badParams("doc_id required");
+        try {
+            // KnowDoc has no SCD2 write path today (flat vertex, see upsertDoc's
+            // comment) — no HAS_STATE edge is ever created, so unlike adr/delete
+            // there are normally no KnowDocHist rows to clean up. Still check
+            // defensively (cheap, and harmless if the schema grows real history
+            // later) before dropping edges/vertex — same cascade order as ADR:
+            // ArcadeDB has no DELETE VERTEX cascade, so edges must go first.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> histRids = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "SELECT @rid as rid FROM KnowDocHist WHERE in('HAS_STATE').doc_id[0]=:id",
+                    Map.of("id", req.doc_id()))).await().indefinitely().result();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(bothE()) FROM KnowDoc WHERE doc_id=:id)",
+                Map.of("id", req.doc_id()))).await().indefinitely();
+            int histDeleted = 0;
+            if (histRids != null) {
+                for (Map<String, Object> r : histRids) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM KnowDocHist WHERE @rid=:rid",
+                        Map.of("rid", r.get("rid")))).await().indefinitely();
+                    histDeleted++;
+                }
+            }
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM KnowDoc WHERE doc_id=:id",
+                Map.of("id", req.doc_id()))).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                "hist_deleted", histDeleted)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOC DELETE] %s: %s", req.doc_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── BRAGI content archive write — MCP-01: publications, variants, assets ──
     // Flat vertices (no SCD2/Hist twin, see LoreSchemaInitializer Phase 7) — LH-44
     // partial-upsert still applies (re-calling with fewer fields must not wipe
