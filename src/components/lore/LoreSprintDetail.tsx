@@ -649,7 +649,29 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [compLinking, setCompLinking] = useState(false);
   const [compQuery, setCompQuery]     = useState('');
   const [compPickerOpen, setCompPickerOpen] = useState(false);
+  const [compPickerPos, setCompPickerPos] = useState<{ top: number; left: number } | null>(null);
   const compInputRef = useRef<HTMLInputElement>(null);
+
+  // The portaled dropdown is position:fixed anchored to the input's screen
+  // rect — recompute on every scroll/resize while open, or it visually
+  // detaches from the input as soon as any ancestor (this sidebar column
+  // scrolls, or the drag-resizable metaRightW column changes width) moves.
+  useEffect(() => {
+    if (!compPickerOpen) { setCompPickerPos(null); return; }
+    const update = () => {
+      const el = compInputRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setCompPickerPos({ top: r.bottom + 2, left: r.left });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [compPickerOpen]);
   const [msLinking, setMsLinking]     = useState(false);
   const [planBusy, setPlanBusy]       = useState(false);
   const [relLinking, setRelLinking]   = useState(false);
@@ -1204,11 +1226,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                       (overflowY:auto), and an absolutely-positioned popup here
                       would get clipped/unclickable as soon as Модули isn't the
                       last visible section (the bug this replaced). */}
-                  {compPickerOpen && filteredUnlinked.length > 0 && compInputRef.current && createPortal(
+                  {compPickerOpen && filteredUnlinked.length > 0 && compPickerPos && createPortal(
                     <div style={{
                       position: 'fixed' as const,
-                      top: compInputRef.current.getBoundingClientRect().bottom + 2,
-                      left: compInputRef.current.getBoundingClientRect().left,
+                      top: compPickerPos.top,
+                      left: compPickerPos.left,
                       zIndex: 1000,
                       minWidth: 180, maxHeight: 200, overflowY: 'auto' as const,
                       background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 4,
