@@ -33,6 +33,12 @@ dependencies {
     // Health — /q/health
     implementation 'io.quarkus:quarkus-smallrye-health'
 
+    // Metrics — /q/metrics (Prometheus scrape format)
+    implementation 'io.quarkus:quarkus-micrometer-registry-prometheus'
+
+    // Structured JSON logs (enabled in prod only — see application.properties)
+    implementation 'io.quarkus:quarkus-logging-json'
+
     // S3-compatible object storage (MinIO) — BRAGI asset uploads.
     // AWS SDK v2, plain library (no dedicated Quarkus extension needed for
     // this use case) — pins its own BOM since it isn't part of the Quarkus platform.
