@@ -455,25 +455,30 @@ public class AidaLoreResource {
                 final String oldStatus = rows.isEmpty() ? null
                     : (String) rows.get(0).get("status_raw");
 
-                Uni<LoreCommandClient.LoreCommandResult> closeOld =
-                    (oldRid != null && oldRid.startsWith("#"))
-                        ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            "UPDATE " + histType + " SET valid_to = :now WHERE @rid = :rid",
-                            Map.of("now", now, "rid", oldRid)))
-                        : Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
+                // A1: close-old + open-new + HAS_STATE edge + denormalize run as one
+                // atomic sqlscript (ArcadeDB implicit transaction). A partial SCD2
+                // transition can no longer leave two open hist rows, or an entity
+                // whose denormalized status_raw disagrees with its open hist row.
+                // vertexType/histType/keyField come from the internal type switch,
+                // never user input; id is bound as a parameter.
+                StringBuilder script = new StringBuilder();
+                Map<String, Object> p = new java.util.HashMap<>();
+                p.put("nsid", nsid); p.put("ns", newRaw); p.put("now", now); p.put("id", id);
+                if (oldRid != null && oldRid.startsWith("#")) {
+                    script.append("UPDATE ").append(histType)
+                          .append(" SET valid_to = :now WHERE @rid = :oldrid;");
+                    p.put("oldrid", oldRid);
+                }
+                script.append("INSERT INTO ").append(histType)
+                      .append(" SET state_uid = :nsid, status_raw = :ns, valid_from = :now;")
+                      .append("CREATE EDGE HAS_STATE FROM (SELECT FROM ").append(vertexType)
+                      .append(" WHERE ").append(keyField).append(" = :id) ")
+                      .append("TO (SELECT FROM ").append(histType).append(" WHERE state_uid = :nsid);")
+                      .append("UPDATE ").append(vertexType)
+                      .append(" SET status_raw = :ns WHERE ").append(keyField).append(" = :id;");
 
-                return closeOld
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "INSERT INTO " + histType +
-                            " SET state_uid = :nsid, status_raw = :ns, valid_from = :now",
-                            Map.of("nsid", nsid, "ns", newRaw, "now", now))))
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        linkStateCmd(vertexType, histType, keyField, id, nsid)))
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "UPDATE " + vertexType + " SET status_raw = :ns WHERE " + keyField + " = :id",
-                            Map.of("ns", newRaw, "id", id))))
+                return writeClient.command(db, basicAuth(),
+                        new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
                     .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
                         true, entityType, id, oldStatus, newRaw,
                         new StatusRevision(now, null)))));
@@ -752,29 +757,34 @@ public class AidaLoreResource {
                 List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
                 Object mxRaw = rows.isEmpty() ? null : rows.get(0).get("mx");
                 final int order = (mxRaw instanceof Number n ? n.intValue() : 0) + 1;
-                return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "INSERT INTO KnowTask SET task_uid = :uid, task_id = :tid, title = :title, " +
-                        "note_md = :note, order_index = :oi, src = 'manual'",
-                        mapOfNullable("uid", uid, "tid", tid, "title", title, "note", note, "oi", order)))
-                    .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
-                        "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
-                        Map.of("uid", uid, "sid", sid))))
-                    .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        // note_md must live on the hist row: tasks_of_sprint / tasks_of_phase
-                        // read it via out('HAS_STATE')[note_md IS NOT NULL].note_md[0], not the vertex.
-                        "INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
-                        "valid_from = :now, note_md = :note",
-                        mapOfNullable("nsid", nsid, "now", now, "note", note))))
-                    .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
-                        "KnowTask", "KnowTaskHist", "task_uid", uid, nsid)))
-                    // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
-                    .chain(__ -> phase == null
-                        ? Uni.createFrom().item((LoreCommandClient.LoreCommandResult) null)
-                        : writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
-                            "TO (SELECT FROM KnowPhase WHERE phase_uid = :puid)",
-                            Map.of("uid", uid, "puid", phase))))
+
+                // A1: one atomic sqlscript. ArcadeDB runs all statements in a single
+                // implicit transaction, so a mid-sequence failure rolls the whole
+                // create back — no orphan KnowTask left without its HAS_STATE hist
+                // row. A later statement also sees rows inserted by an earlier one in
+                // the same script, so the HAS_STATE edge resolves reliably (this used
+                // to need separate commands + careful ordering).
+                // note_md lives on the hist row: tasks_of_sprint / tasks_of_phase read
+                // it via out('HAS_STATE')[note_md IS NOT NULL].note_md[0], not the vertex.
+                StringBuilder script = new StringBuilder()
+                    .append("INSERT INTO KnowTask SET task_uid = :uid, task_id = :tid, title = :title, ")
+                    .append("note_md = :note, order_index = :oi, src = 'manual';")
+                    .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
+                    .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
+                    .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
+                    .append("valid_from = :now, note_md = :note;")
+                    .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
+                    .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
+                Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
+                    "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
+                if (phase != null) {
+                    script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
+                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid);");
+                    p.put("puid", phase);
+                }
+                return writeClient.command(db, basicAuth(),
+                        new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
                     .map(__ -> noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order))));
             })
             .onFailure().recoverWithItem(ex -> {
@@ -842,20 +852,21 @@ public class AidaLoreResource {
                         Object mxRaw = mrows.isEmpty() ? null : mrows.get(0).get("mx");
                         final int order = req.order_index() != null ? req.order_index()
                             : (mxRaw instanceof Number n ? n.intValue() : 0) + 1;
-                        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
-                                "order_index = :oi, src = 'manual'",
-                                mapOfNullable("uid", uid, "pid", display, "name", name, "oi", order)))
-                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
-                                "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
-                                Map.of("uid", uid, "sid", sid))))
-                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
-                                "valid_from = :now",
-                                Map.of("nsid", nsid, "now", now))))
-                            .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
-                                "KnowPhase", "KnowPhaseHist", "phase_uid", uid, nsid)))
+                        // A1: atomic sqlscript — a partial failure leaves no KnowPhase
+                        // without its PART_OF/HAS_STATE edges.
+                        String script =
+                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
+                            "order_index = :oi, src = 'manual';" +
+                            "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
+                            "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
+                            "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
+                            "valid_from = :now;" +
+                            "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
+                            "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid);";
+                        Map<String, Object> p = mapOfNullable("uid", uid, "pid", display, "name", name,
+                            "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                        return writeClient.command(db, basicAuth(),
+                                new LoreCommandClient.LoreCommand("sqlscript", script, p))
                             .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true))));
                     });
                 });
