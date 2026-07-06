@@ -28,3 +28,7 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      # Validates the frontend Dockerfile (npm build + nginx.conf) as shipped.
+      - name: Docker image build (frontend + nginx)
+        run: docker build -t lore-app:ci .
