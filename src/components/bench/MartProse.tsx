@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import mermaid from 'mermaid';
 import elkLayouts from '@mermaid-js/layout-elk';
+import { sanitizeMd, sanitizeSvg } from '../lore/sanitizeHtml';
 
 // The mart is a carrier of reasoning (v6.1): prose fields (narrative,
 // rationale/mechanism/interpretation, long_description, conclusions) are
@@ -88,12 +89,12 @@ function toSegments(text: string): Segment[] {
   MERMAID_FENCE.lastIndex = 0;
   while ((m = MERMAID_FENCE.exec(text)) !== null) {
     const before = text.slice(last, m.index);
-    if (before.trim()) segs.push({ kind: 'html', html: marked.parse(before) as string });
+    if (before.trim()) segs.push({ kind: 'html', html: sanitizeMd(marked.parse(before) as string) });
     segs.push({ kind: 'mermaid', def: m[1].trim() });
     last = MERMAID_FENCE.lastIndex;
   }
   const tail = text.slice(last);
-  if (tail.trim()) segs.push({ kind: 'html', html: marked.parse(tail) as string });
+  if (tail.trim()) segs.push({ kind: 'html', html: sanitizeMd(marked.parse(tail) as string) });
   return segs;
 }
 
@@ -127,7 +128,7 @@ function MermaidDiagram({ def }: { def: string }) {
     return (
       <div
         style={{ margin: '0 0 0.8em', overflowX: 'auto', background: '#f4f4f4', borderRadius: 6, padding: 10 }}
-        dangerouslySetInnerHTML={{ __html: svg }}
+        dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
       />
     );
   }

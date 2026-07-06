@@ -15,6 +15,7 @@ import Image from '@tiptap/extension-image';
 import { TableKit } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import { sanitizeMd } from './sanitizeHtml';
 import { Markdown } from 'tiptap-markdown';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { useEffect, useRef, useState } from 'react';
@@ -248,7 +249,7 @@ export default function TipTapField({
       editor.commands.setContent(draft);
     } else if (mode === 'html') {
       const dom = document.createElement('div');
-      dom.innerHTML = draft;
+      dom.innerHTML = sanitizeMd(draft);
       const doc = PMDOMParser.fromSchema(editor.schema).parse(dom);
       const tr = editor.state.tr.replaceWith(0, editor.state.doc.content.size, doc.content);
       editor.view.dispatch(tr);

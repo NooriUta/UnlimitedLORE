@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { sanitizeSvg } from './sanitizeHtml';
 import {
   fetchLoreSlice,
   updateLoreComponent,
@@ -286,7 +287,7 @@ function MermaidBlock({ code }: { code: string }) {
     import('mermaid').then(m => {
       m.default.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
       m.default.render(id, code).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg;
+        if (ref.current) ref.current.innerHTML = sanitizeSvg(svg);
       }).catch(() => {
         if (ref.current) ref.current.textContent = code;
       });
