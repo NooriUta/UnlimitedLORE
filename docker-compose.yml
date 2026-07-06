@@ -41,13 +41,22 @@ services:
     volumes:
       - C:/AIDA/rag-vs-parse:/bench-data:ro   # STATUS.json + report html
       - C:/AIDA/docs:/team-docs:ro            # ingestion source (opt-in)
+    healthcheck:
+      # Liveness (process up), not readiness — so an ArcadeDB blip doesn't flap
+      # the container. Readiness (DB-gated) lives at /q/health/ready for monitoring.
+      test: ["CMD", "curl", "-fsS", "http://localhost:9100/q/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   lore-app:
     build: .
     ports:
       - "4400:80"
     depends_on:
-      - lore-backend
+      lore-backend:
+        condition: service_healthy
     volumes:
       - C:/AIDA/TestPlayGround/runs:/tyr-runs:ro
 
