@@ -33,6 +33,10 @@ dependencies {
     // Health — /q/health
     implementation 'io.quarkus:quarkus-smallrye-health'
 
+    // OIDC — validate Keycloak (omilore realm) JWTs (A2). Disabled by default
+    // (quarkus.oidc.enabled=false) so dev runs without KC; enable in prod/staging.
+    implementation 'io.quarkus:quarkus-oidc'
+
     // Metrics — /q/metrics (Prometheus scrape format)
     implementation 'io.quarkus:quarkus-micrometer-registry-prometheus'
 
