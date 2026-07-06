@@ -922,12 +922,24 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     )}
                   </span>
                 ))}
-                {releaseOptions.length > 0 && (
+                {releaseOptions.length > 0 && (() => {
+                  // F-22: release options were a flat list of bare tags filtered
+                  // only by git project — hard to pick and unclear which repo/
+                  // component a release belongs to. Group by project (optgroup)
+                  // and carry "<project>#<id>" as the value so cross-project tag
+                  // collisions (AIDA#v1.3.0 vs seidr-site#v1.3.0) link the right one.
+                  const projShort = (p: string) => p?.split('/').pop() ?? p;
+                  const byProj = new Map<string, typeof releaseOptions>();
+                  releaseOptions.forEach(r => { const a = byProj.get(r.gitProject) ?? []; a.push(r); byProj.set(r.gitProject, a); });
+                  const projs = [...byProj.keys()].sort();
+                  return (
                   <select
                     disabled={relLinking}
                     value=""
                     onChange={async e => {
-                      const opt = releaseOptions.find(r => r.id === e.target.value);
+                      const hi = e.target.value.indexOf('#');
+                      const gp = e.target.value.slice(0, hi), rid = e.target.value.slice(hi + 1);
+                      const opt = releaseOptions.find(r => r.gitProject === gp && r.id === rid);
                       if (!opt) return;
                       setRelLinking(true);
                       try {
@@ -938,9 +950,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     style={lookupSelectStyle}
                   >
                     <option value="">{t('lore.sprintDetail.releaseBar.linkPlaceholder', '+ привязать релиз…')}</option>
-                    {releaseOptions.map(r => <option key={r.id} value={r.id}>{r.id}</option>)}
+                    {projs.length > 1
+                      ? projs.map(pr => (
+                          <optgroup key={pr} label={projShort(pr)}>
+                            {byProj.get(pr)!.map(r => <option key={pr + '#' + r.id} value={pr + '#' + r.id}>{r.id}</option>)}
+                          </optgroup>
+                        ))
+                      : releaseOptions.map(r => <option key={r.gitProject + '#' + r.id} value={r.gitProject + '#' + r.id}>{r.id} · {projShort(r.gitProject)}</option>)}
                   </select>
-                )}
+                  );
+                })()}
                 {relLinking && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
               </span>
             )}
