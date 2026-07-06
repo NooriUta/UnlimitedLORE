@@ -550,8 +550,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> updateSprintPlan(SprintPlanRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
             return Uni.createFrom().item(badParams("sprint_id required"));
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
@@ -686,8 +685,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response createSprint(SprintCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank()) {
             return badParams("sprint_id required");
         }
@@ -721,8 +719,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.task_id() == null
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, task_id, title required"));
@@ -806,8 +803,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> createPhase(PhaseCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.phase_key() == null || req.phase_key().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, phase_key required"));
         }
@@ -887,8 +883,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkTaskPhase(TaskPhaseRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.task_uid() == null)
             return badParams("task_uid required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
@@ -960,8 +955,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response editTaskBatch(List<TaskEditRequest> reqs, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (reqs == null || reqs.isEmpty()) return badParams("tasks array required");
         int updated = 0;
         List<String> errors = new java.util.ArrayList<>();
@@ -1030,8 +1024,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> editTask(TaskEditRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.task_uid() == null
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("task_uid and title required"));
@@ -1064,8 +1057,7 @@ public class AidaLoreResource {
     public Response createRelease(ReleaseCreateRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank()) {
             return badParams("release_id required");
         }
@@ -1128,8 +1120,7 @@ public class AidaLoreResource {
     public Response updateRelease(ReleaseUpdateRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank()) {
             return badParams("release_id required");
         }
@@ -1193,8 +1184,7 @@ public class AidaLoreResource {
     public Response linkRelease(ReleaseLinkRequest req,
                                 @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank()) {
             return badParams("release_id required");
         }
@@ -1291,8 +1281,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response unlinkRelease(ReleaseUnlinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank())
             return badParams("release_id required");
         String gp = (req.git_project() != null && !req.git_project().isBlank())
@@ -1347,8 +1336,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response moveToProject(ProjectMoveRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.entity_type() == null || req.id() == null || req.git_project() == null
                 || req.id().isBlank() || req.git_project().isBlank())
             return badParams("entity_type, id, git_project required");
@@ -1419,8 +1407,7 @@ public class AidaLoreResource {
     public Response updateSprintRefs(SprintRefsRequest req,
                                      @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
             return badParams("sprint_id required");
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
@@ -1494,8 +1481,7 @@ public class AidaLoreResource {
     public Response updateSprint(SprintUpdateRequest req,
                                  @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
             return badParams("sprint_id required");
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
@@ -1552,8 +1538,7 @@ public class AidaLoreResource {
     public Response linkSprintProject(SprintProjectRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.git_project() == null)
             return badParams("sprint_id and git_project required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
@@ -1608,8 +1593,7 @@ public class AidaLoreResource {
     public Response linkSprintMilestone(SprintMilestoneRequest req,
                                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.milestone_id() == null)
             return badParams("sprint_id and milestone_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
@@ -1659,8 +1643,7 @@ public class AidaLoreResource {
     public Response upsertMilestone(MilestoneRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.milestone_id() == null || req.milestone_id().isBlank())
             return badParams("milestone_id required");
         try {
@@ -1709,8 +1692,7 @@ public class AidaLoreResource {
     public Response linkSprintComponent(SprintComponentRequest req,
                                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.component_id() == null)
             return badParams("sprint_id and component_id required");
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.component_id()).matches())
@@ -1779,8 +1761,7 @@ public class AidaLoreResource {
     public Response linkTaskComponent(TaskComponentRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.task_uid() == null || req.component_id() == null)
             return badParams("task_uid and component_id required");
         if (!SAFE_ID.matcher(req.task_uid()).matches() || !SAFE_ID.matcher(req.component_id()).matches())
@@ -1841,8 +1822,7 @@ public class AidaLoreResource {
     public Response linkSprintDep(SprintDepRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.from_sprint() == null || req.to_sprint() == null)
             return badParams("from_sprint and to_sprint required");
         if (!SAFE_ID.matcher(req.from_sprint()).matches() || !SAFE_ID.matcher(req.to_sprint()).matches())
@@ -1911,8 +1891,7 @@ public class AidaLoreResource {
     public Response batchSetStatus(BatchStatusRequest req,
                                    @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.ids() == null || req.ids().isEmpty())
             return badParams("ids required");
         if (req.entity_type() == null || req.status() == null)
@@ -1944,8 +1923,7 @@ public class AidaLoreResource {
     public Response createAdr(AdrCreateRequest req,
                               @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank())
             return badParams("adr_id required");
         if (!SAFE_ID.matcher(req.adr_id()).matches())
@@ -2189,8 +2167,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdr(AdrLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank())
             return badParams("adr_id required");
         boolean toSprint  = req.sprint_id()  != null && !req.sprint_id().isBlank();
@@ -2275,8 +2252,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrComponent(AdrComponentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.component_id() == null || req.component_id().isBlank())
             return badParams("adr_id and component_id required");
@@ -2315,8 +2291,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrDependsOn(AdrDependsOnLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.dep_adr_id() == null || req.dep_adr_id().isBlank())
             return badParams("adr_id and dep_adr_id required");
@@ -2355,8 +2330,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrSupersedes(AdrSupersedesLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.superseded_adr_id() == null || req.superseded_adr_id().isBlank())
             return badParams("adr_id and superseded_adr_id required");
@@ -2395,8 +2369,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrTag(AdrTagLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.tag_id() == null || req.tag_id().isBlank())
             return badParams("adr_id and tag_id required");
@@ -2446,8 +2419,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkRunbookAdr(RunbookAdrLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.runbook_id() == null || req.runbook_id().isBlank())
             return badParams("runbook_id required");
         if (req.adr_id() == null || req.adr_id().isBlank())
@@ -2487,8 +2459,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response renameAdr(AdrRenameRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.new_adr_id() == null || req.new_adr_id().isBlank())
             return badParams("adr_id and new_adr_id required");
@@ -2527,8 +2498,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteAdr(AdrDeleteRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank())
             return badParams("adr_id required");
         try {
@@ -2573,8 +2543,7 @@ public class AidaLoreResource {
     public Response createDecision(DecisionCreateRequest req,
                                    @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.decision_id() == null || req.decision_id().isBlank())
             return badParams("decision_id required");
         if (req.title() == null || req.title().isBlank())
@@ -2620,8 +2589,7 @@ public class AidaLoreResource {
     public Response updateComponent(ComponentUpdateRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.component_id() == null || req.component_id().isBlank())
             return badParams("component_id required");
         try {
@@ -2661,8 +2629,7 @@ public class AidaLoreResource {
     public Response createComponent(ComponentCreateRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.component_id() == null || req.component_id().isBlank())
             return badParams("component_id required");
         if (!SAFE_ID.matcher(req.component_id()).matches())
@@ -2715,8 +2682,7 @@ public class AidaLoreResource {
     public Response linkComponentParent(ComponentLinkParentRequest req,
                                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.component_id() == null || req.parent_id() == null)
             return badParams("component_id and parent_id required");
         try {
@@ -2750,8 +2716,7 @@ public class AidaLoreResource {
     public Response upsertSpec(SpecUpsertRequest req,
                                @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.spec_id() == null || req.spec_id().isBlank())
             return badParams("spec_id required");
         if (!SAFE_ID.matcher(req.spec_id()).matches())
@@ -2835,8 +2800,7 @@ public class AidaLoreResource {
     public Response deleteSpec(SpecDeleteRequest req,
                                @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.spec_id() == null || req.spec_id().isBlank())
             return badParams("spec_id required");
         if (!SAFE_ID.matcher(req.spec_id()).matches())
@@ -2864,8 +2828,7 @@ public class AidaLoreResource {
     public Response upsertQualityGate(QGUpsertRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.qg_id() == null || req.qg_id().isBlank())
             return badParams("qg_id required");
         if (!SAFE_ID.matcher(req.qg_id()).matches())
@@ -2907,8 +2870,7 @@ public class AidaLoreResource {
     public Response recordQGRun(QGRunRequest req,
                                 @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.routine_name() == null || req.routine_name().isBlank())
             return badParams("routine_name required");
         String runId = req.run_id() != null ? req.run_id()
@@ -2961,8 +2923,7 @@ public class AidaLoreResource {
     public Response upsertQGJobTask(QGJobTaskRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.job_id() == null || req.job_id().isBlank())
             return badParams("job_id required");
         if (req.qg_id() == null || req.qg_id().isBlank())
@@ -3008,8 +2969,7 @@ public class AidaLoreResource {
     public Response upsertQGRecommendation(QGRecommendationRequest req,
                                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.rec_id() == null || req.rec_id().isBlank())
             return badParams("rec_id required");
         if (req.job_id() == null || req.job_id().isBlank())
@@ -3064,8 +3024,7 @@ public class AidaLoreResource {
     public Response promoteQGRecommendation(QGPromoteRequest req,
                                             @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.rec_id() == null || req.rec_id().isBlank())
             return badParams("rec_id required");
         // Default target: a weekly rotating housekeeping sprint (ISO week), not one
@@ -3207,8 +3166,7 @@ public class AidaLoreResource {
     public Response upsertRunbook(RunbookUpsertRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.runbook_id() == null || req.runbook_id().isBlank())
             return badParams("runbook_id required");
         if (!SAFE_ID.matcher(req.runbook_id()).matches())
@@ -3301,8 +3259,7 @@ public class AidaLoreResource {
     public Response upsertDoc(DocUpsertRequest req,
                               @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.doc_id() == null || req.doc_id().isBlank())
             return badParams("doc_id required");
         if (!SAFE_ID.matcher(req.doc_id()).matches())
@@ -3357,8 +3314,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteDoc(DocDeleteRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.doc_id() == null || req.doc_id().isBlank())
             return badParams("doc_id required");
         try {
@@ -3410,8 +3366,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkDocParent(DocParentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.doc_id() == null || req.doc_id().isBlank())
             return badParams("doc_id required");
         if (!SAFE_ID.matcher(req.doc_id()).matches())
@@ -3466,8 +3421,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkDocComponent(DocComponentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.doc_id() == null || req.doc_id().isBlank()
                 || req.component_id() == null || req.component_id().isBlank())
             return badParams("doc_id and component_id required");
@@ -3510,8 +3464,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkDocSprint(DocSprintLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.doc_id() == null || req.doc_id().isBlank()
                 || req.sprint_id() == null || req.sprint_id().isBlank())
             return badParams("doc_id and sprint_id required");
@@ -3575,8 +3528,7 @@ public class AidaLoreResource {
     public Response upsertBragiPublication(BragiPublicationRequest req,
                                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.publication_id() == null || req.publication_id().isBlank())
             return badParams("publication_id required");
         if (!SAFE_ID.matcher(req.publication_id()).matches())
@@ -3630,8 +3582,7 @@ public class AidaLoreResource {
     public Response upsertBragiVariant(BragiVariantRequest req,
                                        @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.variant_id() == null || req.variant_id().isBlank())
             return badParams("variant_id required");
         if (!SAFE_ID.matcher(req.variant_id()).matches())
@@ -3691,8 +3642,7 @@ public class AidaLoreResource {
     public Response upsertBragiAsset(BragiAssetRequest req,
                                      @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.asset_id() == null || req.asset_id().isBlank())
             return badParams("asset_id required");
         if (!SAFE_ID.matcher(req.asset_id()).matches())
@@ -3746,8 +3696,7 @@ public class AidaLoreResource {
     public Response uploadBragiAsset(@BeanParam BragiAssetUploadForm form,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (form == null || form.file == null || form.file.fileName() == null)
             return badParams("file required");
         String original = form.file.fileName();
@@ -3795,8 +3744,7 @@ public class AidaLoreResource {
     public Response upsertBragiKeyword(BragiKeywordRequest req,
                                        @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.keyword_id() == null || req.keyword_id().isBlank())
             return badParams("keyword_id required");
         if (!SAFE_ID.matcher(req.keyword_id()).matches())
@@ -3852,8 +3800,7 @@ public class AidaLoreResource {
     public Response upsertBragiChannel(BragiChannelRequest req,
                                        @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.channel_id() == null || req.channel_id().isBlank())
             return badParams("channel_id required");
         if (!SAFE_ID.matcher(req.channel_id()).matches())
@@ -3886,8 +3833,7 @@ public class AidaLoreResource {
     public Response upsertBragiRubric(BragiRubricRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.rubric_id() == null || req.rubric_id().isBlank())
             return badParams("rubric_id required");
         if (!SAFE_ID.matcher(req.rubric_id()).matches())
@@ -3922,8 +3868,7 @@ public class AidaLoreResource {
     public Response linkBragiRubric(BragiRubricLinkRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.entity_id() == null || req.entity_id().isBlank())
             return badParams("entity_id required");
         if (req.rubric_id() == null || req.rubric_id().isBlank())
@@ -3973,8 +3918,7 @@ public class AidaLoreResource {
     public Response upsertBragiPage(BragiPageRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.page_id() == null || req.page_id().isBlank())
             return badParams("page_id required");
         if (!SAFE_ID.matcher(req.page_id()).matches())
@@ -4010,8 +3954,7 @@ public class AidaLoreResource {
     public Response upsertBragiCampaign(BragiCampaignRequest req,
                                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.campaign_id() == null || req.campaign_id().isBlank())
             return badParams("campaign_id required");
         if (!SAFE_ID.matcher(req.campaign_id()).matches())
@@ -4059,8 +4002,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkBragiEntity(BragiLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.entity_id() == null || req.entity_id().isBlank())
             return badParams("entity_id required");
         if (req.target_id() == null || req.target_id().isBlank())
@@ -4126,8 +4068,7 @@ public class AidaLoreResource {
     public Response recordBragiMetric(BragiMetricRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.object_type() == null || req.object_type().isBlank())
             return badParams("object_type required");
         if (req.object_id() == null || req.object_id().isBlank())
@@ -4240,8 +4181,7 @@ public class AidaLoreResource {
     public Response upsertBragiIntegration(BragiIntegrationRequest req,
                                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.integration_id() == null || req.integration_id().isBlank())
             return badParams("integration_id required");
         if (!SAFE_ID.matcher(req.integration_id()).matches())
@@ -4283,8 +4223,7 @@ public class AidaLoreResource {
     public Response upsertBragiInsight(BragiInsightRequest req,
                                        @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.insight_id() == null || req.insight_id().isBlank())
             return badParams("insight_id required");
         if (!SAFE_ID.matcher(req.insight_id()).matches())
@@ -4316,8 +4255,7 @@ public class AidaLoreResource {
     public Response linkBragiInsight(BragiInsightLinkRequest req,
                                      @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.insight_id() == null || req.insight_id().isBlank())
             return badParams("insight_id required");
         if (req.target_type() == null || (!req.target_type().equals("task") && !req.target_type().equals("adr")))
@@ -4359,8 +4297,7 @@ public class AidaLoreResource {
     public Response syncBragiIntegration(BragiIntegrationSyncRequest req,
                                          @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.integration_id() == null || req.integration_id().isBlank())
             return badParams("integration_id required");
         try {
@@ -4401,12 +4338,12 @@ public class AidaLoreResource {
         }
     }
 
-    private Response requireAdmin(String role) {
+    // Throws LoreExceptions.Forbidden (→ 403 JSON via LoreExceptionMapper) when the
+    // caller is not admin/superadmin. Call as a guard: `requireAdmin(role);`.
+    private void requireAdmin(String role) {
         if (!"admin".equals(role) && !"superadmin".equals(role)) {
-            return noStore(Response.status(Response.Status.FORBIDDEN)
-                .entity(new LoreError("FORBIDDEN", "admin role required")));
+            throw new LoreExceptions.Forbidden("admin role required");
         }
-        return null;
     }
 
     private Response badParams(String msg) {
