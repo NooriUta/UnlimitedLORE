@@ -1091,13 +1091,17 @@ public class AidaLoreResource {
             String ruid = gp + "#" + req.release_id();
             set.append(", git_project=:gp, release_uid=:ruid");
             p.put("gp", gp); p.put("ruid", ruid);
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                set.toString(), p)).await().indefinitely();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now",
-                Map.of("nsid", nsid, "now", now))).await().indefinitely();
-            writeClient.command(db, basicAuth(), linkStateCmd(
-                "KnowRelease", "KnowReleaseHist", "release_id", req.release_id(), nsid)).await().indefinitely();
+            // A1: vertex INSERT + hist INSERT + HAS_STATE edge as one atomic
+            // sqlscript — no orphan KnowRelease without its hist row on partial
+            // failure. Reuses :rid (already bound above) for the edge.
+            p.put("nsid", nsid);
+            p.put("now", now);
+            String script = set.toString() + ";"
+                + "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now;"
+                + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_id=:rid) "
+                + "TO (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid);";
+            writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sqlscript", script, p)).await().indefinitely();
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("is_current", cur); out.put("created", now);
@@ -2022,16 +2026,17 @@ public class AidaLoreResource {
                     "ctx", req.context_md(),
                     "dec", req.decision_md(),
                     "con", req.consequences_md());
-                // Step 3b: create the initial open hist row + HAS_STATE edge
+                // Step 3b: create the initial open hist row + HAS_STATE edge.
+                // A1: one atomic sqlscript so a failed edge leaves no orphan hist row.
                 histP.put("nsid", nsid);
                 histP.put("now",  now);
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                histP.put("id",   req.adr_id());
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                     "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                    "context_md=:ctx, decision_md=:dec, consequences_md=:con",
+                    "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
+                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
+                    "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);",
                     histP)).await().indefinitely();
-                writeClient.command(db, basicAuth(), linkStateCmd(
-                    "KnowADR", "KnowADRHist", "adr_id", req.adr_id(), nsid))
-                    .await().indefinitely();
                 histCreated = true;
             }
 
@@ -2768,11 +2773,12 @@ public class AidaLoreResource {
                     hp.put("id", req.spec_id());
                     hp.put("nsid", nsid);
                     hp.put("now", Instant.now().toString());
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    // A1: hist INSERT + HAS_STATE edge as one atomic sqlscript.
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
-                        "content_md=:content, version=:version, summary=:summary", hp)).await().indefinitely();
-                    writeClient.command(db, basicAuth(), linkStateCmd(
-                        "KnowSpec", "KnowSpecHist", "spec_id", req.spec_id(), nsid)).await().indefinitely();
+                        "content_md=:content, version=:version, summary=:summary;" +
+                        "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
+                        "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 }
                 histWritten = true;
             }
@@ -3205,13 +3211,14 @@ public class AidaLoreResource {
                 }
                 histCreated = false;
             } else {
-                // Step 3b: create the initial open hist row + HAS_STATE edge
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt",
-                    mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md())))
-                    .await().indefinitely();
-                writeClient.command(db, basicAuth(), linkStateCmd(
-                    "KnowRunbook", "KnowRunbookHist", "runbook_id", req.runbook_id(), nsid))
+                // Step 3b: create the initial open hist row + HAS_STATE edge.
+                // A1: one atomic sqlscript so a failed edge leaves no orphan hist row.
+                Map<String, Object> hp = mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md());
+                hp.put("id", req.runbook_id());
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt;" +
+                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRunbook WHERE runbook_id=:id) " +
+                    "TO (SELECT FROM KnowRunbookHist WHERE state_uid=:nsid);", hp))
                     .await().indefinitely();
                 histCreated = true;
             }
