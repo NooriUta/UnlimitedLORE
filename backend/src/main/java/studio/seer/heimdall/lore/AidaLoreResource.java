@@ -45,11 +45,10 @@ import java.util.regex.Pattern;
  * Pattern: BenchMartResource.
  */
 @Path("/lore")
-public class AidaLoreResource {
+public class AidaLoreResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(AidaLoreResource.class);
 
-    public record LoreError(String error, String detail) {}
     public record SliceInfo(String id, List<String> required, List<String> optional) {}
 
     // ── write-path records ────────────────────────────────────────────────────
@@ -87,8 +86,8 @@ public class AidaLoreResource {
         Integer order_index, boolean created) {}
     public record TaskPhaseRequest(String task_uid, String phase_uid, String action) {}
 
-    // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
-    private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
+    // SAFE_ID, the ArcadeDB clients, config, and shared helpers are inherited from
+    // LoreResourceBase (B2 God-class split).
     // Canonical source of truth for these vocabularies: shared/lore-statuses.json.
     // Drift between this mirror and the JSON is caught by LoreStatusesConsistencyTest
     // (JUnit). The MCP + frontend mirrors are guarded by scripts/check-lore-statuses.mjs.
@@ -117,26 +116,6 @@ public class AidaLoreResource {
         Map.entry("ready_for_deploy", "🚀 READY FOR DEPLOY"),
         Map.entry("backlog",          "🟣 BACKLOG"),
         Map.entry("design",           "🔬 DESIGN"));
-
-    @ConfigProperty(name = "lore.enabled", defaultValue = "false")
-    boolean enabled;
-
-    @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
-    String db;
-
-    @ConfigProperty(name = "bench.mart.user", defaultValue = "root")
-    String user;
-
-    @ConfigProperty(name = "bench.mart.password", defaultValue = "")
-    String password;
-
-    @Inject
-    @RestClient
-    MartClient client;
-
-    @Inject
-    @RestClient
-    LoreCommandClient writeClient;
 
     @Inject
     LoreIngestService ingestService;
@@ -4332,19 +4311,6 @@ public class AidaLoreResource {
         }
     }
 
-    // Throws LoreExceptions.Forbidden (→ 403 JSON via LoreExceptionMapper) when the
-    // caller is not admin/superadmin. Call as a guard: `requireAdmin(role);`.
-    private void requireAdmin(String role) {
-        if (!"admin".equals(role) && !"superadmin".equals(role)) {
-            throw new LoreExceptions.Forbidden("admin role required");
-        }
-    }
-
-    private Response badParams(String msg) {
-        return noStore(Response.status(Response.Status.BAD_REQUEST)
-            .entity(new LoreError("BAD_PARAMS", msg)));
-    }
-
     /** Классификатор — рубрика одна на сущность, не аддитивно: сперва снимаем
      * прежнее IN_RUBRIC-ребро (если было), затем ставим новое. entityIdField
      * is bound via SQL param, never concatenated. */
@@ -4367,45 +4333,4 @@ public class AidaLoreResource {
         return String.format("SPRINT_QG_HOUSEKEEPING_%dW%02d", isoYear, isoWeek);
     }
 
-    /** Param map that tolerates null values (Map.of forbids them) — used for nullable note_md. */
-    private static Map<String, Object> mapOfNullable(Object... kv) {
-        Map<String, Object> m = new java.util.HashMap<>();
-        for (int i = 0; i + 1 < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
-        return m;
-    }
-
-    /**
-     * The HAS_STATE edge that links an entity vertex to its (new or initial) SCD2
-     * history row. This step is byte-for-byte identical across every LORE type —
-     * only the vertex/hist class and key field change — so all create-seed paths
-     * and {@link #updateScd2Status} build it through here (B1). Behaviour is
-     * unchanged: same SQL, same :id/:nsid params. (Atomicity across the surrounding
-     * multi-step write is a separate concern — see task A1.)
-     */
-    private static LoreCommandClient.LoreCommand linkStateCmd(
-            String vertexType, String histType, String keyField, String id, String nsid) {
-        return new LoreCommandClient.LoreCommand("sql",
-            "CREATE EDGE HAS_STATE FROM (SELECT FROM " + vertexType + " WHERE " + keyField + " = :id) " +
-            "TO (SELECT FROM " + histType + " WHERE state_uid = :nsid)",
-            Map.of("id", id, "nsid", nsid));
-    }
-
-    private Response disabled() {
-        return noStore(Response.status(Response.Status.NOT_FOUND)
-            .entity(new LoreError("LORE_DISABLED",
-                "lore.enabled=false (lore is dev-only)")));
-    }
-
-    private String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-            (user + ":" + password).getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static Response noStore(Response.ResponseBuilder builder) {
-        return builder.type(MediaType.APPLICATION_JSON).header("Cache-Control", "no-store").build();
-    }
-
-    private static String str(Object o) {
-        return o == null ? "" : o.toString().trim();
-    }
 }

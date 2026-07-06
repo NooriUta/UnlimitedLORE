@@ -20,7 +20,7 @@ public class LoreExceptionMapper implements ExceptionMapper<LoreExceptions.LoreE
         return Response.status(e.status)
             .type(MediaType.APPLICATION_JSON)
             .header("Cache-Control", "no-store")
-            .entity(new AidaLoreResource.LoreError(e.code, e.getMessage()))
+            .entity(new LoreResourceBase.LoreError(e.code, e.getMessage()))
             .build();
     }
 }
