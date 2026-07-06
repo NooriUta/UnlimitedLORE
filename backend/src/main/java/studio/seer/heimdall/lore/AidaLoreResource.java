@@ -469,11 +469,7 @@ public class AidaLoreResource {
                             " SET state_uid = :nsid, status_raw = :ns, valid_from = :now",
                             Map.of("nsid", nsid, "ns", newRaw, "now", now))))
                     .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "CREATE EDGE HAS_STATE " +
-                            "FROM (SELECT FROM " + vertexType + " WHERE " + keyField + " = :id) " +
-                            "TO (SELECT FROM " + histType + " WHERE state_uid = :nsid)",
-                            Map.of("id", id, "nsid", nsid))))
+                        linkStateCmd(vertexType, histType, keyField, id, nsid)))
                     .chain(__ -> writeClient.command(db, basicAuth(),
                         new LoreCommandClient.LoreCommand("sql",
                             "UPDATE " + vertexType + " SET status_raw = :ns WHERE " + keyField + " = :id",
@@ -602,10 +598,8 @@ public class AidaLoreResource {
                     "planned_end_date = :planned_end_date, planned_milestone_id = :planned_milestone_id, " +
                     "track_id = :track_id, pr_refs = :pr_refs",
                     insertParams)))
-                .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) " +
-                    "TO (SELECT FROM KnowSprintHist WHERE state_uid = :nsid)",
-                    Map.of("sid", sid, "nsid", nsid))))
+                .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
+                    "KnowSprint", "KnowSprintHist", "sprint_id", sid, nsid)))
                 .map(__ -> {
                     Map<String, Object> out = new LinkedHashMap<>(next);
                     out.put("ok", true);
@@ -772,10 +766,8 @@ public class AidaLoreResource {
                         "INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
                         "valid_from = :now, note_md = :note",
                         mapOfNullable("nsid", nsid, "now", now, "note", note))))
-                    .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
-                        "TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid)",
-                        Map.of("uid", uid, "nsid", nsid))))
+                    .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
+                        "KnowTask", "KnowTaskHist", "task_uid", uid, nsid)))
                     // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
                     .chain(__ -> phase == null
                         ? Uni.createFrom().item((LoreCommandClient.LoreCommandResult) null)
@@ -862,10 +854,8 @@ public class AidaLoreResource {
                                 "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
                                 "valid_from = :now",
                                 Map.of("nsid", nsid, "now", now))))
-                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
-                                "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid)",
-                                Map.of("uid", uid, "nsid", nsid))))
+                            .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
+                                "KnowPhase", "KnowPhaseHist", "phase_uid", uid, nsid)))
                             .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true))));
                     });
                 });
@@ -1095,11 +1085,8 @@ public class AidaLoreResource {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now",
                 Map.of("nsid", nsid, "now", now))).await().indefinitely();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE HAS_STATE " +
-                "FROM (SELECT FROM KnowRelease WHERE release_id=:rid) " +
-                "TO   (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid)",
-                Map.of("rid", req.release_id(), "nsid", nsid))).await().indefinitely();
+            writeClient.command(db, basicAuth(), linkStateCmd(
+                "KnowRelease", "KnowReleaseHist", "release_id", req.release_id(), nsid)).await().indefinitely();
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("is_current", cur); out.put("created", now);
@@ -2031,11 +2018,8 @@ public class AidaLoreResource {
                     "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
                     "context_md=:ctx, decision_md=:dec, consequences_md=:con",
                     histP)).await().indefinitely();
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_STATE " +
-                    "FROM (SELECT FROM KnowADR     WHERE adr_id    = :id) " +
-                    "TO   (SELECT FROM KnowADRHist WHERE state_uid = :nsid)",
-                    Map.of("id", req.adr_id(), "nsid", nsid)))
+                writeClient.command(db, basicAuth(), linkStateCmd(
+                    "KnowADR", "KnowADRHist", "adr_id", req.adr_id(), nsid))
                     .await().indefinitely();
                 histCreated = true;
             }
@@ -2776,11 +2760,8 @@ public class AidaLoreResource {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
                         "content_md=:content, version=:version, summary=:summary", hp)).await().indefinitely();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE HAS_STATE " +
-                        "FROM (SELECT FROM KnowSpec     WHERE spec_id   = :id) " +
-                        "TO   (SELECT FROM KnowSpecHist WHERE state_uid = :nsid)",
-                        Map.of("id", req.spec_id(), "nsid", nsid))).await().indefinitely();
+                    writeClient.command(db, basicAuth(), linkStateCmd(
+                        "KnowSpec", "KnowSpecHist", "spec_id", req.spec_id(), nsid)).await().indefinitely();
                 }
                 histWritten = true;
             }
@@ -3125,10 +3106,8 @@ public class AidaLoreResource {
                 "INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='⬜ TODO', valid_from=:now",
                 Map.of("nsid", stateUid, "now", nowTs))).await().indefinitely();
             // Link HAS_STATE: KnowTask → KnowTaskHist
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) " +
-                "TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid)",
-                Map.of("uid", taskUid, "nsid", stateUid))).await().indefinitely();
+            writeClient.command(db, basicAuth(), linkStateCmd(
+                "KnowTask", "KnowTaskHist", "task_uid", taskUid, stateUid)).await().indefinitely();
             // Link PART_OF: KnowTask → KnowSprint
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) " +
@@ -3220,11 +3199,8 @@ public class AidaLoreResource {
                     "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt",
                     mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md())))
                     .await().indefinitely();
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_STATE " +
-                    "FROM (SELECT FROM KnowRunbook     WHERE runbook_id = :id) " +
-                    "TO   (SELECT FROM KnowRunbookHist WHERE state_uid  = :nsid)",
-                    Map.of("id", req.runbook_id(), "nsid", nsid)))
+                writeClient.command(db, basicAuth(), linkStateCmd(
+                    "KnowRunbook", "KnowRunbookHist", "runbook_id", req.runbook_id(), nsid))
                     .await().indefinitely();
                 histCreated = true;
             }
@@ -4378,6 +4354,22 @@ public class AidaLoreResource {
         Map<String, Object> m = new java.util.HashMap<>();
         for (int i = 0; i + 1 < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
         return m;
+    }
+
+    /**
+     * The HAS_STATE edge that links an entity vertex to its (new or initial) SCD2
+     * history row. This step is byte-for-byte identical across every LORE type —
+     * only the vertex/hist class and key field change — so all create-seed paths
+     * and {@link #updateScd2Status} build it through here (B1). Behaviour is
+     * unchanged: same SQL, same :id/:nsid params. (Atomicity across the surrounding
+     * multi-step write is a separate concern — see task A1.)
+     */
+    private static LoreCommandClient.LoreCommand linkStateCmd(
+            String vertexType, String histType, String keyField, String id, String nsid) {
+        return new LoreCommandClient.LoreCommand("sql",
+            "CREATE EDGE HAS_STATE FROM (SELECT FROM " + vertexType + " WHERE " + keyField + " = :id) " +
+            "TO (SELECT FROM " + histType + " WHERE state_uid = :nsid)",
+            Map.of("id", id, "nsid", nsid));
     }
 
     private Response disabled() {
