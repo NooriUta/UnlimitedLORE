@@ -427,10 +427,11 @@ export default function LorePage() {
 
           {/* Пресет: В работе */}
           <span
-            onClick={() => {
+            {...a11yClick(() => {
               if (sprintPresetWorking) { setSprintStatusSel(new Set()); }
               else { setSprintStatusSel(new Set(['in_progress', 'partial'])); setSprintNoRelease(false); }
-            }}
+            })}
+            aria-pressed={sprintPresetWorking}
             title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
@@ -443,10 +444,11 @@ export default function LorePage() {
 
           {/* Пресет: Нужно внимание */}
           <span
-            onClick={() => {
+            {...a11yClick(() => {
               if (sprintPresetAttention) { setSprintStatusSel(new Set()); setSprintNoRelease(false); }
               else { setSprintStatusSel(new Set(['in_progress'])); setSprintNoRelease(true); }
-            }}
+            })}
+            aria-pressed={sprintPresetAttention}
             title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
@@ -466,9 +468,10 @@ export default function LorePage() {
             const color = p === 'P0' ? '#E24B4A' : p === 'P1' ? '#ef9f27' : 'var(--t3)';
             return (
               <span key={p}
-                onClick={() => setSprintPriorityFilter(prev => {
+                {...a11yClick(() => setSprintPriorityFilter(prev => {
                   const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n;
-                })}
+                }))}
+                aria-pressed={on}
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, fontWeight: on ? 600 : 400,
@@ -489,7 +492,8 @@ export default function LorePage() {
             const on    = sprintDatePeriod === p;
             return (
               <span key={p!}
-                onClick={() => setSprintDatePeriod(on ? null : p)}
+                {...a11yClick(() => setSprintDatePeriod(on ? null : p))}
+                aria-pressed={on}
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
@@ -505,7 +509,8 @@ export default function LorePage() {
 
           {/* Без релиза */}
           <span
-            onClick={() => setSprintNoRelease(v => !v)}
+            {...a11yClick(() => setSprintNoRelease(v => !v))}
+            aria-pressed={sprintNoRelease}
             style={{
               display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
               userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
@@ -520,7 +525,7 @@ export default function LorePage() {
             <>
               <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
               <span
-                onClick={() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); setSprintProjSel(new Set()); setSprintCompSel(new Set()); }}
+                {...a11yClick(() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); setSprintProjSel(new Set()); setSprintCompSel(new Set()); }, t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
                 title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
               >✕ {t('lore.page.filters.reset', 'сброс')}</span>
@@ -547,9 +552,10 @@ export default function LorePage() {
             const reachable = count > 0 || on;
             return (
               <span key={id}
-                onClick={() => setSprintProjSel(prev => {
+                {...a11yClick(() => setSprintProjSel(prev => {
                   const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
-                })}
+                }), `${id} (${count})`)}
+                aria-pressed={on}
                 title={`${id} (${count})`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
@@ -567,7 +573,7 @@ export default function LorePage() {
           })}
           {sprintProjSel.size > 0 && (
             <span
-              onClick={() => setSprintProjSel(new Set())}
+              {...a11yClick(() => setSprintProjSel(new Set()), t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
               style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
               title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
             >✕ {t('lore.page.filters.reset', 'сброс')}</span>
@@ -584,7 +590,8 @@ export default function LorePage() {
           padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
         }}>
           <span
-            onClick={() => setSprintCompCollapsed(v => !v)}
+            {...a11yClick(() => setSprintCompCollapsed(v => !v))}
+            aria-expanded={!sprintCompCollapsed}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', userSelect: 'none',
               fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2,
@@ -605,9 +612,10 @@ export default function LorePage() {
             const reachable = count > 0 || on;
             return (
               <span key={id}
-                onClick={() => setSprintCompSel(prev => {
+                {...a11yClick(() => setSprintCompSel(prev => {
                   const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
-                })}
+                }), `${id} (${count})`)}
+                aria-pressed={on}
                 title={`${id} (${count})`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
@@ -630,7 +638,7 @@ export default function LorePage() {
           )}
           {sprintCompSel.size > 0 && (
             <span
-              onClick={() => setSprintCompSel(new Set())}
+              {...a11yClick(() => setSprintCompSel(new Set()), t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
               style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
               title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
             >✕ {t('lore.page.filters.reset', 'сброс')}</span>
@@ -654,7 +662,7 @@ export default function LorePage() {
             const label = STATUS_FILTERS.find(f => f.key === k)?.label ?? k;
             return (
               <span key={'s' + k}
-                onClick={() => setSprintStatusSel(prev => { const n = new Set(prev); n.delete(k); return n; })}
+                {...a11yClick(() => setSprintStatusSel(prev => { const n = new Set(prev); n.delete(k); return n; }), `${label} ✕`)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
                          padding: '5px 9px', borderRadius: 12, whiteSpace: 'nowrap',
                          background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
@@ -664,33 +672,33 @@ export default function LorePage() {
           })}
           {[...sprintPriorityFilter].map(p => (
             <span key={'p' + p}
-              onClick={() => setSprintPriorityFilter(prev => { const n = new Set(prev); n.delete(p); return n; })}
+              {...a11yClick(() => setSprintPriorityFilter(prev => { const n = new Set(prev); n.delete(p); return n; }), `${p} ✕`)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
                        padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
             >{p} ✕</span>
           ))}
           {[...sprintProjSel].map(id => (
             <span key={'pr' + id}
-              onClick={() => setSprintProjSel(prev => { const n = new Set(prev); n.delete(id); return n; })}
+              {...a11yClick(() => setSprintProjSel(prev => { const n = new Set(prev); n.delete(id); return n; }), `${projLabel(id)} ✕`)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
                        padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
             >{projLabel(id)} ✕</span>
           ))}
           {[...sprintCompSel].map(id => (
             <span key={'c' + id}
-              onClick={() => setSprintCompSel(prev => { const n = new Set(prev); n.delete(id); return n; })}
+              {...a11yClick(() => setSprintCompSel(prev => { const n = new Set(prev); n.delete(id); return n; }), `${id} ✕`)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
                        padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
             >{id} ✕</span>
           ))}
           {sprintDatePeriod && (
-            <span onClick={() => setSprintDatePeriod(null)}
+            <span {...a11yClick(() => setSprintDatePeriod(null))}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
                        padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
             >{sprintDatePeriod === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : sprintDatePeriod === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней')} ✕</span>
           )}
           {sprintNoRelease && (
-            <span onClick={() => setSprintNoRelease(false)}
+            <span {...a11yClick(() => setSprintNoRelease(false))}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
                        padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
             >{t('lore.page.sprints.noRelease', 'Без релиза')} ✕</span>
@@ -709,9 +717,10 @@ export default function LorePage() {
             const cnt = adrCounts[f.key] ?? 0;
             return (
               <span key={f.key}
-                onClick={() => setAdrStatusSel(prev => {
+                {...a11yClick(() => setAdrStatusSel(prev => {
                   const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
-                })}
+                }), `${adrStatusLabel(t, f.key)}: ${cnt}`)}
+                aria-pressed={on}
                 title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
@@ -731,7 +740,7 @@ export default function LorePage() {
             <>
               <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
               <span
-                onClick={() => setAdrStatusSel(new Set())}
+                {...a11yClick(() => setAdrStatusSel(new Set()), t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
                 title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
               >✕ {t('lore.page.filters.reset', 'сброс')}</span>
@@ -759,9 +768,10 @@ export default function LorePage() {
               const color = areaColor(area);
               return (
                 <span key={area}
-                  onClick={() => setCompAreaSel(prev => {
+                  {...a11yClick(() => setCompAreaSel(prev => {
                     const n = new Set(prev); n.has(area) ? n.delete(area) : n.add(area); return n;
-                  })}
+                  }), `${area}: ${cnt}`)}
+                  aria-pressed={on}
                   title={`${area}: ${cnt}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
@@ -780,7 +790,7 @@ export default function LorePage() {
             <>
               <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
               <span
-                onClick={() => setCompAreaSel(new Set())}
+                {...a11yClick(() => setCompAreaSel(new Set()), t('lore.page.components.resetAreaFilterTitle', 'Сбросить фильтр по area'))}
                 style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
                 title={t('lore.page.components.resetAreaFilterTitle', 'Сбросить фильтр по area')}
               >✕ {t('lore.page.filters.reset', 'сброс')}</span>
