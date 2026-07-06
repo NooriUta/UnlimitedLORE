@@ -22,6 +22,7 @@ jobs:
         run: |
           npm ci
           npm run check:statuses
+          npm run lint
           npm run build
 
       - name: MCP server — install + typecheck + build

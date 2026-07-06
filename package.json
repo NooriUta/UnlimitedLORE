@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "lint": "eslint src",
     "check:statuses": "node scripts/check-lore-statuses.mjs"
   },
   "dependencies": {
@@ -39,7 +40,10 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "~5.7.2",
+    "typescript-eslint": "^8.62.1",
     "vite": "^6.0.0"
   }
 }

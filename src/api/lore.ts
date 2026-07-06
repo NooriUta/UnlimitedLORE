@@ -53,6 +53,25 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+// Single write/mutation transport for LORE POST endpoints. Replaces the
+// per-component `fetch(... X-Seer-Role ...)` helpers that had each drifted their
+// own error handling. `path` is relative to /lore (e.g. "/bragi/keyword").
+export async function loreMutate<T = { ok: boolean; [k: string]: unknown }>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  const res = await fetch(`${LORE_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(body),
+    signal,
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return (await res.json()) as T;
+}
+
 // BRAGI metric query (GET /lore/bragi/metric/query) — not a whitelisted slice,
 // filter/agg shape doesn't fit the generic template (see MCP-03).
 export interface BragiMetricPoint {

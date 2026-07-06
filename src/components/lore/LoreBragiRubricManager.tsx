@@ -8,19 +8,7 @@
 // rarely-touched admin list isn't worth breaking that).
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-const LORE_BASE = '/lore';
-
-async function post(path: string, body: unknown): Promise<{ ok: boolean; [k: string]: unknown }> {
-  const res = await fetch(`${LORE_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { detail?: string }).detail ?? `POST ${path} → ${res.status}`);
-  return json as { ok: boolean };
-}
+import { loreMutate } from '../../api/lore';
 
 export interface RubricRow { rubric_id: string; name: string; description: string | null; order_index: number | null }
 
@@ -47,7 +35,7 @@ export default function LoreBragiRubricManager({ rubrics, onChanged }: LoreBragi
     setSaving(true);
     setErrMsg(null);
     try {
-      await post('/bragi/rubric', {
+      await loreMutate('/bragi/rubric', {
         rubric_id: rid, name: name.trim(), description: description || undefined,
         order_index: rubrics.length,
       });
