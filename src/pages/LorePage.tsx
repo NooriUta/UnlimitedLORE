@@ -29,6 +29,7 @@ import LoreArtifactDoc, { type DocKind } from '../components/lore/LoreArtifactDo
 import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 import { useIsNarrow } from '../hooks/useMediaQuery';
+import { a11yClick } from '../components/lore/a11y';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
@@ -317,19 +318,23 @@ export default function LorePage() {
 
   // ── Section nav — horizontal bar (План · Спринты · ADR · …) ──────────────────
   const sectionNav = (
-    <nav style={S.navBar} className="lore-nav-scroll">
+    <nav style={S.navBar} className="lore-nav-scroll" role="tablist" aria-label={t('lore.page.nav.ariaLabel', 'Разделы LORE')}>
       {SECTIONS.map(s => {
         const isActive = section === s.id;
         const col = SECTION_COLORS[s.id];
+        const label = t(s.labelKey, s.fallback);
         return (
           <button
             key={s.id}
+            role="tab"
+            aria-selected={isActive}
+            aria-label={label}
             style={narrow ? S.navItemNarrow(isActive, col) : S.navItem(isActive)}
             onClick={() => go(s.id)}
-            title={t(s.labelKey, s.fallback)}
+            title={label}
           >
             {s.icon && <GameIcon slug={s.icon} size={narrow ? 18 : 15} style={{ color: narrow ? col : 'inherit' }} />}
-            {!narrow && <span>{t(s.labelKey, s.fallback)}</span>}
+            {!narrow && <span>{label}</span>}
           </button>
         );
       })}
@@ -396,9 +401,10 @@ export default function LorePage() {
             const cnt  = sprintCounts[f.key] ?? 0;
             return (
               <span key={f.key}
-                onClick={() => setSprintStatusSel(prev => {
+                {...a11yClick(() => setSprintStatusSel(prev => {
                   const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
-                })}
+                }), `${f.label}: ${cnt}`)}
+                aria-pressed={on}
                 title={`${f.label}: ${cnt}`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
