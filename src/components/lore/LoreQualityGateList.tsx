@@ -89,6 +89,7 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
   const [loading, setLoading]     = useState(true);
   const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
   const [compSel, setCompSel]     = useState<Set<string>>(new Set());
+  const [q, setQ]                 = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -109,9 +110,15 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
     m: statusMetaOf(t, s),
   }));
 
+  const ql = q.trim().toLowerCase();
   const shown = rows.filter(r =>
     (statusSel.size === 0 || statusSel.has(r.status ?? '')) &&
-    (compSel.size   === 0 || compSel.has(r.component_id ?? ''))
+    (compSel.size   === 0 || compSel.has(r.component_id ?? '')) &&
+    (ql === '' ||
+      r.qg_id.toLowerCase().includes(ql) ||
+      r.name.toLowerCase().includes(ql) ||
+      (r.description ?? '').toLowerCase().includes(ql) ||
+      (r.component_id ?? '').toLowerCase().includes(ql))
   );
 
   const toggleStatus = (s: string) =>
@@ -123,6 +130,24 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
 
   return (
     <div style={S.root}>
+      {/* Search — unifies with ADR/sprint/component list panels (F-03) */}
+      <div style={S.searchRow}>
+        <span style={{ color: 'var(--t3)', fontSize: 12, flexShrink: 0 }}>🔍</span>
+        <input
+          style={S.searchInput}
+          placeholder={t('lore.qualityGateList.searchPlaceholder', 'quality gate…')}
+          aria-label={t('lore.qualityGateList.searchAriaLabel', 'поиск по quality gates')}
+          value={q}
+          onChange={e => setQ(e.target.value)}
+        />
+        {q && (
+          <span onClick={() => setQ('')} role="button" tabIndex={0}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setQ(''); } }}
+            aria-label={t('lore.qualityGateList.searchClear', 'очистить поиск')}
+            style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>✕</span>
+        )}
+      </div>
+
       {/* Stats bar — T03 */}
       <div style={S.statsBar}>
         <span style={S.statTotal}>{rows.length}</span>
@@ -219,6 +244,15 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
 const S = {
   root:  { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
   state: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  searchRow: {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '0 12px', height: 30, flexShrink: 0,
+    borderBottom: '1px solid var(--bd)',
+  },
+  searchInput: {
+    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+    color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
+  },
   // Stats bar — T03
   statsBar: {
     display: 'flex', alignItems: 'center', gap: 8,
