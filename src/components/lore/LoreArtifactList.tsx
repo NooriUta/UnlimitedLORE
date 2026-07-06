@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   fetchLoreSlice,
@@ -131,9 +132,15 @@ interface Props {
   // own dedicated section for some kinds (e.g. ADR and QG each have a
   // top-level nav section, so the «Знания» embedding only wants runbook+doc).
   kinds?: ArtifactKind[];
+  // Portal target for the Тип/Модуль/search header — when set, the header
+  // renders full-width in the caller's own layout (e.g. LorePage's
+  // full-width filter bar, same slot the sprints filters use) instead of
+  // being squeezed into this component's own narrow resizable list column.
+  // Falls back to rendering inline above the list when omitted.
+  headerContainer?: HTMLElement | null;
 }
 
-export default function LoreArtifactList({ onError, onOpen, selectedKind, selectedId, kinds }: Props) {
+export default function LoreArtifactList({ onError, onOpen, selectedKind, selectedId, kinds, headerContainer }: Props) {
   const { t } = useTranslation();
   const ALL_ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] = [
     { kind: 'adr',     label: 'ADR', color: '#4a90d9', icon: 'scroll-quill' },
@@ -275,58 +282,62 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
 
   if (loading) return <div style={S.empty}>{t('lore.artifactList.loading', 'Загрузка артефактов…')}</div>;
 
-  return (
-    <div style={S.root}>
-      <div style={S.head}>
+  const header = (
+    <div style={headerContainer ? { ...S.head, border: 'none' } : S.head}>
+      <div style={S.chipRow}>
+        <span style={S.flabel}>{t('lore.artifactList.typeLabel', 'Тип')}</span>
+        <div style={S.chips}>
+          {ARTIFACT_KINDS.map(k => {
+            const on = enabled.has(k.kind);
+            return (
+              <span key={k.kind} style={S.chip(on, k.color)} onClick={() => toggle(k.kind)}>
+                <GameIcon slug={k.icon} size={12} />
+                {k.label}
+                <span style={S.chipCount(on)}>{counts[k.kind] ?? 0}</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+      {compChips.length > 1 && (
         <div style={S.chipRow}>
-          <span style={S.flabel}>{t('lore.artifactList.typeLabel', 'Тип')}</span>
+          <span style={S.flabel}>{t('lore.artifactList.moduleLabel', 'Модуль')}</span>
           <div style={S.chips}>
-            {ARTIFACT_KINDS.map(k => {
-              const on = enabled.has(k.kind);
+            {compChips.map(c => {
+              const on = compSel.has(c.id);
               return (
-                <span key={k.kind} style={S.chip(on, k.color)} onClick={() => toggle(k.kind)}>
-                  <GameIcon slug={k.icon} size={12} />
-                  {k.label}
-                  <span style={S.chipCount(on)}>{counts[k.kind] ?? 0}</span>
+                <span key={c.id} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c.id)}>
+                  {c.name}
+                  <span style={S.chipCount(on)}>{c.n}</span>
                 </span>
               );
             })}
           </div>
         </div>
-        {compChips.length > 1 && (
-          <div style={S.chipRow}>
-            <span style={S.flabel}>{t('lore.artifactList.moduleLabel', 'Модуль')}</span>
-            <div style={S.chips}>
-              {compChips.map(c => {
-                const on = compSel.has(c.id);
-                return (
-                  <span key={c.id} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c.id)}>
-                    {c.name}
-                    <span style={S.chipCount(on)}>{c.n}</span>
-                  </span>
-                );
-              })}
-            </div>
-          </div>
+      )}
+      <div style={S.chipRow}>
+        <input
+          style={S.search}
+          placeholder={t('lore.artifactList.searchPlaceholder', 'Поиск по названию…')}
+          value={q}
+          onChange={e => setQ(e.target.value)}
+        />
+        {enabled.has('runbook') && shown.some(a => a.kind === 'runbook') && (
+          <button
+            style={S.exportBtn}
+            title={t('lore.artifactList.exportRunbooksTitle', 'Экспорт чеклиста runbooks в Markdown')}
+            onClick={() => exportRunbooksMd(shown.filter(a => a.kind === 'runbook'))}
+          >
+            ↓ MD
+          </button>
         )}
-        <div style={S.chipRow}>
-          <input
-            style={S.search}
-            placeholder={t('lore.artifactList.searchPlaceholder', 'Поиск по названию…')}
-            value={q}
-            onChange={e => setQ(e.target.value)}
-          />
-          {enabled.has('runbook') && shown.some(a => a.kind === 'runbook') && (
-            <button
-              style={S.exportBtn}
-              title={t('lore.artifactList.exportRunbooksTitle', 'Экспорт чеклиста runbooks в Markdown')}
-              onClick={() => exportRunbooksMd(shown.filter(a => a.kind === 'runbook'))}
-            >
-              ↓ MD
-            </button>
-          )}
-        </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div style={S.root}>
+      {headerContainer ? createPortal(header, headerContainer) : header}
 
       <div style={S.list}>
         {shown.length === 0 && <div style={S.empty}>{t('lore.artifactList.notFound', 'Ничего не найдено.')}</div>}
