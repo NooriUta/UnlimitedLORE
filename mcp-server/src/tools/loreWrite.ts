@@ -10,9 +10,10 @@ const err = (e: unknown) => ({
   isError: true,
 });
 
-// Full set of statuses accepted by the backend (mirrors AidaLoreResource.VALID_STATUSES).
-// Keep in sync with: Set.of("todo","active","partial","done","blocked","high","cancelled",
-//                           "planned","backlog","design","ready_for_deploy")
+// Full set of statuses accepted by the backend. Canonical source of truth:
+// shared/lore-statuses.json (planStatuses). Drift is caught in CI by
+// `npm run check:statuses` (scripts/check-lore-statuses.mjs) — update the JSON
+// first, then mirror here.
 const LORE_STATUS = z.enum([
   'todo', 'planned', 'active', 'partial', 'done',
   'blocked', 'high', 'cancelled', 'backlog', 'design', 'ready_for_deploy',

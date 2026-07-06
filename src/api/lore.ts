@@ -371,6 +371,8 @@ export interface LorePlanItem {
   components: string[] | null;
 }
 
+// Canonical source of truth: shared/lore-statuses.json (planStatuses). Drift is
+// caught in CI by `npm run check:statuses` (scripts/check-lore-statuses.mjs).
 export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
 
 export interface LoreStatusUpdateResponse {

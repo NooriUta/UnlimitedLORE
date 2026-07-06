@@ -1,0 +1,44 @@
+{
+  "_comment": "Canonical source of truth for LORE status/entity vocabularies. Consumed by drift-checks in all three packages (backend JUnit LoreStatusesConsistencyTest, frontend+MCP via scripts/check-lore-statuses.mjs). Change here first, then update the mirrors — CI fails on drift.",
+  "planStatuses": [
+    "todo",
+    "active",
+    "partial",
+    "done",
+    "blocked",
+    "high",
+    "cancelled",
+    "planned",
+    "backlog",
+    "design",
+    "ready_for_deploy"
+  ],
+  "adrStatuses": [
+    "proposed",
+    "accepted",
+    "draft",
+    "deferred",
+    "superseded"
+  ],
+  "entityTypes": [
+    "plan_item",
+    "sprint",
+    "task",
+    "checkpoint",
+    "adr",
+    "phase"
+  ],
+  "statusRaw": {
+    "done": "✅ DONE",
+    "active": "🔄 IN PROGRESS",
+    "partial": "🟡 PARTIAL",
+    "todo": "⬜ TODO",
+    "planned": "📋 PLANNED",
+    "blocked": "🔴 BLOCKED",
+    "high": "🔴 P0",
+    "cancelled": "🚫 CANCELLED",
+    "ready_for_deploy": "🚀 READY FOR DEPLOY",
+    "backlog": "🟣 BACKLOG",
+    "design": "🔬 DESIGN"
+  }
+}
