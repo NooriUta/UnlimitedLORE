@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreSprintRow, type LoreComponent } from '../../api/lore';
 import { statusMeta } from './lore-status';
 import { GameIcon } from './GameIcon';
@@ -387,7 +388,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                 background: active ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
                 cursor: onSelect ? 'pointer' : 'default',
               }}
-              onClick={() => onSelect?.(s.sprint_id)}
+              {...(onSelect ? a11yClick(() => onSelect(s.sprint_id)) : {})}
             >
               <div style={S.line1}>
                 {/* Project colour dots */}

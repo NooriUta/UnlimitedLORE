@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
   type LoreAdrRow, type LoreSpecRow, type LoreKnowDocRow, type LoreComponent,
@@ -290,7 +291,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
           {ARTIFACT_KINDS.map(k => {
             const on = enabled.has(k.kind);
             return (
-              <span key={k.kind} style={S.chip(on, k.color)} onClick={() => toggle(k.kind)}>
+              <span key={k.kind} style={S.chip(on, k.color)} {...a11yClick(() => toggle(k.kind))} aria-pressed={on}>
                 <GameIcon slug={k.icon} size={12} />
                 {k.label}
                 <span style={S.chipCount(on)}>{counts[k.kind] ?? 0}</span>
@@ -306,7 +307,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
             {compChips.map(c => {
               const on = compSel.has(c.id);
               return (
-                <span key={c.id} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c.id)}>
+                <span key={c.id} style={S.chip(on, 'var(--acc)')} {...a11yClick(() => toggleComp(c.id))} aria-pressed={on}>
                   {c.name}
                   <span style={S.chipCount(on)}>{c.n}</span>
                 </span>
@@ -346,7 +347,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
           const sel = selectedKind === a.kind && selectedId === a.id;
           const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
           return (
-            <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} onClick={() => onOpen(a.kind, a.id)} title={`${meta.label} · ${a.id}`}>
+            <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} {...a11yClick(() => onOpen(a.kind, a.id))} title={`${meta.label} · ${a.id}`}>
               <div style={S.rowMain}>
                 <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
                 <span style={S.title}>{a.title}</span>
