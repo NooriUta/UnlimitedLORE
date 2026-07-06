@@ -21,6 +21,7 @@ jobs:
       - name: LORE frontend — install + typecheck + build
         run: |
           npm ci
+          npm run check:statuses
           npm run build
 
       - name: MCP server — install + typecheck + build

@@ -89,18 +89,23 @@ public class AidaLoreResource {
 
     // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
     private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
-    private static final Set<String> ENTITY_TYPES =
+    // Canonical source of truth for these vocabularies: shared/lore-statuses.json.
+    // Drift between this mirror and the JSON is caught by LoreStatusesConsistencyTest
+    // (JUnit). The MCP + frontend mirrors are guarded by scripts/check-lore-statuses.mjs.
+    // Package-private (not private) so LoreStatusesConsistencyTest can assert them
+    // against shared/lore-statuses.json.
+    static final Set<String> ENTITY_TYPES =
         Set.of("plan_item", "sprint", "task", "checkpoint", "adr", "phase");
-    private static final Set<String> PLAN_STATUSES =
+    static final Set<String> PLAN_STATUSES =
         Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled",
                "planned", "backlog", "design", "ready_for_deploy");
-    private static final Set<String> ADR_STATUSES =
+    static final Set<String> ADR_STATUSES =
         Set.of("proposed", "accepted", "draft", "deferred", "superseded");
 
     // Canonical status token → status_raw string written on KnowSprintHist / KnowTaskHist.
     // Mirrors the leading-marker convention the frontend normalizer (LoreSprintDetail) reads back.
     // 🟡 PARTIAL is a distinct status from 🔄 IN PROGRESS — see lore-status.ts taskTick.
-    private static final Map<String, String> SCD2_STATUS_RAW = Map.ofEntries(
+    static final Map<String, String> SCD2_STATUS_RAW = Map.ofEntries(
         Map.entry("done",             "✅ DONE"),
         Map.entry("active",           "🔄 IN PROGRESS"),
         Map.entry("partial",          "🟡 PARTIAL"),

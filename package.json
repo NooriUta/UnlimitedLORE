@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build"
+    "build": "tsc -b && vite build",
+    "check:statuses": "node scripts/check-lore-statuses.mjs"
   },
   "dependencies": {
     "@iconify-json/game-icons": "^1.2.4",
