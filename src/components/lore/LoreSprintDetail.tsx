@@ -205,21 +205,32 @@ function buildPriorityOpts(t: (k: string, d: string) => string) {
   ];
 }
 
-function PriorityPicker({ sprintId, current, onChanged, onError }: {
+function PriorityPicker({ sprintId, current, onChanged }: {
   sprintId: string;
   current: string | null;
   onChanged: () => void;
-  onError: (e: unknown) => void;
 }) {
   const { t } = useTranslation();
   const PRIORITY_OPTS = buildPriorityOpts(t);
   const [busy, setBusy] = useState(false);
+  const [writeErr, setWriteErr] = useState<string | null>(null);
   async function set(next: string | null) {
     if (busy) return;
     const val = next === current ? null : next; // повторный клик — сброс
     setBusy(true);
-    try { await updateSprintPlan(sprintId, { priority: val }); onChanged(); }
-    catch (err) { onError(err); }
+    try { await updateSprintPlan(sprintId, { priority: val }); setWriteErr(null); onChanged(); }
+    catch (err) {
+      // Surface the failure INLINE (F-23): a blocked write (e.g. 403 from a
+      // CORS/origin reject or missing role) otherwise looked like a dead button.
+      // Do NOT forward to the global onError — handleFetchError misreads the
+      // resulting LoreUpstreamError as "LORE unreachable" and replaces the whole
+      // page with a banner, unmounting this picker. A single write failure is
+      // local feedback, not a backend-down event.
+      const msg = err instanceof Error ? err.message : String(err);
+      setWriteErr(/403|non-JSON/.test(msg)
+        ? t('lore.sprintDetail.priority.writeForbidden', 'Не удалось сохранить (нет доступа / CORS)')
+        : msg);
+    }
     finally { setBusy(false); }
   }
   return (
@@ -242,6 +253,10 @@ function PriorityPicker({ sprintId, current, onChanged, onError }: {
           >{o.value}</button>
         );
       })}
+      {writeErr && (
+        <span role="alert" title={writeErr}
+          style={{ color: 'var(--danger)', fontSize: 11, marginLeft: 2, cursor: 'help', alignSelf: 'center' }}>⚠</span>
+      )}
     </span>
   );
 }
@@ -853,7 +868,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           sprintId={sprint.sprint_id}
           current={sprint.priority}
           onChanged={reload}
-          onError={onError}
         />
         {tasks.length > 0 && (
           <>
