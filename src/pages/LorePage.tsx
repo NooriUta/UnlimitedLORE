@@ -37,8 +37,11 @@ type Section =
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
 // Module-scope constant (not recreated per render) — ADR/QG already have their
-// own top-level nav sections, so «Знания» only needs runbook+doc.
-const KNOWLEDGE_ARTIFACT_KINDS: ArtifactKind[] = ['runbook', 'doc'];
+// own top-level nav sections, so «Знания» adds spec+runbook+doc. Specs have no
+// dedicated top-level section of their own (unlike ADR/QG) — without this they
+// were only reachable by drilling into a component's passport, which is why
+// they seemed to be "missing" from the general knowledge browser.
+const KNOWLEDGE_ARTIFACT_KINDS: ArtifactKind[] = ['spec', 'runbook', 'doc'];
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string }[] = [
@@ -230,10 +233,11 @@ export default function LorePage() {
 
   const isMasterDetail = MASTER_DETAIL.includes(section);
   // The narrow-screen master-detail flow below keys off `passport`, but
-  // «Знания» selects its detail view via `kind`+`art` (openArt) instead —
-  // without this, selecting a runbook/doc on a narrow screen never revealed
-  // the detail pane (passport stayed empty forever).
-  const hasDetailSelection = section === 'knowledge' ? !!(artKind && artId) : !!passport;
+  // «Знания» selects its detail view via `kind`+`art` (openArt) for runbook/doc,
+  // or via `spec` (shares LoreSpecView with the Components section) for specs —
+  // without this, selecting an item on a narrow screen never revealed the
+  // detail pane (passport stayed empty forever).
+  const hasDetailSelection = section === 'knowledge' ? !!((artKind && artId) || spec) : !!passport;
 
   // Sections where the global search bar is actually passed to children
   const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
@@ -965,9 +969,12 @@ export default function LorePage() {
               <LoreArtifactList
                 kinds={KNOWLEDGE_ARTIFACT_KINDS}
                 onError={handleFetchError}
-                onOpen={(kind, id) => { if (kind === 'runbook' || kind === 'doc') openArt(kind, id); }}
-                selectedKind={artKind}
-                selectedId={artId}
+                onOpen={(kind, id) => {
+                  if (kind === 'spec') { setParams(p => { p.set('spec', id); p.delete('kind'); p.delete('art'); return p; }); }
+                  else if (kind === 'runbook' || kind === 'doc') { openArt(kind, id); }
+                }}
+                selectedKind={spec ? 'spec' : artKind}
+                selectedId={spec ? spec : artId}
                 headerContainer={knowledgeFilterBar}
               />
             )}
@@ -1089,8 +1096,16 @@ export default function LorePage() {
             </div>
           )}
 
-          {/* Knowledge — Runbook master-detail */}
-          {section === 'knowledge' && artKind && artId && (
+          {/* Knowledge — spec / Runbook / doc master-detail */}
+          {section === 'knowledge' && spec && (
+            <LoreSpecView
+              specId={spec}
+              onError={handleFetchError}
+              onBack={clearSpec}
+              onNavigateComponent={navigateToComponent}
+            />
+          )}
+          {section === 'knowledge' && !spec && artKind && artId && (
             <LoreArtifactDoc
               kind={artKind as DocKind}
               id={artId}
@@ -1099,7 +1114,7 @@ export default function LorePage() {
               onNavigateSprint={navigateToSprint}
             />
           )}
-          {section === 'knowledge' && !(artKind && artId) && (
+          {section === 'knowledge' && !spec && !(artKind && artId) && (
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="spell-book" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
               <span>{t('lore.page.knowledge.emptySelectHint', 'Выберите элемент из списка слева')}</span>
