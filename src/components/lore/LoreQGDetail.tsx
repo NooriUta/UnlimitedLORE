@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice } from '../../api/lore';
+import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { parseRoutine, parseInvariants, parseGateSubtitle } from '../../lib/qgContentMd';
 
 interface QGDetail {
@@ -75,15 +75,6 @@ function statusColor(s: string | null): string {
     : 'var(--t3)';
 }
 
-async function lorePost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`/lore/${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as T;
-}
 
 // ── Sparkline (ADR-QG-004 §2 dynamics) ───────────────────────────────────────
 function Sparkline({ hist, target }: { hist: { v: number; status: string | null }[]; target: number | null }) {
@@ -205,8 +196,8 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   const handlePromote = async (rec: Recommendation) => {
     setPromoting(rec.rec_id);
     try {
-      const res = await lorePost<{ ok: boolean; task_uid: string; task_id: string; sprint_id: string }>(
-        'qg/promote', { rec_id: rec.rec_id, title: rec.title });
+      const res = await loreMutate<{ ok: boolean; task_uid: string; task_id: string; sprint_id: string }>(
+        '/qg/promote', { rec_id: rec.rec_id, title: rec.title });
       setRecs(r => r.map(x => x.rec_id === rec.rec_id
         ? { ...x, status: 'promoted', promoted_task_uid: res.task_uid, promoted_sprint_id: res.sprint_id }
         : x));
@@ -217,7 +208,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   const handleDismiss = async (rec: Recommendation) => {
     setDismissing(rec.rec_id);
     try {
-      await lorePost('qg/recommendation', { rec_id: rec.rec_id, job_id: '_', title: rec.title, status: 'dismissed' });
+      await loreMutate('/qg/recommendation', { rec_id: rec.rec_id, job_id: '_', title: rec.title, status: 'dismissed' });
       setRecs(r => r.map(x => x.rec_id === rec.rec_id ? { ...x, status: 'dismissed' } : x));
     } catch (e) { onError(e); }
     finally { setDismissing(null); }
