@@ -110,7 +110,9 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
     </div>
   );
 
-  const ta = (key: 'context_md' | 'decision_md' | 'consequences_md', placeholder: string, rows = 5) => (
+  // ADR bodies are substantial prose — give the editor real room on open
+  // (T28: fields were only ~100px and felt cramped). Resizable via TipTapField.
+  const ta = (key: 'context_md' | 'decision_md' | 'consequences_md', placeholder: string, rows = 13) => (
     <TipTapField
       value={form[key]}
       onChange={v => set(key)(v)}
@@ -175,7 +177,7 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
       {/* Markdown sections */}
       <Sec label={t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно')}>{ta('context_md', t('lore.adrEditor.contextPlaceholder', 'Опишите проблему, ограничения, исходные данные…'))}</Sec>
       <Sec label={t('lore.adrEditor.sectionDecision', 'Decision — что именно решили')}>{ta('decision_md', t('lore.adrEditor.decisionPlaceholder', 'Опишите принятое решение…'))}</Sec>
-      <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), 4)}</Sec>
+      <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), 9)}</Sec>
 
       {/* Relations */}
       <Sec label={t('lore.adrEditor.sectionDependsOn', 'Зависит от других ADR (DEPENDS_ON)')}>
