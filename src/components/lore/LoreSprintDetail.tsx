@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -142,7 +142,10 @@ function buildSprintPickOpts(t: (k: string, d: string) => string): PickOpt[] {
 
 const TASK_PICK_TOKENS = ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'];
 
-function StatusPicker({ entityType, id, current, onChanged, onError }: {
+// T18: memoized -- rendered once per task/phase row in potentially large
+// sprints, and its own render (building the status option list + several
+// chip elements) is nontrivial relative to a plain row.
+const StatusPicker = memo(function StatusPicker({ entityType, id, current, onChanged, onError }: {
   entityType: 'sprint' | 'task' | 'phase';
   id: string;
   current: LorePlanItemStatus;
@@ -195,7 +198,7 @@ function StatusPicker({ entityType, id, current, onChanged, onError }: {
       })}
     </span>
   );
-}
+});
 
 function buildPriorityOpts(t: (k: string, d: string) => string) {
   return [
