@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { sanitizeSvg } from './sanitizeHtml';
 import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
@@ -183,18 +182,10 @@ const S = {
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
   }),
   readerScroll: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
-  rH1:  { fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginTop: 14, marginBottom: 6 },
+  // rH2 stays: used both as MdBlock's fixed section label AND as the base
+  // font-size passed to MartProse for markdown bodies (T14).
   rH2:  { fontSize: 11, fontWeight: 700, color: 'var(--t2)', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
-  rH3:  { fontSize: 10, fontWeight: 600, color: 'var(--t3)', marginTop: 10, marginBottom: 3, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
   rP:   { fontSize: 11, color: 'var(--t2)', lineHeight: 1.65, marginBottom: 8 },
-  rBullet: { fontSize: 11, color: 'var(--t2)', lineHeight: 1.7, paddingLeft: 10, marginBottom: 2 },
-  rCode:{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 3, padding: '1px 5px', color: 'var(--inf)' },
-  rPre: {
-    fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)',
-    background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5,
-    padding: '8px 12px', margin: '6px 0', whiteSpace: 'pre' as const,
-    overflow: 'auto', lineHeight: 1.6,
-  },
   placeholder: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)', fontSize: 11 },
 
   // ── Edit panel ────────────────────────────────────────────────────────────
@@ -213,117 +204,19 @@ function stLabel(s: string | null | undefined) {
   return (s ?? '').toUpperCase().replace('_', ' ');
 }
 
-// T14: was bold + inline-code only. Added italic and links — the two other
-// GFM-parity gaps the T14 note called out that are safe to hand-add here
-// without pulling this reader panel onto MartProse's different type scale
-// (tables/nested-lists stay out of scope: a real parser rewrite, not a
-// same-shape addition — see T14 remaining-scope note).
-function inlineMd(text: string): ReactNode {
-  const boldM = /\*\*([^*\n]+)\*\*/.exec(text);
-  const italM = /(?<!\*)\*([^*\n]+)\*(?!\*)/.exec(text);
-  const codeM = /`([^`\n]+)`/.exec(text);
-  const linkM = /\[([^\]\n]+)\]\(([^)\s]+)\)/.exec(text);
-  const candidates = ([
-    boldM && { m: boldM, type: 'bold' as const },
-    italM && { m: italM, type: 'italic' as const },
-    codeM && { m: codeM, type: 'code' as const },
-    linkM && { m: linkM, type: 'link' as const },
-  ] as Array<{ m: RegExpExecArray; type: 'bold' | 'italic' | 'code' | 'link' } | false>)
-    .filter((x): x is { m: RegExpExecArray; type: 'bold' | 'italic' | 'code' | 'link' } => Boolean(x))
-    .sort((a, b) => a.m.index - b.m.index);
-  if (!candidates.length) return text;
-  const { m, type } = candidates[0];
-  const before = text.slice(0, m.index);
-  const inner  = m[1];
-  const rest   = text.slice(m.index + m[0].length);
-  const restNode = rest ? inlineMd(rest) : null;
-  if (type === 'bold')
-    return <>{before}<strong style={{ color: 'var(--t1)', fontWeight: 600 }}>{inner}</strong>{restNode}</>;
-  if (type === 'italic')
-    return <>{before}<em>{inner}</em>{restNode}</>;
-  if (type === 'link')
-    return <>{before}<a href={m[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--acc)', textDecoration: 'underline' }}>{inner}</a>{restNode}</>;
-  return <>{before}<code style={{ fontFamily: 'var(--mono)', fontSize: '0.88em', background: 'color-mix(in srgb, var(--acc) 10%, var(--b3))', padding: '1px 4px', borderRadius: 3, color: 'var(--acc)' }}>{inner}</code>{restNode}</>;
-}
-
-function renderMd(md: string | null | undefined): ReactNode {
-  if (!md?.trim()) return null;
-  const nodes: ReactNode[] = [];
-  let preLines: string[] = [];
-  let preLang = '';
-  let inPre = false;
-  md.split('\n').forEach((line, i) => {
-    if (line.startsWith('```')) {
-      if (inPre) {
-        if (preLang === 'mermaid') {
-          nodes.push(<MermaidBlock key={`mermaid-${i}`} code={preLines.join('\n')} />);
-        } else {
-          nodes.push(<pre key={`pre-${i}`} style={S.rPre}>{preLines.join('\n')}</pre>);
-        }
-        preLines = []; preLang = ''; inPre = false;
-      } else { inPre = true; preLang = line.slice(3).trim().toLowerCase(); }
-      return;
-    }
-    if (inPre) { preLines.push(line); return; }
-    if (!line.trim()) return;
-    if (line === '---' || line === '***' || line === '___')
-      nodes.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid var(--bd)', margin: '8px 0' }} />);
-    else if (line.startsWith('# '))        nodes.push(<div key={i} style={S.rH1}>{inlineMd(line.slice(2))}</div>);
-    else if (line.startsWith('## '))       nodes.push(<div key={i} style={S.rH2}>{inlineMd(line.slice(3))}</div>);
-    else if (line.startsWith('### '))      nodes.push(<div key={i} style={S.rH3}>{inlineMd(line.slice(4))}</div>);
-    else if (line.startsWith('- ') || line.startsWith('* '))
-      nodes.push(<div key={i} style={S.rBullet}>{'• '}{inlineMd(line.slice(2))}</div>);
-    else if (/^\d+\.\s/.test(line)) {
-      const dot = line.indexOf('. ');
-      nodes.push(
-        <div key={i} style={{ ...S.rBullet, display: 'flex', gap: 5, paddingLeft: 0 }}>
-          <span style={{ color: 'var(--t3)', flexShrink: 0 }}>{line.slice(0, dot + 1)}</span>
-          <span>{inlineMd(line.slice(dot + 2))}</span>
-        </div>
-      );
-    } else
-      nodes.push(<p key={i} style={S.rP}>{inlineMd(line)}</p>);
-  });
-  if (inPre && preLines.length) {
-    if (preLang === 'mermaid') {
-      nodes.push(<MermaidBlock key="mermaid-end" code={preLines.join('\n')} />);
-    } else {
-      nodes.push(<pre key="pre-end" style={S.rPre}>{preLines.join('\n')}</pre>);
-    }
-  }
-  return nodes;
-}
-
-let _mermaidId = 0;
-function MermaidBlock({ code }: { code: string }) {
-  const { t } = useTranslation();
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !code.trim()) return;
-    const id = `mm-${++_mermaidId}`;
-    import('mermaid').then(m => {
-      m.default.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
-      m.default.render(id, code).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = sanitizeSvg(svg);
-      }).catch(() => {
-        if (ref.current) ref.current.textContent = code;
-      });
-    });
-  }, [code]);
-  return (
-    <div style={{ margin: '8px 0', padding: '8px', background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5, overflow: 'auto' }}>
-      <div ref={ref} style={{ fontSize: 11, color: 'var(--t3)' }}>{t('lore.componentPassport.mermaidRendering', 'Рендеринг диаграммы…')}</div>
-    </div>
-  );
-}
-
+// T14: the reader panel's markdown body now renders via the shared MartProse
+// component (marked + sanitize + real mermaid/GFM-table/nested-list support)
+// instead of a hand-rolled line parser — see T14 remaining-scope note for the
+// visual tradeoffs this traded away (uppercase heading treatment for
+// USER-authored headings inside markdown bodies; the fixed section labels
+// below are untouched, they're outside the markdown). style={S.rP} keeps the
+// base font-size at this panel's 11px instead of MartProse's own 13px.
 function MdBlock({ md, label }: { md: string | null | undefined; label: string }) {
   if (!md?.trim()) return null;
   return (
     <>
       <div style={S.rH2}>{label}</div>
-      {renderMd(md)}
+      <MartProse text={md} style={S.rP} />
     </>
   );
 }
@@ -838,7 +731,7 @@ export default function LoreComponentPassport({
                                 <div style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{activeTask.task_id}</div>
                                 <div style={{ fontSize: 11, color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{activeTask.title}</div>
                                 {activeTask.note_md?.trim()
-                                  ? renderMd(activeTask.note_md)
+                                  ? <MartProse text={activeTask.note_md} style={S.rP} />
                                   : <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.componentPassport.reader.notesEmpty', 'Заметки не заполнены')}</span>}
                               </div>
                             );
