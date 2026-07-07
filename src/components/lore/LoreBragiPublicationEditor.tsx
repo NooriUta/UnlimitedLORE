@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  fetchLoreSlice, uploadBragiAsset, attachBragiAsset, createBragiCampaign, linkBragiForseti,
+  fetchLoreSlice, loreMutate, uploadBragiAsset, attachBragiAsset, createBragiCampaign, linkBragiForseti,
   fetchBragiMetrics, type LoreSprintRow, type LoreRelease, type BragiMetricPoint,
 } from '../../api/lore';
 import { MultiChip } from './LoreAdrEditor';
@@ -15,18 +15,6 @@ import { useIsNarrow } from '../../hooks/useMediaQuery';
 import type { RubricRow } from './LoreBragiRubricManager';
 import { activeCharLimit, validateSkin, validateVariant, type ValidationIssue } from './bragiValidators';
 
-const LORE_BASE = '/lore';
-
-async function post(path: string, body: unknown): Promise<{ ok: boolean; [k: string]: unknown }> {
-  const res = await fetch(`${LORE_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { detail?: string }).detail ?? `POST ${path} → ${res.status}`);
-  return json as { ok: boolean };
-}
 
 interface KeywordRow { keyword_id: string; phrase: string }
 interface ChannelRow { channel_id: string; channel_type: string | null; rules_md?: string | null }
@@ -109,7 +97,7 @@ function channelToSkin(channelId: string): BragiSkin {
   return 'main';
 }
 function statusDot(s: string): string {
-  return s === 'published' ? '#6fae5a' : s === 'ready' ? 'var(--acc)' : 'var(--t3)';
+  return s === 'published' ? 'var(--suc)' : s === 'ready' ? 'var(--acc)' : 'var(--t3)';
 }
 
 // V2-02: todo_md is a plain markdown checklist ("- [ ] text" / "- [x] text").
@@ -339,7 +327,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
     setSaving(true);
     setErrMsg(null);
     try {
-      await post('/bragi/publication', {
+      await loreMutate('/bragi/publication', {
         publication_id: id, title: title.trim(),
         topic: topic || undefined, main_text_md: mainText || undefined,
         type: type || undefined, status_general: status || undefined,
@@ -357,7 +345,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
       for (const v of variants) {
         if (!v.channel_id) { savedVariantIds.push(v.variant_id); continue; } // skip empty rows
         const variantId = v.variant_id ?? `${id}-${v.channel_id.replace(/^CH-/, '')}`;
-        await post('/bragi/variant', {
+        await loreMutate('/bragi/variant', {
           variant_id: variantId, publication_id: id, channel_id: v.channel_id,
           // sameAsMain: explicit '' (not undefined) — the backend's partial-upsert
           // treats an omitted field as "leave untouched", so undefined wouldn't
@@ -1071,7 +1059,7 @@ const S: Record<string, React.CSSProperties> = {
   addVariantBtn: { marginTop: 4, height: 28, padding: '0 12px', borderRadius: 4, border: '1px dashed var(--bd)',
                    background: 'transparent', color: 'var(--t3)', fontSize: 12, cursor: 'pointer' },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
                background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
 

@@ -21,6 +21,8 @@ jobs:
       - name: LORE frontend — install + typecheck + build
         run: |
           npm ci
+          npm run check:statuses
+          npm run lint
           npm run build
 
       - name: MCP server — install + typecheck + build
@@ -28,3 +30,7 @@ jobs:
         run: |
           npm ci
           npm run build
+
+      # Validates the frontend Dockerfile (npm build + nginx.conf) as shipped.
+      - name: Docker image build (frontend + nginx)
+        run: docker build -t lore-app:ci .

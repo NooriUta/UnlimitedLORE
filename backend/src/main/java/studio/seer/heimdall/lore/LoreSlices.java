@@ -145,6 +145,7 @@ public final class LoreSlices {
             "SELECT sprint_id, name, context_md, created_date, no_release_required, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
+            "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
             "out('HAS_STATE')[planned_milestone_id IS NOT NULL].planned_milestone_id[0] AS planned_milestone_id, " +

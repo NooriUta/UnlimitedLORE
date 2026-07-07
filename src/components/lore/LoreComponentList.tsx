@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreComponent } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
@@ -181,7 +182,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
       <div
         key={r.component_id}
         style={{ ...S.card(sel, indent, color), opacity: dimmed ? 0.4 : 1 }}
-        onClick={() => !dimmed && onSelect(r.component_id)}
+        {...(dimmed ? {} : a11yClick(() => onSelect(r.component_id)))}
       >
         <div style={S.iconBox(color, invert)}>
           {r.game_icon
@@ -222,7 +223,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
           nodes.push(
             <div key={`hdr-${thisArea}`}
               style={{ ...S.sectionHdr, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
-              onClick={() => toggleArea(thisArea)}
+              {...a11yClick(() => toggleArea(thisArea))}
             >
               <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
               {curArea}

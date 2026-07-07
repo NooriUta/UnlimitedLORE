@@ -2,6 +2,7 @@
 // No master-detail split: decisions are short notes, not large documents.
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreDecisionRow, type LoreDecisionPassport } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
@@ -126,7 +127,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
       <div
         key={d.decision_id}
         style={{ ...S.row, background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
-        onClick={() => toggle(d.decision_id)}
+        {...a11yClick(() => toggle(d.decision_id))}
       >
         <span style={S.num}>#{d.decision_id}</span>
         <div style={S.body}>
@@ -226,7 +227,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
               {sec.status && (
                 <div
                   style={{ ...S.groupHeader, cursor: 'pointer' }}
-                  onClick={() => toggleGroup(sec.status!)}
+                  {...a11yClick(() => toggleGroup(sec.status!))}
                 >
                   <span style={S.groupChevron}>{isCollapsed ? '▶' : '▼'}</span>
                   <StatusChip status={sec.status} />

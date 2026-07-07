@@ -53,6 +53,25 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+// Single write/mutation transport for LORE POST endpoints. Replaces the
+// per-component `fetch(... X-Seer-Role ...)` helpers that had each drifted their
+// own error handling. `path` is relative to /lore (e.g. "/bragi/keyword").
+export async function loreMutate<T = { ok: boolean; [k: string]: unknown }>(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  const res = await fetch(`${LORE_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    body: JSON.stringify(body),
+    signal,
+  });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return (await res.json()) as T;
+}
+
 // BRAGI metric query (GET /lore/bragi/metric/query) — not a whitelisted slice,
 // filter/agg shape doesn't fit the generic template (see MCP-03).
 export interface BragiMetricPoint {
@@ -371,6 +390,8 @@ export interface LorePlanItem {
   components: string[] | null;
 }
 
+// Canonical source of truth: shared/lore-statuses.json (planStatuses). Drift is
+// caught in CI by `npm run check:statuses` (scripts/check-lore-statuses.mjs).
 export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
 
 export interface LoreStatusUpdateResponse {
@@ -491,11 +512,14 @@ export async function editLoreTask(
   taskUid: string,
   title: string,
   noteMd?: string | null,
+  effortDays?: number | null,
 ): Promise<LoreTaskWriteResponse> {
+  // effort_days: null = leave unchanged (backend only writes it when non-null,
+  // mirroring onto both the vertex and the open KnowTaskHist row).
   const res = await fetch(`${LORE_BASE}/task/edit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify({ task_uid: taskUid, title, note_md: noteMd ?? null }),
+    body: JSON.stringify({ task_uid: taskUid, title, note_md: noteMd ?? null, effort_days: effortDays ?? null }),
   });
   assertJson(res);
   if (!res.ok) return parseError(res);

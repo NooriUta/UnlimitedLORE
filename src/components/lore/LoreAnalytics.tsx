@@ -244,7 +244,8 @@ function VelocityChart({ weeks, stacks }: { weeks: VelocityWeek[]; stacks?: Velo
   const barW = Math.floor((W - pad * (weeks.length + 1)) / weeks.length);
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H + 24}`} style={{ display: 'block', overflow: 'visible' }}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H + 24}`} style={{ display: 'block', overflow: 'visible' }}
+      role="img" aria-label={`График скорости по неделям: ${weeks.length} нед., пик ${maxVal} за неделю`}>
       {weeks.map((w, i) => {
         const x = pad + i * (barW + pad);
         const totalH = Math.max(2, Math.round((w.count / maxVal) * H));
@@ -302,7 +303,8 @@ function CumulativeChart({ points }: { points: { dateMs: number; total: number }
   const areaPath = `M0,${H} L${pts.split(' ').join(' L')} L${W},${H} Z`;
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H + 4}`} style={{ display: 'block' }}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H + 4}`} style={{ display: 'block' }}
+      role="img" aria-label={`Кумулятивный график завершения: ${points.length} точек, итог ${maxTotal}`}>
       <defs>
         <linearGradient id="cumGrad" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="var(--suc)" stopOpacity="0.2" />
@@ -333,7 +335,8 @@ function BurnupChart({ points }: { points: { ms: number; scope: number; done: nu
   const gap = points[points.length - 1].scope - points[points.length - 1].done;
 
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H + 4}`} style={{ display: 'block' }}>
+    <svg width="100%" viewBox={`0 0 ${W} ${H + 4}`} style={{ display: 'block' }}
+      role="img" aria-label={`Burnup график объём/выполнено: объём ${maxY}, остаток ${gap}`}>
       <defs>
         <linearGradient id="scopeGrad" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="var(--acc)" stopOpacity="0.12" />
@@ -1160,7 +1163,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <GameIcon slug={tb.icon} size={12} style={{ color: 'inherit' }} />
           {t(`lore.analytics.tabs.${tb.key}`, tb.label)}
           {tb.key === 'progress' && currentMilestone && daysUntilCurrent !== null && daysUntilCurrent >= 0 && daysUntilCurrent <= 14 && (
-            <span style={{ fontSize: 8, padding: '0 4px', borderRadius: 3, background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)', color: '#fff', marginLeft: 2 }}>
+            <span style={{ fontSize: 8, padding: '0 4px', borderRadius: 3, background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)', color: 'var(--on-accent)', marginLeft: 2 }}>
               {t('lore.analytics.daysSuffix', '{{n}}д', { n: daysUntilCurrent })}
             </span>
           )}

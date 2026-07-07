@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
 
 type DatePreset = null | '3m' | '6m' | '1y';
@@ -158,7 +159,7 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
                 background: selectedId === a.adr_id
                   ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
               }}
-              onClick={() => onOpen(a.adr_id)}
+              {...a11yClick(() => onOpen(a.adr_id))}
             >
               <div style={S.line1}>
                 <span style={S.statusDot(statusColor)} title={statusKey} />

@@ -103,18 +103,21 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
     }
   };
 
-  const fieldRow = (label: string, node: React.ReactNode, grow = 1) => (
+  const fieldRow = (id: string, label: string, node: React.ReactNode, grow = 1) => (
     <div style={{ ...S.field, flex: grow }}>
-      <label style={S.label}>{label}</label>
+      <label htmlFor={id} style={S.label}>{label}</label>
       {node}
     </div>
   );
 
-  const ta = (key: 'context_md' | 'decision_md' | 'consequences_md', placeholder: string, rows = 5) => (
+  // ADR bodies are substantial prose — give the editor real room on open
+  // (T28: fields were only ~100px and felt cramped). Resizable via TipTapField.
+  const ta = (key: 'context_md' | 'decision_md' | 'consequences_md', placeholder: string, ariaLabel: string, rows = 13) => (
     <TipTapField
       value={form[key]}
       onChange={v => set(key)(v)}
       placeholder={placeholder}
+      ariaLabel={ariaLabel}
       minHeight={rows * 20}
       enableImages={false}
       enableHtmlMode={false}
@@ -138,25 +141,31 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
 
       {/* Row 1: ID · Name · Status · Date */}
       <div style={S.row4}>
-        {fieldRow(t('lore.adrEditor.fieldAdrId', 'ADR ID'), (
+        {fieldRow('adr-field-id', t('lore.adrEditor.fieldAdrId', 'ADR ID'), (
           <input
+            id="adr-field-id"
             style={{ ...S.input, ...(lockId ? S.inputLock : {}) }}
             value={form.adr_id}
             readOnly={lockId}
+            required
+            aria-required="true"
+            aria-invalid={!form.adr_id.trim()}
             placeholder="ADR-HND-042"
             onChange={e => set('adr_id')(e.target.value)}
           />
         ))}
-        {fieldRow(t('lore.adrEditor.fieldName', 'Название'), (
+        {fieldRow('adr-field-name', t('lore.adrEditor.fieldName', 'Название'), (
           <input
+            id="adr-field-name"
             style={S.input}
             value={form.name}
             placeholder={t('lore.adrEditor.namePlaceholder', 'Краткое название решения')}
             onChange={e => set('name')(e.target.value)}
           />
         ), 3)}
-        {fieldRow(t('lore.adrEditor.fieldStatus', 'Статус'), (
+        {fieldRow('adr-field-status', t('lore.adrEditor.fieldStatus', 'Статус'), (
           <select
+            id="adr-field-status"
             style={{ ...S.input, color: STATUS_COLOR[form.status] }}
             value={form.status}
             onChange={e => set('status')(e.target.value as AdrStatus)}
@@ -166,16 +175,16 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
             ))}
           </select>
         ))}
-        {fieldRow(t('lore.adrEditor.fieldDate', 'Дата'), (
-          <input style={S.input} type="date" value={form.date_created}
+        {fieldRow('adr-field-date', t('lore.adrEditor.fieldDate', 'Дата'), (
+          <input id="adr-field-date" style={S.input} type="date" value={form.date_created}
             onChange={e => set('date_created')(e.target.value)} />
         ))}
       </div>
 
       {/* Markdown sections */}
-      <Sec label={t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно')}>{ta('context_md', t('lore.adrEditor.contextPlaceholder', 'Опишите проблему, ограничения, исходные данные…'))}</Sec>
-      <Sec label={t('lore.adrEditor.sectionDecision', 'Decision — что именно решили')}>{ta('decision_md', t('lore.adrEditor.decisionPlaceholder', 'Опишите принятое решение…'))}</Sec>
-      <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), 4)}</Sec>
+      <Sec label={t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно')}>{ta('context_md', t('lore.adrEditor.contextPlaceholder', 'Опишите проблему, ограничения, исходные данные…'), t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно'))}</Sec>
+      <Sec label={t('lore.adrEditor.sectionDecision', 'Decision — что именно решили')}>{ta('decision_md', t('lore.adrEditor.decisionPlaceholder', 'Опишите принятое решение…'), t('lore.adrEditor.sectionDecision', 'Decision — что именно решили'))}</Sec>
+      <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs'), 9)}</Sec>
 
       {/* Relations */}
       <Sec label={t('lore.adrEditor.sectionDependsOn', 'Зависит от других ADR (DEPENDS_ON)')}>
@@ -335,7 +344,7 @@ const S: Record<string, React.CSSProperties> = {
               border: '1px solid var(--b3)', background: 'var(--b1)', color: 'var(--t1)',
               fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 1.55, resize: 'vertical', outline: 'none' },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
                background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
 };

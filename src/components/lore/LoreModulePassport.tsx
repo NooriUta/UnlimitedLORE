@@ -3,12 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreComponentDetail, type LoreSpecRow, type LoreAdrRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { specTitle } from './LoreSpecView';
-
-const AREA_COLOR: Record<string, string> = {
-  data: '#29b6f6', engine: '#4caf50', algorithm: '#26a69a', ai: '#ab47bc',
-  api: '#2196f3', frontend: '#9c27b0', observability: '#ff7043',
-  platform: '#ff9800', security: '#ef5350',
-};
+// T16: this was a THIRD independent hardcoded area palette (ComponentTree.tsx
+// carried its own too, already unified) — same domain, three different colour
+// sets depending which file you looked at. One source of truth.
+import { areaColor } from './LoreComponentList';
 
 const S = {
   root: { flex: 1, display: 'flex', flexDirection: 'column' as const, minWidth: 0, overflow: 'hidden' },
@@ -17,7 +15,7 @@ const S = {
   icon: { flexShrink: 0, display: 'flex' },
   name: { fontSize: 17, fontWeight: 600, color: 'var(--t1)' },
   area: (a: string) => {
-    const c = AREA_COLOR[a] ?? 'var(--t3)';
+    const c = areaColor(a);
     return { fontSize: 10, padding: '2px 7px', borderRadius: 3, color: c, background: `color-mix(in srgb, ${c} 14%, transparent)`, whiteSpace: 'nowrap' as const };
   },
   metaLine: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, fontSize: 11, color: 'var(--t3)', marginBottom: 8 },

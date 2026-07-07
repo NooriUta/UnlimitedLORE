@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { sanitizeSvg } from './sanitizeHtml';
+import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
   updateLoreComponent,
@@ -197,7 +199,7 @@ const S = {
   editLabel: { fontSize: 10, color: 'var(--t3)', width: 68, flexShrink: 0, textTransform: 'uppercase' as const },
   editInput: { flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 11, background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)', fontFamily: 'inherit', outline: 'none' },
   editActions:{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' as const },
-  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'var(--acc)', color: '#fff', border: 'none', fontFamily: 'inherit' },
+  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'var(--acc)', color: 'var(--on-accent)', border: 'none', fontFamily: 'inherit' },
   cancelBtn: { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)', fontFamily: 'inherit' },
 };
 
@@ -207,14 +209,23 @@ function stLabel(s: string | null | undefined) {
   return (s ?? '').toUpperCase().replace('_', ' ');
 }
 
+// T14: was bold + inline-code only. Added italic and links — the two other
+// GFM-parity gaps the T14 note called out that are safe to hand-add here
+// without pulling this reader panel onto MartProse's different type scale
+// (tables/nested-lists stay out of scope: a real parser rewrite, not a
+// same-shape addition — see T14 remaining-scope note).
 function inlineMd(text: string): ReactNode {
   const boldM = /\*\*([^*\n]+)\*\*/.exec(text);
+  const italM = /(?<!\*)\*([^*\n]+)\*(?!\*)/.exec(text);
   const codeM = /`([^`\n]+)`/.exec(text);
+  const linkM = /\[([^\]\n]+)\]\(([^)\s]+)\)/.exec(text);
   const candidates = ([
     boldM && { m: boldM, type: 'bold' as const },
+    italM && { m: italM, type: 'italic' as const },
     codeM && { m: codeM, type: 'code' as const },
-  ] as Array<{ m: RegExpExecArray; type: 'bold' | 'code' } | false>)
-    .filter((x): x is { m: RegExpExecArray; type: 'bold' | 'code' } => Boolean(x))
+    linkM && { m: linkM, type: 'link' as const },
+  ] as Array<{ m: RegExpExecArray; type: 'bold' | 'italic' | 'code' | 'link' } | false>)
+    .filter((x): x is { m: RegExpExecArray; type: 'bold' | 'italic' | 'code' | 'link' } => Boolean(x))
     .sort((a, b) => a.m.index - b.m.index);
   if (!candidates.length) return text;
   const { m, type } = candidates[0];
@@ -224,6 +235,10 @@ function inlineMd(text: string): ReactNode {
   const restNode = rest ? inlineMd(rest) : null;
   if (type === 'bold')
     return <>{before}<strong style={{ color: 'var(--t1)', fontWeight: 600 }}>{inner}</strong>{restNode}</>;
+  if (type === 'italic')
+    return <>{before}<em>{inner}</em>{restNode}</>;
+  if (type === 'link')
+    return <>{before}<a href={m[2]} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--acc)', textDecoration: 'underline' }}>{inner}</a>{restNode}</>;
   return <>{before}<code style={{ fontFamily: 'var(--mono)', fontSize: '0.88em', background: 'color-mix(in srgb, var(--acc) 10%, var(--b3))', padding: '1px 4px', borderRadius: 3, color: 'var(--acc)' }}>{inner}</code>{restNode}</>;
 }
 
@@ -286,7 +301,7 @@ function MermaidBlock({ code }: { code: string }) {
     import('mermaid').then(m => {
       m.default.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
       m.default.render(id, code).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg;
+        if (ref.current) ref.current.innerHTML = sanitizeSvg(svg);
       }).catch(() => {
         if (ref.current) ref.current.textContent = code;
       });
@@ -547,7 +562,11 @@ export default function LoreComponentPassport({
         {/* Doc tabs */}
         <div style={S.tabsRow}>
           {tabList.map(t => (
-            <div key={t.key} style={S.tab(docTab === t.key)} onClick={() => { setDocTab(t.key); setSelDocId(null); setDocContent(null); setSprintStatusFilter(new Set()); setSelTaskUid(null); setTaskStatusFilter(new Set()); }}>
+            <div key={t.key} style={S.tab(docTab === t.key)} aria-pressed={docTab === t.key}
+              {...a11yClick(() => {
+                setDocTab(t.key); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
+                setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
+              })}>
               {t.label}
               {t.count > 0 && <span style={S.tabCnt}>{t.count}</span>}
             </div>

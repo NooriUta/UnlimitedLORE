@@ -5,21 +5,8 @@
 // LoreBragiIntegrationEditor/LoreBragiPublicationEditor.
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice } from '../../api/lore';
+import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import type { RubricRow } from './LoreBragiRubricManager';
-
-const LORE_BASE = '/lore';
-
-async function post(path: string, body: unknown): Promise<{ ok: boolean; [k: string]: unknown }> {
-  const res = await fetch(`${LORE_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { detail?: string }).detail ?? `POST ${path} → ${res.status}`);
-  return json as { ok: boolean };
-}
 
 interface PageRow { page_id: string; url: string | null; title: string | null }
 
@@ -76,7 +63,7 @@ export default function LoreBragiKeywordEditor({ onSaved, onCancel, editing, rub
     setSaving(true);
     setErrMsg(null);
     try {
-      await post('/bragi/keyword', {
+      await loreMutate('/bragi/keyword', {
         keyword_id: id, phrase: phrase.trim(),
         cluster: cluster || undefined,
         freq_exact: freqExact ? Number(freqExact) : undefined,
@@ -174,7 +161,7 @@ const S: Record<string, React.CSSProperties> = {
               background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
               outline: 'none', width: '100%', boxSizing: 'border-box' },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
                background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
 };

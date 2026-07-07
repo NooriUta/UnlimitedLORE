@@ -45,11 +45,10 @@ import java.util.regex.Pattern;
  * Pattern: BenchMartResource.
  */
 @Path("/lore")
-public class AidaLoreResource {
+public class AidaLoreResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(AidaLoreResource.class);
 
-    public record LoreError(String error, String detail) {}
     public record SliceInfo(String id, List<String> required, List<String> optional) {}
 
     // ── write-path records ────────────────────────────────────────────────────
@@ -59,7 +58,7 @@ public class AidaLoreResource {
         boolean ok, String entity_type, String id,
         String old_status, String new_status, StatusRevision revision) {}
     public record SprintRefsRequest(String sprint_id, List<Integer> pr_numbers,
-        String git_project, String repo_url) {}
+        String git_project, String repo_url, Boolean replace) {}
     // priority moved to SprintPlanRequest/POST /lore/sprint/plan — it's SCD2-tracked
     // (lives on KnowSprintHist), unlike the vertex-only fields below.
     // no_release_required: sprints that never ship a versioned release (docs-only,
@@ -87,20 +86,25 @@ public class AidaLoreResource {
         Integer order_index, boolean created) {}
     public record TaskPhaseRequest(String task_uid, String phase_uid, String action) {}
 
-    // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
-    private static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
-    private static final Set<String> ENTITY_TYPES =
+    // SAFE_ID, the ArcadeDB clients, config, and shared helpers are inherited from
+    // LoreResourceBase (B2 God-class split).
+    // Canonical source of truth for these vocabularies: shared/lore-statuses.json.
+    // Drift between this mirror and the JSON is caught by LoreStatusesConsistencyTest
+    // (JUnit). The MCP + frontend mirrors are guarded by scripts/check-lore-statuses.mjs.
+    // Package-private (not private) so LoreStatusesConsistencyTest can assert them
+    // against shared/lore-statuses.json.
+    static final Set<String> ENTITY_TYPES =
         Set.of("plan_item", "sprint", "task", "checkpoint", "adr", "phase");
-    private static final Set<String> PLAN_STATUSES =
+    static final Set<String> PLAN_STATUSES =
         Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled",
                "planned", "backlog", "design", "ready_for_deploy");
-    private static final Set<String> ADR_STATUSES =
+    static final Set<String> ADR_STATUSES =
         Set.of("proposed", "accepted", "draft", "deferred", "superseded");
 
     // Canonical status token → status_raw string written on KnowSprintHist / KnowTaskHist.
     // Mirrors the leading-marker convention the frontend normalizer (LoreSprintDetail) reads back.
     // 🟡 PARTIAL is a distinct status from 🔄 IN PROGRESS — see lore-status.ts taskTick.
-    private static final Map<String, String> SCD2_STATUS_RAW = Map.ofEntries(
+    static final Map<String, String> SCD2_STATUS_RAW = Map.ofEntries(
         Map.entry("done",             "✅ DONE"),
         Map.entry("active",           "🔄 IN PROGRESS"),
         Map.entry("partial",          "🟡 PARTIAL"),
@@ -113,31 +117,8 @@ public class AidaLoreResource {
         Map.entry("backlog",          "🟣 BACKLOG"),
         Map.entry("design",           "🔬 DESIGN"));
 
-    @ConfigProperty(name = "lore.enabled", defaultValue = "false")
-    boolean enabled;
-
-    @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
-    String db;
-
-    @ConfigProperty(name = "bench.mart.user", defaultValue = "root")
-    String user;
-
-    @ConfigProperty(name = "bench.mart.password", defaultValue = "")
-    String password;
-
-    @Inject
-    @RestClient
-    MartClient client;
-
-    @Inject
-    @RestClient
-    LoreCommandClient writeClient;
-
     @Inject
     LoreIngestService ingestService;
-
-    @Inject
-    BragiS3Service bragiS3;
 
     @GET
     @Path("slices")
@@ -450,29 +431,30 @@ public class AidaLoreResource {
                 final String oldStatus = rows.isEmpty() ? null
                     : (String) rows.get(0).get("status_raw");
 
-                Uni<LoreCommandClient.LoreCommandResult> closeOld =
-                    (oldRid != null && oldRid.startsWith("#"))
-                        ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            "UPDATE " + histType + " SET valid_to = :now WHERE @rid = :rid",
-                            Map.of("now", now, "rid", oldRid)))
-                        : Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
+                // A1: close-old + open-new + HAS_STATE edge + denormalize run as one
+                // atomic sqlscript (ArcadeDB implicit transaction). A partial SCD2
+                // transition can no longer leave two open hist rows, or an entity
+                // whose denormalized status_raw disagrees with its open hist row.
+                // vertexType/histType/keyField come from the internal type switch,
+                // never user input; id is bound as a parameter.
+                StringBuilder script = new StringBuilder();
+                Map<String, Object> p = new java.util.HashMap<>();
+                p.put("nsid", nsid); p.put("ns", newRaw); p.put("now", now); p.put("id", id);
+                if (oldRid != null && oldRid.startsWith("#")) {
+                    script.append("UPDATE ").append(histType)
+                          .append(" SET valid_to = :now WHERE @rid = :oldrid;");
+                    p.put("oldrid", oldRid);
+                }
+                script.append("INSERT INTO ").append(histType)
+                      .append(" SET state_uid = :nsid, status_raw = :ns, valid_from = :now;")
+                      .append("CREATE EDGE HAS_STATE FROM (SELECT FROM ").append(vertexType)
+                      .append(" WHERE ").append(keyField).append(" = :id) ")
+                      .append("TO (SELECT FROM ").append(histType).append(" WHERE state_uid = :nsid);")
+                      .append("UPDATE ").append(vertexType)
+                      .append(" SET status_raw = :ns WHERE ").append(keyField).append(" = :id;");
 
-                return closeOld
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "INSERT INTO " + histType +
-                            " SET state_uid = :nsid, status_raw = :ns, valid_from = :now",
-                            Map.of("nsid", nsid, "ns", newRaw, "now", now))))
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "CREATE EDGE HAS_STATE " +
-                            "FROM (SELECT FROM " + vertexType + " WHERE " + keyField + " = :id) " +
-                            "TO (SELECT FROM " + histType + " WHERE state_uid = :nsid)",
-                            Map.of("id", id, "nsid", nsid))))
-                    .chain(__ -> writeClient.command(db, basicAuth(),
-                        new LoreCommandClient.LoreCommand("sql",
-                            "UPDATE " + vertexType + " SET status_raw = :ns WHERE " + keyField + " = :id",
-                            Map.of("ns", newRaw, "id", id))))
+                return writeClient.command(db, basicAuth(),
+                        new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
                     .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
                         true, entityType, id, oldStatus, newRaw,
                         new StatusRevision(now, null)))));
@@ -545,8 +527,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> updateSprintPlan(SprintPlanRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
             return Uni.createFrom().item(badParams("sprint_id required"));
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
@@ -598,10 +579,8 @@ public class AidaLoreResource {
                     "planned_end_date = :planned_end_date, planned_milestone_id = :planned_milestone_id, " +
                     "track_id = :track_id, pr_refs = :pr_refs",
                     insertParams)))
-                .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id = :sid) " +
-                    "TO (SELECT FROM KnowSprintHist WHERE state_uid = :nsid)",
-                    Map.of("sid", sid, "nsid", nsid))))
+                .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
+                    "KnowSprint", "KnowSprintHist", "sprint_id", sid, nsid)))
                 .map(__ -> {
                     Map<String, Object> out = new LinkedHashMap<>(next);
                     out.put("ok", true);
@@ -681,8 +660,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response createSprint(SprintCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank()) {
             return badParams("sprint_id required");
         }
@@ -716,8 +694,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.task_id() == null
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, task_id, title required"));
@@ -756,31 +733,34 @@ public class AidaLoreResource {
                 List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
                 Object mxRaw = rows.isEmpty() ? null : rows.get(0).get("mx");
                 final int order = (mxRaw instanceof Number n ? n.intValue() : 0) + 1;
-                return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "INSERT INTO KnowTask SET task_uid = :uid, task_id = :tid, title = :title, " +
-                        "note_md = :note, order_index = :oi, src = 'manual'",
-                        mapOfNullable("uid", uid, "tid", tid, "title", title, "note", note, "oi", order)))
-                    .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
-                        "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
-                        Map.of("uid", uid, "sid", sid))))
-                    .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        // note_md must live on the hist row: tasks_of_sprint / tasks_of_phase
-                        // read it via out('HAS_STATE')[note_md IS NOT NULL].note_md[0], not the vertex.
-                        "INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
-                        "valid_from = :now, note_md = :note",
-                        mapOfNullable("nsid", nsid, "now", now, "note", note))))
-                    .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
-                        "TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid)",
-                        Map.of("uid", uid, "nsid", nsid))))
-                    // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
-                    .chain(__ -> phase == null
-                        ? Uni.createFrom().item((LoreCommandClient.LoreCommandResult) null)
-                        : writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) " +
-                            "TO (SELECT FROM KnowPhase WHERE phase_uid = :puid)",
-                            Map.of("uid", uid, "puid", phase))))
+
+                // A1: one atomic sqlscript. ArcadeDB runs all statements in a single
+                // implicit transaction, so a mid-sequence failure rolls the whole
+                // create back — no orphan KnowTask left without its HAS_STATE hist
+                // row. A later statement also sees rows inserted by an earlier one in
+                // the same script, so the HAS_STATE edge resolves reliably (this used
+                // to need separate commands + careful ordering).
+                // note_md lives on the hist row: tasks_of_sprint / tasks_of_phase read
+                // it via out('HAS_STATE')[note_md IS NOT NULL].note_md[0], not the vertex.
+                StringBuilder script = new StringBuilder()
+                    .append("INSERT INTO KnowTask SET task_uid = :uid, task_id = :tid, title = :title, ")
+                    .append("note_md = :note, order_index = :oi, src = 'manual';")
+                    .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
+                    .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
+                    .append("INSERT INTO KnowTaskHist SET state_uid = :nsid, status_raw = '📋 PLANNED', ")
+                    .append("valid_from = :now, note_md = :note;")
+                    .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
+                    .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
+                Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
+                    "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
+                if (phase != null) {
+                    script.append("CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
+                          .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid);");
+                    p.put("puid", phase);
+                }
+                return writeClient.command(db, basicAuth(),
+                        new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
                     .map(__ -> noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order))));
             })
             .onFailure().recoverWithItem(ex -> {
@@ -801,8 +781,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> createPhase(PhaseCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.phase_key() == null || req.phase_key().isBlank()) {
             return Uni.createFrom().item(badParams("sprint_id, phase_key required"));
         }
@@ -849,22 +828,21 @@ public class AidaLoreResource {
                         Object mxRaw = mrows.isEmpty() ? null : mrows.get(0).get("mx");
                         final int order = req.order_index() != null ? req.order_index()
                             : (mxRaw instanceof Number n ? n.intValue() : 0) + 1;
-                        return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
-                                "order_index = :oi, src = 'manual'",
-                                mapOfNullable("uid", uid, "pid", display, "name", name, "oi", order)))
-                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
-                                "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid)",
-                                Map.of("uid", uid, "sid", sid))))
-                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
-                                "valid_from = :now",
-                                Map.of("nsid", nsid, "now", now))))
-                            .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                                "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
-                                "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid)",
-                                Map.of("uid", uid, "nsid", nsid))))
+                        // A1: atomic sqlscript — a partial failure leaves no KnowPhase
+                        // without its PART_OF/HAS_STATE edges.
+                        String script =
+                            "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
+                            "order_index = :oi, src = 'manual';" +
+                            "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
+                            "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
+                            "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
+                            "valid_from = :now;" +
+                            "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
+                            "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid);";
+                        Map<String, Object> p = mapOfNullable("uid", uid, "pid", display, "name", name,
+                            "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                        return writeClient.command(db, basicAuth(),
+                                new LoreCommandClient.LoreCommand("sqlscript", script, p))
                             .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true))));
                     });
                 });
@@ -882,8 +860,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkTaskPhase(TaskPhaseRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.task_uid() == null)
             return badParams("task_uid required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
@@ -955,8 +932,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response editTaskBatch(List<TaskEditRequest> reqs, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (reqs == null || reqs.isEmpty()) return badParams("tasks array required");
         int updated = 0;
         List<String> errors = new java.util.ArrayList<>();
@@ -1025,8 +1001,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> editTask(TaskEditRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
-        Response guard = requireAdmin(role);
-        if (guard != null) return Uni.createFrom().item(guard);
+        requireAdmin(role);
         if (req == null || req.task_uid() == null
                 || req.title() == null || req.title().isBlank()) {
             return Uni.createFrom().item(badParams("task_uid and title required"));
@@ -1059,8 +1034,7 @@ public class AidaLoreResource {
     public Response createRelease(ReleaseCreateRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank()) {
             return badParams("release_id required");
         }
@@ -1093,16 +1067,17 @@ public class AidaLoreResource {
             String ruid = gp + "#" + req.release_id();
             set.append(", git_project=:gp, release_uid=:ruid");
             p.put("gp", gp); p.put("ruid", ruid);
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                set.toString(), p)).await().indefinitely();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now",
-                Map.of("nsid", nsid, "now", now))).await().indefinitely();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE HAS_STATE " +
-                "FROM (SELECT FROM KnowRelease WHERE release_id=:rid) " +
-                "TO   (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid)",
-                Map.of("rid", req.release_id(), "nsid", nsid))).await().indefinitely();
+            // A1: vertex INSERT + hist INSERT + HAS_STATE edge as one atomic
+            // sqlscript — no orphan KnowRelease without its hist row on partial
+            // failure. Reuses :rid (already bound above) for the edge.
+            p.put("nsid", nsid);
+            p.put("now", now);
+            String script = set.toString() + ";"
+                + "INSERT INTO KnowReleaseHist SET state_uid=:nsid, valid_from=:now;"
+                + "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRelease WHERE release_id=:rid) "
+                + "TO (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid);";
+            writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sqlscript", script, p)).await().indefinitely();
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("is_current", cur); out.put("created", now);
@@ -1123,8 +1098,7 @@ public class AidaLoreResource {
     public Response updateRelease(ReleaseUpdateRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank()) {
             return badParams("release_id required");
         }
@@ -1188,8 +1162,7 @@ public class AidaLoreResource {
     public Response linkRelease(ReleaseLinkRequest req,
                                 @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank()) {
             return badParams("release_id required");
         }
@@ -1286,8 +1259,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response unlinkRelease(ReleaseUnlinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank())
             return badParams("release_id required");
         String gp = (req.git_project() != null && !req.git_project().isBlank())
@@ -1342,8 +1314,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response moveToProject(ProjectMoveRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.entity_type() == null || req.id() == null || req.git_project() == null
                 || req.id().isBlank() || req.git_project().isBlank())
             return badParams("entity_type, id, git_project required");
@@ -1414,8 +1385,7 @@ public class AidaLoreResource {
     public Response updateSprintRefs(SprintRefsRequest req,
                                      @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
             return badParams("sprint_id required");
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
@@ -1442,10 +1412,16 @@ public class AidaLoreResource {
                 return noStore(Response.status(Response.Status.NOT_FOUND)
                     .entity(new LoreError("NOT_FOUND", "no open hist row for sprint: " + req.sprint_id())));
 
-            // pr_refs is a markdown string; build the new entries and append.
+            // pr_refs is a markdown string; build the new entries and append —
+            // unless replace=true, which discards whatever was there before
+            // (for fixing a wrong git_project/repo_url baked into earlier
+            // entries, since there's no per-entry edit otherwise).
+            boolean replace = Boolean.TRUE.equals(req.replace());
             String existing = "";
-            Object raw = rows.get(0).get("pr_refs");
-            if (raw != null) existing = raw.toString().trim();
+            if (!replace) {
+                Object raw = rows.get(0).get("pr_refs");
+                if (raw != null) existing = raw.toString().trim();
+            }
             String rid = rows.get(0).get("@rid").toString();
 
             StringBuilder sb = new StringBuilder(existing);
@@ -1483,8 +1459,7 @@ public class AidaLoreResource {
     public Response updateSprint(SprintUpdateRequest req,
                                  @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.sprint_id().isBlank())
             return badParams("sprint_id required");
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
@@ -1541,8 +1516,7 @@ public class AidaLoreResource {
     public Response linkSprintProject(SprintProjectRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.git_project() == null)
             return badParams("sprint_id and git_project required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
@@ -1597,8 +1571,7 @@ public class AidaLoreResource {
     public Response linkSprintMilestone(SprintMilestoneRequest req,
                                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.milestone_id() == null)
             return badParams("sprint_id and milestone_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
@@ -1648,8 +1621,7 @@ public class AidaLoreResource {
     public Response upsertMilestone(MilestoneRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.milestone_id() == null || req.milestone_id().isBlank())
             return badParams("milestone_id required");
         try {
@@ -1698,8 +1670,7 @@ public class AidaLoreResource {
     public Response linkSprintComponent(SprintComponentRequest req,
                                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.sprint_id() == null || req.component_id() == null)
             return badParams("sprint_id and component_id required");
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.component_id()).matches())
@@ -1768,8 +1739,7 @@ public class AidaLoreResource {
     public Response linkTaskComponent(TaskComponentRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.task_uid() == null || req.component_id() == null)
             return badParams("task_uid and component_id required");
         if (!SAFE_ID.matcher(req.task_uid()).matches() || !SAFE_ID.matcher(req.component_id()).matches())
@@ -1830,8 +1800,7 @@ public class AidaLoreResource {
     public Response linkSprintDep(SprintDepRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.from_sprint() == null || req.to_sprint() == null)
             return badParams("from_sprint and to_sprint required");
         if (!SAFE_ID.matcher(req.from_sprint()).matches() || !SAFE_ID.matcher(req.to_sprint()).matches())
@@ -1900,8 +1869,7 @@ public class AidaLoreResource {
     public Response batchSetStatus(BatchStatusRequest req,
                                    @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.ids() == null || req.ids().isEmpty())
             return badParams("ids required");
         if (req.entity_type() == null || req.status() == null)
@@ -1933,8 +1901,7 @@ public class AidaLoreResource {
     public Response createAdr(AdrCreateRequest req,
                               @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank())
             return badParams("adr_id required");
         if (!SAFE_ID.matcher(req.adr_id()).matches())
@@ -2035,19 +2002,17 @@ public class AidaLoreResource {
                     "ctx", req.context_md(),
                     "dec", req.decision_md(),
                     "con", req.consequences_md());
-                // Step 3b: create the initial open hist row + HAS_STATE edge
+                // Step 3b: create the initial open hist row + HAS_STATE edge.
+                // A1: one atomic sqlscript so a failed edge leaves no orphan hist row.
                 histP.put("nsid", nsid);
                 histP.put("now",  now);
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                histP.put("id",   req.adr_id());
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                     "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
-                    "context_md=:ctx, decision_md=:dec, consequences_md=:con",
+                    "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
+                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
+                    "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);",
                     histP)).await().indefinitely();
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_STATE " +
-                    "FROM (SELECT FROM KnowADR     WHERE adr_id    = :id) " +
-                    "TO   (SELECT FROM KnowADRHist WHERE state_uid = :nsid)",
-                    Map.of("id", req.adr_id(), "nsid", nsid)))
-                    .await().indefinitely();
                 histCreated = true;
             }
 
@@ -2178,8 +2143,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdr(AdrLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank())
             return badParams("adr_id required");
         boolean toSprint  = req.sprint_id()  != null && !req.sprint_id().isBlank();
@@ -2264,8 +2228,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrComponent(AdrComponentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.component_id() == null || req.component_id().isBlank())
             return badParams("adr_id and component_id required");
@@ -2304,8 +2267,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrDependsOn(AdrDependsOnLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.dep_adr_id() == null || req.dep_adr_id().isBlank())
             return badParams("adr_id and dep_adr_id required");
@@ -2344,8 +2306,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrSupersedes(AdrSupersedesLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.superseded_adr_id() == null || req.superseded_adr_id().isBlank())
             return badParams("adr_id and superseded_adr_id required");
@@ -2384,8 +2345,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkAdrTag(AdrTagLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.tag_id() == null || req.tag_id().isBlank())
             return badParams("adr_id and tag_id required");
@@ -2435,8 +2395,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response linkRunbookAdr(RunbookAdrLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.runbook_id() == null || req.runbook_id().isBlank())
             return badParams("runbook_id required");
         if (req.adr_id() == null || req.adr_id().isBlank())
@@ -2476,8 +2435,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response renameAdr(AdrRenameRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank()
                 || req.new_adr_id() == null || req.new_adr_id().isBlank())
             return badParams("adr_id and new_adr_id required");
@@ -2516,8 +2474,7 @@ public class AidaLoreResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteAdr(AdrDeleteRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.adr_id() == null || req.adr_id().isBlank())
             return badParams("adr_id required");
         try {
@@ -2562,8 +2519,7 @@ public class AidaLoreResource {
     public Response createDecision(DecisionCreateRequest req,
                                    @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.decision_id() == null || req.decision_id().isBlank())
             return badParams("decision_id required");
         if (req.title() == null || req.title().isBlank())
@@ -2609,8 +2565,7 @@ public class AidaLoreResource {
     public Response updateComponent(ComponentUpdateRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.component_id() == null || req.component_id().isBlank())
             return badParams("component_id required");
         try {
@@ -2650,8 +2605,7 @@ public class AidaLoreResource {
     public Response createComponent(ComponentCreateRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.component_id() == null || req.component_id().isBlank())
             return badParams("component_id required");
         if (!SAFE_ID.matcher(req.component_id()).matches())
@@ -2704,8 +2658,7 @@ public class AidaLoreResource {
     public Response linkComponentParent(ComponentLinkParentRequest req,
                                         @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.component_id() == null || req.parent_id() == null)
             return badParams("component_id and parent_id required");
         try {
@@ -2739,8 +2692,7 @@ public class AidaLoreResource {
     public Response upsertSpec(SpecUpsertRequest req,
                                @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.spec_id() == null || req.spec_id().isBlank())
             return badParams("spec_id required");
         if (!SAFE_ID.matcher(req.spec_id()).matches())
@@ -2797,14 +2749,12 @@ public class AidaLoreResource {
                     hp.put("id", req.spec_id());
                     hp.put("nsid", nsid);
                     hp.put("now", Instant.now().toString());
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    // A1: hist INSERT + HAS_STATE edge as one atomic sqlscript.
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
-                        "content_md=:content, version=:version, summary=:summary", hp)).await().indefinitely();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE HAS_STATE " +
-                        "FROM (SELECT FROM KnowSpec     WHERE spec_id   = :id) " +
-                        "TO   (SELECT FROM KnowSpecHist WHERE state_uid = :nsid)",
-                        Map.of("id", req.spec_id(), "nsid", nsid))).await().indefinitely();
+                        "content_md=:content, version=:version, summary=:summary;" +
+                        "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
+                        "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 }
                 histWritten = true;
             }
@@ -2824,8 +2774,7 @@ public class AidaLoreResource {
     public Response deleteSpec(SpecDeleteRequest req,
                                @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.spec_id() == null || req.spec_id().isBlank())
             return badParams("spec_id required");
         if (!SAFE_ID.matcher(req.spec_id()).matches())
@@ -2853,8 +2802,7 @@ public class AidaLoreResource {
     public Response upsertQualityGate(QGUpsertRequest req,
                                       @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.qg_id() == null || req.qg_id().isBlank())
             return badParams("qg_id required");
         if (!SAFE_ID.matcher(req.qg_id()).matches())
@@ -2896,8 +2844,7 @@ public class AidaLoreResource {
     public Response recordQGRun(QGRunRequest req,
                                 @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.routine_name() == null || req.routine_name().isBlank())
             return badParams("routine_name required");
         String runId = req.run_id() != null ? req.run_id()
@@ -2950,8 +2897,7 @@ public class AidaLoreResource {
     public Response upsertQGJobTask(QGJobTaskRequest req,
                                     @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.job_id() == null || req.job_id().isBlank())
             return badParams("job_id required");
         if (req.qg_id() == null || req.qg_id().isBlank())
@@ -2997,8 +2943,7 @@ public class AidaLoreResource {
     public Response upsertQGRecommendation(QGRecommendationRequest req,
                                            @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.rec_id() == null || req.rec_id().isBlank())
             return badParams("rec_id required");
         if (req.job_id() == null || req.job_id().isBlank())
@@ -3053,8 +2998,7 @@ public class AidaLoreResource {
     public Response promoteQGRecommendation(QGPromoteRequest req,
                                             @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.rec_id() == null || req.rec_id().isBlank())
             return badParams("rec_id required");
         // Default target: a weekly rotating housekeeping sprint (ISO week), not one
@@ -3155,10 +3099,8 @@ public class AidaLoreResource {
                 "INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='⬜ TODO', valid_from=:now",
                 Map.of("nsid", stateUid, "now", nowTs))).await().indefinitely();
             // Link HAS_STATE: KnowTask → KnowTaskHist
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) " +
-                "TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid)",
-                Map.of("uid", taskUid, "nsid", stateUid))).await().indefinitely();
+            writeClient.command(db, basicAuth(), linkStateCmd(
+                "KnowTask", "KnowTaskHist", "task_uid", taskUid, stateUid)).await().indefinitely();
             // Link PART_OF: KnowTask → KnowSprint
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) " +
@@ -3196,8 +3138,7 @@ public class AidaLoreResource {
     public Response upsertRunbook(RunbookUpsertRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
+        requireAdmin(role);
         if (req == null || req.runbook_id() == null || req.runbook_id().isBlank())
             return badParams("runbook_id required");
         if (!SAFE_ID.matcher(req.runbook_id()).matches())
@@ -3246,16 +3187,14 @@ public class AidaLoreResource {
                 }
                 histCreated = false;
             } else {
-                // Step 3b: create the initial open hist row + HAS_STATE edge
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt",
-                    mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md())))
-                    .await().indefinitely();
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_STATE " +
-                    "FROM (SELECT FROM KnowRunbook     WHERE runbook_id = :id) " +
-                    "TO   (SELECT FROM KnowRunbookHist WHERE state_uid  = :nsid)",
-                    Map.of("id", req.runbook_id(), "nsid", nsid)))
+                // Step 3b: create the initial open hist row + HAS_STATE edge.
+                // A1: one atomic sqlscript so a failed edge leaves no orphan hist row.
+                Map<String, Object> hp = mapOfNullable("nsid", nsid, "now", now, "cnt", req.content_md());
+                hp.put("id", req.runbook_id());
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                    "INSERT INTO KnowRunbookHist SET state_uid=:nsid, valid_from=:now, content_md=:cnt;" +
+                    "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowRunbook WHERE runbook_id=:id) " +
+                    "TO (SELECT FROM KnowRunbookHist WHERE state_uid=:nsid);", hp))
                     .await().indefinitely();
                 histCreated = true;
             }
@@ -3269,1152 +3208,6 @@ public class AidaLoreResource {
         }
     }
 
-    // ── KnowDoc write ────────────────────────────────────────────────────────
-    // content_html is legacy (pre-existing HTML-fragment docs, rendered sandboxed);
-    // content_md_en/content_md_ru are the current authoring path — clean Markdown
-    // per language, rendered in-DOM (inherits app font, supports mermaid fences).
-    // parent_doc_id/sort_order: DeepWiki-style page tree. parent_doc_id here is
-    // a convenience for the common "create + place in the tree in one call"
-    // case — it replaces any existing DOC_CHILD_OF edge (single parent), same
-    // as the dedicated doc/parent endpoint below. Pass "" (empty string, not
-    // omitted) to detach from a parent via this endpoint; omit entirely to
-    // leave the current parent untouched.
-    public record DocUpsertRequest(String doc_id, String title, String kind,
-        Boolean has_ext_deps, String component_id, String file_path, String content_html,
-        String content_md_en, String content_md_ru, String parent_doc_id, Integer sort_order) {}
-
-    @POST
-    @Path("doc")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertDoc(DocUpsertRequest req,
-                              @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.doc_id() == null || req.doc_id().isBlank())
-            return badParams("doc_id required");
-        if (!SAFE_ID.matcher(req.doc_id()).matches())
-            return badParams("doc_id contains illegal characters");
-        try {
-            // LH-44: only SET provided fields — a metadata-only re-call must not wipe
-            // content_html (up to 100 KB of page content) or the other attributes.
-            StringBuilder dcsql = new StringBuilder("UPDATE KnowDoc SET doc_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.doc_id());
-            if (req.title() != null)        { dcsql.append(", title=:title");           p.put("title",    req.title()); }
-            if (req.kind() != null)         { dcsql.append(", kind=:kind");             p.put("kind",     req.kind()); }
-            if (req.has_ext_deps() != null) { dcsql.append(", has_ext_deps=:ext_deps"); p.put("ext_deps", req.has_ext_deps()); }
-            if (req.component_id() != null) { dcsql.append(", component_id=:cid");      p.put("cid",      req.component_id()); }
-            if (req.file_path() != null)    { dcsql.append(", file_path=:fp");          p.put("fp",       req.file_path()); }
-            if (req.content_html() != null) { dcsql.append(", content_html=:content");  p.put("content",  req.content_html()); }
-            if (req.content_md_en() != null) { dcsql.append(", content_md_en=:md_en");  p.put("md_en",    req.content_md_en()); }
-            if (req.content_md_ru() != null) { dcsql.append(", content_md_ru=:md_ru");  p.put("md_ru",    req.content_md_ru()); }
-            if (req.sort_order() != null)    { dcsql.append(", sort_order=:sort_order"); p.put("sort_order", req.sort_order()); }
-            dcsql.append(" UPSERT WHERE doc_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                dcsql.toString(), p)).await().indefinitely();
-            if (req.parent_doc_id() != null) {
-                if (!req.parent_doc_id().isBlank() && !SAFE_ID.matcher(req.parent_doc_id()).matches())
-                    return badParams("parent_doc_id contains illegal characters");
-                if (req.parent_doc_id().equals(req.doc_id()))
-                    return badParams("parent_doc_id cannot equal doc_id");
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id=:id)",
-                    Map.of("id", req.doc_id()))).await().indefinitely();
-                if (!req.parent_doc_id().isBlank()) {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE DOC_CHILD_OF " +
-                        "FROM (SELECT FROM KnowDoc WHERE doc_id = :id) " +
-                        "TO   (SELECT FROM KnowDoc WHERE doc_id = :pid) IF NOT EXISTS",
-                        Map.of("id", req.doc_id(), "pid", req.parent_doc_id()))).await().indefinitely();
-                }
-            }
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id())));
-        } catch (Exception e) {
-            LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record DocDeleteRequest(String doc_id) {}
-
-    @POST
-    @Path("doc/delete")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteDoc(DocDeleteRequest req, @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.doc_id() == null || req.doc_id().isBlank())
-            return badParams("doc_id required");
-        try {
-            // KnowDoc has no SCD2 write path today (flat vertex, see upsertDoc's
-            // comment) — no HAS_STATE edge is ever created, so unlike adr/delete
-            // there are normally no KnowDocHist rows to clean up. Still check
-            // defensively (cheap, and harmless if the schema grows real history
-            // later) before dropping edges/vertex — same cascade order as ADR:
-            // ArcadeDB has no DELETE VERTEX cascade, so edges must go first.
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> histRids = (List<Map<String, Object>>)
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "SELECT @rid as rid FROM KnowDocHist WHERE in('HAS_STATE').doc_id[0]=:id",
-                    Map.of("id", req.doc_id()))).await().indefinitely().result();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM (SELECT expand(bothE()) FROM KnowDoc WHERE doc_id=:id)",
-                Map.of("id", req.doc_id()))).await().indefinitely();
-            int histDeleted = 0;
-            if (histRids != null) {
-                for (Map<String, Object> r : histRids) {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM KnowDocHist WHERE @rid=:rid",
-                        Map.of("rid", r.get("rid")))).await().indefinitely();
-                    histDeleted++;
-                }
-            }
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM KnowDoc WHERE doc_id=:id",
-                Map.of("id", req.doc_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "hist_deleted", histDeleted)));
-        } catch (Exception e) {
-            LOG.warnf("[LORE DOC DELETE] %s: %s", req.doc_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── KnowDoc page tree: standalone reparent/detach ────────────────────────
-    // DeepWiki-style hierarchy. A doc has at most one parent — 'add' always
-    // clears any existing DOC_CHILD_OF edge first, then links the new one (so
-    // moving a page to a different parent is one call, not detach-then-attach).
-    // Use action="remove" to detach entirely (move the page to the top level).
-    public record DocParentLinkRequest(String doc_id, String parent_doc_id, String action) {}
-
-    @POST
-    @Path("doc/parent")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response linkDocParent(DocParentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.doc_id() == null || req.doc_id().isBlank())
-            return badParams("doc_id required");
-        if (!SAFE_ID.matcher(req.doc_id()).matches())
-            return badParams("doc_id contains illegal characters");
-        boolean remove = "remove".equalsIgnoreCase(req.action());
-        if (!remove && (req.parent_doc_id() == null || req.parent_doc_id().isBlank()))
-            return badParams("parent_doc_id required unless action=remove");
-        if (!remove) {
-            if (!SAFE_ID.matcher(req.parent_doc_id()).matches())
-                return badParams("parent_doc_id contains illegal characters");
-            if (req.parent_doc_id().equals(req.doc_id()))
-                return badParams("parent_doc_id cannot equal doc_id");
-        }
-        try {
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM (SELECT expand(outE('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id=:id)",
-                Map.of("id", req.doc_id()))).await().indefinitely();
-            if (remove) {
-                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(), "action", "removed")));
-            }
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> created = (List<Map<String, Object>>)
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE DOC_CHILD_OF " +
-                    "FROM (SELECT FROM KnowDoc WHERE doc_id = :id) " +
-                    "TO   (SELECT FROM KnowDoc WHERE doc_id = :pid) IF NOT EXISTS",
-                    Map.of("id", req.doc_id(), "pid", req.parent_doc_id())))
-                .await().indefinitely().result();
-            boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "parent_doc_id", req.parent_doc_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check both doc_id values exist")));
-        } catch (Exception e) {
-            LOG.warnf("[LORE DOC PARENT] %s: %s", req.doc_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── KnowDoc ↔ component/sprint links — same edges/pattern as ADR's
-    // adr/component and adr/link (sprint branch): BELONGS_TO for component,
-    // IMPLEMENTED_IN for sprint. component_id also lives as a plain field on
-    // KnowDoc (legacy) — the docs/doc_by_id slices already prefer the real
-    // BELONGS_TO edge via COALESCE, so linking here is additive, not a
-    // breaking migration of existing plain-field data.
-    public record DocComponentLinkRequest(String doc_id, String component_id, String action) {}
-    public record DocSprintLinkRequest(String doc_id, String sprint_id, String action) {}
-
-    @POST
-    @Path("doc/component")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response linkDocComponent(DocComponentLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.doc_id() == null || req.doc_id().isBlank()
-                || req.component_id() == null || req.component_id().isBlank())
-            return badParams("doc_id and component_id required");
-        if (!SAFE_ID.matcher(req.doc_id()).matches())
-            return badParams("doc_id contains illegal characters");
-        if (!SAFE_ID.matcher(req.component_id()).matches())
-            return badParams("component_id contains illegal characters");
-        boolean remove = "remove".equalsIgnoreCase(req.action());
-        try {
-            if (remove) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('BELONGS_TO')) FROM KnowDoc WHERE doc_id=:id) " +
-                    "WHERE @in.component_id = :cid",
-                    Map.of("id", req.doc_id(), "cid", req.component_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                    "component_id", req.component_id(), "action", "removed")));
-            }
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> created = (List<Map<String, Object>>)
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE BELONGS_TO " +
-                    "FROM (SELECT FROM KnowDoc       WHERE doc_id       = :id) " +
-                    "TO   (SELECT FROM LoreComponent WHERE component_id = :cid) IF NOT EXISTS",
-                    Map.of("id", req.doc_id(), "cid", req.component_id())))
-                .await().indefinitely().result();
-            boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "component_id", req.component_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check doc_id/component_id exist")));
-        } catch (Exception e) {
-            LOG.warnf("[LORE DOC COMPONENT] %s: %s", req.doc_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    @POST
-    @Path("doc/sprint")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response linkDocSprint(DocSprintLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.doc_id() == null || req.doc_id().isBlank()
-                || req.sprint_id() == null || req.sprint_id().isBlank())
-            return badParams("doc_id and sprint_id required");
-        if (!SAFE_ID.matcher(req.doc_id()).matches())
-            return badParams("doc_id contains illegal characters");
-        if (!SAFE_ID.matcher(req.sprint_id()).matches())
-            return badParams("sprint_id contains illegal characters");
-        boolean remove = "remove".equalsIgnoreCase(req.action());
-        try {
-            if (remove) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('IMPLEMENTED_IN')) FROM KnowDoc WHERE doc_id=:id) " +
-                    "WHERE @in.sprint_id = :sid",
-                    Map.of("id", req.doc_id(), "sid", req.sprint_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                    "sprint_id", req.sprint_id(), "action", "removed")));
-            }
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> created = (List<Map<String, Object>>)
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE IMPLEMENTED_IN " +
-                    "FROM (SELECT FROM KnowDoc    WHERE doc_id    = :id) " +
-                    "TO   (SELECT FROM KnowSprint WHERE sprint_id = :sid) IF NOT EXISTS",
-                    Map.of("id", req.doc_id(), "sid", req.sprint_id())))
-                .await().indefinitely().result();
-            boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "sprint_id", req.sprint_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check doc_id/sprint_id exist")));
-        } catch (Exception e) {
-            LOG.warnf("[LORE DOC SPRINT] %s: %s", req.doc_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── BRAGI content archive write — MCP-01: publications, variants, assets ──
-    // Flat vertices (no SCD2/Hist twin, see LoreSchemaInitializer Phase 7) — LH-44
-    // partial-upsert still applies (re-calling with fewer fields must not wipe
-    // existing content), edges are idempotent CREATE ... IF NOT EXISTS.
-    // source_file_path: where the full draft actually lives on disk (e.g.
-    // "C:\Маркетинг\habr-h1-sql-dedup.md") — was only ever embedded as plain
-    // text inside main_text_md ("Черновик — полный текст: <path>"), with no
-    // real attribute to query/display it separately from the rendered body.
-    // annotation_md/todo_md (V2-02): main_text_md is the article body ONLY —
-    // editorial metadata used to leak into it (master-source pointers, "final
-    // replaces this before publish", teaser-vs-longread notes). annotation_md
-    // is permanent context (source of the master, replacement rule, release
-    // context); todo_md is a transient markdown checklist ("- [ ] ..."). Both
-    // are deliberately excluded from whatever feeds BragiSkinPreview — they're
-    // editor-only, never rendered into a platform skin.
-    public record BragiPublicationRequest(
-        String publication_id, String title, String topic, String main_text_md,
-        String type, String status_general, java.util.List<String> keyword_ids, String rubric_id,
-        String source_file_path, String annotation_md, String todo_md) {}
-
-    @POST
-    @Path("bragi/publication")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiPublication(BragiPublicationRequest req,
-                                           @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.publication_id() == null || req.publication_id().isBlank())
-            return badParams("publication_id required");
-        if (!SAFE_ID.matcher(req.publication_id()).matches())
-            return badParams("publication_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiPublication SET publication_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.publication_id());
-            if (req.title() != null)          { sql.append(", title=:title");         p.put("title", req.title()); }
-            if (req.topic() != null)          { sql.append(", topic=:topic");         p.put("topic", req.topic()); }
-            if (req.main_text_md() != null)   { sql.append(", main_text_md=:mt");     p.put("mt", req.main_text_md()); }
-            if (req.type() != null)           { sql.append(", type=:type");           p.put("type", req.type()); }
-            if (req.status_general() != null) { sql.append(", status_general=:sg");   p.put("sg", req.status_general()); }
-            if (req.source_file_path() != null) { sql.append(", source_file_path=:sfp"); p.put("sfp", req.source_file_path()); }
-            if (req.annotation_md() != null)  { sql.append(", annotation_md=:ann");   p.put("ann", req.annotation_md()); }
-            if (req.todo_md() != null)        { sql.append(", todo_md=:todo");        p.put("todo", req.todo_md()); }
-            sql.append(" UPSERT WHERE publication_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            int keysLinked = 0;
-            if (req.keyword_ids() != null) {
-                for (String kid : req.keyword_ids()) {
-                    if (kid == null || kid.isBlank()) continue;
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE TARGETS_KEY FROM (SELECT FROM BragiPublication WHERE publication_id=:pid) " +
-                        "TO (SELECT FROM BragiKeyword WHERE keyword_id=:kid) IF NOT EXISTS",
-                        Map.of("pid", req.publication_id(), "kid", kid))).await().indefinitely();
-                    keysLinked++;
-                }
-            }
-            if (req.rubric_id() != null && !req.rubric_id().isBlank()) {
-                assignRubric("BragiPublication", "publication_id", req.publication_id(), req.rubric_id());
-            }
-            return noStore(Response.ok(Map.of("ok", true, "publication_id", req.publication_id(), "keys_linked", keysLinked)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI PUBLICATION] %s: %s", req.publication_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record BragiVariantRequest(
-        String variant_id, String publication_id, String channel_id, String text_md,
-        String status, String url, String published_at, String asset_id,
-        String annotation_md, String todo_md) {}
-
-    @POST
-    @Path("bragi/variant")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiVariant(BragiVariantRequest req,
-                                       @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.variant_id() == null || req.variant_id().isBlank())
-            return badParams("variant_id required");
-        if (!SAFE_ID.matcher(req.variant_id()).matches())
-            return badParams("variant_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiVariant SET variant_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.variant_id());
-            if (req.text_md() != null)      { sql.append(", text_md=:tm");    p.put("tm", req.text_md()); }
-            if (req.status() != null)       { sql.append(", status=:st");     p.put("st", req.status()); }
-            if (req.url() != null)          { sql.append(", url=:url");      p.put("url", req.url()); }
-            if (req.published_at() != null) { sql.append(", published_at=:pa"); p.put("pa", req.published_at()); }
-            if (req.annotation_md() != null) { sql.append(", annotation_md=:ann"); p.put("ann", req.annotation_md()); }
-            if (req.todo_md() != null)      { sql.append(", todo_md=:todo");  p.put("todo", req.todo_md()); }
-            sql.append(" UPSERT WHERE variant_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            boolean linkedPub = false, linkedChannel = false, linkedAsset = false;
-            if (req.publication_id() != null && !req.publication_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_VARIANT FROM (SELECT FROM BragiPublication WHERE publication_id=:pid) " +
-                    "TO (SELECT FROM BragiVariant WHERE variant_id=:vid) IF NOT EXISTS",
-                    Map.of("pid", req.publication_id(), "vid", req.variant_id()))).await().indefinitely();
-                linkedPub = true;
-            }
-            if (req.channel_id() != null && !req.channel_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE IN_CHANNEL FROM (SELECT FROM BragiVariant WHERE variant_id=:vid) " +
-                    "TO (SELECT FROM BragiChannel WHERE channel_id=:cid) IF NOT EXISTS",
-                    Map.of("vid", req.variant_id(), "cid", req.channel_id()))).await().indefinitely();
-                linkedChannel = true;
-            }
-            if (req.asset_id() != null && !req.asset_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_ASSET FROM (SELECT FROM BragiVariant WHERE variant_id=:vid) " +
-                    "TO (SELECT FROM BragiAsset WHERE asset_id=:aid) IF NOT EXISTS",
-                    Map.of("vid", req.variant_id(), "aid", req.asset_id()))).await().indefinitely();
-                linkedAsset = true;
-            }
-            return noStore(Response.ok(Map.of("ok", true, "variant_id", req.variant_id(),
-                "linked_publication", linkedPub, "linked_channel", linkedChannel, "linked_asset", linkedAsset)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI VARIANT] %s: %s", req.variant_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record BragiAssetRequest(
-        String asset_id, String asset_type, String file_url, String alt, Long size_bytes,
-        String attach_to_publication_id, String attach_to_variant_id) {}
-
-    @POST
-    @Path("bragi/asset")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiAsset(BragiAssetRequest req,
-                                     @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.asset_id() == null || req.asset_id().isBlank())
-            return badParams("asset_id required");
-        if (!SAFE_ID.matcher(req.asset_id()).matches())
-            return badParams("asset_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiAsset SET asset_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.asset_id());
-            if (req.asset_type() != null) { sql.append(", asset_type=:at");  p.put("at", req.asset_type()); }
-            if (req.file_url() != null)   { sql.append(", file_url=:fu");    p.put("fu", req.file_url()); }
-            if (req.alt() != null)        { sql.append(", alt=:alt");        p.put("alt", req.alt()); }
-            if (req.size_bytes() != null) { sql.append(", size_bytes=:sz");  p.put("sz", req.size_bytes()); }
-            sql.append(" UPSERT WHERE asset_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            String attachedTo = null;
-            if (req.attach_to_publication_id() != null && !req.attach_to_publication_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_ASSET FROM (SELECT FROM BragiPublication WHERE publication_id=:pid) " +
-                    "TO (SELECT FROM BragiAsset WHERE asset_id=:aid) IF NOT EXISTS",
-                    Map.of("pid", req.attach_to_publication_id(), "aid", req.asset_id()))).await().indefinitely();
-                attachedTo = "publication:" + req.attach_to_publication_id();
-            } else if (req.attach_to_variant_id() != null && !req.attach_to_variant_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE HAS_ASSET FROM (SELECT FROM BragiVariant WHERE variant_id=:vid) " +
-                    "TO (SELECT FROM BragiAsset WHERE asset_id=:aid) IF NOT EXISTS",
-                    Map.of("vid", req.attach_to_variant_id(), "aid", req.asset_id()))).await().indefinitely();
-                attachedTo = "variant:" + req.attach_to_variant_id();
-            }
-            return noStore(Response.ok(Map.of("ok", true, "asset_id", req.asset_id(),
-                "attached_to", attachedTo == null ? "" : attachedTo)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI ASSET] %s: %s", req.asset_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── BRAGI asset upload — IMG-01/02: real image storage via S3 (MinIO) ─────
-    public static class BragiAssetUploadForm {
-        @RestForm("file")
-        public FileUpload file;
-    }
-
-    private static final Pattern SAFE_UPLOAD_NAME = Pattern.compile("[A-Za-z0-9_.\\-]{1,150}");
-
-    @POST
-    @Path("bragi/asset/upload")
-    @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response uploadBragiAsset(@BeanParam BragiAssetUploadForm form,
-                                      @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (form == null || form.file == null || form.file.fileName() == null)
-            return badParams("file required");
-        String original = form.file.fileName();
-        String ext = original.contains(".") ? original.substring(original.lastIndexOf('.')) : "";
-        if (ext.length() > 10) ext = ""; // reject implausible/garbage extensions rather than fail
-        String name = UUID.randomUUID() + ext.replaceAll("[^A-Za-z0-9.]", "");
-        try (InputStream in = java.nio.file.Files.newInputStream(form.file.uploadedFile())) {
-            long size = java.nio.file.Files.size(form.file.uploadedFile());
-            bragiS3.put("bragi/" + name, in, size, form.file.contentType());
-            return noStore(Response.ok(Map.of(
-                "ok", true, "file_url", "/lore/bragi/asset/file/" + name, "size_bytes", size)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI UPLOAD] %s: %s", original, e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("S3_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    @GET
-    @Path("bragi/asset/file/{name}")
-    public Response serveBragiAssetFile(@PathParam("name") String name) {
-        if (!enabled) return disabled();
-        if (!SAFE_UPLOAD_NAME.matcher(name).matches()) return badParams("invalid file name");
-        try {
-            byte[] data = bragiS3.get("bragi/" + name);
-            String contentType = bragiS3.contentType("bragi/" + name);
-            return Response.ok(data)
-                .type(contentType != null && !contentType.isBlank() ? contentType : "application/octet-stream")
-                .header("Cache-Control", "public, max-age=31536000, immutable")
-                .build();
-        } catch (Exception e) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-    }
-
-    // ── BRAGI content archive write — MCP-02: keywords, pages, campaigns ──────
-    public record BragiKeywordRequest(
-        String keyword_id, String phrase, String cluster, Integer freq_exact, Integer freq_broad,
-        String source, String intent, String region_engine, String measured_at, String page_id, String rubric_id) {}
-
-    @POST
-    @Path("bragi/keyword")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiKeyword(BragiKeywordRequest req,
-                                       @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.keyword_id() == null || req.keyword_id().isBlank())
-            return badParams("keyword_id required");
-        if (!SAFE_ID.matcher(req.keyword_id()).matches())
-            return badParams("keyword_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiKeyword SET keyword_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.keyword_id());
-            if (req.phrase() != null)        { sql.append(", phrase=:ph");         p.put("ph", req.phrase()); }
-            if (req.cluster() != null)       { sql.append(", cluster=:cl");        p.put("cl", req.cluster()); }
-            if (req.freq_exact() != null)    { sql.append(", freq_exact=:fe");     p.put("fe", req.freq_exact()); }
-            if (req.freq_broad() != null)    { sql.append(", freq_broad=:fb");     p.put("fb", req.freq_broad()); }
-            if (req.source() != null)        { sql.append(", source=:src");       p.put("src", req.source()); }
-            if (req.intent() != null)        { sql.append(", intent=:in");        p.put("in", req.intent()); }
-            if (req.region_engine() != null) { sql.append(", region_engine=:re"); p.put("re", req.region_engine()); }
-            if (req.measured_at() != null)   { sql.append(", measured_at=:ma");   p.put("ma", req.measured_at()); }
-            sql.append(" UPSERT WHERE keyword_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            boolean linkedPage = false;
-            if (req.page_id() != null && !req.page_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE TARGETS_PAGE FROM (SELECT FROM BragiKeyword WHERE keyword_id=:kid) " +
-                    "TO (SELECT FROM BragiPage WHERE page_id=:pgid) IF NOT EXISTS",
-                    Map.of("kid", req.keyword_id(), "pgid", req.page_id()))).await().indefinitely();
-                linkedPage = true;
-            }
-            if (req.rubric_id() != null && !req.rubric_id().isBlank()) {
-                assignRubric("BragiKeyword", "keyword_id", req.keyword_id(), req.rubric_id());
-            }
-            return noStore(Response.ok(Map.of("ok", true, "keyword_id", req.keyword_id(), "linked_page", linkedPage)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI KEYWORD] %s: %s", req.keyword_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── Рубрикатор — фиксированный список рубрик, ручное присвоение публикациям
-    // и ключевым словам (assignRubric, вызывается из upsertBragiPublication /
-    // upsertBragiKeyword). CRUD самих рубрик — отдельный эндпоинт.
-    // Gap found 2026-07-03: BragiChannel (bragi_channels slice) had no write path —
-    // CH-TG's seed url_handle "t.me/seidr" was stale (real channel is t.me/SampleofOne,
-    // per INT-TG-BOT) and there was no tool to fix it. Same flat-vertex upsert shape
-    // as BragiRubric above (no SCD2 hist — channels are reference data, not versioned).
-    public record BragiChannelRequest(String channel_id, String channel_type, String url_handle,
-                                      String funnel_role, String rules_md) {}
-
-    @POST
-    @Path("bragi/channel")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiChannel(BragiChannelRequest req,
-                                       @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.channel_id() == null || req.channel_id().isBlank())
-            return badParams("channel_id required");
-        if (!SAFE_ID.matcher(req.channel_id()).matches())
-            return badParams("channel_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiChannel SET channel_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.channel_id());
-            if (req.channel_type() != null) { sql.append(", channel_type=:ct"); p.put("ct", req.channel_type()); }
-            if (req.url_handle() != null)   { sql.append(", url_handle=:uh");   p.put("uh", req.url_handle()); }
-            if (req.funnel_role() != null)  { sql.append(", funnel_role=:fr");  p.put("fr", req.funnel_role()); }
-            if (req.rules_md() != null)     { sql.append(", rules_md=:rm");     p.put("rm", req.rules_md()); }
-            sql.append(" UPSERT WHERE channel_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "channel_id", req.channel_id())));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI CHANNEL] %s: %s", req.channel_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record BragiRubricRequest(String rubric_id, String name, String description, Integer order_index) {}
-
-    @POST
-    @Path("bragi/rubric")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiRubric(BragiRubricRequest req,
-                                      @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.rubric_id() == null || req.rubric_id().isBlank())
-            return badParams("rubric_id required");
-        if (!SAFE_ID.matcher(req.rubric_id()).matches())
-            return badParams("rubric_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiRubric SET rubric_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.rubric_id());
-            if (req.name() != null)        { sql.append(", name=:nm");         p.put("nm", req.name()); }
-            if (req.description() != null) { sql.append(", description=:ds"); p.put("ds", req.description()); }
-            if (req.order_index() != null) { sql.append(", order_index=:oi"); p.put("oi", req.order_index()); }
-            sql.append(" UPSERT WHERE rubric_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "rubric_id", req.rubric_id())));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI RUBRIC] %s: %s", req.rubric_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // Standalone assignment — lets a caller attach/replace a rubric without
-    // re-supplying every other field of the target publication/keyword
-    // (unlike rubric_id on the full upsert endpoints).
-    public record BragiRubricLinkRequest(String entity_type, String entity_id, String rubric_id) {}
-
-    @POST
-    @Path("bragi/rubric/link")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response linkBragiRubric(BragiRubricLinkRequest req,
-                                    @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.entity_id() == null || req.entity_id().isBlank())
-            return badParams("entity_id required");
-        if (req.rubric_id() == null || req.rubric_id().isBlank())
-            return badParams("rubric_id required");
-        String entityType, idField;
-        if ("publication".equals(req.entity_type())) { entityType = "BragiPublication"; idField = "publication_id"; }
-        else if ("keyword".equals(req.entity_type())) { entityType = "BragiKeyword"; idField = "keyword_id"; }
-        else return badParams("entity_type must be \"publication\" or \"keyword\"");
-        try {
-            assignRubric(entityType, idField, req.entity_id(), req.rubric_id());
-            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(), "rubric_id", req.rubric_id())));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI RUBRIC LINK] %s: %s", req.entity_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // Search-then-update helper for agent callers — the write endpoints all
-    // require an already-known keyword_id; without this there's no way to
-    // resolve one from a phrase substring first.
-    @GET
-    @Path("bragi/keyword/search")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response searchBragiKeyword(@QueryParam("q") String q) {
-        if (!enabled) return disabled();
-        if (q == null || q.isBlank()) return badParams("q required");
-        try {
-            java.util.List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT keyword_id, phrase, cluster FROM BragiKeyword WHERE phrase.toLowerCase() LIKE :q LIMIT 20",
-                Map.of("q", "%" + q.toLowerCase() + "%"));
-            return noStore(Response.ok(Map.of("rows", rows)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI KEYWORD SEARCH] %s: %s", q, e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record BragiPageRequest(
-        String page_id, String url, String title, String description, String page_type, String deployed_at) {}
-
-    @POST
-    @Path("bragi/page")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiPage(BragiPageRequest req,
-                                    @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.page_id() == null || req.page_id().isBlank())
-            return badParams("page_id required");
-        if (!SAFE_ID.matcher(req.page_id()).matches())
-            return badParams("page_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiPage SET page_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.page_id());
-            if (req.url() != null)         { sql.append(", url=:url");         p.put("url", req.url()); }
-            if (req.title() != null)       { sql.append(", title=:title");     p.put("title", req.title()); }
-            if (req.description() != null) { sql.append(", description=:d");   p.put("d", req.description()); }
-            if (req.page_type() != null)   { sql.append(", page_type=:pt");    p.put("pt", req.page_type()); }
-            if (req.deployed_at() != null) { sql.append(", deployed_at=:da");  p.put("da", req.deployed_at()); }
-            sql.append(" UPSERT WHERE page_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "page_id", req.page_id())));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI PAGE] %s: %s", req.page_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record BragiCampaignRequest(
-        String campaign_id, String utm_source, String utm_medium, String utm_campaign,
-        String target_url, String period, String variant_id) {}
-
-    @POST
-    @Path("bragi/campaign")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiCampaign(BragiCampaignRequest req,
-                                        @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.campaign_id() == null || req.campaign_id().isBlank())
-            return badParams("campaign_id required");
-        if (!SAFE_ID.matcher(req.campaign_id()).matches())
-            return badParams("campaign_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiCampaign SET campaign_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.campaign_id());
-            if (req.utm_source() != null)   { sql.append(", utm_source=:us");   p.put("us", req.utm_source()); }
-            if (req.utm_medium() != null)   { sql.append(", utm_medium=:um");   p.put("um", req.utm_medium()); }
-            if (req.utm_campaign() != null) { sql.append(", utm_campaign=:uc"); p.put("uc", req.utm_campaign()); }
-            if (req.target_url() != null)   { sql.append(", target_url=:tu");   p.put("tu", req.target_url()); }
-            if (req.period() != null)       { sql.append(", period=:pe");       p.put("pe", req.period()); }
-            sql.append(" UPSERT WHERE campaign_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            boolean linkedVariant = false;
-            if (req.variant_id() != null && !req.variant_id().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE FOR_VARIANT FROM (SELECT FROM BragiCampaign WHERE campaign_id=:cid) " +
-                    "TO (SELECT FROM BragiVariant WHERE variant_id=:vid) IF NOT EXISTS",
-                    Map.of("cid", req.campaign_id(), "vid", req.variant_id()))).await().indefinitely();
-                linkedVariant = true;
-            }
-            return noStore(Response.ok(Map.of("ok", true, "campaign_id", req.campaign_id(), "linked_variant", linkedVariant)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI CAMPAIGN] %s: %s", req.campaign_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── EDIT-05: BRAGI ↔ Forseti graph edges ────────────────────────────────
-    // PRODUCED_BY (publication|variant → task|sprint) and SHIPPED_IN
-    // (publication|variant → release) both already exist as edge types in the
-    // schema but had no write path — publications lived disconnected from the
-    // work graph. Release target resolves release_uid the same way ADR/PR
-    // linking does (git_project#release_id when known, bare release_id else).
-    public record BragiLinkRequest(String entity_type, String entity_id, String edge_type,
-                                   String target_type, String target_id, String git_project, String action) {}
-
-    @POST
-    @Path("bragi/link")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response linkBragiEntity(BragiLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.entity_id() == null || req.entity_id().isBlank())
-            return badParams("entity_id required");
-        if (req.target_id() == null || req.target_id().isBlank())
-            return badParams("target_id required");
-        String sourceType = "variant".equals(req.entity_type()) ? "BragiVariant"
-            : "publication".equals(req.entity_type()) ? "BragiPublication" : null;
-        if (sourceType == null) return badParams("entity_type must be 'publication' or 'variant'");
-        String sourceField = "variant".equals(req.entity_type()) ? "variant_id" : "publication_id";
-
-        boolean isProducedBy = "PRODUCED_BY".equals(req.edge_type());
-        boolean isShippedIn  = "SHIPPED_IN".equals(req.edge_type());
-        if (!isProducedBy && !isShippedIn) return badParams("edge_type must be 'PRODUCED_BY' or 'SHIPPED_IN'");
-
-        String targetType, targetField, targetKey = req.target_id();
-        if (isProducedBy) {
-            if ("task".equals(req.target_type()))        { targetType = "KnowTask";   targetField = "task_uid"; }
-            else if ("sprint".equals(req.target_type()))  { targetType = "KnowSprint"; targetField = "sprint_id"; }
-            else return badParams("PRODUCED_BY target_type must be 'task' or 'sprint'");
-        } else {
-            if (!"release".equals(req.target_type())) return badParams("SHIPPED_IN target_type must be 'release'");
-            targetType = "KnowRelease";
-            if (req.git_project() != null && !req.git_project().isBlank()) {
-                targetField = "release_uid";
-                targetKey = req.git_project() + "#" + req.target_id();
-            } else {
-                targetField = "release_id";
-            }
-        }
-
-        boolean remove = "remove".equals(req.action());
-        try {
-            if (remove) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('" + req.edge_type() + "')) FROM " + sourceType +
-                    " WHERE " + sourceField + "=:sid) WHERE @in." + targetField + "=:tkey",
-                    Map.of("sid", req.entity_id(), "tkey", targetKey))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
-                    "target_id", req.target_id(), "action", "removed")));
-            }
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE " + req.edge_type() + " FROM (SELECT FROM " + sourceType +
-                " WHERE " + sourceField + "=:sid) TO (SELECT FROM " + targetType +
-                " WHERE " + targetField + "=:tkey) IF NOT EXISTS",
-                Map.of("sid", req.entity_id(), "tkey", targetKey))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
-                "target_id", req.target_id(), "action", "added")));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI LINK] %s -%s-> %s: %s", req.entity_id(), req.edge_type(), req.target_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── BRAGI content archive write/read — MCP-03: MetricSnapshot (TIMESERIES) ─
-    public record BragiMetricRequest(
-        String object_type, String object_id, String metric, Double value,
-        String ts, String source, String segment) {}
-
-    @POST
-    @Path("bragi/metric")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response recordBragiMetric(BragiMetricRequest req,
-                                      @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.object_type() == null || req.object_type().isBlank())
-            return badParams("object_type required");
-        if (req.object_id() == null || req.object_id().isBlank())
-            return badParams("object_id required");
-        if (req.metric() == null || req.metric().isBlank())
-            return badParams("metric required");
-        if (req.value() == null)
-            return badParams("value required");
-        try {
-            // TIMESERIES ts field is epoch millis (LONG) — accept ISO-8601 or bare millis.
-            long tsMillis;
-            if (req.ts() == null || req.ts().isBlank()) {
-                tsMillis = System.currentTimeMillis();
-            } else {
-                try {
-                    tsMillis = Long.parseLong(req.ts());
-                } catch (NumberFormatException nfe) {
-                    tsMillis = java.time.Instant.parse(req.ts()).toEpochMilli();
-                }
-            }
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "INSERT INTO MetricSnapshot SET ts=:ts, object_type=:ot, object_id=:oid, " +
-                "metric=:m, value=:v, source=:src, segment=:seg",
-                mapOfNullable("ts", tsMillis, "ot", req.object_type(), "oid", req.object_id(),
-                    "m", req.metric(), "v", req.value(), "src", req.source(), "seg", req.segment())))
-                .await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "object_id", req.object_id(),
-                "metric", req.metric(), "ts", tsMillis)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI METRIC] %s/%s: %s", req.object_id(), req.metric(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    @GET
-    @Path("bragi/metric/query")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response queryBragiMetric(
-            @QueryParam("object_type") String objectType,
-            @QueryParam("object_id")   String objectId,
-            @QueryParam("metric")      String metric,
-            @QueryParam("from")        String from,
-            @QueryParam("to")          String to,
-            @QueryParam("agg")         String agg,
-            @QueryParam("limit")       Integer limit) {
-        if (!enabled) return disabled();
-        try {
-            StringBuilder where = new StringBuilder(" WHERE 1=1");
-            Map<String, Object> p = new java.util.HashMap<>();
-            if (objectType != null && !objectType.isBlank()) { where.append(" AND object_type=:ot"); p.put("ot", objectType); }
-            if (objectId != null && !objectId.isBlank())     { where.append(" AND object_id=:oid");  p.put("oid", objectId); }
-            if (metric != null && !metric.isBlank())         { where.append(" AND metric=:m");       p.put("m", metric); }
-            if (from != null && !from.isBlank())             { where.append(" AND ts >= :from");     p.put("from", Long.parseLong(from)); }
-            if (to != null && !to.isBlank())                 { where.append(" AND ts <= :to");       p.put("to", Long.parseLong(to)); }
-            // object_type='probe' is a one-off schema-verification artifact (ARC-02/ARC-03) —
-            // never a real BRAGI measurement, always excluded.
-            where.append(" AND object_type != 'probe'");
-            // V2-01 (SPRINT_BRAGI_ARCHIVE_V2): pre-policy seed/test artifacts, filtered at
-            // read time — MetricSnapshot is TIMESERIES (sealed storage): DELETE reports
-            // success but the row physically stays, so there is no real purge path.
-            // qa-e2e/test-mcp03/PUB-QA-E2E are test-only labels, safe to exclude outright.
-            // The 27.06 demo package and the 02.07 ai_share/KW-08 batch used real ongoing
-            // source labels (yandex-metrika/tg-stats/habr-stats/ai-tracker-3549/yandex-serp)
-            // that WILL carry real future data too, so those are pinned to their exact
-            // whole-second seed timestamp instead — a real capture always has sub-second
-            // precision, so this can never collide with genuine future measurements.
-            where.append(" AND object_id != 'PUB-QA-E2E'");
-            where.append(" AND source NOT IN ['qa-e2e', 'test-mcp03']");
-            where.append(" AND NOT (ts = '2026-06-27 12:00:00' AND object_id IN ['PUB-04', 'PUB-04-VC', 'PUB-04-TG', 'PUB-05', 'PUB-05-HABR'])");
-            where.append(" AND NOT (ts = '2026-07-02 09:00:00' AND (object_type = 'competitor' OR object_id = 'KW-08'))");
-
-            String sql;
-            if (agg != null && !agg.isBlank()) {
-                String fn = switch (agg.toLowerCase()) {
-                    case "avg" -> "avg(value)";
-                    case "sum" -> "sum(value)";
-                    case "min" -> "min(value)";
-                    case "max" -> "max(value)";
-                    case "count" -> "count(*)";
-                    default -> null;
-                };
-                if (fn == null) return badParams("agg must be one of avg|sum|min|max|count");
-                sql = "SELECT object_type, object_id, metric, " + fn + " AS agg_value, count(*) AS n " +
-                    "FROM MetricSnapshot" + where + " GROUP BY object_type, object_id, metric";
-            } else {
-                sql = "SELECT object_type, object_id, metric, value, ts, source, segment " +
-                    "FROM MetricSnapshot" + where + " ORDER BY ts DESC LIMIT " + (limit != null ? Math.min(limit, 1000) : 200);
-            }
-            List<Map<String, Object>> rows = ingestService.queryPublic(sql, p);
-            return noStore(Response.ok(Map.of("ok", true, "rows", rows)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI METRIC QUERY] %s", e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── BRAGI content archive write — MCP-04: integrations + insights ─────────
-    private static final Pattern SECRET_REF = Pattern.compile("^(env|vault|oauth|secret):.+");
-
-    public record BragiIntegrationRequest(
-        String integration_id, String service, String purpose, String endpoint,
-        String scope, String secret_ref, String status, String last_called_at) {}
-
-    @POST
-    @Path("bragi/integration")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiIntegration(BragiIntegrationRequest req,
-                                           @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.integration_id() == null || req.integration_id().isBlank())
-            return badParams("integration_id required");
-        if (!SAFE_ID.matcher(req.integration_id()).matches())
-            return badParams("integration_id contains illegal characters");
-        // Spec-mandated guard: secret_ref must be a reference (env:/vault:/oauth:/secret:
-        // prefix), never a raw token value — this is the one field in the whole BRAGI
-        // module the spec explicitly forbids storing as plain content.
-        if (req.secret_ref() != null && !req.secret_ref().isBlank() && !SECRET_REF.matcher(req.secret_ref()).matches())
-            return badParams("secret_ref must be a reference, e.g. \"env:METRIKA_TOKEN\" or \"vault:seidr-telegraph\" — not a raw secret value");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiIntegration SET integration_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.integration_id());
-            if (req.service() != null)       { sql.append(", service=:sv");        p.put("sv", req.service()); }
-            if (req.purpose() != null)       { sql.append(", purpose=:pu");        p.put("pu", req.purpose()); }
-            if (req.endpoint() != null)      { sql.append(", endpoint=:ep");       p.put("ep", req.endpoint()); }
-            if (req.scope() != null)         { sql.append(", scope=:sc");         p.put("sc", req.scope()); }
-            if (req.secret_ref() != null)    { sql.append(", secret_ref=:sr");    p.put("sr", req.secret_ref()); }
-            if (req.status() != null)        { sql.append(", status=:st");        p.put("st", req.status()); }
-            if (req.last_called_at() != null){ sql.append(", last_called_at=:lc"); p.put("lc", req.last_called_at()); }
-            sql.append(" UPSERT WHERE integration_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "integration_id", req.integration_id())));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI INTEGRATION] %s: %s", req.integration_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record BragiInsightRequest(
-        String insight_id, String statement_md, String insight_date, String evidence_ref) {}
-
-    @POST
-    @Path("bragi/insight")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertBragiInsight(BragiInsightRequest req,
-                                       @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.insight_id() == null || req.insight_id().isBlank())
-            return badParams("insight_id required");
-        if (!SAFE_ID.matcher(req.insight_id()).matches())
-            return badParams("insight_id contains illegal characters");
-        try {
-            StringBuilder sql = new StringBuilder("UPDATE BragiInsight SET insight_id=:id");
-            Map<String, Object> p = new java.util.HashMap<>();
-            p.put("id", req.insight_id());
-            if (req.statement_md() != null) { sql.append(", statement_md=:sm"); p.put("sm", req.statement_md()); }
-            if (req.insight_date() != null) { sql.append(", insight_date=:idt"); p.put("idt", req.insight_date()); }
-            if (req.evidence_ref() != null) { sql.append(", evidence_ref=:er"); p.put("er", req.evidence_ref()); }
-            sql.append(" UPSERT WHERE insight_id=:id");
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                sql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "insight_id", req.insight_id())));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI INSIGHT] %s: %s", req.insight_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    public record BragiInsightLinkRequest(String insight_id, String target_type, String target_id) {}
-
-    @POST
-    @Path("bragi/insight/link")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response linkBragiInsight(BragiInsightLinkRequest req,
-                                     @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.insight_id() == null || req.insight_id().isBlank())
-            return badParams("insight_id required");
-        if (req.target_type() == null || (!req.target_type().equals("task") && !req.target_type().equals("adr")))
-            return badParams("target_type must be \"task\" or \"adr\"");
-        if (req.target_id() == null || req.target_id().isBlank())
-            return badParams("target_id required");
-        try {
-            String targetType = req.target_type().equals("task") ? "KnowTask" : "KnowADR";
-            String targetField = req.target_type().equals("task") ? "task_uid" : "adr_id";
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE LED_TO FROM (SELECT FROM BragiInsight WHERE insight_id=:iid) " +
-                "TO (SELECT FROM " + targetType + " WHERE " + targetField + "=:tid) IF NOT EXISTS",
-                Map.of("iid", req.insight_id(), "tid", req.target_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "insight_id", req.insight_id(),
-                "target_type", req.target_type(), "target_id", req.target_id())));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI INSIGHT LINK] %s -> %s: %s", req.insight_id(), req.target_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    // ── BRAGI content archive — INT-01/02: manual integration sync (scaffold) ──
-    // No real cron/scheduled polling here — that needs live credentials for
-    // Яндекс.Метрика/Keys.so/GSC/Telegram, which don't exist anywhere in this
-    // repo (SPRINT_BRAGI_ARCHIVE_IMPL/INT-01,INT-02 — deferred pending real
-    // secrets, per explicit user decision 2026-07-02). This endpoint is the
-    // reusable ingestion interface a real scheduled connector would call: given
-    // an integration_id and a batch of already-fetched metrics, write them to
-    // MetricSnapshot and bump last_called_at. The source→metric mapping and the
-    // actual HTTP calls to the third-party API are the caller's job.
-    public record BragiSyncMetric(String object_type, String object_id, String metric, Double value, String ts, String segment) {}
-    public record BragiIntegrationSyncRequest(String integration_id, java.util.List<BragiSyncMetric> metrics) {}
-
-    @POST
-    @Path("bragi/integration/sync")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response syncBragiIntegration(BragiIntegrationSyncRequest req,
-                                         @HeaderParam("X-Seer-Role") String role) {
-        if (!enabled) return disabled();
-        Response guard = requireAdmin(role);
-        if (guard != null) return guard;
-        if (req == null || req.integration_id() == null || req.integration_id().isBlank())
-            return badParams("integration_id required");
-        try {
-            List<Map<String, Object>> found = ingestService.queryPublic(
-                "SELECT integration_id, service, status FROM BragiIntegration WHERE integration_id=:id",
-                Map.of("id", req.integration_id()));
-            if (found.isEmpty())
-                return noStore(Response.status(Response.Status.NOT_FOUND)
-                    .entity(new LoreError("NOT_FOUND", "no BragiIntegration with integration_id=" + req.integration_id())));
-            int written = 0;
-            if (req.metrics() != null) {
-                for (BragiSyncMetric m : req.metrics()) {
-                    if (m.object_type() == null || m.object_id() == null || m.metric() == null || m.value() == null) continue;
-                    long tsMillis;
-                    if (m.ts() == null || m.ts().isBlank()) tsMillis = System.currentTimeMillis();
-                    else {
-                        try { tsMillis = Long.parseLong(m.ts()); }
-                        catch (NumberFormatException nfe) { tsMillis = java.time.Instant.parse(m.ts()).toEpochMilli(); }
-                    }
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "INSERT INTO MetricSnapshot SET ts=:ts, object_type=:ot, object_id=:oid, " +
-                        "metric=:m, value=:v, source=:src, segment=:seg",
-                        mapOfNullable("ts", tsMillis, "ot", m.object_type(), "oid", m.object_id(),
-                            "m", m.metric(), "v", m.value(), "src", (String) found.get(0).get("service"), "seg", m.segment())))
-                        .await().indefinitely();
-                    written++;
-                }
-            }
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE BragiIntegration SET last_called_at=:lc UPSERT WHERE integration_id=:id",
-                Map.of("lc", java.time.Instant.now().toString(), "id", req.integration_id())))
-                .await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "integration_id", req.integration_id(), "metrics_written", written)));
-        } catch (Exception e) {
-            LOG.warnf("[BRAGI INTEGRATION SYNC] %s: %s", req.integration_id(), e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
-        }
-    }
-
-    private Response requireAdmin(String role) {
-        if (!"admin".equals(role) && !"superadmin".equals(role)) {
-            return noStore(Response.status(Response.Status.FORBIDDEN)
-                .entity(new LoreError("FORBIDDEN", "admin role required")));
-        }
-        return null;
-    }
-
-    private Response badParams(String msg) {
-        return noStore(Response.status(Response.Status.BAD_REQUEST)
-            .entity(new LoreError("BAD_PARAMS", msg)));
-    }
-
-    /** Классификатор — рубрика одна на сущность, не аддитивно: сперва снимаем
-     * прежнее IN_RUBRIC-ребро (если было), затем ставим новое. entityIdField
-     * is bound via SQL param, never concatenated. */
-    private void assignRubric(String entityType, String entityIdField, String entityId, String rubricId) {
-        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-            "DELETE FROM IN_RUBRIC WHERE @out." + entityIdField + " = :id",
-            Map.of("id", entityId))).await().indefinitely();
-        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-            "CREATE EDGE IN_RUBRIC FROM (SELECT FROM " + entityType + " WHERE " + entityIdField + "=:id) " +
-            "TO (SELECT FROM BragiRubric WHERE rubric_id=:rid) IF NOT EXISTS",
-            Map.of("id", entityId, "rid", rubricId))).await().indefinitely();
-    }
 
     /** ISO-week id for the rotating QG-housekeeping sprint, e.g. "SPRINT_QG_HOUSEKEEPING_2026W27". */
     private static String weeklyHousekeepingSprintId() {
@@ -4425,29 +3218,4 @@ public class AidaLoreResource {
         return String.format("SPRINT_QG_HOUSEKEEPING_%dW%02d", isoYear, isoWeek);
     }
 
-    /** Param map that tolerates null values (Map.of forbids them) — used for nullable note_md. */
-    private static Map<String, Object> mapOfNullable(Object... kv) {
-        Map<String, Object> m = new java.util.HashMap<>();
-        for (int i = 0; i + 1 < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
-        return m;
-    }
-
-    private Response disabled() {
-        return noStore(Response.status(Response.Status.NOT_FOUND)
-            .entity(new LoreError("LORE_DISABLED",
-                "lore.enabled=false (lore is dev-only)")));
-    }
-
-    private String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-            (user + ":" + password).getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static Response noStore(Response.ResponseBuilder builder) {
-        return builder.type(MediaType.APPLICATION_JSON).header("Cache-Control", "no-store").build();
-    }
-
-    private static String str(Object o) {
-        return o == null ? "" : o.toString().trim();
-    }
 }

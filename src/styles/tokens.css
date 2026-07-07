@@ -27,6 +27,66 @@
   --b2:     var(--bg2);
   --b3:     var(--bg3);
   --bg:     var(--bg0);
+  /* Text on a strongly-saturated chip/button background (--acc/--dng/--wrn) —
+     white in every current palette (T16, part 2). */
+  --on-accent: #fff;
+
+  /* LORE artifact-kind categorical palette (T16) — was hardcoded twice in
+     LoreArtifactList.tsx (module-level ARTIFACT_KINDS_META + a component-
+     local ALL_ARTIFACT_KINDS re-declaring the same 5 colours verbatim). */
+  --kind-adr:     #4a90d9;
+  --kind-spec:    #4caf50;
+  --kind-runbook: #e8923a;
+  --kind-doc:     #a974d6;
+  --kind-qg:      #3fb8a0;
+
+  /* LORE sprint-tree cyclic palettes (T16) — assigned by list position
+     (index into allSlugs/allIds, not by name) so a project/component gets a
+     stable colour within one render regardless of which one it is. Two
+     separate 6-colour sets on purpose (LoreSprintTree.tsx) so project chips
+     and component chips read as visually distinct from each other, not just
+     from their own siblings. Fixed, non-theme-reactive — same rationale as
+     --mermaid-bg/--section-*. */
+  --proj-palette-1: #7c83fd;
+  --proj-palette-2: var(--suc);
+  --proj-palette-3: #e8884f;
+  --proj-palette-4: #c47af5;
+  --proj-palette-5: #f5c842;
+  --proj-palette-6: #5ab4e8;
+  --comp-palette-1: #e8617a;
+  --comp-palette-2: #59c2c9;
+  --comp-palette-3: #d9a441;
+  --comp-palette-4: #8d9bff;
+  --comp-palette-5: #6fbf73;
+  --comp-palette-6: #c77dd1;
+
+  /* LORE section-nav categorical palette (T16) — 14 fixed, distinct hues so
+     narrow-screen icon-only nav tabs stay tellable apart by colour alone.
+     A qualitative/categorical palette, not a semantic one — deliberately NOT
+     theme-reactive (same rationale as --mermaid-bg): the point is a stable
+     visual identity per section, not contrast-matching the active palette. */
+  --section-milestones: #E0A13D;
+  --section-plan:       #6AB3F3;
+  --section-sprints:    #7DBF78;
+  --section-adrs:       #B48EAD;
+  --section-decisions:  #D9A05B;
+  --section-releases:   #57C7D4;
+  --section-qg:         #A8C062;
+  --section-knowledge:  #E06C9F;
+  --section-components: #88B8A8;
+  --section-tech:       #C0A36E;
+  --section-evolution:  #9A8CDB;
+  --section-timeline:   #6FB0A0;
+  --section-analytics:  #D98E73;
+  --section-mcp:        #8FA0C0;
+
+  /* Mermaid diagrams always render on a fixed light backdrop regardless of
+     page theme/mode (T15) — the 'forest' theme's own line/text colors assume
+     a light background, and per-element dark-mode contrast was tried and
+     abandoned (see MartProse.tsx) as unmaintainable. Deliberately NOT
+     overridden in the palette/[data-mode='light'] blocks below — it must
+     stay constant across every theme. */
+  --mermaid-bg: #f4f4f4;
 
   /* ── border-radius scale (Seiðr) ─────────────────────────────────────── */
   --seer-radius-sm: 4px;
@@ -252,23 +312,6 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
 .lore-resize-handle-h { height: 4px; cursor: row-resize; flex-shrink: 0; background: transparent; transition: background 0.15s; user-select: none; }
 .lore-resize-handle-h:hover,
 .lore-resize-handle-h:active { background: var(--acc); opacity: 0.5; }
-
-/* ── Inline rendered Markdown (sprint context_md / task note_md) ──────────
-   Incident 2026-07-01 (prod v1.6.21): raw marked.parse() + dangerouslySetInnerHTML
-   with no heading-size reset lets a `#`/`##` in user content render at the
-   browser default h1/h2 size, blowing out these small side-panel boxes and
-   shoving surrounding layout down. Same clamp pattern as MartProse's
-   .mart-prose, kept lightweight here since this stylesheet is global (no
-   runtime injection needed) and the lore/ module doesn't otherwise depend on
-   MartProse (mermaid + bench-only marked config). */
-.lore-md h1, .lore-md h2, .lore-md h3,
-.lore-md h4, .lore-md h5, .lore-md h6 {
-  font-size: 1.15em; font-weight: 600; color: var(--t1); margin: 0.6em 0 0.3em;
-}
-.lore-md h1:first-child, .lore-md h2:first-child, .lore-md h3:first-child { margin-top: 0; }
-.lore-md p { margin: 0 0 0.6em; }
-.lore-md p:last-child { margin-bottom: 0; }
-.lore-md ul, .lore-md ol { margin: 0 0 0.6em; padding-left: 1.4em; }
 
 /* ── Analytics cards ────────────────────────────────────────────────────── */
 .analytics-meta { font-size: 11px; color: var(--t3); margin: 0 0 20px; }
