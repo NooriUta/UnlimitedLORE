@@ -22,7 +22,8 @@ export function projLabel(slug: string): string {
 // LorePage's full-width project filter chips use the exact same colours as
 // the per-row project dots rendered here.
 const PROJ_COLORS = [
-  '#7c83fd', 'var(--suc)', '#e8884f', '#c47af5', '#f5c842', '#5ab4e8',
+  'var(--proj-palette-1)', 'var(--proj-palette-2)', 'var(--proj-palette-3)',
+  'var(--proj-palette-4)', 'var(--proj-palette-5)', 'var(--proj-palette-6)',
 ];
 export function projColor(slug: string, allSlugs: string[]): string {
   const i = allSlugs.indexOf(slug);
@@ -33,7 +34,8 @@ export function projColor(slug: string, allSlugs: string[]): string {
 // from project chips (and from each other) instead of all sharing one flat
 // accent colour with an identical icon.
 const COMP_COLORS = [
-  '#e8617a', '#59c2c9', '#d9a441', '#8d9bff', '#6fbf73', '#c77dd1',
+  'var(--comp-palette-1)', 'var(--comp-palette-2)', 'var(--comp-palette-3)',
+  'var(--comp-palette-4)', 'var(--comp-palette-5)', 'var(--comp-palette-6)',
 ];
 export function compColor(id: string, allIds: string[]): string {
   const i = allIds.indexOf(id);

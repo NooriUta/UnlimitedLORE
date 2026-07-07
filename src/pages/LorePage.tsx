@@ -66,10 +66,10 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
 // MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
 // section nav collapses to icons only, so colour is what tells the types apart.
 const SECTION_COLORS: Record<Section, string> = {
-  milestones: '#E0A13D', plan: '#6AB3F3', sprints: '#7DBF78', adrs: '#B48EAD',
-  decisions: '#D9A05B', releases: '#57C7D4', qg: '#A8C062', knowledge: '#E06C9F',
-  components: '#88B8A8', tech: '#C0A36E', evolution: '#9A8CDB', timeline: '#6FB0A0',
-  analytics: '#D98E73', mcp: '#8FA0C0',
+  milestones: 'var(--section-milestones)', plan: 'var(--section-plan)', sprints: 'var(--section-sprints)', adrs: 'var(--section-adrs)',
+  decisions: 'var(--section-decisions)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
+  components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
+  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)',
 };
 
 // Sections that use master-detail layout (list panel + detail panel)

@@ -69,12 +69,22 @@ function exportRunbooksMd(rows: { id: string; title: string; component: string |
 interface QgRow { qg_id: string; name: string | null; component_id: string | null; status: string | null; date_created: string | null; }
 
 export const ARTIFACT_KINDS_META: { kind: ArtifactKind; color: string; icon: string }[] = [
-  { kind: 'adr',     color: '#4a90d9', icon: 'scroll-quill' },
-  { kind: 'spec',    color: '#4caf50', icon: 'white-book' },
-  { kind: 'runbook', color: '#e8923a', icon: 'spell-book' },
-  { kind: 'doc',     color: '#a974d6', icon: 'papers' },
-  { kind: 'qg',      color: '#3fb8a0', icon: 'checkered-flag' },
+  { kind: 'adr',     color: 'var(--kind-adr)', icon: 'scroll-quill' },
+  { kind: 'spec',    color: 'var(--kind-spec)', icon: 'white-book' },
+  { kind: 'runbook', color: 'var(--kind-runbook)', icon: 'spell-book' },
+  { kind: 'doc',     color: 'var(--kind-doc)', icon: 'papers' },
+  { kind: 'qg',      color: 'var(--kind-qg)', icon: 'checkered-flag' },
 ];
+// T16: labels for the 5 kinds above — kept as a separate lookup (not baked
+// into ARTIFACT_KINDS_META) because labels need useTranslation(), which
+// isn't available at module scope.
+const ARTIFACT_KIND_LABEL_KEYS: Record<ArtifactKind, [string, string]> = {
+  adr:     ['lore.artifactList.kindAdr', 'ADR'],
+  spec:    ['lore.artifactList.kindSpec', 'Спеки'],
+  runbook: ['lore.artifactList.kindRunbook', 'Runbooks'],
+  doc:     ['lore.artifactList.kindDoc', 'Документы'],
+  qg:      ['lore.artifactList.kindQg', 'Quality Gates'],
+};
 const KIND_ORDER = Object.fromEntries(ARTIFACT_KINDS_META.map((k, i) => [k.kind, i])) as Record<ArtifactKind, number>;
 
 const S = {
@@ -145,13 +155,11 @@ interface Props {
 
 export default function LoreArtifactList({ onError, onOpen, selectedKind, selectedId, kinds, headerContainer }: Props) {
   const { t } = useTranslation();
-  const ALL_ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] = [
-    { kind: 'adr',     label: 'ADR', color: '#4a90d9', icon: 'scroll-quill' },
-    { kind: 'spec',    label: t('lore.artifactList.kindSpec', 'Спеки'), color: '#4caf50', icon: 'white-book' },
-    { kind: 'runbook', label: t('lore.artifactList.kindRunbook', 'Runbooks'), color: '#e8923a', icon: 'spell-book' },
-    { kind: 'doc',     label: t('lore.artifactList.kindDoc', 'Документы'), color: '#a974d6', icon: 'papers' },
-    { kind: 'qg',      label: t('lore.artifactList.kindQg', 'Quality Gates'), color: '#3fb8a0', icon: 'checkered-flag' },
-  ];
+  const ALL_ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] =
+    ARTIFACT_KINDS_META.map(k => {
+      const [key, fallback] = ARTIFACT_KIND_LABEL_KEYS[k.kind];
+      return { ...k, label: t(key, fallback) };
+    });
   // kinds is typically passed as a fresh array literal on every parent render
   // (e.g. kinds={['runbook','doc']}) — keying on the array reference would
   // recreate kindsFilter (and retrigger the fetch effect) on every render.

@@ -127,16 +127,16 @@ type PickOpt = { token: LorePlanItemStatus; statusKey: string; label: string; gi
 
 function buildSprintPickOpts(t: (k: string, d: string) => string): PickOpt[] {
   return [
-    { token: 'todo',             statusKey: 'todo',             label: t('lore.sprintDetail.status.todo', 'TODO'),          gi: 'checkbox-tree',  c: '#665C48', abbr: 'TODO' },
-    { token: 'planned',          statusKey: 'planned',          label: t('lore.sprintDetail.status.planned', 'Запланировано'), gi: 'calendar',        c: '#D4922A', abbr: 'PLN'  },
-    { token: 'backlog',          statusKey: 'backlog',          label: t('lore.sprintDetail.status.backlog', 'Беклог'),        gi: 'tied-scroll',     c: '#9A8C6E', abbr: 'BL'   },
-    { token: 'design',           statusKey: 'design',           label: t('lore.sprintDetail.status.design', 'Дизайн'),         gi: 'magic-swirl',     c: '#D4922A', abbr: 'DS'   },
-    { token: 'active',           statusKey: 'in_progress',      label: t('lore.sprintDetail.status.active', 'В работе'),       gi: 'progression',     c: '#88B8A8', abbr: 'WIP'  },
-    { token: 'partial',          statusKey: 'partial',          label: t('lore.sprintDetail.status.partial', 'Частично'),      gi: 'battery-50',      c: '#D4922A', abbr: 'PART' },
-    { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: t('lore.sprintDetail.status.readyForDeploy', 'К деплою'), gi: 'wave-crest',      c: '#7DBF78', abbr: 'RD'   },
-    { token: 'done',             statusKey: 'done',             label: t('lore.sprintDetail.status.done', 'Готово'),           gi: 'divided-spiral',  c: '#7DBF78', abbr: 'DONE' },
-    { token: 'blocked',          statusKey: 'blocked',          label: t('lore.sprintDetail.status.blocked', 'Заблокировано'), gi: 'handcuffed',      c: '#C85848', abbr: 'BLK'  },
-    { token: 'cancelled',        statusKey: 'cancelled',        label: t('lore.sprintDetail.status.cancelled', 'Отменено'),    gi: 'cross-mark',      c: '#C85848', abbr: 'CNC'  },
+    { token: 'todo',             statusKey: 'todo',             label: t('lore.sprintDetail.status.todo', 'TODO'),          gi: 'checkbox-tree',  c: 'var(--t3)', abbr: 'TODO' },
+    { token: 'planned',          statusKey: 'planned',          label: t('lore.sprintDetail.status.planned', 'Запланировано'), gi: 'calendar',        c: 'var(--wrn)', abbr: 'PLN'  },
+    { token: 'backlog',          statusKey: 'backlog',          label: t('lore.sprintDetail.status.backlog', 'Беклог'),        gi: 'tied-scroll',     c: 'var(--t2)', abbr: 'BL'   },
+    { token: 'design',           statusKey: 'design',           label: t('lore.sprintDetail.status.design', 'Дизайн'),         gi: 'magic-swirl',     c: 'var(--wrn)', abbr: 'DS'   },
+    { token: 'active',           statusKey: 'in_progress',      label: t('lore.sprintDetail.status.active', 'В работе'),       gi: 'progression',     c: 'var(--inf)', abbr: 'WIP'  },
+    { token: 'partial',          statusKey: 'partial',          label: t('lore.sprintDetail.status.partial', 'Частично'),      gi: 'battery-50',      c: 'var(--wrn)', abbr: 'PART' },
+    { token: 'ready_for_deploy', statusKey: 'ready_for_deploy', label: t('lore.sprintDetail.status.readyForDeploy', 'К деплою'), gi: 'wave-crest',      c: 'var(--suc)', abbr: 'RD'   },
+    { token: 'done',             statusKey: 'done',             label: t('lore.sprintDetail.status.done', 'Готово'),           gi: 'divided-spiral',  c: 'var(--suc)', abbr: 'DONE' },
+    { token: 'blocked',          statusKey: 'blocked',          label: t('lore.sprintDetail.status.blocked', 'Заблокировано'), gi: 'handcuffed',      c: 'var(--dng)', abbr: 'BLK'  },
+    { token: 'cancelled',        statusKey: 'cancelled',        label: t('lore.sprintDetail.status.cancelled', 'Отменено'),    gi: 'cross-mark',      c: 'var(--dng)', abbr: 'CNC'  },
   ];
 }
 
@@ -1330,9 +1330,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
                   padding: '2px 8px', borderRadius: 10,
-                  background: 'color-mix(in srgb, #4a90d9 14%, transparent)',
-                  border: '1px solid color-mix(in srgb, #4a90d9 30%, transparent)',
-                  color: '#4a90d9', cursor: onNavigateToAdr ? 'pointer' : 'default',
+                  background: 'color-mix(in srgb, var(--kind-adr) 14%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--kind-adr) 30%, transparent)',
+                  color: 'var(--kind-adr)', cursor: onNavigateToAdr ? 'pointer' : 'default',
                   fontFamily: 'inherit',
                 }}
               >

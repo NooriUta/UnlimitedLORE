@@ -3,18 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreComponent, type LoreSpecRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { specTitle } from './LoreSpecView';
-
-const AREA_COLOR: Record<string, string> = {
-  data:          '#29b6f6',
-  engine:        '#4caf50',
-  algorithm:     '#26a69a',
-  ai:            '#ab47bc',
-  api:           '#2196f3',
-  frontend:      '#9c27b0',
-  observability: '#ff7043',
-  platform:      '#ff9800',
-  security:      '#ef5350',
-};
+// T16: this file used to carry its own hex-hardcoded area palette, independent
+// of (and inconsistent with) LoreComponentList's token-based one — same area
+// name, two different colors depending which surface you were looking at.
+// Reuse the one source of truth instead.
+import { areaColor } from './LoreComponentList';
 
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, padding: '4px 0' },
@@ -44,7 +37,7 @@ const S = {
   },
   count: { color: 'var(--t3)', fontSize: 9, flexShrink: 0 },
   area: (a: string) => {
-    const c = AREA_COLOR[a] ?? 'var(--t3)';
+    const c = areaColor(a);
     return {
       fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0, whiteSpace: 'nowrap' as const,
       color: c, background: `color-mix(in srgb, ${c} 14%, transparent)`,
