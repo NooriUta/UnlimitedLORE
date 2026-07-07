@@ -202,6 +202,7 @@ function buildPriorityOpts(t: (k: string, d: string) => string) {
     { value: 'P0', label: t('lore.sprintDetail.priority.p0', 'P0 — критично'), color: '#E24B4A' },
     { value: 'P1', label: t('lore.sprintDetail.priority.p1', 'P1 — высокий'),  color: '#ef9f27' },
     { value: 'P2', label: t('lore.sprintDetail.priority.p2', 'P2 — обычный'),  color: 'var(--t3)' },
+    { value: 'P3', label: t('lore.sprintDetail.priority.p3', 'P3 — низкий'),   color: 'var(--t3)' },
   ];
 }
 
