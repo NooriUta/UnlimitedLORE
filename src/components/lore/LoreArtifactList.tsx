@@ -8,6 +8,7 @@ import {
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { FilterBar, type FilterTagData } from './FilterPrimitives';
+import { EmptyState } from './EmptyState';
 
 // Unified knowledge listing under «Компоненты»: ADR / specs / runbooks / docs /
 // quality-gates in one flat, typed, component-linked list. Replaces the per-component
@@ -372,7 +373,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
       {headerContainer ? createPortal(header, headerContainer) : header}
 
       <div style={S.list}>
-        {shown.length === 0 && <div style={S.empty}>{t('lore.artifactList.notFound', 'Ничего не найдено.')}</div>}
+        {shown.length === 0 && <EmptyState message={t('lore.artifactList.notFound', 'Ничего не найдено.')} />}
         {shown.map(a => {
           const meta = KIND_META[a.kind];
           const sel = selectedKind === a.kind && selectedId === a.id;

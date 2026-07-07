@@ -156,7 +156,7 @@ const S: Record<string, React.CSSProperties> = {
   secretHint:    { fontSize: 10.5, color: 'var(--wrn)', marginTop: 5 },
   secretHintWarn:{ fontSize: 10.5, color: 'var(--dng)', marginTop: 5 },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
                background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
 };

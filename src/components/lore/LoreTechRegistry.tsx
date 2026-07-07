@@ -218,7 +218,7 @@ function TechAddForm({ componentId, onSaved, onError }: {
       <input style={{ ...inputStyle, flex: 1, minWidth: 200 }} placeholder={t('lore.techRegistry.form.usage', 'Использование (где/как используется)')} value={usage} onChange={e => setUsage(e.target.value)} />
       <button
         onClick={save} disabled={busy || !techName.trim() || !version.trim()}
-        style={{ fontSize: 11, padding: '4px 12px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer', opacity: busy ? 0.6 : 1 }}
+        style={{ fontSize: 11, padding: '4px 12px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: 'var(--on-accent)', cursor: 'pointer', opacity: busy ? 0.6 : 1 }}
       >{busy ? '…' : t('lore.techRegistry.form.save', 'Сохранить')}</button>
     </div>
   );

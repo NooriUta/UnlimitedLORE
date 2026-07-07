@@ -122,14 +122,24 @@ export interface FilterSummaryLineProps {
   emptyLabel?: string;
 }
 
-/** The "one line for reading" row — never wraps, scrolls horizontally if it overflows. */
+/**
+ * The "one line for reading" row — never wraps, scrolls horizontally if it
+ * overflows. aria-live="polite": this is the ONLY persistent feedback that a
+ * filter was toggled (the chip that changed lives inside the collapsed band,
+ * invisible to screen readers), so announce it here — generalizes the old
+ * narrow-only active-filters strip's aria-live to every viewport (T19).
+ */
 export function FilterSummaryLine({ tags, emptyLabel }: FilterSummaryLineProps) {
   const { t } = useTranslation();
   if (!tags.length) {
-    return <span style={{ color: 'var(--t3)', fontSize: 11, whiteSpace: 'nowrap' }}>{emptyLabel ?? t('lore.filters.notSet', 'не заданы')}</span>;
+    return (
+      <span aria-live="polite" style={{ color: 'var(--t3)', fontSize: 11, whiteSpace: 'nowrap' }}>
+        {emptyLabel ?? t('lore.filters.notSet', 'не заданы')}
+      </span>
+    );
   }
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', flex: 1, minWidth: 0, scrollbarWidth: 'none' }}>
+    <div aria-live="polite" style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', flex: 1, minWidth: 0, scrollbarWidth: 'none' }}>
       {tags.map(({ key, ...tag }) => <FilterTag key={key} {...tag} />)}
     </div>
   );

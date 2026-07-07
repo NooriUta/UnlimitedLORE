@@ -87,6 +87,6 @@ const S: Record<string, React.CSSProperties> = {
   input: { height: 26, padding: '0 8px', borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--bg0)',
            color: 'var(--t1)', fontSize: 11.5, fontFamily: 'inherit', outline: 'none', minWidth: 130 },
   saveBtn:{ height: 26, padding: '0 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
-            background: 'var(--acc)', color: '#fff', fontSize: 11, fontWeight: 600 },
+            background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 11, fontWeight: 600 },
   err:   { fontSize: 10.5, color: 'var(--dng)', width: '100%' },
 };

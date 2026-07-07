@@ -1163,7 +1163,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <GameIcon slug={tb.icon} size={12} style={{ color: 'inherit' }} />
           {t(`lore.analytics.tabs.${tb.key}`, tb.label)}
           {tb.key === 'progress' && currentMilestone && daysUntilCurrent !== null && daysUntilCurrent >= 0 && daysUntilCurrent <= 14 && (
-            <span style={{ fontSize: 8, padding: '0 4px', borderRadius: 3, background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)', color: '#fff', marginLeft: 2 }}>
+            <span style={{ fontSize: 8, padding: '0 4px', borderRadius: 3, background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)', color: 'var(--on-accent)', marginLeft: 2 }}>
               {t('lore.analytics.daysSuffix', '{{n}}д', { n: daysUntilCurrent })}
             </span>
           )}

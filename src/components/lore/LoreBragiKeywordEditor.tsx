@@ -161,7 +161,7 @@ const S: Record<string, React.CSSProperties> = {
               background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
               outline: 'none', width: '100%', boxSizing: 'border-box' },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
                background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
 };

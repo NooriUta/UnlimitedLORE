@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
 import { FilterBar, type FilterTagData } from './FilterPrimitives';
+import { EmptyState } from './EmptyState';
 
 interface QGRow {
   qg_id: string;
@@ -257,7 +258,7 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
             <span style={S.date}>{qg.date_created?.slice(0, 10) ?? ''}</span>
           </div>
         ))}
-        {shown.length === 0 && <div style={S.state}>{t('lore.qualityGateList.empty', 'Quality Gates не найдены.')}</div>}
+        {shown.length === 0 && <EmptyState message={t('lore.qualityGateList.empty', 'Quality Gates не найдены.')} />}
       </div>
     </div>
   );

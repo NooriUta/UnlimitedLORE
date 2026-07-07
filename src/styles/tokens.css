@@ -27,6 +27,17 @@
   --b2:     var(--bg2);
   --b3:     var(--bg3);
   --bg:     var(--bg0);
+  /* Text on a strongly-saturated chip/button background (--acc/--dng/--wrn) —
+     white in every current palette (T16, part 2). */
+  --on-accent: #fff;
+
+  /* Mermaid diagrams always render on a fixed light backdrop regardless of
+     page theme/mode (T15) — the 'forest' theme's own line/text colors assume
+     a light background, and per-element dark-mode contrast was tried and
+     abandoned (see MartProse.tsx) as unmaintainable. Deliberately NOT
+     overridden in the palette/[data-mode='light'] blocks below — it must
+     stay constant across every theme. */
+  --mermaid-bg: #f4f4f4;
 
   /* ── border-radius scale (Seiðr) ─────────────────────────────────────── */
   --seer-radius-sm: 4px;

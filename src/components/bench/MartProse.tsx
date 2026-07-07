@@ -127,7 +127,7 @@ function MermaidDiagram({ def }: { def: string }) {
     // theme needed, or its own arrows/labels wash out to low-contrast grey.
     return (
       <div
-        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: '#f4f4f4', borderRadius: 6, padding: 10 }}
+        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: 'var(--mermaid-bg)', borderRadius: 6, padding: 10 }}
         dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
       />
     );

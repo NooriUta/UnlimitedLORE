@@ -269,7 +269,7 @@ function statusDotStyle(color: string): React.CSSProperties {
 const S: Record<string, React.CSSProperties> = {
   descRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   newBtn:  { flex: 'none', height: 28, padding: '0 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
-             background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+             background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   desc:    { color: 'var(--t2)', fontSize: 14, marginBottom: 18 },
   hint:    { fontSize: 12, color: 'var(--t3)' },
   card:    { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '10px 18px' },
