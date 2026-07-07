@@ -339,7 +339,7 @@ interface Props {
 export default function LoreComponentPassport({
   componentId, onError, onNavigateComponent,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [comp, setComp]       = useState<LoreComponentDetail | null>(null);
   const [adrs, setAdrs]       = useState<LoreAdrRow[]>([]);
   const [specs, setSpecs]     = useState<LoreSpecRow[]>([]);
@@ -728,7 +728,8 @@ export default function LoreComponentPassport({
                 </>
               )}
               {docContent.type === 'doc' && (() => {
-                const md = docContent.data.content_md_en ?? docContent.data.content_md_ru;
+                const preferred = i18n.language?.startsWith('ru') ? docContent.data.content_md_ru : docContent.data.content_md_en;
+                const md = preferred ?? docContent.data.content_md_en ?? docContent.data.content_md_ru;
                 if (md) return <MartProse text={md} style={S.rP} />;
                 if (docContent.data.content_html) {
                   return <p style={S.rP}>{t('lore.componentPassport.reader.docHtmlOnly', 'Документ хранится как HTML — откройте его во вкладке «Знания» для просмотра.')}</p>;
