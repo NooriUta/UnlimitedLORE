@@ -624,11 +624,13 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   return (
     <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
       <input value={tid} onChange={e => setTid(e.target.value)}
+        aria-label={t('lore.sprintDetail.addTask.idPlaceholder', 'ID (SH-10)')}
         placeholder={t('lore.sprintDetail.addTask.idPlaceholder', 'ID (SH-10)')} style={{ ...inputStyle, width: 110, fontFamily: 'var(--mono)' }} />
       <input value={title} onChange={e => setTitle(e.target.value)}
+        aria-label={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')}
         placeholder={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')} style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
       <button type="button" style={primaryBtn} disabled={busy} onClick={add}>{t('lore.sprintDetail.addTask.submit', 'Добавить')}</button>
-      <button type="button" style={ghostBtn} onClick={() => setShow(false)}>×</button>
+      <button type="button" style={ghostBtn} onClick={() => setShow(false)} aria-label={t('lore.sprintDetail.addTask.cancel', 'Отменить добавление задачи')}>×</button>
     </div>
   );
 }
