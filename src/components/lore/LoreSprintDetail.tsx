@@ -1058,7 +1058,10 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
       {/* ── Projects section ───────────────────────────────────────────────── */}
       {(() => {
-        const linked = sprint.git_projects ?? [];
+        // git_projects can carry the same slug more than once (one entry per
+        // linked commit/PR, not per distinct project) — dedupe, or repeated
+        // slugs collide as React keys below.
+        const linked = [...new Set(sprint.git_projects ?? [])];
         const unlinked = allProjects.filter(g => !linked.includes(g));
         const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         return (
@@ -1314,14 +1317,23 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       })()}
 
       {/* ── ADR section (reverse of ADR's IMPLEMENTED_IN — which ADRs implement in this sprint) ── */}
-      {sprint.adr_ids != null && sprint.adr_ids.length > 0 && (
+      {/* T-fix: the sprint_tree slice's reverse ADR lookup can return null
+          entries (edge resolved but the target vertex didn't) — e.g.
+          SPRINT_LORE_UX_OPTIMIZATION comes back adr_ids: [null, null, null].
+          Unfiltered, that rendered 3 identical key={null} buttons all
+          labelled "Открыть null" and navigating nowhere on click. Filter at
+          the read site rather than touching the backend query. */}
+      {(() => {
+        const adrIds = (sprint.adr_ids ?? []).filter((id): id is string => !!id);
+        if (adrIds.length === 0) return null;
+        return (
         <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.adr.label', 'ADR')}</span>
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{sprint.adr_ids.length}</span>
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{adrIds.length}</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-            {sprint.adr_ids.map(id => (
+            {adrIds.map(id => (
               <button
                 key={id}
                 onClick={onNavigateToAdr ? () => onNavigateToAdr(id) : undefined}
@@ -1342,7 +1354,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             ))}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       </div>{/* END META RIGHT */}
       </div>{/* END TOP META BLOCK */}

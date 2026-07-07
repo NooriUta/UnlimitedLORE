@@ -380,7 +380,11 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
           const release = s.release_ids?.[0] ?? (s.status_raw?.match(/v\d+\.\d+(?:\.\d+)?/)?.[0] ?? null);
           const relDate = s.release_dates?.[0]?.slice(0, 10) ?? null;
           const active  = selectedId === s.sprint_id;
-          const projs   = s.git_projects ?? [];
+          // git_projects can carry the same slug more than once (one dot per
+          // linked commit/PR, not per distinct project) — dedupe before using
+          // it as a React key source, or repeat entries collide (duplicate-key
+          // warning, reproduces on any sprint touching a project more than once).
+          const projs   = [...new Set(s.git_projects ?? [])];
 
           return (
             <div
