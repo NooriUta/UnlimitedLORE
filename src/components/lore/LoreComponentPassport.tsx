@@ -550,7 +550,10 @@ export default function LoreComponentPassport({
         <div style={S.tabsRow}>
           {tabList.map(t => (
             <div key={t.key} style={S.tab(docTab === t.key)} aria-pressed={docTab === t.key}
-              {...a11yClick(() => { setDocTab(t.key); setSelDocId(null); setDocContent(null); setSelTaskUid(null); })}>
+              {...a11yClick(() => {
+                setDocTab(t.key); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
+                setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
+              })}>
               {t.label}
               {t.count > 0 && <span style={S.tabCnt}>{t.count}</span>}
             </div>
