@@ -97,7 +97,7 @@ function channelToSkin(channelId: string): BragiSkin {
   return 'main';
 }
 function statusDot(s: string): string {
-  return s === 'published' ? '#6fae5a' : s === 'ready' ? 'var(--acc)' : 'var(--t3)';
+  return s === 'published' ? 'var(--suc)' : s === 'ready' ? 'var(--acc)' : 'var(--t3)';
 }
 
 // V2-02: todo_md is a plain markdown checklist ("- [ ] text" / "- [x] text").

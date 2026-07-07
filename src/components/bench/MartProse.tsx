@@ -114,7 +114,7 @@ function MermaidDiagram({ def }: { def: string }) {
   }, [def]);
 
   if (err) {
-    return <div style={{ color: '#e06c75', fontSize: 12, fontFamily: 'var(--mono)', margin: '0 0 0.8em' }}>⚠ mermaid: {err}</div>;
+    return <div style={{ color: 'var(--dng)', fontSize: 12, fontFamily: 'var(--mono)', margin: '0 0 0.8em' }}>⚠ mermaid: {err}</div>;
   }
   if (svg) {
     // The diagram's colors (themeVariables above) assume a dark backdrop —

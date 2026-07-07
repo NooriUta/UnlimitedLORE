@@ -22,7 +22,7 @@ export function projLabel(slug: string): string {
 // LorePage's full-width project filter chips use the exact same colours as
 // the per-row project dots rendered here.
 const PROJ_COLORS = [
-  '#7c83fd', '#4dc9a0', '#e8884f', '#c47af5', '#f5c842', '#5ab4e8',
+  '#7c83fd', 'var(--suc)', '#e8884f', '#c47af5', '#f5c842', '#5ab4e8',
 ];
 export function projColor(slug: string, allSlugs: string[]): string {
   const i = allSlugs.indexOf(slug);
@@ -403,7 +403,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                   {s.priority && (
                     <span style={{
                       fontSize: 10, fontWeight: 600, flexShrink: 0,
-                      color: s.priority === 'P0' ? '#E24B4A' : s.priority === 'P1' ? '#ef9f27' : 'var(--t3)',
+                      color: s.priority === 'P0' ? 'var(--dng)' : s.priority === 'P1' ? 'var(--wrn)' : 'var(--t3)',
                     }}>{s.priority}</span>
                   )}
                   {status && (

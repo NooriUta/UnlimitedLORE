@@ -453,9 +453,9 @@ export default function LorePage() {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
               userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-              border: `1px solid ${sprintPresetAttention ? '#E24B4A' : 'var(--b3)'}`,
-              background: sprintPresetAttention ? 'color-mix(in srgb, #E24B4A 16%, transparent)' : 'transparent',
-              color: sprintPresetAttention ? '#E24B4A' : 'var(--t3)',
+              border: `1px solid ${sprintPresetAttention ? 'var(--dng)' : 'var(--b3)'}`,
+              background: sprintPresetAttention ? 'color-mix(in srgb, var(--dng) 16%, transparent)' : 'transparent',
+              color: sprintPresetAttention ? 'var(--dng)' : 'var(--t3)',
             }}
           >⚠{!narrow && <> {t('lore.page.sprints.presetAttention', 'Внимание')}</>}</span>
 
@@ -465,7 +465,7 @@ export default function LorePage() {
           {/* Приоритет */}
           {(['P0', 'P1', 'P2'] as const).map(p => {
             const on    = sprintPriorityFilter.has(p);
-            const color = p === 'P0' ? '#E24B4A' : p === 'P1' ? '#ef9f27' : 'var(--t3)';
+            const color = p === 'P0' ? 'var(--dng)' : p === 'P1' ? 'var(--wrn)' : 'var(--t3)';
             return (
               <span key={p}
                 {...a11yClick(() => setSprintPriorityFilter(prev => {
@@ -811,9 +811,9 @@ export default function LorePage() {
         }}>
           {([
             { label: t('lore.page.sprints.stats.total', 'всего'),      value: sprintStats.total,     color: 'var(--t1)' },
-            { label: t('lore.page.sprints.stats.done', 'завершено'),  value: sprintStats.done,      color: '#4dc9a0'   },
+            { label: t('lore.page.sprints.stats.done', 'завершено'),  value: sprintStats.done,      color: 'var(--suc)'   },
             { label: t('lore.page.sprints.stats.active', 'активных'),   value: sprintStats.active,    color: 'var(--acc)'},
-            { label: t('lore.page.sprints.stats.p0Open', 'P0 открыто'), value: sprintStats.p0Open,    color: '#E24B4A'   },
+            { label: t('lore.page.sprints.stats.p0Open', 'P0 открыто'), value: sprintStats.p0Open,    color: 'var(--dng)'   },
             { label: t('lore.page.sprints.stats.noRelease', 'без релиза'), value: sprintStats.noRelease, color: 'var(--t3)' },
           ]).map((s, i) => (
             <div key={i} style={{
@@ -831,13 +831,13 @@ export default function LorePage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             padding: '3px 14px', flexShrink: 0, borderLeft: '1px solid var(--bd)',
           }}>
-            <span style={{ fontSize: 15, fontWeight: 500, color: '#4dc9a0', lineHeight: 1.1 }}>
+            <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--suc)', lineHeight: 1.1 }}>
               {pct}%
             </span>
             <div style={{ width: 44, height: 3, background: 'var(--b2)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>
               <div style={{
                 width: `${pct}%`,
-                height: '100%', background: '#4dc9a0', borderRadius: 2,
+                height: '100%', background: 'var(--suc)', borderRadius: 2,
               }} />
             </div>
             <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{t('lore.page.sprints.stats.percentDone', 'выполнено')}</span>
