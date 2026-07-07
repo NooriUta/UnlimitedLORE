@@ -460,6 +460,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
   const [editing, setEditing] = useState(false);
   const [title, setTitle]     = useState(task.title ?? '');
   const [note, setNote]       = useState(task.note_md ?? '');
+  const [effort, setEffort]   = useState(task.effort_days != null ? String(task.effort_days) : '');
   const [busy, setBusy]       = useState(false);
   const [compPicker, setCompPicker] = useState(false);
   const [compBusy, setCompBusy]     = useState<string | null>(null);
@@ -478,8 +479,11 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
 
   async function save() {
     if (busy || !title.trim()) return;
+    const effRaw = effort.trim().replace(',', '.');
+    const eff = effRaw === '' ? null : Number(effRaw);
+    if (eff != null && !Number.isFinite(eff)) return; // ignore bad number
     setBusy(true);
-    try { await editLoreTask(task.task_uid, title.trim(), note); setEditing(false); onChanged(); }
+    try { await editLoreTask(task.task_uid, title.trim(), note, eff); setEditing(false); onChanged(); }
     catch (e) { onError(e); }
     finally { setBusy(false); }
   }
@@ -487,6 +491,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     setEditing(false);
     setTitle(task.title ?? '');
     setNote(task.note_md ?? '');
+    setEffort(task.effort_days != null ? String(task.effort_days) : '');
   }
 
   return (
@@ -565,6 +570,14 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
           <TipTapField value={note} onChange={setNote} minHeight={100}
             placeholder={t('lore.sprintDetail.task.descriptionPlaceholder', 'Описание (Markdown)')}
             enableImages={false} enableHtmlMode={false} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label htmlFor={`eff-${task.task_uid}`} style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
+              {t('lore.sprintDetail.task.effortLabel', 'Стоимость, дн')}
+            </label>
+            <input id={`eff-${task.task_uid}`} value={effort} onChange={e => setEffort(e.target.value)}
+              inputMode="decimal" placeholder={t('lore.sprintDetail.task.effortPlaceholder', 'напр. 1.5')}
+              style={{ ...inputStyle, width: 96 }} />
+          </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>
             <button type="button" style={ghostBtn} onClick={cancel}>{t('lore.sprintDetail.task.cancel', 'Отмена')}</button>

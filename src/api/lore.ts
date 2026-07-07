@@ -512,11 +512,14 @@ export async function editLoreTask(
   taskUid: string,
   title: string,
   noteMd?: string | null,
+  effortDays?: number | null,
 ): Promise<LoreTaskWriteResponse> {
+  // effort_days: null = leave unchanged (backend only writes it when non-null,
+  // mirroring onto both the vertex and the open KnowTaskHist row).
   const res = await fetch(`${LORE_BASE}/task/edit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify({ task_uid: taskUid, title, note_md: noteMd ?? null }),
+    body: JSON.stringify({ task_uid: taskUid, title, note_md: noteMd ?? null, effort_days: effortDays ?? null }),
   });
   assertJson(res);
   if (!res.ok) return parseError(res);
