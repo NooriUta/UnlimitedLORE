@@ -34,6 +34,11 @@ const S = {
   }),
   section: { marginTop: 16 },
   sLabel:  { fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase' as const, marginBottom: 4 },
+  // MartProse defaults to 13px — was left unset here while ComponentPassport
+  // (same ADR content, different surface) pins it to 11px, so the same ADR
+  // read noticeably bigger depending which page you opened it from. Match
+  // that 11px so ADR content reads the same size everywhere (T14).
+  prose:   { fontSize: 11 },
   chips:   { display: 'flex', flexWrap: 'wrap' as const, gap: 4 },
   chip: (clickable: boolean) => ({
     padding: '2px 7px', borderRadius: 3, fontSize: 11,
@@ -127,19 +132,19 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       {data.context_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.context', 'Context')}</div>
-          <MartProse text={data.context_md} />
+          <MartProse text={data.context_md} style={S.prose} />
         </div>
       )}
       {data.decision_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.decision', 'Decision')}</div>
-          <MartProse text={data.decision_md} />
+          <MartProse text={data.decision_md} style={S.prose} />
         </div>
       )}
       {data.consequences_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.consequences', 'Consequences')}</div>
-          <MartProse text={data.consequences_md} />
+          <MartProse text={data.consequences_md} style={S.prose} />
         </div>
       )}
 
