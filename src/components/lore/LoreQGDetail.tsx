@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { parseRoutine, parseInvariants, parseGateSubtitle } from '../../lib/qgContentMd';
+import { MartProse } from '../bench/MartProse';
 
 interface QGDetail {
   qg_id: string;
@@ -225,13 +226,33 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   for (const m of latestMetrics) metricByKey[m.metric_key] = m;
   const prevByKey: Record<string, RunMetric> = {};
   for (const m of prevMetrics) prevByKey[m.metric_key] = m;
-  // recommendation by inv key (inv_id may carry bare key or inv_N_key)
+  // recommendation by inv key (inv_id may carry bare key or inv_N_key).
+  // A pending rec always wins the slot; otherwise the first promoted/dismissed
+  // one found keeps showing here instead of silently disappearing once acted
+  // on (QGRecommendation has no valid_from/supersede edge yet — see T14
+  // QG-recommendations follow-up — so this is "first wins", not "latest
+  // wins"; multiple non-pending recs for the same key beyond the first
+  // still surface below in "Прочие рекомендации").
   const recByKey: Record<string, Recommendation> = {};
   for (const r of recs) {
     if (!r.inv_id) continue;
     const bare = r.inv_id.replace(/^inv_?\d+_/, '');
-    if (r.status === 'pending') { recByKey[bare] = r; recByKey[r.inv_id] = r; }
+    if (!recByKey[bare] || r.status === 'pending') {
+      recByKey[bare] = r; recByKey[r.inv_id] = r;
+    }
   }
+  // Only recs that actually render inline (mirrors the FAIL/WARN gate on the
+  // inline card below) get excluded from "Прочие рекомендации" — a rec whose
+  // invariant recovered to PASS (or has no run) after being promoted must
+  // still surface somewhere, not disappear because recByKey claimed its slot.
+  const inlineRecIds = new Set(
+    invariants
+      .filter(inv => {
+        const st = metricByKey[inv.key]?.status;
+        return recByKey[inv.key] && (st === 'FAIL' || st === 'WARN');
+      })
+      .map(inv => recByKey[inv.key].rec_id),
+  );
 
   // status counts for latest structured run, restricted to this gate's keys
   const gateMetrics = invariants.map(i => metricByKey[i.key]).filter(Boolean) as RunMetric[];
@@ -268,6 +289,13 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
             )}
             {qg.component_id && <span style={S.compBadge}>{qg.component_id}</span>}
             <span style={S.routineBadge}>{routineName}</span>
+            {/* qg.sprint_id was fetched but never rendered — the QG's own
+                home sprint had no link anywhere on this page. */}
+            {qg.sprint_id && onNavigateToSprint && (
+              <button style={S.sprintLink} onClick={() => onNavigateToSprint(qg.sprint_id!)}>
+                {t('lore.qgDetail.header.sprintLink', '↗ {{sprintId}}', { sprintId: qg.sprint_id })}
+              </button>
+            )}
           </div>
           <div style={S.qgName}>{qg.name}</div>
           {(qg.description || gateSubtitle) && <div style={S.desc}>{qg.description ?? gateSubtitle}</div>}
@@ -468,7 +496,9 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                         <div style={S.sparkLabel}>{t('lore.qgDetail.invariants.dynamicsLabel', 'динамика')}</div>
                       </div>
                     </div>
-                    {/* inline recommendation under failing invariant */}
+                    {/* inline recommendation under failing invariant — stays in
+                        place (doesn't vanish) once promoted/dismissed, so
+                        acting on it doesn't silently drop its info from view. */}
                     {rec && (st === 'FAIL' || st === 'WARN') && (
                       <div style={{ ...S.recInline, borderColor: `color-mix(in srgb, ${sc} 22%, transparent)`, background: `color-mix(in srgb, ${sc} 7%, transparent)`, borderLeft: `3px solid ${sc}` }}>
                         <div style={S.recInlineHead}>
@@ -476,15 +506,29 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                           <span style={S.badge(sc)}>{rec.status ?? 'pending'}</span>
                         </div>
                         <div style={S.recTitle}>{rec.title}</div>
-                        {rec.body_md && <div style={S.recBody}>{rec.body_md}</div>}
-                        <div style={S.recActions}>
-                          <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
-                            {promoting === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.createTask', '✅ Создать задачу')}
-                          </button>
-                          <button style={S.dismissBtn} disabled={dismissing === rec.rec_id} onClick={() => handleDismiss(rec)}>
-                            {dismissing === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.dismiss', '✕ Отклонить')}
-                          </button>
-                        </div>
+                        {rec.body_md && <MartProse text={rec.body_md} style={S.recBody} />}
+                        {rec.status === 'promoted' ? (
+                          rec.promoted_task_uid && rec.promoted_sprint_id ? (
+                            <button
+                              style={S.promotedLink}
+                              onClick={() => onNavigateToSprint?.(rec.promoted_sprint_id!)}
+                              title={t('lore.qgDetail.otherRecs.openSprintTitle', 'Открыть {{sprintId}}', { sprintId: rec.promoted_sprint_id })}
+                            >
+                              {t('lore.qgDetail.otherRecs.taskLink', '→ задача {{taskUid}}', { taskUid: rec.promoted_task_uid })}
+                            </button>
+                          ) : (
+                            <div style={S.promotedNote}>{t('lore.qgDetail.otherRecs.taskCreated', '→ задача создана')}</div>
+                          )
+                        ) : rec.status === 'dismissed' ? null : (
+                          <div style={S.recActions}>
+                            <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
+                              {promoting === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.createTask', '✅ Создать задачу')}
+                            </button>
+                            <button style={S.dismissBtn} disabled={dismissing === rec.rec_id} onClick={() => handleDismiss(rec)}>
+                              {dismissing === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.dismiss', '✕ Отклонить')}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -494,13 +538,11 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
           )}
         </section>
 
-        {/* Unmatched recommendations (not tied to a visible invariant) */}
+        {/* Recommendations not already shown inline under an invariant card
+            above (either because their key has no matching invariant, or
+            because a different rec for the same key already took that slot). */}
         {(() => {
-          const shownKeys = new Set(invariants.map(i => i.key));
-          const orphan = recs.filter(r => {
-            const bare = (r.inv_id ?? '').replace(/^inv_?\d+_/, '');
-            return !shownKeys.has(bare) || r.status !== 'pending';
-          });
+          const orphan = recs.filter(r => !inlineRecIds.has(r.rec_id));
           if (orphan.length === 0) return null;
           return (
             <section style={S.section}>
@@ -527,7 +569,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                         <span style={S.recId}>{rec.rec_id}</span>
                       </div>
                       <div style={S.recTitle}>{rec.title}</div>
-                      {rec.body_md && <div style={S.recBody}>{rec.body_md}</div>}
+                      {rec.body_md && <MartProse text={rec.body_md} style={S.recBody} />}
                       {isPending && (
                         <div style={S.recActions}>
                           <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
@@ -595,6 +637,12 @@ const S = {
     background: 'color-mix(in srgb, var(--inf) 10%, transparent)',
     color: 'var(--inf)', border: '1px solid color-mix(in srgb, var(--inf) 26%, transparent)',
     fontFamily: 'var(--mono)',
+  },
+  sprintLink: {
+    fontSize: 10, padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)',
+    background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
+    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 26%, transparent)',
+    cursor: 'pointer',
   },
   provRow: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
   provLabel: { fontSize: 9.5, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
@@ -716,7 +764,7 @@ const S = {
   recInv: { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)' },
   recId:  { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)' },
   recTitle: { color: 'var(--t1)', fontSize: 12, fontWeight: 600, marginBottom: 4 },
-  recBody:  { color: 'var(--t2)', fontSize: 11, marginBottom: 6, whiteSpace: 'pre-wrap' as const },
+  recBody:  { color: 'var(--t2)', fontSize: 11, marginBottom: 6 },
   recActions: { display: 'flex', gap: 6, marginTop: 6 },
   promoteBtn: {
     padding: '3px 10px', fontSize: 11, border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
