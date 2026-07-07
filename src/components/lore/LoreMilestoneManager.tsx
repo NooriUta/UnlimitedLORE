@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  fetchLoreSlice, linkSprintMilestone, upsertMilestone,
+  fetchLoreSlice, linkSprintMilestone, updateSprintPlan, upsertMilestone,
   type LoreMilestone, type LoreSprintRow,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
@@ -211,7 +211,15 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                       <span style={S.sprName}>{s?.name ?? ''}</span>
                       {proj && <span style={S.projTag}>{proj}</span>}
                       <button style={S.x} title={t('lore.milestoneManager.unlink', 'Отвязать')} disabled={busy === 'unlink-' + sid}
-                        onClick={() => run('unlink-' + sid, () => linkSprintMilestone(sid, m.milestone_id, 'remove'))}>×</button>
+                        onClick={() => run('unlink-' + sid, async () => {
+                          await linkSprintMilestone(sid, m.milestone_id, 'remove');
+                          // Sync planned_milestone_id too (same pattern as LoreSprintDetail's
+                          // milestone picker) — only if it currently points at THIS milestone,
+                          // so an unrelated planned link on the same sprint isn't clobbered.
+                          if (sprintMeta.get(sid)?.planned_milestone_id === m.milestone_id) {
+                            await updateSprintPlan(sid, { planned_milestone_id: null });
+                          }
+                        })}>×</button>
                     </div>
                   );
                 })}
@@ -224,6 +232,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                     if (!sid) return;
                     run('link-' + m.milestone_id, async () => {
                       await linkSprintMilestone(sid, m.milestone_id, 'add');
+                      await updateSprintPlan(sid, { planned_milestone_id: m.milestone_id });
                       setPick({ ...pick, [m.milestone_id]: '' });
                     });
                   }}>
@@ -266,7 +275,10 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                       onChange={e => {
                         const mid = e.target.value;
                         if (!mid) return;
-                        run('assign-' + s.sprint_id, () => linkSprintMilestone(s.sprint_id, mid, 'add'));
+                        run('assign-' + s.sprint_id, async () => {
+                          await linkSprintMilestone(s.sprint_id, mid, 'add');
+                          await updateSprintPlan(s.sprint_id, { planned_milestone_id: mid });
+                        });
                       }}>
                       <option value="">{t('lore.milestoneManager.assignToMilestoneOption', '→ в веху…')}</option>
                       {milestones.map(m => <option key={m.milestone_id} value={m.milestone_id}>{m.milestone_id}</option>)}
