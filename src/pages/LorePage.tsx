@@ -30,6 +30,7 @@ import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { a11yClick } from '../components/lore/a11y';
+import { FilterBar, type FilterTagData } from '../components/lore/FilterPrimitives';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
@@ -196,6 +197,12 @@ export default function LorePage() {
     const v = params.get('as'); return v ? new Set(v.split(',').filter(Boolean)) : new Set();
   });
   const [adrCounts, setAdrCounts]       = useState<Record<string, number>>({});
+  // T34: filter chrome bars collapse to one summary line by default (approved
+  // design, docs/prototypes/two-tier-filter.html) — one toggle per section,
+  // not per-dimension (tried, rejected as noisy, see [[feedback_ux_change_process]]).
+  const [sprintFilterOpen, setSprintFilterOpen] = useState(false);
+  const [adrFilterOpen, setAdrFilterOpen]       = useState(false);
+  const [compFilterOpen, setCompFilterOpen]     = useState(false);
 
   // LH-11: sync filter state → URL params (debounce-free, small payload)
   useEffect(() => {
@@ -259,6 +266,39 @@ export default function LorePage() {
 
   const sprintPresetWorking   = sprintStatusSel.has('in_progress') && sprintStatusSel.has('partial') && sprintStatusSel.size === 2 && !sprintNoRelease;
   const sprintPresetAttention = sprintStatusSel.has('in_progress') && sprintStatusSel.size === 1 && sprintNoRelease;
+
+  // T34: one-line summary for the sprint FilterBar — replaces the old
+  // narrow-only MOB-08 active-filters strip (this now shows on every
+  // viewport, since a one-line read-only summary is the approved default
+  // state for ALL filter chrome, not just touch screens).
+  const sprintSummaryTags: FilterTagData[] = [
+    ...[...sprintStatusSel].map((k): FilterTagData => {
+      const meta  = statusMeta(k);
+      const label = STATUS_FILTERS.find(f => f.key === k)?.label ?? k;
+      return { key: 's:' + k, label, color: meta.color, onRemove: () => setSprintStatusSel(prev => { const n = new Set(prev); n.delete(k); return n; }) };
+    }),
+    ...[...sprintPriorityFilter].map((p): FilterTagData => ({
+      key: 'p:' + p, label: p, onRemove: () => setSprintPriorityFilter(prev => { const n = new Set(prev); n.delete(p); return n; }),
+    })),
+    ...[...sprintProjSel].map((id): FilterTagData => ({
+      key: 'pr:' + id, label: projLabel(id), color: projColor(id, sprintProjFacets.map(f => f.id)),
+      onRemove: () => setSprintProjSel(prev => { const n = new Set(prev); n.delete(id); return n; }),
+    })),
+    ...[...sprintCompSel].map((id): FilterTagData => ({
+      key: 'c:' + id, label: id, onRemove: () => setSprintCompSel(prev => { const n = new Set(prev); n.delete(id); return n; }),
+    })),
+    ...(sprintDatePeriod ? [{
+      key: 'date',
+      label: sprintDatePeriod === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : sprintDatePeriod === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней'),
+      onRemove: () => setSprintDatePeriod(null),
+    } as FilterTagData] : []),
+    ...(sprintNoRelease ? [{ key: 'norel', label: t('lore.page.sprints.noRelease', 'Без релиза'), onRemove: () => setSprintNoRelease(false) } as FilterTagData] : []),
+  ];
+  const sprintActiveCount = sprintStatusSel.size + sprintPriorityFilter.size + sprintProjSel.size + sprintCompSel.size + (sprintDatePeriod ? 1 : 0) + (sprintNoRelease ? 1 : 0);
+  const sprintClearAll = () => {
+    setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null);
+    setSprintPriorityFilter(new Set()); setSprintProjSel(new Set()); setSprintCompSel(new Set());
+  };
 
   const go = (s: Section) => setParams(p => {
     p.set('section', s);
@@ -388,419 +428,322 @@ export default function LorePage() {
         <div ref={setKnowledgeFilterBar} style={{ flexShrink: 0, borderBottom: '1px solid var(--bd)' }} />
       )}
 
-      {/* ── Sprint filter bar: статусы + пресеты + приоритет + даты + без релиза ─ */}
+      {/* ── Sprint filter bar — one collapsible band (статусы/пресеты/приоритет/
+           даты/без релиза + проекты + компоненты), one-line summary when closed.
+           Replaces the 3 always-visible stacked rows + narrow-only MOB-08 strip
+           (T34, unifying with the ADR/Components bands below). ────────────── */}
       {section === 'sprints' && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
-        }}>
-          {/* Статусы */}
-          {STATUS_FILTERS.map(f => {
-            const on  = sprintStatusSel.has(f.key);
-            const meta = statusMeta(f.key);
-            const cnt  = sprintCounts[f.key] ?? 0;
-            return (
-              <span key={f.key}
-                {...a11yClick(() => setSprintStatusSel(prev => {
-                  const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
-                }), `${f.label}: ${cnt}`)}
-                aria-pressed={on}
-                title={`${f.label}: ${cnt}`}
+        <FilterBar
+          tier="local"
+          label={t('lore.page.sprints.filtersLabel', 'Фильтры')}
+          activeCount={sprintActiveCount}
+          summaryTags={sprintSummaryTags}
+          onClear={sprintClearAll}
+          open={sprintFilterOpen}
+          onToggleOpen={() => setSprintFilterOpen(v => !v)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* Статусы + пресеты + приоритет + даты + без релиза */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              {STATUS_FILTERS.map(f => {
+                const on  = sprintStatusSel.has(f.key);
+                const meta = statusMeta(f.key);
+                const cnt  = sprintCounts[f.key] ?? 0;
+                return (
+                  <span key={f.key}
+                    {...a11yClick(() => setSprintStatusSel(prev => {
+                      const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
+                    }), `${f.label}: ${cnt}`)}
+                    aria-pressed={on}
+                    title={`${f.label}: ${cnt}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                      userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      border: `1px solid ${on ? meta.color : 'var(--b3)'}`,
+                      background: on ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
+                      color: on ? 'var(--t1)' : 'var(--t3)',
+                    }}
+                  >
+                    <GameIcon slug={meta.icon} size={narrow ? 14 : 11} style={{ color: meta.color }} />
+                    {!narrow && f.label}
+                    {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>}
+                  </span>
+                );
+              })}
+
+              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+
+              <span
+                {...a11yClick(() => {
+                  if (sprintPresetWorking) { setSprintStatusSel(new Set()); }
+                  else { setSprintStatusSel(new Set(['in_progress', 'partial'])); setSprintNoRelease(false); }
+                })}
+                aria-pressed={sprintPresetWorking}
+                title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                  border: `1px solid ${on ? meta.color : 'var(--b3)'}`,
-                  background: on ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
-                  color: on ? 'var(--t1)' : 'var(--t3)',
+                  border: `1px solid ${sprintPresetWorking ? 'var(--acc)' : 'var(--b3)'}`,
+                  background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
+                  color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
                 }}
-              >
-                <GameIcon slug={meta.icon} size={narrow ? 14 : 11} style={{ color: meta.color }} />
-                {/* MOB: icon-only chips on narrow — label+count live in the title tooltip */}
-                {!narrow && f.label}
-                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>}
-              </span>
-            );
-          })}
+              >⚡{!narrow && <> {t('lore.page.sprints.presetWorking', 'В работе')}</>}</span>
 
-          {/* Сепаратор */}
-          <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+              <span
+                {...a11yClick(() => {
+                  if (sprintPresetAttention) { setSprintStatusSel(new Set()); setSprintNoRelease(false); }
+                  else { setSprintStatusSel(new Set(['in_progress'])); setSprintNoRelease(true); }
+                })}
+                aria-pressed={sprintPresetAttention}
+                title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
+                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                  border: `1px solid ${sprintPresetAttention ? 'var(--dng)' : 'var(--b3)'}`,
+                  background: sprintPresetAttention ? 'color-mix(in srgb, var(--dng) 16%, transparent)' : 'transparent',
+                  color: sprintPresetAttention ? 'var(--dng)' : 'var(--t3)',
+                }}
+              >⚠{!narrow && <> {t('lore.page.sprints.presetAttention', 'Внимание')}</>}</span>
 
-          {/* Пресет: В работе */}
-          <span
-            {...a11yClick(() => {
-              if (sprintPresetWorking) { setSprintStatusSel(new Set()); }
-              else { setSprintStatusSel(new Set(['in_progress', 'partial'])); setSprintNoRelease(false); }
-            })}
-            aria-pressed={sprintPresetWorking}
-            title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-              border: `1px solid ${sprintPresetWorking ? 'var(--acc)' : 'var(--b3)'}`,
-              background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
-              color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
-            }}
-          >⚡{!narrow && <> {t('lore.page.sprints.presetWorking', 'В работе')}</>}</span>
+              <span style={{ flex: 1 }} />
 
-          {/* Пресет: Нужно внимание */}
-          <span
-            {...a11yClick(() => {
-              if (sprintPresetAttention) { setSprintStatusSel(new Set()); setSprintNoRelease(false); }
-              else { setSprintStatusSel(new Set(['in_progress'])); setSprintNoRelease(true); }
-            })}
-            aria-pressed={sprintPresetAttention}
-            title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-              border: `1px solid ${sprintPresetAttention ? 'var(--dng)' : 'var(--b3)'}`,
-              background: sprintPresetAttention ? 'color-mix(in srgb, var(--dng) 16%, transparent)' : 'transparent',
-              color: sprintPresetAttention ? 'var(--dng)' : 'var(--t3)',
-            }}
-          >⚠{!narrow && <> {t('lore.page.sprints.presetAttention', 'Внимание')}</>}</span>
+              {(['P0', 'P1', 'P2'] as const).map(p => {
+                const on    = sprintPriorityFilter.has(p);
+                const color = p === 'P0' ? 'var(--dng)' : p === 'P1' ? 'var(--wrn)' : 'var(--t3)';
+                return (
+                  <span key={p}
+                    {...a11yClick(() => setSprintPriorityFilter(prev => {
+                      const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n;
+                    }))}
+                    aria-pressed={on}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
+                      userSelect: 'none', fontSize: 11, fontWeight: on ? 600 : 400,
+                      padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      border: `1px solid ${on ? color : 'var(--b3)'}`,
+                      background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
+                      color: on ? color : 'var(--t3)',
+                    }}
+                  >{p}</span>
+                );
+              })}
 
-          {/* Распорка */}
-          <span style={{ flex: 1 }} />
+              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
 
-          {/* Приоритет */}
-          {(['P0', 'P1', 'P2'] as const).map(p => {
-            const on    = sprintPriorityFilter.has(p);
-            const color = p === 'P0' ? 'var(--dng)' : p === 'P1' ? 'var(--wrn)' : 'var(--t3)';
-            return (
-              <span key={p}
-                {...a11yClick(() => setSprintPriorityFilter(prev => {
-                  const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n;
-                }))}
-                aria-pressed={on}
+              {(['month', 'quarter', '90d'] as DatePeriod[]).map(p => {
+                const label = p === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : p === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней');
+                const on    = sprintDatePeriod === p;
+                return (
+                  <span key={p!}
+                    {...a11yClick(() => setSprintDatePeriod(on ? null : p))}
+                    aria-pressed={on}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
+                      userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
+                      background: on ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
+                      color: on ? 'var(--acc)' : 'var(--t3)',
+                    }}
+                  >{label}</span>
+                );
+              })}
+
+              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+
+              <span
+                {...a11yClick(() => setSprintNoRelease(v => !v))}
+                aria-pressed={sprintNoRelease}
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, fontWeight: on ? 600 : 400,
-                  padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                  border: `1px solid ${on ? color : 'var(--b3)'}`,
-                  background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
-                  color: on ? color : 'var(--t3)',
-                }}
-              >{p}</span>
-            );
-          })}
-
-          <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
-
-          {/* Даты */}
-          {(['month', 'quarter', '90d'] as DatePeriod[]).map(p => {
-            const label = p === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : p === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней');
-            const on    = sprintDatePeriod === p;
-            return (
-              <span key={p!}
-                {...a11yClick(() => setSprintDatePeriod(on ? null : p))}
-                aria-pressed={on}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
                   userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                  border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
-                  background: on ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
-                  color: on ? 'var(--acc)' : 'var(--t3)',
+                  border: `1px solid ${sprintNoRelease ? 'var(--acc)' : 'var(--b3)'}`,
+                  background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
+                  color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
                 }}
-              >{label}</span>
-            );
-          })}
+              >{t('lore.page.sprints.noRelease', 'Без релиза')}</span>
+            </div>
 
-          <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
+            {/* Проекты — facet counts reflect whatever's already selected above */}
+            {sprintProjFacets.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>
+                  {t('lore.page.sprints.projectsLabel', 'Проекты')}
+                </span>
+                {sprintProjFacets.map(({ id, count }) => {
+                  const on = sprintProjSel.has(id);
+                  const color = projColor(id, sprintProjFacets.map(f => f.id));
+                  const reachable = count > 0 || on;
+                  return (
+                    <span key={id}
+                      {...a11yClick(() => setSprintProjSel(prev => {
+                        const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+                      }), `${id} (${count})`)}
+                      aria-pressed={on}
+                      title={`${id} (${count})`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                        userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                        border: `1px solid ${on ? color : 'var(--b3)'}`,
+                        background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                        color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
+                      }}
+                    >
+                      <span style={{ width: narrow ? 10 : 6, height: narrow ? 10 : 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                      {!narrow && projLabel(id)}
+                      {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
-          {/* Без релиза */}
-          <span
-            {...a11yClick(() => setSprintNoRelease(v => !v))}
-            aria-pressed={sprintNoRelease}
-            style={{
-              display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-              userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-              border: `1px solid ${sprintNoRelease ? 'var(--acc)' : 'var(--b3)'}`,
-              background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
-              color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
-            }}
-          >{t('lore.page.sprints.noRelease', 'Без релиза')}</span>
-
-          {/* Сброс */}
-          {(sprintStatusSel.size > 0 || sprintNoRelease || sprintDatePeriod || sprintPriorityFilter.size > 0 || sprintProjSel.size > 0 || sprintCompSel.size > 0) && (
-            <>
-              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
-              <span
-                {...a11yClick(() => { setSprintStatusSel(new Set()); setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set()); setSprintProjSel(new Set()); setSprintCompSel(new Set()); }, t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
-                style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
-              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Sprint project filter bar — full-width, own row (moved out of the
-           narrow sidebar list per user feedback); faceted: counts reflect
-           whatever's already selected in the status/priority/date filter
-           above ─────────────────────────────────────────────────────────── */}
-      {section === 'sprints' && sprintProjFacets.length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>
-            {t('lore.page.sprints.projectsLabel', 'Проекты')}
-          </span>
-          {sprintProjFacets.map(({ id, count }) => {
-            const on = sprintProjSel.has(id);
-            const color = projColor(id, sprintProjFacets.map(f => f.id));
-            const reachable = count > 0 || on;
-            return (
-              <span key={id}
-                {...a11yClick(() => setSprintProjSel(prev => {
-                  const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
-                }), `${id} (${count})`)}
-                aria-pressed={on}
-                title={`${id} (${count})`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                  border: `1px solid ${on ? color : 'var(--b3)'}`,
-                  background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
-                  color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
-                }}
-              >
-                <span style={{ width: narrow ? 10 : 6, height: narrow ? 10 : 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                {!narrow && projLabel(id)}
-                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
-              </span>
-            );
-          })}
-          {sprintProjSel.size > 0 && (
-            <span
-              {...a11yClick(() => setSprintProjSel(new Set()), t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
-              style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-              title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
-            >✕ {t('lore.page.filters.reset', 'сброс')}</span>
-          )}
-        </div>
-      )}
-
-      {/* ── Sprint component filter bar — separate full-width row, collapsible
-           since the component list can get long; each chip's colour/icon is
-           unique per component (not one flat repeated icon) ──────────────── */}
-      {section === 'sprints' && sprintCompFacets.length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
-        }}>
-          <span
-            {...a11yClick(() => setSprintCompCollapsed(v => !v))}
-            aria-expanded={!sprintCompCollapsed}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', userSelect: 'none',
-              fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2,
-            }}
-            title={sprintCompCollapsed ? t('lore.page.sprints.expandComponents', 'Развернуть') : t('lore.page.sprints.collapseComponents', 'Свернуть')}
-          >
-            <span style={{ display: 'inline-block', transform: sprintCompCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.12s' }}>▾</span>
-            {t('lore.page.sprints.componentsLabel', 'Компоненты')}
-            {sprintCompSel.size > 0 && <span style={{ color: 'var(--acc)', fontWeight: 600 }}>({sprintCompSel.size})</span>}
-          </span>
-          {!sprintCompCollapsed && sprintCompFacets.map(({ id, count, icon, area }) => {
-            const on = sprintCompSel.has(id);
-            // Real per-component icon + area colour when the components slice
-            // has loaded; fall back to a generated palette colour + generic
-            // icon so chips still render (and stay distinguishable) before
-            // that fetch resolves.
-            const color = area ? areaColor(area) : compColor(id, sprintCompFacets.map(f => f.id));
-            const reachable = count > 0 || on;
-            return (
-              <span key={id}
-                {...a11yClick(() => setSprintCompSel(prev => {
-                  const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
-                }), `${id} (${count})`)}
-                aria-pressed={on}
-                title={`${id} (${count})`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                  border: `1px solid ${on ? color : 'var(--b3)'}`,
-                  background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
-                  color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
-                }}
-              >
-                <GameIcon slug={icon ?? 'puzzle'} size={narrow ? 14 : 11} style={{ color }} />
-                {!narrow && id}
-                {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
-              </span>
-            );
-          })}
-          {sprintCompCollapsed && sprintCompSel.size > 0 && (
-            <span style={{ fontSize: 11, color: 'var(--t3)' }}>
-              {[...sprintCompSel].join(', ')}
-            </span>
-          )}
-          {sprintCompSel.size > 0 && (
-            <span
-              {...a11yClick(() => setSprintCompSel(new Set()), t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
-              style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-              title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
-            >✕ {t('lore.page.filters.reset', 'сброс')}</span>
-          )}
-        </div>
-      )}
-
-      {/* ── MOB-08: active-filters strip (narrow only). The icon-only chips rely
-           on title tooltips, which DON'T EXIST on touch — this strip is the
-           readable feedback: every active filter as a labelled chip, tap × to
-           remove. Desktop keeps labels inline, so the strip is narrow-only. ── */}
-      {narrow && section === 'sprints' &&
-        (sprintStatusSel.size > 0 || sprintPriorityFilter.size > 0 || sprintProjSel.size > 0 ||
-         sprintCompSel.size > 0 || sprintDatePeriod || sprintNoRelease) && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-          padding: '6px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
-        }}>
-          {[...sprintStatusSel].map(k => {
-            const meta = statusMeta(k);
-            const label = STATUS_FILTERS.find(f => f.key === k)?.label ?? k;
-            return (
-              <span key={'s' + k}
-                {...a11yClick(() => setSprintStatusSel(prev => { const n = new Set(prev); n.delete(k); return n; }), `${label} ✕`)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
-                         padding: '5px 9px', borderRadius: 12, whiteSpace: 'nowrap',
-                         background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
-                         border: `1px solid color-mix(in srgb, ${meta.color} 30%, transparent)`, color: 'var(--t1)' }}
-              >{label} ✕</span>
-            );
-          })}
-          {[...sprintPriorityFilter].map(p => (
-            <span key={'p' + p}
-              {...a11yClick(() => setSprintPriorityFilter(prev => { const n = new Set(prev); n.delete(p); return n; }), `${p} ✕`)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
-                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
-            >{p} ✕</span>
-          ))}
-          {[...sprintProjSel].map(id => (
-            <span key={'pr' + id}
-              {...a11yClick(() => setSprintProjSel(prev => { const n = new Set(prev); n.delete(id); return n; }), `${projLabel(id)} ✕`)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
-                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
-            >{projLabel(id)} ✕</span>
-          ))}
-          {[...sprintCompSel].map(id => (
-            <span key={'c' + id}
-              {...a11yClick(() => setSprintCompSel(prev => { const n = new Set(prev); n.delete(id); return n; }), `${id} ✕`)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
-                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
-            >{id} ✕</span>
-          ))}
-          {sprintDatePeriod && (
-            <span {...a11yClick(() => setSprintDatePeriod(null))}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
-                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
-            >{sprintDatePeriod === 'month' ? t('lore.page.sprints.dateMonth', 'Этот месяц') : sprintDatePeriod === 'quarter' ? t('lore.page.sprints.dateQuarter', 'Квартал') : t('lore.page.sprints.date90d', '90 дней')} ✕</span>
-          )}
-          {sprintNoRelease && (
-            <span {...a11yClick(() => setSprintNoRelease(false))}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12,
-                       padding: '5px 9px', borderRadius: 12, background: 'var(--bg2)', border: '1px solid var(--b3)', color: 'var(--t1)' }}
-            >{t('lore.page.sprints.noRelease', 'Без релиза')} ✕</span>
-          )}
-        </div>
-      )}
-
-      {/* ── ADR filter bar ──────────────────────────────────────────────────── */}
-      {section === 'adrs' && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
-        }}>
-          {ADR_STATUS_FILTERS.map(f => {
-            const on  = adrStatusSel.has(f.key);
-            const cnt = adrCounts[f.key] ?? 0;
-            return (
-              <span key={f.key}
-                {...a11yClick(() => setAdrStatusSel(prev => {
-                  const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
-                }), `${adrStatusLabel(t, f.key)}: ${cnt}`)}
-                aria-pressed={on}
-                title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                  border: `1px solid ${on ? f.color : 'var(--b3)'}`,
-                  background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
-                  color: on ? 'var(--t1)' : 'var(--t3)',
-                }}
-              >
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
-                {adrStatusLabel(t, f.key)}
-                <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
-              </span>
-            );
-          })}
-          {adrStatusSel.size > 0 && (
-            <>
-              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
-              <span
-                {...a11yClick(() => setAdrStatusSel(new Set()), t('lore.page.filters.resetTitle', 'Сбросить фильтры'))}
-                style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title={t('lore.page.filters.resetTitle', 'Сбросить фильтры')}
-              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
-            </>
-          )}
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 10, color: 'var(--t3)' }}>
-            {adrStatusSel.size === 0
-              ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
-              : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
-          </span>
-        </div>
-      )}
-
-      {/* ── Component filter bar ─────────────────────────────────────────────── */}
-      {section === 'components' && Object.keys(compAreaCounts).length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
-          padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
-        }}>
-          {Object.entries(compAreaCounts)
-            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-            .map(([area, cnt]) => {
-              const on = compAreaSel.has(area);
-              const color = areaColor(area);
-              return (
-                <span key={area}
-                  {...a11yClick(() => setCompAreaSel(prev => {
-                    const n = new Set(prev); n.has(area) ? n.delete(area) : n.add(area); return n;
-                  }), `${area}: ${cnt}`)}
-                  aria-pressed={on}
-                  title={`${area}: ${cnt}`}
+            {/* Компоненты — nested show-more/less (long list), independent of the outer collapse */}
+            {sprintCompFacets.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 4, flexWrap: 'wrap' }}>
+                <span
+                  {...a11yClick(() => setSprintCompCollapsed(v => !v))}
+                  aria-expanded={!sprintCompCollapsed}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', userSelect: 'none',
+                    fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2,
+                  }}
+                  title={sprintCompCollapsed ? t('lore.page.sprints.expandComponents', 'Развернуть') : t('lore.page.sprints.collapseComponents', 'Свернуть')}
+                >
+                  <span style={{ display: 'inline-block', transform: sprintCompCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.12s' }}>▾</span>
+                  {t('lore.page.sprints.componentsLabel', 'Компоненты')}
+                  {sprintCompSel.size > 0 && <span style={{ color: 'var(--acc)', fontWeight: 600 }}>({sprintCompSel.size})</span>}
+                </span>
+                {!sprintCompCollapsed && sprintCompFacets.map(({ id, count, icon, area }) => {
+                  const on = sprintCompSel.has(id);
+                  const color = area ? areaColor(area) : compColor(id, sprintCompFacets.map(f => f.id));
+                  const reachable = count > 0 || on;
+                  return (
+                    <span key={id}
+                      {...a11yClick(() => setSprintCompSel(prev => {
+                        const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+                      }), `${id} (${count})`)}
+                      aria-pressed={on}
+                      title={`${id} (${count})`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                        userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                        border: `1px solid ${on ? color : 'var(--b3)'}`,
+                        background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                        color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
+                      }}
+                    >
+                      <GameIcon slug={icon ?? 'puzzle'} size={narrow ? 14 : 11} style={{ color }} />
+                      {!narrow && id}
+                      {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
+                    </span>
+                  );
+                })}
+                {sprintCompCollapsed && sprintCompSel.size > 0 && (
+                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+                    {[...sprintCompSel].join(', ')}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </FilterBar>
+      )}
+
+      {/* ── ADR filter bar — one collapsible band, one-line summary when closed ── */}
+      {section === 'adrs' && (
+        <FilterBar
+          tier="local"
+          label={t('lore.page.adrs.filtersLabel', 'Фильтры')}
+          activeCount={adrStatusSel.size}
+          summaryTags={ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
+            key: f.key, label: adrStatusLabel(t, f.key), color: f.color,
+            onRemove: () => setAdrStatusSel(prev => { const n = new Set(prev); n.delete(f.key); return n; }),
+          }))}
+          onClear={() => setAdrStatusSel(new Set())}
+          open={adrFilterOpen}
+          onToggleOpen={() => setAdrFilterOpen(v => !v)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            {ADR_STATUS_FILTERS.map(f => {
+              const on  = adrStatusSel.has(f.key);
+              const cnt = adrCounts[f.key] ?? 0;
+              return (
+                <span key={f.key}
+                  {...a11yClick(() => setAdrStatusSel(prev => {
+                    const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
+                  }), `${adrStatusLabel(t, f.key)}: ${cnt}`)}
+                  aria-pressed={on}
+                  title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
                     userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                    border: `1px solid ${on ? color : 'var(--b3)'}`,
-                    background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                    border: `1px solid ${on ? f.color : 'var(--b3)'}`,
+                    background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
                     color: on ? 'var(--t1)' : 'var(--t3)',
                   }}
                 >
-                  {area}
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
+                  {adrStatusLabel(t, f.key)}
                   <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
                 </span>
               );
             })}
-          {compAreaSel.size > 0 && (
-            <>
-              <div style={{ width: 1, height: 14, background: 'var(--b2)', flexShrink: 0, margin: '0 2px' }} />
-              <span
-                {...a11yClick(() => setCompAreaSel(new Set()), t('lore.page.components.resetAreaFilterTitle', 'Сбросить фильтр по area'))}
-                style={{ fontSize: 11, color: 'var(--t3)', cursor: 'pointer', padding: '2px 4px', whiteSpace: 'nowrap' }}
-                title={t('lore.page.components.resetAreaFilterTitle', 'Сбросить фильтр по area')}
-              >✕ {t('lore.page.filters.reset', 'сброс')}</span>
-            </>
-          )}
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 10, color: 'var(--t3)' }}>
-            {t('lore.page.components.totalCount', '{{count}} компонентов', { count: Object.values(compAreaCounts).reduce((a, b) => a + b, 0) })}
-          </span>
-        </div>
+            <span style={{ flex: 1 }} />
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+              {adrStatusSel.size === 0
+                ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
+                : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
+            </span>
+          </div>
+        </FilterBar>
+      )}
+
+      {/* ── Component filter bar — one collapsible band, one-line summary when closed ── */}
+      {section === 'components' && Object.keys(compAreaCounts).length > 0 && (
+        <FilterBar
+          tier="local"
+          label={t('lore.page.components.filtersLabel', 'Фильтры')}
+          activeCount={compAreaSel.size}
+          summaryTags={[...compAreaSel].map((area): FilterTagData => ({
+            key: area, label: area, color: areaColor(area),
+            onRemove: () => setCompAreaSel(prev => { const n = new Set(prev); n.delete(area); return n; }),
+          }))}
+          onClear={() => setCompAreaSel(new Set())}
+          open={compFilterOpen}
+          onToggleOpen={() => setCompFilterOpen(v => !v)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            {Object.entries(compAreaCounts)
+              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+              .map(([area, cnt]) => {
+                const on = compAreaSel.has(area);
+                const color = areaColor(area);
+                return (
+                  <span key={area}
+                    {...a11yClick(() => setCompAreaSel(prev => {
+                      const n = new Set(prev); n.has(area) ? n.delete(area) : n.add(area); return n;
+                    }), `${area}: ${cnt}`)}
+                    aria-pressed={on}
+                    title={`${area}: ${cnt}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                      userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      border: `1px solid ${on ? color : 'var(--b3)'}`,
+                      background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
+                      color: on ? 'var(--t1)' : 'var(--t3)',
+                    }}
+                  >
+                    {area}
+                    <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                  </span>
+                );
+              })}
+            <span style={{ flex: 1 }} />
+            <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+              {t('lore.page.components.totalCount', '{{count}} компонентов', { count: Object.values(compAreaCounts).reduce((a, b) => a + b, 0) })}
+            </span>
+          </div>
+        </FilterBar>
       )}
 
       {/* ── Sprint stats row ─────────────────────────────────────────────────── */}

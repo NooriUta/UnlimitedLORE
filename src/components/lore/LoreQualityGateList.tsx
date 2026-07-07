@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
+import { FilterBar, type FilterTagData } from './FilterPrimitives';
 
 interface QGRow {
   qg_id: string;
@@ -90,6 +91,8 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
   const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
   const [compSel, setCompSel]     = useState<Set<string>>(new Set());
   const [q, setQ]                 = useState('');
+  // T34: same collapsible-band pattern as the sprint/ADR/component bars in LorePage.tsx
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -177,39 +180,58 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
         </button>
       </div>
 
-      {/* Filters — T01: status chips */}
-      {allStatuses.length > 1 && (
-        <div style={S.filterRow}>
-          <span style={S.filterLabel}>{t('lore.qualityGateList.statusLabel', 'Статус')}</span>
-          {allStatuses.map(s => {
-            const m  = statusMetaOf(t, s);
-            const on = statusSel.has(s);
-            return (
-              <span key={s} style={S.chip(on, m.color)} onClick={() => toggleStatus(s)}>
-                {m.label}
-                <span style={{ fontSize: 9, opacity: 0.6 }}>{rows.filter(r => r.status === s).length}</span>
-              </span>
-            );
-          })}
-          {statusSel.size > 0 && <span style={S.reset} onClick={() => setStatusSel(new Set())}>✕</span>}
-        </div>
-      )}
-
-      {/* Filters — T01: component chips */}
-      {allComps.length > 1 && (
-        <div style={S.filterRow}>
-          <span style={S.filterLabel}>{t('lore.qualityGateList.moduleLabel', 'Модуль')}</span>
-          {allComps.map(c => {
-            const on = compSel.has(c);
-            return (
-              <span key={c} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c)}>
-                {c}
-                <span style={{ fontSize: 9, opacity: 0.6 }}>{rows.filter(r => r.component_id === c).length}</span>
-              </span>
-            );
-          })}
-          {compSel.size > 0 && <span style={S.reset} onClick={() => setCompSel(new Set())}>✕</span>}
-        </div>
+      {/* Filters — one collapsible band, one-line summary when closed (T34) */}
+      {(allStatuses.length > 1 || allComps.length > 1) && (
+        <FilterBar
+          tier="local"
+          label={t('lore.qualityGateList.filtersLabel', 'Фильтры')}
+          activeCount={statusSel.size + compSel.size}
+          summaryTags={[
+            ...[...statusSel].map((s): FilterTagData => ({
+              key: 's:' + s, label: statusMetaOf(t, s).label, color: statusMetaOf(t, s).color,
+              onRemove: () => setStatusSel(prev => { const n = new Set(prev); n.delete(s); return n; }),
+            })),
+            ...[...compSel].map((c): FilterTagData => ({
+              key: 'c:' + c, label: c,
+              onRemove: () => setCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
+            })),
+          ]}
+          onClear={() => { setStatusSel(new Set()); setCompSel(new Set()); }}
+          open={filterOpen}
+          onToggleOpen={() => setFilterOpen(v => !v)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {allStatuses.length > 1 && (
+              <div style={S.filterRow}>
+                <span style={S.filterLabel}>{t('lore.qualityGateList.statusLabel', 'Статус')}</span>
+                {allStatuses.map(s => {
+                  const m  = statusMetaOf(t, s);
+                  const on = statusSel.has(s);
+                  return (
+                    <span key={s} style={S.chip(on, m.color)} onClick={() => toggleStatus(s)}>
+                      {m.label}
+                      <span style={{ fontSize: 9, opacity: 0.6 }}>{rows.filter(r => r.status === s).length}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {allComps.length > 1 && (
+              <div style={S.filterRow}>
+                <span style={S.filterLabel}>{t('lore.qualityGateList.moduleLabel', 'Модуль')}</span>
+                {allComps.map(c => {
+                  const on = compSel.has(c);
+                  return (
+                    <span key={c} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c)}>
+                      {c}
+                      <span style={{ fontSize: 9, opacity: 0.6 }}>{rows.filter(r => r.component_id === c).length}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </FilterBar>
       )}
 
       {/* List — selecting a row opens the full ADR-QG-004 report in LoreQGDetail */}
