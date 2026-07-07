@@ -764,7 +764,7 @@ export default function LorePage() {
               padding: '3px 14px', flexShrink: 0,
               borderLeft: i === 0 ? 'none' : '1px solid var(--bd)',
             }}>
-              <span style={{ fontSize: 15, fontWeight: 500, color: s.color, lineHeight: 1.1 }}>{s.value}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: s.color, lineHeight: 1.1 }}>{s.value}</span>
               <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{s.label}</span>
             </div>
           ))}
@@ -774,7 +774,7 @@ export default function LorePage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             padding: '3px 14px', flexShrink: 0, borderLeft: '1px solid var(--bd)',
           }}>
-            <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--suc)', lineHeight: 1.1 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--suc)', lineHeight: 1.1 }}>
               {pct}%
             </span>
             <div style={{ width: 44, height: 3, background: 'var(--b2)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>

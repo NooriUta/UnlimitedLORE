@@ -282,7 +282,7 @@ const S = {
     padding: '5px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
     flexWrap: 'wrap' as const,
   },
-  statTotal: { fontSize: 15, fontWeight: 600, color: 'var(--t1)', lineHeight: 1 },
+  statTotal: { fontSize: 13, fontWeight: 600, color: 'var(--t1)', lineHeight: 1 },
   statBadge: (color: string) => ({
     fontSize: 10, padding: '1px 7px', borderRadius: 10,
     background: `color-mix(in srgb, ${color} 14%, transparent)`,

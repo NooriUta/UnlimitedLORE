@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parsePrRefs, normalizeStatus, formatEffortDays } from './loreUtils';
-import { marked } from 'marked';
-import { sanitizeMd } from './sanitizeHtml';
+import { MartProse } from '../bench/MartProse';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
@@ -446,10 +445,6 @@ const mdBox: React.CSSProperties = {
   padding: '4px 8px 8px 26px', overflowX: 'auto',
 };
 
-function mdHtml(md: string | null | undefined): string {
-  return md && md.trim() ? sanitizeMd(marked.parse(md) as string) : '';
-}
-
 function TaskLine({ t: task, allComps, onChanged, onError }: {
   t: LoreSprintTask;
   allComps: CompRow[];
@@ -589,7 +584,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
       )}
 
       {hasDetail && !editing && expanded && (
-        <div className="lore-md" style={mdBox} dangerouslySetInnerHTML={{ __html: mdHtml(task.note_md) }} />
+        <MartProse text={task.note_md} style={mdBox} />
       )}
     </div>
   );
@@ -1041,7 +1036,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             </div>
           </div>
         ) : sprint.context_md ? (
-          <div className="lore-md" style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: mdHtml(sprint.context_md) }} />
+          <MartProse text={sprint.context_md} style={{ fontSize: 10, color: 'var(--t2)', lineHeight: 1.55 }} />
         ) : (
           <div style={{ fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>{t('lore.sprintDetail.context.empty', 'Контекст не заполнен')}</div>
         )}
