@@ -98,16 +98,17 @@ public class LoreIngestService {
         if (created) {
             String stateUid = java.util.UUID.randomUUID().toString();
             String now = java.time.Instant.now().toString();
-            exec("INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now",
-                Map.of("su", stateUid, "sraw", statusRaw, "now", now));
-            exec("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
-                    "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su)",
-                Map.of("sp", sprintId, "su", stateUid));
-            // created_date: stamped exactly once, here — unlike valid_from (which
-            // moves on every SCD2 transition), this must survive untouched so
-            // lead/cycle-time analytics have a real creation timestamp to anchor on.
-            exec("UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp",
-                Map.of("now", now, "sp", sprintId));
+            // A1: seed hist row + HAS_STATE edge + created_date stamp atomically in
+            // one sqlscript transaction — a partial failure leaves no KnowSprintHist
+            // without its HAS_STATE edge. created_date is stamped exactly once here —
+            // unlike valid_from (which moves on every SCD2 transition), it must
+            // survive untouched so lead/cycle-time analytics have a real anchor.
+            execScript(
+                "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now;" +
+                "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
+                "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su);" +
+                "UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp;",
+                Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
         }
 
         LOG.infof("[LORE] created sprint %s (new=%b)", sprintId, created);
@@ -650,6 +651,14 @@ public class LoreIngestService {
     private void exec(String sql, Map<String, Object> params) {
         client.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sql", sql, params))
+              .await().indefinitely();
+    }
+
+    /** Runs a multi-statement `;`-separated sqlscript in a single ArcadeDB
+     *  transaction — all-or-nothing (A1), so a partial seed can't leave orphans. */
+    private void execScript(String script, Map<String, Object> params) {
+        client.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sqlscript", script, params))
               .await().indefinitely();
     }
 

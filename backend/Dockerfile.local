@@ -1,5 +1,30 @@
+# Multi-stage build — compiles the Quarkus app from source inside the image, so
+# there is no need to run `./gradlew build` on the host first (the previous
+# single-stage Dockerfile copied a prebuilt build/quarkus-app and silently
+# shipped stale bytecode when that step was forgotten).
+
+# ── Build stage ───────────────────────────────────────────────────────────────
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /src
+
+# Warm the dependency layer on build scripts alone, so source-only edits don't
+# re-resolve every dependency.
+COPY gradlew gradlew.bat settings.gradle build.gradle gradle.properties ./
+COPY gradle ./gradle
+RUN chmod +x gradlew && ./gradlew --no-daemon --version
+
+# Compile + assemble the Quarkus app. Tests run in CI (they need a live
+# ArcadeDB), so the image build stays hermetic with -x test.
+COPY src ./src
+COPY db-schema ./db-schema
+RUN ./gradlew --no-daemon clean build -x test
+
+# ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre
+# curl is used by the docker-compose healthcheck to probe /q/health/live.
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY build/quarkus-app/ ./
+COPY --from=build /src/build/quarkus-app/ ./
 EXPOSE 9100
 ENTRYPOINT ["java", "-jar", "quarkus-run.jar"]

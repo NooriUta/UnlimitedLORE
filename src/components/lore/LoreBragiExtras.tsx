@@ -128,7 +128,7 @@ export function LoreBragiArchive() {
         <table style={S.table}>
           <thead><tr>
             <th style={S.th}>{t('bragi.extras.archive.colPublication', 'публикация')}</th><th style={S.th}>{t('bragi.extras.archive.colChannel', 'канал')}</th><th style={S.th}>{t('bragi.extras.archive.colDate', 'дата')}</th>
-            <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th><th style={S.th}>{t('bragi.extras.archive.colTakeaway', 'вывод')}</th>
+            <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th>
           </tr></thead>
           <tbody>
             {rows.map(r => (
@@ -139,7 +139,6 @@ export function LoreBragiArchive() {
                 <td style={S.tdNum}>{r.views || '—'}</td>
                 <td style={S.tdNum}>{r.clicks || '—'}</td>
                 <td style={S.tdNum}>{r.demo || '—'}</td>
-                <td style={S.td}>—</td>
               </tr>
             ))}
           </tbody>
@@ -270,7 +269,7 @@ function statusDotStyle(color: string): React.CSSProperties {
 const S: Record<string, React.CSSProperties> = {
   descRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   newBtn:  { flex: 'none', height: 28, padding: '0 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
-             background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+             background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   desc:    { color: 'var(--t2)', fontSize: 14, marginBottom: 18 },
   hint:    { fontSize: 12, color: 'var(--t3)' },
   card:    { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '10px 18px' },

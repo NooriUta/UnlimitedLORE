@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
+import { sanitizeMd } from './sanitizeHtml';
 
 // REN-00 (SPRINT_BRAGI_PLATFORM_RENDER) — shared render engine for the BRAGI
 // publication preview. Every platform "skin" (master / Telegram / VC / Habr /
@@ -155,7 +156,7 @@ function applyImageWidths(html: string): string {
 }
 
 function md(text: string): string {
-  return text && text.trim() ? applyImageWidths(marked.parse(text) as string) : '';
+  return text && text.trim() ? sanitizeMd(applyImageWidths(marked.parse(text) as string)) : '';
 }
 
 /** Inner body — the markdown rendered to HTML. Shared by every skin. */

@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
   type LoreAdrRow, type LoreSpecRow, type LoreKnowDocRow, type LoreComponent,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
+import { FilterBar, type FilterTagData } from './FilterPrimitives';
+import { EmptyState } from './EmptyState';
 
 // Unified knowledge listing under «Компоненты»: ADR / specs / runbooks / docs /
 // quality-gates in one flat, typed, component-linked list. Replaces the per-component
@@ -66,12 +69,22 @@ function exportRunbooksMd(rows: { id: string; title: string; component: string |
 interface QgRow { qg_id: string; name: string | null; component_id: string | null; status: string | null; date_created: string | null; }
 
 export const ARTIFACT_KINDS_META: { kind: ArtifactKind; color: string; icon: string }[] = [
-  { kind: 'adr',     color: '#4a90d9', icon: 'scroll-quill' },
-  { kind: 'spec',    color: '#4caf50', icon: 'white-book' },
-  { kind: 'runbook', color: '#e8923a', icon: 'spell-book' },
-  { kind: 'doc',     color: '#a974d6', icon: 'papers' },
-  { kind: 'qg',      color: '#3fb8a0', icon: 'checkered-flag' },
+  { kind: 'adr',     color: 'var(--kind-adr)', icon: 'scroll-quill' },
+  { kind: 'spec',    color: 'var(--kind-spec)', icon: 'white-book' },
+  { kind: 'runbook', color: 'var(--kind-runbook)', icon: 'spell-book' },
+  { kind: 'doc',     color: 'var(--kind-doc)', icon: 'papers' },
+  { kind: 'qg',      color: 'var(--kind-qg)', icon: 'checkered-flag' },
 ];
+// T16: labels for the 5 kinds above — kept as a separate lookup (not baked
+// into ARTIFACT_KINDS_META) because labels need useTranslation(), which
+// isn't available at module scope.
+const ARTIFACT_KIND_LABEL_KEYS: Record<ArtifactKind, [string, string]> = {
+  adr:     ['lore.artifactList.kindAdr', 'ADR'],
+  spec:    ['lore.artifactList.kindSpec', 'Спеки'],
+  runbook: ['lore.artifactList.kindRunbook', 'Runbooks'],
+  doc:     ['lore.artifactList.kindDoc', 'Документы'],
+  qg:      ['lore.artifactList.kindQg', 'Quality Gates'],
+};
 const KIND_ORDER = Object.fromEntries(ARTIFACT_KINDS_META.map((k, i) => [k.kind, i])) as Record<ArtifactKind, number>;
 
 const S = {
@@ -142,13 +155,11 @@ interface Props {
 
 export default function LoreArtifactList({ onError, onOpen, selectedKind, selectedId, kinds, headerContainer }: Props) {
   const { t } = useTranslation();
-  const ALL_ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] = [
-    { kind: 'adr',     label: 'ADR', color: '#4a90d9', icon: 'scroll-quill' },
-    { kind: 'spec',    label: t('lore.artifactList.kindSpec', 'Спеки'), color: '#4caf50', icon: 'white-book' },
-    { kind: 'runbook', label: t('lore.artifactList.kindRunbook', 'Runbooks'), color: '#e8923a', icon: 'spell-book' },
-    { kind: 'doc',     label: t('lore.artifactList.kindDoc', 'Документы'), color: '#a974d6', icon: 'papers' },
-    { kind: 'qg',      label: t('lore.artifactList.kindQg', 'Quality Gates'), color: '#3fb8a0', icon: 'checkered-flag' },
-  ];
+  const ALL_ARTIFACT_KINDS: { kind: ArtifactKind; label: string; color: string; icon: string }[] =
+    ARTIFACT_KINDS_META.map(k => {
+      const [key, fallback] = ARTIFACT_KIND_LABEL_KEYS[k.kind];
+      return { ...k, label: t(key, fallback) };
+    });
   // kinds is typically passed as a fresh array literal on every parent render
   // (e.g. kinds={['runbook','doc']}) — keying on the array reference would
   // recreate kindsFilter (and retrigger the fetch effect) on every render.
@@ -160,14 +171,19 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
   const [items, setItems]     = useState<Artifact[]>([]);
   const [comps, setComps]     = useState<LoreComponent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [enabled, setEnabled] = useState<Set<ArtifactKind>>(new Set(ARTIFACT_KINDS.map(k => k.kind)));
+  // T34: unified "include" semantics (empty = show all, same as ADR/sprint/
+  // component/QG filters) — was inverted ("exclude": start with every kind
+  // enabled, toggle OFF to hide), the one outlier in the app. `enabled.size
+  // === 0` now means "no type filter active", matching everywhere else.
+  const [enabled, setEnabled] = useState<Set<ArtifactKind>>(new Set());
   const [compSel, setCompSel] = useState<Set<string>>(new Set());
   const [q, setQ]             = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const showsKind = (k: ArtifactKind) => enabled.size === 0 || enabled.has(k);
 
-  // Keep `enabled` in sync if the set of kinds this instance shows ever changes.
+  // Reset the type filter if the set of kinds this instance shows ever changes.
   useEffect(() => {
-    setEnabled(new Set(kindsFilter ? ALL_ARTIFACT_KINDS.filter(k => kindsFilter.has(k.kind)).map(k => k.kind) : ALL_ARTIFACT_KINDS.map(k => k.kind)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setEnabled(new Set());
   }, [kindsKey]);
 
   useEffect(() => {
@@ -217,13 +233,14 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
   // enabled types) — not every LoreComponent. Counts reflect the active type filter.
   const compChips = useMemo(() => {
     const cnt: Record<string, number> = {};
-    items.filter(a => enabled.has(a.kind)).forEach(a => {
+    items.filter(a => showsKind(a.kind)).forEach(a => {
       const k = a.component ?? '∅';
       cnt[k] = (cnt[k] || 0) + 1;
     });
     return Object.entries(cnt)
       .map(([id, n]) => ({ id, name: id === '∅' ? t('lore.artifactList.noComponent', '— без компонента') : (nameOf[id] || id), n }))
       .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, enabled, nameOf]);
 
   const counts = useMemo(() => {
@@ -243,7 +260,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
   const shown = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return items
-      .filter(a => enabled.has(a.kind))
+      .filter(a => showsKind(a.kind))
       .filter(a => compSel.size === 0 || compSel.has(a.component ?? '∅'))
       .filter(a => !ql || a.title.toLowerCase().includes(ql) || a.id.toLowerCase().includes(ql))
       .sort((a, b) => {
@@ -267,6 +284,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
         }
         return a.title.localeCompare(b.title);
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, enabled, compSel, q, nameOf, docById]);
 
   const toggle = (k: ArtifactKind) => setEnabled(p => {
@@ -282,39 +300,62 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
 
   if (loading) return <div style={S.empty}>{t('lore.artifactList.loading', 'Загрузка артефактов…')}</div>;
 
+  const filterSummaryTags: FilterTagData[] = [
+    ...[...enabled].map((k): FilterTagData => {
+      const meta = ARTIFACT_KINDS.find(x => x.kind === k);
+      return { key: 'k:' + k, label: meta?.label ?? k, color: meta?.color, onRemove: () => toggle(k) };
+    }),
+    ...[...compSel].map((id): FilterTagData => ({
+      key: 'c:' + id, label: compChips.find(c => c.id === id)?.name ?? id,
+      onRemove: () => toggleComp(id),
+    })),
+  ];
+
   const header = (
     <div style={headerContainer ? { ...S.head, border: 'none' } : S.head}>
-      <div style={S.chipRow}>
-        <span style={S.flabel}>{t('lore.artifactList.typeLabel', 'Тип')}</span>
-        <div style={S.chips}>
-          {ARTIFACT_KINDS.map(k => {
-            const on = enabled.has(k.kind);
-            return (
-              <span key={k.kind} style={S.chip(on, k.color)} onClick={() => toggle(k.kind)}>
-                <GameIcon slug={k.icon} size={12} />
-                {k.label}
-                <span style={S.chipCount(on)}>{counts[k.kind] ?? 0}</span>
-              </span>
-            );
-          })}
-        </div>
-      </div>
-      {compChips.length > 1 && (
-        <div style={S.chipRow}>
-          <span style={S.flabel}>{t('lore.artifactList.moduleLabel', 'Модуль')}</span>
-          <div style={S.chips}>
-            {compChips.map(c => {
-              const on = compSel.has(c.id);
-              return (
-                <span key={c.id} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c.id)}>
-                  {c.name}
-                  <span style={S.chipCount(on)}>{c.n}</span>
-                </span>
-              );
-            })}
+      <FilterBar
+        tier="local"
+        label={t('lore.artifactList.filtersLabel', 'Фильтры')}
+        activeCount={enabled.size + compSel.size}
+        summaryTags={filterSummaryTags}
+        onClear={() => { setEnabled(new Set()); setCompSel(new Set()); }}
+        open={filterOpen}
+        onToggleOpen={() => setFilterOpen(v => !v)}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={S.chipRow}>
+            <span style={S.flabel}>{t('lore.artifactList.typeLabel', 'Тип')}</span>
+            <div style={S.chips}>
+              {ARTIFACT_KINDS.map(k => {
+                const on = enabled.has(k.kind);
+                return (
+                  <span key={k.kind} style={S.chip(on, k.color)} {...a11yClick(() => toggle(k.kind))} aria-pressed={on}>
+                    <GameIcon slug={k.icon} size={12} />
+                    {k.label}
+                    <span style={S.chipCount(on)}>{counts[k.kind] ?? 0}</span>
+                  </span>
+                );
+              })}
+            </div>
           </div>
+          {compChips.length > 1 && (
+            <div style={S.chipRow}>
+              <span style={S.flabel}>{t('lore.artifactList.moduleLabel', 'Модуль')}</span>
+              <div style={S.chips}>
+                {compChips.map(c => {
+                  const on = compSel.has(c.id);
+                  return (
+                    <span key={c.id} style={S.chip(on, 'var(--acc)')} {...a11yClick(() => toggleComp(c.id))} aria-pressed={on}>
+                      {c.name}
+                      <span style={S.chipCount(on)}>{c.n}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </FilterBar>
       <div style={S.chipRow}>
         <input
           style={S.search}
@@ -322,7 +363,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
           value={q}
           onChange={e => setQ(e.target.value)}
         />
-        {enabled.has('runbook') && shown.some(a => a.kind === 'runbook') && (
+        {showsKind('runbook') && shown.some(a => a.kind === 'runbook') && (
           <button
             style={S.exportBtn}
             title={t('lore.artifactList.exportRunbooksTitle', 'Экспорт чеклиста runbooks в Markdown')}
@@ -340,13 +381,13 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
       {headerContainer ? createPortal(header, headerContainer) : header}
 
       <div style={S.list}>
-        {shown.length === 0 && <div style={S.empty}>{t('lore.artifactList.notFound', 'Ничего не найдено.')}</div>}
+        {shown.length === 0 && <EmptyState message={t('lore.artifactList.notFound', 'Ничего не найдено.')} />}
         {shown.map(a => {
           const meta = KIND_META[a.kind];
           const sel = selectedKind === a.kind && selectedId === a.id;
           const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
           return (
-            <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} onClick={() => onOpen(a.kind, a.id)} title={`${meta.label} · ${a.id}`}>
+            <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} {...a11yClick(() => onOpen(a.kind, a.id))} title={`${meta.label} · ${a.id}`}>
               <div style={S.rowMain}>
                 <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
                 <span style={S.title}>{a.title}</span>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
@@ -211,7 +212,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                 <div
                   key={uid}
                   style={{ ...S.row, ...(narrow ? S.rowNarrow : null), background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
-                  onClick={() => toggle(uid, tag, ruid, r.git_tag ?? null)}
+                  {...a11yClick(() => toggle(uid, tag, ruid, r.git_tag ?? null))}
                 >
                   <div style={S.tagCell}>
                     <span style={{ ...S.tag, ...(type === 'major' ? S.tagMajor : type === 'minor' ? S.tagMinor : S.tagPatch) }}>
@@ -246,7 +247,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                                 <div key={s.sprint_id} style={S.sprintBlock}>
                                   <div
                                     style={S.sprintRef}
-                                    onClick={() => onNavigateToSprint(s.sprint_id)}
+                                    {...a11yClick(() => onNavigateToSprint(s.sprint_id))}
                                     title={t('lore.releasesBoard.openSprintTitle', 'Открыть спринт {{id}}', { id: s.sprint_id })}
                                   >
                                     <span style={S.sprintId}>{s.sprint_id}</span>

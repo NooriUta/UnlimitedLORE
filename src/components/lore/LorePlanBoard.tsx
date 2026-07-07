@@ -668,7 +668,16 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
     if (!svg) return;
     let raf = 0;
     let settle = 0;
-    const redraw = () => {
+    // T18: ResizeObserver can fire for sub-pixel layout deltas that produce
+    // no visible change — round + compare against the last size (same
+    // pattern as the vis-timeline ResizeObserver above) instead of
+    // redrawing on every callback.
+    let lastW = 0, lastH = 0;
+    const redraw = (entries: ResizeObserverEntry[]) => {
+      const { width, height } = entries[0].contentRect;
+      const w = Math.round(width), h = Math.round(height);
+      if (w === lastW && h === lastH) return;
+      lastW = w; lastH = h;
       if (!raf) raf = requestAnimationFrame(() => { raf = 0; drawArrows(); });
       clearTimeout(settle);
       settle = window.setTimeout(() => { drawArrows(); }, 120);

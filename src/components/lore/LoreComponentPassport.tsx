@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { sanitizeSvg } from './sanitizeHtml';
+import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
   updateLoreComponent,
@@ -197,7 +199,7 @@ const S = {
   editLabel: { fontSize: 10, color: 'var(--t3)', width: 68, flexShrink: 0, textTransform: 'uppercase' as const },
   editInput: { flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 11, background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)', fontFamily: 'inherit', outline: 'none' },
   editActions:{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' as const },
-  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'var(--acc)', color: '#fff', border: 'none', fontFamily: 'inherit' },
+  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'var(--acc)', color: 'var(--on-accent)', border: 'none', fontFamily: 'inherit' },
   cancelBtn: { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)', fontFamily: 'inherit' },
 };
 
@@ -286,7 +288,7 @@ function MermaidBlock({ code }: { code: string }) {
     import('mermaid').then(m => {
       m.default.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
       m.default.render(id, code).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg;
+        if (ref.current) ref.current.innerHTML = sanitizeSvg(svg);
       }).catch(() => {
         if (ref.current) ref.current.textContent = code;
       });
@@ -547,7 +549,11 @@ export default function LoreComponentPassport({
         {/* Doc tabs */}
         <div style={S.tabsRow}>
           {tabList.map(t => (
-            <div key={t.key} style={S.tab(docTab === t.key)} onClick={() => { setDocTab(t.key); setSelDocId(null); setDocContent(null); setSprintStatusFilter(new Set()); setSelTaskUid(null); setTaskStatusFilter(new Set()); }}>
+            <div key={t.key} style={S.tab(docTab === t.key)} aria-pressed={docTab === t.key}
+              {...a11yClick(() => {
+                setDocTab(t.key); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
+                setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
+              })}>
               {t.label}
               {t.count > 0 && <span style={S.tabCnt}>{t.count}</span>}
             </div>

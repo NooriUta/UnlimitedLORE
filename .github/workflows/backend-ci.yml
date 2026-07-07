@@ -21,3 +21,13 @@ jobs:
       - name: Gradle build (Quarkus backend)
         working-directory: backend
         run: ./gradlew build --no-daemon
+
+      # `build` already runs the test task; kept explicit so a future test
+      # regression is obvious in the log even if `build` is later narrowed.
+      - name: Gradle test (Quarkus backend)
+        working-directory: backend
+        run: ./gradlew test --no-daemon
+
+      # Validates the multi-stage Dockerfile compiles the app from source.
+      - name: Docker image build (backend)
+        run: docker build -f backend/Dockerfile.local -t lore-backend:ci backend/

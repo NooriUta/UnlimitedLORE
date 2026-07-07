@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreTimelineItem } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
@@ -152,7 +153,7 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
         {ALL_KINDS.map(k => {
           const on = kindSel.has(k);
           return (
-            <span key={k} style={S.chip(on)} onClick={() => toggleKind(k)}>
+            <span key={k} style={S.chip(on)} {...a11yClick(() => toggleKind(k))} aria-pressed={on}>
               <GameIcon slug={KIND_ICON[k]} size={11} />
               {KIND_LABEL[k]}
               <span style={{ opacity: 0.6, fontSize: 9 }}>{counts[k] ?? 0}</span>

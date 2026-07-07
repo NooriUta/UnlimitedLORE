@@ -5,20 +5,9 @@
 // gets an inline hint before submitting, not just a 400 after the fact.
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { loreMutate } from '../../api/lore';
 
-const LORE_BASE = '/lore';
 const SECRET_REF_RE = /^(env|vault|oauth|secret):.+/;
-
-async function post(path: string, body: unknown): Promise<{ ok: boolean; [k: string]: unknown }> {
-  const res = await fetch(`${LORE_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { detail?: string }).detail ?? `POST ${path} → ${res.status}`);
-  return json as { ok: boolean };
-}
 
 const PURPOSES = ['read', 'write', 'read/write'];
 const STATUSES = ['active', 'needs_admin', 'inactive'];
@@ -64,7 +53,7 @@ export default function LoreBragiIntegrationEditor({ onSaved, onCancel, editing 
     setSaving(true);
     setErrMsg(null);
     try {
-      await post('/bragi/integration', {
+      await loreMutate('/bragi/integration', {
         integration_id: id, service: service || undefined, purpose: purpose || undefined,
         endpoint: endpoint || undefined, scope: scope || undefined,
         secret_ref: secretRef || undefined, status: status || undefined,
@@ -167,7 +156,7 @@ const S: Record<string, React.CSSProperties> = {
   secretHint:    { fontSize: 10.5, color: 'var(--wrn)', marginTop: 5 },
   secretHintWarn:{ fontSize: 10.5, color: 'var(--dng)', marginTop: 5 },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
                background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
 };
