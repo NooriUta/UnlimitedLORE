@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { marked } from 'marked';
+import { marked } from './markdown';
 import { sanitizeMd } from './sanitizeHtml';
 
 // REN-00 (SPRINT_BRAGI_PLATFORM_RENDER) — shared render engine for the BRAGI
@@ -16,8 +16,8 @@ import { sanitizeMd } from './sanitizeHtml';
 // Platform colours are INTENTIONALLY hardcoded (a Telegram preview must look
 // like Telegram regardless of the active LORE theme). The master + site skins
 // follow LORE tokens (var(--…)) because they represent our own surfaces.
-
-marked.setOptions({ gfm: true, breaks: false });
+// marked config (gfm/breaks) lives in ./markdown (T14) — shared with every
+// other read-only markdown renderer, no local setOptions here.
 
 export type BragiSkin = 'main' | 'tg' | 'vc' | 'habr' | 'site' | 'tgraph';
 

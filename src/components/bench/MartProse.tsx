@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { marked } from 'marked';
+import { marked } from '../lore/markdown';
 import mermaid from 'mermaid';
 import elkLayouts from '@mermaid-js/layout-elk';
 import { sanitizeMd, sanitizeSvg } from '../lore/sanitizeHtml';
@@ -8,8 +8,6 @@ import { sanitizeMd, sanitizeSvg } from '../lore/sanitizeHtml';
 // rationale/mechanism/interpretation, long_description, conclusions) are
 // Markdown. Render it properly — tables + mermaid — instead of a flat <p>.
 // Same trust model as DocsPage: prose is authored by the experiment owner.
-
-marked.setOptions({ gfm: true, breaks: false });
 
 // DocsPage initializes mermaid on its module load, but it is lazy — initialize
 // here too so prose diagrams work without ever visiting /docs (idempotent).
