@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { sanitizeSvg } from './sanitizeHtml';
+import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
   updateLoreComponent,
@@ -548,7 +549,8 @@ export default function LoreComponentPassport({
         {/* Doc tabs */}
         <div style={S.tabsRow}>
           {tabList.map(t => (
-            <div key={t.key} style={S.tab(docTab === t.key)} onClick={() => { setDocTab(t.key); setSelDocId(null); setDocContent(null); setSprintStatusFilter(new Set()); setSelTaskUid(null); setTaskStatusFilter(new Set()); }}>
+            <div key={t.key} style={S.tab(docTab === t.key)} aria-pressed={docTab === t.key}
+              {...a11yClick(() => { setDocTab(t.key); setSelDocId(null); setDocContent(null); setSelTaskUid(null); })}>
               {t.label}
               {t.count > 0 && <span style={S.tabCnt}>{t.count}</span>}
             </div>

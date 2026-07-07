@@ -128,7 +128,7 @@ export function LoreBragiArchive() {
         <table style={S.table}>
           <thead><tr>
             <th style={S.th}>{t('bragi.extras.archive.colPublication', 'публикация')}</th><th style={S.th}>{t('bragi.extras.archive.colChannel', 'канал')}</th><th style={S.th}>{t('bragi.extras.archive.colDate', 'дата')}</th>
-            <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th><th style={S.th}>{t('bragi.extras.archive.colTakeaway', 'вывод')}</th>
+            <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th>
           </tr></thead>
           <tbody>
             {rows.map(r => (
@@ -139,7 +139,6 @@ export function LoreBragiArchive() {
                 <td style={S.tdNum}>{r.views || '—'}</td>
                 <td style={S.tdNum}>{r.clicks || '—'}</td>
                 <td style={S.tdNum}>{r.demo || '—'}</td>
-                <td style={S.td}>—</td>
               </tr>
             ))}
           </tbody>
