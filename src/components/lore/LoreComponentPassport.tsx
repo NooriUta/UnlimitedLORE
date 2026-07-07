@@ -13,10 +13,13 @@ import {
   type LoreSpecPassport,
   type LoreSprintRow,
   type LoreSprintTask,
+  type LoreKnowDocRow,
+  type LoreKnowDoc,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
+import { MartProse } from '../bench/MartProse';
 
 interface QGRow {
   qg_id: string;
@@ -39,12 +42,13 @@ interface ComponentSprintRow {
   release_ids: string[] | null;
 }
 
-type DocTab = 'adr' | 'spec' | 'qg' | 'sprint';
+type DocTab = 'adr' | 'spec' | 'qg' | 'doc' | 'sprint';
 
 type DocContent =
   | { type: 'spec';   data: LoreSpecPassport }
   | { type: 'qg';    data: QGPassport }
   | { type: 'adr';   data: LoreAdrPassport }
+  | { type: 'doc';   data: LoreKnowDoc }
   | { type: 'sprint'; data: LoreSprintRow; tasks: LoreSprintTask[] };
 
 // QG status labels/colors (mirrors LoreQualityGateList)
@@ -340,6 +344,7 @@ export default function LoreComponentPassport({
   const [adrs, setAdrs]       = useState<LoreAdrRow[]>([]);
   const [specs, setSpecs]     = useState<LoreSpecRow[]>([]);
   const [qgs, setQgs]         = useState<QGRow[]>([]);
+  const [docs, setDocs]       = useState<LoreKnowDocRow[]>([]);
   const [sprints, setSprints] = useState<ComponentSprintRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -378,7 +383,7 @@ export default function LoreComponentPassport({
 
   // ── Data load ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    setLoading(true); setComp(null); setAdrs([]); setSpecs([]); setQgs([]);
+    setLoading(true); setComp(null); setAdrs([]); setSpecs([]); setQgs([]); setDocs([]);
     setSprints([]); setEditing(false); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
     setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
     const ctrl = new AbortController();
@@ -388,10 +393,14 @@ export default function LoreComponentPassport({
       fetchLoreSlice<LoreAdrRow>          ('adrs',           { component: componentId }, ctrl.signal),
       fetchLoreSlice<LoreSpecRow>         ('specs',          { component: componentId }, ctrl.signal),
       fetchLoreSlice<QGRow>               ('quality_gates',  { component: componentId }, ctrl.signal),
+      // 'docs' has no server-side component filter (LoreArtifactList/LoreDocView
+      // fetch it unfiltered too) — filter client-side below.
+      fetchLoreSlice<LoreKnowDocRow>      ('docs',           undefined,                 ctrl.signal),
     ])
-      .then(([compRows, adrRows, specRows, qgRows]) => {
+      .then(([compRows, adrRows, specRows, qgRows, docRows]) => {
         const c = compRows[0] ?? null;
         setComp(c); setAdrs(adrRows); setSpecs(specRows); setQgs(qgRows);
+        setDocs(docRows.filter(d => d.component_id === componentId));
         setEditOwner(c?.owner ?? '');
         setEditTeam(c?.team ?? '');
         setEditIcon(c?.game_icon ?? '');
@@ -424,6 +433,9 @@ export default function LoreComponentPassport({
       } else if (docTab === 'adr') {
         const rows = await fetchLoreSlice<LoreAdrPassport>('adr', { id: selDocId }, ctrl.signal);
         if (rows[0]) setDocContent({ type: 'adr', data: rows[0] });
+      } else if (docTab === 'doc') {
+        const rows = await fetchLoreSlice<LoreKnowDoc>('doc_by_id', { id: selDocId }, ctrl.signal);
+        if (rows[0]) setDocContent({ type: 'doc', data: rows[0] });
       } else {
         const [sprintRows, taskRows] = await Promise.all([
           fetchLoreSlice<LoreSprintRow>('sprint_tree', { id: selDocId }, ctrl.signal),
@@ -477,6 +489,7 @@ export default function LoreComponentPassport({
     { key: 'adr',    label: t('lore.componentPassport.tabs.adr', 'ADR'),     count: adrs.length    },
     { key: 'spec',   label: t('lore.componentPassport.tabs.spec', 'Spec'),    count: specs.length   },
     { key: 'qg',     label: t('lore.componentPassport.tabs.qg', 'QG'),      count: qgs.length     },
+    { key: 'doc',    label: t('lore.componentPassport.tabs.doc', 'Знания'),  count: docs.length    },
     { key: 'sprint', label: t('lore.componentPassport.tabs.sprints', 'Спринты'), count: sprints.length },
   ];
 
@@ -484,6 +497,7 @@ export default function LoreComponentPassport({
     docTab === 'adr'    ? adrs.map(a => ({ id: a.adr_id, title: a.name ?? a.adr_id, status: a.status }))
     : docTab === 'spec' ? specs.map(s => ({ id: s.spec_id, title: s.title ?? s.spec_id, status: null, hint: s.file_path?.split('/').pop() ?? null }))
     : docTab === 'qg'   ? qgs.map(q => ({ id: q.qg_id, title: q.name, status: q.status, hint: q.date_created?.slice(0, 10) ?? null }))
+    : docTab === 'doc'  ? docs.map(d => ({ id: d.doc_id, title: d.title ?? d.doc_id, status: null, hint: d.kind }))
     : sprints
         .map(s => { const { status } = taskTick(s.status_raw); return { id: s.sprint_id, title: s.name ?? s.sprint_id, status, releases: s.release_ids }; })
         .filter(r => sprintStatusFilter.size === 0 || sprintStatusFilter.has(r.status ?? ''));
@@ -682,12 +696,14 @@ export default function LoreComponentPassport({
                 {docContent.type === 'adr'    && (docContent.data.name ?? docContent.data.adr_id)}
                 {docContent.type === 'spec'   && (docContent.data.title ?? docContent.data.spec_id)}
                 {docContent.type === 'qg'     && docContent.data.name}
+                {docContent.type === 'doc'    && (docContent.data.title ?? docContent.data.doc_id)}
                 {docContent.type === 'sprint' && (docContent.data.name ?? docContent.data.sprint_id)}
               </div>
               <span style={S.readerBadge(
                 docContent.type === 'adr'    ? 'var(--acc)' :
                 docContent.type === 'spec'   ? 'var(--inf)' :
-                docContent.type === 'qg'     ? 'var(--wrn)' : 'var(--suc)'
+                docContent.type === 'qg'     ? 'var(--wrn)' :
+                docContent.type === 'doc'    ? 'var(--kind-doc)' : 'var(--suc)'
               )}>
                 {docContent.type.toUpperCase()}
               </span>
@@ -711,6 +727,14 @@ export default function LoreComponentPassport({
                   )}
                 </>
               )}
+              {docContent.type === 'doc' && (() => {
+                const md = docContent.data.content_md_en ?? docContent.data.content_md_ru;
+                if (md) return <MartProse text={md} style={S.rP} />;
+                if (docContent.data.content_html) {
+                  return <p style={S.rP}>{t('lore.componentPassport.reader.docHtmlOnly', 'Документ хранится как HTML — откройте его во вкладке «Знания» для просмотра.')}</p>;
+                }
+                return <p style={S.rP}>{t('lore.componentPassport.reader.contentEmpty', 'Содержимое не заполнено.')}</p>;
+              })()}
               {docContent.type === 'qg' && (
                 <>
                   {docContent.data.description && <p style={S.rP}>{docContent.data.description}</p>}
