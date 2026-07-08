@@ -1195,11 +1195,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <GameIcon slug="crossed-axes" size={16} style={{ color: 'var(--acc)' }} />
+            {/* value-then-caption, matching the KPI blocks in this same row
+                (big number on top, small label below) — was caption-then-value,
+                the mismatched order made this block's text sit at a visibly
+                different height than its siblings despite the shared
+                alignItems:center on the parent row. */}
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
               <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>
                 {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 'var(--fs-sm)' }}>· {currentMilestone.date_display}</span>
               </span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
             </div>
           </div>
 
@@ -1872,11 +1877,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <GameIcon slug="crossed-axes" size={16} style={{ color: 'var(--acc)' }} />
+            {/* value-then-caption, matching the KPI blocks in this same row
+                (big number on top, small label below) — was caption-then-value,
+                the mismatched order made this block's text sit at a visibly
+                different height than its siblings despite the shared
+                alignItems:center on the parent row. */}
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
               <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>
                 {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 'var(--fs-sm)' }}>· {currentMilestone.date_display}</span>
               </span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
             </div>
           </div>
           {daysUntilCurrent !== null && (
