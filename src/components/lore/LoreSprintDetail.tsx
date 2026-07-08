@@ -32,7 +32,6 @@ interface SprintMeta {
   created_date: string | null;
   planned_start_date: string | null;
   planned_end_date: string | null;
-  planned_milestone_id: string | null;
   no_release_required: boolean | null;
 }
 
@@ -1153,14 +1152,12 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 } catch (err) { onError(err); } finally { setPlanBusy(false); }
               }} />
           </div>
-          {/* Planned vs. actual milestone used to be two separate controls
-              (planned_milestone_id plain field vs. TARGETS_MILESTONE edge) —
-              in practice they're always the same value, so one control now
-              drives both: it links/unlinks the actual edge AND keeps
-              planned_milestone_id in sync for the forecast/analytics that
-              still read it. */}
+          {/* Milestone used to have a separate planned_milestone_id plain-field
+              write alongside the TARGETS_MILESTONE edge — that field drifted out
+              of sync on 62+ sprints and was retired; the edge is the sole source
+              of truth now. */}
           <select disabled={planBusy || msLinking} style={lookupSelectStyle}
-            value={(sprint.milestone_ids ?? [])[0] ?? sprint.planned_milestone_id ?? ''}
+            value={(sprint.milestone_ids ?? [])[0] ?? ''}
             title={t('lore.sprintDetail.plan.milestone', 'Веха')}
             onChange={async e => {
               const v = e.target.value || null;
@@ -1171,8 +1168,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                   if (mid !== v) await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
                 }
                 if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
-                await updateSprintPlan(sprint.sprint_id, { planned_milestone_id: v });
-                setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [], planned_milestone_id: v } : s);
+                setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
               } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
             }}>
             <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>

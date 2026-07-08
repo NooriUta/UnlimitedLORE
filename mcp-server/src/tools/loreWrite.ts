@@ -286,10 +286,9 @@ export function registerLoreWrite(server: McpServer): void {
 
   definePostTool(server, {
     name: 'lore_link_sprint_milestone',
-    description: 'Link (or unlink) a KnowSprint directly to a KnowMilestone via a TARGETS_MILESTONE edge — ' +
-      'the canonical way to assign a sprint to a milestone (factual attachment; for the separately-' +
-      'tracked "planned" attachment use lore_update_sprint\'s planned_milestone_id via ' +
-      'POST /lore/sprint/plan, no MCP tool wired to it yet). ' +
+    description: 'Link (or unlink) a KnowSprint to a KnowMilestone via a TARGETS_MILESTONE edge — ' +
+      'the sole way to assign a sprint to a milestone (a separate planned_milestone_id field used to ' +
+      'exist alongside this edge; it drifted out of sync on 62+ sprints and was retired). ' +
       'Idempotent on add. Use action="remove" to unlink. Returns {ok, sprint_id, milestone_id, action}.',
     schema: {
       sprint_id:    z.string().describe('sprint id, e.g. "SPRINT_LORE_QG_INTEGRATION"'),

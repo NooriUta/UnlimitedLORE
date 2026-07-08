@@ -8,13 +8,6 @@ import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import TipTapField from './TipTapField';
 
-// Union of a milestone's sprints: planned (planned_milestone_id property,
-// SPRINT_PLANITEM_RETIRE T-21 — no longer a backend PlanItem hop, see caller)
-// + direct (direct_sprint_ids, TARGETS_MILESTONE edge).
-function msSprintIds(planIds: string[], m: LoreMilestone & { direct_sprint_ids?: string[] | null }): string[] {
-  return [...new Set([...planIds, ...(m.direct_sprint_ids ?? [])].filter(Boolean))];
-}
-
 function classifySprint(s: string | null): string {
   const u = (s ?? '').toUpperCase();
   if (/DONE|CLOSED|ЗАВЕРШ|✅/.test(u)) return 'done';
@@ -64,24 +57,12 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
   const sprintIds = useMemo(() => sprints.map(s => s.sprint_id).sort(), [sprints]);
   const sprintMeta = useMemo(() => new Map(sprints.map(s => [s.sprint_id, s])), [sprints]);
 
-  // SPRINT_PLANITEM_RETIRE (T-21): planned-milestone membership derived from
-  // sprints.planned_milestone_id (see LoreMilestonesView.tsx for the same pattern).
-  const plannedByMilestone = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const s of sprints) {
-      if (!s.planned_milestone_id) continue;
-      const arr = map.get(s.planned_milestone_id);
-      if (arr) arr.push(s.sprint_id); else map.set(s.planned_milestone_id, [s.sprint_id]);
-    }
-    return map;
-  }, [sprints]);
-
   // Sprints not linked to ANY milestone — for planning (assign them).
   const linkedSet = useMemo(() => {
     const s = new Set<string>();
-    milestones.forEach(m => msSprintIds(plannedByMilestone.get(m.milestone_id) ?? [], m).forEach(id => s.add(id)));
+    milestones.forEach(m => (m.direct_sprint_ids ?? []).forEach(id => id && s.add(id)));
     return s;
-  }, [milestones, plannedByMilestone]);
+  }, [milestones]);
   const orphans = useMemo(
     () => sprints.filter(s => !linkedSet.has(s.sprint_id)).sort((a, b) => a.sprint_id.localeCompare(b.sprint_id)),
     [sprints, linkedSet]);
@@ -146,7 +127,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
 
       <div style={S.list}>
         {milestones.map(m => {
-          const ids = msSprintIds(plannedByMilestone.get(m.milestone_id) ?? [], m);
+          const ids = (m.direct_sprint_ids ?? []).filter(Boolean);
           const isOpen = openId === m.milestone_id;
           const isEdit = editId === m.milestone_id;
           return (

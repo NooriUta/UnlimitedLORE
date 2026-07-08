@@ -423,38 +423,24 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     data?.by_sprint.filter(isGenuinelyOpen).length ?? 0,
   [data]);
 
-  // SPRINT_PLANITEM_RETIRE (T-21): "planned" milestone membership no longer
-  // comes from the backend slice (retired PlanItem hop) — derive it from
-  // sprintRows.planned_milestone_id instead, same pattern as LoreMilestonesView.
-  const plannedByMilestone = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const s of sprintRows) {
-      if (!s.planned_milestone_id) continue;
-      const arr = map.get(s.planned_milestone_id);
-      if (arr) arr.push(s.sprint_id); else map.set(s.planned_milestone_id, [s.sprint_id]);
-    }
-    return map;
-  }, [sprintRows]);
-
   // open sprints belonging to the current milestone — used for forecast.
   // Only falls back to the system-wide openSprintCount when there's no
   // resolvable current milestone at all (data not loaded yet). A resolved
-  // milestone with genuinely zero planned sprints must flow through to 0 —
-  // substituting the global count there was a leftover pre-SPRINT_PLANITEM_RETIRE
-  // idiom (used to guard against an empty PlanItem-derived list meaning "not
-  // loaded"), but with the plain planned_milestone_id field, empty just as
-  // often means "really zero" — that's what caused this header to show a
-  // stale "3" while the drilldown below it correctly showed 0. Must use
-  // isGenuinelyOpen (not raw classify) or it diverges again whenever a
-  // sprint's status text lags behind its actually-completed tasks.
+  // milestone with genuinely zero sprints (direct_sprint_ids, TARGETS_MILESTONE
+  // edge) must flow through to 0 — substituting the global count there was a
+  // leftover idiom (used to guard against an empty derived list meaning "not
+  // loaded"), but empty just as often means "really zero" — that's what caused
+  // this header to show a stale "3" while the drilldown below it correctly
+  // showed 0. Must use isGenuinelyOpen (not raw classify) or it diverges again
+  // whenever a sprint's status text lags behind its actually-completed tasks.
   const milestoneOpenCount = useMemo(() => {
     if (!data || !milestoneList.length) return openSprintCount;
     // find current milestone (first non-done)
     const cur = milestoneList.find(m => !(m.goal_md?.includes('✅') ?? false));
     if (!cur) return openSprintCount;
-    const ids = new Set(plannedByMilestone.get(cur.milestone_id) ?? []);
+    const ids = new Set(cur.direct_sprint_ids ?? []);
     return data.by_sprint.filter(s => isGenuinelyOpen(s) && ids.has(s.sprint_id)).length;
-  }, [data, milestoneList, openSprintCount, plannedByMilestone]);
+  }, [data, milestoneList, openSprintCount]);
 
   // Velocity by ISO week (last 12 weeks)
   const velocityWeeks = useMemo(() => {
@@ -496,9 +482,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     milestoneList.map(m => ({
       id: m.milestone_id,
       label: m.label,
-      ids: new Set([...(plannedByMilestone.get(m.milestone_id) ?? []), ...(m.direct_sprint_ids ?? [])]),
+      ids: new Set(m.direct_sprint_ids ?? []),
     })),
-  [milestoneList, plannedByMilestone]);
+  [milestoneList]);
 
   // Top components for filter chips (by sprint count, max 10)
   const chartComps = useMemo(() => {
@@ -1098,7 +1084,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // bug above: that one over-counted via a stale fallback, this one would
   // over-list via the same stale "empty means not loaded" assumption).
   const milestoneOpenSprints = useMemo(() => {
-    const milestoneIds = currentMilestone ? new Set(plannedByMilestone.get(currentMilestone.milestone_id) ?? []) : null;
+    const milestoneIds = currentMilestone ? new Set(currentMilestone.direct_sprint_ids ?? []) : null;
     return (data?.by_sprint ?? [])
       .filter(s => isGenuinelyOpen(s) && (milestoneIds === null || milestoneIds.has(s.sprint_id)))
       .map(s => ({
@@ -1111,7 +1097,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         const rank = (k: string) => k === 'blocked' ? 0 : k === 'in_progress' ? 1 : k === 'ready_for_deploy' ? 2 : k === 'partial' ? 3 : 4;
         return rank(a.klass) - rank(b.klass) || b.open_tasks - a.open_tasks;
       });
-  }, [data, sprintRows, sprintNameMap, currentMilestone, plannedByMilestone]);
+  }, [data, sprintRows, sprintNameMap, currentMilestone]);
 
   const [showOpenDrilldown, setShowOpenDrilldown] = React.useState(false);
 
