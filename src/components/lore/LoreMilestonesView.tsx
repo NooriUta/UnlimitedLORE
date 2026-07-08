@@ -66,7 +66,7 @@ function pct(d: number, t: number) { return t > 0 ? Math.round((100 * d) / t) : 
 function Field({ caption, w, children }: { caption: string; w: number | string; children: ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 2, width: w, flexShrink: 0 }}>
-      <span style={{ fontSize: 8, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{caption}</span>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{caption}</span>
       {children}
     </label>
   );
@@ -221,12 +221,12 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               style={{ ...S.card, borderColor: isSel ? 'var(--acc)' : status === 'current' ? 'color-mix(in srgb,var(--acc) 40%,var(--bd))' : 'var(--bd)',
                 boxShadow: isSel ? '0 0 0 1px var(--acc)' : 'none' }}>
               <div style={S.cardHead}>
-                <span style={{ fontSize: 12, color: col }}>{status === 'done' ? '✓' : status === 'current' ? '▶' : '○'}</span>
+                <span style={{ fontSize: 'var(--fs-base)', color: col }}>{status === 'done' ? '✓' : status === 'current' ? '▶' : '○'}</span>
                 <span style={S.mLabel}>{m.label}</span>
                 {m.priority && <span style={{ ...S.prio, color: m.priority === 'P0' ? 'var(--dng)' : m.priority === 'P1' ? 'var(--wrn)' : 'var(--inf)' }}>{m.priority}</span>}
                 {dleft != null && <span style={{ ...S.dl, color: dleft < 0 ? 'var(--dng)' : dleft <= 7 ? 'var(--wrn)' : 'var(--t3)' }}>{dleft >= 0 ? t('lore.milestonesView.daysLeft', '{{days}}д', { days: dleft }) : t('lore.milestonesView.overdue', 'просроч.')}</span>}
                 {riskBlock && (
-                  <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 600, color: riskBlock.riskCol,
+                  <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', fontWeight: 600, color: riskBlock.riskCol,
                     background: `color-mix(in srgb, ${riskBlock.riskCol} 12%, transparent)`,
                     borderRadius: 4, padding: '1px 5px', whiteSpace: 'nowrap' as const }}>
                     {riskBlock.riskLabel}
@@ -239,7 +239,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                 <span style={S.progNum}>{done}/{ids.length} · {p}%</span>
               </div>
               {riskBlock && (
-                <div style={{ marginTop: 4, fontSize: 9, color: 'var(--t3)', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                <div style={{ marginTop: 4, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
                   <span>{t('lore.milestonesView.risk.remaining', 'осталось')} <b style={{ color: 'var(--t2)' }}>{t('lore.milestonesView.risk.sp', '{{count}} Sp', { count: open })}</b></span>
                   <span>{t('lore.milestonesView.risk.needed', 'нужно')} <b style={{ color: riskBlock.riskCol }}>{t('lore.milestonesView.risk.days', '{{count}} дн', { count: riskBlock.daysNeeded })}</b> @ {t('lore.milestonesView.risk.spPerWeek', '{{velocity}} Sp/нед', { velocity: avgVelocity.toFixed(1) })}</span>
                   {riskBlock.deficit > 0
@@ -260,7 +260,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
           {!editMode ? (
             <div style={S.detailHead}>
               <span style={S.detMid}>{selM.milestone_id}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{selM.label}</span>
+              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>{selM.label}</span>
               {selM.priority && <span style={{ ...S.prio, color: selM.priority === 'P0' ? 'var(--dng)' : selM.priority === 'P1' ? 'var(--wrn)' : 'var(--inf)' }}>{selM.priority}</span>}
               <span style={S.dim}>{selM.date_display}{selM.week != null ? ` · w${selM.week}` : ''}</span>
               <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
@@ -333,7 +333,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                   return (
                     <div key={t.task_uid} style={S.sprRow} title={`${t.sprint_id}`}>
                       <GameIcon slug={statusMeta(k).icon} size={10} style={{ color: statusMeta(k).color, flexShrink: 0 }} />
-                      <span style={{ ...S.sprId, fontSize: 9 }}>{t.task_id}</span>
+                      <span style={{ ...S.sprId, fontSize: 'var(--fs-2xs)' }}>{t.task_id}</span>
                       <span style={S.sprName}>{t.title ?? ''}</span>
                     </div>
                   );
@@ -366,7 +366,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
           {t('lore.milestonesView.sprintsWithoutMilestones', 'Спринты без вех · {{count}}', { count: orphans.length })}
         </div>
         {orphans.length === 0
-          ? <div style={{ fontSize: 11, color: 'var(--suc)' }}>{t('lore.milestonesView.allSprintsLinked', 'Все спринты привязаны к вехам ✓')}</div>
+          ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--suc)' }}>{t('lore.milestonesView.allSprintsLinked', 'Все спринты привязаны к вехам ✓')}</div>
           : (
             <div style={{ ...S.sprList, maxHeight: 320 }}>
               {orphans.map(s => {
@@ -377,7 +377,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
                     <span style={S.sprId} onClick={() => onNavigateToSprint?.(s.sprint_id)} role={onNavigateToSprint ? 'button' : undefined}>{s.sprint_id}</span>
                     <span style={S.sprName}>{s.name}</span>
                     {proj && <span style={S.projTag}>{proj}</span>}
-                    <select style={{ ...S.in, fontSize: 9, padding: '2px 4px', flexShrink: 0 }} value=""
+                    <select style={{ ...S.in, fontSize: 'var(--fs-2xs)', padding: '2px 4px', flexShrink: 0 }} value=""
                       onChange={e => { const mid = e.target.value; if (mid) run('assign' + s.sprint_id, () => linkSprintMilestone(s.sprint_id, mid, 'add')); }}>
                       <option value="">{t('lore.milestonesView.intoMilestonePlaceholder', '→ в веху…')}</option>
                       {milestones.map(m => <option key={m.milestone_id} value={m.milestone_id}>{m.milestone_id}</option>)}
@@ -395,37 +395,37 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
 const S = {
   root:    { flex: 1, overflowY: 'auto' as const, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 12 },
   header:  { display: 'flex', alignItems: 'center', gap: 8 },
-  h1:      { fontSize: 15, fontWeight: 700, color: 'var(--t1)' },
-  dim:     { fontSize: 11, color: 'var(--t3)' },
-  dim2:    { fontSize: 9, color: 'var(--t3)' },
-  err:     { fontSize: 10, color: 'var(--dng)' },
+  h1:      { fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--t1)' },
+  dim:     { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  dim2:    { fontSize: 'var(--fs-2xs)', color: 'var(--t3)' },
+  err:     { fontSize: 'var(--fs-xs)', color: 'var(--dng)' },
   cards:   { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 },
   card:    { textAlign: 'left' as const, cursor: 'pointer', background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 10, padding: 10, display: 'flex', flexDirection: 'column' as const, gap: 5 },
   cardHead:{ display: 'flex', alignItems: 'center', gap: 6 },
-  mLabel:  { fontSize: 12, fontWeight: 700, color: 'var(--t1)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  prio:    { fontSize: 8, fontWeight: 700, fontFamily: 'var(--mono)' },
-  dl:      { fontSize: 9, fontFamily: 'var(--mono)' },
+  mLabel:  { fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--t1)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  prio:    { fontSize: 'var(--fs-2xs)', fontWeight: 700, fontFamily: 'var(--mono)' },
+  dl:      { fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)' },
   progRow: { display: 'flex', alignItems: 'center', gap: 6 },
   bar:     { flex: 1, height: 6, borderRadius: 3, background: 'var(--b3)', overflow: 'hidden' },
-  progNum: { fontSize: 9, color: 'var(--t2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const },
+  progNum: { fontSize: 'var(--fs-2xs)', color: 'var(--t2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const },
   projWrap:{ display: 'flex', flexWrap: 'wrap' as const, gap: 3 },
-  projTag: { fontSize: 8, fontFamily: 'var(--mono)', color: 'var(--t2)', background: 'var(--b3)', borderRadius: 3, padding: '1px 5px', border: '1px solid var(--bd)' },
+  projTag: { fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', color: 'var(--t2)', background: 'var(--b3)', borderRadius: 3, padding: '1px 5px', border: '1px solid var(--bd)' },
   detail:  { background: 'var(--b1)', border: '1px solid var(--acc)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column' as const, gap: 8 },
   detailHead: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
-  detMid:  { fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 700, color: 'var(--acc)' },
+  detMid:  { fontFamily: 'var(--mono)', fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--acc)' },
   twoCol:  { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
   col:     { display: 'flex', flexDirection: 'column' as const, gap: 2 },
-  colTitle:{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', fontWeight: 700, marginBottom: 2 },
+  colTitle:{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', fontWeight: 700, marginBottom: 2 },
   sprList: { display: 'flex', flexDirection: 'column' as const, gap: 1, maxHeight: 260, overflowY: 'auto' as const },
-  sprRow:  { display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, padding: '2px 4px', borderRadius: 4, background: 'var(--b2)' },
+  sprRow:  { display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', padding: '2px 4px', borderRadius: 4, background: 'var(--b2)' },
   sprId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', flexShrink: 0, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, cursor: 'pointer' },
   sprName: { color: 'var(--t3)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  muted:   { fontSize: 10, color: 'var(--t4)', fontStyle: 'italic' as const, padding: '2px 0' },
-  x:       { border: 'none', background: 'transparent', color: 'var(--dng)', cursor: 'pointer', fontSize: 11, padding: 0, lineHeight: 1, flexShrink: 0 },
-  in:      { fontSize: 11, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)' },
-  ta:      { fontSize: 11, padding: '6px 8px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)', minHeight: 44, resize: 'vertical' as const, fontFamily: 'inherit' },
+  muted:   { fontSize: 'var(--fs-xs)', color: 'var(--t4)', fontStyle: 'italic' as const, padding: '2px 0' },
+  x:       { border: 'none', background: 'transparent', color: 'var(--dng)', cursor: 'pointer', fontSize: 'var(--fs-sm)', padding: 0, lineHeight: 1, flexShrink: 0 },
+  in:      { fontSize: 'var(--fs-sm)', padding: '4px 6px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)' },
+  ta:      { fontSize: 'var(--fs-sm)', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)', minHeight: 44, resize: 'vertical' as const, fontFamily: 'inherit' },
   editBox: { display: 'flex', flexDirection: 'column' as const, gap: 6, padding: 8, background: 'var(--b2)', borderRadius: 8 },
   row:     { display: 'flex', gap: 6, flexWrap: 'wrap' as const },
-  btn:     { fontSize: 10, padding: '3px 8px', borderRadius: 4, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)', cursor: 'pointer' },
-  btnPrimary: { fontSize: 10, padding: '4px 12px', borderRadius: 4, border: '1px solid color-mix(in srgb,var(--acc) 35%,transparent)', background: 'color-mix(in srgb,var(--acc) 12%,transparent)', color: 'var(--acc)', cursor: 'pointer', fontWeight: 600 },
+  btn:     { fontSize: 'var(--fs-xs)', padding: '3px 8px', borderRadius: 4, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)', cursor: 'pointer' },
+  btnPrimary: { fontSize: 'var(--fs-xs)', padding: '4px 12px', borderRadius: 4, border: '1px solid color-mix(in srgb,var(--acc) 35%,transparent)', background: 'color-mix(in srgb,var(--acc) 12%,transparent)', color: 'var(--acc)', cursor: 'pointer', fontWeight: 600 },
 };

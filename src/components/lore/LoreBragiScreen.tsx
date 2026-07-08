@@ -102,7 +102,7 @@ export default function LoreBragiScreen() {
                 </div>
                 <div style={S.card}>
                   <h2 style={S.cardH2}>{t('bragi.screen.overview.publicationsTitle', 'публикации')} <span style={S.meta}>{t('bragi.screen.overview.publicationsMeta', '→ Публикации')}</span></h2>
-                  <div style={{ fontSize: 13, lineHeight: 2 }}>
+                  <div style={{ fontSize: 'var(--fs-md)', lineHeight: 2 }}>
                     {publications.slice(0, 5).map(p => (
                       <div key={p.publication_id}>
                         <span style={S.chip}>{p.status_general ?? '—'}</span> {p.title}
@@ -138,22 +138,22 @@ const S: Record<string, React.CSSProperties> = {
   root:     { flex: 1, overflowY: 'auto', fontFamily: 'var(--font)', color: 'var(--t1)' },
   subhead:  { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 22px 0' },
   torch:    { width: 9, height: 9, borderRadius: 2, background: 'var(--acc)', transform: 'rotate(45deg)' },
-  h1:       { fontFamily: 'var(--display)', fontWeight: 700, fontSize: 16, margin: 0 },
-  tagline:  { color: 'var(--t3)', fontSize: 13 },
-  menu:     { display: 'flex', flexWrap: 'wrap', gap: 16, padding: '12px 22px 0', fontSize: 12.5,
+  h1:       { fontFamily: 'var(--display)', fontWeight: 700, fontSize: 'var(--fs-lg)', margin: 0 },
+  tagline:  { color: 'var(--t3)', fontSize: 'var(--fs-md)' },
+  menu:     { display: 'flex', flexWrap: 'wrap', gap: 16, padding: '12px 22px 0', fontSize: 'var(--fs-base)',
               color: 'var(--t3)', borderBottom: '1px solid var(--bd)' },
   menuLink: { marginLeft: 'auto', color: 'var(--t3)', cursor: 'default' },
   wrap:     { maxWidth: 1120, margin: '0 auto', padding: '22px 22px 56px' },
-  desc:     { color: 'var(--t2)', fontSize: 14, marginBottom: 18 },
-  hint:     { fontSize: 12, color: 'var(--t3)' },
+  desc:     { color: 'var(--t2)', fontSize: 'var(--fs-lg)', marginBottom: 18 },
+  hint:     { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
   kpis:     { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 18 },
   kpi:      { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 10, padding: '14px 16px' },
-  kpiLab:   { fontSize: 12, color: 'var(--t3)' },
-  kpiVal:   { fontFamily: 'var(--display)', fontWeight: 700, fontSize: 25, marginTop: 8, lineHeight: 1 },
+  kpiLab:   { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
+  kpiVal:   { fontFamily: 'var(--display)', fontWeight: 700, fontSize: 'var(--fs-2xl)', marginTop: 8, lineHeight: 1 },
   card:     { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '16px 18px', marginBottom: 16 },
-  cardH2:   { fontFamily: 'var(--font)', fontWeight: 600, fontSize: 14, margin: '0 0 12px', display: 'flex',
+  cardH2:   { fontFamily: 'var(--font)', fontWeight: 600, fontSize: 'var(--fs-lg)', margin: '0 0 12px', display: 'flex',
               justifyContent: 'space-between', alignItems: 'center' },
-  meta:     { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 11, color: 'var(--t3)' },
+  meta:     { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   chip:     { background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 6, padding: '1px 8px',
-              fontSize: 11, color: 'var(--t2)' },
+              fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
 };

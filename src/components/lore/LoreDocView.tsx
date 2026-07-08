@@ -80,7 +80,7 @@ export default function LoreDocView({ onError }: Props) {
                 </span>
               )}
               {doc.component_id && (
-                <span style={{ fontSize: 9, color: 'var(--t3)' }}>{doc.component_id}</span>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{doc.component_id}</span>
               )}
             </div>
           </div>
@@ -138,55 +138,55 @@ const S = {
     padding: '6px 10px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   filterInp: {
-    flex: 1, height: 24, padding: '0 8px', fontSize: 11,
+    flex: 1, height: 24, padding: '0 8px', fontSize: 'var(--fs-sm)',
     border: '1px solid var(--b3)', borderRadius: 3,
     background: 'var(--b2)', color: 'var(--t1)', outline: 'none',
     fontFamily: 'inherit',
   },
-  listCount: { fontSize: 10, color: 'var(--t3)', flexShrink: 0 },
+  listCount: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', flexShrink: 0 },
   docRow: {
     padding: '7px 10px', borderBottom: '1px solid var(--bd)',
     cursor: 'pointer', transition: 'background 0.1s',
   },
   docId: {
-    fontSize: 10, fontFamily: 'var(--mono)',
+    fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)',
     color: 'var(--acc)', marginBottom: 2,
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
   },
   docTitle: {
-    fontSize: 11, color: 'var(--t1)',
+    fontSize: 'var(--fs-sm)', color: 'var(--t1)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
   },
   docMeta: {
     display: 'flex', gap: 4, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' as const,
   },
   kindChip: (kind: string) => ({
-    fontSize: 9, padding: '1px 4px', borderRadius: 2,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 2,
     background: `color-mix(in srgb, ${kind === 'page' ? 'var(--inf)' : 'var(--wrn)'} 14%, transparent)`,
     color: kind === 'page' ? 'var(--inf)' : 'var(--wrn)',
   }),
   extWarn: {
-    fontSize: 9, color: 'var(--danger)', fontWeight: 600,
+    fontSize: 'var(--fs-2xs)', color: 'var(--danger)', fontWeight: 600,
   },
   detail: {
     flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
   },
   detailEmpty: {
-    padding: '40px 24px', color: 'var(--t3)', fontSize: 12,
+    padding: '40px 24px', color: 'var(--t3)', fontSize: 'var(--fs-base)',
     textAlign: 'center' as const, flex: 1,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   detailHdr: {
     padding: '10px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
-  detailTitle: { fontSize: 13, fontWeight: 600, color: 'var(--t1)', display: 'block', marginBottom: 3 },
-  detailMeta:  { fontSize: 10, color: 'var(--t3)' },
+  detailTitle: { fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--t1)', display: 'block', marginBottom: 3 },
+  detailMeta:  { fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
   extBanner: {
     marginTop: 6, padding: '5px 10px',
     background: 'color-mix(in srgb, var(--danger) 8%, transparent)',
     border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
-    borderRadius: 3, fontSize: 10, color: 'var(--danger)', lineHeight: 1.5,
+    borderRadius: 3, fontSize: 'var(--fs-xs)', color: 'var(--danger)', lineHeight: 1.5,
   },
   detailBody: { flex: 1, overflowY: 'auto' as const, padding: 12 },
-  msg: { padding: '24px 16px', color: 'var(--t3)', fontSize: 12 },
+  msg: { padding: '24px 16px', color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };

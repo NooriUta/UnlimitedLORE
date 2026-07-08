@@ -147,21 +147,21 @@ function Field({ label, grow, children }: { label: string; grow: number; childre
 }
 
 const S: Record<string, React.CSSProperties> = {
-  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 12 },
+  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 'var(--fs-base)' },
   head:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10 },
-  title:    { fontSize: 14, fontWeight: 600, color: 'var(--t1)' },
+  title:    { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
   headBtns: { display: 'flex', gap: 8 },
-  errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 11,
+  errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 'var(--fs-sm)',
               background: 'color-mix(in srgb, var(--dng) 12%, transparent)',
               color: 'var(--dng)', border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)' },
   row4:     { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 },
   field:    { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 110 },
-  label:    { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  label:    { fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input:    { height: 28, padding: '0 8px', borderRadius: 4, border: '1px solid var(--b3)',
-              background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
+              background: 'var(--b1)', color: 'var(--t1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
               outline: 'none', width: '100%', boxSizing: 'border-box' },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 'var(--fs-base)', fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
-               background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
+               background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 'var(--fs-base)' },
 };

@@ -10,17 +10,17 @@ function ErrorBoundaryFallback({ label, message, onRetry }: { label?: string; me
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', gap: 10, padding: 32, color: 'var(--t3)', fontSize: 12,
+      justifyContent: 'center', gap: 10, padding: 32, color: 'var(--t3)', fontSize: 'var(--fs-base)',
     }}>
       <GameIcon slug="broken-heart" size={32} />
       <span style={{ color: 'var(--danger)', fontWeight: 600 }}>
         {label ?? t('lore.errorBoundary.title', 'Ошибка рендера')}
       </span>
-      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, maxWidth: 480, textAlign: 'center', color: 'var(--t2)' }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', maxWidth: 480, textAlign: 'center', color: 'var(--t2)' }}>
         {message}
       </span>
       <button
-        style={{ marginTop: 8, cursor: 'pointer', fontSize: 11, padding: '4px 12px' }}
+        style={{ marginTop: 8, cursor: 'pointer', fontSize: 'var(--fs-sm)', padding: '4px 12px' }}
         onClick={onRetry}
       >
         {t('lore.errorBoundary.retry', 'Повторить')}
