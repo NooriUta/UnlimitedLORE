@@ -34,7 +34,7 @@ export function Chip({ label, pressed, onClick, count, color, dot, shape = 'pill
       disabled={zero}
       onClick={onClick}
       style={{
-        font: 'inherit', fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5,
+        font: 'inherit', fontSize: 'var(--fs-sm)', display: 'inline-flex', alignItems: 'center', gap: 5,
         padding: '3px 8px', borderRadius: shape === 'pill' ? 999 : 6, cursor: zero ? 'default' : 'pointer',
         border: `1px solid ${pressed ? `color-mix(in srgb, ${c} 60%, var(--bd))` : 'var(--b3)'}`,
         background: pressed ? `color-mix(in srgb, ${c} 16%, transparent)` : 'transparent',
@@ -44,7 +44,7 @@ export function Chip({ label, pressed, onClick, count, color, dot, shape = 'pill
     >
       {dot && <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: pressed ? c : 'var(--t3)' }} />}
       {label}
-      {count !== undefined && <span style={{ fontSize: 9.5, opacity: 0.65, fontFamily: 'var(--mono)' }}>{count}</span>}
+      {count !== undefined && <span style={{ fontSize: 'var(--fs-2xs)', opacity: 0.65, fontFamily: 'var(--mono)' }}>{count}</span>}
     </button>
   );
 }
@@ -72,7 +72,7 @@ export function SearchInput({ value, onChange, placeholder, ariaLabel, maxWidth 
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel ?? t('lore.filters.search', 'Поиск')}
-        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--t1)', fontSize: 13, fontFamily: 'inherit' }}
+        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--t1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit' }}
       />
       {value && (
         <button
@@ -106,7 +106,7 @@ export function FilterTag({ label, onRemove, color, muted }: FilterTagData) {
       type="button"
       onClick={e => { e.stopPropagation(); onRemove(); }}
       style={{
-        font: 'inherit', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 5,
+        font: 'inherit', fontSize: 'var(--fs-sm)', display: 'inline-flex', alignItems: 'center', gap: 5,
         padding: '2px 8px', borderRadius: 999, cursor: 'pointer', background: 'var(--bg2)',
         border: `1px solid color-mix(in srgb, ${c} 45%, var(--bd))`, borderStyle: muted ? 'dashed' : 'solid',
         color: 'var(--t1)', whiteSpace: 'nowrap', flexShrink: 0, opacity: muted ? 0.5 : 1,
@@ -133,7 +133,7 @@ export function FilterSummaryLine({ tags, emptyLabel }: FilterSummaryLineProps) 
   const { t } = useTranslation();
   if (!tags.length) {
     return (
-      <span aria-live="polite" style={{ color: 'var(--t3)', fontSize: 11, whiteSpace: 'nowrap' }}>
+      <span aria-live="polite" style={{ color: 'var(--t3)', fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap' }}>
         {emptyLabel ?? t('lore.filters.notSet', 'не заданы')}
       </span>
     );
@@ -168,13 +168,13 @@ export function SortControl({ options, sortKey, direction, onChange }: SortContr
             aria-pressed={active}
             onClick={() => onChange(o.key, active ? (direction === 'asc' ? 'desc' : 'asc') : 'desc')}
             style={{
-              font: 'inherit', fontSize: 11, padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
+              font: 'inherit', fontSize: 'var(--fs-sm)', padding: '3px 8px', borderRadius: 6, cursor: 'pointer',
               border: `1px solid ${active ? 'color-mix(in srgb, var(--acc) 55%, var(--bd))' : 'var(--b3)'}`,
               background: active ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
               color: active ? 'var(--acc)' : 'var(--t3)', display: 'inline-flex', gap: 4, alignItems: 'center',
             }}
           >
-            {o.label}{active && <span style={{ fontSize: 9 }}>{direction === 'asc' ? '↑' : '↓'}</span>}
+            {o.label}{active && <span style={{ fontSize: 'var(--fs-2xs)' }}>{direction === 'asc' ? '↑' : '↓'}</span>}
           </button>
         );
       })}
@@ -229,7 +229,7 @@ export function FilterDimensionSingle({ label, options, selected, onSelect, coun
 }
 
 const dimLabelStyle = {
-  fontFamily: 'var(--mono)', fontSize: 9.5, letterSpacing: '.05em', textTransform: 'uppercase' as const,
+  fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const,
   color: 'var(--t3)', width: 82, flexShrink: 0,
 };
 
@@ -273,13 +273,13 @@ export function FilterBar({ tier, label, activeCount, summaryTags, onClear, open
         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', cursor: 'pointer', minWidth: 0 }}
       >
         <span style={{
-          fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: '.08em', textTransform: 'uppercase',
+          fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.08em', textTransform: 'uppercase',
           color: isGlobal ? 'var(--acc)' : 'var(--t3)', flexShrink: 0,
         }}>
           {label}
         </span>
         <span style={{
-          fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)', background: 'var(--bg2)',
+          fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t2)', background: 'var(--bg2)',
           border: '1px solid var(--b3)', borderRadius: 999, padding: '0 7px', flexShrink: 0,
         }}>
           {activeCount}
@@ -289,12 +289,12 @@ export function FilterBar({ tier, label, activeCount, summaryTags, onClear, open
           <button
             type="button"
             onClick={e => { e.stopPropagation(); onClear(); }}
-            style={{ flexShrink: 0, fontSize: 10.5, color: 'var(--t3)', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ flexShrink: 0, fontSize: 'var(--fs-xs)', color: 'var(--t3)', background: 'none', border: 'none', cursor: 'pointer' }}
           >
             {t('lore.filters.clear', '✕ сброс')}
           </button>
         )}
-        <span style={{ flexShrink: 0, color: 'var(--t3)', fontSize: 11, whiteSpace: 'nowrap' }}>
+        <span style={{ flexShrink: 0, color: 'var(--t3)', fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap' }}>
           {open ? t('lore.filters.collapse', '▴ свернуть') : t('lore.filters.expand', '▾ развернуть')}
         </span>
       </div>

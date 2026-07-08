@@ -16,12 +16,12 @@ export interface EmptyStateProps {
 export function EmptyState({ message, icon, hint }: EmptyStateProps) {
   return (
     <div style={{
-      padding: 24, color: 'var(--t3)', fontSize: 12, textAlign: 'center',
+      padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)', textAlign: 'center',
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
     }}>
       {icon}
       <span>{message}</span>
-      {hint && <span style={{ fontSize: 10 }}>{hint}</span>}
+      {hint && <span style={{ fontSize: 'var(--fs-xs)' }}>{hint}</span>}
     </div>
   );
 }

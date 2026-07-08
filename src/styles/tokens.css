@@ -93,6 +93,24 @@
   --seer-radius-md: 6px;
   --seer-radius-lg: 10px;
   --seer-radius-xl: 14px;
+
+  /* ── typography scale (T24) — an audit of every inline fontSize in the
+     lore/ tree found ~20 distinct px values (7–32), with ~690 of ~840
+     occurrences already clustered at 9–12px behind scattered near-duplicates
+     (8/8.5/9/9.5 read as the same size, etc). These 8 steps round that
+     existing usage to a canon rather than introduce a new visual language —
+     each step keeps whichever value already dominated its role (e.g.
+     --fs-lg is 14px because that was already the majority size for section
+     headers; the rarer 15/16/17px one-offs round down to it, not the other
+     way around). Prototype: docs/prototypes/type-scale.html. */
+  --fs-2xs:  9px;   /* micro meta — dates, counts, sub-labels under KPI numbers */
+  --fs-xs:   10px;  /* chips, table headers, field labels */
+  --fs-sm:   11px;  /* UI baseline — list rows, buttons, badges, chip text */
+  --fs-base: 12px;  /* body text, inputs, descriptions */
+  --fs-md:   13px;  /* sub-headers, emphasis text */
+  --fs-lg:   14px;  /* section/card headers, dialog titles */
+  --fs-xl:   20px;  /* secondary KPI numbers */
+  --fs-2xl:  24px;  /* primary/hero KPI numbers */
 }
 
 /* ---------- SLATE (dark, blue) ---------- */

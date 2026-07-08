@@ -942,11 +942,11 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
             </div>
             <div style={S.panelBodyCol}>
               {msPanel.date_display && (
-                <div style={{ color: 'var(--t3)', marginBottom: 10, fontSize: 11 }}>
+                <div style={{ color: 'var(--t3)', marginBottom: 10, fontSize: 'var(--fs-sm)' }}>
                   W{msPanel.week} · {msPanel.date_display}
                 </div>
               )}
-              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 11 }}>{t('lore.planBoard.milestone.toClose', 'Что закрыть:')}</div>
+              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 'var(--fs-sm)' }}>{t('lore.planBoard.milestone.toClose', 'Что закрыть:')}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', columnGap: 24 }}>
                 {renderMsGroups(msPanel, sprints, cps, setMsPanel, onNavigateToSprint, t)}
               </div>
@@ -991,14 +991,14 @@ function renderMsGroups(
   return (
     <>
       {msSprints.length === 0 && msCps.length === 0 && (
-        <div style={{ color: 'var(--t3)', fontSize: 11, padding: '4px 0' }}>
+        <div style={{ color: 'var(--t3)', fontSize: 'var(--fs-sm)', padding: '4px 0' }}>
           {t('lore.planBoard.milestone.noTasks', 'Нет связанных задач.')}
         </div>
       )}
       {[...grouped.entries()].map(([st, grp]) => (
         <div key={st} style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+            fontSize: 'var(--fs-xs)', fontWeight: 600, textTransform: 'uppercase',
             color: statusMeta(st).color, marginBottom: 3 }}>
             <GameIcon slug={statusMeta(st).icon} size={11} style={{ color: 'inherit' }} />
             {st} ({grp.length})
@@ -1007,7 +1007,7 @@ function renderMsGroups(
             <div key={s.sprint_id}
               onClick={() => { setMsPanel(null); onNavigateToSprint?.(s.sprint_id); }}
               style={{ paddingLeft: 8, color: 'var(--t2)', lineHeight: '1.7',
-                fontSize: 11, cursor: 'pointer' }}>
+                fontSize: 'var(--fs-sm)', cursor: 'pointer' }}>
               · {cleanLabel(s.name)}
             </div>
           ))}
@@ -1015,14 +1015,14 @@ function renderMsGroups(
       ))}
       {msCps.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+          <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, textTransform: 'uppercase',
             color: 'var(--acc)', marginBottom: 3 }}>
             {t('lore.planBoard.milestone.checkpoints', 'Плашки')} ({msCps.length})
           </div>
           {msCps.map(cp => (
             <div key={cp.checkpoint_id}
               title={cp.desc_md ?? ''}
-              style={{ paddingLeft: 8, color: 'var(--t2)', lineHeight: '1.7', fontSize: 10 }}>
+              style={{ paddingLeft: 8, color: 'var(--t2)', lineHeight: '1.7', fontSize: 'var(--fs-xs)' }}>
               ✓ {cp.label}
             </div>
           ))}
@@ -1039,7 +1039,7 @@ function Tog({ active, onClick, children, title }: {
     <button onClick={onClick} style={{
       height: 22, padding: '0 8px',
       border: '1px solid var(--b3)', borderRadius: 3,
-      fontSize: 10, cursor: 'pointer',
+      fontSize: 'var(--fs-xs)', cursor: 'pointer',
       background: active ? 'color-mix(in srgb, var(--acc) 20%, transparent)' : 'var(--b2)',
       color: active ? 'var(--acc)' : 'var(--t3)',
     }} title={title}>
@@ -1051,7 +1051,7 @@ function Tog({ active, onClick, children, title }: {
 function LegendStatus({ status, label }: { status: string; label: string }) {
   const m = statusMeta(status);
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--t2)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>
       <GameIcon slug={m.icon} size={12} style={{ color: m.color }} />
       {label}
     </span>
@@ -1080,7 +1080,7 @@ const S = {
     display: 'flex', flexDirection: 'column' as const,
     position: 'relative' as const,
   },
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   toolbar: {
     display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const,
     padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
@@ -1088,21 +1088,21 @@ const S = {
   btn: {
     height: 22, padding: '0 8px',
     border: '1px solid var(--b3)', borderRadius: 3,
-    fontSize: 10, cursor: 'pointer',
+    fontSize: 'var(--fs-xs)', cursor: 'pointer',
     background: 'var(--b2)', color: 'var(--t2)',
   },
-  zlabel: { fontSize: 10, color: 'var(--t3)' },
-  stat:   { fontSize: 10, color: 'var(--t3)' },
+  zlabel: { fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
+  stat:   { fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
   divider:{ width: 1, height: 16, background: 'var(--b3)', margin: '0 2px' },
   legend: {
     display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const,
     padding: '5px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
     background: 'var(--b1)',
   },
-  legendCap:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
-  legendGlyph: { fontSize: 10, color: 'var(--t2)', display: 'inline-flex', gap: 4, alignItems: 'center' },
+  legendCap:   { fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  legendGlyph: { fontSize: 'var(--fs-xs)', color: 'var(--t2)', display: 'inline-flex', gap: 4, alignItems: 'center' },
   legendSep:   { width: 1, height: 14, background: 'var(--b3)' },
-  legendDim:   { fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' },
+  legendDim:   { fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginLeft: 'auto' },
   // Timeline on top, detail panel as a full-width strip at the bottom.
   main: {
     flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden',
@@ -1125,12 +1125,12 @@ const S = {
   },
   // Title wraps fully now (no ellipsis) — the whole description is visible.
   panelTitle: {
-    flex: 1, fontWeight: 600, fontSize: 13, lineHeight: 1.35, color: 'var(--t1)',
+    flex: 1, fontWeight: 600, fontSize: 'var(--fs-md)', lineHeight: 1.35, color: 'var(--t1)',
     overflowWrap: 'anywhere' as const,
   },
   panelBodyCol: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
   closeBtn: {
     background: 'transparent', border: 'none', cursor: 'pointer',
-    color: 'var(--t3)', fontSize: 13, padding: '0 4px', flexShrink: 0,
+    color: 'var(--t3)', fontSize: 'var(--fs-md)', padding: '0 4px', flexShrink: 0,
   },
 };

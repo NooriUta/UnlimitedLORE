@@ -211,7 +211,7 @@ function Kpi({ icon, label, value, sub, color, highlight, hint }: {
       <div style={{ display: 'flex', flexDirection: 'column' as const, minWidth: 0 }}>
         <span style={{ ...S.cardValue, ...(highlight ? { color } : {}) }}>{value}</span>
         <span style={{ ...S.cardLabel, display: 'flex', alignItems: 'center', gap: 3 }}>
-          {label}{hint && <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>}
+          {label}{hint && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>}
         </span>
         {sub && <span style={S.cardSub}>{sub}</span>}
       </div>
@@ -1149,7 +1149,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <GameIcon slug={tb.icon} size={12} style={{ color: 'inherit' }} />
           {t(`lore.analytics.tabs.${tb.key}`, tb.label)}
           {tb.key === 'progress' && currentMilestone && daysUntilCurrent !== null && daysUntilCurrent >= 0 && daysUntilCurrent <= 14 && (
-            <span style={{ fontSize: 8, padding: '0 4px', borderRadius: 3, background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)', color: 'var(--on-accent)', marginLeft: 2 }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', padding: '0 4px', borderRadius: 3, background: daysUntilCurrent <= 7 ? 'var(--dng)' : 'var(--wrn)', color: 'var(--on-accent)', marginLeft: 2 }}>
               {t('lore.analytics.daysSuffix', '{{n}}д', { n: daysUntilCurrent })}
             </span>
           )}
@@ -1185,7 +1185,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {currentMilestone && (
         <section style={{
           ...S.panel,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const,
+          // flex-start, not center: sibling blocks have different line counts
+          // (milestone/overdue are 2 lines, open-Sp/weeks-to-close grow a 3rd
+          // line when milestoneOpenCount !== openSprintCount or a forecast
+          // hint wraps) — centering a row of unequal-height blocks staggers
+          // their headline numbers instead of aligning them.
+          display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' as const,
           background: onTrack
             ? `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 6%,var(--b2))`
             : 'var(--b2)',
@@ -1195,28 +1200,33 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <GameIcon slug="crossed-axes" size={16} style={{ color: 'var(--acc)' }} />
+            {/* value-then-caption, matching the KPI blocks in this same row
+                (big number on top, small label below) — was caption-then-value,
+                the mismatched order made this block's text sit at a visibly
+                different height than its siblings despite the shared
+                alignItems:center on the parent row. */}
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
-                {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 11 }}>· {currentMilestone.date_display}</span>
+              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>
+                {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 'var(--fs-sm)' }}>· {currentMilestone.date_display}</span>
               </span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
             </div>
           </div>
 
           {daysUntilCurrent !== null && (
             <div title={t('lore.analytics.planHealth.daysUntilHint', 'Календарных дней от сегодня до плановой даты текущей вехи (date_display).')} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
-              <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1,
+              <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, lineHeight: 1,
                 color: daysUntilCurrent < 0 ? 'var(--dng)' : daysUntilCurrent <= 7 ? 'var(--wrn)' : 'var(--t1)' }}>
                 {daysUntilCurrent >= 0 ? daysUntilCurrent : `+${-daysUntilCurrent}`}
               </span>
-              <span style={{ fontSize: 9, color: 'var(--t3)' }}>{daysUntilCurrent >= 0 ? t('lore.analytics.planHealth.daysToDeadline', 'дней до дедлайна ⓘ') : t('lore.analytics.planHealth.daysOverdue', 'дней просрочки ⓘ')}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{daysUntilCurrent >= 0 ? t('lore.analytics.planHealth.daysToDeadline', 'дней до дедлайна ⓘ') : t('lore.analytics.planHealth.daysOverdue', 'дней просрочки ⓘ')}</span>
             </div>
           )}
 
           <div title={t('lore.analytics.planHealth.openSprintsHint', 'Незакрытые спринты вехи: {{open}}. Всего в системе незакрыто: {{total}}.', { open: milestoneOpenCount, total: openSprintCount })}
             style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
-            <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--dng)' }}>{milestoneOpenCount}</span>
-            <span style={{ fontSize: 9, color: 'var(--t3)', textAlign: 'center' as const }}>
+            <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, lineHeight: 1, color: 'var(--dng)' }}>{milestoneOpenCount}</span>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textAlign: 'center' as const }}>
               {t('lore.analytics.planHealth.openSpMilestone', 'open Sp вехи ⓘ')}
               {milestoneOpenCount !== openSprintCount && <><br /><span style={{ opacity: 0.6 }}>{t('lore.analytics.planHealth.total', 'всего {{n}}', { n: openSprintCount })}</span></>}
             </span>
@@ -1225,8 +1235,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           {weeksToFinish !== null && (
             <div title={t('lore.analytics.planHealth.forecastHint', 'Прогноз: незакрытых Sp вехи ({{open}}) ÷ velocity ({{vel}} Sp/нед) = недель до закрытия.', { open: milestoneOpenCount, vel: avgVelocity.toFixed(1) })}
               style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'help' }}>
-              <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--t1)' }}>~{Math.ceil(weeksToFinish)}</span>
-              <span style={{ fontSize: 9, color: 'var(--t3)' }}>{t('lore.analytics.planHealth.weeksToClose', 'нед до закрытия ⓘ')}<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
+              <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, lineHeight: 1, color: 'var(--t1)' }}>~{Math.ceil(weeksToFinish)}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{t('lore.analytics.planHealth.weeksToClose', 'нед до закрытия ⓘ')}<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
             </div>
           )}
 
@@ -1239,10 +1249,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               <GameIcon slug={onTrack.ok ? 'check-mark' : 'padlock'} size={14}
                 style={{ color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }} />
               <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }}>
                   {onTrack.ok ? t('lore.analytics.planHealth.onTrack', 'В графике') : t('lore.analytics.planHealth.atRisk', 'Риск срыва')}
                 </span>
-                <span style={{ fontSize: 9, color: 'var(--t3)' }}>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
                   {onTrack.ok ? t('lore.analytics.planHealth.slackShort', 'запас {{n}} дн', { n: onTrack.slack }) : t('lore.analytics.planHealth.deficitShort', 'не хватает {{n}} дн', { n: -onTrack.slack })}
                 </span>
               </div>
@@ -1271,11 +1281,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
       <div style={S.row2}>
         <section style={S.panel}>
-          <div style={S.panelTitle} title={t('lore.analytics.overview.tasksByStatusHint', 'Распределение всех задач по статусу (классификация status_raw). Длина сегмента = доля статуса.')}>{t('lore.analytics.overview.tasksByStatus', 'Задачи по статусу')} <span style={S.dim}>· {totals.tasks}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.overview.tasksByStatusHint', 'Распределение всех задач по статусу (классификация status_raw). Длина сегмента = доля статуса.')}>{t('lore.analytics.overview.tasksByStatus', 'Задачи по статусу')} <span style={S.dim}>· {totals.tasks}</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           <StatusBar data={data.tasks_by_status} total={totals.tasks} />
         </section>
         <section style={S.panel}>
-          <div style={S.panelTitle} title={t('lore.analytics.overview.sprintsByStatusHint', 'Распределение всех спринтов по статусу (классификация status_raw). Длина сегмента = доля статуса.')}>{t('lore.analytics.overview.sprintsByStatus', 'Спринты по статусу')} <span style={S.dim}>· {totals.sprints}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.overview.sprintsByStatusHint', 'Распределение всех спринтов по статусу (классификация status_raw). Длина сегмента = доля статуса.')}>{t('lore.analytics.overview.sprintsByStatus', 'Спринты по статусу')} <span style={S.dim}>· {totals.sprints}</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           <StatusBar data={data.sprints_by_status} total={totals.sprints} />
         </section>
       </div>
@@ -1285,10 +1295,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ ...S.panelTitle, marginBottom: 0, cursor: 'help' }}
             title={t('lore.analytics.overview.componentsHint', 'Компоненты со спринтами. Группировка: area (поле area) · платформа (корневой компонент-предок: AIDA/SEIDR…) · проект (доминирующий git-проект компонента, выведенный через его спринты: Component←BELONGS_TO←Sprint→BELONGS_TO_PROJECT). Числа: Sp = спринтов, X/Y = задачи done/всего, % = выполнение.')}>
-            {t('lore.analytics.overview.components', 'Компоненты')} <span style={S.dim}>· {data.by_component.length}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+            {t('lore.analytics.overview.components', 'Компоненты')} <span style={S.dim}>· {data.by_component.length}</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.analytics.overview.groupBy', 'Группировка:')}</span>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{t('lore.analytics.overview.groupBy', 'Группировка:')}</span>
             <div style={S.toggle}>
               {(['area', 'platform', 'project'] as CompGroupBy[]).map(g => (
                 <button key={g} style={{ ...S.toggleBtn, ...(groupBy === g ? S.toggleBtnOn : {}) }}
@@ -1302,11 +1312,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
         {/* Column header row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 8px 6px', borderBottom: '1px solid var(--bd)', marginBottom: 4 }}>
-          <span style={{ flex: 1, fontSize: 8, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.overview.componentGroupCol', 'Компонент / группа')}</span>
-          <span title={t('lore.analytics.overview.sprintCountHint', 'Число привязанных спринтов')} style={{ fontSize: 8, color: 'var(--t3)', width: 44, textAlign: 'right' as const, cursor: 'help' }}>Sp ⓘ</span>
+          <span style={{ flex: 1, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.overview.componentGroupCol', 'Компонент / группа')}</span>
+          <span title={t('lore.analytics.overview.sprintCountHint', 'Число привязанных спринтов')} style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 44, textAlign: 'right' as const, cursor: 'help' }}>Sp ⓘ</span>
           <span style={{ width: 60 }} />
-          <span title={t('lore.analytics.overview.doneTotalHint', 'Задачи: выполнено / всего')} style={{ fontSize: 8, color: 'var(--t3)', width: 56, textAlign: 'right' as const, cursor: 'help' }}>{t('lore.analytics.overview.doneTotalCol', 'done/всего ⓘ')}</span>
-          <span title={t('lore.analytics.overview.pctHint', 'Процент выполнения = done / всего × 100')} style={{ fontSize: 8, color: 'var(--t3)', width: 38, textAlign: 'right' as const, cursor: 'help' }}>% ⓘ</span>
+          <span title={t('lore.analytics.overview.doneTotalHint', 'Задачи: выполнено / всего')} style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 56, textAlign: 'right' as const, cursor: 'help' }}>{t('lore.analytics.overview.doneTotalCol', 'done/всего ⓘ')}</span>
+          <span title={t('lore.analytics.overview.pctHint', 'Процент выполнения = done / всего × 100')} style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 38, textAlign: 'right' as const, cursor: 'help' }}>% ⓘ</span>
         </div>
 
         <div style={S.table}>
@@ -1323,14 +1333,14 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   {group.icon
                     ? <GameIcon slug={group.icon} size={11} style={{ color: group.color, flexShrink: 0 }} />
                     : <div style={{ width: 8, height: 8, borderRadius: 2, background: group.color, flexShrink: 0 }} />}
-                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--t1)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>
+                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--t1)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>
                     {group.label}
                   </span>
-                  <span style={{ fontSize: 9, color: 'var(--t3)' }} title={t('lore.analytics.overview.componentsInGroup', 'Компонентов в группе')}>· {group.comps.length}</span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }} title={t('lore.analytics.overview.componentsInGroup', 'Компонентов в группе')}>· {group.comps.length}</span>
                   <div title={t('lore.analytics.overview.groupDoneHint', 'Выполнение группы: {{done}} из {{total}} задач', { done: doneTasks, total: totTasks })} style={{ width: 80, height: 4, borderRadius: 2, background: 'var(--b3)', overflow: 'hidden', margin: '0 6px', flexShrink: 0 }}>
                     <div style={{ height: '100%', width: `${p}%`, background: group.color, borderRadius: 2 }} />
                   </div>
-                  <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', marginLeft: 'auto', cursor: 'help' }}
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', marginLeft: 'auto', cursor: 'help' }}
                     title={t('lore.analytics.overview.groupSumHint', 'Сумма по группе: {{sp}} спринтов, {{done}}/{{total}} задач выполнено ({{pct}}%)', { sp: totSp, done: doneTasks, total: totTasks, pct: p })}>
                     {totSp}Sp · {p}%
                   </span>
@@ -1361,7 +1371,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       </section>
 
       <section style={S.panel}>
-        <div style={S.panelTitle} title={t('lore.analytics.overview.releasesByProjectHint', 'Число релизов (KnowRelease) в разрезе корневого git-проекта.')}>{t('lore.analytics.overview.releasesByProject', 'Релизы по проектам')} <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+        <div style={S.panelTitle} title={t('lore.analytics.overview.releasesByProjectHint', 'Число релизов (KnowRelease) в разрезе корневого git-проекта.')}>{t('lore.analytics.overview.releasesByProject', 'Релизы по проектам')} <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
         <div style={S.relRow}>
           {Object.entries(data.releases_by_project).sort((a, b) => b[1] - a[1]).map(([proj, n]) => (
             <div key={proj} style={S.relCard}>
@@ -1381,7 +1391,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Filter bar: project + milestone + component — top of tab */}
       <section style={{ ...S.panel, padding: '10px 14px', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterProject', 'Проект')}</span>
+          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterProject', 'Проект')}</span>
           <div style={S.filterChips}>
             {['all', ...chartProjects].map(p => (
               <button key={p} style={{ ...S.chip, ...(chartProj === p ? S.chipActive : {}) }}
@@ -1392,7 +1402,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-          <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterMilestone', 'Веха')}</span>
+          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterMilestone', 'Веха')}</span>
           <div style={S.filterChips}>
             {[{ id: 'all', label: t('lore.analytics.progress.filterAll', 'Все') }, ...chartMilestones].map(m => (
               <button key={m.id} style={{ ...S.chip, ...(chartMilestone === m.id ? S.chipActive : {}) }}
@@ -1404,7 +1414,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         </div>
         {chartComps.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
-            <span style={{ fontSize: 9, color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterComponent', 'Компонент')}</span>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 72, flexShrink: 0, textAlign: 'right' as const, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.progress.filterComponent', 'Компонент')}</span>
             <div style={S.filterChips}>
               <button style={{ ...S.chip, ...(chartComp === 'all' ? S.chipActive : {}) }}
                 onClick={() => setChartComp('all')}>{t('lore.analytics.progress.filterAll', 'Все')}</button>
@@ -1419,12 +1429,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         )}
         {(chartProj !== 'all' || chartMilestone !== 'all' || chartComp !== 'all') && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 9, color: 'var(--t3)', width: 72 }} />
-            <button style={{ fontSize: 9, color: 'var(--acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 72 }} />
+            <button style={{ fontSize: 'var(--fs-2xs)', color: 'var(--acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               onClick={() => { setChartProj('all'); setChartMilestone('all'); setChartComp('all'); }}>
               {t('lore.analytics.progress.resetFilters', '× сбросить фильтры')}
             </button>
-            <span style={{ fontSize: 9, color: 'var(--t3)' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
               {t('lore.analytics.progress.sprintsInSelection', '{{n}} спринтов в выборке', { n: chartSprints.length })}
             </span>
           </div>
@@ -1436,12 +1446,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         <section style={S.panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap' as const, gap: 4 }}>
             <div style={S.panelTitle} title={t('lore.analytics.progress.velocityHint', 'Спринтов, закрытых за каждую ISO-неделю (по done_date). Столбик = неделя, последняя подсвечена.')}>
-              Velocity <span style={S.dim}>· {t('lore.analytics.progress.lastNWeeks', 'последние {{n}} нед', { n: (chartVelocityWeeks.length || velocityWeeks.length) })}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+              Velocity <span style={S.dim}>· {t('lore.analytics.progress.lastNWeeks', 'последние {{n}} нед', { n: (chartVelocityWeeks.length || velocityWeeks.length) })}</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span title={t('lore.analytics.progress.avgVelocityHint', 'Среднее число закрытых спринтов в неделю за показанный период.')} style={{ fontSize: 10, color: 'var(--t2)', cursor: 'help' }}>avg <b style={{ color: 'var(--t1)' }}>{avgVelocity.toFixed(1)}</b>/нед</span>
+              <span title={t('lore.analytics.progress.avgVelocityHint', 'Среднее число закрытых спринтов в неделю за показанный период.')} style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)', cursor: 'help' }}>avg <b style={{ color: 'var(--t1)' }}>{avgVelocity.toFixed(1)}</b>/нед</span>
               {velocityTrend !== null && (
-                <span title={t('lore.analytics.progress.velocityTrendHint', 'Тренд: средний velocity последних 4 недель vs предыдущих 4, в %.')} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)', cursor: 'help',
+                <span title={t('lore.analytics.progress.velocityTrendHint', 'Тренд: средний velocity последних 4 недель vs предыдущих 4, в %.')} style={{ fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)', cursor: 'help',
                   color: velocityTrend >= 0 ? 'var(--suc)' : 'var(--dng)',
                   background: velocityTrend >= 0 ? 'color-mix(in srgb,var(--suc) 12%,transparent)' : 'color-mix(in srgb,var(--dng) 12%,transparent)',
                 }}>
@@ -1450,7 +1460,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               )}
               {velocityCV !== null && (
                 <span title={t('lore.analytics.progress.velocityCVHint', 'Стабильность темпа (коэф. вариации; ниже = ровнее)')}
-                  style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)',
+                  style={{ fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, fontFamily: 'var(--mono)',
                     color: velocityCV <= 0.4 ? 'var(--suc)' : velocityCV <= 0.7 ? 'var(--wrn)' : 'var(--dng)',
                     background: 'var(--b3)' }}>
                   σ {Math.round(velocityCV * 100)}%
@@ -1464,7 +1474,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               {chartVelocityStacks.map(s => (
                 <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 9, color: 'var(--t3)' }}>{s.label}</span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{s.label}</span>
                 </div>
               ))}
             </div>
@@ -1476,33 +1486,33 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         </section>
 
         <section style={S.panel}>
-          <div style={S.panelTitle} title={t('lore.analytics.progress.unreleasedBurnHint', 'Завершено за проект = все спринты с done_date. После M2 = завершённые с 03.06, ещё не вошедшие в релиз. Открыто = статус не done/cancelled.')}>{t('lore.analytics.progress.unreleasedBurn', 'Незарелиженное / burn')} <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.progress.unreleasedBurnHint', 'Завершено за проект = все спринты с done_date. После M2 = завершённые с 03.06, ещё не вошедшие в релиз. Открыто = статус не done/cancelled.')}>{t('lore.analytics.progress.unreleasedBurn', 'Незарелиженное / burn')} <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
             {/* Done total */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.analytics.progress.doneForProject', 'Завершено за проект')}</span>
-                <span style={{ fontSize: 10, color: 'var(--suc)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{doneDates.length} Sp</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{t('lore.analytics.progress.doneForProject', 'Завершено за проект')}</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--suc)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{doneDates.length} Sp</span>
               </div>
               <MiniBar done={doneDates.length} total={doneDates.length + openSprintCount} color="var(--suc)" wide />
             </div>
             {/* Since M2 (незарелиженное) */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.analytics.progress.sinceM2', 'После M2 (c 3 июн) — незарелиженное')}</span>
-                <span style={{ fontSize: 10, color: 'var(--wrn)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{sinceM2Count} Sp</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{t('lore.analytics.progress.sinceM2', 'После M2 (c 3 июн) — незарелиженное')}</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--wrn)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{sinceM2Count} Sp</span>
               </div>
               <MiniBar done={sinceM2Count} total={doneDates.length} color="var(--wrn)" wide />
             </div>
             {/* Open */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.analytics.progress.openInProgress', 'Открыто / в работе')}</span>
-                <span style={{ fontSize: 10, color: 'var(--dng)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{openSprintCount} Sp</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{t('lore.analytics.progress.openInProgress', 'Открыто / в работе')}</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--dng)', fontFamily: 'var(--mono)', fontWeight: 600 }}>{openSprintCount} Sp</span>
               </div>
               <MiniBar done={openSprintCount} total={doneDates.length + openSprintCount} color="var(--dng)" wide />
             </div>
-            <div style={{ fontSize: 9, color: 'var(--t3)', borderTop: '1px solid var(--bd)', paddingTop: 8, lineHeight: 1.4 }}>
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', borderTop: '1px solid var(--bd)', paddingTop: 8, lineHeight: 1.4 }}>
               {deployLag.unreleased > 0
                 ? <><b style={{ color: 'var(--wrn)' }}>{deployLag.unreleased}</b> {t('lore.analytics.progress.doneNotReleased', 'завершённых спринтов ещё не в релизе.')}<br /></>
                 : <>{t('lore.analytics.progress.allReleased', 'Все завершённые спринты вошли в релизы.')}<br /></>}
@@ -1516,9 +1526,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <div style={S.row2}>
         <section style={S.panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap' as const, gap: 4 }}>
-            <div style={S.panelTitle} title={t('lore.analytics.progress.burnupHint', 'Две накопленные линии по неделям: scope = спринты, созданные к дате (по valid_from); done = закрытые к дате (по done_date). Разрыв = backlog (scope creep). Учитывает фильтр проекта.')}>Burnup <span style={S.dim}>· scope vs done</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+            <div style={S.panelTitle} title={t('lore.analytics.progress.burnupHint', 'Две накопленные линии по неделям: scope = спринты, созданные к дате (по valid_from); done = закрытые к дате (по done_date). Разрыв = backlog (scope creep). Учитывает фильтр проекта.')}>Burnup <span style={S.dim}>· scope vs done</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
             {burnup && (
-              <div style={{ display: 'flex', gap: 10, fontSize: 9 }}>
+              <div style={{ display: 'flex', gap: 10, fontSize: 'var(--fs-2xs)' }}>
                 <span style={{ color: 'var(--acc)' }}>scope <b>{burnup.totalScope}</b></span>
                 <span style={{ color: 'var(--suc)' }}>done <b>{burnup.totalDone}</b></span>
                 <span style={{ color: 'var(--wrn)' }}>Δ <b>{burnup.totalScope - burnup.totalDone}</b></span>
@@ -1532,15 +1542,15 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
         <section style={S.panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap' as const, gap: 4 }}>
-            <div style={S.panelTitle} title={t('lore.analytics.progress.cumulativeHint', 'Нарастающий итог закрытых спринтов по дням (по done_date). Крутизна = темп. Учитывает фильтр проекта.')}>{t('lore.analytics.progress.cumulativeDone', 'Накопленное выполнение')} <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
-            <span style={{ fontSize: 10, color: 'var(--t2)' }}>
-              <b style={{ color: 'var(--suc)', fontSize: 13 }}>{cumulativePoints.length}</b> Sp
+            <div style={S.panelTitle} title={t('lore.analytics.progress.cumulativeHint', 'Нарастающий итог закрытых спринтов по дням (по done_date). Крутизна = темп. Учитывает фильтр проекта.')}>{t('lore.analytics.progress.cumulativeDone', 'Накопленное выполнение')} <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>
+              <b style={{ color: 'var(--suc)', fontSize: 'var(--fs-md)' }}>{cumulativePoints.length}</b> Sp
             </span>
           </div>
           {cumulativePoints.length >= 2
             ? <>
                 <CumulativeChart points={cumulativePoints} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 9, color: 'var(--t3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
                   <span>{t('lore.analytics.progress.apr19', '19 апр')}</span><span>{t('lore.analytics.progress.today', 'сегодня')}</span>
                 </div>
               </>
@@ -1551,9 +1561,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Pareto — concentration of work */}
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={S.panelTitle} title="Доля задач каждого компонента от всех задач (Парето). Σ — накопленная доля сверху вниз. Покрытие = компоненты со спринтами / все компоненты.">Концентрация работы <span style={S.dim}>· топ-8 компонентов</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title="Доля задач каждого компонента от всех задач (Парето). Σ — накопленная доля сверху вниз. Покрытие = компоненты со спринтами / все компоненты.">Концентрация работы <span style={S.dim}>· топ-8 компонентов</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {coverage && (
-            <span style={{ fontSize: 10, color: 'var(--t2)' }}>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>
               покрытие <b style={{ color: 'var(--t1)' }}>{coverage.withSprints}/{coverage.total}</b>{' '}
               <span style={{ color: 'var(--t3)' }}>({pct(coverage.withSprints, coverage.total)}% компонентов со спринтами)</span>
             </span>
@@ -1576,7 +1586,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 </div>
                 <span style={S.count}>{c.task_total}</span>
                 <span style={{ ...S.pctNum, width: 40 }}>{Math.round(c.share * 100)}%</span>
-                <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', width: 44, textAlign: 'right' as const }}
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', width: 44, textAlign: 'right' as const }}
                   title="Накопленная доля (Парето)">Σ{Math.round(c.cumShare * 100)}%</span>
               </div>
             );
@@ -1597,9 +1607,9 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={S.panelTitle} title="Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done».">
-            Throughput задач <span style={S.dim}>· закрыто/нед</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+            Throughput задач <span style={S.dim}>· закрыто/нед</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
-          <span style={{ fontSize: 10, color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн</span>
         </div>
         {taskThroughput.weeks.length === 0 ? <div style={S.empty}>Нет данных за период.</div> : (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 90 }}>
@@ -1607,16 +1617,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               const max = Math.max(...taskThroughput.weeks.map(x => x.count), 1);
               return (
                 <div key={w.key} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
-                  <span style={{ fontSize: 9, color: 'var(--t2)', fontFamily: 'var(--mono)' }}>{w.count}</span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t2)', fontFamily: 'var(--mono)' }}>{w.count}</span>
                   <div title={`${w.label}: ${w.count} задач`} style={{ width: '100%', height: Math.max(3, (w.count / max) * 64),
                     background: 'color-mix(in srgb,var(--suc) 55%,var(--b3))', borderRadius: 3 }} />
-                  <span style={{ fontSize: 8, color: 'var(--t3)' }}>{w.label}</span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{w.label}</span>
                 </div>
               );
             })}
           </div>
         )}
-        <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 6 }}>
+        <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 6 }}>
           Данные с 12 июн 2026 (запуск LORE). Ранее — массовый импорт; архивные задачи (сразу в финале) исключены.
         </div>
       </section>
@@ -1625,18 +1635,18 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={S.panelTitle} title="Точность оценок по закрытым задачам: план = effort_days, факт = календарная длительность (создано→закрыто). ⚠ «потраченное» = календарь (wall-clock), а не чистые трудозатраты. Только реальные закрытия (с 12 июн, states>1).">
-            Точность оценок <span style={S.dim}>· план vs факт (календарь)</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+            Точность оценок <span style={S.dim}>· план vs факт (календарь)</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
-          <span style={{ fontSize: 10, color: 'var(--t2)' }}>n=<b style={{ color: 'var(--t1)' }}>{effortAccuracy.n}</b></span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>n=<b style={{ color: 'var(--t1)' }}>{effortAccuracy.n}</b></span>
         </div>
         {effortAccuracy.n === 0 ? <div style={S.empty}>Нет данных.</div> : (
           <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' as const }}>
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1,
+              <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, lineHeight: 1,
                 color: effortAccuracy.ratio <= 1.1 && effortAccuracy.ratio >= 0.9 ? 'var(--suc)' : effortAccuracy.ratio > 1.25 ? 'var(--dng)' : 'var(--wrn)' }}>
                 {Math.round(effortAccuracy.ratio * 100)}%
               </span>
-              <span style={{ fontSize: 9, color: 'var(--t3)' }}>факт/план · Σ {effortAccuracy.act}/{effortAccuracy.plan} дн</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>факт/план · Σ {effortAccuracy.act}/{effortAccuracy.plan} дн</span>
             </div>
             <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
               {[
@@ -1644,7 +1654,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 { label: '~в плане (80–125%)',   n: effortAccuracy.on,    col: 'var(--inf)' },
                 { label: 'дольше (>125%)',        n: effortAccuracy.over,  col: 'var(--dng)' },
               ].map(b => (
-                <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+                <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)' }}>
                   <span style={{ color: 'var(--t2)', minWidth: 150 }}>{b.label}</span>
                   <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--b3)', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct(b.n, effortAccuracy.n)}%`, background: b.col, borderRadius: 3 }} />
@@ -1655,7 +1665,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             </div>
           </div>
         )}
-        <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 6 }}>
+        <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 6 }}>
           ⚠ «Потраченное» считается как календарная длительность (создано→закрыто), а не чистые трудозатраты — реального учёта времени в графе нет.
         </div>
       </section>
@@ -1663,17 +1673,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <div style={S.row2}>
         {/* Lead / cycle time */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Дней от реального старта спринта (самый ранний valid_from из истории состояний, слайс sprint_starts) до закрытия (done_date). Медиана/p25/p75/макс + гистограмма по закрытым спринтам.">Lead time спринта <span style={S.dim}>· старт → закрытие</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title="Дней от реального старта спринта (самый ранний valid_from из истории состояний, слайс sprint_starts) до закрытия (done_date). Медиана/p25/p75/макс + гистограмма по закрытым спринтам.">Lead time спринта <span style={S.dim}>· старт → закрытие</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {leadTime ? (
             <>
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
                 <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-                  <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--t1)', lineHeight: 1 }}>{leadTime.med}<span style={{ fontSize: 11, color: 'var(--t3)' }}>д</span></span>
-                  <span style={{ fontSize: 9, color: 'var(--t3)' }}>медиана</span>
+                  <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--t1)', lineHeight: 1 }}>{leadTime.med}<span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>д</span></span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>медиана</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: 2 }}>
-                  <span style={{ fontSize: 10, color: 'var(--t2)' }}>p25 <b style={{ color: 'var(--t1)' }}>{leadTime.p25}д</b> · p75 <b style={{ color: 'var(--t1)' }}>{leadTime.p75}д</b></span>
-                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>макс {leadTime.max}д · n={leadTime.count}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>p25 <b style={{ color: 'var(--t1)' }}>{leadTime.p25}д</b> · p75 <b style={{ color: 'var(--t1)' }}>{leadTime.p75}д</b></span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>макс {leadTime.max}д · n={leadTime.count}</span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 56 }}>
@@ -1681,7 +1691,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   const max = Math.max(...leadTime.buckets.map(x => x.n), 1);
                   return (
                     <div key={b.label} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
-                      <span style={{ fontSize: 8, color: 'var(--t2)' }}>{b.n}</span>
+                      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t2)' }}>{b.n}</span>
                       <div title={`${b.label}: ${b.n}`} style={{ width: '100%', height: Math.max(2, (b.n / max) * 40),
                         background: 'color-mix(in srgb,var(--inf) 50%,var(--b3))', borderRadius: 2 }} />
                       <span style={{ fontSize: 7, color: 'var(--t3)' }}>{b.label}</span>
@@ -1695,27 +1705,27 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
         {/* Release cadence — per project */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Темп релизов по каждому проекту: частота = релизы за последние 30 дней ÷ (30/7) = релизов в неделю. Медиана = медианный разрыв в днях между соседними релизами проекта.">Release cadence <span style={S.dim}>· по проектам · {releases.length} релизов</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title="Темп релизов по каждому проекту: частота = релизы за последние 30 дней ÷ (30/7) = релизов в неделю. Медиана = медианный разрыв в днях между соседними релизами проекта.">Release cadence <span style={S.dim}>· по проектам · {releases.length} релизов</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {releaseCadence ? (
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
               {releaseCadence.map(p => (
                 <div key={p.proj} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px',
                   background: 'var(--b3)', borderRadius: 6 }}>
                   <div style={{ display: 'flex', flexDirection: 'column' as const, minWidth: 110 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{p.proj}</span>
-                    <span style={{ fontSize: 9, color: 'var(--t3)' }}>{p.count} релизов</span>
+                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{p.proj}</span>
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{p.count} релизов</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', minWidth: 64 }} title="Релизов в неделю за последние 30 дней">
-                    <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--t1)', lineHeight: 1 }}>
-                      {p.perWeek}<span style={{ fontSize: 9, color: 'var(--t3)' }}>/нед</span>
+                    <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--t1)', lineHeight: 1 }}>
+                      {p.perWeek}<span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>/нед</span>
                     </span>
-                    <span style={{ fontSize: 8, color: 'var(--t3)' }}>за 30 дн</span>
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>за 30 дн</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 1, flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 9, color: 'var(--t2)' }}>
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t2)' }}>
                       медиана {p.med !== null ? `${p.med}д` : '—'} · посл. <span style={{ fontFamily: 'var(--mono)', color: 'var(--inf)' }}>{p.lastVersion}</span>
                     </span>
-                    <span style={{ fontSize: 9, color: p.med !== null && p.daysSinceLast > Math.max(2, p.med * 1.5) ? 'var(--wrn)' : 'var(--t3)' }}>
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: p.med !== null && p.daysSinceLast > Math.max(2, p.med * 1.5) ? 'var(--wrn)' : 'var(--t3)' }}>
                       с последнего: {p.daysSinceLast}д {p.med !== null && p.daysSinceLast > Math.max(2, p.med * 1.5) ? '⚠' : ''}
                     </span>
                   </div>
@@ -1729,23 +1739,23 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <div style={S.row2}>
         {/* Deploy lag */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Дней от закрытия спринта (done_date) до первого релиза, в который он вошёл (release_dates). Медиана/p75 по таким спринтам. Справа — сколько done-спринтов ещё без релиза.">Deploy lag <span style={S.dim}>· закрытие → релиз</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title="Дней от закрытия спринта (done_date) до первого релиза, в который он вошёл (release_dates). Медиана/p75 по таким спринтам. Справа — сколько done-спринтов ещё без релиза.">Deploy lag <span style={S.dim}>· закрытие → релиз</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {deployLag.med !== null ? (
             <div style={{ display: 'flex', gap: 16 }}>
               <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--t1)', lineHeight: 1 }}>{deployLag.med}<span style={{ fontSize: 11, color: 'var(--t3)' }}>д</span></span>
-                <span style={{ fontSize: 9, color: 'var(--t3)' }}>медиана · p75 {deployLag.p75}д</span>
+                <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--t1)', lineHeight: 1 }}>{deployLag.med}<span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>д</span></span>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>медиана · p75 {deployLag.p75}д</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center' }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: deployLag.unreleased ? 'var(--wrn)' : 'var(--suc)' }}>{deployLag.unreleased}</span>
-                <span style={{ fontSize: 9, color: 'var(--t3)' }}>готово, ждёт релиза</span>
+                <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: deployLag.unreleased ? 'var(--wrn)' : 'var(--suc)' }}>{deployLag.unreleased}</span>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>готово, ждёт релиза</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', marginLeft: 'auto', textAlign: 'right' as const, cursor: 'help' }}
                 title={`Спринтов, прошедших через статус BLOCKED (по истории состояний): ${blockedStats.ever} из ${blockedStats.total} (${pct(blockedStats.ever, blockedStats.total)}%). Сейчас заблокировано: ${blockedStats.nowBlocked}.`}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: blockedStats.nowBlocked ? 'var(--dng)' : 'var(--t1)' }}>
+                <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: blockedStats.nowBlocked ? 'var(--dng)' : 'var(--t1)' }}>
                   {pct(blockedStats.ever, blockedStats.total)}%
                 </span>
-                <span style={{ fontSize: 9, color: 'var(--t3)' }}>через blocked ({blockedStats.ever}) · сейчас {blockedStats.nowBlocked} ⓘ</span>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>через blocked ({blockedStats.ever}) · сейчас {blockedStats.nowBlocked} ⓘ</span>
               </div>
             </div>
           ) : <div style={S.empty}>Нет данных о связках спринт→релиз.</div>}
@@ -1753,17 +1763,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
         {/* Quality gates */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Распределение Quality Gates по статусу (closed/active/deprecated). Большой % = closed / (closed + active). Внизу — сколько компонентов имеют хотя бы один QG.">Quality Gates <span style={S.dim}>· {qgStats.total}</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title="Распределение Quality Gates по статусу (closed/active/deprecated). Большой % = closed / (closed + active). Внизу — сколько компонентов имеют хотя бы один QG.">Quality Gates <span style={S.dim}>· {qgStats.total}</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--suc)', lineHeight: 1 }}>{pct(qgDone, qgDone + qgActive)}%</span>
-              <span style={{ fontSize: 9, color: 'var(--t3)' }}>закрыто ({qgDone}/{qgDone + qgActive})</span>
+              <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--suc)', lineHeight: 1 }}>{pct(qgDone, qgDone + qgActive)}%</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>закрыто ({qgDone}/{qgDone + qgActive})</span>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
               {Object.entries(qgStats.byStatus).sort((a, b) => b[1] - a[1]).map(([st, n]) => {
                 const col = st === 'closed' ? 'var(--suc)' : st === 'active' ? 'var(--inf)' : 'var(--t3)';
                 return (
-                  <div key={st} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10 }}>
+                  <div key={st} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)' }}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: col, flexShrink: 0 }} />
                     <span style={{ color: 'var(--t2)', minWidth: 70 }}>{st}</span>
                     <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--b3)', overflow: 'hidden' }}>
@@ -1773,7 +1783,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   </div>
                 );
               })}
-              <span style={{ fontSize: 9, color: 'var(--t3)', marginTop: 2 }}>{qgStats.compsWithQg} компонентов с QG</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 2 }}>{qgStats.compsWithQg} компонентов с QG</span>
             </div>
           </div>
         </section>
@@ -1782,8 +1792,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Aging WIP */}
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={S.panelTitle} title="Открытые спринты (не done/cancelled), сгруппированы по проекту, отсортированы по возрасту = дней от реального старта (min valid_from из истории) до сегодня. Красный >30д, жёлтый >14д. Ловит «зависшее».">Aging WIP <span style={S.dim}>· открытые по проектам и возрасту</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
-          <span style={{ fontSize: 10, color: 'var(--t2)' }}>{agingWIP.length} открытых</span>
+          <div style={S.panelTitle} title="Открытые спринты (не done/cancelled), сгруппированы по проекту, отсортированы по возрасту = дней от реального старта (min valid_from из истории) до сегодня. Красный >30д, жёлтый >14д. Ловит «зависшее».">Aging WIP <span style={S.dim}>· открытые по проектам и возрасту</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{agingWIP.length} открытых</span>
         </div>
         {agingWIP.length === 0 ? <div style={S.empty}>Нет открытых спринтов с датой старта.</div> : (() => {
           const byProj = new Map<string, typeof agingWIP>();
@@ -1815,7 +1825,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                           title={`${age} дней в работе`}>
                           <div style={{ height: '100%', width: `${Math.min(100, (age / 45) * 100)}%`, background: col, borderRadius: 3 }} />
                         </div>
-                        <span style={{ fontSize: 11, color: col, fontFamily: 'var(--mono)', fontWeight: 600, width: 44, textAlign: 'right' as const, flexShrink: 0 }}>{age}д</span>
+                        <span style={{ fontSize: 'var(--fs-sm)', color: col, fontFamily: 'var(--mono)', fontWeight: 600, width: 44, textAlign: 'right' as const, flexShrink: 0 }}>{age}д</span>
                       </div>
                     );
                   })}
@@ -1828,21 +1838,21 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
       {/* Cross-project balance */}
       <section style={S.panel}>
-        <div style={S.panelTitle} title="Спринты и релизы, сгруппированные по корневому git-проекту. Зелёная часть полосы = закрытые спринты, светлая = всего. Справа — done/всего Sp и число релизов.">Баланс по проектам <span style={S.dim}>· спринты / релизы</span> <span style={{ fontSize: 8, color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+        <div style={S.panelTitle} title="Спринты и релизы, сгруппированные по корневому git-проекту. Зелёная часть полосы = закрытые спринты, светлая = всего. Справа — done/всего Sp и число релизов.">Баланс по проектам <span style={S.dim}>· спринты / релизы</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
         <div style={S.table}>
           {crossProject.map(p => {
             const max = Math.max(...crossProject.map(x => x.sprints), 1);
             return (
-              <div key={p.proj} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 4px', fontSize: 11 }}>
+              <div key={p.proj} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 4px', fontSize: 'var(--fs-sm)' }}>
                 <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)', minWidth: 110, fontWeight: 600 }}>{p.proj}</span>
                 <div style={{ flex: 1, height: 14, borderRadius: 3, background: 'var(--b3)', overflow: 'hidden', position: 'relative' as const }}>
                   <div style={{ height: '100%', width: `${(p.sprints / max) * 100}%`, background: 'color-mix(in srgb,var(--acc) 35%,var(--b3))' }} />
                   <div style={{ position: 'absolute' as const, top: 0, left: 0, height: '100%', width: `${(p.doneSprints / max) * 100}%`, background: 'color-mix(in srgb,var(--suc) 55%,transparent)' }} />
                 </div>
-                <span style={{ color: 'var(--t2)', fontFamily: 'var(--mono)', fontSize: 10, width: 90, textAlign: 'right' as const }}>
+                <span style={{ color: 'var(--t2)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', width: 90, textAlign: 'right' as const }}>
                   {p.doneSprints}/{p.sprints} Sp
                 </span>
-                <span style={{ color: 'var(--inf)', fontFamily: 'var(--mono)', fontSize: 10, width: 56, textAlign: 'right' as const }}>{p.releases} rel</span>
+                <span style={{ color: 'var(--inf)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', width: 56, textAlign: 'right' as const }}>{p.releases} rel</span>
               </div>
             );
           })}
@@ -1862,7 +1872,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {currentMilestone && (
         <section style={{
           ...S.panel,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const,
+          // flex-start, not center: sibling blocks have different line counts
+          // (milestone/overdue are 2 lines, open-Sp/weeks-to-close grow a 3rd
+          // line when milestoneOpenCount !== openSprintCount or a forecast
+          // hint wraps) — centering a row of unequal-height blocks staggers
+          // their headline numbers instead of aligning them.
+          display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' as const,
           background: onTrack
             ? `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 6%,var(--b2))`
             : 'var(--b2)',
@@ -1872,29 +1887,34 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <GameIcon slug="crossed-axes" size={16} style={{ color: 'var(--acc)' }} />
+            {/* value-then-caption, matching the KPI blocks in this same row
+                (big number on top, small label below) — was caption-then-value,
+                the mismatched order made this block's text sit at a visibly
+                different height than its siblings despite the shared
+                alignItems:center on the parent row. */}
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-              <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
-                {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 11 }}>· {currentMilestone.date_display}</span>
+              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>
+                {currentMilestone.label} <span style={{ fontWeight: 400, color: 'var(--t2)', fontSize: 'var(--fs-sm)' }}>· {currentMilestone.date_display}</span>
               </span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.analytics.planHealth.currentMilestone', 'Текущая веха')}</span>
             </div>
           </div>
           {daysUntilCurrent !== null && (
             <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
-              <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1,
+              <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, lineHeight: 1,
                 color: daysUntilCurrent < 0 ? 'var(--dng)' : daysUntilCurrent <= 7 ? 'var(--wrn)' : 'var(--t1)' }}>
                 {daysUntilCurrent >= 0 ? daysUntilCurrent : `+${-daysUntilCurrent}`}
               </span>
-              <span style={{ fontSize: 9, color: 'var(--t3)' }}>{daysUntilCurrent >= 0 ? 'дней до дедлайна' : 'дней просрочки'}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{daysUntilCurrent >= 0 ? 'дней до дедлайна' : 'дней просрочки'}</span>
             </div>
           )}
           {/* Clickable open Sp chip → opens drilldown */}
           <button onClick={() => setShowOpenDrilldown(v => !v)}
             style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', cursor: 'pointer',
               background: 'none', border: 'none', padding: 0 }}>
-            <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--dng)',
+            <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, lineHeight: 1, color: 'var(--dng)',
               textDecoration: showOpenDrilldown ? 'underline' : 'none' }}>{milestoneOpenCount}</span>
-            <span style={{ fontSize: 9, color: 'var(--t3)', textAlign: 'center' as const }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textAlign: 'center' as const }}>
               open Sp вехи {showOpenDrilldown ? '▲' : '▼'}
               {milestoneOpenCount !== openSprintCount && (
                 <><br /><span style={{ color: 'var(--t3)', opacity: 0.7 }}>всего {openSprintCount}</span></>
@@ -1903,8 +1923,8 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           </button>
           {weeksToFinish !== null && (
             <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
-              <span style={{ fontSize: 20, fontWeight: 700, lineHeight: 1, color: 'var(--t1)' }}>~{Math.ceil(weeksToFinish)}</span>
-              <span style={{ fontSize: 9, color: 'var(--t3)', textAlign: 'center' as const }}>нед до закрытия<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
+              <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, lineHeight: 1, color: 'var(--t1)' }}>~{Math.ceil(weeksToFinish)}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textAlign: 'center' as const }}>нед до закрытия<br />@ {avgVelocity.toFixed(1)} Sp/нед</span>
             </div>
           )}
           {onTrack && (
@@ -1915,10 +1935,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               <GameIcon slug={onTrack.ok ? 'check-mark' : 'padlock'} size={14}
                 style={{ color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }} />
               <div style={{ display: 'flex', flexDirection: 'column' as const }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: onTrack.ok ? 'var(--suc)' : 'var(--dng)' }}>
                   {onTrack.ok ? 'В графике' : 'Риск срыва'}
                 </span>
-                <span style={{ fontSize: 9, color: 'var(--t3)' }}>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
                   {onTrack.ok ? `запас ${onTrack.slack} дн` : `не хватает ${-onTrack.slack} дн`}
                 </span>
               </div>
@@ -1934,13 +1954,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             Незакрытые спринты вехи{currentMilestone ? ` · ${currentMilestone.label}` : ''}
             <span style={S.dim}> · {milestoneOpenSprints.length}</span>
           </div>
-          <div style={{ fontSize: 9, color: 'var(--t3)', marginBottom: 10 }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginBottom: 10 }}>
             {milestoneOpenSprints.reduce((s, r) => s + r.open_tasks, 0)} незакрытых задач суммарно · нажми строку → открыть спринт
           </div>
 
           {/* header row */}
           <div style={{ display: 'grid', gridTemplateColumns: '12px 1fr 70px 70px 50px 16px', gap: '0 8px',
-            fontSize: 9, color: 'var(--t3)', fontWeight: 600, letterSpacing: '0.05em',
+            fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontWeight: 600, letterSpacing: '0.05em',
             padding: '0 4px', marginBottom: 4 }}>
             <span/>
             <span>Спринт</span>
@@ -1972,21 +1992,21 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg2)')}
                     onMouseLeave={e => (e.currentTarget.style.background = '')}>
                     <span style={{ width: 8, height: 8, borderRadius: 2, background: statusCol, flexShrink: 0, display: 'inline-block' }} />
-                    <span style={{ fontSize: 10, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}
                       title={s.name}>{s.name}</span>
-                    <span style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', textAlign: 'right' as const }}>
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', textAlign: 'right' as const }}>
                       {s.task_total > 0 ? `${s.task_done}/${s.task_total}` : '—'}
                     </span>
-                    <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--mono)',
+                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'var(--mono)',
                       color: s.open_tasks > 0 ? 'var(--dng)' : 'var(--suc)', textAlign: 'right' as const }}>
                       {s.open_tasks > 0 ? `${s.open_tasks} open` : '✓'}
                     </span>
-                    <span style={{ fontSize: 9, color: taskPct !== null && taskPct >= 75 ? 'var(--suc)' : 'var(--t3)',
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: taskPct !== null && taskPct >= 75 ? 'var(--suc)' : 'var(--t3)',
                       fontFamily: 'var(--mono)', textAlign: 'right' as const }}>
                       {taskPct !== null ? `${taskPct}%` : '—'}
                     </span>
                     {onNavigateToSprint
-                      ? <span style={{ fontSize: 10, color: 'var(--acc)' }}>→</span>
+                      ? <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}>→</span>
                       : <span/>}
                   </div>
                 );
@@ -2002,7 +2022,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             return (
               <div style={{ display: 'grid', gridTemplateColumns: '12px 1fr 70px 70px 50px 16px',
                 gap: '0 8px', padding: '6px 4px', borderTop: '1px solid var(--bd)',
-                fontSize: 9, color: 'var(--t2)', fontWeight: 600, marginTop: 4 }}>
+                fontSize: 'var(--fs-2xs)', color: 'var(--t2)', fontWeight: 600, marginTop: 4 }}>
                 <span/><span>Итого</span>
                 <span style={{ fontFamily: 'var(--mono)', textAlign: 'right' as const }}>{totalDone}/{totalTasks}</span>
                 <span style={{ fontFamily: 'var(--mono)', textAlign: 'right' as const, color: 'var(--dng)' }}>{totalOpen} open</span>
@@ -2020,7 +2040,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
             Спринты <span style={S.dim}>· {data.by_sprint.length}</span>
             <span style={{ ...S.openChip, marginLeft: 8 }}>{openSprintCount} открытых</span>
             {filteredEffortSum > 0 && (
-              <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--t2)', fontFamily: 'var(--mono)' }}>
+              <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--t2)', fontFamily: 'var(--mono)' }}>
                 Σ <b style={{ color: 'var(--acc)' }}>{filteredEffortSum}</b> д
               </span>
             )}
@@ -2088,7 +2108,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 <div key={q.qg_id}
                   onClick={clickable ? () => onNavigateToQG!(q.qg_id) : undefined}
                   title={`${q.qg_id}\nРутина: ${routineByQg.get(q.qg_id)}\nСтатус: ${runSt === 'norun' ? 'нет прогонов' : runSt}`}
-                  style={{ padding: '4px 7px', borderRadius: 5, fontSize: 9, fontWeight: 600,
+                  style={{ padding: '4px 7px', borderRadius: 5, fontSize: 'var(--fs-2xs)', fontWeight: 600,
                     background: `color-mix(in srgb,${col} 12%,var(--b3))`,
                     border: `1px solid color-mix(in srgb,${col} 30%,transparent)`,
                     color: col, overflow: 'hidden', cursor: clickable ? 'pointer' : 'default' }}>
@@ -2113,16 +2133,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               const nWarn = statuses.filter(s => s === 'WARN').length;
               const compCol = nFail > 0 ? 'var(--dng)' : nWarn > 0 ? 'var(--wrn)' : nPass === gates.length ? 'var(--suc)' : 'var(--t3)';
               return (
-                <div key={cid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 5, fontSize: 11 }}>
+                <div key={cid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 5, fontSize: 'var(--fs-sm)' }}>
                   <span style={{ ...S.compTag, color: compCol,
                     borderColor: `color-mix(in srgb,${compCol} 30%,transparent)`,
                     background: `color-mix(in srgb,${compCol} 12%,transparent)` }}>
                     {cid}
                   </span>
-                  <span style={{ flex: 1, color: 'var(--t2)', fontSize: 10 }}>{gates.length} QG</span>
-                  {nPass > 0 && <span style={{ fontSize: 9, color: 'var(--suc)', fontFamily: 'var(--mono)' }}>{nPass}✓</span>}
-                  {nWarn > 0 && <span style={{ fontSize: 9, color: 'var(--wrn)', fontFamily: 'var(--mono)' }}>{nWarn}⚠</span>}
-                  {nFail > 0 && <span style={{ fontSize: 9, color: 'var(--dng)', fontFamily: 'var(--mono)' }}>{nFail}✗</span>}
+                  <span style={{ flex: 1, color: 'var(--t2)', fontSize: 'var(--fs-xs)' }}>{gates.length} QG</span>
+                  {nPass > 0 && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--suc)', fontFamily: 'var(--mono)' }}>{nPass}✓</span>}
+                  {nWarn > 0 && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)', fontFamily: 'var(--mono)' }}>{nWarn}⚠</span>}
+                  {nFail > 0 && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--dng)', fontFamily: 'var(--mono)' }}>{nFail}✗</span>}
                 </div>
               );
             })}
@@ -2150,10 +2170,10 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                     <div
                       onClick={clickable ? () => onNavigateToQG!(qgId) : undefined}
                       style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, cursor: clickable ? 'pointer' : 'default' }}>
-                      <span style={{ fontSize: 11, color: col, fontWeight: 700 }}>{worst === 'FAIL' ? '✗' : '⚠'}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', flex: 1, fontFamily: 'var(--mono)' }}>{qgId}</span>
-                      <span style={{ fontSize: 9, color: 'var(--t3)' }}>{invs[0].routine}</span>
-                      {clickable && <span style={{ fontSize: 10, color: 'var(--inf)' }}>→</span>}
+                      <span style={{ fontSize: 'var(--fs-sm)', color: col, fontWeight: 700 }}>{worst === 'FAIL' ? '✗' : '⚠'}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t1)', flex: 1, fontFamily: 'var(--mono)' }}>{qgId}</span>
+                      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{invs[0].routine}</span>
+                      {clickable && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--inf)' }}>→</span>}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
                       {invs.map(f => {
@@ -2161,17 +2181,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                         const vf = f.value == null || f.value === -1 ? '—' : (Number.isInteger(f.value) ? f.value : f.value.toFixed(1));
                         const tf = f.inv.target == null ? null : (Number.isInteger(f.inv.target) ? f.inv.target : f.inv.target.toFixed(1));
                         return (
-                          <div key={f.inv.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 10 }}>
-                            <span style={{ ...S.compTag, fontSize: 8, flexShrink: 0, color: mc,
+                          <div key={f.inv.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 'var(--fs-xs)' }}>
+                            <span style={{ ...S.compTag, fontSize: 'var(--fs-2xs)', flexShrink: 0, color: mc,
                               borderColor: `color-mix(in srgb,${mc} 30%,transparent)`,
                               background: `color-mix(in srgb,${mc} 12%,transparent)` }}>{f.status}</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <span style={{ color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{f.inv.key}</span>
                                 <span style={{ color: mc, fontWeight: 600, fontFamily: 'var(--mono)' }}>{vf}{f.inv.unit ? ` ${f.inv.unit}` : ''}</span>
-                                {tf != null && <span style={{ color: 'var(--t3)', fontSize: 9 }}>/ цель {f.inv.direction === 'lte' ? '≤' : '≥'}{tf}</span>}
+                                {tf != null && <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-2xs)' }}>/ цель {f.inv.direction === 'lte' ? '≤' : '≥'}{tf}</span>}
                               </div>
-                              {f.inv.condition && <div style={{ color: 'var(--t3)', fontSize: 9, marginTop: 1 }}>{f.inv.condition}</div>}
+                              {f.inv.condition && <div style={{ color: 'var(--t3)', fontSize: 'var(--fs-2xs)', marginTop: 1 }}>{f.inv.condition}</div>}
                             </div>
                           </div>
                         );
@@ -2220,20 +2240,20 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 return (
                   <React.Fragment key={key}>
                     {showDate && (
-                      <div style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', padding: '5px 6px 2px',
+                      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', padding: '5px 6px 2px',
                         borderTop: showDate && lastDate !== dateStr ? '1px solid var(--bd)' : 'none', marginTop: 2 }}>
                         {dateStr}
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 6px', borderRadius: 5,
                       background: `color-mix(in srgb,${col} 5%,transparent)`, borderLeft: `2px solid ${col}` }}>
-                      <span style={{ fontSize: 11, color: col, width: 14, textAlign: 'center' as const, paddingTop: 1 }}>{icon}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: col, width: 14, textAlign: 'center' as const, paddingTop: 1 }}>{icon}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
                           {runs.map((r, ri) => {
                             const rc = runColor(r.status);
                             return (
-                              <span key={ri} style={{ fontSize: 10, color: rc, fontFamily: 'var(--mono)', fontWeight: 600 }}>
+                              <span key={ri} style={{ fontSize: 'var(--fs-xs)', color: rc, fontFamily: 'var(--mono)', fontWeight: 600 }}>
                                 {r.routine_name.replace('qg-', '')}
                                 <span style={{ fontWeight: 400, color: `color-mix(in srgb,${rc} 60%,var(--t3))`, marginLeft: 2 }}>
                                   {r.status === 'PASS' || r.status === 'OK' ? '✓' : r.status === 'FAIL' ? '✗' : r.status === 'WARN' ? '⚠' : '?'}
@@ -2241,12 +2261,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                               </span>
                             );
                           })}
-                          <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
+                          <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
                             {timeStr ?? '—'}{finStr && finStr !== timeStr ? `→${finStr}` : ''}
                           </span>
                         </div>
                         {runs[0].flags && (
-                          <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                             {runs[0].flags}
                           </div>
                         )}
@@ -2277,16 +2297,16 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                       <div key={v.job_id} style={{ ...S.trow, cursor: v.qg_id && onNavigateToQG ? 'pointer' : 'default' }}
                         onClick={v.qg_id && onNavigateToQG ? () => onNavigateToQG!(v.qg_id!) : undefined}>
                         <span style={{ width: 8, height: 8, borderRadius: 2, background: col, flexShrink: 0 }} />
-                        <span style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t3)', flexShrink: 0, width: 80 }}>
+                        <span style={{ fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', color: 'var(--t3)', flexShrink: 0, width: 80 }}>
                           {(v.run_date ?? '').slice(0, 10)}
                         </span>
-                        <span style={{ fontSize: 10, color: 'var(--t1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                           {v.qg_id ?? v.component_id ?? '—'} / {v.inv_id ?? v.job_id}
                         </span>
-                        {v.note_md && <span style={{ fontSize: 9, color: 'var(--t3)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{v.note_md}</span>}
+                        {v.note_md && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{v.note_md}</span>}
                       </div>
                     ))}
-                    {viols.length > 10 && <div style={{ fontSize: 9, color: 'var(--t3)', padding: '2px 6px' }}>…ещё {viols.length - 10}</div>}
+                    {viols.length > 10 && <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', padding: '2px 6px' }}>…ещё {viols.length - 10}</div>}
                   </React.Fragment>
                 );
               })}
@@ -2307,31 +2327,31 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   <div key={r.rec_id} style={{ padding: '8px 10px', borderRadius: 7, background: 'var(--b3)',
                     border: `1px solid color-mix(in srgb,${pc} 25%,var(--bd))` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' as const }}>
-                      {r.priority && <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 600,
+                      {r.priority && <span style={{ fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, fontWeight: 600,
                         color: pc, background: `color-mix(in srgb,${pc} 14%,transparent)`,
                         border: `1px solid color-mix(in srgb,${pc} 30%,transparent)` }}>{r.priority}</span>}
-                      {r.severity && <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 600,
+                      {r.severity && <span style={{ fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, fontWeight: 600,
                         color: sc, background: `color-mix(in srgb,${sc} 14%,transparent)`,
                         border: `1px solid color-mix(in srgb,${sc} 30%,transparent)` }}>{r.severity}</span>}
-                      {r.effort_days != null && <span style={{ fontSize: 9, color: 'var(--t3)' }}>{r.effort_days}д</span>}
-                      {r.component_id && <span style={{ ...S.compTag, fontSize: 9, color: 'var(--inf)',
+                      {r.effort_days != null && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{r.effort_days}д</span>}
+                      {r.component_id && <span style={{ ...S.compTag, fontSize: 'var(--fs-2xs)', color: 'var(--inf)',
                         borderColor: 'color-mix(in srgb,var(--inf) 25%,transparent)',
                         background: 'color-mix(in srgb,var(--inf) 10%,transparent)' }}>{r.component_id}</span>}
                       <span
                         onClick={r.qg_id && onNavigateToQG ? () => onNavigateToQG!(r.qg_id!) : undefined}
-                        style={{ marginLeft: 'auto', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--inf)',
+                        style={{ marginLeft: 'auto', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', color: 'var(--inf)',
                           cursor: r.qg_id && onNavigateToQG ? 'pointer' : 'default' }}>{r.qg_id}{r.qg_id && onNavigateToQG ? ' →' : ''}</span>
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--t1)', marginBottom: 3 }}>{r.title}</div>
-                    {r.body_md && <div style={{ fontSize: 10, color: 'var(--t2)', marginTop: 3, lineHeight: 1.5,
+                    <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t1)', marginBottom: 3 }}>{r.title}</div>
+                    {r.body_md && <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)', marginTop: 3, lineHeight: 1.5,
                       whiteSpace: 'pre-wrap' as const, wordBreak: 'break-word' as const }}>{r.body_md}</div>}
-                    {r.fix_cmd && <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--acc)',
+                    {r.fix_cmd && <div style={{ fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', color: 'var(--acc)',
                       background: 'var(--b2)', padding: '3px 7px', borderRadius: 4, marginTop: 4,
                       overflowX: 'auto' as const, whiteSpace: 'nowrap' as const }}>$ {r.fix_cmd}</div>}
-                    {r.how_to_verify && <div style={{ fontSize: 9, color: 'var(--t3)', marginTop: 4 }}>✓ {r.how_to_verify}</div>}
+                    {r.how_to_verify && <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 4 }}>✓ {r.how_to_verify}</div>}
                     {r.tags && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const, marginTop: 5 }}>
                       {r.tags.split(',').map(tag => (
-                        <span key={tag} style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3,
+                        <span key={tag} style={{ fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3,
                           color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--bd)' }}>
                           {tag.trim()}
                         </span>
@@ -2344,13 +2364,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       </section>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, padding: '4px 2px 0' }}>
-        <span style={{ fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Регламент:</span>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Регламент:</span>
         {['ADR-QG-001', 'ADR-QG-002', 'ADR-QG-004'].map(id => (
-          <span key={id} style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3,
+          <span key={id} style={{ fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3,
             color: 'var(--pro, #bc8cff)', background: 'color-mix(in srgb, var(--pro, #bc8cff) 9%, transparent)',
             border: '1px solid color-mix(in srgb, var(--pro, #bc8cff) 22%, transparent)' }}>{id}</span>
         ))}
-        <span style={{ fontSize: 9, color: 'var(--t3)' }}>— полная методика и source-evidence: клик по гейту</span>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>— полная методика и source-evidence: клик по гейту</span>
       </div>
     </>
   );
@@ -2365,7 +2385,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         <section style={S.panel}>
           <div style={S.panelTitle}>
             {t('lore.analytics.tech.title', 'Матрица технологии × компоненты')}
-            <span style={{ ...S.dim, marginLeft: 6, fontSize: 10 }}>
+            <span style={{ ...S.dim, marginLeft: 6, fontSize: 'var(--fs-xs)' }}>
               {t('lore.analytics.tech.subtitle', '{{techs}} технологий · {{comps}} компонентов', { techs: techMatrix.rows.length, comps: techMatrix.cols.length })}
             </span>
           </div>
@@ -2386,7 +2406,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   <tr key={tech}>
                     <td style={S.matrixRowHead}>
                       {tech}
-                      <span style={{ ...S.dim, marginLeft: 5, fontSize: 9 }}>{usageCount}</span>
+                      <span style={{ ...S.dim, marginLeft: 5, fontSize: 'var(--fs-2xs)' }}>{usageCount}</span>
                     </td>
                     {techMatrix.cols.map(c => {
                       const row = byComp.get(c.component_id);
@@ -2461,13 +2481,13 @@ function SprintGroupedDone({ sprints, onNavigate }: { sprints: LoreAnalyticsSpri
 
 const S = {
   root:        { flex: 1, overflowY: 'auto' as const, padding: 16, display: 'flex', flexDirection: 'column' as const, gap: 12 },
-  empty:       { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  empty:       { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 
   tabBar:      { display: 'flex', gap: 1, borderBottom: '1px solid var(--bd)', paddingBottom: 0 },
   tabBtn:      {
     display: 'inline-flex', alignItems: 'center', gap: 5,
     padding: '7px 14px', borderRadius: '6px 6px 0 0',
-    fontSize: 11, fontWeight: 500, cursor: 'pointer',
+    fontSize: 'var(--fs-sm)', fontWeight: 500, cursor: 'pointer',
     border: '1px solid transparent', borderBottom: 'none',
     background: 'transparent', color: 'var(--t3)', transition: 'color .12s',
   },
@@ -2480,59 +2500,59 @@ const S = {
   cards:       { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(148px, 1fr))', gap: 8 },
   card:        { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 10 },
   cardIcon:    { width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  cardValue:   { fontSize: 20, fontWeight: 700, color: 'var(--t1)', lineHeight: 1.1 },
-  cardLabel:   { fontSize: 10, color: 'var(--t2)', textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
-  cardSub:     { fontSize: 9, color: 'var(--t3)', marginTop: 1 },
+  cardValue:   { fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--t1)', lineHeight: 1.1 },
+  cardLabel:   { fontSize: 'var(--fs-xs)', color: 'var(--t2)', textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
+  cardSub:     { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 1 },
 
   row2:        { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 10 },
   panel:       { background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 10, padding: 14 },
-  panelTitle:  { fontSize: 12, fontWeight: 600, color: 'var(--t1)', marginBottom: 10, display: 'inline-flex', alignItems: 'center' } as React.CSSProperties,
+  panelTitle:  { fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--t1)', marginBottom: 10, display: 'inline-flex', alignItems: 'center' } as React.CSSProperties,
   dim:         { color: 'var(--t3)', fontWeight: 400 },
 
   segBar:      { display: 'flex', height: 12, borderRadius: 4, overflow: 'hidden', background: 'var(--b3)' },
   legend:      { display: 'flex', flexWrap: 'wrap' as const, gap: '4px 10px', marginTop: 7 },
-  legendItem:  { display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--t2)' },
+  legendItem:  { display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--t2)' },
 
   table:       { display: 'flex', flexDirection: 'column' as const, gap: 2 },
-  trow:        { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 5, fontSize: 11, cursor: 'pointer' },
+  trow:        { display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', borderRadius: 5, fontSize: 'var(--fs-sm)', cursor: 'pointer' },
   groupHdr:    { display: 'flex', alignItems: 'center', gap: 5, padding: '7px 4px 3px', cursor: 'pointer', userSelect: 'none' as const },
-  groupBucket: { fontSize: 10, fontWeight: 600, color: 'var(--t3)', letterSpacing: '0.05em', padding: '4px 6px 2px', textTransform: 'uppercase' as const },
+  groupBucket: { fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--t3)', letterSpacing: '0.05em', padding: '4px 6px 2px', textTransform: 'uppercase' as const },
 
-  compTag:     { fontSize: 10, padding: '1px 6px', borderRadius: 3, border: '1px solid', flexShrink: 0, fontFamily: 'var(--mono)' },
-  compName:    { flex: 1, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, fontSize: 11 },
-  sprintId:    { flex: 1, color: 'var(--t1)', fontFamily: 'var(--mono)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
-  sprintChip:  { fontSize: 9, padding: '1px 4px', borderRadius: 3, flexShrink: 0, fontFamily: 'var(--mono)', color: 'var(--acc)', background: 'color-mix(in srgb,var(--acc) 12%,transparent)', border: '1px solid color-mix(in srgb,var(--acc) 30%,transparent)' },
-  openChip:    { fontSize: 9, padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)', color: 'var(--dng)', background: 'color-mix(in srgb,var(--dng) 12%,transparent)', border: '1px solid color-mix(in srgb,var(--dng) 30%,transparent)' },
+  compTag:     { fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3, border: '1px solid', flexShrink: 0, fontFamily: 'var(--mono)' },
+  compName:    { flex: 1, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0, fontSize: 'var(--fs-sm)' },
+  sprintId:    { flex: 1, color: 'var(--t1)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
+  sprintChip:  { fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 3, flexShrink: 0, fontFamily: 'var(--mono)', color: 'var(--acc)', background: 'color-mix(in srgb,var(--acc) 12%,transparent)', border: '1px solid color-mix(in srgb,var(--acc) 30%,transparent)' },
+  openChip:    { fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)', color: 'var(--dng)', background: 'color-mix(in srgb,var(--dng) 12%,transparent)', border: '1px solid color-mix(in srgb,var(--dng) 30%,transparent)' },
   progressWrap: { width: 100, height: 5, borderRadius: 3, background: 'var(--b3)', overflow: 'hidden', flexShrink: 0 },
   progressFill: { height: '100%', borderRadius: 3 },
-  count:       { fontSize: 10, color: 'var(--t2)', fontFamily: 'var(--mono)', width: 52, textAlign: 'right' as const, flexShrink: 0 },
-  pctNum:      { fontSize: 10, color: 'var(--t3)', width: 32, textAlign: 'right' as const, flexShrink: 0 },
+  count:       { fontSize: 'var(--fs-xs)', color: 'var(--t2)', fontFamily: 'var(--mono)', width: 52, textAlign: 'right' as const, flexShrink: 0 },
+  pctNum:      { fontSize: 'var(--fs-xs)', color: 'var(--t3)', width: 32, textAlign: 'right' as const, flexShrink: 0 },
 
   filterChips: { display: 'flex', gap: 4, flexWrap: 'wrap' as const },
-  chip:        { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 500, cursor: 'pointer', border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)' },
+  chip:        { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 500, cursor: 'pointer', border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)' },
   chipActive:  { background: 'color-mix(in srgb,var(--acc) 12%,transparent)', color: 'var(--acc)', borderColor: 'color-mix(in srgb,var(--acc) 35%,transparent)' },
-  chipCount:   { fontSize: 9, opacity: 0.7, fontFamily: 'var(--mono)' },
+  chipCount:   { fontSize: 'var(--fs-2xs)', opacity: 0.7, fontFamily: 'var(--mono)' },
 
   toggle:      { display: 'flex', border: '1px solid var(--bd)', borderRadius: 5, overflow: 'hidden' },
-  toggleBtn:   { fontSize: 10, padding: '3px 10px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--t3)' },
+  toggleBtn:   { fontSize: 'var(--fs-xs)', padding: '3px 10px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--t3)' },
   toggleBtnOn: { background: 'color-mix(in srgb,var(--acc) 12%,transparent)', color: 'var(--acc)', fontWeight: 600 },
 
   relRow:      { display: 'flex', flexWrap: 'wrap' as const, gap: 8 },
   relCard:     { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 2, padding: '8px 16px', background: 'var(--b3)', border: '1px solid var(--bd)', borderRadius: 8 },
-  relProj:     { fontSize: 10, color: 'var(--t2)' },
-  relNum:      { fontSize: 18, fontWeight: 700, color: 'var(--inf)' },
+  relProj:     { fontSize: 'var(--fs-xs)', color: 'var(--t2)' },
+  relNum:      { fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--inf)' },
   relTypeTag:  (type: string | null) => {
     const col = type === 'major' ? 'var(--dng)' : type === 'minor' ? 'var(--wrn)' : type === 'patch' ? 'var(--inf)' : 'var(--t3)';
-    return { fontSize: 8, padding: '0 5px', borderRadius: 3, fontFamily: 'var(--mono)' as const,
+    return { fontSize: 'var(--fs-2xs)', padding: '0 5px', borderRadius: 3, fontFamily: 'var(--mono)' as const,
       color: col, background: `color-mix(in srgb,${col} 14%,transparent)`,
       border: `1px solid color-mix(in srgb,${col} 30%,transparent)` };
   },
 
-  matrixTable:        { borderCollapse: 'collapse' as const, fontSize: 11, width: 'max-content' },
-  matrixCornerCell:   { position: 'sticky' as const, left: 0, zIndex: 1, background: 'var(--b2)', textAlign: 'left' as const, padding: '4px 10px 4px 4px', fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', borderBottom: '1px solid var(--bd)' },
-  matrixColHead:      { padding: '4px 8px', fontSize: 10, fontWeight: 600, borderBottom: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', writingMode: 'vertical-rl' as const, transform: 'rotate(180deg)', maxHeight: 110, whiteSpace: 'nowrap' as const, verticalAlign: 'bottom' as const },
+  matrixTable:        { borderCollapse: 'collapse' as const, fontSize: 'var(--fs-sm)', width: 'max-content' },
+  matrixCornerCell:   { position: 'sticky' as const, left: 0, zIndex: 1, background: 'var(--b2)', textAlign: 'left' as const, padding: '4px 10px 4px 4px', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', borderBottom: '1px solid var(--bd)' },
+  matrixColHead:      { padding: '4px 8px', fontSize: 'var(--fs-xs)', fontWeight: 600, borderBottom: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', writingMode: 'vertical-rl' as const, transform: 'rotate(180deg)', maxHeight: 110, whiteSpace: 'nowrap' as const, verticalAlign: 'bottom' as const },
   matrixColHeadLabel: { display: 'inline-block', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis' as const },
-  matrixRowHead:      { position: 'sticky' as const, left: 0, background: 'var(--b2)', padding: '4px 10px 4px 4px', fontSize: 11, color: 'var(--t1)', fontWeight: 500, whiteSpace: 'nowrap' as const, borderTop: '1px solid var(--bd)' },
-  matrixCell:         { padding: '4px 8px', fontSize: 10, fontFamily: 'var(--mono)', textAlign: 'center' as const, borderTop: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', cursor: 'help' as const },
-  matrixCellEmpty:    { padding: '4px 8px', fontSize: 10, textAlign: 'center' as const, color: 'var(--t4, var(--t3))', borderTop: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', opacity: 0.35 },
+  matrixRowHead:      { position: 'sticky' as const, left: 0, background: 'var(--b2)', padding: '4px 10px 4px 4px', fontSize: 'var(--fs-sm)', color: 'var(--t1)', fontWeight: 500, whiteSpace: 'nowrap' as const, borderTop: '1px solid var(--bd)' },
+  matrixCell:         { padding: '4px 8px', fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', textAlign: 'center' as const, borderTop: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', cursor: 'help' as const },
+  matrixCellEmpty:    { padding: '4px 8px', fontSize: 'var(--fs-xs)', textAlign: 'center' as const, color: 'var(--t4, var(--t3))', borderTop: '1px solid var(--bd)', borderLeft: '1px solid var(--bd)', opacity: 0.35 },
 };

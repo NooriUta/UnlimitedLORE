@@ -91,10 +91,10 @@ const S = {
     padding: '0 12px', height: 36, flexShrink: 0,
     borderBottom: '1px solid var(--bd)',
   },
-  searchIcon: { color: 'var(--t3)', fontSize: 13, flexShrink: 0 },
+  searchIcon: { color: 'var(--t3)', fontSize: 'var(--fs-md)', flexShrink: 0 },
   searchInput: {
     flex: 1, background: 'transparent', border: 'none', outline: 'none',
-    color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
+    color: 'var(--t1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
   },
   body: {
     flex: 1, display: 'flex', overflow: 'hidden',
@@ -109,7 +109,7 @@ const S = {
   navItem: (active: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 6,
     padding: '4px 10px', height: 27, cursor: 'pointer', borderRadius: 5,
-    border: 'none', fontSize: 12, whiteSpace: 'nowrap' as const, flexShrink: 0,
+    border: 'none', fontSize: 'var(--fs-base)', whiteSpace: 'nowrap' as const, flexShrink: 0,
     fontFamily: 'inherit',
     background: active ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
     color: active ? 'var(--acc)' : 'var(--t2)',
@@ -134,24 +134,24 @@ const S = {
     display: 'flex', alignItems: 'center', gap: 6,
     padding: '0 12px', height: 32, flexShrink: 0,
     borderBottom: '1px solid var(--bd)',
-    fontSize: 11, color: 'var(--t3)',
+    fontSize: 'var(--fs-sm)', color: 'var(--t3)',
     fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: 1,
   },
   listPanelSearch: {
     background: 'transparent', border: 'none', outline: 'none',
-    color: 'var(--t1)', fontSize: 11, fontFamily: 'inherit', flex: 1,
+    color: 'var(--t1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit', flex: 1,
   },
   content: {
     flex: 1, overflow: 'hidden', display: 'flex',
   },
   placeholder: {
     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color: 'var(--t3)', fontSize: 12,
+    color: 'var(--t3)', fontSize: 'var(--fs-base)',
   },
   disabledBanner: {
     flex: 1, display: 'flex', flexDirection: 'column' as const,
     alignItems: 'center', justifyContent: 'center',
-    color: 'var(--t3)', fontSize: 13, gap: 8,
+    color: 'var(--t3)', fontSize: 'var(--fs-md)', gap: 8,
   },
 };
 
@@ -386,7 +386,7 @@ export default function LorePage() {
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>📚</span>
         <span>{t('lore.page.disabled.message', 'LORE отключён в этой среде.')}</span>
-        <span style={{ fontSize: 11 }}>{t('lore.page.disabled.hint', 'Установить lore.enabled=true в lore-backend (:9100).')}</span>
+        <span style={{ fontSize: 'var(--fs-sm)' }}>{t('lore.page.disabled.hint', 'Установить lore.enabled=true в lore-backend (:9100).')}</span>
       </div>
     </div>
   );
@@ -396,7 +396,7 @@ export default function LorePage() {
       <div style={{ ...S.body, ...S.disabledBanner }}>
         <span style={{ fontSize: 32 }}>⚠️</span>
         <span>{t('lore.page.unreachable.message', 'LORE недоступен — lore-backend (:9100) не отвечает.')}</span>
-        <button style={{ fontSize: 11, marginTop: 8, cursor: 'pointer' }} onClick={() => setLoreUnreachable(false)}>
+        <button style={{ fontSize: 'var(--fs-sm)', marginTop: 8, cursor: 'pointer' }} onClick={() => setLoreUnreachable(false)}>
           {t('lore.page.unreachable.retry', 'Повторить')}
         </button>
       </div>
@@ -458,7 +458,7 @@ export default function LorePage() {
                     title={`${f.label}: ${cnt}`}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                      userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                       border: `1px solid ${on ? meta.color : 'var(--b3)'}`,
                       background: on ? `color-mix(in srgb, ${meta.color} 18%, transparent)` : 'transparent',
                       color: on ? 'var(--t1)' : 'var(--t3)',
@@ -466,7 +466,7 @@ export default function LorePage() {
                   >
                     <GameIcon slug={meta.icon} size={narrow ? 14 : 11} style={{ color: meta.color }} />
                     {!narrow && f.label}
-                    {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>}
+                    {!narrow && <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{cnt}</span>}
                   </span>
                 );
               })}
@@ -482,7 +482,7 @@ export default function LorePage() {
                 title={t('lore.page.sprints.presetWorkingTitle', 'В работе + Частично')}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${sprintPresetWorking ? 'var(--acc)' : 'var(--b3)'}`,
                   background: sprintPresetWorking ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
                   color: sprintPresetWorking ? 'var(--acc)' : 'var(--t3)',
@@ -498,7 +498,7 @@ export default function LorePage() {
                 title={t('lore.page.sprints.presetAttentionTitle', 'В работе без привязки к релизу')}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${sprintPresetAttention ? 'var(--dng)' : 'var(--b3)'}`,
                   background: sprintPresetAttention ? 'color-mix(in srgb, var(--dng) 16%, transparent)' : 'transparent',
                   color: sprintPresetAttention ? 'var(--dng)' : 'var(--t3)',
@@ -518,7 +518,7 @@ export default function LorePage() {
                     aria-pressed={on}
                     style={{
                       display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-                      userSelect: 'none', fontSize: 11, fontWeight: on ? 600 : 400,
+                      userSelect: 'none', fontSize: 'var(--fs-sm)', fontWeight: on ? 600 : 400,
                       padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                       border: `1px solid ${on ? color : 'var(--b3)'}`,
                       background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
@@ -539,7 +539,7 @@ export default function LorePage() {
                     aria-pressed={on}
                     style={{
                       display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-                      userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                       border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
                       background: on ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
                       color: on ? 'var(--acc)' : 'var(--t3)',
@@ -555,7 +555,7 @@ export default function LorePage() {
                 aria-pressed={sprintNoRelease}
                 style={{
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer',
-                  userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                  userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                   border: `1px solid ${sprintNoRelease ? 'var(--acc)' : 'var(--b3)'}`,
                   background: sprintNoRelease ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'transparent',
                   color: sprintNoRelease ? 'var(--acc)' : 'var(--t3)',
@@ -566,7 +566,7 @@ export default function LorePage() {
             {/* Проекты — facet counts reflect whatever's already selected above */}
             {sprintProjFacets.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2 }}>
                   {t('lore.page.sprints.projectsLabel', 'Проекты')}
                 </span>
                 {sprintProjFacets.map(({ id, count }) => {
@@ -582,7 +582,7 @@ export default function LorePage() {
                       title={`${id} (${count})`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                        userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                        userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                         border: `1px solid ${on ? color : 'var(--b3)'}`,
                         background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                         color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
@@ -590,7 +590,7 @@ export default function LorePage() {
                     >
                       <span style={{ width: narrow ? 10 : 6, height: narrow ? 10 : 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
                       {!narrow && projLabel(id)}
-                      {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
+                      {!narrow && <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{count}</span>}
                     </span>
                   );
                 })}
@@ -605,7 +605,7 @@ export default function LorePage() {
                   aria-expanded={!sprintCompCollapsed}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', userSelect: 'none',
-                    fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2,
+                    fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 2,
                   }}
                   title={sprintCompCollapsed ? t('lore.page.sprints.expandComponents', 'Развернуть') : t('lore.page.sprints.collapseComponents', 'Свернуть')}
                 >
@@ -626,7 +626,7 @@ export default function LorePage() {
                       title={`${id} (${count})`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                        userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                        userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                         border: `1px solid ${on ? color : 'var(--b3)'}`,
                         background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                         color: on ? color : 'var(--t3)', opacity: reachable ? 1 : 0.4,
@@ -634,12 +634,12 @@ export default function LorePage() {
                     >
                       <GameIcon slug={icon ?? 'puzzle'} size={narrow ? 14 : 11} style={{ color }} />
                       {!narrow && id}
-                      {!narrow && <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{count}</span>}
+                      {!narrow && <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{count}</span>}
                     </span>
                   );
                 })}
                 {sprintCompCollapsed && sprintCompSel.size > 0 && (
-                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
                     {[...sprintCompSel].join(', ')}
                   </span>
                 )}
@@ -676,7 +676,7 @@ export default function LorePage() {
                   title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                    userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                    userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                     border: `1px solid ${on ? f.color : 'var(--b3)'}`,
                     background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
                     color: on ? 'var(--t1)' : 'var(--t3)',
@@ -684,12 +684,12 @@ export default function LorePage() {
                 >
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
                   {adrStatusLabel(t, f.key)}
-                  <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                  <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
                 </span>
               );
             })}
             <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
               {adrStatusSel.size === 0
                 ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
                 : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
@@ -727,19 +727,19 @@ export default function LorePage() {
                     title={`${area}: ${cnt}`}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                      userSelect: 'none', fontSize: 11, padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
                       border: `1px solid ${on ? color : 'var(--b3)'}`,
                       background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
                       color: on ? 'var(--t1)' : 'var(--t3)',
                     }}
                   >
                     {area}
-                    <span style={{ fontSize: 9, opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                    <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
                   </span>
                 );
               })}
             <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
               {t('lore.page.components.totalCount', '{{count}} компонентов', { count: Object.values(compAreaCounts).reduce((a, b) => a + b, 0) })}
             </span>
           </div>
@@ -764,8 +764,8 @@ export default function LorePage() {
               padding: '3px 14px', flexShrink: 0,
               borderLeft: i === 0 ? 'none' : '1px solid var(--bd)',
             }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: s.color, lineHeight: 1.1 }}>{s.value}</span>
-              <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{s.label}</span>
+              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: s.color, lineHeight: 1.1 }}>{s.value}</span>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{s.label}</span>
             </div>
           ))}
           {/* % выполнено */}
@@ -774,7 +774,7 @@ export default function LorePage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             padding: '3px 14px', flexShrink: 0, borderLeft: '1px solid var(--bd)',
           }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--suc)', lineHeight: 1.1 }}>
+            <span style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--suc)', lineHeight: 1.1 }}>
               {pct}%
             </span>
             <div style={{ width: 44, height: 3, background: 'var(--b2)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>
@@ -783,7 +783,7 @@ export default function LorePage() {
                 height: '100%', background: 'var(--suc)', borderRadius: 2,
               }} />
             </div>
-            <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{t('lore.page.sprints.stats.percentDone', 'выполнено')}</span>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', whiteSpace: 'nowrap', marginTop: 1 }}>{t('lore.page.sprints.stats.percentDone', 'выполнено')}</span>
           </div>
           ); })()}
         </div>
@@ -812,7 +812,7 @@ export default function LorePage() {
                   <button
                     onClick={clearItem}
                     style={{ background: 'none', border: 'none', cursor: 'pointer',
-                             color: 'var(--t3)', fontSize: 11, padding: '0 2px' }}
+                             color: 'var(--t3)', fontSize: 'var(--fs-sm)', padding: '0 2px' }}
                     title={t('lore.page.adrs.clearSelectionTitle', 'Сбросить выбор')}
                   >✕</button>
                 )}
@@ -840,11 +840,11 @@ export default function LorePage() {
                   padding: '0 10px', height: 30, flexShrink: 0,
                   borderBottom: '1px solid var(--bd)',
                 }}>
-                  <span style={{ color: 'var(--t3)', fontSize: 12, flexShrink: 0 }}>🔍</span>
+                  <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
                   <input
                     style={{
                       flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                      color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
+                      color: 'var(--t1)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)',
                     }}
                     placeholder={t('lore.page.sprints.searchPlaceholder', 'спринт…')}
                     aria-label={t('lore.page.sprints.searchAriaLabel', 'поиск по имени спринта')}
@@ -853,7 +853,7 @@ export default function LorePage() {
                   />
                   {sprintQ && (
                     <span onClick={() => setSprintQ('')}
-                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>✕</span>
+                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>✕</span>
                   )}
                   <button
                     onClick={() => selectItem('__new')}
@@ -861,7 +861,7 @@ export default function LorePage() {
                     style={{
                       flexShrink: 0, width: 20, height: 20, borderRadius: 4,
                       border: '1px solid var(--bd)', background: 'transparent',
-                      color: 'var(--acc)', cursor: 'pointer', fontSize: 13, lineHeight: 1,
+                      color: 'var(--acc)', cursor: 'pointer', fontSize: 'var(--fs-md)', lineHeight: 1,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >+</button>
@@ -892,11 +892,11 @@ export default function LorePage() {
                   padding: '0 10px', height: 30, flexShrink: 0,
                   borderBottom: '1px solid var(--bd)',
                 }}>
-                  <span style={{ color: 'var(--t3)', fontSize: 12, flexShrink: 0 }}>🔍</span>
+                  <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
                   <input
                     style={{
                       flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                      color: 'var(--t1)', fontSize: 11, fontFamily: 'var(--mono)',
+                      color: 'var(--t1)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)',
                     }}
                     placeholder={t('lore.page.components.searchPlaceholder', 'компонент…')}
                     aria-label={t('lore.page.components.searchAriaLabel', 'поиск по компонентам')}
@@ -905,7 +905,7 @@ export default function LorePage() {
                   />
                   {compQ && (
                     <span onClick={() => setCompQ('')}
-                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>✕</span>
+                      style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>✕</span>
                   )}
                 </div>
                 <LoreComponentList
@@ -962,7 +962,7 @@ export default function LorePage() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, width: '100%',
                 padding: '7px 12px', border: 'none', borderBottom: '1px solid var(--bd)',
-                background: 'var(--bg1)', color: 'var(--acc)', fontSize: 12,
+                background: 'var(--bg1)', color: 'var(--acc)', fontSize: 'var(--fs-base)',
                 fontFamily: 'var(--mono)', cursor: 'pointer', textAlign: 'left', flexShrink: 0,
               }}
             >← {t('lore.page.backToList', 'к списку')}</button>
@@ -991,7 +991,7 @@ export default function LorePage() {
             <div style={{ ...S.placeholder, flexDirection: 'column' as const, gap: 8 }}>
               <GameIcon slug="scroll-quill" size={28} style={{ color: 'var(--t3)', opacity: 0.4 }} />
               <span>{t('lore.page.adrs.emptySelectHint', 'Выберите ADR из списка слева')}</span>
-              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.page.adrs.emptyCreateHint', 'или нажмите «+ новый ADR» чтобы создать')}</span>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{t('lore.page.adrs.emptyCreateHint', 'или нажмите «+ новый ADR» чтобы создать')}</span>
             </div>
           )}
 
@@ -1132,7 +1132,7 @@ export function StatusChip({ status }: { status: string }) {
   return (
     <span title={label} style={{
       display: 'inline-flex', alignItems: 'center', gap: 3,
-      fontSize: 10, padding: narrow ? '2px 3px' : '1px 5px 1px 4px', borderRadius: 3,
+      fontSize: 'var(--fs-xs)', padding: narrow ? '2px 3px' : '1px 5px 1px 4px', borderRadius: 3,
       background: `color-mix(in srgb, ${color} 16%, transparent)`,
       color, border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
       whiteSpace: 'nowrap', flexShrink: 0,
