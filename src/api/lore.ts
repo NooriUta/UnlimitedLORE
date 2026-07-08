@@ -245,7 +245,6 @@ export interface LoreSprintRow {
   created_date: string | null;
   planned_start_date: string | null;
   planned_end_date: string | null;
-  planned_milestone_id: string | null;
   milestone_ids?: string[] | null;
   no_release_required: boolean | null;
 }
@@ -273,11 +272,10 @@ export interface LoreMilestone {
   week: number | null;
   date_display: string | null;
   goal_md: string | null;
-  // SPRINT_PLANITEM_RETIRE (T-21): the "planned" bucket is no longer returned
-  // by the backend slice — derive it client-side from the already-fetched
-  // `sprints` list, filtered on planned_milestone_id (see LoreMilestonesView's
-  // msIds()). direct_sprint_ids (TARGETS_MILESTONE, the "actual" bucket) is
-  // still a real edge and still comes from the slice.
+  // direct_sprint_ids (TARGETS_MILESTONE edge) is the sole source of truth for
+  // sprint↔milestone membership — a separate "planned" bucket (planned_milestone_
+  // id field, client-derived) used to exist alongside it, drifted out of sync on
+  // 62+ sprints, and was retired.
   direct_sprint_ids?: string[] | null;
   priority?: string | null;
 }
@@ -692,7 +690,7 @@ export async function updateSprintPlan(
   sprintId: string,
   fields: {
     priority?: string | null; planned_start_date?: string | null; planned_end_date?: string | null;
-    planned_milestone_id?: string | null; track_id?: string | null;
+    track_id?: string | null;
   },
 ): Promise<{ ok: boolean; sprint_id: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/plan`, {

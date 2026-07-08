@@ -975,7 +975,11 @@ function renderMsGroups(
   onNavigateToSprint: ((sprintId: string) => void) | undefined,
   t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
 ) {
-  const msSprints = sprints.filter(s => s.planned_milestone_id === ms.milestone_id);
+  // Was s.planned_milestone_id — this file's only sprint↔milestone grouping had
+  // NO fallback to the TARGETS_MILESTONE edge (unlike every other view), so it
+  // silently under/over-counted whenever the two drifted apart (confirmed live
+  // on 62+ sprints). Edge is the sole source of truth now.
+  const msSprints = sprints.filter(s => (s.milestone_ids ?? []).includes(ms.milestone_id));
   const grouped = new Map<string, LoreSprintRow[]>();
   for (const sprint of msSprints) {
     const raw = sprint.status_raw;

@@ -58,7 +58,7 @@ const TOOLS: ToolDoc[] = [
     desc: 'Явное ребро BELONGS_TO (спринт → компонент) — перекрывает нечёткий матч по имени (sprint_id LIKE %component_key%) в слайсе component_sprints и на бейджах модулей в паспорте спринта. action = add | remove.' },
   { name: 'lore_link_sprint_milestone', kind: 'write', entity: 'Sprint', backend: 'POST /lore/milestone/sprint',
     params: 'sprint_id, milestone_id, action?',
-    desc: 'Прямое ребро TARGETS_MILESTONE (спринт → веха) — канонический путь факт. привязки. Отдельно есть план. привязка (sprints.planned_milestone_id через POST /lore/sprint/plan) — MCP-тула на неё пока нет. action = add | remove.' },
+    desc: 'Ребро TARGETS_MILESTONE (спринт → веха) — единственный способ привязки. action = add | remove.' },
 
   // ── Status (SCD2-переходы, общие для нескольких типов) ────────────────────
   { name: 'lore_set_status', kind: 'write', entity: 'Status', backend: 'POST /lore/status',
