@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { parseRoutine, parseInvariants, parseGateSubtitle } from '../../lib/qgContentMd';
+import { MartProse } from '../bench/MartProse';
 
 interface QGDetail {
   qg_id: string;
@@ -225,13 +226,33 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   for (const m of latestMetrics) metricByKey[m.metric_key] = m;
   const prevByKey: Record<string, RunMetric> = {};
   for (const m of prevMetrics) prevByKey[m.metric_key] = m;
-  // recommendation by inv key (inv_id may carry bare key or inv_N_key)
+  // recommendation by inv key (inv_id may carry bare key or inv_N_key).
+  // A pending rec always wins the slot; otherwise the first promoted/dismissed
+  // one found keeps showing here instead of silently disappearing once acted
+  // on (QGRecommendation has no valid_from/supersede edge yet — see T14
+  // QG-recommendations follow-up — so this is "first wins", not "latest
+  // wins"; multiple non-pending recs for the same key beyond the first
+  // still surface below in "Прочие рекомендации").
   const recByKey: Record<string, Recommendation> = {};
   for (const r of recs) {
     if (!r.inv_id) continue;
     const bare = r.inv_id.replace(/^inv_?\d+_/, '');
-    if (r.status === 'pending') { recByKey[bare] = r; recByKey[r.inv_id] = r; }
+    if (!recByKey[bare] || r.status === 'pending') {
+      recByKey[bare] = r; recByKey[r.inv_id] = r;
+    }
   }
+  // Only recs that actually render inline (mirrors the FAIL/WARN gate on the
+  // inline card below) get excluded from "Прочие рекомендации" — a rec whose
+  // invariant recovered to PASS (or has no run) after being promoted must
+  // still surface somewhere, not disappear because recByKey claimed its slot.
+  const inlineRecIds = new Set(
+    invariants
+      .filter(inv => {
+        const st = metricByKey[inv.key]?.status;
+        return recByKey[inv.key] && (st === 'FAIL' || st === 'WARN');
+      })
+      .map(inv => recByKey[inv.key].rec_id),
+  );
 
   // status counts for latest structured run, restricted to this gate's keys
   const gateMetrics = invariants.map(i => metricByKey[i.key]).filter(Boolean) as RunMetric[];
@@ -268,6 +289,13 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
             )}
             {qg.component_id && <span style={S.compBadge}>{qg.component_id}</span>}
             <span style={S.routineBadge}>{routineName}</span>
+            {/* qg.sprint_id was fetched but never rendered — the QG's own
+                home sprint had no link anywhere on this page. */}
+            {qg.sprint_id && onNavigateToSprint && (
+              <button style={S.sprintLink} onClick={() => onNavigateToSprint(qg.sprint_id!)}>
+                {t('lore.qgDetail.header.sprintLink', '↗ {{sprintId}}', { sprintId: qg.sprint_id })}
+              </button>
+            )}
           </div>
           <div style={S.qgName}>{qg.name}</div>
           {(qg.description || gateSubtitle) && <div style={S.desc}>{qg.description ?? gateSubtitle}</div>}
@@ -468,7 +496,9 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                         <div style={S.sparkLabel}>{t('lore.qgDetail.invariants.dynamicsLabel', 'динамика')}</div>
                       </div>
                     </div>
-                    {/* inline recommendation under failing invariant */}
+                    {/* inline recommendation under failing invariant — stays in
+                        place (doesn't vanish) once promoted/dismissed, so
+                        acting on it doesn't silently drop its info from view. */}
                     {rec && (st === 'FAIL' || st === 'WARN') && (
                       <div style={{ ...S.recInline, borderColor: `color-mix(in srgb, ${sc} 22%, transparent)`, background: `color-mix(in srgb, ${sc} 7%, transparent)`, borderLeft: `3px solid ${sc}` }}>
                         <div style={S.recInlineHead}>
@@ -476,15 +506,29 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                           <span style={S.badge(sc)}>{rec.status ?? 'pending'}</span>
                         </div>
                         <div style={S.recTitle}>{rec.title}</div>
-                        {rec.body_md && <div style={S.recBody}>{rec.body_md}</div>}
-                        <div style={S.recActions}>
-                          <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
-                            {promoting === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.createTask', '✅ Создать задачу')}
-                          </button>
-                          <button style={S.dismissBtn} disabled={dismissing === rec.rec_id} onClick={() => handleDismiss(rec)}>
-                            {dismissing === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.dismiss', '✕ Отклонить')}
-                          </button>
-                        </div>
+                        {rec.body_md && <MartProse text={rec.body_md} style={S.recBody} />}
+                        {rec.status === 'promoted' ? (
+                          rec.promoted_task_uid && rec.promoted_sprint_id ? (
+                            <button
+                              style={S.promotedLink}
+                              onClick={() => onNavigateToSprint?.(rec.promoted_sprint_id!)}
+                              title={t('lore.qgDetail.otherRecs.openSprintTitle', 'Открыть {{sprintId}}', { sprintId: rec.promoted_sprint_id })}
+                            >
+                              {t('lore.qgDetail.otherRecs.taskLink', '→ задача {{taskUid}}', { taskUid: rec.promoted_task_uid })}
+                            </button>
+                          ) : (
+                            <div style={S.promotedNote}>{t('lore.qgDetail.otherRecs.taskCreated', '→ задача создана')}</div>
+                          )
+                        ) : rec.status === 'dismissed' ? null : (
+                          <div style={S.recActions}>
+                            <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
+                              {promoting === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.createTask', '✅ Создать задачу')}
+                            </button>
+                            <button style={S.dismissBtn} disabled={dismissing === rec.rec_id} onClick={() => handleDismiss(rec)}>
+                              {dismissing === rec.rec_id ? '…' : t('lore.qgDetail.recommendations.dismiss', '✕ Отклонить')}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -494,13 +538,11 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
           )}
         </section>
 
-        {/* Unmatched recommendations (not tied to a visible invariant) */}
+        {/* Recommendations not already shown inline under an invariant card
+            above (either because their key has no matching invariant, or
+            because a different rec for the same key already took that slot). */}
         {(() => {
-          const shownKeys = new Set(invariants.map(i => i.key));
-          const orphan = recs.filter(r => {
-            const bare = (r.inv_id ?? '').replace(/^inv_?\d+_/, '');
-            return !shownKeys.has(bare) || r.status !== 'pending';
-          });
+          const orphan = recs.filter(r => !inlineRecIds.has(r.rec_id));
           if (orphan.length === 0) return null;
           return (
             <section style={S.section}>
@@ -527,7 +569,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
                         <span style={S.recId}>{rec.rec_id}</span>
                       </div>
                       <div style={S.recTitle}>{rec.title}</div>
-                      {rec.body_md && <div style={S.recBody}>{rec.body_md}</div>}
+                      {rec.body_md && <MartProse text={rec.body_md} style={S.recBody} />}
                       {isPending && (
                         <div style={S.recActions}>
                           <button style={S.promoteBtn} disabled={promoting === rec.rec_id} onClick={() => handlePromote(rec)}>
@@ -565,41 +607,47 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
 
 const S = {
   root: { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   header: {
     display: 'flex', alignItems: 'flex-start', gap: 8, flexShrink: 0,
     padding: '10px 16px', borderBottom: '1px solid var(--bd)', background: 'var(--bg1)',
   },
   backBtn: {
     background: 'transparent', border: '1px solid var(--bd)', borderRadius: 4,
-    color: 'var(--t2)', cursor: 'pointer', fontSize: 14, padding: '2px 8px',
+    color: 'var(--t2)', cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '2px 8px',
     fontFamily: 'inherit', flexShrink: 0, alignSelf: 'center',
   },
   headerMain: { flex: 1, minWidth: 0 },
   headerRow:  { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, marginBottom: 3 },
-  qgId:       { color: 'var(--t3)', fontSize: 11, fontFamily: 'var(--mono)' },
-  qgName:     { color: 'var(--t1)', fontSize: 13, fontWeight: 600, marginBottom: 3 },
-  desc:       { color: 'var(--t2)', fontSize: 11, marginBottom: 6 },
+  qgId:       { color: 'var(--t3)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)' },
+  qgName:     { color: 'var(--t1)', fontSize: 'var(--fs-md)', fontWeight: 600, marginBottom: 3 },
+  desc:       { color: 'var(--t2)', fontSize: 'var(--fs-sm)', marginBottom: 6 },
   statusBadge: (color: string) => ({
-    fontSize: 9, padding: '1px 5px', borderRadius: 3,
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3,
     background: `color-mix(in srgb, ${color} 16%, transparent)`,
     color, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
   }),
   compBadge: {
-    fontSize: 10, padding: '1px 6px', borderRadius: 3,
+    fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 28%, transparent)',
   },
   routineBadge: {
-    fontSize: 10, padding: '1px 6px', borderRadius: 3,
+    fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--inf) 10%, transparent)',
     color: 'var(--inf)', border: '1px solid color-mix(in srgb, var(--inf) 26%, transparent)',
     fontFamily: 'var(--mono)',
   },
+  sprintLink: {
+    fontSize: 10, padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)',
+    background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
+    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 26%, transparent)',
+    cursor: 'pointer',
+  },
   provRow: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
-  provLabel: { fontSize: 9.5, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  provLabel: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
   provChip: {
-    fontSize: 10, padding: '1px 7px', borderRadius: 3,
+    fontSize: 'var(--fs-xs)', padding: '1px 7px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--purple, #bc8cff) 9%, transparent)',
     color: 'var(--purple, #bc8cff)',
     border: '1px solid color-mix(in srgb, var(--purple, #bc8cff) 24%, transparent)',
@@ -607,22 +655,22 @@ const S = {
   body: { flex: 1, overflowY: 'auto' as const },
   section: { borderBottom: '1px solid var(--bd)', padding: '10px 16px 12px' },
   secLabel: {
-    fontSize: 10, fontWeight: 700, color: 'var(--t3)',
+    fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)',
     textTransform: 'uppercase' as const, letterSpacing: '0.05em',
     marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
   },
   secLabelInline: {
-    fontSize: 10, fontWeight: 700, color: 'var(--t3)',
+    fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)',
     textTransform: 'uppercase' as const, letterSpacing: '0.05em',
   },
-  muted: { color: 'var(--t3)', fontWeight: 400, fontSize: 10 },
+  muted: { color: 'var(--t3)', fontWeight: 400, fontSize: 'var(--fs-xs)' },
   badge: (color: string) => ({
-    fontSize: 9, padding: '1px 5px', borderRadius: 3,
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3,
     background: `color-mix(in srgb, ${color} 16%, transparent)`,
     color, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
     fontWeight: 600, letterSpacing: '0.04em', whiteSpace: 'nowrap' as const,
   }),
-  emptySection: { color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' as const },
+  emptySection: { color: 'var(--t3)', fontSize: 'var(--fs-sm)', fontStyle: 'italic' as const },
 
   // run history
   runList: { display: 'flex', flexDirection: 'column' as const, gap: 4 },
@@ -632,76 +680,76 @@ const S = {
     background: 'color-mix(in srgb, var(--acc) 5%, transparent)',
     borderRadius: 4, padding: '2px 4px', margin: '0 -4px',
   },
-  runDate:  { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)', flexShrink: 0 },
-  runId:    { color: 'var(--t3)', fontSize: 9, fontFamily: 'var(--mono)', opacity: 0.6 },
-  runLegacy:{ color: 'var(--t3)', fontSize: 9, fontStyle: 'italic' as const },
-  runFlags: { color: 'var(--t2)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  runDate:  { color: 'var(--t3)', fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', flexShrink: 0 },
+  runId:    { color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', opacity: 0.6 },
+  runLegacy:{ color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontStyle: 'italic' as const },
+  runFlags: { color: 'var(--t2)', fontSize: 'var(--fs-xs)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
 
   // methodology
   methToggle: {
     width: '100%', textAlign: 'left' as const, background: 'none', border: 'none',
     padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'inherit',
   },
-  methCaret: { color: 'var(--inf)', fontSize: 11 },
-  methBody: { paddingTop: 8, paddingLeft: 18, fontSize: 11, color: 'var(--t2)', lineHeight: 1.6 },
+  methCaret: { color: 'var(--inf)', fontSize: 'var(--fs-sm)' },
+  methBody: { paddingTop: 8, paddingLeft: 18, fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.6 },
   methLine: { marginBottom: 5 },
-  methDir: { fontFamily: 'var(--mono)', color: 'var(--suc)', fontSize: 10 },
-  methSkip: { fontFamily: 'var(--mono)', color: 'var(--t3)', fontSize: 10 },
+  methDir: { fontFamily: 'var(--mono)', color: 'var(--suc)', fontSize: 'var(--fs-xs)' },
+  methSkip: { fontFamily: 'var(--mono)', color: 'var(--t3)', fontSize: 'var(--fs-xs)' },
   methStrong: { fontWeight: 600, color: 'var(--t1)' },
   methNote: { marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--bd)', color: 'var(--t3)' },
 
   // changes
   changeRow: { display: 'flex', gap: 6, flexWrap: 'wrap' as const },
   changeChip: (c: string) => ({
-    display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10,
+    display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--fs-xs)',
     padding: '3px 8px', borderRadius: 4,
     background: `color-mix(in srgb, ${c} 9%, transparent)`,
     border: `1px solid color-mix(in srgb, ${c} 22%, transparent)`,
   }),
-  changeKey: { fontFamily: 'var(--mono)', color: 'var(--t2)', fontSize: 10 },
+  changeKey: { fontFamily: 'var(--mono)', color: 'var(--t2)', fontSize: 'var(--fs-xs)' },
 
   // invariants
   countRow: { display: 'flex', gap: 4, marginLeft: 'auto' },
   countBadge: (c: string) => ({
-    fontSize: 10, padding: '1px 6px', borderRadius: 3,
+    fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3,
     background: `color-mix(in srgb, ${c} 12%, transparent)`,
     color: c, border: `1px solid color-mix(in srgb, ${c} 25%, transparent)`, fontWeight: 600,
   }),
   invList: { display: 'flex', flexDirection: 'column' as const, gap: 0 },
   invCard: { padding: '11px 4px 11px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)' },
   invMain: { display: 'flex', gap: 10, alignItems: 'flex-start' },
-  invNo: { fontSize: 11, color: 'var(--t3)', marginTop: 2, minWidth: 16, paddingLeft: 8 },
+  invNo: { fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginTop: 2, minWidth: 16, paddingLeft: 8 },
   invContent: { flex: 1, minWidth: 0 },
   invHeadRow: { display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' as const, marginBottom: 2 },
-  invKey: (sk: boolean) => ({ fontFamily: 'var(--mono)', fontSize: 11, color: sk ? 'var(--t3)' : 'var(--t1)' }),
+  invKey: (sk: boolean) => ({ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: sk ? 'var(--t3)' : 'var(--t1)' }),
   dirBadge: {
-    fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--inf)',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--inf)',
     background: 'color-mix(in srgb, var(--inf) 9%, transparent)', padding: '0 5px', borderRadius: 3,
   },
-  invDescr: { fontSize: 11, color: 'var(--t3)', lineHeight: 1.4, marginBottom: 4 },
-  ruleLine: { fontSize: 10.5, color: 'var(--t2)', lineHeight: 1.45, marginTop: 3, display: 'flex', gap: 6 },
+  invDescr: { fontSize: 'var(--fs-sm)', color: 'var(--t3)', lineHeight: 1.4, marginBottom: 4 },
+  ruleLine: { fontSize: 'var(--fs-xs)', color: 'var(--t2)', lineHeight: 1.45, marginTop: 3, display: 'flex', gap: 6 },
   ruleTag: {
-    fontSize: 8.5, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.04em',
+    fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.04em',
     border: '1px solid var(--bd)', borderRadius: 3, padding: '0 4px', flexShrink: 0, alignSelf: 'flex-start',
     marginTop: 1,
   },
   srcWrap: { marginTop: 5 },
-  srcToggle: { color: 'var(--inf)', fontSize: 10, cursor: 'pointer', userSelect: 'none' as const },
+  srcToggle: { color: 'var(--inf)', fontSize: 'var(--fs-xs)', cursor: 'pointer', userSelect: 'none' as const },
   srcPre: {
     margin: '5px 0 0', padding: '6px 9px', borderRadius: 5,
-    background: 'var(--bg0)', border: '1px solid var(--bd)', fontSize: 10, fontFamily: 'var(--mono)',
+    background: 'var(--bg0)', border: '1px solid var(--bd)', fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)',
     color: 'var(--t2)', whiteSpace: 'pre-wrap' as const, wordBreak: 'break-word' as const,
     maxHeight: 120, overflowY: 'auto' as const,
   },
   valBox: { flexShrink: 0, textAlign: 'right' as const, minWidth: 64 },
-  valNum: (c: string) => ({ fontFamily: 'var(--mono)', fontSize: 13, color: c, fontWeight: 700 }),
-  valTgt: { fontSize: 9, color: 'var(--t3)', marginTop: 1 },
-  valSkip: { fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' as const },
+  valNum: (c: string) => ({ fontFamily: 'var(--mono)', fontSize: 'var(--fs-md)', color: c, fontWeight: 700 }),
+  valTgt: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 1 },
+  valSkip: { fontSize: 'var(--fs-sm)', color: 'var(--t3)', fontStyle: 'italic' as const },
   sparkBox: { flexShrink: 0, textAlign: 'center' as const },
-  sparkLabel: { fontSize: 8.5, color: 'var(--t3)', marginTop: 1 },
+  sparkLabel: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginTop: 1 },
   sparkEmpty: {
     width: 104, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color: 'var(--t3)', fontSize: 9, fontStyle: 'italic' as const,
+    color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontStyle: 'italic' as const,
   },
 
   // recommendations
@@ -713,23 +761,25 @@ const S = {
     border: '1px solid var(--bd)', borderRadius: 6, padding: '8px 12px', opacity: dim ? 0.45 : 1,
   }),
   recHeader: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' as const },
-  recInv: { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)' },
-  recId:  { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)' },
-  recTitle: { color: 'var(--t1)', fontSize: 12, fontWeight: 600, marginBottom: 4 },
-  recBody:  { color: 'var(--t2)', fontSize: 11, marginBottom: 6, whiteSpace: 'pre-wrap' as const },
+
+  recInv: { color: 'var(--t3)', fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)' },
+  recId:  { color: 'var(--t3)', fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)' },
+  recTitle: { color: 'var(--t1)', fontSize: 'var(--fs-base)', fontWeight: 600, marginBottom: 4 },
+  recBody:  { color: 'var(--t2)', fontSize: 'var(--fs-sm)', marginBottom: 6, whiteSpace: 'pre-wrap' as const },
+
   recActions: { display: 'flex', gap: 6, marginTop: 6 },
   promoteBtn: {
-    padding: '3px 10px', fontSize: 11, border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
+    padding: '3px 10px', fontSize: 'var(--fs-sm)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     background: 'color-mix(in srgb, var(--acc) 10%, transparent)', color: 'var(--acc)',
     borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit',
   },
   dismissBtn: {
-    padding: '3px 8px', fontSize: 11, border: '1px solid var(--bd)',
+    padding: '3px 8px', fontSize: 'var(--fs-sm)', border: '1px solid var(--bd)',
     background: 'transparent', color: 'var(--t3)', borderRadius: 4, cursor: 'pointer', fontFamily: 'inherit',
   },
-  promotedNote: { color: 'var(--suc)', fontSize: 10, marginTop: 4 },
+  promotedNote: { color: 'var(--suc)', fontSize: 'var(--fs-xs)', marginTop: 4 },
   promotedLink: {
-    color: 'var(--suc)', fontSize: 10, marginTop: 4, padding: 0,
+    color: 'var(--suc)', fontSize: 'var(--fs-xs)', marginTop: 4, padding: 0,
     background: 'transparent', border: 'none', cursor: 'pointer',
     fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2,
   },

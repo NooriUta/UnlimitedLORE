@@ -181,7 +181,7 @@ export default function LoreEvolutionView({ onError }: Props) {
                   <span style={S.sumDot}>·</span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                     <GameIcon slug={curMeta.icon} size={11} style={{ color: curMeta.color }} />
-                    <span style={{ fontSize: 11, color: curMeta.color }}>{curStatus}</span>
+                    <span style={{ fontSize: 'var(--fs-sm)', color: curMeta.color }}>{curStatus}</span>
                   </span>
                 </>
               )}
@@ -265,7 +265,7 @@ const S = {
     flexShrink: 0,
   },
   kindBtn: {
-    height: 26, padding: '0 12px', fontSize: 11, cursor: 'pointer',
+    height: 26, padding: '0 12px', fontSize: 'var(--fs-sm)', cursor: 'pointer',
     border: '1px solid var(--b3)', borderRadius: 4,
     background: 'transparent', color: 'var(--t2)', fontFamily: 'inherit',
   },
@@ -273,7 +273,7 @@ const S = {
     background: 'color-mix(in srgb, var(--acc) 15%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 35%, transparent)',
   },
-  hint: { fontSize: 10, color: 'var(--t3)', marginLeft: 8 },
+  hint: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginLeft: 8 },
   body: { flex: 1, display: 'flex', overflow: 'hidden' },
 
   // LHR-06: master-detail
@@ -288,18 +288,18 @@ const S = {
     cursor: 'pointer',
   },
   listId: {
-    fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--acc)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
   },
   listLabel: {
-    fontSize: 10, color: 'var(--t3)', marginTop: 1,
+    fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginTop: 1,
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
   },
 
   histPane: {
     flex: 1, overflowY: 'auto' as const, overflowX: 'auto' as const,
   },
-  msg: { padding: '24px 16px', color: 'var(--t3)', fontSize: 12 },
+  msg: { padding: '24px 16px', color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 
   // LHR-08: summary
   summary: {
@@ -307,37 +307,37 @@ const S = {
     padding: '8px 14px', borderBottom: '1px solid var(--bd)',
     background: 'var(--b2)', flexShrink: 0,
   },
-  sumId:   { fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--t1)' },
-  sumDot:  { fontSize: 11, color: 'var(--t3)' },
-  sumInfo: { fontSize: 11, color: 'var(--t2)' },
+  sumId:   { fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--t1)' },
+  sumDot:  { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  sumInfo: { fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
 
   tbl: {
     width: '100%', borderCollapse: 'collapse' as const,
-    fontSize: 11, tableLayout: 'auto' as const,
+    fontSize: 'var(--fs-sm)', tableLayout: 'auto' as const,
   },
   th: {
     padding: '6px 12px', textAlign: 'left' as const,
-    fontWeight: 600, fontSize: 10, color: 'var(--t3)',
+    fontWeight: 600, fontSize: 'var(--fs-xs)', color: 'var(--t3)',
     borderBottom: '2px solid var(--bd)', background: 'var(--b1)',
     whiteSpace: 'nowrap' as const, position: 'sticky' as const, top: 0,
   },
   trow: { borderBottom: '1px solid var(--bd)' },
   td: {
-    padding: '5px 12px', color: 'var(--t1)', fontSize: 11,
+    padding: '5px 12px', color: 'var(--t1)', fontSize: 'var(--fs-sm)',
     whiteSpace: 'nowrap' as const,
   },
   tdDiff: {
-    padding: '5px 12px', fontSize: 10, color: 'var(--t3)',
+    padding: '5px 12px', fontSize: 'var(--fs-xs)', color: 'var(--t3)',
     whiteSpace: 'nowrap' as const,
   },
   tdMono: {
-    padding: '5px 12px', fontFamily: 'monospace', fontSize: 10,
+    padding: '5px 12px', fontFamily: 'monospace', fontSize: 'var(--fs-xs)',
     whiteSpace: 'nowrap' as const,
   },
   diffBadge: {
     display: 'inline-block', padding: '1px 5px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--wrn) 12%, transparent)',
     border: '1px solid color-mix(in srgb, var(--wrn) 28%, transparent)',
-    color: 'var(--wrn)', fontSize: 10,
+    color: 'var(--wrn)', fontSize: 'var(--fs-xs)',
   },
 };

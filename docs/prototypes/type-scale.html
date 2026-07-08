@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE · Единая типо-шкала (прототип, T24)</title>
+<style>
+  html,body{margin:0;background:#141108}
+  .tt{--bg0:#141108;--bg1:#1c1810;--bg2:#241e14;--b2:#2b2417;--b3:#37301f;--bd:#42382a;--bdh:#5b4e39;
+    --t1:#ede5d0;--t2:#9a8c6e;--t3:#665c48;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#c85848;
+    --mono:ui-monospace,'SF Mono','JetBrains Mono',Menlo,monospace;--font:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    max-width:1180px;margin:0 auto;background:var(--bg0);color:var(--t1);font-family:var(--font);font-size:13px;padding:20px 18px 60px}
+  .tt *{box-sizing:border-box}
+  .tt h1{font-family:var(--mono);font-size:18px;margin:0 0 4px}
+  .tt .lead{color:var(--t2);font-size:12px;line-height:1.55;margin:0 0 20px;border-left:2px solid var(--acc);padding-left:11px;max-width:760px}
+  .tt .lead b{color:var(--t1)}
+  .tt h2{font-family:var(--mono);font-size:13px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin:28px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+
+  /* ── scale legend ── */
+  .tt .scale{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+  .tt .tok{border:1px solid var(--bd);border-radius:8px;padding:10px 10px 12px;background:var(--bg1)}
+  .tt .tok .name{font-family:var(--mono);font-size:10px;color:var(--acc);margin-bottom:2px}
+  .tt .tok .px{font-family:var(--mono);font-size:9px;color:var(--t3);margin-bottom:8px}
+  .tt .tok .demo{color:var(--t1);font-weight:600;line-height:1}
+  .tt .tok .role{font-size:9px;color:var(--t3);margin-top:8px;line-height:1.4}
+
+  /* ── before/after ── */
+  .tt .cmp{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .tt .panel{border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+  .tt .panel .ph{display:flex;align-items:center;gap:6px;padding:7px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase}
+  .tt .panel.before .ph{background:color-mix(in srgb,var(--dng) 12%,var(--bg1));color:var(--dng)}
+  .tt .panel.after .ph{background:color-mix(in srgb,var(--suc) 12%,var(--bg1));color:var(--suc)}
+  .tt .panel .pb{padding:14px;background:var(--bg0)}
+
+  /* recreated fragments */
+  .tt .frag{margin-bottom:16px}
+  .tt .frag:last-child{margin-bottom:0}
+  .tt .frag .flab{font-family:var(--mono);font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+
+  /* stats row */
+  .tt .statsrow{display:flex;border-bottom:1px solid var(--bd)}
+  .tt .stat{display:flex;flex-direction:column;align-items:center;padding:3px 14px;border-left:1px solid var(--bd)}
+  .tt .stat:first-child{border-left:none}
+  .tt .stat .v{font-weight:500;line-height:1.1;color:var(--t1)}
+  .tt .stat .l{font-size:9px;color:var(--t3);margin-top:1px}
+  .tt .after .stat .v{font-weight:600}
+
+  /* section header */
+  .tt .sechead{font-weight:600;color:var(--t1);margin-bottom:2px}
+  .tt .secsub{color:var(--t3)}
+
+  /* chip row */
+  .tt .chiprow{display:flex;gap:5px;flex-wrap:wrap}
+  .tt .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;border:1px solid var(--b3);color:var(--t2)}
+
+  /* KPI card */
+  .tt .kpi{display:flex;gap:14px}
+  .tt .kpicard{border:1px solid var(--bd);border-radius:8px;padding:10px 14px;background:var(--bg1);flex:1}
+  .tt .kpicard .kl{color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+  .tt .kpicard .kv{font-weight:700;color:var(--acc);font-family:var(--mono)}
+
+  /* table */
+  .tt table{width:100%;border-collapse:collapse}
+  .tt th{text-align:left;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;font-weight:600;padding:4px 8px;border-bottom:1px solid var(--bd)}
+  .tt td{padding:5px 8px;border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent);color:var(--t2)}
+
+  /* ---- BEFORE: real scattered values from the audit ---- */
+  .tt .before .statsrow .v{font-size:15px}
+  .tt .before .statsrow .l{font-size:9px}
+  .tt .before .sechead{font-size:14px}
+  .tt .before .secsub{font-size:10.5px}
+  .tt .before .chiprow .chip{font-size:11.5px}
+  .tt .before .kpicard .kl{font-size:8.5px}
+  .tt .before .kpicard .kv{font-size:22px}
+  .tt .before table{font-size:11px}
+  .tt .before th{font-size:9.5px}
+
+  /* ---- AFTER: proposed --fs-* scale ---- */
+  .tt.scaled{
+    --fs-2xs:9px; --fs-xs:10px; --fs-sm:11px; --fs-base:12px;
+    --fs-md:13px; --fs-lg:14px; --fs-xl:20px; --fs-2xl:24px;
+  }
+  .tt .after .statsrow .v{font-size:var(--fs-md)}
+  .tt .after .statsrow .l{font-size:var(--fs-2xs)}
+  .tt .after .sechead{font-size:var(--fs-lg)}
+  .tt .after .secsub{font-size:var(--fs-base)}
+  .tt .after .chiprow .chip{font-size:var(--fs-sm)}
+  .tt .after .kpicard .kl{font-size:var(--fs-2xs)}
+  .tt .after .kpicard .kv{font-size:var(--fs-2xl)}
+  .tt .after table{font-size:var(--fs-sm)}
+  .tt .after th{font-size:var(--fs-2xs)}
+
+  .tt .note{font-size:11px;color:var(--t3);line-height:1.55;margin-top:8px}
+  .tt .note code{font-family:var(--mono);color:var(--t2);background:var(--bg2);padding:0 4px;border-radius:3px;font-size:10px}
+</style>
+</head>
+<body>
+<div class="tt scaled">
+
+  <h1>Единая типо-шкала</h1>
+  <p class="lead">
+    Аудит нашёл <b>~20 разных px-значений</b> шрифтов в inline-стилях lore/-компонентов (7–32px), из них
+    <b>~690 из ~840</b> использований зажаты в кластере 9–12px с рассеянными дублями (8 / 8.5 / 9 / 9.5 —
+    визуально один и тот же размер). Ниже — предлагаемая шкала из 8 шагов, которая округляет существующие
+    значения к канону, а не придумывает новый визуальный язык. Числа ≥18px (KPI-герои) уже везде идут с
+    <code>font-weight:700</code> без исключений — объединяю их в два уровня.
+  </p>
+
+  <h2>Предлагаемая шкала</h2>
+  <div class="scale">
+    <div class="tok"><div class="name">--fs-2xs</div><div class="px">9px</div><div class="demo" style="font-size:9px">Aa 123</div><div class="role">микро-метки, даты, счётчики</div></div>
+    <div class="tok"><div class="name">--fs-xs</div><div class="px">10px</div><div class="demo" style="font-size:10px">Aa 123</div><div class="role">чипы, заголовки таблиц, поля</div></div>
+    <div class="tok"><div class="name">--fs-sm</div><div class="px">11px</div><div class="demo" style="font-size:11px">Aa 123</div><div class="role">база UI — списки, кнопки, badges</div></div>
+    <div class="tok"><div class="name">--fs-base</div><div class="px">12px</div><div class="demo" style="font-size:12px">Aa 123</div><div class="role">тело текста, инпуты, описания</div></div>
+    <div class="tok"><div class="name">--fs-md</div><div class="px">13px</div><div class="demo" style="font-size:13px">Aa 123</div><div class="role">под-заголовки, акцент-текст</div></div>
+    <div class="tok"><div class="name">--fs-lg</div><div class="px">14px</div><div class="demo" style="font-size:14px">Aa 123</div><div class="role">заголовки секций/карточек</div></div>
+    <div class="tok"><div class="name">--fs-xl</div><div class="px">20px</div><div class="demo" style="font-size:20px;color:var(--acc)">Aa 123</div><div class="role">вторичные KPI-числа</div></div>
+    <div class="tok"><div class="name">--fs-2xl</div><div class="px">24px</div><div class="demo" style="font-size:24px;color:var(--acc)">Aa 123</div><div class="role">главные KPI-герои</div></div>
+  </div>
+
+  <h2>До / После — на реальных фрагментах UI</h2>
+  <div class="cmp">
+    <div class="panel before">
+      <div class="ph">Сейчас — вразнобой</div>
+      <div class="pb">
+        <div class="frag">
+          <div class="flab">Sprints stats-row</div>
+          <div class="statsrow">
+            <div class="stat"><span class="v">344</span><span class="l">всего</span></div>
+            <div class="stat"><span class="v">256</span><span class="l">завершено</span></div>
+            <div class="stat"><span class="v">8</span><span class="l">активных</span></div>
+            <div class="stat"><span class="v">74%</span><span class="l">выполнено</span></div>
+          </div>
+        </div>
+        <div class="frag">
+          <div class="flab">Section header</div>
+          <div class="sechead">Инварианты</div>
+          <div class="secsub">ADR-QG-002 SMART-QG · методика расчёта</div>
+        </div>
+        <div class="frag">
+          <div class="flab">Filter chips</div>
+          <div class="chiprow">
+            <span class="chip">активен · 16</span>
+            <span class="chip">черновик · 3</span>
+            <span class="chip">архив · 5</span>
+          </div>
+        </div>
+        <div class="frag">
+          <div class="flab">KPI cards</div>
+          <div class="kpi">
+            <div class="kpicard"><div class="kl">Lead time (медиана)</div><div class="kv">4.2д</div></div>
+            <div class="kpicard"><div class="kl">Deploy lag (медиана)</div><div class="kv">1.8д</div></div>
+          </div>
+        </div>
+        <div class="frag">
+          <div class="flab">Table</div>
+          <table>
+            <tr><th>ID</th><th>Название</th><th>Статус</th></tr>
+            <tr><td>ADR-042</td><td>Retry policy</td><td>accepted</td></tr>
+            <tr><td>ADR-043</td><td>Cache layer</td><td>proposed</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel after">
+      <div class="ph">С единой шкалой</div>
+      <div class="pb">
+        <div class="frag">
+          <div class="flab">Sprints stats-row</div>
+          <div class="statsrow">
+            <div class="stat"><span class="v">344</span><span class="l">всего</span></div>
+            <div class="stat"><span class="v">256</span><span class="l">завершено</span></div>
+            <div class="stat"><span class="v">8</span><span class="l">активных</span></div>
+            <div class="stat"><span class="v">74%</span><span class="l">выполнено</span></div>
+          </div>
+        </div>
+        <div class="frag">
+          <div class="flab">Section header</div>
+          <div class="sechead">Инварианты</div>
+          <div class="secsub">ADR-QG-002 SMART-QG · методика расчёта</div>
+        </div>
+        <div class="frag">
+          <div class="flab">Filter chips</div>
+          <div class="chiprow">
+            <span class="chip">активен · 16</span>
+            <span class="chip">черновик · 3</span>
+            <span class="chip">архив · 5</span>
+          </div>
+        </div>
+        <div class="frag">
+          <div class="flab">KPI cards</div>
+          <div class="kpi">
+            <div class="kpicard"><div class="kl">Lead time (медиана)</div><div class="kv">4.2д</div></div>
+            <div class="kpicard"><div class="kl">Deploy lag (медиана)</div><div class="kv">1.8д</div></div>
+          </div>
+        </div>
+        <div class="frag">
+          <div class="flab">Table</div>
+          <table>
+            <tr><th>ID</th><th>Название</th><th>Статус</th></tr>
+            <tr><td>ADR-042</td><td>Retry policy</td><td>accepted</td></tr>
+            <tr><td>ADR-043</td><td>Cache layer</td><td>proposed</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    Разница в основном малозаметная точечно (это и есть цель — не редизайн, а наведение порядка) но убирает
+    ~11 лишних промежуточных значений (8.5, 9.5, 10.5, 11.5, 12.5, 15, 16, 17, 18, 22, 25 и т.п.), сводя всё
+    к 8 именованным шагам. <code>--fs-lg</code> (14px) — это уже доминирующий размер заголовков секций
+    (21 из ~30 таких заголовков в аудите); редкие 15/16/17px-исключения округляются ВНИЗ к нему, а не наоборот.
+    KPI-герои (<code>--fs-2xl</code>, 24px) чуть крупнее нынешних 20-22px в Plan Health карточках — это
+    осознанно: сейчас там разнобой 18/20/22/25px без системы, после шкалы «главный KPI» и «второстепенный
+    KPI» — это буквально два разных, всегда предсказуемых уровня.
+  </p>
+
+</div>
+</body>
+</html>

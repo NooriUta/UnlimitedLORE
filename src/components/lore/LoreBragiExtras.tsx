@@ -249,7 +249,7 @@ export function LoreBragiIntegrations() {
                   <span style={statusDotStyle(r.status === 'active' ? 'var(--suc)' : 'var(--wrn)')} />
                   {r.status ? t('bragi.integrationEditor.status.' + r.status, r.status) : '—'}
                 </td>
-                <td style={S.td}><code style={{ fontSize: 11 }}>{r.secret_ref ?? '—'}</code></td>
+                <td style={S.td}><code style={{ fontSize: 'var(--fs-sm)' }}>{r.secret_ref ?? '—'}</code></td>
                 <td style={S.td}>{r.last_called_at ?? '—'}</td>
                 <td style={S.td}><button style={S.editBtn} onClick={() => setEditingRow(r)}>{t('bragi.extras.integrations.editBtn', '✎ редактировать')}</button></td>
               </tr>
@@ -269,23 +269,23 @@ function statusDotStyle(color: string): React.CSSProperties {
 const S: Record<string, React.CSSProperties> = {
   descRow: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   newBtn:  { flex: 'none', height: 28, padding: '0 12px', borderRadius: 5, border: 'none', cursor: 'pointer',
-             background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
-  desc:    { color: 'var(--t2)', fontSize: 14, marginBottom: 18 },
-  hint:    { fontSize: 12, color: 'var(--t3)' },
+             background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 'var(--fs-base)', fontWeight: 600 },
+  desc:    { color: 'var(--t2)', fontSize: 'var(--fs-lg)', marginBottom: 18 },
+  hint:    { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
   card:    { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '10px 18px' },
-  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
-  th:      { textAlign: 'left', color: 'var(--t3)', fontWeight: 400, fontSize: 11, padding: '8px 10px',
+  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-md)' },
+  th:      { textAlign: 'left', color: 'var(--t3)', fontWeight: 400, fontSize: 'var(--fs-sm)', padding: '8px 10px',
              borderBottom: '1px solid var(--bd)', fontFamily: 'var(--mono)' },
-  thNum:   { textAlign: 'right', color: 'var(--t3)', fontWeight: 400, fontSize: 11, padding: '8px 10px',
+  thNum:   { textAlign: 'right', color: 'var(--t3)', fontWeight: 400, fontSize: 'var(--fs-sm)', padding: '8px 10px',
              borderBottom: '1px solid var(--bd)', fontFamily: 'var(--mono)' },
   td:      { padding: '10px 10px', borderBottom: '1px solid var(--bd)', verticalAlign: 'top' },
   tdNum:   { padding: '10px 10px', borderBottom: '1px solid var(--bd)', textAlign: 'right', fontFamily: 'var(--mono)' },
   insight: { borderLeft: '2px solid var(--acc)', padding: '2px 0 2px 14px', marginBottom: 16 },
-  insightDate: { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)', marginBottom: 5 },
-  insightTxt:  { fontSize: 14, lineHeight: 1.5 },
+  insightDate: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 5 },
+  insightTxt:  { fontSize: 'var(--fs-lg)', lineHeight: 1.5 },
   insightLinks:{ marginTop: 9, display: 'flex', gap: 7, flexWrap: 'wrap' },
   chipAcc: { background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
-             borderRadius: 6, padding: '1px 8px', fontSize: 11, color: 'var(--acc)' },
-  editBtn: { flex: 'none', fontSize: 11, color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
+             borderRadius: 6, padding: '1px 8px', fontSize: 'var(--fs-sm)', color: 'var(--acc)' },
+  editBtn: { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
              borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
 };

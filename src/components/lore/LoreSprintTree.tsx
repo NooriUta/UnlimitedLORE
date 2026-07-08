@@ -76,7 +76,7 @@ const S = {
   },
   sortBtn: (active: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer',
-    fontSize: 10, padding: '3px 8px', borderRadius: 12, whiteSpace: 'nowrap' as const,
+    fontSize: 'var(--fs-xs)', padding: '3px 8px', borderRadius: 12, whiteSpace: 'nowrap' as const,
     border: `1px solid ${active ? 'var(--acc)' : 'var(--b3)'}`,
     background: active ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
     color: active ? 'var(--acc)' : 'var(--t2)', fontFamily: 'inherit',
@@ -85,13 +85,13 @@ const S = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     width: 24, height: 24, borderRadius: 6, cursor: 'pointer',
     border: '1px solid var(--b3)', background: 'transparent',
-    color: 'var(--t3)', fontSize: 13, flexShrink: 0,
+    color: 'var(--t3)', fontSize: 'var(--fs-md)', flexShrink: 0,
     marginLeft: 'auto' as const,
   },
   projChip: (on: boolean, color: string) => ({
     display: 'inline-flex', alignItems: 'center', gap: 3,
     cursor: 'pointer', userSelect: 'none' as const,
-    fontSize: 10, padding: '2px 7px', borderRadius: 12, whiteSpace: 'nowrap' as const,
+    fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 12, whiteSpace: 'nowrap' as const,
     border: `1px solid ${on ? color : 'var(--b3)'}`,
     background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
     color: on ? color : 'var(--t3)',
@@ -99,13 +99,13 @@ const S = {
   }),
   statusChip: (on: boolean, color: string) => ({
     display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-    userSelect: 'none' as const, fontSize: 10, padding: '2px 7px',
+    userSelect: 'none' as const, fontSize: 'var(--fs-xs)', padding: '2px 7px',
     borderRadius: 12, whiteSpace: 'nowrap' as const,
     border: `1px solid ${on ? color : 'var(--b3)'}`,
     background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
     color: on ? 'var(--t1)' : 'var(--t3)',
   }),
-  chipCount: (on: boolean) => ({ fontSize: 9, opacity: on ? 0.85 : 0.55 }),
+  chipCount: (on: boolean) => ({ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }),
 
   // List
   root:  { flex: 1, overflowY: 'auto' as const, overflowX: 'hidden' as const },
@@ -116,16 +116,16 @@ const S = {
   line1: { display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 },
   line2: { display: 'flex', alignItems: 'center', gap: 5, paddingLeft: 1 },
   id: {
-    color: 'var(--acc)', fontSize: 11, fontFamily: 'var(--mono)',
+    color: 'var(--acc)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
     flex: 1, minWidth: 0,
   },
-  date:  { color: 'var(--t3)', fontSize: 10, fontFamily: 'var(--mono)', flexShrink: 0 },
+  date:  { color: 'var(--t3)', fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', flexShrink: 0 },
   projDot: (color: string) => ({
     width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
     background: color,
   }),
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   spinning: { display: 'inline-block', animation: 'lore-spin 0.6s linear infinite' },
 };
 
@@ -408,7 +408,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                   {date && <span style={S.date}>{date}</span>}
                   {s.priority && (
                     <span style={{
-                      fontSize: 10, fontWeight: 600, flexShrink: 0,
+                      fontSize: 'var(--fs-xs)', fontWeight: 600, flexShrink: 0,
                       color: s.priority === 'P0' ? 'var(--dng)' : s.priority === 'P1' ? 'var(--wrn)' : 'var(--t3)',
                     }}>{s.priority}</span>
                   )}
@@ -420,7 +420,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                   )}
                   {release && (
                     <span style={{
-                      fontSize: 10, padding: '0 5px', borderRadius: 3, whiteSpace: 'nowrap' as const,
+                      fontSize: 'var(--fs-xs)', padding: '0 5px', borderRadius: 3, whiteSpace: 'nowrap' as const,
                       background: 'color-mix(in srgb, var(--acc) 16%, transparent)',
                       color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 35%, transparent)',
                     }}>{release}</span>

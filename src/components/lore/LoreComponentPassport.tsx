@@ -86,17 +86,17 @@ const S = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     color, background: `color-mix(in srgb, ${color} 15%, transparent)`,
   }),
-  compId:   { fontSize: 14, fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' },
-  fullName: { fontSize: 11, color: 'var(--t2)', marginTop: 1 },
+  compId:   { fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' },
+  fullName: { fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginTop: 1 },
   titleCol: { flex: 1, minWidth: 0 },
   parentBtn: {
-    padding: '2px 7px', borderRadius: 4, fontSize: 10, flexShrink: 0,
+    padding: '2px 7px', borderRadius: 4, fontSize: 'var(--fs-xs)', flexShrink: 0,
     background: 'transparent', color: 'var(--acc)',
     border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     cursor: 'pointer', whiteSpace: 'nowrap' as const, display: 'flex', alignItems: 'center', gap: 3,
   },
   editBtn: {
-    padding: '2px 7px', borderRadius: 4, fontSize: 10, flexShrink: 0,
+    padding: '2px 7px', borderRadius: 4, fontSize: 'var(--fs-xs)', flexShrink: 0,
     background: 'transparent', color: 'var(--t3)',
     border: '1px solid var(--bd)', cursor: 'pointer',
   },
@@ -107,7 +107,7 @@ const S = {
   },
   metaChip: (color?: string) => ({
     display: 'flex', alignItems: 'center', gap: 4,
-    padding: '1px 7px', borderRadius: 3, fontSize: 10,
+    padding: '1px 7px', borderRadius: 3, fontSize: 'var(--fs-xs)',
     background: color
       ? `color-mix(in srgb, ${color} 12%, transparent)`
       : 'var(--b2)',
@@ -118,13 +118,13 @@ const S = {
     whiteSpace: 'nowrap' as const,
   }),
   techChip: {
-    fontFamily: 'var(--mono)', fontSize: 9,
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)',
     padding: '1px 6px', borderRadius: 3,
     background: 'var(--b2)', color: 'var(--t2)', border: '1px solid var(--bd)',
     whiteSpace: 'nowrap' as const,
   },
   childChip: (color: string) => ({
-    fontFamily: 'var(--mono)', fontSize: 9, cursor: 'pointer',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', cursor: 'pointer',
     padding: '1px 6px', borderRadius: 3,
     color, background: `color-mix(in srgb, ${color} 12%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
@@ -137,7 +137,7 @@ const S = {
     marginTop: 2,
   },
   tab: (active: boolean) => ({
-    padding: '5px 12px', fontSize: 10, fontWeight: 600,
+    padding: '5px 12px', fontSize: 'var(--fs-xs)', fontWeight: 600,
     letterSpacing: '0.03em', cursor: 'pointer',
     color: active ? 'var(--acc)' : 'var(--t3)',
     borderBottom: `2px solid ${active ? 'var(--acc)' : 'transparent'}`,
@@ -145,7 +145,7 @@ const S = {
     whiteSpace: 'nowrap' as const,
     display: 'flex', alignItems: 'center', gap: 4,
   }),
-  tabCnt: { fontSize: 9, opacity: 0.65 },
+  tabCnt: { fontSize: 'var(--fs-2xs)', opacity: 0.65 },
 
   // ── Doc list ──────────────────────────────────────────────────────────────
   docList: { maxHeight: 160, overflowY: 'auto' as const },
@@ -155,16 +155,16 @@ const S = {
     borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)',
     background: sel ? 'color-mix(in srgb, var(--acc) 7%, transparent)' : 'transparent',
   }),
-  docId:   { fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--acc)', fontWeight: 600, flexShrink: 0, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  docTitle:{ flex: 1, fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
+  docId:   { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--acc)', fontWeight: 600, flexShrink: 0, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  docTitle:{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
   docSt:   (color: string) => ({
-    fontSize: 9, color, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3,
+    fontSize: 'var(--fs-2xs)', color, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3,
     padding: '1px 5px', borderRadius: 3,
     background: `color-mix(in srgb, ${color} 14%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
   }),
-  docHint: { fontSize: 9, color: 'var(--t3)', flexShrink: 0, whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)' },
-  docEmpty:{ padding: '12px 14px', fontSize: 11, color: 'var(--t3)' },
+  docHint: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0, whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)' },
+  docEmpty:{ padding: '12px 14px', fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
 
   // ── BOTTOM: reader ────────────────────────────────────────────────────────
   reader: {
@@ -174,28 +174,36 @@ const S = {
     padding: '8px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
     display: 'flex', alignItems: 'flex-start', gap: 8,
   },
-  readerTitle:{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', flex: 1, minWidth: 0 },
+  readerTitle:{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--t1)', flex: 1, minWidth: 0 },
   readerBadge: (color: string) => ({
-    fontSize: 9, padding: '1px 6px', borderRadius: 3, fontWeight: 700,
+    fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, fontWeight: 700,
     fontFamily: 'var(--mono)', flexShrink: 0,
     color, background: `color-mix(in srgb, ${color} 14%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
   }),
   readerScroll: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
-  // rH2 stays: used both as MdBlock's fixed section label AND as the base
-  // font-size passed to MartProse for markdown bodies (T14).
-  rH2:  { fontSize: 11, fontWeight: 700, color: 'var(--t2)', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
-  rP:   { fontSize: 11, color: 'var(--t2)', lineHeight: 1.65, marginBottom: 8 },
-  placeholder: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)', fontSize: 11 },
+  rH1:  { fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)', marginTop: 14, marginBottom: 6 },
+  rH2:  { fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--t2)', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
+  rH3:  { fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--t3)', marginTop: 10, marginBottom: 3, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  rP:   { fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.65, marginBottom: 8 },
+  rBullet: { fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.7, paddingLeft: 10, marginBottom: 2 },
+  rCode:{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 3, padding: '1px 5px', color: 'var(--inf)' },
+  rPre: {
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t2)',
+    background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5,
+    padding: '8px 12px', margin: '6px 0', whiteSpace: 'pre' as const,
+    overflow: 'auto', lineHeight: 1.6,
+  },
+  placeholder: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)', fontSize: 'var(--fs-sm)' },
 
   // ── Edit panel ────────────────────────────────────────────────────────────
   editPanel: { margin: '0 14px 10px', padding: '10px 12px', borderRadius: 6, background: 'var(--b2)', border: '1px solid var(--bd)' },
   editRow:   { display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' },
-  editLabel: { fontSize: 10, color: 'var(--t3)', width: 68, flexShrink: 0, textTransform: 'uppercase' as const },
-  editInput: { flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 11, background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)', fontFamily: 'inherit', outline: 'none' },
+  editLabel: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', width: 68, flexShrink: 0, textTransform: 'uppercase' as const },
+  editInput: { flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 'var(--fs-sm)', background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)', fontFamily: 'inherit', outline: 'none' },
   editActions:{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' as const },
-  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'var(--acc)', color: 'var(--on-accent)', border: 'none', fontFamily: 'inherit' },
-  cancelBtn: { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)', fontFamily: 'inherit' },
+  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 'var(--fs-sm)', cursor: 'pointer', background: 'var(--acc)', color: 'var(--on-accent)', border: 'none', fontFamily: 'inherit' },
+  cancelBtn: { padding: '3px 10px', borderRadius: 4, fontSize: 'var(--fs-sm)', cursor: 'pointer', background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)', fontFamily: 'inherit' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -204,13 +212,6 @@ function stLabel(s: string | null | undefined) {
   return (s ?? '').toUpperCase().replace('_', ' ');
 }
 
-// T14: the reader panel's markdown body now renders via the shared MartProse
-// component (marked + sanitize + real mermaid/GFM-table/nested-list support)
-// instead of a hand-rolled line parser — see T14 remaining-scope note for the
-// visual tradeoffs this traded away (uppercase heading treatment for
-// USER-authored headings inside markdown bodies; the fixed section labels
-// below are untouched, they're outside the markdown). style={S.rP} keeps the
-// base font-size at this panel's 11px instead of MartProse's own 13px.
 function MdBlock({ md, label }: { md: string | null | undefined; label: string }) {
   if (!md?.trim()) return null;
   return (
@@ -371,8 +372,8 @@ export default function LoreComponentPassport({
     finally { setSaving(false); }
   };
 
-  if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>{t('lore.componentPassport.loading', 'Загрузка')} {componentId}…</div>;
-  if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>{t('lore.componentPassport.notFound', 'Не найден:')} {componentId}</div>;
+  if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>{t('lore.componentPassport.loading', 'Загрузка')} {componentId}…</div>;
+  if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>{t('lore.componentPassport.notFound', 'Не найден:')} {componentId}</div>;
 
   const color   = areaColor(compArea(comp));
   const tech    = comp.tech ?? [];
@@ -404,7 +405,7 @@ export default function LoreComponentPassport({
           <div style={S.iconLg(color)}>
             {comp.game_icon
               ? <GameIcon slug={comp.game_icon} size={16} style={{ color: 'inherit' }} />
-              : <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700 }}>{comp.component_id[0]}</span>}
+              : <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', fontWeight: 700 }}>{comp.component_id[0]}</span>}
           </div>
           <div style={S.titleCol}>
             <div style={S.compId}>{comp.component_id}</div>
@@ -510,7 +511,7 @@ export default function LoreComponentPassport({
                     }}
                   >
                     <GameIcon slug={sm.icon} size={9} style={{ color: sm.color }} />
-                    <span style={{ fontSize: 9, color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 600 }}>{n}</span>
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 600 }}>{n}</span>
                   </div>
                 );
               })}
@@ -542,11 +543,11 @@ export default function LoreComponentPassport({
                   {d.releases && d.releases.length > 0 && (
                     <span style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                       {d.releases.slice(0, 2).map(r => (
-                        <span key={r} style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'color-mix(in srgb, var(--inf) 12%, transparent)', color: 'var(--inf)', border: '1px solid color-mix(in srgb, var(--inf) 25%, transparent)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const }}>
+                        <span key={r} style={{ fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 3, background: 'color-mix(in srgb, var(--inf) 12%, transparent)', color: 'var(--inf)', border: '1px solid color-mix(in srgb, var(--inf) 25%, transparent)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const }}>
                           {r}
                         </span>
                       ))}
-                      {d.releases.length > 2 && <span style={{ fontSize: 8, color: 'var(--t3)' }}>+{d.releases.length - 2}</span>}
+                      {d.releases.length > 2 && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>+{d.releases.length - 2}</span>}
                     </span>
                   )}
                   {sm && (
@@ -647,7 +648,7 @@ export default function LoreComponentPassport({
                     {status !== 'todo' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
                         <GameIcon slug={sm.icon} size={12} style={{ color: sm.color }} />
-                        <span style={{ fontSize: 10, color: sm.color, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>
+                        <span style={{ fontSize: 'var(--fs-xs)', color: sm.color, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>
                           {stLabel(status)}
                         </span>
                       </div>
@@ -685,7 +686,7 @@ export default function LoreComponentPassport({
                                     }}
                                   >
                                     <GameIcon slug={sm.icon} size={8} style={{ color: sm.color }} />
-                                    <span style={{ fontSize: 9, color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 400 }}>{n}</span>
+                                    <span style={{ fontSize: 'var(--fs-2xs)', color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 400 }}>{n}</span>
                                   </div>
                                 );
                               })}
@@ -714,8 +715,8 @@ export default function LoreComponentPassport({
                                   }}
                                 >
                                   <GameIcon slug={tsm.icon} size={10} style={{ color: tsm.color, flexShrink: 0 }} />
-                                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--acc)', flexShrink: 0 }}>{t.task_id}</span>
-                                  <span style={{ fontSize: 11, color: ts === 'done' ? 'var(--t3)' : 'var(--t2)', flex: 1, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{t.title}</span>
+                                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--acc)', flexShrink: 0 }}>{t.task_id}</span>
+                                  <span style={{ fontSize: 'var(--fs-sm)', color: ts === 'done' ? 'var(--t3)' : 'var(--t2)', flex: 1, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{t.title}</span>
                                 </div>
                               );
                             })}
@@ -728,11 +729,11 @@ export default function LoreComponentPassport({
                             const tsm = statusMeta(ts);
                             return (
                               <div style={{ flex: 1, minWidth: 0, borderLeft: `2px solid color-mix(in srgb, ${tsm.color} 35%, transparent)`, paddingLeft: 10 }}>
-                                <div style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{activeTask.task_id}</div>
-                                <div style={{ fontSize: 11, color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{activeTask.title}</div>
+                                <div style={{ fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{activeTask.task_id}</div>
+                                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{activeTask.title}</div>
                                 {activeTask.note_md?.trim()
                                   ? <MartProse text={activeTask.note_md} style={S.rP} />
-                                  : <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.componentPassport.reader.notesEmpty', 'Заметки не заполнены')}</span>}
+                                  : <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{t('lore.componentPassport.reader.notesEmpty', 'Заметки не заполнены')}</span>}
                               </div>
                             );
                           })()}

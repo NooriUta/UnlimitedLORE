@@ -146,7 +146,7 @@ export default function LoreBragiPlan() {
         </div>
         <div style={S.card}>
           <h2 style={S.cardH2}>{t('bragi.plan.cadenceTitle', 'ритм')}</h2>
-          <div style={{ fontSize: 13, lineHeight: 1.9, color: 'var(--t2)' }}>
+          <div style={{ fontSize: 'var(--fs-md)', lineHeight: 1.9, color: 'var(--t2)' }}>
             {CADENCE_KEYS.map(c => (
               <div key={c.key}><b style={{ color: 'var(--t1)' }}>{c.channel}</b> — {t('bragi.plan.cadence.' + c.key, c.rule)}</div>
             ))}
@@ -169,29 +169,29 @@ function cellStyle(otherMonth: boolean, isToday: boolean): React.CSSProperties {
   };
 }
 function dnumStyle(isToday: boolean): React.CSSProperties {
-  return { fontFamily: 'var(--mono)', fontSize: 12, color: isToday ? 'var(--acc)' : 'var(--t2)', textAlign: 'right', marginBottom: 3 };
+  return { fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: isToday ? 'var(--acc)' : 'var(--t2)', textAlign: 'right', marginBottom: 3 };
 }
 function pchipStyle(color: string): React.CSSProperties {
   return {
-    fontSize: 10.5, border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 5px', marginTop: 3,
+    fontSize: 'var(--fs-xs)', border: `1px solid ${color}55`, borderRadius: 5, padding: '2px 5px', marginTop: 3,
     lineHeight: 1.3, color, background: `${color}1a`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   };
 }
 
 const S: Record<string, React.CSSProperties> = {
-  desc:      { color: 'var(--t2)', fontSize: 14, marginBottom: 18 },
-  hint:      { fontSize: 12, color: 'var(--t3)' },
+  desc:      { color: 'var(--t2)', fontSize: 'var(--fs-lg)', marginBottom: 18 },
+  hint:      { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
   grid2:     { display: 'grid', gridTemplateColumns: '1.7fr 1fr', gap: 16, alignItems: 'start' },
   card:      { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '16px 18px' },
-  cardH2:    { fontFamily: 'var(--font)', fontWeight: 600, fontSize: 14, margin: '0 0 12px', display: 'flex',
+  cardH2:    { fontFamily: 'var(--font)', fontWeight: 600, fontSize: 'var(--fs-lg)', margin: '0 0 12px', display: 'flex',
                justifyContent: 'space-between', alignItems: 'center' },
-  meta:      { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 11, color: 'var(--t3)' },
-  monthNav:  { display: 'flex', gap: 10, fontSize: 12, color: 'var(--t2)', marginBottom: 10 },
+  meta:      { fontFamily: 'var(--mono)', fontWeight: 400, fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  monthNav:  { display: 'flex', gap: 10, fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 10 },
   navBtn:    { cursor: 'pointer', color: 'var(--acc)' },
-  legend:    { display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 11, color: 'var(--t2)', marginBottom: 12 },
+  legend:    { display: 'flex', flexWrap: 'wrap', gap: 14, fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginBottom: 12 },
   legendItem:{ display: 'flex', alignItems: 'center' },
   calHead:   { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6,
-               fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' },
+               fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   cal:       { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 },
-  addHint:   { fontSize: 14, color: 'var(--t3)', textAlign: 'center', marginTop: 6 },
+  addHint:   { fontSize: 'var(--fs-lg)', color: 'var(--t3)', textAlign: 'center', marginTop: 6 },
 };

@@ -41,14 +41,14 @@ const S = {
   root: { flex: 1, overflowY: 'auto' as const, padding: '14px 20px' },
   areaHeader: {
     display: 'flex', alignItems: 'center', gap: 8, marginTop: 18, marginBottom: 6,
-    fontSize: 12, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+    fontSize: 'var(--fs-base)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em',
   },
   compBlock: { marginBottom: 14, background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' as const },
   compHeader: { display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderBottom: '1px solid var(--bd)', background: 'var(--bg2)' },
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 12 },
-  th: { textAlign: 'left' as const, padding: '5px 12px', color: 'var(--t3)', fontSize: 10, textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontWeight: 600 },
+  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 'var(--fs-base)' },
+  th: { textAlign: 'left' as const, padding: '5px 12px', color: 'var(--t3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontWeight: 600 },
   td: { padding: '5px 12px', borderTop: '1px solid var(--bd)', color: 'var(--t2)' },
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
 
 export default function LoreTechRegistry({ onError }: { onError: (e: unknown) => void }) {
@@ -104,11 +104,11 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
               <div key={c.component_id} style={S.compBlock}>
                 <div style={S.compHeader}>
                   <GameIcon slug={c.game_icon} size={13} style={{ color: areaColor(area) }} />
-                  <span style={{ fontWeight: 600, color: 'var(--t1)', fontSize: 12 }}>{c.full_name ?? c.component_id}</span>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' }}>{c.component_id}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--t1)', fontSize: 'var(--fs-base)' }}>{c.full_name ?? c.component_id}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{c.component_id}</span>
                   <button
                     onClick={() => setAddingFor(v => v === c.component_id ? null : c.component_id)}
-                    style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 8px', background: 'transparent', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--acc)', cursor: 'pointer' }}
+                    style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', padding: '2px 8px', background: 'transparent', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--acc)', cursor: 'pointer' }}
                   >{addingFor === c.component_id ? '✕' : t('lore.techRegistry.addButton', '+ технология')}</button>
                 </div>
 
@@ -151,7 +151,7 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
                             </tr>
                             {f.usage && (
                               <tr>
-                                <td colSpan={6} style={{ ...S.td, borderTop: 'none', paddingTop: 0, fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>
+                                <td colSpan={6} style={{ ...S.td, borderTop: 'none', paddingTop: 0, fontSize: 'var(--fs-sm)', color: 'var(--t3)', fontStyle: 'italic' }}>
                                   {t('lore.techRegistry.usagePrefix', 'Использование:')} {f.usage}
                                 </td>
                               </tr>
@@ -162,7 +162,7 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
                     </tbody>
                   </table>
                 ) : addingFor !== c.component_id && (
-                  <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--t4)', fontStyle: 'italic' }}>
+                  <div style={{ padding: '8px 12px', fontSize: 'var(--fs-sm)', color: 'var(--t4)', fontStyle: 'italic' }}>
                     {t('lore.techRegistry.noTech', 'Технологии не зарегистрированы')}
                   </div>
                 )}
@@ -190,7 +190,7 @@ function TechAddForm({ componentId, onSaved, onError }: {
   const [usage, setUsage] = useState('');
   const [busy, setBusy] = useState(false);
   const inputStyle = {
-    fontSize: 11, padding: '4px 7px', borderRadius: 4,
+    fontSize: 'var(--fs-sm)', padding: '4px 7px', borderRadius: 4,
     border: '1px solid var(--bd)', background: 'var(--bg2)', color: 'var(--t1)', fontFamily: 'inherit',
   };
 
@@ -218,7 +218,7 @@ function TechAddForm({ componentId, onSaved, onError }: {
       <input style={{ ...inputStyle, flex: 1, minWidth: 200 }} placeholder={t('lore.techRegistry.form.usage', 'Использование (где/как используется)')} value={usage} onChange={e => setUsage(e.target.value)} />
       <button
         onClick={save} disabled={busy || !techName.trim() || !version.trim()}
-        style={{ fontSize: 11, padding: '4px 12px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: 'var(--on-accent)', cursor: 'pointer', opacity: busy ? 0.6 : 1 }}
+        style={{ fontSize: 'var(--fs-sm)', padding: '4px 12px', background: 'var(--acc)', border: 'none', borderRadius: 4, color: 'var(--on-accent)', cursor: 'pointer', opacity: busy ? 0.6 : 1 }}
       >{busy ? '…' : t('lore.techRegistry.form.save', 'Сохранить')}</button>
     </div>
   );

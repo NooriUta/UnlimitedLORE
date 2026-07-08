@@ -58,7 +58,7 @@ const TOOLS: ToolDoc[] = [
     desc: 'Явное ребро BELONGS_TO (спринт → компонент) — перекрывает нечёткий матч по имени (sprint_id LIKE %component_key%) в слайсе component_sprints и на бейджах модулей в паспорте спринта. action = add | remove.' },
   { name: 'lore_link_sprint_milestone', kind: 'write', entity: 'Sprint', backend: 'POST /lore/milestone/sprint',
     params: 'sprint_id, milestone_id, action?',
-    desc: 'Прямое ребро TARGETS_MILESTONE (спринт → веха) — канонический путь факт. привязки. Отдельно есть план. привязка (sprints.planned_milestone_id через POST /lore/sprint/plan) — MCP-тула на неё пока нет. action = add | remove.' },
+    desc: 'Ребро TARGETS_MILESTONE (спринт → веха) — единственный способ привязки. action = add | remove.' },
 
   // ── Status (SCD2-переходы, общие для нескольких типов) ────────────────────
   { name: 'lore_set_status', kind: 'write', entity: 'Status', backend: 'POST /lore/status',
@@ -523,7 +523,7 @@ function HealthPill({ health, count }: { health: 'checking' | 'up' | 'down'; cou
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
-      fontSize: 11, padding: '3px 10px', borderRadius: 20,
+      fontSize: 'var(--fs-sm)', padding: '3px 10px', borderRadius: 20,
       background: `color-mix(in srgb, ${map.c} 14%, transparent)`,
       color: map.c, border: `1px solid color-mix(in srgb, ${map.c} 35%, transparent)`,
       whiteSpace: 'nowrap',
@@ -538,7 +538,7 @@ function KindTag({ kind }: { kind: 'read' | 'write' }) {
   const c = kind === 'write' ? 'var(--wrn)' : 'var(--inf)';
   return (
     <span style={{
-      fontSize: 10, padding: '1px 6px', borderRadius: 3, whiteSpace: 'nowrap',
+      fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3, whiteSpace: 'nowrap',
       background: `color-mix(in srgb, ${c} 16%, transparent)`,
       color: c, border: `1px solid color-mix(in srgb, ${c} 35%, transparent)`,
     }}>{kind}</span>
@@ -548,7 +548,7 @@ function KindTag({ kind }: { kind: 'read' | 'write' }) {
 function Node({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
   return (
     <span style={{
-      padding: '4px 10px', borderRadius: 5, fontSize: 11, whiteSpace: 'nowrap',
+      padding: '4px 10px', borderRadius: 5, fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap',
       fontFamily: 'var(--mono)',
       background: accent ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'var(--b2)',
       color: accent ? 'var(--acc)' : 'var(--t2)',
@@ -560,8 +560,8 @@ function Node({ children, accent }: { children: React.ReactNode; accent?: boolea
 function Arrow({ label }: { label: string }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', color: 'var(--t3)' }}>
-      <span style={{ fontSize: 8, lineHeight: 1 }}>{label}</span>
-      <span style={{ fontSize: 13, lineHeight: 1 }}>→</span>
+      <span style={{ fontSize: 'var(--fs-2xs)', lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 'var(--fs-md)', lineHeight: 1 }}>→</span>
     </span>
   );
 }
@@ -589,7 +589,7 @@ function Pre({ children }: { children: React.ReactNode }) {
 function entityChipStyle(active: boolean): React.CSSProperties {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '3px 9px', borderRadius: 20, fontSize: 11, cursor: 'pointer', userSelect: 'none',
+    padding: '3px 9px', borderRadius: 20, fontSize: 'var(--fs-sm)', cursor: 'pointer', userSelect: 'none',
     fontFamily: 'var(--mono)',
     background: active ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'var(--b1)',
     color: active ? 'var(--acc)' : 'var(--t2)',
@@ -598,7 +598,7 @@ function entityChipStyle(active: boolean): React.CSSProperties {
 }
 function kindChipStyle(active: boolean): React.CSSProperties {
   return {
-    padding: '3px 9px', borderRadius: 20, fontSize: 11, cursor: 'pointer', userSelect: 'none',
+    padding: '3px 9px', borderRadius: 20, fontSize: 'var(--fs-sm)', cursor: 'pointer', userSelect: 'none',
     background: active ? 'var(--b3)' : 'transparent',
     color: active ? 'var(--t1)' : 'var(--t3)',
     border: `1px solid ${active ? 'var(--bdh)' : 'transparent'}`,
@@ -609,57 +609,57 @@ const S: Record<string, React.CSSProperties> = {
   scroll:  { flex: 1, overflowY: 'auto', fontFamily: 'var(--font)' },
   wrap:    { maxWidth: 920, margin: '0 auto', padding: '22px 26px 60px' },
   head:    { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' },
-  h1:      { fontSize: 22, fontWeight: 700, fontFamily: 'var(--display)', color: 'var(--t1)' },
-  h2:      { fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginBottom: 10,
+  h1:      { fontSize: 'var(--fs-2xl)', fontWeight: 700, fontFamily: 'var(--display)', color: 'var(--t1)' },
+  h2:      { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)', marginBottom: 10,
              paddingBottom: 5, borderBottom: '1px solid var(--bd)' },
-  lead:    { marginTop: 12, fontSize: 13, lineHeight: 1.65, color: 'var(--t2)' },
+  lead:    { marginTop: 12, fontSize: 'var(--fs-md)', lineHeight: 1.65, color: 'var(--t2)' },
   pipe:    { marginTop: 18, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   tableWrap: { overflowX: 'auto', border: '1px solid var(--bd)', borderRadius: 6 },
-  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 12 },
+  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-base)' },
   th:      { textAlign: 'left', padding: '7px 10px', color: 'var(--t3)', fontWeight: 600,
-             fontSize: 11, borderBottom: '1px solid var(--bd)', background: 'var(--b1)',
+             fontSize: 'var(--fs-sm)', borderBottom: '1px solid var(--bd)', background: 'var(--b1)',
              whiteSpace: 'nowrap' },
   tr:      { borderBottom: '1px solid var(--bd)' },
   td:      { padding: '7px 10px', verticalAlign: 'top', color: 'var(--t1)' },
-  note:    { marginTop: 10, fontSize: 12, lineHeight: 1.6, color: 'var(--t3)' },
-  code:    { fontFamily: 'var(--mono)', fontSize: 11, padding: '1px 5px', borderRadius: 3,
+  note:    { marginTop: 10, fontSize: 'var(--fs-base)', lineHeight: 1.6, color: 'var(--t3)' },
+  code:    { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', padding: '1px 5px', borderRadius: 3,
              background: 'var(--b2)', color: 'var(--t2)' },
-  codeAcc: { fontFamily: 'var(--mono)', fontSize: 11, padding: '1px 5px', borderRadius: 3,
+  codeAcc: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', padding: '1px 5px', borderRadius: 3,
              background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)' },
   pre:     { marginTop: 8, padding: '10px 12px', borderRadius: 6, overflowX: 'auto',
              background: 'var(--b1)', border: '1px solid var(--bd)',
-             fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1.6, color: 'var(--t2)',
+             fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', lineHeight: 1.6, color: 'var(--t2)',
              whiteSpace: 'pre' },
-  ol:      { marginTop: 4, paddingLeft: 20, fontSize: 12.5, lineHeight: 1.7, color: 'var(--t2)',
+  ol:      { marginTop: 4, paddingLeft: 20, fontSize: 'var(--fs-base)', lineHeight: 1.7, color: 'var(--t2)',
              display: 'flex', flexDirection: 'column', gap: 6 },
   filter:  { marginTop: 10, width: '100%', maxWidth: 320, height: 28, padding: '0 10px',
              background: 'var(--b1)', border: '1px solid var(--b3)', borderRadius: 5,
-             color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' },
+             color: 'var(--t1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit', outline: 'none' },
   chips:   { marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 },
   chip:    { display: 'inline-flex', alignItems: 'center', gap: 4,
              padding: '3px 4px', borderRadius: 4, background: 'var(--b1)',
              border: '1px solid var(--bd)' },
-  req:     { fontSize: 10, color: 'var(--wrn)' },
-  opt:     { fontSize: 10, color: 'var(--t3)' },
-  down:    { marginTop: 10, padding: '10px 12px', borderRadius: 6, fontSize: 12,
+  req:     { fontSize: 'var(--fs-xs)', color: 'var(--wrn)' },
+  opt:     { fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
+  down:    { marginTop: 10, padding: '10px 12px', borderRadius: 6, fontSize: 'var(--fs-base)',
              background: 'color-mix(in srgb, var(--dng) 10%, transparent)',
              border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)',
              color: 'var(--t2)' },
-  foot:    { marginTop: 30, fontSize: 11, color: 'var(--t3)', lineHeight: 1.7,
+  foot:    { marginTop: 30, fontSize: 'var(--fs-sm)', color: 'var(--t3)', lineHeight: 1.7,
              paddingTop: 12, borderTop: '1px solid var(--bd)' },
 
   // Entity/kind filter chips above the tools table.
   entityChips: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 10 },
-  entityChipCount: { fontSize: 9, opacity: 0.7 },
+  entityChipCount: { fontSize: 'var(--fs-2xs)', opacity: 0.7 },
   kindToggle: { display: 'inline-flex', gap: 4, marginLeft: 8, paddingLeft: 8, borderLeft: '1px solid var(--bd)' },
 
   // Group header row within the tools table.
   trGroup: { background: 'var(--b1)' },
-  tdGroup: { padding: '5px 10px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const,
+  tdGroup: { padding: '5px 10px', fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase' as const,
              letterSpacing: '0.06em', color: 'var(--acc)' },
 
   // Params column: one param per line instead of one squashed string.
   paramList: { display: 'flex', flexDirection: 'column' as const, gap: 2 },
-  paramReq:  { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t1)' },
-  paramOpt:  { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' },
+  paramReq:  { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t1)' },
+  paramOpt:  { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
 };
