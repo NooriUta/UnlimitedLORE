@@ -127,10 +127,11 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
-            // SPRINT_PLANITEM_RETIRE: planned_milestone_id/planned_start_date/
-            // planned_end_date/track_id are now plain SCD2-tracked fields on
-            // KnowSprintHist (set via /lore/sprint/plan) — no more PlanItem hop.
-            "out('HAS_STATE')[planned_milestone_id IS NOT NULL].planned_milestone_id[0] AS planned_milestone_id, " +
+            // SPRINT_PLANITEM_RETIRE: planned_start_date/planned_end_date/track_id
+            // are plain SCD2-tracked fields on KnowSprintHist (set via
+            // /lore/sprint/plan) — no more PlanItem hop. planned_milestone_id
+            // retired (drifted vs. milestone_ids above on 62+ sprints) — the
+            // TARGETS_MILESTONE edge is the sole source of truth now.
             "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0]     AS planned_start_date, " +
             "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]         AS planned_end_date, " +
             "out('HAS_STATE')[track_id IS NOT NULL].track_id[0]                         AS track_id, " +
@@ -148,7 +149,6 @@ public final class LoreSlices {
             "out('HAS_STATE')[priority IS NOT NULL].priority[0]     AS priority, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id              AS release_ids, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
-            "out('HAS_STATE')[planned_milestone_id IS NOT NULL].planned_milestone_id[0] AS planned_milestone_id, " +
             "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0]     AS planned_start_date, " +
             "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]         AS planned_end_date, " +
             "out('DEPENDS_ON').sprint_id   AS depends_on, " +
@@ -244,13 +244,11 @@ public final class LoreSlices {
             "SELECT milestone_id, label, week, date_display, priority, " +
             "out('HAS_STATE').goal_md[0]      AS goal_md, " +
             "out('HAS_STATE').decisions_md[0] AS decisions_md, " +
-            // SPRINT_PLANITEM_RETIRE (T-21): the "planned" bucket used to come from
-            // a CONTRIBUTES_TO←PlanItem→REPRESENTS hop; that data now lives as
-            // KnowSprintHist.planned_milestone_id (a plain property, no graph edge
-            // to join on here) — the frontend computes the planned-sprint list by
-            // filtering its already-fetched `sprints` slice on that field instead
-            // (see LoreMilestonesView.tsx msIds()). direct_sprint_ids (the "actual"
-            // bucket, TARGETS_MILESTONE) is a real edge and stays a plain traversal.
+            // SPRINT_PLANITEM_RETIRE (T-21) had briefly split this into a "planned"
+            // bucket (KnowSprintHist.planned_milestone_id, a plain property) vs.
+            // this "actual" bucket (TARGETS_MILESTONE edge). The property drifted
+            // out of sync with the edge on 62+ sprints and was retired — the edge
+            // is now the sole source of truth for sprint↔milestone membership.
             "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");

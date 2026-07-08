@@ -433,11 +433,15 @@ public class LoreSchemaInitializer {
         // ── SPRINT_PLANITEM_RETIRE: planning fields move from PlanItem onto
         // KnowSprint/KnowSprintHist directly (see ADR + memory lore_milestone_
         // sprint_via_planitem for the "why"). planned_start_date/planned_end_date/
-        // planned_milestone_id/track_id are SCD2-tracked (same read pattern as
-        // priority: out('HAS_STATE')[field IS NOT NULL].field[0]) — hence on
-        // KnowSprintHist, not the vertex. created_date is a one-time vertex stamp,
-        // deliberately NOT on the hist chain (must survive every SCD2 transition
-        // unchanged, so it can't live on a row that gets replaced).
+        // track_id are SCD2-tracked (same read pattern as priority:
+        // out('HAS_STATE')[field IS NOT NULL].field[0]) — hence on KnowSprintHist,
+        // not the vertex. created_date is a one-time vertex stamp, deliberately
+        // NOT on the hist chain (must survive every SCD2 transition unchanged, so
+        // it can't live on a row that gets replaced).
+        // planned_milestone_id (plain field) retired — the TARGETS_MILESTONE edge
+        // is now the sole source of truth for sprint↔milestone. The field drifted
+        // out of sync with the edge on 62+ sprints in production (two independent
+        // write paths, no reconciliation) before being removed entirely.
         "CREATE PROPERTY KnowSprint.created_date          IF NOT EXISTS STRING",
         // Vertex-only flag (no history needed) — excluded from deploy-lag/
         // unreleased-burn metrics when true (docs-only/research/tooling sprints
@@ -445,7 +449,6 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowSprint.no_release_required   IF NOT EXISTS BOOLEAN",
         "CREATE PROPERTY KnowSprintHist.planned_start_date IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.planned_end_date   IF NOT EXISTS STRING",
-        "CREATE PROPERTY KnowSprintHist.planned_milestone_id IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.track_id           IF NOT EXISTS STRING"
     );
 }

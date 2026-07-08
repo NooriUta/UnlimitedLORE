@@ -467,19 +467,24 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     // ── SPRINT_PLANITEM_RETIRE: sprint plan-field carry-forward helpers ──────
-    // priority/planned_start_date/planned_end_date/planned_milestone_id/track_id
-    // all live on the open KnowSprintHist row. Any SCD2 transition that inserts a
-    // fresh row (status flip via updateScd2Status, or an explicit plan edit via
-    // /lore/sprint/plan) must carry these forward, or they silently disappear.
-    // pr_refs joined this list after a live bug: a status flip right after
-    // lore_update_sprint_refs wiped the just-added PR links, because the
-    // freshly-opened hist row only ever inherited the plan fields above.
+    // priority/planned_start_date/planned_end_date/track_id all live on the open
+    // KnowSprintHist row. Any SCD2 transition that inserts a fresh row (status
+    // flip via updateScd2Status, or an explicit plan edit via /lore/sprint/plan)
+    // must carry these forward, or they silently disappear. pr_refs joined this
+    // list after a live bug: a status flip right after lore_update_sprint_refs
+    // wiped the just-added PR links, because the freshly-opened hist row only
+    // ever inherited the plan fields above.
+    // planned_milestone_id used to live here too — retired. It required this
+    // exact carry-forward mechanism to stay in sync with the TARGETS_MILESTONE
+    // edge (which needs no such handling — edges point at the stable KnowSprint
+    // vertex, not the hist row, so they survive SCD2 transitions untouched) and
+    // drifted on 62+ sprints in production before removal.
     private static final List<String> SPRINT_PLAN_FIELDS = List.of(
-        "priority", "planned_start_date", "planned_end_date", "planned_milestone_id", "track_id", "pr_refs");
+        "priority", "planned_start_date", "planned_end_date", "track_id", "pr_refs");
 
     private Uni<Map<String, Object>> readSprintPlanFields(String sprintId) {
         MartQuery q = new MartQuery("sql",
-            "SELECT priority, planned_start_date, planned_end_date, planned_milestone_id, track_id, pr_refs " +
+            "SELECT priority, planned_start_date, planned_end_date, track_id, pr_refs " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sprintId), -1);
         return client.query(db, basicAuth(), q).map(res -> {
@@ -519,7 +524,7 @@ public class AidaLoreResource extends LoreResourceBase {
     // updateSprint() no longer accepts it (see its handler).
 
     public record SprintPlanRequest(String sprint_id, String priority, String planned_start_date,
-        String planned_end_date, String planned_milestone_id, String track_id) {}
+        String planned_end_date, String track_id) {}
 
     @POST
     @Path("sprint/plan")
@@ -533,7 +538,7 @@ public class AidaLoreResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.sprint_id()).matches())
             return Uni.createFrom().item(badParams("sprint_id contains illegal characters"));
         if (req.priority() == null && req.planned_start_date() == null && req.planned_end_date() == null
-                && req.planned_milestone_id() == null && req.track_id() == null)
+                && req.track_id() == null)
             return Uni.createFrom().item(badParams("at least one field required"));
 
         final String sid  = req.sprint_id();
@@ -542,7 +547,7 @@ public class AidaLoreResource extends LoreResourceBase {
 
         MartQuery readQ = new MartQuery("sql",
             "SELECT @rid AS rid, status_raw, priority, planned_start_date, planned_end_date, " +
-            "planned_milestone_id, track_id, pr_refs FROM KnowSprintHist " +
+            "track_id, pr_refs FROM KnowSprintHist " +
             "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sid), -1);
 
@@ -558,7 +563,6 @@ public class AidaLoreResource extends LoreResourceBase {
             next.put("priority",             req.priority()             != null ? req.priority()             : cur.get("priority"));
             next.put("planned_start_date",   req.planned_start_date()   != null ? req.planned_start_date()   : cur.get("planned_start_date"));
             next.put("planned_end_date",     req.planned_end_date()     != null ? req.planned_end_date()     : cur.get("planned_end_date"));
-            next.put("planned_milestone_id", req.planned_milestone_id() != null ? req.planned_milestone_id() : cur.get("planned_milestone_id"));
             next.put("track_id",             req.track_id()             != null ? req.track_id()             : cur.get("track_id"));
             next.put("pr_refs",              cur.get("pr_refs"));
 
@@ -576,7 +580,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 .chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
-                    "planned_end_date = :planned_end_date, planned_milestone_id = :planned_milestone_id, " +
+                    "planned_end_date = :planned_end_date, " +
                     "track_id = :track_id, pr_refs = :pr_refs",
                     insertParams)))
                 .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
@@ -1497,13 +1501,15 @@ public class AidaLoreResource extends LoreResourceBase {
 
     // NB SPRINT_PLANITEM_RETIRE: removed POST /lore/sprint/track (setSprintTrack)
     // and POST /lore/plan-item/milestone (updatePlanItemMilestone). Both targeted
-    // PlanItem, which is being retired — track_id and planned_milestone_id are now
-    // plain SCD2-tracked fields set via POST /lore/sprint/plan. setSprintTrack was
-    // additionally dead code: it queried a nonexistent type `KnowPlanItem` (schema
-    // only ever had `PlanItem`) and a nonexistent property `represents_sprint` on
-    // PlanItem (that was only ever a slice-level SQL alias) — it could never
-    // actually create the ON_TRACK edge it claimed to. updatePlanItemMilestone had
-    // zero frontend callers (confirmed by repo-wide grep before removal).
+    // PlanItem, which is being retired — track_id is a plain SCD2-tracked field
+    // set via POST /lore/sprint/plan (planned_milestone_id was too, until it was
+    // later retired in favor of the TARGETS_MILESTONE edge — see linkSprintMilestone
+    // below). setSprintTrack was additionally dead code: it queried a nonexistent
+    // type `KnowPlanItem` (schema only ever had `PlanItem`) and a nonexistent
+    // property `represents_sprint` on PlanItem (that was only ever a slice-level
+    // SQL alias) — it could never actually create the ON_TRACK edge it claimed
+    // to. updatePlanItemMilestone had zero frontend callers (confirmed by
+    // repo-wide grep before removal).
 
     // ── Write-path: link sprint ↔ project ────────────────────────────────────
 
