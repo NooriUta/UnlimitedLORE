@@ -1185,7 +1185,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {currentMilestone && (
         <section style={{
           ...S.panel,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const,
+          // flex-start, not center: sibling blocks have different line counts
+          // (milestone/overdue are 2 lines, open-Sp/weeks-to-close grow a 3rd
+          // line when milestoneOpenCount !== openSprintCount or a forecast
+          // hint wraps) — centering a row of unequal-height blocks staggers
+          // their headline numbers instead of aligning them.
+          display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' as const,
           background: onTrack
             ? `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 6%,var(--b2))`
             : 'var(--b2)',
@@ -1867,7 +1872,12 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {currentMilestone && (
         <section style={{
           ...S.panel,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const,
+          // flex-start, not center: sibling blocks have different line counts
+          // (milestone/overdue are 2 lines, open-Sp/weeks-to-close grow a 3rd
+          // line when milestoneOpenCount !== openSprintCount or a forecast
+          // hint wraps) — centering a row of unequal-height blocks staggers
+          // their headline numbers instead of aligning them.
+          display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' as const,
           background: onTrack
             ? `color-mix(in srgb,${onTrack.ok ? 'var(--suc)' : 'var(--dng)'} 6%,var(--b2))`
             : 'var(--b2)',
