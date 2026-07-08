@@ -34,6 +34,7 @@ const S = {
   }),
   section: { marginTop: 16 },
   sLabel:  { fontSize: 'var(--fs-sm)', color: 'var(--t3)', textTransform: 'uppercase' as const, marginBottom: 4 },
+  prose:   { fontSize: 'var(--fs-sm)' },
   chips:   { display: 'flex', flexWrap: 'wrap' as const, gap: 4 },
   chip: (clickable: boolean) => ({
     padding: '2px 7px', borderRadius: 3, fontSize: 'var(--fs-sm)',
@@ -127,19 +128,19 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       {data.context_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.context', 'Context')}</div>
-          <MartProse text={data.context_md} />
+          <MartProse text={data.context_md} style={S.prose} />
         </div>
       )}
       {data.decision_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.decision', 'Decision')}</div>
-          <MartProse text={data.decision_md} />
+          <MartProse text={data.decision_md} style={S.prose} />
         </div>
       )}
       {data.consequences_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.consequences', 'Consequences')}</div>
-          <MartProse text={data.consequences_md} />
+          <MartProse text={data.consequences_md} style={S.prose} />
         </div>
       )}
 
