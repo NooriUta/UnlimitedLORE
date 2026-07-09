@@ -393,8 +393,20 @@ public class AidaLoreResource extends LoreResourceBase {
                                             req.id(), ex.getMessage()))
                                         .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
                                         .replaceWith(resp)));
-            case "task"      -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
-                                    "task_uid", req.id(), req.status(), now, nsid);
+            case "task"      -> readTaskHistCarryFields(req.id())
+                                  .chain(fields -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
+                                    "task_uid", req.id(), req.status(), now, nsid)
+                                  .chain(resp -> resp.getStatus() >= 300
+                                    ? Uni.createFrom().item(resp)
+                                    : restoreTaskHistFields(nsid,
+                                          (String) fields.get("note_md"),
+                                          fields.get("effort_days") == null ? null
+                                              : ((Number) fields.get("effort_days")).doubleValue())
+                                        .onFailure().invoke(ex -> LOG.warnf(
+                                            "[LORE STATUS] task=%s note/effort carry-forward failed (status flip itself succeeded): %s",
+                                            req.id(), ex.getMessage()))
+                                        .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
+                                        .replaceWith(resp)));
             // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
             case "phase"     -> updateScd2Status("phase", "KnowPhase", "KnowPhaseHist",
                                     "phase_uid", req.id(), req.status(), now, nsid);
@@ -978,6 +990,36 @@ public class AidaLoreResource extends LoreResourceBase {
         if (effortDays != null) { sql.append(", effort_days = :eff");  p.put("eff", effortDays); }
         sql.append(" WHERE task_uid = :uid");
         return new LoreCommandClient.LoreCommand("sql", sql.toString(), p);
+    }
+
+    /** Read note_md / effort_days from the currently-open KnowTaskHist row BEFORE a SCD2 flip. */
+    private Uni<Map<String, Object>> readTaskHistCarryFields(String taskUid) {
+        MartQuery q = new MartQuery("sql",
+            "SELECT note_md, effort_days FROM KnowTaskHist" +
+            " WHERE in('HAS_STATE').task_uid CONTAINS :uid AND valid_to IS NULL LIMIT 1",
+            Map.of("uid", taskUid), -1);
+        return client.query(db, basicAuth(), q).map(res -> {
+            List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
+            return rows.isEmpty() ? Map.<String, Object>of() : rows.get(0);
+        });
+    }
+
+    /**
+     * Restore note_md / effort_days onto the newly-opened KnowTaskHist row after a SCD2 flip.
+     * Targets by state_uid (indexed property, no edge traversal) to avoid the CREATE EDGE
+     * visibility race that would break an in('HAS_STATE') traversal done on the same connection.
+     */
+    private Uni<LoreCommandClient.LoreCommandResult> restoreTaskHistFields(
+            String nsid, String noteMd, Double effortDays) {
+        StringBuilder sb = new StringBuilder("UPDATE KnowTaskHist SET ");
+        Map<String, Object> p = new LinkedHashMap<>();
+        if (noteMd     != null) { sb.append("note_md = :note, ");     p.put("note", noteMd); }
+        if (effortDays != null) { sb.append("effort_days = :eff, ");  p.put("eff", effortDays); }
+        if (p.isEmpty()) return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
+        String set = sb.toString().replaceAll(",\\s*$", "");
+        p.put("nsid", nsid);
+        return writeClient.command(db, basicAuth(),
+            new LoreCommandClient.LoreCommand("sql", set + " WHERE state_uid = :nsid", p));
     }
 
     /**
