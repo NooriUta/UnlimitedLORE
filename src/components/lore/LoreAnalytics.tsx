@@ -1561,7 +1561,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Pareto — concentration of work */}
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={S.panelTitle} title="Доля задач каждого компонента от всех задач (Парето). Σ — накопленная доля сверху вниз. Покрытие = компоненты со спринтами / все компоненты.">Концентрация работы <span style={S.dim}>· топ-8 компонентов</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.progress.paretoHint', 'Доля задач каждого компонента от всех задач (Парето). Σ — накопленная доля сверху вниз. Покрытие = компоненты со спринтами / все компоненты.')}>Концентрация работы <span style={S.dim}>· топ-8 компонентов</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {coverage && (
             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>
               покрытие <b style={{ color: 'var(--t1)' }}>{coverage.withSprints}/{coverage.total}</b>{' '}
@@ -1581,13 +1581,13 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                   {c.component_id}
                 </span>
                 <span style={S.compName}>{c.full_name ?? ''}</span>
-                <div style={{ ...S.progressWrap, width: 120 }} title={`${Math.round(c.share * 100)}% всех задач`}>
+                <div style={{ ...S.progressWrap, width: 120 }} title={t('lore.analytics.progress.paretoShareHint', '{{pct}}% всех задач', { pct: Math.round(c.share * 100) })}>
                   <div style={{ ...S.progressFill, width: `${Math.round(c.share * 100)}%`, background: col }} />
                 </div>
                 <span style={S.count}>{c.task_total}</span>
                 <span style={{ ...S.pctNum, width: 40 }}>{Math.round(c.share * 100)}%</span>
                 <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', width: 44, textAlign: 'right' as const }}
-                  title="Накопленная доля (Парето)">Σ{Math.round(c.cumShare * 100)}%</span>
+                  title={t('lore.analytics.progress.paretoCumHint', 'Накопленная доля (Парето)')}>Σ{Math.round(c.cumShare * 100)}%</span>
               </div>
             );
           })}
@@ -1606,7 +1606,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Task throughput */}
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={S.panelTitle} title="Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done».">
+          <div style={S.panelTitle} title={t('lore.analytics.flow.throughputHint', 'Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done».')}>
             Throughput задач <span style={S.dim}>· закрыто/нед</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>avg <b style={{ color: 'var(--t1)' }}>{taskThroughput.avg}</b>/нед · с 12 июн</span>
@@ -1618,7 +1618,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               return (
                 <div key={w.key} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3 }}>
                   <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t2)', fontFamily: 'var(--mono)' }}>{w.count}</span>
-                  <div title={`${w.label}: ${w.count} задач`} style={{ width: '100%', height: Math.max(3, (w.count / max) * 64),
+                  <div title={t('lore.analytics.flow.throughputBarHint', '{{label}}: {{count}} задач', { label: w.label, count: w.count })} style={{ width: '100%', height: Math.max(3, (w.count / max) * 64),
                     background: 'color-mix(in srgb,var(--suc) 55%,var(--b3))', borderRadius: 3 }} />
                   <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{w.label}</span>
                 </div>
@@ -1634,7 +1634,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Effort accuracy — план vs факт (календарь) */}
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={S.panelTitle} title="Точность оценок по закрытым задачам: план = effort_days, факт = календарная длительность (создано→закрыто). ⚠ «потраченное» = календарь (wall-clock), а не чистые трудозатраты. Только реальные закрытия (с 12 июн, states>1).">
+          <div style={S.panelTitle} title={t('lore.analytics.flow.accuracyHint', 'Точность оценок по закрытым задачам: план = effort_days, факт = календарная длительность (создано→закрыто). ⚠ «потраченное» = календарь (wall-clock), а не чистые трудозатраты. Только реальные закрытия (с 12 июн, states>1).')}>
             Точность оценок <span style={S.dim}>· план vs факт (календарь)</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>n=<b style={{ color: 'var(--t1)' }}>{effortAccuracy.n}</b></span>
@@ -1673,7 +1673,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <div style={S.row2}>
         {/* Lead / cycle time */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Дней от реального старта спринта (самый ранний valid_from из истории состояний, слайс sprint_starts) до закрытия (done_date). Медиана/p25/p75/макс + гистограмма по закрытым спринтам.">Lead time спринта <span style={S.dim}>· старт → закрытие</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.flow.leadTimeHint', 'Дней от реального старта спринта (самый ранний valid_from из истории состояний, слайс sprint_starts) до закрытия (done_date). Медиана/p25/p75/макс + гистограмма по закрытым спринтам.')}>Lead time спринта <span style={S.dim}>· старт → закрытие</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {leadTime ? (
             <>
               <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
@@ -1705,7 +1705,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
         {/* Release cadence — per project */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Темп релизов по каждому проекту: частота = релизы за последние 30 дней ÷ (30/7) = релизов в неделю. Медиана = медианный разрыв в днях между соседними релизами проекта.">Release cadence <span style={S.dim}>· по проектам · {releases.length} релизов</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.flow.releaseCadenceHint', 'Темп релизов по каждому проекту: частота = релизы за последние 30 дней ÷ (30/7) = релизов в неделю. Медиана = медианный разрыв в днях между соседними релизами проекта.')}>Release cadence <span style={S.dim}>· по проектам · {releases.length} релизов</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {releaseCadence ? (
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
               {releaseCadence.map(p => (
@@ -1715,7 +1715,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                     <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{p.proj}</span>
                     <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{p.count} релизов</span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', minWidth: 64 }} title="Релизов в неделю за последние 30 дней">
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', minWidth: 64 }} title={t('lore.analytics.flow.releasePerWeekHint', 'Релизов в неделю за последние 30 дней')}>
                     <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--t1)', lineHeight: 1 }}>
                       {p.perWeek}<span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>/нед</span>
                     </span>
@@ -1739,7 +1739,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       <div style={S.row2}>
         {/* Deploy lag */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Дней от закрытия спринта (done_date) до первого релиза, в который он вошёл (release_dates). Медиана/p75 по таким спринтам. Справа — сколько done-спринтов ещё без релиза.">Deploy lag <span style={S.dim}>· закрытие → релиз</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.flow.deployLagHint', 'Дней от закрытия спринта (done_date) до первого релиза, в который он вошёл (release_dates). Медиана/p75 по таким спринтам. Справа — сколько done-спринтов ещё без релиза.')}>Deploy lag <span style={S.dim}>· закрытие → релиз</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           {deployLag.med !== null ? (
             <div style={{ display: 'flex', gap: 16 }}>
               <div style={{ display: 'flex', flexDirection: 'column' as const }}>
@@ -1751,7 +1751,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>готово, ждёт релиза</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', marginLeft: 'auto', textAlign: 'right' as const, cursor: 'help' }}
-                title={`Спринтов, прошедших через статус BLOCKED (по истории состояний): ${blockedStats.ever} из ${blockedStats.total} (${pct(blockedStats.ever, blockedStats.total)}%). Сейчас заблокировано: ${blockedStats.nowBlocked}.`}>
+                title={t('lore.analytics.flow.blockedHint', 'Спринтов, прошедших через статус BLOCKED (по истории состояний): {{ever}} из {{total}} ({{pct}}%). Сейчас заблокировано: {{nowBlocked}}.', { ever: blockedStats.ever, total: blockedStats.total, pct: pct(blockedStats.ever, blockedStats.total), nowBlocked: blockedStats.nowBlocked })}>
                 <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: blockedStats.nowBlocked ? 'var(--dng)' : 'var(--t1)' }}>
                   {pct(blockedStats.ever, blockedStats.total)}%
                 </span>
@@ -1763,7 +1763,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
         {/* Quality gates */}
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Распределение Quality Gates по статусу (closed/active/deprecated). Большой % = closed / (closed + active). Внизу — сколько компонентов имеют хотя бы один QG.">Quality Gates <span style={S.dim}>· {qgStats.total}</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
+          <div style={S.panelTitle} title={t('lore.analytics.qg.qgDistributionHint', 'Распределение Quality Gates по статусу (closed/active/deprecated). Большой % = closed / (closed + active). Внизу — сколько компонентов имеют хотя бы один QG.')}>Quality Gates <span style={S.dim}>· {qgStats.total}</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span></div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
               <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--suc)', lineHeight: 1 }}>{pct(qgDone, qgDone + qgActive)}%</span>
@@ -2095,7 +2095,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
 
       <div style={S.row2}>
         <section style={S.panel}>
-          <div style={S.panelTitle} title="Цвет = худший статус среди инвариантов гейта (content_md × latest metric, ADR-QG-002 compute_status). Серый = нет прогонов/метрик.">
+          <div style={S.panelTitle} title={t('lore.analytics.qg.statusGridHint', 'Цвет = худший статус среди инвариантов гейта (content_md × latest metric, ADR-QG-002 compute_status). Серый = нет прогонов/метрик.')}>
             QG статус-сетка <span style={S.dim}>· {qgRows.length}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 5 }}>
@@ -2107,7 +2107,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
               return (
                 <div key={q.qg_id}
                   onClick={clickable ? () => onNavigateToQG!(q.qg_id) : undefined}
-                  title={`${q.qg_id}\nРутина: ${routineByQg.get(q.qg_id)}\nСтатус: ${runSt === 'norun' ? 'нет прогонов' : runSt}`}
+                  title={t('lore.analytics.qg.qgCellHint', '{{qgId}}\nРутина: {{routine}}\nСтатус: {{status}}', { qgId: q.qg_id, routine: routineByQg.get(q.qg_id), status: runSt === 'norun' ? 'нет прогонов' : runSt })}
                   style={{ padding: '4px 7px', borderRadius: 5, fontSize: 'var(--fs-2xs)', fontWeight: 600,
                     background: `color-mix(in srgb,${col} 12%,var(--b3))`,
                     border: `1px solid color-mix(in srgb,${col} 30%,transparent)`,
@@ -2154,7 +2154,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* ── ADR-QG-004 fleet triage: ЧТО+ПОЧЕМУ collapsed to a prioritized list; ────
           детали (source/спарклайн/методика) — в LoreQGDetail по клику. ─────────── */}
       <section style={S.panel}>
-        <div style={S.panelTitle} title="FAIL/WARN инварианты по всему флоту (content_md × latest ClRoutineMetric, статус пересчитан через compute_status — ADR-QG-002/004). Полная детализация — по клику на гейт.">
+        <div style={S.panelTitle} title={t('lore.analytics.qg.attentionHint', 'FAIL/WARN инварианты по всему флоту (content_md × latest ClRoutineMetric, статус пересчитан через compute_status — ADR-QG-002/004). Полная детализация — по клику на гейт.')}>
           Что требует внимания <span style={S.dim}>· {attentionNeeded.length} инвариантов в {attentionByGate.length} гейтах</span>
         </div>
         {attentionByGate.length === 0
@@ -2205,7 +2205,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       </section>
 
       <section style={S.panel}>
-        <div style={S.panelTitle} title="Прогоны сгруппированы по run_id (или routine+дата). Время берётся из started_at/finished_at.">
+        <div style={S.panelTitle} title={t('lore.analytics.qg.runHistoryHint', 'Прогоны сгруппированы по run_id (или routine+дата). Время берётся из started_at/finished_at.')}>
           История прогонов <span style={S.dim}>· {qgRoutineRuns.length} записей</span>
         </div>
         {(() => {
@@ -2281,7 +2281,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       </section>
 
       <section style={S.panel}>
-        <div style={S.panelTitle} title="QGJobTask WHERE status=open, по severity.">
+        <div style={S.panelTitle} title={t('lore.analytics.qg.violationsHint', 'QGJobTask WHERE status=open, по severity.')}>
           Открытые нарушения <span style={S.dim}>· {qgViolations.length}</span>
         </div>
         {qgViolations.length === 0
@@ -2314,7 +2314,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       </section>
 
       <section style={S.panel}>
-        <div style={S.panelTitle} title="QGRecommendation WHERE status=pending, отсортированы P0→P1→P2.">
+        <div style={S.panelTitle} title={t('lore.analytics.qg.recommendationsHint', 'QGRecommendation WHERE status=pending, отсортированы P0→P1→P2.')}>
           Рекомендации к выполнению <span style={S.dim}>· {qgPendingRecs.length}</span>
         </div>
         {qgPendingRecs.length === 0
