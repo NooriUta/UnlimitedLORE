@@ -117,10 +117,15 @@ function toSegments(text: string): Segment[] {
 // is a mermaid `%%{init}%%` directive prepended to the definition, so it overrides
 // the global init for that one diagram. All keep htmlLabels:false + dark, high-
 // contrast label/line colours so they stay readable on the light --mermaid-bg.
-const DIAGRAM_THEMES: { label: string; init: string }[] = [
-  { label: 'Лес', init: '%%{init: {"theme":"forest","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryTextColor":"#14210a","secondaryTextColor":"#14210a","tertiaryTextColor":"#14210a","textColor":"#1c1c1c","lineColor":"#4c6138","edgeLabelBackground":"#f4f4f4"}}}%%' },
-  { label: 'Нейтр', init: '%%{init: {"theme":"neutral","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryTextColor":"#1c1c1c","secondaryTextColor":"#1c1c1c","tertiaryTextColor":"#1c1c1c","textColor":"#1c1c1c","lineColor":"#666","edgeLabelBackground":"#f4f4f4"}}}%%' },
-  { label: 'Синяя', init: '%%{init: {"theme":"base","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryColor":"#cfe0ff","primaryBorderColor":"#3f6fb8","primaryTextColor":"#0e1c33","secondaryColor":"#e3ecff","tertiaryColor":"#eef3ff","textColor":"#1c1c1c","lineColor":"#3f6fb8","edgeLabelBackground":"#f4f4f4"}}}%%' },
+const DIAGRAM_THEMES: { label: string; bg: string; init: string }[] = [
+  { label: 'Лес', bg: '#f4f7ee', init: '%%{init: {"theme":"forest","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryTextColor":"#14210a","secondaryTextColor":"#14210a","tertiaryTextColor":"#14210a","textColor":"#1c1c1c","lineColor":"#4c6138","edgeLabelBackground":"#f4f7ee"}}}%%' },
+  { label: 'Нейтр', bg: '#f4f4f4', init: '%%{init: {"theme":"neutral","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryTextColor":"#1c1c1c","secondaryTextColor":"#1c1c1c","tertiaryTextColor":"#1c1c1c","textColor":"#1c1c1c","lineColor":"#666","edgeLabelBackground":"#f4f4f4"}}}%%' },
+  { label: 'Синяя', bg: '#eef4fc', init: '%%{init: {"theme":"base","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryColor":"#cfe0ff","primaryBorderColor":"#3f6fb8","primaryTextColor":"#0e1c33","secondaryColor":"#e3ecff","tertiaryColor":"#eef3ff","textColor":"#1c1c1c","lineColor":"#3f6fb8","edgeLabelBackground":"#eef4fc"}}}%%' },
+  // A dark palette was tried and dropped: mermaid renders the SVG label <text>
+  // fill from the GLOBAL init themeVariables (nodeTextColor/textColor), and a
+  // per-diagram %%{init}%% overrides the node *fill* but NOT the text colour —
+  // so labels stayed dark (#14210a/#1c1c1c) on a dark backdrop, i.e. unreadable.
+  // Every kept palette therefore uses a light backdrop where the dark labels read.
 ];
 
 function MermaidDiagram({ def }: { def: string }) {
@@ -167,7 +172,7 @@ function MermaidDiagram({ def }: { def: string }) {
         {/* color: with htmlLabels:false labels are SVG <text> (coloured by
             themeVariables); the dark color here also covers any inherited HTML. */}
         <div
-          style={{ overflowX: 'auto', background: 'var(--mermaid-bg)', borderRadius: 6, padding: 10, color: '#1c1c1c' }}
+          style={{ overflowX: 'auto', background: DIAGRAM_THEMES[themeIdx].bg, borderRadius: 6, padding: 10, color: '#1c1c1c' }}
           dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
         />
       </div>
