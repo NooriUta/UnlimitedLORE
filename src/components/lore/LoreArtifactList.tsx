@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { Virtuoso } from 'react-virtuoso';
 import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
@@ -381,26 +382,33 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
       {headerContainer ? createPortal(header, headerContainer) : header}
 
       <div style={S.list}>
-        {shown.length === 0 && <EmptyState message={t('lore.artifactList.notFound', 'Ничего не найдено.')} />}
-        {shown.map(a => {
-          const meta = KIND_META[a.kind];
-          const sel = selectedKind === a.kind && selectedId === a.id;
-          const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
-          return (
-            <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} {...a11yClick(() => onOpen(a.kind, a.id))} title={`${meta.label} · ${a.id}`}>
-              <div style={S.rowMain}>
-                <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
-                <span style={S.title}>{a.title}</span>
-              </div>
-              <div style={S.rowMeta}>
-                {a.component
-                  ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
-                  : <span style={S.noComp}>—</span>}
-                {a.date && <span style={S.date}>{a.date.slice(0, 10)}</span>}
-              </div>
-            </div>
-          );
-        })}
+        {shown.length === 0
+          ? <EmptyState message={t('lore.artifactList.notFound', 'Ничего не найдено.')} />
+          : <Virtuoso
+              style={{ height: '100%' }}
+              data={shown}
+              computeItemKey={(_, a) => `${a.kind}:${a.id}`}
+              itemContent={(_, a) => {
+                const meta = KIND_META[a.kind];
+                const sel = selectedKind === a.kind && selectedId === a.id;
+                const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
+                return (
+                  <div style={S.row(sel, indent)} {...a11yClick(() => onOpen(a.kind, a.id))} title={`${meta.label} · ${a.id}`}>
+                    <div style={S.rowMain}>
+                      <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
+                      <span style={S.title}>{a.title}</span>
+                    </div>
+                    <div style={S.rowMeta}>
+                      {a.component
+                        ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
+                        : <span style={S.noComp}>—</span>}
+                      {a.date && <span style={S.date}>{a.date.slice(0, 10)}</span>}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+        }
       </div>
     </div>
   );
