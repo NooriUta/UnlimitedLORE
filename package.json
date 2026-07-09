@@ -21,7 +21,7 @@
     "@tiptap/pm": "^3.27.1",
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
-    "@xyflow/react": "^12.11.0",
+    "@xyflow/react": "^12.11.2",
     "dompurify": "^3.4.11",
     "elkjs": "^0.11.1",
     "i18next": "^26.3.6",
