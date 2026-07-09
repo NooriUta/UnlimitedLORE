@@ -32,9 +32,26 @@ mermaid.registerLayoutLoaders(elkLayouts);
 mermaid.initialize({
   startOnLoad: false,
   theme: 'forest',
+  // SVG <text> labels, NOT HTML-in-foreignObject: our sanitizeSvg() (XSS pass)
+  // strips the <div> content out of <foreignObject>, which left every node an
+  // empty box. SVG text survives sanitisation and is coloured by themeVariables.
+  htmlLabels: false,
+  flowchart: { htmlLabels: false },
   themeVariables: {
     fontFamily: 'monospace',
     fontSize: '13px',
+    // The diagram always sits on a fixed light backdrop (--mermaid-bg #f4f4f4),
+    // but 'forest' left node/edge label text at a near-invisible low-contrast
+    // colour on the light-green nodes. Pin dark, high-contrast text so labels
+    // stay readable regardless of the app's (dark/light) theme.
+    primaryTextColor: '#14210a',
+    secondaryTextColor: '#14210a',
+    tertiaryTextColor: '#14210a',
+    textColor: '#1c1c1c',
+    nodeTextColor: '#14210a',
+    lineColor: '#4c6138',
+    edgeLabelBackground: '#f4f4f4',
+    titleColor: '#1c1c1c',
   },
   securityLevel: 'loose',
 });
@@ -125,7 +142,12 @@ function MermaidDiagram({ def }: { def: string }) {
     // theme needed, or its own arrows/labels wash out to low-contrast grey.
     return (
       <div
-        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: 'var(--mermaid-bg)', borderRadius: 6, padding: 10 }}
+        // color: mermaid renders node/edge labels as HTML in <foreignObject>,
+        // which inherit the ancestor `color` — inside .mart-prose that is the
+        // app's light --t2, so on the light diagram backdrop the labels washed
+        // out to invisible. Pin a dark colour here so the inherited HTML labels
+        // stay readable (SVG <text> is covered by themeVariables above).
+        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: 'var(--mermaid-bg)', borderRadius: 6, padding: 10, color: '#1c1c1c' }}
         dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
       />
     );
