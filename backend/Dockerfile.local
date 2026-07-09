@@ -4,7 +4,7 @@
 # shipped stale bytecode when that step was forgotten).
 
 # ── Build stage ───────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /src
 
 # Warm the dependency layer on build scripts alone, so source-only edits don't
@@ -20,7 +20,7 @@ COPY db-schema ./db-schema
 RUN ./gradlew --no-daemon clean build -x test
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 # curl is used by the docker-compose healthcheck to probe /q/health/live.
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
