@@ -113,20 +113,31 @@ function toSegments(text: string): Segment[] {
   return segs;
 }
 
+// Per-diagram palette presets — user-switchable (the toggle in the corner). Each
+// is a mermaid `%%{init}%%` directive prepended to the definition, so it overrides
+// the global init for that one diagram. All keep htmlLabels:false + dark, high-
+// contrast label/line colours so they stay readable on the light --mermaid-bg.
+const DIAGRAM_THEMES: { label: string; init: string }[] = [
+  { label: 'Лес', init: '%%{init: {"theme":"forest","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryTextColor":"#14210a","secondaryTextColor":"#14210a","tertiaryTextColor":"#14210a","textColor":"#1c1c1c","lineColor":"#4c6138","edgeLabelBackground":"#f4f4f4"}}}%%' },
+  { label: 'Нейтр', init: '%%{init: {"theme":"neutral","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryTextColor":"#1c1c1c","secondaryTextColor":"#1c1c1c","tertiaryTextColor":"#1c1c1c","textColor":"#1c1c1c","lineColor":"#666","edgeLabelBackground":"#f4f4f4"}}}%%' },
+  { label: 'Синяя', init: '%%{init: {"theme":"base","flowchart":{"htmlLabels":false},"themeVariables":{"fontFamily":"monospace","fontSize":"13px","primaryColor":"#cfe0ff","primaryBorderColor":"#3f6fb8","primaryTextColor":"#0e1c33","secondaryColor":"#e3ecff","tertiaryColor":"#eef3ff","textColor":"#1c1c1c","lineColor":"#3f6fb8","edgeLabelBackground":"#f4f4f4"}}}%%' },
+];
+
 function MermaidDiagram({ def }: { def: string }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [themeIdx, setThemeIdx] = useState(0);
   useEffect(() => {
     let active = true;
     setErr(null);
-    mermaid.render(`mart-mermaid-${mermaidSeq++}`, def)
+    mermaid.render(`mart-mermaid-${mermaidSeq++}`, `${DIAGRAM_THEMES[themeIdx].init}\n${def}`)
       .then(({ svg }) => { if (active) setSvg(svg); })
       .catch(e => {
         console.warn('[mart-prose mermaid] render error:', e);
         if (active) setErr(String((e as Error)?.message ?? e));
       });
     return () => { active = false; };
-  }, [def]);
+  }, [def, themeIdx]);
 
   if (err) {
     return <div style={{ color: 'var(--dng)', fontSize: 12, fontFamily: 'var(--mono)', margin: '0 0 0.8em' }}>⚠ mermaid: {err}</div>;
@@ -141,15 +152,25 @@ function MermaidDiagram({ def }: { def: string }) {
     // give it one explicitly rather than the dark background the old 'base'
     // theme needed, or its own arrows/labels wash out to low-contrast grey.
     return (
-      <div
-        // color: mermaid renders node/edge labels as HTML in <foreignObject>,
-        // which inherit the ancestor `color` — inside .mart-prose that is the
-        // app's light --t2, so on the light diagram backdrop the labels washed
-        // out to invisible. Pin a dark colour here so the inherited HTML labels
-        // stay readable (SVG <text> is covered by themeVariables above).
-        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: 'var(--mermaid-bg)', borderRadius: 6, padding: 10, color: '#1c1c1c' }}
-        dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
-      />
+      <div style={{ position: 'relative', margin: '0 0 0.8em' }}>
+        <button
+          type="button"
+          onClick={() => setThemeIdx(i => (i + 1) % DIAGRAM_THEMES.length)}
+          title="Сменить палитру диаграммы"
+          style={{
+            position: 'absolute', top: 6, right: 8, zIndex: 1, cursor: 'pointer',
+            fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: 4,
+            border: '1px solid var(--bd)', background: 'var(--bg1)', color: 'var(--t2)',
+            fontFamily: 'var(--mono)', opacity: 0.85,
+          }}
+        >🎨 {DIAGRAM_THEMES[themeIdx].label}</button>
+        {/* color: with htmlLabels:false labels are SVG <text> (coloured by
+            themeVariables); the dark color here also covers any inherited HTML. */}
+        <div
+          style={{ overflowX: 'auto', background: 'var(--mermaid-bg)', borderRadius: 6, padding: 10, color: '#1c1c1c' }}
+          dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
+        />
+      </div>
     );
   }
   return <div style={{ minHeight: 24, margin: '0 0 0.8em' }} aria-hidden />;
