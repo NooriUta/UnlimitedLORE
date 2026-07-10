@@ -5,10 +5,12 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.logging.Logger;
 import studio.seer.heimdall.bench.MartClient;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -22,6 +24,8 @@ import java.util.regex.Pattern;
  * lives in this package.
  */
 public abstract class LoreResourceBase {
+
+    private static final Logger LOG = Logger.getLogger(LoreResourceBase.class);
 
     // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
     static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
@@ -130,6 +134,43 @@ public abstract class LoreResourceBase {
 
     static Response noStore(Response.ResponseBuilder builder) {
         return builder.type(MediaType.APPLICATION_JSON).header("Cache-Control", "no-store").build();
+    }
+
+    /**
+     * ADR-LORE-012 level B: component → area dictionary edge (IN_AREA). Keeps
+     * the edge in sync with LoreComponent.area (dual-write: the string stays
+     * for existing readers, the edge enables graph traversal). Shared between
+     * LoreComponentResource (component/create, component/update) and
+     * LoreDictResource (dict/backfill-area) — same rationale as linkStateCmd
+     * (B1): identical logic, two call sites, belongs in the base. DELETE EDGE
+     * is unreliable on ArcadeDB → remove by @rid, then create the new edge.
+     * Best-effort: swallows its own failures so an edge-relink hiccup never
+     * fails the caller's primary write.
+     */
+    void relinkAreaEdge(String cid, String area) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT outE('IN_AREA').@rid AS rids FROM LoreComponent WHERE component_id=:cid",
+                Map.of("cid", cid));
+            if (!rows.isEmpty() && rows.get(0).get("rids") instanceof List<?> rids) {
+                for (Object rid : rids) {
+                    if (rid == null) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM IN_AREA WHERE @rid=" + rid)).await().indefinitely();
+                }
+            }
+            if (area != null && !area.isBlank()) {
+                // String.format (not named params) — matches the PARENT_OF edge path;
+                // ArcadeDB CREATE EDGE does not bind named params in FROM/TO subqueries.
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                    "CREATE EDGE IN_AREA FROM (SELECT FROM LoreComponent WHERE component_id='%s') " +
+                    "TO (SELECT FROM KnowDictEntry WHERE dict_type='area' AND code='%s')",
+                    cid, area))).await().indefinitely();
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE IN_AREA] relink %s→%s failed: %s", cid, area, e.getMessage());
+        }
     }
 
     static String str(Object o) {

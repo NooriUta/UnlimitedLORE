@@ -760,6 +760,27 @@ public final class LoreSlices {
         slice("bragi_pages",
             "SELECT page_id, url, title FROM BragiPage",
             List.of(), Map.of(), " ORDER BY page_id");
+
+        // ── ADR-LORE-012: dictionary (KnowDictEntry) ─────────────────────────
+        // Without dict_type — весь справочник; с dict_type — один домен.
+        // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
+        slice("dictionary",
+            // ifnull() masks the brief NULL-flag window on a freshly-upserted row
+            // (defaults are set in a second, IS NULL-gated statement) — readers
+            // always see the effective defaults, never NULL.
+            "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, " +
+            "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible FROM KnowDictEntry",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "dict_type", " WHERE dict_type = :dict_type")),
+            " ORDER BY dict_type, sort_order");
+
+        // ADR-LORE-012 level B: components linked to an area via the IN_AREA edge
+        // (graph traversal, not the string field) — «all components in area X».
+        slice("components_in_area",
+            "SELECT component_id, full_name, area, game_icon FROM LoreComponent " +
+            "WHERE out('IN_AREA').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY component_id");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }

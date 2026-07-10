@@ -13,6 +13,7 @@ import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor } from './LoreComponentList';
+import { useDictionary } from './DictionaryProvider';
 import TipTapField from './TipTapField';
 
 interface SprintMeta {
@@ -213,7 +214,12 @@ function PriorityPicker({ sprintId, current, onChanged }: {
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
-  const PRIORITY_OPTS = buildPriorityOpts(t);
+  // ADR-LORE-012: prefer the `priority` dictionary (single canon), fall back to
+  // the static P0–P3 defaults when the dictionary is absent (older backend).
+  const { entries: dictPrio } = useDictionary('priority');
+  const PRIORITY_OPTS = dictPrio.length
+    ? dictPrio.map(e => ({ value: e.code, label: e.label_ru || e.code, color: e.color || 'var(--t3)' }))
+    : buildPriorityOpts(t);
   const [busy, setBusy] = useState(false);
   const [writeErr, setWriteErr] = useState<string | null>(null);
   async function set(next: string | null) {

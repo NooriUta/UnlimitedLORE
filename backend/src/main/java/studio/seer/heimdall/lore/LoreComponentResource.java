@@ -52,6 +52,8 @@ public class LoreComponentResource extends LoreResourceBase {
             csql.append(" WHERE component_id=:cid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 csql.toString(), p)).await().indefinitely();
+            // ADR-LORE-012 level B: keep the IN_AREA edge in sync with the string.
+            if (req.area() != null) relinkAreaEdge(req.component_id(), req.area());
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
@@ -109,6 +111,8 @@ public class LoreComponentResource extends LoreResourceBase {
                     req.component_id(), req.parent_id()),
                     Map.of())).await().indefinitely();
             }
+            // ADR-LORE-012 level B: keep the IN_AREA edge in sync with the string.
+            if (req.area() != null) relinkAreaEdge(req.component_id(), req.area());
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT CREATE] %s: %s", req.component_id(), e.getMessage());
