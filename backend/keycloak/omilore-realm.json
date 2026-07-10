@@ -77,6 +77,5 @@
         }
       ]
     }
-  ],
-  "_notes": "Import into the shared KC (aida-root-keycloak-1, http://localhost:18180/kc). Assign the 'admin' realm role to the lore-mcp service-account user so MCP writes pass requireAdmin. Rotate the lore-mcp secret before any non-local use. Realm roles land in the 'seer_roles' access-token claim (matches quarkus.oidc.roles.role-claim-path)."
+  ]
 }

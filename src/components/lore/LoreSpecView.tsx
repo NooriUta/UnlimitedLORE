@@ -7,24 +7,24 @@ const S = {
   root:  { flex: 1, overflowY: 'auto' as const, padding: '12px 20px' },
   back: {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--acc)', fontSize: 12, padding: '0 0 12px', display: 'block',
+    color: 'var(--acc)', fontSize: 'var(--fs-base)', padding: '0 0 12px', display: 'block',
   },
   header: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' as const },
-  title:  { fontSize: 16, fontWeight: 600, color: 'var(--t1)' },
+  title:  { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
   compChip: {
-    padding: '2px 7px', borderRadius: 3, fontSize: 11,
+    padding: '2px 7px', borderRadius: 3, fontSize: 'var(--fs-sm)',
     background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
     cursor: 'pointer', whiteSpace: 'nowrap' as const,
   },
-  meta:    { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' as const, fontSize: 11, color: 'var(--t3)' },
-  sid:     { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' },
+  meta:    { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' as const, fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  sid:     { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   summary: {
-    fontSize: 12, color: 'var(--t2)', fontStyle: 'italic' as const,
+    fontSize: 'var(--fs-base)', color: 'var(--t2)', fontStyle: 'italic' as const,
     borderLeft: '2px solid var(--b3)', padding: '2px 0 2px 10px', marginBottom: 14,
   },
-  path:  { marginTop: 18, paddingTop: 10, borderTop: '1px solid var(--bd)', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' },
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  path:  { marginTop: 18, paddingTop: 10, borderTop: '1px solid var(--bd)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
 
 export function specTitle(s: { title: string | null; spec_id: string }): string {

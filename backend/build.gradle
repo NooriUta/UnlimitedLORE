@@ -46,12 +46,17 @@ dependencies {
     // S3-compatible object storage (MinIO) — BRAGI asset uploads.
     // AWS SDK v2, plain library (no dedicated Quarkus extension needed for
     // this use case) — pins its own BOM since it isn't part of the Quarkus platform.
-    implementation enforcedPlatform('software.amazon.awssdk:bom:2.29.52')
+    implementation enforcedPlatform('software.amazon.awssdk:bom:2.47.4')
     implementation 'software.amazon.awssdk:s3'
     implementation 'software.amazon.awssdk:url-connection-client'
 
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
+
+    // C5 (SPRINT_LORE_PROD_HARDENING): real ArcadeDB in a throwaway container
+    // for SCD2-transition and A1-rollback tests — not part of the Quarkus
+    // platform BOM, so pinned directly.
+    testImplementation 'org.testcontainers:testcontainers:1.20.4'
 }
 
 compileJava.options.encoding     = 'UTF-8'

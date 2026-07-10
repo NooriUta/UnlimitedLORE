@@ -71,6 +71,13 @@ public class LoreSchemaInitializer {
 
     // ── Vertex types ──────────────────────────────────────────────────────────
     private static final List<String> DDL = List.of(
+        // ArcadeDB's own base types — NOT auto-present on a freshly `create
+        // database`'d instance (only discovered via C5's testcontainer run
+        // against a genuinely empty DB; the shared system_aida_lore has had
+        // these for years, which is why this was never hit in prod). Safe to
+        // leave here permanently: IF NOT EXISTS makes it a no-op there.
+        "CREATE VERTEX TYPE V IF NOT EXISTS",
+        "CREATE EDGE TYPE E IF NOT EXISTS",
         // Справочники
         "CREATE VERTEX TYPE LoreComponent    IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE LoreTechnology   IF NOT EXISTS EXTENDS V",
@@ -139,6 +146,38 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE REFERENCES_ADR   IF NOT EXISTS EXTENDS E",
 
         // ── Unique indexes on PK fields ───────────────────────────────────────
+        // NB 2026-07-10: CREATE INDEX ... UNIQUE does NOT implicitly create the
+        // property either (the 2026-07-01 note below only checked NOTUNIQUE) —
+        // on a truly fresh DB it fails with "Cannot create the index on type
+        // 'X.y' because the property does not exist". Found via C5's ArcadeDB
+        // testcontainer run: the shared system_aida_lore has carried these
+        // properties for years, which is why this never surfaced in prod.
+        // Explicit CREATE PROPERTY first, for every PK field below.
+        "CREATE PROPERTY LoreComponent.component_id   IF NOT EXISTS STRING",
+        "CREATE PROPERTY LoreTechnology.tech_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY LoreTag.tag_id               IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusDecision.status_id     IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusAdr.status_id          IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusSprint.status_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusMilestone.status_id    IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusTask.status_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusPhase.status_id        IF NOT EXISTS STRING",
+        "CREATE PROPERTY TrackType.type_id            IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanTrack.track_id           IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanSection.section_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanConfig.config_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDecision.decision_id     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowADR.adr_id               IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowTag.tag_id               IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSprint.sprint_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSpec.spec_id             IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowFinding.finding_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowRelease.release_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowMilestone.milestone_id   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowPhase.phase_uid          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowTask.task_uid            IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanCheckpoint.checkpoint_id IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanVersion.version_id       IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON LoreComponent   (component_id) UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON LoreTechnology  (tech_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON LoreTag         (tag_id)       UNIQUE",
@@ -217,6 +256,10 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowRunbookHist.valid_from  IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowRunbookHist.valid_to    IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowRunbookHist.content_md  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowRunbook.runbook_id      IF NOT EXISTS STRING",
+        "CREATE PROPERTY QualityGate.qg_id           IF NOT EXISTS STRING",
+        "CREATE PROPERTY QGMetric.metric_id          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDoc.doc_id              IF NOT EXISTS STRING",
 
         "CREATE INDEX IF NOT EXISTS ON KnowRunbook    (runbook_id)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (state_uid)  UNIQUE",
@@ -433,11 +476,15 @@ public class LoreSchemaInitializer {
         // ── SPRINT_PLANITEM_RETIRE: planning fields move from PlanItem onto
         // KnowSprint/KnowSprintHist directly (see ADR + memory lore_milestone_
         // sprint_via_planitem for the "why"). planned_start_date/planned_end_date/
-        // planned_milestone_id/track_id are SCD2-tracked (same read pattern as
-        // priority: out('HAS_STATE')[field IS NOT NULL].field[0]) — hence on
-        // KnowSprintHist, not the vertex. created_date is a one-time vertex stamp,
-        // deliberately NOT on the hist chain (must survive every SCD2 transition
-        // unchanged, so it can't live on a row that gets replaced).
+        // track_id are SCD2-tracked (same read pattern as priority:
+        // out('HAS_STATE')[field IS NOT NULL].field[0]) — hence on KnowSprintHist,
+        // not the vertex. created_date is a one-time vertex stamp, deliberately
+        // NOT on the hist chain (must survive every SCD2 transition unchanged, so
+        // it can't live on a row that gets replaced).
+        // planned_milestone_id (plain field) retired — the TARGETS_MILESTONE edge
+        // is now the sole source of truth for sprint↔milestone. The field drifted
+        // out of sync with the edge on 62+ sprints in production (two independent
+        // write paths, no reconciliation) before being removed entirely.
         "CREATE PROPERTY KnowSprint.created_date          IF NOT EXISTS STRING",
         // Vertex-only flag (no history needed) — excluded from deploy-lag/
         // unreleased-burn metrics when true (docs-only/research/tooling sprints
@@ -445,7 +492,6 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowSprint.no_release_required   IF NOT EXISTS BOOLEAN",
         "CREATE PROPERTY KnowSprintHist.planned_start_date IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.planned_end_date   IF NOT EXISTS STRING",
-        "CREATE PROPERTY KnowSprintHist.planned_milestone_id IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.track_id           IF NOT EXISTS STRING"
     );
 }

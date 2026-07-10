@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
@@ -211,7 +212,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                 <div
                   key={uid}
                   style={{ ...S.row, ...(narrow ? S.rowNarrow : null), background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
-                  onClick={() => toggle(uid, tag, ruid, r.git_tag ?? null)}
+                  {...a11yClick(() => toggle(uid, tag, ruid, r.git_tag ?? null))}
                 >
                   <div style={S.tagCell}>
                     <span style={{ ...S.tag, ...(type === 'major' ? S.tagMajor : type === 'minor' ? S.tagMinor : S.tagPatch) }}>
@@ -246,7 +247,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                                 <div key={s.sprint_id} style={S.sprintBlock}>
                                   <div
                                     style={S.sprintRef}
-                                    onClick={() => onNavigateToSprint(s.sprint_id)}
+                                    {...a11yClick(() => onNavigateToSprint(s.sprint_id))}
                                     title={t('lore.releasesBoard.openSprintTitle', 'Открыть спринт {{id}}', { id: s.sprint_id })}
                                   >
                                     <span style={S.sprintId}>{s.sprint_id}</span>
@@ -350,11 +351,11 @@ const S = {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '6px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
-  count:      { fontSize: 11, color: 'var(--t3)' },
-  filterNote: { fontSize: 11, color: 'var(--acc)', display: 'inline-flex', alignItems: 'center', gap: 4 },
-  clearQ: { cursor: 'pointer', fontSize: 10, color: 'var(--t3)', padding: '0 2px' },
+  count:      { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  filterNote: { fontSize: 'var(--fs-sm)', color: 'var(--acc)', display: 'inline-flex', alignItems: 'center', gap: 4 },
+  clearQ: { cursor: 'pointer', fontSize: 'var(--fs-xs)', color: 'var(--t3)', padding: '0 2px' },
   resetBtn: {
-    fontSize: 10, padding: '2px 7px', borderRadius: 10, cursor: 'pointer',
+    fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 10, cursor: 'pointer',
     border: '1px solid color-mix(in srgb, var(--err) 40%, transparent)',
     color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 6%, transparent)',
   },
@@ -363,7 +364,7 @@ const S = {
     color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)',
   },
   projectTab: {
-    fontSize: 10, padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
+    fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 10, cursor: 'pointer',
     border: '1px solid var(--bd)', color: 'var(--t3)',
     background: 'transparent', transition: 'all 0.1s',
   },
@@ -372,18 +373,18 @@ const S = {
     color: 'var(--acc)', borderColor: 'color-mix(in srgb, var(--acc) 40%, transparent)',
   },
   prRepo: {
-    fontSize: 9, padding: '1px 4px', borderRadius: 3,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--war) 10%, transparent)',
     color: 'var(--war)', fontFamily: 'var(--mono)', flexShrink: 0,
   },
   repoBadge: {
-    fontSize: 9, padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)',
+    fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)',
     background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
     flexShrink: 0,
   },
   list:  { flex: 1, overflowY: 'auto' as const },
-  empty: { padding: '24px 16px', color: 'var(--t3)', fontSize: 12 },
+  empty: { padding: '24px 16px', color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 
   groupHeader: {
     display: 'flex', alignItems: 'center', gap: 8,
@@ -391,8 +392,8 @@ const S = {
     borderBottom: '1px solid var(--bd)', borderTop: '1px solid var(--bd)',
     position: 'sticky' as const, top: 0, zIndex: 1,
   },
-  groupLabel: { fontSize: 11, fontWeight: 700, color: 'var(--t2)', fontFamily: 'var(--mono)' },
-  groupCount: { fontSize: 10, color: 'var(--t3)' },
+  groupLabel: { fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--t2)', fontFamily: 'var(--mono)' },
+  groupCount: { fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
 
   row: {
     display: 'flex', alignItems: 'flex-start', gap: 10,
@@ -408,18 +409,18 @@ const S = {
   descNarrow: { flexBasis: '100%', width: '100%' },
   tagCell: { display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 },
   tag: {
-    fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', fontWeight: 700,
     minWidth: 72, flexShrink: 0, paddingTop: 1,
   },
   currentBadge: {
-    fontSize: 8, padding: '1px 4px', borderRadius: 3, fontWeight: 700,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 3, fontWeight: 700,
     letterSpacing: '0.06em', textTransform: 'uppercase' as const,
     background: 'color-mix(in srgb, var(--suc) 18%, transparent)',
     color: 'var(--suc)', border: '1px solid color-mix(in srgb, var(--suc) 35%, transparent)',
   },
   rowRight: { display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 },
   ghLink: {
-    fontSize: 11, color: 'var(--t3)', textDecoration: 'none', flexShrink: 0,
+    fontSize: 'var(--fs-sm)', color: 'var(--t3)', textDecoration: 'none', flexShrink: 0,
     padding: '1px 4px', borderRadius: 3,
     border: '1px solid color-mix(in srgb, var(--bd) 70%, transparent)',
     lineHeight: 1.4, transition: 'color 0.1s',
@@ -431,29 +432,29 @@ const S = {
   body: { flex: 1, minWidth: 0, display: 'flex', flexWrap: 'wrap' as const, alignItems: 'center', gap: 6 },
 
   typeBadge: {
-    fontSize: 9, padding: '1px 5px', borderRadius: 3, textTransform: 'uppercase' as const,
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, textTransform: 'uppercase' as const,
     letterSpacing: '0.08em', fontWeight: 700,
     background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
     color: 'var(--t3)', border: '1px solid color-mix(in srgb, var(--bd) 80%, transparent)',
   },
   weekBadge: {
-    fontSize: 10, padding: '1px 5px', borderRadius: 3,
+    fontSize: 'var(--fs-xs)', padding: '1px 5px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--t3) 8%, transparent)',
     color: 'var(--t3)', fontFamily: 'var(--mono)',
   },
   countBadge: {
-    fontSize: 10, padding: '1px 5px', borderRadius: 3,
+    fontSize: 'var(--fs-xs)', padding: '1px 5px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--acc) 8%, transparent)',
     color: 'var(--t3)', fontFamily: 'var(--mono)',
     border: '1px solid color-mix(in srgb, var(--acc) 20%, transparent)',
   },
-  desc: { fontSize: 11, color: 'var(--t2)' },
-  date: { fontSize: 10, color: 'var(--t3)', flexShrink: 0, paddingTop: 2 },
+  desc: { fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
+  date: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', flexShrink: 0, paddingTop: 2 },
 
   detail: { width: '100%', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--bd)' },
-  meta:   { fontSize: 11, color: 'var(--t3)' },
+  meta:   { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   refLabel: {
-    fontSize: 10, fontWeight: 600, color: 'var(--t3)',
+    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--t3)',
     textTransform: 'uppercase' as const, letterSpacing: '0.08em',
     display: 'block', marginBottom: 4,
   },
@@ -464,12 +465,12 @@ const S = {
     cursor: 'pointer',
   },
   sprintId: {
-    fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--acc)',
     fontWeight: 700, minWidth: 0, overflowWrap: 'anywhere' as const,
   },
-  sprintName: { fontSize: 11, color: 'var(--t2)', flex: '1 1 120px', minWidth: 0 },
+  sprintName: { fontSize: 'var(--fs-sm)', color: 'var(--t2)', flex: '1 1 120px', minWidth: 0 },
   taskCount: {
-    fontSize: 9, padding: '1px 4px', borderRadius: 2, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 2, flexShrink: 0,
     background: 'color-mix(in srgb, var(--acc) 8%, transparent)',
     color: 'var(--t3)', border: '1px solid color-mix(in srgb, var(--acc) 18%, transparent)',
   },
@@ -484,15 +485,15 @@ const S = {
     background: done ? 'var(--suc)' : 'var(--acc)',
     opacity: done ? 0.5 : 1,
   }),
-  taskId: { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)', flexShrink: 0 },
-  taskTitle: { fontSize: 10, color: 'var(--t2)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  taskId: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--acc)', flexShrink: 0 },
+  taskTitle: { fontSize: 'var(--fs-xs)', color: 'var(--t2)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   decisionRef: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '3px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)',
   },
   decisionNum: {
-    fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--acc)',
     fontWeight: 700, minWidth: 38, flexShrink: 0,
   },
-  decisionTitle: { fontSize: 11, color: 'var(--t2)', flex: 1 },
+  decisionTitle: { fontSize: 'var(--fs-sm)', color: 'var(--t2)', flex: 1 },
 };

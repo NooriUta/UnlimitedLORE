@@ -10,6 +10,10 @@ const err = (e: unknown) => ({
   isError: true,
 });
 
+// zod v4 dropped z.objectOutputType — z.infer<z.ZodObject<S>> is the direct
+// replacement for a plain shape (no catchall needed by any call site here).
+type ShapeOutput<S extends z.ZodRawShape> = z.infer<z.ZodObject<S>>;
+
 // Factory for the common write-tool shape: validate against `schema`, POST the
 // mapped body to `path`, wrap the result in json()/err(). Removes the repeated
 // try/catch boilerplate that every straight-through tool used to inline. Tools
@@ -21,13 +25,13 @@ function definePostTool<S extends z.ZodRawShape>(
     description: string;
     schema: S;
     path: string;
-    body: (args: z.objectOutputType<S, z.ZodTypeAny>) => Record<string, unknown>;
+    body: (args: ShapeOutput<S>) => Record<string, unknown>;
   },
 ): void {
   // The SDK's server.tool overloads don't unify cleanly with a generic shape, so
   // the registration is cast. Per-call-site type safety comes from `def.body`
   // being checked against `S`; runtime validation is the zod `schema` itself.
-  const handler = async (args: z.objectOutputType<S, z.ZodTypeAny>) => {
+  const handler = async (args: ShapeOutput<S>) => {
     try {
       return json(await lorePost(def.path, def.body(args)));
     } catch (e) {
@@ -286,10 +290,9 @@ export function registerLoreWrite(server: McpServer): void {
 
   definePostTool(server, {
     name: 'lore_link_sprint_milestone',
-    description: 'Link (or unlink) a KnowSprint directly to a KnowMilestone via a TARGETS_MILESTONE edge — ' +
-      'the canonical way to assign a sprint to a milestone (factual attachment; for the separately-' +
-      'tracked "planned" attachment use lore_update_sprint\'s planned_milestone_id via ' +
-      'POST /lore/sprint/plan, no MCP tool wired to it yet). ' +
+    description: 'Link (or unlink) a KnowSprint to a KnowMilestone via a TARGETS_MILESTONE edge — ' +
+      'the sole way to assign a sprint to a milestone (a separate planned_milestone_id field used to ' +
+      'exist alongside this edge; it drifted out of sync on 62+ sprints and was retired). ' +
       'Idempotent on add. Use action="remove" to unlink. Returns {ok, sprint_id, milestone_id, action}.',
     schema: {
       sprint_id:    z.string().describe('sprint id, e.g. "SPRINT_LORE_QG_INTEGRATION"'),

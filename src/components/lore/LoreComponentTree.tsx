@@ -3,32 +3,25 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreComponent, type LoreSpecRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { specTitle } from './LoreSpecView';
-
-const AREA_COLOR: Record<string, string> = {
-  data:          '#29b6f6',
-  engine:        '#4caf50',
-  algorithm:     '#26a69a',
-  ai:            '#ab47bc',
-  api:           '#2196f3',
-  frontend:      '#9c27b0',
-  observability: '#ff7043',
-  platform:      '#ff9800',
-  security:      '#ef5350',
-};
+// T16: this file used to carry its own hex-hardcoded area palette, independent
+// of (and inconsistent with) LoreComponentList's token-based one — same area
+// name, two different colors depending which surface you were looking at.
+// Reuse the one source of truth instead.
+import { areaColor } from './LoreComponentList';
 
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, padding: '4px 0' },
   row: (indent: number, clickable: boolean, selected: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 6,
     padding: '5px 10px', paddingLeft: 6 + indent * 14,
-    fontSize: 12, lineHeight: 1.3,
+    fontSize: 'var(--fs-base)', lineHeight: 1.3,
     cursor: clickable ? 'pointer' : 'default',
     background: selected ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
     borderLeft: `2px solid ${selected ? 'var(--acc)' : 'transparent'}`,
     transition: 'background 0.1s',
   }),
   chevron: (open: boolean) => ({
-    flexShrink: 0, width: 12, textAlign: 'center' as const, fontSize: 9,
+    flexShrink: 0, width: 12, textAlign: 'center' as const, fontSize: 'var(--fs-2xs)',
     color: 'var(--t3)', cursor: 'pointer', userSelect: 'none' as const,
     transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.1s',
   }),
@@ -42,15 +35,15 @@ const S = {
     flex: 1, minWidth: 0, color: 'var(--t2)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
   },
-  count: { color: 'var(--t3)', fontSize: 9, flexShrink: 0 },
+  count: { color: 'var(--t3)', fontSize: 'var(--fs-2xs)', flexShrink: 0 },
   area: (a: string) => {
-    const c = AREA_COLOR[a] ?? 'var(--t3)';
+    const c = areaColor(a);
     return {
-      fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0, whiteSpace: 'nowrap' as const,
+      fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, whiteSpace: 'nowrap' as const,
       color: c, background: `color-mix(in srgb, ${c} 14%, transparent)`,
     };
   },
-  empty:   { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  empty:   { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
 
 interface Props {

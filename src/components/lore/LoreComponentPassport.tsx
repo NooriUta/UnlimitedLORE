@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
   updateLoreComponent,
@@ -11,10 +12,13 @@ import {
   type LoreSpecPassport,
   type LoreSprintRow,
   type LoreSprintTask,
+  type LoreKnowDocRow,
+  type LoreKnowDoc,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor, compArea } from './LoreComponentList';
+import { MartProse } from '../bench/MartProse';
 
 interface QGRow {
   qg_id: string;
@@ -37,12 +41,13 @@ interface ComponentSprintRow {
   release_ids: string[] | null;
 }
 
-type DocTab = 'adr' | 'spec' | 'qg' | 'sprint';
+type DocTab = 'adr' | 'spec' | 'qg' | 'doc' | 'sprint';
 
 type DocContent =
   | { type: 'spec';   data: LoreSpecPassport }
   | { type: 'qg';    data: QGPassport }
   | { type: 'adr';   data: LoreAdrPassport }
+  | { type: 'doc';   data: LoreKnowDoc }
   | { type: 'sprint'; data: LoreSprintRow; tasks: LoreSprintTask[] };
 
 // QG status labels/colors (mirrors LoreQualityGateList)
@@ -81,17 +86,17 @@ const S = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     color, background: `color-mix(in srgb, ${color} 15%, transparent)`,
   }),
-  compId:   { fontSize: 14, fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' },
-  fullName: { fontSize: 11, color: 'var(--t2)', marginTop: 1 },
+  compId:   { fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' },
+  fullName: { fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginTop: 1 },
   titleCol: { flex: 1, minWidth: 0 },
   parentBtn: {
-    padding: '2px 7px', borderRadius: 4, fontSize: 10, flexShrink: 0,
+    padding: '2px 7px', borderRadius: 4, fontSize: 'var(--fs-xs)', flexShrink: 0,
     background: 'transparent', color: 'var(--acc)',
     border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     cursor: 'pointer', whiteSpace: 'nowrap' as const, display: 'flex', alignItems: 'center', gap: 3,
   },
   editBtn: {
-    padding: '2px 7px', borderRadius: 4, fontSize: 10, flexShrink: 0,
+    padding: '2px 7px', borderRadius: 4, fontSize: 'var(--fs-xs)', flexShrink: 0,
     background: 'transparent', color: 'var(--t3)',
     border: '1px solid var(--bd)', cursor: 'pointer',
   },
@@ -102,7 +107,7 @@ const S = {
   },
   metaChip: (color?: string) => ({
     display: 'flex', alignItems: 'center', gap: 4,
-    padding: '1px 7px', borderRadius: 3, fontSize: 10,
+    padding: '1px 7px', borderRadius: 3, fontSize: 'var(--fs-xs)',
     background: color
       ? `color-mix(in srgb, ${color} 12%, transparent)`
       : 'var(--b2)',
@@ -113,13 +118,13 @@ const S = {
     whiteSpace: 'nowrap' as const,
   }),
   techChip: {
-    fontFamily: 'var(--mono)', fontSize: 9,
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)',
     padding: '1px 6px', borderRadius: 3,
     background: 'var(--b2)', color: 'var(--t2)', border: '1px solid var(--bd)',
     whiteSpace: 'nowrap' as const,
   },
   childChip: (color: string) => ({
-    fontFamily: 'var(--mono)', fontSize: 9, cursor: 'pointer',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', cursor: 'pointer',
     padding: '1px 6px', borderRadius: 3,
     color, background: `color-mix(in srgb, ${color} 12%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
@@ -132,7 +137,7 @@ const S = {
     marginTop: 2,
   },
   tab: (active: boolean) => ({
-    padding: '5px 12px', fontSize: 10, fontWeight: 600,
+    padding: '5px 12px', fontSize: 'var(--fs-xs)', fontWeight: 600,
     letterSpacing: '0.03em', cursor: 'pointer',
     color: active ? 'var(--acc)' : 'var(--t3)',
     borderBottom: `2px solid ${active ? 'var(--acc)' : 'transparent'}`,
@@ -140,7 +145,7 @@ const S = {
     whiteSpace: 'nowrap' as const,
     display: 'flex', alignItems: 'center', gap: 4,
   }),
-  tabCnt: { fontSize: 9, opacity: 0.65 },
+  tabCnt: { fontSize: 'var(--fs-2xs)', opacity: 0.65 },
 
   // ── Doc list ──────────────────────────────────────────────────────────────
   docList: { maxHeight: 160, overflowY: 'auto' as const },
@@ -150,16 +155,16 @@ const S = {
     borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)',
     background: sel ? 'color-mix(in srgb, var(--acc) 7%, transparent)' : 'transparent',
   }),
-  docId:   { fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--acc)', fontWeight: 600, flexShrink: 0, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  docTitle:{ flex: 1, fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
+  docId:   { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--acc)', fontWeight: 600, flexShrink: 0, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  docTitle:{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, minWidth: 0 },
   docSt:   (color: string) => ({
-    fontSize: 9, color, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3,
+    fontSize: 'var(--fs-2xs)', color, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3,
     padding: '1px 5px', borderRadius: 3,
     background: `color-mix(in srgb, ${color} 14%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
   }),
-  docHint: { fontSize: 9, color: 'var(--t3)', flexShrink: 0, whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)' },
-  docEmpty:{ padding: '12px 14px', fontSize: 11, color: 'var(--t3)' },
+  docHint: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0, whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)' },
+  docEmpty:{ padding: '12px 14px', fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
 
   // ── BOTTOM: reader ────────────────────────────────────────────────────────
   reader: {
@@ -169,36 +174,36 @@ const S = {
     padding: '8px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
     display: 'flex', alignItems: 'flex-start', gap: 8,
   },
-  readerTitle:{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', flex: 1, minWidth: 0 },
+  readerTitle:{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--t1)', flex: 1, minWidth: 0 },
   readerBadge: (color: string) => ({
-    fontSize: 9, padding: '1px 6px', borderRadius: 3, fontWeight: 700,
+    fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, fontWeight: 700,
     fontFamily: 'var(--mono)', flexShrink: 0,
     color, background: `color-mix(in srgb, ${color} 14%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
   }),
   readerScroll: { flex: 1, overflowY: 'auto' as const, padding: '12px 16px' },
-  rH1:  { fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginTop: 14, marginBottom: 6 },
-  rH2:  { fontSize: 11, fontWeight: 700, color: 'var(--t2)', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
-  rH3:  { fontSize: 10, fontWeight: 600, color: 'var(--t3)', marginTop: 10, marginBottom: 3, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
-  rP:   { fontSize: 11, color: 'var(--t2)', lineHeight: 1.65, marginBottom: 8 },
-  rBullet: { fontSize: 11, color: 'var(--t2)', lineHeight: 1.7, paddingLeft: 10, marginBottom: 2 },
-  rCode:{ fontFamily: 'var(--mono)', fontSize: 10, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 3, padding: '1px 5px', color: 'var(--inf)' },
+  rH1:  { fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)', marginTop: 14, marginBottom: 6 },
+  rH2:  { fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--t2)', marginTop: 12, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.04em' },
+  rH3:  { fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--t3)', marginTop: 10, marginBottom: 3, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  rP:   { fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.65, marginBottom: 8 },
+  rBullet: { fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.7, paddingLeft: 10, marginBottom: 2 },
+  rCode:{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 3, padding: '1px 5px', color: 'var(--inf)' },
   rPre: {
-    fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t2)',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t2)',
     background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5,
     padding: '8px 12px', margin: '6px 0', whiteSpace: 'pre' as const,
     overflow: 'auto', lineHeight: 1.6,
   },
-  placeholder: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)', fontSize: 11 },
+  placeholder: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t3)', fontSize: 'var(--fs-sm)' },
 
   // ── Edit panel ────────────────────────────────────────────────────────────
   editPanel: { margin: '0 14px 10px', padding: '10px 12px', borderRadius: 6, background: 'var(--b2)', border: '1px solid var(--bd)' },
   editRow:   { display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' },
-  editLabel: { fontSize: 10, color: 'var(--t3)', width: 68, flexShrink: 0, textTransform: 'uppercase' as const },
-  editInput: { flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 11, background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)', fontFamily: 'inherit', outline: 'none' },
+  editLabel: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', width: 68, flexShrink: 0, textTransform: 'uppercase' as const },
+  editInput: { flex: 1, padding: '3px 7px', borderRadius: 4, fontSize: 'var(--fs-sm)', background: 'var(--b1)', border: '1px solid var(--bd)', color: 'var(--t1)', fontFamily: 'inherit', outline: 'none' },
   editActions:{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' as const },
-  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'var(--acc)', color: '#fff', border: 'none', fontFamily: 'inherit' },
-  cancelBtn: { padding: '3px 10px', borderRadius: 4, fontSize: 11, cursor: 'pointer', background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)', fontFamily: 'inherit' },
+  saveBtn:   { padding: '3px 10px', borderRadius: 4, fontSize: 'var(--fs-sm)', cursor: 'pointer', background: 'var(--acc)', color: 'var(--on-accent)', border: 'none', fontFamily: 'inherit' },
+  cancelBtn: { padding: '3px 10px', borderRadius: 4, fontSize: 'var(--fs-sm)', cursor: 'pointer', background: 'transparent', color: 'var(--t3)', border: '1px solid var(--bd)', fontFamily: 'inherit' },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -207,104 +212,12 @@ function stLabel(s: string | null | undefined) {
   return (s ?? '').toUpperCase().replace('_', ' ');
 }
 
-function inlineMd(text: string): ReactNode {
-  const boldM = /\*\*([^*\n]+)\*\*/.exec(text);
-  const codeM = /`([^`\n]+)`/.exec(text);
-  const candidates = ([
-    boldM && { m: boldM, type: 'bold' as const },
-    codeM && { m: codeM, type: 'code' as const },
-  ] as Array<{ m: RegExpExecArray; type: 'bold' | 'code' } | false>)
-    .filter((x): x is { m: RegExpExecArray; type: 'bold' | 'code' } => Boolean(x))
-    .sort((a, b) => a.m.index - b.m.index);
-  if (!candidates.length) return text;
-  const { m, type } = candidates[0];
-  const before = text.slice(0, m.index);
-  const inner  = m[1];
-  const rest   = text.slice(m.index + m[0].length);
-  const restNode = rest ? inlineMd(rest) : null;
-  if (type === 'bold')
-    return <>{before}<strong style={{ color: 'var(--t1)', fontWeight: 600 }}>{inner}</strong>{restNode}</>;
-  return <>{before}<code style={{ fontFamily: 'var(--mono)', fontSize: '0.88em', background: 'color-mix(in srgb, var(--acc) 10%, var(--b3))', padding: '1px 4px', borderRadius: 3, color: 'var(--acc)' }}>{inner}</code>{restNode}</>;
-}
-
-function renderMd(md: string | null | undefined): ReactNode {
-  if (!md?.trim()) return null;
-  const nodes: ReactNode[] = [];
-  let preLines: string[] = [];
-  let preLang = '';
-  let inPre = false;
-  md.split('\n').forEach((line, i) => {
-    if (line.startsWith('```')) {
-      if (inPre) {
-        if (preLang === 'mermaid') {
-          nodes.push(<MermaidBlock key={`mermaid-${i}`} code={preLines.join('\n')} />);
-        } else {
-          nodes.push(<pre key={`pre-${i}`} style={S.rPre}>{preLines.join('\n')}</pre>);
-        }
-        preLines = []; preLang = ''; inPre = false;
-      } else { inPre = true; preLang = line.slice(3).trim().toLowerCase(); }
-      return;
-    }
-    if (inPre) { preLines.push(line); return; }
-    if (!line.trim()) return;
-    if (line === '---' || line === '***' || line === '___')
-      nodes.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid var(--bd)', margin: '8px 0' }} />);
-    else if (line.startsWith('# '))        nodes.push(<div key={i} style={S.rH1}>{inlineMd(line.slice(2))}</div>);
-    else if (line.startsWith('## '))       nodes.push(<div key={i} style={S.rH2}>{inlineMd(line.slice(3))}</div>);
-    else if (line.startsWith('### '))      nodes.push(<div key={i} style={S.rH3}>{inlineMd(line.slice(4))}</div>);
-    else if (line.startsWith('- ') || line.startsWith('* '))
-      nodes.push(<div key={i} style={S.rBullet}>{'• '}{inlineMd(line.slice(2))}</div>);
-    else if (/^\d+\.\s/.test(line)) {
-      const dot = line.indexOf('. ');
-      nodes.push(
-        <div key={i} style={{ ...S.rBullet, display: 'flex', gap: 5, paddingLeft: 0 }}>
-          <span style={{ color: 'var(--t3)', flexShrink: 0 }}>{line.slice(0, dot + 1)}</span>
-          <span>{inlineMd(line.slice(dot + 2))}</span>
-        </div>
-      );
-    } else
-      nodes.push(<p key={i} style={S.rP}>{inlineMd(line)}</p>);
-  });
-  if (inPre && preLines.length) {
-    if (preLang === 'mermaid') {
-      nodes.push(<MermaidBlock key="mermaid-end" code={preLines.join('\n')} />);
-    } else {
-      nodes.push(<pre key="pre-end" style={S.rPre}>{preLines.join('\n')}</pre>);
-    }
-  }
-  return nodes;
-}
-
-let _mermaidId = 0;
-function MermaidBlock({ code }: { code: string }) {
-  const { t } = useTranslation();
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !code.trim()) return;
-    const id = `mm-${++_mermaidId}`;
-    import('mermaid').then(m => {
-      m.default.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
-      m.default.render(id, code).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg;
-      }).catch(() => {
-        if (ref.current) ref.current.textContent = code;
-      });
-    });
-  }, [code]);
-  return (
-    <div style={{ margin: '8px 0', padding: '8px', background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 5, overflow: 'auto' }}>
-      <div ref={ref} style={{ fontSize: 11, color: 'var(--t3)' }}>{t('lore.componentPassport.mermaidRendering', 'Рендеринг диаграммы…')}</div>
-    </div>
-  );
-}
-
 function MdBlock({ md, label }: { md: string | null | undefined; label: string }) {
   if (!md?.trim()) return null;
   return (
     <>
       <div style={S.rH2}>{label}</div>
-      {renderMd(md)}
+      <MartProse text={md} style={S.rP} />
     </>
   );
 }
@@ -320,11 +233,12 @@ interface Props {
 export default function LoreComponentPassport({
   componentId, onError, onNavigateComponent,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [comp, setComp]       = useState<LoreComponentDetail | null>(null);
   const [adrs, setAdrs]       = useState<LoreAdrRow[]>([]);
   const [specs, setSpecs]     = useState<LoreSpecRow[]>([]);
   const [qgs, setQgs]         = useState<QGRow[]>([]);
+  const [docs, setDocs]       = useState<LoreKnowDocRow[]>([]);
   const [sprints, setSprints] = useState<ComponentSprintRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -363,7 +277,7 @@ export default function LoreComponentPassport({
 
   // ── Data load ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    setLoading(true); setComp(null); setAdrs([]); setSpecs([]); setQgs([]);
+    setLoading(true); setComp(null); setAdrs([]); setSpecs([]); setQgs([]); setDocs([]);
     setSprints([]); setEditing(false); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
     setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
     const ctrl = new AbortController();
@@ -373,10 +287,14 @@ export default function LoreComponentPassport({
       fetchLoreSlice<LoreAdrRow>          ('adrs',           { component: componentId }, ctrl.signal),
       fetchLoreSlice<LoreSpecRow>         ('specs',          { component: componentId }, ctrl.signal),
       fetchLoreSlice<QGRow>               ('quality_gates',  { component: componentId }, ctrl.signal),
+      // 'docs' has no server-side component filter (LoreArtifactList/LoreDocView
+      // fetch it unfiltered too) — filter client-side below.
+      fetchLoreSlice<LoreKnowDocRow>      ('docs',           undefined,                 ctrl.signal),
     ])
-      .then(([compRows, adrRows, specRows, qgRows]) => {
+      .then(([compRows, adrRows, specRows, qgRows, docRows]) => {
         const c = compRows[0] ?? null;
         setComp(c); setAdrs(adrRows); setSpecs(specRows); setQgs(qgRows);
+        setDocs(docRows.filter(d => d.component_id === componentId));
         setEditOwner(c?.owner ?? '');
         setEditTeam(c?.team ?? '');
         setEditIcon(c?.game_icon ?? '');
@@ -409,6 +327,9 @@ export default function LoreComponentPassport({
       } else if (docTab === 'adr') {
         const rows = await fetchLoreSlice<LoreAdrPassport>('adr', { id: selDocId }, ctrl.signal);
         if (rows[0]) setDocContent({ type: 'adr', data: rows[0] });
+      } else if (docTab === 'doc') {
+        const rows = await fetchLoreSlice<LoreKnowDoc>('doc_by_id', { id: selDocId }, ctrl.signal);
+        if (rows[0]) setDocContent({ type: 'doc', data: rows[0] });
       } else {
         const [sprintRows, taskRows] = await Promise.all([
           fetchLoreSlice<LoreSprintRow>('sprint_tree', { id: selDocId }, ctrl.signal),
@@ -451,8 +372,8 @@ export default function LoreComponentPassport({
     finally { setSaving(false); }
   };
 
-  if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>{t('lore.componentPassport.loading', 'Загрузка')} {componentId}…</div>;
-  if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 12 }}>{t('lore.componentPassport.notFound', 'Не найден:')} {componentId}</div>;
+  if (loading) return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>{t('lore.componentPassport.loading', 'Загрузка')} {componentId}…</div>;
+  if (!comp)   return <div style={{ padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>{t('lore.componentPassport.notFound', 'Не найден:')} {componentId}</div>;
 
   const color   = areaColor(compArea(comp));
   const tech    = comp.tech ?? [];
@@ -462,6 +383,7 @@ export default function LoreComponentPassport({
     { key: 'adr',    label: t('lore.componentPassport.tabs.adr', 'ADR'),     count: adrs.length    },
     { key: 'spec',   label: t('lore.componentPassport.tabs.spec', 'Spec'),    count: specs.length   },
     { key: 'qg',     label: t('lore.componentPassport.tabs.qg', 'QG'),      count: qgs.length     },
+    { key: 'doc',    label: t('lore.componentPassport.tabs.doc', 'Знания'),  count: docs.length    },
     { key: 'sprint', label: t('lore.componentPassport.tabs.sprints', 'Спринты'), count: sprints.length },
   ];
 
@@ -469,6 +391,7 @@ export default function LoreComponentPassport({
     docTab === 'adr'    ? adrs.map(a => ({ id: a.adr_id, title: a.name ?? a.adr_id, status: a.status }))
     : docTab === 'spec' ? specs.map(s => ({ id: s.spec_id, title: s.title ?? s.spec_id, status: null, hint: s.file_path?.split('/').pop() ?? null }))
     : docTab === 'qg'   ? qgs.map(q => ({ id: q.qg_id, title: q.name, status: q.status, hint: q.date_created?.slice(0, 10) ?? null }))
+    : docTab === 'doc'  ? docs.map(d => ({ id: d.doc_id, title: d.title ?? d.doc_id, status: null, hint: d.kind }))
     : sprints
         .map(s => { const { status } = taskTick(s.status_raw); return { id: s.sprint_id, title: s.name ?? s.sprint_id, status, releases: s.release_ids }; })
         .filter(r => sprintStatusFilter.size === 0 || sprintStatusFilter.has(r.status ?? ''));
@@ -482,7 +405,7 @@ export default function LoreComponentPassport({
           <div style={S.iconLg(color)}>
             {comp.game_icon
               ? <GameIcon slug={comp.game_icon} size={16} style={{ color: 'inherit' }} />
-              : <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700 }}>{comp.component_id[0]}</span>}
+              : <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', fontWeight: 700 }}>{comp.component_id[0]}</span>}
           </div>
           <div style={S.titleCol}>
             <div style={S.compId}>{comp.component_id}</div>
@@ -547,7 +470,11 @@ export default function LoreComponentPassport({
         {/* Doc tabs */}
         <div style={S.tabsRow}>
           {tabList.map(t => (
-            <div key={t.key} style={S.tab(docTab === t.key)} onClick={() => { setDocTab(t.key); setSelDocId(null); setDocContent(null); setSprintStatusFilter(new Set()); setSelTaskUid(null); setTaskStatusFilter(new Set()); }}>
+            <div key={t.key} style={S.tab(docTab === t.key)} aria-pressed={docTab === t.key}
+              {...a11yClick(() => {
+                setDocTab(t.key); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
+                setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
+              })}>
               {t.label}
               {t.count > 0 && <span style={S.tabCnt}>{t.count}</span>}
             </div>
@@ -584,7 +511,7 @@ export default function LoreComponentPassport({
                     }}
                   >
                     <GameIcon slug={sm.icon} size={9} style={{ color: sm.color }} />
-                    <span style={{ fontSize: 9, color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 600 }}>{n}</span>
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 600 }}>{n}</span>
                   </div>
                 );
               })}
@@ -616,11 +543,11 @@ export default function LoreComponentPassport({
                   {d.releases && d.releases.length > 0 && (
                     <span style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
                       {d.releases.slice(0, 2).map(r => (
-                        <span key={r} style={{ fontSize: 8, padding: '1px 4px', borderRadius: 3, background: 'color-mix(in srgb, var(--inf) 12%, transparent)', color: 'var(--inf)', border: '1px solid color-mix(in srgb, var(--inf) 25%, transparent)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const }}>
+                        <span key={r} style={{ fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 3, background: 'color-mix(in srgb, var(--inf) 12%, transparent)', color: 'var(--inf)', border: '1px solid color-mix(in srgb, var(--inf) 25%, transparent)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const }}>
                           {r}
                         </span>
                       ))}
-                      {d.releases.length > 2 && <span style={{ fontSize: 8, color: 'var(--t3)' }}>+{d.releases.length - 2}</span>}
+                      {d.releases.length > 2 && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>+{d.releases.length - 2}</span>}
                     </span>
                   )}
                   {sm && (
@@ -663,12 +590,14 @@ export default function LoreComponentPassport({
                 {docContent.type === 'adr'    && (docContent.data.name ?? docContent.data.adr_id)}
                 {docContent.type === 'spec'   && (docContent.data.title ?? docContent.data.spec_id)}
                 {docContent.type === 'qg'     && docContent.data.name}
+                {docContent.type === 'doc'    && (docContent.data.title ?? docContent.data.doc_id)}
                 {docContent.type === 'sprint' && (docContent.data.name ?? docContent.data.sprint_id)}
               </div>
               <span style={S.readerBadge(
                 docContent.type === 'adr'    ? 'var(--acc)' :
                 docContent.type === 'spec'   ? 'var(--inf)' :
-                docContent.type === 'qg'     ? 'var(--wrn)' : 'var(--suc)'
+                docContent.type === 'qg'     ? 'var(--wrn)' :
+                docContent.type === 'doc'    ? 'var(--kind-doc)' : 'var(--suc)'
               )}>
                 {docContent.type.toUpperCase()}
               </span>
@@ -692,6 +621,15 @@ export default function LoreComponentPassport({
                   )}
                 </>
               )}
+              {docContent.type === 'doc' && (() => {
+                const preferred = i18n.language?.startsWith('ru') ? docContent.data.content_md_ru : docContent.data.content_md_en;
+                const md = preferred ?? docContent.data.content_md_en ?? docContent.data.content_md_ru;
+                if (md) return <MartProse text={md} style={S.rP} />;
+                if (docContent.data.content_html) {
+                  return <p style={S.rP}>{t('lore.componentPassport.reader.docHtmlOnly', 'Документ хранится как HTML — откройте его во вкладке «Знания» для просмотра.')}</p>;
+                }
+                return <p style={S.rP}>{t('lore.componentPassport.reader.contentEmpty', 'Содержимое не заполнено.')}</p>;
+              })()}
               {docContent.type === 'qg' && (
                 <>
                   {docContent.data.description && <p style={S.rP}>{docContent.data.description}</p>}
@@ -710,7 +648,7 @@ export default function LoreComponentPassport({
                     {status !== 'todo' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
                         <GameIcon slug={sm.icon} size={12} style={{ color: sm.color }} />
-                        <span style={{ fontSize: 10, color: sm.color, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>
+                        <span style={{ fontSize: 'var(--fs-xs)', color: sm.color, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>
                           {stLabel(status)}
                         </span>
                       </div>
@@ -748,7 +686,7 @@ export default function LoreComponentPassport({
                                     }}
                                   >
                                     <GameIcon slug={sm.icon} size={8} style={{ color: sm.color }} />
-                                    <span style={{ fontSize: 9, color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 400 }}>{n}</span>
+                                    <span style={{ fontSize: 'var(--fs-2xs)', color: sm.color, fontFamily: 'var(--mono)', fontWeight: active ? 700 : 400 }}>{n}</span>
                                   </div>
                                 );
                               })}
@@ -777,8 +715,8 @@ export default function LoreComponentPassport({
                                   }}
                                 >
                                   <GameIcon slug={tsm.icon} size={10} style={{ color: tsm.color, flexShrink: 0 }} />
-                                  <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--acc)', flexShrink: 0 }}>{t.task_id}</span>
-                                  <span style={{ fontSize: 11, color: ts === 'done' ? 'var(--t3)' : 'var(--t2)', flex: 1, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{t.title}</span>
+                                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--acc)', flexShrink: 0 }}>{t.task_id}</span>
+                                  <span style={{ fontSize: 'var(--fs-sm)', color: ts === 'done' ? 'var(--t3)' : 'var(--t2)', flex: 1, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{t.title}</span>
                                 </div>
                               );
                             })}
@@ -791,11 +729,11 @@ export default function LoreComponentPassport({
                             const tsm = statusMeta(ts);
                             return (
                               <div style={{ flex: 1, minWidth: 0, borderLeft: `2px solid color-mix(in srgb, ${tsm.color} 35%, transparent)`, paddingLeft: 10 }}>
-                                <div style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{activeTask.task_id}</div>
-                                <div style={{ fontSize: 11, color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{activeTask.title}</div>
+                                <div style={{ fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', color: 'var(--acc)', marginBottom: 4 }}>{activeTask.task_id}</div>
+                                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t1)', fontWeight: 500, marginBottom: 6, lineHeight: 1.4 }}>{activeTask.title}</div>
                                 {activeTask.note_md?.trim()
-                                  ? renderMd(activeTask.note_md)
-                                  : <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t('lore.componentPassport.reader.notesEmpty', 'Заметки не заполнены')}</span>}
+                                  ? <MartProse text={activeTask.note_md} style={S.rP} />
+                                  : <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{t('lore.componentPassport.reader.notesEmpty', 'Заметки не заполнены')}</span>}
                               </div>
                             );
                           })()}

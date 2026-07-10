@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreTimelineItem } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
@@ -19,7 +20,7 @@ const S = {
   },
   chip: (on: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-    padding: '2px 8px', borderRadius: 10, fontSize: 10,
+    padding: '2px 8px', borderRadius: 10, fontSize: 'var(--fs-xs)',
     border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
     background: on ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
     color: on ? 'var(--t1)' : 'var(--t3)',
@@ -29,15 +30,15 @@ const S = {
   item: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '7px 16px', borderBottom: '1px solid var(--bd)',
-    fontSize: 12, cursor: 'default',
+    fontSize: 'var(--fs-base)', cursor: 'default',
   },
-  date:    { color: 'var(--t3)', fontSize: 11, minWidth: 80, flexShrink: 0 },
-  icon:    { fontSize: 14, flexShrink: 0 },
-  kind:    { color: 'var(--t3)', fontSize: 10, minWidth: 62, flexShrink: 0, textTransform: 'uppercase' as const },
-  ref:     { color: 'var(--acc)', fontSize: 11, minWidth: 130, flexShrink: 0 },
+  date:    { color: 'var(--t3)', fontSize: 'var(--fs-sm)', minWidth: 80, flexShrink: 0 },
+  icon:    { fontSize: 'var(--fs-lg)', flexShrink: 0 },
+  kind:    { color: 'var(--t3)', fontSize: 'var(--fs-xs)', minWidth: 62, flexShrink: 0, textTransform: 'uppercase' as const },
+  ref:     { color: 'var(--acc)', fontSize: 'var(--fs-sm)', minWidth: 130, flexShrink: 0 },
   title:   { flex: 1, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  loading: { padding: 24, color: 'var(--t3)', fontSize: 12 },
-  empty:   { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  loading: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  empty:   { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
 
 interface AdrRow  { adr_id: string; date_created: string; component?: string }
@@ -152,15 +153,15 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
         {ALL_KINDS.map(k => {
           const on = kindSel.has(k);
           return (
-            <span key={k} style={S.chip(on)} onClick={() => toggleKind(k)}>
+            <span key={k} style={S.chip(on)} {...a11yClick(() => toggleKind(k))} aria-pressed={on}>
               <GameIcon slug={KIND_ICON[k]} size={11} />
               {KIND_LABEL[k]}
-              <span style={{ opacity: 0.6, fontSize: 9 }}>{counts[k] ?? 0}</span>
+              <span style={{ opacity: 0.6, fontSize: 'var(--fs-2xs)' }}>{counts[k] ?? 0}</span>
             </span>
           );
         })}
         {module && (
-          <span style={{ fontSize: 9, color: 'var(--t3)', marginLeft: 4 }}>
+          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginLeft: 4 }}>
             {t('lore.timeline.moduleFilter', '· фильтр по модулю {{module}} — только ADR', { module })}
           </span>
         )}

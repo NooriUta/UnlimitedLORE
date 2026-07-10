@@ -9,12 +9,14 @@
 // one); this is the first, chosen for React 19 support + markdown-native
 // serialization. Fresh install: @tiptap/react, @tiptap/starter-kit,
 // @tiptap/pm, tiptap-markdown.
+import { useTranslation } from 'react-i18next';
 import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import { TableKit } from '@tiptap/extension-table';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
+import { sanitizeMd } from './sanitizeHtml';
 import { Markdown } from 'tiptap-markdown';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { useEffect, useRef, useState } from 'react';
@@ -49,6 +51,7 @@ function parseWidthPercent(title: string | null | undefined): number {
 }
 
 function ResizableImageView({ node, updateAttributes, selected, editor }: NodeViewProps) {
+  const { t } = useTranslation();
   const wrapRef = useRef<HTMLElement | null>(null);
   const widthPct = parseWidthPercent(node.attrs.title as string | null);
 
@@ -88,7 +91,7 @@ function ResizableImageView({ node, updateAttributes, selected, editor }: NodeVi
       {editor.isEditable && selected && (
         <span
           onMouseDown={onHandleMouseDown}
-          title="изменить размер"
+          title={t('lore.tiptap.resize', 'изменить размер')}
           style={{
             position: 'absolute', right: -5, bottom: -5, width: 13, height: 13,
             background: 'var(--acc)', border: '2px solid var(--bg0)', borderRadius: '50%',
@@ -162,12 +165,17 @@ export interface TipTapFieldProps {
    * elsewhere: outside marketing content there's no reason to hand-author
    * HTML into a markdown field, and it's one less button to explain. */
   enableHtmlMode?: boolean;
+  /** T13: accessible name for the editable region — needed wherever this
+   * field has no visually-linked <label> (a <Sec> heading nearby doesn't
+   * count for a11y purposes). */
+  ariaLabel?: string;
 }
 
 export default function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
-  enableImages = true, enableHtmlMode = true,
+  enableImages = true, enableHtmlMode = true, ariaLabel,
 }: TipTapFieldProps) {
+  const { t } = useTranslation();
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -186,7 +194,10 @@ export default function TipTapField({
     content: value,
     editable,
     editorProps: {
-      attributes: { style: `min-height:${minHeight}px; outline: none;` },
+      attributes: {
+        style: `min-height:${minHeight}px; outline: none;`,
+        ...(ariaLabel ? { 'aria-label': ariaLabel, role: 'textbox' } : {}),
+      },
     },
     onUpdate: ({ editor }) => {
       onChangeRef.current(getMarkdown(editor));
@@ -248,7 +259,7 @@ export default function TipTapField({
       editor.commands.setContent(draft);
     } else if (mode === 'html') {
       const dom = document.createElement('div');
-      dom.innerHTML = draft;
+      dom.innerHTML = sanitizeMd(draft);
       const doc = PMDOMParser.fromSchema(editor.schema).parse(dom);
       const tr = editor.state.tr.replaceWith(0, editor.state.doc.content.size, doc.content);
       editor.view.dispatch(tr);
@@ -274,36 +285,36 @@ export default function TipTapField({
         <div style={S.toolbar}>
           {editor && (
             <>
-              <ToolBtn active={false} onClick={() => editor.chain().focus().undo().run()} title="отменить (Ctrl+Z)">↺</ToolBtn>
-              <ToolBtn active={false} onClick={() => editor.chain().focus().redo().run()} title="повторить (Ctrl+Y)">↻</ToolBtn>
+              <ToolBtn active={false} onClick={() => editor.chain().focus().undo().run()} title={t('lore.tiptap.undo', 'отменить (Ctrl+Z)')}>↺</ToolBtn>
+              <ToolBtn active={false} onClick={() => editor.chain().focus().redo().run()} title={t('lore.tiptap.redo', 'повторить (Ctrl+Y)')}>↻</ToolBtn>
               <Sep />
-              <ToolBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>B</ToolBtn>
-              <ToolBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}><i>i</i></ToolBtn>
-              <ToolBtn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}><s>S</s></ToolBtn>
-              <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()}>{'</>'}</ToolBtn>
-              <ToolBtn active={editor.isActive('link')} onClick={toggleLink} title="ссылка">🔗</ToolBtn>
+              <ToolBtn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title={t('lore.tiptap.bold', 'жирный (Ctrl+B)')}>B</ToolBtn>
+              <ToolBtn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title={t('lore.tiptap.italic', 'курсив (Ctrl+I)')}><i>i</i></ToolBtn>
+              <ToolBtn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title={t('lore.tiptap.strike', 'зачёркнутый')}><s>S</s></ToolBtn>
+              <ToolBtn active={editor.isActive('code')} onClick={() => editor.chain().focus().toggleCode().run()} title={t('lore.tiptap.code', 'код')}>{'</>'}</ToolBtn>
+              <ToolBtn active={editor.isActive('link')} onClick={toggleLink} title={t('lore.tiptap.link', 'ссылка')}>🔗</ToolBtn>
               <Sep />
-              <ToolBtn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>H1</ToolBtn>
-              <ToolBtn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</ToolBtn>
-              <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</ToolBtn>
+              <ToolBtn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title={t('lore.tiptap.h1', 'заголовок 1 уровня')}>H1</ToolBtn>
+              <ToolBtn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title={t('lore.tiptap.h2', 'заголовок 2 уровня')}>H2</ToolBtn>
+              <ToolBtn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title={t('lore.tiptap.h3', 'заголовок 3 уровня')}>H3</ToolBtn>
               <Sep />
-              <ToolBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</ToolBtn>
-              <ToolBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</ToolBtn>
-              <ToolBtn active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()} title="чек-лист">☑</ToolBtn>
-              <ToolBtn active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="цитата">❝</ToolBtn>
-              <ToolBtn active={false} onClick={() => editor.chain().focus().setHorizontalRule().run()} title="разделитель">—</ToolBtn>
+              <ToolBtn active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} title={t('lore.tiptap.bulletList', 'маркированный список')}>•</ToolBtn>
+              <ToolBtn active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} title={t('lore.tiptap.orderedList', 'нумерованный список')}>1.</ToolBtn>
+              <ToolBtn active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()} title={t('lore.tiptap.taskList', 'чек-лист')}>☑</ToolBtn>
+              <ToolBtn active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} title={t('lore.tiptap.blockquote', 'цитата')}>❝</ToolBtn>
+              <ToolBtn active={false} onClick={() => editor.chain().focus().setHorizontalRule().run()} title={t('lore.tiptap.hr', 'разделитель')}>—</ToolBtn>
               <Sep />
               {editor.isActive('table')
                 ? <>
-                    <ToolBtn active={false} onClick={() => editor.chain().focus().addColumnAfter().run()} title="+ столбец">+▏</ToolBtn>
-                    <ToolBtn active={false} onClick={() => editor.chain().focus().addRowAfter().run()} title="+ строка">+▁</ToolBtn>
-                    <ToolBtn active={false} onClick={() => editor.chain().focus().deleteTable().run()} title="удалить таблицу">⊞×</ToolBtn>
+                    <ToolBtn active={false} onClick={() => editor.chain().focus().addColumnAfter().run()} title={t('lore.tiptap.addColumn', '+ столбец')}>+▏</ToolBtn>
+                    <ToolBtn active={false} onClick={() => editor.chain().focus().addRowAfter().run()} title={t('lore.tiptap.addRow', '+ строка')}>+▁</ToolBtn>
+                    <ToolBtn active={false} onClick={() => editor.chain().focus().deleteTable().run()} title={t('lore.tiptap.deleteTable', 'удалить таблицу')}>⊞×</ToolBtn>
                   </>
-                : <ToolBtn active={false} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="вставить таблицу">⊞</ToolBtn>}
-              {enableImages && <ToolBtn active={uploading} onClick={pickImage}>{uploading ? '…' : '🖼'}</ToolBtn>}
+                : <ToolBtn active={false} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title={t('lore.tiptap.insertTable', 'вставить таблицу')}>⊞</ToolBtn>}
+              {enableImages && <ToolBtn active={uploading} onClick={pickImage} title={t('lore.tiptap.insertImage', 'вставить изображение')}>{uploading ? '…' : '🖼'}</ToolBtn>}
               <Sep />
-              <ToolBtn active={mode === 'md'} onClick={() => toggleMode('md')}>{'</> md'}</ToolBtn>
-              {enableHtmlMode && <ToolBtn active={mode === 'html'} onClick={() => toggleMode('html')}>{'</> html'}</ToolBtn>}
+              <ToolBtn active={mode === 'md'} onClick={() => toggleMode('md')} title={t('lore.tiptap.modeMd', 'режим markdown-источника')}>{'</> md'}</ToolBtn>
+              {enableHtmlMode && <ToolBtn active={mode === 'html'} onClick={() => toggleMode('html')} title={t('lore.tiptap.modeHtml', 'режим HTML-источника')}>{'</> html'}</ToolBtn>}
             </>
           )}
           {enableImages && <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onImageSelected} />}
@@ -327,14 +338,18 @@ export default function TipTapField({
 }
 
 function ToolBtn({ active, onClick, children, title }: { active: boolean; onClick: () => void; children: React.ReactNode; title?: string }) {
-  return <button type="button" style={toolBtnStyle(active)} onClick={onClick} title={title}>{children}</button>;
+  // T13: title alone isn't an accessible name once the button has visible
+  // text/emoji content (e.g. "B", "🔗") — the browser prefers that content
+  // over title for the a11y-tree name, so screen readers announced the raw
+  // glyph instead of what the button does. Mirror title into aria-label.
+  return <button type="button" style={toolBtnStyle(active)} onClick={onClick} title={title} aria-label={title}>{children}</button>;
 }
 function Sep() {
   return <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--b3)', margin: '2px 1px' }} />;
 }
 function toolBtnStyle(active: boolean): React.CSSProperties {
   return {
-    height: 22, minWidth: 22, padding: '0 5px', borderRadius: 3, fontSize: 11, cursor: 'pointer',
+    height: 22, minWidth: 22, padding: '0 5px', borderRadius: 3, fontSize: 'var(--fs-sm)', cursor: 'pointer',
     background: active ? 'color-mix(in srgb, var(--acc) 18%, transparent)' : 'transparent',
     color: active ? 'var(--acc)' : 'var(--t2)',
     border: active ? '1px solid color-mix(in srgb, var(--acc) 35%, transparent)' : '1px solid transparent',
@@ -344,9 +359,9 @@ function toolBtnStyle(active: boolean): React.CSSProperties {
 const S: Record<string, React.CSSProperties> = {
   wrap:       { border: '1px solid var(--b3)', borderRadius: 4, overflow: 'hidden' },
   toolbar:    { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 3, padding: '4px 6px', background: 'var(--b2)', borderBottom: '1px solid var(--b3)' },
-  editorBox:  { position: 'relative', background: 'var(--b1)', padding: '7px 9px', fontSize: 12, color: 'var(--t1)', lineHeight: 1.55 },
+  editorBox:  { position: 'relative', background: 'var(--b1)', padding: '7px 9px', fontSize: 'var(--fs-base)', color: 'var(--t1)', lineHeight: 1.55 },
   sourceBox:  { width: '100%', minHeight: 100, background: 'var(--b1)', color: 'var(--t1)', fontFamily: 'var(--mono)',
-                fontSize: 12, lineHeight: 1.55, padding: '7px 9px', border: 'none', outline: 'none', resize: 'vertical',
+                fontSize: 'var(--fs-base)', lineHeight: 1.55, padding: '7px 9px', border: 'none', outline: 'none', resize: 'vertical',
                 boxSizing: 'border-box' },
-  placeholder:{ position: 'absolute', top: 7, left: 9, color: 'var(--t3)', pointerEvents: 'none', fontSize: 12 },
+  placeholder:{ position: 'absolute', top: 7, left: 9, color: 'var(--t3)', pointerEvents: 'none', fontSize: 'var(--fs-base)' },
 };

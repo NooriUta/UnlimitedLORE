@@ -10,6 +10,7 @@ import studio.seer.heimdall.bench.MartClient;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -24,6 +25,36 @@ public abstract class LoreResourceBase {
 
     // task_uid carries a '/' (e.g. SPRINT_X/SH-1); all values are bound as SQL params, never concatenated.
     static final Pattern SAFE_ID = Pattern.compile("[A-Za-z0-9_./\\-]{1,100}");
+
+    // Canonical source of truth for these vocabularies: shared/lore-statuses.json.
+    // Drift between this mirror and the JSON is caught by LoreStatusesConsistencyTest
+    // (JUnit). The MCP + frontend mirrors are guarded by scripts/check-lore-statuses.mjs.
+    // Package-private (not private) so LoreStatusesConsistencyTest can assert them
+    // against shared/lore-statuses.json. Shared here (not just the status dispatcher's
+    // own resource) because sprint/task creation also validates against PLAN_STATUSES.
+    static final Set<String> ENTITY_TYPES =
+        Set.of("plan_item", "sprint", "task", "checkpoint", "adr", "phase");
+    static final Set<String> PLAN_STATUSES =
+        Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled",
+               "planned", "backlog", "design", "ready_for_deploy");
+    static final Set<String> ADR_STATUSES =
+        Set.of("proposed", "accepted", "draft", "deferred", "superseded");
+
+    // Canonical status token → status_raw string written on KnowSprintHist / KnowTaskHist.
+    // Mirrors the leading-marker convention the frontend normalizer (LoreSprintDetail) reads back.
+    // 🟡 PARTIAL is a distinct status from 🔄 IN PROGRESS — see lore-status.ts taskTick.
+    static final Map<String, String> SCD2_STATUS_RAW = Map.ofEntries(
+        Map.entry("done",             "✅ DONE"),
+        Map.entry("active",           "🔄 IN PROGRESS"),
+        Map.entry("partial",          "🟡 PARTIAL"),
+        Map.entry("todo",             "⬜ TODO"),
+        Map.entry("planned",          "📋 PLANNED"),
+        Map.entry("blocked",          "🔴 BLOCKED"),
+        Map.entry("high",             "🔴 P0"),
+        Map.entry("cancelled",        "🚫 CANCELLED"),
+        Map.entry("ready_for_deploy", "🚀 READY FOR DEPLOY"),
+        Map.entry("backlog",          "🟣 BACKLOG"),
+        Map.entry("design",           "🔬 DESIGN"));
 
     /** JSON error body returned by every LORE endpoint (and LoreExceptionMapper). */
     public record LoreError(String error, String detail) {}
@@ -47,6 +78,11 @@ public abstract class LoreResourceBase {
     @Inject
     @RestClient
     LoreCommandClient writeClient;
+
+    // Shared by most write domains (task/phase/sprint/milestone/QG all read via
+    // ingestService.queryPublic before deciding whether to create/skip an edge).
+    @Inject
+    LoreIngestService ingestService;
 
     // Throws LoreExceptions.Forbidden (→ 403 JSON via LoreExceptionMapper) when the
     // caller is not admin/superadmin. Call as a guard: `requireAdmin(role);`.

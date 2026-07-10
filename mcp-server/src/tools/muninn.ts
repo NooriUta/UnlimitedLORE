@@ -42,7 +42,7 @@ export function registerMuninn(server: McpServer): void {
     {
       slice: z.string().describe('slice id from bench_list_slices, e.g. "findings"'),
       params: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe('slice parameters as string key/values, e.g. {"run":"…"}'),
     },

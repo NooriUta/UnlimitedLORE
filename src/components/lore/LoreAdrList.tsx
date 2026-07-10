@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
 
 type DatePreset = null | '3m' | '6m' | '1y';
@@ -42,11 +43,11 @@ const S = {
     padding: '5px 10px', margin: '6px 8px',
     background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
     color: 'var(--acc)', border: '1px dashed color-mix(in srgb, var(--acc) 40%, transparent)',
-    borderRadius: 5, cursor: 'pointer', fontSize: 11, fontWeight: 600,
+    borderRadius: 5, cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 600,
   },
   dateLine: { display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', flexShrink: 0 },
   dateBtn: (on: boolean) => ({
-    padding: '2px 8px', borderRadius: 4, fontSize: 10, cursor: 'pointer',
+    padding: '2px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', cursor: 'pointer',
     border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
     background: on ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
     color: on ? 'var(--acc)' : 'var(--t3)',
@@ -55,7 +56,7 @@ const S = {
   row: {
     display: 'flex', flexDirection: 'column' as const, gap: 2,
     padding: '6px 10px', borderBottom: '1px solid var(--bd)',
-    fontSize: 11, cursor: 'pointer', minWidth: 0,
+    fontSize: 'var(--fs-sm)', cursor: 'pointer', minWidth: 0,
   },
   line1: { display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 },
   line2: { display: 'flex', alignItems: 'center', gap: 5 },
@@ -65,7 +66,7 @@ const S = {
     minWidth: 0, flexShrink: 0,
   },
   name: {
-    flex: 1, color: 'var(--t2)', fontSize: 10,
+    flex: 1, color: 'var(--t2)', fontSize: 'var(--fs-xs)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
     minWidth: 0,
   },
@@ -74,17 +75,17 @@ const S = {
     background: color,
   }),
   statusBadge: (color: string) => ({
-    fontSize: 9, padding: '1px 4px', borderRadius: 2, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 2, flexShrink: 0,
     color, background: `color-mix(in srgb, ${color} 14%, transparent)`,
     border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
     whiteSpace: 'nowrap' as const,
   }),
   component: {
-    fontSize: 9, padding: '1px 4px', borderRadius: 2, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 2, flexShrink: 0,
     background: 'var(--b2)', color: 'var(--t3)',
   },
-  date: { fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 },
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  date: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
 
 interface Props {
@@ -158,7 +159,7 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
                 background: selectedId === a.adr_id
                   ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
               }}
-              onClick={() => onOpen(a.adr_id)}
+              {...a11yClick(() => onOpen(a.adr_id))}
             >
               <div style={S.line1}>
                 <span style={S.statusDot(statusColor)} title={statusKey} />

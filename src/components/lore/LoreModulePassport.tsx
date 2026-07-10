@@ -3,47 +3,45 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, type LoreComponentDetail, type LoreSpecRow, type LoreAdrRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { specTitle } from './LoreSpecView';
-
-const AREA_COLOR: Record<string, string> = {
-  data: '#29b6f6', engine: '#4caf50', algorithm: '#26a69a', ai: '#ab47bc',
-  api: '#2196f3', frontend: '#9c27b0', observability: '#ff7043',
-  platform: '#ff9800', security: '#ef5350',
-};
+// T16: this was a THIRD independent hardcoded area palette (ComponentTree.tsx
+// carried its own too, already unified) — same domain, three different colour
+// sets depending which file you looked at. One source of truth.
+import { areaColor } from './LoreComponentList';
 
 const S = {
   root: { flex: 1, display: 'flex', flexDirection: 'column' as const, minWidth: 0, overflow: 'hidden' },
   head: { padding: '14px 20px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0 },
   titleRow: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' as const },
   icon: { flexShrink: 0, display: 'flex' },
-  name: { fontSize: 17, fontWeight: 600, color: 'var(--t1)' },
+  name: { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
   area: (a: string) => {
-    const c = AREA_COLOR[a] ?? 'var(--t3)';
-    return { fontSize: 10, padding: '2px 7px', borderRadius: 3, color: c, background: `color-mix(in srgb, ${c} 14%, transparent)`, whiteSpace: 'nowrap' as const };
+    const c = areaColor(a);
+    return { fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 3, color: c, background: `color-mix(in srgb, ${c} 14%, transparent)`, whiteSpace: 'nowrap' as const };
   },
-  metaLine: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, fontSize: 11, color: 'var(--t3)', marginBottom: 8 },
-  sid:  { fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' },
+  metaLine: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 8 },
+  sid:  { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   link: { color: 'var(--acc)', cursor: 'pointer' },
   attrRow:   { display: 'flex', gap: 8, alignItems: 'baseline', marginTop: 4 },
-  attrLabel: { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase' as const, flexShrink: 0, width: 76, letterSpacing: 0.3 },
+  attrLabel: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, flexShrink: 0, width: 76, letterSpacing: 0.3 },
   chips: { display: 'flex', flexWrap: 'wrap' as const, gap: 4 },
-  tech:  { fontSize: 10, padding: '1px 6px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t2)' },
-  childChip: { fontSize: 11, padding: '1px 7px', borderRadius: 3, background: 'color-mix(in srgb, var(--acc) 10%, transparent)', color: 'var(--acc)', cursor: 'pointer' },
+  tech:  { fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t2)' },
+  childChip: { fontSize: 'var(--fs-sm)', padding: '1px 7px', borderRadius: 3, background: 'color-mix(in srgb, var(--acc) 10%, transparent)', color: 'var(--acc)', cursor: 'pointer' },
   cols: { flex: 1, display: 'flex', minHeight: 0 },
   col:  { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' as const, minHeight: 0 },
   colDivider: { borderLeft: '1px solid var(--bd)' },
-  colHead: { fontSize: 11, fontWeight: 600, color: 'var(--t2)', padding: '8px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: 0.3 },
+  colHead: { fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t2)', padding: '8px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: 0.3 },
   specList: { flex: 1, overflowY: 'auto' as const },
   specRow: (sel: boolean) => ({
     display: 'flex', alignItems: 'center', gap: 7, padding: '6px 12px',
-    borderBottom: '1px solid var(--bd)', fontSize: 11, cursor: 'pointer',
+    borderBottom: '1px solid var(--bd)', fontSize: 'var(--fs-sm)', cursor: 'pointer',
     background: sel ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent', color: 'var(--t1)',
   }),
   specName: { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  adrId:     { minWidth: 0, color: 'var(--acc)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)', flexShrink: 0, maxWidth: '38%', fontSize: 10 },
-  adrName:   { flex: 1, minWidth: 0, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, fontSize: 11 },
-  adrStatus: { fontSize: 9, padding: '1px 5px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t3)', flexShrink: 0, textTransform: 'uppercase' as const },
-  adrDate:   { color: 'var(--t3)', fontSize: 10, flexShrink: 0 },
-  empty: { padding: 20, color: 'var(--t3)', fontSize: 12 },
+  adrId:     { minWidth: 0, color: 'var(--acc)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)', flexShrink: 0, maxWidth: '38%', fontSize: 'var(--fs-xs)' },
+  adrName:   { flex: 1, minWidth: 0, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, fontSize: 'var(--fs-sm)' },
+  adrStatus: { fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t3)', flexShrink: 0, textTransform: 'uppercase' as const },
+  adrDate:   { color: 'var(--t3)', fontSize: 'var(--fs-xs)', flexShrink: 0 },
+  empty: { padding: 20, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
 
 interface Props {

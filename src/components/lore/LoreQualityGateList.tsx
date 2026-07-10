@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../api/lore';
+import { FilterBar, type FilterTagData } from './FilterPrimitives';
+import { EmptyState } from './EmptyState';
 
 interface QGRow {
   qg_id: string;
@@ -89,6 +91,9 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
   const [loading, setLoading]     = useState(true);
   const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
   const [compSel, setCompSel]     = useState<Set<string>>(new Set());
+  const [q, setQ]                 = useState('');
+  // T34: same collapsible-band pattern as the sprint/ADR/component bars in LorePage.tsx
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -109,9 +114,15 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
     m: statusMetaOf(t, s),
   }));
 
+  const ql = q.trim().toLowerCase();
   const shown = rows.filter(r =>
     (statusSel.size === 0 || statusSel.has(r.status ?? '')) &&
-    (compSel.size   === 0 || compSel.has(r.component_id ?? ''))
+    (compSel.size   === 0 || compSel.has(r.component_id ?? '')) &&
+    (ql === '' ||
+      r.qg_id.toLowerCase().includes(ql) ||
+      r.name.toLowerCase().includes(ql) ||
+      (r.description ?? '').toLowerCase().includes(ql) ||
+      (r.component_id ?? '').toLowerCase().includes(ql))
   );
 
   const toggleStatus = (s: string) =>
@@ -123,10 +134,28 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
 
   return (
     <div style={S.root}>
+      {/* Search — unifies with ADR/sprint/component list panels (F-03) */}
+      <div style={S.searchRow}>
+        <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
+        <input
+          style={S.searchInput}
+          placeholder={t('lore.qualityGateList.searchPlaceholder', 'quality gate…')}
+          aria-label={t('lore.qualityGateList.searchAriaLabel', 'поиск по quality gates')}
+          value={q}
+          onChange={e => setQ(e.target.value)}
+        />
+        {q && (
+          <span onClick={() => setQ('')} role="button" tabIndex={0}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setQ(''); } }}
+            aria-label={t('lore.qualityGateList.searchClear', 'очистить поиск')}
+            style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>✕</span>
+        )}
+      </div>
+
       {/* Stats bar — T03 */}
       <div style={S.statsBar}>
         <span style={S.statTotal}>{rows.length}</span>
-        <span style={{ color: 'var(--t3)', fontSize: 10 }}>{t('lore.qualityGateList.total', 'всего')}</span>
+        <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>{t('lore.qualityGateList.total', 'всего')}</span>
         {statsByStatus.map(({ s, n, m }) => {
           const on = statusSel.has(s);
           return (
@@ -152,39 +181,58 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
         </button>
       </div>
 
-      {/* Filters — T01: status chips */}
-      {allStatuses.length > 1 && (
-        <div style={S.filterRow}>
-          <span style={S.filterLabel}>{t('lore.qualityGateList.statusLabel', 'Статус')}</span>
-          {allStatuses.map(s => {
-            const m  = statusMetaOf(t, s);
-            const on = statusSel.has(s);
-            return (
-              <span key={s} style={S.chip(on, m.color)} onClick={() => toggleStatus(s)}>
-                {m.label}
-                <span style={{ fontSize: 9, opacity: 0.6 }}>{rows.filter(r => r.status === s).length}</span>
-              </span>
-            );
-          })}
-          {statusSel.size > 0 && <span style={S.reset} onClick={() => setStatusSel(new Set())}>✕</span>}
-        </div>
-      )}
-
-      {/* Filters — T01: component chips */}
-      {allComps.length > 1 && (
-        <div style={S.filterRow}>
-          <span style={S.filterLabel}>{t('lore.qualityGateList.moduleLabel', 'Модуль')}</span>
-          {allComps.map(c => {
-            const on = compSel.has(c);
-            return (
-              <span key={c} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c)}>
-                {c}
-                <span style={{ fontSize: 9, opacity: 0.6 }}>{rows.filter(r => r.component_id === c).length}</span>
-              </span>
-            );
-          })}
-          {compSel.size > 0 && <span style={S.reset} onClick={() => setCompSel(new Set())}>✕</span>}
-        </div>
+      {/* Filters — one collapsible band, one-line summary when closed (T34) */}
+      {(allStatuses.length > 1 || allComps.length > 1) && (
+        <FilterBar
+          tier="local"
+          label={t('lore.qualityGateList.filtersLabel', 'Фильтры')}
+          activeCount={statusSel.size + compSel.size}
+          summaryTags={[
+            ...[...statusSel].map((s): FilterTagData => ({
+              key: 's:' + s, label: statusMetaOf(t, s).label, color: statusMetaOf(t, s).color,
+              onRemove: () => setStatusSel(prev => { const n = new Set(prev); n.delete(s); return n; }),
+            })),
+            ...[...compSel].map((c): FilterTagData => ({
+              key: 'c:' + c, label: c,
+              onRemove: () => setCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
+            })),
+          ]}
+          onClear={() => { setStatusSel(new Set()); setCompSel(new Set()); }}
+          open={filterOpen}
+          onToggleOpen={() => setFilterOpen(v => !v)}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {allStatuses.length > 1 && (
+              <div style={S.filterRow}>
+                <span style={S.filterLabel}>{t('lore.qualityGateList.statusLabel', 'Статус')}</span>
+                {allStatuses.map(s => {
+                  const m  = statusMetaOf(t, s);
+                  const on = statusSel.has(s);
+                  return (
+                    <span key={s} style={S.chip(on, m.color)} onClick={() => toggleStatus(s)}>
+                      {m.label}
+                      <span style={{ fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>{rows.filter(r => r.status === s).length}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {allComps.length > 1 && (
+              <div style={S.filterRow}>
+                <span style={S.filterLabel}>{t('lore.qualityGateList.moduleLabel', 'Модуль')}</span>
+                {allComps.map(c => {
+                  const on = compSel.has(c);
+                  return (
+                    <span key={c} style={S.chip(on, 'var(--acc)')} onClick={() => toggleComp(c)}>
+                      {c}
+                      <span style={{ fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>{rows.filter(r => r.component_id === c).length}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </FilterBar>
       )}
 
       {/* List — selecting a row opens the full ADR-QG-004 report in LoreQGDetail */}
@@ -198,7 +246,7 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
               </span>
             )}
             {qg.last_run_status && runMetaOf(t, qg.last_run_status) && (
-              <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+              <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 5px', borderRadius: 3,
                 color: runMetaOf(t, qg.last_run_status)!.color,
                 background: `color-mix(in srgb,${runMetaOf(t, qg.last_run_status)!.color} 12%,transparent)` }}>
                 {runMetaOf(t, qg.last_run_status)!.label}
@@ -210,7 +258,7 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
             <span style={S.date}>{qg.date_created?.slice(0, 10) ?? ''}</span>
           </div>
         ))}
-        {shown.length === 0 && <div style={S.state}>{t('lore.qualityGateList.empty', 'Quality Gates не найдены.')}</div>}
+        {shown.length === 0 && <EmptyState message={t('lore.qualityGateList.empty', 'Quality Gates не найдены.')} />}
       </div>
     </div>
   );
@@ -218,22 +266,31 @@ export default function LoreQualityGateList({ onError, onOpen }: Props) {
 
 const S = {
   root:  { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
-  state: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  state: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  searchRow: {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '0 12px', height: 30, flexShrink: 0,
+    borderBottom: '1px solid var(--bd)',
+  },
+  searchInput: {
+    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+    color: 'var(--t1)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)',
+  },
   // Stats bar — T03
   statsBar: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '5px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
     flexWrap: 'wrap' as const,
   },
-  statTotal: { fontSize: 15, fontWeight: 600, color: 'var(--t1)', lineHeight: 1 },
+  statTotal: { fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--t1)', lineHeight: 1 },
   statBadge: (color: string) => ({
-    fontSize: 10, padding: '1px 7px', borderRadius: 10,
+    fontSize: 'var(--fs-xs)', padding: '1px 7px', borderRadius: 10,
     background: `color-mix(in srgb, ${color} 14%, transparent)`,
     color, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
   }),
   exportBtn: {
     height: 22, padding: '0 8px', border: '1px solid var(--b3)', borderRadius: 3,
-    cursor: 'pointer', fontSize: 10, background: 'var(--b2)', color: 'var(--t2)',
+    cursor: 'pointer', fontSize: 'var(--fs-xs)', background: 'var(--b2)', color: 'var(--t2)',
     fontFamily: 'inherit',
   },
   // Filter chips — T01
@@ -241,33 +298,33 @@ const S = {
     display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const,
     padding: '4px 14px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
-  filterLabel: { fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, flexShrink: 0 },
+  filterLabel: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, flexShrink: 0 },
   chip: (on: boolean, color: string) => ({
     display: 'inline-flex', alignItems: 'center', gap: 4,
-    fontSize: 10, padding: '1px 7px', borderRadius: 10, cursor: 'pointer', userSelect: 'none' as const,
+    fontSize: 'var(--fs-xs)', padding: '1px 7px', borderRadius: 10, cursor: 'pointer', userSelect: 'none' as const,
     border: `1px solid ${on ? color : 'var(--b3)'}`,
     background: on ? `color-mix(in srgb, ${color} 20%, transparent)` : 'transparent',
     color: on ? color : 'var(--t3)',
   }),
-  reset: { fontSize: 10, color: 'var(--t3)', cursor: 'pointer', padding: '0 4px' },
+  reset: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', cursor: 'pointer', padding: '0 4px' },
   list:  { flex: 1, overflowY: 'auto' as const },
   row: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '7px 14px', borderBottom: '1px solid var(--bd)',
-    fontSize: 12, cursor: 'pointer',
+    fontSize: 'var(--fs-base)', cursor: 'pointer',
   },
-  arrow:  { color: 'var(--t3)', fontSize: 11, width: 12, flexShrink: 0 },
+  arrow:  { color: 'var(--t3)', fontSize: 'var(--fs-sm)', width: 12, flexShrink: 0 },
   statusChip: (s: string) => {
     const color = STATUS_COLOR[s] ?? 'var(--t3)';
     return {
-      fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+      fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
       background: `color-mix(in srgb, ${color} 16%, transparent)`,
       color,
       border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
     };
   },
-  id:          { color: 'var(--t3)', fontSize: 11, minWidth: 140, flexShrink: 0 },
+  id:          { color: 'var(--t3)', fontSize: 'var(--fs-sm)', minWidth: 140, flexShrink: 0 },
   name:        { flex: 1, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  comp:        { color: 'var(--acc)', fontSize: 11, flexShrink: 0 },
-  date:        { color: 'var(--t3)', fontSize: 11, flexShrink: 0 },
+  comp:        { color: 'var(--acc)', fontSize: 'var(--fs-sm)', flexShrink: 0 },
+  date:        { color: 'var(--t3)', fontSize: 'var(--fs-sm)', flexShrink: 0 },
 };

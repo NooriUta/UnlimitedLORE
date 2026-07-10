@@ -103,18 +103,21 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
     }
   };
 
-  const fieldRow = (label: string, node: React.ReactNode, grow = 1) => (
+  const fieldRow = (id: string, label: string, node: React.ReactNode, grow = 1) => (
     <div style={{ ...S.field, flex: grow }}>
-      <label style={S.label}>{label}</label>
+      <label htmlFor={id} style={S.label}>{label}</label>
       {node}
     </div>
   );
 
-  const ta = (key: 'context_md' | 'decision_md' | 'consequences_md', placeholder: string, rows = 5) => (
+  // ADR bodies are substantial prose — give the editor real room on open
+  // (T28: fields were only ~100px and felt cramped). Resizable via TipTapField.
+  const ta = (key: 'context_md' | 'decision_md' | 'consequences_md', placeholder: string, ariaLabel: string, rows = 13) => (
     <TipTapField
       value={form[key]}
       onChange={v => set(key)(v)}
       placeholder={placeholder}
+      ariaLabel={ariaLabel}
       minHeight={rows * 20}
       enableImages={false}
       enableHtmlMode={false}
@@ -138,25 +141,31 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
 
       {/* Row 1: ID · Name · Status · Date */}
       <div style={S.row4}>
-        {fieldRow(t('lore.adrEditor.fieldAdrId', 'ADR ID'), (
+        {fieldRow('adr-field-id', t('lore.adrEditor.fieldAdrId', 'ADR ID'), (
           <input
+            id="adr-field-id"
             style={{ ...S.input, ...(lockId ? S.inputLock : {}) }}
             value={form.adr_id}
             readOnly={lockId}
+            required
+            aria-required="true"
+            aria-invalid={!form.adr_id.trim()}
             placeholder="ADR-HND-042"
             onChange={e => set('adr_id')(e.target.value)}
           />
         ))}
-        {fieldRow(t('lore.adrEditor.fieldName', 'Название'), (
+        {fieldRow('adr-field-name', t('lore.adrEditor.fieldName', 'Название'), (
           <input
+            id="adr-field-name"
             style={S.input}
             value={form.name}
             placeholder={t('lore.adrEditor.namePlaceholder', 'Краткое название решения')}
             onChange={e => set('name')(e.target.value)}
           />
         ), 3)}
-        {fieldRow(t('lore.adrEditor.fieldStatus', 'Статус'), (
+        {fieldRow('adr-field-status', t('lore.adrEditor.fieldStatus', 'Статус'), (
           <select
+            id="adr-field-status"
             style={{ ...S.input, color: STATUS_COLOR[form.status] }}
             value={form.status}
             onChange={e => set('status')(e.target.value as AdrStatus)}
@@ -166,16 +175,16 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
             ))}
           </select>
         ))}
-        {fieldRow(t('lore.adrEditor.fieldDate', 'Дата'), (
-          <input style={S.input} type="date" value={form.date_created}
+        {fieldRow('adr-field-date', t('lore.adrEditor.fieldDate', 'Дата'), (
+          <input id="adr-field-date" style={S.input} type="date" value={form.date_created}
             onChange={e => set('date_created')(e.target.value)} />
         ))}
       </div>
 
       {/* Markdown sections */}
-      <Sec label={t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно')}>{ta('context_md', t('lore.adrEditor.contextPlaceholder', 'Опишите проблему, ограничения, исходные данные…'))}</Sec>
-      <Sec label={t('lore.adrEditor.sectionDecision', 'Decision — что именно решили')}>{ta('decision_md', t('lore.adrEditor.decisionPlaceholder', 'Опишите принятое решение…'))}</Sec>
-      <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), 4)}</Sec>
+      <Sec label={t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно')}>{ta('context_md', t('lore.adrEditor.contextPlaceholder', 'Опишите проблему, ограничения, исходные данные…'), t('lore.adrEditor.sectionContext', 'Context — почему это решение нужно'))}</Sec>
+      <Sec label={t('lore.adrEditor.sectionDecision', 'Decision — что именно решили')}>{ta('decision_md', t('lore.adrEditor.decisionPlaceholder', 'Опишите принятое решение…'), t('lore.adrEditor.sectionDecision', 'Decision — что именно решили'))}</Sec>
+      <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs'), 9)}</Sec>
 
       {/* Relations */}
       <Sec label={t('lore.adrEditor.sectionDependsOn', 'Зависит от других ADR (DEPENDS_ON)')}>
@@ -300,9 +309,9 @@ export function MultiChip({ values, onChange, suggestions, suggestionLabels, pla
                   onMouseDown={() => add(s)}
                   onMouseEnter={() => setCursor(i)}
                 >
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{s}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{s}</span>
                   {suggestionLabels?.[s] && (
-                    <span style={{ color: 'var(--t3)', fontSize: 10, marginLeft: 6 }}>{suggestionLabels[s]}</span>
+                    <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)', marginLeft: 6 }}>{suggestionLabels[s]}</span>
                   )}
                 </div>
               ))}
@@ -316,28 +325,28 @@ export function MultiChip({ values, onChange, suggestions, suggestionLabels, pla
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S: Record<string, React.CSSProperties> = {
-  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 12 },
+  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 'var(--fs-base)' },
   head:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10 },
-  title:    { fontSize: 14, fontWeight: 600, color: 'var(--t1)' },
+  title:    { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
   headBtns: { display: 'flex', gap: 8 },
-  errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 11,
+  errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 'var(--fs-sm)',
               background: 'color-mix(in srgb, var(--dng) 12%, transparent)',
               color: 'var(--dng)', border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)' },
   row4:     { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 4 },
   field:    { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 110 },
-  label:    { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  label:    { fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input:    { height: 28, padding: '0 8px', borderRadius: 4, border: '1px solid var(--b3)',
-              background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
+              background: 'var(--b1)', color: 'var(--t1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
               outline: 'none', width: '100%', boxSizing: 'border-box' },
   inputLock:{ opacity: 0.55, cursor: 'not-allowed', background: 'var(--b2)' },
-  sLabel:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 },
+  sLabel:   { fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 },
   ta:       { width: '100%', boxSizing: 'border-box', padding: '7px 9px', borderRadius: 4,
               border: '1px solid var(--b3)', background: 'var(--b1)', color: 'var(--t1)',
-              fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 1.55, resize: 'vertical', outline: 'none' },
+              fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)', lineHeight: 1.55, resize: 'vertical', outline: 'none' },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: '#fff', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 'var(--fs-base)', fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
-               background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
+               background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 'var(--fs-base)' },
 };
 
 const MC: Record<string, React.CSSProperties> = {
@@ -347,12 +356,12 @@ const MC: Record<string, React.CSSProperties> = {
   chip:    { display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 3,
              background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
              color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
-             padding: '1px 4px', fontSize: 11 },
+             padding: '1px 4px', fontSize: 'var(--fs-sm)' },
   chipTxt: { fontFamily: 'var(--mono)' },
   del:     { background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
-             fontSize: 13, lineHeight: 1, padding: '0 1px', opacity: 0.7 },
+             fontSize: 'var(--fs-md)', lineHeight: 1, padding: '0 1px', opacity: 0.7 },
   input:   { border: 'none', background: 'transparent', outline: 'none', color: 'var(--t1)',
-             fontSize: 12, fontFamily: 'inherit', width: '100%', padding: '2px 2px' },
+             fontSize: 'var(--fs-base)', fontFamily: 'inherit', width: '100%', padding: '2px 2px' },
   dropdown:{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
              background: 'var(--b2)', border: '1px solid var(--b3)', borderRadius: 4,
              boxShadow: '0 4px 12px rgba(0,0,0,.25)', maxHeight: 200, overflowY: 'auto' },

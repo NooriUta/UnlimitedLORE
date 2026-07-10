@@ -8,13 +8,6 @@ import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import TipTapField from './TipTapField';
 
-// Union of a milestone's sprints: planned (planned_milestone_id property,
-// SPRINT_PLANITEM_RETIRE T-21 — no longer a backend PlanItem hop, see caller)
-// + direct (direct_sprint_ids, TARGETS_MILESTONE edge).
-function msSprintIds(planIds: string[], m: LoreMilestone & { direct_sprint_ids?: string[] | null }): string[] {
-  return [...new Set([...planIds, ...(m.direct_sprint_ids ?? [])].filter(Boolean))];
-}
-
 function classifySprint(s: string | null): string {
   const u = (s ?? '').toUpperCase();
   if (/DONE|CLOSED|ЗАВЕРШ|✅/.test(u)) return 'done';
@@ -64,24 +57,12 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
   const sprintIds = useMemo(() => sprints.map(s => s.sprint_id).sort(), [sprints]);
   const sprintMeta = useMemo(() => new Map(sprints.map(s => [s.sprint_id, s])), [sprints]);
 
-  // SPRINT_PLANITEM_RETIRE (T-21): planned-milestone membership derived from
-  // sprints.planned_milestone_id (see LoreMilestonesView.tsx for the same pattern).
-  const plannedByMilestone = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const s of sprints) {
-      if (!s.planned_milestone_id) continue;
-      const arr = map.get(s.planned_milestone_id);
-      if (arr) arr.push(s.sprint_id); else map.set(s.planned_milestone_id, [s.sprint_id]);
-    }
-    return map;
-  }, [sprints]);
-
   // Sprints not linked to ANY milestone — for planning (assign them).
   const linkedSet = useMemo(() => {
     const s = new Set<string>();
-    milestones.forEach(m => msSprintIds(plannedByMilestone.get(m.milestone_id) ?? [], m).forEach(id => s.add(id)));
+    milestones.forEach(m => (m.direct_sprint_ids ?? []).forEach(id => id && s.add(id)));
     return s;
-  }, [milestones, plannedByMilestone]);
+  }, [milestones]);
   const orphans = useMemo(
     () => sprints.filter(s => !linkedSet.has(s.sprint_id)).sort((a, b) => a.sprint_id.localeCompare(b.sprint_id)),
     [sprints, linkedSet]);
@@ -146,14 +127,14 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
 
       <div style={S.list}>
         {milestones.map(m => {
-          const ids = msSprintIds(plannedByMilestone.get(m.milestone_id) ?? [], m);
+          const ids = (m.direct_sprint_ids ?? []).filter(Boolean);
           const isOpen = openId === m.milestone_id;
           const isEdit = editId === m.milestone_id;
           return (
             <div key={m.milestone_id} style={S.card}>
               <div style={{ ...S.cardHead, cursor: 'pointer' }}
                 onClick={() => { setOpenId(isOpen ? null : m.milestone_id); setEditId(null); }}>
-                <span style={{ fontSize: 8, color: 'var(--t3)', width: 8 }}>{isOpen ? '▼' : '▶'}</span>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', width: 8 }}>{isOpen ? '▼' : '▶'}</span>
                 <span style={S.mid}>{m.milestone_id}</span>
                 <span style={S.label}>{m.label}</span>
                 <span style={S.dim}>{m.date_display}{m.week != null ? ` · w${m.week}` : ''}</span>
@@ -195,11 +176,11 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
               )}
 
               {/* Linked sprints — rows with status + project */}
-              <div style={{ fontSize: 8, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '8px 0 3px' }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '8px 0 3px' }}>
                 {t('lore.milestoneManager.linkedSprints', 'Привязанные спринты')} · {ids.length}
               </div>
               <div style={S.sprList}>
-                {ids.length === 0 && <div style={{ fontSize: 10, color: 'var(--t4)', fontStyle: 'italic', padding: '2px 0' }}>{t('lore.milestoneManager.noneYet', 'пока нет — добавьте ниже')}</div>}
+                {ids.length === 0 && <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t4)', fontStyle: 'italic', padding: '2px 0' }}>{t('lore.milestoneManager.noneYet', 'пока нет — добавьте ниже')}</div>}
                 {ids.map(sid => {
                   const s = sprintMeta.get(sid);
                   const k = classifySprint(s?.status_raw ?? null);
@@ -235,7 +216,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                     return <option key={s} value={s}>{s}{proj ? ` · ${proj}` : ''} · {st}</option>;
                   })}
                 </select>
-                {busy === 'link-' + m.milestone_id && <span style={{ fontSize: 10, color: 'var(--t3)' }}>…</span>}
+                {busy === 'link-' + m.milestone_id && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>…</span>}
               </div>
               </>)}
             </div>
@@ -250,7 +231,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
           {t('lore.milestoneManager.sprintsWithoutMilestones', 'Спринты без вех')} <span style={S.dim}>· {orphans.length}</span>
         </div>
         {orphans.length === 0
-          ? <div style={{ fontSize: 10, color: 'var(--suc)' }}>{t('lore.milestoneManager.allSprintsLinked', 'Все спринты привязаны к вехам ✓')}</div>
+          ? <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--suc)' }}>{t('lore.milestoneManager.allSprintsLinked', 'Все спринты привязаны к вехам ✓')}</div>
           : (
             <div style={{ ...S.sprList, maxHeight: 300, overflowY: 'auto' as const, gap: 2 }}>
               {orphans.map(s => {
@@ -262,7 +243,7 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
                     <span style={S.sprId}>{s.sprint_id}</span>
                     <span style={S.sprName}>{s.name}</span>
                     {proj && <span style={S.projTag}>{proj}</span>}
-                    <select style={{ ...S.in, fontSize: 9, padding: '2px 4px', flexShrink: 0 }} value=""
+                    <select style={{ ...S.in, fontSize: 'var(--fs-2xs)', padding: '2px 4px', flexShrink: 0 }} value=""
                       onChange={e => {
                         const mid = e.target.value;
                         if (!mid) return;
@@ -284,28 +265,28 @@ export default function LoreMilestoneManager({ onChange }: { onChange?: () => vo
 const S = {
   panel:   { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 10, padding: 12 },
   head:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  title:   { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--t1)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
-  dim:     { fontSize: 10, color: 'var(--t3)', fontWeight: 400 },
-  note:    { padding: 16, color: 'var(--t3)', fontSize: 12 },
-  err:     { fontSize: 10, color: 'var(--dng)', padding: '4px 0' },
+  title:   { display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--t1)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  dim:     { fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontWeight: 400 },
+  note:    { padding: 16, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  err:     { fontSize: 'var(--fs-xs)', color: 'var(--dng)', padding: '4px 0' },
   list:    { display: 'flex', flexDirection: 'column' as const, gap: 6, maxHeight: 460, overflowY: 'auto' as const },
   card:    { border: '1px solid var(--bd)', borderRadius: 8, padding: 8, background: 'var(--b2)' },
   cardHead:{ display: 'flex', alignItems: 'center', gap: 8 },
-  mid:     { fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--acc)' },
-  label:   { fontSize: 11, color: 'var(--t1)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  spCount: { fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)' },
+  mid:     { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--acc)' },
+  label:   { fontSize: 'var(--fs-sm)', color: 'var(--t1)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
+  spCount: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' },
   chips:   { display: 'flex', flexWrap: 'wrap' as const, gap: 4, marginTop: 6 },
-  chip:    { display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontFamily: 'var(--mono)', padding: '1px 4px', borderRadius: 3, background: 'var(--b3)', border: '1px solid var(--bd)', color: 'var(--t2)' },
-  x:       { border: 'none', background: 'transparent', color: 'var(--dng)', cursor: 'pointer', fontSize: 11, padding: 0, lineHeight: 1 },
+  chip:    { display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', padding: '1px 4px', borderRadius: 3, background: 'var(--b3)', border: '1px solid var(--bd)', color: 'var(--t2)' },
+  x:       { border: 'none', background: 'transparent', color: 'var(--dng)', cursor: 'pointer', fontSize: 'var(--fs-sm)', padding: 0, lineHeight: 1 },
   sprList: { display: 'flex', flexDirection: 'column' as const, gap: 1 },
-  sprRow:  { display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, padding: '2px 4px', borderRadius: 4 },
+  sprRow:  { display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', padding: '2px 4px', borderRadius: 4 },
   sprId:   { fontFamily: 'var(--mono)', color: 'var(--acc)', flexShrink: 0, maxWidth: 230, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
   sprName: { color: 'var(--t3)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const },
-  projTag: { fontSize: 8, fontFamily: 'var(--mono)', color: 'var(--t2)', background: 'var(--b3)', borderRadius: 3, padding: '0 4px', flexShrink: 0 },
+  projTag: { fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', color: 'var(--t2)', background: 'var(--b3)', borderRadius: 3, padding: '0 4px', flexShrink: 0 },
   editBox: { display: 'flex', flexDirection: 'column' as const, gap: 6, padding: 8, marginTop: 6, background: 'var(--b3)', borderRadius: 6 },
   row:     { display: 'flex', gap: 6, flexWrap: 'wrap' as const },
-  in:      { fontSize: 11, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)' },
-  ta:      { fontSize: 11, padding: '4px 6px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)', minHeight: 48, resize: 'vertical' as const, fontFamily: 'inherit' },
-  btn:     { fontSize: 10, padding: '3px 8px', borderRadius: 4, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)', cursor: 'pointer' },
-  btnPrimary: { fontSize: 10, padding: '3px 10px', borderRadius: 4, border: '1px solid color-mix(in srgb,var(--acc) 35%,transparent)', background: 'color-mix(in srgb,var(--acc) 12%,transparent)', color: 'var(--acc)', cursor: 'pointer', fontWeight: 600 },
+  in:      { fontSize: 'var(--fs-sm)', padding: '4px 6px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)' },
+  ta:      { fontSize: 'var(--fs-sm)', padding: '4px 6px', borderRadius: 4, border: '1px solid var(--bd)', background: 'var(--b1)', color: 'var(--t1)', minHeight: 48, resize: 'vertical' as const, fontFamily: 'inherit' },
+  btn:     { fontSize: 'var(--fs-xs)', padding: '3px 8px', borderRadius: 4, border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)', cursor: 'pointer' },
+  btnPrimary: { fontSize: 'var(--fs-xs)', padding: '3px 10px', borderRadius: 4, border: '1px solid color-mix(in srgb,var(--acc) 35%,transparent)', background: 'color-mix(in srgb,var(--acc) 12%,transparent)', color: 'var(--acc)', cursor: 'pointer', fontWeight: 600 },
 };

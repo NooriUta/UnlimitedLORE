@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreComponent } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
@@ -51,30 +52,30 @@ const S = {
     background: invert ? color : `color-mix(in srgb, ${color} 15%, transparent)`,
   }),
   compId: {
-    fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--acc)',
     whiteSpace: 'nowrap' as const, fontWeight: 600,
   },
   compName: {
-    fontSize: 9, color: 'var(--t3)',
+    fontSize: 'var(--fs-2xs)', color: 'var(--t3)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
   },
   compBlock: {
     flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' as const,
   },
   countBadge: {
-    fontSize: 8, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 3, flexShrink: 0,
     color: 'var(--t3)', background: 'var(--b2)', border: '1px solid var(--bd)',
     whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)',
   },
   sprintBadge: {
-    fontSize: 8, padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 3, flexShrink: 0,
     color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
     border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     whiteSpace: 'nowrap' as const, fontFamily: 'var(--mono)',
   },
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   sectionHdr: {
-    padding: '8px 4px 3px', fontSize: 9, fontWeight: 700, letterSpacing: '0.07em',
+    padding: '8px 4px 3px', fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.07em',
     textTransform: 'uppercase' as const, color: 'var(--t3)', flexShrink: 0,
   },
 };
@@ -181,12 +182,12 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
       <div
         key={r.component_id}
         style={{ ...S.card(sel, indent, color), opacity: dimmed ? 0.4 : 1 }}
-        onClick={() => !dimmed && onSelect(r.component_id)}
+        {...(dimmed ? {} : a11yClick(() => onSelect(r.component_id)))}
       >
         <div style={S.iconBox(color, invert)}>
           {r.game_icon
             ? <GameIcon slug={r.game_icon} size={12} style={{ color: 'inherit' }} />
-            : <span style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700 }}>{r.component_id[0]}</span>}
+            : <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', fontWeight: 700 }}>{r.component_id[0]}</span>}
         </div>
         <div style={S.compBlock}>
           <span style={S.compId}>{r.component_id}</span>
@@ -222,7 +223,7 @@ export default function LoreComponentList({ q, areaSel, selectedId, onSelect, on
           nodes.push(
             <div key={`hdr-${thisArea}`}
               style={{ ...S.sectionHdr, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, userSelect: 'none' }}
-              onClick={() => toggleArea(thisArea)}
+              {...a11yClick(() => toggleArea(thisArea))}
             >
               <span style={{ fontSize: 7, color: 'var(--t3)', lineHeight: 1 }}>{isCollapsed ? '▶' : '▼'}</span>
               {curArea}

@@ -2,6 +2,7 @@
 // No master-detail split: decisions are short notes, not large documents.
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreDecisionRow, type LoreDecisionPassport } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
@@ -126,7 +127,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
       <div
         key={d.decision_id}
         style={{ ...S.row, background: isOpen ? 'color-mix(in srgb, var(--acc) 5%, transparent)' : 'transparent' }}
-        onClick={() => toggle(d.decision_id)}
+        {...a11yClick(() => toggle(d.decision_id))}
       >
         <span style={S.num}>#{d.decision_id}</span>
         <div style={S.body}>
@@ -226,7 +227,7 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
               {sec.status && (
                 <div
                   style={{ ...S.groupHeader, cursor: 'pointer' }}
-                  onClick={() => toggleGroup(sec.status!)}
+                  {...a11yClick(() => toggleGroup(sec.status!))}
                 >
                   <span style={S.groupChevron}>{isCollapsed ? '▶' : '▼'}</span>
                   <StatusChip status={sec.status} />
@@ -249,10 +250,10 @@ const S = {
     padding: '6px 16px', borderBottom: '1px solid var(--bd)',
     flexShrink: 0,
   },
-  count:      { fontSize: 11, color: 'var(--t3)' },
-  filterNote: { fontSize: 11, color: 'var(--acc)' },
+  count:      { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  filterNote: { fontSize: 'var(--fs-sm)', color: 'var(--acc)' },
   list:  { flex: 1, overflowY: 'auto' as const },
-  empty: { padding: '24px 16px', color: 'var(--t3)', fontSize: 12 },
+  empty: { padding: '24px 16px', color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   row: {
     display: 'flex', alignItems: 'flex-start', gap: 10,
     padding: '8px 16px', borderBottom: '1px solid var(--bd)',
@@ -260,30 +261,30 @@ const S = {
     transition: 'background 0.1s',
   },
   num: {
-    fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)',
+    fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--acc)',
     fontWeight: 700, minWidth: 42, flexShrink: 0, paddingTop: 1,
   },
   body: { flex: 1, minWidth: 0 },
-  title: { fontSize: 12, color: 'var(--t1)', lineHeight: 1.6 },
-  date:  { fontSize: 10, color: 'var(--t3)', flexShrink: 0, paddingTop: 2 },
+  title: { fontSize: 'var(--fs-base)', color: 'var(--t1)', lineHeight: 1.6 },
+  date:  { fontSize: 'var(--fs-xs)', color: 'var(--t3)', flexShrink: 0, paddingTop: 2 },
   detail: {
     marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--bd)',
   },
-  meta:    { fontSize: 11, color: 'var(--t3)' },
+  meta:    { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   bodyMd: {
-    fontSize: 11, color: 'var(--t2)', lineHeight: 1.7,
+    fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.7,
     margin: '0 0 8px 0', whiteSpace: 'pre-wrap' as const,
     fontFamily: 'inherit',
   },
   rationaleWrap: { marginBottom: 8 },
   rationaleLabel: {
-    fontSize: 10, fontWeight: 600, color: 'var(--t3)',
+    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--t3)',
     textTransform: 'uppercase' as const, letterSpacing: '0.08em',
     display: 'block', marginBottom: 3,
   },
   chips: { display: 'flex', flexWrap: 'wrap' as const, gap: 4 },
   chip: {
-    fontSize: 10, padding: '2px 6px', borderRadius: 3,
+    fontSize: 'var(--fs-xs)', padding: '2px 6px', borderRadius: 3,
     background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
     fontFamily: 'var(--mono)',
@@ -305,7 +306,7 @@ const S = {
     color: 'var(--t2)', border: '1px solid color-mix(in srgb, var(--t2) 25%, transparent)',
   },
   ctrl: {
-    fontSize: 10, padding: '3px 8px', borderRadius: 4, cursor: 'pointer',
+    fontSize: 'var(--fs-xs)', padding: '3px 8px', borderRadius: 4, cursor: 'pointer',
     border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)',
   },
   ctrlActive: {
@@ -318,7 +319,7 @@ const S = {
     borderBottom: '1px solid var(--bd)', borderTop: '1px solid var(--bd)',
     position: 'sticky' as const, top: 0, zIndex: 1,
   },
-  groupChevron: { fontSize: 9, color: 'var(--t3)', flexShrink: 0 },
-  groupCount:   { fontSize: 10, color: 'var(--t3)' },
+  groupChevron: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0 },
+  groupCount:   { fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
   pillGroup:    { display: 'flex' },
 };
