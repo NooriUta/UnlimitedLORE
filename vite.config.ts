@@ -33,4 +33,14 @@ export default defineConfig({
       },
     },
   },
+  // `vite preview` serves the production build (dist/), where mermaid + the ELK
+  // layout engine are pre-bundled — so heavy diagrams render the same as they do
+  // behind nginx (:4400), unlike the dev server where the unbundled ELK layout
+  // can stall the renderer. API is proxied to the running backend the same way.
+  preview: {
+    proxy: {
+      '/lore/': { target: process.env.VITE_LORE_API_URL ?? 'http://localhost:9100', changeOrigin: true },
+      '/bench/': { target: process.env.VITE_BENCH_API_URL ?? 'http://localhost:9100', changeOrigin: true },
+    },
+  },
 });

@@ -4,6 +4,8 @@ import { fetchLoreSlice, updateLoreDoc } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
 import TipTapField from './TipTapField';
+import { GameIcon } from './GameIcon';
+import { ARTIFACT_KINDS_META } from './LoreArtifactList';
 
 // Generic single-artifact viewer for runbooks / docs / quality-gates opened from
 // the unified list. Markdown bodies render via MartProse; KnowDoc HTML fragments
@@ -36,7 +38,12 @@ const S = {
   root: { flex: 1, overflowY: 'auto' as const, padding: '12px 20px' },
   back: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--acc)', fontSize: 'var(--fs-base)', padding: '0 0 12px', display: 'block' },
   header: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' as const },
-  kindTag: { fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.3 },
+  kindTag: (color: string) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 3,
+    background: `color-mix(in srgb, ${color} 16%, transparent)`, color,
+    textTransform: 'uppercase' as const, letterSpacing: 0.3, fontWeight: 600,
+  }),
   statusChip: { fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 3, background: 'color-mix(in srgb, var(--suc) 16%, transparent)', color: 'var(--suc)' },
   title: { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
   comp: { padding: '2px 7px', borderRadius: 3, fontSize: 'var(--fs-sm)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
@@ -164,16 +171,22 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
   const title = row.name || row.title || id;
   const date  = row.date_created || row.valid_from;
+  const kindMeta = ARTIFACT_KINDS_META.find(k => k.kind === kind);
+  const chars = (row.content_md_ru || row.content_md_en || row.content_md || row.content_html || '').length;
   const metaBits: string[] = [];
   if (row.area) metaBits.push(row.area);
   if (row.kind) metaBits.push(row.kind);
+  if (chars)    metaBits.push(t('lore.artifactDoc.chars', '{{n}} зн.', { n: chars.toLocaleString('ru-RU') }));
   if (date)     metaBits.push(date.slice(0, 10));
 
   return (
     <div style={S.root}>
       <button style={S.back} onClick={onBack}>{t('lore.artifactDoc.backToList', '← К списку')}</button>
       <div style={S.header}>
-        <span style={S.kindTag}>{t(SLICE[kind].labelKey, SLICE[kind].labelFallback)}</span>
+        <span style={S.kindTag(kindMeta?.color ?? 'var(--t3)')}>
+          {kindMeta && <GameIcon slug={kindMeta.icon} size={11} />}
+          {t(SLICE[kind].labelKey, SLICE[kind].labelFallback)}
+        </span>
         {row.status && <span style={S.statusChip}>{row.status}</span>}
         <span style={S.title}>{title}</span>
         {row.component_id && <span style={S.comp}>{row.component_id}</span>}

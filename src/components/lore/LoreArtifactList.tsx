@@ -126,6 +126,12 @@ const S = {
     color, background: `color-mix(in srgb, ${color} 16%, transparent)`,
   }),
   title:  { flex: 1, minWidth: 0, color: 'var(--t1)', fontSize: 'var(--fs-sm)', lineHeight: 1.3, wordBreak: 'break-word' as const },
+  kindPill: (color: string) => ({
+    fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, flexShrink: 0,
+    background: `color-mix(in srgb, ${color} 16%, transparent)`, color,
+    whiteSpace: 'nowrap' as const, textTransform: 'uppercase' as const,
+    letterSpacing: '0.03em', fontWeight: 600,
+  }),
   comp:   { fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
   noComp: { fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
   date:   { color: 'var(--t3)', fontSize: 'var(--fs-2xs)', marginLeft: 'auto' as const },
@@ -399,6 +405,7 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
                       <span style={S.title}>{a.title}</span>
                     </div>
                     <div style={S.rowMeta}>
+                      <span style={S.kindPill(meta.color)}>{meta.label}</span>
                       {a.component
                         ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
                         : <span style={S.noComp}>—</span>}
