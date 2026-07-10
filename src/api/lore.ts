@@ -53,6 +53,21 @@ export async function fetchLoreSlice<T>(
   return body.rows ?? [];
 }
 
+// ── ADR-LORE-012: dictionary entries (KnowDictEntry) ───────────────────────
+// One row per (dict_type, code). Read via fetchLoreSlice('dictionary', …) and
+// cached in DictionaryProvider; consumers use the useDictionary hook.
+export interface DictEntry {
+  dict_type: string;
+  code: string;
+  label_ru: string | null;
+  label_en: string | null;
+  color: string | null;
+  icon: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
+  is_extensible: boolean | null;
+}
+
 // Single write/mutation transport for LORE POST endpoints. Replaces the
 // per-component `fetch(... X-Seer-Role ...)` helpers that had each drifted their
 // own error handling. `path` is relative to /lore (e.g. "/bragi/keyword").

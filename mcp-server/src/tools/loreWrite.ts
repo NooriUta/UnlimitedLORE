@@ -10,6 +10,10 @@ const err = (e: unknown) => ({
   isError: true,
 });
 
+// zod v4 dropped z.objectOutputType — z.infer<z.ZodObject<S>> is the direct
+// replacement for a plain shape (no catchall needed by any call site here).
+type ShapeOutput<S extends z.ZodRawShape> = z.infer<z.ZodObject<S>>;
+
 // Factory for the common write-tool shape: validate against `schema`, POST the
 // mapped body to `path`, wrap the result in json()/err(). Removes the repeated
 // try/catch boilerplate that every straight-through tool used to inline. Tools
@@ -21,13 +25,13 @@ function definePostTool<S extends z.ZodRawShape>(
     description: string;
     schema: S;
     path: string;
-    body: (args: z.objectOutputType<S, z.ZodTypeAny>) => Record<string, unknown>;
+    body: (args: ShapeOutput<S>) => Record<string, unknown>;
   },
 ): void {
   // The SDK's server.tool overloads don't unify cleanly with a generic shape, so
   // the registration is cast. Per-call-site type safety comes from `def.body`
   // being checked against `S`; runtime validation is the zod `schema` itself.
-  const handler = async (args: z.objectOutputType<S, z.ZodTypeAny>) => {
+  const handler = async (args: ShapeOutput<S>) => {
     try {
       return json(await lorePost(def.path, def.body(args)));
     } catch (e) {
@@ -80,6 +84,25 @@ export function registerLoreWrite(server: McpServer): void {
           sprint_id, task_id, title,
           note_md: note_md ?? null, phase_uid: phase_uid ?? null,
         }),
+  });
+
+  definePostTool(server, {
+    name: 'lore_move_task',
+    description: 'Move a task to another sprint (ADR-LORE-013, cancel + recreate). Creates a fresh copy ' +
+      'in target_sprint_id — same title/note_md/effort_days + TAGGED_WITH component links, initial ' +
+      'PLANNED state — and cancels the source (it stays as a ❌ CANCELLED tombstone in the old sprint). ' +
+      'NOT a PK re-key: the new task has its OWN fresh status history; the source keeps its history. ' +
+      'task_id is reused when free in the target, else new_task_id, else a "<id>_N" suffix (returned as ' +
+      'new_task_id + task_id_changed). IN_PHASE and inbound edges (PROMOTED_TO/LED_TO) stay on the source ' +
+      '— re-link on the new task via lore_link_task_phase / lore_link_task_component if needed. ' +
+      'Mutates the shared system_aida_lore.',
+    schema: {
+      task_uid:         z.string().describe('full source task uid, e.g. "SPRINT_OLD/T05"'),
+      target_sprint_id: z.string().describe('destination sprint, e.g. "SPRINT_NEW"'),
+      new_task_id:      z.string().optional().describe('preferred task_id in the target (default: reuse source task_id; auto-suffixed on collision)'),
+    },
+    path: '/lore/task/move',
+    body: ({ task_uid, target_sprint_id, new_task_id }) => ({ task_uid, target_sprint_id, new_task_id: new_task_id ?? null }),
   });
 
   definePostTool(server, {
@@ -1123,6 +1146,31 @@ export function registerLoreWrite(server: McpServer): void {
     },
     path: '/lore/bragi/channel',
     body: ({ channel_id, channel_type, url_handle, funnel_role, rules_md }) => ({ channel_id, channel_type, url_handle, funnel_role, rules_md }),
+  });
+
+  // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────
+  definePostTool(server, {
+    name: 'lore_upsert_dict_entry',
+    description: 'KnowDictEntry (ADR-LORE-012): create/amend one dictionary value as a graph vertex — upsert by ' +
+      '(dict_type, code), partial-safe for metadata (label/color/icon/sort_order left untouched when omitted; ' +
+      'is_active defaults true, is_extensible false on create). Single canon read by frontend (useDictionary), ' +
+      'backend and MCP via lore_query_slice "dictionary". dict_type e.g. "sprint_status"|"task_status"|"adr_status"|' +
+      '"priority"|"artifact_kind"|"area"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
+      'Check lore_query_slice "dictionary" (optionally dict_type=...) before adding. Mutates the shared system_aida_lore.',
+    schema: {
+      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area"'),
+      code:          z.string().describe('stable key, e.g. "done", "P0", "PROPOSED", "runbook"'),
+      label_ru:      z.string().optional(),
+      label_en:      z.string().optional(),
+      color:         z.string().optional().describe('CSS token preferred, e.g. "var(--suc)"'),
+      icon:          z.string().optional().describe('game-icons slug, e.g. "divided-spiral"'),
+      sort_order:    z.number().int().optional().describe('display order within the domain'),
+      is_active:     z.boolean().optional().describe('soft-delete flag; default true'),
+      is_extensible: z.boolean().optional().describe('true = admins may add values via UI; default false'),
+    },
+    path: '/lore/dict/entry',
+    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }) =>
+      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }),
   });
 
   definePostTool(server, {
