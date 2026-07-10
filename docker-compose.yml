@@ -22,7 +22,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile.local
     ports:
-      - "9100:9100"                    # published so the host-side MCP server can reach it
+      # IPv4-only bind: Docker's bare "9100:9100" shorthand also publishes an
+      # IPv6 [::]:9100 listener, and on this host `localhost` resolves to ::1
+      # first — that IPv6 path hangs instead of connection-refusing, so any
+      # client using bare "localhost" (curl, Node's fetch, the LORE MCP
+      # server) stalls until timeout. Loopback-only matches the actual use
+      # (host-side MCP server on the same machine) — same pattern minio's
+      # 9001 console port already uses below.
+      - "127.0.0.1:9100:9100"          # published so the host-side MCP server can reach it
     extra_hosts:
       - "arcade:host-gateway"          # ArcadeDB runs on the host :2480
     depends_on:
