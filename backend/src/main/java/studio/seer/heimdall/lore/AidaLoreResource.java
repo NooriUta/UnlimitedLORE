@@ -1705,9 +1705,12 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     // ── ADR-LORE-012: upsert dictionary entry (KnowDictEntry) ────────────────
-    // One vertex per (dict_type, code). Partial-safe for metadata (label/color/
-    // icon/sort_order set only when provided), but is_active/is_extensible always
-    // written with sane defaults (true / false) so a fresh create is well-formed.
+    // One vertex per (dict_type, code). Fully partial-safe: every field (metadata
+    // AND the is_active/is_extensible flags) is SET only when provided. Create-time
+    // defaults are then applied in a second step, gated on `... IS NULL`, so they
+    // land only on a freshly-inserted row and never overwrite an explicit value.
+    // (The brief NULL-flag window on a fresh insert is masked at read time by the
+    // dictionary slice's ifnull(...) — consumers never see NULL.)
     public record DictEntryRequest(String dict_type, String code, String label_ru,
                                    String label_en, String color, String icon,
                                    Integer sort_order, Boolean is_active, Boolean is_extensible) {}
@@ -1725,12 +1728,15 @@ public class AidaLoreResource extends LoreResourceBase {
             return badParams("dict_type and code required");
         try {
             StringBuilder sql = new StringBuilder(
-                "UPDATE KnowDictEntry SET dict_type=:dt, code=:code, is_active=:ia, is_extensible=:ie");
+                "UPDATE KnowDictEntry SET dict_type=:dt, code=:code");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("dt", req.dict_type());
             p.put("code", req.code());
-            p.put("ia", req.is_active()     == null ? Boolean.TRUE  : req.is_active());
-            p.put("ie", req.is_extensible() == null ? Boolean.FALSE : req.is_extensible());
+            // Partial-safe: SET the flags only when explicitly provided — an omitted
+            // flag on a metadata-only update must NOT silently reactivate a
+            // soft-deleted (is_active=false) entry. Create-time defaults applied below.
+            if (req.is_active()     != null) { sql.append(", is_active=:ia");     p.put("ia", req.is_active()); }
+            if (req.is_extensible() != null) { sql.append(", is_extensible=:ie"); p.put("ie", req.is_extensible()); }
             if (req.label_ru()   != null) { sql.append(", label_ru=:lr");   p.put("lr", req.label_ru()); }
             if (req.label_en()   != null) { sql.append(", label_en=:le");   p.put("le", req.label_en()); }
             if (req.color()      != null) { sql.append(", color=:col");     p.put("col", req.color()); }
@@ -1739,6 +1745,16 @@ public class AidaLoreResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE dict_type=:dt AND code=:code");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
+            // Create-time defaults ONLY where the flag is still unset (fresh insert) —
+            // never overwrites an explicit is_active=false / is_extensible on an
+            // existing row, so a metadata-only update can't resurrect a soft-delete.
+            Map<String, Object> key = Map.of("dt", req.dict_type(), "code", req.code());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowDictEntry SET is_active=true WHERE dict_type=:dt AND code=:code AND is_active IS NULL",
+                key)).await().indefinitely();
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowDictEntry SET is_extensible=false WHERE dict_type=:dt AND code=:code AND is_extensible IS NULL",
+                key)).await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true,
                 "dict_type", req.dict_type(), "code", req.code())));
         } catch (Exception e) {
