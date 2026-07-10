@@ -125,8 +125,16 @@ public class LoreStatusResource extends LoreResourceBase {
      *   3. link it: CREATE EDGE HAS_STATE entity → new state
      *   4. denormalise the current status_raw onto the entity vertex
      * Entities with no open state row (some backfilled tasks) skip step 1.
+     *
+     * Package-private (not private): ADR-LORE-013's task/move endpoint
+     * (LoreSprintTaskResource) reuses this — plus the two task carry-forward
+     * helpers below — to cancel the source task via the exact same SCD2 flip
+     * every other status change goes through, instead of duplicating the
+     * transition logic. LoreStatusResource stays the sole owner of the
+     * mechanism; callers inject this class as a bean (same pattern as
+     * ingestService) and call through it.
      */
-    private Uni<Response> updateScd2Status(String entityType, String vertexType, String histType,
+    Uni<Response> updateScd2Status(String entityType, String vertexType, String histType,
                                            String keyField, String id, String token,
                                            String now, String nsid) {
         final String newRaw = SCD2_STATUS_RAW.getOrDefault(token, token);
@@ -330,8 +338,9 @@ public class LoreStatusResource extends LoreResourceBase {
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
     }
 
-    /** Read note_md / effort_days from the currently-open KnowTaskHist row BEFORE a SCD2 flip. */
-    private Uni<Map<String, Object>> readTaskHistCarryFields(String taskUid) {
+    /** Read note_md / effort_days from the currently-open KnowTaskHist row BEFORE a SCD2 flip.
+     * Package-private — see updateScd2Status's Javadoc (ADR-LORE-013 task/move reuse). */
+    Uni<Map<String, Object>> readTaskHistCarryFields(String taskUid) {
         MartQuery q = new MartQuery("sql",
             "SELECT note_md, effort_days FROM KnowTaskHist" +
             " WHERE in('HAS_STATE').task_uid CONTAINS :uid AND valid_to IS NULL LIMIT 1",
@@ -346,8 +355,9 @@ public class LoreStatusResource extends LoreResourceBase {
      * Restore note_md / effort_days onto the newly-opened KnowTaskHist row after a SCD2 flip.
      * Targets by state_uid (indexed property, no edge traversal) to avoid the CREATE EDGE
      * visibility race that would break an in('HAS_STATE') traversal done on the same connection.
+     * Package-private — see updateScd2Status's Javadoc (ADR-LORE-013 task/move reuse).
      */
-    private Uni<LoreCommandClient.LoreCommandResult> restoreTaskHistFields(
+    Uni<LoreCommandClient.LoreCommandResult> restoreTaskHistFields(
             String nsid, String noteMd, Double effortDays) {
         StringBuilder sb = new StringBuilder("UPDATE KnowTaskHist SET ");
         Map<String, Object> p = new LinkedHashMap<>();
