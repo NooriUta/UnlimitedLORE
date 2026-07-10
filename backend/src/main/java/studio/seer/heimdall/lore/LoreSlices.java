@@ -770,6 +770,13 @@ public final class LoreSlices {
             new LinkedHashMap<>(Map.of(
                 "dict_type", " WHERE dict_type = :dict_type")),
             " ORDER BY dict_type, sort_order");
+
+        // ADR-LORE-012 level B: components linked to an area via the IN_AREA edge
+        // (graph traversal, not the string field) — «all components in area X».
+        slice("components_in_area",
+            "SELECT component_id, full_name, area, game_icon FROM LoreComponent " +
+            "WHERE out('IN_AREA').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY component_id");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }

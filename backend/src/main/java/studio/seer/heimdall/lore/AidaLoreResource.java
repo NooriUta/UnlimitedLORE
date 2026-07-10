@@ -1748,6 +1748,63 @@ public class AidaLoreResource extends LoreResourceBase {
         }
     }
 
+    // ── ADR-LORE-012 level B: component → area dictionary edge (IN_AREA) ─────
+    // Keeps the IN_AREA edge in sync with LoreComponent.area (dual-write: string
+    // stays for existing readers, edge enables graph traversal). DELETE EDGE is
+    // unreliable on ArcadeDB → remove by @rid, then create the new edge.
+    private void relinkAreaEdge(String cid, String area) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT outE('IN_AREA').@rid AS rids FROM LoreComponent WHERE component_id=:cid",
+                Map.of("cid", cid));
+            if (!rows.isEmpty() && rows.get(0).get("rids") instanceof List<?> rids) {
+                for (Object rid : rids) {
+                    if (rid == null) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM IN_AREA WHERE @rid=" + rid)).await().indefinitely();
+                }
+            }
+            if (area != null && !area.isBlank()) {
+                // String.format (not named params) — matches the PARENT_OF edge path;
+                // ArcadeDB CREATE EDGE does not bind named params in FROM/TO subqueries.
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                    "CREATE EDGE IN_AREA FROM (SELECT FROM LoreComponent WHERE component_id='%s') " +
+                    "TO (SELECT FROM KnowDictEntry WHERE dict_type='area' AND code='%s')",
+                    cid, area))).await().indefinitely();
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE IN_AREA] relink %s→%s failed: %s", cid, area, e.getMessage());
+        }
+    }
+
+    // One-time (idempotent) backfill of IN_AREA edges from existing area strings —
+    // the schema initializer's DDL is gated off in prod, so this ensures the edge
+    // type exists and links every component that has an area. Safe to re-run.
+    @POST
+    @Path("dict/backfill-area")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response backfillAreaEdges(@HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE TYPE IN_AREA IF NOT EXISTS")).await().indefinitely();
+            List<Map<String, Object>> comps = ingestService.queryPublic(
+                "SELECT component_id, area FROM LoreComponent WHERE area IS NOT NULL", Map.of());
+            int n = 0;
+            for (Map<String, Object> c : comps) {
+                relinkAreaEdge((String) c.get("component_id"), (String) c.get("area"));
+                n++;
+            }
+            return noStore(Response.ok(Map.of("ok", true, "relinked", n)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE IN_AREA backfill] %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Write-path: link sprint ↔ component (BELONGS_TO) ─────────────────────
     // An explicit sprint→component link. When present it OVERRIDES the fuzzy
     // naming-convention match (sprint_id LIKE %component_key%) used by the
@@ -2676,6 +2733,8 @@ public class AidaLoreResource extends LoreResourceBase {
             csql.append(" WHERE component_id=:cid");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 csql.toString(), p)).await().indefinitely();
+            // ADR-LORE-012 level B: keep the IN_AREA edge in sync with the string.
+            if (req.area() != null) relinkAreaEdge(req.component_id(), req.area());
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
@@ -2733,6 +2792,8 @@ public class AidaLoreResource extends LoreResourceBase {
                     req.component_id(), req.parent_id()),
                     Map.of())).await().indefinitely();
             }
+            // ADR-LORE-012 level B: keep the IN_AREA edge in sync with the string.
+            if (req.area() != null) relinkAreaEdge(req.component_id(), req.area());
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT CREATE] %s: %s", req.component_id(), e.getMessage());
