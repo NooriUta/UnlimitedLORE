@@ -765,7 +765,11 @@ public final class LoreSlices {
         // Without dict_type — весь справочник; с dict_type — один домен.
         // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
         slice("dictionary",
-            "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible FROM KnowDictEntry",
+            // ifnull() masks the brief NULL-flag window on a freshly-upserted row
+            // (defaults are set in a second, IS NULL-gated statement) — readers
+            // always see the effective defaults, never NULL.
+            "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, " +
+            "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible FROM KnowDictEntry",
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "dict_type", " WHERE dict_type = :dict_type")),

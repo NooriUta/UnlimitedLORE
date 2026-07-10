@@ -1705,9 +1705,12 @@ public class AidaLoreResource extends LoreResourceBase {
     }
 
     // ── ADR-LORE-012: upsert dictionary entry (KnowDictEntry) ────────────────
-    // One vertex per (dict_type, code). Partial-safe for metadata (label/color/
-    // icon/sort_order set only when provided), but is_active/is_extensible always
-    // written with sane defaults (true / false) so a fresh create is well-formed.
+    // One vertex per (dict_type, code). Fully partial-safe: every field (metadata
+    // AND the is_active/is_extensible flags) is SET only when provided. Create-time
+    // defaults are then applied in a second step, gated on `... IS NULL`, so they
+    // land only on a freshly-inserted row and never overwrite an explicit value.
+    // (The brief NULL-flag window on a fresh insert is masked at read time by the
+    // dictionary slice's ifnull(...) — consumers never see NULL.)
     public record DictEntryRequest(String dict_type, String code, String label_ru,
                                    String label_en, String color, String icon,
                                    Integer sort_order, Boolean is_active, Boolean is_extensible) {}
