@@ -37,7 +37,7 @@ export function registerLoreRead(server: McpServer): void {
     {
       slice: z.string().describe('slice id from lore_list_slices, e.g. "sprints"'),
       params: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe('slice parameters as string key/values, e.g. {"id":"ADR-FE-001"}'),
     },

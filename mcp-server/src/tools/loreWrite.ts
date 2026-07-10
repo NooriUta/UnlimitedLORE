@@ -10,6 +10,10 @@ const err = (e: unknown) => ({
   isError: true,
 });
 
+// zod v4 dropped z.objectOutputType — z.infer<z.ZodObject<S>> is the direct
+// replacement for a plain shape (no catchall needed by any call site here).
+type ShapeOutput<S extends z.ZodRawShape> = z.infer<z.ZodObject<S>>;
+
 // Factory for the common write-tool shape: validate against `schema`, POST the
 // mapped body to `path`, wrap the result in json()/err(). Removes the repeated
 // try/catch boilerplate that every straight-through tool used to inline. Tools
@@ -21,13 +25,13 @@ function definePostTool<S extends z.ZodRawShape>(
     description: string;
     schema: S;
     path: string;
-    body: (args: z.objectOutputType<S, z.ZodTypeAny>) => Record<string, unknown>;
+    body: (args: ShapeOutput<S>) => Record<string, unknown>;
   },
 ): void {
   // The SDK's server.tool overloads don't unify cleanly with a generic shape, so
   // the registration is cast. Per-call-site type safety comes from `def.body`
   // being checked against `S`; runtime validation is the zod `schema` itself.
-  const handler = async (args: z.objectOutputType<S, z.ZodTypeAny>) => {
+  const handler = async (args: ShapeOutput<S>) => {
     try {
       return json(await lorePost(def.path, def.body(args)));
     } catch (e) {
