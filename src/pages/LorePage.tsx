@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
 import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
+import { DictionaryProvider } from '../components/lore/DictionaryProvider';
 import LoreTimeline        from '../components/lore/LoreTimeline';
 import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
@@ -404,6 +405,7 @@ export default function LorePage() {
   );
 
   return (
+    <DictionaryProvider>
     <div style={S.root}>
       {/* ── Top search bar — only on sections that use global q ───────────── */}
       {showGlobalSearch && (
@@ -1113,6 +1115,7 @@ export default function LorePage() {
         )}
       </div>
     </div>
+    </DictionaryProvider>
   );
 }
 
