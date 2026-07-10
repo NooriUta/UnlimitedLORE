@@ -17,38 +17,39 @@ const S = {
   topBar:  { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   back: {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--acc)', fontSize: 12, padding: 0,
+    color: 'var(--acc)', fontSize: 'var(--fs-base)', padding: 0,
   },
   editBtn: {
     background: 'none', border: '1px solid var(--b3)', cursor: 'pointer',
-    color: 'var(--t2)', fontSize: 11, padding: '2px 10px', borderRadius: 4,
+    color: 'var(--t2)', fontSize: 'var(--fs-sm)', padding: '2px 10px', borderRadius: 4,
   },
   header:  { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' as const },
-  id:      { fontSize: 15, fontWeight: 600, color: 'var(--t1)' },
-  name:    { fontSize: 13, color: 'var(--t2)', flex: 1 },
+  id:      { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
+  name:    { fontSize: 'var(--fs-md)', color: 'var(--t2)', flex: 1 },
   statusChip: (status: string) => ({
-    padding: '2px 7px', borderRadius: 3, fontSize: 10, whiteSpace: 'nowrap' as const,
+    padding: '2px 7px', borderRadius: 3, fontSize: 'var(--fs-xs)', whiteSpace: 'nowrap' as const,
     color: STATUS_COLOR[status] ?? 'var(--t3)',
     background: `color-mix(in srgb, ${STATUS_COLOR[status] ?? 'var(--t3)'} 14%, transparent)`,
     border: `1px solid color-mix(in srgb, ${STATUS_COLOR[status] ?? 'var(--t3)'} 30%, transparent)`,
   }),
   section: { marginTop: 16 },
-  sLabel:  { fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase' as const, marginBottom: 4 },
+  sLabel:  { fontSize: 'var(--fs-sm)', color: 'var(--t3)', textTransform: 'uppercase' as const, marginBottom: 4 },
+  prose:   { fontSize: 'var(--fs-sm)' },
   chips:   { display: 'flex', flexWrap: 'wrap' as const, gap: 4 },
   chip: (clickable: boolean) => ({
-    padding: '2px 7px', borderRadius: 3, fontSize: 11,
+    padding: '2px 7px', borderRadius: 3, fontSize: 'var(--fs-sm)',
     background: 'var(--b2)', color: clickable ? 'var(--acc)' : 'var(--t2)',
     border: '1px solid var(--b3)', cursor: clickable ? 'pointer' : 'default',
     whiteSpace: 'nowrap' as const,
   }),
   compChip: {
-    padding: '2px 7px', borderRadius: 3, fontSize: 11,
+    padding: '2px 7px', borderRadius: 3, fontSize: 'var(--fs-sm)',
     background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
     whiteSpace: 'nowrap' as const,
   },
-  date:  { color: 'var(--t3)', fontSize: 11 },
-  empty: { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  date:  { color: 'var(--t3)', fontSize: 'var(--fs-sm)' },
+  empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
 
 interface Props {
@@ -127,19 +128,19 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       {data.context_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.context', 'Context')}</div>
-          <MartProse text={data.context_md} />
+          <MartProse text={data.context_md} style={S.prose} />
         </div>
       )}
       {data.decision_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.decision', 'Decision')}</div>
-          <MartProse text={data.decision_md} />
+          <MartProse text={data.decision_md} style={S.prose} />
         </div>
       )}
       {data.consequences_md && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.consequences', 'Consequences')}</div>
-          <MartProse text={data.consequences_md} />
+          <MartProse text={data.consequences_md} style={S.prose} />
         </div>
       )}
 

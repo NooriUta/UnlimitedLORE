@@ -309,9 +309,9 @@ export function MultiChip({ values, onChange, suggestions, suggestionLabels, pla
                   onMouseDown={() => add(s)}
                   onMouseEnter={() => setCursor(i)}
                 >
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{s}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{s}</span>
                   {suggestionLabels?.[s] && (
-                    <span style={{ color: 'var(--t3)', fontSize: 10, marginLeft: 6 }}>{suggestionLabels[s]}</span>
+                    <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)', marginLeft: 6 }}>{suggestionLabels[s]}</span>
                   )}
                 </div>
               ))}
@@ -325,28 +325,28 @@ export function MultiChip({ values, onChange, suggestions, suggestionLabels, pla
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S: Record<string, React.CSSProperties> = {
-  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 12 },
+  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 'var(--fs-base)' },
   head:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10 },
-  title:    { fontSize: 14, fontWeight: 600, color: 'var(--t1)' },
+  title:    { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
   headBtns: { display: 'flex', gap: 8 },
-  errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 11,
+  errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 'var(--fs-sm)',
               background: 'color-mix(in srgb, var(--dng) 12%, transparent)',
               color: 'var(--dng)', border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)' },
   row4:     { display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 4 },
   field:    { display: 'flex', flexDirection: 'column', gap: 4, minWidth: 110 },
-  label:    { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  label:    { fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em' },
   input:    { height: 28, padding: '0 8px', borderRadius: 4, border: '1px solid var(--b3)',
-              background: 'var(--b1)', color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
+              background: 'var(--b1)', color: 'var(--t1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
               outline: 'none', width: '100%', boxSizing: 'border-box' },
   inputLock:{ opacity: 0.55, cursor: 'not-allowed', background: 'var(--b2)' },
-  sLabel:   { fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 },
+  sLabel:   { fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 },
   ta:       { width: '100%', boxSizing: 'border-box', padding: '7px 9px', borderRadius: 4,
               border: '1px solid var(--b3)', background: 'var(--b1)', color: 'var(--t1)',
-              fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 1.55, resize: 'vertical', outline: 'none' },
+              fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)', lineHeight: 1.55, resize: 'vertical', outline: 'none' },
   btnPrimary:{ height: 28, padding: '0 14px', borderRadius: 5, border: 'none', cursor: 'pointer',
-               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 12, fontWeight: 600 },
+               background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 'var(--fs-base)', fontWeight: 600 },
   btnGhost:  { height: 28, padding: '0 12px', borderRadius: 5, cursor: 'pointer',
-               background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 12 },
+               background: 'transparent', color: 'var(--t2)', border: '1px solid var(--b3)', fontSize: 'var(--fs-base)' },
 };
 
 const MC: Record<string, React.CSSProperties> = {
@@ -356,12 +356,12 @@ const MC: Record<string, React.CSSProperties> = {
   chip:    { display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 3,
              background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
              color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
-             padding: '1px 4px', fontSize: 11 },
+             padding: '1px 4px', fontSize: 'var(--fs-sm)' },
   chipTxt: { fontFamily: 'var(--mono)' },
   del:     { background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
-             fontSize: 13, lineHeight: 1, padding: '0 1px', opacity: 0.7 },
+             fontSize: 'var(--fs-md)', lineHeight: 1, padding: '0 1px', opacity: 0.7 },
   input:   { border: 'none', background: 'transparent', outline: 'none', color: 'var(--t1)',
-             fontSize: 12, fontFamily: 'inherit', width: '100%', padding: '2px 2px' },
+             fontSize: 'var(--fs-base)', fontFamily: 'inherit', width: '100%', padding: '2px 2px' },
   dropdown:{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
              background: 'var(--b2)', border: '1px solid var(--b3)', borderRadius: 4,
              boxShadow: '0 4px 12px rgba(0,0,0,.25)', maxHeight: 200, overflowY: 'auto' },

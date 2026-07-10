@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { Virtuoso } from 'react-virtuoso';
 import { a11yClick } from './a11y';
 import {
   fetchLoreSlice,
@@ -93,18 +94,18 @@ const S = {
   chips:  { display: 'flex', flexWrap: 'wrap' as const, gap: 6 },
   chip: (on: boolean, color: string) => ({
     display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', userSelect: 'none' as const,
-    padding: '3px 9px', borderRadius: 12, fontSize: 11, whiteSpace: 'nowrap' as const,
+    padding: '3px 9px', borderRadius: 12, fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap' as const,
     border: `1px solid ${on ? color : 'var(--b3)'}`,
     background: on ? `color-mix(in srgb, ${color} 18%, transparent)` : 'transparent',
     color: on ? 'var(--t1)' : 'var(--t3)',
     transition: 'all 0.1s',
   }),
-  chipCount: (on: boolean) => ({ fontSize: 9, opacity: on ? 0.8 : 0.6 }),
+  chipCount: (on: boolean) => ({ fontSize: 'var(--fs-2xs)', opacity: on ? 0.8 : 0.6 }),
   chipRow: { display: 'flex', alignItems: 'flex-start', gap: 8 },
-  flabel:  { fontSize: 9, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, width: 58, flexShrink: 0, paddingTop: 5 },
+  flabel:  { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, width: 58, flexShrink: 0, paddingTop: 5 },
   search: {
     flex: 1, minWidth: 100, background: 'var(--b1)', border: '1px solid var(--b3)', borderRadius: 4,
-    color: 'var(--t1)', fontSize: 11, fontFamily: 'inherit', padding: '4px 8px', outline: 'none',
+    color: 'var(--t1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit', padding: '4px 8px', outline: 'none',
   },
   list:   { flex: 1, overflowY: 'auto' as const },
   // Two lines per row: title gets the full row width and can wrap (no more
@@ -124,14 +125,14 @@ const S = {
     flexShrink: 0, width: 18, height: 18, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
     color, background: `color-mix(in srgb, ${color} 16%, transparent)`,
   }),
-  title:  { flex: 1, minWidth: 0, color: 'var(--t1)', fontSize: 11.5, lineHeight: 1.3, wordBreak: 'break-word' as const },
-  comp:   { fontSize: 8, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
-  noComp: { fontSize: 8, padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
-  date:   { color: 'var(--t3)', fontSize: 9, marginLeft: 'auto' as const },
-  empty:  { padding: 24, color: 'var(--t3)', fontSize: 12 },
+  title:  { flex: 1, minWidth: 0, color: 'var(--t1)', fontSize: 'var(--fs-sm)', lineHeight: 1.3, wordBreak: 'break-word' as const },
+  comp:   { fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', whiteSpace: 'nowrap' as const },
+  noComp: { fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)', whiteSpace: 'nowrap' as const },
+  date:   { color: 'var(--t3)', fontSize: 'var(--fs-2xs)', marginLeft: 'auto' as const },
+  empty:  { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   exportBtn: {
     flexShrink: 0, height: 24, padding: '0 8px', border: '1px solid var(--b3)', borderRadius: 3,
-    cursor: 'pointer', fontSize: 10, background: 'var(--b2)', color: 'var(--t2)', fontFamily: 'inherit',
+    cursor: 'pointer', fontSize: 'var(--fs-xs)', background: 'var(--b2)', color: 'var(--t2)', fontFamily: 'inherit',
   },
 };
 
@@ -381,26 +382,33 @@ export default function LoreArtifactList({ onError, onOpen, selectedKind, select
       {headerContainer ? createPortal(header, headerContainer) : header}
 
       <div style={S.list}>
-        {shown.length === 0 && <EmptyState message={t('lore.artifactList.notFound', 'Ничего не найдено.')} />}
-        {shown.map(a => {
-          const meta = KIND_META[a.kind];
-          const sel = selectedKind === a.kind && selectedId === a.id;
-          const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
-          return (
-            <div key={`${a.kind}:${a.id}`} style={S.row(sel, indent)} {...a11yClick(() => onOpen(a.kind, a.id))} title={`${meta.label} · ${a.id}`}>
-              <div style={S.rowMain}>
-                <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
-                <span style={S.title}>{a.title}</span>
-              </div>
-              <div style={S.rowMeta}>
-                {a.component
-                  ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
-                  : <span style={S.noComp}>—</span>}
-                {a.date && <span style={S.date}>{a.date.slice(0, 10)}</span>}
-              </div>
-            </div>
-          );
-        })}
+        {shown.length === 0
+          ? <EmptyState message={t('lore.artifactList.notFound', 'Ничего не найдено.')} />
+          : <Virtuoso
+              style={{ height: '100%' }}
+              data={shown}
+              computeItemKey={(_, a) => `${a.kind}:${a.id}`}
+              itemContent={(_, a) => {
+                const meta = KIND_META[a.kind];
+                const sel = selectedKind === a.kind && selectedId === a.id;
+                const indent = a.kind === 'doc' ? Math.max(0, docPath(a.id, docById).length - 1) : 0;
+                return (
+                  <div style={S.row(sel, indent)} {...a11yClick(() => onOpen(a.kind, a.id))} title={`${meta.label} · ${a.id}`}>
+                    <div style={S.rowMain}>
+                      <span style={S.badge(meta.color)}><GameIcon slug={meta.icon} size={11} /></span>
+                      <span style={S.title}>{a.title}</span>
+                    </div>
+                    <div style={S.rowMeta}>
+                      {a.component
+                        ? <span style={S.comp}>{nameOf[a.component] || a.component}</span>
+                        : <span style={S.noComp}>—</span>}
+                      {a.date && <span style={S.date}>{a.date.slice(0, 10)}</span>}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+        }
       </div>
     </div>
   );

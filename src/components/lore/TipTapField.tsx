@@ -349,7 +349,7 @@ function Sep() {
 }
 function toolBtnStyle(active: boolean): React.CSSProperties {
   return {
-    height: 22, minWidth: 22, padding: '0 5px', borderRadius: 3, fontSize: 11, cursor: 'pointer',
+    height: 22, minWidth: 22, padding: '0 5px', borderRadius: 3, fontSize: 'var(--fs-sm)', cursor: 'pointer',
     background: active ? 'color-mix(in srgb, var(--acc) 18%, transparent)' : 'transparent',
     color: active ? 'var(--acc)' : 'var(--t2)',
     border: active ? '1px solid color-mix(in srgb, var(--acc) 35%, transparent)' : '1px solid transparent',
@@ -359,9 +359,9 @@ function toolBtnStyle(active: boolean): React.CSSProperties {
 const S: Record<string, React.CSSProperties> = {
   wrap:       { border: '1px solid var(--b3)', borderRadius: 4, overflow: 'hidden' },
   toolbar:    { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 3, padding: '4px 6px', background: 'var(--b2)', borderBottom: '1px solid var(--b3)' },
-  editorBox:  { position: 'relative', background: 'var(--b1)', padding: '7px 9px', fontSize: 12, color: 'var(--t1)', lineHeight: 1.55 },
+  editorBox:  { position: 'relative', background: 'var(--b1)', padding: '7px 9px', fontSize: 'var(--fs-base)', color: 'var(--t1)', lineHeight: 1.55 },
   sourceBox:  { width: '100%', minHeight: 100, background: 'var(--b1)', color: 'var(--t1)', fontFamily: 'var(--mono)',
-                fontSize: 12, lineHeight: 1.55, padding: '7px 9px', border: 'none', outline: 'none', resize: 'vertical',
+                fontSize: 'var(--fs-base)', lineHeight: 1.55, padding: '7px 9px', border: 'none', outline: 'none', resize: 'vertical',
                 boxSizing: 'border-box' },
-  placeholder:{ position: 'absolute', top: 7, left: 9, color: 'var(--t3)', pointerEvents: 'none', fontSize: 12 },
+  placeholder:{ position: 'absolute', top: 7, left: 9, color: 'var(--t3)', pointerEvents: 'none', fontSize: 'var(--fs-base)' },
 };
