@@ -5,6 +5,8 @@
 //
 // In prod lore.enabled=false → backend returns 404 LORE_DISABLED → LoreDisabledError.
 
+import { authHeaders } from '../auth/session';
+
 const LORE_BASE = '/lore';
 
 export class LoreDisabledError extends Error {
@@ -63,7 +65,7 @@ export async function loreMutate<T = { ok: boolean; [k: string]: unknown }>(
 ): Promise<T> {
   const res = await fetch(`${LORE_BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body),
     signal,
   });
@@ -200,7 +202,7 @@ export interface AdrWritePayload {
 export async function createLoreAdr(payload: AdrWritePayload): Promise<{ ok: boolean; adr_id: string; hist_created: boolean }> {
   const res = await fetch(`${LORE_BASE}/adr`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
   });
   assertJson(res);
@@ -317,7 +319,7 @@ export interface ComponentUpdatePayload {
 export async function updateLoreComponent(payload: ComponentUpdatePayload): Promise<{ ok: boolean; component_id: string }> {
   const res = await fetch('/lore/component/update', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
   });
   assertJson(res);
@@ -410,7 +412,7 @@ export async function postLoreStatus(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Seer-Role': 'admin',
+      ...authHeaders(),
     },
     body: JSON.stringify({ entity_type: entityType, id, status }),
   });
@@ -424,7 +426,7 @@ export async function uploadBragiAsset(file: File): Promise<{ ok: boolean; file_
   form.append('file', file);
   const res = await fetch(`${LORE_BASE}/bragi/asset/upload`, {
     method: 'POST',
-    headers: { 'X-Seer-Role': 'admin' },
+    headers: { ...authHeaders() },
     body: form,
   });
   assertJson(res);
@@ -441,7 +443,7 @@ export async function attachBragiAsset(p: {
 }): Promise<{ ok: boolean; asset_id: string; attached_to: string }> {
   const res = await fetch(`${LORE_BASE}/bragi/asset`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
   });
   assertJson(res);
@@ -457,7 +459,7 @@ export async function createBragiCampaign(p: {
 }): Promise<{ ok: boolean; campaign_id: string; linked_variant: boolean }> {
   const res = await fetch(`${LORE_BASE}/bragi/campaign`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
   });
   assertJson(res);
@@ -475,7 +477,7 @@ export async function linkBragiForseti(p: {
 }): Promise<{ ok: boolean; entity_id: string; target_id: string; action: string }> {
   const res = await fetch(`${LORE_BASE}/bragi/link`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
   });
   assertJson(res);
@@ -498,7 +500,7 @@ export async function createLoreTask(
 ): Promise<LoreTaskWriteResponse> {
   const res = await fetch(`${LORE_BASE}/task`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, task_id: taskId, title, note_md: noteMd ?? null }),
   });
   assertJson(res);
@@ -516,7 +518,7 @@ export async function editLoreTask(
   // mirroring onto both the vertex and the open KnowTaskHist row).
   const res = await fetch(`${LORE_BASE}/task/edit`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ task_uid: taskUid, title, note_md: noteMd ?? null, effort_days: effortDays ?? null }),
   });
   assertJson(res);
@@ -532,7 +534,7 @@ export async function linkTaskComponent(
 ): Promise<{ ok: boolean; task_uid: string; component_id: string; action: string }> {
   const res = await fetch(`${LORE_BASE}/task/component`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ task_uid: taskUid, component_id: componentId, action }),
   });
   assertJson(res);
@@ -547,7 +549,7 @@ export async function linkSprintComponent(
 ): Promise<{ ok: boolean; sprint_id: string; component_id: string; action: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/component`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, component_id: componentId, action }),
   });
   assertJson(res);
@@ -562,7 +564,7 @@ export async function linkSprintProject(
 ): Promise<{ ok: boolean; sprint_id: string; git_project: string; action: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/project`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, git_project: gitProject, action }),
   });
   assertJson(res);
@@ -578,7 +580,7 @@ export async function linkSprintMilestone(
 ): Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }> {
   const res = await fetch(`${LORE_BASE}/milestone/sprint`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, milestone_id: milestoneId, action }),
   });
   assertJson(res);
@@ -624,7 +626,7 @@ export async function upsertTech(p: TechUpsertPayload): Promise<{ ok: boolean; s
   ].filter(Boolean);
   const res = await fetch(`${LORE_BASE}/spec`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({
       spec_id: specId, title: p.tech_name, version: p.version, component_id: p.component_id,
       content_md: lines.join('\n'),
@@ -644,7 +646,7 @@ export async function linkSprintRelease(
 ): Promise<{ ok: boolean }> {
   const res = await fetch(`${LORE_BASE}/release/${action === 'remove' ? 'unlink' : 'link'}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ release_id: releaseId, git_project: gitProject, sprint_ids: [sprintId] }),
   });
   assertJson(res);
@@ -658,7 +660,7 @@ export async function upsertMilestone(
 ): Promise<{ ok: boolean; milestone_id: string }> {
   const res = await fetch(`${LORE_BASE}/milestone`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(m),
   });
   assertJson(res);
@@ -672,7 +674,7 @@ export async function updateLoreSprint(
 ): Promise<{ ok: boolean; sprint_id: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/update`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),
   });
   assertJson(res);
@@ -695,7 +697,7 @@ export async function updateSprintPlan(
 ): Promise<{ ok: boolean; sprint_id: string }> {
   const res = await fetch(`${LORE_BASE}/sprint/plan`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),
   });
   assertJson(res);
@@ -710,7 +712,7 @@ export async function createLoreSprint(payload: {
 }): Promise<{ ok: boolean; sprint_id: string; created: boolean }> {
   const res = await fetch(`${LORE_BASE}/sprint/create`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
   });
   assertJson(res);
@@ -787,7 +789,7 @@ export async function updateLoreDoc(
 ): Promise<{ ok: boolean; doc_id: string }> {
   const res = await fetch(`${LORE_BASE}/doc`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': 'admin' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ doc_id: docId, ...fields }),
   });
   assertJson(res);

@@ -15,6 +15,19 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
   `viewer`, client `lore-app` (SPA, public + PKCE S256), client `lore-mcp` (confidential
   service-account). Realm roles land in the `seer_roles` claim (mirrors the platform
   `seer` realm mapper).
+- **Frontend `lore-app`** (`src/auth/session.ts`, `AuthGate.tsx`, `AuthCallback.tsx`) — full
+  Authorization Code + PKCE login via `oidc-client-ts`. Feature-flagged on
+  `VITE_LORE_AUTH_ENABLED`: off (default/unset) → every write call still sends the same
+  hardcoded `X-Seer-Role: admin` header as always, `AuthGate` renders children immediately,
+  zero behavior change. On → `AuthGate` redirects to Keycloak when there's no session,
+  `/auth/callback` exchanges the code, and `authHeaders()` (imported by every `src/api/*`
+  write call) switches to `Authorization: Bearer <token>` instead of the role header. A
+  small logout badge appears in `AppShell`'s header, but only once the flag is on.
+- **MCP server** (`mcp-server/src/backend.ts`) — `client_credentials` token fetch against
+  the `lore-mcp` service account, cached until near expiry. Feature-gated on
+  `LORE_OIDC_ISSUER` + `LORE_MCP_CLIENT_ID` + `LORE_MCP_CLIENT_SECRET` all being set:
+  unset (default) → `lorePost`/`loreUpload` keep sending `X-Seer-Role` from
+  `LORE_SEER_ROLE` exactly as before. Set → they send a Bearer token instead.
 
 ## Enabling auth (staging/prod)
 
@@ -25,17 +38,17 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
 2. **Backend:** set `LORE_AUTH_ENABLED=true` and `LORE_OIDC_ISSUER=http://<kc>/kc/realms/omilore`
    (from inside the lore-backend container, `<kc>` must be reachable — add the KC host to
    `extra_hosts` / use the compose network alias). Rebuild the image.
-3. **Verify:** a request without a bearer token → 401; a token carrying realm role
+3. **Frontend:** set `VITE_LORE_AUTH_ENABLED=true`, `VITE_OIDC_ISSUER` (same issuer URL,
+   reachable from the browser — likely a different host/port than the backend's internal
+   one), `VITE_OIDC_CLIENT_ID=lore-app` (default). Rebuild.
+4. **MCP:** set `LORE_OIDC_ISSUER`, `LORE_MCP_CLIENT_ID=lore-mcp`, `LORE_MCP_CLIENT_SECRET`
+   (the rotated secret from step 1).
+5. **Verify:** a request without a bearer token → 401; a token carrying realm role
    `admin`/`super-admin` → writes succeed; forging `X-Seer-Role: admin` without a token →
    still 401/anonymous (the filter no longer honours the raw header once a token is required).
+   In the browser: no session → redirected to Keycloak login; after login, writes work and
+   the header shows a logout badge.
 
-## Remaining runtime work (only needed when auth is on)
-
-- **Frontend `lore-app`:** implement the OIDC Authorization Code + PKCE login (redirect to
-  KC, store the token, send `Authorization: Bearer …`). Today the SPA sends `X-Seer-Role`
-  directly — that stops working once auth is enforced.
-- **MCP server:** fetch a token via `client_credentials` from the `lore-mcp` client
-  (`LORE_MCP_CLIENT_ID`/`LORE_MCP_CLIENT_SECRET`) and send `Bearer` instead of the default
-  `LORE_SEER_ROLE=admin` header (`mcp-server/src/backend.ts`).
-
-Both are gated on the realm being live, so they're deliberately left as follow-ups.
+All three flags (backend/frontend/MCP) must flip together — flipping only one leaves that
+side either broken (frontend/MCP sending a token nothing checks) or unprotected (backend
+enforcing auth while a client still only sends the old header).

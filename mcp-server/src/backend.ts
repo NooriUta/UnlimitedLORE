@@ -1,9 +1,46 @@
 // Thin HTTP client for the UnlimitedLORE backend (:9100). The MCP server proxies
 // this backend — it never talks to ArcadeDB directly, reusing the backend's
-// named-slice composition + whitelisting. Writes carry the X-Seer-Role header.
+// named-slice composition + whitelisting. Writes carry either a bearer token
+// (A2, once LORE_MCP_CLIENT_ID/SECRET are set) or the legacy X-Seer-Role header.
 
 const BASE = (process.env.LORE_BACKEND_URL ?? 'http://localhost:9100').replace(/\/$/, '');
 const ROLE = process.env.LORE_SEER_ROLE ?? 'admin';
+
+// A2: client_credentials against the omilore realm's lore-mcp service account.
+// Feature-gated on both env vars being set — until the realm is imported and
+// these are configured, writeAuthHeaders() falls through to the X-Seer-Role
+// header exactly as before. See docs/AUTH_OMILORE.md.
+const OIDC_ISSUER    = process.env.LORE_OIDC_ISSUER;
+const MCP_CLIENT_ID  = process.env.LORE_MCP_CLIENT_ID;
+const MCP_CLIENT_SECRET = process.env.LORE_MCP_CLIENT_SECRET;
+const OIDC_CONFIGURED = Boolean(OIDC_ISSUER && MCP_CLIENT_ID && MCP_CLIENT_SECRET);
+
+let cachedToken: { accessToken: string; expiresAt: number } | null = null;
+
+/** Bearer token for the lore-mcp service account, cached until near expiry
+ * (60s safety margin so a request never races a just-expired token). */
+async function serviceAccountToken(): Promise<string> {
+  const now = Date.now();
+  if (cachedToken && cachedToken.expiresAt > now) return cachedToken.accessToken;
+  const res = await fetch(`${OIDC_ISSUER}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: MCP_CLIENT_ID as string,
+      client_secret: MCP_CLIENT_SECRET as string,
+    }),
+  });
+  if (!res.ok) throw new Error(`OIDC token request → ${res.status} ${await detail(res)}`);
+  const body = (await res.json()) as { access_token: string; expires_in: number };
+  cachedToken = { accessToken: body.access_token, expiresAt: now + (body.expires_in - 60) * 1000 };
+  return cachedToken.accessToken;
+}
+
+async function writeAuthHeaders(): Promise<Record<string, string>> {
+  if (!OIDC_CONFIGURED) return { 'X-Seer-Role': ROLE };
+  return { Authorization: `Bearer ${await serviceAccountToken()}` };
+}
 
 async function detail(res: Response): Promise<string> {
   try {
@@ -76,11 +113,11 @@ export async function loreGet(path: string, params?: Record<string, string>): Pr
   return res.json();
 }
 
-/** POST a LORE write endpoint with the admin role header. */
+/** POST a LORE write endpoint, authenticated per writeAuthHeaders() (see A2 above). */
 export async function lorePost(path: string, body: unknown): Promise<unknown> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Seer-Role': ROLE },
+    headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()) },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
@@ -101,7 +138,7 @@ export async function loreUpload(
   form.append('file', new Blob([bytes], { type: contentType ?? 'application/octet-stream' }), filename);
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'X-Seer-Role': ROLE },
+    headers: { ...(await writeAuthHeaders()) },
     body: form,
   });
   if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
