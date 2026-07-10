@@ -52,6 +52,11 @@ dependencies {
 
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
+
+    // C5 (SPRINT_LORE_PROD_HARDENING): real ArcadeDB in a throwaway container
+    // for SCD2-transition and A1-rollback tests — not part of the Quarkus
+    // platform BOM, so pinned directly.
+    testImplementation 'org.testcontainers:testcontainers:1.20.4'
 }
 
 compileJava.options.encoding     = 'UTF-8'

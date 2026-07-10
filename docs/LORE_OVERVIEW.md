@@ -37,9 +37,15 @@ ArcadeDB (граф), читается/пишется через собствен
   - `LoreSlices.java` — именованные read-запросы («слайсы»), каждый — Cypher/SQL с
     параметрами, отдаются через `GET /lore/slice/<name>?param=...`. Каталог —
     `GET /lore/slices`.
-  - `AidaLoreResource.java` — write-эндпоинты (`POST /lore/adr`, `/lore/sprint`,
-    `/lore/qg/run`, `/lore/qg/promote`, …) — все SCD2-совместимые upsert'ы с
-    правильными рёбрами (`HAS_STATE`, `BELONGS_TO`, `SUPERSEDES`, …).
+  - Write-эндпоинты (`POST /lore/adr`, `/lore/sprint`, `/lore/qg/run`,
+    `/lore/qg/promote`, …) — все SCD2-совместимые upsert'ы с правильными
+    рёбрами (`HAS_STATE`, `BELONGS_TO`, `SUPERSEDES`, …). После God-класс
+    распила (B2) живут в доменных resource-классах (`LoreAdrResource.java`,
+    `LoreSprintTaskResource.java`, `LoreStatusResource.java`, `LoreQgResource.java`,
+    `LoreReleaseResource.java`, …), а не в одном `AidaLoreResource.java` — тот
+    остался только с read-only `/lore/slices`/`/analytics`/`/slice/{id}` +
+    admin ingest. Общая инфра (клиенты ArcadeDB, конфиг, SAFE_ID, хелперы) —
+    `LoreResourceBase.java`.
   - `LoreSchemaInitializer.java` — идемпотентный DDL-бутстрап (запускается один
     раз при `lore.bootstrap=true`). См. `backend/db-schema/` — извлечённая копия
     + инструмент разворота с нуля.

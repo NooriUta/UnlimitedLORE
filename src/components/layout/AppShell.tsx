@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { GameIcon } from '../lore/GameIcon';
 import { SHELL_TABS, type ShellTab } from './shellNav';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { AUTH_ENABLED, displayName, logout } from '../../auth/session';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
@@ -175,6 +176,20 @@ export default function AppShell() {
         >
           {lang === 'ru' ? 'RU' : 'EN'}
         </button>
+
+        {/* A2: only rendered once VITE_LORE_AUTH_ENABLED is actually on —
+            invisible today, same as every write call still sending the old
+            hardcoded admin header until both sides of the flag flip together. */}
+        {AUTH_ENABLED && (
+          <button
+            type="button"
+            onClick={() => { void logout(); }}
+            title="Выйти"
+            style={btnStyle}
+          >
+            {displayName() ?? '…'} ⏻
+          </button>
+        )}
       </header>
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>

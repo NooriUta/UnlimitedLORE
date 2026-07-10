@@ -48,7 +48,7 @@ class LoreStatusesConsistencyTest {
     void planStatusesMatchCanonical() throws Exception {
         JsonNode c = loadCanonical();
         assertEquals(new TreeSet<>(array(c, "planStatuses")),
-                     new TreeSet<>(AidaLoreResource.PLAN_STATUSES),
+                     new TreeSet<>(LoreResourceBase.PLAN_STATUSES),
                      "PLAN_STATUSES drift vs shared/lore-statuses.json");
     }
 
@@ -56,7 +56,7 @@ class LoreStatusesConsistencyTest {
     void adrStatusesMatchCanonical() throws Exception {
         JsonNode c = loadCanonical();
         assertEquals(new TreeSet<>(array(c, "adrStatuses")),
-                     new TreeSet<>(AidaLoreResource.ADR_STATUSES),
+                     new TreeSet<>(LoreResourceBase.ADR_STATUSES),
                      "ADR_STATUSES drift vs shared/lore-statuses.json");
     }
 
@@ -64,7 +64,7 @@ class LoreStatusesConsistencyTest {
     void entityTypesMatchCanonical() throws Exception {
         JsonNode c = loadCanonical();
         assertEquals(new TreeSet<>(array(c, "entityTypes")),
-                     new TreeSet<>(AidaLoreResource.ENTITY_TYPES),
+                     new TreeSet<>(LoreResourceBase.ENTITY_TYPES),
                      "ENTITY_TYPES drift vs shared/lore-statuses.json");
     }
 
@@ -76,11 +76,11 @@ class LoreStatusesConsistencyTest {
         Set<String> jsonKeys = new LinkedHashSet<>();
         raw.fieldNames().forEachRemaining(jsonKeys::add);
         assertEquals(new TreeSet<>(jsonKeys),
-                     new TreeSet<>(AidaLoreResource.SCD2_STATUS_RAW.keySet()),
+                     new TreeSet<>(LoreResourceBase.SCD2_STATUS_RAW.keySet()),
                      "SCD2_STATUS_RAW key set drift vs shared/lore-statuses.json.statusRaw");
 
         for (String key : jsonKeys) {
-            assertEquals(raw.get(key).asText(), AidaLoreResource.SCD2_STATUS_RAW.get(key),
+            assertEquals(raw.get(key).asText(), LoreResourceBase.SCD2_STATUS_RAW.get(key),
                 "statusRaw['" + key + "'] value drift vs shared/lore-statuses.json");
         }
     }
