@@ -87,6 +87,25 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
+    name: 'lore_move_task',
+    description: 'Move a task to another sprint (ADR-LORE-013, cancel + recreate). Creates a fresh copy ' +
+      'in target_sprint_id — same title/note_md/effort_days + TAGGED_WITH component links, initial ' +
+      'PLANNED state — and cancels the source (it stays as a ❌ CANCELLED tombstone in the old sprint). ' +
+      'NOT a PK re-key: the new task has its OWN fresh status history; the source keeps its history. ' +
+      'task_id is reused when free in the target, else new_task_id, else a "<id>_N" suffix (returned as ' +
+      'new_task_id + task_id_changed). IN_PHASE and inbound edges (PROMOTED_TO/LED_TO) stay on the source ' +
+      '— re-link on the new task via lore_link_task_phase / lore_link_task_component if needed. ' +
+      'Mutates the shared system_aida_lore.',
+    schema: {
+      task_uid:         z.string().describe('full source task uid, e.g. "SPRINT_OLD/T05"'),
+      target_sprint_id: z.string().describe('destination sprint, e.g. "SPRINT_NEW"'),
+      new_task_id:      z.string().optional().describe('preferred task_id in the target (default: reuse source task_id; auto-suffixed on collision)'),
+    },
+    path: '/lore/task/move',
+    body: ({ task_uid, target_sprint_id, new_task_id }) => ({ task_uid, target_sprint_id, new_task_id: new_task_id ?? null }),
+  });
+
+  definePostTool(server, {
     name: 'lore_create_phase',
     description: 'Create a sprint phase (KnowPhase): PART_OF → sprint, initial PLANNED history state. ' +
       'phase_uid = "<sprint_id>/PHASE_<KEY>". Idempotent — an existing phase is returned ' +

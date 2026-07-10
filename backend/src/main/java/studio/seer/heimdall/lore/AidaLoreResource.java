@@ -786,6 +786,109 @@ public class AidaLoreResource extends LoreResourceBase {
             });
     }
 
+    // ── ADR-LORE-013: move a task between sprints (cancel + recreate) ────────
+    // Creates a fresh copy in the target sprint (title/note_md/effort_days +
+    // TAGGED_WITH component links, initial PLANNED state) and cancels the source
+    // (stays as a ❌ tombstone in the old sprint, note carried forward per #88).
+    // No PK re-key / SCD2 surgery — reuses the create + status write paths.
+    public record TaskMoveRequest(String task_uid, String target_sprint_id, String new_task_id) {}
+
+    @POST
+    @Path("task/move")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response moveTask(TaskMoveRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.task_uid() == null || req.task_uid().isBlank()
+                || req.target_sprint_id() == null || req.target_sprint_id().isBlank())
+            return badParams("task_uid and target_sprint_id required");
+        if (!SAFE_ID.matcher(req.target_sprint_id()).matches()
+                || (req.new_task_id() != null && !req.new_task_id().isBlank()
+                    && !SAFE_ID.matcher(req.new_task_id()).matches()))
+            return badParams("target_sprint_id / new_task_id contain illegal characters");
+        final String oldUid = req.task_uid();
+        final String targetSid = req.target_sprint_id();
+        final String now = Instant.now().toString();
+        final String nsid = UUID.randomUUID().toString();   // new task's PLANNED hist
+        final String cnsid = UUID.randomUUID().toString();  // source's CANCELLED hist
+        try {
+            List<Map<String, Object>> src = ingestService.queryPublic(
+                "SELECT task_id, title, " +
+                "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
+                "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+                "out('TAGGED_WITH').component_id AS components " +
+                "FROM KnowTask WHERE task_uid=:u LIMIT 1", Map.of("u", oldUid));
+            if (src.isEmpty()) return badParams("task not found: " + oldUid);
+            if (ingestService.queryPublic("SELECT sprint_id FROM KnowSprint WHERE sprint_id=:s LIMIT 1",
+                    Map.of("s", targetSid)).isEmpty())
+                return badParams("target sprint not found: " + targetSid);
+            Map<String, Object> s = src.get(0);
+            String title  = (String) s.get("title");
+            String note   = (String) s.get("note_md");
+            Object effort = s.get("effort_days");
+            List<?> comps = s.get("components") instanceof List<?> l ? l : List.of();
+
+            // Resolve a collision-free task_id in the target sprint.
+            String wantTid = (req.new_task_id() != null && !req.new_task_id().isBlank())
+                ? req.new_task_id() : (String) s.get("task_id");
+            String tid = wantTid;
+            for (int k = 2; taskExists(targetSid + "/" + tid); k++) tid = wantTid + "_" + k;
+            final String newUid = targetSid + "/" + tid;
+
+            String prefix = targetSid + "/";
+            List<Map<String, Object>> mx = ingestService.queryPublic(
+                "SELECT max(order_index) AS mx FROM KnowTask WHERE task_uid.substring(0, :plen) = :prefix",
+                Map.of("prefix", prefix, "plen", prefix.length()));
+            int order = (!mx.isEmpty() && mx.get(0).get("mx") instanceof Number n ? n.intValue() : 0) + 1;
+
+            // Create the new task (mirrors createTask's atomic sqlscript).
+            StringBuilder script = new StringBuilder()
+                .append("INSERT INTO KnowTask SET task_uid=:uid, task_id=:tid, title=:title, note_md=:note, order_index=:oi, src='manual';")
+                .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowSprint WHERE sprint_id=:sid);")
+                .append("INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='📋 PLANNED', valid_from=:now, note_md=:note")
+                .append(effort != null ? ", effort_days=:eff;" : ";")
+                .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid=:uid) TO (SELECT FROM KnowTaskHist WHERE state_uid=:nsid);");
+            Map<String, Object> p = mapOfNullable("uid", newUid, "tid", tid, "title", title,
+                "note", note, "oi", order, "sid", targetSid, "nsid", nsid, "now", now);
+            if (effort != null) p.put("eff", effort);
+            for (Object c : comps) {
+                if (c == null) continue;
+                script.append(String.format(
+                    "CREATE EDGE TAGGED_WITH FROM (SELECT FROM KnowTask WHERE task_uid='%s') TO (SELECT FROM LoreComponent WHERE component_id='%s');",
+                    newUid, c));
+            }
+            writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p)).await().indefinitely();
+
+            // Cancel the source — reuse the /lore/status flip + #88 note carry-forward.
+            Map<String, Object> carry = readTaskHistCarryFields(oldUid).await().indefinitely();
+            var resp = updateScd2Status("task", "KnowTask", "KnowTaskHist", "task_uid",
+                oldUid, "cancelled", now, cnsid).await().indefinitely();
+            if (resp.getStatus() < 300) {
+                restoreTaskHistFields(cnsid, (String) carry.get("note_md"),
+                    carry.get("effort_days") == null ? null : ((Number) carry.get("effort_days")).doubleValue())
+                    .await().indefinitely();
+            } else {
+                LOG.warnf("[LORE TASK MOVE] %s created as %s but source cancel returned %d",
+                    oldUid, newUid, resp.getStatus());
+            }
+            boolean tidChanged = !tid.equals(s.get("task_id"));
+            return noStore(Response.ok(Map.of("ok", true,
+                "old_task_uid", oldUid, "new_task_uid", newUid,
+                "task_id_changed", tidChanged, "new_task_id", tid)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE TASK MOVE] %s → %s: %s", oldUid, targetSid, e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    private boolean taskExists(String taskUid) {
+        return !ingestService.queryPublic(
+            "SELECT task_uid FROM KnowTask WHERE task_uid=:u LIMIT 1", Map.of("u", taskUid)).isEmpty();
+    }
+
     // ── Write-path: sprint phases (MCP-PHASES, SPRINT_LORE_MCP_GAPS_2) ────────
     // Read side already exists (phases_of_sprint / tasks_of_phase, LoreSlices): KnowPhase
     // { phase_uid = "<sprint>/PHASE_<KEY>", phase_id = "Фаза <KEY>", order_index }

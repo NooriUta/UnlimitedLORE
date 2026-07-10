@@ -139,7 +139,11 @@ function buildSprintPickOpts(t: (k: string, d: string) => string): PickOpt[] {
   ];
 }
 
-const TASK_PICK_TOKENS = ['todo', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'];
+// 'planned' included: tasks are created in PLANNED state (createTask opens
+// '📋 PLANNED'), so the picker must show it (with its calendar icon) AND let a
+// task be set back to planned — it was missing, so a fresh task's own status
+// wasn't selectable in the UI.
+const TASK_PICK_TOKENS = ['todo', 'planned', 'active', 'partial', 'ready_for_deploy', 'done', 'blocked', 'cancelled'];
 
 // T18: memoized -- rendered once per task/phase row in potentially large
 // sprints, and its own render (building the status option list + several
