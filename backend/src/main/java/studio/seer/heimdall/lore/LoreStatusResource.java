@@ -221,9 +221,15 @@ public class LoreStatusResource extends LoreResourceBase {
         for (String f : SPRINT_PLAN_FIELDS) {
             if (fields.get(f) != null) { sb.append(f).append("=:").append(f).append(", "); p.put(f, fields.get(f)); }
         }
+        // fields can be non-empty (one hist row read) while every SPRINT_PLAN_FIELDS
+        // value on it is null (a bare sprint with no priority/dates/track/pr_refs set
+        // yet) — p stays empty in that case, which is the real "nothing to restore"
+        // signal. A string-equality check on the built SET clause used to gate this
+        // instead and never matched (StringBuilder's seed already has a trailing
+        // space the check didn't account for), so every status flip on such a
+        // sprint fired an invalid empty "UPDATE ... SET " and logged a spurious 500.
+        if (p.isEmpty()) return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
         String set = sb.toString().replaceAll(",\\s*$", "");
-        if (set.equals("UPDATE KnowSprintHist SET"))
-            return Uni.createFrom().item(new LoreCommandClient.LoreCommandResult(null));
         p.put("nsid", nsid);
         return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
             set + " WHERE state_uid = :nsid", p));
