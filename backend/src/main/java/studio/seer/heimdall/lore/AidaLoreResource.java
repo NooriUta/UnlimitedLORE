@@ -1704,6 +1704,50 @@ public class AidaLoreResource extends LoreResourceBase {
         }
     }
 
+    // ── ADR-LORE-012: upsert dictionary entry (KnowDictEntry) ────────────────
+    // One vertex per (dict_type, code). Partial-safe for metadata (label/color/
+    // icon/sort_order set only when provided), but is_active/is_extensible always
+    // written with sane defaults (true / false) so a fresh create is well-formed.
+    public record DictEntryRequest(String dict_type, String code, String label_ru,
+                                   String label_en, String color, String icon,
+                                   Integer sort_order, Boolean is_active, Boolean is_extensible) {}
+
+    @POST
+    @Path("dict/entry")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertDictEntry(DictEntryRequest req,
+                                    @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.dict_type() == null || req.dict_type().isBlank()
+                || req.code() == null || req.code().isBlank())
+            return badParams("dict_type and code required");
+        try {
+            StringBuilder sql = new StringBuilder(
+                "UPDATE KnowDictEntry SET dict_type=:dt, code=:code, is_active=:ia, is_extensible=:ie");
+            Map<String, Object> p = new java.util.HashMap<>();
+            p.put("dt", req.dict_type());
+            p.put("code", req.code());
+            p.put("ia", req.is_active()     == null ? Boolean.TRUE  : req.is_active());
+            p.put("ie", req.is_extensible() == null ? Boolean.FALSE : req.is_extensible());
+            if (req.label_ru()   != null) { sql.append(", label_ru=:lr");   p.put("lr", req.label_ru()); }
+            if (req.label_en()   != null) { sql.append(", label_en=:le");   p.put("le", req.label_en()); }
+            if (req.color()      != null) { sql.append(", color=:col");     p.put("col", req.color()); }
+            if (req.icon()       != null) { sql.append(", icon=:icon");     p.put("icon", req.icon()); }
+            if (req.sort_order() != null) { sql.append(", sort_order=:so"); p.put("so", req.sort_order()); }
+            sql.append(" UPSERT WHERE dict_type=:dt AND code=:code");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                sql.toString(), p)).await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true,
+                "dict_type", req.dict_type(), "code", req.code())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DICT] %s/%s: %s", req.dict_type(), req.code(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Write-path: link sprint ↔ component (BELONGS_TO) ─────────────────────
     // An explicit sprint→component link. When present it OVERRIDES the fuzzy
     // naming-convention match (sprint_id LIKE %component_key%) used by the

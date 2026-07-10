@@ -449,6 +449,25 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowSprint.no_release_required   IF NOT EXISTS BOOLEAN",
         "CREATE PROPERTY KnowSprintHist.planned_start_date IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprintHist.planned_end_date   IF NOT EXISTS STRING",
-        "CREATE PROPERTY KnowSprintHist.track_id           IF NOT EXISTS STRING"
+        "CREATE PROPERTY KnowSprintHist.track_id           IF NOT EXISTS STRING",
+
+        // ── ADR-LORE-012: KnowDictEntry — значения справочников как вершины графа ─
+        // Одна вершина = одно значение (dict_type, code) с метаданными; цель для
+        // ссылки/паспорта и (для сущностных доменов) для ребра. Reference-only
+        // домены (status/priority/adr_status) читают color/icon/label отсюда,
+        // храня значение строкой; сущностные (area/artifact_kind/channel/tag) —
+        // позже через ребро. is_extensible гейтит affordance «+» в UI.
+        "CREATE VERTEX TYPE KnowDictEntry IF NOT EXISTS",
+        "CREATE PROPERTY KnowDictEntry.dict_type     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntry.code          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntry.label_ru      IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntry.label_en      IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntry.color         IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntry.icon          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntry.sort_order    IF NOT EXISTS INTEGER",
+        "CREATE PROPERTY KnowDictEntry.is_active     IF NOT EXISTS BOOLEAN",
+        "CREATE PROPERTY KnowDictEntry.is_extensible IF NOT EXISTS BOOLEAN",
+        // Composite unique — enables UPSERT WHERE dict_type=x AND code=y without dups.
+        "CREATE INDEX IF NOT EXISTS ON KnowDictEntry (dict_type, code) UNIQUE"
     );
 }

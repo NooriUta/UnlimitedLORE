@@ -760,6 +760,16 @@ public final class LoreSlices {
         slice("bragi_pages",
             "SELECT page_id, url, title FROM BragiPage",
             List.of(), Map.of(), " ORDER BY page_id");
+
+        // ── ADR-LORE-012: dictionary (KnowDictEntry) ─────────────────────────
+        // Without dict_type — весь справочник; с dict_type — один домен.
+        // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
+        slice("dictionary",
+            "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible FROM KnowDictEntry",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "dict_type", " WHERE dict_type = :dict_type")),
+            " ORDER BY dict_type, sort_order");
     }
 
     public static Set<String> ids() { return SLICES.keySet(); }

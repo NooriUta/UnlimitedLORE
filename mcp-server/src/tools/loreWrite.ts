@@ -1129,6 +1129,31 @@ export function registerLoreWrite(server: McpServer): void {
     body: ({ channel_id, channel_type, url_handle, funnel_role, rules_md }) => ({ channel_id, channel_type, url_handle, funnel_role, rules_md }),
   });
 
+  // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────
+  definePostTool(server, {
+    name: 'lore_upsert_dict_entry',
+    description: 'KnowDictEntry (ADR-LORE-012): create/amend one dictionary value as a graph vertex — upsert by ' +
+      '(dict_type, code), partial-safe for metadata (label/color/icon/sort_order left untouched when omitted; ' +
+      'is_active defaults true, is_extensible false on create). Single canon read by frontend (useDictionary), ' +
+      'backend and MCP via lore_query_slice "dictionary". dict_type e.g. "sprint_status"|"task_status"|"adr_status"|' +
+      '"priority"|"artifact_kind"|"area"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
+      'Check lore_query_slice "dictionary" (optionally dict_type=...) before adding. Mutates the shared system_aida_lore.',
+    schema: {
+      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area"'),
+      code:          z.string().describe('stable key, e.g. "done", "P0", "PROPOSED", "runbook"'),
+      label_ru:      z.string().optional(),
+      label_en:      z.string().optional(),
+      color:         z.string().optional().describe('CSS token preferred, e.g. "var(--suc)"'),
+      icon:          z.string().optional().describe('game-icons slug, e.g. "divided-spiral"'),
+      sort_order:    z.number().int().optional().describe('display order within the domain'),
+      is_active:     z.boolean().optional().describe('soft-delete flag; default true'),
+      is_extensible: z.boolean().optional().describe('true = admins may add values via UI; default false'),
+    },
+    path: '/lore/dict/entry',
+    body: ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }) =>
+      ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }),
+  });
+
   definePostTool(server, {
     name: 'lore_link_rubric',
     description: 'Assigns (or replaces) ONE rubric on a BragiPublication or BragiKeyword via IN_RUBRIC, without re-supplying ' +
