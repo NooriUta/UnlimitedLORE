@@ -32,9 +32,26 @@ mermaid.registerLayoutLoaders(elkLayouts);
 mermaid.initialize({
   startOnLoad: false,
   theme: 'forest',
+  // SVG <text> labels, NOT HTML-in-foreignObject: our sanitizeSvg() (XSS pass)
+  // strips the <div> content out of <foreignObject>, which left every node an
+  // empty box. SVG text survives sanitisation and is coloured by themeVariables.
+  htmlLabels: false,
+  flowchart: { htmlLabels: false },
   themeVariables: {
     fontFamily: 'monospace',
     fontSize: '13px',
+    // The diagram always sits on a fixed light backdrop (--mermaid-bg #f4f4f4),
+    // but 'forest' left node/edge label text at a near-invisible low-contrast
+    // colour on the light-green nodes. Pin dark, high-contrast text so labels
+    // stay readable regardless of the app's (dark/light) theme.
+    primaryTextColor: '#14210a',
+    secondaryTextColor: '#14210a',
+    tertiaryTextColor: '#14210a',
+    textColor: '#1c1c1c',
+    nodeTextColor: '#14210a',
+    lineColor: '#4c6138',
+    edgeLabelBackground: '#f4f4f4',
+    titleColor: '#1c1c1c',
   },
   securityLevel: 'loose',
 });
@@ -57,6 +74,12 @@ const PROSE_CSS = `
 .mart-prose th { background: var(--bg2); border: 1px solid var(--bd); padding: 4px 10px; text-align: left; font-weight: 600; color: var(--t1); }
 .mart-prose td { border: 1px solid var(--bd); padding: 4px 10px; font-variant-numeric: tabular-nums; }
 .mart-prose hr { border: none; border-top: 1px solid var(--bd); margin: 1em 0; }
+/* Dark palette: mermaid draws SVG label <text> fill from the GLOBAL init and
+   ignores a per-diagram text colour, so labels render dark. On the dark backdrop
+   that is invisible — invert every label to light here (element selector, so it
+   survives sanitizeSvg stripping class attributes). Edge-label backdrops stay
+   dark (edgeLabelBackground), so light text on them reads. */
+.mart-mermaid--dark svg text { fill: #e6e6e6 !important; }
 `;
 
 let mermaidSeq = 0;
@@ -96,20 +119,57 @@ function toSegments(text: string): Segment[] {
   return segs;
 }
 
+// Per-diagram palette presets — user-switchable (the toggle in the corner). Each
+// becomes a single mermaid `%%{init}%%` directive (built by buildInit) prepended
+// to the definition, overriding the global init for that one diagram. The `dark`
+// preset relies on the injected `.mart-mermaid--dark svg text` CSS to invert its
+// otherwise-dark labels to light (mermaid ignores a per-diagram text colour).
+type DiagramTheme = { label: string; theme: string; bg: string; vars: Record<string, string>; dark?: boolean };
+const BASE_VARS: Record<string, string> = { fontFamily: 'monospace', fontSize: '13px' };
+const DIAGRAM_THEMES: DiagramTheme[] = [
+  { label: 'Лес', theme: 'forest', bg: '#f4f7ee', vars: { ...BASE_VARS, primaryTextColor: '#14210a', secondaryTextColor: '#14210a', tertiaryTextColor: '#14210a', textColor: '#1c1c1c', lineColor: '#4c6138', edgeLabelBackground: '#f4f7ee' } },
+  { label: 'Нейтр', theme: 'neutral', bg: '#f4f4f4', vars: { ...BASE_VARS, primaryTextColor: '#1c1c1c', secondaryTextColor: '#1c1c1c', tertiaryTextColor: '#1c1c1c', textColor: '#1c1c1c', lineColor: '#666', edgeLabelBackground: '#f4f4f4' } },
+  { label: 'Синяя', theme: 'base', bg: '#eef4fc', vars: { ...BASE_VARS, primaryColor: '#cfe0ff', primaryBorderColor: '#3f6fb8', primaryTextColor: '#0e1c33', secondaryColor: '#e3ecff', tertiaryColor: '#eef3ff', textColor: '#1c1c1c', lineColor: '#3f6fb8', edgeLabelBackground: '#eef4fc' } },
+  { label: 'Тёмная', theme: 'dark', bg: '#1e2229', dark: true, vars: { ...BASE_VARS, primaryColor: '#2d333b', primaryBorderColor: '#6b7684', primaryTextColor: '#e6e6e6', secondaryColor: '#343b44', tertiaryColor: '#2a2f37', textColor: '#e6e6e6', lineColor: '#9aa4b0', edgeLabelBackground: '#1e2229' } },
+];
+
+// Flowchart/graph diagrams get the ELK layout engine (registered above) for a
+// cleaner routed layout. Other diagram types (sequence, class, state, …) don't
+// support ELK — passing layout:elk to them hangs mermaid.render() silently — so
+// only opt in when the definition is actually a flowchart/graph.
+function isElkCompatible(def: string): boolean {
+  const body = def
+    .replace(/^\s*---[\s\S]*?---\s*/, '')        // YAML frontmatter block
+    .replace(/^(\s*%%\{[\s\S]*?\}%%\s*)+/, '')   // leading %%{init}%% directives
+    .replace(/^(\s*%%[^\n]*\r?\n)+/, '')          // leading %% line comments
+    .trimStart();
+  return /^(flowchart|graph)\b/.test(body);
+}
+
+// Build the single %%{init}%% directive for a palette, folding in layout:elk when
+// the diagram supports it. One merged directive (not two) avoids relying on
+// mermaid merging multiple directives.
+function buildInit(t: DiagramTheme, elk: boolean): string {
+  const cfg: Record<string, unknown> = { theme: t.theme, flowchart: { htmlLabels: false }, themeVariables: t.vars };
+  if (elk) cfg.layout = 'elk';
+  return `%%{init: ${JSON.stringify(cfg)}}%%`;
+}
+
 function MermaidDiagram({ def }: { def: string }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [themeIdx, setThemeIdx] = useState(0);
   useEffect(() => {
     let active = true;
     setErr(null);
-    mermaid.render(`mart-mermaid-${mermaidSeq++}`, def)
+    mermaid.render(`mart-mermaid-${mermaidSeq++}`, `${buildInit(DIAGRAM_THEMES[themeIdx], isElkCompatible(def))}\n${def}`)
       .then(({ svg }) => { if (active) setSvg(svg); })
       .catch(e => {
         console.warn('[mart-prose mermaid] render error:', e);
         if (active) setErr(String((e as Error)?.message ?? e));
       });
     return () => { active = false; };
-  }, [def]);
+  }, [def, themeIdx]);
 
   if (err) {
     return <div style={{ color: 'var(--dng)', fontSize: 12, fontFamily: 'var(--mono)', margin: '0 0 0.8em' }}>⚠ mermaid: {err}</div>;
@@ -124,10 +184,27 @@ function MermaidDiagram({ def }: { def: string }) {
     // give it one explicitly rather than the dark background the old 'base'
     // theme needed, or its own arrows/labels wash out to low-contrast grey.
     return (
-      <div
-        style={{ margin: '0 0 0.8em', overflowX: 'auto', background: 'var(--mermaid-bg)', borderRadius: 6, padding: 10 }}
-        dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
-      />
+      <div style={{ position: 'relative', margin: '0 0 0.8em' }}>
+        <button
+          type="button"
+          onClick={() => setThemeIdx(i => (i + 1) % DIAGRAM_THEMES.length)}
+          title="Сменить палитру диаграммы"
+          style={{
+            position: 'absolute', top: 6, right: 8, zIndex: 1, cursor: 'pointer',
+            fontSize: 'var(--fs-2xs)', padding: '2px 8px', borderRadius: 4,
+            border: '1px solid var(--bd)', background: 'var(--bg1)', color: 'var(--t2)',
+            fontFamily: 'var(--mono)', opacity: 0.85,
+          }}
+        >🎨 {DIAGRAM_THEMES[themeIdx].label}</button>
+        {/* color: with htmlLabels:false labels are SVG <text> (coloured by
+            themeVariables); the mart-mermaid--dark class inverts them to light
+            for the dark palette (see PROSE_CSS). */}
+        <div
+          className={`mart-mermaid${DIAGRAM_THEMES[themeIdx].dark ? ' mart-mermaid--dark' : ''}`}
+          style={{ overflowX: 'auto', background: DIAGRAM_THEMES[themeIdx].bg, borderRadius: 6, padding: 10, color: DIAGRAM_THEMES[themeIdx].dark ? '#e6e6e6' : '#1c1c1c' }}
+          dangerouslySetInnerHTML={{ __html: sanitizeSvg(svg) }}
+        />
+      </div>
     );
   }
   return <div style={{ minHeight: 24, margin: '0 0 0.8em' }} aria-hidden />;

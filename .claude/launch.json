@@ -9,6 +9,27 @@
       "autoPort": false
     },
     {
+      "name": "lore-dev-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5191", "--strictPort"],
+      "port": 5191,
+      "autoPort": false
+    },
+    {
+      "name": "lore-dev-preview",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set \"VITE_LORE_API_URL=http://localhost:4400\" && set \"VITE_BENCH_API_URL=http://localhost:4400\" && npm run dev -- --port 5192 --strictPort"],
+      "port": 5192,
+      "autoPort": false
+    },
+    {
+      "name": "lore-preview",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set \"VITE_LORE_API_URL=http://localhost:4400\" && set \"VITE_BENCH_API_URL=http://localhost:4400\" && npx vite preview --port 4401 --strictPort"],
+      "port": 4401,
+      "autoPort": false
+    },
+    {
       "name": "lore-app",
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "echo", "already running on 4400"],
