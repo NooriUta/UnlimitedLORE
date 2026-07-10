@@ -71,6 +71,13 @@ public class LoreSchemaInitializer {
 
     // ── Vertex types ──────────────────────────────────────────────────────────
     private static final List<String> DDL = List.of(
+        // ArcadeDB's own base types — NOT auto-present on a freshly `create
+        // database`'d instance (only discovered via C5's testcontainer run
+        // against a genuinely empty DB; the shared system_aida_lore has had
+        // these for years, which is why this was never hit in prod). Safe to
+        // leave here permanently: IF NOT EXISTS makes it a no-op there.
+        "CREATE VERTEX TYPE V IF NOT EXISTS",
+        "CREATE EDGE TYPE E IF NOT EXISTS",
         // Справочники
         "CREATE VERTEX TYPE LoreComponent    IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE LoreTechnology   IF NOT EXISTS EXTENDS V",
@@ -139,6 +146,38 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE REFERENCES_ADR   IF NOT EXISTS EXTENDS E",
 
         // ── Unique indexes on PK fields ───────────────────────────────────────
+        // NB 2026-07-10: CREATE INDEX ... UNIQUE does NOT implicitly create the
+        // property either (the 2026-07-01 note below only checked NOTUNIQUE) —
+        // on a truly fresh DB it fails with "Cannot create the index on type
+        // 'X.y' because the property does not exist". Found via C5's ArcadeDB
+        // testcontainer run: the shared system_aida_lore has carried these
+        // properties for years, which is why this never surfaced in prod.
+        // Explicit CREATE PROPERTY first, for every PK field below.
+        "CREATE PROPERTY LoreComponent.component_id   IF NOT EXISTS STRING",
+        "CREATE PROPERTY LoreTechnology.tech_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY LoreTag.tag_id               IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusDecision.status_id     IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusAdr.status_id          IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusSprint.status_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusMilestone.status_id    IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusTask.status_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY StatusPhase.status_id        IF NOT EXISTS STRING",
+        "CREATE PROPERTY TrackType.type_id            IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanTrack.track_id           IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanSection.section_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanConfig.config_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDecision.decision_id     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowADR.adr_id               IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowTag.tag_id               IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSprint.sprint_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowSpec.spec_id             IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowFinding.finding_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowRelease.release_id       IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowMilestone.milestone_id   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowPhase.phase_uid          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowTask.task_uid            IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanCheckpoint.checkpoint_id IF NOT EXISTS STRING",
+        "CREATE PROPERTY PlanVersion.version_id       IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON LoreComponent   (component_id) UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON LoreTechnology  (tech_id)      UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON LoreTag         (tag_id)       UNIQUE",
@@ -217,6 +256,10 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowRunbookHist.valid_from  IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowRunbookHist.valid_to    IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowRunbookHist.content_md  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowRunbook.runbook_id      IF NOT EXISTS STRING",
+        "CREATE PROPERTY QualityGate.qg_id           IF NOT EXISTS STRING",
+        "CREATE PROPERTY QGMetric.metric_id          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDoc.doc_id              IF NOT EXISTS STRING",
 
         "CREATE INDEX IF NOT EXISTS ON KnowRunbook    (runbook_id)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (state_uid)  UNIQUE",
