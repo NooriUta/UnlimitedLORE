@@ -14,6 +14,7 @@ import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor } from './LoreComponentList';
 import { useDictionary } from './DictionaryProvider';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 import TipTapField from './TipTapField';
 
 interface SprintMeta {
@@ -718,7 +719,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
   const [allReleases, setAllReleases] = useState<{ id: string; gitProject: string }[]>([]);
   const [relatedMeta, setRelatedMeta] = useState<Map<string, { status_raw: string | null; task_total: number; task_done: number }>>(new Map());
-  const [metaRightW, setMetaRightW] = useState(320);
+  const narrow = useIsNarrow();
+  const [metaRightW, setMetaRightW] = useState(230);
   const metaDragRef = useRef<{ x: number; w: number } | null>(null);
   const [topBlockH, setTopBlockH] = useState(220);
   const topDragRef = useRef<{ y: number; h: number } | null>(null);
@@ -910,9 +912,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         ) : null}
       </div>
 
-      {sprint.name && <div style={S.sprintName}>{sprint.name}</div>}
-
       {(() => {
+        // Проект + Релиз + PR merged into one strip (T25-follow-up reorg —
+        // "атрибуция одной веткой": project/release/PR are all "where this
+        // sprint belongs / shipped", one glance instead of 3 separate boxes).
+        const linkedProjects = [...new Set(sprint.git_projects ?? [])];
+        const unlinkedProjects = allProjects.filter(g => !linkedProjects.includes(g));
+        const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         // `releases` (top of render) falls back to a version string parsed out of
         // status_raw when there's no real IMPLEMENTED_IN_RELEASE edge — only
         // sprint.release_ids are real edges and thus unlinkable/addable here.
@@ -922,13 +928,60 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         const releaseOptions = allReleases.filter(r =>
           !linkedReleases.includes(r.id) &&
           (sprintProjects.length === 0 || sprintProjects.includes(r.gitProject)));
+        const showProjects = linkedProjects.length > 0 || unlinkedProjects.length > 0;
         const showRelease = displayReleases.length > 0 || releaseOptions.length > 0;
         const showPr = prNums.length > 0;
-        if (!showRelease && !showPr) return null;
-        // Релиз + PR merged into one row (was two separately-bordered/padded
-        // bars) — same info, half the vertical space.
+        if (!showProjects && !showRelease && !showPr) return null;
         return (
           <div style={S.prBar}>
+            {showProjects && (
+              <span style={S.linkGroup}>
+                <span style={S.prLabel}>{t('lore.sprintDetail.projects.label', 'Проект')}</span>
+                {linkedProjects.map(g => (
+                  <span key={g} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
+                    padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
+                    {projLabel(g)}
+                    <button
+                      disabled={projLinking}
+                      onClick={async () => {
+                        setProjLinking(true);
+                        try {
+                          await linkSprintProject(sprint.sprint_id, g, 'remove');
+                          setSprint(s => s ? { ...s, git_projects: (s.git_projects ?? []).filter(x => x !== g) } : s);
+                        } catch (e) { onError(e); }
+                        finally { setProjLinking(false); }
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
+                        fontSize: 'var(--fs-xs)', padding: 0, lineHeight: 1, opacity: 0.7 }}
+                      title={t('lore.sprintDetail.projects.unlink', 'Отвязать {{g}}', { g })}
+                    >✕</button>
+                  </span>
+                ))}
+                {unlinkedProjects.length > 0 && (
+                  <select
+                    disabled={projLinking}
+                    value=""
+                    onChange={async e => {
+                      const g = e.target.value;
+                      if (!g) return;
+                      setProjLinking(true);
+                      try {
+                        await linkSprintProject(sprint.sprint_id, g, 'add');
+                        setSprint(s => s ? { ...s, git_projects: [...(s.git_projects ?? []), g] } : s);
+                      } catch (err) { onError(err); }
+                      finally { setProjLinking(false); }
+                    }}
+                    style={lookupSelectStyle}
+                  >
+                    <option value="">{t('lore.sprintDetail.projects.linkPlaceholder', '+ привязать…')}</option>
+                    {unlinkedProjects.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
+                  </select>
+                )}
+                {projLinking && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>…</span>}
+              </span>
+            )}
+            {showProjects && (showRelease || showPr) && <span style={S.barDivider} />}
             {showRelease && (
               <span style={S.linkGroup}>
                 <span style={S.prLabel}>{t('lore.sprintDetail.releaseBar.label', 'Релиз')}</span>
@@ -1015,14 +1068,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
-      {/* ── Top meta block: context (left) + projects/milestones/modules (right) ── */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+      {/* ── Top meta block: context (left) + projects/milestones/modules (right) ──
+          Narrow: stack context above meta (side-by-side squishes context to
+          one-word-per-line at 375px). */}
+      <div style={{ display: 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
 
       {/* CONTEXT — left, flexible. maxHeight+overflow caps its growth so a long
           context_md can never crowd out the task list below (both this block and
           the task list live in the same flex column; without a cap, a large
           context — flexShrink:0 — pushes the flex:1 task list toward 0 height). */}
-      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px', maxHeight: topBlockH, overflowY: 'auto' as const }}>
+      <div style={{ flex: 1, minWidth: 0, borderRight: narrow ? 'none' : '1px solid var(--bd)', borderBottom: narrow ? '1px solid var(--bd)' : 'none', padding: '8px 14px 10px', maxHeight: topBlockH, overflowY: 'auto' as const }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.context.label', 'Контекст')}</span>
           {!ctxEdit && (
@@ -1030,6 +1085,10 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               style={{ fontSize: 'var(--fs-xs)', padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>{t('lore.sprintDetail.context.editButton', '✎ ред.')}</button>
           )}
         </div>
+        {/* Human-readable name as the context's caption — moved out of the
+            header (which now shows only the code sprint_id, per approved
+            prototype: header = identifier, context = title + prose). */}
+        {sprint.name && <div style={S.sprintName}>{sprint.name}</div>}
         {ctxEdit ? (
           <div>
             <TipTapField value={ctxDraft} onChange={setCtxDraft} minHeight={120}
@@ -1051,75 +1110,17 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         )}
       </div>
 
-      {/* Drag handle — resizes META RIGHT (mirrors LorePage's .lore-resize-handle) */}
+      {/* Drag handle — resizes META RIGHT (mirrors LorePage's .lore-resize-handle).
+          Hidden on narrow: the block is stacked, nothing to drag. */}
+      {!narrow && (
       <div
         className="lore-resize-handle"
         onMouseDown={e => { metaDragRef.current = { x: e.clientX, w: metaRightW }; e.preventDefault(); }}
       />
+      )}
 
-      {/* META RIGHT — projects + milestones + modules */}
-      <div style={{ width: metaRightW, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: topBlockH, overflowY: 'auto' as const }}>
-
-      {/* ── Projects section ───────────────────────────────────────────────── */}
-      {(() => {
-        // git_projects can carry the same slug more than once (one entry per
-        // linked commit/PR, not per distinct project) — dedupe, or repeated
-        // slugs collide as React keys below.
-        const linked = [...new Set(sprint.git_projects ?? [])];
-        const unlinked = allProjects.filter(g => !linked.includes(g));
-        const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
-        return (
-          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.projects.label', 'Проекты')}</span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-              {linked.map(g => (
-                <span key={g} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
-                  padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
-                  {projLabel(g)}
-                  <button
-                    disabled={projLinking}
-                    onClick={async () => {
-                      setProjLinking(true);
-                      try {
-                        await linkSprintProject(sprint.sprint_id, g, 'remove');
-                        setSprint(s => s ? { ...s, git_projects: (s.git_projects ?? []).filter(x => x !== g) } : s);
-                      } catch (e) { onError(e); }
-                      finally { setProjLinking(false); }
-                    }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
-                      fontSize: 'var(--fs-xs)', padding: 0, lineHeight: 1, opacity: 0.7 }}
-                    title={t('lore.sprintDetail.projects.unlink', 'Отвязать {{g}}', { g })}
-                  >✕</button>
-                </span>
-              ))}
-              {unlinked.length > 0 && (
-                <select
-                  disabled={projLinking}
-                  value=""
-                  onChange={async e => {
-                    const g = e.target.value;
-                    if (!g) return;
-                    setProjLinking(true);
-                    try {
-                      await linkSprintProject(sprint.sprint_id, g, 'add');
-                      setSprint(s => s ? { ...s, git_projects: [...(s.git_projects ?? []), g] } : s);
-                    } catch (err) { onError(err); }
-                    finally { setProjLinking(false); }
-                  }}
-                  style={lookupSelectStyle}
-                >
-                  <option value="">{t('lore.sprintDetail.projects.linkPlaceholder', '+ привязать…')}</option>
-                  {unlinked.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
-                </select>
-              )}
-              {projLinking && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>…</span>}
-            </div>
-          </div>
-        );
-      })()}
+      {/* META RIGHT — projects + milestones + modules. Full-width when stacked. */}
+      <div style={{ width: narrow ? '100%' : metaRightW, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: topBlockH, overflowY: 'auto' as const }}>
 
       {/* ── Planning section (planned_start/end date, planned milestone, created_date)
           — plain SCD2-tracked KnowSprintHist fields, edited via /lore/sprint/plan.
@@ -1137,6 +1138,30 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               {t('lore.sprintDetail.plan.created', 'Создан')}: <span style={{ color: 'var(--t2)', fontFamily: 'var(--mono)' }}>{sprint.created_date.slice(0, 10)}</span>
             </div>
           )}
+          {/* Order: milestone → date range → checkbox, each its own row
+              (approved prototype docs/prototypes/sprint-detail-reorg.html —
+              was date-range-then-milestone on one cramped row). Milestone used
+              to have a separate planned_milestone_id plain-field write alongside
+              the TARGETS_MILESTONE edge — that field drifted out of sync on 62+
+              sprints and was retired; the edge is the sole source of truth now. */}
+          <select disabled={planBusy || msLinking} style={{ ...lookupSelectStyle, width: '100%' }}
+            value={(sprint.milestone_ids ?? [])[0] ?? ''}
+            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
+            onChange={async e => {
+              const v = e.target.value || null;
+              setPlanBusy(true); setMsLinking(true);
+              try {
+                const prevLinked = sprint.milestone_ids ?? [];
+                for (const mid of prevLinked) {
+                  if (mid !== v) await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
+                }
+                if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
+                setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
+              } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
+            }}>
+            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
+            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
+          </select>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input type="date" disabled={planBusy} style={lookupSelectStyle}
               value={sprint.planned_start_date ?? ''}
@@ -1162,28 +1187,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 } catch (err) { onError(err); } finally { setPlanBusy(false); }
               }} />
           </div>
-          {/* Milestone used to have a separate planned_milestone_id plain-field
-              write alongside the TARGETS_MILESTONE edge — that field drifted out
-              of sync on 62+ sprints and was retired; the edge is the sole source
-              of truth now. */}
-          <select disabled={planBusy || msLinking} style={lookupSelectStyle}
-            value={(sprint.milestone_ids ?? [])[0] ?? ''}
-            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
-            onChange={async e => {
-              const v = e.target.value || null;
-              setPlanBusy(true); setMsLinking(true);
-              try {
-                const prevLinked = sprint.milestone_ids ?? [];
-                for (const mid of prevLinked) {
-                  if (mid !== v) await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
-                }
-                if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
-                setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
-              } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
-            }}>
-            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
-            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
-          </select>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--fs-xs)', color: 'var(--t2)', cursor: planBusy ? 'default' : 'pointer' }}>
             <input type="checkbox" disabled={planBusy}
               checked={!!sprint.no_release_required}
@@ -1317,47 +1320,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
-      {/* ── ADR section (reverse of ADR's IMPLEMENTED_IN — which ADRs implement in this sprint) ── */}
-      {/* T-fix: the sprint_tree slice's reverse ADR lookup can return null
-          entries (edge resolved but the target vertex didn't) — e.g.
-          SPRINT_LORE_UX_OPTIMIZATION comes back adr_ids: [null, null, null].
-          Unfiltered, that rendered 3 identical key={null} buttons all
-          labelled "Открыть null" and navigating nowhere on click. Filter at
-          the read site rather than touching the backend query. */}
-      {(() => {
-        const adrIds = (sprint.adr_ids ?? []).filter((id): id is string => !!id);
-        if (adrIds.length === 0) return null;
-        return (
-        <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.adr.label', 'ADR')}</span>
-            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{adrIds.length}</span>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-            {adrIds.map(id => (
-              <button
-                key={id}
-                onClick={onNavigateToAdr ? () => onNavigateToAdr(id) : undefined}
-                disabled={!onNavigateToAdr}
-                title={onNavigateToAdr ? t('lore.sprintDetail.adr.openTitle', 'Открыть {{id}}', { id }) : id}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
-                  padding: '2px 8px', borderRadius: 10,
-                  background: 'color-mix(in srgb, var(--kind-adr) 14%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--kind-adr) 30%, transparent)',
-                  color: 'var(--kind-adr)', cursor: onNavigateToAdr ? 'pointer' : 'default',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <GameIcon slug="scroll-quill" size={12} style={{ color: 'inherit' }} />
-                {id}
-              </button>
-            ))}
-          </div>
-        </div>
-        );
-      })()}
-
       </div>{/* END META RIGHT */}
       </div>{/* END TOP META BLOCK */}
 
@@ -1457,6 +1419,48 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         )}
 
         <AddTaskForm sprintId={sprint.sprint_id} onAdded={reload} onError={onError} />
+
+        {/* ── Связи: ADR + related sprints — moved down from the top meta block
+            (approved prototype docs/prototypes/sprint-detail-reorg.html): ADR
+            used to sit in META RIGHT alongside Планирование/Модули, but it's a
+            RELATION (what this sprint implements), same kind of thing as
+            depends_on/blocks below — so it belongs in one cluster with them,
+            under the tasks, not mixed in with what/when/where planning fields. */}
+        {(() => {
+          // T-fix: the sprint_tree slice's reverse ADR lookup can return null
+          // entries (edge resolved but the target vertex didn't) — e.g.
+          // SPRINT_LORE_UX_OPTIMIZATION comes back adr_ids: [null, null, null].
+          // Unfiltered, that rendered 3 identical key={null} buttons all
+          // labelled "Открыть null" and navigating nowhere on click.
+          const adrIds = (sprint.adr_ids ?? []).filter((id): id is string => !!id);
+          if (adrIds.length === 0) return null;
+          return (
+            <div style={S.deps}>
+              <div style={S.sectionLabel}>{t('lore.sprintDetail.adr.label', 'ADR')}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5, marginTop: 4 }}>
+                {adrIds.map(id => (
+                  <button
+                    key={id}
+                    onClick={onNavigateToAdr ? () => onNavigateToAdr(id) : undefined}
+                    disabled={!onNavigateToAdr}
+                    title={onNavigateToAdr ? t('lore.sprintDetail.adr.openTitle', 'Открыть {{id}}', { id }) : id}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
+                      padding: '2px 8px', borderRadius: 10,
+                      background: 'color-mix(in srgb, var(--kind-adr) 14%, transparent)',
+                      border: '1px solid color-mix(in srgb, var(--kind-adr) 30%, transparent)',
+                      color: 'var(--kind-adr)', cursor: onNavigateToAdr ? 'pointer' : 'default',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <GameIcon slug="scroll-quill" size={12} style={{ color: 'inherit' }} />
+                    {id}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {sprint.depends_on?.length ? (
           <div style={S.deps}>

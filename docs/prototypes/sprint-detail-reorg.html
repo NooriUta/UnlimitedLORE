@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип · sprint-detail v3</title>
+<style>
+  :root{
+    --bg0:#0f1115; --bg1:#161922; --bg2:#1e222d; --b1:#181c26; --b2:#212633; --b3:#2b3140;
+    --bd:#2a3040; --t1:#e6e9f0; --t2:#aab2c5; --t3:#7c869c; --t4:#5b6478;
+    --acc:#e0a03a; --on-accent:#1a1206; --suc:#4caf72; --wrn:#d9a441; --dng:#d76b6b; --inf:#5b9bd5;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+    --fs-2xs:10px; --fs-xs:11px; --fs-sm:12px; --fs-base:13px; --fs-lg:14px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg0:#f6f7fa; --bg1:#fff; --bg2:#eef1f6; --b1:#fff; --b2:#f1f3f8; --b3:#e2e6ee;
+      --bd:#dbe0ea; --t1:#1c2230; --t2:#485264; --t3:#7a8397; --t4:#a4adbf; --on-accent:#1a1206; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg0);color:var(--t1);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:var(--fs-base);line-height:1.45;padding:24px}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--t3);font-size:var(--fs-sm);margin-bottom:20px;max-width:780px}
+  .cols{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap}
+  .frameWrap{display:flex;flex-direction:column;gap:8px}
+  .frameTitle{font-size:var(--fs-sm);color:var(--t3);font-family:var(--mono)}
+  .frame{background:var(--bg1);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+  .desktop{width:620px}
+  .mobile{width:375px}
+  .sd{display:flex;flex-direction:column}
+  .sdhead{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bd)}
+  .code{font-family:var(--mono);font-weight:600;font-size:var(--fs-base);color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip{font-size:var(--fs-2xs);font-family:var(--mono);padding:2px 7px;border-radius:999px;border:1px solid var(--bd);color:var(--t2);background:var(--bg2);flex-shrink:0}
+  .chip.active{background:color-mix(in srgb,var(--suc) 16%,transparent);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd));color:var(--t1)}
+  .mbadge{font-family:var(--mono);font-size:var(--fs-xs);color:var(--t3);border:1px solid var(--bd);border-radius:6px;padding:1px 7px;flex-shrink:0}
+  .lbl{font-size:var(--fs-xs);font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+  .lblIn{font-size:var(--fs-2xs);font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px}
+  /* top attribution strip: Проект + Релизы */
+  .strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 14px;border-bottom:1px solid var(--bd);background:color-mix(in srgb,var(--acc) 4%,transparent)}
+  .grpInline{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .divider{width:1px;height:15px;background:var(--bd);flex-shrink:0}
+  .pill{font-size:var(--fs-sm);border:1px solid var(--b3);border-radius:6px;padding:2px 8px;color:var(--t2);background:var(--bg2);display:inline-flex;align-items:center;gap:5px}
+  .pill.proj{border-color:color-mix(in srgb,var(--acc) 35%,var(--bd))}
+  .pill.mod{border-color:color-mix(in srgb,var(--inf) 35%,var(--bd));color:var(--t1)}
+  .pill.rel{font-family:var(--mono);font-size:var(--fs-xs);background:color-mix(in srgb,var(--acc) 13%,transparent);border-color:color-mix(in srgb,var(--acc) 32%,transparent);color:var(--acc)}
+  .add{font-size:var(--fs-sm);color:var(--t3);border:1px dashed var(--bd);border-radius:6px;padding:2px 9px;background:transparent}
+  /* 2-column meta block */
+  .meta{display:flex;border-bottom:1px solid var(--bd)}
+  .meta.stack{flex-direction:column}
+  .ctx{flex:1;min-width:0;border-right:1px solid var(--bd);padding:9px 14px;max-height:200px;overflow-y:auto}
+  .meta.stack .ctx{border-right:none;border-bottom:1px solid var(--bd);max-height:none}
+  .metaR{width:230px;flex-shrink:0}
+  .meta.stack .metaR{width:100%}
+  .metaSec{padding:9px 14px;border-top:1px solid var(--bd)}
+  .metaSec:first-child{border-top:none}
+  .caption{font-size:var(--fs-lg);font-weight:600;color:var(--t1);margin:4px 0 6px;line-height:1.3}
+  .ctxbody{color:var(--t2);font-size:var(--fs-sm)}
+  .ctxbody p{margin:0 0 7px}
+  .pageflag{font-size:var(--fs-2xs);color:var(--t3);font-family:var(--mono);float:right}
+  .plan{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
+  .sel{font-size:var(--fs-sm);height:26px;border:1px solid var(--b3);border-radius:5px;background:var(--bg2);color:var(--t1);padding:0 8px;max-width:100%}
+  .date{font-size:var(--fs-sm);height:26px;border:1px solid var(--b3);border-radius:5px;background:var(--bg2);color:var(--t2);padding:0 8px;display:inline-flex;align-items:center;gap:5px}
+  .cbx{font-size:var(--fs-sm);color:var(--t2);display:inline-flex;align-items:center;gap:5px}
+  .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .tasks{padding:9px 14px;border-bottom:1px solid var(--bd)}
+  .tsec{font-size:var(--fs-xs);font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .task{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--b2);font-size:var(--fs-sm)}
+  .tick{width:14px;height:14px;border-radius:3px;border:1px solid var(--b3);flex-shrink:0}
+  .tick.done{background:var(--suc);border-color:var(--suc)}
+  .tid{font-family:var(--mono);font-size:var(--fs-xs);color:var(--t3)}
+  .links{padding:10px 14px;background:color-mix(in srgb,var(--inf) 5%,transparent)}
+  .grp{margin-bottom:9px}
+  .grp:last-child{margin-bottom:0}
+  .relatedRow{display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid var(--bd);border-radius:6px;background:var(--bg1);margin-top:4px;font-size:var(--fs-sm)}
+  .rid{font-family:var(--mono);font-size:var(--fs-xs)}
+  .adrpill{font-family:var(--mono);font-size:var(--fs-xs);background:color-mix(in srgb,var(--inf) 15%,transparent);border:1px solid color-mix(in srgb,var(--inf) 35%,transparent);color:var(--inf);border-radius:6px;padding:1px 8px}
+  .tag{display:inline-block;font-size:var(--fs-2xs);background:var(--acc);color:var(--on-accent);border-radius:4px;padding:0 5px;margin-left:6px;font-weight:700;vertical-align:middle}
+  .callout{max-width:880px;background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:14px 18px;margin:24px 0 0}
+  .callout h3{margin:0 0 8px;font-size:var(--fs-lg)}
+  .callout li{margin:5px 0;color:var(--t2)}
+  ins{color:var(--suc);text-decoration:none}
+</style>
+</head>
+<body>
+  <h1>Прототип · sprint-detail v3</h1>
+  <div class="sub">Исправлено по твоей правке: 2 колонки сохранены — <b>справа Планирование + Модули</b>; <b>Проект + Релизы — одной строкой сверху</b> (не ниже контекста); контекст (с названием-caption) — слева, может быть длинным/на несколько страниц (свой скролл). ADR — вниз к связям.</div>
+
+  <div class="cols">
+    <!-- DESKTOP -->
+    <div class="frameWrap">
+      <div class="frameTitle">desktop · 620px</div>
+      <div class="frame desktop">
+        <div class="sd">
+          <div class="sdhead">
+            <span class="code">SPRINT_LORE_UX_OPTIMIZATION</span>
+            <span class="chip active">🔄 IN PROGRESS</span>
+            <span class="mbadge" style="margin-left:auto" title="read-only, редактируется в Планировании">веха M4</span>
+          </div>
+
+          <!-- TOP STRIP: Проект + Релизы one row -->
+          <div class="strip">
+            <span class="grpInline"><span class="lblIn">Проект</span><span class="pill proj">AIDA ✕</span></span>
+            <span class="divider"></span>
+            <span class="grpInline"><span class="lblIn">Релизы</span><span class="pill rel">v1.0.44</span><span class="pill rel">v1.0.43</span></span>
+            <button class="add">+ привязать…</button>
+          </div>
+
+          <!-- 2-COLUMN: context (left) | planning + modules (right) -->
+          <div class="meta">
+            <div class="ctx">
+              <span class="lbl">Контекст</span><span class="pageflag">стр. 1 / 3</span>
+              <div class="caption">LORE UX-оптимизация — аудит Forseti+Bragi и план улучшений <span class="tag">название</span></div>
+              <div class="ctxbody">
+                <p>Довести UX до консистентного вида: единый паттерн фильтров, мобильная адаптация 375px, единый MD-рендер, реорганизация паспорта спринта.</p>
+                <p>Ключевые решения — ADR-LORE-012 (справочники как вершины графа), ADR-LORE-013 (перенос задач между спринтами: cancel+recreate).</p>
+                <p>Контекст длинный — своя область прокрутки, может занимать несколько «страниц» текста, не вытесняя список задач ниже…</p>
+              </div>
+            </div>
+            <div class="metaR">
+              <div class="metaSec">
+                <span class="lbl">Планирование</span>
+                <div class="plan" style="flex-direction:column;align-items:stretch;gap:6px">
+                  <select class="sel" style="width:100%"><option>Веха: M4 — Q3 UX</option></select>
+                  <span class="date" style="width:100%">📅 01.07 → 14.07</span>
+                  <label class="cbx"><input type="checkbox"> не требует релиза</label>
+                </div>
+              </div>
+              <div class="metaSec">
+                <span class="lbl">Модули</span>
+                <div class="row"><span class="pill mod">⚙ FORSETI ✕</span><span class="pill mod">📖 LORE ✕</span><span class="pill mod">🎨 BRAGI ✕</span><span class="pill mod">🚪 QG ✕</span><button class="add">+ привязать…</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tasks">
+            <div class="tsec">Задачи (37)</div>
+            <div class="task"><span class="tick done"></span><span class="tid">T34</span><span>Фильтры остальных разделов</span><span style="margin-left:auto;color:var(--suc)">✓</span></div>
+            <div class="task"><span class="tick done"></span><span class="tid">T35</span><span>Фильтры Bragi-списков</span><span style="margin-left:auto;color:var(--suc)">✓</span></div>
+            <div class="task"><span class="tick"></span><span class="tid">T25</span><span>Мобильный вид 375px</span><span style="margin-left:auto;color:var(--t3)">…</span></div>
+          </div>
+
+          <div class="links">
+            <div class="grp">
+              <span class="lbl" style="color:var(--inf)">Связи · ADR</span>
+              <div class="row"><span class="adrpill">ADR-LORE-012</span><span class="adrpill">ADR-LORE-013</span><button class="add">+ привязать ADR…</button></div>
+            </div>
+            <div class="grp">
+              <div class="lbl">Зависит от</div>
+              <div class="relatedRow"><span class="tick done"></span><span class="rid">SPRINT_LORE_PROD_HARDENING</span><span style="margin-left:auto;color:var(--t3)">done · 12/12</span></div>
+            </div>
+            <div class="grp">
+              <div class="lbl" style="color:var(--wrn)">Блокирует</div>
+              <div class="relatedRow"><span class="tick"></span><span class="rid">SPRINT_LORE_STANDALONE_DEPLOY</span><span style="margin-left:auto;color:var(--t3)">todo · 0/6</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOBILE -->
+    <div class="frameWrap">
+      <div class="frameTitle">mobile · 375px (2 колонки → стек)</div>
+      <div class="frame mobile">
+        <div class="sd">
+          <div class="sdhead">
+            <span class="code">SPRINT_LORE_UX_OPTIMIZATION</span>
+            <span class="chip active">🔄</span>
+            <span class="mbadge" style="margin-left:auto">M4</span>
+          </div>
+
+          <div class="strip">
+            <span class="grpInline"><span class="lblIn">Проект</span><span class="pill proj">AIDA ✕</span></span>
+            <span class="grpInline"><span class="lblIn">Релизы</span><span class="pill rel">v1.0.44</span><span class="pill rel">v1.0.43</span></span>
+            <button class="add">+ привязать…</button>
+          </div>
+
+          <div class="meta stack">
+            <div class="ctx">
+              <span class="lbl">Контекст</span><span class="pageflag">стр. 1 / 3</span>
+              <div class="caption">LORE UX-оптимизация — аудит Forseti+Bragi и план улучшений <span class="tag">название</span></div>
+              <div class="ctxbody"><p>Довести UX до консистентного вида. ADR-LORE-012/013. Контекст может быть длинным.</p></div>
+            </div>
+            <div class="metaR">
+              <div class="metaSec">
+                <span class="lbl">Планирование</span>
+                <div class="plan" style="flex-direction:column;align-items:stretch;gap:6px">
+                  <select class="sel" style="width:100%"><option>Веха: M4 — Q3 UX</option></select>
+                  <span class="date" style="width:100%">📅 01.07 → 14.07</span>
+                  <label class="cbx"><input type="checkbox"> не требует релиза</label>
+                </div>
+              </div>
+              <div class="metaSec">
+                <span class="lbl">Модули</span>
+                <div class="row"><span class="pill mod">⚙ FORSETI ✕</span><span class="pill mod">📖 LORE ✕</span><span class="pill mod">🎨 BRAGI ✕</span><span class="pill mod">🚪 QG ✕</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tasks">
+            <div class="tsec">Задачи (37)</div>
+            <div class="task"><span class="tick done"></span><span class="tid">T34</span><span>Фильтры разделов</span><span style="margin-left:auto;color:var(--suc)">✓</span></div>
+            <div class="task"><span class="tick"></span><span class="tid">T25</span><span>Мобильный вид</span><span style="margin-left:auto;color:var(--t3)">…</span></div>
+          </div>
+
+          <div class="links">
+            <div class="grp">
+              <span class="lbl" style="color:var(--inf)">Связи · ADR</span>
+              <div class="row"><span class="adrpill">ADR-LORE-012</span><span class="adrpill">ADR-LORE-013</span><button class="add">+ ADR…</button></div>
+            </div>
+            <div class="grp">
+              <div class="lbl">Зависит от</div>
+              <div class="relatedRow"><span class="tick done"></span><span class="rid">…PROD_HARDENING</span><span style="margin-left:auto;color:var(--t3)">12/12</span></div>
+            </div>
+            <div class="grp">
+              <div class="lbl" style="color:var(--wrn)">Блокирует</div>
+              <div class="relatedRow"><span class="tick"></span><span class="rid">…STANDALONE_DEPLOY</span><span style="margin-left:auto;color:var(--t3)">0/6</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h3>Раскладка v3</h3>
+    <ul>
+      <li><ins>Проект + Релизы</ins> — одной строкой сверху (полоса под шапкой), НЕ ниже контекста.</li>
+      <li><ins>Справа — Планирование + Модули</ins> (2 колонки сохранены: слева контекст, справа этот блок).</li>
+      <li><ins>Название → в контекст</ins> — как заглавная строка; в шапке только код-идентификатор.</li>
+      <li><ins>Контекст длинный / многостраничный</ins> — своя область прокрутки (индикатор «стр. 1/3»), не вытесняет задачи.</li>
+      <li><ins>ADR → вниз</ins>, в кластер «Связи» с Зависит от / Блокирует.</li>
+      <li><ins>Единый выбор вехи</ins> — только в Планировании; бейдж «M4» в шапке read-only.</li>
+      <li>Мобайл: 2 колонки складываются в стек (контекст → планирование → модули), полоса Проект+Релизы переносится.</li>
+    </ul>
+  </div>
+</body>
+</html>
