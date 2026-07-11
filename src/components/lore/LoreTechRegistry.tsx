@@ -4,6 +4,7 @@ import { fetchLoreSlice, upsertTech, type LoreComponent, type LoreTechRow } from
 import { areaColor, compArea } from './LoreComponentList';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
+import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
 
 // checked_at older than this reads as stale — same intent as TR-05's
 // "не разово, а по регламенту" (a registry with no upkeep signal rots).
@@ -58,6 +59,10 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [addingFor, setAddingFor] = useState<string | null>(null);
+  // T34: filter the registry to components using a selected technology
+  // ("which components use ArcadeDB?"). Empty = show all.
+  const [techSel, setTechSel] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -90,12 +95,54 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
     return m;
   }, [rows]);
 
+  // T34: technologies present, with the number of components using each.
+  const techCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const [, techRows] of rowsByComponent) {
+      new Set(techRows.map(r => r.tech_name).filter(Boolean)).forEach(n => { m[n] = (m[n] || 0) + 1; });
+    }
+    return m;
+  }, [rowsByComponent]);
+  const allTech = useMemo(
+    () => Object.keys(techCounts).sort((a, b) => techCounts[b] - techCounts[a] || a.localeCompare(b)),
+    [techCounts]);
+  const compMatchesTech = (cid: string) =>
+    techSel.size === 0 || (rowsByComponent.get(cid) ?? []).some(r => techSel.has(r.tech_name));
+  const toggleTech = (name: string) =>
+    setTechSel(prev => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n; });
+
   if (loading) return <LoreSkeleton />;
   if (comps.length === 0) return <div style={S.empty}>{t('lore.techRegistry.empty', 'Компоненты не найдены.')}</div>;
 
   return (
     <div style={S.root}>
-      {byArea.map(([area, areaComps]) => (
+      {allTech.length > 1 && (
+        <FilterBar
+          tier="local"
+          label={t('lore.techRegistry.filtersLabel', 'Фильтры')}
+          activeCount={techSel.size}
+          summaryTags={[...techSel].map((tn): FilterTagData => ({
+            key: 't:' + tn, label: tn,
+            onRemove: () => setTechSel(prev => { const n = new Set(prev); n.delete(tn); return n; }),
+          }))}
+          onClear={() => setTechSel(new Set())}
+          open={filterOpen}
+          onToggleOpen={() => setFilterOpen(v => !v)}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, marginRight: 4 }}>
+              {t('lore.techRegistry.techLabel', 'Технология')}
+            </span>
+            {allTech.map(tn => (
+              <Chip key={tn} label={tn} pressed={techSel.has(tn)} onClick={() => toggleTech(tn)} count={techCounts[tn]} />
+            ))}
+          </div>
+        </FilterBar>
+      )}
+      {byArea
+        .map(([area, areaComps]): [string, LoreComponent[]] => [area, areaComps.filter(c => compMatchesTech(c.component_id))])
+        .filter(([, areaComps]) => areaComps.length > 0)
+        .map(([area, areaComps]) => (
         <div key={area}>
           <div style={{ ...S.areaHeader, color: areaColor(area) }}>{area}</div>
           {areaComps.map(c => {
