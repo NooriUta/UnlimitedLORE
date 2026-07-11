@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchBragiMetrics, type BragiMetricPoint } from '../../api/lore';
 import LoreBragiPublicationEditor, { type LoreBragiPublicationEditData, countOpenTodos } from './LoreBragiPublicationEditor';
+import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
 
 interface PublicationRow {
   publication_id: string;
@@ -61,7 +62,10 @@ export default function LoreBragiPublications() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<PublicationRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('все');
+  const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
+  const [rubricSel, setRubricSel] = useState<Set<string>>(new Set());
+  const [channelSel, setChannelSel] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<BragiMetricPoint[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -90,12 +94,50 @@ export default function LoreBragiPublications() {
     return Array.from(s).sort();
   }, [rows]);
 
-  const filtered = useMemo(() => {
-    if (filter === 'все') return rows;
-    if (filter === 'черновики') return rows.filter(r => r.status_general === 'draft');
-    if (rubricNames.includes(filter)) return rows.filter(r => r.rubric_names.includes(filter));
-    return rows.filter(r => r.variant_channels.includes(filter));
-  }, [rows, filter, rubricNames]);
+  const statuses = useMemo(() => {
+    const order = ['draft', 'ready', 'planned', 'published'];
+    const s = new Set<string>();
+    rows.forEach(r => { if (r.status_general) s.add(r.status_general); });
+    return Array.from(s).sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+    });
+  }, [rows]);
+
+  const matchStatus  = useCallback((r: PublicationRow) => statusSel.size === 0 || (r.status_general != null && statusSel.has(r.status_general)), [statusSel]);
+  const matchRubric  = useCallback((r: PublicationRow) => rubricSel.size === 0 || r.rubric_names.some(n => rubricSel.has(n)), [rubricSel]);
+  const matchChannel = useCallback((r: PublicationRow) => channelSel.size === 0 || r.variant_channels.some(c => channelSel.has(c)), [channelSel]);
+
+  const filtered = useMemo(
+    () => rows.filter(r => matchStatus(r) && matchRubric(r) && matchChannel(r)),
+    [rows, matchStatus, matchRubric, matchChannel],
+  );
+
+  // Facet counts: each dimension counts rows passing ALL OTHER active dimensions.
+  const statusCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.filter(r => matchRubric(r) && matchChannel(r)).forEach(r => { if (r.status_general) m[r.status_general] = (m[r.status_general] || 0) + 1; });
+    return m;
+  }, [rows, matchRubric, matchChannel]);
+  const rubricCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.filter(r => matchStatus(r) && matchChannel(r)).forEach(r => new Set(r.rubric_names.filter(Boolean)).forEach(n => { m[n] = (m[n] || 0) + 1; }));
+    return m;
+  }, [rows, matchStatus, matchChannel]);
+  const channelCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.filter(r => matchStatus(r) && matchRubric(r)).forEach(r => new Set(r.variant_channels.filter(Boolean)).forEach(c => { m[c] = (m[c] || 0) + 1; }));
+    return m;
+  }, [rows, matchStatus, matchRubric]);
+
+  const mkToggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (v: string) =>
+    setter(prev => { const n = new Set(prev); if (n.has(v)) n.delete(v); else n.add(v); return n; });
+  const toggleStatus = mkToggle(setStatusSel);
+  const toggleRubric = mkToggle(setRubricSel);
+  const toggleChannel = mkToggle(setChannelSel);
+  const activeCount = statusSel.size + rubricSel.size + channelSel.size;
+  const clearAll = () => { setStatusSel(new Set()); setRubricSel(new Set()); setChannelSel(new Set()); };
+  const statusLabel = (s: string) => t(`bragi.publications.status.${s}`, s);
 
   const toggleVariant = (variantId: string, objectId: string) => {
     if (expanded === variantId) { setExpanded(null); return; }
@@ -149,23 +191,47 @@ export default function LoreBragiPublications() {
 
   if (loading) return <div style={S.hint}>{t('bragi.publications.loading', 'загрузка…')}</div>;
 
-  const filterLabel = (f: string): string => {
-    if (f === 'все') return t('bragi.publications.filterAll', 'все');
-    if (f === 'черновики') return t('bragi.publications.filterDrafts', 'черновики');
-    return f;
-  };
-
   return (
     <div>
       <div style={S.descRow}>
         <div style={S.desc}>{t('bragi.publications.desc', 'main-текст + вариации под площадки: одна публикация группирует свои версии; у каждой — свой текст, статус и картинка.')}</div>
         <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.publications.newPublication', '+ новая публикация')}</button>
       </div>
-      <div style={S.filters}>
-        {['все', ...channels, ...rubricNames, 'черновики'].map(f => (
-          <span key={f} style={filterChipStyle(filter === f)} onClick={() => setFilter(f)}>{filterLabel(f)}</span>
-        ))}
-      </div>
+      {(statuses.length + rubricNames.length + channels.length) > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <FilterBar
+            tier="local"
+            label={t('bragi.publications.filtersLabel', 'Фильтры')}
+            activeCount={activeCount}
+            summaryTags={[
+              ...[...statusSel].map((s): FilterTagData => ({ key: 'st:' + s, label: statusLabel(s), color: STATUS_COLOR[s], onRemove: () => toggleStatus(s) })),
+              ...[...rubricSel].map((n): FilterTagData => ({ key: 'ru:' + n, label: n, onRemove: () => toggleRubric(n) })),
+              ...[...channelSel].map((c): FilterTagData => ({ key: 'ch:' + c, label: c, onRemove: () => toggleChannel(c) })),
+            ]}
+            onClear={clearAll}
+            open={filterOpen}
+            onToggleOpen={() => setFilterOpen(v => !v)}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {statuses.length > 0 && (
+                <FilterDimensionMulti label={t('bragi.publications.statusLabel', 'Статус')}
+                  options={statuses.map(s => ({ value: s, label: statusLabel(s), color: STATUS_COLOR[s] }))}
+                  selected={statusSel} onToggle={toggleStatus} counts={statusCounts} dot />
+              )}
+              {rubricNames.length > 0 && (
+                <FilterDimensionMulti label={t('bragi.publications.rubricLabel', 'Рубрика')}
+                  options={rubricNames.map(n => ({ value: n, label: n }))}
+                  selected={rubricSel} onToggle={toggleRubric} counts={rubricCounts} />
+              )}
+              {channels.length > 0 && (
+                <FilterDimensionMulti label={t('bragi.publications.channelLabel', 'Канал')}
+                  options={channels.map(c => ({ value: c, label: c }))}
+                  selected={channelSel} onToggle={toggleChannel} counts={channelCounts} />
+              )}
+            </div>
+          </FilterBar>
+        </div>
+      )}
 
       {filtered.map(pub => {
         const openTodos = countOpenTodos(pub.todo_md) + (pub.variant_todo_texts ?? []).reduce((sum, v) => sum + countOpenTodos(v), 0);
@@ -264,14 +330,6 @@ export default function LoreBragiPublications() {
   );
 }
 
-function filterChipStyle(active: boolean): React.CSSProperties {
-  return {
-    fontSize: 'var(--fs-base)', border: '1px solid', borderRadius: 6, padding: '3px 10px', cursor: 'pointer',
-    color: active ? 'var(--acc)' : 'var(--t2)',
-    borderColor: active ? 'var(--acc)' : 'var(--bd)',
-  };
-}
-
 function statusDotStyle(color: string): React.CSSProperties {
   return { width: 7, height: 7, borderRadius: '50%', display: 'inline-block', background: color, marginRight: 6 };
 }
@@ -282,7 +340,6 @@ const S: Record<string, React.CSSProperties> = {
                background: 'var(--acc)', color: 'var(--on-accent)', fontSize: 'var(--fs-base)', fontWeight: 600 },
   desc:      { color: 'var(--t2)', fontSize: 'var(--fs-lg)', margin: 0 },
   hint:      { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
-  filters:   { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 },
   pubcard:   { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '14px 16px', marginBottom: 14 },
   pubhead:   { display: 'flex', gap: 14, alignItems: 'flex-start' },
   thumb:     { flex: 'none', width: 128, height: 90, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8 },
