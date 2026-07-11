@@ -165,8 +165,16 @@ export default function LorePage() {
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
   const spec      = params.get('spec')      || '';
-  const artKind   = (params.get('kind') as DocKind | '') || '';
-  const artId     = params.get('art')        || '';
+  // T19: Knowledge doc/runbook deep-links are unified onto `passport` as
+  // "<kind>:<id>" (like every other section's passport). Legacy ?kind=&art=
+  // is still read so old bookmarks keep working. `spec` keeps its own param —
+  // it's shared with the Components section's spec drill-down, not a
+  // Knowledge-only quirk.
+  const kSel = section === 'knowledge' && /^(doc|runbook):/.test(passport)
+    ? { kind: passport.slice(0, passport.indexOf(':')) as DocKind, id: passport.slice(passport.indexOf(':') + 1) }
+    : null;
+  const artKind   = (kSel?.kind ?? ((params.get('kind') as DocKind | '') || '')) as DocKind | '';
+  const artId     = kSel?.id ?? (params.get('art') || '');
 
   const [debouncedQ, setDebouncedQ] = useState(q);
   useEffect(() => {
@@ -306,6 +314,7 @@ export default function LorePage() {
     p.delete('passport');
     p.delete('kind');
     p.delete('art');
+    p.delete('spec');
     return p;
   });
 
@@ -316,8 +325,9 @@ export default function LorePage() {
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
-  const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('kind', kind); p.set('art', id); p.delete('spec'); return p; });
-  const closeArt  = () => setParams(p => { p.delete('kind'); p.delete('art'); return p; });
+  // T19: encode Knowledge doc/runbook selection into the unified `passport`.
+  const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('passport', `${kind}:${id}`); p.delete('kind'); p.delete('art'); p.delete('spec'); return p; });
+  const closeArt  = () => setParams(p => { p.delete('passport'); p.delete('kind'); p.delete('art'); return p; });
 
   const onSearchChange = (v: string) => {
     setSearch(v);
@@ -931,7 +941,7 @@ export default function LorePage() {
                 kinds={KNOWLEDGE_ARTIFACT_KINDS}
                 onError={handleFetchError}
                 onOpen={(kind, id) => {
-                  if (kind === 'spec') { setParams(p => { p.set('spec', id); p.delete('kind'); p.delete('art'); return p; }); }
+                  if (kind === 'spec') { setParams(p => { p.set('spec', id); p.delete('kind'); p.delete('art'); p.delete('passport'); return p; }); }
                   else if (kind === 'runbook' || kind === 'doc') { openArt(kind, id); }
                 }}
                 selectedKind={spec ? 'spec' : artKind}
