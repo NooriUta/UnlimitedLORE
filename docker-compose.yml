@@ -61,6 +61,13 @@ services:
     build: .
     ports:
       - "4400:80"
+    # host.docker.internal is auto-provided by Docker Desktop but NOT by plain
+    # Docker Engine (Ubuntu) — map it to the host gateway so the /tyr-* proxy can
+    # reach the host's TYR process there too. nginx no longer fails to boot when
+    # this is unresolvable (deferred resolution in nginx.conf), so this only
+    # affects whether TYR is reachable, never whether the app starts.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       lore-backend:
         condition: service_healthy
