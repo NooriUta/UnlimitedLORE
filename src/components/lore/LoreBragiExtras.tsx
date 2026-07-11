@@ -3,12 +3,29 @@
 // one slice (bragi_keys/bragi_insights/bragi_integrations) or a small
 // client-side join over bragi_calendar + fetchBragiMetrics (Архив has no
 // dedicated backend slice — see note below).
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, fetchBragiMetrics } from '../../api/lore';
 import LoreBragiIntegrationEditor, { type LoreBragiIntegrationEditData } from './LoreBragiIntegrationEditor';
 import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBragiKeywordEditor';
 import LoreBragiRubricManager, { type RubricRow } from './LoreBragiRubricManager';
+import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
+
+// Shared facet helpers for the Bragi tables (T35) — same "empty = all,
+// counts exclude own dimension" model as Forseti (T33/T34).
+function facetCount<T>(rows: T[], base: (r: T) => boolean, values: (r: T) => (string | null)[]): Record<string, number> {
+  const m: Record<string, number> = {};
+  rows.filter(base).forEach(r => new Set(values(r).filter(Boolean) as string[]).forEach(v => { m[v] = (m[v] || 0) + 1; }));
+  return m;
+}
+function mkSetToggle(setter: React.Dispatch<React.SetStateAction<Set<string>>>) {
+  return (v: string) => setter(prev => { const n = new Set(prev); if (n.has(v)) n.delete(v); else n.add(v); return n; });
+}
+function distinct<T>(rows: T[], values: (r: T) => (string | null)[]): string[] {
+  const s = new Set<string>();
+  rows.forEach(r => values(r).forEach(v => { if (v) s.add(v); }));
+  return Array.from(s).sort();
+}
 
 // ── Ключи ────────────────────────────────────────────────────────────────
 interface KeywordRow {
@@ -25,6 +42,11 @@ export function LoreBragiKeys() {
   const [creating, setCreating] = useState(false);
   const [editingRow, setEditingRow] = useState<KeywordRow | null>(null);
 
+  const [intentSel, setIntentSel] = useState<Set<string>>(new Set());
+  const [clusterSel, setClusterSel] = useState<Set<string>>(new Set());
+  const [rubricSel, setRubricSel] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
+
   const load = useCallback(() => {
     setLoading(true);
     return Promise.all([
@@ -35,6 +57,26 @@ export function LoreBragiKeys() {
       .catch(() => setLoading(false));
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  const intents  = useMemo(() => distinct(rows, r => [r.intent]), [rows]);
+  const clusters = useMemo(() => distinct(rows, r => [r.cluster]), [rows]);
+  const rubricNames = useMemo(() => distinct(rows, r => r.rubric_names), [rows]);
+
+  const matchIntent  = useCallback((r: KeywordRow) => intentSel.size === 0 || (r.intent != null && intentSel.has(r.intent)), [intentSel]);
+  const matchCluster = useCallback((r: KeywordRow) => clusterSel.size === 0 || (r.cluster != null && clusterSel.has(r.cluster)), [clusterSel]);
+  const matchRubric  = useCallback((r: KeywordRow) => rubricSel.size === 0 || r.rubric_names.some(n => rubricSel.has(n)), [rubricSel]);
+
+  const filtered = useMemo(() => rows.filter(r => matchIntent(r) && matchCluster(r) && matchRubric(r)),
+    [rows, matchIntent, matchCluster, matchRubric]);
+  const intentCounts  = useMemo(() => facetCount(rows, r => matchCluster(r) && matchRubric(r), r => [r.intent]), [rows, matchCluster, matchRubric]);
+  const clusterCounts = useMemo(() => facetCount(rows, r => matchIntent(r) && matchRubric(r), r => [r.cluster]), [rows, matchIntent, matchRubric]);
+  const rubricCounts  = useMemo(() => facetCount(rows, r => matchIntent(r) && matchCluster(r), r => r.rubric_names), [rows, matchIntent, matchCluster]);
+
+  const toggleIntent = mkSetToggle(setIntentSel);
+  const toggleCluster = mkSetToggle(setClusterSel);
+  const toggleRubric = mkSetToggle(setRubricSel);
+  const activeCount = intentSel.size + clusterSel.size + rubricSel.size;
+  const clearAll = () => { setIntentSel(new Set()); setClusterSel(new Set()); setRubricSel(new Set()); };
 
   if (creating) {
     return (
@@ -65,11 +107,46 @@ export function LoreBragiKeys() {
         <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.extras.keys.newBtn', '+ новое ключевое слово')}</button>
       </div>
       <LoreBragiRubricManager rubrics={rubrics} onChanged={load} />
+      {(intents.length + clusters.length + rubricNames.length) > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <FilterBar
+            tier="local"
+            label={t('bragi.extras.keys.filtersLabel', 'Фильтры')}
+            activeCount={activeCount}
+            summaryTags={[
+              ...[...intentSel].map((v): FilterTagData => ({ key: 'in:' + v, label: t('bragi.keywordEditor.intent.' + v, v), onRemove: () => toggleIntent(v) })),
+              ...[...clusterSel].map((v): FilterTagData => ({ key: 'cl:' + v, label: v, onRemove: () => toggleCluster(v) })),
+              ...[...rubricSel].map((v): FilterTagData => ({ key: 'ru:' + v, label: v, onRemove: () => toggleRubric(v) })),
+            ]}
+            onClear={clearAll}
+            open={filterOpen}
+            onToggleOpen={() => setFilterOpen(o => !o)}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {intents.length > 0 && (
+                <FilterDimensionMulti label={t('bragi.extras.keys.colIntent', 'интент')}
+                  options={intents.map(v => ({ value: v, label: t('bragi.keywordEditor.intent.' + v, v) }))}
+                  selected={intentSel} onToggle={toggleIntent} counts={intentCounts} />
+              )}
+              {clusters.length > 0 && (
+                <FilterDimensionMulti label={t('bragi.extras.keys.colCluster', 'кластер')}
+                  options={clusters.map(v => ({ value: v, label: v }))}
+                  selected={clusterSel} onToggle={toggleCluster} counts={clusterCounts} />
+              )}
+              {rubricNames.length > 0 && (
+                <FilterDimensionMulti label={t('bragi.extras.keys.colRubric', 'рубрика')}
+                  options={rubricNames.map(v => ({ value: v, label: v }))}
+                  selected={rubricSel} onToggle={toggleRubric} counts={rubricCounts} />
+              )}
+            </div>
+          </FilterBar>
+        </div>
+      )}
       <div style={S.card}>
         <table style={S.table}>
           <thead><tr><th style={S.th}>{t('bragi.extras.keys.colPhrase', 'фраза')}</th><th style={S.th}>{t('bragi.extras.keys.colCluster', 'кластер')}</th><th style={S.th}>{t('bragi.extras.keys.colRubric', 'рубрика')}</th><th style={S.thNum}>{t('bragi.extras.keys.colFreq', '[!] /мес')}</th><th style={S.th}>{t('bragi.extras.keys.colIntent', 'интент')}</th><th style={S.th}>{t('bragi.extras.keys.colPage', 'страница')}</th><th style={S.th}></th></tr></thead>
           <tbody>
-            {rows.map(r => (
+            {filtered.map(r => (
               <tr key={r.keyword_id}>
                 <td style={S.td}>{r.phrase}</td>
                 <td style={S.td}>{r.cluster ?? '—'}</td>
@@ -83,6 +160,7 @@ export function LoreBragiKeys() {
           </tbody>
         </table>
         {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.keys.empty', 'ключей пока нет')}</div>}
+        {rows.length > 0 && filtered.length === 0 && <div style={S.hint}>{t('bragi.extras.keys.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
       </div>
     </div>
   );
@@ -104,6 +182,8 @@ export function LoreBragiArchive() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<ArchiveRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [channelSel, setChannelSel] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetchLoreSlice<CalendarRow>('bragi_calendar').then(async cal => {
@@ -120,10 +200,33 @@ export function LoreBragiArchive() {
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
+  const channels = useMemo(() => distinct(rows, r => r.channel_id), [rows]);
+  const matchChannel = useCallback((r: ArchiveRow) => channelSel.size === 0 || r.channel_id.some(c => channelSel.has(c)), [channelSel]);
+  const filtered = useMemo(() => rows.filter(matchChannel), [rows, matchChannel]);
+  const channelCounts = useMemo(() => facetCount(rows, () => true, r => r.channel_id), [rows]);
+  const toggleChannel = mkSetToggle(setChannelSel);
+
   if (loading) return <div style={S.hint}>{t('bragi.extras.archive.loading', 'загрузка…')}</div>;
   return (
     <div>
       <div style={S.desc}>{t('bragi.extras.archive.desc', 'ретроспектива: опубликованное и что оно дало.')}</div>
+      {channels.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <FilterBar
+            tier="local"
+            label={t('bragi.extras.archive.filtersLabel', 'Фильтры')}
+            activeCount={channelSel.size}
+            summaryTags={[...channelSel].map((c): FilterTagData => ({ key: 'ch:' + c, label: c, onRemove: () => toggleChannel(c) }))}
+            onClear={() => setChannelSel(new Set())}
+            open={filterOpen}
+            onToggleOpen={() => setFilterOpen(o => !o)}
+          >
+            <FilterDimensionMulti label={t('bragi.extras.archive.colChannel', 'канал')}
+              options={channels.map(c => ({ value: c, label: c }))}
+              selected={channelSel} onToggle={toggleChannel} counts={channelCounts} />
+          </FilterBar>
+        </div>
+      )}
       <div style={S.card}>
         <table style={S.table}>
           <thead><tr>
@@ -131,7 +234,7 @@ export function LoreBragiArchive() {
             <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th>
           </tr></thead>
           <tbody>
-            {rows.map(r => (
+            {filtered.map(r => (
               <tr key={r.variant_id}>
                 <td style={S.td}>{r.title[0] ?? r.publication_id[0]}</td>
                 <td style={S.td}>{r.channel_id[0] ?? '—'}</td>
@@ -144,6 +247,7 @@ export function LoreBragiArchive() {
           </tbody>
         </table>
         {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyState', 'опубликованных вариаций пока нет')}</div>}
+        {rows.length > 0 && filtered.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
       </div>
     </div>
   );
