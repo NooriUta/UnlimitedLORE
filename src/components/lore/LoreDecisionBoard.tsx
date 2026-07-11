@@ -8,6 +8,8 @@ import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
 import { MartProse } from '../bench/MartProse';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
+import { resolveStatusMeta, statusLabel } from './lore-status';
 
 interface Props {
   q: string;
@@ -52,6 +54,10 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
   const [sortDir,        setSortDir]        = useState<'asc' | 'desc'>('asc');
   const [groupByStatus,  setGroupByStatus]  = useState(false);
   const [collapsedGroups,setCollapsedGroups]= useState<Set<string>>(new Set());
+  // T34: status facet filter (decisions carry no status field — the category is
+  // inferred from the headline via inferDecisionStatus, same source group-by uses).
+  const [statusSel,      setStatusSel]      = useState<Set<string>>(new Set());
+  const [filterOpen,     setFilterOpen]     = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -83,12 +89,26 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
     });
   }
 
-  const filtered = q
-    ? rows.filter(d =>
-        d.title.toLowerCase().includes(q.toLowerCase()) ||
-        d.decision_id.includes(q.replace(/^#/, ''))
-      )
-    : rows;
+  const decStatus = (d: LoreDecisionRow): string | null => d.status_raw ?? inferDecisionStatus(d.title);
+  function toggleStatus(s: string) {
+    setStatusSel(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
+  }
+  // Available status chips: only categories actually present, ordered by STATUS_ORDER.
+  const statusCounts = (() => {
+    const m: Record<string, number> = {};
+    rows.forEach(d => { const s = decStatus(d); if (s) m[s] = (m[s] || 0) + 1; });
+    return m;
+  })();
+  const allStatuses = [
+    ...STATUS_ORDER.filter(s => statusCounts[s]),
+    ...Object.keys(statusCounts).filter(s => !STATUS_ORDER.includes(s)).sort(),
+  ];
+
+  const filtered = rows
+    .filter(d => !q
+      || d.title.toLowerCase().includes(q.toLowerCase())
+      || d.decision_id.includes(q.replace(/^#/, '')))
+    .filter(d => statusSel.size === 0 || statusSel.has(decStatus(d) ?? '\0'));
 
   const display = [...filtered].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -218,6 +238,32 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
           </button>
         </div>
       </div>
+      {/* T34: status facet filter (collapsible one-line band, same as QG/Знания) */}
+      {allStatuses.length > 1 && (
+        <FilterBar
+          tier="local"
+          label={t('lore.decisionBoard.filtersLabel', 'Фильтры')}
+          activeCount={statusSel.size}
+          summaryTags={[...statusSel].map((s): FilterTagData => ({
+            key: 's:' + s, label: statusLabel(s), color: resolveStatusMeta(s).color,
+            onRemove: () => setStatusSel(prev => { const n = new Set(prev); n.delete(s); return n; }),
+          }))}
+          onClear={() => setStatusSel(new Set())}
+          open={filterOpen}
+          onToggleOpen={() => setFilterOpen(v => !v)}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, marginRight: 4 }}>
+              {t('lore.decisionBoard.statusLabel', 'Статус')}
+            </span>
+            {allStatuses.map(s => (
+              <Chip key={s} label={statusLabel(s)} pressed={statusSel.has(s)}
+                onClick={() => toggleStatus(s)} count={statusCounts[s]}
+                color={resolveStatusMeta(s).color} dot />
+            ))}
+          </div>
+        </FilterBar>
+      )}
       <div style={S.list}>
         {filtered.length === 0 && <div style={S.empty}>{t('lore.decisionBoard.noneFound', 'Решений не найдено.')}</div>}
         {sections.map(sec => {
