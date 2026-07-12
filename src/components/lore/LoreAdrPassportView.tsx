@@ -110,11 +110,43 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   const releasedIn    = data.release_ids        ?? [];
   const tags          = data.tags              ?? [];
 
+  // Full-ADR Markdown export — assembles the complete record (header + all
+  // body sections + relations) into one .md file, downloaded client-side.
+  const downloadMd = () => {
+    const lines: string[] = [];
+    lines.push(`# ${data.adr_id}${data.name ? ` — ${data.name}` : ''}`, '');
+    const meta: string[] = [];
+    if (data.status)       meta.push(`- **Status:** ${data.status.toUpperCase()}`);
+    if (data.date_created) meta.push(`- **Date:** ${data.date_created.slice(0, 10)}`);
+    if (components.length)  meta.push(`- **Components:** ${components.join(', ')}`);
+    if (tags.length)        meta.push(`- **Tags:** ${tags.join(', ')}`);
+    if (dependsOn.length)   meta.push(`- **Depends on:** ${dependsOn.join(', ')}`);
+    if (supersedes.length)  meta.push(`- **Supersedes:** ${supersedes.join(', ')}`);
+    if (implementedIn.length) meta.push(`- **Implemented in:** ${implementedIn.join(', ')}`);
+    if (releasedIn.length)  meta.push(`- **Released in:** ${releasedIn.join(', ')}`);
+    if (meta.length) lines.push(...meta, '');
+    if (data.context_md)      lines.push('## Context', '', data.context_md.trim(), '');
+    if (data.decision_md)     lines.push('## Decision', '', data.decision_md.trim(), '');
+    if (data.consequences_md) lines.push('## Consequences', '', data.consequences_md.trim(), '');
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${data.adr_id}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={S.root}>
       <div style={S.topBar}>
         <button style={S.back} onClick={onBack}>{t('lore.adrPassportView.backToList', '← К списку')}</button>
-        <button style={S.editBtn} onClick={() => setEditing(true)}>{t('lore.adrPassportView.edit', '✎ Редактировать')}</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button style={S.editBtn} onClick={downloadMd} title={t('lore.adrPassportView.downloadMdTitle', 'Скачать ADR целиком в Markdown')}>{t('lore.adrPassportView.downloadMd', '⬇ MD')}</button>
+          <button style={S.editBtn} onClick={() => setEditing(true)}>{t('lore.adrPassportView.edit', '✎ Редактировать')}</button>
+        </div>
       </div>
 
       <div style={S.header}>
