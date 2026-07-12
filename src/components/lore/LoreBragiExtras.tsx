@@ -143,6 +143,7 @@ export function LoreBragiKeys() {
         </div>
       )}
       <div style={S.card}>
+        <div style={S.tableWrap}>
         <table style={S.table}>
           <thead><tr><th style={S.th}>{t('bragi.extras.keys.colPhrase', 'фраза')}</th><th style={S.th}>{t('bragi.extras.keys.colCluster', 'кластер')}</th><th style={S.th}>{t('bragi.extras.keys.colRubric', 'рубрика')}</th><th style={S.thNum}>{t('bragi.extras.keys.colFreq', '[!] /мес')}</th><th style={S.th}>{t('bragi.extras.keys.colIntent', 'интент')}</th><th style={S.th}>{t('bragi.extras.keys.colPage', 'страница')}</th><th style={S.th}></th></tr></thead>
           <tbody>
@@ -159,6 +160,7 @@ export function LoreBragiKeys() {
             ))}
           </tbody>
         </table>
+        </div>
         {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.keys.empty', 'ключей пока нет')}</div>}
         {rows.length > 0 && filtered.length === 0 && <div style={S.hint}>{t('bragi.extras.keys.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
       </div>
@@ -228,6 +230,7 @@ export function LoreBragiArchive() {
         </div>
       )}
       <div style={S.card}>
+        <div style={S.tableWrap}>
         <table style={S.table}>
           <thead><tr>
             <th style={S.th}>{t('bragi.extras.archive.colPublication', 'публикация')}</th><th style={S.th}>{t('bragi.extras.archive.colChannel', 'канал')}</th><th style={S.th}>{t('bragi.extras.archive.colDate', 'дата')}</th>
@@ -246,6 +249,7 @@ export function LoreBragiArchive() {
             ))}
           </tbody>
         </table>
+        </div>
         {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyState', 'опубликованных вариаций пока нет')}</div>}
         {rows.length > 0 && filtered.length === 0 && <div style={S.hint}>{t('bragi.extras.archive.emptyFiltered', 'ничего не найдено под этим фильтром')}</div>}
       </div>
@@ -342,6 +346,7 @@ export function LoreBragiIntegrations() {
         <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.extras.integrations.newBtn', '+ новая интеграция')}</button>
       </div>
       <div style={S.card}>
+        <div style={S.tableWrap}>
         <table style={S.table}>
           <thead><tr><th style={S.th}>{t('bragi.extras.integrations.colService', 'сервис')}</th><th style={S.th}>{t('bragi.extras.integrations.colPurpose', 'назначение')}</th><th style={S.th}>{t('bragi.extras.integrations.colStatus', 'статус')}</th><th style={S.th}>{t('bragi.extras.integrations.colSecret', 'секрет')}</th><th style={S.th}>{t('bragi.extras.integrations.colLastCalled', 'последний вызов')}</th><th style={S.th}></th></tr></thead>
           <tbody>
@@ -360,6 +365,7 @@ export function LoreBragiIntegrations() {
             ))}
           </tbody>
         </table>
+        </div>
         {rows.length === 0 && <div style={S.hint}>{t('bragi.extras.integrations.empty', 'интеграций пока нет')}</div>}
       </div>
     </div>
@@ -377,7 +383,8 @@ const S: Record<string, React.CSSProperties> = {
   desc:    { color: 'var(--t2)', fontSize: 'var(--fs-lg)', marginBottom: 18 },
   hint:    { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
   card:    { background: 'var(--b1)', border: '1px solid var(--bd)', borderRadius: 12, padding: '10px 18px' },
-  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-md)' },
+  tableWrap: { overflowX: 'auto' as const, width: '100%' },
+  table:   { width: '100%', minWidth: 520, borderCollapse: 'collapse', fontSize: 'var(--fs-md)' },
   th:      { textAlign: 'left', color: 'var(--t3)', fontWeight: 400, fontSize: 'var(--fs-sm)', padding: '8px 10px',
              borderBottom: '1px solid var(--bd)', fontFamily: 'var(--mono)' },
   thNum:   { textAlign: 'right', color: 'var(--t3)', fontWeight: 400, fontSize: 'var(--fs-sm)', padding: '8px 10px',

@@ -83,6 +83,7 @@ export default function LoreBragiAnalytics() {
       <div style={S.card}>
         <h2 style={S.cardH2}>{t('bragi.analytics.recent.title', 'последние замеры')} <span style={S.meta}>{recent.length}</span></h2>
         {recent.length === 0 ? <div style={S.hint}>{t('bragi.analytics.recent.empty', 'замеров пока нет')}</div> : (
+          <div style={S.tableWrap}>
           <table style={S.table}>
             <thead>
               <tr><th style={S.th}>{t('bragi.analytics.recent.colObject', 'объект')}</th><th style={S.th}>{t('bragi.analytics.recent.colMetric', 'метрика')}</th><th style={S.thNum}>{t('bragi.analytics.recent.colValue', 'значение')}</th><th style={S.th}>{t('bragi.analytics.recent.colSource', 'источник')}</th></tr>
@@ -98,6 +99,7 @@ export default function LoreBragiAnalytics() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
@@ -122,7 +124,8 @@ const S: Record<string, React.CSSProperties> = {
   shareRow:{ marginBottom: 11 },
   shareTop:{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 4 },
   shareTrack: { height: 6, borderRadius: 3, background: 'var(--b2)' },
-  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-md)' },
+  tableWrap: { overflowX: 'auto' as const, width: '100%' },
+  table:   { width: '100%', minWidth: 440, borderCollapse: 'collapse', fontSize: 'var(--fs-md)' },
   th:      { textAlign: 'left', color: 'var(--t3)', fontWeight: 400, fontSize: 'var(--fs-sm)', padding: '8px 10px',
              borderBottom: '1px solid var(--bd)', fontFamily: 'var(--mono)' },
   thNum:   { textAlign: 'right', color: 'var(--t3)', fontWeight: 400, fontSize: 'var(--fs-sm)', padding: '8px 10px',
