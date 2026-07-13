@@ -12,6 +12,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # LoreScd2AndRollbackLiveDbTest needs a real ArcadeDB via Testcontainers.
+      # That works on GitHub-hosted runners but not on self-hosted Docker-in-Docker
+      # stands (e.g. the Forgejo act_runner), where the job container can't reach
+      # Testcontainers' Ryuk/DB on the default bridge network. Export a skip flag
+      # for that one test off github-hosted; every other backend test still runs
+      # everywhere. Must be a STEP (via $GITHUB_ENV) — the `runner` context is not
+      # available in a job-level `env:`. runner.environment is 'github-hosted' on
+      # GitHub's hosted runners and 'self-hosted'/empty elsewhere, so the value is
+      # 'false' only on GitHub-hosted; subsequent steps inherit it.
+      - name: Flag self-hosted DooD (skip live-DB test off github-hosted)
+        run: echo "LORE_SKIP_LIVE_DB_TESTS=${{ runner.environment != 'github-hosted' }}" >> "$GITHUB_ENV"
+
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:

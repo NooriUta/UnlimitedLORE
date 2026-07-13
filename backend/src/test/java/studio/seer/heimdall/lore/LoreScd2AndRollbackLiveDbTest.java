@@ -5,6 +5,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,7 +31,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * exactly the kind of DB-transaction behavior a mock would rubber-stamp.
  */
 @QuarkusTest
-@QuarkusTestResource(LoreArcadeDbTestResource.class)
+// restrictToAnnotatedClass: @QuarkusTestResource is GLOBAL by default in Quarkus,
+// so without this the ArcadeDB Testcontainer would boot for EVERY test class — and
+// its Ryuk reaper failing then crashes the whole suite bootstrap (unrelated tests
+// like LoreAdminGuardTest get reported as failed). Scope the container to just this
+// class, which is the only one that needs it.
+@QuarkusTestResource(value = LoreArcadeDbTestResource.class, restrictToAnnotatedClass = true)
+// This is the only test that needs a real ArcadeDB container. On self-hosted
+// Docker-in-Docker CI (e.g. the Forgejo act_runner stand) Testcontainers can't
+// reach its Ryuk/DB on the default bridge network from the job container, so we
+// skip it there and rely on GitHub-hosted runners for the live-DB coverage.
+// backend-ci.yml sets LORE_SKIP_LIVE_DB_TESTS=true whenever the runner is not
+// github-hosted; the var is unset for a plain `./gradlew test`, so local runs
+// (against Docker Desktop) still exercise it.
+@DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class LoreScd2AndRollbackLiveDbTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
