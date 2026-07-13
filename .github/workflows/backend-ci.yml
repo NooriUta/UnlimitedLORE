@@ -24,11 +24,30 @@ jobs:
       - name: Flag self-hosted DooD (skip live-DB test off github-hosted)
         run: echo "LORE_SKIP_LIVE_DB_TESTS=${{ runner.environment != 'github-hosted' }}" >> "$GITHUB_ENV"
 
-      - name: Set up JDK 21
+      # GitHub-hosted: fetch the JDK the normal way.
+      - name: Set up JDK 21 (github-hosted)
+        if: runner.environment == 'github-hosted'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
+
+      # Self-hosted stand: the Forgejo runner image already bakes JDK 21 into its
+      # act tool cache, but setup-java looks under a different RUNNER_TOOL_CACHE dir
+      # (and the cached version-folder name doesn't match its lookup), so it
+      # re-downloads the JDK over the network — which on this Docker Desktop/WSL2
+      # host intermittently fails ("socket disconnected before secure TLS") and
+      # reliably red-lit backend-ci. Point JAVA_HOME straight at the baked JDK: no
+      # download, no flake. Discovered by path so it survives a JDK patch bump.
+      - name: Use runner-image JDK 21 (self-hosted)
+        if: runner.environment != 'github-hosted'
+        run: |
+          JAVA_BIN="$(find /opt -type f -path '*/bin/java' 2>/dev/null | grep -iE 'temurin|jdk' | head -1)"
+          JH="$(dirname "$(dirname "$JAVA_BIN")")"
+          test -x "$JH/bin/java" || { echo "::error::no baked JDK found under /opt"; exit 1; }
+          echo "JAVA_HOME=$JH" >> "$GITHUB_ENV"
+          echo "$JH/bin" >> "$GITHUB_PATH"
+          "$JH/bin/java" -version
 
       - name: Gradle build (Quarkus backend)
         working-directory: backend
