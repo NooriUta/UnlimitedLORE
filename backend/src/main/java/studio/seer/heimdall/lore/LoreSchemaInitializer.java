@@ -514,6 +514,15 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowDictEntry.is_active     IF NOT EXISTS BOOLEAN",
         "CREATE PROPERTY KnowDictEntry.is_extensible IF NOT EXISTS BOOLEAN",
         // Composite unique — enables UPSERT WHERE dict_type=x AND code=y without dups.
-        "CREATE INDEX IF NOT EXISTS ON KnowDictEntry (dict_type, code) UNIQUE"
+        "CREATE INDEX IF NOT EXISTS ON KnowDictEntry (dict_type, code) UNIQUE",
+
+        // ── ADR-LORE-015: task_type — классификация задач (первичный слой для ролей) ─
+        // Значения — справочник KnowDictEntry (dict_type="task_type"), два измерения:
+        // последовательные фазы (planning/design/dev/test/ops) + сквозные
+        // (research/analytics/docs/content). Тип определяет дефолтных
+        // author/executor/reviewer (ADR-LORE-014). Единственный объект, которому
+        // недоставало типа по итогам аудита §4 ADR-LORE-015.
+        "CREATE PROPERTY KnowTask.task_type IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowTask (task_type) NOTUNIQUE"
     );
 }
