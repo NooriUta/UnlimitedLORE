@@ -281,6 +281,11 @@ export interface LoreSprintTask {
   effort_days: number | null;
   note_md: string | null;
   component_ids: string[] | null;
+  // ADR-LORE-014 §4 — free-text task ownership; reviewer_agent must differ from
+  // executor_agent before the task can move to done (backend hard gate).
+  author_agent?: string | null;
+  executor_agent?: string | null;
+  reviewer_agent?: string | null;
 }
 
 export interface LoreMilestone {
@@ -523,18 +528,30 @@ export async function createLoreTask(
   return res.json() as Promise<LoreTaskWriteResponse>;
 }
 
+export interface LoreTaskAgentFields {
+  authorAgent?: string | null;
+  executorAgent?: string | null;
+  reviewerAgent?: string | null;
+}
+
 export async function editLoreTask(
   taskUid: string,
   title: string,
   noteMd?: string | null,
   effortDays?: number | null,
+  agents?: LoreTaskAgentFields,
 ): Promise<LoreTaskWriteResponse> {
-  // effort_days: null = leave unchanged (backend only writes it when non-null,
-  // mirroring onto both the vertex and the open KnowTaskHist row).
+  // effort_days / agent fields: null (or omitted) = leave unchanged (backend only
+  // writes a field when it's non-null; ADR-LORE-014 §4 fields live on the vertex).
   const res = await fetch(`${LORE_BASE}/task/edit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ task_uid: taskUid, title, note_md: noteMd ?? null, effort_days: effortDays ?? null }),
+    body: JSON.stringify({
+      task_uid: taskUid, title, note_md: noteMd ?? null, effort_days: effortDays ?? null,
+      author_agent: agents?.authorAgent ?? null,
+      executor_agent: agents?.executorAgent ?? null,
+      reviewer_agent: agents?.reviewerAgent ?? null,
+    }),
   });
   assertJson(res);
   if (!res.ok) return parseError(res);

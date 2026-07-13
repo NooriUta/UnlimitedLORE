@@ -523,6 +523,20 @@ public class LoreSchemaInitializer {
         // author/executor/reviewer (ADR-LORE-014). Единственный объект, которому
         // недоставало типа по итогам аудита §4 ADR-LORE-015.
         "CREATE PROPERTY KnowTask.task_type IF NOT EXISTS STRING",
-        "CREATE INDEX IF NOT EXISTS ON KnowTask (task_type) NOTUNIQUE"
+        "CREATE INDEX IF NOT EXISTS ON KnowTask (task_type) NOTUNIQUE",
+
+        // ── ADR-LORE-014 §4: author/executor/reviewer — SDLC ownership on a task ──
+        // Deliberately on the VERTEX (KnowTask), not KnowTaskHist ("as priority" in
+        // the ADR's first draft) — priority's Hist+carry-forward pattern already has
+        // a live bug (readTaskHistCarryFields/restoreTaskHistFields only carry
+        // note_md/effort_days; any other Hist field silently vanishes on every status
+        // flip). These fields characterize WHO owns the task, not a point-in-time
+        // status fact, so they belong where task_type does — immune to the whole
+        // carry-forward problem class by construction.
+        "CREATE PROPERTY KnowTask.author_agent   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowTask.executor_agent IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowTask.reviewer_agent IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowTask (executor_agent) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowTask (reviewer_agent) NOTUNIQUE"
     );
 }
