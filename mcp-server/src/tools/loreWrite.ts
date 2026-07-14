@@ -1098,9 +1098,25 @@ export function registerLoreWrite(server: McpServer): void {
     schema: {
       slug: z.string().describe('e.g. "NooriUta/UnlimitedLORE" (GitHub) or "AIDA/aida-root@forgejo" (Forgejo)'),
       name: z.string().optional().describe('human-readable project name, e.g. "UnlimitedLORE"'),
+      // ADR-LORE-018: hosting entries (origin + mirrors). URL is composed at read
+      // time from the template, so a repo move is a one-record fix, not a rewrite.
+      hosts: z.array(z.object({
+        remote: z.string().describe('remote name, e.g. "origin" | "github"'),
+        role: z.enum(['primary', 'mirror']),
+        base_url: z.string().describe('e.g. "http://localhost:3030/AIDA/UnlimitedLORE"'),
+        file_url_template: z.string().describe('e.g. "{base}/src/branch/{branch}/{path}" (Forgejo) | "{base}/blob/{branch}/{path}" (GitHub)'),
+        pr_url_template: z.string().describe('e.g. "{base}/pulls/{n}" (Forgejo) | "{base}/pull/{n}" (GitHub)'),
+        default_branch: z.string().optional(),
+      })).optional().describe('origin + mirrors; stored as JSON, URL composed on read'),
+      default_branch: z.string().optional().describe('repo default branch, e.g. "develop"'),
     },
     path: '/lore/project',
-    body: ({ slug, name }) => ({ slug, name: name ?? null }),
+    body: ({ slug, name, hosts, default_branch }) => ({
+      slug,
+      name: name ?? null,
+      hosts: hosts ? JSON.stringify(hosts) : null,
+      default_branch: default_branch ?? null,
+    }),
   });
 
   // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────

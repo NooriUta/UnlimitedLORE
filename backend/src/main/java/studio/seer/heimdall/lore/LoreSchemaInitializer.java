@@ -569,6 +569,12 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE KnowGitProject IF NOT EXISTS EXTENDS V",
         "CREATE PROPERTY KnowGitProject.slug IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowGitProject (slug) UNIQUE",
+        // ADR-LORE-018: hosts = JSON array of hosting entries (origin + mirrors),
+        // each with role/base_url/file_url_template/pr_url_template/default_branch.
+        // Stored as a JSON STRING (no EMBEDDEDLIST precedent in this schema; pr_refs
+        // is handled the same way); the URL is composed at read time on the client.
+        "CREATE PROPERTY KnowGitProject.hosts          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowGitProject.default_branch IF NOT EXISTS STRING",
 
         // BELONGS_TO_PROJECT (KnowSprint -> KnowGitProject, also read off KnowRelease/
         // KnowPR elsewhere) — same gap: only ever auto-vivified via CREATE EDGE ... IF

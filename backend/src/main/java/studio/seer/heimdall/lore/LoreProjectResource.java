@@ -27,7 +27,9 @@ public class LoreProjectResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreProjectResource.class);
 
-    public record ProjectCreateRequest(String slug, String name) {}
+    // hosts = JSON array string (ADR-018); default_branch = repo default branch.
+    // JSON field names map 1:1 to record components (snake_case kept deliberately).
+    public record ProjectCreateRequest(String slug, String name, String hosts, String default_branch) {}
 
     @POST
     @Path("project")
@@ -47,6 +49,8 @@ public class LoreProjectResource extends LoreResourceBase {
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("slug", req.slug());
             if (req.name() != null) { sql.append(", name=:name"); p.put("name", req.name()); }
+            if (req.hosts() != null) { sql.append(", hosts=:hosts"); p.put("hosts", req.hosts()); }
+            if (req.default_branch() != null) { sql.append(", default_branch=:db"); p.put("db", req.default_branch()); }
             sql.append(" UPSERT WHERE slug=:slug");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
