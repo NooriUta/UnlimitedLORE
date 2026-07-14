@@ -147,7 +147,7 @@ npm run build       # tsc → dist/index.js
 1. `curl http://localhost:2480/api/v1/ready` — ArcadeDB жива
 2. `curl http://localhost:9100/lore/slices` — backend отвечает, знает слайсы
 3. Открыть `http://localhost:4400/lore?section=plan` — фронт грузит план
-4. (если настроен MCP) `lore_query_slice({slice: "sprints"})` из LLM-агента —
+4. (если настроен MCP) `query_slice({slice: "sprints"})` из LLM-агента —
    возвращает реальные данные
 
 ## Частые проблемы

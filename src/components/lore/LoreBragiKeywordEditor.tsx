@@ -1,6 +1,6 @@
 // LoreBragiKeywordEditor — create/edit a BragiKeyword. The "Ключи" table
 // (LoreBragiExtras.tsx) was read-only from FE-05 onward even though the
-// backend/MCP write path (POST /lore/bragi/keyword, lore_upsert_keyword) has
+// backend/MCP write path (POST /lore/bragi/keyword, bragi_keyword_set) has
 // always supported it — this closes that gap. Same convention as
 // LoreBragiIntegrationEditor/LoreBragiPublicationEditor.
 import { useEffect, useState } from 'react';

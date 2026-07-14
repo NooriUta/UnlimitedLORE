@@ -157,7 +157,7 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
             // reverse of ADR's IMPLEMENTED_IN (ADR → Sprint) — which ADRs this
             // sprint implements. Was missing entirely; sprint detail had no way
-            // to surface the link even though lore_link_adr_sprint has always
+            // to surface the link even though adr_link(rel:"sprint") has always
             // been able to create it.
             "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
             "out('HAS_STATE')[track_id IS NOT NULL].track_id[0] AS track_id " +
@@ -723,7 +723,7 @@ public final class LoreSlices {
             "SELECT rubric_id, name, description, order_index FROM BragiRubric",
             List.of(), Map.of(), " ORDER BY order_index, name");
 
-        // Recent metric feed — for filtered/aggregated queries use lore_query_metric
+        // Recent metric feed — for filtered/aggregated queries use metric_get
         // (POST /lore/bragi/metric/query) instead; this slice is a flat recent-points
         // feed for dashboard cards. object_type='probe' is a schema-verification
         // artifact (ARC-02/ARC-03), always excluded. The remaining exclusions

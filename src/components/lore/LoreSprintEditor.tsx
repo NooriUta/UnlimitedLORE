@@ -1,5 +1,5 @@
 // LoreSprintEditor — standalone "create sprint" form, modeled on LoreAdrEditor.
-// Sprints had no dedicated create-UI before this (only MCP/lore_create_sprint) —
+// Sprints had no dedicated create-UI before this (only MCP/sprint_new) —
 // this fills that gap with the same multi-select pattern (MultiChip) used for
 // ADR relations, for the fields where several values are legitimate
 // (components, git projects, an initial batch of tasks).

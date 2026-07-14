@@ -341,7 +341,7 @@ public class LoreAdrResource extends LoreResourceBase {
             return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
                 "release_id", req.release_id(), "action", "added", "linked", linked,
                 "hint", linked ? "" : "no edge created — release not found by " + relField + "='" + relKey
-                    + "' (register it via lore_create_release, or pass git_project)")));
+                    + "' (register it via release_new, or pass git_project)")));
         } catch (Exception e) {
             LOG.warnf("[LORE ADR LINK] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -350,7 +350,7 @@ public class LoreAdrResource extends LoreResourceBase {
     }
 
     // ── Write-path: point add/remove for ADR's other relations ──────────────
-    // lore_create_adr's component_ids/depends_on_ids/supersedes_ids/tags are
+    // adr_new's component_ids/depends_on_ids/supersedes_ids/tags are
     // full-replace (delete-all-then-recreate) — fine for authoring the whole
     // set up front, but risky for incremental edits (must resend the entire
     // current set to add/remove one item). These four give the same
@@ -499,7 +499,7 @@ public class LoreAdrResource extends LoreResourceBase {
                 return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
                     "tag_id", req.tag_id(), "action", "removed")));
             }
-            // Upsert the tag vertex first (same as lore_create_adr's tag step) —
+            // Upsert the tag vertex first (same as adr_new's tag step) —
             // tags are freeform, not a fixed vocabulary.
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowTag SET tag_id=:tag UPSERT WHERE tag_id=:tag",
