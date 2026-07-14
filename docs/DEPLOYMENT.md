@@ -1,7 +1,9 @@
 # LORE — разворот с нуля
 
-Пошаговый чек-лист для поднятия всего стека LORE (ArcadeDB → backend → frontend →
-MCP-сервер) на чистой машине или новом окружении.
+**Перенесено в LORE (2026-07-14):** полный чек-лист теперь живёт как runbook
+`RUNBOOK-DEPLOY-LOCAL-DEV` — `:4400/lore?section=knowledge&passport=RUNBOOK-DEPLOY-LOCAL-DEV`
+(или `query_slice({slice:"runbook_by_id", params:{id:"RUNBOOK-DEPLOY-LOCAL-DEV"}})` из MCP).
+Этот файл больше не обновляется — правьте runbook в LORE, не этот .md.
 
 См. также: [`LORE_OVERVIEW.md`](./LORE_OVERVIEW.md) — что это вообще такое,
 [`backend/db-schema/README.md`](../backend/db-schema/README.md) — детали шага 2.
