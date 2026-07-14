@@ -123,6 +123,14 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE DEPENDS_ON       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE SUPERSEDES       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE YIELDED          IF NOT EXISTS EXTENDS E",
+        // PRODUCED (QGJobTask→QGRecommendation) and PROMOTED_TO (QGRecommendation→
+        // KnowTask) were used by LoreQgResource's CREATE EDGE ... IF NOT EXISTS calls
+        // without an explicit type declaration here — ArcadeDB auto-vivifies the type
+        // on first use, so this worked on the live shared DB, but a fresh bootstrap
+        // (LORE_BOOTSTRAP=true) DB had no upfront declaration for either. Added for
+        // parity with every other edge type (T13, 2026-07-14).
+        "CREATE EDGE TYPE PRODUCED         IF NOT EXISTS EXTENDS E",
+        "CREATE EDGE TYPE PROMOTED_TO      IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE VALIDATES        IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE BELONGS_TO       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE DOCUMENTED_IN    IF NOT EXISTS EXTENDS E",
