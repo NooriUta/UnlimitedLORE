@@ -126,8 +126,15 @@ jobs:
       # Only success/failure, no "start" ping: this fires on every push to
       # develop, and a start-notification for every local dev push would be
       # noisy where aida-root's tag-triggered prod releases are not.
+      # continue-on-error + trailing `exit 0`: Telegram is best-effort only.
+      # Confirmed 2026-07-13 that api.telegram.org:443 is unreachable from this
+      # host entirely (host + both docker networks all timeout at the TCP
+      # level, not a code/secrets issue) — without this, an unreachable
+      # Telegram silently turned every deploy red even though backend/frontend
+      # health checks both passed, which is worse than no notification at all.
       - name: Notify success
         if: success()
+        continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -150,9 +157,11 @@ jobs:
             echo "::warning::[tg] success-notify attempt $attempt/3 failed"
             [ $attempt -lt 3 ] && sleep $((attempt * 5))
           done
+          exit 0
 
       - name: Notify failure
         if: failure()
+        continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -175,3 +184,4 @@ jobs:
             echo "::warning::[tg] failure-notify attempt $attempt/3 failed"
             [ $attempt -lt 3 ] && sleep $((attempt * 5))
           done
+          exit 0
