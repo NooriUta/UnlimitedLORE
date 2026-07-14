@@ -617,9 +617,9 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         onClick={() => { if (hasDetail && !editing) setExpanded(v => !v); }}
       >
         <GameIcon slug={meta.icon} size={13} style={{ color: meta.color, alignSelf: 'center' }} />
-        <span style={S.taskId}>{task.task_id}</span>
-        {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
-        {/* task_type chip (ADR-LORE-015, T14) — color/label from the dictionary, no hardcode. */}
+        {/* task_type — icon-only chip (color from the dictionary), label moved into the
+            hover tooltip: with roles/modules/status all sharing this row, a text label
+            per chip was too much clutter (ADR-LORE-015, T14; decluttered per user request). */}
         {task.task_type && (() => {
           const e = dictTaskTypeByCode[task.task_type];
           const color = e?.color || 'var(--t3)';
@@ -627,21 +627,22 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
           return (
             <span title={label}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3,
-                fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3,
+                display: 'inline-flex', alignItems: 'center', padding: '1px 4px', borderRadius: 3,
                 background: `color-mix(in srgb, ${color} 14%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
-                color, fontFamily: 'var(--mono)', flexShrink: 0,
+                flexShrink: 0,
               }}>
-              {e?.icon && <GameIcon slug={e.icon} size={10} style={{ color }} />}
-              {label}
+              <GameIcon slug={e?.icon || 'checkbox-tree'} size={10} style={{ color }} />
             </span>
           );
         })()}
+        <span style={S.taskId}>{task.task_id}</span>
+        {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (
           <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
         )}
-        {/* Component tags */}
+        {/* Component tags — icon-only (game_icon), full_name/component_id as tooltip;
+            same declutter treatment as the task_type chip. */}
         {Array.from(linkedIds).map(cid => {
           const c = allComps.find(x => x.component_id === cid);
           const color = areaColor(c?.area ?? '');
@@ -649,13 +650,15 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             <span key={cid}
               title={c?.full_name ?? cid}
               style={{
-                fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3,
+                display: 'inline-flex', alignItems: 'center', padding: '1px 4px', borderRadius: 3,
                 background: `color-mix(in srgb, ${color} 14%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
-                color, fontFamily: 'var(--mono)', flexShrink: 0, cursor: 'default',
+                flexShrink: 0, cursor: 'default',
               }}
               onClick={e => e.stopPropagation()}
-            >{cid}</span>
+            >
+              <GameIcon slug={c?.game_icon} size={10} style={{ color }} />
+            </span>
           );
         })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
