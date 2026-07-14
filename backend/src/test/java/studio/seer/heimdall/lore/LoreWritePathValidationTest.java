@@ -179,4 +179,17 @@ class LoreWritePathValidationTest {
             .statusCode(400)
             .body("error", equalTo("BAD_PARAMS"));
     }
+
+    @Test
+    void projectCreateRejectsIllegalId() {
+        given()
+            .header("X-Seer-Role", "admin")
+            .contentType("application/json")
+            .body("{\"slug\":\"" + ILLEGAL_ID + "\"}")
+        .when()
+            .post("/lore/project")
+        .then()
+            .statusCode(400)
+            .body("error", equalTo("BAD_PARAMS"));
+    }
 }

@@ -545,6 +545,29 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowTask.executor_agent IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowTask.reviewer_agent IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowTask (executor_agent) NOTUNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowTask (reviewer_agent) NOTUNIQUE"
+        "CREATE INDEX IF NOT EXISTS ON KnowTask (reviewer_agent) NOTUNIQUE",
+
+        // ── QG-flow: QGJobTask + QGRecommendation (Tests task, 2026-07-14) ────────
+        // Same gap as PRODUCED/PROMOTED_TO above, one layer deeper: LoreQgResource's
+        // "UPDATE QGJobTask/QGRecommendation SET ... UPSERT WHERE ..." calls never had
+        // an explicit vertex-type/index declaration either — worked on the live shared
+        // DB via auto-vivification (types + ad-hoc property inference from years of
+        // writes), but a fresh bootstrap DB has neither type, so the UPSERT itself
+        // fails outright (surfaced by LoreScd2AndRollbackLiveDbTest's Testcontainer run
+        // against a genuinely empty ArcadeDB — same class of gap C5 found for V/E).
+        "CREATE VERTEX TYPE QGJobTask       IF NOT EXISTS EXTENDS V",
+        "CREATE VERTEX TYPE QGRecommendation IF NOT EXISTS EXTENDS V",
+        "CREATE PROPERTY QGJobTask.job_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY QGRecommendation.rec_id  IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON QGJobTask       (job_id) UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON QGRecommendation (rec_id) UNIQUE",
+
+        // ── KnowGitProject (T15: project_new) ─────────────────────────────────────
+        // Previously created only via a direct ArcadeDB INSERT (see MEMORY
+        // lore_git_project_registration) — never declared here either, same
+        // auto-vivification-on-the-live-DB-only gap as above.
+        "CREATE VERTEX TYPE KnowGitProject IF NOT EXISTS EXTENDS V",
+        "CREATE PROPERTY KnowGitProject.slug IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowGitProject (slug) UNIQUE"
     );
 }
