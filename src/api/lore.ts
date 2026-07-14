@@ -182,6 +182,8 @@ export interface LoreAdrRow {
   status: string | null;
   date_created: string | null;
   component: string | null;
+  components: string[] | null;
+  tags: string[] | null;
 }
 
 export interface LoreAdrPassport {

@@ -70,7 +70,9 @@ public final class LoreSlices {
         // ── §2 ADRs ──────────────────────────────────────────────────────────
         slice("adrs",
             "SELECT adr_id, name, status, date_created, " +
-            "out('BELONGS_TO').component_id[0] AS component " +
+            "out('BELONGS_TO').component_id[0] AS component, " +
+            "out('BELONGS_TO').component_id    AS components, " +
+            "out('TAGGED_WITH').tag_id         AS tags " +
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(
