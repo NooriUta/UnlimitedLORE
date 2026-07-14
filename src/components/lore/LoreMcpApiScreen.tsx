@@ -171,6 +171,11 @@ const TOOLS: ToolDoc[] = [
     params: 'component_id, full_name?, area?, team?, game_icon?, owner?, parent_id?',
     desc: 'LoreComponent: частичное обновление существующего компонента — переименование, смена владельца/команды/иконки, репарент. Пишутся только переданные поля. Новый компонент этим тулом не создать.' },
 
+  // ── Project (KnowGitProject, T15) ─────────────────────────────────────────
+  { name: 'project_new', kind: 'write', entity: 'Project', backend: 'POST /lore/project',
+    params: 'slug, name?',
+    desc: 'KnowGitProject: создать/обновить (upsert по slug, частично-безопасно). Первый реальный write-путь для этого типа — раньше вершина создавалась только прямым INSERT в ArcadeDB. Регистрировать репозиторий ДО того, как на него сошлётся sprint_link(rel:"project")/release_new/release_mv — иначе эти вызовы молча no-op (ok:true, без вершины/ребра). RBAC: только pm + architect + full (ADR-LORE-014 §3, agent-profiles/pm.json и architect.json).' },
+
   // ── Dictionary (KnowDictEntry, ADR-LORE-012) ──────────────────────────────
   { name: 'dict_set', kind: 'write', entity: 'Dictionary', backend: 'POST /lore/dict/entry',
     params: 'dict_type, code, label_ru?, label_en?, color?, icon?, sort_order?, is_active?, is_extensible?',

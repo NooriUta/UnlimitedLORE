@@ -1078,6 +1078,26 @@ export function registerLoreWrite(server: McpServer): void {
     body: ({ channel_id, channel_type, url_handle, funnel_role, rules_md }) => ({ channel_id, channel_type, url_handle, funnel_role, rules_md }),
   });
 
+  // ── Project (KnowGitProject, T15) ─────────────────────────────────────────
+  // First real write path for KnowGitProject — previously only ever created via a
+  // direct ArcadeDB INSERT (no MCP tool, no REST endpoint). sprint_link(rel:"project"),
+  // release_new, and release_mv all assume the target vertex already exists and
+  // silently no-op (ok:true, no edge/vertex written) otherwise. RBAC: pm+architect+full
+  // only (ADR-LORE-014 §3 amendment) — see agent-profiles/pm.json and architect.json.
+  definePostTool(server, {
+    name: 'project_new',
+    description: 'Create or update a KnowGitProject vertex (upsert by slug, partial-safe — omitted ' +
+      'fields left untouched). Register a repo BEFORE sprint_link(rel:"project"), release_new, or ' +
+      'release_mv reference it — those all silently no-op if the git_project slug has no matching ' +
+      'vertex yet. RBAC: pm + architect + full only.',
+    schema: {
+      slug: z.string().describe('e.g. "NooriUta/UnlimitedLORE" (GitHub) or "AIDA/aida-root@forgejo" (Forgejo)'),
+      name: z.string().optional().describe('human-readable project name, e.g. "UnlimitedLORE"'),
+    },
+    path: '/lore/project',
+    body: ({ slug, name }) => ({ slug, name: name ?? null }),
+  });
+
   // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────
   definePostTool(server, {
     name: 'dict_set',
