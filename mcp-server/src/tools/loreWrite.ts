@@ -85,13 +85,14 @@ export function registerLoreWrite(server: McpServer): void {
       author_agent: z.string().optional().describe('who owns/posed this task, e.g. "architect", "claude-full"'),
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
+      task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent }) => ({
+    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type }) => ({
           sprint_id, task_id, title,
           note_md: note_md ?? null, phase_uid: phase_uid ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
-          reviewer_agent: reviewer_agent ?? null,
+          reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
         }),
   });
 
@@ -835,6 +836,7 @@ export function registerLoreWrite(server: McpServer): void {
       author_agent:   z.string().optional().describe('single-mode: who owns/posed this task'),
       executor_agent: z.string().optional().describe('single-mode: who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
+      task_type:      z.string().optional().describe('single-mode: ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content)'),
       tasks: z.array(z.object({
         task_uid:       z.string(),
         title:          z.string(),
@@ -843,21 +845,24 @@ export function registerLoreWrite(server: McpServer): void {
         author_agent:   z.string().optional(),
         executor_agent: z.string().optional(),
         reviewer_agent: z.string().optional(),
-      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?}'),
+        task_type:      z.string().optional(),
+      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
             tasks.map(t => ({
               task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
+              task_type: t.task_type ?? null,
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', {
           task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
+          task_type: task_type ?? null,
         }));
       } catch (e) { return err(e); }
     },

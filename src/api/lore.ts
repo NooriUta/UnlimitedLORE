@@ -295,6 +295,8 @@ export interface LoreSprintTask {
   author_agent?: string | null;
   executor_agent?: string | null;
   reviewer_agent?: string | null;
+  // ADR-LORE-015 (T14) — classification, plain vertex field like the roles above.
+  task_type?: string | null;
 }
 
 export interface LoreMilestone {
@@ -526,11 +528,15 @@ export async function createLoreTask(
   taskId: string,
   title: string,
   noteMd?: string | null,
+  taskType?: string | null,
 ): Promise<LoreTaskWriteResponse> {
   const res = await fetch(`${LORE_BASE}/task`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ sprint_id: sprintId, task_id: taskId, title, note_md: noteMd ?? null }),
+    body: JSON.stringify({
+      sprint_id: sprintId, task_id: taskId, title, note_md: noteMd ?? null,
+      task_type: taskType ?? null,
+    }),
   });
   assertJson(res);
   if (!res.ok) return parseError(res);
@@ -541,6 +547,7 @@ export interface LoreTaskAgentFields {
   authorAgent?: string | null;
   executorAgent?: string | null;
   reviewerAgent?: string | null;
+  taskType?: string | null;
 }
 
 export async function editLoreTask(
@@ -551,7 +558,8 @@ export async function editLoreTask(
   agents?: LoreTaskAgentFields,
 ): Promise<LoreTaskWriteResponse> {
   // effort_days / agent fields: null (or omitted) = leave unchanged (backend only
-  // writes a field when it's non-null; ADR-LORE-014 §4 fields live on the vertex).
+  // writes a field when it's non-null; ADR-LORE-014 §4 / ADR-LORE-015 fields live
+  // on the vertex).
   const res = await fetch(`${LORE_BASE}/task/edit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -560,6 +568,7 @@ export async function editLoreTask(
       author_agent: agents?.authorAgent ?? null,
       executor_agent: agents?.executorAgent ?? null,
       reviewer_agent: agents?.reviewerAgent ?? null,
+      task_type: agents?.taskType ?? null,
     }),
   });
   assertJson(res);

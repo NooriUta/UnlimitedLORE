@@ -207,9 +207,10 @@ public final class LoreSlices {
             // note from whichever hist row carries it — same form as tasks_of_sprint.
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
-            // author/executor/reviewer_agent (ADR-LORE-014 §4) are plain KnowTask
-            // vertex fields — no traversal needed, unlike note_md/effort_days above.
-            "author_agent, executor_agent, reviewer_agent " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
+            // (ADR-LORE-015, T14) are plain KnowTask vertex fields — no traversal
+            // needed, unlike note_md/effort_days above.
+            "author_agent, executor_agent, reviewer_agent, task_type " +
             "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
@@ -224,8 +225,9 @@ public final class LoreSlices {
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
-            // author/executor/reviewer_agent (ADR-LORE-014 §4) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
+            // (ADR-LORE-015, T14) — plain vertex fields.
+            "author_agent, executor_agent, reviewer_agent, task_type " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
@@ -240,8 +242,9 @@ public final class LoreSlices {
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
-            // author/executor/reviewer_agent (ADR-LORE-014 §4) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
+            // (ADR-LORE-015, T14) — plain vertex fields.
+            "author_agent, executor_agent, reviewer_agent, task_type " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
@@ -565,12 +568,12 @@ public final class LoreSlices {
         // in('PART_OF') on KnowTask always returns empty — the old query classified EVERY
         // task as backlog regardless of sprint membership.
         slice("backlog_tasks",
-            "SELECT task_uid, task_id, title, status_raw, priority, component_id " +
+            "SELECT task_uid, task_id, title, status_raw, priority, component_id, task_type " +
             "FROM KnowTask WHERE out('PART_OF').size() = 0",
             List.of(), Map.of(), " ORDER BY task_uid LIMIT 200");
 
         slice("all_tasks",
-            "SELECT task_uid, task_id, title, status_raw, priority, component_id, " +
+            "SELECT task_uid, task_id, title, status_raw, priority, component_id, task_type, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
