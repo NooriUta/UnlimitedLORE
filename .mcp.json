@@ -7,6 +7,13 @@
         "LORE_BACKEND_URL": "http://localhost:9100",
         "LORE_SEER_ROLE": "admin"
       }
+    },
+    "forgejo-mcp": {
+      "type": "http",
+      "url": "http://localhost:3400/mcp",
+      "headers": {
+        "Authorization": "Bearer ${FORGEJO_MCP_API_KEY}"
+      }
     }
   }
 }

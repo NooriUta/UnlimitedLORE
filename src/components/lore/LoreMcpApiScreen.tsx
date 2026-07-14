@@ -280,6 +280,41 @@ const MCP_JSON = `{
   }
 }`;
 
+// ADR-LORE-014 §3: OpenCode wires the SAME MCP server, but each agent gets a
+// permission block that narrows which tools it may call — that IS the lazy
+// mechanism on this client (no server-side dispatcher exists).
+const OPENCODE_JSON = `{
+  "mcp": {
+    "aida-lore": {
+      "type": "local",
+      "command": ["node", "mcp-server/dist/index.js"],
+      "environment": {
+        "LORE_BACKEND_URL": "http://localhost:9100",
+        "LORE_SEER_ROLE": "admin"
+      }
+    }
+  },
+  "agent": {
+    "architect": {
+      "mode": "subagent",
+      "permission": {
+        "*": "deny",
+        "list_slices": "allow",
+        "query_slice": "allow",
+        "adr_*": "allow",
+        "component_*": "allow",
+        "tech_*": "allow",
+        "spec_*": "allow",
+        "runbook_*": "allow",
+        "doc_*": "allow",
+        "decision_*": "allow",
+        "project_new": "allow",
+        "status_set": "allow"
+      }
+    }
+  }
+}`;
+
 // Unique entities in TOOLS array order (already grouped by comment sections above).
 const ENTITIES = Array.from(new Set(TOOLS.map(t => t.entity)));
 
@@ -326,6 +361,93 @@ export default function LoreMcpApiScreen() {
           <Node>backend :9100</Node><Arrow label="REST" />
           <Node>ArcadeDB :2480</Node>
         </div>
+
+        {/* ── Lazy-доступ + ролевые профили (ADR-LORE-014 §1, §3) ─────────────── */}
+        <Section title={t('lore.mcpApi.lazyTitle', 'Lazy-доступ к инструментам и ролевые профили')}>
+          <p style={S.note}>
+            {t('lore.mcpApi.lazyIntro', '60 инструментов — слишком много, чтобы вываливать их все каждому агенту: контекст раздувается, а роль размывается («писать может кто угодно»). ADR-LORE-014 решает это')}{' '}
+            <b>{t('lore.mcpApi.lazyNoDispatcher', 'без server-side диспетчера')}</b>{' '}
+            {t('lore.mcpApi.lazyIntro2', '— сервер всегда отдаёт полный список, а сужение происходит на стороне клиента, по имени инструмента.')}
+          </p>
+          <p style={S.note}>
+            <b>{t('lore.mcpApi.lazyWhyNames', 'Ради этого и делалось переименование.')}</b>{' '}
+            {t('lore.mcpApi.lazyWhyNames2', 'Схема')} <code style={S.codeAcc}>&lt;категория&gt;_&lt;действие&gt;</code>{' '}
+            {t('lore.mcpApi.lazyWhyNames3', '— не косметика: она даёт стабильный префикс, по которому клиент фильтрует. Со старыми именами (')}
+            <code style={S.code}>lore_create_task</code>, <code style={S.code}>lore_link_adr_sprint</code>
+            {t('lore.mcpApi.lazyWhyNames4', ') общий префикс был у всех, и фильтровать было не по чему.')}
+          </p>
+          <div style={S.tableWrap}>
+            <table style={S.table}>
+              <thead><tr>
+                <Th>{t('lore.mcpApi.lazyColClient', 'Клиент')}</Th>
+                <Th>{t('lore.mcpApi.lazyColHow', 'Чем сужает')}</Th>
+              </tr></thead>
+              <tbody>
+                <tr style={S.tr}>
+                  <Td><b>Claude Code</b></Td>
+                  <Td style={{ color: 'var(--t2)' }}>
+                    {t('lore.mcpApi.lazyClaude', 'ToolSearch — схемы инструментов подгружаются по запросу, а не все сразу. В контексте висят только имена.')}
+                  </Td>
+                </tr>
+                <tr style={S.tr}>
+                  <Td><b>OpenCode</b></Td>
+                  <Td style={{ color: 'var(--t2)' }}>
+                    {t('lore.mcpApi.lazyOpenCode', 'permission-wildcard в профиле:')} <code style={S.code}>{'{"*": "deny", "adr_*": "allow"}'}</code>
+                  </Td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p style={S.note}>
+            {t('lore.mcpApi.profilesIntro', '7 профилей лежат в')} <code style={S.code}>mcp-server/agent-profiles/*.json</code>.{' '}
+            <code style={S.codeAcc}>full</code> {t('lore.mcpApi.profilesFull', '— primary, всё разрешено (Claude / бэкфилл). Остальные 6 — subagent:')}{' '}
+            <code style={S.code}>{'"*": "deny"'}</code> {t('lore.mcpApi.profilesRest', 'плюс allow-лист своих категорий.')}{' '}
+            <b>{t('lore.mcpApi.profilesRead', 'Чтение (')}<code style={S.code}>list_slices</code>, <code style={S.code}>query_slice</code>{t('lore.mcpApi.profilesRead2', ') разрешено ВСЕМ')}</b>{' '}
+            {t('lore.mcpApi.profilesRead3', '— граф читать не запрещаем никому, ограничиваем только запись.')}
+          </p>
+          <div style={S.tableWrap}>
+            <table style={S.table}>
+              <thead><tr>
+                <Th>{t('lore.mcpApi.profColRole', 'Роль')}</Th>
+                <Th>{t('lore.mcpApi.profColAllowed', 'Разрешено на запись (сверх чтения)')}</Th>
+                <Th>{t('lore.mcpApi.profColOwns', 'Владеет типами задач (ADR-LORE-015)')}</Th>
+              </tr></thead>
+              <tbody>
+                {([
+                  ['full',      '*  — всё, primary-режим',                                                                             '— не subagent'],
+                  ['architect', 'adr_* · component_* · tech_* · spec_* · runbook_* · doc_* · decision_* · project_new · status_set',   'design'],
+                  ['pm',        'sprint_* · task_* · milestone_* · project_new · status_set · status_set_batch',                       'planning · приёмка test/ops/design'],
+                  ['developer', 'task_* · release_* · tech_* · spec_* · runbook_* · doc_* · adr_new · status_set',                     'dev'],
+                  ['tester',    'qg_* · task_* · status_set · status_set_batch',                                                       'test'],
+                  ['analyst',   'metric_* · insight_* · rec_* · task_set · status_set',                                                'research · analytics'],
+                  ['marketer',  'bragi_* · task_* · insight_* · rec_* · doc_* · status_set',                                           'content'],
+                ] as [string, string, string][]).map(([role, allowed, owns]) => (
+                  <tr key={role} style={S.tr}>
+                    <Td><code style={S.codeAcc}>{role}</code></Td>
+                    <Td><code style={{ ...S.code, fontSize: 'var(--fs-xs)' }}>{allowed}</code></Td>
+                    <Td style={{ color: 'var(--t2)' }}>{owns}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p style={S.note}>
+            <code style={S.codeAcc}>project_new</code> {t('lore.mcpApi.projectNewRbac', '— намеренно только у')} <code style={S.code}>pm</code> + <code style={S.code}>architect</code> + <code style={S.code}>full</code>:{' '}
+            {t('lore.mcpApi.projectNewRbac2', 'регистрация git-проекта — решение управленческое/архитектурное, не операционное.')}
+          </p>
+          <p style={S.note}>
+            <b>{t('lore.mcpApi.gateLabel', 'Единственный жёсткий гейт SDLC.')}</b>{' '}
+            {t('lore.mcpApi.gateText', 'Профили — это фильтр видимости, а не безопасность: сервер по-прежнему исполнит любой вызов с')}{' '}
+            <code style={S.code}>X-Seer-Role: admin</code>.{' '}
+            {t('lore.mcpApi.gateText2', 'Настоящее ограничение ровно одно и живёт на бэкенде —')}{' '}
+            <code style={S.codeAcc}>status_set</code> {t('lore.mcpApi.gateText3', 'на')} <code style={S.code}>task → done</code>{' '}
+            {t('lore.mcpApi.gateText4', 'отклоняется с 409 NO_SELF_ACCEPTANCE, если')} <code style={S.code}>reviewer_agent</code> {t('lore.mcpApi.gateText5', 'совпадает с')} <code style={S.code}>executor_agent</code>{' '}
+            {t('lore.mcpApi.gateText6', '(ADR-LORE-014 §4). Никто не принимает собственную работу.')}
+          </p>
+          <p style={S.note}>
+            {t('lore.mcpApi.metaToolsNote', 'Meta-tools (инструмент, который отдаёт другие инструменты) сознательно НЕ делались — это была бы Phase 2, и она не понадобилась: клиентская фильтрация закрыла задачу без новой машинерии на сервере.')}
+          </p>
+        </Section>
 
         {/* ── Tools ──────────────────────────────────────────────────────────── */}
         <Section title={
@@ -465,8 +587,17 @@ export default function LoreMcpApiScreen() {
               </tbody>
             </table>
           </div>
-          <p style={S.note}>{t('lore.mcpApi.clientRegNote', 'Регистрация у клиента (Claude Code) —')} <code style={S.code}>.mcp.json</code> {t('lore.mcpApi.clientRegNoteRest', 'в корне репо:')}</p>
+          <p style={S.note}>
+            <b>{t('lore.mcpApi.clientClaude', 'Claude Code')}</b> — <code style={S.code}>.mcp.json</code> {t('lore.mcpApi.clientRegNoteRest', 'в корне репо:')}
+          </p>
           <Pre>{MCP_JSON}</Pre>
+          <p style={S.note}>
+            <b>{t('lore.mcpApi.clientOpenCode', 'OpenCode')}</b> — <code style={S.code}>opencode.json</code>:{' '}
+            {t('lore.mcpApi.clientOpenCodeNote', 'тот же MCP-сервер, но у каждого агента свой')} <code style={S.code}>permission</code>-{t('lore.mcpApi.clientOpenCodeNote2', 'блок — это и есть lazy-механизм на этом клиенте (server-side диспетчера нет). Ниже — пример для')}{' '}
+            <code style={S.codeAcc}>architect</code>; {t('lore.mcpApi.clientOpenCodeNote3', 'остальные 6 профилей — так же, только со своим allow-листом (готовые блоки лежат в')}{' '}
+            <code style={S.code}>mcp-server/agent-profiles/*.json</code>{t('lore.mcpApi.clientOpenCodeNote4', ' — каждый файл уже валидный фрагмент agent-конфига, его можно подключить по ссылке, не копируя).')}
+          </p>
+          <Pre>{OPENCODE_JSON}</Pre>
         </Section>
 
         {/* ── Ops ────────────────────────────────────────────────────────────── */}
