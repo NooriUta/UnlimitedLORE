@@ -13,7 +13,7 @@ const err = (e: unknown) => ({
 
 export function registerLoreRead(server: McpServer): void {
   server.tool(
-    'lore_list_slices',
+    'list_slices',
     'List all available LORE read slices (≈43) with their required and optional ' +
       'parameters. Call this first to discover what can be queried (plan, sprints, ' +
       'ADRs, decisions, releases, components, specs, docs, findings, …).',
@@ -28,14 +28,14 @@ export function registerLoreRead(server: McpServer): void {
   );
 
   server.tool(
-    'lore_query_slice',
+    'query_slice',
     'Run a named LORE read slice against system_aida_lore and return its rows. ' +
       'Examples: slice="sprints" (Gantt bars), "adrs", "adr" with ' +
       'params {"id":"ADR-FE-001"}, "spec_by_id" with params {"id":"..."}, ' +
-      '"search" with params {"pattern":"..."}. Use lore_list_slices for the full ' +
+      '"search" with params {"pattern":"..."}. Use list_slices for the full ' +
       'catalog and each slice\'s required params.',
     {
-      slice: z.string().describe('slice id from lore_list_slices, e.g. "sprints"'),
+      slice: z.string().describe('slice id from list_slices, e.g. "sprints"'),
       params: z
         .record(z.string(), z.string())
         .optional()
