@@ -18,17 +18,19 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: LORE frontend — install + typecheck + build
+      - name: LORE frontend — install + typecheck + test + build
         run: |
           npm ci
           npm run check:statuses
           npm run lint
+          npm test
           npm run build
 
-      - name: MCP server — install + typecheck + build
+      - name: MCP server — install + typecheck + test + build
         working-directory: mcp-server
         run: |
           npm ci
+          npm test
           npm run build
 
       # Validates the frontend Dockerfile (npm build + nginx.conf) as shipped.

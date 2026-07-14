@@ -48,13 +48,16 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // author/executor/reviewer_agent (ADR-LORE-014 §4): free-text identity of who
     // owns/does/accepts the task — on the vertex, not Hist (see LoreSchemaInitializer
     // comment for why: immune to the note_md/effort_days carry-forward bug class).
+    // task_type (ADR-LORE-015, T14): defaults to "dev" when omitted — a vertex-only
+    // field like author/executor/reviewer_agent above, so no carry-forward concern.
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md,
-        String phase_uid, String author_agent, String executor_agent, String reviewer_agent) {}
+        String phase_uid, String author_agent, String executor_agent, String reviewer_agent,
+        String task_type) {}
     // effort_days: fractional, granular to the hour (1 day = 8 working hours,
     // so the smallest meaningful increment is 0.125). Was Integer — too coarse
     // to estimate sub-day tasks.
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
-        String author_agent, String executor_agent, String reviewer_agent) {}
+        String author_agent, String executor_agent, String reviewer_agent, String task_type) {}
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index) {}
     // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
     public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index) {}
@@ -63,7 +66,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskPhaseRequest(String task_uid, String phase_uid, String action) {}
 
     public record SprintCreateRequest(String sprint_id, String name, String status,
-        String plan_id, String priority, String outcome_md, String context_md) {}
+        String plan_id, String priority, String outcome_md, String context_md, String git_project) {}
 
     // ── Write-path: create sprint directly ───────────────────────────────────
 
@@ -87,6 +90,17 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         try {
             LoreIngestService.CreateSprintResult r = ingestService.createSprint(
                 req.sprint_id(), req.name(), status, req.plan_id(), req.priority(), req.outcome_md(), req.context_md());
+            // ADR-LORE-017 §Решение 2: sprint_new gets the same optional project param
+            // release_new/release_link/sprint_link(rel:"project") already have — brings
+            // Tier-1 write coverage in line, no separate call needed for the common case
+            // of creating a sprint that already belongs to a known repo.
+            if (req.git_project() != null && !req.git_project().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT " +
+                    "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                    "TO   (SELECT FROM KnowGitProject WHERE slug=:gp) IF NOT EXISTS",
+                    Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
+            }
             java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
@@ -155,9 +169,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 // to need separate commands + careful ordering).
                 // note_md lives on the hist row: tasks_of_sprint / tasks_of_phase read
                 // it via out('HAS_STATE')[note_md IS NOT NULL].note_md[0], not the vertex.
+                final String taskType = (req.task_type() == null || req.task_type().isBlank())
+                    ? "dev" : req.task_type();
                 StringBuilder script = new StringBuilder()
                     .append("INSERT INTO KnowTask SET task_uid = :uid, task_id = :tid, title = :title, ")
-                    .append("note_md = :note, order_index = :oi, src = 'manual', ")
+                    .append("note_md = :note, order_index = :oi, src = 'manual', task_type = :tt, ")
                     .append("author_agent = :author, executor_agent = :executor, reviewer_agent = :reviewer;")
                     .append("CREATE EDGE PART_OF FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);")
@@ -166,7 +182,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .append("CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
                     .append("TO (SELECT FROM KnowTaskHist WHERE state_uid = :nsid);");
                 Map<String, Object> p = mapOfNullable("uid", uid, "tid", tid, "title", title,
-                    "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now,
+                    "note", note, "oi", order, "sid", sid, "nsid", nsid, "now", now, "tt", taskType,
                     "author", req.author_agent(), "executor", req.executor_agent(), "reviewer", req.reviewer_agent());
                 // MCP-PHASES: optional task → phase attachment (tasks_of_phase reads out('IN_PHASE'))
                 if (phase != null) {
@@ -473,7 +489,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             try {
                 writeClient.command(db, basicAuth(),
                     taskVertexUpdate(req.task_uid(), req.title(), req.note_md(), req.effort_days(),
-                        req.author_agent(), req.executor_agent(), req.reviewer_agent()))
+                        req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type()))
                     .await().indefinitely();
                 mirrorTaskHist(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely();
                 updated++;
@@ -494,18 +510,20 @@ public class LoreSprintTaskResource extends LoreResourceBase {
      */
     private static LoreCommandClient.LoreCommand taskVertexUpdate(
             String uid, String title, String noteMd, Double effortDays,
-            String authorAgent, String executorAgent, String reviewerAgent) {
+            String authorAgent, String executorAgent, String reviewerAgent, String taskType) {
         StringBuilder sql = new StringBuilder("UPDATE KnowTask SET title = :title");
         Map<String, Object> p = new java.util.HashMap<>();
         p.put("uid", uid);
         p.put("title", title.trim());
         if (noteMd != null)     { sql.append(", note_md = :note");     p.put("note", noteMd); }
         if (effortDays != null) { sql.append(", effort_days = :eff");  p.put("eff", effortDays); }
-        // author/executor/reviewer_agent (ADR-LORE-014 §4) — vertex fields, only
-        // touched when supplied so a title-only edit never wipes an existing owner.
+        // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type (ADR-LORE-015,
+        // T14) — vertex fields, only touched when supplied so a title-only edit never
+        // wipes an existing owner/type.
         if (authorAgent   != null) { sql.append(", author_agent = :author");     p.put("author", authorAgent); }
         if (executorAgent != null) { sql.append(", executor_agent = :executor"); p.put("executor", executorAgent); }
         if (reviewerAgent != null) { sql.append(", reviewer_agent = :reviewer"); p.put("reviewer", reviewerAgent); }
+        if (taskType      != null) { sql.append(", task_type = :tt");            p.put("tt", taskType); }
         sql.append(" WHERE task_uid = :uid");
         return new LoreCommandClient.LoreCommand("sql", sql.toString(), p);
     }
@@ -546,7 +564,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         final String uid = req.task_uid();
         return writeClient.command(db, basicAuth(),
                 taskVertexUpdate(uid, req.title(), req.note_md(), req.effort_days(),
-                    req.author_agent(), req.executor_agent(), req.reviewer_agent()))
+                    req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type()))
             // The vertex note_md/effort_days above are denormalisations the UI never reads.
             // tasks_of_sprint / tasks_of_phase read BOTH from the open KnowTaskHist row
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "subagent",
+  "description": "Analyst — metrics, insights, recommendations, and own tasks. task_set + status_set were added deliberately during ADR-LORE-014's consistency check against ADR-LORE-015: without them the Analyst couldn't run their own research/analytics-type tasks despite ADR-LORE-015 §1b naming them the default executor for both.",
+  "permission": {
+    "*": "deny",
+    "list_slices": "allow",
+    "query_slice": "allow",
+    "metric_*": "allow",
+    "insight_*": "allow",
+    "rec_*": "allow",
+    "task_set": "allow",
+    "status_set": "allow"
+  }
+}

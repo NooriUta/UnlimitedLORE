@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "subagent",
+  "description": "Developer — own tasks, releases, tech registry, specs, runbooks, docs, and adr_new (Design-in-Build: a developer can propose an ADR, ADR-LORE-014 §4, though the architect assembles the design-type task). Owns dev/ops task types and research spikes per ADR-LORE-015 §1a/1b.",
+  "permission": {
+    "*": "deny",
+    "list_slices": "allow",
+    "query_slice": "allow",
+    "task_*": "allow",
+    "release_*": "allow",
+    "tech_*": "allow",
+    "spec_*": "allow",
+    "runbook_*": "allow",
+    "doc_*": "allow",
+    "adr_new": "allow",
+    "status_set": "allow"
+  }
+}

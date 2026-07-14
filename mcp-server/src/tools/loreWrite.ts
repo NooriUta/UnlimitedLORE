@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { lorePost, loreGet, loreUpload } from '../backend.js';
+import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -17,7 +17,8 @@ type ShapeOutput<S extends z.ZodRawShape> = z.infer<z.ZodObject<S>>;
 // Factory for the common write-tool shape: validate against `schema`, POST the
 // mapped body to `path`, wrap the result in json()/err(). Removes the repeated
 // try/catch boilerplate that every straight-through tool used to inline. Tools
-// with pre-processing (batch branches, computed ids, GET/upload) stay explicit.
+// with pre-processing (batch branches, computed ids, GET/upload, rel-dispatch
+// link-collapse) stay explicit via server.tool().
 function definePostTool<S extends z.ZodRawShape>(
   server: McpServer,
   def: {
@@ -54,7 +55,7 @@ export function registerLoreWrite(server: McpServer): void {
   // SCD2 status transition (closes the open history row, opens a new one, edges,
   // denormalizes status onto the vertex). Writes to the shared system_aida_lore.
   definePostTool(server, {
-    name: 'lore_set_status',
+    name: 'status_set',
     description: 'Set the status of a LORE entity (SCD2 transition). Mutates the shared ' +
       'system_aida_lore — use deliberately. Returns the new revision.',
     schema: {
@@ -67,12 +68,12 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_task',
+    name: 'task_new',
     description: 'Create a new task under a sprint (appends with the next order_index, opens an ' +
       'initial PLANNED history state). Optionally attaches the task to a sprint phase ' +
       '(IN_PHASE edge — the tasks_of_phase slice reads it). author/executor/reviewer_agent ' +
       '(ADR-LORE-014 §4) are free-text identities on the task vertex — reviewer must differ ' +
-      'from executor before the task can move to done (hard gate, see lore_set_status). ' +
+      'from executor before the task can move to done (hard gate, see status_set). ' +
       'Mutates the shared system_aida_lore.',
     schema: {
       sprint_id: z.string(),
@@ -80,29 +81,30 @@ export function registerLoreWrite(server: McpServer): void {
       title: z.string(),
       note_md: z.string().optional().describe('optional Markdown note'),
       phase_uid: z.string().optional()
-        .describe('optional phase to attach to, e.g. "SPRINT_X/PHASE_A" (must belong to the same sprint; create via lore_create_phase first)'),
+        .describe('optional phase to attach to, e.g. "SPRINT_X/PHASE_A" (must belong to the same sprint; create via sprint_phase_new first)'),
       author_agent: z.string().optional().describe('who owns/posed this task, e.g. "architect", "claude-full"'),
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
+      task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent }) => ({
+    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type }) => ({
           sprint_id, task_id, title,
           note_md: note_md ?? null, phase_uid: phase_uid ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
-          reviewer_agent: reviewer_agent ?? null,
+          reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
         }),
   });
 
   definePostTool(server, {
-    name: 'lore_move_task',
+    name: 'task_mv',
     description: 'Move a task to another sprint (ADR-LORE-013, cancel + recreate). Creates a fresh copy ' +
       'in target_sprint_id — same title/note_md/effort_days + TAGGED_WITH component links, initial ' +
       'PLANNED state — and cancels the source (it stays as a ❌ CANCELLED tombstone in the old sprint). ' +
       'NOT a PK re-key: the new task has its OWN fresh status history; the source keeps its history. ' +
       'task_id is reused when free in the target, else new_task_id, else a "<id>_N" suffix (returned as ' +
       'new_task_id + task_id_changed). IN_PHASE and inbound edges (PROMOTED_TO/LED_TO) stay on the source ' +
-      '— re-link on the new task via lore_link_task_phase / lore_link_task_component if needed. ' +
+      '— re-link on the new task via task_link if needed. ' +
       'Mutates the shared system_aida_lore.',
     schema: {
       task_uid:         z.string().describe('full source task uid, e.g. "SPRINT_OLD/T05"'),
@@ -114,11 +116,11 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_phase',
+    name: 'sprint_phase_new',
     description: 'Create a sprint phase (KnowPhase): PART_OF → sprint, initial PLANNED history state. ' +
       'phase_uid = "<sprint_id>/PHASE_<KEY>". Idempotent — an existing phase is returned ' +
-      'unchanged (created=false). Attach tasks via lore_create_task(phase_uid) or ' +
-      'lore_link_task_phase. Mutates the shared system_aida_lore.',
+      'unchanged (created=false). Attach tasks via task_new(phase_uid) or ' +
+      'task_link(rel:"phase"). Mutates the shared system_aida_lore.',
     schema: {
       sprint_id: z.string().describe('e.g. "SPRINT_GEOID_STRUCTURAL_ID"'),
       phase_key: z.string().describe('short phase key, e.g. "A", "B", "1" → phase_uid "SPRINT_X/PHASE_A", display "Фаза A"'),
@@ -132,26 +134,38 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
-  definePostTool(server, {
-    name: 'lore_link_task_phase',
-    description: 'Link (or unlink) a task to a sprint phase via an IN_PHASE edge. Task and phase must ' +
-      'belong to the same sprint. Idempotent on add. action="remove" detaches (omit ' +
-      'phase_uid with remove to detach the task from ALL phases). Mutates system_aida_lore.',
-    schema: {
-      task_uid: z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
-      phase_uid: z.string().optional().describe('phase uid, e.g. "SPRINT_X/PHASE_B"; required for add'),
-      action: z.enum(['add', 'remove']).optional().default('add'),
+  // ── task_link(rel) — collapses task_link_phase + task_link_component (2→1) ──
+  server.tool(
+    'task_link',
+    'Link (or unlink) a KnowTask to another entity. rel="phase": IN_PHASE edge to a sprint phase ' +
+      '(task and phase must belong to the same sprint; action="remove" without target_id detaches ' +
+      'from ALL phases). rel="component": TAGGED_WITH edge to a LoreComponent, many-to-many. ' +
+      'Idempotent on add. Mutates system_aida_lore.',
+    {
+      task_uid:  z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
+      rel:       z.enum(['phase', 'component']),
+      target_id: z.string().optional().describe('phase_uid (rel="phase", e.g. "SPRINT_X/PHASE_B") or component_id (rel="component"); omit with rel="phase"+action="remove" to detach from all phases'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
     },
-    path: '/lore/task/phase',
-    body: ({ task_uid, phase_uid, action }) => ({
-          task_uid, phase_uid: phase_uid ?? null, action: action ?? 'add',
-        }),
-  });
+    async ({ task_uid, rel, target_id, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'phase') {
+          return json(await lorePost('/lore/task/phase', { task_uid, phase_uid: target_id ?? null, action: act }));
+        }
+        if (!target_id) return err(new Error('target_id required for rel="component"'));
+        return json(await lorePost('/lore/task/component', { task_uid, component_id: target_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
 
   definePostTool(server, {
-    name: 'lore_create_sprint',
+    name: 'sprint_new',
     description: 'Create a new KnowSprint vertex directly. Idempotent (upsert by sprint_id). ' +
-      'Seeds an initial HAS_STATE history row. Mutates system_aida_lore.',
+      'Seeds an initial HAS_STATE history row. project (ADR-LORE-017, T16) optionally wires ' +
+      'BELONGS_TO_PROJECT in the same call — omit to default to the session\'s ' +
+      'LORE_ACTIVE_PROJECT, if set; pass sprint_link(rel:"project") later if you need to add ' +
+      'more than one project. Mutates system_aida_lore.',
     schema: {
       sprint_id:  z.string().describe('unique sprint id, e.g. "SPRINT_SITE_EXTRACT"'),
       name:       z.string().describe('human-readable sprint name'),
@@ -160,122 +174,116 @@ export function registerLoreWrite(server: McpServer): void {
       priority:   z.string().optional().describe('e.g. "high", "critical"'),
       outcome_md: z.string().optional().describe('sprint goal / outcome in Markdown'),
       context_md: z.string().optional().describe('background context for the sprint — WHY it exists, key decisions, related sprints, links to docs. Shown in sprint detail panel.'),
+      project:    z.string().optional().describe('git_project slug to wire via BELONGS_TO_PROJECT, e.g. "NooriUta/UnlimitedLORE" — omit to fall back to LORE_ACTIVE_PROJECT if set, omit both to leave unlinked'),
     },
     path: '/lore/sprint/create',
-    body: ({ sprint_id, name, status, plan_id, priority, outcome_md, context_md }) => ({
+    body: ({ sprint_id, name, status, plan_id, priority, outcome_md, context_md, project }) => ({
           sprint_id, name,
           status: status ?? 'todo',
           plan_id: plan_id ?? null,
           priority: priority ?? null,
           outcome_md: outcome_md ?? null,
           context_md: context_md ?? null,
+          git_project: project ?? ACTIVE_PROJECT ?? null,
         }),
   });
 
-  definePostTool(server, {
-    name: 'lore_update_sprint',
-    description: 'Update metadata fields on a KnowSprint vertex (partial update — only supplied fields written). ' +
-      'Covers name, outcome_md, context_md, plan_id, effort_days. ' +
-      'Does NOT change status — use lore_set_status for that. ' +
-      'Does NOT change priority — priority lives on the SCD2-tracked KnowSprintHist row, not this ' +
-      'vertex-only endpoint; there is currently no MCP tool wired to it (backend: POST /lore/sprint/plan). ' +
-      'RULE: always fill context_md when you know WHY the sprint exists, key decisions, or related sprints.',
-    schema: {
+  // sprint_set: merges the old lore_update_sprint (metadata) + lore_update_sprint_refs
+  // (pr_refs) into one tool per ADR-LORE-014 §2's single `sprint_set` entry — routes to
+  // whichever backend endpoint the supplied fields imply. Passing BOTH metadata fields
+  // and pr_numbers in one call hits both endpoints in sequence.
+  server.tool(
+    'sprint_set',
+    'Update a KnowSprint: metadata fields (name/outcome_md/context_md/plan_id/effort_days — partial, ' +
+      'only supplied fields written) and/or PR refs (pr_numbers — appended to the sprint\'s pr_refs ' +
+      'string, existing ones skipped; pass pr_replace=true to discard existing pr_refs first instead of ' +
+      'appending, e.g. to fix entries baked with the wrong repo). Does NOT change status — use status_set. ' +
+      'Does NOT change priority (SCD2-tracked field, no MCP tool wired to it yet). ' +
+      'RULE: always fill context_md when you know WHY the sprint exists. Mutates system_aida_lore.',
+    {
       sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
       name:        z.string().optional(),
       outcome_md:  z.string().optional().describe('sprint outcome / retrospective in Markdown'),
-      context_md:  z.string().optional().describe('background context — WHY the sprint exists, key decisions, links to ADRs/docs, related sprints. Fill whenever you have this information.'),
+      context_md:  z.string().optional().describe('background context — WHY the sprint exists, key decisions, links to ADRs/docs, related sprints'),
       plan_id:     z.string().optional(),
       effort_days: z.number().optional().describe('actual effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
+      pr_numbers:  z.array(z.number().int()).optional().describe('PR numbers to append to pr_refs, e.g. [420, 421]'),
+      pr_git_project: z.string().optional().describe('GitHub project slug for PR links, e.g. "NooriUta/aida-documentation" (default: NooriUta/AIDA). Ignored if pr_repo_url is set.'),
+      pr_repo_url: z.string().optional().describe('full base URL for PR links, e.g. "https://github.com/NooriUta/UnlimitedLORE/pull" — takes precedence over pr_git_project'),
+      pr_replace:  z.boolean().optional().describe('discard existing pr_refs before adding pr_numbers, instead of appending'),
     },
-    path: '/lore/sprint/update',
-    body: ({ sprint_id, name, outcome_md, context_md, plan_id, effort_days }) => ({
-          sprint_id,
-          name: name ?? null, outcome_md: outcome_md ?? null,
-          context_md: context_md ?? null,
-          plan_id: plan_id ?? null,
-          effort_days: effort_days ?? null,
-        }),
-  });
+    async ({ sprint_id, name, outcome_md, context_md, plan_id, effort_days, pr_numbers, pr_git_project, pr_repo_url, pr_replace }) => {
+      try {
+        const results: Record<string, unknown> = {};
+        const hasMeta = name !== undefined || outcome_md !== undefined || context_md !== undefined
+          || plan_id !== undefined || effort_days !== undefined;
+        if (hasMeta) {
+          results.metadata = await lorePost('/lore/sprint/update', {
+            sprint_id,
+            name: name ?? null, outcome_md: outcome_md ?? null,
+            context_md: context_md ?? null, plan_id: plan_id ?? null,
+            effort_days: effort_days ?? null,
+          });
+        }
+        if (pr_numbers && pr_numbers.length > 0) {
+          results.pr_refs = await lorePost('/lore/sprint/refs', {
+            sprint_id, pr_numbers,
+            git_project: pr_git_project ?? null, repo_url: pr_repo_url ?? null,
+            replace: pr_replace ?? false,
+          });
+        }
+        if (!hasMeta && !(pr_numbers && pr_numbers.length > 0)) {
+          return err(new Error('provide at least one metadata field or pr_numbers'));
+        }
+        return json({ sprint_id, ...results });
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // ── sprint_link(rel) — collapses sprint_link_project/dep/component/milestone (4→1) ──
+  server.tool(
+    'sprint_link',
+    'Link (or unlink) a KnowSprint to another entity. rel="project": BELONGS_TO_PROJECT edge, target_id ' +
+      '= git_project slug (a sprint can belong to multiple projects). rel="dep": DEPENDS_ON edge to ' +
+      'ANOTHER sprint (target_id = the sprint depended on; this sprint_id depends on target_id); kind = ' +
+      'hard (blocks deploy) | soft (coordination) | gate (go/no-go) | informs (awareness); server rejects ' +
+      'edges that would create a cycle. rel="component": BELONGS_TO edge, target_id = component_id — ' +
+      'overrides the fuzzy sprint_id-LIKE-%component_key% match. rel="milestone": TARGETS_MILESTONE edge, ' +
+      'target_id = milestone_id — the sole way to assign a sprint to a milestone. ' +
+      'Idempotent on add. Mutates system_aida_lore.',
+    {
+      sprint_id: z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
+      rel:       z.enum(['project', 'dep', 'component', 'milestone']),
+      target_id: z.string().describe('git_project slug (rel="project"), depended-on sprint_id (rel="dep"), component_id (rel="component"), or milestone_id (rel="milestone")'),
+      kind:      z.enum(['hard', 'soft', 'gate', 'informs']).optional().default('soft').describe('rel="dep" only'),
+      reason:    z.string().optional().describe('rel="dep" only: brief reason for the dependency'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ sprint_id, rel, target_id, kind, reason, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'project') {
+          return json(await lorePost('/lore/sprint/project', { sprint_id, git_project: target_id, action: act }));
+        }
+        if (rel === 'dep') {
+          return json(await lorePost('/lore/sprint/dep', {
+            from_sprint: sprint_id, to_sprint: target_id, kind: kind ?? 'soft', reason: reason ?? null, action: act,
+          }));
+        }
+        if (rel === 'component') {
+          return json(await lorePost('/lore/sprint/component', { sprint_id, component_id: target_id, action: act }));
+        }
+        return json(await lorePost('/lore/milestone/sprint', { sprint_id, milestone_id: target_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
 
   definePostTool(server, {
-    name: 'lore_link_sprint_project',
-    description: 'Link (or unlink) a KnowSprint to a KnowGitProject via BELONGS_TO_PROJECT edge. ' +
-      'A sprint can belong to multiple projects (e.g. a cross-repo sprint). ' +
-      'Idempotent on add. Use action="remove" to unlink. ' +
-      'Known slugs: "NooriUta/AIDA", "NooriUta/seidr-site", "NooriUta/aida-documentation", "NooriUta/AIDA-TestPlayGround".',
-    schema: {
-      sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
-      git_project: z.string().describe('project slug, e.g. "NooriUta/AIDA"'),
-      action:      z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/sprint/project',
-    body: ({ sprint_id, git_project, action }) => ({
-          sprint_id, git_project, action: action ?? 'add',
-        }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_sprint_dep',
-    description: 'Link (or unlink) two KnowSprint vertices via a DEPENDS_ON edge (from_sprint depends on to_sprint). ' +
-      'Idempotent on add. Cycle-guard on server rejects edges that would create a cycle. ' +
-      'kind: hard (blocks deployment), soft (coordination), gate (go/no-go), informs (awareness). ' +
-      'Use action="remove" to delete the dependency.',
-    schema: {
-      from_sprint: z.string().describe('the sprint that depends on another, e.g. "SPRINT_FE_REDESIGN"'),
-      to_sprint:   z.string().describe('the sprint being depended on, e.g. "SPRINT_INFRA_V3"'),
-      kind:        z.enum(['hard', 'soft', 'gate', 'informs']).optional().default('soft'),
-      reason:      z.string().optional().describe('brief reason for the dependency'),
-      action:      z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/sprint/dep',
-    body: ({ from_sprint, to_sprint, kind, reason, action }) => ({
-          from_sprint, to_sprint,
-          kind: kind ?? 'soft',
-          reason: reason ?? null,
-          action: action ?? 'add',
-        }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_sprint_component',
-    description: 'Link (or unlink) a KnowSprint to a LoreComponent via a BELONGS_TO edge. ' +
-      'An explicit link OVERRIDES the fuzzy naming-convention match (sprint_id LIKE %component_key%) ' +
-      'in the component_sprints slice and the sprint-detail module badges. ' +
-      'Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      sprint_id:    z.string().describe('the sprint, e.g. "SPRINT_LORE_WRITE_TOOLS"'),
-      component_id: z.string().describe('the component, e.g. "OMILORE", "FORSETI", "FORSETI_MCP"'),
-      action:       z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/sprint/component',
-    body: ({ sprint_id, component_id, action }) => ({
-          sprint_id, component_id, action: action ?? 'add',
-        }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_task_component',
-    description: 'Tag (or untag) a KnowTask with a LoreComponent via a TAGGED_WITH edge. ' +
-      'Many-to-many: a task can be linked to 0..N components. ' +
-      'Idempotent on add. Use action="remove" to remove the tag.',
-    schema: {
-      task_uid:     z.string().describe('the task uid, e.g. "SPRINT_LORE_WRITE_TOOLS/T01"'),
-      component_id: z.string().describe('the component, e.g. "OMILORE", "FORSETI"'),
-      action:       z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/task/component',
-    body: ({ task_uid, component_id, action }) => ({
-          task_uid, component_id, action: action ?? 'add',
-        }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_create_milestone',
+    name: 'milestone_new',
     description: 'Create a KnowMilestone (upsert by milestone_id) — was previously ONLY reachable via raw HTTP ' +
       'or the UI form, no MCP tool existed. Partial calls are safe: unset label/week/date_display/' +
       'priority are left untouched (LH-44). goal_md is written to the open KnowMilestoneHist row ' +
-      '(created on first fill). To attach sprints, use lore_link_sprint_milestone — this tool only ' +
+      '(created on first fill). To attach sprints, use sprint_link(rel:"milestone") — this tool only ' +
       'creates the milestone itself.',
     schema: {
       milestone_id: z.string().describe('e.g. "M4"'),
@@ -294,9 +302,9 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_update_milestone',
-    description: 'Amend an EXISTING KnowMilestone — same endpoint as lore_create_milestone, signature tailored ' +
-      'for partial updates (mirror of lore_update_adr/lore_update_spec). Omitted fields are left ' +
+    name: 'milestone_set',
+    description: 'Amend an EXISTING KnowMilestone — same endpoint as milestone_new, signature tailored ' +
+      'for partial updates (mirror of adr_set/spec_set). Omitted fields are left ' +
       'untouched, never wiped — e.g. pass only goal_md to fix the goal text without resending ' +
       'label/week/date_display/priority.',
     schema: {
@@ -316,24 +324,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_link_sprint_milestone',
-    description: 'Link (or unlink) a KnowSprint to a KnowMilestone via a TARGETS_MILESTONE edge — ' +
-      'the sole way to assign a sprint to a milestone (a separate planned_milestone_id field used to ' +
-      'exist alongside this edge; it drifted out of sync on 62+ sprints and was retired). ' +
-      'Idempotent on add. Use action="remove" to unlink. Returns {ok, sprint_id, milestone_id, action}.',
-    schema: {
-      sprint_id:    z.string().describe('sprint id, e.g. "SPRINT_LORE_QG_INTEGRATION"'),
-      milestone_id: z.string().describe('milestone id, e.g. "M3"'),
-      action:       z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/milestone/sprint',
-    body: ({ sprint_id, milestone_id, action }) => ({
-          sprint_id, milestone_id, action: action ?? 'add',
-        }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_batch_set_status',
+    name: 'status_set_batch',
     description: 'Set the same status on multiple LORE entities in one call. ' +
       'Each item goes through the full SCD2 transition (closes old hist row, opens new one). ' +
       'Errors are collected per-item without aborting the rest. ' +
@@ -348,7 +339,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_adr',
+    name: 'adr_new',
     description: 'Create or update a KnowADR (Architecture Decision Record). Idempotent — upserts by adr_id. ' +
       'Default status is PROPOSED. Supports context_md / decision_md / consequences_md sections. ' +
       'depends_on_ids/supersedes_ids/component_ids/tags each REPLACE the full edge set on every call ' +
@@ -364,7 +355,7 @@ export function registerLoreWrite(server: McpServer): void {
       decision_md:      z.string().optional(),
       consequences_md:  z.string().optional(),
       depends_on_ids:   z.array(z.string()).optional().describe('other adr_id this ADR depends on — creates DEPENDS_ON edges, replaces the full set'),
-      supersedes_ids:   z.array(z.string()).optional().describe('adr_id(s) this ADR supersedes — creates SUPERSEDES edges FROM this adr TO each listed one, replaces the full set. Pair with status="SUPERSEDED" on the OLD adr_id (separate lore_create_adr call) to mark it retired.'),
+      supersedes_ids:   z.array(z.string()).optional().describe('adr_id(s) this ADR supersedes — creates SUPERSEDES edges FROM this adr TO each listed one, replaces the full set. Pair with status="SUPERSEDED" on the OLD adr_id (separate adr_new call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('free-text tags — upserts KnowTag + TAGGED_WITH edges, replaces the full set'),
       file_path:        z.string().optional().describe('source .md path relative to docs root, e.g. "engine/specs/adr/ADR-HND-022.md"'),
     },
@@ -381,8 +372,8 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_update_adr',
-    description: 'Amend an EXISTING KnowADR — thin wrapper over the same endpoint as lore_create_adr, ' +
+    name: 'adr_set',
+    description: 'Amend an EXISTING KnowADR — thin wrapper over the same endpoint as adr_new, ' +
       'tailored for partial updates. name is still required (backend always writes it), everything ' +
       'else is safe to omit: unset context_md/decision_md/consequences_md/date_created/component_id/status ' +
       'are left UNTOUCHED (never wiped or reset to today). Use this to amend a single ADR section — ' +
@@ -415,27 +406,57 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
-  definePostTool(server, {
-    name: 'lore_link_adr_sprint',
-    description: 'Link (or unlink) a KnowADR to the KnowSprint that implements it via an IMPLEMENTED_IN edge. ' +
-      'Feeds the adr slice implemented_in_ids field. Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      adr_id:    z.string().describe('e.g. "ADR-HND-022"'),
-      sprint_id: z.string().describe('implementing sprint, e.g. "SPRINT_GEOID_STRUCTURAL_ID"'),
-      action:    z.enum(['add', 'remove']).optional().default('add'),
+  // ── adr_link(rel) — collapses 6 adr_link_* tools into one (rel picks the edge type) ──
+  server.tool(
+    'adr_link',
+    'Link (or unlink) a KnowADR to another entity, one edge at a time (full-replace alternatives — ' +
+      'component_ids/depends_on_ids/supersedes_ids/tags on adr_new/adr_set — recreate the WHOLE set; use ' +
+      'this for a single incremental add/remove). rel="sprint": IMPLEMENTED_IN edge, target_id=sprint_id ' +
+      '(feeds the adr slice implemented_in_ids). rel="release": IMPLEMENTED_IN_RELEASE edge, ' +
+      'target_id=release_id — pass git_project for multi-repo safety (release_uid = ' +
+      '"{git_project}#{release_id}"). rel="component": BELONGS_TO edge, target_id=component_id. ' +
+      'rel="depends_on": DEPENDS_ON edge, target_id=the ADR this one depends on. rel="supersedes": ' +
+      'SUPERSEDES edge, target_id=the OLDER ADR this one supersedes (pair with status="SUPERSEDED" on ' +
+      'the old adr_id via a separate adr_set call). rel="tag": TAGGED_WITH edge (upserts the KnowTag ' +
+      'vertex if new), target_id=tag_id. Idempotent on add. Mutates system_aida_lore.',
+    {
+      adr_id:      z.string().describe('e.g. "ADR-HND-022"'),
+      rel:         z.enum(['sprint', 'release', 'component', 'depends_on', 'supersedes', 'tag']),
+      target_id:   z.string().describe('sprint_id / release_id / component_id / dep_adr_id / superseded_adr_id / tag_id, matching rel'),
+      git_project: z.string().optional().describe('rel="release" only: GitHub project slug, e.g. "NooriUta/AIDA"'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
     },
-    path: '/lore/adr/link',
-    body: ({ adr_id, sprint_id, action }) => ({ adr_id, sprint_id, action: action ?? 'add' }),
-  });
+    async ({ adr_id, rel, target_id, git_project, action }) => {
+      try {
+        const act = action ?? 'add';
+        switch (rel) {
+          case 'sprint':
+            return json(await lorePost('/lore/adr/link', { adr_id, sprint_id: target_id, action: act }));
+          case 'release':
+            return json(await lorePost('/lore/adr/link', { adr_id, release_id: target_id, git_project: git_project ?? null, action: act }));
+          case 'component':
+            return json(await lorePost('/lore/adr/component', { adr_id, component_id: target_id, action: act }));
+          case 'depends_on':
+            return json(await lorePost('/lore/adr/depends_on', { adr_id, dep_adr_id: target_id, action: act }));
+          case 'supersedes':
+            return json(await lorePost('/lore/adr/supersedes', { adr_id, superseded_adr_id: target_id, action: act }));
+          case 'tag':
+            return json(await lorePost('/lore/adr/tag', { adr_id, tag_id: target_id, action: act }));
+        }
+      } catch (e) { return err(e); }
+    },
+  );
 
+  // ── runbook_link(rel) — rename only, single edge type today ──
   definePostTool(server, {
-    name: 'lore_link_runbook_adr',
+    name: 'runbook_link',
     description: 'Link (or unlink) a KnowRunbook to the KnowADR it references via a REFERENCES_ADR edge (feeds the ' +
       '"runbooks"/"runbook_by_id" slices\' adr_ids field). A runbook mentioning an ADR only as a text-only ' +
       '[[ADR-ID]] wiki link inside content_md has NO real graph edge — this creates one. Idempotent on add. ' +
-      'Use action="remove" to unlink.',
+      'rel is always "adr" today (kept for symmetry with other *_link tools).',
     schema: {
       runbook_id: z.string().describe('e.g. "RUNBOOK-INFISICAL-LOCAL-SETUP"'),
+      rel:        z.literal('adr').optional().default('adr'),
       adr_id:     z.string().describe('e.g. "ADR-MT-011"'),
       action:     z.enum(['add', 'remove']).optional().default('add'),
     },
@@ -444,82 +465,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_link_adr_release',
-    description: 'Link (or unlink) a KnowADR to the KnowRelease it shipped in via an IMPLEMENTED_IN_RELEASE edge. ' +
-      'Feeds the adr slice release_ids field. Pass git_project for multi-repo safety ' +
-      '(matches release_uid = "{git_project}#{release_id}"; without it matches bare release_id). ' +
-      'Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      adr_id:      z.string().describe('e.g. "ADR-HND-022"'),
-      release_id:  z.string().describe('e.g. "v1.0.24"'),
-      git_project: z.string().optional().describe('GitHub project slug, e.g. "NooriUta/AIDA"'),
-      action:      z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/adr/link',
-    body: ({ adr_id, release_id, git_project, action }) => ({
-          adr_id, release_id, git_project: git_project ?? null, action: action ?? 'add',
-        }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_adr_component',
-    description: 'Link (or unlink) a KnowADR to a LoreComponent via a BELONGS_TO edge, one at a time. ' +
-      'For adding/removing a single component without touching the rest — lore_create_adr\'s ' +
-      'component_ids is full-replace (deletes and recreates the whole set), which is risky for ' +
-      'incremental edits. Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      adr_id:       z.string().describe('e.g. "ADR-HND-022"'),
-      component_id: z.string().describe('e.g. "HOUND"'),
-      action:       z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/adr/component',
-    body: ({ adr_id, component_id, action }) => ({ adr_id, component_id, action: action ?? 'add' }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_adr_depends_on',
-    description: 'Link (or unlink) a KnowADR→KnowADR DEPENDS_ON edge, one at a time. For adding/removing a single ' +
-      'dependency without touching the rest — lore_create_adr\'s depends_on_ids is full-replace. ' +
-      'Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      adr_id:     z.string().describe('the dependent ADR, e.g. "ADR-HND-022"'),
-      dep_adr_id: z.string().describe('the ADR it depends on, e.g. "ADR-HND-GEOID-IDENTITY"'),
-      action:     z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/adr/depends_on',
-    body: ({ adr_id, dep_adr_id, action }) => ({ adr_id, dep_adr_id, action: action ?? 'add' }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_adr_supersedes',
-    description: 'Link (or unlink) a KnowADR→KnowADR SUPERSEDES edge, one at a time. For adding/removing a single ' +
-      'supersession without touching the rest — lore_create_adr\'s supersedes_ids is full-replace. ' +
-      'Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      adr_id:            z.string().describe('the newer ADR, e.g. "ADR-HND-GEOID-IDENTITY"'),
-      superseded_adr_id: z.string().describe('the older ADR it supersedes, e.g. "ADR-HND-GEOID-V1"'),
-      action:            z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/adr/supersedes',
-    body: ({ adr_id, superseded_adr_id, action }) => ({ adr_id, superseded_adr_id, action: action ?? 'add' }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_adr_tag',
-    description: 'Link (or unlink) a KnowADR to a freeform tag via a TAGGED_WITH edge, one at a time (upserts the ' +
-      'KnowTag vertex if it does not exist yet). For adding/removing a single tag without touching the ' +
-      'rest — lore_create_adr\'s tags is full-replace. Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      adr_id: z.string().describe('e.g. "ADR-HND-022"'),
-      tag_id: z.string().describe('e.g. "scd2"'),
-      action: z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/adr/tag',
-    body: ({ adr_id, tag_id, action }) => ({ adr_id, tag_id, action: action ?? 'add' }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_rename_adr',
+    name: 'adr_rename',
     description: 'Rename an existing KnowADR to a new adr_id IN PLACE — all edges (DEPENDS_ON/SUPERSEDES/' +
       'BELONGS_TO/TAGGED_WITH/IMPLEMENTED_IN*/HAS_STATE) hang off the vertex and survive untouched; ' +
       'no orphan, no tombstone. Fails if new_adr_id already exists. ' +
@@ -533,10 +479,10 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_delete_adr',
+    name: 'adr_del',
     description: 'PERMANENTLY delete a KnowADR: cascades edges first (ArcadeDB cannot DELETE VERTEX with edges), ' +
       'then its KnowADRHist rows, then the vertex. Irreversible — prefer status="DEPRECATED"/' +
-      '"SUPERSEDED" via lore_update_adr for anything that was ever real; delete is for test ' +
+      '"SUPERSEDED" via adr_set for anything that was ever real; delete is for test ' +
       'artifacts and mistaken creations only.',
     schema: { adr_id: z.string() },
     path: '/lore/adr/delete',
@@ -544,7 +490,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_decision',
+    name: 'decision_new',
     description: 'Create or update a KnowDecision (logged decision/verdict). Idempotent — upserts by decision_id. ' +
       'Use for recording key decisions made during a sprint or design session.',
     schema: {
@@ -562,33 +508,14 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
-  definePostTool(server, {
-    name: 'lore_update_sprint_refs',
-    description: 'Append PR numbers to a sprint\'s pr_refs field (stored on the open KnowSprintHist row ' +
-      'as a markdown link string). Skips PRs already present. Pass replace=true to discard the ' +
-      'existing pr_refs first instead of appending — use this to fix entries baked with the wrong ' +
-      'git_project/repo_url (there is no per-entry edit otherwise). ' +
-      'Returns the updated pr_refs string and count of newly added links.',
-    schema: {
-      sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
-      pr_numbers:  z.array(z.number().int()).describe('PR numbers to append, e.g. [420, 421]'),
-      git_project: z.string().optional()
-        .describe('GitHub project slug, e.g. "NooriUta/aida-documentation" (default: NooriUta/AIDA). Ignored if repo_url is set.'),
-      repo_url:    z.string().optional()
-        .describe('Full base URL for PR links, e.g. "https://github.com/NooriUta/UnlimitedLORE/pull" — takes precedence over git_project.'),
-      replace:     z.boolean().optional().describe('Discard existing pr_refs before adding these, instead of appending.'),
-    },
-    path: '/lore/sprint/refs',
-    body: ({ sprint_id, pr_numbers, git_project, repo_url, replace }) => ({
-          sprint_id, pr_numbers, git_project: git_project ?? null,
-          repo_url: repo_url ?? null, replace: replace ?? false,
-        }),
-  });
-
   // ── Release management ──────────────────────────────────────────────────
 
+  // release_mv: not in ADR-LORE-014 §2's table (its "project" category is the NEW
+  // project_new/KnowGitProject tool, a different thing) — this fixes a misattributed
+  // git_project on an EXISTING PR or release, so it's grouped under release_* instead.
+  // Flagged in MIGRATION.md as a naming gap in the ADR text, not guessed silently.
   definePostTool(server, {
-    name: 'lore_move_to_project',
+    name: 'release_mv',
     description: 'Correct the git_project on a PR or release that was accidentally assigned to the wrong repo. ' +
       'For PRs: updates git_project, pr_uid, and re-wires the BELONGS_TO_PROJECT edge. ' +
       'For releases: updates git_project field.',
@@ -605,7 +532,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_release',
+    name: 'release_new',
     description: 'Create a new KnowRelease vertex in system_aida_lore. ' +
       'If is_current=true, the previous current release is automatically cleared. ' +
       'Returns the created release_id and timestamp.',
@@ -631,7 +558,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_update_release',
+    name: 'release_set',
     description: 'Update fields on an existing KnowRelease (partial update — only supplied fields are written). ' +
       'If is_current=true, clears the previous current release first. ' +
       'Useful for adding description_md / git_tag after the release is live.',
@@ -655,44 +582,32 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
-  definePostTool(server, {
-    name: 'lore_link_release',
-    description: 'Attach one or more SPRINTS to a release. ' +
-      'Creates IMPLEMENTED_IN_RELEASE edges (KnowSprint → KnowRelease). ' +
-      'Use when a sprint is done and shipped in a specific release. ' +
-      'For linking PRs to a release use lore_link_release_pr instead.\n\n' +
-      'MULTI-REPO: always pass git_project — release_uid = "{git_project}#{release_id}".',
-    schema: {
+  // ── release_link(rel) — collapses release_link_sprint + release_link_pr (2→1) ──
+  server.tool(
+    'release_link',
+    'Attach sprints and/or PRs to a release. rel="sprint": creates IMPLEMENTED_IN_RELEASE edges ' +
+      '(KnowSprint → KnowRelease) — use when a sprint is done and shipped in a specific release. ' +
+      'rel="pr": upserts KnowPR vertices and creates SHIPPED_IN edges (KnowPR → KnowRelease). ' +
+      'MULTI-REPO: always pass git_project — release_uid = "{git_project}#{release_id}". ' +
+      'For removing links use release_unlink.',
+    {
       release_id:  z.string().describe('target release version, e.g. "v1.6.11"'),
-      sprint_ids:  z.array(z.string()).describe('sprint ids to attach, e.g. ["SPRINT_HOUND_ROWSET_V2"]'),
+      rel:         z.enum(['sprint', 'pr']),
+      ids:         z.array(z.union([z.string(), z.number().int()])).describe('sprint_ids (rel="sprint") or PR numbers (rel="pr")'),
       git_project: z.string().describe('GitHub project slug, e.g. "NooriUta/AIDA"'),
     },
-    path: '/lore/release/link',
-    body: ({ release_id, sprint_ids, git_project }) => ({
-          release_id, sprint_ids, pr_numbers: [], git_project,
-        }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_release_pr',
-    description: 'Attach one or more PULL REQUESTS to a release. ' +
-      'Upserts KnowPR vertices and creates SHIPPED_IN edges (KnowPR → KnowRelease). ' +
-      'Use when you know which PRs were merged into a release. ' +
-      'For linking sprints to a release use lore_link_release instead.\n\n' +
-      'MULTI-REPO: always pass git_project — release_uid = "{git_project}#{release_id}".',
-    schema: {
-      release_id:  z.string().describe('target release version, e.g. "v1.6.11"'),
-      pr_numbers:  z.array(z.number().int()).describe('PR numbers to attach, e.g. [401, 402]'),
-      git_project: z.string().describe('GitHub project slug, e.g. "NooriUta/AIDA"'),
+    async ({ release_id, rel, ids, git_project }) => {
+      try {
+        if (rel === 'sprint') {
+          return json(await lorePost('/lore/release/link', { release_id, sprint_ids: ids, pr_numbers: [], git_project }));
+        }
+        return json(await lorePost('/lore/release/link', { release_id, sprint_ids: [], pr_numbers: ids, git_project }));
+      } catch (e) { return err(e); }
     },
-    path: '/lore/release/link',
-    body: ({ release_id, pr_numbers, git_project }) => ({
-          release_id, sprint_ids: [], pr_numbers, git_project,
-        }),
-  });
+  );
 
   definePostTool(server, {
-    name: 'lore_unlink_release',
+    name: 'release_unlink',
     description: 'Remove IMPLEMENTED_IN_RELEASE (sprint→release) or SHIPPED_IN (PR→release) edges. ' +
       'Use to correct accidental double-links.',
     schema: {
@@ -710,7 +625,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   server.tool(
-    'lore_create_spec',
+    'spec_new',
     'Create or update a specification document (KnowSpec + SCD2 hist). Idempotent — upserts by ' +
       'spec_id. Body fields (content_md/version/summary) are written to the OPEN KnowSpecHist row ' +
       '(created when missing) — the row spec_by_id actually reads. Partial calls are SAFE: omitted ' +
@@ -731,9 +646,9 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
-    'lore_update_spec',
-    'Amend an EXISTING KnowSpec — same endpoint as lore_create_spec, signature tailored for ' +
-      'partial updates (mirror of lore_update_adr). title required by the backend on every write; ' +
+    'spec_set',
+    'Amend an EXISTING KnowSpec — same endpoint as spec_new, signature tailored for ' +
+      'partial updates (mirror of adr_set). title required by the backend on every write; ' +
       'everything else safe to omit — unset content_md/version/summary/component_id/file_path are ' +
       'left UNTOUCHED. Body fields land on the OPEN KnowSpecHist row (the one spec_by_id reads), ' +
       'not just the vertex. Use for version bumps and body amends without resending the whole spec.',
@@ -753,7 +668,7 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   definePostTool(server, {
-    name: 'lore_delete_spec',
+    name: 'spec_del',
     description: 'Permanently delete a KnowSpec vertex by spec_id. Mutates system_aida_lore.',
     schema: { spec_id: z.string() },
     path: '/lore/spec/delete',
@@ -761,14 +676,14 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   server.tool(
-    'lore_upsert_tech',
+    'tech_set',
     '(SPRINT_TECH_REGISTRY) Register or update one technology entry (version + release date + ' +
       'license + source + our own release + usage) for a component — e.g. "ArcadeDB 26.6.1" under YGG. ' +
       'Prevents re-verifying facts already checked this session (the recurring pain this sprint exists ' +
       'for). Stored as one KnowSpec per (component, tech) via the existing spec-upsert path — spec_id ' +
       '"SPEC-TECH-<COMPONENT>-<TECH>", title=tech_name, version=tech version, content_md=a small ' +
       'bullet list of release_date/our_release/license/usage/source_url/checked_at. Idempotent — ' +
-      'upserts by that id. Read back via lore_query_slice(slice="tech_registry", params={component: ' +
+      'upserts by that id. Read back via query_slice(slice="tech_registry", params={component: ' +
       '"<ID>"}) (component optional — omit for the full registry). Mutates system_aida_lore.',
     {
       component_id: z.string().describe('e.g. "YGG", "SECURITY"'),
@@ -802,7 +717,7 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
-    'lore_create_quality_gate',
+    'qg_new',
     'Create or update a QualityGate vertex. ' +
       'Idempotent — upserts by qg_id. Mutates system_aida_lore.',
     {
@@ -821,7 +736,7 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
-    'lore_create_runbook',
+    'runbook_new',
     'Create or update a KnowRunbook vertex. ' +
       'Idempotent — upserts by runbook_id. Mutates system_aida_lore.',
     {
@@ -838,7 +753,7 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   server.tool(
-    'lore_create_doc',
+    'doc_new',
     'Create or update a KnowDoc vertex (documentation page or fragment). ' +
       'Idempotent — upserts by doc_id (only provided fields are set; omitted fields keep their ' +
       'existing value). Mutates system_aida_lore. ' +
@@ -857,7 +772,7 @@ export function registerLoreWrite(server: McpServer): void {
       parent_doc_id:  z.string().optional().describe(
         'DeepWiki-style page tree: set this doc\'s parent page in the same call (replaces any existing ' +
         'parent — a doc has at most one). Pass "" (empty string) to detach/move to top level; omit to ' +
-        'leave the current parent untouched. For reparenting without touching content, use lore_link_doc_parent instead.'),
+        'leave the current parent untouched. For reparenting without touching content, use doc_link(rel:"parent") instead.'),
       sort_order: z.number().int().optional().describe(
         'Position among sibling pages under the same parent (used for tree ordering and prev/next navigation).'),
     },
@@ -867,49 +782,37 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
-  definePostTool(server, {
-    name: 'lore_link_doc_parent',
-    description: 'Set (or clear) a KnowDoc\'s parent page via a DOC_CHILD_OF edge, for building a DeepWiki-style page ' +
-      'tree. A doc has at most one parent — action="add" always replaces any existing parent edge first ' +
-      '(so moving a page to a different parent is one call). Use action="remove" to detach (move to top ' +
-      'level). Idempotent on add.',
-    schema: {
-      doc_id:        z.string().describe('the child page, e.g. "deepwiki_1_1"'),
-      parent_doc_id: z.string().optional().describe('the parent page, e.g. "deepwiki_1" — required unless action="remove"'),
-      action:        z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/doc/parent',
-    body: ({ doc_id, parent_doc_id, action }) => ({ doc_id, parent_doc_id: parent_doc_id ?? null, action: action ?? 'add' }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_doc_component',
-    description: 'Link (or unlink) a KnowDoc to a LoreComponent via a BELONGS_TO edge, same pattern as ' +
-      'lore_link_adr_component. Idempotent on add. Use action="remove" to unlink.',
-    schema: {
-      doc_id:       z.string().describe('e.g. "guide_onboarding"'),
-      component_id: z.string().describe('e.g. "HOUND"'),
-      action:       z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/doc/component',
-    body: ({ doc_id, component_id, action }) => ({ doc_id, component_id, action: action ?? 'add' }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_doc_sprint',
-    description: 'Link (or unlink) a KnowDoc to a KnowSprint via an IMPLEMENTED_IN edge, same pattern as ' +
-      'lore_link_adr\'s sprint branch. Idempotent on add. Use action="remove" to unlink.',
-    schema: {
+  // ── doc_link(rel) — collapses doc_link_parent/component/sprint (3→1) ──
+  server.tool(
+    'doc_link',
+    'Link (or unlink) a KnowDoc to another entity. rel="parent": DOC_CHILD_OF edge (DeepWiki-style page ' +
+      'tree) — a doc has at most one parent, action="add" always replaces any existing parent edge first ' +
+      '(so moving a page is one call); action="remove" detaches to top level (target_id not needed). ' +
+      'rel="component": BELONGS_TO edge, target_id=component_id. rel="sprint": IMPLEMENTED_IN edge, ' +
+      'target_id=sprint_id. Idempotent on add. Mutates system_aida_lore.',
+    {
       doc_id:    z.string().describe('e.g. "guide_onboarding"'),
-      sprint_id: z.string().describe('e.g. "SPRINT_LORE_KNOWDOC_TREE"'),
+      rel:       z.enum(['parent', 'component', 'sprint']),
+      target_id: z.string().optional().describe('parent_doc_id / component_id / sprint_id, matching rel — optional only for rel="parent"+action="remove"'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },
-    path: '/lore/doc/sprint',
-    body: ({ doc_id, sprint_id, action }) => ({ doc_id, sprint_id, action: action ?? 'add' }),
-  });
+    async ({ doc_id, rel, target_id, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'parent') {
+          return json(await lorePost('/lore/doc/parent', { doc_id, parent_doc_id: target_id ?? null, action: act }));
+        }
+        if (!target_id) return err(new Error(`target_id required for rel="${rel}"`));
+        if (rel === 'component') {
+          return json(await lorePost('/lore/doc/component', { doc_id, component_id: target_id, action: act }));
+        }
+        return json(await lorePost('/lore/doc/sprint', { doc_id, sprint_id: target_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
 
   definePostTool(server, {
-    name: 'lore_delete_doc',
+    name: 'doc_del',
     description: 'PERMANENTLY delete a KnowDoc: cascades edges first (ArcadeDB cannot DELETE VERTEX with edges), ' +
       'then any KnowDocHist rows, then the vertex. Irreversible — for stale duplicates and empty ' +
       'placeholder docs only (e.g. legacy DOC-* entries superseded by a newer guide_*/product_*/ref_* ' +
@@ -921,11 +824,11 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   server.tool(
-    'lore_edit_task',
+    'task_set',
     'Edit one task OR a batch of tasks (title, note_md, effort_days, author/executor/reviewer_agent). ' +
       'Updates the vertex and its open history row. Only supplied fields are touched — omit a field to ' +
       'leave it unchanged. reviewer_agent must differ from executor_agent before the task can move to ' +
-      'done (ADR-LORE-014 §4 hard gate, enforced in lore_set_status, not here). ' +
+      'done (ADR-LORE-014 §4 hard gate, enforced in status_set, not here). ' +
       'Mutates the shared system_aida_lore.\n\n' +
       'Single: pass task_uid + title (+ optional note_md, effort_days, author/executor/reviewer_agent).\n' +
       'Batch:  pass tasks=[{task_uid, title, ...}, ...] — all processed in one call, ' +
@@ -938,6 +841,7 @@ export function registerLoreWrite(server: McpServer): void {
       author_agent:   z.string().optional().describe('single-mode: who owns/posed this task'),
       executor_agent: z.string().optional().describe('single-mode: who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
+      task_type:      z.string().optional().describe('single-mode: ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content)'),
       tasks: z.array(z.object({
         task_uid:       z.string(),
         title:          z.string(),
@@ -946,28 +850,31 @@ export function registerLoreWrite(server: McpServer): void {
         author_agent:   z.string().optional(),
         executor_agent: z.string().optional(),
         reviewer_agent: z.string().optional(),
-      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?}'),
+        task_type:      z.string().optional(),
+      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
             tasks.map(t => ({
               task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
+              task_type: t.task_type ?? null,
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', {
           task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
+          task_type: task_type ?? null,
         }));
       } catch (e) { return err(e); }
     },
   );
 
   definePostTool(server, {
-    name: 'lore_create_component',
+    name: 'component_new',
     description: 'Create a new LoreComponent vertex (upsert by component_id). ' +
       'Use for brand-new components not yet in the knowledge graph. ' +
       'Mutates the shared system_aida_lore.',
@@ -987,7 +894,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_qg_job_task',
+    name: 'qg_job_new',
     description: 'Upsert a QGJobTask vertex and wire a YIELDED edge from the parent QualityGate. ' +
       'Call after running a QG slice when an invariant FAILS. ' +
       'severity: "blocker" | "major" | "minor". status: "open" (new failure) | "resolved" (pass after open). ' +
@@ -1011,10 +918,10 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_recommendation',
+    name: 'rec_new',
     description: 'Upsert a QGRecommendation vertex and wire a PRODUCED edge from the parent QGJobTask. ' +
-      'Call after lore_create_qg_job_task when you want to suggest a remediation action. ' +
-      'Status starts as "pending" until the user confirms via lore_promote_recommendation. ' +
+      'Call after qg_job_new when you want to suggest a remediation action. ' +
+      'Status starts as "pending" until the user confirms via rec_promote. ' +
       'Always fill priority, severity, effort_days, fix_cmd and how_to_verify — sparse recs are useless.',
     schema: {
       rec_id:        z.string().describe('unique id, e.g. "REC-QG-SECURITY-INV9-2026-06-30"'),
@@ -1051,7 +958,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   server.tool(
-    'lore_record_qg_run',
+    'qg_run_log',
     'Record a completed QG routine run with metrics into LORE (ClRoutineRun + ClRoutineMetric). ' +
       'Call once at the end of each QG routine run. routine_name must match the QG slug pattern ' +
       '(e.g. "qg-auth", "qg-security-demo", "qg-lineage"). ' +
@@ -1087,7 +994,7 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   definePostTool(server, {
-    name: 'lore_promote_recommendation',
+    name: 'rec_promote',
     description: 'Confirm a QGRecommendation and promote it to a KnowTask. Default target is a rotating ' +
       'weekly housekeeping sprint derived from the ISO calendar week — "SPRINT_QG_HOUSEKEEPING_' +
       '<year>W<week>" (e.g. SPRINT_QG_HOUSEKEEPING_2026W27) — auto-created (active, on the Plan ' +
@@ -1103,20 +1010,22 @@ export function registerLoreWrite(server: McpServer): void {
       task_uid:  z.string().optional().describe('KnowTask uid; defaults to "<sprint_id>/T<NN>"'),
       title:     z.string().optional().describe('override task title (default: rec title)'),
       note_md:   z.string().optional().describe('override task description (default: auto-built from rec fields)'),
+      task_type: z.string().optional().describe('KnowTask.task_type override — defaults to "research" (ADR-LORE-015: Analyst owns research) when omitted'),
     },
     path: '/lore/qg/promote',
-    body: ({ rec_id, sprint_id, task_uid, title, note_md }) => ({
+    body: ({ rec_id, sprint_id, task_uid, title, note_md, task_type }) => ({
           rec_id, sprint_id: sprint_id ?? null,
           task_uid: task_uid ?? null, title: title ?? null, note_md: note_md ?? null,
+          task_type: task_type ?? null,
         }),
   });
 
   definePostTool(server, {
-    name: 'lore_update_component',
+    name: 'component_set',
     description: 'Update metadata fields on an existing LoreComponent vertex (partial update — only supplied fields written). ' +
       'Covers full_name, area, team, game_icon, owner, parent_id. ' +
       'Use to rename, re-assign owner/team, fix icon slug, or reparent a component. ' +
-      'Does NOT create a new component — use lore_create_component for that.',
+      'Does NOT create a new component — use component_new for that.',
     schema: {
       component_id: z.string().describe('ID of the component to update, e.g. "FORSETI"'),
       full_name:    z.string().optional().describe('Human-readable full name'),
@@ -1135,11 +1044,14 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   // ── BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4) ──────────────────
+  // Sub-namespaced per ADR-LORE-014 §2's own table (bragi_pub_new, bragi_channel_set, …)
+  // rather than flattened bragi_new/bragi_set — BRAGI covers 9+ distinct sub-entities,
+  // and a flat verb-only name would collide across all of them.
   definePostTool(server, {
-    name: 'lore_upsert_rubric',
+    name: 'bragi_rubric_set',
     description: 'BragiRubric: create/amend a rubric — the fixed classifier list assigned to publications ' +
-      '(lore_create_publication) and keywords (lore_upsert_keyword) via rubric_id (upsert by rubric_id, ' +
-      'partial-safe). This is a single, editorially-curated list, not a freeform tag — check lore_query_slice ' +
+      '(bragi_pub_new) and keywords (bragi_keyword_set) via rubric_id (upsert by rubric_id, ' +
+      'partial-safe). This is a single, editorially-curated list, not a freeform tag — check query_slice ' +
       '"bragi_rubrics" before creating a new one to avoid near-duplicate rubrics. Mutates the shared system_aida_lore.',
     schema: {
       rubric_id:    z.string().describe('e.g. "RUB-GOV"'),
@@ -1152,13 +1064,13 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_upsert_channel',
+    name: 'bragi_channel_set',
     description: 'BragiChannel: create/amend a distribution channel (e.g. CH-TG, CH-SITE) — upsert by channel_id, ' +
       'partial-safe (omitted fields left untouched). Gap found 2026-07-03: there was no write path for ' +
       'this type — CH-TG\'s seeded url_handle ("t.me/seidr") was stale, no tool existed to fix it. ' +
       '`rules_md` (VAL-00, added 2026-07-03) holds the platform\'s structural limits/style rules as free-text ' +
       'markdown — VAL-01\'s validator engine reads it to check drafts before publish (e.g. TG caption/post/poll ' +
-      'char limits, VC footer-link policy, Habr code-block rules). Check lore_query_slice "bragi_channels" for ' +
+      'char limits, VC footer-link policy, Habr code-block rules). Check query_slice "bragi_channels" for ' +
       'existing channels before creating a new one. Mutates the shared system_aida_lore.',
     schema: {
       channel_id:   z.string().describe('e.g. "CH-TG", "CH-SITE"'),
@@ -1171,17 +1083,37 @@ export function registerLoreWrite(server: McpServer): void {
     body: ({ channel_id, channel_type, url_handle, funnel_role, rules_md }) => ({ channel_id, channel_type, url_handle, funnel_role, rules_md }),
   });
 
+  // ── Project (KnowGitProject, T15) ─────────────────────────────────────────
+  // First real write path for KnowGitProject — previously only ever created via a
+  // direct ArcadeDB INSERT (no MCP tool, no REST endpoint). sprint_link(rel:"project"),
+  // release_new, and release_mv all assume the target vertex already exists and
+  // silently no-op (ok:true, no edge/vertex written) otherwise. RBAC: pm+architect+full
+  // only (ADR-LORE-014 §3 amendment) — see agent-profiles/pm.json and architect.json.
+  definePostTool(server, {
+    name: 'project_new',
+    description: 'Create or update a KnowGitProject vertex (upsert by slug, partial-safe — omitted ' +
+      'fields left untouched). Register a repo BEFORE sprint_link(rel:"project"), release_new, or ' +
+      'release_mv reference it — those all silently no-op if the git_project slug has no matching ' +
+      'vertex yet. RBAC: pm + architect + full only.',
+    schema: {
+      slug: z.string().describe('e.g. "NooriUta/UnlimitedLORE" (GitHub) or "AIDA/aida-root@forgejo" (Forgejo)'),
+      name: z.string().optional().describe('human-readable project name, e.g. "UnlimitedLORE"'),
+    },
+    path: '/lore/project',
+    body: ({ slug, name }) => ({ slug, name: name ?? null }),
+  });
+
   // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────
   definePostTool(server, {
-    name: 'lore_upsert_dict_entry',
+    name: 'dict_set',
     description: 'KnowDictEntry (ADR-LORE-012): create/amend one dictionary value as a graph vertex — upsert by ' +
       '(dict_type, code), partial-safe for metadata (label/color/icon/sort_order left untouched when omitted; ' +
       'is_active defaults true, is_extensible false on create). Single canon read by frontend (useDictionary), ' +
-      'backend and MCP via lore_query_slice "dictionary". dict_type e.g. "sprint_status"|"task_status"|"adr_status"|' +
-      '"priority"|"artifact_kind"|"area"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
-      'Check lore_query_slice "dictionary" (optionally dict_type=...) before adding. Mutates the shared system_aida_lore.',
+      'backend and MCP via query_slice "dictionary". dict_type e.g. "sprint_status"|"task_status"|"adr_status"|' +
+      '"priority"|"artifact_kind"|"area"|"agent_role"|"task_type"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
+      'Check query_slice "dictionary" (optionally dict_type=...) before adding. Mutates the shared system_aida_lore.',
     schema: {
-      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area"'),
+      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area", "agent_role"'),
       code:          z.string().describe('stable key, e.g. "done", "P0", "PROPOSED", "runbook"'),
       label_ru:      z.string().optional(),
       label_en:      z.string().optional(),
@@ -1196,50 +1128,11 @@ export function registerLoreWrite(server: McpServer): void {
       ({ dict_type, code, label_ru, label_en, color, icon, sort_order, is_active, is_extensible }),
   });
 
-  definePostTool(server, {
-    name: 'lore_link_rubric',
-    description: 'Assigns (or replaces) ONE rubric on a BragiPublication or BragiKeyword via IN_RUBRIC, without re-supplying ' +
-      'every other field of the target — unlike the rubric_id param on lore_create_publication/lore_upsert_keyword, ' +
-      'this is a lightweight standalone call. Replaces any prior rubric on the target (single-assignment, not ' +
-      'additive). Mutates the shared system_aida_lore.',
-    schema: {
-      entity_type: z.enum(['publication', 'keyword']),
-      entity_id:   z.string().describe('publication_id or keyword_id, matching entity_type'),
-      rubric_id:   z.string().describe('existing BragiRubric id'),
-    },
-    path: '/lore/bragi/rubric/link',
-    body: ({ entity_type, entity_id, rubric_id }) => ({ entity_type, entity_id, rubric_id }),
-  });
-
-  definePostTool(server, {
-    name: 'lore_link_bragi_forseti',
-    description: 'Link (or unlink) a BragiPublication/BragiVariant into the Forseti work graph — PRODUCED_BY (which ' +
-      'task/sprint made it) or SHIPPED_IN (which release carried it). Both edge types existed in the schema ' +
-      'with no write path (EDIT-05, 2026-07-03) — publications lived disconnected from work/releases. For ' +
-      'SHIPPED_IN, pass git_project for multi-repo release safety (matches release_uid = ' +
-      '"{git_project}#{target_id}"; without it matches bare release_id). Idempotent on add. ' +
-      'Use action="remove" to unlink. Mutates the shared system_aida_lore.',
-    schema: {
-      entity_type: z.enum(['publication', 'variant']),
-      entity_id:   z.string().describe('publication_id or variant_id, matching entity_type'),
-      edge_type:   z.enum(['PRODUCED_BY', 'SHIPPED_IN']),
-      target_type: z.enum(['task', 'sprint', 'release']).describe('task|sprint for PRODUCED_BY, release for SHIPPED_IN'),
-      target_id:   z.string().describe('task_uid, sprint_id, or release_id/tag matching target_type'),
-      git_project: z.string().optional().describe('GitHub project slug for release_uid resolution, e.g. "NooriUta/UnlimitedLORE" (SHIPPED_IN only)'),
-      action:      z.enum(['add', 'remove']).optional().default('add'),
-    },
-    path: '/lore/bragi/link',
-    body: ({ entity_type, entity_id, edge_type, target_type, target_id, git_project, action }) => ({
-          entity_type, entity_id, edge_type, target_type, target_id,
-          git_project: git_project ?? null, action: action ?? 'add',
-        }),
-  });
-
   server.tool(
-    'lore_find_keyword',
+    'bragi_search',
     'Searches BragiKeyword by a case-insensitive substring of phrase, returning keyword_id/phrase/cluster for ' +
-      'matches (max 20). Use this to resolve a keyword_id from a phrase BEFORE calling lore_upsert_keyword, ' +
-      'lore_link_rubric, or the keyword_ids param on lore_create_publication — those all require an already-known id.',
+      'matches (max 20). Use this to resolve a keyword_id from a phrase BEFORE calling bragi_keyword_set, ' +
+      'bragi_link(rel:"rubric"), or the keyword_ids param on bragi_pub_new — those all require an already-known id.',
     {
       q: z.string().describe('substring to search for, e.g. "data governance"'),
     },
@@ -1251,9 +1144,9 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   definePostTool(server, {
-    name: 'lore_create_publication',
+    name: 'bragi_pub_new',
     description: 'BragiPublication: create/amend a content publication (upsert by publication_id, partial-safe). ' +
-      'The main-text master version that groups per-channel variants (see lore_create_variant). ' +
+      'The main-text master version that groups per-channel variants (see bragi_variant_new). ' +
       'Pass keyword_ids to link TARGETS_KEY edges to existing BragiKeyword rows (idempotent, additive-only — ' +
       'does not unlink keys omitted on a re-call). rubric_id assigns ONE rubric via IN_RUBRIC — replaces any ' +
       'prior rubric on this publication (not additive, unlike keyword_ids). Mutates the shared system_aida_lore.',
@@ -1276,7 +1169,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_variant',
+    name: 'bragi_variant_new',
     description: 'BragiVariant: create/amend a per-channel version of a publication (upsert by variant_id, partial-safe). ' +
       'Pass publication_id to wire HAS_VARIANT from the parent BragiPublication, channel_id to wire IN_CHANNEL ' +
       'to an existing BragiChannel, asset_id to attach an existing BragiAsset via HAS_ASSET — all idempotent, ' +
@@ -1299,11 +1192,16 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
+  // bragi_asset_up / bragi_asset_attach: ADR-LORE-014 §2's table names these
+  // doc_asset_up/doc_asset_attach under the "doc" category, but they operate on
+  // BragiAsset (paths /lore/bragi/asset/upload, /lore/bragi/asset), not KnowDoc —
+  // renamed to match what they actually touch; flagged as an ADR-text inconsistency
+  // to fix separately (not a code bug), see MIGRATION.md.
   server.tool(
-    'lore_upload_asset',
+    'bragi_asset_up',
     'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +
       'file_url ("/lore/bragi/asset/file/..."). This is the ONLY way to get a real, browser-loadable file_url — ' +
-      'there is no separate "presign" step. Call this FIRST, then pass its file_url into lore_attach_asset ' +
+      'there is no separate "presign" step. Call this FIRST, then pass its file_url into bragi_asset_attach ' +
       'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself.',
     {
       filename:     z.string().describe('original filename, e.g. "cover.png" — extension is preserved'),
@@ -1318,10 +1216,10 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   definePostTool(server, {
-    name: 'lore_attach_asset',
+    name: 'bragi_asset_attach',
     description: 'BragiAsset: create/amend an image/media asset (upsert by asset_id, partial-safe) and optionally attach it ' +
       'via HAS_ASSET to an existing BragiPublication (cover) or BragiVariant (per-channel image) — pass exactly ' +
-      'one of attach_to_publication_id/attach_to_variant_id, not both. file_url should come from lore_upload_asset ' +
+      'one of attach_to_publication_id/attach_to_variant_id, not both. file_url should come from bragi_asset_up ' +
       'if you have raw image bytes rather than an already-hosted URL. Mutates the shared system_aida_lore.',
     schema: {
       asset_id:                  z.string().describe('e.g. "AST-01"'),
@@ -1339,7 +1237,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_upsert_keyword',
+    name: 'bragi_keyword_set',
     description: 'BragiKeyword: create/amend a semantic-core keyword (upsert by keyword_id, partial-safe). ' +
       'Pass page_id to wire TARGETS_PAGE to an existing BragiPage (idempotent, additive-only). rubric_id assigns ' +
       'ONE rubric via IN_RUBRIC — replaces any prior rubric on this keyword. Mutates the shared system_aida_lore.',
@@ -1363,7 +1261,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_upsert_page',
+    name: 'bragi_page_set',
     description: 'BragiPage: create/amend a target landing/article page (upsert by page_id, partial-safe). ' +
       'Mutates the shared system_aida_lore.',
     schema: {
@@ -1381,7 +1279,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_campaign',
+    name: 'bragi_campaign_new',
     description: 'BragiCampaign: create/amend a UTM tracking campaign (upsert by campaign_id, partial-safe). ' +
       'Pass variant_id to wire FOR_VARIANT to an existing BragiVariant (idempotent). ' +
       'Mutates the shared system_aida_lore.',
@@ -1401,7 +1299,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_record_metric',
+    name: 'metric_log',
     description: 'MetricSnapshot: append one measurement to the BRAGI TIMESERIES store (native ArcadeDB time-series, ' +
       'not a graph vertex — no edges, referenced by object_type+object_id tags). ts accepts ISO-8601 ' +
       '(e.g. "2026-07-02T09:00:00Z") or epoch millis; omit for now(). This is append-only — there is no ' +
@@ -1422,7 +1320,7 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   server.tool(
-    'lore_query_metric',
+    'metric_get',
     'Read BRAGI MetricSnapshot points with optional filters (object_type/object_id/metric, from/to as epoch ' +
       'millis) and optional server-side aggregation (agg: avg|sum|min|max|count, grouped by object_type+' +
       'object_id+metric). Without agg, returns up to `limit` raw points ordered newest-first. Always excludes ' +
@@ -1452,7 +1350,7 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   definePostTool(server, {
-    name: 'lore_create_integration',
+    name: 'bragi_integration_new',
     description: 'BragiIntegration: create/amend a read/write connector (upsert by integration_id, partial-safe). ' +
       '⚠️ secret_ref MUST be a reference, not a value — "env:METRIKA_TOKEN", "vault:seidr-telegraph", ' +
       '"oauth:gsc"; the backend rejects anything else. Never pass an actual token/API key. ' +
@@ -1474,10 +1372,10 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_create_insight',
+    name: 'insight_new',
     description: 'BragiInsight: create/amend a data-driven conclusion (upsert by insight_id, partial-safe). ' +
       'evidence_ref is a freeform pointer to the supporting measurement/date-range (MetricSnapshot rows ' +
-      'don\'t carry graph edges, so this is text, not an edge). Use lore_link_insight to connect it to a ' +
+      'don\'t carry graph edges, so this is text, not an edge). Use insight_link to connect it to a ' +
       'Forseti task/ADR. Mutates the shared system_aida_lore.',
     schema: {
       insight_id:    z.string().describe('e.g. "INS-01"'),
@@ -1492,20 +1390,60 @@ export function registerLoreWrite(server: McpServer): void {
   });
 
   definePostTool(server, {
-    name: 'lore_link_insight',
+    name: 'insight_link',
     description: 'Wire a LED_TO edge from an existing BragiInsight to a Forseti KnowTask or KnowADR — records that this ' +
-      'insight drove a concrete follow-up. Idempotent.',
+      'insight drove a concrete follow-up. Idempotent. rel picks the target type (task|adr) — kept as ' +
+      '"rel" for naming symmetry with the other *_link tools (was "target_type").',
     schema: {
-      insight_id:  z.string(),
-      target_type: z.enum(['task', 'adr']),
-      target_id:   z.string().describe('task_uid if target_type="task", adr_id if target_type="adr"'),
+      insight_id: z.string(),
+      rel:        z.enum(['task', 'adr']),
+      target_id:  z.string().describe('task_uid if rel="task", adr_id if rel="adr"'),
     },
     path: '/lore/bragi/insight/link',
-    body: ({ insight_id, target_type, target_id }) => ({ insight_id, target_type, target_id }),
+    body: ({ insight_id, rel, target_id }) => ({ insight_id, target_type: rel, target_id }),
   });
 
+  // ── bragi_link(rel) — collapses bragi_link_rubric + bragi_link_forseti (2→1) ──
+  // Flagged as the messiest collapse in ADR-LORE-014 §2 (Explore-agent research,
+  // 2026-07-14): the two source tools each carry their OWN polymorphic entity_type
+  // axis independent of the edge type. Resolved by making `rel` the edge/purpose
+  // and keeping entity_type/target_type as rel-conditional side params rather than
+  // trying to force one flat parameter shape across both.
+  server.tool(
+    'bragi_link',
+    'Link (or unlink) a BragiPublication/BragiVariant/BragiKeyword to another entity. rel="rubric": assigns ' +
+      '(replaces) ONE rubric via IN_RUBRIC — entity_type: publication|keyword, target_id=rubric_id. ' +
+      'rel="produced_by": PRODUCED_BY edge into the Forseti work graph — entity_type: publication|variant, ' +
+      'target_type: task|sprint, target_id=task_uid or sprint_id. rel="shipped_in": SHIPPED_IN edge — ' +
+      'entity_type: publication|variant, target_id=release_id/tag, pass git_project for multi-repo release ' +
+      'safety (release_uid = "{git_project}#{target_id}"). Idempotent on add. Mutates system_aida_lore.',
+    {
+      rel:         z.enum(['rubric', 'produced_by', 'shipped_in']),
+      entity_type: z.enum(['publication', 'keyword', 'variant']).describe('rel="rubric": publication|keyword. rel="produced_by"/"shipped_in": publication|variant'),
+      entity_id:   z.string().describe('publication_id / keyword_id / variant_id, matching entity_type'),
+      target_type: z.enum(['task', 'sprint']).optional().describe('rel="produced_by" only: which kind of target_id'),
+      target_id:   z.string().describe('rubric_id (rel="rubric") / task_uid or sprint_id (rel="produced_by") / release_id (rel="shipped_in")'),
+      git_project: z.string().optional().describe('rel="shipped_in" only: GitHub project slug for release_uid resolution, e.g. "NooriUta/UnlimitedLORE"'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ rel, entity_type, entity_id, target_type, target_id, git_project, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'rubric') {
+          return json(await lorePost('/lore/bragi/rubric/link', { entity_type, entity_id, rubric_id: target_id }));
+        }
+        const edge_type = rel === 'produced_by' ? 'PRODUCED_BY' : 'SHIPPED_IN';
+        const resolvedTargetType = rel === 'produced_by' ? (target_type ?? 'task') : 'release';
+        return json(await lorePost('/lore/bragi/link', {
+          entity_type, entity_id, edge_type, target_type: resolvedTargetType, target_id,
+          git_project: git_project ?? null, action: act,
+        }));
+      } catch (e) { return err(e); }
+    },
+  );
+
   definePostTool(server, {
-    name: 'lore_sync_integration',
+    name: 'bragi_sync',
     description: 'BragiIntegration manual sync (scaffold — no real cron): given an integration_id and a batch of ' +
       'ALREADY-FETCHED metrics, writes them to MetricSnapshot and bumps the integration\'s last_called_at. ' +
       'This does NOT call any third-party API itself — the caller (a real connector, or a human pasting ' +

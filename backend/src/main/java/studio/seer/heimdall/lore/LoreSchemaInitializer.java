@@ -123,6 +123,14 @@ public class LoreSchemaInitializer {
         "CREATE EDGE TYPE DEPENDS_ON       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE SUPERSEDES       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE YIELDED          IF NOT EXISTS EXTENDS E",
+        // PRODUCED (QGJobTask→QGRecommendation) and PROMOTED_TO (QGRecommendation→
+        // KnowTask) were used by LoreQgResource's CREATE EDGE ... IF NOT EXISTS calls
+        // without an explicit type declaration here — ArcadeDB auto-vivifies the type
+        // on first use, so this worked on the live shared DB, but a fresh bootstrap
+        // (LORE_BOOTSTRAP=true) DB had no upfront declaration for either. Added for
+        // parity with every other edge type (T13, 2026-07-14).
+        "CREATE EDGE TYPE PRODUCED         IF NOT EXISTS EXTENDS E",
+        "CREATE EDGE TYPE PROMOTED_TO      IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE VALIDATES        IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE BELONGS_TO       IF NOT EXISTS EXTENDS E",
         "CREATE EDGE TYPE DOCUMENTED_IN    IF NOT EXISTS EXTENDS E",
@@ -300,7 +308,7 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY ClRoutineRun.flags            IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineRun.detail_md        IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineRun.gates_failed_ids IF NOT EXISTS STRING",
-        // SMART-QG run identity (lore_record_qg_run UPSERT WHERE run_id) — durable
+        // SMART-QG run identity (qg_run_log UPSERT WHERE run_id) — durable
         "CREATE PROPERTY ClRoutineRun.run_id           IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineRun.started_at       IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineRun.finished_at      IF NOT EXISTS STRING",
@@ -314,7 +322,7 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY ClRoutineMetric.unit          IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineMetric.target        IF NOT EXISTS DOUBLE",
         "CREATE PROPERTY ClRoutineMetric.status        IF NOT EXISTS STRING",
-        // SMART-QG metric identity + evidence (lore_record_qg_run UPSERT WHERE metric_id) — durable
+        // SMART-QG metric identity + evidence (qg_run_log UPSERT WHERE metric_id) — durable
         "CREATE PROPERTY ClRoutineMetric.metric_id     IF NOT EXISTS STRING",
         "CREATE PROPERTY ClRoutineMetric.run_id        IF NOT EXISTS STRING",
         // source = exact reproducer command + file:line evidence, drives _qg_recommend
@@ -537,6 +545,35 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowTask.executor_agent IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowTask.reviewer_agent IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowTask (executor_agent) NOTUNIQUE",
-        "CREATE INDEX IF NOT EXISTS ON KnowTask (reviewer_agent) NOTUNIQUE"
+        "CREATE INDEX IF NOT EXISTS ON KnowTask (reviewer_agent) NOTUNIQUE",
+
+        // ── QG-flow: QGJobTask + QGRecommendation (Tests task, 2026-07-14) ────────
+        // Same gap as PRODUCED/PROMOTED_TO above, one layer deeper: LoreQgResource's
+        // "UPDATE QGJobTask/QGRecommendation SET ... UPSERT WHERE ..." calls never had
+        // an explicit vertex-type/index declaration either — worked on the live shared
+        // DB via auto-vivification (types + ad-hoc property inference from years of
+        // writes), but a fresh bootstrap DB has neither type, so the UPSERT itself
+        // fails outright (surfaced by LoreScd2AndRollbackLiveDbTest's Testcontainer run
+        // against a genuinely empty ArcadeDB — same class of gap C5 found for V/E).
+        "CREATE VERTEX TYPE QGJobTask       IF NOT EXISTS EXTENDS V",
+        "CREATE VERTEX TYPE QGRecommendation IF NOT EXISTS EXTENDS V",
+        "CREATE PROPERTY QGJobTask.job_id         IF NOT EXISTS STRING",
+        "CREATE PROPERTY QGRecommendation.rec_id  IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON QGJobTask       (job_id) UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON QGRecommendation (rec_id) UNIQUE",
+
+        // ── KnowGitProject (T15: project_new) ─────────────────────────────────────
+        // Previously created only via a direct ArcadeDB INSERT (see MEMORY
+        // lore_git_project_registration) — never declared here either, same
+        // auto-vivification-on-the-live-DB-only gap as above.
+        "CREATE VERTEX TYPE KnowGitProject IF NOT EXISTS EXTENDS V",
+        "CREATE PROPERTY KnowGitProject.slug IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowGitProject (slug) UNIQUE",
+
+        // BELONGS_TO_PROJECT (KnowSprint -> KnowGitProject, also read off KnowRelease/
+        // KnowPR elsewhere) — same gap: only ever auto-vivified via CREATE EDGE ... IF
+        // NOT EXISTS calls (sprint/project, sprint_new's new git_project param, T16/
+        // ADR-LORE-017), never declared here. Added alongside the other T13/T15 finds.
+        "CREATE EDGE TYPE BELONGS_TO_PROJECT IF NOT EXISTS EXTENDS E"
     );
 }

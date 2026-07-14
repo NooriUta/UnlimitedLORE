@@ -200,7 +200,7 @@ public class LoreStatusResource extends LoreResourceBase {
     // KnowSprintHist row. Any SCD2 transition that inserts a fresh row (status
     // flip via updateScd2Status, or an explicit plan edit via /lore/sprint/plan)
     // must carry these forward, or they silently disappear. pr_refs joined this
-    // list after a live bug: a status flip right after lore_update_sprint_refs
+    // list after a live bug: a status flip right after sprint_set (pr_refs)
     // wiped the just-added PR links, because the freshly-opened hist row only
     // ever inherited the plan fields above.
     // planned_milestone_id used to live here too — retired. It required this

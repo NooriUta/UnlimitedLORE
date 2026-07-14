@@ -1,5 +1,5 @@
 // LoreBragiIntegrationEditor — FE-08: create/amend a BragiIntegration.
-// Wraps lore_create_integration (MCP-04) via its backend endpoint directly
+// Wraps bragi_integration_new (MCP-04) via its backend endpoint directly
 // (same convention as LoreBragiPublicationEditor). Mirrors the backend's
 // secret_ref guard (^(env|vault|oauth|secret):.+) client-side so the user
 // gets an inline hint before submitting, not just a 400 after the fact.

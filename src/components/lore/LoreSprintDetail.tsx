@@ -7,6 +7,7 @@ import { MartProse } from '../bench/MartProse';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
+  upsertDictEntry,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
@@ -344,6 +345,57 @@ function StatusCounts({ tasks, filter, onFilter }: {
   );
 }
 
+// task_type filter chips (ADR-LORE-015, T14) — same multi-select pattern as
+// StatusCounts, colored from the `task_type` dictionary instead of statusMeta.
+function TypeCounts({ tasks, filter, onFilter }: {
+  tasks: LoreSprintTask[];
+  filter: Set<string>;
+  onFilter: (key: string) => void;
+}) {
+  const { t } = useTranslation();
+  const { entries: dictTypes } = useDictionary('task_type');
+  const counts: Record<string, number> = {};
+  for (const tk of tasks) {
+    if (!tk.task_type) continue;
+    counts[tk.task_type] = (counts[tk.task_type] ?? 0) + 1;
+  }
+  const shown = dictTypes.filter(e => counts[e.code]);
+  if (shown.length === 0) return null;
+  return (
+    <span role="group" aria-label={t('lore.sprintDetail.typeCounts.ariaLabel', 'Задачи по типам (мультивыбор)')}
+      style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+      {shown.map(e => {
+        const active = filter.has(e.code);
+        const color = e.color || 'var(--t3)';
+        const label = e.label_ru || e.code;
+        const actionLabel = active
+          ? t('lore.sprintDetail.statusCounts.unset', 'снять')
+          : t('lore.sprintDetail.statusCounts.filter', 'фильтровать');
+        return (
+          <button
+            key={e.code} type="button" aria-pressed={active}
+            title={`${label}: ${counts[e.code]} — ${actionLabel}`}
+            aria-label={`${label}: ${counts[e.code]}`}
+            onClick={() => onFilter(e.code)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '0 6px', height: 18, borderRadius: 9, cursor: 'pointer',
+              fontSize: 'var(--fs-sm)', fontWeight: 700, lineHeight: 1, color,
+              background: active
+                ? `color-mix(in srgb, ${color} 22%, transparent)`
+                : 'transparent',
+              border: `1px solid color-mix(in srgb, ${color} ${active ? 90 : 35}%, transparent)`,
+            }}
+          >
+            {e.icon && <GameIcon slug={e.icon} size={11} style={{ color }} />}
+            {counts[e.code]}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
 const S = {
   root: {
     flex: 1, overflowY: 'auto' as const,
@@ -455,6 +507,27 @@ const mdBox: React.CSSProperties = {
   padding: '4px 8px 8px 26px', overflowX: 'auto',
 };
 
+// ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer_agent picked from the
+// extensible `agent_role` dictionary. Native <input list=...> gives a dropdown
+// of known roles while still accepting free text — a role typed here that isn't
+// in the dictionary yet gets upserted into it on save (see TaskLine.save below),
+// so the next picker offers it too.
+function AgentRoleInput({ id, value, onChange, placeholder, title }: {
+  id: string; value: string; onChange: (v: string) => void; placeholder: string; title?: string;
+}) {
+  const { entries } = useDictionary('agent_role');
+  const listId = `agent-role-opts-${id}`;
+  return (
+    <>
+      <input list={listId} value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder} title={title} style={{ ...inputStyle, width: 120 }} />
+      <datalist id={listId}>
+        {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
+      </datalist>
+    </>
+  );
+}
+
 function TaskLine({ t: task, allComps, onChanged, onError }: {
   t: LoreSprintTask;
   allComps: CompRow[];
@@ -473,6 +546,8 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
   const [author, setAuthor]     = useState(task.author_agent ?? '');
   const [executor, setExecutor] = useState(task.executor_agent ?? '');
   const [reviewer, setReviewer] = useState(task.reviewer_agent ?? '');
+  // ADR-LORE-015 (T14): task_type classification — closed dictionary, no free text.
+  const [taskType, setTaskType] = useState(task.task_type ?? '');
   const [busy, setBusy]       = useState(false);
   const [compPicker, setCompPicker] = useState(false);
   const [compBusy, setCompBusy]     = useState<string | null>(null);
@@ -489,6 +564,22 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     finally { setCompBusy(null); }
   }
 
+  const { byCode: agentRoleByCode } = useDictionary('agent_role');
+  const { byCode: dictTaskTypeByCode, entries: dictTaskTypes } = useDictionary('task_type');
+
+  // A role typed that isn't in the `agent_role` dictionary yet gets added to it
+  // (is_extensible) so it shows up in every other picker's dropdown from now on.
+  function registerNewRoles(values: string[]) {
+    const seen = new Set<string>();
+    for (const v of values) {
+      const code = v.trim();
+      if (!code || seen.has(code) || agentRoleByCode[code]) continue;
+      seen.add(code);
+      void upsertDictEntry({ dict_type: 'agent_role', code, label_ru: code, is_extensible: true })
+        .catch(() => { /* best-effort — free-text field still works without the dictionary entry */ });
+    }
+  }
+
   async function save() {
     if (busy || !title.trim()) return;
     const effRaw = effort.trim().replace(',', '.');
@@ -500,7 +591,9 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         authorAgent: author.trim() || null,
         executorAgent: executor.trim() || null,
         reviewerAgent: reviewer.trim() || null,
+        taskType: taskType || null,
       });
+      registerNewRoles([author, executor, reviewer]);
       setEditing(false); onChanged();
     }
     catch (e) { onError(e); }
@@ -514,6 +607,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     setAuthor(task.author_agent ?? '');
     setExecutor(task.executor_agent ?? '');
     setReviewer(task.reviewer_agent ?? '');
+    setTaskType(task.task_type ?? '');
   }
 
   return (
@@ -523,12 +617,32 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         onClick={() => { if (hasDetail && !editing) setExpanded(v => !v); }}
       >
         <GameIcon slug={meta.icon} size={13} style={{ color: meta.color, alignSelf: 'center' }} />
+        {/* task_type — icon-only chip (color from the dictionary), label moved into the
+            hover tooltip: with roles/modules/status all sharing this row, a text label
+            per chip was too much clutter (ADR-LORE-015, T14; decluttered per user request). */}
+        {task.task_type && (() => {
+          const e = dictTaskTypeByCode[task.task_type];
+          const color = e?.color || 'var(--t3)';
+          const label = e?.label_ru || task.task_type;
+          return (
+            <span title={label}
+              style={{
+                display: 'inline-flex', alignItems: 'center', padding: '1px 4px', borderRadius: 3,
+                background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
+                flexShrink: 0,
+              }}>
+              <GameIcon slug={e?.icon || 'checkbox-tree'} size={10} style={{ color }} />
+            </span>
+          );
+        })()}
         <span style={S.taskId}>{task.task_id}</span>
         {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (
           <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
         )}
-        {/* Component tags */}
+        {/* Component tags — icon-only (game_icon), full_name/component_id as tooltip;
+            same declutter treatment as the task_type chip. */}
         {Array.from(linkedIds).map(cid => {
           const c = allComps.find(x => x.component_id === cid);
           const color = areaColor(c?.area ?? '');
@@ -536,23 +650,37 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             <span key={cid}
               title={c?.full_name ?? cid}
               style={{
-                fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3,
+                display: 'inline-flex', alignItems: 'center', padding: '1px 4px', borderRadius: 3,
                 background: `color-mix(in srgb, ${color} 14%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
-                color, fontFamily: 'var(--mono)', flexShrink: 0, cursor: 'default',
+                flexShrink: 0, cursor: 'default',
               }}
               onClick={e => e.stopPropagation()}
-            >{cid}</span>
+            >
+              <GameIcon slug={c?.game_icon} size={10} style={{ color }} />
+            </span>
           );
         })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {task.executor_agent && (
-            <span title={t('lore.sprintDetail.task.executorLabel', 'Исполнитель: {{name}}', { name: task.executor_agent })}
-              style={{ color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)',
-                padding: '1px 5px', borderRadius: 3, border: '1px solid var(--b3)' }}>
-              {task.executor_agent}
-            </span>
-          )}
+          {/* ADR-LORE-014 §4: all three roles visible at a glance, not only in
+              the edit form — makes a reviewer==executor gate conflict obvious
+              before the ✓ click hits the backend's 409. */}
+          {([
+            ['author_agent', 'lore.sprintDetail.task.authorLabel', 'Автор: {{name}}'],
+            ['executor_agent', 'lore.sprintDetail.task.executorLabel', 'Исполнитель: {{name}}'],
+            ['reviewer_agent', 'lore.sprintDetail.task.reviewerLabel', 'Ревьювер: {{name}}'],
+          ] as const).map(([field, key, fallback]) => {
+            const name = task[field];
+            if (!name) return null;
+            const conflict = field === 'reviewer_agent' && task.reviewer_agent === task.executor_agent;
+            return (
+              <span key={field} title={t(key, fallback, { name }) + (conflict ? ' — ' + t('lore.sprintDetail.task.roleConflict', 'совпадает с исполнителем, задача не сможет перейти в done') : '')}
+                style={{ color: conflict ? 'var(--danger)' : 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)',
+                  padding: '1px 5px', borderRadius: 3, border: `1px solid ${conflict ? 'var(--danger)' : 'var(--b3)'}` }}>
+                {conflict && '⚠ '}{name}
+              </span>
+            );
+          })}
           {task.effort_days != null && (
             <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>{formatEffortDays(task.effort_days)}</span>
           )}
@@ -599,27 +727,38 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
           <TipTapField value={note} onChange={setNote} minHeight={100}
             placeholder={t('lore.sprintDetail.task.descriptionPlaceholder', 'Описание (Markdown)')}
             enableImages={false} enableHtmlMode={false} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
             <label htmlFor={`eff-${task.task_uid}`} style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
               {t('lore.sprintDetail.task.effortLabel', 'Стоимость, дн')}
             </label>
             <input id={`eff-${task.task_uid}`} value={effort} onChange={e => setEffort(e.target.value)}
               inputMode="decimal" placeholder={t('lore.sprintDetail.task.effortPlaceholder', 'напр. 1.5')}
               style={{ ...inputStyle, width: 96 }} />
+            {/* ADR-LORE-015 (T14): closed dictionary, native <select> (unlike agent_role,
+                task_type isn't extensible — no free-text add-new). */}
+            <label htmlFor={`tt-${task.task_uid}`} style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
+              {t('lore.sprintDetail.task.typeLabel', 'Тип')}
+            </label>
+            <select id={`tt-${task.task_uid}`} value={taskType} onChange={e => setTaskType(e.target.value)}
+              style={{ ...inputStyle, width: 130 }}>
+              <option value="">{t('lore.sprintDetail.task.typeUnset', '—')}</option>
+              {dictTaskTypes.map(e => (
+                <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>
+              ))}
+            </select>
           </div>
-          {/* ADR-LORE-014 §4: author/executor/reviewer — free text, reviewer must
+          {/* ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer — dropdown
+              lookup from the extensible `agent_role` dictionary (still accepts
+              free text; new values are registered on save). reviewer must
               differ from executor before the task can reach done (backend gate). */}
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-            <input value={author} onChange={e => setAuthor(e.target.value)}
-              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')}
-              style={{ ...inputStyle, width: 120 }} />
-            <input value={executor} onChange={e => setExecutor(e.target.value)}
-              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')}
-              style={{ ...inputStyle, width: 120 }} />
-            <input value={reviewer} onChange={e => setReviewer(e.target.value)}
+            <AgentRoleInput id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
+              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
+            <AgentRoleInput id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
+              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
+            <AgentRoleInput id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
               placeholder={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
-              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')}
-              style={{ ...inputStyle, width: 120 }} />
+              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>
@@ -645,14 +784,16 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   const [show, setShow]   = useState(false);
   const [tid, setTid]     = useState('');
   const [title, setTitle] = useState('');
+  const [taskType, setTaskType] = useState('');
   const [busy, setBusy]   = useState(false);
+  const { entries: dictTaskTypes } = useDictionary('task_type');
 
   async function add() {
     if (busy || !tid.trim() || !title.trim()) return;
     setBusy(true);
     try {
-      await createLoreTask(sprintId, tid.trim(), title.trim());
-      setTid(''); setTitle(''); setShow(false); onAdded();
+      await createLoreTask(sprintId, tid.trim(), title.trim(), null, taskType || null);
+      setTid(''); setTitle(''); setTaskType(''); setShow(false); onAdded();
     } catch (e) { onError(e); }
     finally { setBusy(false); }
   }
@@ -672,6 +813,14 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
       <input value={title} onChange={e => setTitle(e.target.value)}
         aria-label={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')}
         placeholder={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')} style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
+      <select value={taskType} onChange={e => setTaskType(e.target.value)}
+        aria-label={t('lore.sprintDetail.task.typeLabel', 'Тип')}
+        title={t('lore.sprintDetail.task.typeLabel', 'Тип')} style={{ ...inputStyle, width: 130 }}>
+        <option value="">{t('lore.sprintDetail.addTask.typeDefault', 'тип: dev (по умолчанию)')}</option>
+        {dictTaskTypes.map(e => (
+          <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>
+        ))}
+      </select>
       <button type="button" style={primaryBtn} disabled={busy} onClick={add}>{t('lore.sprintDetail.addTask.submit', 'Добавить')}</button>
       <button type="button" style={ghostBtn} onClick={() => setShow(false)} aria-label={t('lore.sprintDetail.addTask.cancel', 'Отменить добавление задачи')}>×</button>
     </div>
@@ -717,6 +866,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [filter, setFilter]   = useState<Set<string>>(new Set());
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [ctxEdit, setCtxEdit] = useState(false);
   const [ctxDraft, setCtxDraft] = useState('');
   const [ctxSaving, setCtxSaving] = useState(false);
@@ -791,9 +941,12 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
   }
+  function toggleTypeFilter(k: string) {
+    setTypeFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  }
 
-  // Reset the status filter when switching sprints (not on in-place reloads).
-  useEffect(() => { setFilter(new Set()); }, [sprintId]);
+  // Reset the status/type filters when switching sprints (not on in-place reloads).
+  useEffect(() => { setFilter(new Set()); setTypeFilter(new Set()); }, [sprintId]);
 
   // Load available projects from DB once (not per-sprint).
   useEffect(() => {
@@ -900,7 +1053,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   }
 
   // Optional status filter — multi-select; empty set = show all.
-  const visibleTasks = filter.size === 0 ? tasks : tasks.filter(t => filter.has(taskTick(t.status_raw).status));
+  const visibleTasks = tasks.filter(t =>
+    (filter.size === 0 || filter.has(taskTick(t.status_raw).status)) &&
+    (typeFilter.size === 0 || (t.task_type != null && typeFilter.has(t.task_type))));
 
   // Group tasks by phase; tasks with no phase fall into NO_PHASE bucket.
   const byPhase = new Map<string, LoreSprintTask[]>();
@@ -932,6 +1087,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         {tasks.length > 0 && (
           <>
             <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
+            <TypeCounts tasks={tasks} filter={typeFilter} onFilter={toggleTypeFilter} />
             <span style={S.meta}>{doneTotal}/{tasks.length}</span>
             {(() => {
               const effortSum = visibleTasks.reduce((s, tk) => s + (tk.effort_days ?? 0), 0);

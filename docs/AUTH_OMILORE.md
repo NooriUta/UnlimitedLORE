@@ -1,5 +1,10 @@
 # LORE auth — Keycloak `omilore` realm (A2)
 
+**Перенесено в LORE (2026-07-14):** полное содержимое теперь живёт как runbook
+`RUNBOOK-AUTH-OMILORE` — `:4400/lore?section=knowledge&passport=RUNBOOK-AUTH-OMILORE`
+(или `query_slice({slice:"runbook_by_id", params:{id:"RUNBOOK-AUTH-OMILORE"}})` из MCP).
+Этот файл больше не обновляется — правьте runbook в LORE, не этот .md.
+
 Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
 **Off by default** — dev/local runs exactly as before until you switch it on.
 

@@ -138,8 +138,18 @@ public final class LoreSlices {
             "context_md " +
             "FROM KnowSprint",
             List.of(),
+            // ADR-LORE-017 (T16): optional `project` filter — Tier 1 (Sprint has a direct
+            // BELONGS_TO_PROJECT edge) read-scoping. KNOWN LIMITATION: compose() appends
+            // every supplied optional filter's raw SQL fragment in registration order with
+            // no AND-joining (see LoreSlices.compose()) — every slice in this file has
+            // exactly one active optional filter by convention, so this has never mattered
+            // before. Passing BOTH status AND project on this slice in the same call would
+            // concatenate two "WHERE" clauses into invalid SQL. Not fixed here (would touch
+            // all 10 existing optionalFilters registrations); flagged for whoever adds a
+            // second simultaneously-usable filter to any slice.
             new LinkedHashMap<>(Map.of(
-                "status", " WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE :status")),
+                "status", " WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE :status",
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
@@ -157,7 +167,7 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug AS git_projects, " +
             // reverse of ADR's IMPLEMENTED_IN (ADR → Sprint) — which ADRs this
             // sprint implements. Was missing entirely; sprint detail had no way
-            // to surface the link even though lore_link_adr_sprint has always
+            // to surface the link even though adr_link(rel:"sprint") has always
             // been able to create it.
             "in('IMPLEMENTED_IN').adr_id   AS adr_ids, " +
             "out('HAS_STATE')[track_id IS NOT NULL].track_id[0] AS track_id " +
@@ -207,9 +217,10 @@ public final class LoreSlices {
             // note from whichever hist row carries it — same form as tasks_of_sprint.
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
             "out('TAGGED_WITH').component_id AS component_ids, " +
-            // author/executor/reviewer_agent (ADR-LORE-014 §4) are plain KnowTask
-            // vertex fields — no traversal needed, unlike note_md/effort_days above.
-            "author_agent, executor_agent, reviewer_agent " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
+            // (ADR-LORE-015, T14) are plain KnowTask vertex fields — no traversal
+            // needed, unlike note_md/effort_days above.
+            "author_agent, executor_agent, reviewer_agent, task_type " +
             "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
@@ -224,8 +235,9 @@ public final class LoreSlices {
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
-            // author/executor/reviewer_agent (ADR-LORE-014 §4) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
+            // (ADR-LORE-015, T14) — plain vertex fields.
+            "author_agent, executor_agent, reviewer_agent, task_type " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
@@ -240,8 +252,9 @@ public final class LoreSlices {
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
-            // author/executor/reviewer_agent (ADR-LORE-014 §4) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
+            // (ADR-LORE-015, T14) — plain vertex fields.
+            "author_agent, executor_agent, reviewer_agent, task_type " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
@@ -565,12 +578,12 @@ public final class LoreSlices {
         // in('PART_OF') on KnowTask always returns empty — the old query classified EVERY
         // task as backlog regardless of sprint membership.
         slice("backlog_tasks",
-            "SELECT task_uid, task_id, title, status_raw, priority, component_id " +
+            "SELECT task_uid, task_id, title, status_raw, priority, component_id, task_type " +
             "FROM KnowTask WHERE out('PART_OF').size() = 0",
             List.of(), Map.of(), " ORDER BY task_uid LIMIT 200");
 
         slice("all_tasks",
-            "SELECT task_uid, task_id, title, status_raw, priority, component_id, " +
+            "SELECT task_uid, task_id, title, status_raw, priority, component_id, task_type, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
@@ -723,7 +736,7 @@ public final class LoreSlices {
             "SELECT rubric_id, name, description, order_index FROM BragiRubric",
             List.of(), Map.of(), " ORDER BY order_index, name");
 
-        // Recent metric feed — for filtered/aggregated queries use lore_query_metric
+        // Recent metric feed — for filtered/aggregated queries use metric_get
         // (POST /lore/bragi/metric/query) instead; this slice is a flat recent-points
         // feed for dashboard cards. object_type='probe' is a schema-verification
         // artifact (ARC-02/ARC-03), always excluded. The remaining exclusions

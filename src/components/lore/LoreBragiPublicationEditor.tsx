@@ -1,6 +1,6 @@
 // LoreBragiPublicationEditor — FE-06: create a BragiPublication with inline
 // variants, modeled on LoreAdrEditor/LoreSprintEditor's create-form pattern.
-// Wraps lore_create_publication/lore_create_variant (MCP-01) via their
+// Wraps bragi_pub_new/bragi_variant_new (MCP-01) via their
 // backend endpoints directly (same convention as LoreSprintEditor).
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -275,7 +275,7 @@ export default function LoreBragiPublicationEditor({ onSaved, onCancel, initialP
     setActiveVariantIdx(ai => (ai > i ? ai - 1 : ai)); // clamped to valid range on render via editVariantIdx
   };
 
-  // Cover image: gap reported 2026-07-03 — lore_attach_asset/lore_upload_asset
+  // Cover image: gap reported 2026-07-03 — bragi_asset_attach/bragi_asset_up
   // existed as MCP-only capabilities, no UI control ever called them for a
   // publication's own cover (only inline TipTap images, IMG-04). Requires the
   // publication to already have an id (new + unsaved has nowhere to attach to
@@ -952,7 +952,7 @@ function TodoChecklist({ value, onChange, disabled, addPlaceholder }: {
 
 // EDIT-06: read-only mini-metrics for a published variant — one point per
 // metric name (latest value the feed returned; MetricSnapshot rows come back
-// newest-first per fetchBragiMetrics/lore_query_metric's default ordering).
+// newest-first per fetchBragiMetrics/metric_get's default ordering).
 function VariantMetrics({ variantId }: { variantId: string }) {
   const [points, setPoints] = useState<BragiMetricPoint[] | null>(null);
   useEffect(() => {

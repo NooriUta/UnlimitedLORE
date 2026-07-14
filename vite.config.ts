@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Vitest's default include glob would otherwise also pick up mcp-server/**/*.test.ts
+  // (a sibling folder, not an npm workspace) when run from this root — that suite has
+  // its own package.json/test script and should stay isolated from this one.
+  test: {
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+  },
   build: {
     rollupOptions: {
       output: {

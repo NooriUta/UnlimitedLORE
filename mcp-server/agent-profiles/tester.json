@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "subagent",
+  "description": "Tester — quality gates and own tasks. Owns test-type tasks and reviews dev/design-type tasks per ADR-LORE-015 §1a (the no-self-acceptance gate, ADR-LORE-014 §4, requires a DIFFERENT agent than the executor before a task can reach done).",
+  "permission": {
+    "*": "deny",
+    "list_slices": "allow",
+    "query_slice": "allow",
+    "qg_*": "allow",
+    "task_*": "allow",
+    "status_set": "allow",
+    "status_set_batch": "allow"
+  }
+}

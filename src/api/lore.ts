@@ -70,6 +70,15 @@ export interface DictEntry {
   is_extensible: boolean | null;
 }
 
+// Upsert one (dict_type, code) row — used to grow an is_extensible domain
+// on the fly (e.g. a free-typed agent role not yet in the dictionary).
+export async function upsertDictEntry(
+  entry: Pick<DictEntry, 'dict_type' | 'code'> & Partial<DictEntry>,
+  signal?: AbortSignal,
+): Promise<{ ok: boolean }> {
+  return loreMutate('/dict/entry', entry, signal);
+}
+
 // Single write/mutation transport for LORE POST endpoints. Replaces the
 // per-component `fetch(... X-Seer-Role ...)` helpers that had each drifted their
 // own error handling. `path` is relative to /lore (e.g. "/bragi/keyword").
@@ -108,7 +117,7 @@ export async function fetchBragiMetrics(
   return body.rows ?? [];
 }
 
-// Slice catalog (GET /lore/slices) — the whitelist the MCP `lore_list_slices`
+// Slice catalog (GET /lore/slices) — the whitelist the MCP `list_slices`
 // tool exposes. Used by the MCP API screen to show the live catalog.
 export interface LoreSliceDescriptor {
   id: string;
@@ -286,6 +295,8 @@ export interface LoreSprintTask {
   author_agent?: string | null;
   executor_agent?: string | null;
   reviewer_agent?: string | null;
+  // ADR-LORE-015 (T14) — classification, plain vertex field like the roles above.
+  task_type?: string | null;
 }
 
 export interface LoreMilestone {
@@ -517,11 +528,15 @@ export async function createLoreTask(
   taskId: string,
   title: string,
   noteMd?: string | null,
+  taskType?: string | null,
 ): Promise<LoreTaskWriteResponse> {
   const res = await fetch(`${LORE_BASE}/task`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ sprint_id: sprintId, task_id: taskId, title, note_md: noteMd ?? null }),
+    body: JSON.stringify({
+      sprint_id: sprintId, task_id: taskId, title, note_md: noteMd ?? null,
+      task_type: taskType ?? null,
+    }),
   });
   assertJson(res);
   if (!res.ok) return parseError(res);
@@ -532,6 +547,7 @@ export interface LoreTaskAgentFields {
   authorAgent?: string | null;
   executorAgent?: string | null;
   reviewerAgent?: string | null;
+  taskType?: string | null;
 }
 
 export async function editLoreTask(
@@ -542,7 +558,8 @@ export async function editLoreTask(
   agents?: LoreTaskAgentFields,
 ): Promise<LoreTaskWriteResponse> {
   // effort_days / agent fields: null (or omitted) = leave unchanged (backend only
-  // writes a field when it's non-null; ADR-LORE-014 §4 fields live on the vertex).
+  // writes a field when it's non-null; ADR-LORE-014 §4 / ADR-LORE-015 fields live
+  // on the vertex).
   const res = await fetch(`${LORE_BASE}/task/edit`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -551,6 +568,7 @@ export async function editLoreTask(
       author_agent: agents?.authorAgent ?? null,
       executor_agent: agents?.executorAgent ?? null,
       reviewer_agent: agents?.reviewerAgent ?? null,
+      task_type: agents?.taskType ?? null,
     }),
   });
   assertJson(res);
@@ -623,7 +641,7 @@ export async function linkSprintMilestone(
 // ── Tech registry (SPRINT_TECH_REGISTRY) ───────────────────────────────────
 // Stored as one KnowSpec per (component, tech) pair via the existing /lore/spec
 // upsert path — spec_id "SPEC-TECH-<COMPONENT>-<TECH>" — same convention as the
-// lore_upsert_tech MCP tool. Read side is the tech_registry slice.
+// tech_set MCP tool. Read side is the tech_registry slice.
 export interface LoreTechRow {
   spec_id: string;
   tech_name: string;
@@ -814,7 +832,7 @@ export async function fetchLoreDoc(
 }
 
 // Partial upsert — only supplied fields are set (same semantics as
-// lore_create_doc/POST /lore/doc), so an EN-only save doesn't clear RU.
+// doc_new/POST /lore/doc), so an EN-only save doesn't clear RU.
 export async function updateLoreDoc(
   docId: string,
   fields: { title?: string; content_md_en?: string; content_md_ru?: string },

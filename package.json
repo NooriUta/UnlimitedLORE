@@ -5,6 +5,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint src",
+    "test": "vitest run",
     "check:statuses": "node scripts/check-lore-statuses.mjs"
   },
   "dependencies": {
@@ -46,7 +47,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.62.1",
-    "vite": "^8.1.4"
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "dompurify": "^3.4.11"
