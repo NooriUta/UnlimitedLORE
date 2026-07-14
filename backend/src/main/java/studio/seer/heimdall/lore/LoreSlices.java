@@ -206,7 +206,10 @@ public final class LoreSlices {
             // sparse: a later status flip inserts a note-less open row, so recover the
             // note from whichever hist row carries it — same form as tasks_of_sprint.
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
-            "out('TAGGED_WITH').component_id AS component_ids " +
+            "out('TAGGED_WITH').component_id AS component_ids, " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) are plain KnowTask
+            // vertex fields — no traversal needed, unlike note_md/effort_days above.
+            "author_agent, executor_agent, reviewer_agent " +
             "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
@@ -220,7 +223,9 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
-            "out('TAGGED_WITH').component_id                          AS component_ids " +
+            "out('TAGGED_WITH').component_id                          AS component_ids, " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) — plain vertex fields.
+            "author_agent, executor_agent, reviewer_agent " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
@@ -234,7 +239,9 @@ public final class LoreSlices {
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, " +
-            "out('TAGGED_WITH').component_id                          AS component_ids " +
+            "out('TAGGED_WITH').component_id                          AS component_ids, " +
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) — plain vertex fields.
+            "author_agent, executor_agent, reviewer_agent " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");

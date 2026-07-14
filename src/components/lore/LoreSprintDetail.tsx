@@ -469,6 +469,10 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
   const [title, setTitle]     = useState(task.title ?? '');
   const [note, setNote]       = useState(task.note_md ?? '');
   const [effort, setEffort]   = useState(task.effort_days != null ? String(task.effort_days) : '');
+  // ADR-LORE-014 §4: author/executor/reviewer_agent — free-text task ownership.
+  const [author, setAuthor]     = useState(task.author_agent ?? '');
+  const [executor, setExecutor] = useState(task.executor_agent ?? '');
+  const [reviewer, setReviewer] = useState(task.reviewer_agent ?? '');
   const [busy, setBusy]       = useState(false);
   const [compPicker, setCompPicker] = useState(false);
   const [compBusy, setCompBusy]     = useState<string | null>(null);
@@ -491,7 +495,14 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     const eff = effRaw === '' ? null : Number(effRaw);
     if (eff != null && !Number.isFinite(eff)) return; // ignore bad number
     setBusy(true);
-    try { await editLoreTask(task.task_uid, title.trim(), note, eff); setEditing(false); onChanged(); }
+    try {
+      await editLoreTask(task.task_uid, title.trim(), note, eff, {
+        authorAgent: author.trim() || null,
+        executorAgent: executor.trim() || null,
+        reviewerAgent: reviewer.trim() || null,
+      });
+      setEditing(false); onChanged();
+    }
     catch (e) { onError(e); }
     finally { setBusy(false); }
   }
@@ -500,6 +511,9 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     setTitle(task.title ?? '');
     setNote(task.note_md ?? '');
     setEffort(task.effort_days != null ? String(task.effort_days) : '');
+    setAuthor(task.author_agent ?? '');
+    setExecutor(task.executor_agent ?? '');
+    setReviewer(task.reviewer_agent ?? '');
   }
 
   return (
@@ -532,6 +546,13 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
           );
         })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {task.executor_agent && (
+            <span title={t('lore.sprintDetail.task.executorLabel', 'Исполнитель: {{name}}', { name: task.executor_agent })}
+              style={{ color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)',
+                padding: '1px 5px', borderRadius: 3, border: '1px solid var(--b3)' }}>
+              {task.executor_agent}
+            </span>
+          )}
           {task.effort_days != null && (
             <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>{formatEffortDays(task.effort_days)}</span>
           )}
@@ -585,6 +606,20 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             <input id={`eff-${task.task_uid}`} value={effort} onChange={e => setEffort(e.target.value)}
               inputMode="decimal" placeholder={t('lore.sprintDetail.task.effortPlaceholder', 'напр. 1.5')}
               style={{ ...inputStyle, width: 96 }} />
+          </div>
+          {/* ADR-LORE-014 §4: author/executor/reviewer — free text, reviewer must
+              differ from executor before the task can reach done (backend gate). */}
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+            <input value={author} onChange={e => setAuthor(e.target.value)}
+              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')}
+              style={{ ...inputStyle, width: 120 }} />
+            <input value={executor} onChange={e => setExecutor(e.target.value)}
+              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')}
+              style={{ ...inputStyle, width: 120 }} />
+            <input value={reviewer} onChange={e => setReviewer(e.target.value)}
+              placeholder={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
+              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')}
+              style={{ ...inputStyle, width: 120 }} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>

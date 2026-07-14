@@ -70,7 +70,10 @@ export function registerLoreWrite(server: McpServer): void {
     name: 'lore_create_task',
     description: 'Create a new task under a sprint (appends with the next order_index, opens an ' +
       'initial PLANNED history state). Optionally attaches the task to a sprint phase ' +
-      '(IN_PHASE edge — the tasks_of_phase slice reads it). Mutates the shared system_aida_lore.',
+      '(IN_PHASE edge — the tasks_of_phase slice reads it). author/executor/reviewer_agent ' +
+      '(ADR-LORE-014 §4) are free-text identities on the task vertex — reviewer must differ ' +
+      'from executor before the task can move to done (hard gate, see lore_set_status). ' +
+      'Mutates the shared system_aida_lore.',
     schema: {
       sprint_id: z.string(),
       task_id: z.string().describe('short task id, unique within the sprint'),
@@ -78,11 +81,16 @@ export function registerLoreWrite(server: McpServer): void {
       note_md: z.string().optional().describe('optional Markdown note'),
       phase_uid: z.string().optional()
         .describe('optional phase to attach to, e.g. "SPRINT_X/PHASE_A" (must belong to the same sprint; create via lore_create_phase first)'),
+      author_agent: z.string().optional().describe('who owns/posed this task, e.g. "architect", "claude-full"'),
+      executor_agent: z.string().optional().describe('who is expected to do the work'),
+      reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, phase_uid }) => ({
+    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent }) => ({
           sprint_id, task_id, title,
           note_md: note_md ?? null, phase_uid: phase_uid ?? null,
+          author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
+          reviewer_agent: reviewer_agent ?? null,
         }),
   });
 
@@ -914,31 +922,46 @@ export function registerLoreWrite(server: McpServer): void {
 
   server.tool(
     'lore_edit_task',
-    'Edit one task OR a batch of tasks (title, note_md, effort_days). Updates the vertex and its ' +
-      'open history row. Mutates the shared system_aida_lore.\n\n' +
-      'Single: pass task_uid + title (+ optional note_md, effort_days).\n' +
-      'Batch:  pass tasks=[{task_uid, title, note_md?, effort_days?}, ...] — all processed in one call, ' +
+    'Edit one task OR a batch of tasks (title, note_md, effort_days, author/executor/reviewer_agent). ' +
+      'Updates the vertex and its open history row. Only supplied fields are touched — omit a field to ' +
+      'leave it unchanged. reviewer_agent must differ from executor_agent before the task can move to ' +
+      'done (ADR-LORE-014 §4 hard gate, enforced in lore_set_status, not here). ' +
+      'Mutates the shared system_aida_lore.\n\n' +
+      'Single: pass task_uid + title (+ optional note_md, effort_days, author/executor/reviewer_agent).\n' +
+      'Batch:  pass tasks=[{task_uid, title, ...}, ...] — all processed in one call, ' +
       'errors collected per-item without aborting the rest.',
     {
-      task_uid:    z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
-      title:       z.string().optional().describe('single-mode: new title'),
-      note_md:     z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
-      effort_days: z.number().optional().describe('single-mode: estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
+      task_uid:       z.string().optional().describe('single-mode: full task uid, e.g. "SPRINT_X/SH-1"'),
+      title:          z.string().optional().describe('single-mode: new title'),
+      note_md:        z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
+      effort_days:    z.number().optional().describe('single-mode: estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
+      author_agent:   z.string().optional().describe('single-mode: who owns/posed this task'),
+      executor_agent: z.string().optional().describe('single-mode: who is expected to do the work'),
+      reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
       tasks: z.array(z.object({
-        task_uid:    z.string(),
-        title:       z.string(),
-        note_md:     z.string().optional(),
-        effort_days: z.number().optional(),
-      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?}'),
+        task_uid:       z.string(),
+        title:          z.string(),
+        note_md:        z.string().optional(),
+        effort_days:    z.number().optional(),
+        author_agent:   z.string().optional(),
+        executor_agent: z.string().optional(),
+        reviewer_agent: z.string().optional(),
+      })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
-            tasks.map(t => ({ task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null }))));
+            tasks.map(t => ({
+              task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null,
+              author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
+            }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
-        return json(await lorePost('/lore/task/edit', { task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null }));
+        return json(await lorePost('/lore/task/edit', {
+          task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null,
+          author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
+        }));
       } catch (e) { return err(e); }
     },
   );

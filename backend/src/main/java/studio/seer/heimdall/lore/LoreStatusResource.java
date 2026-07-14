@@ -94,20 +94,28 @@ public class LoreStatusResource extends LoreResourceBase {
                                             req.id(), ex.getMessage()))
                                         .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
                                         .replaceWith(resp)));
-            case "task"      -> readTaskHistCarryFields(req.id())
-                                  .chain(fields -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
-                                    "task_uid", req.id(), req.status(), now, nsid)
-                                  .chain(resp -> resp.getStatus() >= 300
-                                    ? Uni.createFrom().item(resp)
-                                    : restoreTaskHistFields(nsid,
-                                          (String) fields.get("note_md"),
-                                          fields.get("effort_days") == null ? null
-                                              : ((Number) fields.get("effort_days")).doubleValue())
-                                        .onFailure().invoke(ex -> LOG.warnf(
-                                            "[LORE STATUS] task=%s note/effort carry-forward failed (status flip itself succeeded): %s",
-                                            req.id(), ex.getMessage()))
-                                        .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
-                                        .replaceWith(resp)));
+            // ADR-LORE-014 §4: →done is gated — refuse self-acceptance (reviewer_agent
+            // unset or equal to executor_agent) BEFORE the SCD2 flip. Every other task
+            // transition is ungated (RBAC-only, per the ADR's "one hard-gate" decision).
+            case "task"      -> ("done".equals(req.status())
+                                    ? checkTaskDoneGate(req.id())
+                                    : Uni.createFrom().<Response>item((Response) null))
+                                  .chain(gate -> gate != null
+                                    ? Uni.createFrom().item(gate)
+                                    : readTaskHistCarryFields(req.id())
+                                        .chain(fields -> updateScd2Status("task", "KnowTask", "KnowTaskHist",
+                                          "task_uid", req.id(), req.status(), now, nsid)
+                                        .chain(resp -> resp.getStatus() >= 300
+                                          ? Uni.createFrom().item(resp)
+                                          : restoreTaskHistFields(nsid,
+                                                (String) fields.get("note_md"),
+                                                fields.get("effort_days") == null ? null
+                                                    : ((Number) fields.get("effort_days")).doubleValue())
+                                              .onFailure().invoke(ex -> LOG.warnf(
+                                                  "[LORE STATUS] task=%s note/effort carry-forward failed (status flip itself succeeded): %s",
+                                                  req.id(), ex.getMessage()))
+                                              .onFailure().recoverWithItem(new LoreCommandClient.LoreCommandResult(null))
+                                              .replaceWith(resp))));
             // MCP-PHASES: same SCD2 flip as sprint/task — KnowPhase carries HAS_STATE → KnowPhaseHist
             case "phase"     -> updateScd2Status("phase", "KnowPhase", "KnowPhaseHist",
                                     "phase_uid", req.id(), req.status(), now, nsid);
@@ -336,6 +344,31 @@ public class LoreStatusResource extends LoreResourceBase {
             .onFailure().recoverWithItem(ex ->
                 noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
+    }
+
+    /**
+     * ADR-LORE-014 §4 hard-gate: a task may not move to {@code done} if it has no
+     * reviewer_agent, or if reviewer_agent equals executor_agent (no self-acceptance).
+     * Returns null when the transition may proceed, or a 409 Response to short-circuit
+     * with otherwise. author/executor/reviewer_agent are plain KnowTask vertex fields
+     * (not Hist — see LoreSchemaInitializer), so this is a single non-traversal read.
+     */
+    private Uni<Response> checkTaskDoneGate(String taskUid) {
+        MartQuery q = new MartQuery("sql",
+            "SELECT executor_agent, reviewer_agent FROM KnowTask WHERE task_uid = :uid LIMIT 1",
+            Map.of("uid", taskUid), -1);
+        return client.query(db, basicAuth(), q).map(res -> {
+            List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
+            if (rows.isEmpty()) return null; // unknown task — let the normal flip report NOT_FOUND-shaped failure
+            String executor = (String) rows.get(0).get("executor_agent");
+            String reviewer = (String) rows.get(0).get("reviewer_agent");
+            if (reviewer == null || reviewer.isBlank() || reviewer.equals(executor)) {
+                return noStore(Response.status(Response.Status.CONFLICT)
+                    .entity(new LoreError("NO_SELF_ACCEPTANCE",
+                        "task cannot move to done: reviewer_agent must be set and differ from executor_agent")));
+            }
+            return null;
+        });
     }
 
     /** Read note_md / effort_days from the currently-open KnowTaskHist row BEFORE a SCD2 flip.
