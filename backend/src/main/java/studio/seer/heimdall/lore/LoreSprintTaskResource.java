@@ -66,7 +66,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskPhaseRequest(String task_uid, String phase_uid, String action) {}
 
     public record SprintCreateRequest(String sprint_id, String name, String status,
-        String plan_id, String priority, String outcome_md, String context_md) {}
+        String plan_id, String priority, String outcome_md, String context_md, String git_project) {}
 
     // ── Write-path: create sprint directly ───────────────────────────────────
 
@@ -90,6 +90,17 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         try {
             LoreIngestService.CreateSprintResult r = ingestService.createSprint(
                 req.sprint_id(), req.name(), status, req.plan_id(), req.priority(), req.outcome_md(), req.context_md());
+            // ADR-LORE-017 §Решение 2: sprint_new gets the same optional project param
+            // release_new/release_link/sprint_link(rel:"project") already have — brings
+            // Tier-1 write coverage in line, no separate call needed for the common case
+            // of creating a sprint that already belongs to a known repo.
+            if (req.git_project() != null && !req.git_project().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT " +
+                    "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                    "TO   (SELECT FROM KnowGitProject WHERE slug=:gp) IF NOT EXISTS",
+                    Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
+            }
             java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());

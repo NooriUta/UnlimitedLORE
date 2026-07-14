@@ -568,6 +568,12 @@ public class LoreSchemaInitializer {
         // auto-vivification-on-the-live-DB-only gap as above.
         "CREATE VERTEX TYPE KnowGitProject IF NOT EXISTS EXTENDS V",
         "CREATE PROPERTY KnowGitProject.slug IF NOT EXISTS STRING",
-        "CREATE INDEX IF NOT EXISTS ON KnowGitProject (slug) UNIQUE"
+        "CREATE INDEX IF NOT EXISTS ON KnowGitProject (slug) UNIQUE",
+
+        // BELONGS_TO_PROJECT (KnowSprint -> KnowGitProject, also read off KnowRelease/
+        // KnowPR elsewhere) — same gap: only ever auto-vivified via CREATE EDGE ... IF
+        // NOT EXISTS calls (sprint/project, sprint_new's new git_project param, T16/
+        // ADR-LORE-017), never declared here. Added alongside the other T13/T15 finds.
+        "CREATE EDGE TYPE BELONGS_TO_PROJECT IF NOT EXISTS EXTENDS E"
     );
 }

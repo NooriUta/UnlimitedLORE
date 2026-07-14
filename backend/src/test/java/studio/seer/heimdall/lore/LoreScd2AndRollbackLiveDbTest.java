@@ -170,6 +170,59 @@ class LoreScd2AndRollbackLiveDbTest {
         assertEquals(1, countHasStateEdges(taskUid), "duplicate attempt must leave no orphan HAS_STATE edge");
     }
 
+    // ── T16 / ADR-LORE-017: sprint_new's optional git_project + sprints slice's project filter ──
+
+    @Test
+    void sprintCreateWithGitProjectWiresBelongsToProjectEdge() {
+        final String sprintId = "SPRINT_C5_PROJECT_SCOPE_PROBE";
+        final String slug = "LORE_TEST_ORG/scope-probe-repo";
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"slug\":\"" + slug + "\"}")
+        .when().post("/lore/project")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintId + "\",\"git_project\":\"" + slug + "\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+
+        List<Map<String, Object>> linked = query(
+            "SELECT out('BELONGS_TO_PROJECT').slug AS gp FROM KnowSprint WHERE sprint_id = :s", Map.of("s", sprintId));
+        @SuppressWarnings("unchecked")
+        List<String> gps = (List<String>) linked.get(0).get("gp");
+        assertEquals(List.of(slug), gps, "sprint_new's git_project param must wire BELONGS_TO_PROJECT in the same call");
+    }
+
+    @Test
+    void sprintsSliceProjectFilterOnlyReturnsMatchingSprints() {
+        final String slugA = "LORE_TEST_ORG/scope-filter-a";
+        final String slugB = "LORE_TEST_ORG/scope-filter-b";
+        final String sprintA = "SPRINT_C5_SCOPE_FILTER_A";
+        final String sprintB = "SPRINT_C5_SCOPE_FILTER_B";
+
+        for (String slug : List.of(slugA, slugB)) {
+            given().header("X-Seer-Role", "admin").contentType("application/json")
+                .body("{\"slug\":\"" + slug + "\"}")
+            .when().post("/lore/project")
+            .then().statusCode(200);
+        }
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintA + "\",\"git_project\":\"" + slugA + "\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintB + "\",\"git_project\":\"" + slugB + "\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+
+        given()
+        .when().get("/lore/slice/sprints?project=" + slugA)
+        .then().statusCode(200)
+            .body("rows.sprint_id", org.hamcrest.Matchers.hasItem(sprintA))
+            .body("rows.sprint_id", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(sprintB)));
+    }
+
     // ── T15: project_new (KnowGitProject) — upsert + partial-update field preservation ──
 
     @Test

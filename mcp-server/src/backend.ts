@@ -6,6 +6,12 @@
 const BASE = (process.env.LORE_BACKEND_URL ?? 'http://localhost:9100').replace(/\/$/, '');
 const ROLE = process.env.LORE_SEER_ROLE ?? 'admin';
 
+// ADR-LORE-017: optional session-default "active project" — same place as LORE_BACKEND_URL/
+// LORE_SEER_ROLE (one MCP server process = one client session/checkout). Read by query_slice
+// (loreRead.ts) to default Tier-1 slices' `project` param when the caller omits it, and to
+// warn (not block) when an explicit `project` differs from this default.
+export const ACTIVE_PROJECT = process.env.LORE_ACTIVE_PROJECT || undefined;
+
 // A2: client_credentials against the omilore realm's lore-mcp service account.
 // Feature-gated on both env vars being set — until the realm is imported and
 // these are configured, writeAuthHeaders() falls through to the X-Seer-Role

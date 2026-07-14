@@ -138,8 +138,18 @@ public final class LoreSlices {
             "context_md " +
             "FROM KnowSprint",
             List.of(),
+            // ADR-LORE-017 (T16): optional `project` filter — Tier 1 (Sprint has a direct
+            // BELONGS_TO_PROJECT edge) read-scoping. KNOWN LIMITATION: compose() appends
+            // every supplied optional filter's raw SQL fragment in registration order with
+            // no AND-joining (see LoreSlices.compose()) — every slice in this file has
+            // exactly one active optional filter by convention, so this has never mattered
+            // before. Passing BOTH status AND project on this slice in the same call would
+            // concatenate two "WHERE" clauses into invalid SQL. Not fixed here (would touch
+            // all 10 existing optionalFilters registrations); flagged for whoever adds a
+            // second simultaneously-usable filter to any slice.
             new LinkedHashMap<>(Map.of(
-                "status", " WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE :status")),
+                "status", " WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE :status",
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
             " ORDER BY sprint_id");
 
         slice("sprint_tree",

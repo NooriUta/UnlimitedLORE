@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { lorePost, loreGet, loreUpload } from '../backend.js';
+import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -162,7 +162,10 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'sprint_new',
     description: 'Create a new KnowSprint vertex directly. Idempotent (upsert by sprint_id). ' +
-      'Seeds an initial HAS_STATE history row. Mutates system_aida_lore.',
+      'Seeds an initial HAS_STATE history row. project (ADR-LORE-017, T16) optionally wires ' +
+      'BELONGS_TO_PROJECT in the same call — omit to default to the session\'s ' +
+      'LORE_ACTIVE_PROJECT, if set; pass sprint_link(rel:"project") later if you need to add ' +
+      'more than one project. Mutates system_aida_lore.',
     schema: {
       sprint_id:  z.string().describe('unique sprint id, e.g. "SPRINT_SITE_EXTRACT"'),
       name:       z.string().describe('human-readable sprint name'),
@@ -171,15 +174,17 @@ export function registerLoreWrite(server: McpServer): void {
       priority:   z.string().optional().describe('e.g. "high", "critical"'),
       outcome_md: z.string().optional().describe('sprint goal / outcome in Markdown'),
       context_md: z.string().optional().describe('background context for the sprint — WHY it exists, key decisions, related sprints, links to docs. Shown in sprint detail panel.'),
+      project:    z.string().optional().describe('git_project slug to wire via BELONGS_TO_PROJECT, e.g. "NooriUta/UnlimitedLORE" — omit to fall back to LORE_ACTIVE_PROJECT if set, omit both to leave unlinked'),
     },
     path: '/lore/sprint/create',
-    body: ({ sprint_id, name, status, plan_id, priority, outcome_md, context_md }) => ({
+    body: ({ sprint_id, name, status, plan_id, priority, outcome_md, context_md, project }) => ({
           sprint_id, name,
           status: status ?? 'todo',
           plan_id: plan_id ?? null,
           priority: priority ?? null,
           outcome_md: outcome_md ?? null,
           context_md: context_md ?? null,
+          git_project: project ?? ACTIVE_PROJECT ?? null,
         }),
   });
 

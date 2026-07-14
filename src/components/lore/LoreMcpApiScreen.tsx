@@ -39,12 +39,12 @@ const TOOLS: ToolDoc[] = [
   { name: 'list_slices', kind: 'read', entity: 'Meta', backend: 'GET /lore/slices', params: '—',
     desc: 'Каталог всех именованных слайсов (read-запросов) с их обязательными/опциональными параметрами. Вызывать первым — задаёт, что вообще можно прочитать через query_slice.' },
   { name: 'query_slice', kind: 'read', entity: 'Meta', backend: 'GET /lore/slice/{slice}', params: 'slice, params?',
-    desc: 'Выполнить один слайс из каталога list_slices и получить rows[]. params — map строк-значений: {"id":"ADR-FE-001"}, {"sprint_id":"SPRINT_X"} и т.п. Сам SQL и whitelisting полей — на бэкенде, клиент их не видит.' },
+    desc: 'Выполнить один слайс из каталога list_slices и получить rows[]. params — map строк-значений: {"id":"ADR-FE-001"}, {"sprint_id":"SPRINT_X"} и т.п. Сам SQL и whitelisting полей — на бэкенде, клиент их не видит. ADR-LORE-017 (T16): project-scoped слайсы (сегодня — "sprints") принимают опциональный params.project (git_project slug) — не передан, подставляется сессионный LORE_ACTIVE_PROJECT, если задан; явный project, отличный от него, разрешён, но ответ несёт поле _warning — расхождение никогда не тихое.' },
 
   // ── Sprint (KnowSprint) ──────────────────────────────────────────────────
   { name: 'sprint_new', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint/create',
-    params: 'sprint_id, name, status?, plan_id?, priority?, outcome_md?, context_md?',
-    desc: 'KnowSprint: создать напрямую. Идемпотентен — upsert по sprint_id. Сеет начальную открытую KnowSprintHist-строку (HAS_STATE).' },
+    params: 'sprint_id, name, status?, plan_id?, priority?, outcome_md?, context_md?, project?',
+    desc: 'KnowSprint: создать напрямую. Идемпотентен — upsert по sprint_id. Сеет начальную открытую KnowSprintHist-строку (HAS_STATE). project (ADR-LORE-017, T16) опционально сразу привязывает BELONGS_TO_PROJECT тем же вызовом — не передан, подставляется сессионный LORE_ACTIVE_PROJECT, если задан; для привязки ещё одного проекта позже — sprint_link(rel:"project").' },
   { name: 'sprint_set', kind: 'write', entity: 'Sprint', backend: 'POST /lore/sprint/update, POST /lore/sprint/refs',
     params: 'sprint_id, name?, outcome_md?, context_md?, plan_id?, effort_days?, pr_numbers?[], pr_git_project?, pr_repo_url?, pr_replace?',
     desc: 'KnowSprint: слитый инструмент (T02) — старые lore_update_sprint (метаданные) + lore_update_sprint_refs (pr_refs) в одном вызове, маршрутизация по тому, какие поля переданы (можно оба сразу — тогда два запроса к бэкенду последовательно). pr_numbers добавляются к pr_refs (уже присутствующие пропускаются); pr_replace=true — сначала отбросить старые pr_refs, а не дописывать. Статус этим тулом не меняется — status_set. Правило: всегда заполнять context_md, если известно, зачем спринт существует.' },
