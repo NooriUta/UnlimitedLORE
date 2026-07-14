@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "subagent",
+  "description": "Marketer — BRAGI content archive, own tasks, insights/recommendations, docs. Owns content-type tasks per ADR-LORE-015 §1b.",
+  "permission": {
+    "*": "deny",
+    "list_slices": "allow",
+    "query_slice": "allow",
+    "bragi_*": "allow",
+    "task_*": "allow",
+    "insight_*": "allow",
+    "rec_*": "allow",
+    "doc_*": "allow",
+    "status_set": "allow"
+  }
+}

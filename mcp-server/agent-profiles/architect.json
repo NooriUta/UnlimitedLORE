@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "subagent",
+  "description": "Architect — ADRs, components, tech registry, specs, runbooks, docs, decisions, and project registration (pm+architect+full only, ADR-LORE-014 §3 amendment for T15). Owns design/dev/ops-review task types per ADR-LORE-015 §1a.",
+  "permission": {
+    "*": "deny",
+    "list_slices": "allow",
+    "query_slice": "allow",
+    "adr_*": "allow",
+    "component_*": "allow",
+    "tech_*": "allow",
+    "spec_*": "allow",
+    "runbook_*": "allow",
+    "doc_*": "allow",
+    "decision_*": "allow",
+    "project_new": "allow",
+    "status_set": "allow"
+  }
+}
