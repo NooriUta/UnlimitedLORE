@@ -5,6 +5,7 @@ import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -30,7 +31,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * exactly the kind of DB-transaction behavior a mock would rubber-stamp.
  */
 @QuarkusTest
-@QuarkusTestResource(LoreArcadeDbTestResource.class)
+// restrictToAnnotatedClass: @QuarkusTestResource is GLOBAL by default in Quarkus,
+// so without this the ArcadeDB Testcontainer would boot for EVERY test class — and
+// its Ryuk reaper failing then crashes the whole suite bootstrap (unrelated tests
+// like LoreAdminGuardTest get reported as failed). Scope the container to just this
+// class, which is the only one that needs it.
+@QuarkusTestResource(value = LoreArcadeDbTestResource.class, restrictToAnnotatedClass = true)
+// This is the only test that needs a real ArcadeDB container. On self-hosted
+// Docker-in-Docker CI (e.g. the Forgejo act_runner stand) Testcontainers can't
+// reach its Ryuk/DB on the default bridge network from the job container, so we
+// skip it there and rely on GitHub-hosted runners for the live-DB coverage.
+// backend-ci.yml sets LORE_SKIP_LIVE_DB_TESTS=true whenever the runner is not
+// github-hosted; the var is unset for a plain `./gradlew test`, so local runs
+// (against Docker Desktop) still exercise it.
+@DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class LoreScd2AndRollbackLiveDbTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -154,6 +168,147 @@ class LoreScd2AndRollbackLiveDbTest {
         assertEquals(1, countTaskVertices(taskUid), "duplicate attempt must not create a second KnowTask vertex");
         assertEquals(1, countTaskHistRows(taskUid), "duplicate attempt must leave no orphan KnowTaskHist row");
         assertEquals(1, countHasStateEdges(taskUid), "duplicate attempt must leave no orphan HAS_STATE edge");
+    }
+
+    // ── T16 / ADR-LORE-017: sprint_new's optional git_project + sprints slice's project filter ──
+
+    @Test
+    void sprintCreateWithGitProjectWiresBelongsToProjectEdge() {
+        final String sprintId = "SPRINT_C5_PROJECT_SCOPE_PROBE";
+        final String slug = "LORE_TEST_ORG/scope-probe-repo";
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"slug\":\"" + slug + "\"}")
+        .when().post("/lore/project")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintId + "\",\"git_project\":\"" + slug + "\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+
+        List<Map<String, Object>> linked = query(
+            "SELECT out('BELONGS_TO_PROJECT').slug AS gp FROM KnowSprint WHERE sprint_id = :s", Map.of("s", sprintId));
+        @SuppressWarnings("unchecked")
+        List<String> gps = (List<String>) linked.get(0).get("gp");
+        assertEquals(List.of(slug), gps, "sprint_new's git_project param must wire BELONGS_TO_PROJECT in the same call");
+    }
+
+    @Test
+    void sprintsSliceProjectFilterOnlyReturnsMatchingSprints() {
+        final String slugA = "LORE_TEST_ORG/scope-filter-a";
+        final String slugB = "LORE_TEST_ORG/scope-filter-b";
+        final String sprintA = "SPRINT_C5_SCOPE_FILTER_A";
+        final String sprintB = "SPRINT_C5_SCOPE_FILTER_B";
+
+        for (String slug : List.of(slugA, slugB)) {
+            given().header("X-Seer-Role", "admin").contentType("application/json")
+                .body("{\"slug\":\"" + slug + "\"}")
+            .when().post("/lore/project")
+            .then().statusCode(200);
+        }
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintA + "\",\"git_project\":\"" + slugA + "\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintB + "\",\"git_project\":\"" + slugB + "\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+
+        given()
+        .when().get("/lore/slice/sprints?project=" + slugA)
+        .then().statusCode(200)
+            .body("rows.sprint_id", org.hamcrest.Matchers.hasItem(sprintA))
+            .body("rows.sprint_id", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(sprintB)));
+    }
+
+    // ── T15: project_new (KnowGitProject) — upsert + partial-update field preservation ──
+
+    @Test
+    void projectCreateUpsertsAndPreservesNameOnPartialUpdate() {
+        final String slug = "LORE_TEST_ORG/lore-test-repo";
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"slug\":\"" + slug + "\",\"name\":\"Original Name\"}")
+        .when().post("/lore/project")
+        .then().statusCode(200);
+
+        assertEquals("Original Name", query("SELECT name FROM KnowGitProject WHERE slug = :s", Map.of("s", slug))
+            .get(0).get("name"));
+
+        // slug-only re-call (name omitted) must NOT wipe the existing name — LH-44 partial-safe upsert.
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"slug\":\"" + slug + "\"}")
+        .when().post("/lore/project")
+        .then().statusCode(200);
+
+        List<Map<String, Object>> rows = query("SELECT name FROM KnowGitProject WHERE slug = :s", Map.of("s", slug));
+        assertEquals(1, rows.size(), "upsert by slug must not create a second vertex");
+        assertEquals("Original Name", rows.get(0).get("name"), "omitted name must be left untouched, not wiped to null");
+    }
+
+    // ── T14: task_new defaults task_type to "dev" when the caller omits it ──
+
+    @Test
+    void taskCreateDefaultsTaskTypeToDevWhenOmitted() {
+        final String sprintId = "SPRINT_C5_TASKTYPE_PROBE";
+        final String taskUid  = sprintId + "/T01";
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintId + "\"}")
+        .when().post("/lore/sprint/create")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"sprint_id\":\"" + sprintId + "\",\"task_id\":\"T01\",\"title\":\"no explicit type\"}")
+        .when().post("/lore/task")
+        .then().statusCode(200);
+
+        assertEquals("dev", query("SELECT task_type FROM KnowTask WHERE task_uid = :u", Map.of("u", taskUid))
+            .get(0).get("task_type"));
+    }
+
+    // ── T13: rec_promote wires PROMOTED_TO and defaults task_type to "research" ──
+
+    @Test
+    void recPromoteCreatesPromotedToEdgeWithDefaultResearchTaskType() {
+        final String qgId  = "QG_C5_PROBE";
+        final String jobId = "QG_C5_PROBE_JOB";
+        final String recId = "QG_C5_PROBE_REC";
+        final String sprintId = "SPRINT_C5_PROMOTE_PROBE";
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"qg_id\":\"" + qgId + "\",\"name\":\"C5 probe gate\"}")
+        .when().post("/lore/quality-gate")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"job_id\":\"" + jobId + "\",\"qg_id\":\"" + qgId + "\"}")
+        .when().post("/lore/qg/job-task")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"rec_id\":\"" + recId + "\",\"job_id\":\"" + jobId + "\",\"title\":\"fix the probe\"}")
+        .when().post("/lore/qg/recommendation")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"rec_id\":\"" + recId + "\",\"sprint_id\":\"" + sprintId + "\"}")
+        .when().post("/lore/qg/promote")
+        .then().statusCode(200);
+
+        // ArcadeDB edge queries: @out/@in (not out/in) resolve the edge's endpoints.
+        List<Map<String, Object>> edge = query(
+            "SELECT count(*) AS n FROM PROMOTED_TO WHERE @out.rec_id = :r", Map.of("r", recId));
+        assertEquals(1L, ((Number) edge.get(0).get("n")).longValue(),
+            "rec_promote must create exactly one PROMOTED_TO edge from the recommendation to the new task");
+
+        List<Map<String, Object>> task = query(
+            "SELECT task_type FROM KnowTask WHERE task_uid IN (SELECT @in.task_uid FROM PROMOTED_TO WHERE @out.rec_id = :r)",
+            Map.of("r", recId));
+        assertEquals("research", task.get(0).get("task_type"),
+            "promoted task must default to task_type=research (ADR-LORE-015: analyst owns research) when not overridden");
     }
 
     private long countTaskVertices(String taskUid) {

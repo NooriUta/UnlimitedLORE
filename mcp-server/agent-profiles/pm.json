@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "subagent",
+  "description": "PM — sprints, tasks, milestones, and project registration (pm+architect+full only). Owns planning-type tasks and reviews test/ops/design-type tasks per ADR-LORE-015 §1a — the most frequent reviewer role in the default author/executor/reviewer table.",
+  "permission": {
+    "*": "deny",
+    "list_slices": "allow",
+    "query_slice": "allow",
+    "sprint_*": "allow",
+    "task_*": "allow",
+    "milestone_*": "allow",
+    "project_new": "allow",
+    "status_set": "allow",
+    "status_set_batch": "allow"
+  }
+}

@@ -1,0 +1,192 @@
+name: LORE CD (local Docker stand)
+
+# Continuous deployment to the local docker-compose stand this repo shares
+# with the developer session (lore-backend :9100 / lore-app :4400). Deliberately
+# NOT modeled on aida-root's cd.yml (tag-triggered, SSH-to-remote-host, backup/
+# rollback, Telegram) — there is no remote staging/prod target here, just this
+# machine's Docker Desktop. Borrowed from that pattern: workflow_dispatch for an
+# on-demand run, a concurrency group so two deploys never race, and a real
+# post-deploy health check instead of trusting `docker compose up` succeeding.
+#
+# Runs via the Forgejo act_runner registered on THIS host (label "ubuntu-latest",
+# see the job's runs-on comment) — a github-hosted runner has no access to this
+# machine's Docker Desktop / compose stack at all, so this only makes sense here.
+
+on:
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to redeploy'
+        required: false
+        default: 'both'
+        type: choice
+        options: [both, backend, frontend]
+
+concurrency:
+  group: lore-cd-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a deploy in flight — queue instead
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build + deploy to local Docker stand
+    # Matches backend-ci.yml: the only registered runner label is "ubuntu-latest"
+    # (mapped by the runner's own config to the forgejo-ci-runtime:jdk21 image),
+    # NOT "self-hosted" — that label doesn't exist here and the job would queue
+    # forever. github-hosted runners can't reach this host's Docker Desktop at
+    # all, so this workflow only makes sense running here regardless of the label name.
+    runs-on: ubuntu-latest
+    # This job's checkout has no .env (gitignored — it holds the ArcadeDB root
+    # password). docker-compose.yml reads ARCADEDB_ROOT_PASSWORD from the shell
+    # environment (which wins over any .env), so pass it here from a repo
+    # secret. Found the hard way on 2026-07-13: without this, compose silently
+    # falls back to the literal placeholder "unset", the backend authenticates
+    # to ArcadeDB (:2480) as root/unset, and every query 403s — while the
+    # container itself stays "healthy" the whole time, so this workflow's own
+    # health check didn't catch it.
+    env:
+      ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify required secrets are configured
+        run: |
+          if [ -z "${ARCADEDB_ROOT_PASSWORD}" ]; then
+            echo "::error::secrets.ARCADEDB_ROOT_PASSWORD is not set on this repo — deploy would silently break the backend's ArcadeDB auth (see comment above). Add it in Forgejo: Settings -> Actions -> Secrets."
+            exit 1
+          fi
+
+      - name: Resolve which services to touch
+        id: which
+        run: |
+          svc="${{ github.event.inputs.service || 'both' }}"
+          echo "backend=$([ "$svc" != frontend ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "frontend=$([ "$svc" != backend ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Build backend image
+        if: steps.which.outputs.backend == 'true'
+        run: docker compose build lore-backend
+
+      - name: Build frontend image
+        if: steps.which.outputs.frontend == 'true'
+        run: docker compose build lore-app
+
+      - name: Deploy backend
+        if: steps.which.outputs.backend == 'true'
+        run: docker compose up -d --no-deps lore-backend
+
+      - name: Deploy frontend
+        if: steps.which.outputs.frontend == 'true'
+        run: docker compose up -d --no-deps lore-app
+
+      # Real verification, not "the command exited 0" — matches the manual
+      # check this session ran by hand after every deploy this sprint.
+      #
+      # NOT curl 127.0.0.1:PORT from this step: this job runs inside a runner
+      # container on the isolated "forgejo-net" bridge network (DooD via a
+      # socket mount, not host networking) — its own 127.0.0.1 is itself, not
+      # the Docker host, so a direct curl here would silently hit nothing.
+      # `docker inspect`/`docker exec` go through the mounted socket instead,
+      # which reaches the actual containers regardless of network topology.
+      #
+      # Resolved via `docker compose ps -q`, not a hardcoded container name —
+      # the compose project name is derived from the checkout directory, which
+      # may not be "unlimitedlore" on the runner's workspace.
+      - name: Wait for backend health
+        if: steps.which.outputs.backend == 'true'
+        run: |
+          cid=$(docker compose ps -q lore-backend)
+          for i in $(seq 1 24); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo "missing")
+            if [ "$status" = "healthy" ]; then echo "backend healthy"; exit 0; fi
+            sleep 5
+          done
+          echo "::error::backend did not report healthy within 120s (last status: $status)"
+          exit 1
+
+      - name: Verify frontend serves
+        if: steps.which.outputs.frontend == 'true'
+        run: |
+          cid=$(docker compose ps -q lore-app)
+          code=$(docker exec "$cid" curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/)
+          if [ "$code" != "200" ]; then
+            echo "::error::frontend (in-container) returned HTTP $code"
+            exit 1
+          fi
+          echo "frontend OK ($code)"
+
+      # Telegram notifications — same pattern as aida-root's cd.yml (secrets.
+      # TELEGRAM_TOKEN/TELEGRAM_CHAT_ID, silent no-op if unset so this doesn't
+      # fail for anyone who hasn't configured them on THIS repo — Forgejo
+      # secrets are per-repo, aida-root's config does not carry over here).
+      # Only success/failure, no "start" ping: this fires on every push to
+      # develop, and a start-notification for every local dev push would be
+      # noisy where aida-root's tag-triggered prod releases are not.
+      # continue-on-error + trailing `exit 0`: Telegram is best-effort only.
+      # 2026-07-13: api.telegram.org:443 was unreachable from this host entirely
+      # (host + both docker networks timed out at the TCP level). 2026-07-14: the
+      # act_runner containers were given an outbound HTTP(S) proxy (runner.envs
+      # HTTP_PROXY/HTTPS_PROXY -> host.docker.internal:10809, routing through the
+      # host's local VPN client; NO_PROXY keeps the Forgejo-internal checkout
+      # unproxied) and Telegram is reachable again — confirmed live via a real
+      # workflow_dispatch run reaching the user's Telegram. Kept best-effort
+      # anyway: the proxy is a detail of THIS dev machine, not guaranteed to
+      # exist on whatever CI host eventually replaces it, so an unreachable
+      # Telegram still must not turn a healthy deploy red.
+      - name: Notify success
+        if: success()
+        continue-on-error: true
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          [ -z "${TG_TOKEN}" ] && exit 0
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG=$(printf "✅ LORE local CD deployed\nRef: %s\nSHA: %s\nBy: %s\nService: %s\n\nRun: %s" \
+            "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
+            "${{ github.event.inputs.service || 'both' }}" "$RUN_URL")
+          jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
+            '{"chat_id":$chat,"text":$text}' > /tmp/tg-payload.json
+          for attempt in 1 2 3; do
+            if curl -sf --max-time 10 -X POST \
+                 "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                 -H "Content-Type: application/json" \
+                 -d @/tmp/tg-payload.json; then
+              echo "[tg] success notification sent (attempt $attempt)"
+              break
+            fi
+            echo "::warning::[tg] success-notify attempt $attempt/3 failed"
+            [ $attempt -lt 3 ] && sleep $((attempt * 5))
+          done
+          exit 0
+
+      - name: Notify failure
+        if: failure()
+        continue-on-error: true
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          [ -z "${TG_TOKEN}" ] && exit 0
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG=$(printf "❌ LORE local CD FAILED\nRef: %s\nSHA: %s\nBy: %s\nService: %s\n\nRun: %s" \
+            "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
+            "${{ github.event.inputs.service || 'both' }}" "$RUN_URL")
+          jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
+            '{"chat_id":$chat,"text":$text}' > /tmp/tg-payload.json
+          for attempt in 1 2 3; do
+            if curl -sf --max-time 10 -X POST \
+                 "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                 -H "Content-Type: application/json" \
+                 -d @/tmp/tg-payload.json; then
+              echo "[tg] failure notification sent (attempt $attempt)"
+              break
+            fi
+            echo "::warning::[tg] failure-notify attempt $attempt/3 failed"
+            [ $attempt -lt 3 ] && sleep $((attempt * 5))
+          done
+          exit 0

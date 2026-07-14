@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип · ADR-LORE-019 — Решения как дочерняя сущность ADR</title>
+<style>
+  :root{
+    --bg0:#0f1115; --bg1:#161922; --bg2:#1e222d; --b1:#181c26; --b2:#212633; --b3:#2b3140;
+    --bd:#2a3040; --t1:#e6e9f0; --t2:#aab2c5; --t3:#7c869c; --t4:#5b6478;
+    --acc:#e0a03a; --on-accent:#1a1206; --suc:#4caf72; --wrn:#d9a441; --dng:#d76b6b; --inf:#5b9bd5;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+    --fs-2xs:10px; --fs-xs:11px; --fs-sm:12px; --fs-base:13px; --fs-lg:14px; --fs-xl:17px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg0:#f6f7fa; --bg1:#fff; --bg2:#eef1f6; --b1:#fff; --b2:#f1f3f8; --b3:#e2e6ee;
+      --bd:#dbe0ea; --t1:#1c2230; --t2:#485264; --t3:#7a8397; --t4:#a4adbf; --on-accent:#1a1206; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg0);color:var(--t1);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:var(--fs-base);line-height:1.45;padding:24px}
+  h1{font-size:18px;margin:0 0 4px}
+  .h1sub{color:var(--t3);font-size:var(--fs-sm);margin:0 0 14px}
+  .frame{background:var(--bg1);border:1px solid var(--bd);border-radius:12px;overflow:hidden;max-width:1000px}
+  .head{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--bd)}
+  .h1x{font-size:var(--fs-xl);font-weight:700}
+
+  .tabs{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--bd);overflow-x:auto}
+  .tab{padding:9px 12px;font-size:var(--fs-sm);color:var(--t3);border-bottom:2px solid transparent;white-space:nowrap;cursor:default}
+  .tab.on{color:var(--t1);border-bottom-color:var(--acc)}
+
+  .filterbar{padding:8px 16px;border-bottom:1px solid var(--bd);display:flex;flex-direction:column;gap:7px}
+  .filterrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .flabel{font-size:var(--fs-xs);color:var(--t3);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-right:2px;min-width:74px}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-sm);padding:3px 10px;border-radius:12px;cursor:default;user-select:none;border:1px solid var(--b3);color:var(--t3)}
+  .chip.on{color:var(--t1);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,transparent)}
+  .cnt{font-size:var(--fs-2xs);opacity:.7}
+  .newrow{background:color-mix(in srgb, var(--acc) 5%, transparent);margin:0 -16px;padding:7px 16px;border-top:1px dashed color-mix(in srgb, var(--acc) 30%, var(--bd));border-bottom:1px dashed color-mix(in srgb, var(--acc) 30%, var(--bd))}
+
+  .list{padding:4px 0}
+  .drow{display:flex;align-items:flex-start;gap:10px;padding:9px 16px;border-bottom:1px solid var(--b2)}
+  .drow.stale{opacity:.55}
+  .dicon{width:20px;height:20px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px;
+    background:color-mix(in srgb, var(--wrn) 16%, transparent);color:var(--wrn)}
+  .dmain{flex:1;min-width:0}
+  .dtext{color:var(--t1);font-size:var(--fs-sm);line-height:1.5}
+  .dmeta{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
+  .did{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t4)}
+  .parent{font-family:var(--mono);font-size:var(--fs-2xs);padding:1px 6px;border-radius:3px;color:var(--inf);
+    background:color-mix(in srgb,var(--inf) 12%,transparent);border:1px solid color-mix(in srgb,var(--inf) 30%,transparent)}
+  .parent.none{color:var(--t4);background:transparent;border-color:var(--b3);border-style:dashed}
+  .ctag{font-family:var(--mono);font-size:var(--fs-2xs);padding:1px 6px;border-radius:3px;color:var(--acc);
+    background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 25%,transparent)}
+  .ttag{font-family:var(--mono);font-size:var(--fs-2xs);padding:1px 6px;border-radius:3px;color:var(--t3);background:var(--b2);border:1px solid var(--b3)}
+  .ttag.warn{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 35%,transparent);background:color-mix(in srgb,var(--wrn) 10%,transparent)}
+  .ttag.dead{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 35%,transparent);background:color-mix(in srgb,var(--dng) 10%,transparent)}
+  .ddate{font-size:var(--fs-2xs);color:var(--t4);margin-left:auto;flex-shrink:0}
+
+  .passport{background:var(--bg1);border:1px solid var(--bd);border-radius:12px;padding:16px 20px;max-width:1000px}
+  .pp-top{display:flex;justify-content:space-between;align-items:center}
+  .pp-back{color:var(--acc);font-size:var(--fs-sm)}
+  .pp-btn{border:1px solid var(--b3);border-radius:4px;padding:2px 9px;font-size:var(--fs-xs);color:var(--t2)}
+  .pp-head{display:flex;align-items:center;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
+  .pp-id{font-size:var(--fs-lg);font-weight:600}
+  .pp-name{color:var(--t2);flex:1}
+  .statuspill{font-size:var(--fs-2xs);font-family:var(--mono);padding:1px 7px;border-radius:3px;border:1px solid var(--bd);color:var(--suc);border-color:color-mix(in srgb,var(--suc) 40%,var(--bd))}
+  .pp-sec{margin-top:16px}
+  .pp-slabel{font-size:var(--fs-xs);color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+  .pp-body{color:var(--t2);font-size:var(--fs-sm);line-height:1.6}
+  .pp-sec.childs{background:color-mix(in srgb,var(--wrn) 6%,transparent);margin-left:-20px;margin-right:-20px;padding:12px 20px;
+    border-top:1px dashed color-mix(in srgb,var(--wrn) 35%,var(--bd));border-bottom:1px dashed color-mix(in srgb,var(--wrn) 35%,var(--bd))}
+  .pp-sec.childs .pp-slabel{color:var(--wrn)}
+  .crow{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--b2)}
+  .crow:last-child{border-bottom:none}
+
+  .note{max-width:1000px;color:var(--t3);font-size:var(--fs-sm);margin:8px 0 30px;line-height:1.6}
+  .note b{color:var(--t2)}
+  .note code{font-family:var(--mono);background:var(--b2);padding:1px 5px;border-radius:3px;color:var(--t2)}
+  .sect{margin-top:36px}
+</style>
+</head>
+<body>
+
+<div class="sect" style="margin-top:0">
+<h1>Режим «ПРАВИЛА» — раздел «Решения»</h1>
+<p class="h1sub">Разработчик: «дай правила, по которым я строю дизайн». Сквозной список решений, фильтруемый по компоненту / проблеме / ADR. Весь ADR читать не надо. Данные — реальные, из графа.</p>
+<div class="frame">
+  <div class="head"><span class="h1x">LORE</span></div>
+  <div class="tabs">
+    <span class="tab">Вехи</span><span class="tab">План</span><span class="tab">Спринты</span>
+    <span class="tab">ADR</span><span class="tab on">Решения</span><span class="tab">Релизы</span>
+  </div>
+  <div class="filterbar">
+    <div class="filterrow newrow">
+      <span class="flabel">Компонент</span>
+      <span class="chip">HND <span class="cnt">14</span></span>
+      <span class="chip">YGG <span class="cnt">9</span></span>
+      <span class="chip on">OBS <span class="cnt">4</span></span>
+      <span class="chip">MIMIR <span class="cnt">7</span></span>
+      <span class="chip">SKULD <span class="cnt">5</span></span>
+    </div>
+    <div class="filterrow newrow" style="border-top:none">
+      <span class="flabel">Проблема</span>
+      <span class="chip on">no-grafana <span class="cnt">4</span></span>
+      <span class="chip">antlr-collision <span class="cnt">4</span></span>
+      <span class="chip">geoid <span class="cnt">8</span></span>
+      <span class="chip">stale-versions <span class="cnt">8</span></span>
+    </div>
+    <div class="filterrow">
+      <span class="flabel">Родитель</span>
+      <span class="chip">все</span>
+      <span class="chip">есть ADR <span class="cnt">75</span></span>
+      <span class="chip">без ADR <span class="cnt">55</span></span>
+    </div>
+  </div>
+  <div class="list">
+    <div class="drow stale">
+      <span class="dicon">Р</span>
+      <span class="dmain">
+        <span class="dtext">OTel strategy: <b>C3</b> — OTel SDK + ArcadeDB OTLP receiver + HEIMDALL UI. Из 5 комбинаций (C1…C5) выбран C3. <b>НЕ C5</b> (full Grafana stack) — нарушает ADR-TS-001.</span>
+        <span class="dmeta">
+          <span class="did">#104</span>
+          <span class="parent">ADR-TS-001 ↗</span>
+          <span class="ctag">OBS</span><span class="ttag">no-grafana</span>
+          <span class="ttag dead">⚠ гипотеза не подтвердилась</span>
+          <span class="ddate">2026-06-01</span>
+        </span>
+      </span>
+    </div>
+    <div class="drow">
+      <span class="dicon">Р</span>
+      <span class="dmain">
+        <span class="dtext">Prod Observability: хранилище = ArcadeDB-native TIMESERIES в FRIGG, <b>НЕ Prometheus</b>. Визуализация — Heimdall Capacity.</span>
+        <span class="dmeta">
+          <span class="did">#125</span>
+          <span class="parent">ADR-TS-001 ↗</span>
+          <span class="ctag">OBS</span><span class="ttag">no-grafana</span>
+          <span class="ddate">2026-06-11</span>
+        </span>
+      </span>
+    </div>
+    <div class="drow">
+      <span class="dicon">Р</span>
+      <span class="dmain">
+        <span class="dtext"><code>ContainerMetricCollector</code> — per-service cgroup v2, без docker.sock. Свои сборщики вместо внешнего агента.</span>
+        <span class="dmeta">
+          <span class="did">#107</span>
+          <span class="parent">ADR-TS-001 ↗</span>
+          <span class="ctag">OBS</span><span class="ttag">no-grafana</span>
+          <span class="ddate">2026-06-28</span>
+        </span>
+      </span>
+    </div>
+    <div class="drow">
+      <span class="dicon">Р</span>
+      <span class="dmain">
+        <span class="dtext">DB-метрики ArcadeDB = <b>Prometheus-плагин (pull), НЕ OTLP</b>. Своего стека не ставим, но <b>PromQL endpoint держим для заказчика</b> — его Grafana подключается без миграции данных.</span>
+        <span class="dmeta">
+          <span class="did">D-2026-ARCADE-OBSERVABILITY</span>
+          <span class="parent">ADR-TS-001 ↗</span>
+          <span class="ctag">OBS</span><span class="ttag">no-grafana</span>
+          <span class="ddate">2026-07-10</span>
+        </span>
+      </span>
+    </div>
+  </div>
+</div>
+<p class="note">
+  Фильтр <b>«Проблема» = <code>no-grafana</code></b> собрал всю линейку наблюдаемости за 4 месяца одним кликом — <b>ни один ADR читать не пришлось</b>.
+  Видно и то, что <b>#104 устарел</b> (гипотеза C3 не подтвердилась — итог в <code>D-2026-ARCADE-OBSERVABILITY</code>), при этом само ограничение
+  <code>ADR-TS-001</code> выдержано во всех четырёх. Тег <code>stale-versions</code> — для решений, где записаны версии апреля (актуальные — в tech-реестре, не здесь).
+</p>
+</div>
+
+<div class="sect">
+<h1>Режим «ОБОСНОВАНИЕ» — паспорт ADR</h1>
+<p class="h1sub">Архитектор / аналитик: «почему мы так решили». Полный ADR + все его дочерние решения одной секцией. Сквозное ограничение видно вместе со всем, что оно породило.</p>
+<div class="passport">
+  <div class="pp-top"><span class="pp-back">← К списку</span><span class="pp-btn">✎ Редактировать</span></div>
+  <div class="pp-head">
+    <span class="pp-id">ADR-TS-001</span>
+    <span class="statuspill">ACCEPTED</span>
+    <span class="pp-name">Протокол наружу (OTel/PromQL-ready) — UI внутрь (HEIMDALL). Свой observability-стек не разворачиваем</span>
+    <span class="ctag">OBS</span>
+  </div>
+
+  <div class="pp-sec">
+    <div class="pp-slabel">Context — почему</div>
+    <div class="pp-body">
+      Наблюдаемость требует стека: сбор → хранение → визуализация. Индустриальный дефолт — Prometheus + Grafana (+ Jaeger/Tempo).
+      Здесь <b>две разные задачи, которые легко спутать</b>:
+      <br>· <b>наша эксплуатация</b> — нам нужен рабочий UI, и он уже есть (HEIMDALL: in-process сборщики → TIMESERIES в FRIGG → Heimdall Capacity);
+      <br>· <b>интеграция у заказчика</b> — у него может быть СВОЙ observability-стек, и он вправе забрать наши метрики к себе.
+      <br>Разворачивать Grafana/Prometheus-сервер у себя — значит платить несколькими сервисами в compose и своей эксплуатацией за задачу, которая у нас уже решена.
+    </div>
+  </div>
+
+  <div class="pp-sec">
+    <div class="pp-slabel">Decision — что решили</div>
+    <div class="pp-body">
+      <b>Протокол — да, стек — нет.</b>
+      <br>· <b>Наружу:</b> остаёмся <b>OTel/PromQL-ready</b> — заказчик может подключить свою Grafana / свой OTel-коллектор
+      (<code>PromQL endpoint в ArcadeDB</code>) и забрать данные <b>без миграции</b>.
+      <br>· <b>Внутрь:</b> собственный UI наблюдаемости — <b>HEIMDALL</b>. Grafana / Prometheus-сервер / OTel-коллектор
+      в наш compose <b>не добавляются</b>.
+    </div>
+  </div>
+
+  <div class="pp-sec childs">
+    <div class="pp-slabel">↓ Решения этого ADR (4) — сквозное ограничение в действии</div>
+    <div class="crow"><span class="dicon">Р</span><span class="dmain">
+      <span class="dtext">OTel strategy C3. <b>C5 (full Grafana stack) отвергнут — нарушает ADR-TS-001.</b></span>
+      <span class="dmeta"><span class="did">#104</span><span class="ttag dead">⚠ гипотеза не подтвердилась</span><span class="ddate">2026-06-01</span></span>
+    </span></div>
+    <div class="crow"><span class="dicon">Р</span><span class="dmain">
+      <span class="dtext">Prod Observability: TIMESERIES в FRIGG, <b>не Prometheus</b>. Визуализация — Heimdall Capacity.</span>
+      <span class="dmeta"><span class="did">#125</span><span class="ddate">2026-06-11</span></span>
+    </span></div>
+    <div class="crow"><span class="dicon">Р</span><span class="dmain">
+      <span class="dtext"><code>ContainerMetricCollector</code> — свои сборщики (cgroup v2), не внешний агент.</span>
+      <span class="dmeta"><span class="did">#107</span><span class="ddate">2026-06-28</span></span>
+    </span></div>
+    <div class="crow"><span class="dicon">Р</span><span class="dmain">
+      <span class="dtext">DB-метрики = Prometheus-плагин (pull), <b>не OTLP</b> — <b>заменяет C3 из #104</b>. PromQL endpoint остаётся для заказчика.</span>
+      <span class="dmeta"><span class="did">D-2026-ARCADE-OBSERVABILITY</span><span class="ddate">2026-07-10</span></span>
+    </span></div>
+  </div>
+
+  <div class="pp-sec">
+    <div class="pp-slabel">Consequences — следствия</div>
+    <div class="pp-body">
+      Проверено 2026-07-10: в compose <b>0 сервисов</b> Grafana / Prometheus-сервера / OTel-коллектора — ограничение выдержано за 4 месяца и 4 решения.
+      Способ менялся (OTLP → Prometheus-плагин), <b>ограничение — нет</b>. Ровно то, ради чего ADR и существует: правило пережило смену реализации.
+      <br><br>Ключевое, что <b>«протокол наружу» — не отложенная задача, а действующее обязательство</b>: `PromQL endpoint` держится ради заказчика,
+      даже пока свою Grafana мы не ставим. Спутать эти два уровня — значит либо развернуть лишний стек у себя, либо закрыться от интеграции у клиента.
+    </div>
+  </div>
+</div>
+<p class="note">
+  <b>Один-ко-многим:</b> один ADR-ограничение → 4 решения, принятых в разное время разными людьми. В плоской модели (ADR-016) эта связь была бы <b>невидима</b> —
+  каждое решение стало бы отдельным ADR без общего родителя. Секция «Решения этого ADR» = обход <code>in('DECIDED_IN')</code>, по образцу существующих «Depends on» / «Supersedes».
+</p>
+</div>
+
+</body>
+</html>

@@ -1,5 +1,10 @@
 # LORE — обзор системы
 
+**Перенесено в LORE (2026-07-14):** полное содержимое теперь живёт как документ
+`lore_overview_ru` — `:4400/lore?section=knowledge&passport=lore_overview_ru`
+(или `query_slice({slice:"doc_by_id", params:{id:"lore_overview_ru"}})` из MCP).
+Этот файл больше не обновляется — правьте документ в LORE, не этот .md.
+
 **LORE** — персистентный граф знаний проекта AIDA: архитектурные решения (ADR),
 спринты, задачи, компоненты, релизы, quality gates, runbook'и, спеки — единый
 источник правды вместо разрозненных markdown-файлов по репозиториям. Живёт в
@@ -54,7 +59,7 @@ ArcadeDB (граф), читается/пишется через собствен
   слева (master) + деталь справа (detail), ссылки на сущности — `?section=X&passport=ID`
   (**не GitHub URL** — у сущностей LORE своего внешнего URL нет).
 - **MCP-сервер** (`mcp-server/`, `aida-lore-mcp`) — обёртка над HTTP backend'ом
-  для LLM-агентов (`lore_create_adr`, `lore_query_slice`, `lore_record_qg_run`, …).
+  для LLM-агентов (`adr_new`, `query_slice`, `qg_run_log`, …).
   Собирается `npm run build` → `dist/index.js`, подключается через `.mcp.json`
   (`LORE_BACKEND_URL=http://localhost:9100`).
 
@@ -95,9 +100,9 @@ ArcadeDB `INSERT`/`UPDATE` в обход MCP/HTTP **запрещены для э
 Отдельная подсистема: `QualityGate` (проверяемый набор инвариантов) →
 QG-рутина (bash-скрипт в `C:/AIDA/docs/change/routines-prompts/`) прогоняется →
 пишет `ClRoutineRun` + `ClRoutineMetric` (один на инвариант: `key/value/unit/
-target/direction/status/source`, `value=-1`→SKIP) через `lore_record_qg_run` →
+target/direction/status/source`, `value=-1`→SKIP) через `qg_run_log` →
 при FAIL/WARN может завести `QGJobTask`+`QGRecommendation` → пользователь
-подтверждает (`lore_promote_recommendation`) → создаётся реальный `KnowTask`.
+подтверждает (`rec_promote`) → создаётся реальный `KnowTask`.
 Отчёт — `LoreQGDetail.tsx` (4 слоя: что/динамика/почему/регламент, ADR-QG-004),
 fleet-триаж по всем гейтам — вкладка Quality в `LoreAnalytics.tsx`.
 
@@ -108,9 +113,9 @@ fleet-триаж по всем гейтам — вкладка Quality в `LoreA
 | Как читается конкретное поле в UI | Слайс в `LoreSlices.java` → React-компонент в `src/components/lore/` |
 | Как что-то записывается | Эндпоинт в `AidaLoreResource.java`, или MCP-тул в `mcp-server/src/tools/loreWrite.ts` |
 | Полная схема БД | `backend/db-schema/` |
-| Список доступных слайсов | `GET http://localhost:9100/lore/slices`, или MCP `lore_list_slices` |
+| Список доступных слайсов | `GET http://localhost:9100/lore/slices`, или MCP `list_slices` |
 | QG-рутины (bash-скрипты проверок) | `C:/AIDA/docs/change/routines-prompts/qg-gates.md`, `qg-aida-arch.md` |
-| ADR-стандарт для QG-метрик | ADR-QG-002 (SMART-QG Metric Standard) — сама живёт в LORE, читается `lore_query_slice adr {id: "ADR-QG-002"}` |
+| ADR-стандарт для QG-метрик | ADR-QG-002 (SMART-QG Metric Standard) — сама живёт в LORE, читается `query_slice adr {id: "ADR-QG-002"}` |
 
 ## Смежные документы
 

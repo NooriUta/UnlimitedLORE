@@ -46,7 +46,8 @@ const S = {
   },
   compBlock: { marginBottom: 14, background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' as const },
   compHeader: { display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderBottom: '1px solid var(--bd)', background: 'var(--bg2)' },
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 'var(--fs-base)' },
+  tableWrap: { overflowX: 'auto' as const, width: '100%' },
+  table: { width: '100%', minWidth: 440, borderCollapse: 'collapse' as const, fontSize: 'var(--fs-base)' },
   th: { textAlign: 'left' as const, padding: '5px 12px', color: 'var(--t3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontWeight: 600 },
   td: { padding: '5px 12px', borderTop: '1px solid var(--bd)', color: 'var(--t2)' },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
@@ -168,6 +169,7 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
                 )}
 
                 {techRows.length > 0 ? (
+                  <div style={S.tableWrap}>
                   <table style={S.table}>
                     <thead>
                       <tr>
@@ -208,6 +210,7 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
                       })}
                     </tbody>
                   </table>
+                  </div>
                 ) : addingFor !== c.component_id && (
                   <div style={{ padding: '8px 12px', fontSize: 'var(--fs-sm)', color: 'var(--t4)', fontStyle: 'italic' }}>
                     {t('lore.techRegistry.noTech', 'Технологии не зарегистрированы')}

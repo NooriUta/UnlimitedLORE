@@ -220,7 +220,8 @@ public class LoreQgResource extends LoreResourceBase {
     }
 
     public record QGPromoteRequest(
-        String rec_id, String sprint_id, String task_uid, String title, String note_md) {}
+        String rec_id, String sprint_id, String task_uid, String title, String note_md,
+        String task_type) {}
 
     /** ISO-week id for the rotating QG-housekeeping sprint, e.g. "SPRINT_QG_HOUSEKEEPING_2026W27". */
     private static String weeklyHousekeepingSprintId() {
@@ -327,12 +328,19 @@ public class LoreQgResource extends LoreResourceBase {
                 note = sb.toString().trim();
             }
 
-            // 4. Upsert task vertex with task_id + component_id
+            // 4. Upsert task vertex with task_id + component_id + type/author defaults.
+            // task_type defaults to "research" (ADR-LORE-015 §1b: Analyst owns research)
+            // unless the caller overrides; author_agent defaults to the owning role
+            // ("analyst") rather than a session id, since this task is system-created
+            // from a QG finding, not authored by a specific working session (T13, 2026-07-14).
             String compId = recComp.isBlank() ? "AIDA" : recComp;
+            String taskType = req.task_type() != null ? req.task_type() : "research";
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowTask SET task_uid=:uid, task_id=:tid, title=:title, " +
-                "note_md=:note, src='qg', component_id=:cid UPSERT WHERE task_uid=:uid",
-                mapOfNullable("uid", taskUid, "tid", taskId, "title", title, "note", note, "cid", compId)))
+                "note_md=:note, src='qg', component_id=:cid, task_type=:tt, author_agent=:auth " +
+                "UPSERT WHERE task_uid=:uid",
+                mapOfNullable("uid", taskUid, "tid", taskId, "title", title, "note", note,
+                    "cid", compId, "tt", taskType, "auth", "analyst")))
                 .await().indefinitely();
             // Insert KnowTaskHist row with TODO status
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",

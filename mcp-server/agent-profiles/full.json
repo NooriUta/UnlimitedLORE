@@ -1,0 +1,8 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "primary",
+  "description": "Claude / backfill — unrestricted access to every aida-lore MCP tool. The only primary-mode profile; every subagent profile below is a restricted whitelist relative to this one (ADR-LORE-014 §3).",
+  "permission": {
+    "*": "allow"
+  }
+}

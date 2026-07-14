@@ -7,6 +7,7 @@ import { MartProse } from '../bench/MartProse';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
+  upsertDictEntry,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
@@ -14,6 +15,7 @@ import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
 import { areaColor } from './LoreComponentList';
 import { useDictionary } from './DictionaryProvider';
+import { useIsNarrow } from '../../hooks/useMediaQuery';
 import TipTapField from './TipTapField';
 
 interface SprintMeta {
@@ -343,6 +345,57 @@ function StatusCounts({ tasks, filter, onFilter }: {
   );
 }
 
+// task_type filter chips (ADR-LORE-015, T14) — same multi-select pattern as
+// StatusCounts, colored from the `task_type` dictionary instead of statusMeta.
+function TypeCounts({ tasks, filter, onFilter }: {
+  tasks: LoreSprintTask[];
+  filter: Set<string>;
+  onFilter: (key: string) => void;
+}) {
+  const { t } = useTranslation();
+  const { entries: dictTypes } = useDictionary('task_type');
+  const counts: Record<string, number> = {};
+  for (const tk of tasks) {
+    if (!tk.task_type) continue;
+    counts[tk.task_type] = (counts[tk.task_type] ?? 0) + 1;
+  }
+  const shown = dictTypes.filter(e => counts[e.code]);
+  if (shown.length === 0) return null;
+  return (
+    <span role="group" aria-label={t('lore.sprintDetail.typeCounts.ariaLabel', 'Задачи по типам (мультивыбор)')}
+      style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+      {shown.map(e => {
+        const active = filter.has(e.code);
+        const color = e.color || 'var(--t3)';
+        const label = e.label_ru || e.code;
+        const actionLabel = active
+          ? t('lore.sprintDetail.statusCounts.unset', 'снять')
+          : t('lore.sprintDetail.statusCounts.filter', 'фильтровать');
+        return (
+          <button
+            key={e.code} type="button" aria-pressed={active}
+            title={`${label}: ${counts[e.code]} — ${actionLabel}`}
+            aria-label={`${label}: ${counts[e.code]}`}
+            onClick={() => onFilter(e.code)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '0 6px', height: 18, borderRadius: 9, cursor: 'pointer',
+              fontSize: 'var(--fs-sm)', fontWeight: 700, lineHeight: 1, color,
+              background: active
+                ? `color-mix(in srgb, ${color} 22%, transparent)`
+                : 'transparent',
+              border: `1px solid color-mix(in srgb, ${color} ${active ? 90 : 35}%, transparent)`,
+            }}
+          >
+            {e.icon && <GameIcon slug={e.icon} size={11} style={{ color }} />}
+            {counts[e.code]}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
 const S = {
   root: {
     flex: 1, overflowY: 'auto' as const,
@@ -454,6 +507,27 @@ const mdBox: React.CSSProperties = {
   padding: '4px 8px 8px 26px', overflowX: 'auto',
 };
 
+// ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer_agent picked from the
+// extensible `agent_role` dictionary. Native <input list=...> gives a dropdown
+// of known roles while still accepting free text — a role typed here that isn't
+// in the dictionary yet gets upserted into it on save (see TaskLine.save below),
+// so the next picker offers it too.
+function AgentRoleInput({ id, value, onChange, placeholder, title }: {
+  id: string; value: string; onChange: (v: string) => void; placeholder: string; title?: string;
+}) {
+  const { entries } = useDictionary('agent_role');
+  const listId = `agent-role-opts-${id}`;
+  return (
+    <>
+      <input list={listId} value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder} title={title} style={{ ...inputStyle, width: 120 }} />
+      <datalist id={listId}>
+        {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
+      </datalist>
+    </>
+  );
+}
+
 function TaskLine({ t: task, allComps, onChanged, onError }: {
   t: LoreSprintTask;
   allComps: CompRow[];
@@ -468,6 +542,12 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
   const [title, setTitle]     = useState(task.title ?? '');
   const [note, setNote]       = useState(task.note_md ?? '');
   const [effort, setEffort]   = useState(task.effort_days != null ? String(task.effort_days) : '');
+  // ADR-LORE-014 §4: author/executor/reviewer_agent — free-text task ownership.
+  const [author, setAuthor]     = useState(task.author_agent ?? '');
+  const [executor, setExecutor] = useState(task.executor_agent ?? '');
+  const [reviewer, setReviewer] = useState(task.reviewer_agent ?? '');
+  // ADR-LORE-015 (T14): task_type classification — closed dictionary, no free text.
+  const [taskType, setTaskType] = useState(task.task_type ?? '');
   const [busy, setBusy]       = useState(false);
   const [compPicker, setCompPicker] = useState(false);
   const [compBusy, setCompBusy]     = useState<string | null>(null);
@@ -484,13 +564,38 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     finally { setCompBusy(null); }
   }
 
+  const { byCode: agentRoleByCode } = useDictionary('agent_role');
+  const { byCode: dictTaskTypeByCode, entries: dictTaskTypes } = useDictionary('task_type');
+
+  // A role typed that isn't in the `agent_role` dictionary yet gets added to it
+  // (is_extensible) so it shows up in every other picker's dropdown from now on.
+  function registerNewRoles(values: string[]) {
+    const seen = new Set<string>();
+    for (const v of values) {
+      const code = v.trim();
+      if (!code || seen.has(code) || agentRoleByCode[code]) continue;
+      seen.add(code);
+      void upsertDictEntry({ dict_type: 'agent_role', code, label_ru: code, is_extensible: true })
+        .catch(() => { /* best-effort — free-text field still works without the dictionary entry */ });
+    }
+  }
+
   async function save() {
     if (busy || !title.trim()) return;
     const effRaw = effort.trim().replace(',', '.');
     const eff = effRaw === '' ? null : Number(effRaw);
     if (eff != null && !Number.isFinite(eff)) return; // ignore bad number
     setBusy(true);
-    try { await editLoreTask(task.task_uid, title.trim(), note, eff); setEditing(false); onChanged(); }
+    try {
+      await editLoreTask(task.task_uid, title.trim(), note, eff, {
+        authorAgent: author.trim() || null,
+        executorAgent: executor.trim() || null,
+        reviewerAgent: reviewer.trim() || null,
+        taskType: taskType || null,
+      });
+      registerNewRoles([author, executor, reviewer]);
+      setEditing(false); onChanged();
+    }
     catch (e) { onError(e); }
     finally { setBusy(false); }
   }
@@ -499,6 +604,10 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     setTitle(task.title ?? '');
     setNote(task.note_md ?? '');
     setEffort(task.effort_days != null ? String(task.effort_days) : '');
+    setAuthor(task.author_agent ?? '');
+    setExecutor(task.executor_agent ?? '');
+    setReviewer(task.reviewer_agent ?? '');
+    setTaskType(task.task_type ?? '');
   }
 
   return (
@@ -508,12 +617,32 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         onClick={() => { if (hasDetail && !editing) setExpanded(v => !v); }}
       >
         <GameIcon slug={meta.icon} size={13} style={{ color: meta.color, alignSelf: 'center' }} />
+        {/* task_type — icon-only chip (color from the dictionary), label moved into the
+            hover tooltip: with roles/modules/status all sharing this row, a text label
+            per chip was too much clutter (ADR-LORE-015, T14; decluttered per user request). */}
+        {task.task_type && (() => {
+          const e = dictTaskTypeByCode[task.task_type];
+          const color = e?.color || 'var(--t3)';
+          const label = e?.label_ru || task.task_type;
+          return (
+            <span title={label}
+              style={{
+                display: 'inline-flex', alignItems: 'center', padding: '1px 4px', borderRadius: 3,
+                background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
+                flexShrink: 0,
+              }}>
+              <GameIcon slug={e?.icon || 'checkbox-tree'} size={10} style={{ color }} />
+            </span>
+          );
+        })()}
         <span style={S.taskId}>{task.task_id}</span>
         {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (
           <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0 }}>{expanded ? '▲' : '▼'}</span>
         )}
-        {/* Component tags */}
+        {/* Component tags — icon-only (game_icon), full_name/component_id as tooltip;
+            same declutter treatment as the task_type chip. */}
         {Array.from(linkedIds).map(cid => {
           const c = allComps.find(x => x.component_id === cid);
           const color = areaColor(c?.area ?? '');
@@ -521,16 +650,37 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             <span key={cid}
               title={c?.full_name ?? cid}
               style={{
-                fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3,
+                display: 'inline-flex', alignItems: 'center', padding: '1px 4px', borderRadius: 3,
                 background: `color-mix(in srgb, ${color} 14%, transparent)`,
                 border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`,
-                color, fontFamily: 'var(--mono)', flexShrink: 0, cursor: 'default',
+                flexShrink: 0, cursor: 'default',
               }}
               onClick={e => e.stopPropagation()}
-            >{cid}</span>
+            >
+              <GameIcon slug={c?.game_icon} size={10} style={{ color }} />
+            </span>
           );
         })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {/* ADR-LORE-014 §4: all three roles visible at a glance, not only in
+              the edit form — makes a reviewer==executor gate conflict obvious
+              before the ✓ click hits the backend's 409. */}
+          {([
+            ['author_agent', 'lore.sprintDetail.task.authorLabel', 'Автор: {{name}}'],
+            ['executor_agent', 'lore.sprintDetail.task.executorLabel', 'Исполнитель: {{name}}'],
+            ['reviewer_agent', 'lore.sprintDetail.task.reviewerLabel', 'Ревьювер: {{name}}'],
+          ] as const).map(([field, key, fallback]) => {
+            const name = task[field];
+            if (!name) return null;
+            const conflict = field === 'reviewer_agent' && task.reviewer_agent === task.executor_agent;
+            return (
+              <span key={field} title={t(key, fallback, { name }) + (conflict ? ' — ' + t('lore.sprintDetail.task.roleConflict', 'совпадает с исполнителем, задача не сможет перейти в done') : '')}
+                style={{ color: conflict ? 'var(--danger)' : 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)',
+                  padding: '1px 5px', borderRadius: 3, border: `1px solid ${conflict ? 'var(--danger)' : 'var(--b3)'}` }}>
+                {conflict && '⚠ '}{name}
+              </span>
+            );
+          })}
           {task.effort_days != null && (
             <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>{formatEffortDays(task.effort_days)}</span>
           )}
@@ -577,13 +727,38 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
           <TipTapField value={note} onChange={setNote} minHeight={100}
             placeholder={t('lore.sprintDetail.task.descriptionPlaceholder', 'Описание (Markdown)')}
             enableImages={false} enableHtmlMode={false} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const }}>
             <label htmlFor={`eff-${task.task_uid}`} style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
               {t('lore.sprintDetail.task.effortLabel', 'Стоимость, дн')}
             </label>
             <input id={`eff-${task.task_uid}`} value={effort} onChange={e => setEffort(e.target.value)}
               inputMode="decimal" placeholder={t('lore.sprintDetail.task.effortPlaceholder', 'напр. 1.5')}
               style={{ ...inputStyle, width: 96 }} />
+            {/* ADR-LORE-015 (T14): closed dictionary, native <select> (unlike agent_role,
+                task_type isn't extensible — no free-text add-new). */}
+            <label htmlFor={`tt-${task.task_uid}`} style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
+              {t('lore.sprintDetail.task.typeLabel', 'Тип')}
+            </label>
+            <select id={`tt-${task.task_uid}`} value={taskType} onChange={e => setTaskType(e.target.value)}
+              style={{ ...inputStyle, width: 130 }}>
+              <option value="">{t('lore.sprintDetail.task.typeUnset', '—')}</option>
+              {dictTaskTypes.map(e => (
+                <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>
+              ))}
+            </select>
+          </div>
+          {/* ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer — dropdown
+              lookup from the extensible `agent_role` dictionary (still accepts
+              free text; new values are registered on save). reviewer must
+              differ from executor before the task can reach done (backend gate). */}
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+            <AgentRoleInput id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
+              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
+            <AgentRoleInput id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
+              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
+            <AgentRoleInput id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
+              placeholder={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
+              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>
@@ -609,14 +784,16 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
   const [show, setShow]   = useState(false);
   const [tid, setTid]     = useState('');
   const [title, setTitle] = useState('');
+  const [taskType, setTaskType] = useState('');
   const [busy, setBusy]   = useState(false);
+  const { entries: dictTaskTypes } = useDictionary('task_type');
 
   async function add() {
     if (busy || !tid.trim() || !title.trim()) return;
     setBusy(true);
     try {
-      await createLoreTask(sprintId, tid.trim(), title.trim());
-      setTid(''); setTitle(''); setShow(false); onAdded();
+      await createLoreTask(sprintId, tid.trim(), title.trim(), null, taskType || null);
+      setTid(''); setTitle(''); setTaskType(''); setShow(false); onAdded();
     } catch (e) { onError(e); }
     finally { setBusy(false); }
   }
@@ -636,6 +813,14 @@ function AddTaskForm({ sprintId, onAdded, onError }: {
       <input value={title} onChange={e => setTitle(e.target.value)}
         aria-label={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')}
         placeholder={t('lore.sprintDetail.task.titlePlaceholder', 'Заголовок')} style={{ ...inputStyle, flex: 1, minWidth: 160 }} />
+      <select value={taskType} onChange={e => setTaskType(e.target.value)}
+        aria-label={t('lore.sprintDetail.task.typeLabel', 'Тип')}
+        title={t('lore.sprintDetail.task.typeLabel', 'Тип')} style={{ ...inputStyle, width: 130 }}>
+        <option value="">{t('lore.sprintDetail.addTask.typeDefault', 'тип: dev (по умолчанию)')}</option>
+        {dictTaskTypes.map(e => (
+          <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>
+        ))}
+      </select>
       <button type="button" style={primaryBtn} disabled={busy} onClick={add}>{t('lore.sprintDetail.addTask.submit', 'Добавить')}</button>
       <button type="button" style={ghostBtn} onClick={() => setShow(false)} aria-label={t('lore.sprintDetail.addTask.cancel', 'Отменить добавление задачи')}>×</button>
     </div>
@@ -681,6 +866,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
   const [filter, setFilter]   = useState<Set<string>>(new Set());
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(new Set());
   const [ctxEdit, setCtxEdit] = useState(false);
   const [ctxDraft, setCtxDraft] = useState('');
   const [ctxSaving, setCtxSaving] = useState(false);
@@ -718,7 +904,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const [allMilestones, setAllMilestones] = useState<{ id: string; label: string }[]>([]);
   const [allReleases, setAllReleases] = useState<{ id: string; gitProject: string }[]>([]);
   const [relatedMeta, setRelatedMeta] = useState<Map<string, { status_raw: string | null; task_total: number; task_done: number }>>(new Map());
-  const [metaRightW, setMetaRightW] = useState(320);
+  const narrow = useIsNarrow();
+  const [metaRightW, setMetaRightW] = useState(230);
   const metaDragRef = useRef<{ x: number; w: number } | null>(null);
   const [topBlockH, setTopBlockH] = useState(220);
   const topDragRef = useRef<{ y: number; h: number } | null>(null);
@@ -754,9 +941,12 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   function toggleFilter(k: string) {
     setFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
   }
+  function toggleTypeFilter(k: string) {
+    setTypeFilter(prev => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  }
 
-  // Reset the status filter when switching sprints (not on in-place reloads).
-  useEffect(() => { setFilter(new Set()); }, [sprintId]);
+  // Reset the status/type filters when switching sprints (not on in-place reloads).
+  useEffect(() => { setFilter(new Set()); setTypeFilter(new Set()); }, [sprintId]);
 
   // Load available projects from DB once (not per-sprint).
   useEffect(() => {
@@ -863,7 +1053,9 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   }
 
   // Optional status filter — multi-select; empty set = show all.
-  const visibleTasks = filter.size === 0 ? tasks : tasks.filter(t => filter.has(taskTick(t.status_raw).status));
+  const visibleTasks = tasks.filter(t =>
+    (filter.size === 0 || filter.has(taskTick(t.status_raw).status)) &&
+    (typeFilter.size === 0 || (t.task_type != null && typeFilter.has(t.task_type))));
 
   // Group tasks by phase; tasks with no phase fall into NO_PHASE bucket.
   const byPhase = new Map<string, LoreSprintTask[]>();
@@ -895,6 +1087,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         {tasks.length > 0 && (
           <>
             <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
+            <TypeCounts tasks={tasks} filter={typeFilter} onFilter={toggleTypeFilter} />
             <span style={S.meta}>{doneTotal}/{tasks.length}</span>
             {(() => {
               const effortSum = visibleTasks.reduce((s, tk) => s + (tk.effort_days ?? 0), 0);
@@ -910,9 +1103,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         ) : null}
       </div>
 
-      {sprint.name && <div style={S.sprintName}>{sprint.name}</div>}
-
       {(() => {
+        // Проект + Релиз + PR merged into one strip (T25-follow-up reorg —
+        // "атрибуция одной веткой": project/release/PR are all "where this
+        // sprint belongs / shipped", one glance instead of 3 separate boxes).
+        const linkedProjects = [...new Set(sprint.git_projects ?? [])];
+        const unlinkedProjects = allProjects.filter(g => !linkedProjects.includes(g));
+        const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
         // `releases` (top of render) falls back to a version string parsed out of
         // status_raw when there's no real IMPLEMENTED_IN_RELEASE edge — only
         // sprint.release_ids are real edges and thus unlinkable/addable here.
@@ -922,13 +1119,60 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         const releaseOptions = allReleases.filter(r =>
           !linkedReleases.includes(r.id) &&
           (sprintProjects.length === 0 || sprintProjects.includes(r.gitProject)));
+        const showProjects = linkedProjects.length > 0 || unlinkedProjects.length > 0;
         const showRelease = displayReleases.length > 0 || releaseOptions.length > 0;
         const showPr = prNums.length > 0;
-        if (!showRelease && !showPr) return null;
-        // Релиз + PR merged into one row (was two separately-bordered/padded
-        // bars) — same info, half the vertical space.
+        if (!showProjects && !showRelease && !showPr) return null;
         return (
           <div style={S.prBar}>
+            {showProjects && (
+              <span style={S.linkGroup}>
+                <span style={S.prLabel}>{t('lore.sprintDetail.projects.label', 'Проект')}</span>
+                {linkedProjects.map(g => (
+                  <span key={g} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
+                    padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
+                    {projLabel(g)}
+                    <button
+                      disabled={projLinking}
+                      onClick={async () => {
+                        setProjLinking(true);
+                        try {
+                          await linkSprintProject(sprint.sprint_id, g, 'remove');
+                          setSprint(s => s ? { ...s, git_projects: (s.git_projects ?? []).filter(x => x !== g) } : s);
+                        } catch (e) { onError(e); }
+                        finally { setProjLinking(false); }
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
+                        fontSize: 'var(--fs-xs)', padding: 0, lineHeight: 1, opacity: 0.7 }}
+                      title={t('lore.sprintDetail.projects.unlink', 'Отвязать {{g}}', { g })}
+                    >✕</button>
+                  </span>
+                ))}
+                {unlinkedProjects.length > 0 && (
+                  <select
+                    disabled={projLinking}
+                    value=""
+                    onChange={async e => {
+                      const g = e.target.value;
+                      if (!g) return;
+                      setProjLinking(true);
+                      try {
+                        await linkSprintProject(sprint.sprint_id, g, 'add');
+                        setSprint(s => s ? { ...s, git_projects: [...(s.git_projects ?? []), g] } : s);
+                      } catch (err) { onError(err); }
+                      finally { setProjLinking(false); }
+                    }}
+                    style={lookupSelectStyle}
+                  >
+                    <option value="">{t('lore.sprintDetail.projects.linkPlaceholder', '+ привязать…')}</option>
+                    {unlinkedProjects.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
+                  </select>
+                )}
+                {projLinking && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>…</span>}
+              </span>
+            )}
+            {showProjects && (showRelease || showPr) && <span style={S.barDivider} />}
             {showRelease && (
               <span style={S.linkGroup}>
                 <span style={S.prLabel}>{t('lore.sprintDetail.releaseBar.label', 'Релиз')}</span>
@@ -1015,14 +1259,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
-      {/* ── Top meta block: context (left) + projects/milestones/modules (right) ── */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+      {/* ── Top meta block: context (left) + projects/milestones/modules (right) ──
+          Narrow: stack context above meta (side-by-side squishes context to
+          one-word-per-line at 375px). */}
+      <div style={{ display: 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
 
       {/* CONTEXT — left, flexible. maxHeight+overflow caps its growth so a long
           context_md can never crowd out the task list below (both this block and
           the task list live in the same flex column; without a cap, a large
           context — flexShrink:0 — pushes the flex:1 task list toward 0 height). */}
-      <div style={{ flex: 1, minWidth: 0, borderRight: '1px solid var(--bd)', padding: '8px 14px 10px', maxHeight: topBlockH, overflowY: 'auto' as const }}>
+      <div style={{ flex: 1, minWidth: 0, borderRight: narrow ? 'none' : '1px solid var(--bd)', borderBottom: narrow ? '1px solid var(--bd)' : 'none', padding: '8px 14px 10px', maxHeight: topBlockH, overflowY: 'auto' as const }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.context.label', 'Контекст')}</span>
           {!ctxEdit && (
@@ -1030,6 +1276,10 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               style={{ fontSize: 'var(--fs-xs)', padding: '1px 6px', background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4, color: 'var(--t2)', cursor: 'pointer' }}>{t('lore.sprintDetail.context.editButton', '✎ ред.')}</button>
           )}
         </div>
+        {/* Human-readable name as the context's caption — moved out of the
+            header (which now shows only the code sprint_id, per approved
+            prototype: header = identifier, context = title + prose). */}
+        {sprint.name && <div style={S.sprintName}>{sprint.name}</div>}
         {ctxEdit ? (
           <div>
             <TipTapField value={ctxDraft} onChange={setCtxDraft} minHeight={120}
@@ -1051,75 +1301,17 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         )}
       </div>
 
-      {/* Drag handle — resizes META RIGHT (mirrors LorePage's .lore-resize-handle) */}
+      {/* Drag handle — resizes META RIGHT (mirrors LorePage's .lore-resize-handle).
+          Hidden on narrow: the block is stacked, nothing to drag. */}
+      {!narrow && (
       <div
         className="lore-resize-handle"
         onMouseDown={e => { metaDragRef.current = { x: e.clientX, w: metaRightW }; e.preventDefault(); }}
       />
+      )}
 
-      {/* META RIGHT — projects + milestones + modules */}
-      <div style={{ width: metaRightW, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: topBlockH, overflowY: 'auto' as const }}>
-
-      {/* ── Projects section ───────────────────────────────────────────────── */}
-      {(() => {
-        // git_projects can carry the same slug more than once (one entry per
-        // linked commit/PR, not per distinct project) — dedupe, or repeated
-        // slugs collide as React keys below.
-        const linked = [...new Set(sprint.git_projects ?? [])];
-        const unlinked = allProjects.filter(g => !linked.includes(g));
-        const projLabel = (slug: string) => slug.split('/').pop() ?? slug;
-        return (
-          <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.projects.label', 'Проекты')}</span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-              {linked.map(g => (
-                <span key={g} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
-                  padding: '2px 8px', borderRadius: 10, background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', color: 'var(--acc)' }}>
-                  {projLabel(g)}
-                  <button
-                    disabled={projLinking}
-                    onClick={async () => {
-                      setProjLinking(true);
-                      try {
-                        await linkSprintProject(sprint.sprint_id, g, 'remove');
-                        setSprint(s => s ? { ...s, git_projects: (s.git_projects ?? []).filter(x => x !== g) } : s);
-                      } catch (e) { onError(e); }
-                      finally { setProjLinking(false); }
-                    }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit',
-                      fontSize: 'var(--fs-xs)', padding: 0, lineHeight: 1, opacity: 0.7 }}
-                    title={t('lore.sprintDetail.projects.unlink', 'Отвязать {{g}}', { g })}
-                  >✕</button>
-                </span>
-              ))}
-              {unlinked.length > 0 && (
-                <select
-                  disabled={projLinking}
-                  value=""
-                  onChange={async e => {
-                    const g = e.target.value;
-                    if (!g) return;
-                    setProjLinking(true);
-                    try {
-                      await linkSprintProject(sprint.sprint_id, g, 'add');
-                      setSprint(s => s ? { ...s, git_projects: [...(s.git_projects ?? []), g] } : s);
-                    } catch (err) { onError(err); }
-                    finally { setProjLinking(false); }
-                  }}
-                  style={lookupSelectStyle}
-                >
-                  <option value="">{t('lore.sprintDetail.projects.linkPlaceholder', '+ привязать…')}</option>
-                  {unlinked.map(g => <option key={g} value={g}>{projLabel(g)}</option>)}
-                </select>
-              )}
-              {projLinking && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>…</span>}
-            </div>
-          </div>
-        );
-      })()}
+      {/* META RIGHT — projects + milestones + modules. Full-width when stacked. */}
+      <div style={{ width: narrow ? '100%' : metaRightW, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, maxHeight: topBlockH, overflowY: 'auto' as const }}>
 
       {/* ── Planning section (planned_start/end date, planned milestone, created_date)
           — plain SCD2-tracked KnowSprintHist fields, edited via /lore/sprint/plan.
@@ -1137,6 +1329,30 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               {t('lore.sprintDetail.plan.created', 'Создан')}: <span style={{ color: 'var(--t2)', fontFamily: 'var(--mono)' }}>{sprint.created_date.slice(0, 10)}</span>
             </div>
           )}
+          {/* Order: milestone → date range → checkbox, each its own row
+              (approved prototype docs/prototypes/sprint-detail-reorg.html —
+              was date-range-then-milestone on one cramped row). Milestone used
+              to have a separate planned_milestone_id plain-field write alongside
+              the TARGETS_MILESTONE edge — that field drifted out of sync on 62+
+              sprints and was retired; the edge is the sole source of truth now. */}
+          <select disabled={planBusy || msLinking} style={{ ...lookupSelectStyle, width: '100%' }}
+            value={(sprint.milestone_ids ?? [])[0] ?? ''}
+            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
+            onChange={async e => {
+              const v = e.target.value || null;
+              setPlanBusy(true); setMsLinking(true);
+              try {
+                const prevLinked = sprint.milestone_ids ?? [];
+                for (const mid of prevLinked) {
+                  if (mid !== v) await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
+                }
+                if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
+                setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
+              } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
+            }}>
+            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
+            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
+          </select>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <input type="date" disabled={planBusy} style={lookupSelectStyle}
               value={sprint.planned_start_date ?? ''}
@@ -1162,28 +1378,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 } catch (err) { onError(err); } finally { setPlanBusy(false); }
               }} />
           </div>
-          {/* Milestone used to have a separate planned_milestone_id plain-field
-              write alongside the TARGETS_MILESTONE edge — that field drifted out
-              of sync on 62+ sprints and was retired; the edge is the sole source
-              of truth now. */}
-          <select disabled={planBusy || msLinking} style={lookupSelectStyle}
-            value={(sprint.milestone_ids ?? [])[0] ?? ''}
-            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
-            onChange={async e => {
-              const v = e.target.value || null;
-              setPlanBusy(true); setMsLinking(true);
-              try {
-                const prevLinked = sprint.milestone_ids ?? [];
-                for (const mid of prevLinked) {
-                  if (mid !== v) await linkSprintMilestone(sprint.sprint_id, mid, 'remove');
-                }
-                if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
-                setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
-              } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
-            }}>
-            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
-            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
-          </select>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--fs-xs)', color: 'var(--t2)', cursor: planBusy ? 'default' : 'pointer' }}>
             <input type="checkbox" disabled={planBusy}
               checked={!!sprint.no_release_required}
@@ -1317,47 +1511,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         );
       })()}
 
-      {/* ── ADR section (reverse of ADR's IMPLEMENTED_IN — which ADRs implement in this sprint) ── */}
-      {/* T-fix: the sprint_tree slice's reverse ADR lookup can return null
-          entries (edge resolved but the target vertex didn't) — e.g.
-          SPRINT_LORE_UX_OPTIMIZATION comes back adr_ids: [null, null, null].
-          Unfiltered, that rendered 3 identical key={null} buttons all
-          labelled "Открыть null" and navigating nowhere on click. Filter at
-          the read site rather than touching the backend query. */}
-      {(() => {
-        const adrIds = (sprint.adr_ids ?? []).filter((id): id is string => !!id);
-        if (adrIds.length === 0) return null;
-        return (
-        <div style={{ padding: '6px 10px 8px', borderBottom: '1px solid var(--bd)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{t('lore.sprintDetail.adr.label', 'ADR')}</span>
-            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{adrIds.length}</span>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-            {adrIds.map(id => (
-              <button
-                key={id}
-                onClick={onNavigateToAdr ? () => onNavigateToAdr(id) : undefined}
-                disabled={!onNavigateToAdr}
-                title={onNavigateToAdr ? t('lore.sprintDetail.adr.openTitle', 'Открыть {{id}}', { id }) : id}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
-                  padding: '2px 8px', borderRadius: 10,
-                  background: 'color-mix(in srgb, var(--kind-adr) 14%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--kind-adr) 30%, transparent)',
-                  color: 'var(--kind-adr)', cursor: onNavigateToAdr ? 'pointer' : 'default',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <GameIcon slug="scroll-quill" size={12} style={{ color: 'inherit' }} />
-                {id}
-              </button>
-            ))}
-          </div>
-        </div>
-        );
-      })()}
-
       </div>{/* END META RIGHT */}
       </div>{/* END TOP META BLOCK */}
 
@@ -1457,6 +1610,48 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         )}
 
         <AddTaskForm sprintId={sprint.sprint_id} onAdded={reload} onError={onError} />
+
+        {/* ── Связи: ADR + related sprints — moved down from the top meta block
+            (approved prototype docs/prototypes/sprint-detail-reorg.html): ADR
+            used to sit in META RIGHT alongside Планирование/Модули, but it's a
+            RELATION (what this sprint implements), same kind of thing as
+            depends_on/blocks below — so it belongs in one cluster with them,
+            under the tasks, not mixed in with what/when/where planning fields. */}
+        {(() => {
+          // T-fix: the sprint_tree slice's reverse ADR lookup can return null
+          // entries (edge resolved but the target vertex didn't) — e.g.
+          // SPRINT_LORE_UX_OPTIMIZATION comes back adr_ids: [null, null, null].
+          // Unfiltered, that rendered 3 identical key={null} buttons all
+          // labelled "Открыть null" and navigating nowhere on click.
+          const adrIds = (sprint.adr_ids ?? []).filter((id): id is string => !!id);
+          if (adrIds.length === 0) return null;
+          return (
+            <div style={S.deps}>
+              <div style={S.sectionLabel}>{t('lore.sprintDetail.adr.label', 'ADR')}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5, marginTop: 4 }}>
+                {adrIds.map(id => (
+                  <button
+                    key={id}
+                    onClick={onNavigateToAdr ? () => onNavigateToAdr(id) : undefined}
+                    disabled={!onNavigateToAdr}
+                    title={onNavigateToAdr ? t('lore.sprintDetail.adr.openTitle', 'Открыть {{id}}', { id }) : id}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)',
+                      padding: '2px 8px', borderRadius: 10,
+                      background: 'color-mix(in srgb, var(--kind-adr) 14%, transparent)',
+                      border: '1px solid color-mix(in srgb, var(--kind-adr) 30%, transparent)',
+                      color: 'var(--kind-adr)', cursor: onNavigateToAdr ? 'pointer' : 'default',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <GameIcon slug="scroll-quill" size={12} style={{ color: 'inherit' }} />
+                    {id}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {sprint.depends_on?.length ? (
           <div style={S.deps}>
