@@ -70,11 +70,11 @@ const TOOLS: ToolDoc[] = [
 
   // ── Task (KnowTask) ────────────────────────────────────────────────────────
   { name: 'lore_create_task', kind: 'write', entity: 'Task', backend: 'POST /lore/task',
-    params: 'sprint_id, task_id, title, note_md?, phase_uid?',
-    desc: 'KnowTask: создать задачу в спринте (order_index = max по спринту + 1, стартовый статус PLANNED с открытой hist-строкой). phase_uid — опционально сразу привязать к фазе тем же вызовом (ребро IN_PHASE); фаза должна уже существовать (lore_create_phase) и принадлежать тому же спринту.' },
+    params: 'sprint_id, task_id, title, note_md?, phase_uid?, author_agent?, executor_agent?, reviewer_agent?',
+    desc: 'KnowTask: создать задачу в спринте (order_index = max по спринту + 1, стартовый статус PLANNED с открытой hist-строкой). phase_uid — опционально сразу привязать к фазе тем же вызовом (ребро IN_PHASE); фаза должна уже существовать (lore_create_phase) и принадлежать тому же спринту. author/executor/reviewer_agent (ADR-LORE-014 §4) — свободный текст, но лучше значением из справочника agent_role (dictionary, lore_upsert_dict_entry) — кто поставил/кто исполняет/кто примет задачу.' },
   { name: 'lore_edit_task', kind: 'write', entity: 'Task', backend: 'POST /lore/task/edit',
-    params: 'task_uid, title, note_md?, effort_days? | tasks: [{task_uid, title, note_md?, effort_days?}]',
-    desc: 'KnowTask: изменить заголовок/заметку/оценку трудозатрат существующей задачи (обновляется и вершина, и её открытая hist-строка). Одиночный режим — task_uid+title в аргументах напрямую; batch-режим — массив tasks[] за один вызов, ошибки собираются по элементу, не прерывая остальные.' },
+    params: 'task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent? | tasks: [{task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?}]',
+    desc: 'KnowTask: изменить заголовок/заметку/оценку трудозатрат/роли существующей задачи (обновляется и вершина, и её открытая hist-строка). Одиночный режим — task_uid+title в аргументах напрямую; batch-режим — массив tasks[] за один вызов, ошибки собираются по элементу, не прерывая остальные. reviewer_agent должен отличаться от executor_agent — единственный жёсткий гейт SDLC: lore_set_status task→done отклоняется (409 NO_SELF_ACCEPTANCE), если ревьювер и исполнитель совпадают.' },
   { name: 'lore_link_task_component', kind: 'write', entity: 'Task', backend: 'POST /lore/task/component',
     params: 'task_uid, component_id, action?',
     desc: 'Ребро TAGGED_WITH между задачей и компонентом, many-to-many — у одной задачи может быть 0..N меток. action = add | remove.' },
@@ -167,6 +167,11 @@ const TOOLS: ToolDoc[] = [
   { name: 'lore_update_component', kind: 'write', entity: 'Component', backend: 'POST /lore/component/update',
     params: 'component_id, full_name?, area?, team?, game_icon?, owner?, parent_id?',
     desc: 'LoreComponent: частичное обновление существующего компонента — переименование, смена владельца/команды/иконки, репарент. Пишутся только переданные поля. Новый компонент этим тулом не создать.' },
+
+  // ── Dictionary (KnowDictEntry, ADR-LORE-012) ──────────────────────────────
+  { name: 'lore_upsert_dict_entry', kind: 'write', entity: 'Dictionary', backend: 'POST /lore/dict/entry',
+    params: 'dict_type, code, label_ru?, label_en?, color?, icon?, sort_order?, is_active?, is_extensible?',
+    desc: 'KnowDictEntry: создать/дописать одно значение справочника — upsert по (dict_type, code), партициально-безопасно (непереданные поля метаданных не трогаются; is_active по умолчанию true, is_extensible false при создании). Единый канон, читается фронтом (useDictionary), бэкендом и MCP через lore_query_slice "dictionary". Примеры dict_type: sprint_status, task_status, adr_status, priority, area, agent_role (ADR-LORE-014 §4 — авто-заполняется UI при вводе новой роли в задаче). Проверить lore_query_slice "dictionary" (опционально dict_type=...) перед добавлением, чтобы не плодить дубли.' },
 
   // ── Release (KnowRelease) ──────────────────────────────────────────────────
   { name: 'lore_create_release', kind: 'write', entity: 'Release', backend: 'POST /lore/release',
@@ -385,6 +390,9 @@ export default function LoreMcpApiScreen() {
             <code style={S.code}>system_aida_lore</code> {t('lore.mcpApi.toolsNote3', '— применять осознанно.')}
             <code style={S.code}>lore_create_adr</code> {t('lore.mcpApi.toolsNote4', 'создаёт полную SCD2-структуру: вершина + KnowADRHist (valid_to=null) + HAS_STATE edge — тело ADR читается именно из hist-строки.')}{' '}
             {t('lore.mcpApi.toolsNote5', 'Партиальные (amend) вызовы у всех upsert-инструментов с 2026-07 безопасны — SQL SET собирается динамически, непереданное поле не трогается (раньше пропущенный параметр молча обнулялся).')}{' '}
+            {t('lore.mcpApi.toolsNoteRoles', 'Задачи несут author/executor/reviewer_agent (ADR-LORE-014 §4) — единственный жёсткий SDLC-гейт: reviewer_agent должен отличаться от executor_agent, иначе')}{' '}
+            <code style={S.code}>lore_set_status</code> {t('lore.mcpApi.toolsNoteRoles2', 'task→done отклоняется (409 NO_SELF_ACCEPTANCE). Значения ролей — расширяемый справочник')}{' '}
+            <code style={S.code}>agent_role</code> {t('lore.mcpApi.toolsNoteRoles3', '(см. Dictionary ниже) — UI сам регистрирует новую роль в словаре при первом вводе.')}{' '}
             <b>{t('lore.mcpApi.toolsNoteDeletionLabel', 'Удаление:')}</b> {t('lore.mcpApi.toolsNote6', 'штатный путь — soft-delete через статус (')}<code style={S.code}>lore_set_status</code>
             {t('lore.mcpApi.toolsNote7', ' со status="cancelled"/"deprecated"/"archived" — история сохраняется). Настоящий hard-delete есть только у ')}<code style={S.code}>lore_delete_adr</code> {t('lore.mcpApi.toolsNote8', 'и')}{' '}
             <code style={S.code}>lore_delete_spec</code>, {t('lore.mcpApi.toolsNote9', 'оба явно помечены как «только для тестовых артефактов». Остальные типы (Sprint/Task/Release/Component/Milestone/ QualityGate/Runbook/Doc) осознанно без hard-delete тула — реальные данные не удаляются, только архивируются статусом.')}{' '}

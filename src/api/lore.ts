@@ -70,6 +70,15 @@ export interface DictEntry {
   is_extensible: boolean | null;
 }
 
+// Upsert one (dict_type, code) row — used to grow an is_extensible domain
+// on the fly (e.g. a free-typed agent role not yet in the dictionary).
+export async function upsertDictEntry(
+  entry: Pick<DictEntry, 'dict_type' | 'code'> & Partial<DictEntry>,
+  signal?: AbortSignal,
+): Promise<{ ok: boolean }> {
+  return loreMutate('/dict/entry', entry, signal);
+}
+
 // Single write/mutation transport for LORE POST endpoints. Replaces the
 // per-component `fetch(... X-Seer-Role ...)` helpers that had each drifted their
 // own error handling. `path` is relative to /lore (e.g. "/bragi/keyword").

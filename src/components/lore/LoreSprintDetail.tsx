@@ -7,6 +7,7 @@ import { MartProse } from '../bench/MartProse';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
+  upsertDictEntry,
   type LoreSprintTask, type LorePlanItemStatus,
 } from '../../api/lore';
 import { StatusChip } from '../../pages/LorePage';
@@ -455,6 +456,27 @@ const mdBox: React.CSSProperties = {
   padding: '4px 8px 8px 26px', overflowX: 'auto',
 };
 
+// ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer_agent picked from the
+// extensible `agent_role` dictionary. Native <input list=...> gives a dropdown
+// of known roles while still accepting free text — a role typed here that isn't
+// in the dictionary yet gets upserted into it on save (see TaskLine.save below),
+// so the next picker offers it too.
+function AgentRoleInput({ id, value, onChange, placeholder, title }: {
+  id: string; value: string; onChange: (v: string) => void; placeholder: string; title?: string;
+}) {
+  const { entries } = useDictionary('agent_role');
+  const listId = `agent-role-opts-${id}`;
+  return (
+    <>
+      <input list={listId} value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder} title={title} style={{ ...inputStyle, width: 120 }} />
+      <datalist id={listId}>
+        {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
+      </datalist>
+    </>
+  );
+}
+
 function TaskLine({ t: task, allComps, onChanged, onError }: {
   t: LoreSprintTask;
   allComps: CompRow[];
@@ -489,6 +511,21 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     finally { setCompBusy(null); }
   }
 
+  const { byCode: agentRoleByCode } = useDictionary('agent_role');
+
+  // A role typed that isn't in the `agent_role` dictionary yet gets added to it
+  // (is_extensible) so it shows up in every other picker's dropdown from now on.
+  function registerNewRoles(values: string[]) {
+    const seen = new Set<string>();
+    for (const v of values) {
+      const code = v.trim();
+      if (!code || seen.has(code) || agentRoleByCode[code]) continue;
+      seen.add(code);
+      void upsertDictEntry({ dict_type: 'agent_role', code, label_ru: code, is_extensible: true })
+        .catch(() => { /* best-effort — free-text field still works without the dictionary entry */ });
+    }
+  }
+
   async function save() {
     if (busy || !title.trim()) return;
     const effRaw = effort.trim().replace(',', '.');
@@ -501,6 +538,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         executorAgent: executor.trim() || null,
         reviewerAgent: reviewer.trim() || null,
       });
+      registerNewRoles([author, executor, reviewer]);
       setEditing(false); onChanged();
     }
     catch (e) { onError(e); }
@@ -546,13 +584,25 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
           );
         })}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {task.executor_agent && (
-            <span title={t('lore.sprintDetail.task.executorLabel', 'Исполнитель: {{name}}', { name: task.executor_agent })}
-              style={{ color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)',
-                padding: '1px 5px', borderRadius: 3, border: '1px solid var(--b3)' }}>
-              {task.executor_agent}
-            </span>
-          )}
+          {/* ADR-LORE-014 §4: all three roles visible at a glance, not only in
+              the edit form — makes a reviewer==executor gate conflict obvious
+              before the ✓ click hits the backend's 409. */}
+          {([
+            ['author_agent', 'lore.sprintDetail.task.authorLabel', 'Автор: {{name}}'],
+            ['executor_agent', 'lore.sprintDetail.task.executorLabel', 'Исполнитель: {{name}}'],
+            ['reviewer_agent', 'lore.sprintDetail.task.reviewerLabel', 'Ревьювер: {{name}}'],
+          ] as const).map(([field, key, fallback]) => {
+            const name = task[field];
+            if (!name) return null;
+            const conflict = field === 'reviewer_agent' && task.reviewer_agent === task.executor_agent;
+            return (
+              <span key={field} title={t(key, fallback, { name }) + (conflict ? ' — ' + t('lore.sprintDetail.task.roleConflict', 'совпадает с исполнителем, задача не сможет перейти в done') : '')}
+                style={{ color: conflict ? 'var(--danger)' : 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)',
+                  padding: '1px 5px', borderRadius: 3, border: `1px solid ${conflict ? 'var(--danger)' : 'var(--b3)'}` }}>
+                {conflict && '⚠ '}{name}
+              </span>
+            );
+          })}
           {task.effort_days != null && (
             <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>{formatEffortDays(task.effort_days)}</span>
           )}
@@ -607,19 +657,18 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
               inputMode="decimal" placeholder={t('lore.sprintDetail.task.effortPlaceholder', 'напр. 1.5')}
               style={{ ...inputStyle, width: 96 }} />
           </div>
-          {/* ADR-LORE-014 §4: author/executor/reviewer — free text, reviewer must
+          {/* ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer — dropdown
+              lookup from the extensible `agent_role` dictionary (still accepts
+              free text; new values are registered on save). reviewer must
               differ from executor before the task can reach done (backend gate). */}
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-            <input value={author} onChange={e => setAuthor(e.target.value)}
-              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')}
-              style={{ ...inputStyle, width: 120 }} />
-            <input value={executor} onChange={e => setExecutor(e.target.value)}
-              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')}
-              style={{ ...inputStyle, width: 120 }} />
-            <input value={reviewer} onChange={e => setReviewer(e.target.value)}
+            <AgentRoleInput id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
+              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
+            <AgentRoleInput id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
+              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
+            <AgentRoleInput id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
               placeholder={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
-              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')}
-              style={{ ...inputStyle, width: 120 }} />
+              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>
