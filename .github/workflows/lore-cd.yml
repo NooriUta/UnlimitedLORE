@@ -127,11 +127,16 @@ jobs:
       # develop, and a start-notification for every local dev push would be
       # noisy where aida-root's tag-triggered prod releases are not.
       # continue-on-error + trailing `exit 0`: Telegram is best-effort only.
-      # Confirmed 2026-07-13 that api.telegram.org:443 is unreachable from this
-      # host entirely (host + both docker networks all timeout at the TCP
-      # level, not a code/secrets issue) — without this, an unreachable
-      # Telegram silently turned every deploy red even though backend/frontend
-      # health checks both passed, which is worse than no notification at all.
+      # 2026-07-13: api.telegram.org:443 was unreachable from this host entirely
+      # (host + both docker networks timed out at the TCP level). 2026-07-14: the
+      # act_runner containers were given an outbound HTTP(S) proxy (runner.envs
+      # HTTP_PROXY/HTTPS_PROXY -> host.docker.internal:10809, routing through the
+      # host's local VPN client; NO_PROXY keeps the Forgejo-internal checkout
+      # unproxied) and Telegram is reachable again — confirmed live via a real
+      # workflow_dispatch run reaching the user's Telegram. Kept best-effort
+      # anyway: the proxy is a detail of THIS dev machine, not guaranteed to
+      # exist on whatever CI host eventually replaces it, so an unreachable
+      # Telegram still must not turn a healthy deploy red.
       - name: Notify success
         if: success()
         continue-on-error: true
