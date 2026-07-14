@@ -47,6 +47,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-l", "5602", "C:\\AIDA\\OMILORE"],
       "port": 5602
+    },
+    {
+      "name": "lore-prototypes",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "5603", "C:\\AIDA\\UnlimitedLORE\\docs\\prototypes"],
+      "port": 5603
     }
   ]
 }
