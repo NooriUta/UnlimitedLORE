@@ -1068,7 +1068,7 @@ export default function LorePage() {
 
           {/* Decisions: composite feed */}
           {section === 'decisions' && (
-            <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} />
+            <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
           )}
 
           {/* Releases */}

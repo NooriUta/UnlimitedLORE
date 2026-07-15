@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, type LoreAdrPassport } from '../../api/lore';
+import { fetchLoreSlice, type LoreAdrPassport, type LoreDecisionRow } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import LoreAdrEditor from './LoreAdrEditor';
 import { adrStatusLabel } from './LoreAdrList';
@@ -65,6 +65,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [reload, setReload]   = useState(0);
+  // ADR-019 "rationale" mode: the decisions that live under this ADR (DECIDED_IN).
+  const [decisions, setDecisions] = useState<LoreDecisionRow[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -73,6 +75,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
     fetchLoreSlice<LoreAdrPassport>('adr', { id: adrId }, ctrl.signal)
       .then(rows => { setData(rows[0] ?? null); setLoading(false); })
       .catch(e => { onError(e); setLoading(false); });
+    fetchLoreSlice<LoreDecisionRow>('decisions_of_adr', { id: adrId }, ctrl.signal)
+      .then(setDecisions).catch(() => { /* decisions are optional context */ });
     return () => ctrl.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adrId, reload]);
@@ -192,6 +196,19 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
           <div style={S.chips}>
             {supersedes.map(id => (
               <span key={id} style={S.chip(true)} onClick={() => onNavigate(id)}>{id}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {decisions.length > 0 && (
+        <div style={S.section}>
+          <div style={S.sLabel}>{t('lore.adrPassportView.decisions', 'Решения этого ADR')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {decisions.map(d => (
+              <div key={d.decision_id} style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-sm)', minWidth: 0 }}>
+                <span style={{ fontFamily: 'var(--mono)', color: 'var(--acc)', flexShrink: 0 }}>#{d.decision_id}</span>
+                <span style={{ color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{d.title}</span>
+              </div>
             ))}
           </div>
         </div>

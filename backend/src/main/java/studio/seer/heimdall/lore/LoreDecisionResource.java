@@ -21,8 +21,11 @@ public class LoreDecisionResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreDecisionResource.class);
 
+    // ADR-019: component_id (vertex filter axis), adr_id (parent → DECIDED_IN edge),
+    // tags (KnowTag → TAGGED_WITH). Decision stays vertex-only — no KnowDecisionHist.
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
-        String date_created, String refs_raw) {}
+        String date_created, String refs_raw, String component_id, String adr_id,
+        java.util.List<String> tags) {}
 
     // ── Write-path: create / upsert KnowDecision ─────────────────────────────
 
@@ -48,6 +51,7 @@ public class LoreDecisionResource extends LoreResourceBase {
             if (req.body_md() != null)      { dsql.append(", body_md=:body");      p.put("body", req.body_md()); }
             if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
             if (req.refs_raw() != null)     { dsql.append(", refs_raw=:refs");     p.put("refs", req.refs_raw()); }
+            if (req.component_id() != null) { dsql.append(", component_id=:comp"); p.put("comp", req.component_id()); }
             dsql.append(" UPSERT WHERE decision_id=:did");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dsql.toString(), p)).await().indefinitely();
@@ -56,6 +60,26 @@ public class LoreDecisionResource extends LoreResourceBase {
                 "UPDATE KnowDecision SET date_created=:d WHERE decision_id=:did AND date_created IS NULL",
                 Map.of("d", java.time.LocalDate.now().toString(), "did", req.decision_id())))
                 .await().indefinitely();
+            // ADR-019: parent link (DECIDED_IN) + tags (TAGGED_WITH → KnowTag),
+            // both idempotent (IF NOT EXISTS). No-op if the target ADR is absent.
+            if (req.adr_id() != null && !req.adr_id().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE DECIDED_IN FROM (SELECT FROM KnowDecision WHERE decision_id=:did) " +
+                    "TO (SELECT FROM KnowADR WHERE adr_id=:adr) IF NOT EXISTS",
+                    Map.of("did", req.decision_id(), "adr", req.adr_id()))).await().indefinitely();
+            }
+            if (req.tags() != null) {
+                for (String tag : req.tags()) {
+                    if (tag == null || tag.isBlank()) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "UPDATE KnowTag SET tag_id=:tag UPSERT WHERE tag_id=:tag", Map.of("tag", tag)))
+                        .await().indefinitely();
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE TAGGED_WITH FROM (SELECT FROM KnowDecision WHERE decision_id=:did) " +
+                        "TO (SELECT FROM KnowTag WHERE tag_id=:tag) IF NOT EXISTS",
+                        Map.of("did", req.decision_id(), "tag", tag))).await().indefinitely();
+                }
+            }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("decision_id", req.decision_id());
             return noStore(Response.ok(out));

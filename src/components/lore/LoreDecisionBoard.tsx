@@ -14,6 +14,8 @@ import { resolveStatusMeta, statusLabel } from './lore-status';
 interface Props {
   q: string;
   onError: (e: unknown) => void;
+  /** Navigate to the parent ADR passport (ADR-019 "rule → why"). */
+  onNavigateAdr?: (adrId: string) => void;
 }
 
 // KnowDecision has no status field — but many titles state the decision's own
@@ -41,7 +43,12 @@ function inferDecisionStatus(title: string | null): string | null {
 
 const STATUS_ORDER = ['fixed', 'accepted', 'done', 'deferred', 'rejected', 'superseded'];
 
-export default function LoreDecisionBoard({ q, onError }: Props) {
+const dimLbl = {
+  fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const,
+  letterSpacing: 0.5, marginRight: 4, minWidth: 70,
+};
+
+export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) {
   const { t } = useTranslation();
   // MOB: compact date (MM-DD) on narrow — frees width for the decision text.
   const narrow = useIsNarrow(720);
@@ -58,6 +65,9 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
   // inferred from the headline via inferDecisionStatus, same source group-by uses).
   const [statusSel,      setStatusSel]      = useState<Set<string>>(new Set());
   const [filterOpen,     setFilterOpen]     = useState(false);
+  // ADR-019 "rule" mode facets: component + parent (has ADR / orphan).
+  const [compSel,        setCompSel]        = useState<Set<string>>(new Set());
+  const [parentFilter,   setParentFilter]   = useState<'all' | 'has' | 'orphan'>('all');
 
   useEffect(() => {
     setLoading(true);
@@ -103,12 +113,21 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
     ...STATUS_ORDER.filter(s => statusCounts[s]),
     ...Object.keys(statusCounts).filter(s => !STATUS_ORDER.includes(s)).sort(),
   ];
+  const compCounts = (() => {
+    const m: Record<string, number> = {};
+    rows.forEach(d => { if (d.component_id) m[d.component_id] = (m[d.component_id] || 0) + 1; });
+    return m;
+  })();
+  const allComps = Object.keys(compCounts).sort((a, b) => (compCounts[b] - compCounts[a]) || a.localeCompare(b));
+  const orphanCount = rows.filter(d => !d.parent_adr).length;
 
   const filtered = rows
     .filter(d => !q
       || d.title.toLowerCase().includes(q.toLowerCase())
       || d.decision_id.includes(q.replace(/^#/, '')))
-    .filter(d => statusSel.size === 0 || statusSel.has(decStatus(d) ?? '\0'));
+    .filter(d => statusSel.size === 0 || statusSel.has(decStatus(d) ?? '\0'))
+    .filter(d => compSel.size === 0 || (d.component_id != null && compSel.has(d.component_id)))
+    .filter(d => parentFilter === 'all' || (parentFilter === 'has' ? !!d.parent_adr : !d.parent_adr));
 
   const display = [...filtered].sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -191,6 +210,16 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
             </div>
           )}
         </div>
+        {d.component_id && <span style={S.compChip}>{d.component_id}</span>}
+        {d.parent_adr && (
+          onNavigateAdr
+            ? <span role="button" tabIndex={0} style={S.parentLink} title={d.parent_adr}
+                onClick={e => { e.stopPropagation(); onNavigateAdr(d.parent_adr!); }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onNavigateAdr(d.parent_adr!); } }}>
+                {d.parent_adr}
+              </span>
+            : <span style={S.parentChip} title={d.parent_adr}>{d.parent_adr}</span>
+        )}
         {!groupByStatus && status && <StatusChip status={status} />}
         {d.date_created && (
           <span style={S.date} title={d.date_created.slice(0, 10)}>
@@ -239,28 +268,57 @@ export default function LoreDecisionBoard({ q, onError }: Props) {
         </div>
       </div>
       {/* T34: status facet filter (collapsible one-line band, same as QG/Знания) */}
-      {allStatuses.length > 1 && (
+      {(allStatuses.length > 1 || allComps.length > 0) && (
         <FilterBar
           tier="local"
           label={t('lore.decisionBoard.filtersLabel', 'Фильтры')}
-          activeCount={statusSel.size}
-          summaryTags={[...statusSel].map((s): FilterTagData => ({
-            key: 's:' + s, label: statusLabel(s), color: resolveStatusMeta(s).color,
-            onRemove: () => setStatusSel(prev => { const n = new Set(prev); n.delete(s); return n; }),
-          }))}
-          onClear={() => setStatusSel(new Set())}
+          activeCount={statusSel.size + compSel.size + (parentFilter !== 'all' ? 1 : 0)}
+          summaryTags={[
+            ...[...statusSel].map((s): FilterTagData => ({
+              key: 's:' + s, label: statusLabel(s), color: resolveStatusMeta(s).color,
+              onRemove: () => setStatusSel(prev => { const n = new Set(prev); n.delete(s); return n; }),
+            })),
+            ...[...compSel].map((c): FilterTagData => ({
+              key: 'c:' + c, label: c,
+              onRemove: () => setCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
+            })),
+            ...(parentFilter !== 'all' ? [{
+              key: 'p', label: parentFilter === 'has' ? t('lore.decisionBoard.parentHas', 'есть ADR') : t('lore.decisionBoard.parentOrphan', 'сирота'),
+              onRemove: () => setParentFilter('all'),
+            } as FilterTagData] : []),
+          ]}
+          onClear={() => { setStatusSel(new Set()); setCompSel(new Set()); setParentFilter('all'); }}
           open={filterOpen}
           onToggleOpen={() => setFilterOpen(v => !v)}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, marginRight: 4 }}>
-              {t('lore.decisionBoard.statusLabel', 'Статус')}
-            </span>
-            {allStatuses.map(s => (
-              <Chip key={s} label={statusLabel(s)} pressed={statusSel.has(s)}
-                onClick={() => toggleStatus(s)} count={statusCounts[s]}
-                color={resolveStatusMeta(s).color} dot />
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+            {allStatuses.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
+                <span style={dimLbl}>{t('lore.decisionBoard.statusLabel', 'Статус')}</span>
+                {allStatuses.map(s => (
+                  <Chip key={s} label={statusLabel(s)} pressed={statusSel.has(s)}
+                    onClick={() => toggleStatus(s)} count={statusCounts[s]}
+                    color={resolveStatusMeta(s).color} dot />
+                ))}
+              </div>
+            )}
+            {allComps.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
+                <span style={dimLbl}>{t('lore.decisionBoard.componentLabel', 'Компонент')}</span>
+                {allComps.map(c => (
+                  <Chip key={c} label={c} pressed={compSel.has(c)}
+                    onClick={() => setCompSel(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; })}
+                    count={compCounts[c]} dot />
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
+              <span style={dimLbl}>{t('lore.decisionBoard.parentLabel', 'Родитель')}</span>
+              <Chip label={t('lore.decisionBoard.parentHas', 'есть ADR')} pressed={parentFilter === 'has'}
+                onClick={() => setParentFilter(p => p === 'has' ? 'all' : 'has')} count={rows.length - orphanCount} />
+              <Chip label={t('lore.decisionBoard.parentOrphan', 'сирота')} pressed={parentFilter === 'orphan'}
+                onClick={() => setParentFilter(p => p === 'orphan' ? 'all' : 'orphan')} count={orphanCount} />
+            </div>
           </div>
         </FilterBar>
       )}
@@ -350,6 +408,19 @@ const S = {
   chipPr: {
     background: 'color-mix(in srgb, var(--t2) 10%, transparent)',
     color: 'var(--t2)', border: '1px solid color-mix(in srgb, var(--t2) 25%, transparent)',
+  },
+  compChip: {
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+    background: 'var(--b2)', color: 'var(--t3)', alignSelf: 'flex-start' as const,
+  },
+  parentChip: {
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+    fontFamily: 'var(--mono)', color: 'var(--t3)', border: '1px solid var(--bd)', alignSelf: 'flex-start' as const,
+  },
+  parentLink: {
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, cursor: 'pointer',
+    fontFamily: 'var(--mono)', color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
+    background: 'color-mix(in srgb, var(--acc) 8%, transparent)', alignSelf: 'flex-start' as const,
   },
   ctrl: {
     fontSize: 'var(--fs-xs)', padding: '3px 8px', borderRadius: 4, cursor: 'pointer',
