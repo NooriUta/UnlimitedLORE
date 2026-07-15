@@ -500,19 +500,25 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'decision_new',
     description: 'Create or update a KnowDecision (logged decision/verdict). Idempotent — upserts by decision_id. ' +
-      'Use for recording key decisions made during a sprint or design session.',
+      'Use for recording key decisions made during a sprint or design session. ADR-019: a decision is a CHILD of ' +
+      'an ADR — pass adr_id to link it (DECIDED_IN), component_id/tags for the "rule" filters. Stays vertex-only ' +
+      '(no history) — consistent with the flat KnowDecision model.',
     schema: {
       decision_id:  z.string().describe('unique id, e.g. "D-2026-047"'),
       title:        z.string(),
       body_md:      z.string().optional().describe('full decision text in Markdown'),
       date_created: z.string().optional().describe('YYYY-MM-DD, defaults to today'),
       refs_raw:     z.string().optional().describe('free-text references, e.g. "#420, ADR-HND-021"'),
+      component_id: z.string().optional().describe('ADR-019: component this decision belongs to (filter axis)'),
+      adr_id:       z.string().optional().describe('ADR-019: parent ADR — creates a DECIDED_IN edge to it'),
+      tags:         z.array(z.string()).optional().describe('ADR-019: free tags (KnowTag), e.g. ["stale-versions"]'),
     },
     path: '/lore/decision',
-    body: ({ decision_id, title, body_md, date_created, refs_raw }) => ({
+    body: ({ decision_id, title, body_md, date_created, refs_raw, component_id, adr_id, tags }) => ({
           decision_id, title,
           body_md: body_md ?? null, date_created: date_created ?? null,
           refs_raw: refs_raw ?? null,
+          component_id: component_id ?? null, adr_id: adr_id ?? null, tags: tags ?? null,
         }),
   });
 
