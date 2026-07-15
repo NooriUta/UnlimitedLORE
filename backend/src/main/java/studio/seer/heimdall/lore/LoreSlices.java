@@ -583,7 +583,7 @@ public final class LoreSlices {
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
         slice("git_projects",
-            "SELECT slug, name FROM KnowGitProject",
+            "SELECT slug, name, hosts, default_branch FROM KnowGitProject",
             List.of(), Map.of(), " ORDER BY slug");
 
         // Fixed 2026-07-02: PART_OF is Task --PART_OF--> Sprint (out from the task), so

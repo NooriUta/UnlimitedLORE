@@ -10,7 +10,7 @@ import {
   upsertDictEntry,
   type LoreSprintTask, type LorePlanItemStatus, type LoreFileRow,
 } from '../../api/lore';
-import { parseHosts, primaryHost, fileUrl } from './repo-url';
+import { parseHosts, primaryHost, fileUrl, prUrl, type RepoHost } from './repo-url';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
@@ -988,10 +988,17 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   // Reset the status/type filters when switching sprints (not on in-place reloads).
   useEffect(() => { setFilter(new Set()); setTypeFilter(new Set()); }, [sprintId]);
 
-  // Load available projects from DB once (not per-sprint).
+  // Load available projects from DB once (not per-sprint). hosts[] (ADR-018) rides
+  // along so PR/file URLs compose from the template, not a hardcoded host.
+  const [projectHosts, setProjectHosts] = useState<Record<string, RepoHost[]>>({});
   useEffect(() => {
-    fetchLoreSlice<{ slug: string }>('git_projects', {})
-      .then(rows => setAllProjects(rows.map(r => r.slug).filter(Boolean)))
+    fetchLoreSlice<{ slug: string; hosts: string | null }>('git_projects', {})
+      .then(rows => {
+        setAllProjects(rows.map(r => r.slug).filter(Boolean));
+        const m: Record<string, RepoHost[]> = {};
+        rows.forEach(r => { if (r.slug) m[r.slug] = parseHosts(r.hosts); });
+        setProjectHosts(m);
+      })
       .catch(() => {});
   }, []);
 
@@ -1076,6 +1083,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
     ? sprint.release_ids
     : (fallbackVer ? [fallbackVer] : []);
   const prNums  = parsePrRefs(sprint.pr_refs);
+  // ADR-018 §7: compose PR URLs from the project's hosts[] template (not a baked-in
+  // host). Falls back to the GitHub-shaped ghBase for projects with no hosts yet.
+  const prHosts   = projectHosts[ghSlug] ?? [];
+  const prPrimary = primaryHost(prHosts);
+  const prMirrors = prPrimary ? prHosts.filter(h => h !== prPrimary) : [];
 
   // Modules for this sprint. Explicit BELONGS_TO links (sprint.components, from the
   // sprint_tree slice) are authoritative — when present, show ONLY those. Otherwise
@@ -1289,9 +1301,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               <span style={S.linkGroup}>
                 <span style={S.prLabel}>{t('lore.sprintDetail.prBar.label', 'PR')}</span>
                 {prNums.map(n => (
-                  <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>
-                    #{n}
-                  </a>
+                  prPrimary
+                    ? <span key={n} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <a href={prUrl(prPrimary, n)} target="_blank" rel="noopener noreferrer" style={S.prLink}>#{n}</a>
+                        {prMirrors.map(m => (
+                          <a key={m.remote} href={prUrl(m, n)} target="_blank" rel="noopener noreferrer"
+                             title={t('lore.sprintDetail.prBar.openInMirror', 'Открыть в зеркале')}
+                             style={{ ...S.prLink, fontSize: 'var(--fs-2xs)', opacity: 0.7 }}>⧉</a>
+                        ))}
+                      </span>
+                    : <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>#{n}</a>
                 ))}
               </span>
             )}
