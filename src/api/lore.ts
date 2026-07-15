@@ -186,6 +186,14 @@ export interface LoreAdrRow {
   tags: string[] | null;
 }
 
+export interface LoreFileRow {
+  project: string | null;
+  file_path: string;
+  summary_md: string | null;
+  project_hosts: string | null;           // JSON string of RepoHost[] (ADR-018)
+  project_default_branch: string | null;
+}
+
 export interface LoreAdrPassport {
   adr_id: string;
   name: string | null;

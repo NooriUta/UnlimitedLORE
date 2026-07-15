@@ -8,8 +8,9 @@ import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
   upsertDictEntry,
-  type LoreSprintTask, type LorePlanItemStatus,
+  type LoreSprintTask, type LorePlanItemStatus, type LoreFileRow,
 } from '../../api/lore';
+import { parseHosts, primaryHost, fileUrl } from './repo-url';
 import { StatusChip } from '../../pages/LorePage';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
@@ -770,6 +771,45 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
       {hasDetail && !editing && expanded && (
         <MartProse text={task.note_md} style={mdBox} />
       )}
+      {!editing && expanded && <TaskFiles taskUid={task.task_uid} />}
+    </div>
+  );
+}
+
+// ADR-LORE-018 T21: files referenced by this task (EDITED_IN). The link URL is
+// composed from the project's hosts[] at read time; "open in mirror" links walk
+// the remaining hosts. Nothing here parses code — these are plain references.
+function TaskFiles({ taskUid }: { taskUid: string }) {
+  const { t } = useTranslation();
+  const [files, setFiles] = useState<LoreFileRow[]>([]);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreFileRow>('files_of_task', { id: taskUid }, ctrl.signal)
+      .then(setFiles).catch(() => { /* files are optional — never block the row */ });
+    return () => ctrl.abort();
+  }, [taskUid]);
+  if (!files.length) return null;
+  return (
+    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {files.map(f => {
+        const hosts   = parseHosts(f.project_hosts);
+        const primary = primaryHost(hosts);
+        const mirrors = primary ? hosts.filter(h => h !== primary) : [];
+        return (
+          <div key={f.file_path} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', minWidth: 0 }}>
+            <span style={{ color: 'var(--t3)', flexShrink: 0 }}>📄</span>
+            {primary
+              ? <a href={fileUrl(primary, f.file_path, f.project_default_branch)} target="_blank" rel="noreferrer"
+                   style={{ color: 'var(--acc)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{f.file_path}</a>
+              : <span style={{ fontFamily: 'var(--mono)', color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{f.file_path}</span>}
+            {mirrors.map(m => (
+              <a key={m.remote} href={fileUrl(m, f.file_path, f.project_default_branch)} target="_blank" rel="noreferrer"
+                 title={t('lore.sprintDetail.task.openInMirror', 'Открыть в зеркале')}
+                 style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0 }}>⧉ {m.remote}</a>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

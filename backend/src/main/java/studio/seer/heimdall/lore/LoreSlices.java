@@ -115,6 +115,16 @@ public final class LoreSlices {
             "FROM KnowDecision WHERE decision_id = :id",
             List.of("id"), Map.of(), "");
 
+        // ── ADR-LORE-018 T21: files referenced (EDITED_IN) by a task ──────────
+        // Returns the project's hosts[]/default_branch alongside, so the client
+        // composes file URLs (+ "open in mirror") in one fetch, no second call.
+        slice("files_of_task",
+            "SELECT project, file_path, summary_md, " +
+            "out('BELONGS_TO_PROJECT').hosts[0]          AS project_hosts, " +
+            "out('BELONGS_TO_PROJECT').default_branch[0] AS project_default_branch " +
+            "FROM KnowFile WHERE out('EDITED_IN').task_uid CONTAINS :id ORDER BY file_path",
+            List.of("id"), Map.of(), "");
+
         // ── §3 Sprints ───────────────────────────────────────────────────────
         // [field IS NOT NULL] filter: skip sparse hist entries where field absent
         slice("sprints",

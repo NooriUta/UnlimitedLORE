@@ -140,18 +140,26 @@ export function registerLoreWrite(server: McpServer): void {
     'Link (or unlink) a KnowTask to another entity. rel="phase": IN_PHASE edge to a sprint phase ' +
       '(task and phase must belong to the same sprint; action="remove" without target_id detaches ' +
       'from ALL phases). rel="component": TAGGED_WITH edge to a LoreComponent, many-to-many. ' +
-      'Idempotent on add. Mutates system_aida_lore.',
+      'rel="file": EDITED_IN edge to a KnowFile (ADR-018) — a repo file REFERENCE (relative path ' +
+      'only), lazily created on first link; requires project. Idempotent on add. Mutates system_aida_lore.',
     {
       task_uid:  z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
-      rel:       z.enum(['phase', 'component']),
-      target_id: z.string().optional().describe('phase_uid (rel="phase", e.g. "SPRINT_X/PHASE_B") or component_id (rel="component"); omit with rel="phase"+action="remove" to detach from all phases'),
+      rel:       z.enum(['phase', 'component', 'file']),
+      target_id: z.string().optional().describe('phase_uid (rel="phase") | component_id (rel="component") | relative file path (rel="file", e.g. "backend/src/.../LoreSlices.java"); omit with rel="phase"+action="remove" to detach from all phases'),
+      project:   z.string().optional().describe('rel="file" only: KnowGitProject slug the file belongs to, e.g. "NooriUta/UnlimitedLORE"'),
+      summary_md: z.string().optional().describe('rel="file" only: optional short note on what the file does'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },
-    async ({ task_uid, rel, target_id, action }) => {
+    async ({ task_uid, rel, target_id, project, summary_md, action }) => {
       try {
         const act = action ?? 'add';
         if (rel === 'phase') {
           return json(await lorePost('/lore/task/phase', { task_uid, phase_uid: target_id ?? null, action: act }));
+        }
+        if (rel === 'file') {
+          if (!target_id) return err(new Error('target_id (file path) required for rel="file"'));
+          if (!project) return err(new Error('project required for rel="file"'));
+          return json(await lorePost('/lore/task/file', { task_uid, project, file_path: target_id, summary_md: summary_md ?? null, action: act }));
         }
         if (!target_id) return err(new Error('target_id required for rel="component"'));
         return json(await lorePost('/lore/task/component', { task_uid, component_id: target_id, action: act }));
