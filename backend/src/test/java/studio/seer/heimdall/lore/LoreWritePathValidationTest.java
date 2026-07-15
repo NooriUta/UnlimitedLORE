@@ -192,4 +192,30 @@ class LoreWritePathValidationTest {
             .statusCode(400)
             .body("error", equalTo("BAD_PARAMS"));
     }
+
+    @Test
+    void questionCreateRejectsIllegalId() {
+        given()
+            .header("X-Seer-Role", "admin")
+            .contentType("application/json")
+            .body("{\"question_id\":\"" + ILLEGAL_ID + "\",\"title\":\"x\"}")
+        .when()
+            .post("/lore/question")
+        .then()
+            .statusCode(400)
+            .body("error", equalTo("BAD_PARAMS"));
+    }
+
+    @Test
+    void taskFileLinkRejectsIllegalId() {
+        given()
+            .header("X-Seer-Role", "admin")
+            .contentType("application/json")
+            .body("{\"task_uid\":\"" + ILLEGAL_ID + "\",\"project\":\"P\",\"file_path\":\"x.java\"}")
+        .when()
+            .post("/lore/task/file")
+        .then()
+            .statusCode(400)
+            .body("error", equalTo("BAD_PARAMS"));
+    }
 }

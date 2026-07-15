@@ -593,6 +593,18 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowFile.file_path  IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowFile.summary_md IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowFile (project, file_path) UNIQUE",
-        "CREATE EDGE TYPE EDITED_IN IF NOT EXISTS"   // KnowFile -> KnowTask
+        "CREATE EDGE TYPE EDITED_IN IF NOT EXISTS",   // KnowFile -> KnowTask
+
+        // ── KnowQuestion (ADR-020/021 T25): open-questions register. Vertex-only
+        // like KnowDecision — NO Hist (status/opened_date/closed_date are plain
+        // fields, see ADR-021 §SCD2). GATES (question→task gate) reuses the
+        // already-declared-but-empty edge; ANSWERS/RAISED_IN are new.
+        "CREATE VERTEX TYPE KnowQuestion IF NOT EXISTS",
+        "CREATE PROPERTY KnowQuestion.question_id  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowQuestion.component_id IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (question_id)  UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (component_id) NOTUNIQUE",
+        "CREATE EDGE TYPE ANSWERS   IF NOT EXISTS",   // KnowDecision -> KnowQuestion
+        "CREATE EDGE TYPE RAISED_IN IF NOT EXISTS"    // KnowQuestion -> KnowADR|KnowSprint|KnowTask
     );
 }
