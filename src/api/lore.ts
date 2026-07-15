@@ -249,6 +249,9 @@ export interface LoreDecisionRow {
   title: string;
   date_created: string | null;
   status_raw: string | null;
+  component_id: string | null;   // ADR-019: child-of-ADR filter axis
+  tags: string[] | null;
+  parent_adr: string | null;     // out('DECIDED_IN') — the ADR this decision lives under
 }
 
 export interface LoreDecisionPassport {

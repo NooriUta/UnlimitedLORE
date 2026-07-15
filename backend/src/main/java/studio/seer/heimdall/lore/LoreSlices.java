@@ -103,9 +103,22 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         // ── §2 Decisions ─────────────────────────────────────────────────────
+        // ADR-019: KnowDecision as child of ADR. component_id/tags are filter axes,
+        // parent_adr (out DECIDED_IN) is the "rule → why" link. ORDER BY/LIMIT live
+        // in the suffix so a future optional WHERE lands before them.
         slice("decisions",
-            "SELECT decision_id, title, date_created, status_raw FROM KnowDecision ORDER BY decision_id",
-            List.of(), Map.of(), " LIMIT 300");
+            "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('TAGGED_WITH').tag_id  AS tags, " +
+            "out('DECIDED_IN').adr_id[0] AS parent_adr " +
+            "FROM KnowDecision",
+            List.of(), Map.of(), " ORDER BY decision_id LIMIT 300");
+
+        // Decisions that belong to one ADR (in('DECIDED_IN') from the ADR side).
+        slice("decisions_of_adr",
+            "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('TAGGED_WITH').tag_id AS tags " +
+            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id ORDER BY decision_id",
+            List.of("id"), Map.of(), "");
 
         slice("decision",
             "SELECT decision_id, title, date_created, " +

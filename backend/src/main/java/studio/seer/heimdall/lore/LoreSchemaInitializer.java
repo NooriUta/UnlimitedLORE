@@ -178,6 +178,7 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY PlanSection.section_id       IF NOT EXISTS STRING",
         "CREATE PROPERTY PlanConfig.config_id         IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowDecision.decision_id     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDecision.component_id    IF NOT EXISTS STRING",  // ADR-019: child-of-ADR filter axis (vertex field, no Hist)
         "CREATE PROPERTY KnowADR.adr_id               IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowTag.tag_id               IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprint.sprint_id         IF NOT EXISTS STRING",
@@ -203,6 +204,7 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON PlanSection     (section_id)   UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanConfig      (config_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDecision    (decision_id)  UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowDecision    (component_id) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowADR         (adr_id)       UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowTag         (tag_id)       UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSprint      (sprint_id)    UNIQUE",
