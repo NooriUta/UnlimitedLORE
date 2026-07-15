@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
+import { GameIcon } from './GameIcon';
+import { areaColor } from './LoreComponentList';
+
+interface CompMeta { area: string | null; full_name: string | null; game_icon: string | null }
 
 type DatePreset = null | '3m' | '6m' | '1y';
 const DATE_PRESETS: { key: DatePreset; labelKey: string; labelFallback: string }[] = [
@@ -109,6 +113,17 @@ const S = {
     fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 2, flexShrink: 0,
     background: 'var(--b2)', color: 'var(--t3)',
   },
+  compIcon: (color: string) => ({
+    display: 'inline-flex', alignItems: 'center', padding: '1px 3px', borderRadius: 3, flexShrink: 0,
+    background: `color-mix(in srgb, ${color} 14%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 32%, transparent)`,
+  }),
+  decCount: {
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 999, flexShrink: 0, fontFamily: 'var(--mono)',
+    color: 'var(--section-decisions, var(--acc))',
+    background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
+  },
   date: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
@@ -135,6 +150,7 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sor
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
   const [datePreset, setDatePreset] = useState<DatePreset>(null);
+  const [comps, setComps]           = useState<Record<string, CompMeta>>({});
 
   useEffect(() => {
     setLoading(true);
@@ -146,6 +162,16 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sor
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
   }, [module, onError]);
+
+  // Component icon/colour map (game_icon + area) — same source LoreSprintDetail
+  // uses to render tasks' component tags as icons.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ component_id: string } & CompMeta>('components', {}, ctrl.signal)
+      .then(cs => { const m: Record<string, CompMeta> = {}; cs.forEach(c => { m[c.component_id] = c; }); setComps(m); })
+      .catch(() => { /* icons degrade to id text */ });
+    return () => ctrl.abort();
+  }, []);
 
   // Report facet counts (status / component / tag) from the full list
   useEffect(() => {
@@ -206,10 +232,23 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sor
                 <span style={S.id}>{a.adr_id}</span>
                 {a.name && <span style={S.name}>{a.name}</span>}
               </div>
-              {(a.component || a.date_created || a.status) && (
+              {(a.component || a.date_created || a.status || a.decision_count) && (
                 <div style={S.line2}>
                   {a.status && <span style={S.statusBadge(statusColor)}>{adrStatusLabel(t, statusKey)}</span>}
-                  {a.component && <span style={S.component}>{a.component}</span>}
+                  {(a.components?.length ? a.components : (a.component ? [a.component] : [])).map(cid => {
+                    const c = comps[cid];
+                    const color = areaColor(c?.area ?? '');
+                    return (
+                      <span key={cid} title={c?.full_name ?? cid} style={S.compIcon(color)}>
+                        <GameIcon slug={c?.game_icon ?? 'cog'} size={11} style={{ color }} />
+                      </span>
+                    );
+                  })}
+                  {!!a.decision_count && (
+                    <span style={S.decCount} title={t('lore.adrList.decisionCount', 'решений: {{n}}', { n: a.decision_count })}>
+                      DES {a.decision_count}
+                    </span>
+                  )}
                   {a.date_created && <span style={S.date}>{a.date_created.slice(0, 10)}</span>}
                 </div>
               )}

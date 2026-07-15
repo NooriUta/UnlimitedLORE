@@ -19,6 +19,7 @@ import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreSprintEditor    from '../components/lore/LoreSprintEditor';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
+import LoreOpenQuestionsBoard from '../components/lore/LoreOpenQuestionsBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
 import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
@@ -35,7 +36,7 @@ import { FilterBar, SortControl, FilterDimensionMulti, type FilterTagData } from
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
-  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
+  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'openQuestions' | 'releases' | 'milestones'
   | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
@@ -51,6 +52,7 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'milestones', icon: 'crossed-axes',   labelKey: 'lore.page.nav.milestones', fallback: 'Вехи'       },
   { id: 'plan',       icon: 'compass',        labelKey: 'lore.page.nav.plan',       fallback: 'План'       },
   { id: 'sprints',    icon: 'sprint',         labelKey: 'lore.page.nav.sprints',    fallback: 'Спринты'    },
+  { id: 'openQuestions', icon: 'help',        labelKey: 'lore.page.nav.openQuestions', fallback: 'Вопросы' },
   { id: 'adrs',       icon: 'scroll-quill',   labelKey: 'lore.page.nav.adrs',       fallback: 'ADR'        },
   { id: 'decisions',  icon: 'vote',           labelKey: 'lore.page.nav.decisions',  fallback: 'Решения'    },
   { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
@@ -68,7 +70,7 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
 // section nav collapses to icons only, so colour is what tells the types apart.
 const SECTION_COLORS: Record<Section, string> = {
   milestones: 'var(--section-milestones)', plan: 'var(--section-plan)', sprints: 'var(--section-sprints)', adrs: 'var(--section-adrs)',
-  decisions: 'var(--section-decisions)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
+  decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
   analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)',
 };
@@ -263,7 +265,7 @@ export default function LorePage() {
   const hasDetailSelection = section === 'knowledge' ? !!((artKind && artId) || spec) : !!passport;
 
   // Sections where the global search bar is actually passed to children
-  const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
+  const SEARCH_SECTIONS: Section[] = ['decisions', 'openQuestions', 'releases', 'timeline'];
   const showGlobalSearch = SEARCH_SECTIONS.includes(section);
   // MOB: collapse the section nav to type-coloured icons on narrow screens.
   const narrow = useIsNarrow(720);
@@ -1069,6 +1071,11 @@ export default function LorePage() {
           {/* Decisions: composite feed */}
           {section === 'decisions' && (
             <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
+          )}
+
+          {/* Open Questions register (ADR-020/021) */}
+          {section === 'openQuestions' && (
+            <LoreOpenQuestionsBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
           )}
 
           {/* Releases */}

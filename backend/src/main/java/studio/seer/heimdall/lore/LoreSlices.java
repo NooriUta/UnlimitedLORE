@@ -72,7 +72,8 @@ public final class LoreSlices {
             "SELECT adr_id, name, status, date_created, " +
             "out('BELONGS_TO').component_id[0] AS component, " +
             "out('BELONGS_TO').component_id    AS components, " +
-            "out('TAGGED_WITH').tag_id         AS tags " +
+            "out('TAGGED_WITH').tag_id         AS tags, " +
+            "in('DECIDED_IN').size()           AS decision_count " +
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(

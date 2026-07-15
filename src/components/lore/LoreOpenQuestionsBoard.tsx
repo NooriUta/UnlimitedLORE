@@ -1,0 +1,288 @@
+// Open-questions register (KnowQuestion, ADR-LORE-020/021) — flat scrollable
+// feed, sibling to LoreDecisionBoard. "What we haven't answered yet" vs the
+// decisions board's "what rule". Client-side filter/sort (data is small).
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { a11yClick } from './a11y';
+import { fetchLoreSlice, type LoreQuestionRow } from '../../api/lore';
+import LoreSkeleton from './LoreSkeleton';
+import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
+
+interface Props {
+  q: string;
+  onError: (e: unknown) => void;
+  /** Navigate to the ADR where the question was raised (RAISED_IN). */
+  onNavigateAdr?: (adrId: string) => void;
+}
+
+// status = plain vertex field; overdue is derived (open ∧ due_date < today).
+const STATUS_META: Record<string, { label: string; color: string }> = {
+  open:     { label: 'открыт',   color: 'var(--inf)' },
+  deferred: { label: 'отложен',  color: 'var(--wrn)' },
+  closed:   { label: 'закрыт',   color: 'var(--suc)' },
+  dropped:  { label: 'снят',     color: 'var(--t3)'  },
+};
+const STATUS_ORDER = ['open', 'deferred', 'closed', 'dropped'];
+const PRIORITY_META: Record<string, { label: string; color: string }> = {
+  blocker: { label: 'blocker', color: 'var(--err)' },
+  high:    { label: 'high',    color: 'var(--wrn)' },
+  normal:  { label: 'normal',  color: 'var(--t2)'  },
+  low:     { label: 'low',     color: 'var(--t3)'  },
+};
+const PRIORITY_ORDER = ['blocker', 'high', 'normal', 'low'];
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+// Exported for unit test. Overdue is derived, never stored (ADR-021 §SCD2).
+export const isOverdue = (r: Pick<LoreQuestionRow, 'status' | 'due_date'>, today = todayISO()): boolean =>
+  r.status === 'open' && !!r.due_date && r.due_date.slice(0, 10) < today;
+const first = (a: (string | null)[] | null | undefined): string | null =>
+  (a ?? []).find(Boolean) ?? null;
+const gatingCount = (r: LoreQuestionRow) => (r.gating_tasks ?? []).filter(Boolean).length;
+
+export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Props) {
+  const { t } = useTranslation();
+  const [rows, setRows]       = useState<LoreQuestionRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy]   = useState<'due' | 'id' | 'opened'>('due');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusSel, setStatusSel]   = useState<Set<string>>(new Set(['open', 'deferred']));
+  const [prioSel, setPrioSel]       = useState<Set<string>>(new Set());
+  const [compSel, setCompSel]       = useState<Set<string>>(new Set());
+  const [onlyOverdue, setOnlyOverdue] = useState(false);
+  const [onlyGating, setOnlyGating]   = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreQuestionRow>('open_questions', undefined, ctrl.signal)
+      .then(r => { setRows(r); setLoading(false); })
+      .catch(e => { onError(e); setLoading(false); });
+    return () => ctrl.abort();
+  }, [onError]);
+
+  const statusCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.forEach(r => { const s = r.status ?? 'open'; m[s] = (m[s] || 0) + 1; });
+    return m;
+  }, [rows]);
+  const prioCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.forEach(r => { if (r.priority) m[r.priority] = (m[r.priority] || 0) + 1; });
+    return m;
+  }, [rows]);
+  const compCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.forEach(r => { if (r.component_id) m[r.component_id] = (m[r.component_id] || 0) + 1; });
+    return m;
+  }, [rows]);
+  const overdueCount = useMemo(() => rows.filter(r => isOverdue(r)).length, [rows]);
+  const gatingTotal  = useMemo(() => rows.filter(r => gatingCount(r) > 0).length, [rows]);
+
+  const allStatuses = STATUS_ORDER.filter(s => statusCounts[s]);
+  const allPrios    = PRIORITY_ORDER.filter(p => prioCounts[p]);
+  const allComps    = Object.keys(compCounts).sort((a, b) => (compCounts[b] - compCounts[a]) || a.localeCompare(b));
+
+  const filtered = useMemo(() => rows
+    .filter(r => !q
+      || (r.title ?? '').toLowerCase().includes(q.toLowerCase())
+      || r.question_id.toLowerCase().includes(q.toLowerCase()))
+    .filter(r => statusSel.size === 0 || statusSel.has(r.status ?? 'open'))
+    .filter(r => prioSel.size === 0 || (r.priority != null && prioSel.has(r.priority)))
+    .filter(r => compSel.size === 0 || (r.component_id != null && compSel.has(r.component_id)))
+    .filter(r => !onlyOverdue || isOverdue(r, todayISO()))
+    .filter(r => !onlyGating || gatingCount(r) > 0),
+  [rows, q, [...statusSel].sort().join(','), [...prioSel].sort().join(','), [...compSel].sort().join(','), onlyOverdue, onlyGating]);
+
+  const display = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'id') return dir * a.question_id.localeCompare(b.question_id, undefined, { numeric: true });
+      if (sortBy === 'opened') return dir * (a.opened_date ?? '').localeCompare(b.opened_date ?? '');
+      // due: nulls always last regardless of dir
+      const ad = a.due_date, bd = b.due_date;
+      if (!ad && !bd) return 0;
+      if (!ad) return 1;
+      if (!bd) return -1;
+      return dir * ad.localeCompare(bd);
+    });
+  }, [filtered, sortBy, sortDir]);
+
+  function toggle<T>(set: Set<T>, setFn: (s: Set<T>) => void, v: T) {
+    const n = new Set(set); n.has(v) ? n.delete(v) : n.add(v); setFn(n);
+  }
+
+  if (loading) return <LoreSkeleton />;
+
+  return (
+    <div style={S.root}>
+      <div style={S.header}>
+        <span style={S.count}>{t('lore.oqBoard.count', '{{count}} вопросов', { count: filtered.length })}</span>
+        {overdueCount > 0 && (
+          <span style={S.overdueBadge}>{t('lore.oqBoard.overdue', '{{n}} просрочено', { n: overdueCount })}</span>
+        )}
+        {q && <span style={S.filterNote}>{t('lore.oqBoard.filterNote', 'фильтр: «{{q}}»', { q })}</span>}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center' }}>
+          <div style={S.pillGroup}>
+            {(['due', 'id', 'opened'] as const).map((k, i, arr) => (
+              <button key={k}
+                onClick={() => { if (sortBy === k) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortBy(k); setSortDir(k === 'opened' ? 'desc' : 'asc'); } }}
+                style={{ ...S.ctrl, ...(sortBy === k ? S.ctrlActive : {}),
+                  borderRadius: i === 0 ? '4px 0 0 4px' : i === arr.length - 1 ? '0 4px 4px 0' : 0,
+                  borderRight: i === arr.length - 1 ? undefined : 'none' }}>
+                {t('lore.oqBoard.sort.' + k, k === 'due' ? 'срок' : k === 'id' ? 'ID' : 'создан')} {sortBy === k ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <FilterBar
+        tier="local"
+        label={t('lore.oqBoard.filtersLabel', 'Фильтры')}
+        activeCount={statusSel.size + prioSel.size + compSel.size + (onlyOverdue ? 1 : 0) + (onlyGating ? 1 : 0)}
+        summaryTags={[
+          ...[...statusSel].map((s): FilterTagData => ({
+            key: 'st:' + s, label: STATUS_META[s]?.label ?? s, color: STATUS_META[s]?.color,
+            onRemove: () => toggle(statusSel, setStatusSel, s),
+          })),
+          ...[...prioSel].map((p): FilterTagData => ({
+            key: 'pr:' + p, label: PRIORITY_META[p]?.label ?? p, color: PRIORITY_META[p]?.color,
+            onRemove: () => toggle(prioSel, setPrioSel, p),
+          })),
+          ...[...compSel].map((c): FilterTagData => ({
+            key: 'co:' + c, label: c, onRemove: () => toggle(compSel, setCompSel, c),
+          })),
+          ...(onlyOverdue ? [{ key: 'ov', label: t('lore.oqBoard.overdueTag', 'просрочен'), color: 'var(--err)', onRemove: () => setOnlyOverdue(false) } as FilterTagData] : []),
+          ...(onlyGating ? [{ key: 'ga', label: t('lore.oqBoard.gatingTag', 'блокирует'), onRemove: () => setOnlyGating(false) } as FilterTagData] : []),
+        ]}
+        onClear={() => { setStatusSel(new Set()); setPrioSel(new Set()); setCompSel(new Set()); setOnlyOverdue(false); setOnlyGating(false); }}
+        open={filterOpen}
+        onToggleOpen={() => setFilterOpen(v => !v)}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={S.dimRow}>
+            <span style={S.dimLbl}>{t('lore.oqBoard.statusLabel', 'Статус')}</span>
+            {allStatuses.map(s => (
+              <Chip key={s} label={STATUS_META[s]?.label ?? s} pressed={statusSel.has(s)}
+                onClick={() => toggle(statusSel, setStatusSel, s)} count={statusCounts[s]}
+                color={STATUS_META[s]?.color} dot />
+            ))}
+          </div>
+          {allPrios.length > 0 && (
+            <div style={S.dimRow}>
+              <span style={S.dimLbl}>{t('lore.oqBoard.priorityLabel', 'Приоритет')}</span>
+              {allPrios.map(p => (
+                <Chip key={p} label={PRIORITY_META[p]?.label ?? p} pressed={prioSel.has(p)}
+                  onClick={() => toggle(prioSel, setPrioSel, p)} count={prioCounts[p]}
+                  color={PRIORITY_META[p]?.color} dot />
+              ))}
+            </div>
+          )}
+          {allComps.length > 0 && (
+            <div style={S.dimRow}>
+              <span style={S.dimLbl}>{t('lore.oqBoard.componentLabel', 'Компонент')}</span>
+              {allComps.map(c => (
+                <Chip key={c} label={c} pressed={compSel.has(c)}
+                  onClick={() => toggle(compSel, setCompSel, c)} count={compCounts[c]} dot />
+              ))}
+            </div>
+          )}
+          <div style={S.dimRow}>
+            <span style={S.dimLbl}>{t('lore.oqBoard.flagsLabel', 'Признак')}</span>
+            <Chip label={t('lore.oqBoard.overdueTag', 'просрочен')} pressed={onlyOverdue}
+              onClick={() => setOnlyOverdue(v => !v)} count={overdueCount} color="var(--err)" />
+            <Chip label={t('lore.oqBoard.gatingTag', 'блокирует')} pressed={onlyGating}
+              onClick={() => setOnlyGating(v => !v)} count={gatingTotal} />
+          </div>
+        </div>
+      </FilterBar>
+
+      <div style={S.list}>
+        {display.length === 0 && <div style={S.empty}>{t('lore.oqBoard.none', 'Вопросов не найдено.')}</div>}
+        {display.map(r => {
+          const st = r.status ?? 'open';
+          const meta = STATUS_META[st] ?? { label: st, color: 'var(--t3)' };
+          const overdue = isOverdue(r);
+          const gate = gatingCount(r);
+          const adr = first(r.raised_adr);
+          const ans = (r.answered_by ?? []).filter(Boolean);
+          return (
+            <div key={r.question_id} style={S.row}>
+              <span style={S.statusDot(meta.color)} title={meta.label} />
+              <span style={S.qid}>{r.question_id}</span>
+              <div style={S.body}>
+                <span style={S.title}>{r.title ?? r.question_id}</span>
+              </div>
+              {r.priority && (
+                <span style={S.prioChip(PRIORITY_META[r.priority]?.color ?? 'var(--t3)')}>
+                  {PRIORITY_META[r.priority]?.label ?? r.priority}
+                </span>
+              )}
+              {gate > 0 && <span style={S.gateChip} title={t('lore.oqBoard.gatesTitle', 'блокирует задач: {{n}}', { n: gate })}>⛔ {gate}</span>}
+              {r.component_id && <span style={S.compChip}>{r.component_id}</span>}
+              {adr && (
+                onNavigateAdr
+                  ? <span style={S.adrLink} title={adr}
+                      {...a11yClick(() => onNavigateAdr(adr))}>{adr}</span>
+                  : <span style={S.adrChip} title={adr}>{adr}</span>
+              )}
+              {st === 'closed' && ans.length > 0 && (
+                <span style={S.ansChip} title={t('lore.oqBoard.answeredTitle', 'закрыт решением')}>← #{ans.join(', #')}</span>
+              )}
+              {r.due_date && (
+                <span style={{ ...S.due, ...(overdue ? S.dueOverdue : {}) }} title={r.due_date.slice(0, 10)}>
+                  {overdue ? '⚠ ' : ''}{r.due_date.slice(0, 10)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const S = {
+  root:   { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
+  header: { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0 },
+  count:  { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
+  overdueBadge: {
+    fontSize: 'var(--fs-2xs)', padding: '1px 7px', borderRadius: 999, fontWeight: 700,
+    color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 14%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--err) 35%, transparent)',
+  },
+  filterNote: { fontSize: 'var(--fs-sm)', color: 'var(--acc)' },
+  list:  { flex: 1, overflowY: 'auto' as const },
+  empty: { padding: '24px 16px', color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  row: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '7px 16px', borderBottom: '1px solid var(--bd)',
+  },
+  statusDot: (c: string) => ({ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0 }),
+  qid:  { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--acc)', fontWeight: 700, flexShrink: 0, minWidth: 60 },
+  body: { flex: 1, minWidth: 0 },
+  title: { fontSize: 'var(--fs-base)', color: 'var(--t1)', lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, display: 'block' },
+  prioChip: (c: string) => ({
+    fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 3, flexShrink: 0, fontWeight: 600,
+    color: c, background: `color-mix(in srgb, ${c} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${c} 30%, transparent)`,
+  }),
+  gateChip: {
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+    color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 10%, transparent)',
+  },
+  compChip: { fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)' },
+  adrChip:  { fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, fontFamily: 'var(--mono)', color: 'var(--t3)', border: '1px solid var(--bd)' },
+  adrLink:  {
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, cursor: 'pointer', fontFamily: 'var(--mono)',
+    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)', background: 'color-mix(in srgb, var(--acc) 8%, transparent)',
+  },
+  ansChip:  { fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, fontFamily: 'var(--mono)', color: 'var(--suc)', border: '1px solid color-mix(in srgb, var(--suc) 30%, transparent)' },
+  due:      { fontSize: 'var(--fs-xs)', color: 'var(--t3)', flexShrink: 0, fontFamily: 'var(--mono)' },
+  dueOverdue: { color: 'var(--err)', fontWeight: 700 },
+  dimRow: { display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' },
+  dimLbl: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: 0.5, marginRight: 4, minWidth: 70 },
+  ctrl: { fontSize: 'var(--fs-xs)', padding: '3px 8px', cursor: 'pointer', border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)' },
+  ctrlActive: { background: 'color-mix(in srgb, var(--acc) 15%, transparent)', color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 40%, transparent)' },
+  pillGroup: { display: 'flex' },
+};
