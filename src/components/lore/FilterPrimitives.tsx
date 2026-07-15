@@ -193,16 +193,43 @@ export interface FilterDimensionMultiProps {
   onToggle: (value: string) => void;
   counts?: Record<string, number>;
   dot?: boolean;
+  /**
+   * Long lists (components, tags) fold to their label — chips render only when
+   * expanded; collapsed shows a ▾ toggle + selected summary. Same nested
+   * show-more the Sprints filter uses, independent of the outer FilterBar band.
+   */
+  collapsible?: boolean;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
-export function FilterDimensionMulti({ label, options, selected, onToggle, counts, dot }: FilterDimensionMultiProps) {
+export function FilterDimensionMulti({ label, options, selected, onToggle, counts, dot, collapsible, collapsed, onToggleCollapsed }: FilterDimensionMultiProps) {
+  const showChips = !collapsible || !collapsed;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-      <span style={dimLabelStyle}>{label}</span>
-      {options.map(o => (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, flexWrap: 'wrap' }}>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          aria-expanded={!collapsed}
+          style={{ ...dimLabelStyle, width: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+        >
+          <span style={{ display: 'inline-block', transform: collapsed ? 'rotate(-90deg)' : 'none', transition: 'transform .12s' }}>▾</span>
+          {label}
+          {selected.size > 0 && <span style={{ color: 'var(--acc)' }}>({selected.size})</span>}
+        </button>
+      ) : (
+        <span style={dimLabelStyle}>{label}</span>
+      )}
+      {showChips && options.map(o => (
         <Chip key={o.value} label={o.label} pressed={selected.has(o.value)} onClick={() => onToggle(o.value)}
           count={counts?.[o.value]} color={o.color} dot={dot} />
       ))}
+      {collapsible && collapsed && selected.size > 0 && (
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
+          {[...selected].map(v => options.find(o => o.value === v)?.label ?? v).join(', ')}
+        </span>
+      )}
     </div>
   );
 }

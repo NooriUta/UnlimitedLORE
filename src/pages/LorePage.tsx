@@ -12,7 +12,7 @@ import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type D
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, type AdrSortKey } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT, DATE_PRESETS, type AdrSortKey, type DatePreset } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
@@ -212,6 +212,9 @@ export default function LorePage() {
   const [adrTagSel, setAdrTagSel]       = useState<Set<string>>(new Set());
   const [adrCompCounts, setAdrCompCounts] = useState<Record<string, number>>({});
   const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
+  const [adrCompCollapsed, setAdrCompCollapsed] = useState(true);
+  const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
+  const [adrDatePreset, setAdrDatePreset] = useState<DatePreset>(null);
   const [adrSortKey, setAdrSortKey]     = useState<AdrSortKey>('date');
   const [adrSortDir, setAdrSortDir]     = useState<'asc' | 'desc'>('desc');
   // T34: filter chrome bars collapse to one summary line by default (approved
@@ -674,22 +677,26 @@ export default function LorePage() {
         <FilterBar
           tier="local"
           label={t('lore.page.adrs.filtersLabel', 'Фильтры')}
-          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size}
+          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size + (adrDatePreset ? 1 : 0)}
           summaryTags={[
             ...ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
               key: 'st:' + f.key, label: adrStatusLabel(t, f.key), color: f.color,
               onRemove: () => setAdrStatusSel(prev => { const n = new Set(prev); n.delete(f.key); return n; }),
             })),
             ...[...adrCompSel].map((c): FilterTagData => ({
-              key: 'co:' + c, label: c,
+              key: 'co:' + c, label: c === NO_COMPONENT ? t('lore.page.adrs.noComponent', 'без компонента') : c,
               onRemove: () => setAdrCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
             })),
             ...[...adrTagSel].map((tg): FilterTagData => ({
               key: 'tg:' + tg, label: tg === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : tg,
               onRemove: () => setAdrTagSel(prev => { const n = new Set(prev); n.delete(tg); return n; }),
             })),
+            ...(adrDatePreset ? [{
+              key: 'dp', label: DATE_PRESETS.find(p => p.key === adrDatePreset)!.labelFallback,
+              onRemove: () => setAdrDatePreset(null),
+            } as FilterTagData] : []),
           ]}
-          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }}
+          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); setAdrDatePreset(null); }}
           open={adrFilterOpen}
           onToggleOpen={() => setAdrFilterOpen(v => !v)}
         >
@@ -729,11 +736,19 @@ export default function LorePage() {
             {Object.keys(adrCompCounts).length > 0 && (
               <FilterDimensionMulti
                 label={t('lore.page.adrs.componentDim', 'Компонент')}
-                options={Object.keys(adrCompCounts).sort((a, b) => (adrCompCounts[b] - adrCompCounts[a]) || a.localeCompare(b)).map(c => ({ value: c, label: c }))}
+                options={[
+                  ...Object.keys(adrCompCounts).filter(c => c !== NO_COMPONENT)
+                    .sort((a, b) => (adrCompCounts[b] - adrCompCounts[a]) || a.localeCompare(b))
+                    .map(c => ({ value: c, label: c })),
+                  ...(adrCompCounts[NO_COMPONENT] ? [{ value: NO_COMPONENT, label: t('lore.page.adrs.noComponent', 'без компонента') }] : []),
+                ]}
                 selected={adrCompSel}
                 onToggle={v => setAdrCompSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
                 counts={adrCompCounts}
                 dot
+                collapsible
+                collapsed={adrCompCollapsed}
+                onToggleCollapsed={() => setAdrCompCollapsed(v => !v)}
               />
             )}
             {Object.keys(adrTagCounts).length > 0 && (
@@ -743,6 +758,9 @@ export default function LorePage() {
                 selected={adrTagSel}
                 onToggle={v => setAdrTagSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
                 counts={adrTagCounts}
+                collapsible
+                collapsed={adrTagCollapsed}
+                onToggleCollapsed={() => setAdrTagCollapsed(v => !v)}
               />
             )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -760,6 +778,26 @@ export default function LorePage() {
                 direction={adrSortDir}
                 onChange={(k, d) => { setAdrSortKey(k as AdrSortKey); setAdrSortDir(d); }}
               />
+              <div style={{ width: 1, height: 14, background: 'var(--b2)', margin: '0 2px' }} />
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--t3)' }}>
+                {t('lore.page.adrs.periodDim', 'Период')}
+              </span>
+              {DATE_PRESETS.map(p => {
+                const on = adrDatePreset === p.key;
+                return (
+                  <span key={String(p.key)}
+                    {...a11yClick(() => setAdrDatePreset(p.key))}
+                    aria-pressed={on}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none',
+                      fontSize: 'var(--fs-sm)', padding: '3px 8px', borderRadius: 6, whiteSpace: 'nowrap',
+                      border: `1px solid ${on ? 'color-mix(in srgb, var(--acc) 55%, var(--bd))' : 'var(--b3)'}`,
+                      background: on ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
+                      color: on ? 'var(--acc)' : 'var(--t3)',
+                    }}
+                  >{t(p.labelKey, p.labelFallback)}</span>
+                );
+              })}
             </div>
           </div>
         </FilterBar>
@@ -896,6 +934,7 @@ export default function LorePage() {
                 tagSel={adrTagSel}
                 sortKey={adrSortKey}
                 sortDir={adrSortDir}
+                datePreset={adrDatePreset}
                 selectedId={passport === '__new' ? undefined : passport}
                 onError={handleFetchError}
                 onOpen={selectItem}

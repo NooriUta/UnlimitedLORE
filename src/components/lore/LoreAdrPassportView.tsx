@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, loreMutate, type LoreAdrPassport, type LoreDecisionRow } from '../../api/lore';
+import { fetchLoreSlice, loreMutate, type LoreAdrPassport, type LoreDecisionRow, type LoreQuestionRow } from '../../api/lore';
+import { isOverdue } from './LoreOpenQuestionsBoard';
 import { MartProse } from '../bench/MartProse';
 import LoreAdrEditor from './LoreAdrEditor';
 import { adrStatusLabel } from './LoreAdrList';
@@ -77,6 +78,11 @@ const S = {
   },
 };
 
+// Question status → dot colour (mirrors the ОВ register's STATUS_META).
+const QSTATUS_COLOR: Record<string, string> = {
+  open: 'var(--inf)', deferred: 'var(--wrn)', closed: 'var(--suc)', dropped: 'var(--t3)',
+};
+
 interface Props {
   adrId: string;
   onError: (e: unknown) => void;
@@ -92,6 +98,9 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   const [reload, setReload]   = useState(0);
   // ADR-019 "rationale" mode: the decisions that live under this ADR (DECIDED_IN).
   const [decisions, setDecisions] = useState<LoreDecisionRow[]>([]);
+  // ADR-020/021: open questions raised against this ADR (RAISED_IN). Read-only
+  // here — questions are created/edited in the ОВ register.
+  const [questions, setQuestions] = useState<LoreQuestionRow[]>([]);
   // Inline decision editing (ADR-019: edit decisions where they live as children).
   const [decEditId, setDecEditId] = useState<string | null>(null); // decision_id | '__new__' | null
   const [decForm, setDecForm]     = useState<{ decision_id: string; title: string; body_md: string; component_id: string }>(
@@ -129,6 +138,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       .catch(e => { onError(e); setLoading(false); });
     fetchLoreSlice<LoreDecisionRow>('decisions_of_adr', { id: adrId }, ctrl.signal)
       .then(setDecisions).catch(() => { /* decisions are optional context */ });
+    fetchLoreSlice<LoreQuestionRow>('questions_of_adr', { id: adrId }, ctrl.signal)
+      .then(setQuestions).catch(() => { /* questions are optional context */ });
     return () => ctrl.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adrId, reload]);
@@ -292,6 +303,32 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.adrPassportView.noDecisions', 'Решений пока нет — добавьте «+ решение».')}</div>
         ))}
       </div>
+      {questions.length > 0 && (
+        <div style={S.section}>
+          <div style={S.sLabel}>{t('lore.adrPassportView.questions', 'Открытые вопросы этого ADR')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {questions.map(qn => {
+              const overdue = isOverdue(qn);
+              const color = QSTATUS_COLOR[qn.status ?? 'open'] ?? 'var(--t3)';
+              return (
+                <div key={qn.question_id} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 'var(--fs-sm)', minWidth: 0 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} title={qn.status ?? 'open'} />
+                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--acc)', flexShrink: 0 }}>{qn.question_id}</span>
+                  <span style={{ color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{qn.title}</span>
+                  {qn.priority && qn.priority !== 'normal' && (
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0 }}>{qn.priority}</span>
+                  )}
+                  {qn.due_date && (
+                    <span style={{ fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', flexShrink: 0, color: overdue ? 'var(--err)' : 'var(--t3)', fontWeight: overdue ? 700 : 400 }}>
+                      {qn.due_date.slice(0, 10)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {implementedIn.length > 0 && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.implementedInSprint', 'Implemented in sprint')}</div>

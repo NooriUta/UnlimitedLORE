@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchTags, sortAdrs, NO_TAG, type AdrSortKey } from './LoreAdrList';
+import { matchTags, matchComponents, sortAdrs, NO_TAG, NO_COMPONENT, type AdrSortKey } from './LoreAdrList';
 
 // Client-side ADR filter/sort logic (T01, SPRINT_LORE_UX_FILTERS_LINKS). The
 // backend only returns the fields; combining/ordering happens here because
@@ -26,6 +26,30 @@ describe('matchTags', () => {
     expect(matchTags([], sel)).toBe(true);      // untagged
     expect(matchTags(['a'], sel)).toBe(true);   // tagged with a
     expect(matchTags(['x'], sel)).toBe(false);  // tagged, but not a
+  });
+});
+
+describe('matchComponents', () => {
+  it('matches everything when no component selected', () => {
+    expect(matchComponents([], new Set())).toBe(true);
+    expect(matchComponents(['OMILORE'], new Set())).toBe(true);
+  });
+
+  it('NO_COMPONENT sentinel matches only ADRs without a component', () => {
+    expect(matchComponents([], new Set([NO_COMPONENT]))).toBe(true);
+    expect(matchComponents(['OMILORE'], new Set([NO_COMPONENT]))).toBe(false);
+  });
+
+  it('matches when any of the ADR components is selected (OR within dimension)', () => {
+    expect(matchComponents(['OMILORE', 'FORSETI'], new Set(['FORSETI']))).toBe(true);
+    expect(matchComponents(['OMILORE'], new Set(['QG']))).toBe(false);
+  });
+
+  it('NO_COMPONENT combined with a real component matches either', () => {
+    const sel = new Set([NO_COMPONENT, 'OMILORE']);
+    expect(matchComponents([], sel)).toBe(true);            // no component
+    expect(matchComponents(['OMILORE'], sel)).toBe(true);   // has OMILORE
+    expect(matchComponents(['QG'], sel)).toBe(false);       // has one, but not OMILORE
   });
 });
 

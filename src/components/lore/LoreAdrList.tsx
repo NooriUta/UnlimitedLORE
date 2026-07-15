@@ -7,8 +7,8 @@ import { areaColor } from './LoreComponentList';
 
 interface CompMeta { area: string | null; full_name: string | null; game_icon: string | null }
 
-type DatePreset = null | '3m' | '6m' | '1y';
-const DATE_PRESETS: { key: DatePreset; labelKey: string; labelFallback: string }[] = [
+export type DatePreset = null | '3m' | '6m' | '1y';
+export const DATE_PRESETS: { key: DatePreset; labelKey: string; labelFallback: string }[] = [
   { key: null, labelKey: 'lore.adrList.datePreset.all', labelFallback: 'Все' },
   { key: '3m', labelKey: 'lore.adrList.datePreset.3m',  labelFallback: '3м' },
   { key: '6m', labelKey: 'lore.adrList.datePreset.6m',  labelFallback: '6м' },
@@ -48,6 +48,13 @@ export function matchTags(tags: string[], sel: Set<string>): boolean {
   if (sel.has(NO_TAG) && tags.length === 0) return true;
   return tags.some(t => sel.has(t));
 }
+// Mirror of NO_TAG for the component dimension: match ADRs with no component.
+export const NO_COMPONENT = '__nocomp__';
+export function matchComponents(components: string[], sel: Set<string>): boolean {
+  if (sel.size === 0) return true;
+  if (sel.has(NO_COMPONENT) && components.length === 0) return true;
+  return components.some(c => sel.has(c));
+}
 // Client-side sort (data is small — ~130 ADRs; ArcadeDB can't bind ORDER BY,
 // and compose() can't AND-join filters, so all list logic lives here).
 export type AdrSortKey = 'date' | 'id' | 'status' | 'component';
@@ -74,13 +81,6 @@ const S = {
     color: 'var(--acc)', border: '1px dashed color-mix(in srgb, var(--acc) 40%, transparent)',
     borderRadius: 5, cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 600,
   },
-  dateLine: { display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', flexShrink: 0 },
-  dateBtn: (on: boolean) => ({
-    padding: '2px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', cursor: 'pointer',
-    border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
-    background: on ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
-    color: on ? 'var(--acc)' : 'var(--t3)',
-  }),
   list: { flex: 1, overflowY: 'auto' as const },
   row: {
     display: 'flex', flexDirection: 'column' as const, gap: 2,
@@ -136,6 +136,7 @@ interface Props {
   tagSel: Set<string>;
   sortKey: AdrSortKey;
   sortDir: 'asc' | 'desc';
+  datePreset: DatePreset;
   selectedId?: string;
   onError: (e: unknown) => void;
   onOpen: (id: string) => void;
@@ -145,11 +146,10 @@ interface Props {
   onTagCounts: (counts: Record<string, number>) => void;
 }
 
-export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sortKey, sortDir, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts }: Props) {
+export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sortKey, sortDir, datePreset, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts }: Props) {
   const { t } = useTranslation();
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
-  const [datePreset, setDatePreset] = useState<DatePreset>(null);
   const [comps, setComps]           = useState<Record<string, CompMeta>>({});
 
   useEffect(() => {
@@ -181,7 +181,9 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sor
     rows.forEach(r => {
       const k = (r.status ?? 'PROPOSED').toUpperCase();
       c[k] = (c[k] || 0) + 1;
-      (r.components ?? []).forEach(x => { cc[x] = (cc[x] || 0) + 1; });
+      const comps = r.components ?? [];
+      if (comps.length === 0) cc[NO_COMPONENT] = (cc[NO_COMPONENT] || 0) + 1;
+      else comps.forEach(x => { cc[x] = (cc[x] || 0) + 1; });
       const tags = r.tags ?? [];
       if (tags.length === 0) tc[NO_TAG] = (tc[NO_TAG] || 0) + 1;
       else tags.forEach(tg => { tc[tg] = (tc[tg] || 0) + 1; });
@@ -194,7 +196,7 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sor
     const cutoff = cutoffDate(datePreset);
     const filtered = rows
       .filter(r => statusSel.size === 0 || statusSel.has((r.status ?? 'PROPOSED').toUpperCase()))
-      .filter(r => compSel.size === 0 || (r.components ?? []).some(x => compSel.has(x)))
+      .filter(r => matchComponents(r.components ?? [], compSel))
       .filter(r => matchTags(r.tags ?? [], tagSel))
       .filter(r => !cutoff || (r.date_created ?? '') >= cutoff)
       .filter(r => !ql || r.adr_id.toLowerCase().includes(ql) || (r.name ?? '').toLowerCase().includes(ql));
@@ -204,13 +206,6 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sor
   return (
     <div style={S.root}>
       <button style={S.newBtn} onClick={onNew}>{t('lore.adrList.newButton', '+ Новый ADR')}</button>
-      <div style={S.dateLine}>
-        {DATE_PRESETS.map(p => (
-          <button key={String(p.key)} style={S.dateBtn(datePreset === p.key)} onClick={() => setDatePreset(p.key)}>
-            {t(p.labelKey, p.labelFallback)}
-          </button>
-        ))}
-      </div>
       <div style={S.list}>
         {loading && <div style={S.empty}>{t('lore.adrList.loading', 'Загрузка ADR…')}</div>}
         {!loading && !shown.length && <div style={S.empty}>{t('lore.adrList.empty', 'ADR не найдены.')}</div>}
