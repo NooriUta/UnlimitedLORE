@@ -9,6 +9,7 @@
     "metric_*": "allow",
     "insight_*": "allow",
     "rec_*": "allow",
+    "question_*": "allow",
     "task_set": "allow",
     "status_set": "allow"
   }

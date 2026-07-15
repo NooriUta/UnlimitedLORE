@@ -13,6 +13,7 @@
     "runbook_*": "allow",
     "doc_*": "allow",
     "decision_*": "allow",
+    "question_*": "allow",
     "project_new": "allow",
     "status_set": "allow"
   }

@@ -138,6 +138,34 @@ public final class LoreSlices {
             "FROM KnowFile WHERE out('EDITED_IN').task_uid CONTAINS :id ORDER BY file_path",
             List.of("id"), Map.of(), "");
 
+        // ── ADR-020/021 T25: open-questions register (ОВ) ─────────────────────
+        // Derived overdue/blocking/age are computed on the client from the raw
+        // fields (status/due_date + gating_tasks) — never stored.
+        slice("open_questions",
+            "SELECT question_id, title, status, component_id, due_date, priority, owner, " +
+            "raised_by, opened_date, closed_date, " +
+            "out('GATES').task_uid      AS gating_tasks, " +
+            "out('RAISED_IN').adr_id    AS raised_adr, " +
+            "out('RAISED_IN').sprint_id AS raised_sprint, " +
+            "in('ANSWERS').decision_id  AS answered_by " +
+            "FROM KnowQuestion",
+            List.of(), Map.of(), " ORDER BY question_id");
+
+        slice("questions_of_adr",
+            "SELECT question_id, title, status, component_id, due_date, priority " +
+            "FROM KnowQuestion WHERE out('RAISED_IN').adr_id CONTAINS :id ORDER BY question_id",
+            List.of("id"), Map.of(), "");
+
+        slice("questions_of_sprint",
+            "SELECT question_id, title, status, component_id, due_date, priority " +
+            "FROM KnowQuestion WHERE out('RAISED_IN').sprint_id CONTAINS :id ORDER BY question_id",
+            List.of("id"), Map.of(), "");
+
+        slice("gating_questions_of_task",
+            "SELECT question_id, title, status, priority " +
+            "FROM KnowQuestion WHERE out('GATES').task_uid CONTAINS :id AND status <> 'closed' ORDER BY question_id",
+            List.of("id"), Map.of(), "");
+
         // ── §3 Sprints ───────────────────────────────────────────────────────
         // [field IS NOT NULL] filter: skip sparse hist entries where field absent
         slice("sprints",
