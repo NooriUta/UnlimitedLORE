@@ -1,12 +1,20 @@
 // Open-questions register (KnowQuestion, ADR-LORE-020/021) — flat scrollable
 // feed, sibling to LoreDecisionBoard. "What we haven't answered yet" vs the
 // decisions board's "what rule". Client-side filter/sort (data is small).
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
-import { fetchLoreSlice, type LoreQuestionRow } from '../../api/lore';
+import { fetchLoreSlice, loreMutate, type LoreQuestionRow } from '../../api/lore';
 import LoreSkeleton from './LoreSkeleton';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
+
+// Editable fields — question is vertex-only, so a single upsert POST /lore/question
+// (partial-safe) covers both create and edit. status='deferred' requires trigger.
+interface QForm {
+  question_id: string; title: string; body_md: string; component_id: string;
+  status: string; priority: string; due_date: string; owner: string; raised_in: string;
+}
+const EMPTY_FORM: QForm = { question_id: '', title: '', body_md: '', component_id: '', status: 'open', priority: '', due_date: '', owner: '', raised_in: '' };
 
 interface Props {
   q: string;
@@ -51,15 +59,47 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   const [compSel, setCompSel]       = useState<Set<string>>(new Set());
   const [onlyOverdue, setOnlyOverdue] = useState(false);
   const [onlyGating, setOnlyGating]   = useState(false);
+  // Editing: editId is a question_id, or '__new__' for the create form, or null.
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm]     = useState<QForm>(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
-    const ctrl = new AbortController();
-    fetchLoreSlice<LoreQuestionRow>('open_questions', undefined, ctrl.signal)
+    fetchLoreSlice<LoreQuestionRow>('open_questions')
       .then(r => { setRows(r); setLoading(false); })
       .catch(e => { onError(e); setLoading(false); });
-    return () => ctrl.abort();
   }, [onError]);
+  useEffect(() => { load(); }, [load]);
+
+  function startNew() { setForm({ ...EMPTY_FORM, question_id: '' }); setEditId('__new__'); }
+  function startEdit(r: LoreQuestionRow) {
+    setForm({
+      question_id: r.question_id, title: r.title ?? '', body_md: '', component_id: r.component_id ?? '',
+      status: r.status ?? 'open', priority: r.priority ?? '', due_date: (r.due_date ?? '').slice(0, 10),
+      owner: r.owner ?? '', raised_in: (r.raised_adr ?? []).filter(Boolean)[0] ?? '',
+    });
+    setEditId(r.question_id);
+  }
+  function cancel() { setEditId(null); setForm(EMPTY_FORM); }
+
+  async function save() {
+    const f = form;
+    if (!f.question_id.trim() || !f.title.trim()) { onError(new Error('question_id и title обязательны')); return; }
+    setSaving(true);
+    try {
+      // Upsert (partial-safe). status='deferred' needs a trigger — the form omits
+      // deferred to avoid the backend trigger requirement; use the row's ⏸ later.
+      await loreMutate('/question', {
+        question_id: f.question_id.trim(), title: f.title.trim(),
+        body_md: f.body_md.trim() || null, component_id: f.component_id.trim() || null,
+        status: f.status || 'open', priority: f.priority || null,
+        due_date: f.due_date || null, owner: f.owner.trim() || null,
+        raised_in: f.raised_in.trim() || null,
+      });
+      cancel(); load();
+    } catch (e) { onError(e); } finally { setSaving(false); }
+  }
 
   const statusCounts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -123,6 +163,9 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
         )}
         {q && <span style={S.filterNote}>{t('lore.oqBoard.filterNote', 'фильтр: «{{q}}»', { q })}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center' }}>
+          <button style={S.newBtn} onClick={() => (editId === '__new__' ? cancel() : startNew())}>
+            {t('lore.oqBoard.newButton', '+ вопрос')}
+          </button>
           <div style={S.pillGroup}>
             {(['due', 'id', 'opened'] as const).map((k, i, arr) => (
               <button key={k}
@@ -198,6 +241,43 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
         </div>
       </FilterBar>
 
+      {editId !== null && (
+        <div style={S.formPanel}>
+          <div style={S.formTitle}>
+            {editId === '__new__' ? t('lore.oqBoard.formNew', 'Новый вопрос') : t('lore.oqBoard.formEdit', 'Правка {{id}}', { id: editId })}
+          </div>
+          <div style={S.formGrid}>
+            {editId === '__new__' && (
+              <input style={S.input} placeholder="ID (Q-M1, OQ7, …)" value={form.question_id}
+                onChange={e => setForm(f => ({ ...f, question_id: e.target.value }))} />
+            )}
+            <input style={{ ...S.input, gridColumn: '1 / -1' }} placeholder="Заголовок вопроса" value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+            <textarea style={{ ...S.input, gridColumn: '1 / -1', minHeight: 44, resize: 'vertical' as const }}
+              placeholder="Контекст / критерий закрытия (опц.)" value={form.body_md}
+              onChange={e => setForm(f => ({ ...f, body_md: e.target.value }))} />
+            <input style={S.input} placeholder="Компонент" value={form.component_id}
+              onChange={e => setForm(f => ({ ...f, component_id: e.target.value }))} />
+            <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+              {['open', 'closed', 'dropped'].map(s => <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>)}
+            </select>
+            <select style={S.input} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
+              <option value="">— приоритет —</option>
+              {PRIORITY_ORDER.map(p => <option key={p} value={p}>{PRIORITY_META[p].label}</option>)}
+            </select>
+            <input style={S.input} type="date" value={form.due_date}
+              onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
+            <input style={S.input} placeholder="Владелец (owner)" value={form.owner}
+              onChange={e => setForm(f => ({ ...f, owner: e.target.value }))} />
+            <input style={S.input} placeholder="Поставлен в ADR (raised_in)" value={form.raised_in}
+              onChange={e => setForm(f => ({ ...f, raised_in: e.target.value }))} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+            <button style={S.saveBtn} disabled={saving} onClick={save}>{saving ? '…' : t('lore.oqBoard.save', 'Сохранить')}</button>
+            <button style={S.cancelBtn} onClick={cancel}>{t('lore.oqBoard.cancel', 'Отмена')}</button>
+          </div>
+        </div>
+      )}
       <div style={S.list}>
         {display.length === 0 && <div style={S.empty}>{t('lore.oqBoard.none', 'Вопросов не найдено.')}</div>}
         {display.map(r => {
@@ -235,6 +315,7 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                   {overdue ? '⚠ ' : ''}{r.due_date.slice(0, 10)}
                 </span>
               )}
+              <button style={S.editBtn} title={t('lore.oqBoard.edit', 'Править')} onClick={() => startEdit(r)}>✎</button>
             </div>
           );
         })}
@@ -285,4 +366,28 @@ const S = {
   ctrl: { fontSize: 'var(--fs-xs)', padding: '3px 8px', cursor: 'pointer', border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)' },
   ctrlActive: { background: 'color-mix(in srgb, var(--acc) 15%, transparent)', color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 40%, transparent)' },
   pillGroup: { display: 'flex' },
+  newBtn: {
+    fontSize: 'var(--fs-xs)', padding: '3px 10px', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
+    border: '1px dashed color-mix(in srgb, var(--acc) 40%, transparent)',
+    background: 'color-mix(in srgb, var(--acc) 10%, transparent)', color: 'var(--acc)',
+  },
+  editBtn: {
+    fontSize: 'var(--fs-xs)', padding: '1px 5px', borderRadius: 3, cursor: 'pointer', flexShrink: 0,
+    border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)',
+  },
+  formPanel: { padding: '10px 16px', borderBottom: '1px solid var(--bd)', background: 'var(--bg2)', flexShrink: 0 },
+  formTitle: { fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t2)', marginBottom: 6 },
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 },
+  input: {
+    fontSize: 'var(--fs-sm)', padding: '4px 8px', borderRadius: 4, minWidth: 0,
+    border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'inherit',
+  },
+  saveBtn: {
+    fontSize: 'var(--fs-sm)', padding: '4px 14px', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
+    border: '1px solid var(--acc)', background: 'var(--acc)', color: 'var(--bg1)',
+  },
+  cancelBtn: {
+    fontSize: 'var(--fs-sm)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
+    border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)',
+  },
 };

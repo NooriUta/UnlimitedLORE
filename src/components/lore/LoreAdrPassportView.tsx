@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, type LoreAdrPassport, type LoreDecisionRow } from '../../api/lore';
+import { fetchLoreSlice, loreMutate, type LoreAdrPassport, type LoreDecisionRow } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import LoreAdrEditor from './LoreAdrEditor';
 import { adrStatusLabel } from './LoreAdrList';
@@ -50,6 +50,31 @@ const S = {
   },
   date:  { color: 'var(--t3)', fontSize: 'var(--fs-sm)' },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  decNewBtn: {
+    fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 4, cursor: 'pointer',
+    border: '1px dashed color-mix(in srgb, var(--acc) 40%, transparent)',
+    background: 'color-mix(in srgb, var(--acc) 8%, transparent)', color: 'var(--acc)',
+  },
+  decEditBtn: {
+    fontSize: 'var(--fs-xs)', padding: '0 5px', borderRadius: 3, cursor: 'pointer', flexShrink: 0,
+    border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t3)',
+  },
+  decFormPanel: {
+    display: 'flex', flexDirection: 'column' as const, gap: 5, padding: 8, marginBottom: 6,
+    border: '1px solid var(--b3)', borderRadius: 5, background: 'var(--bg2)',
+  },
+  decInput: {
+    fontSize: 'var(--fs-sm)', padding: '4px 8px', borderRadius: 4,
+    border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'inherit',
+  },
+  decSave: {
+    fontSize: 'var(--fs-sm)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer', fontWeight: 600,
+    border: '1px solid var(--acc)', background: 'var(--acc)', color: 'var(--bg1)',
+  },
+  decCancel: {
+    fontSize: 'var(--fs-sm)', padding: '4px 10px', borderRadius: 4, cursor: 'pointer',
+    border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)',
+  },
 };
 
 interface Props {
@@ -67,6 +92,33 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   const [reload, setReload]   = useState(0);
   // ADR-019 "rationale" mode: the decisions that live under this ADR (DECIDED_IN).
   const [decisions, setDecisions] = useState<LoreDecisionRow[]>([]);
+  // Inline decision editing (ADR-019: edit decisions where they live as children).
+  const [decEditId, setDecEditId] = useState<string | null>(null); // decision_id | '__new__' | null
+  const [decForm, setDecForm]     = useState<{ decision_id: string; title: string; body_md: string; component_id: string }>(
+    { decision_id: '', title: '', body_md: '', component_id: '' });
+  const [decSaving, setDecSaving] = useState(false);
+
+  function startNewDec() { setDecForm({ decision_id: '', title: '', body_md: '', component_id: '' }); setDecEditId('__new__'); }
+  function startEditDec(d: LoreDecisionRow) {
+    setDecForm({ decision_id: d.decision_id, title: d.title ?? '', body_md: '', component_id: d.component_id ?? '' });
+    setDecEditId(d.decision_id);
+  }
+  function cancelDec() { setDecEditId(null); }
+  async function saveDec() {
+    const f = decForm;
+    if (!f.decision_id.trim() || !f.title.trim()) { onError(new Error('decision_id и title обязательны')); return; }
+    setDecSaving(true);
+    try {
+      // Partial-safe upsert: on edit we omit body_md when empty so it isn't wiped.
+      const body: Record<string, unknown> = {
+        decision_id: f.decision_id.trim(), title: f.title.trim(),
+        adr_id: adrId, component_id: f.component_id.trim() || null,
+      };
+      if (decEditId === '__new__' || f.body_md.trim()) body.body_md = f.body_md.trim() || null;
+      await loreMutate('/decision', body);
+      setDecEditId(null); setReload(x => x + 1);
+    } catch (e) { onError(e); } finally { setDecSaving(false); }
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -200,19 +252,46 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
           </div>
         </div>
       )}
-      {decisions.length > 0 && (
-        <div style={S.section}>
-          <div style={S.sLabel}>{t('lore.adrPassportView.decisions', 'Решения этого ADR')}</div>
+      <div style={S.section}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{ ...S.sLabel, marginBottom: 0 }}>{t('lore.adrPassportView.decisions', 'Решения этого ADR')}</div>
+          <button style={S.decNewBtn} onClick={() => (decEditId === '__new__' ? cancelDec() : startNewDec())}>
+            {t('lore.adrPassportView.decNew', '+ решение')}
+          </button>
+        </div>
+        {decEditId !== null && (
+          <div style={S.decFormPanel}>
+            {decEditId === '__new__' && (
+              <input style={S.decInput} placeholder="ID решения (напр. 133)" value={decForm.decision_id}
+                onChange={e => setDecForm(f => ({ ...f, decision_id: e.target.value }))} />
+            )}
+            <input style={S.decInput} placeholder="Заголовок решения (правило)" value={decForm.title}
+              onChange={e => setDecForm(f => ({ ...f, title: e.target.value }))} />
+            <input style={S.decInput} placeholder="Компонент (опц.)" value={decForm.component_id}
+              onChange={e => setDecForm(f => ({ ...f, component_id: e.target.value }))} />
+            <textarea style={{ ...S.decInput, minHeight: 40, resize: 'vertical' as const }}
+              placeholder={decEditId === '__new__' ? 'Тело решения (опц.)' : 'Тело — оставьте пустым, чтобы не менять'}
+              value={decForm.body_md} onChange={e => setDecForm(f => ({ ...f, body_md: e.target.value }))} />
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button style={S.decSave} disabled={decSaving} onClick={saveDec}>{decSaving ? '…' : t('lore.adrPassportView.save', 'Сохранить')}</button>
+              <button style={S.decCancel} onClick={cancelDec}>{t('lore.adrPassportView.cancel', 'Отмена')}</button>
+            </div>
+          </div>
+        )}
+        {decisions.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {decisions.map(d => (
-              <div key={d.decision_id} style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-sm)', minWidth: 0 }}>
+              <div key={d.decision_id} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 'var(--fs-sm)', minWidth: 0 }}>
                 <span style={{ fontFamily: 'var(--mono)', color: 'var(--acc)', flexShrink: 0 }}>#{d.decision_id}</span>
-                <span style={{ color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{d.title}</span>
+                <span style={{ color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{d.title}</span>
+                <button style={S.decEditBtn} title={t('lore.adrPassportView.edit', 'Править')} onClick={() => startEditDec(d)}>✎</button>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (decEditId === null && (
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.adrPassportView.noDecisions', 'Решений пока нет — добавьте «+ решение».')}</div>
+        ))}
+      </div>
       {implementedIn.length > 0 && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.implementedInSprint', 'Implemented in sprint')}</div>
