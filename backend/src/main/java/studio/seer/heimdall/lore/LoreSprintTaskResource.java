@@ -895,6 +895,77 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
     }
 
+    // ── Write-path: link task ↔ file (EDITED_IN, ADR-LORE-018 T21) ───────────
+    // KnowFile is a *reference* (relative path only), created lazily on first
+    // link. Keyed by (project, file_path). The URL is composed at read time on
+    // the client from the project's hosts[] — nothing here parses code.
+
+    public record TaskFileRequest(String task_uid, String project, String file_path,
+                                  String summary_md, String action) {}
+
+    @POST
+    @Path("task/file")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkTaskFile(TaskFileRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.task_uid() == null || req.project() == null || req.file_path() == null)
+            return badParams("task_uid, project and file_path required");
+        if (!SAFE_ID.matcher(req.task_uid()).matches() || !SAFE_ID.matcher(req.project()).matches())
+            return badParams("task_uid/project contain illegal characters");
+        // file_path allows longer, path-shaped values (deep repo paths), but no
+        // quotes/newlines — it flows into String.format'd CREATE EDGE (named
+        // params are unreliable there, same as every other edge write here).
+        if (!req.file_path().matches("[A-Za-z0-9_./\\-]{1,300}"))
+            return badParams("file_path contains illegal characters");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (ingestService.queryPublic(
+                    "SELECT task_uid FROM KnowTask WHERE task_uid=:t LIMIT 1",
+                    Map.of("t", req.task_uid())).isEmpty())
+                return badParams("task not found: " + req.task_uid());
+            String p = req.project(), f = req.file_path();
+            if (remove) {
+                List<Map<String, Object>> edges = ingestService.queryPublic(
+                    "SELECT @rid FROM EDITED_IN WHERE @out.project=:p AND @out.file_path=:f AND @in.task_uid=:t",
+                    Map.of("p", p, "f", f, "t", req.task_uid()));
+                for (Map<String, Object> e : edges) {
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM EDITED_IN WHERE @rid=" + e.get("@rid").toString(), null)).await().indefinitely();
+                }
+            } else {
+                // Lazy upsert of KnowFile, then idempotent edges — one sqlscript so
+                // the CREATE EDGE statements see the just-upserted vertex in-tx.
+                String summarySet = req.summary_md() != null
+                    ? ", summary_md='" + req.summary_md().replace("'", "''") + "'" : "";
+                String script = String.join(";\n",
+                    String.format(
+                        "UPDATE KnowFile SET project='%s', file_path='%s'%s UPSERT WHERE project='%s' AND file_path='%s'",
+                        p, f, summarySet, p, f),
+                    String.format(
+                        "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowFile WHERE project='%s' AND file_path='%s') " +
+                        "TO (SELECT FROM KnowGitProject WHERE slug='%s') IF NOT EXISTS", p, f, p),
+                    String.format(
+                        "CREATE EDGE EDITED_IN FROM (SELECT FROM KnowFile WHERE project='%s' AND file_path='%s') " +
+                        "TO (SELECT FROM KnowTask WHERE task_uid='%s') IF NOT EXISTS", p, f, req.task_uid()));
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                    script, null)).await().indefinitely();
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("task_uid", req.task_uid());
+            out.put("project", p);
+            out.put("file_path", f);
+            out.put("action", remove ? "removed" : "added");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE TASK FILE] %s / %s: %s", req.task_uid(), req.file_path(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Write-path: link sprint ↔ sprint (DEPENDS_ON) ────────────────────────
 
     public record SprintDepRequest(String from_sprint, String to_sprint, String kind, String reason, String action) {}

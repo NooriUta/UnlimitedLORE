@@ -36,6 +36,31 @@ export function adrStatusLabel(t: (key: string, fallback: string) => string, key
   return t(`adrStatus.${key.toLowerCase()}`, f?.label ?? key);
 }
 
+// Sentinel tag-filter value: match ADRs that carry NO tags at all (otherwise
+// untagged ADRs would silently vanish once any tag chip is active).
+export const NO_TAG = '__notag__';
+export function matchTags(tags: string[], sel: Set<string>): boolean {
+  if (sel.size === 0) return true;
+  if (sel.has(NO_TAG) && tags.length === 0) return true;
+  return tags.some(t => sel.has(t));
+}
+// Client-side sort (data is small — ~130 ADRs; ArcadeDB can't bind ORDER BY,
+// and compose() can't AND-join filters, so all list logic lives here).
+export type AdrSortKey = 'date' | 'id' | 'status' | 'component';
+export function sortAdrs<T extends { adr_id: string; date_created: string | null; status: string | null; component: string | null }>(
+  rows: T[], key: AdrSortKey, dir: 'asc' | 'desc',
+): T[] {
+  const sign = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    switch (key) {
+      case 'date':      return sign * (a.date_created ?? '').localeCompare(b.date_created ?? '');
+      case 'status':    return sign * (a.status ?? '').localeCompare(b.status ?? '');
+      case 'component': return sign * (a.component ?? '').localeCompare(b.component ?? '');
+      default:          return sign * a.adr_id.localeCompare(b.adr_id, undefined, { numeric: true });
+    }
+  });
+}
+
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, overflowX: 'hidden' as const, display: 'flex', flexDirection: 'column' as const },
   newBtn: {
@@ -92,14 +117,20 @@ interface Props {
   module: string;
   q: string;
   statusSel: Set<string>;
+  compSel: Set<string>;
+  tagSel: Set<string>;
+  sortKey: AdrSortKey;
+  sortDir: 'asc' | 'desc';
   selectedId?: string;
   onError: (e: unknown) => void;
   onOpen: (id: string) => void;
   onNew: () => void;
   onCounts: (counts: Record<string, number>) => void;
+  onCompCounts: (counts: Record<string, number>) => void;
+  onTagCounts: (counts: Record<string, number>) => void;
 }
 
-export default function LoreAdrList({ module, q, statusSel, selectedId, onError, onOpen, onNew, onCounts }: Props) {
+export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sortKey, sortDir, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts }: Props) {
   const { t } = useTranslation();
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -116,24 +147,33 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
     return () => ctrl.abort();
   }, [module, onError]);
 
-  // Report counts per status key (uppercase) from the full list
+  // Report facet counts (status / component / tag) from the full list
   useEffect(() => {
     const c: Record<string, number> = {};
+    const cc: Record<string, number> = {};
+    const tc: Record<string, number> = {};
     rows.forEach(r => {
       const k = (r.status ?? 'PROPOSED').toUpperCase();
       c[k] = (c[k] || 0) + 1;
+      (r.components ?? []).forEach(x => { cc[x] = (cc[x] || 0) + 1; });
+      const tags = r.tags ?? [];
+      if (tags.length === 0) tc[NO_TAG] = (tc[NO_TAG] || 0) + 1;
+      else tags.forEach(tg => { tc[tg] = (tc[tg] || 0) + 1; });
     });
-    onCounts(c);
-  }, [rows, onCounts]);
+    onCounts(c); onCompCounts(cc); onTagCounts(tc);
+  }, [rows, onCounts, onCompCounts, onTagCounts]);
 
   const shown = useMemo(() => {
     const ql     = q.trim().toLowerCase();
     const cutoff = cutoffDate(datePreset);
-    return rows
+    const filtered = rows
       .filter(r => statusSel.size === 0 || statusSel.has((r.status ?? 'PROPOSED').toUpperCase()))
+      .filter(r => compSel.size === 0 || (r.components ?? []).some(x => compSel.has(x)))
+      .filter(r => matchTags(r.tags ?? [], tagSel))
       .filter(r => !cutoff || (r.date_created ?? '') >= cutoff)
       .filter(r => !ql || r.adr_id.toLowerCase().includes(ql) || (r.name ?? '').toLowerCase().includes(ql));
-  }, [rows, q, [...statusSel].sort().join(','), datePreset]);
+    return sortAdrs(filtered, sortKey, sortDir);
+  }, [rows, q, [...statusSel].sort().join(','), [...compSel].sort().join(','), [...tagSel].sort().join(','), datePreset, sortKey, sortDir]);
 
   return (
     <div style={S.root}>

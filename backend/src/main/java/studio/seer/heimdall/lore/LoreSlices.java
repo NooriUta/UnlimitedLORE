@@ -70,7 +70,9 @@ public final class LoreSlices {
         // ── §2 ADRs ──────────────────────────────────────────────────────────
         slice("adrs",
             "SELECT adr_id, name, status, date_created, " +
-            "out('BELONGS_TO').component_id[0] AS component " +
+            "out('BELONGS_TO').component_id[0] AS component, " +
+            "out('BELONGS_TO').component_id    AS components, " +
+            "out('TAGGED_WITH').tag_id         AS tags " +
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -111,6 +113,16 @@ public final class LoreSlices {
             "adr_refs, sprint_refs, pr_refs, release_refs, " +
             "out('SUPERSEDES').decision_id AS supersedes_ids " +
             "FROM KnowDecision WHERE decision_id = :id",
+            List.of("id"), Map.of(), "");
+
+        // ── ADR-LORE-018 T21: files referenced (EDITED_IN) by a task ──────────
+        // Returns the project's hosts[]/default_branch alongside, so the client
+        // composes file URLs (+ "open in mirror") in one fetch, no second call.
+        slice("files_of_task",
+            "SELECT project, file_path, summary_md, " +
+            "out('BELONGS_TO_PROJECT').hosts[0]          AS project_hosts, " +
+            "out('BELONGS_TO_PROJECT').default_branch[0] AS project_default_branch " +
+            "FROM KnowFile WHERE out('EDITED_IN').task_uid CONTAINS :id ORDER BY file_path",
             List.of("id"), Map.of(), "");
 
         // ── §3 Sprints ───────────────────────────────────────────────────────
@@ -571,7 +583,7 @@ public final class LoreSlices {
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
         slice("git_projects",
-            "SELECT slug, name FROM KnowGitProject",
+            "SELECT slug, name, hosts, default_branch FROM KnowGitProject",
             List.of(), Map.of(), " ORDER BY slug");
 
         // Fixed 2026-07-02: PART_OF is Task --PART_OF--> Sprint (out from the task), so

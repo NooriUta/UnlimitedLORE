@@ -569,11 +569,28 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE KnowGitProject IF NOT EXISTS EXTENDS V",
         "CREATE PROPERTY KnowGitProject.slug IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowGitProject (slug) UNIQUE",
+        // ADR-LORE-018: hosts = JSON array of hosting entries (origin + mirrors),
+        // each with role/base_url/file_url_template/pr_url_template/default_branch.
+        // Stored as a JSON STRING (no EMBEDDEDLIST precedent in this schema; pr_refs
+        // is handled the same way); the URL is composed at read time on the client.
+        "CREATE PROPERTY KnowGitProject.hosts          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowGitProject.default_branch IF NOT EXISTS STRING",
 
         // BELONGS_TO_PROJECT (KnowSprint -> KnowGitProject, also read off KnowRelease/
         // KnowPR elsewhere) — same gap: only ever auto-vivified via CREATE EDGE ... IF
         // NOT EXISTS calls (sprint/project, sprint_new's new git_project param, T16/
         // ADR-LORE-017), never declared here. Added alongside the other T13/T15 finds.
-        "CREATE EDGE TYPE BELONGS_TO_PROJECT IF NOT EXISTS EXTENDS E"
+        "CREATE EDGE TYPE BELONGS_TO_PROJECT IF NOT EXISTS EXTENDS E",
+
+        // ── KnowFile (ADR-LORE-018 T21): reference to a repo file, NOT parsing. ──
+        // Relative path only (no host/branch); the URL is composed at read time
+        // from the project's hosts[]. Keyed by (project, file_path). Lazily created
+        // on first link to a task (EDITED_IN). No file↔file / symbol graph.
+        "CREATE VERTEX TYPE KnowFile IF NOT EXISTS",
+        "CREATE PROPERTY KnowFile.project    IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowFile.file_path  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowFile.summary_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowFile (project, file_path) UNIQUE",
+        "CREATE EDGE TYPE EDITED_IN IF NOT EXISTS"   // KnowFile -> KnowTask
     );
 }

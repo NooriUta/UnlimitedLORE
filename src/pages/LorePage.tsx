@@ -12,7 +12,7 @@ import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type D
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS, adrStatusLabel } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, type AdrSortKey } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
@@ -31,7 +31,7 @@ import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { a11yClick } from '../components/lore/a11y';
-import { FilterBar, type FilterTagData } from '../components/lore/FilterPrimitives';
+import { FilterBar, SortControl, FilterDimensionMulti, type FilterTagData } from '../components/lore/FilterPrimitives';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
@@ -206,6 +206,12 @@ export default function LorePage() {
     const v = params.get('as'); return v ? new Set(v.split(',').filter(Boolean)) : new Set();
   });
   const [adrCounts, setAdrCounts]       = useState<Record<string, number>>({});
+  const [adrCompSel, setAdrCompSel]     = useState<Set<string>>(new Set());
+  const [adrTagSel, setAdrTagSel]       = useState<Set<string>>(new Set());
+  const [adrCompCounts, setAdrCompCounts] = useState<Record<string, number>>({});
+  const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
+  const [adrSortKey, setAdrSortKey]     = useState<AdrSortKey>('date');
+  const [adrSortDir, setAdrSortDir]     = useState<'asc' | 'desc'>('desc');
   // T34: filter chrome bars collapse to one summary line by default (approved
   // design, docs/prototypes/two-tier-filter.html) — one toggle per section,
   // not per-dimension (tried, rejected as noisy, see [[feedback_ux_change_process]]).
@@ -351,7 +357,7 @@ export default function LorePage() {
       setSprintQ(''); setSprintStatusSel(new Set());
       setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set());
     }
-    if (section !== 'adrs')       { setAdrStatusSel(new Set()); }
+    if (section !== 'adrs')       { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }
     if (section !== 'components') { setCompQ(''); setCompAreaSel(new Set()); }
   }, [section]);
 
@@ -666,46 +672,93 @@ export default function LorePage() {
         <FilterBar
           tier="local"
           label={t('lore.page.adrs.filtersLabel', 'Фильтры')}
-          activeCount={adrStatusSel.size}
-          summaryTags={ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
-            key: f.key, label: adrStatusLabel(t, f.key), color: f.color,
-            onRemove: () => setAdrStatusSel(prev => { const n = new Set(prev); n.delete(f.key); return n; }),
-          }))}
-          onClear={() => setAdrStatusSel(new Set())}
+          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size}
+          summaryTags={[
+            ...ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
+              key: 'st:' + f.key, label: adrStatusLabel(t, f.key), color: f.color,
+              onRemove: () => setAdrStatusSel(prev => { const n = new Set(prev); n.delete(f.key); return n; }),
+            })),
+            ...[...adrCompSel].map((c): FilterTagData => ({
+              key: 'co:' + c, label: c,
+              onRemove: () => setAdrCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
+            })),
+            ...[...adrTagSel].map((tg): FilterTagData => ({
+              key: 'tg:' + tg, label: tg === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : tg,
+              onRemove: () => setAdrTagSel(prev => { const n = new Set(prev); n.delete(tg); return n; }),
+            })),
+          ]}
+          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }}
           open={adrFilterOpen}
           onToggleOpen={() => setAdrFilterOpen(v => !v)}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-            {ADR_STATUS_FILTERS.map(f => {
-              const on  = adrStatusSel.has(f.key);
-              const cnt = adrCounts[f.key] ?? 0;
-              return (
-                <span key={f.key}
-                  {...a11yClick(() => setAdrStatusSel(prev => {
-                    const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
-                  }), `${adrStatusLabel(t, f.key)}: ${cnt}`)}
-                  aria-pressed={on}
-                  title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                    userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                    border: `1px solid ${on ? f.color : 'var(--b3)'}`,
-                    background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
-                    color: on ? 'var(--t1)' : 'var(--t3)',
-                  }}
-                >
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
-                  {adrStatusLabel(t, f.key)}
-                  <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
-                </span>
-              );
-            })}
-            <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
-              {adrStatusSel.size === 0
-                ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
-                : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
-            </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              {ADR_STATUS_FILTERS.map(f => {
+                const on  = adrStatusSel.has(f.key);
+                const cnt = adrCounts[f.key] ?? 0;
+                return (
+                  <span key={f.key}
+                    {...a11yClick(() => setAdrStatusSel(prev => {
+                      const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
+                    }), `${adrStatusLabel(t, f.key)}: ${cnt}`)}
+                    aria-pressed={on}
+                    title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                      userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      border: `1px solid ${on ? f.color : 'var(--b3)'}`,
+                      background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
+                      color: on ? 'var(--t1)' : 'var(--t3)',
+                    }}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
+                    {adrStatusLabel(t, f.key)}
+                    <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                  </span>
+                );
+              })}
+              <span style={{ flex: 1 }} />
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+                {adrStatusSel.size === 0
+                  ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
+                  : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
+              </span>
+            </div>
+            {Object.keys(adrCompCounts).length > 0 && (
+              <FilterDimensionMulti
+                label={t('lore.page.adrs.componentDim', 'Компонент')}
+                options={Object.keys(adrCompCounts).sort((a, b) => (adrCompCounts[b] - adrCompCounts[a]) || a.localeCompare(b)).map(c => ({ value: c, label: c }))}
+                selected={adrCompSel}
+                onToggle={v => setAdrCompSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
+                counts={adrCompCounts}
+                dot
+              />
+            )}
+            {Object.keys(adrTagCounts).length > 0 && (
+              <FilterDimensionMulti
+                label={t('lore.page.adrs.tagDim', 'Тег')}
+                options={Object.keys(adrTagCounts).sort((a, b) => (adrTagCounts[b] - adrTagCounts[a]) || a.localeCompare(b)).map(k => ({ value: k, label: k === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : k }))}
+                selected={adrTagSel}
+                onToggle={v => setAdrTagSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
+                counts={adrTagCounts}
+              />
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--t3)' }}>
+                {t('lore.page.adrs.sortDim', 'Сортировка')}
+              </span>
+              <SortControl
+                options={[
+                  { key: 'date',      label: t('lore.page.adrs.sortDate', 'Дата') },
+                  { key: 'id',        label: t('lore.page.adrs.sortId', 'ID') },
+                  { key: 'status',    label: t('lore.page.adrs.sortStatus', 'Статус') },
+                  { key: 'component', label: t('lore.page.adrs.sortComp', 'Компонент') },
+                ]}
+                sortKey={adrSortKey}
+                direction={adrSortDir}
+                onChange={(k, d) => { setAdrSortKey(k as AdrSortKey); setAdrSortDir(d); }}
+              />
+            </div>
           </div>
         </FilterBar>
       )}
@@ -837,11 +890,17 @@ export default function LorePage() {
                 module=""
                 q={listSearch}
                 statusSel={adrStatusSel}
+                compSel={adrCompSel}
+                tagSel={adrTagSel}
+                sortKey={adrSortKey}
+                sortDir={adrSortDir}
                 selectedId={passport === '__new' ? undefined : passport}
                 onError={handleFetchError}
                 onOpen={selectItem}
                 onNew={() => selectItem('__new')}
                 onCounts={setAdrCounts}
+                onCompCounts={setAdrCompCounts}
+                onTagCounts={setAdrTagCounts}
               />
             )}
             {section === 'sprints' && (
