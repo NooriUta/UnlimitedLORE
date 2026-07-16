@@ -105,6 +105,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   const [decEditId, setDecEditId] = useState<string | null>(null); // decision_id | '__new__' | null
   const [decForm, setDecForm]     = useState<{ decision_id: string; title: string; body_md: string; component_id: string }>(
     { decision_id: '', title: '', body_md: '', component_id: '' });
+  // Component ids for the decision form's "Компонент" binding (datalist).
+  const [compIds, setCompIds] = useState<string[]>([]);
   const [decSaving, setDecSaving] = useState(false);
 
   function startNewDec() { setDecForm({ decision_id: '', title: '', body_md: '', component_id: '' }); setDecEditId('__new__'); }
@@ -140,6 +142,9 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       .then(setDecisions).catch(() => { /* decisions are optional context */ });
     fetchLoreSlice<LoreQuestionRow>('questions_of_adr', { id: adrId }, ctrl.signal)
       .then(setQuestions).catch(() => { /* questions are optional context */ });
+    fetchLoreSlice<{ component_id: string }>('components', {}, ctrl.signal)
+      .then(cs => setCompIds(cs.map(c => c.component_id).filter(Boolean).sort()))
+      .catch(() => { /* datalist just falls back to free text */ });
     return () => ctrl.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adrId, reload]);
@@ -278,8 +283,12 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
             )}
             <input style={S.decInput} placeholder="Заголовок решения (правило)" value={decForm.title}
               onChange={e => setDecForm(f => ({ ...f, title: e.target.value }))} />
-            <input style={S.decInput} placeholder="Компонент (опц.)" value={decForm.component_id}
+            <input style={S.decInput} placeholder={t('lore.adrPassportView.decComponent', 'Компонент — выбор из списка (опц.)')}
+              list="lore-decform-comps" value={decForm.component_id}
               onChange={e => setDecForm(f => ({ ...f, component_id: e.target.value }))} />
+            <datalist id="lore-decform-comps">
+              {compIds.map(c => <option key={c} value={c} />)}
+            </datalist>
             <textarea style={{ ...S.decInput, minHeight: 40, resize: 'vertical' as const }}
               placeholder={decEditId === '__new__' ? 'Тело решения (опц.)' : 'Тело — оставьте пустым, чтобы не менять'}
               value={decForm.body_md} onChange={e => setDecForm(f => ({ ...f, body_md: e.target.value }))} />
