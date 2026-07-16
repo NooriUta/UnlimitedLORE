@@ -389,7 +389,8 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
           const ans = (r.answered_by ?? []).filter(Boolean);
           return (
             <div key={r.question_id} style={S.row}>
-              <span style={S.statusDot(meta.color)} title={meta.label} />
+              {/* открыт = полое кольцо, закрыт/прочие = сплошная точка — цвета suc/inf в amber-палитре сливаются, форма разводит */}
+              <span style={{ ...S.statusDot(meta.color), ...(st === 'open' ? { background: 'transparent', border: `2px solid ${meta.color}`, boxSizing: 'border-box' as const } : {}) }} title={meta.label} />
               <span style={S.qid}>{r.question_id}</span>
               <div style={S.body}>
                 <span style={S.title}>{r.title ?? r.question_id}</span>
