@@ -72,7 +72,8 @@ public final class LoreSlices {
             "SELECT adr_id, name, status, date_created, " +
             "out('BELONGS_TO').component_id[0] AS component, " +
             "out('BELONGS_TO').component_id    AS components, " +
-            "out('TAGGED_WITH').tag_id         AS tags " +
+            "out('TAGGED_WITH').tag_id         AS tags, " +
+            "in('DECIDED_IN').size()           AS decision_count " +
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -108,6 +109,8 @@ public final class LoreSlices {
         // in the suffix so a future optional WHERE lands before them.
         slice("decisions",
             "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('BELONGS_TO').component_id     AS components, " +
+            "out('BELONGS_TO_PROJECT').slug     AS projects, " +
             "out('TAGGED_WITH').tag_id  AS tags, " +
             "out('DECIDED_IN').adr_id[0] AS parent_adr " +
             "FROM KnowDecision",
@@ -116,6 +119,8 @@ public final class LoreSlices {
         // Decisions that belong to one ADR (in('DECIDED_IN') from the ADR side).
         slice("decisions_of_adr",
             "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('TAGGED_WITH').tag_id AS tags " +
             "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id ORDER BY decision_id",
             List.of("id"), Map.of(), "");
@@ -142,8 +147,10 @@ public final class LoreSlices {
         // Derived overdue/blocking/age are computed on the client from the raw
         // fields (status/due_date + gating_tasks) — never stored.
         slice("open_questions",
-            "SELECT question_id, title, status, component_id, due_date, priority, owner, " +
+            "SELECT question_id, title, body_md, status, component_id, due_date, priority, owner, " +
             "raised_by, opened_date, closed_date, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('GATES').task_uid      AS gating_tasks, " +
             "out('RAISED_IN').adr_id    AS raised_adr, " +
             "out('RAISED_IN').sprint_id AS raised_sprint, " +
@@ -152,7 +159,9 @@ public final class LoreSlices {
             List.of(), Map.of(), " ORDER BY question_id");
 
         slice("questions_of_adr",
-            "SELECT question_id, title, status, component_id, due_date, priority " +
+            "SELECT question_id, title, status, component_id, due_date, priority, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowQuestion WHERE out('RAISED_IN').adr_id CONTAINS :id ORDER BY question_id",
             List.of("id"), Map.of(), "");
 
@@ -378,6 +387,10 @@ public final class LoreSlices {
 
         slice("plan_versions",
             "SELECT version_id, version_date, changelog_md FROM PlanVersion ORDER BY version_date DESC");
+
+        // Git projects — for the T43 multi-project picker (question/decision forms).
+        slice("git_projects",
+            "SELECT slug, name, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
@@ -837,6 +850,14 @@ public final class LoreSlices {
         // ── ADR-LORE-012: dictionary (KnowDictEntry) ─────────────────────────
         // Without dict_type — весь справочник; с dict_type — один домен.
         // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
+        // Admin LORE (ADR-LORE-025): tag usage counts for the read-only «Теги» tab.
+        slice("tags_usage",
+            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+        slice("lore_tags_usage",
+            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM LoreTag",
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+
         slice("dictionary",
             // ifnull() masks the brief NULL-flag window on a freshly-upserted row
             // (defaults are set in a second, IS NULL-gated statement) — readers

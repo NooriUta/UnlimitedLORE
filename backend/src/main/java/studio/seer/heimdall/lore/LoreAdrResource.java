@@ -30,7 +30,11 @@ public class LoreAdrResource extends LoreResourceBase {
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
         String component_id, String context_md, String decision_md, String consequences_md,
         List<String> depends_on_ids, List<String> supersedes_ids,
-        List<String> component_ids, List<String> tags, String file_path) {}
+        List<String> component_ids, List<String> tags, String file_path,
+        // LH-02: when true, a body edit CLOSES the current open hist row and opens a
+        // fresh one (SCD2 close-open) instead of amending in place — so the previous
+        // edition is preserved. Default (null/false) keeps the amend-in-place behaviour.
+        Boolean checkpoint) {}
 
     // ── Write-path: create / upsert KnowADR ──────────────────────────────────
 
@@ -95,7 +99,7 @@ public class LoreAdrResource extends LoreResourceBase {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "SELECT @rid as rid, state_uid FROM KnowADRHist " +
+                    "SELECT @rid as rid, state_uid, context_md, decision_md, consequences_md FROM KnowADRHist " +
                     "WHERE in('HAS_STATE').adr_id[0] = :id AND valid_to IS NULL LIMIT 1",
                     Map.of("id", req.adr_id())))
                 .await().indefinitely().result();
@@ -117,6 +121,26 @@ public class LoreAdrResource extends LoreResourceBase {
                 // Found 2026-07-02 debugging why body edits weren't landing on real ADRs.
                 Object rid = histRows.get(0).get("rid");
                 Object existingSid = histRows.get(0).get("state_uid");
+                boolean wantCheckpoint = Boolean.TRUE.equals(req.checkpoint())
+                    && (req.context_md() != null || req.decision_md() != null || req.consequences_md() != null);
+                if (wantCheckpoint) {
+                    // LH-02: close the open row + open a fresh one, carrying forward the
+                    // sections not being changed — the previous edition survives as a closed row.
+                    Map<String, Object> cp = new java.util.HashMap<>();
+                    cp.put("rid", rid); cp.put("nsid", nsid); cp.put("now", now); cp.put("id", req.adr_id());
+                    cp.put("ctx", req.context_md()      != null ? req.context_md()      : histRows.get(0).get("context_md"));
+                    cp.put("dec", req.decision_md()     != null ? req.decision_md()     : histRows.get(0).get("decision_md"));
+                    cp.put("con", req.consequences_md() != null ? req.consequences_md() : histRows.get(0).get("consequences_md"));
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                        "UPDATE KnowADRHist SET valid_to=:now WHERE @rid=:rid;" +
+                        "INSERT INTO KnowADRHist SET state_uid=:nsid, valid_from=:now, " +
+                        "context_md=:ctx, decision_md=:dec, consequences_md=:con;" +
+                        "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowADR WHERE adr_id=:id) " +
+                        "TO (SELECT FROM KnowADRHist WHERE state_uid=:nsid);", cp)).await().indefinitely();
+                    histCreated = true;
+                } else {
+                // Step 3a: update body fields on the existing open hist row (amend-in-place) — SAME
+                // null-safe pattern as status above (LH-44): only SET fields actually provided.
                 StringBuilder histSql = new StringBuilder("UPDATE KnowADRHist SET ");
                 Map<String, Object> histUpdP = new java.util.HashMap<>();
                 histUpdP.put("rid", rid);
@@ -137,6 +161,7 @@ public class LoreAdrResource extends LoreResourceBase {
                 }
                 // else: no body fields provided at all (e.g. a pure status/edges-only call) — leave the hist row untouched.
                 histCreated = false;
+                }
             } else {
                 Map<String, Object> histP = mapOfNullable(
                     "ctx", req.context_md(),

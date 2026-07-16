@@ -184,6 +184,7 @@ export interface LoreAdrRow {
   component: string | null;
   components: string[] | null;
   tags: string[] | null;
+  decision_count: number | null;
 }
 
 export interface LoreFileRow {
@@ -192,6 +193,28 @@ export interface LoreFileRow {
   summary_md: string | null;
   project_hosts: string | null;           // JSON string of RepoHost[] (ADR-018)
   project_default_branch: string | null;
+}
+
+// ADR-LORE-020/021: open-questions register (KnowQuestion). status is a plain
+// vertex field (vertex-only, no SCD2). overdue/blocking/age are derived on read.
+export interface LoreQuestionRow {
+  question_id: string;
+  title: string | null;
+  body_md: string | null;                  // контекст вопроса (для раскрывающегося блока)
+  status: string | null;                  // open | deferred | closed | dropped
+  component_id: string | null;
+  components: (string | null)[] | null;    // T43: multi component via BELONGS_TO
+  projects: (string | null)[] | null;      // T43: multi git project via BELONGS_TO_PROJECT
+  due_date: string | null;
+  priority: string | null;                // blocker | high | normal | low
+  owner: string | null;
+  raised_by: string | null;
+  opened_date: string | null;
+  closed_date: string | null;
+  gating_tasks: (string | null)[] | null;   // tasks this question GATES
+  raised_adr: (string | null)[] | null;      // RAISED_IN → ADR
+  raised_sprint: (string | null)[] | null;
+  answered_by: (string | null)[] | null;     // decision_id(s) that closed it
 }
 
 export interface LoreAdrPassport {
@@ -249,7 +272,9 @@ export interface LoreDecisionRow {
   title: string;
   date_created: string | null;
   status_raw: string | null;
-  component_id: string | null;   // ADR-019: child-of-ADR filter axis
+  component_id: string | null;   // ADR-019: legacy single component (primary)
+  components: (string | null)[] | null; // T43: multi component via BELONGS_TO
+  projects: (string | null)[] | null;   // T43: multi git project via BELONGS_TO_PROJECT
   tags: string[] | null;
   parent_adr: string | null;     // out('DECIDED_IN') — the ADR this decision lives under
 }

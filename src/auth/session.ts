@@ -77,6 +77,36 @@ export function displayName(): string | null {
   return (claims.preferred_username as string) ?? (claims.name as string) ?? u.profile.sub ?? null;
 }
 
+// ── Role (ADR-LORE-025 D8) ──────────────────────────────────────────────────
+// The single verified-source role accessor: with auth ON the realm role comes
+// from the token's seer_roles claim (super-admin→superadmin, admin, else
+// viewer); with auth OFF (dev) — from config (default 'admin', today's
+// behavior). Section gating (⚙ Admin LORE) must go through this, never a
+// hand-rolled check.
+export type SeerRole = 'superadmin' | 'admin' | 'viewer';
+
+const DEV_ROLE = ((import.meta.env.VITE_LORE_ROLE as string | undefined) ?? 'admin') as SeerRole;
+
+/** Pure claim→role mapping — unit-tested separately (AL-09). */
+export function roleFromClaims(roles: string[]): SeerRole {
+  if (roles.includes('super-admin')) return 'superadmin';
+  if (roles.includes('admin')) return 'admin';
+  return 'viewer';
+}
+
+export function getRole(): SeerRole {
+  if (!AUTH_ENABLED) return DEV_ROLE;
+  const u = currentUser;
+  if (!u || u.expired) return 'viewer';
+  const claims = u.profile as Record<string, unknown>;
+  return roleFromClaims((claims.seer_roles as string[] | undefined) ?? []);
+}
+
+export function isAdmin(): boolean {
+  const r = getRole();
+  return r === 'admin' || r === 'superadmin';
+}
+
 export function authHeaders(): Record<string, string> {
   if (!AUTH_ENABLED) return { 'X-Seer-Role': 'admin' };
   if (currentUser && !currentUser.expired) return { Authorization: `Bearer ${currentUser.access_token}` };

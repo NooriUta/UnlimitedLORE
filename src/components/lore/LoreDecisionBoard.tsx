@@ -10,6 +10,13 @@ import { MartProse } from '../bench/MartProse';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
 import { resolveStatusMeta, statusLabel } from './lore-status';
+import { GameIcon } from './GameIcon';
+
+// Distinct marker for orphan decisions (no parent ADR) — used both on the
+// filter chip and on each orphan row, so orphans are spottable in the list.
+const OrphanIcon = ({ size = 11 }: { size?: number }) => (
+  <GameIcon slug="broken-heart" size={size} style={{ color: 'var(--wrn)' }} />
+);
 
 interface Props {
   q: string;
@@ -122,9 +129,15 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
   const orphanCount = rows.filter(d => !d.parent_adr).length;
 
   const filtered = rows
-    .filter(d => !q
-      || d.title.toLowerCase().includes(q.toLowerCase())
-      || d.decision_id.includes(q.replace(/^#/, '')))
+    .filter(d => {
+      if (!q) return true;
+      const ql = q.toLowerCase();
+      // Search matches the decision's own text/id AND its parent ADR — so an
+      // ADR id typed here surfaces that ADR's decisions (по ADR и по решению).
+      return d.title.toLowerCase().includes(ql)
+        || d.decision_id.includes(q.replace(/^#/, ''))
+        || (d.parent_adr ?? '').toLowerCase().includes(ql);
+    })
     .filter(d => statusSel.size === 0 || statusSel.has(decStatus(d) ?? '\0'))
     .filter(d => compSel.size === 0 || (d.component_id != null && compSel.has(d.component_id)))
     .filter(d => parentFilter === 'all' || (parentFilter === 'has' ? !!d.parent_adr : !d.parent_adr));
@@ -211,7 +224,7 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
           )}
         </div>
         {d.component_id && <span style={S.compChip}>{d.component_id}</span>}
-        {d.parent_adr && (
+        {d.parent_adr ? (
           onNavigateAdr
             ? <span role="button" tabIndex={0} style={S.parentLink} title={d.parent_adr}
                 onClick={e => { e.stopPropagation(); onNavigateAdr(d.parent_adr!); }}
@@ -219,6 +232,10 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
                 {d.parent_adr}
               </span>
             : <span style={S.parentChip} title={d.parent_adr}>{d.parent_adr}</span>
+        ) : (
+          <span style={S.orphanChip} title={t('lore.decisionBoard.parentOrphan', 'Независимые')}>
+            <OrphanIcon size={10} />
+          </span>
         )}
         {!groupByStatus && status && <StatusChip status={status} />}
         {d.date_created && (
@@ -265,6 +282,13 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
           >
             {t('lore.decisionBoard.groupButton', 'группировать')}
           </button>
+          <button
+            onClick={() => setParentFilter(p => p === 'orphan' ? 'all' : 'orphan')}
+            style={{ ...S.ctrl, ...(parentFilter === 'orphan' ? S.ctrlActive : {}), display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            title={t('lore.decisionBoard.onlyIndependentTitle', 'Только независимые решения (без ADR)')}
+          >
+            <OrphanIcon size={10} />{t('lore.decisionBoard.onlyIndependent', 'Независимые')} {orphanCount}
+          </button>
         </div>
       </div>
       {/* T34: status facet filter (collapsible one-line band, same as QG/Знания) */}
@@ -283,7 +307,7 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
               onRemove: () => setCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
             })),
             ...(parentFilter !== 'all' ? [{
-              key: 'p', label: parentFilter === 'has' ? t('lore.decisionBoard.parentHas', 'есть ADR') : t('lore.decisionBoard.parentOrphan', 'сирота'),
+              key: 'p', label: parentFilter === 'has' ? t('lore.decisionBoard.parentHas', 'Под ADR') : t('lore.decisionBoard.parentOrphan', 'Независимые'),
               onRemove: () => setParentFilter('all'),
             } as FilterTagData] : []),
           ]}
@@ -313,10 +337,12 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
               </div>
             )}
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
-              <span style={dimLbl}>{t('lore.decisionBoard.parentLabel', 'Родитель')}</span>
-              <Chip label={t('lore.decisionBoard.parentHas', 'есть ADR')} pressed={parentFilter === 'has'}
+              <span style={dimLbl}>{t('lore.decisionBoard.parentLabel', 'Привязка к ADR')}</span>
+              <Chip label={t('lore.decisionBoard.parentHas', 'Под ADR')} pressed={parentFilter === 'has'}
                 onClick={() => setParentFilter(p => p === 'has' ? 'all' : 'has')} count={rows.length - orphanCount} />
-              <Chip label={t('lore.decisionBoard.parentOrphan', 'сирота')} pressed={parentFilter === 'orphan'}
+              <Chip
+                label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><OrphanIcon />{t('lore.decisionBoard.parentOrphan', 'Независимые')}</span>}
+                pressed={parentFilter === 'orphan'}
                 onClick={() => setParentFilter(p => p === 'orphan' ? 'all' : 'orphan')} count={orphanCount} />
             </div>
           </div>
@@ -421,6 +447,11 @@ const S = {
     fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, cursor: 'pointer',
     fontFamily: 'var(--mono)', color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     background: 'color-mix(in srgb, var(--acc) 8%, transparent)', alignSelf: 'flex-start' as const,
+  },
+  orphanChip: {
+    display: 'inline-flex', alignItems: 'center', padding: '1px 4px', borderRadius: 3, flexShrink: 0,
+    border: '1px solid color-mix(in srgb, var(--wrn) 30%, transparent)',
+    background: 'color-mix(in srgb, var(--wrn) 8%, transparent)', alignSelf: 'flex-start' as const,
   },
   ctrl: {
     fontSize: 'var(--fs-xs)', padding: '3px 8px', borderRadius: 4, cursor: 'pointer',

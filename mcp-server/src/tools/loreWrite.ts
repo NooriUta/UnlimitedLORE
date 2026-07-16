@@ -366,16 +366,17 @@ export function registerLoreWrite(server: McpServer): void {
       supersedes_ids:   z.array(z.string()).optional().describe('adr_id(s) this ADR supersedes — creates SUPERSEDES edges FROM this adr TO each listed one, replaces the full set. Pair with status="SUPERSEDED" on the OLD adr_id (separate adr_new call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('free-text tags — upserts KnowTag + TAGGED_WITH edges, replaces the full set'),
       file_path:        z.string().optional().describe('source .md path relative to docs root, e.g. "engine/specs/adr/ADR-HND-022.md"'),
+      checkpoint:       z.boolean().optional().describe('LH-02: true = a body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
     },
     path: '/lore/adr',
-    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => ({
+    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path, checkpoint }) => ({
           adr_id, name,
           status: status ?? null, date_created: date_created ?? null,
           component_id: component_id ?? null, component_ids: component_ids ?? null,
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null, file_path: file_path ?? null,
+          tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
   });
 
@@ -401,16 +402,17 @@ export function registerLoreWrite(server: McpServer): void {
       supersedes_ids:   z.array(z.string()).optional().describe('replaces the full SUPERSEDES edge set, omit to leave untouched. Pair with status="SUPERSEDED" on the OLD adr_id (separate call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('replaces the full tag set, omit to leave untouched'),
       file_path:        z.string().optional().describe('source .md path relative to docs root — omit to leave untouched'),
+      checkpoint:       z.boolean().optional().describe('LH-02: true = amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
     },
     path: '/lore/adr',
-    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => ({
+    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path, checkpoint }) => ({
           adr_id, name,
           status: status ?? null, date_created: date_created ?? null,
           component_id: component_id ?? null, component_ids: component_ids ?? null,
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null, file_path: file_path ?? null,
+          tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
   });
 
@@ -522,6 +524,26 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
+  server.tool(
+    'decision_link',
+    'Link a KnowDecision (T43). rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
+      'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). The parent-ADR link ' +
+      '(DECIDED_IN) is set via decision_new(adr_id), not here. Idempotent. Mutates system_aida_lore.',
+    {
+      decision_id: z.string(),
+      rel:         z.enum(['component', 'project']),
+      target_id:   z.string().describe('component_id (rel="component") or git_project slug (rel="project")'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ decision_id, rel, target_id, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'component') return json(await lorePost('/lore/decision/component', { decision_id, component_id: target_id, action: act }));
+        return json(await lorePost('/lore/decision/project', { decision_id, project: target_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
+
   // ── Open questions (KnowQuestion, ADR-020/021) ────────────────────────────
   definePostTool(server, {
     name: 'question_new',
@@ -578,11 +600,12 @@ export function registerLoreWrite(server: McpServer): void {
     'question_link',
     'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed); ' +
       'rel="raised_in": where it was raised (needs target_type adr|sprint|task); rel="gates": it blocks a task (GATES — ' +
-      'the gate that keeps the register self-cleaning); rel="component": set its component. Idempotent. Mutates system_aida_lore.',
+      'the gate that keeps the register self-cleaning); rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
+      'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). Idempotent. Mutates system_aida_lore.',
     {
       question_id: z.string(),
-      rel:         z.enum(['answers', 'raised_in', 'gates', 'component']),
-      target_id:   z.string().describe('per rel: decision_id | adr/sprint/task id | task_uid | component_id'),
+      rel:         z.enum(['answers', 'raised_in', 'gates', 'component', 'project']),
+      target_id:   z.string().describe('per rel: decision_id | adr/sprint/task id | task_uid | component_id | git_project slug'),
       target_type: z.enum(['adr', 'sprint', 'task']).optional().describe('rel="raised_in" only'),
       action:      z.enum(['add', 'remove']).optional().default('add'),
     },
@@ -591,7 +614,8 @@ export function registerLoreWrite(server: McpServer): void {
         const act = action ?? 'add';
         if (rel === 'answers')   return json(await lorePost('/lore/question/answers', { decision_id: target_id, question_id, action: act }));
         if (rel === 'gates')     return json(await lorePost('/lore/question/gates', { question_id, task_uid: target_id, action: act }));
-        if (rel === 'component') return json(await lorePost('/lore/question/component', { question_id, component_id: target_id }));
+        if (rel === 'component') return json(await lorePost('/lore/question/component', { question_id, component_id: target_id, action: act }));
+        if (rel === 'project')   return json(await lorePost('/lore/question/project', { question_id, project: target_id, action: act }));
         if (!target_type) return err(new Error('target_type (adr|sprint|task) required for rel="raised_in"'));
         return json(await lorePost('/lore/question/raised_in', { question_id, target_type, target_id, action: act }));
       } catch (e) { return err(e); }
@@ -728,6 +752,7 @@ export function registerLoreWrite(server: McpServer): void {
       content_md:   z.string().optional().describe('spec body in Markdown'),
       summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
+      checkpoint:   z.boolean().optional().describe('LH-02: true = body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
@@ -750,6 +775,7 @@ export function registerLoreWrite(server: McpServer): void {
       content_md:   z.string().optional().describe('omit to leave the existing body untouched'),
       summary:      z.string().optional().describe('omit to leave untouched'),
       file_path:    z.string().optional().describe('omit to leave untouched'),
+      checkpoint:   z.boolean().optional().describe('LH-02: true = body amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
