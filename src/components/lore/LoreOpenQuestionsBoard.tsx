@@ -7,7 +7,7 @@ import { a11yClick } from './a11y';
 import { fetchLoreSlice, loreMutate, type LoreQuestionRow } from '../../api/lore';
 import LoreSkeleton from './LoreSkeleton';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
-import { LoreLinkChips } from './LoreLinkChips';
+import { LoreLinkChips, type LinkMeta } from './LoreLinkChips';
 
 // Editable fields — question is vertex-only, so a single upsert POST /lore/question
 // (partial-safe) covers both create and edit. status='deferred' requires trigger.
@@ -66,6 +66,8 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   const [saving, setSaving] = useState(false);
   // All component ids for the form's «Компонент» binding (datalist).
   const [compIds, setCompIds] = useState<string[]>([]);
+  // T43: component icon/area/name meta for the module-style picker (as in Спринты).
+  const [compMeta, setCompMeta] = useState<Record<string, LinkMeta>>({});
   // T43: all git-project slugs for the multi-project picker.
   const [projectIds, setProjectIds] = useState<string[]>([]);
   // T43: project filter selection.
@@ -79,9 +81,14 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   }, [onError]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    fetchLoreSlice<{ component_id: string }>('components', {})
-      .then(cs => setCompIds(cs.map(c => c.component_id).filter(Boolean).sort()))
-      .catch(() => { /* datalist just falls back to free text */ });
+    fetchLoreSlice<{ component_id: string; game_icon: string | null; area: string | null; full_name: string | null }>('components', {})
+      .then(cs => {
+        setCompIds(cs.map(c => c.component_id).filter(Boolean).sort());
+        const m: Record<string, LinkMeta> = {};
+        cs.forEach(c => { if (c.component_id) m[c.component_id] = { game_icon: c.game_icon, area: c.area, full_name: c.full_name }; });
+        setCompMeta(m);
+      })
+      .catch(() => { /* picker degrades to plain */ });
     fetchLoreSlice<{ slug: string }>('git_projects', {})
       .then(ps => setProjectIds(ps.map(p => p.slug).filter(Boolean).sort()))
       .catch(() => { /* project picker degrades to free text */ });
@@ -325,13 +332,13 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               return (
                 <>
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <LoreLinkChips label={t('lore.oqBoard.componentsMulti', 'Компоненты')} listId="qf-comp-multi" color="var(--inf)"
+                    <LoreLinkChips label={t('lore.oqBoard.componentsMulti', 'Компоненты')} meta={compMeta}
                       values={comps} options={compIds}
                       onAdd={v => linkQuestion(editId!, 'component', v, 'add')}
                       onRemove={v => linkQuestion(editId!, 'component', v, 'remove')} />
                   </div>
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <LoreLinkChips label={t('lore.oqBoard.projectsMulti', 'Проекты')} listId="qf-proj-multi" color="var(--suc)"
+                    <LoreLinkChips label={t('lore.oqBoard.projectsMulti', 'Проекты')} color="var(--suc)"
                       values={projs} options={projectIds}
                       onAdd={v => linkQuestion(editId!, 'project', v, 'add')}
                       onRemove={v => linkQuestion(editId!, 'project', v, 'remove')} />

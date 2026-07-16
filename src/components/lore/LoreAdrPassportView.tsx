@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, loreMutate, type LoreAdrPassport, type LoreDecisionRow, type LoreQuestionRow } from '../../api/lore';
 import { isOverdue } from './LoreOpenQuestionsBoard';
-import { LoreLinkChips } from './LoreLinkChips';
+import { LoreLinkChips, type LinkMeta } from './LoreLinkChips';
 import { MartProse } from '../bench/MartProse';
 import LoreAdrEditor from './LoreAdrEditor';
 import { adrStatusLabel } from './LoreAdrList';
@@ -109,6 +109,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
     { decision_id: '', title: '', body_md: '', component_id: '' });
   // Component ids for the decision form's "Компонент" binding (datalist).
   const [compIds, setCompIds] = useState<string[]>([]);
+  // T43: component icon/area/name meta for the module-style picker (as in Спринты).
+  const [compMeta, setCompMeta] = useState<Record<string, LinkMeta>>({});
   // T43: git-project slugs for the decision multi-project picker.
   const [projectIds, setProjectIds] = useState<string[]>([]);
 
@@ -157,9 +159,14 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       .then(setDecisions).catch(() => { /* decisions are optional context */ });
     fetchLoreSlice<LoreQuestionRow>('questions_of_adr', { id: adrId }, ctrl.signal)
       .then(setQuestions).catch(() => { /* questions are optional context */ });
-    fetchLoreSlice<{ component_id: string }>('components', {}, ctrl.signal)
-      .then(cs => setCompIds(cs.map(c => c.component_id).filter(Boolean).sort()))
-      .catch(() => { /* datalist just falls back to free text */ });
+    fetchLoreSlice<{ component_id: string; game_icon: string | null; area: string | null; full_name: string | null }>('components', {}, ctrl.signal)
+      .then(cs => {
+        setCompIds(cs.map(c => c.component_id).filter(Boolean).sort());
+        const m: Record<string, LinkMeta> = {};
+        cs.forEach(c => { if (c.component_id) m[c.component_id] = { game_icon: c.game_icon, area: c.area, full_name: c.full_name }; });
+        setCompMeta(m);
+      })
+      .catch(() => { /* picker degrades to plain */ });
     fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
       .then(ps => setProjectIds(ps.map(p => p.slug).filter(Boolean).sort()))
       .catch(() => { /* project picker degrades */ });
@@ -337,11 +344,11 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
               const projs = (dr?.projects ?? []).filter(Boolean) as string[];
               return (
                 <>
-                  <LoreLinkChips label={t('lore.adrPassportView.componentsMulti', 'Компоненты')} listId="decf-comp-multi" color="var(--inf)"
+                  <LoreLinkChips label={t('lore.adrPassportView.componentsMulti', 'Компоненты')} meta={compMeta}
                     values={comps} options={compIds}
                     onAdd={v => linkDecision(decEditId!, 'component', v, 'add')}
                     onRemove={v => linkDecision(decEditId!, 'component', v, 'remove')} />
-                  <LoreLinkChips label={t('lore.adrPassportView.projectsMulti', 'Проекты')} listId="decf-proj-multi" color="var(--suc)"
+                  <LoreLinkChips label={t('lore.adrPassportView.projectsMulti', 'Проекты')} color="var(--suc)"
                     values={projs} options={projectIds}
                     onAdd={v => linkDecision(decEditId!, 'project', v, 'add')}
                     onRemove={v => linkDecision(decEditId!, 'project', v, 'remove')} />
