@@ -22,6 +22,7 @@ import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
 import LoreOpenQuestionsBoard from '../components/lore/LoreOpenQuestionsBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
+import LoreAdminPanel      from '../components/lore/LoreAdminPanel';
 import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
 import LoreMilestonesView  from '../components/lore/LoreMilestonesView';
 import LoreQualityGateList from '../components/lore/LoreQualityGateList';
@@ -32,11 +33,12 @@ import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { a11yClick } from '../components/lore/a11y';
+import { useIsAdmin } from '../auth/useRole';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from '../components/lore/FilterPrimitives';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
-  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'openQuestions' | 'releases' | 'milestones'
+  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'openQuestions' | 'releases' | 'milestones' | 'admin'
   | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
@@ -65,6 +67,8 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
+  // ADR-LORE-025: admin-gated — скрывается из навигации для не-admin (см. sectionNav).
+  { id: 'admin',      icon: 'key',            labelKey: 'lore.page.nav.admin',      fallback: 'Админ'      },
 ];
 
 // MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
@@ -73,7 +77,7 @@ const SECTION_COLORS: Record<Section, string> = {
   milestones: 'var(--section-milestones)', plan: 'var(--section-plan)', sprints: 'var(--section-sprints)', adrs: 'var(--section-adrs)',
   decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
-  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)',
+  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', admin: 'var(--wrn)',
 };
 
 // Sections that use master-detail layout (list panel + detail panel)
@@ -215,6 +219,8 @@ export default function LorePage() {
   const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
   const [adrCompCollapsed, setAdrCompCollapsed] = useState(true);
   const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
+  // ADR-LORE-025 D8: role from the verified source — gates the ⚙ Админ section.
+  const isAdmin = useIsAdmin();
   // Аналитика hosts a temporary «Решения» sub-tab (decisions parked out of the
   // main nav until the ADR-fold call is made).
   const [analyticsTab, setAnalyticsTab] = useState<'analytics' | 'decisions'>('analytics');
@@ -384,6 +390,8 @@ export default function LorePage() {
   const sectionNav = (
     <nav style={S.navBar} className="lore-nav-scroll" role="tablist" aria-label={t('lore.page.nav.ariaLabel', 'Разделы LORE')}>
       {SECTIONS.map(s => {
+        // ADR-LORE-025: админ-секция не существует для не-admin (не disabled — отсутствует).
+        if (s.id === 'admin' && !isAdmin) return null;
         const isActive = section === s.id;
         const col = SECTION_COLORS[s.id];
         const label = t(s.labelKey, s.fallback);
@@ -1204,6 +1212,9 @@ export default function LorePage() {
 
           {/* MCP API — published reference for the aida-lore MCP server */}
           {section === 'mcp' && <LoreMcpApiScreen />}
+
+          {/* ⚙ Admin LORE (ADR-LORE-025) — admin-gated reference-data management */}
+          {section === 'admin' && isAdmin && <LoreAdminPanel onError={handleFetchError} />}
           </LoreErrorBoundary>
         </div>
         )}
