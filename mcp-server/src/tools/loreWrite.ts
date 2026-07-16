@@ -522,6 +522,26 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
+  server.tool(
+    'decision_link',
+    'Link a KnowDecision (T43). rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
+      'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). The parent-ADR link ' +
+      '(DECIDED_IN) is set via decision_new(adr_id), not here. Idempotent. Mutates system_aida_lore.',
+    {
+      decision_id: z.string(),
+      rel:         z.enum(['component', 'project']),
+      target_id:   z.string().describe('component_id (rel="component") or git_project slug (rel="project")'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ decision_id, rel, target_id, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'component') return json(await lorePost('/lore/decision/component', { decision_id, component_id: target_id, action: act }));
+        return json(await lorePost('/lore/decision/project', { decision_id, project: target_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
+
   // ── Open questions (KnowQuestion, ADR-020/021) ────────────────────────────
   definePostTool(server, {
     name: 'question_new',
@@ -578,11 +598,12 @@ export function registerLoreWrite(server: McpServer): void {
     'question_link',
     'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed); ' +
       'rel="raised_in": where it was raised (needs target_type adr|sprint|task); rel="gates": it blocks a task (GATES — ' +
-      'the gate that keeps the register self-cleaning); rel="component": set its component. Idempotent. Mutates system_aida_lore.',
+      'the gate that keeps the register self-cleaning); rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
+      'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). Idempotent. Mutates system_aida_lore.',
     {
       question_id: z.string(),
-      rel:         z.enum(['answers', 'raised_in', 'gates', 'component']),
-      target_id:   z.string().describe('per rel: decision_id | adr/sprint/task id | task_uid | component_id'),
+      rel:         z.enum(['answers', 'raised_in', 'gates', 'component', 'project']),
+      target_id:   z.string().describe('per rel: decision_id | adr/sprint/task id | task_uid | component_id | git_project slug'),
       target_type: z.enum(['adr', 'sprint', 'task']).optional().describe('rel="raised_in" only'),
       action:      z.enum(['add', 'remove']).optional().default('add'),
     },
@@ -591,7 +612,8 @@ export function registerLoreWrite(server: McpServer): void {
         const act = action ?? 'add';
         if (rel === 'answers')   return json(await lorePost('/lore/question/answers', { decision_id: target_id, question_id, action: act }));
         if (rel === 'gates')     return json(await lorePost('/lore/question/gates', { question_id, task_uid: target_id, action: act }));
-        if (rel === 'component') return json(await lorePost('/lore/question/component', { question_id, component_id: target_id }));
+        if (rel === 'component') return json(await lorePost('/lore/question/component', { question_id, component_id: target_id, action: act }));
+        if (rel === 'project')   return json(await lorePost('/lore/question/project', { question_id, project: target_id, action: act }));
         if (!target_type) return err(new Error('target_type (adr|sprint|task) required for rel="raised_in"'));
         return json(await lorePost('/lore/question/raised_in', { question_id, target_type, target_id, action: act }));
       } catch (e) { return err(e); }

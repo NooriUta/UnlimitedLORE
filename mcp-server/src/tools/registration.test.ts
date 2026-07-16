@@ -32,11 +32,11 @@ describe('registerLoreWrite', () => {
     expect(stragglers).toEqual([]);
   });
 
-  it('registers the expected total tool count (63 — 61 in loreWrite + 2 in loreRead)', () => {
+  it('registers the expected total tool count (64 — 62 in loreWrite + 2 in loreRead)', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
-    // 58 baseline + question_new/question_set/question_link (ADR-020/021, T25).
-    expect(names).toHaveLength(61);
+    // 58 baseline + question_new/question_set/question_link (ADR-020/021, T25) + decision_link (T43).
+    expect(names).toHaveLength(62);
   });
 
   it('registers every name exactly once (no accidental duplicate registration)', () => {

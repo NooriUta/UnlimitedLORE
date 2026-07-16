@@ -109,6 +109,8 @@ public final class LoreSlices {
         // in the suffix so a future optional WHERE lands before them.
         slice("decisions",
             "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('BELONGS_TO').component_id     AS components, " +
+            "out('BELONGS_TO_PROJECT').slug     AS projects, " +
             "out('TAGGED_WITH').tag_id  AS tags, " +
             "out('DECIDED_IN').adr_id[0] AS parent_adr " +
             "FROM KnowDecision",
@@ -117,6 +119,8 @@ public final class LoreSlices {
         // Decisions that belong to one ADR (in('DECIDED_IN') from the ADR side).
         slice("decisions_of_adr",
             "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('TAGGED_WITH').tag_id AS tags " +
             "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id ORDER BY decision_id",
             List.of("id"), Map.of(), "");
@@ -145,6 +149,8 @@ public final class LoreSlices {
         slice("open_questions",
             "SELECT question_id, title, status, component_id, due_date, priority, owner, " +
             "raised_by, opened_date, closed_date, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('GATES').task_uid      AS gating_tasks, " +
             "out('RAISED_IN').adr_id    AS raised_adr, " +
             "out('RAISED_IN').sprint_id AS raised_sprint, " +
@@ -153,7 +159,9 @@ public final class LoreSlices {
             List.of(), Map.of(), " ORDER BY question_id");
 
         slice("questions_of_adr",
-            "SELECT question_id, title, status, component_id, due_date, priority " +
+            "SELECT question_id, title, status, component_id, due_date, priority, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowQuestion WHERE out('RAISED_IN').adr_id CONTAINS :id ORDER BY question_id",
             List.of("id"), Map.of(), "");
 

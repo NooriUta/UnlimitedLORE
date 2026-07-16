@@ -202,6 +202,8 @@ export interface LoreQuestionRow {
   title: string | null;
   status: string | null;                  // open | deferred | closed | dropped
   component_id: string | null;
+  components: (string | null)[] | null;    // T43: multi component via BELONGS_TO
+  projects: (string | null)[] | null;      // T43: multi git project via BELONGS_TO_PROJECT
   due_date: string | null;
   priority: string | null;                // blocker | high | normal | low
   owner: string | null;
@@ -269,7 +271,9 @@ export interface LoreDecisionRow {
   title: string;
   date_created: string | null;
   status_raw: string | null;
-  component_id: string | null;   // ADR-019: child-of-ADR filter axis
+  component_id: string | null;   // ADR-019: legacy single component (primary)
+  components: (string | null)[] | null; // T43: multi component via BELONGS_TO
+  projects: (string | null)[] | null;   // T43: multi git project via BELONGS_TO_PROJECT
   tags: string[] | null;
   parent_adr: string | null;     // out('DECIDED_IN') — the ADR this decision lives under
 }

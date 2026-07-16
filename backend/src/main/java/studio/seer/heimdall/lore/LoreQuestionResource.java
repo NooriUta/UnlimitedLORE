@@ -196,7 +196,7 @@ public class LoreQuestionResource extends LoreResourceBase {
         }
     }
 
-    public record QComponentRequest(String question_id, String component_id) {}
+    public record QComponentRequest(String question_id, String component_id, String action) {}
 
     @POST
     @Path("question/component")
@@ -209,15 +209,60 @@ public class LoreQuestionResource extends LoreResourceBase {
             return badParams("question_id and component_id required");
         if (!SAFE_ID.matcher(req.question_id()).matches() || !SAFE_ID.matcher(req.component_id()).matches())
             return badParams("ids contain illegal characters");
+        // T43: components are now MULTI, via BELONGS_TO edges (like tasks) — add/remove.
+        // The legacy component_id vertex field is kept in sync as the "primary" (first) one.
+        boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
-            // component is a vertex field on KnowQuestion (the filter axis), not an edge.
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowQuestion SET component_id=:c WHERE question_id=:q",
-                Map.of("c", req.component_id(), "q", req.question_id()))).await().indefinitely();
+            if (remove) {
+                deleteEdges("BELONGS_TO", "@out.question_id=:q AND @in.component_id=:c",
+                    Map.of("q", req.question_id(), "c", req.component_id()));
+            } else {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO FROM (SELECT FROM KnowQuestion WHERE question_id=:q) " +
+                    "TO (SELECT FROM LoreComponent WHERE component_id=:c) IF NOT EXISTS",
+                    Map.of("q", req.question_id(), "c", req.component_id()))).await().indefinitely();
+                // keep the legacy single field pointing at the primary component if unset
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowQuestion SET component_id=:c WHERE question_id=:q AND component_id IS NULL",
+                    Map.of("c", req.component_id(), "q", req.question_id()))).await().indefinitely();
+            }
             return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id(),
-                "component_id", req.component_id())));
+                "component_id", req.component_id(), "action", remove ? "removed" : "added")));
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION COMPONENT] %s: %s", req.question_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    public record QProjectRequest(String question_id, String project, String action) {}
+
+    @POST
+    @Path("question/project")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkProject(QProjectRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.question_id() == null || req.project() == null)
+            return badParams("question_id and project required");
+        if (!SAFE_ID.matcher(req.question_id()).matches())
+            return badParams("question_id contains illegal characters");
+        // T43: questions belong to one or more git projects (multi) via BELONGS_TO_PROJECT.
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                deleteEdges("BELONGS_TO_PROJECT", "@out.question_id=:q AND @in.slug=:p",
+                    Map.of("q", req.question_id(), "p", req.project()));
+            } else {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowQuestion WHERE question_id=:q) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("q", req.question_id(), "p", req.project()))).await().indefinitely();
+            }
+            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id(),
+                "project", req.project(), "action", remove ? "removed" : "added")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE QUESTION PROJECT] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
         }
     }
