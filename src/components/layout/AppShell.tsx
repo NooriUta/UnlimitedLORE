@@ -5,6 +5,7 @@ import { GameIcon } from '../lore/GameIcon';
 import { SHELL_TABS, type ShellTab } from './shellNav';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { AUTH_ENABLED, displayName, logout } from '../../auth/session';
+import { useIsAdmin } from '../../auth/useRole';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
@@ -26,6 +27,9 @@ export default function AppShell() {
   const { t, i18n } = useTranslation();
   const active = activeTabId(pathname);
   const lang = i18n.language?.startsWith('en') ? 'en' : 'ru';
+  // ADR-LORE-025: админка администрирует ВЕСЬ LORE (словари/проекты/люди/агенты),
+  // а не раздел Forseti — вход живёт здесь, в шапке приложения. Гейт — D8.
+  const isAdmin = useIsAdmin();
   // MOB-01: below ~720px the tab labels + text toggles overflow the header
   // (~447px at 375px). Go icon-only for tabs and symbol-only for the palette
   // toggle so everything fits without clipping.
@@ -146,6 +150,19 @@ export default function AppShell() {
             );
           })}
         </nav>
+
+        {/* ⚙ Admin LORE — уровень приложения, не раздел Forseti (ADR-LORE-025) */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => navigate('/lore?section=admin')}
+            title={t('app.admin', 'Admin LORE — справочники, проекты, пользователи, агенты')}
+            aria-label={t('app.admin', 'Admin LORE')}
+            style={{ ...btnStyle, color: 'var(--wrn)' }}
+          >
+            ⚙{narrow ? '' : ' Админ'}
+          </button>
+        )}
 
         {/* Palette toggle */}
         <button

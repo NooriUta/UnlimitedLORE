@@ -72,6 +72,20 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   const [compMeta, setCompMeta] = useState<Record<string, LinkMeta>>({});
   // T43: all git-project slugs for the multi-project picker.
   const [projectIds, setProjectIds] = useState<string[]>([]);
+  // Закрытие вопроса: только через ребро ANSWERS (инвариант ADR-021) — форма даёт
+  // легальный путь: выбрать решение-ответ, бэкенд сам переведёт в closed.
+  const [decisionIds, setDecisionIds] = useState<string[]>([]);
+  const [answerPick, setAnswerPick] = useState('');   // существующее решение (опц. — иначе создаём новое)
+  const [answerTitle, setAnswerTitle] = useState(''); // сам ответ — то, что человек пишет
+  const [answerBody, setAnswerBody] = useState('');   // обоснование (опц.)
+  const [pickMode, setPickMode] = useState(false);    // false = пишем ответ, true = берём существующее
+
+  // Код ответа человек не придумывает: следующий свободный числовой id (max+1).
+  // Корпус исторически нумерует решения числами (129 из 243), максимум = 132.
+  const nextDecisionId = useMemo(() => {
+    const nums = decisionIds.map(Number).filter(n => Number.isFinite(n) && n > 0);
+    return String((nums.length ? Math.max(...nums) : 0) + 1);
+  }, [decisionIds]);
   // QANS-01: раскрывающийся ответ у закрытого вопроса (лениво тянем решение).
   const [openAns, setOpenAns] = useState<string | null>(null);
   const [ansCache, setAnsCache] = useState<Record<string, LoreDecisionPassport>>({});
@@ -106,6 +120,9 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
     fetchLoreSlice<{ slug: string }>('git_projects', {})
       .then(ps => setProjectIds(ps.map(p => p.slug).filter(Boolean).sort()))
       .catch(() => { /* project picker degrades to free text */ });
+    fetchLoreSlice<{ decision_id: string }>('decisions', {})
+      .then(ds => setDecisionIds(ds.map(d => d.decision_id).filter(Boolean).sort()))
+      .catch(() => { /* «закрыть решением» деградирует до свободного ввода */ });
   }, []);
 
   // T43: add/remove a component or project link on a question (multi, via edges).
@@ -122,13 +139,45 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   function startNew() { setForm({ ...EMPTY_FORM, question_id: '' }); setEditId('__new__'); }
   function startEdit(r: LoreQuestionRow) {
     setForm({
-      question_id: r.question_id, title: r.title ?? '', body_md: '', component_id: r.component_id ?? '',
+      // body_md грузим из строки: раньше поле открывалось пустым (слайс его не
+      // отдавал), контекст сохранялся, но не показывался — выглядело как «не сохраняется».
+      question_id: r.question_id, title: r.title ?? '', body_md: r.body_md ?? '', component_id: r.component_id ?? '',
       status: r.status ?? 'open', priority: r.priority ?? '', due_date: (r.due_date ?? '').slice(0, 10),
       owner: r.owner ?? '', raised_in: (r.raised_adr ?? []).filter(Boolean)[0] ?? '',
     });
     setEditId(r.question_id);
   }
-  function cancel() { setEditId(null); setForm(EMPTY_FORM); }
+  function cancel() { setEditId(null); setForm(EMPTY_FORM); setAnswerPick(''); }
+
+  /**
+   * Закрыть вопрос легально (ADR-021: closed только через ребро ANSWERS).
+   * Как в паспорте ADR: ответ можно НАПИСАТЬ здесь же — если id новый, сначала
+   * создаём решение (decision_new), потом линкуем; если id существует — просто
+   * линкуем. Бэкенд сам переводит вопрос в closed.
+   */
+  async function answerAndClose(q: LoreQuestionRow) {
+    // Код не спрашиваем: пишем ответ → id присваивается сам (max+1). Ветка
+    // «взять существующее» — для случая, когда решение уже принято раньше.
+    const id = pickMode ? answerPick.trim() : nextDecisionId;
+    if (pickMode && !id) { onError(new Error('выберите решение или переключитесь на «написать ответ»')); return; }
+    if (!pickMode && !answerTitle.trim()) { onError(new Error('напишите ответ — это и есть решение')); return; }
+    setSaving(true);
+    try {
+      if (!pickMode) {
+        await loreMutate('/decision', {
+          decision_id: id, title: answerTitle.trim(), body_md: answerBody.trim() || null,
+          // компонент и родительский ADR наследуем у вопроса — ответ живёт там же
+          component_id: q.component_id ?? null,
+          adr_id: (q.raised_adr ?? []).filter(Boolean)[0] ?? null,
+          date_created: null, refs_raw: null, tags: null,
+        });
+        setDecisionIds(prev => [...prev, id].sort());
+      }
+      await loreMutate('/question/answers', { question_id: q.question_id, decision_id: id, action: 'add' });
+      setAnswerPick(''); setAnswerTitle(''); setAnswerBody(''); setPickMode(false);
+      setEditId(null); setForm(EMPTY_FORM); load();
+    } catch (e) { onError(e); } finally { setSaving(false); }
+  }
 
   async function save() {
     const f = form;
@@ -364,12 +413,66 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                       onAdd={v => linkQuestion(editId!, 'project', v, 'add')}
                       onRemove={v => linkQuestion(editId!, 'project', v, 'remove')} />
                   </div>
+                  {/* Легальный путь закрытия: closed нельзя выставить полем (ADR-021),
+                      но можно указать решение-ответ — ребро ANSWERS закроет вопрос. */}
+                  {/* Ответ на вопрос — композер решения, как в паспорте ADR: ответа
+                      ещё нет, его пишут здесь. Новый id → создаём решение и линкуем;
+                      существующий → просто линкуем. ANSWERS закрывает вопрос (ADR-021). */}
+                  {er && er.status !== 'closed' && (() => {
+                    const parentAdr = (er.raised_adr ?? []).filter(Boolean)[0];
+                    return (
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' as const, gap: 5, padding: '8px 10px', border: '1px solid var(--b3)', borderRadius: 6, background: 'color-mix(in srgb, var(--suc) 5%, transparent)' }}>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const, color: 'var(--t3)' }}>
+                          {t('lore.oqBoard.answerHead', 'Ответить решением — закроет вопрос')}
+                        </div>
+                        {pickMode ? (
+                          <>
+                            <input style={S.input} list="lore-qform-decisions"
+                              placeholder={t('lore.oqBoard.answerExisting', 'решение, которое уже отвечает на этот вопрос')}
+                              value={answerPick} onChange={e => setAnswerPick(e.target.value)} />
+                            <datalist id="lore-qform-decisions">
+                              {decisionIds.map(d => <option key={d} value={d} />)}
+                            </datalist>
+                          </>
+                        ) : (
+                          <>
+                            {/* Ответ — первым и главным. Код не спрашиваем. */}
+                            <input style={S.input} autoFocus
+                              placeholder={t('lore.oqBoard.answerTitle', 'Ответ — правило одной строкой (это и есть решение)')}
+                              value={answerTitle} onChange={e => setAnswerTitle(e.target.value)} />
+                            <textarea style={{ ...S.input, minHeight: 44, resize: 'vertical' as const }}
+                              placeholder={t('lore.oqBoard.answerBody', 'Обоснование / детали (опц.)')}
+                              value={answerBody} onChange={e => setAnswerBody(e.target.value)} />
+                            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                              {t('lore.oqBoard.answerAuto', 'код ответа: {{id}} (авто) · унаследует компонент вопроса{{adr}}', {
+                                id: nextDecisionId, adr: parentAdr ? ` и родителя ${parentAdr}` : '',
+                              })}
+                            </div>
+                          </>
+                        )}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button style={S.saveBtn} disabled={saving || (pickMode ? !answerPick.trim() : !answerTitle.trim())}
+                            onClick={() => answerAndClose(er)}>
+                            {saving ? '…' : pickMode
+                              ? t('lore.oqBoard.answerLinkBtn', 'закрыть этим решением ✓')
+                              : t('lore.oqBoard.answerNewBtn', 'ответить и закрыть ✓')}
+                          </button>
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)', cursor: 'pointer' }}
+                            {...a11yClick(() => { setPickMode(m => !m); setAnswerPick(''); })}>
+                            {pickMode
+                              ? t('lore.oqBoard.modeWrite', '← написать новый ответ')
+                              : t('lore.oqBoard.modePick', 'или взять уже принятое решение →')}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </>
               );
             })()}
             <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-              {/* closed ставится ТОЛЬКО через ANSWERS (инвариант) — в селекте его нет;
-                  для уже закрытого вопроса показываем disabled-опцию, чтобы селект не врал. */}
+              {/* closed ставится ТОЛЬКО через ANSWERS (инвариант ADR-021) — в селекте
+                  его нет; закрыть можно рядом, выбрав решение-ответ. */}
               {(form.status === 'closed' || form.status === 'deferred') && (
                 <option value={form.status} disabled>{STATUS_META[form.status]?.label ?? form.status}</option>
               )}

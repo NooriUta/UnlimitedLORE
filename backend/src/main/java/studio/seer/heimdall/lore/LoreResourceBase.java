@@ -174,6 +174,41 @@ public abstract class LoreResourceBase {
     }
 
     /**
+     * Keep the DOCUMENTED_IN edge in sync with a spec's component_id field.
+     *
+     * Same class of bug as T01/PARENT_OF: spec upsert wrote only the field, while
+     * the component passport reads out('DOCUMENTED_IN').spec_id — so specs created
+     * with component_id simply never appeared on their component (107 such vertices
+     * against 135 edges, all of the latter left over from the old git-ETL).
+     *
+     * Direction is component → spec (the component documents itself in the spec),
+     * matching how the `component` slice traverses it. Blank component detaches.
+     */
+    void relinkSpecComponentEdge(String specId, String componentId) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT inE('DOCUMENTED_IN').@rid AS rids FROM KnowSpec WHERE spec_id=:sid",
+                Map.of("sid", specId));
+            if (!rows.isEmpty() && rows.get(0).get("rids") instanceof List<?> rids) {
+                for (Object rid : rids) {
+                    if (rid == null) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM DOCUMENTED_IN WHERE @rid=" + rid)).await().indefinitely();
+                }
+            }
+            if (componentId != null && !componentId.isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                    "CREATE EDGE DOCUMENTED_IN FROM (SELECT FROM LoreComponent WHERE component_id='%s') " +
+                    "TO (SELECT FROM KnowSpec WHERE spec_id='%s')",
+                    componentId, specId))).await().indefinitely();
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOCUMENTED_IN] relink spec %s→component %s failed: %s", specId, componentId, e.getMessage());
+        }
+    }
+
+    /**
      * T01 (REC-QG-LORE-STORAGE-001): keep the PARENT_OF edge in sync with the
      * parent_id field. component/update used to write only the field, so the
      * component-tree UI (which reads in('PARENT_OF')) never saw the move — 9

@@ -605,6 +605,37 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowQuestion (question_id)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowQuestion (component_id) NOTUNIQUE",
         "CREATE EDGE TYPE ANSWERS   IF NOT EXISTS",   // KnowDecision -> KnowQuestion
-        "CREATE EDGE TYPE RAISED_IN IF NOT EXISTS"    // KnowQuestion -> KnowADR|KnowSprint|KnowTask
+        "CREATE EDGE TYPE RAISED_IN IF NOT EXISTS",   // KnowQuestion -> KnowADR|KnowSprint|KnowTask
+
+        // ── FULL_TEXT по телам (v1.0.50) ──────────────────────────────────────
+        // Слайс `search` гонял ILIKE '%…%' по каждому телу — полный скан корпуса
+        // на каждый запрос. FULL_TEXT даёт SEARCH_FIELDS(["decision_md"], "агентн*").
+        // ArcadeDB schema-less: индексировать можно только ОБЪЯВЛЕННОЕ свойство,
+        // поэтому перед каждым индексом идёт CREATE PROPERTY (поля уже живут в
+        // документах — объявление их не трогает).
+        "CREATE PROPERTY KnowADRHist.context_md      IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowADRHist.decision_md     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowADRHist.consequences_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowADRHist (context_md)      FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowADRHist (decision_md)     FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowADRHist (consequences_md) FULL_TEXT",
+        "CREATE PROPERTY KnowDecision.title   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDecision.body_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowDecision (title)   FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowDecision (body_md) FULL_TEXT",
+        "CREATE PROPERTY KnowQuestion.title   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowQuestion.body_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (title)   FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (body_md) FULL_TEXT",
+        "CREATE PROPERTY KnowSpecHist.content_md    IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowSpecHist (content_md)    FULL_TEXT",
+        "CREATE PROPERTY KnowRunbookHist.content_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (content_md) FULL_TEXT",
+        "CREATE PROPERTY KnowDocHist.content_md     IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowDocHist (content_md)     FULL_TEXT",
+        "CREATE PROPERTY KnowSprintHist.context_md  IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowSprintHist (context_md)  FULL_TEXT",
+        "CREATE PROPERTY KnowTaskHist.note_md       IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowTaskHist (note_md)       FULL_TEXT"
     );
 }
