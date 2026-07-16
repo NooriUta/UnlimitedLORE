@@ -24,9 +24,10 @@ const S = {
     background: 'none', border: '1px solid var(--b3)', cursor: 'pointer',
     color: 'var(--t2)', fontSize: 'var(--fs-sm)', padding: '2px 10px', borderRadius: 4,
   },
-  header:  { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' as const },
+  header:  { display: 'flex', flexDirection: 'column' as const, gap: 6, marginBottom: 16 },
+  headerMeta: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const },
   id:      { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
-  name:    { fontSize: 'var(--fs-md)', color: 'var(--t2)', flex: 1 },
+  name:    { fontSize: 'var(--fs-lg)', color: 'var(--t1)', fontWeight: 500, lineHeight: 1.35 },
   statusChip: (status: string) => ({
     padding: '2px 7px', borderRadius: 3, fontSize: 'var(--fs-xs)', whiteSpace: 'nowrap' as const,
     color: STATUS_COLOR[status] ?? 'var(--t3)',
@@ -222,11 +223,13 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       </div>
 
       <div style={S.header}>
-        <span style={S.id}>{data.adr_id}</span>
-        {data.status && <span style={S.statusChip(data.status.toUpperCase())}>{adrStatusLabel(t, data.status.toUpperCase())}</span>}
-        {data.name && <span style={S.name}>{data.name}</span>}
-        {components.map(c => <span key={c} style={S.compChip}>{c}</span>)}
-        {data.date_created && <span style={S.date}>{data.date_created.slice(0, 10)}</span>}
+        <div style={S.headerMeta}>
+          <span style={S.id}>{data.adr_id}</span>
+          {data.status && <span style={S.statusChip(data.status.toUpperCase())}>{adrStatusLabel(t, data.status.toUpperCase())}</span>}
+          {components.map(c => <span key={c} style={S.compChip}>{c}</span>)}
+          {data.date_created && <span style={S.date}>{data.date_created.slice(0, 10)}</span>}
+        </div>
+        {data.name && <div style={S.name}>{data.name}</div>}
       </div>
 
       {data.context_md && (
