@@ -451,8 +451,10 @@ export default function LorePage() {
         </div>
       )}
 
-      {/* ── Horizontal section nav ─────────────────────────────────────────── */}
-      {sectionNav}
+      {/* ── Horizontal section nav ───────────────────────────────────────────
+          Не показываем в Admin LORE: админка — уровень приложения (вход в шапке,
+          ADR-LORE-025), разделы Forseti к её содержимому отношения не имеют. */}
+      {section !== 'admin' && sectionNav}
 
       {/* ── Knowledge filter bar: Тип/Модуль chips portal in here from
           LoreArtifactList's own header (see knowledgeFilterBar above) ─── */}
