@@ -63,6 +63,8 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm]     = useState<QForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  // All component ids for the form's «Компонент» binding (datalist).
+  const [compIds, setCompIds] = useState<string[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -71,6 +73,11 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
       .catch(e => { onError(e); setLoading(false); });
   }, [onError]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    fetchLoreSlice<{ component_id: string }>('components', {})
+      .then(cs => setCompIds(cs.map(c => c.component_id).filter(Boolean).sort()))
+      .catch(() => { /* datalist just falls back to free text */ });
+  }, []);
 
   function startNew() { setForm({ ...EMPTY_FORM, question_id: '' }); setEditId('__new__'); }
   function startEdit(r: LoreQuestionRow) {
@@ -256,8 +263,12 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
             <textarea style={{ ...S.input, gridColumn: '1 / -1', minHeight: 44, resize: 'vertical' as const }}
               placeholder="Контекст / критерий закрытия (опц.)" value={form.body_md}
               onChange={e => setForm(f => ({ ...f, body_md: e.target.value }))} />
-            <input style={S.input} placeholder="Компонент" value={form.component_id}
+            <input style={S.input} placeholder={t('lore.oqBoard.componentPick', 'Компонент — выбор из списка')}
+              list="lore-qform-comps" value={form.component_id}
               onChange={e => setForm(f => ({ ...f, component_id: e.target.value }))} />
+            <datalist id="lore-qform-comps">
+              {compIds.map(c => <option key={c} value={c} />)}
+            </datalist>
             <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
               {['open', 'closed', 'dropped'].map(s => <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>)}
             </select>
