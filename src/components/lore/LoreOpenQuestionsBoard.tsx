@@ -4,7 +4,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
-import { fetchLoreSlice, loreMutate, type LoreQuestionRow } from '../../api/lore';
+import { fetchLoreSlice, loreMutate, type LoreQuestionRow, type LoreDecisionPassport } from '../../api/lore';
+import { MartProse } from '../bench/MartProse';
+import { projLabel } from './LoreSprintTree';
 import LoreSkeleton from './LoreSkeleton';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
 import { LoreLinkChips, type LinkMeta } from './LoreLinkChips';
@@ -70,6 +72,18 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   const [compMeta, setCompMeta] = useState<Record<string, LinkMeta>>({});
   // T43: all git-project slugs for the multi-project picker.
   const [projectIds, setProjectIds] = useState<string[]>([]);
+  // QANS-01: раскрывающийся ответ у закрытого вопроса (лениво тянем решение).
+  const [openAns, setOpenAns] = useState<string | null>(null);
+  const [ansCache, setAnsCache] = useState<Record<string, LoreDecisionPassport>>({});
+  function toggleAns(qid: string, decisionId: string) {
+    if (openAns === qid) { setOpenAns(null); return; }
+    setOpenAns(qid);
+    if (!ansCache[decisionId]) {
+      fetchLoreSlice<LoreDecisionPassport>('decision', { id: decisionId })
+        .then(rows => { if (rows[0]) setAnsCache(prev => ({ ...prev, [decisionId]: rows[0] })); })
+        .catch(onError);
+    }
+  }
   // T43: project filter selection.
   const [projSel, setProjSel] = useState<Set<string>>(new Set());
 
@@ -394,6 +408,33 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               <span style={S.qid}>{r.question_id}</span>
               <div style={S.body}>
                 <span style={S.title}>{r.title ?? r.question_id}</span>
+                {/* QANS-01: подвал с ответом — текст решения + переход в ADR или в «Решения» */}
+                {openAns === r.question_id && ans.length > 0 && (() => {
+                  const det = ansCache[ans[0] as string];
+                  const parentAdr = det?.adr_refs?.filter(Boolean)[0];
+                  return (
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--bd)' }} onClick={e => e.stopPropagation()}>
+                      {!det && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.oqBoard.ansLoading', 'Загрузка ответа…')}</span>}
+                      {det && (
+                        <>
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t1)', fontWeight: 600, marginBottom: 4 }}>#{det.decision_id} — {det.title}</div>
+                          {det.body_md && <MartProse text={det.body_md} />}
+                          <div style={{ marginTop: 6 }}>
+                            {parentAdr ? (
+                              <span style={S.adrLink} {...a11yClick(() => onNavigateAdr && onNavigateAdr(parentAdr))}>
+                                → {t('lore.oqBoard.openAdr', 'открыть ADR')} {parentAdr}
+                              </span>
+                            ) : (
+                              <a href="/lore?section=analytics" style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}>
+                                → {t('lore.oqBoard.openDecisions', 'независимое решение — открыть в «Решениях»')}
+                              </a>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               {r.priority && (
                 <span style={S.prioChip(PRIORITY_META[r.priority]?.color ?? 'var(--t3)')}>
@@ -405,7 +446,7 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                 <span key={'c' + c} style={S.compChip}>{c}</span>
               ))}
               {(r.projects ?? []).filter(Boolean).map(p => (
-                <span key={'p' + p} style={S.projChip}>{p as string}</span>
+                <span key={'p' + p} style={S.projChip} title={p as string}>{projLabel(p as string)}</span>
               ))}
               {adr && (
                 onNavigateAdr
@@ -414,7 +455,11 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                   : <span style={S.adrChip} title={adr}>{adr}</span>
               )}
               {st === 'closed' && ans.length > 0 && (
-                <span style={S.ansChip} title={t('lore.oqBoard.answeredTitle', 'закрыт решением')}>← #{ans.join(', #')}</span>
+                <span style={{ ...S.ansChip, cursor: 'pointer' }}
+                  title={t('lore.oqBoard.answeredToggle', 'закрыт решением — клик раскроет ответ')}
+                  {...a11yClick(() => toggleAns(r.question_id, ans[0] as string))}>
+                  {openAns === r.question_id ? '▾' : '▸'} ← #{ans.join(', #')}
+                </span>
               )}
               {/* Срок виден у живых вопросов ВСЕГДА: дата (красная при просрочке) или «без срока» приглушённо. */}
               {r.due_date ? (
