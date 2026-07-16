@@ -7,6 +7,7 @@ import { a11yClick } from './a11y';
 import { fetchLoreSlice, loreMutate, type LoreQuestionRow } from '../../api/lore';
 import LoreSkeleton from './LoreSkeleton';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
+import { LoreLinkChips } from './LoreLinkChips';
 
 // Editable fields — question is vertex-only, so a single upsert POST /lore/question
 // (partial-safe) covers both create and edit. status='deferred' requires trigger.
@@ -65,6 +66,10 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   const [saving, setSaving] = useState(false);
   // All component ids for the form's «Компонент» binding (datalist).
   const [compIds, setCompIds] = useState<string[]>([]);
+  // T43: all git-project slugs for the multi-project picker.
+  const [projectIds, setProjectIds] = useState<string[]>([]);
+  // T43: project filter selection.
+  const [projSel, setProjSel] = useState<Set<string>>(new Set());
 
   const load = useCallback(() => {
     setLoading(true);
@@ -77,7 +82,21 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
     fetchLoreSlice<{ component_id: string }>('components', {})
       .then(cs => setCompIds(cs.map(c => c.component_id).filter(Boolean).sort()))
       .catch(() => { /* datalist just falls back to free text */ });
+    fetchLoreSlice<{ slug: string }>('git_projects', {})
+      .then(ps => setProjectIds(ps.map(p => p.slug).filter(Boolean).sort()))
+      .catch(() => { /* project picker degrades to free text */ });
   }, []);
+
+  // T43: add/remove a component or project link on a question (multi, via edges).
+  async function linkQuestion(question_id: string, rel: 'component' | 'project', value: string, action: 'add' | 'remove') {
+    try {
+      const body = rel === 'component'
+        ? { question_id, component_id: value, action }
+        : { question_id, project: value, action };
+      await loreMutate(`/question/${rel}`, body);
+      load();
+    } catch (e) { onError(e); }
+  }
 
   function startNew() { setForm({ ...EMPTY_FORM, question_id: '' }); setEditId('__new__'); }
   function startEdit(r: LoreQuestionRow) {
@@ -120,9 +139,20 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   }, [rows]);
   const compCounts = useMemo(() => {
     const m: Record<string, number> = {};
-    rows.forEach(r => { if (r.component_id) m[r.component_id] = (m[r.component_id] || 0) + 1; });
+    // T43: count over multi-components (edges), falling back to the single field.
+    rows.forEach(r => {
+      const cs = (r.components ?? []).filter(Boolean) as string[];
+      const list = cs.length ? cs : (r.component_id ? [r.component_id] : []);
+      list.forEach(c => { m[c] = (m[c] || 0) + 1; });
+    });
     return m;
   }, [rows]);
+  const projCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    rows.forEach(r => (r.projects ?? []).filter(Boolean).forEach(p => { m[p as string] = (m[p as string] || 0) + 1; }));
+    return m;
+  }, [rows]);
+  const allProjects = Object.keys(projCounts).sort((a, b) => (projCounts[b] - projCounts[a]) || a.localeCompare(b));
   const overdueCount = useMemo(() => rows.filter(r => isOverdue(r)).length, [rows]);
   const gatingTotal  = useMemo(() => rows.filter(r => gatingCount(r) > 0).length, [rows]);
 
@@ -136,10 +166,16 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
       || r.question_id.toLowerCase().includes(q.toLowerCase()))
     .filter(r => statusSel.size === 0 || statusSel.has(r.status ?? 'open'))
     .filter(r => prioSel.size === 0 || (r.priority != null && prioSel.has(r.priority)))
-    .filter(r => compSel.size === 0 || (r.component_id != null && compSel.has(r.component_id)))
+    .filter(r => {
+      if (compSel.size === 0) return true;
+      const cs = (r.components ?? []).filter(Boolean) as string[];
+      const list = cs.length ? cs : (r.component_id ? [r.component_id] : []);
+      return list.some(c => compSel.has(c));
+    })
+    .filter(r => projSel.size === 0 || (r.projects ?? []).some(p => p != null && projSel.has(p as string)))
     .filter(r => !onlyOverdue || isOverdue(r, todayISO()))
     .filter(r => !onlyGating || gatingCount(r) > 0),
-  [rows, q, [...statusSel].sort().join(','), [...prioSel].sort().join(','), [...compSel].sort().join(','), onlyOverdue, onlyGating]);
+  [rows, q, [...statusSel].sort().join(','), [...prioSel].sort().join(','), [...compSel].sort().join(','), [...projSel].sort().join(','), onlyOverdue, onlyGating]);
 
   const display = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -190,8 +226,11 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
       <FilterBar
         tier="local"
         label={t('lore.oqBoard.filtersLabel', 'Фильтры')}
-        activeCount={statusSel.size + prioSel.size + compSel.size + (onlyOverdue ? 1 : 0) + (onlyGating ? 1 : 0)}
+        activeCount={statusSel.size + prioSel.size + compSel.size + projSel.size + (onlyOverdue ? 1 : 0) + (onlyGating ? 1 : 0)}
         summaryTags={[
+          ...[...projSel].map((p): FilterTagData => ({
+            key: 'pj:' + p, label: p, color: 'var(--suc)', onRemove: () => toggle(projSel, setProjSel, p),
+          })),
           ...[...statusSel].map((s): FilterTagData => ({
             key: 'st:' + s, label: STATUS_META[s]?.label ?? s, color: STATUS_META[s]?.color,
             onRemove: () => toggle(statusSel, setStatusSel, s),
@@ -206,7 +245,7 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
           ...(onlyOverdue ? [{ key: 'ov', label: t('lore.oqBoard.overdueTag', 'просрочен'), color: 'var(--err)', onRemove: () => setOnlyOverdue(false) } as FilterTagData] : []),
           ...(onlyGating ? [{ key: 'ga', label: t('lore.oqBoard.gatingTag', 'блокирует'), onRemove: () => setOnlyGating(false) } as FilterTagData] : []),
         ]}
-        onClear={() => { setStatusSel(new Set()); setPrioSel(new Set()); setCompSel(new Set()); setOnlyOverdue(false); setOnlyGating(false); }}
+        onClear={() => { setStatusSel(new Set()); setPrioSel(new Set()); setCompSel(new Set()); setProjSel(new Set()); setOnlyOverdue(false); setOnlyGating(false); }}
         open={filterOpen}
         onToggleOpen={() => setFilterOpen(v => !v)}
       >
@@ -235,6 +274,15 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               {allComps.map(c => (
                 <Chip key={c} label={c} pressed={compSel.has(c)}
                   onClick={() => toggle(compSel, setCompSel, c)} count={compCounts[c]} dot />
+              ))}
+            </div>
+          )}
+          {allProjects.length > 0 && (
+            <div style={S.dimRow}>
+              <span style={S.dimLbl}>{t('lore.oqBoard.projectLabel', 'Проект')}</span>
+              {allProjects.map(p => (
+                <Chip key={p} label={p} pressed={projSel.has(p)}
+                  onClick={() => toggle(projSel, setProjSel, p)} count={projCounts[p]} color="var(--suc)" dot />
               ))}
             </div>
           )}
@@ -269,6 +317,28 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
             <datalist id="lore-qform-comps">
               {compIds.map(c => <option key={c} value={c} />)}
             </datalist>
+            {/* T43: multi component + multi project (edges) — for an existing question. */}
+            {editId !== '__new__' && (() => {
+              const er = rows.find(r => r.question_id === editId);
+              const comps = (er?.components ?? []).filter(Boolean) as string[];
+              const projs = (er?.projects ?? []).filter(Boolean) as string[];
+              return (
+                <>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <LoreLinkChips label={t('lore.oqBoard.componentsMulti', 'Компоненты')} listId="qf-comp-multi" color="var(--inf)"
+                      values={comps} options={compIds}
+                      onAdd={v => linkQuestion(editId!, 'component', v, 'add')}
+                      onRemove={v => linkQuestion(editId!, 'component', v, 'remove')} />
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <LoreLinkChips label={t('lore.oqBoard.projectsMulti', 'Проекты')} listId="qf-proj-multi" color="var(--suc)"
+                      values={projs} options={projectIds}
+                      onAdd={v => linkQuestion(editId!, 'project', v, 'add')}
+                      onRemove={v => linkQuestion(editId!, 'project', v, 'remove')} />
+                  </div>
+                </>
+              );
+            })()}
             <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
               {['open', 'closed', 'dropped'].map(s => <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>)}
             </select>
@@ -311,7 +381,12 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                 </span>
               )}
               {gate > 0 && <span style={S.gateChip} title={t('lore.oqBoard.gatesTitle', 'блокирует задач: {{n}}', { n: gate })}>⛔ {gate}</span>}
-              {r.component_id && <span style={S.compChip}>{r.component_id}</span>}
+              {(((r.components ?? []).filter(Boolean).length ? (r.components as string[]).filter(Boolean) : (r.component_id ? [r.component_id] : []))).map(c => (
+                <span key={'c' + c} style={S.compChip}>{c}</span>
+              ))}
+              {(r.projects ?? []).filter(Boolean).map(p => (
+                <span key={'p' + p} style={S.projChip}>{p as string}</span>
+              ))}
               {adr && (
                 onNavigateAdr
                   ? <span style={S.adrLink} title={adr}
@@ -364,6 +439,7 @@ const S = {
     color: 'var(--err)', background: 'color-mix(in srgb, var(--err) 10%, transparent)',
   },
   compChip: { fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, background: 'var(--b2)', color: 'var(--t3)' },
+  projChip: { fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, fontFamily: 'var(--mono)', color: 'var(--suc)', background: 'color-mix(in srgb, var(--suc) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--suc) 25%, transparent)' },
   adrChip:  { fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, fontFamily: 'var(--mono)', color: 'var(--t3)', border: '1px solid var(--bd)' },
   adrLink:  {
     fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0, cursor: 'pointer', fontFamily: 'var(--mono)',

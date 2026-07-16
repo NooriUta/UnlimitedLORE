@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice, loreMutate, type LoreAdrPassport, type LoreDecisionRow, type LoreQuestionRow } from '../../api/lore';
 import { isOverdue } from './LoreOpenQuestionsBoard';
+import { LoreLinkChips } from './LoreLinkChips';
 import { MartProse } from '../bench/MartProse';
 import LoreAdrEditor from './LoreAdrEditor';
 import { adrStatusLabel } from './LoreAdrList';
@@ -108,6 +109,19 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
     { decision_id: '', title: '', body_md: '', component_id: '' });
   // Component ids for the decision form's "Компонент" binding (datalist).
   const [compIds, setCompIds] = useState<string[]>([]);
+  // T43: git-project slugs for the decision multi-project picker.
+  const [projectIds, setProjectIds] = useState<string[]>([]);
+
+  // T43: add/remove a component or project link on a decision (multi, via edges).
+  async function linkDecision(decision_id: string, rel: 'component' | 'project', value: string, action: 'add' | 'remove') {
+    try {
+      const body = rel === 'component'
+        ? { decision_id, component_id: value, action }
+        : { decision_id, project: value, action };
+      await loreMutate(`/decision/${rel}`, body);
+      setReload(x => x + 1);
+    } catch (e) { onError(e); }
+  }
   const [decSaving, setDecSaving] = useState(false);
 
   function startNewDec() { setDecForm({ decision_id: '', title: '', body_md: '', component_id: '' }); setDecEditId('__new__'); }
@@ -146,6 +160,9 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
     fetchLoreSlice<{ component_id: string }>('components', {}, ctrl.signal)
       .then(cs => setCompIds(cs.map(c => c.component_id).filter(Boolean).sort()))
       .catch(() => { /* datalist just falls back to free text */ });
+    fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
+      .then(ps => setProjectIds(ps.map(p => p.slug).filter(Boolean).sort()))
+      .catch(() => { /* project picker degrades */ });
     return () => ctrl.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adrId, reload]);
@@ -313,6 +330,24 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
             <textarea style={{ ...S.decInput, minHeight: 40, resize: 'vertical' as const }}
               placeholder={decEditId === '__new__' ? 'Тело решения (опц.)' : 'Тело — оставьте пустым, чтобы не менять'}
               value={decForm.body_md} onChange={e => setDecForm(f => ({ ...f, body_md: e.target.value }))} />
+            {/* T43: multi component + multi project (edges) — for an existing decision. */}
+            {decEditId !== '__new__' && (() => {
+              const dr = decisions.find(d => d.decision_id === decEditId);
+              const comps = (dr?.components ?? []).filter(Boolean) as string[];
+              const projs = (dr?.projects ?? []).filter(Boolean) as string[];
+              return (
+                <>
+                  <LoreLinkChips label={t('lore.adrPassportView.componentsMulti', 'Компоненты')} listId="decf-comp-multi" color="var(--inf)"
+                    values={comps} options={compIds}
+                    onAdd={v => linkDecision(decEditId!, 'component', v, 'add')}
+                    onRemove={v => linkDecision(decEditId!, 'component', v, 'remove')} />
+                  <LoreLinkChips label={t('lore.adrPassportView.projectsMulti', 'Проекты')} listId="decf-proj-multi" color="var(--suc)"
+                    values={projs} options={projectIds}
+                    onAdd={v => linkDecision(decEditId!, 'project', v, 'add')}
+                    onRemove={v => linkDecision(decEditId!, 'project', v, 'remove')} />
+                </>
+              );
+            })()}
             <div style={{ display: 'flex', gap: 6 }}>
               <button style={S.decSave} disabled={decSaving} onClick={saveDec}>{decSaving ? '…' : t('lore.adrPassportView.save', 'Сохранить')}</button>
               <button style={S.decCancel} onClick={cancelDec}>{t('lore.adrPassportView.cancel', 'Отмена')}</button>

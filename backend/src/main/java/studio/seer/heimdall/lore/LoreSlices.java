@@ -388,6 +388,10 @@ public final class LoreSlices {
         slice("plan_versions",
             "SELECT version_id, version_date, changelog_md FROM PlanVersion ORDER BY version_date DESC");
 
+        // Git projects — for the T43 multi-project picker (question/decision forms).
+        slice("git_projects",
+            "SELECT slug, name, default_branch, is_private FROM KnowGitProject ORDER BY slug");
+
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
             "SELECT component_id, full_name, area, parent_id, game_icon, owner, team, " +
