@@ -140,18 +140,26 @@ export function registerLoreWrite(server: McpServer): void {
     'Link (or unlink) a KnowTask to another entity. rel="phase": IN_PHASE edge to a sprint phase ' +
       '(task and phase must belong to the same sprint; action="remove" without target_id detaches ' +
       'from ALL phases). rel="component": TAGGED_WITH edge to a LoreComponent, many-to-many. ' +
-      'Idempotent on add. Mutates system_aida_lore.',
+      'rel="file": EDITED_IN edge to a KnowFile (ADR-018) — a repo file REFERENCE (relative path ' +
+      'only), lazily created on first link; requires project. Idempotent on add. Mutates system_aida_lore.',
     {
       task_uid:  z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
-      rel:       z.enum(['phase', 'component']),
-      target_id: z.string().optional().describe('phase_uid (rel="phase", e.g. "SPRINT_X/PHASE_B") or component_id (rel="component"); omit with rel="phase"+action="remove" to detach from all phases'),
+      rel:       z.enum(['phase', 'component', 'file']),
+      target_id: z.string().optional().describe('phase_uid (rel="phase") | component_id (rel="component") | relative file path (rel="file", e.g. "backend/src/.../LoreSlices.java"); omit with rel="phase"+action="remove" to detach from all phases'),
+      project:   z.string().optional().describe('rel="file" only: KnowGitProject slug the file belongs to, e.g. "NooriUta/UnlimitedLORE"'),
+      summary_md: z.string().optional().describe('rel="file" only: optional short note on what the file does'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },
-    async ({ task_uid, rel, target_id, action }) => {
+    async ({ task_uid, rel, target_id, project, summary_md, action }) => {
       try {
         const act = action ?? 'add';
         if (rel === 'phase') {
           return json(await lorePost('/lore/task/phase', { task_uid, phase_uid: target_id ?? null, action: act }));
+        }
+        if (rel === 'file') {
+          if (!target_id) return err(new Error('target_id (file path) required for rel="file"'));
+          if (!project) return err(new Error('project required for rel="file"'));
+          return json(await lorePost('/lore/task/file', { task_uid, project, file_path: target_id, summary_md: summary_md ?? null, action: act }));
         }
         if (!target_id) return err(new Error('target_id required for rel="component"'));
         return json(await lorePost('/lore/task/component', { task_uid, component_id: target_id, action: act }));
@@ -358,16 +366,17 @@ export function registerLoreWrite(server: McpServer): void {
       supersedes_ids:   z.array(z.string()).optional().describe('adr_id(s) this ADR supersedes — creates SUPERSEDES edges FROM this adr TO each listed one, replaces the full set. Pair with status="SUPERSEDED" on the OLD adr_id (separate adr_new call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('free-text tags — upserts KnowTag + TAGGED_WITH edges, replaces the full set'),
       file_path:        z.string().optional().describe('source .md path relative to docs root, e.g. "engine/specs/adr/ADR-HND-022.md"'),
+      checkpoint:       z.boolean().optional().describe('LH-02: true = a body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
     },
     path: '/lore/adr',
-    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => ({
+    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path, checkpoint }) => ({
           adr_id, name,
           status: status ?? null, date_created: date_created ?? null,
           component_id: component_id ?? null, component_ids: component_ids ?? null,
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null, file_path: file_path ?? null,
+          tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
   });
 
@@ -393,16 +402,17 @@ export function registerLoreWrite(server: McpServer): void {
       supersedes_ids:   z.array(z.string()).optional().describe('replaces the full SUPERSEDES edge set, omit to leave untouched. Pair with status="SUPERSEDED" on the OLD adr_id (separate call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('replaces the full tag set, omit to leave untouched'),
       file_path:        z.string().optional().describe('source .md path relative to docs root — omit to leave untouched'),
+      checkpoint:       z.boolean().optional().describe('LH-02: true = amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
     },
     path: '/lore/adr',
-    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => ({
+    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path, checkpoint }) => ({
           adr_id, name,
           status: status ?? null, date_created: date_created ?? null,
           component_id: component_id ?? null, component_ids: component_ids ?? null,
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null, file_path: file_path ?? null,
+          tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
   });
 
@@ -492,21 +502,125 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'decision_new',
     description: 'Create or update a KnowDecision (logged decision/verdict). Idempotent — upserts by decision_id. ' +
-      'Use for recording key decisions made during a sprint or design session.',
+      'Use for recording key decisions made during a sprint or design session. ADR-019: a decision is a CHILD of ' +
+      'an ADR — pass adr_id to link it (DECIDED_IN), component_id/tags for the "rule" filters. Stays vertex-only ' +
+      '(no history) — consistent with the flat KnowDecision model.',
     schema: {
       decision_id:  z.string().describe('unique id, e.g. "D-2026-047"'),
       title:        z.string(),
       body_md:      z.string().optional().describe('full decision text in Markdown'),
       date_created: z.string().optional().describe('YYYY-MM-DD, defaults to today'),
       refs_raw:     z.string().optional().describe('free-text references, e.g. "#420, ADR-HND-021"'),
+      component_id: z.string().optional().describe('ADR-019: component this decision belongs to (filter axis)'),
+      adr_id:       z.string().optional().describe('ADR-019: parent ADR — creates a DECIDED_IN edge to it'),
+      tags:         z.array(z.string()).optional().describe('ADR-019: free tags (KnowTag), e.g. ["stale-versions"]'),
     },
     path: '/lore/decision',
-    body: ({ decision_id, title, body_md, date_created, refs_raw }) => ({
+    body: ({ decision_id, title, body_md, date_created, refs_raw, component_id, adr_id, tags }) => ({
           decision_id, title,
           body_md: body_md ?? null, date_created: date_created ?? null,
           refs_raw: refs_raw ?? null,
+          component_id: component_id ?? null, adr_id: adr_id ?? null, tags: tags ?? null,
         }),
   });
+
+  server.tool(
+    'decision_link',
+    'Link a KnowDecision (T43). rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
+      'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). The parent-ADR link ' +
+      '(DECIDED_IN) is set via decision_new(adr_id), not here. Idempotent. Mutates system_aida_lore.',
+    {
+      decision_id: z.string(),
+      rel:         z.enum(['component', 'project']),
+      target_id:   z.string().describe('component_id (rel="component") or git_project slug (rel="project")'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ decision_id, rel, target_id, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'component') return json(await lorePost('/lore/decision/component', { decision_id, component_id: target_id, action: act }));
+        return json(await lorePost('/lore/decision/project', { decision_id, project: target_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // ── Open questions (KnowQuestion, ADR-020/021) ────────────────────────────
+  definePostTool(server, {
+    name: 'question_new',
+    description: 'Create or update a KnowQuestion — an OPEN QUESTION (ADR-020/021), the "what have we not answered yet" ' +
+      'register. Upserts by question_id, vertex-only (no history). status="deferred" REQUIRES a trigger; ' +
+      'status="closed" is set automatically when a decision answers it (question_link rel="answers"), never here. ' +
+      'RBAC: architect + analyst + pm + full.',
+    schema: {
+      question_id:  z.string().describe('e.g. "Q-M1", "OQ7", "Q-MT3"'),
+      title:        z.string().optional().describe('the question itself'),
+      body_md:      z.string().optional().describe('context, options, closing criterion'),
+      status:       z.enum(['open', 'deferred', 'dropped']).optional().describe('open|deferred|dropped (closed is set via answers link)'),
+      trigger:      z.string().optional().describe('REQUIRED when status="deferred": reactivation condition (may be a date)'),
+      component_id: z.string().optional(),
+      due_date:     z.string().optional().describe('YYYY-MM-DD — the answer deadline (drives overdue)'),
+      priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
+      owner:        z.string().optional().describe('who owns getting the answer'),
+      raised_by:    z.string().optional(),
+    },
+    path: '/lore/question',
+    body: (a) => ({
+      question_id: a.question_id, title: a.title ?? null, body_md: a.body_md ?? null,
+      status: a.status ?? null, trigger: a.trigger ?? null, component_id: a.component_id ?? null,
+      due_date: a.due_date ?? null, priority: a.priority ?? null, owner: a.owner ?? null, raised_by: a.raised_by ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'question_set',
+    description: 'Update fields of an existing KnowQuestion (partial — omitted fields untouched). Same path as ' +
+      'question_new. Use to change status/priority/due_date/owner. status="deferred" still requires a trigger; ' +
+      'do NOT set status="closed" here (link an answering decision instead).',
+    schema: {
+      question_id:  z.string(),
+      title:        z.string().optional(),
+      body_md:      z.string().optional(),
+      status:       z.enum(['open', 'deferred', 'dropped']).optional(),
+      trigger:      z.string().optional(),
+      component_id: z.string().optional(),
+      due_date:     z.string().optional(),
+      priority:     z.enum(['blocker', 'high', 'normal', 'low']).optional(),
+      owner:        z.string().optional(),
+      raised_by:    z.string().optional(),
+    },
+    path: '/lore/question',
+    body: (a) => ({
+      question_id: a.question_id, title: a.title ?? null, body_md: a.body_md ?? null,
+      status: a.status ?? null, trigger: a.trigger ?? null, component_id: a.component_id ?? null,
+      due_date: a.due_date ?? null, priority: a.priority ?? null, owner: a.owner ?? null, raised_by: a.raised_by ?? null,
+    }),
+  });
+
+  server.tool(
+    'question_link',
+    'Link a KnowQuestion (ADR-020/021). rel="answers": a decision closes it (creates ANSWERS + auto-sets status=closed); ' +
+      'rel="raised_in": where it was raised (needs target_type adr|sprint|task); rel="gates": it blocks a task (GATES — ' +
+      'the gate that keeps the register self-cleaning); rel="component": attach a component (MULTI, BELONGS_TO — add/remove); ' +
+      'rel="project": attach a git project (MULTI, BELONGS_TO_PROJECT — add/remove). Idempotent. Mutates system_aida_lore.',
+    {
+      question_id: z.string(),
+      rel:         z.enum(['answers', 'raised_in', 'gates', 'component', 'project']),
+      target_id:   z.string().describe('per rel: decision_id | adr/sprint/task id | task_uid | component_id | git_project slug'),
+      target_type: z.enum(['adr', 'sprint', 'task']).optional().describe('rel="raised_in" only'),
+      action:      z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ question_id, rel, target_id, target_type, action }) => {
+      try {
+        const act = action ?? 'add';
+        if (rel === 'answers')   return json(await lorePost('/lore/question/answers', { decision_id: target_id, question_id, action: act }));
+        if (rel === 'gates')     return json(await lorePost('/lore/question/gates', { question_id, task_uid: target_id, action: act }));
+        if (rel === 'component') return json(await lorePost('/lore/question/component', { question_id, component_id: target_id, action: act }));
+        if (rel === 'project')   return json(await lorePost('/lore/question/project', { question_id, project: target_id, action: act }));
+        if (!target_type) return err(new Error('target_type (adr|sprint|task) required for rel="raised_in"'));
+        return json(await lorePost('/lore/question/raised_in', { question_id, target_type, target_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
 
   // ── Release management ──────────────────────────────────────────────────
 
@@ -638,6 +752,7 @@ export function registerLoreWrite(server: McpServer): void {
       content_md:   z.string().optional().describe('spec body in Markdown'),
       summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
+      checkpoint:   z.boolean().optional().describe('LH-02: true = body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
@@ -660,6 +775,7 @@ export function registerLoreWrite(server: McpServer): void {
       content_md:   z.string().optional().describe('omit to leave the existing body untouched'),
       summary:      z.string().optional().describe('omit to leave untouched'),
       file_path:    z.string().optional().describe('omit to leave untouched'),
+      checkpoint:   z.boolean().optional().describe('LH-02: true = body amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
@@ -1098,9 +1214,25 @@ export function registerLoreWrite(server: McpServer): void {
     schema: {
       slug: z.string().describe('e.g. "NooriUta/UnlimitedLORE" (GitHub) or "AIDA/aida-root@forgejo" (Forgejo)'),
       name: z.string().optional().describe('human-readable project name, e.g. "UnlimitedLORE"'),
+      // ADR-LORE-018: hosting entries (origin + mirrors). URL is composed at read
+      // time from the template, so a repo move is a one-record fix, not a rewrite.
+      hosts: z.array(z.object({
+        remote: z.string().describe('remote name, e.g. "origin" | "github"'),
+        role: z.enum(['primary', 'mirror']),
+        base_url: z.string().describe('e.g. "http://localhost:3030/AIDA/UnlimitedLORE"'),
+        file_url_template: z.string().describe('e.g. "{base}/src/branch/{branch}/{path}" (Forgejo) | "{base}/blob/{branch}/{path}" (GitHub)'),
+        pr_url_template: z.string().describe('e.g. "{base}/pulls/{n}" (Forgejo) | "{base}/pull/{n}" (GitHub)'),
+        default_branch: z.string().optional(),
+      })).optional().describe('origin + mirrors; stored as JSON, URL composed on read'),
+      default_branch: z.string().optional().describe('repo default branch, e.g. "develop"'),
     },
     path: '/lore/project',
-    body: ({ slug, name }) => ({ slug, name: name ?? null }),
+    body: ({ slug, name, hosts, default_branch }) => ({
+      slug,
+      name: name ?? null,
+      hosts: hosts ? JSON.stringify(hosts) : null,
+      default_branch: default_branch ?? null,
+    }),
   });
 
   // ── ADR-LORE-012: dictionary entries (KnowDictEntry) ─────────────────────

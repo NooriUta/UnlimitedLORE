@@ -178,6 +178,7 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY PlanSection.section_id       IF NOT EXISTS STRING",
         "CREATE PROPERTY PlanConfig.config_id         IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowDecision.decision_id     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDecision.component_id    IF NOT EXISTS STRING",  // ADR-019: child-of-ADR filter axis (vertex field, no Hist)
         "CREATE PROPERTY KnowADR.adr_id               IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowTag.tag_id               IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowSprint.sprint_id         IF NOT EXISTS STRING",
@@ -203,6 +204,7 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON PlanSection     (section_id)   UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON PlanConfig      (config_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDecision    (decision_id)  UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowDecision    (component_id) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowADR         (adr_id)       UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowTag         (tag_id)       UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSprint      (sprint_id)    UNIQUE",
@@ -569,11 +571,40 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE KnowGitProject IF NOT EXISTS EXTENDS V",
         "CREATE PROPERTY KnowGitProject.slug IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowGitProject (slug) UNIQUE",
+        // ADR-LORE-018: hosts = JSON array of hosting entries (origin + mirrors),
+        // each with role/base_url/file_url_template/pr_url_template/default_branch.
+        // Stored as a JSON STRING (no EMBEDDEDLIST precedent in this schema; pr_refs
+        // is handled the same way); the URL is composed at read time on the client.
+        "CREATE PROPERTY KnowGitProject.hosts          IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowGitProject.default_branch IF NOT EXISTS STRING",
 
         // BELONGS_TO_PROJECT (KnowSprint -> KnowGitProject, also read off KnowRelease/
         // KnowPR elsewhere) — same gap: only ever auto-vivified via CREATE EDGE ... IF
         // NOT EXISTS calls (sprint/project, sprint_new's new git_project param, T16/
         // ADR-LORE-017), never declared here. Added alongside the other T13/T15 finds.
-        "CREATE EDGE TYPE BELONGS_TO_PROJECT IF NOT EXISTS EXTENDS E"
+        "CREATE EDGE TYPE BELONGS_TO_PROJECT IF NOT EXISTS EXTENDS E",
+
+        // ── KnowFile (ADR-LORE-018 T21): reference to a repo file, NOT parsing. ──
+        // Relative path only (no host/branch); the URL is composed at read time
+        // from the project's hosts[]. Keyed by (project, file_path). Lazily created
+        // on first link to a task (EDITED_IN). No file↔file / symbol graph.
+        "CREATE VERTEX TYPE KnowFile IF NOT EXISTS",
+        "CREATE PROPERTY KnowFile.project    IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowFile.file_path  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowFile.summary_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowFile (project, file_path) UNIQUE",
+        "CREATE EDGE TYPE EDITED_IN IF NOT EXISTS",   // KnowFile -> KnowTask
+
+        // ── KnowQuestion (ADR-020/021 T25): open-questions register. Vertex-only
+        // like KnowDecision — NO Hist (status/opened_date/closed_date are plain
+        // fields, see ADR-021 §SCD2). GATES (question→task gate) reuses the
+        // already-declared-but-empty edge; ANSWERS/RAISED_IN are new.
+        "CREATE VERTEX TYPE KnowQuestion IF NOT EXISTS",
+        "CREATE PROPERTY KnowQuestion.question_id  IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowQuestion.component_id IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (question_id)  UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (component_id) NOTUNIQUE",
+        "CREATE EDGE TYPE ANSWERS   IF NOT EXISTS",   // KnowDecision -> KnowQuestion
+        "CREATE EDGE TYPE RAISED_IN IF NOT EXISTS"    // KnowQuestion -> KnowADR|KnowSprint|KnowTask
     );
 }

@@ -70,7 +70,10 @@ public final class LoreSlices {
         // ── §2 ADRs ──────────────────────────────────────────────────────────
         slice("adrs",
             "SELECT adr_id, name, status, date_created, " +
-            "out('BELONGS_TO').component_id[0] AS component " +
+            "out('BELONGS_TO').component_id[0] AS component, " +
+            "out('BELONGS_TO').component_id    AS components, " +
+            "out('TAGGED_WITH').tag_id         AS tags, " +
+            "in('DECIDED_IN').size()           AS decision_count " +
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -101,9 +104,26 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         // ── §2 Decisions ─────────────────────────────────────────────────────
+        // ADR-019: KnowDecision as child of ADR. component_id/tags are filter axes,
+        // parent_adr (out DECIDED_IN) is the "rule → why" link. ORDER BY/LIMIT live
+        // in the suffix so a future optional WHERE lands before them.
         slice("decisions",
-            "SELECT decision_id, title, date_created, status_raw FROM KnowDecision ORDER BY decision_id",
-            List.of(), Map.of(), " LIMIT 300");
+            "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('BELONGS_TO').component_id     AS components, " +
+            "out('BELONGS_TO_PROJECT').slug     AS projects, " +
+            "out('TAGGED_WITH').tag_id  AS tags, " +
+            "out('DECIDED_IN').adr_id[0] AS parent_adr " +
+            "FROM KnowDecision",
+            List.of(), Map.of(), " ORDER BY decision_id LIMIT 300");
+
+        // Decisions that belong to one ADR (in('DECIDED_IN') from the ADR side).
+        slice("decisions_of_adr",
+            "SELECT decision_id, title, date_created, status_raw, component_id, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "out('TAGGED_WITH').tag_id AS tags " +
+            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id ORDER BY decision_id",
+            List.of("id"), Map.of(), "");
 
         slice("decision",
             "SELECT decision_id, title, date_created, " +
@@ -111,6 +131,48 @@ public final class LoreSlices {
             "adr_refs, sprint_refs, pr_refs, release_refs, " +
             "out('SUPERSEDES').decision_id AS supersedes_ids " +
             "FROM KnowDecision WHERE decision_id = :id",
+            List.of("id"), Map.of(), "");
+
+        // ── ADR-LORE-018 T21: files referenced (EDITED_IN) by a task ──────────
+        // Returns the project's hosts[]/default_branch alongside, so the client
+        // composes file URLs (+ "open in mirror") in one fetch, no second call.
+        slice("files_of_task",
+            "SELECT project, file_path, summary_md, " +
+            "out('BELONGS_TO_PROJECT').hosts[0]          AS project_hosts, " +
+            "out('BELONGS_TO_PROJECT').default_branch[0] AS project_default_branch " +
+            "FROM KnowFile WHERE out('EDITED_IN').task_uid CONTAINS :id ORDER BY file_path",
+            List.of("id"), Map.of(), "");
+
+        // ── ADR-020/021 T25: open-questions register (ОВ) ─────────────────────
+        // Derived overdue/blocking/age are computed on the client from the raw
+        // fields (status/due_date + gating_tasks) — never stored.
+        slice("open_questions",
+            "SELECT question_id, title, body_md, status, component_id, due_date, priority, owner, " +
+            "raised_by, opened_date, closed_date, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "out('GATES').task_uid      AS gating_tasks, " +
+            "out('RAISED_IN').adr_id    AS raised_adr, " +
+            "out('RAISED_IN').sprint_id AS raised_sprint, " +
+            "in('ANSWERS').decision_id  AS answered_by " +
+            "FROM KnowQuestion",
+            List.of(), Map.of(), " ORDER BY question_id");
+
+        slice("questions_of_adr",
+            "SELECT question_id, title, status, component_id, due_date, priority, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowQuestion WHERE out('RAISED_IN').adr_id CONTAINS :id ORDER BY question_id",
+            List.of("id"), Map.of(), "");
+
+        slice("questions_of_sprint",
+            "SELECT question_id, title, status, component_id, due_date, priority " +
+            "FROM KnowQuestion WHERE out('RAISED_IN').sprint_id CONTAINS :id ORDER BY question_id",
+            List.of("id"), Map.of(), "");
+
+        slice("gating_questions_of_task",
+            "SELECT question_id, title, status, priority " +
+            "FROM KnowQuestion WHERE out('GATES').task_uid CONTAINS :id AND status <> 'closed' ORDER BY question_id",
             List.of("id"), Map.of(), "");
 
         // ── §3 Sprints ───────────────────────────────────────────────────────
@@ -325,6 +387,10 @@ public final class LoreSlices {
 
         slice("plan_versions",
             "SELECT version_id, version_date, changelog_md FROM PlanVersion ORDER BY version_date DESC");
+
+        // Git projects — for the T43 multi-project picker (question/decision forms).
+        slice("git_projects",
+            "SELECT slug, name, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
@@ -571,7 +637,7 @@ public final class LoreSlices {
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
         slice("git_projects",
-            "SELECT slug, name FROM KnowGitProject",
+            "SELECT slug, name, hosts, default_branch FROM KnowGitProject",
             List.of(), Map.of(), " ORDER BY slug");
 
         // Fixed 2026-07-02: PART_OF is Task --PART_OF--> Sprint (out from the task), so
@@ -784,6 +850,14 @@ public final class LoreSlices {
         // ── ADR-LORE-012: dictionary (KnowDictEntry) ─────────────────────────
         // Without dict_type — весь справочник; с dict_type — один домен.
         // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
+        // Admin LORE (ADR-LORE-025): tag usage counts for the read-only «Теги» tab.
+        slice("tags_usage",
+            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+        slice("lore_tags_usage",
+            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM LoreTag",
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+
         slice("dictionary",
             // ifnull() masks the brief NULL-flag window on a freshly-upserted row
             // (defaults are set in a second, IS NULL-gated statement) — readers

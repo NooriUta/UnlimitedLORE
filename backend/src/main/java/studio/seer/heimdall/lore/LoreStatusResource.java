@@ -146,6 +146,22 @@ public class LoreStatusResource extends LoreResourceBase {
                                            String keyField, String id, String token,
                                            String now, String nsid) {
         final String newRaw = SCD2_STATUS_RAW.getOrDefault(token, token);
+        // Guard: the entity vertex must exist. Without this an unknown id — e.g. a
+        // bare task_id "T40" instead of the full task_uid "SPRINT_X/T40" — slips
+        // through: the CREATE EDGE FROM (SELECT ... WHERE keyField=:id) matches
+        // nothing, so an ORPHAN hist row gets inserted yet the call still reports
+        // ok:true (a silent no-op that leaves the status unchanged). Fail loud.
+        MartQuery existsQ = new MartQuery("sql",
+            "SELECT count(*) AS n FROM " + vertexType + " WHERE " + keyField + " = :id",
+            Map.of("id", id), -1);
+        return client.query(db, basicAuth(), existsQ).chain(exRes -> {
+            List<Map<String, Object>> exRows = exRes.result() != null ? exRes.result() : List.of();
+            long cnt = exRows.isEmpty() ? 0L : ((Number) exRows.get(0).getOrDefault("n", 0)).longValue();
+            if (cnt == 0) {
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
+                    .entity(new LoreError("NOT_FOUND", entityType + " '" + id + "' not found — id must be the full "
+                        + keyField + " (a task needs \"SPRINT_X/T05\", not a bare task_id)"))));
+            }
         MartQuery readQ = new MartQuery("sql",
             "SELECT @rid AS rid, status_raw FROM " + histType +
             " WHERE in('HAS_STATE')." + keyField + " CONTAINS :id AND valid_to IS NULL LIMIT 1",
@@ -187,7 +203,8 @@ public class LoreStatusResource extends LoreResourceBase {
                     .map(__ -> noStore(Response.ok(new StatusUpdateResponse(
                         true, entityType, id, oldStatus, newRaw,
                         new StatusRevision(now, null)))));
-            })
+                });
+        })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE STATUS] %s=%s: %s", entityType, id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)

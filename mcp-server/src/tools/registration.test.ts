@@ -32,10 +32,11 @@ describe('registerLoreWrite', () => {
     expect(stragglers).toEqual([]);
   });
 
-  it('registers the expected total tool count (60 — 58 in loreWrite + 2 in loreRead)', () => {
+  it('registers the expected total tool count (64 — 62 in loreWrite + 2 in loreRead)', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
-    expect(names).toHaveLength(58);
+    // 58 baseline + question_new/question_set/question_link (ADR-020/021, T25) + decision_link (T43).
+    expect(names).toHaveLength(62);
   });
 
   it('registers every name exactly once (no accidental duplicate registration)', () => {
@@ -85,6 +86,14 @@ describe('registerLoreWrite', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
     expect(names).toContain('project_new');
+  });
+
+  it('registers the open-questions tools (ADR-020/021, T25)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    for (const expected of ['question_new', 'question_set', 'question_link']) {
+      expect(names, `missing question tool: ${expected}`).toContain(expected);
+    }
   });
 
   it('does not register sprint_set as two separate tools (merged from lore_update_sprint + lore_update_sprint_refs)', () => {

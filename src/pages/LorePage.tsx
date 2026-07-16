@@ -12,15 +12,17 @@ import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type D
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS, adrStatusLabel } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
 import LoreSprintDetail    from '../components/lore/LoreSprintDetail';
 import LoreSprintEditor    from '../components/lore/LoreSprintEditor';
 import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
+import LoreOpenQuestionsBoard from '../components/lore/LoreOpenQuestionsBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
+import LoreAdminPanel      from '../components/lore/LoreAdminPanel';
 import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
 import LoreMilestonesView  from '../components/lore/LoreMilestonesView';
 import LoreQualityGateList from '../components/lore/LoreQualityGateList';
@@ -31,11 +33,12 @@ import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { a11yClick } from '../components/lore/a11y';
-import { FilterBar, type FilterTagData } from '../components/lore/FilterPrimitives';
+import { useIsAdmin } from '../auth/useRole';
+import { FilterBar, FilterDimensionMulti, type FilterTagData } from '../components/lore/FilterPrimitives';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
-  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'releases' | 'milestones'
+  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'openQuestions' | 'releases' | 'milestones' | 'admin'
   | 'knowledge' | 'components' | 'qg' | 'tech'
   | 'evolution' | 'timeline' | 'analytics' | 'mcp';
 
@@ -51,8 +54,10 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'milestones', icon: 'crossed-axes',   labelKey: 'lore.page.nav.milestones', fallback: 'Вехи'       },
   { id: 'plan',       icon: 'compass',        labelKey: 'lore.page.nav.plan',       fallback: 'План'       },
   { id: 'sprints',    icon: 'sprint',         labelKey: 'lore.page.nav.sprints',    fallback: 'Спринты'    },
+  { id: 'openQuestions', icon: 'help',        labelKey: 'lore.page.nav.openQuestions', fallback: 'Вопросы' },
   { id: 'adrs',       icon: 'scroll-quill',   labelKey: 'lore.page.nav.adrs',       fallback: 'ADR'        },
-  { id: 'decisions',  icon: 'vote',           labelKey: 'lore.page.nav.decisions',  fallback: 'Решения'    },
+  // 'decisions' parked as a sub-tab under Аналитика (not its own nav item) —
+  // temporary, pending the ADR-fold decision. See analyticsTab below.
   { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
@@ -62,15 +67,17 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
+  // ADR-LORE-025: admin-gated — скрывается из навигации для не-admin (см. sectionNav).
+  { id: 'admin',      icon: 'key',            labelKey: 'lore.page.nav.admin',      fallback: 'Админ'      },
 ];
 
 // MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
 // section nav collapses to icons only, so colour is what tells the types apart.
 const SECTION_COLORS: Record<Section, string> = {
   milestones: 'var(--section-milestones)', plan: 'var(--section-plan)', sprints: 'var(--section-sprints)', adrs: 'var(--section-adrs)',
-  decisions: 'var(--section-decisions)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
+  decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
-  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)',
+  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', admin: 'var(--wrn)',
 };
 
 // Sections that use master-detail layout (list panel + detail panel)
@@ -206,6 +213,17 @@ export default function LorePage() {
     const v = params.get('as'); return v ? new Set(v.split(',').filter(Boolean)) : new Set();
   });
   const [adrCounts, setAdrCounts]       = useState<Record<string, number>>({});
+  const [adrCompSel, setAdrCompSel]     = useState<Set<string>>(new Set());
+  const [adrTagSel, setAdrTagSel]       = useState<Set<string>>(new Set());
+  const [adrCompCounts, setAdrCompCounts] = useState<Record<string, number>>({});
+  const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
+  const [adrCompCollapsed, setAdrCompCollapsed] = useState(true);
+  const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
+  // ADR-LORE-025 D8: role from the verified source — gates the ⚙ Админ section.
+  const isAdmin = useIsAdmin();
+  // Аналитика hosts a temporary «Решения» sub-tab (decisions parked out of the
+  // main nav until the ADR-fold call is made).
+  const [analyticsTab, setAnalyticsTab] = useState<'analytics' | 'decisions'>('analytics');
   // T34: filter chrome bars collapse to one summary line by default (approved
   // design, docs/prototypes/two-tier-filter.html) — one toggle per section,
   // not per-dimension (tried, rejected as noisy, see [[feedback_ux_change_process]]).
@@ -257,8 +275,9 @@ export default function LorePage() {
   const hasDetailSelection = section === 'knowledge' ? !!((artKind && artId) || spec) : !!passport;
 
   // Sections where the global search bar is actually passed to children
-  const SEARCH_SECTIONS: Section[] = ['decisions', 'releases', 'timeline'];
-  const showGlobalSearch = SEARCH_SECTIONS.includes(section);
+  const SEARCH_SECTIONS: Section[] = ['decisions', 'openQuestions', 'releases', 'timeline'];
+  const showGlobalSearch = SEARCH_SECTIONS.includes(section)
+    || (section === 'analytics' && analyticsTab === 'decisions');
   // MOB: collapse the section nav to type-coloured icons on narrow screens.
   const narrow = useIsNarrow(720);
   // MOB-08: touch targets — icon-only chips get taller padding on narrow so
@@ -351,7 +370,7 @@ export default function LorePage() {
       setSprintQ(''); setSprintStatusSel(new Set());
       setSprintNoRelease(false); setSprintDatePeriod(null); setSprintPriorityFilter(new Set());
     }
-    if (section !== 'adrs')       { setAdrStatusSel(new Set()); }
+    if (section !== 'adrs')       { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }
     if (section !== 'components') { setCompQ(''); setCompAreaSel(new Set()); }
   }, [section]);
 
@@ -371,6 +390,8 @@ export default function LorePage() {
   const sectionNav = (
     <nav style={S.navBar} className="lore-nav-scroll" role="tablist" aria-label={t('lore.page.nav.ariaLabel', 'Разделы LORE')}>
       {SECTIONS.map(s => {
+        // ADR-LORE-025: админ-секция не существует для не-admin (не disabled — отсутствует).
+        if (s.id === 'admin' && !isAdmin) return null;
         const isActive = section === s.id;
         const col = SECTION_COLORS[s.id];
         const label = t(s.labelKey, s.fallback);
@@ -666,46 +687,88 @@ export default function LorePage() {
         <FilterBar
           tier="local"
           label={t('lore.page.adrs.filtersLabel', 'Фильтры')}
-          activeCount={adrStatusSel.size}
-          summaryTags={ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
-            key: f.key, label: adrStatusLabel(t, f.key), color: f.color,
-            onRemove: () => setAdrStatusSel(prev => { const n = new Set(prev); n.delete(f.key); return n; }),
-          }))}
-          onClear={() => setAdrStatusSel(new Set())}
+          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size}
+          summaryTags={[
+            ...ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
+              key: 'st:' + f.key, label: adrStatusLabel(t, f.key), color: f.color,
+              onRemove: () => setAdrStatusSel(prev => { const n = new Set(prev); n.delete(f.key); return n; }),
+            })),
+            ...[...adrCompSel].map((c): FilterTagData => ({
+              key: 'co:' + c, label: c === NO_COMPONENT ? t('lore.page.adrs.noComponent', 'без компонента') : c,
+              onRemove: () => setAdrCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
+            })),
+            ...[...adrTagSel].map((tg): FilterTagData => ({
+              key: 'tg:' + tg, label: tg === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : tg,
+              onRemove: () => setAdrTagSel(prev => { const n = new Set(prev); n.delete(tg); return n; }),
+            })),
+          ]}
+          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }}
           open={adrFilterOpen}
           onToggleOpen={() => setAdrFilterOpen(v => !v)}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-            {ADR_STATUS_FILTERS.map(f => {
-              const on  = adrStatusSel.has(f.key);
-              const cnt = adrCounts[f.key] ?? 0;
-              return (
-                <span key={f.key}
-                  {...a11yClick(() => setAdrStatusSel(prev => {
-                    const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
-                  }), `${adrStatusLabel(t, f.key)}: ${cnt}`)}
-                  aria-pressed={on}
-                  title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
-                    userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
-                    border: `1px solid ${on ? f.color : 'var(--b3)'}`,
-                    background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
-                    color: on ? 'var(--t1)' : 'var(--t3)',
-                  }}
-                >
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
-                  {adrStatusLabel(t, f.key)}
-                  <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
-                </span>
-              );
-            })}
-            <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
-              {adrStatusSel.size === 0
-                ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
-                : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
-            </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              {ADR_STATUS_FILTERS.map(f => {
+                const on  = adrStatusSel.has(f.key);
+                const cnt = adrCounts[f.key] ?? 0;
+                return (
+                  <span key={f.key}
+                    {...a11yClick(() => setAdrStatusSel(prev => {
+                      const n = new Set(prev); n.has(f.key) ? n.delete(f.key) : n.add(f.key); return n;
+                    }), `${adrStatusLabel(t, f.key)}: ${cnt}`)}
+                    aria-pressed={on}
+                    title={`${adrStatusLabel(t, f.key)}: ${cnt}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+                      userSelect: 'none', fontSize: 'var(--fs-sm)', padding: chipPad, borderRadius: 12, whiteSpace: 'nowrap',
+                      border: `1px solid ${on ? f.color : 'var(--b3)'}`,
+                      background: on ? `color-mix(in srgb, ${f.color} 18%, transparent)` : 'transparent',
+                      color: on ? 'var(--t1)' : 'var(--t3)',
+                    }}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: f.color, flexShrink: 0 }} />
+                    {adrStatusLabel(t, f.key)}
+                    <span style={{ fontSize: 'var(--fs-2xs)', opacity: on ? 0.85 : 0.55 }}>{cnt}</span>
+                  </span>
+                );
+              })}
+              <span style={{ flex: 1 }} />
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+                {adrStatusSel.size === 0
+                  ? t('lore.page.adrs.totalCount', '{{count}} ADR всего', { count: Object.values(adrCounts).reduce((a, b) => a + b, 0) })
+                  : t('lore.page.adrs.filteredCount', '{{shown}} из {{total}}', { shown: ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).reduce((s, f) => s + (adrCounts[f.key] ?? 0), 0), total: Object.values(adrCounts).reduce((a, b) => a + b, 0) })}
+              </span>
+            </div>
+            {Object.keys(adrCompCounts).length > 0 && (
+              <FilterDimensionMulti
+                label={t('lore.page.adrs.componentDim', 'Компонент')}
+                options={[
+                  ...Object.keys(adrCompCounts).filter(c => c !== NO_COMPONENT)
+                    .sort((a, b) => (adrCompCounts[b] - adrCompCounts[a]) || a.localeCompare(b))
+                    .map(c => ({ value: c, label: c })),
+                  ...(adrCompCounts[NO_COMPONENT] ? [{ value: NO_COMPONENT, label: t('lore.page.adrs.noComponent', 'без компонента') }] : []),
+                ]}
+                selected={adrCompSel}
+                onToggle={v => setAdrCompSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
+                counts={adrCompCounts}
+                dot
+                collapsible
+                collapsed={adrCompCollapsed}
+                onToggleCollapsed={() => setAdrCompCollapsed(v => !v)}
+              />
+            )}
+            {Object.keys(adrTagCounts).length > 0 && (
+              <FilterDimensionMulti
+                label={t('lore.page.adrs.tagDim', 'Тег')}
+                options={Object.keys(adrTagCounts).sort((a, b) => (adrTagCounts[b] - adrTagCounts[a]) || a.localeCompare(b)).map(k => ({ value: k, label: k === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : k }))}
+                selected={adrTagSel}
+                onToggle={v => setAdrTagSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
+                counts={adrTagCounts}
+                collapsible
+                collapsed={adrTagCollapsed}
+                onToggleCollapsed={() => setAdrTagCollapsed(v => !v)}
+              />
+            )}
           </div>
         </FilterBar>
       )}
@@ -837,11 +900,15 @@ export default function LorePage() {
                 module=""
                 q={listSearch}
                 statusSel={adrStatusSel}
+                compSel={adrCompSel}
+                tagSel={adrTagSel}
                 selectedId={passport === '__new' ? undefined : passport}
                 onError={handleFetchError}
                 onOpen={selectItem}
                 onNew={() => selectItem('__new')}
                 onCounts={setAdrCounts}
+                onCompCounts={setAdrCompCounts}
+                onTagCounts={setAdrTagCounts}
               />
             )}
             {section === 'sprints' && (
@@ -1007,9 +1074,9 @@ export default function LorePage() {
             </div>
           )}
 
-          {/* Decisions: composite feed */}
-          {section === 'decisions' && (
-            <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} />
+          {/* Open Questions register (ADR-020/021) */}
+          {section === 'openQuestions' && (
+            <LoreOpenQuestionsBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
           )}
 
           {/* Releases */}
@@ -1110,16 +1177,44 @@ export default function LorePage() {
           )}
 
           {section === 'analytics' && (
-            <LoreAnalyticsView
-              onError={handleFetchError}
-              onNavigateToSprint={navigateToSprint}
-              onNavigateToComponent={navigateToComponent}
-              onNavigateToQG={navigateToQG}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+                {([
+                  { key: 'analytics', label: t('lore.page.analyticsTab.analytics', 'Аналитика') },
+                  { key: 'decisions', label: t('lore.page.analyticsTab.decisions', 'Решения') },
+                ] as const).map(tab => {
+                  const on = analyticsTab === tab.key;
+                  return (
+                    <button key={tab.key} type="button" onClick={() => setAnalyticsTab(tab.key)}
+                      style={{
+                        font: 'inherit', fontSize: 'var(--fs-sm)', padding: '4px 12px', borderRadius: 6, cursor: 'pointer',
+                        border: `1px solid ${on ? 'color-mix(in srgb, var(--acc) 55%, var(--bd))' : 'var(--b3)'}`,
+                        background: on ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
+                        color: on ? 'var(--acc)' : 'var(--t3)', fontWeight: on ? 600 : 400,
+                      }}>
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {analyticsTab === 'analytics' ? (
+                <LoreAnalyticsView
+                  onError={handleFetchError}
+                  onNavigateToSprint={navigateToSprint}
+                  onNavigateToComponent={navigateToComponent}
+                  onNavigateToQG={navigateToQG}
+                />
+              ) : (
+                <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
+              )}
+            </div>
           )}
 
           {/* MCP API — published reference for the aida-lore MCP server */}
           {section === 'mcp' && <LoreMcpApiScreen />}
+
+          {/* ⚙ Admin LORE (ADR-LORE-025) — admin-gated reference-data management */}
+          {section === 'admin' && isAdmin && <LoreAdminPanel onError={handleFetchError} />}
           </LoreErrorBoundary>
         </div>
         )}

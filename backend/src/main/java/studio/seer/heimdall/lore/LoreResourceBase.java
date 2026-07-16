@@ -173,6 +173,39 @@ public abstract class LoreResourceBase {
         }
     }
 
+    /**
+     * T01 (REC-QG-LORE-STORAGE-001): keep the PARENT_OF edge in sync with the
+     * parent_id field. component/update used to write only the field, so the
+     * component-tree UI (which reads in('PARENT_OF')) never saw the move — 9
+     * drifted vertices. Mirror of relinkAreaEdge: drop the child's incoming
+     * PARENT_OF, then create the new one (parent → child). Blank parent detaches.
+     */
+    void relinkParentEdge(String cid, String parentId) {
+        try {
+            // Convention (component/create): PARENT_OF goes child → parent, so the
+            // child's parent link is its OUTgoing edge. Drop it, then recreate.
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT outE('PARENT_OF').@rid AS rids FROM LoreComponent WHERE component_id=:cid",
+                Map.of("cid", cid));
+            if (!rows.isEmpty() && rows.get(0).get("rids") instanceof List<?> rids) {
+                for (Object rid : rids) {
+                    if (rid == null) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM PARENT_OF WHERE @rid=" + rid)).await().indefinitely();
+                }
+            }
+            if (parentId != null && !parentId.isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                    "CREATE EDGE PARENT_OF FROM (SELECT FROM LoreComponent WHERE component_id='%s') " +
+                    "TO (SELECT FROM LoreComponent WHERE component_id='%s')",
+                    cid, parentId))).await().indefinitely();
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE PARENT_OF] relink %s→parent %s failed: %s", cid, parentId, e.getMessage());
+        }
+    }
+
     static String str(Object o) {
         return o == null ? "" : o.toString().trim();
     }

@@ -9,6 +9,7 @@
     "sprint_*": "allow",
     "task_*": "allow",
     "milestone_*": "allow",
+    "question_*": "allow",
     "project_new": "allow",
     "status_set": "allow",
     "status_set_batch": "allow"

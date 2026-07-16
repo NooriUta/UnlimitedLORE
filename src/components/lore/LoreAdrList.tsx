@@ -2,9 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
+import { GameIcon } from './GameIcon';
+import { areaColor } from './LoreComponentList';
+import { SortControl } from './FilterPrimitives';
 
-type DatePreset = null | '3m' | '6m' | '1y';
-const DATE_PRESETS: { key: DatePreset; labelKey: string; labelFallback: string }[] = [
+interface CompMeta { area: string | null; full_name: string | null; game_icon: string | null }
+
+export type DatePreset = null | '3m' | '6m' | '1y';
+export const DATE_PRESETS: { key: DatePreset; labelKey: string; labelFallback: string }[] = [
   { key: null, labelKey: 'lore.adrList.datePreset.all', labelFallback: 'Все' },
   { key: '3m', labelKey: 'lore.adrList.datePreset.3m',  labelFallback: '3м' },
   { key: '6m', labelKey: 'lore.adrList.datePreset.6m',  labelFallback: '6м' },
@@ -36,6 +41,38 @@ export function adrStatusLabel(t: (key: string, fallback: string) => string, key
   return t(`adrStatus.${key.toLowerCase()}`, f?.label ?? key);
 }
 
+// Sentinel tag-filter value: match ADRs that carry NO tags at all (otherwise
+// untagged ADRs would silently vanish once any tag chip is active).
+export const NO_TAG = '__notag__';
+export function matchTags(tags: string[], sel: Set<string>): boolean {
+  if (sel.size === 0) return true;
+  if (sel.has(NO_TAG) && tags.length === 0) return true;
+  return tags.some(t => sel.has(t));
+}
+// Mirror of NO_TAG for the component dimension: match ADRs with no component.
+export const NO_COMPONENT = '__nocomp__';
+export function matchComponents(components: string[], sel: Set<string>): boolean {
+  if (sel.size === 0) return true;
+  if (sel.has(NO_COMPONENT) && components.length === 0) return true;
+  return components.some(c => sel.has(c));
+}
+// Client-side sort (data is small — ~130 ADRs; ArcadeDB can't bind ORDER BY,
+// and compose() can't AND-join filters, so all list logic lives here).
+export type AdrSortKey = 'date' | 'id' | 'status' | 'component';
+export function sortAdrs<T extends { adr_id: string; date_created: string | null; status: string | null; component: string | null }>(
+  rows: T[], key: AdrSortKey, dir: 'asc' | 'desc',
+): T[] {
+  const sign = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    switch (key) {
+      case 'date':      return sign * (a.date_created ?? '').localeCompare(b.date_created ?? '');
+      case 'status':    return sign * (a.status ?? '').localeCompare(b.status ?? '');
+      case 'component': return sign * (a.component ?? '').localeCompare(b.component ?? '');
+      default:          return sign * a.adr_id.localeCompare(b.adr_id, undefined, { numeric: true });
+    }
+  });
+}
+
 const S = {
   root:  { flex: 1, overflowY: 'auto' as const, overflowX: 'hidden' as const, display: 'flex', flexDirection: 'column' as const },
   newBtn: {
@@ -45,7 +82,9 @@ const S = {
     color: 'var(--acc)', border: '1px dashed color-mix(in srgb, var(--acc) 40%, transparent)',
     borderRadius: 5, cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 600,
   },
-  dateLine: { display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', flexShrink: 0 },
+  controls: { display: 'flex', flexDirection: 'column' as const, gap: 4, padding: '2px 8px 7px', flexShrink: 0, borderBottom: '1px solid var(--bd)' },
+  ctrlRow: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
+  ctrlLabel: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const, color: 'var(--t3)', width: 74, flexShrink: 0 },
   dateBtn: (on: boolean) => ({
     padding: '2px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', cursor: 'pointer',
     border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
@@ -66,8 +105,9 @@ const S = {
     minWidth: 0, flexShrink: 0,
   },
   name: {
-    flex: 1, color: 'var(--t2)', fontSize: 'var(--fs-xs)',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+    color: 'var(--t2)', fontSize: 'var(--fs-xs)', lineHeight: 1.3,
+    overflow: 'hidden', textOverflow: 'ellipsis',
+    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
     minWidth: 0,
   },
   statusDot: (color: string) => ({
@@ -84,6 +124,17 @@ const S = {
     fontSize: 'var(--fs-2xs)', padding: '1px 4px', borderRadius: 2, flexShrink: 0,
     background: 'var(--b2)', color: 'var(--t3)',
   },
+  compIcon: (color: string) => ({
+    display: 'inline-flex', alignItems: 'center', padding: '1px 3px', borderRadius: 3, flexShrink: 0,
+    background: `color-mix(in srgb, ${color} 14%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 32%, transparent)`,
+  }),
+  decCount: {
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 999, flexShrink: 0, fontFamily: 'var(--mono)',
+    color: 'var(--section-decisions, var(--acc))',
+    background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
+  },
   date: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', flexShrink: 0 },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
 };
@@ -92,17 +143,26 @@ interface Props {
   module: string;
   q: string;
   statusSel: Set<string>;
+  compSel: Set<string>;
+  tagSel: Set<string>;
   selectedId?: string;
   onError: (e: unknown) => void;
   onOpen: (id: string) => void;
   onNew: () => void;
   onCounts: (counts: Record<string, number>) => void;
+  onCompCounts: (counts: Record<string, number>) => void;
+  onTagCounts: (counts: Record<string, number>) => void;
 }
 
-export default function LoreAdrList({ module, q, statusSel, selectedId, onError, onOpen, onNew, onCounts }: Props) {
+export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts }: Props) {
   const { t } = useTranslation();
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
+  const [comps, setComps]           = useState<Record<string, CompMeta>>({});
+  // Sort + time-range live in the list panel, under the «+ Новый ADR» button
+  // (always visible, not hidden when the filter band collapses).
+  const [sortKey, setSortKey]       = useState<AdrSortKey>('date');
+  const [sortDir, setSortDir]       = useState<'asc' | 'desc'>('desc');
   const [datePreset, setDatePreset] = useState<DatePreset>(null);
 
   useEffect(() => {
@@ -116,34 +176,72 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
     return () => ctrl.abort();
   }, [module, onError]);
 
-  // Report counts per status key (uppercase) from the full list
+  // Component icon/colour map (game_icon + area) — same source LoreSprintDetail
+  // uses to render tasks' component tags as icons.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ component_id: string } & CompMeta>('components', {}, ctrl.signal)
+      .then(cs => { const m: Record<string, CompMeta> = {}; cs.forEach(c => { m[c.component_id] = c; }); setComps(m); })
+      .catch(() => { /* icons degrade to id text */ });
+    return () => ctrl.abort();
+  }, []);
+
+  // Report facet counts (status / component / tag) from the full list
   useEffect(() => {
     const c: Record<string, number> = {};
+    const cc: Record<string, number> = {};
+    const tc: Record<string, number> = {};
     rows.forEach(r => {
       const k = (r.status ?? 'PROPOSED').toUpperCase();
       c[k] = (c[k] || 0) + 1;
+      const comps = r.components ?? [];
+      if (comps.length === 0) cc[NO_COMPONENT] = (cc[NO_COMPONENT] || 0) + 1;
+      else comps.forEach(x => { cc[x] = (cc[x] || 0) + 1; });
+      const tags = r.tags ?? [];
+      if (tags.length === 0) tc[NO_TAG] = (tc[NO_TAG] || 0) + 1;
+      else tags.forEach(tg => { tc[tg] = (tc[tg] || 0) + 1; });
     });
-    onCounts(c);
-  }, [rows, onCounts]);
+    onCounts(c); onCompCounts(cc); onTagCounts(tc);
+  }, [rows, onCounts, onCompCounts, onTagCounts]);
 
   const shown = useMemo(() => {
     const ql     = q.trim().toLowerCase();
     const cutoff = cutoffDate(datePreset);
-    return rows
+    const filtered = rows
       .filter(r => statusSel.size === 0 || statusSel.has((r.status ?? 'PROPOSED').toUpperCase()))
+      .filter(r => matchComponents(r.components ?? [], compSel))
+      .filter(r => matchTags(r.tags ?? [], tagSel))
       .filter(r => !cutoff || (r.date_created ?? '') >= cutoff)
       .filter(r => !ql || r.adr_id.toLowerCase().includes(ql) || (r.name ?? '').toLowerCase().includes(ql));
-  }, [rows, q, [...statusSel].sort().join(','), datePreset]);
+    return sortAdrs(filtered, sortKey, sortDir);
+  }, [rows, q, [...statusSel].sort().join(','), [...compSel].sort().join(','), [...tagSel].sort().join(','), datePreset, sortKey, sortDir]);
 
   return (
     <div style={S.root}>
       <button style={S.newBtn} onClick={onNew}>{t('lore.adrList.newButton', '+ Новый ADR')}</button>
-      <div style={S.dateLine}>
-        {DATE_PRESETS.map(p => (
-          <button key={String(p.key)} style={S.dateBtn(datePreset === p.key)} onClick={() => setDatePreset(p.key)}>
-            {t(p.labelKey, p.labelFallback)}
-          </button>
-        ))}
+      <div style={S.controls}>
+        <div style={S.ctrlRow}>
+          <span style={S.ctrlLabel}>{t('lore.page.adrs.sortDim', 'Сортировка')}</span>
+          <SortControl
+            options={[
+              { key: 'date',      label: t('lore.page.adrs.sortDate', 'Дата') },
+              { key: 'id',        label: t('lore.page.adrs.sortId', 'ID') },
+              { key: 'status',    label: t('lore.page.adrs.sortStatus', 'Статус') },
+              { key: 'component', label: t('lore.page.adrs.sortComp', 'Компонент') },
+            ]}
+            sortKey={sortKey}
+            direction={sortDir}
+            onChange={(k, d) => { setSortKey(k as AdrSortKey); setSortDir(d); }}
+          />
+        </div>
+        <div style={S.ctrlRow}>
+          <span style={S.ctrlLabel}>{t('lore.page.adrs.periodDim', 'Период')}</span>
+          {DATE_PRESETS.map(p => (
+            <button key={String(p.key)} style={S.dateBtn(datePreset === p.key)} onClick={() => setDatePreset(p.key)}>
+              {t(p.labelKey, p.labelFallback)}
+            </button>
+          ))}
+        </div>
       </div>
       <div style={S.list}>
         {loading && <div style={S.empty}>{t('lore.adrList.loading', 'Загрузка ADR…')}</div>}
@@ -164,12 +262,25 @@ export default function LoreAdrList({ module, q, statusSel, selectedId, onError,
               <div style={S.line1}>
                 <span style={S.statusDot(statusColor)} title={statusKey} />
                 <span style={S.id}>{a.adr_id}</span>
-                {a.name && <span style={S.name}>{a.name}</span>}
               </div>
-              {(a.component || a.date_created || a.status) && (
+              {a.name && <div style={S.name}>{a.name}</div>}
+              {(a.component || a.date_created || a.status || a.decision_count) && (
                 <div style={S.line2}>
                   {a.status && <span style={S.statusBadge(statusColor)}>{adrStatusLabel(t, statusKey)}</span>}
-                  {a.component && <span style={S.component}>{a.component}</span>}
+                  {(a.components?.length ? a.components : (a.component ? [a.component] : [])).map(cid => {
+                    const c = comps[cid];
+                    const color = areaColor(c?.area ?? '');
+                    return (
+                      <span key={cid} title={c?.full_name ?? cid} style={S.compIcon(color)}>
+                        <GameIcon slug={c?.game_icon ?? 'cog'} size={11} style={{ color }} />
+                      </span>
+                    );
+                  })}
+                  {!!a.decision_count && (
+                    <span style={S.decCount} title={t('lore.adrList.decisionCount', 'решений: {{n}}', { n: a.decision_count })}>
+                      DES {a.decision_count}
+                    </span>
+                  )}
                   {a.date_created && <span style={S.date}>{a.date_created.slice(0, 10)}</span>}
                 </div>
               )}
