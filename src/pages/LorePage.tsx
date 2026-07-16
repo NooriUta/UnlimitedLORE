@@ -67,8 +67,9 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
-  // ADR-LORE-025: admin-gated — скрывается из навигации для не-admin (см. sectionNav).
-  { id: 'admin',      icon: 'key',            labelKey: 'lore.page.nav.admin',      fallback: 'Админ'      },
+  // NB: 'admin' сознательно НЕ здесь — админка administers весь LORE, а не раздел
+  // Forseti, поэтому вход живёт в шапке приложения (AppShell, ADR-LORE-025).
+  // Секция остаётся валидным роутом ?section=admin и рендерится ниже под гейтом.
 ];
 
 // MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
@@ -390,8 +391,6 @@ export default function LorePage() {
   const sectionNav = (
     <nav style={S.navBar} className="lore-nav-scroll" role="tablist" aria-label={t('lore.page.nav.ariaLabel', 'Разделы LORE')}>
       {SECTIONS.map(s => {
-        // ADR-LORE-025: админ-секция не существует для не-admin (не disabled — отсутствует).
-        if (s.id === 'admin' && !isAdmin) return null;
         const isActive = section === s.id;
         const col = SECTION_COLORS[s.id];
         const label = t(s.labelKey, s.fallback);
