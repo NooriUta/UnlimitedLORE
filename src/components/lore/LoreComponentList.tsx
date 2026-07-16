@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
+import { dictColor } from './DictionaryProvider';
 import { fetchLoreSlice, type LoreComponent } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
@@ -25,7 +26,12 @@ export const AREA_STYLE: Record<string, 'B'> = {
   api: 'B', frontend: 'B', algorithm: 'B', service: 'B', engine: 'B',
 };
 
-export const areaColor  = (a: string | null | undefined) => AREA_COLOR[a ?? ''] ?? 'var(--t3)';
+// AL-28 (ADR-LORE-012): словарь — канон, карта ниже — фолбэк на время загрузки
+// и для старого бэкенда без слайса. До этого цвет area жил в ДВУХ местах: в
+// словаре (его показывала админка) и здесь — правка в админке не меняла ничего,
+// потому что рисовалось из кода. Теперь словарь выигрывает.
+export const areaColor  = (a: string | null | undefined) =>
+  dictColor('area', a) ?? AREA_COLOR[a ?? ''] ?? 'var(--t3)';
 export const areaInvert = (a: string | null | undefined) => !!(a && AREA_STYLE[a]);
 export const compArea   = (r: { area?: string | null; team?: string | null }) => r.area || r.team || '';
 

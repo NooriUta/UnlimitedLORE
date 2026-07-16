@@ -4,6 +4,8 @@
 // automatically — no hard-coded hex. Icons are game-icons, bundled offline via
 // addCollection in main.tsx (air-gap safe, ADR-FE-001).
 
+import { dictColor, dictIcon } from './DictionaryProvider';
+
 export interface StatusMeta { icon: string; color: string }
 
 const STATUS_META: Record<string, StatusMeta> = {
@@ -40,8 +42,25 @@ const STATUS_META: Record<string, StatusMeta> = {
 
 const FALLBACK: StatusMeta = { icon: 'checkbox-tree', color: 'var(--t3)' };
 
+// AL-28 (ADR-LORE-012): словарь — канон, карта выше — фолбэк (загрузка / старый
+// бэкенд без слайса). Статусы живут в трёх dict_type, ключ у всех — тот же код.
+// До этого правка цвета статуса в Admin LORE не меняла в UI ничего: словарь
+// показывался, а рисовалось из STATUS_META.
+const STATUS_DICTS = ['task_status', 'sprint_status', 'adr_status'];
+function fromDict(code: string): StatusMeta | undefined {
+  for (const d of STATUS_DICTS) {
+    const color = dictColor(d, code), icon = dictIcon(d, code);
+    if (color || icon) {
+      const base = STATUS_META[code] ?? FALLBACK;
+      return { icon: icon ?? base.icon, color: color ?? base.color };
+    }
+  }
+  return undefined;
+}
+
 export function statusMeta(status: string | null | undefined): StatusMeta {
-  return STATUS_META[(status ?? '').toLowerCase()] ?? FALLBACK;
+  const code = (status ?? '').toLowerCase();
+  return fromDict(code) ?? STATUS_META[code] ?? FALLBACK;
 }
 
 /**
@@ -51,9 +70,11 @@ export function statusMeta(status: string | null | undefined): StatusMeta {
  * Avoids the silent FALLBACK (checkbox-tree) when given an emoji-prefixed status.
  */
 export function resolveStatusMeta(status: string | null | undefined): StatusMeta {
-  const direct = STATUS_META[(status ?? '').toLowerCase().trim()];
+  const code = (status ?? '').toLowerCase().trim();
+  const direct = fromDict(code) ?? STATUS_META[code];
   if (direct) return direct;
-  return STATUS_META[taskTick(status).status] ?? FALLBACK;
+  const norm = taskTick(status).status;
+  return fromDict(norm) ?? STATUS_META[norm] ?? FALLBACK;
 }
 
 /**
