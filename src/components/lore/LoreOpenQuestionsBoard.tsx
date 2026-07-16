@@ -72,6 +72,10 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   const [compMeta, setCompMeta] = useState<Record<string, LinkMeta>>({});
   // T43: all git-project slugs for the multi-project picker.
   const [projectIds, setProjectIds] = useState<string[]>([]);
+  // Закрытие вопроса: только через ребро ANSWERS (инвариант ADR-021) — форма даёт
+  // легальный путь: выбрать решение-ответ, бэкенд сам переведёт в closed.
+  const [decisionIds, setDecisionIds] = useState<string[]>([]);
+  const [answerPick, setAnswerPick] = useState('');
   // QANS-01: раскрывающийся ответ у закрытого вопроса (лениво тянем решение).
   const [openAns, setOpenAns] = useState<string | null>(null);
   const [ansCache, setAnsCache] = useState<Record<string, LoreDecisionPassport>>({});
@@ -106,6 +110,9 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
     fetchLoreSlice<{ slug: string }>('git_projects', {})
       .then(ps => setProjectIds(ps.map(p => p.slug).filter(Boolean).sort()))
       .catch(() => { /* project picker degrades to free text */ });
+    fetchLoreSlice<{ decision_id: string }>('decisions', {})
+      .then(ds => setDecisionIds(ds.map(d => d.decision_id).filter(Boolean).sort()))
+      .catch(() => { /* «закрыть решением» деградирует до свободного ввода */ });
   }, []);
 
   // T43: add/remove a component or project link on a question (multi, via edges).
@@ -122,13 +129,25 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   function startNew() { setForm({ ...EMPTY_FORM, question_id: '' }); setEditId('__new__'); }
   function startEdit(r: LoreQuestionRow) {
     setForm({
-      question_id: r.question_id, title: r.title ?? '', body_md: '', component_id: r.component_id ?? '',
+      // body_md грузим из строки: раньше поле открывалось пустым (слайс его не
+      // отдавал), контекст сохранялся, но не показывался — выглядело как «не сохраняется».
+      question_id: r.question_id, title: r.title ?? '', body_md: r.body_md ?? '', component_id: r.component_id ?? '',
       status: r.status ?? 'open', priority: r.priority ?? '', due_date: (r.due_date ?? '').slice(0, 10),
       owner: r.owner ?? '', raised_in: (r.raised_adr ?? []).filter(Boolean)[0] ?? '',
     });
     setEditId(r.question_id);
   }
-  function cancel() { setEditId(null); setForm(EMPTY_FORM); }
+  function cancel() { setEditId(null); setForm(EMPTY_FORM); setAnswerPick(''); }
+
+  /** Закрыть вопрос легально: ребро ANSWERS → бэкенд сам ставит closed (ADR-021). */
+  async function closeByDecision(questionId: string, decisionId: string) {
+    if (!decisionId.trim()) return;
+    setSaving(true);
+    try {
+      await loreMutate('/question/answers', { question_id: questionId, decision_id: decisionId.trim(), action: 'add' });
+      setAnswerPick(''); setEditId(null); setForm(EMPTY_FORM); load();
+    } catch (e) { onError(e); } finally { setSaving(false); }
+  }
 
   async function save() {
     const f = form;
@@ -364,12 +383,31 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                       onAdd={v => linkQuestion(editId!, 'project', v, 'add')}
                       onRemove={v => linkQuestion(editId!, 'project', v, 'remove')} />
                   </div>
+                  {/* Легальный путь закрытия: closed нельзя выставить полем (ADR-021),
+                      но можно указать решение-ответ — ребро ANSWERS закроет вопрос. */}
+                  {er?.status !== 'closed' && (
+                    <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const, color: 'var(--t3)', width: 92, flexShrink: 0 }}>
+                        {t('lore.oqBoard.closeBy', 'Закрыть')}
+                      </span>
+                      <input style={{ ...S.input, flex: 1, minWidth: 180 }} list="lore-qform-decisions"
+                        placeholder={t('lore.oqBoard.closePick', 'решением-ответом — выберите решение (закроет вопрос)')}
+                        value={answerPick} onChange={e => setAnswerPick(e.target.value)} />
+                      <datalist id="lore-qform-decisions">
+                        {decisionIds.map(d => <option key={d} value={d} />)}
+                      </datalist>
+                      <button style={S.saveBtn} disabled={saving || !answerPick.trim()}
+                        onClick={() => closeByDecision(editId!, answerPick)}>
+                        {saving ? '…' : t('lore.oqBoard.closeBtn', 'закрыть ✓')}
+                      </button>
+                    </div>
+                  )}
                 </>
               );
             })()}
             <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-              {/* closed ставится ТОЛЬКО через ANSWERS (инвариант) — в селекте его нет;
-                  для уже закрытого вопроса показываем disabled-опцию, чтобы селект не врал. */}
+              {/* closed ставится ТОЛЬКО через ANSWERS (инвариант ADR-021) — в селекте
+                  его нет; закрыть можно рядом, выбрав решение-ответ. */}
               {(form.status === 'closed' || form.status === 'deferred') && (
                 <option value={form.status} disabled>{STATUS_META[form.status]?.label ?? form.status}</option>
               )}
