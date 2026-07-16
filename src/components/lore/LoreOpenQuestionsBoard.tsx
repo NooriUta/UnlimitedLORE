@@ -123,13 +123,20 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
     try {
       // Upsert (partial-safe). status='deferred' needs a trigger — the form omits
       // deferred to avoid the backend trigger requirement; use the row's ⏸ later.
+      // raised_in — НЕ поле /lore/question (бэкенд отвергал весь payload 400);
+      // это ребро — шлём отдельным вызовом ниже. status='closed' ставится только
+      // через ANSWERS — не отправляем его вовсе (инвариант бэкенда).
       await loreMutate('/question', {
         question_id: f.question_id.trim(), title: f.title.trim(),
         body_md: f.body_md.trim() || null, component_id: f.component_id.trim() || null,
-        status: f.status || 'open', priority: f.priority || null,
+        status: f.status === 'open' || f.status === 'dropped' ? f.status : null, priority: f.priority || null,
         due_date: f.due_date || null, owner: f.owner.trim() || null,
-        raised_in: f.raised_in.trim() || null,
       });
+      if (f.raised_in.trim()) {
+        await loreMutate('/question/raised_in', {
+          question_id: f.question_id.trim(), target_type: 'adr', target_id: f.raised_in.trim(), action: 'add',
+        });
+      }
       cancel(); load();
     } catch (e) { onError(e); } finally { setSaving(false); }
   }
@@ -347,7 +354,12 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               );
             })()}
             <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-              {['open', 'closed', 'dropped'].map(s => <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>)}
+              {/* closed ставится ТОЛЬКО через ANSWERS (инвариант) — в селекте его нет;
+                  для уже закрытого вопроса показываем disabled-опцию, чтобы селект не врал. */}
+              {(form.status === 'closed' || form.status === 'deferred') && (
+                <option value={form.status} disabled>{STATUS_META[form.status]?.label ?? form.status}</option>
+              )}
+              {['open', 'dropped'].map(s => <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>)}
             </select>
             <select style={S.input} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
               <option value="">— приоритет —</option>
