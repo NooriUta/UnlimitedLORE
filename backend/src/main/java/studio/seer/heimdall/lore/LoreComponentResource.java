@@ -54,6 +54,9 @@ public class LoreComponentResource extends LoreResourceBase {
                 csql.toString(), p)).await().indefinitely();
             // ADR-LORE-012 level B: keep the IN_AREA edge in sync with the string.
             if (req.area() != null) relinkAreaEdge(req.component_id(), req.area());
+            // T01: keep the PARENT_OF edge in sync with the parent_id field (the
+            // tree UI reads the edge, not the field) — create/link-parent already do.
+            if (req.parent_id() != null) relinkParentEdge(req.component_id(), req.parent_id());
             return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
