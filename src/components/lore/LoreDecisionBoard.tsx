@@ -282,6 +282,13 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
           >
             {t('lore.decisionBoard.groupButton', 'группировать')}
           </button>
+          <button
+            onClick={() => setParentFilter(p => p === 'orphan' ? 'all' : 'orphan')}
+            style={{ ...S.ctrl, ...(parentFilter === 'orphan' ? S.ctrlActive : {}), display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            title={t('lore.decisionBoard.onlyIndependentTitle', 'Только независимые решения (без ADR)')}
+          >
+            <OrphanIcon size={10} />{t('lore.decisionBoard.onlyIndependent', 'Независимые')} {orphanCount}
+          </button>
         </div>
       </div>
       {/* T34: status facet filter (collapsible one-line band, same as QG/Знания) */}
