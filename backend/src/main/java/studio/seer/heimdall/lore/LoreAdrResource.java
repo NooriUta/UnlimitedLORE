@@ -288,6 +288,12 @@ public class LoreAdrResource extends LoreResourceBase {
             // body sections was actually persisted this call.
             out.put("body_written", req.context_md() != null
                 || req.decision_md() != null || req.consequences_md() != null);
+            // ADR-LORE-020: реестр ОВ — отдельная сущность (KnowQuestion), а не
+            // markdown-раздел. Тело с «Открытыми вопросами» = вопросы, которые
+            // никто не найдёт фильтром, не увидит просроченными и не закроет
+            // решением. Ловим на записи и подсказываем вызывающему (агенту).
+            String qHint = questionsInBodyHint(req);
+            if (qHint != null) out.put("hint", qHint);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());
@@ -627,5 +633,33 @@ public class LoreAdrResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    // ── Реестр ОВ vs markdown-раздел (ADR-LORE-020) ─────────────────────────
+    // «Открытые вопросы» разделом в теле ADR — распространённая ошибка (14 ADR
+    // корпуса на 2026-07-16, включая свежие). Такие вопросы не находятся
+    // фильтром, не всплывают просроченными, не гейтят задачи и не закрываются
+    // решением — весь смысл KnowQuestion теряется. Ловим на записи и говорим
+    // вызывающему (агенту), что делать. Только подсказка: тело не отвергаем —
+    // раздел в ADR законен как обзор, дубликатом реестра он быть не должен.
+    // Две кириллические ловушки Java-regex, обе поймались тестом, не глазами:
+    //  • \w = [a-zA-Z_0-9] — кириллицу не матчит → \p{L};
+    //  • (?i) БЕЗ (?u) сворачивает регистр только ASCII → «открыт» не матчил
+    //    «Открытые», хотя английский вариант ловился. Отсюда флаг u.
+    private static final java.util.regex.Pattern QUESTION_SECTION = java.util.regex.Pattern.compile(
+        "(?imu)^\\s*#{1,6}\\s*.*(открыт\\p{L}*\\s+вопрос|нерешённ\\p{L}*\\s+вопрос|open\\s+questions).*$");
+
+    static String questionsInBodyHint(AdrCreateRequest req) {
+        int hits = 0;
+        for (String body : new String[] { req.context_md(), req.decision_md(), req.consequences_md() }) {
+            if (body == null || body.isBlank()) continue;
+            java.util.regex.Matcher m = QUESTION_SECTION.matcher(body);
+            while (m.find()) hits++;
+        }
+        if (hits == 0) return null;
+        return "в теле найден раздел с открытыми вопросами (" + hits + ") — реестр ОВ это отдельная сущность "
+            + "(ADR-LORE-020): заведите их через question_new + question_link(rel:\"raised_in\", target=" + req.adr_id()
+            + "), иначе они не попадут в слайс open_questions, не будут видны просроченными и их нельзя закрыть решением (ANSWERS). "
+            + "Раздел в теле оставляйте только как обзор, не как реестр.";
     }
 }
