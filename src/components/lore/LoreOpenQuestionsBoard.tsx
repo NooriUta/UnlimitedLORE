@@ -75,7 +75,9 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   // Закрытие вопроса: только через ребро ANSWERS (инвариант ADR-021) — форма даёт
   // легальный путь: выбрать решение-ответ, бэкенд сам переведёт в closed.
   const [decisionIds, setDecisionIds] = useState<string[]>([]);
-  const [answerPick, setAnswerPick] = useState('');
+  const [answerPick, setAnswerPick] = useState('');   // id решения-ответа (новое или существующее)
+  const [answerTitle, setAnswerTitle] = useState(''); // сам ответ (для нового решения)
+  const [answerBody, setAnswerBody] = useState('');   // обоснование (опц.)
   // QANS-01: раскрывающийся ответ у закрытого вопроса (лениво тянем решение).
   const [openAns, setOpenAns] = useState<string | null>(null);
   const [ansCache, setAnsCache] = useState<Record<string, LoreDecisionPassport>>({});
@@ -139,13 +141,32 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   }
   function cancel() { setEditId(null); setForm(EMPTY_FORM); setAnswerPick(''); }
 
-  /** Закрыть вопрос легально: ребро ANSWERS → бэкенд сам ставит closed (ADR-021). */
-  async function closeByDecision(questionId: string, decisionId: string) {
-    if (!decisionId.trim()) return;
+  /**
+   * Закрыть вопрос легально (ADR-021: closed только через ребро ANSWERS).
+   * Как в паспорте ADR: ответ можно НАПИСАТЬ здесь же — если id новый, сначала
+   * создаём решение (decision_new), потом линкуем; если id существует — просто
+   * линкуем. Бэкенд сам переводит вопрос в closed.
+   */
+  async function answerAndClose(q: LoreQuestionRow) {
+    const id = answerPick.trim();
+    if (!id) return;
+    const isNew = !decisionIds.includes(id);
+    if (isNew && !answerTitle.trim()) { onError(new Error('для нового решения нужен заголовок — это и есть ответ')); return; }
     setSaving(true);
     try {
-      await loreMutate('/question/answers', { question_id: questionId, decision_id: decisionId.trim(), action: 'add' });
-      setAnswerPick(''); setEditId(null); setForm(EMPTY_FORM); load();
+      if (isNew) {
+        await loreMutate('/decision', {
+          decision_id: id, title: answerTitle.trim(), body_md: answerBody.trim() || null,
+          // компонент и родительский ADR наследуем у вопроса — ответ живёт там же
+          component_id: q.component_id ?? null,
+          adr_id: (q.raised_adr ?? []).filter(Boolean)[0] ?? null,
+          date_created: null, refs_raw: null, tags: null,
+        });
+        setDecisionIds(prev => [...prev, id].sort());
+      }
+      await loreMutate('/question/answers', { question_id: q.question_id, decision_id: id, action: 'add' });
+      setAnswerPick(''); setAnswerTitle(''); setAnswerBody('');
+      setEditId(null); setForm(EMPTY_FORM); load();
     } catch (e) { onError(e); } finally { setSaving(false); }
   }
 
@@ -385,23 +406,46 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                   </div>
                   {/* Легальный путь закрытия: closed нельзя выставить полем (ADR-021),
                       но можно указать решение-ответ — ребро ANSWERS закроет вопрос. */}
-                  {er?.status !== 'closed' && (
-                    <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const, color: 'var(--t3)', width: 92, flexShrink: 0 }}>
-                        {t('lore.oqBoard.closeBy', 'Закрыть')}
-                      </span>
-                      <input style={{ ...S.input, flex: 1, minWidth: 180 }} list="lore-qform-decisions"
-                        placeholder={t('lore.oqBoard.closePick', 'решением-ответом — выберите решение (закроет вопрос)')}
-                        value={answerPick} onChange={e => setAnswerPick(e.target.value)} />
-                      <datalist id="lore-qform-decisions">
-                        {decisionIds.map(d => <option key={d} value={d} />)}
-                      </datalist>
-                      <button style={S.saveBtn} disabled={saving || !answerPick.trim()}
-                        onClick={() => closeByDecision(editId!, answerPick)}>
-                        {saving ? '…' : t('lore.oqBoard.closeBtn', 'закрыть ✓')}
-                      </button>
-                    </div>
-                  )}
+                  {/* Ответ на вопрос — композер решения, как в паспорте ADR: ответа
+                      ещё нет, его пишут здесь. Новый id → создаём решение и линкуем;
+                      существующий → просто линкуем. ANSWERS закрывает вопрос (ADR-021). */}
+                  {er && er.status !== 'closed' && (() => {
+                    const isNew = !!answerPick.trim() && !decisionIds.includes(answerPick.trim());
+                    const parentAdr = (er.raised_adr ?? []).filter(Boolean)[0];
+                    return (
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' as const, gap: 5, padding: '8px 10px', border: '1px solid var(--b3)', borderRadius: 6, background: 'color-mix(in srgb, var(--suc) 5%, transparent)' }}>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const, color: 'var(--t3)' }}>
+                          {t('lore.oqBoard.answerHead', 'Ответить решением — закроет вопрос')}
+                        </div>
+                        <input style={S.input} list="lore-qform-decisions"
+                          placeholder={t('lore.oqBoard.answerId', 'id решения: новый (напишем ответ) или существующий из списка')}
+                          value={answerPick} onChange={e => setAnswerPick(e.target.value)} />
+                        <datalist id="lore-qform-decisions">
+                          {decisionIds.map(d => <option key={d} value={d} />)}
+                        </datalist>
+                        {isNew && (
+                          <>
+                            <input style={S.input} placeholder={t('lore.oqBoard.answerTitle', 'Ответ — правило одной строкой (это и есть решение)')}
+                              value={answerTitle} onChange={e => setAnswerTitle(e.target.value)} />
+                            <textarea style={{ ...S.input, minHeight: 44, resize: 'vertical' as const }}
+                              placeholder={t('lore.oqBoard.answerBody', 'Обоснование / детали (опц.)')}
+                              value={answerBody} onChange={e => setAnswerBody(e.target.value)} />
+                            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                              {t('lore.oqBoard.answerInherit', 'Новое решение унаследует компонент вопроса{{adr}}', { adr: parentAdr ? ` и родителя ${parentAdr}` : '' })}
+                            </div>
+                          </>
+                        )}
+                        <div>
+                          <button style={S.saveBtn} disabled={saving || !answerPick.trim() || (isNew && !answerTitle.trim())}
+                            onClick={() => answerAndClose(er)}>
+                            {saving ? '…' : isNew
+                              ? t('lore.oqBoard.answerNewBtn', 'создать решение и закрыть ✓')
+                              : t('lore.oqBoard.answerLinkBtn', 'закрыть этим решением ✓')}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </>
               );
             })()}
