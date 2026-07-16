@@ -54,7 +54,8 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'sprints',    icon: 'sprint',         labelKey: 'lore.page.nav.sprints',    fallback: 'Спринты'    },
   { id: 'openQuestions', icon: 'help',        labelKey: 'lore.page.nav.openQuestions', fallback: 'Вопросы' },
   { id: 'adrs',       icon: 'scroll-quill',   labelKey: 'lore.page.nav.adrs',       fallback: 'ADR'        },
-  { id: 'decisions',  icon: 'vote',           labelKey: 'lore.page.nav.decisions',  fallback: 'Решения'    },
+  // 'decisions' parked as a sub-tab under Аналитика (not its own nav item) —
+  // temporary, pending the ADR-fold decision. See analyticsTab below.
   { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
@@ -214,6 +215,9 @@ export default function LorePage() {
   const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
   const [adrCompCollapsed, setAdrCompCollapsed] = useState(true);
   const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
+  // Аналитика hosts a temporary «Решения» sub-tab (decisions parked out of the
+  // main nav until the ADR-fold call is made).
+  const [analyticsTab, setAnalyticsTab] = useState<'analytics' | 'decisions'>('analytics');
   // T34: filter chrome bars collapse to one summary line by default (approved
   // design, docs/prototypes/two-tier-filter.html) — one toggle per section,
   // not per-dimension (tried, rejected as noisy, see [[feedback_ux_change_process]]).
@@ -266,7 +270,8 @@ export default function LorePage() {
 
   // Sections where the global search bar is actually passed to children
   const SEARCH_SECTIONS: Section[] = ['decisions', 'openQuestions', 'releases', 'timeline'];
-  const showGlobalSearch = SEARCH_SECTIONS.includes(section);
+  const showGlobalSearch = SEARCH_SECTIONS.includes(section)
+    || (section === 'analytics' && analyticsTab === 'decisions');
   // MOB: collapse the section nav to type-coloured icons on narrow screens.
   const narrow = useIsNarrow(720);
   // MOB-08: touch targets — icon-only chips get taller padding on narrow so
@@ -1061,11 +1066,6 @@ export default function LorePage() {
             </div>
           )}
 
-          {/* Decisions: composite feed */}
-          {section === 'decisions' && (
-            <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
-          )}
-
           {/* Open Questions register (ADR-020/021) */}
           {section === 'openQuestions' && (
             <LoreOpenQuestionsBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
@@ -1169,12 +1169,37 @@ export default function LorePage() {
           )}
 
           {section === 'analytics' && (
-            <LoreAnalyticsView
-              onError={handleFetchError}
-              onNavigateToSprint={navigateToSprint}
-              onNavigateToComponent={navigateToComponent}
-              onNavigateToQG={navigateToQG}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+                {([
+                  { key: 'analytics', label: t('lore.page.analyticsTab.analytics', 'Аналитика') },
+                  { key: 'decisions', label: t('lore.page.analyticsTab.decisions', 'Решения') },
+                ] as const).map(tab => {
+                  const on = analyticsTab === tab.key;
+                  return (
+                    <button key={tab.key} type="button" onClick={() => setAnalyticsTab(tab.key)}
+                      style={{
+                        font: 'inherit', fontSize: 'var(--fs-sm)', padding: '4px 12px', borderRadius: 6, cursor: 'pointer',
+                        border: `1px solid ${on ? 'color-mix(in srgb, var(--acc) 55%, var(--bd))' : 'var(--b3)'}`,
+                        background: on ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
+                        color: on ? 'var(--acc)' : 'var(--t3)', fontWeight: on ? 600 : 400,
+                      }}>
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {analyticsTab === 'analytics' ? (
+                <LoreAnalyticsView
+                  onError={handleFetchError}
+                  onNavigateToSprint={navigateToSprint}
+                  onNavigateToComponent={navigateToComponent}
+                  onNavigateToQG={navigateToQG}
+                />
+              ) : (
+                <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
+              )}
+            </div>
           )}
 
           {/* MCP API — published reference for the aida-lore MCP server */}
