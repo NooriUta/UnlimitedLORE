@@ -105,8 +105,9 @@ const S = {
     minWidth: 0, flexShrink: 0,
   },
   name: {
-    flex: 1, color: 'var(--t2)', fontSize: 'var(--fs-xs)',
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+    color: 'var(--t2)', fontSize: 'var(--fs-xs)', lineHeight: 1.3,
+    overflow: 'hidden', textOverflow: 'ellipsis',
+    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const,
     minWidth: 0,
   },
   statusDot: (color: string) => ({
@@ -261,8 +262,8 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sel
               <div style={S.line1}>
                 <span style={S.statusDot(statusColor)} title={statusKey} />
                 <span style={S.id}>{a.adr_id}</span>
-                {a.name && <span style={S.name}>{a.name}</span>}
               </div>
+              {a.name && <div style={S.name}>{a.name}</div>}
               {(a.component || a.date_created || a.status || a.decision_count) && (
                 <div style={S.line2}>
                   {a.status && <span style={S.statusBadge(statusColor)}>{adrStatusLabel(t, statusKey)}</span>}
