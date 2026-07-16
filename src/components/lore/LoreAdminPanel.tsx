@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { AUTH_ENABLED } from '../../auth/session';
@@ -33,6 +34,27 @@ const PROFILE_SCOPE: [string, string][] = [
   ['marketer', 'bragi_* · task_* · insight_* · rec_* · doc_* · status_set'],
 ];
 
+// AL-31: у KC-моста ЧЕТЫРЕ разных исхода, и «пусто» — только один из них.
+// Раньше 403/5xx уходили в onError (страничная ошибка) или молча давали пустой
+// список, и экран одинаково бодро предлагал «завести первого» — при том что
+// отказ в доступе и неподнятый KC требуют противоположных действий.
+type KcState<T> =
+  | { k: 'loading' }
+  | { k: 'ok'; rows: T[] }
+  | { k: 'forbidden' }              // 403 — роль не пускает; люди могут быть
+  | { k: 'off'; detail: string }    // 503 — моста нет, состояние неизвестно
+  | { k: 'error'; detail: string }; // сеть/5xx — то же, но без внятной причины
+
+async function loadKc<T>(path: string): Promise<KcState<T>> {
+  try {
+    const r = await fetch(path, { headers: { 'X-Seer-Role': 'admin' } });
+    if (r.status === 403) return { k: 'forbidden' };
+    if (r.status === 503) return { k: 'off', detail: (await r.json().catch(() => ({}))).detail ?? 'not configured' };
+    if (!r.ok) return { k: 'error', detail: `HTTP ${r.status}` };
+    return { k: 'ok', rows: (await r.json()) as T[] };
+  } catch (e) { return { k: 'error', detail: e instanceof Error ? e.message : String(e) }; }
+}
+
 const S = {
   root: { flex: 1, overflowY: 'auto' as const, padding: '10px 16px' },
   tabs: { display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const },
@@ -58,16 +80,82 @@ const S = {
   card: { border: '1px solid var(--bd)', borderRadius: 6, padding: '10px 12px', marginBottom: 8, fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
   form: { display: 'flex', flexDirection: 'column' as const, gap: 6, padding: 10, margin: '8px 0', border: '1px solid var(--b3)', borderRadius: 6, background: 'var(--bg2)' },
   sw: (c: string | null) => ({ display: 'inline-block', width: 12, height: 12, borderRadius: 3, background: c ?? 'transparent', border: '1px solid var(--b3)', verticalAlign: 'middle' }),
+  // AL-37: небезопасное состояние — во всю ширину. Было — серым шёпотом в углу,
+  // тише декоративной плашки палитры, хотя означает «админ — любой, кто открыл адрес».
+  banner: {
+    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 10,
+    borderRadius: 5, fontSize: 'var(--fs-sm)', color: 'var(--t1)',
+    background: 'color-mix(in srgb, var(--wrn) 16%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--wrn) 45%, var(--bd))',
+  },
+  // AL-31: пустое / отказ / мост недоступен — разные экраны, а не один текст.
+  state: (tone: 'neutral' | 'bad') => ({
+    border: `1px ${tone === 'bad' ? 'solid' : 'dashed'} ${tone === 'bad' ? 'color-mix(in srgb, var(--dng) 50%, var(--bd))' : 'var(--bd)'}`,
+    borderRadius: 6, padding: '18px 14px', textAlign: 'center' as const, color: 'var(--t2)', fontSize: 'var(--fs-sm)',
+  }),
+  stateH: (tone: 'neutral' | 'bad') => ({ fontWeight: 600, marginBottom: 4, color: tone === 'bad' ? 'var(--dng)' : 'var(--t1)' }),
+  stateCode: { display: 'block', marginTop: 8, fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' },
 };
+
+/** AL-31: один и тот же разбор исходов для «Людей» и «Агентов». */
+function KcStateView({ s, empty }: { s: KcState<unknown>; empty: React.ReactNode }) {
+  const { t } = useTranslation();
+  if (s.k === 'loading') return <div style={S.state('neutral')}>{t('lore.admin.kcLoading', 'Спрашиваем Keycloak…')}</div>;
+  if (s.k === 'forbidden') return (
+    <div style={S.state('bad')}>
+      <div style={S.stateH('bad')}>{t('lore.admin.kcForbiddenH', 'Нет прав смотреть этот список')}</div>
+      <div>{t('lore.admin.kcForbiddenB', 'Управление доступом открыто только роли admin. Это НЕ пустой список: записи могут существовать, но они вам не видны.')}</div>
+      <code style={S.stateCode}>403 · admin role required</code>
+    </div>
+  );
+  if (s.k === 'off') return (
+    <div style={S.state('bad')}>
+      <div style={S.stateH('bad')}>{t('lore.admin.kcOffH', 'Keycloak не подключён')}</div>
+      <div>{t('lore.admin.kcOffB', 'Мост в KC не настроен, получить список неоткуда. Это не значит, что записей нет — их состояние сейчас неизвестно. Настройка: KC_ADMIN_CLIENT_SECRET в .env, см. RUNBOOK-ADMIN-LORE. Остальной LORE работает как обычно.')}</div>
+      <code style={S.stateCode}>503 · {s.detail}</code>
+    </div>
+  );
+  if (s.k === 'error') return (
+    <div style={S.state('bad')}>
+      <div style={S.stateH('bad')}>{t('lore.admin.kcErrH', 'Keycloak не ответил')}</div>
+      <div>{t('lore.admin.kcErrB', 'Запрос не дошёл или сорвался. Состояние записей неизвестно — это не пустой список.')}</div>
+      <code style={S.stateCode}>{s.detail}</code>
+    </div>
+  );
+  return s.rows.length ? null : <>{empty}</>;
+}
+
+const TABS: [Tab, string][] = [
+  ['dicts', 'Словари'], ['projects', 'Проекты'], ['users', 'Пользователи'],
+  ['agents', 'Агенты'], ['roles', 'Роли'], ['tags', 'Теги'], ['settings', 'Настройки'],
+];
 
 export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
   const role = useRole();
-  const [tab, setTab] = useState<Tab>('dicts');
+  // AL-39: вкладка живёт в URL (?section=admin&tab=agents) — как паспорт сущности.
+  // Было: состояние только в useState → F5 ронял на «Словари», ссылку на вкладку
+  // дать было нельзя, «назад» уводил из панели целиком.
+  const [params, setParams] = useSearchParams();
+  const tab = (TABS.find(([k]) => k === params.get('tab'))?.[0] ?? 'dicts') as Tab;
+  const setTab = (k: Tab) => {
+    const p = new URLSearchParams(params);
+    p.set('tab', k);
+    setParams(p, { replace: true }); // replace: вкладки не копят историю, «назад» уходит из панели
+  };
   return (
     <div style={S.root}>
+      {!AUTH_ENABLED && (
+        <div style={S.banner}>
+          <span aria-hidden>⚠</span>
+          <span>
+            <b>{t('lore.admin.devBannerH', 'Аутентификация выключена.')}</b>{' '}
+            {t('lore.admin.devBannerB', 'Администрировать LORE может любой, кто открыл этот адрес: роль берётся из конфига, а не из токена. Режим разработки.')}
+          </span>
+        </div>
+      )}
       <div style={S.tabs}>
-        {([['dicts', 'Словари'], ['projects', 'Проекты'], ['users', 'Пользователи'], ['agents', 'Агенты'], ['roles', 'Роли'], ['tags', 'Теги'], ['settings', 'Настройки']] as [Tab, string][]).map(([k, l]) => (
+        {TABS.map(([k, l]) => (
           <button key={k} style={S.tab(tab === k)} onClick={() => setTab(k)}>{l}</button>
         ))}
         <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
@@ -261,22 +349,14 @@ function ProjectsTab({ onError }: { onError: (e: unknown) => void }) {
 // D12: только человеческий admin; эскалация до super-admin — вне моста.
 function UsersTab({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<KcUser[] | null>(null);
-  const [off, setOff] = useState<string | null>(null);   // 503 → интеграция не настроена
+  const [st, setSt] = useState<KcState<KcUser>>({ k: 'loading' });
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [nu, setNu] = useState<{ username: string; email: string } | null>(null);
   const [confirmAdmin, setConfirmAdmin] = useState<string | null>(null); // userId, кому даём admin
 
-  useEffect(() => {
-    fetch('/lore/kc/users', { headers: { 'X-Seer-Role': 'admin' } })
-      .then(async r => {
-        if (r.status === 503) { setOff((await r.json()).detail ?? 'not configured'); setRows([]); return; }
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        setRows(await r.json()); setOff(null);
-      })
-      .catch(onError);
-  }, [onError, reload]);
+  useEffect(() => { loadKc<KcUser>('/lore/kc/users').then(setSt); }, [reload]);
+  const rows = st.k === 'ok' ? st.rows : [];
 
   async function setRole(id: string, role: string, action: 'add' | 'remove') {
     setBusy(true);
@@ -290,7 +370,14 @@ function UsersTab({ onError }: { onError: (e: unknown) => void }) {
     catch (e) { onError(e); } finally { setBusy(false); }
   }
 
-  if (off) return <div style={S.card}>{t('lore.admin.kcOff', 'KC-интеграция не настроена ({{d}}). Задайте KC_ADMIN_CLIENT_SECRET в .env — остальной LORE работает как обычно.', { d: off })}</div>;
+  // AL-31: не-ok исходы (403/503/сеть) заменяют таблицу целиком — иначе экран
+  // предлагает «завести первого» там, где на самом деле отказ или мёртвый мост.
+  if (st.k !== 'ok') return (
+    <div>
+      <div style={S.card}>{t('lore.admin.usersNote', 'Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).')}</div>
+      <KcStateView s={st} empty={null} />
+    </div>
+  );
   return (
     <div>
       <div style={S.card}>{t('lore.admin.usersNote', 'Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).')}</div>
@@ -318,9 +405,15 @@ function UsersTab({ onError }: { onError: (e: unknown) => void }) {
               </td>
             </tr>
           ))}
-          {rows && rows.length === 0 && <tr><td style={S.td} colSpan={5}>{t('lore.admin.noUsers', 'Пользователей нет — заведите первого')}</td></tr>}
         </tbody>
       </table>
+      {rows.length === 0 && (
+        <div style={S.state('neutral')}>
+          <div style={S.stateH('neutral')}>{t('lore.admin.noUsersH', 'Ни одного человека ещё не заведено')}</div>
+          <div>{t('lore.admin.noUsersB', 'Keycloak отвечает нормально, в realm просто нет учётных записей. Заведите себя первой — ДО включения аутентификации: она отключит доступ по конфигу, и войти станет некому.')}</div>
+          <code style={S.stateCode}>GET /lore/kc/users → 200 · []</code>
+        </div>
+      )}
       <div style={{ marginTop: 8 }}>
         {nu ? (
           <div style={S.form}>
@@ -341,21 +434,13 @@ function UsersTab({ onError }: { onError: (e: unknown) => void }) {
 // ── Агенты (client-роли: ось агентов) — read + ротация секрета ──────────────
 function AgentsTab({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<KcAgent[] | null>(null);
-  const [off, setOff] = useState<string | null>(null);
+  const [st, setSt] = useState<KcState<KcAgent>>({ k: 'loading' });
   const [secret, setSecret] = useState<{ client: string; value: string } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    fetch('/lore/kc/agents', { headers: { 'X-Seer-Role': 'admin' } })
-      .then(async r => {
-        if (r.status === 503) { setOff((await r.json()).detail ?? 'not configured'); setRows([]); return; }
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        setRows(await r.json()); setOff(null);
-      })
-      .catch(onError);
-  }, [onError]);
+  useEffect(() => { loadKc<KcAgent>('/lore/kc/agents').then(setSt); }, []);
+  const rows = st.k === 'ok' ? st.rows : [];
 
   async function rotate(a: KcAgent) {
     setBusy(true);
@@ -366,10 +451,12 @@ function AgentsTab({ onError }: { onError: (e: unknown) => void }) {
     } catch (e) { onError(e); } finally { setBusy(false); }
   }
 
-  if (off) return <div style={S.card}>{t('lore.admin.kcOff2', 'KC-интеграция не настроена ({{d}}).', { d: off })}</div>;
+  const note = <div style={S.card}>{t('lore.admin.agentsNote', 'AI-агенты — client-роли сервис-аккаунтов (ось «агенты», клейм agent_scope). Провижинятся скриптом, не заводятся руками. Ротация показывает секрет ОДИН раз — LORE его не хранит.')}</div>;
+  if (st.k !== 'ok') return <div>{note}<KcStateView s={st} empty={null} /></div>;
   return (
     <div>
-      <div style={S.card}>{t('lore.admin.agentsNote', 'AI-агенты — client-роли сервис-аккаунтов (ось «агенты», клейм agent_scope). Провижинятся скриптом, не заводятся руками. Ротация показывает секрет ОДИН раз — LORE его не хранит.')}</div>
+      {note}
+      <NotEnforcedNotice />
       {secret && (
         <div style={{ ...S.warn, color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)' }}>
           <div>{t('lore.admin.newSecret', 'Новый секрет {{c}} — скопируйте сейчас, больше не покажем:', { c: secret.client })}</div>
@@ -402,6 +489,20 @@ function AgentsTab({ onError }: { onError: (e: unknown) => void }) {
   );
 }
 
+// AL-33: экран не имеет права утверждать наличие защиты, которой нет.
+// Матрица ниже — клиентский JSON-вайтлист (SPEC-RBAC-OMILORE-AGENTS §1: «фильтр
+// видимости, не безопасность»). AgentScopeFilter не написан (AL-17) → клейм
+// agent_scope бэкендом не читается вообще. Плашка снимается вместе с R2.
+function NotEnforcedNotice() {
+  const { t } = useTranslation();
+  return (
+    <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>
+      <b>{t('lore.admin.notEnforcedH', 'Права из этой таблицы пока не проверяются.')}</b>{' '}
+      {t('lore.admin.notEnforcedB', 'Клейм agent_scope бэкенд ещё не читает: сейчас это фильтр видимости инструментов, не защита. Включится в R2 — задача AL-17.')}
+    </div>
+  );
+}
+
 function RolesTab({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
   const [roles, setRoles] = useState<DictRow[]>([]);
@@ -409,6 +510,7 @@ function RolesTab({ onError }: { onError: (e: unknown) => void }) {
   return (
     <div>
       <div style={S.card}>{t('lore.admin.rolesNote', 'Read-only (ADR-LORE-025 D6): RBAC-скоуп правится в mcp-server/agent-profiles/*.json, роли-значения — в словаре agent_role.')}</div>
+      <NotEnforcedNotice />
       <table style={S.table}>
         <thead><tr>{['роль (словарь)', 'label'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
         <tbody>{roles.map(r => <tr key={r.code}><td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td><td style={S.td}>{r.label_ru ?? '—'}</td></tr>)}</tbody>
