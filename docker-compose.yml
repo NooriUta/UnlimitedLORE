@@ -32,12 +32,22 @@ services:
       - "127.0.0.1:9100:9100"          # published so the host-side MCP server can reach it
     extra_hosts:
       - "arcade:host-gateway"          # ArcadeDB runs on the host :2480
+      - "kc:host-gateway"              # Keycloak runs on the host :18180
     depends_on:
       - minio
     environment:
       - MART_ARCADE_URL=http://arcade:2480
       - ARCADEDB_USER=${ARCADEDB_USER:-root}
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
+      # KC-мост (ADR-LORE-025 D11/D14): пусто → /lore/kc/* отвечает 503
+      # "not configured", остальной LORE работает как обычно (pluggable).
+      # Секрет читается через SecretProvider (D15): env | infisical.
+      - KC_ADMIN_CLIENT_SECRET=${KC_ADMIN_CLIENT_SECRET:-}
+      # НЕ ${KC_ADMIN_URL}: в .env он localhost (для host-скриптов), а внутри
+      # контейнера localhost = сам контейнер. Ходим через kc:host-gateway.
+      - kc.admin.url=http://kc:18180/kc
+      - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
+      - lore.secrets.provider=${LORE_SECRETS_PROVIDER:-env}
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs
       - S3_ENDPOINT=http://minio:9000

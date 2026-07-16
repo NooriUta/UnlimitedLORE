@@ -2,15 +2,40 @@
 // Секреты и админ-пароль НЕ печатаются.
 const { execSync } = require('child_process');
 const http = require('http');
+const fs = require('fs');
 
-const KC = { host: 'localhost', port: 18180, base: '/kc' };
-// Креды: сначала KC_ADMIN_USER/KC_ADMIN_PASS из env запуска (владелица запускает
-// сама — креды не проходят через агента), fallback — bootstrap-пара контейнера.
+// Читает .env репозитория (gitignored) — как ARCADEDB_ROOT_PASSWORD и прочие
+// секреты проекта. Задаётся ОДИН раз, дальше скрипт запускается без аргументов.
+function loadDotEnv() {
+  const path = require('path').join(__dirname, '..', '..', '.env');
+  if (!fs.existsSync(path)) return;
+  for (const line of fs.readFileSync(path, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)\s*$/i);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+}
+loadDotEnv();
+
+const KC = {
+  host: process.env.KC_ADMIN_HOST || 'localhost',
+  port: Number(process.env.KC_ADMIN_PORT || 18180),
+  base: process.env.KC_ADMIN_BASE || '/kc',
+};
+// Порядок: env процесса → .env репозитория → bootstrap-пара контейнера (fallback).
 let ADMIN_USER = process.env.KC_ADMIN_USER, ADMIN_PASS = process.env.KC_ADMIN_PASS;
 if (!ADMIN_USER || !ADMIN_PASS) {
-  const env = execSync('docker inspect aida-root-keycloak-1 --format "{{range .Config.Env}}{{println .}}{{end}}"').toString();
-  ADMIN_USER = ADMIN_USER || (env.match(/KC_BOOTSTRAP_ADMIN_USERNAME=(.*)/) || [])[1].trim();
-  ADMIN_PASS = ADMIN_PASS || (env.match(/KC_BOOTSTRAP_ADMIN_PASSWORD=(.*)/) || [])[1].trim();
+  try {
+    const env = execSync('docker inspect aida-root-keycloak-1 --format "{{range .Config.Env}}{{println .}}{{end}}"').toString();
+    ADMIN_USER = ADMIN_USER || ((env.match(/KC_BOOTSTRAP_ADMIN_USERNAME=(.*)/) || [])[1] || '').trim();
+    ADMIN_PASS = ADMIN_PASS || ((env.match(/KC_BOOTSTRAP_ADMIN_PASSWORD=(.*)/) || [])[1] || '').trim();
+  } catch { /* контейнер не найден — упадём на понятной проверке ниже */ }
+}
+if (!ADMIN_USER || !ADMIN_PASS) {
+  console.log('Нет KC-админ-кредов. Впишите в .env репозитория (gitignored):');
+  console.log('  KC_ADMIN_USER=<логин админа Keycloak>');
+  console.log('  KC_ADMIN_PASS=<пароль>');
+  console.log('Затем: node backend/keycloak/kc-provision-agents.js');
+  process.exit(1);
 }
 
 function req(method, path, body, token, form) {
@@ -102,7 +127,9 @@ const PROFILES = ['full', 'architect', 'developer', 'tester', 'pm', 'analyst', '
     const rmList = JSON.parse((await req('GET', `/admin/realms/omilore/clients?clientId=realm-management`, null, T)).body);
     if (rmList.length) {
       const rmId = rmList[0].id;
-      const want = ['view-users', 'manage-users', 'view-realm'];
+      // view/manage-users — вкладка «Пользователи»; view-clients — список агентных
+      // клиентов (/lore/kc/agents); manage-clients — ротация их секретов.
+      const want = ['view-users', 'manage-users', 'view-realm', 'view-clients', 'manage-clients'];
       const avail = JSON.parse((await req('GET', `/admin/realms/omilore/users/${sa.id}/role-mappings/clients/${rmId}/available`, null, T)).body || '[]');
       const grant = avail.filter(r => want.includes(r.name));
       if (grant.length) {

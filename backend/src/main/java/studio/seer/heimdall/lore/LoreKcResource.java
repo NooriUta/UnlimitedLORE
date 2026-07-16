@@ -42,20 +42,26 @@ public class LoreKcResource extends LoreResourceBase {
     String kcRealm;
     @ConfigProperty(name = "kc.admin.client-id", defaultValue = "lore-admin")
     String kcClientId;
-    @ConfigProperty(name = "kc.admin.client-secret")
-    Optional<String> kcSecret;
 
-    private boolean configured() { return kcSecret.isPresent() && !kcSecret.get().isBlank(); }
+    /** ADR-LORE-025 D15: секрет читается через абстракцию (env | infisical), не напрямую из env. */
+    @jakarta.inject.Inject
+    SecretProvider secrets;
+
+    private static final String KC_SECRET_KEY = "KC_ADMIN_CLIENT_SECRET";
+
+    private Optional<String> kcSecret() { return secrets.get(KC_SECRET_KEY); }
+
+    private boolean configured() { return secrets.has(KC_SECRET_KEY); }
 
     private Response notConfigured() {
         return noStore(Response.status(503)
-            .entity(new LoreError("KC_NOT_CONFIGURED", "kc integration not configured (KC_ADMIN_CLIENT_SECRET unset)")));
+            .entity(new LoreError("KC_NOT_CONFIGURED", "kc integration not configured (" + KC_SECRET_KEY + " unset)")));
     }
 
     /** client_credentials токен lore-admin — только внутри сервера. */
     private String adminToken() throws Exception {
         String body = "grant_type=client_credentials&client_id=" + URLEncoder.encode(kcClientId, StandardCharsets.UTF_8)
-            + "&client_secret=" + URLEncoder.encode(kcSecret.get(), StandardCharsets.UTF_8);
+            + "&client_secret=" + URLEncoder.encode(kcSecret().orElseThrow(), StandardCharsets.UTF_8);
         HttpRequest req = HttpRequest.newBuilder(URI.create(kcUrl + "/realms/" + kcRealm + "/protocol/openid-connect/token"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();

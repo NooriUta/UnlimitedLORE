@@ -16,7 +16,11 @@ interface TagRow { tag_id: string; uses: number }
 interface HostRow { remote: string; role: string; base_url: string; file_url_template: string; pr_url_template: string; default_branch?: string }
 
 const CANON_TYPES = new Set(['adr_status', 'sprint_status', 'task_status', 'priority']);
-type Tab = 'dicts' | 'projects' | 'roles' | 'tags' | 'settings';
+type Tab = 'dicts' | 'projects' | 'users' | 'agents' | 'roles' | 'tags' | 'settings';
+
+// KC-мост (ADR-LORE-025 D11/D12): люди — realm-роли, агенты — client-роли.
+interface KcUser { id: string; username: string; email: string | null; enabled: boolean; roles: string[] }
+interface KcAgent { clientId: string; id: string; enabled: boolean; agent_scope: string[] }
 
 // RBAC scope per ADR-LORE-014 §3 (agent-profiles are files; read-only view).
 const PROFILE_SCOPE: [string, string][] = [
@@ -63,7 +67,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   return (
     <div style={S.root}>
       <div style={S.tabs}>
-        {([['dicts', 'Словари'], ['projects', 'Проекты'], ['roles', 'Роли'], ['tags', 'Теги'], ['settings', 'Настройки']] as [Tab, string][]).map(([k, l]) => (
+        {([['dicts', 'Словари'], ['projects', 'Проекты'], ['users', 'Пользователи'], ['agents', 'Агенты'], ['roles', 'Роли'], ['tags', 'Теги'], ['settings', 'Настройки']] as [Tab, string][]).map(([k, l]) => (
           <button key={k} style={S.tab(tab === k)} onClick={() => setTab(k)}>{l}</button>
         ))}
         <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
@@ -72,6 +76,8 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
       </div>
       {tab === 'dicts' && <DictsTab onError={onError} />}
       {tab === 'projects' && <ProjectsTab onError={onError} />}
+      {tab === 'users' && <UsersTab onError={onError} />}
+      {tab === 'agents' && <AgentsTab onError={onError} />}
       {tab === 'roles' && <RolesTab onError={onError} />}
       {tab === 'tags' && <TagsTab onError={onError} />}
       {tab === 'settings' && <SettingsTab />}
@@ -246,6 +252,152 @@ function ProjectsTab({ onError }: { onError: (e: unknown) => void }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Пользователи (люди: realm-роли, KC-мост) ────────────────────────────────
+// D11: паролей здесь нет — создание отдаёт пользователя в KC (reset-link).
+// D12: только человеческий admin; эскалация до super-admin — вне моста.
+function UsersTab({ onError }: { onError: (e: unknown) => void }) {
+  const { t } = useTranslation();
+  const [rows, setRows] = useState<KcUser[] | null>(null);
+  const [off, setOff] = useState<string | null>(null);   // 503 → интеграция не настроена
+  const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [nu, setNu] = useState<{ username: string; email: string } | null>(null);
+  const [confirmAdmin, setConfirmAdmin] = useState<string | null>(null); // userId, кому даём admin
+
+  useEffect(() => {
+    fetch('/lore/kc/users', { headers: { 'X-Seer-Role': 'admin' } })
+      .then(async r => {
+        if (r.status === 503) { setOff((await r.json()).detail ?? 'not configured'); setRows([]); return; }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        setRows(await r.json()); setOff(null);
+      })
+      .catch(onError);
+  }, [onError, reload]);
+
+  async function setRole(id: string, role: string, action: 'add' | 'remove') {
+    setBusy(true);
+    try { await loreMutate(`/kc/user/${id}/role`, { role, action }); setReload(x => x + 1); setConfirmAdmin(null); }
+    catch (e) { onError(e); } finally { setBusy(false); }
+  }
+  async function create() {
+    if (!nu?.username.trim()) return;
+    setBusy(true);
+    try { await loreMutate('/kc/user', { username: nu.username.trim(), email: nu.email.trim() || null }); setNu(null); setReload(x => x + 1); }
+    catch (e) { onError(e); } finally { setBusy(false); }
+  }
+
+  if (off) return <div style={S.card}>{t('lore.admin.kcOff', 'KC-интеграция не настроена ({{d}}). Задайте KC_ADMIN_CLIENT_SECRET в .env — остальной LORE работает как обычно.', { d: off })}</div>;
+  return (
+    <div>
+      <div style={S.card}>{t('lore.admin.usersNote', 'Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).')}</div>
+      <table style={S.table}>
+        <thead><tr>{['логин', 'email', 'вкл', 'роли', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+        <tbody>
+          {(rows ?? []).map(u => (
+            <tr key={u.id}>
+              <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{u.username}</td>
+              <td style={S.td}>{u.email ?? '—'}</td>
+              <td style={S.td}>{u.enabled ? '✓' : '✗'}</td>
+              <td style={S.td}>
+                {(u.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
+                  <span key={r} style={{ ...S.chip(true), marginRight: 4 }}>
+                    {r}{r !== 'super-admin' && <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
+                      disabled={busy} onClick={() => setRole(u.id, r, 'remove')}> ✕</button>}
+                  </span>
+                ))}
+              </td>
+              <td style={S.td}>
+                {!u.roles?.includes('viewer') && <button style={S.btn} disabled={busy} onClick={() => setRole(u.id, 'viewer', 'add')}>+viewer</button>}{' '}
+                {!u.roles?.includes('admin') && (confirmAdmin === u.id
+                  ? <button style={S.primary} disabled={busy} onClick={() => setRole(u.id, 'admin', 'add')}>{t('lore.admin.confirmAdmin', 'точно admin?')}</button>
+                  : <button style={S.btn} disabled={busy} onClick={() => setConfirmAdmin(u.id)}>+admin</button>)}
+              </td>
+            </tr>
+          ))}
+          {rows && rows.length === 0 && <tr><td style={S.td} colSpan={5}>{t('lore.admin.noUsers', 'Пользователей нет — заведите первого')}</td></tr>}
+        </tbody>
+      </table>
+      <div style={{ marginTop: 8 }}>
+        {nu ? (
+          <div style={S.form}>
+            <input style={S.input} placeholder="логин" value={nu.username} onChange={e => setNu(v => v && ({ ...v, username: e.target.value }))} />
+            <input style={S.input} placeholder="email (опц.)" value={nu.email} onChange={e => setNu(v => v && ({ ...v, email: e.target.value }))} />
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{t('lore.admin.noPassNote', 'Пароль задаётся в Keycloak (reset-link/консоль) — LORE его не принимает и не хранит.')}</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button style={S.primary} disabled={busy} onClick={create}>{busy ? '…' : t('lore.admin.create', 'Создать')}</button>
+              <button style={S.btn} onClick={() => setNu(null)}>{t('lore.admin.cancel', 'Отмена')}</button>
+            </div>
+          </div>
+        ) : <button style={S.btn} onClick={() => setNu({ username: '', email: '' })}>{t('lore.admin.addUser', '+ пользователь')}</button>}
+      </div>
+    </div>
+  );
+}
+
+// ── Агенты (client-роли: ось агентов) — read + ротация секрета ──────────────
+function AgentsTab({ onError }: { onError: (e: unknown) => void }) {
+  const { t } = useTranslation();
+  const [rows, setRows] = useState<KcAgent[] | null>(null);
+  const [off, setOff] = useState<string | null>(null);
+  const [secret, setSecret] = useState<{ client: string; value: string } | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetch('/lore/kc/agents', { headers: { 'X-Seer-Role': 'admin' } })
+      .then(async r => {
+        if (r.status === 503) { setOff((await r.json()).detail ?? 'not configured'); setRows([]); return; }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        setRows(await r.json()); setOff(null);
+      })
+      .catch(onError);
+  }, [onError]);
+
+  async function rotate(a: KcAgent) {
+    setBusy(true);
+    try {
+      const res = await loreMutate<{ value?: string }>(`/kc/agent/${a.id}/rotate`, {});
+      setSecret({ client: a.clientId, value: res?.value ?? '(секрет не возвращён)' });
+      setConfirm(null);
+    } catch (e) { onError(e); } finally { setBusy(false); }
+  }
+
+  if (off) return <div style={S.card}>{t('lore.admin.kcOff2', 'KC-интеграция не настроена ({{d}}).', { d: off })}</div>;
+  return (
+    <div>
+      <div style={S.card}>{t('lore.admin.agentsNote', 'AI-агенты — client-роли сервис-аккаунтов (ось «агенты», клейм agent_scope). Провижинятся скриптом, не заводятся руками. Ротация показывает секрет ОДИН раз — LORE его не хранит.')}</div>
+      {secret && (
+        <div style={{ ...S.warn, color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)' }}>
+          <div>{t('lore.admin.newSecret', 'Новый секрет {{c}} — скопируйте сейчас, больше не покажем:', { c: secret.client })}</div>
+          <code style={{ fontSize: 'var(--fs-sm)', wordBreak: 'break-all' }}>{secret.value}</code>
+          <div><button style={S.btn} onClick={() => setSecret(null)}>{t('lore.admin.hide', 'скрыть')}</button></div>
+        </div>
+      )}
+      <table style={S.table}>
+        <thead><tr>{['клиент', 'agent_scope', 'вкл', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+        <tbody>
+          {(rows ?? []).map(a => (
+            <tr key={a.id}>
+              <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{a.clientId}</td>
+              <td style={S.td}>
+                {(a.agent_scope ?? []).length
+                  ? a.agent_scope.map(s => <span key={s} style={{ ...S.chip(true), marginRight: 4 }}>{s}</span>)
+                  : <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noScope', '— (оси не несёт, легаси)')}</span>}
+              </td>
+              <td style={S.td}>{a.enabled ? '✓' : '✗'}</td>
+              <td style={S.td}>
+                {confirm === a.id
+                  ? <button style={S.primary} disabled={busy} onClick={() => rotate(a)}>{t('lore.admin.confirmRotate', 'точно ротировать?')}</button>
+                  : <button style={S.btn} onClick={() => setConfirm(a.id)}>{t('lore.admin.rotate', 'ротировать секрет')}</button>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
