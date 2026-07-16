@@ -401,40 +401,15 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
           const gate = gatingCount(r);
           const adr = first(r.raised_adr);
           const ans = (r.answered_by ?? []).filter(Boolean);
+          const ansOpen = openAns === r.question_id && ans.length > 0;
           return (
-            <div key={r.question_id} style={S.row}>
+            <div key={r.question_id} style={{ display: 'flex', flexDirection: 'column' as const }}>
+            <div style={S.row}>
               {/* открыт = полое кольцо, закрыт/прочие = сплошная точка — цвета suc/inf в amber-палитре сливаются, форма разводит */}
               <span style={{ ...S.statusDot(meta.color), ...(st === 'open' ? { background: 'transparent', border: `2px solid ${meta.color}`, boxSizing: 'border-box' as const } : {}) }} title={meta.label} />
               <span style={S.qid}>{r.question_id}</span>
               <div style={S.body}>
                 <span style={S.title}>{r.title ?? r.question_id}</span>
-                {/* QANS-01: подвал с ответом — текст решения + переход в ADR или в «Решения» */}
-                {openAns === r.question_id && ans.length > 0 && (() => {
-                  const det = ansCache[ans[0] as string];
-                  const parentAdr = det?.adr_refs?.filter(Boolean)[0];
-                  return (
-                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--bd)' }} onClick={e => e.stopPropagation()}>
-                      {!det && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.oqBoard.ansLoading', 'Загрузка ответа…')}</span>}
-                      {det && (
-                        <>
-                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t1)', fontWeight: 600, marginBottom: 4 }}>#{det.decision_id} — {det.title}</div>
-                          {det.body_md && <MartProse text={det.body_md} />}
-                          <div style={{ marginTop: 6 }}>
-                            {parentAdr ? (
-                              <span style={S.adrLink} {...a11yClick(() => onNavigateAdr && onNavigateAdr(parentAdr))}>
-                                → {t('lore.oqBoard.openAdr', 'открыть ADR')} {parentAdr}
-                              </span>
-                            ) : (
-                              <a href="/lore?section=analytics" style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}>
-                                → {t('lore.oqBoard.openDecisions', 'независимое решение — открыть в «Решениях»')}
-                              </a>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
               {r.priority && (
                 <span style={S.prioChip(PRIORITY_META[r.priority]?.color ?? 'var(--t3)')}>
@@ -473,6 +448,36 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               )}
               <button style={S.editBtn} title={t('lore.oqBoard.edit', 'Править')} onClick={() => startEdit(r)}>✎</button>
             </div>
+            {/* QANS-01: дочерний раскрывающийся блок — доп. контекст вопроса + ответ. Шапка выше статична. */}
+            {ansOpen && (() => {
+              const det = ansCache[ans[0] as string];
+              const parentAdr = det?.adr_refs?.filter(Boolean)[0];
+              return (
+                <div style={S.ansPanel}>
+                  {r.body_md && <div style={S.ansCtx}><MartProse text={r.body_md} /></div>}
+                  {!det && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.oqBoard.ansLoading', 'Загрузка ответа…')}</span>}
+                  {det && (
+                    <div>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '.05em', marginBottom: 3 }}>{t('lore.oqBoard.answer', 'Ответ (решение)')}</div>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t1)', fontWeight: 600, marginBottom: 4 }}>#{det.decision_id} — {det.title}</div>
+                      {det.body_md && <MartProse text={det.body_md} />}
+                      <div style={{ marginTop: 6 }}>
+                        {parentAdr ? (
+                          <span style={S.adrLink} {...a11yClick(() => onNavigateAdr && onNavigateAdr(parentAdr))}>
+                            → {t('lore.oqBoard.openAdr', 'открыть ADR')} {parentAdr}
+                          </span>
+                        ) : (
+                          <a href="/lore?section=analytics" style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}>
+                            → {t('lore.oqBoard.openDecisions', 'независимое решение — открыть в «Решениях»')}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            </div>
           );
         })}
       </div>
@@ -492,6 +497,8 @@ const S = {
   filterNote: { fontSize: 'var(--fs-sm)', color: 'var(--acc)' },
   list:  { flex: 1, overflowY: 'auto' as const },
   empty: { padding: '24px 16px', color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  ansPanel: { margin: '0 16px 8px 42px', padding: '8px 12px', borderLeft: '2px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 5%, transparent)', borderRadius: '0 6px 6px 0', display: 'flex', flexDirection: 'column' as const, gap: 8 },
+  ansCtx: { fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
   row: {
     display: 'flex', alignItems: 'center', gap: 8,
     padding: '7px 16px', borderBottom: '1px solid var(--bd)',

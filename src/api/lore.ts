@@ -200,6 +200,7 @@ export interface LoreFileRow {
 export interface LoreQuestionRow {
   question_id: string;
   title: string | null;
+  body_md: string | null;                  // контекст вопроса (для раскрывающегося блока)
   status: string | null;                  // open | deferred | closed | dropped
   component_id: string | null;
   components: (string | null)[] | null;    // T43: multi component via BELONGS_TO

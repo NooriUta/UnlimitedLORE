@@ -147,7 +147,7 @@ public final class LoreSlices {
         // Derived overdue/blocking/age are computed on the client from the raw
         // fields (status/due_date + gating_tasks) — never stored.
         slice("open_questions",
-            "SELECT question_id, title, status, component_id, due_date, priority, owner, " +
+            "SELECT question_id, title, body_md, status, component_id, due_date, priority, owner, " +
             "raised_by, opened_date, closed_date, " +
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
