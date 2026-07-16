@@ -390,7 +390,7 @@ public final class LoreSlices {
 
         // Git projects — for the T43 multi-project picker (question/decision forms).
         slice("git_projects",
-            "SELECT slug, name, default_branch, is_private FROM KnowGitProject ORDER BY slug");
+            "SELECT slug, name, default_branch, is_private, hosts FROM KnowGitProject ORDER BY slug");
 
         // ── §6 Components ────────────────────────────────────────────────────
         slice("components",
@@ -850,6 +850,14 @@ public final class LoreSlices {
         // ── ADR-LORE-012: dictionary (KnowDictEntry) ─────────────────────────
         // Without dict_type — весь справочник; с dict_type — один домен.
         // Читается фронтом (useDictionary), бэкендом и MCP как единый канон.
+        // Admin LORE (ADR-LORE-025): tag usage counts for the read-only «Теги» tab.
+        slice("tags_usage",
+            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+        slice("lore_tags_usage",
+            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM LoreTag",
+            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+
         slice("dictionary",
             // ifnull() masks the brief NULL-flag window on a freshly-upserted row
             // (defaults are set in a second, IS NULL-gated statement) — readers
