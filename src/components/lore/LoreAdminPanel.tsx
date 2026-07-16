@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { iconLoaded } from '@iconify/react';
 import gameIconsData from '@iconify-json/game-icons/icons.json';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
+import { loadKc, loadKcObj, type KcState } from './kc-state';
 import { GameIcon } from './GameIcon';
 import { AUTH_ENABLED } from '../../auth/session';
 import { useRole } from '../../auth/useRole';
@@ -59,31 +60,7 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
 // «неопознанные». Появится реальный ключ → строка здесь + чтение в коде одним PR.
 const KNOWN_SETTINGS: { key: string; type: string; def: string; descr: string }[] = [];
 
-// AL-31: у KC-моста ЧЕТЫРЕ разных исхода, и «пусто» — только один из них.
-type KcState<T> =
-  | { k: 'loading' }
-  | { k: 'ok'; rows: T[] }
-  | { k: 'forbidden' }              // 403 — роль не пускает; записи могут существовать
-  | { k: 'off'; detail: string }    // 503 — моста нет, состояние неизвестно
-  | { k: 'error'; detail: string }; // сеть/5xx — то же, но без внятной причины
-
-async function loadKc<T>(path: string): Promise<KcState<T>> {
-  try {
-    const r = await fetch(path, { headers: { 'X-Seer-Role': 'admin' } });
-    if (r.status === 403) return { k: 'forbidden' };
-    if (r.status === 503) return { k: 'off', detail: (await r.json().catch(() => ({}))).detail ?? 'not configured' };
-    if (!r.ok) return { k: 'error', detail: `HTTP ${r.status}` };
-    return { k: 'ok', rows: (await r.json()) as T[] };
-  } catch (e) { return { k: 'error', detail: e instanceof Error ? e.message : String(e) }; }
-}
-
-async function loadKcObj<T>(path: string): Promise<T | null> {
-  try {
-    const r = await fetch(path, { headers: { 'X-Seer-Role': 'admin' } });
-    if (!r.ok) return null;
-    return (await r.json()) as T;
-  } catch { return null; }
-}
+// AL-31: разбор исходов KC-моста — в kc-state.ts (чистая логика, покрыта vitest).
 
 // Узкий экран: группы навигации схлопываются в горизонтальные ряды (mobile-проверка фазы UI).
 const narrowQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 760px)') : null;
