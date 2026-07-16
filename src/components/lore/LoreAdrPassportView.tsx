@@ -201,6 +201,24 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
     if (data.context_md)      lines.push('## Context', '', data.context_md.trim(), '');
     if (data.decision_md)     lines.push('## Decision', '', data.decision_md.trim(), '');
     if (data.consequences_md) lines.push('## Consequences', '', data.consequences_md.trim(), '');
+    // Child decisions (DES) — the concrete rules that live under this ADR.
+    if (decisions.length) {
+      lines.push(`## ${t('lore.adrPassportView.decisions', 'Решения этого ADR')} (DES)`, '');
+      decisions.forEach(d => {
+        const m = [d.status_raw, d.component_id].filter(Boolean).join(', ');
+        lines.push(`- **#${d.decision_id}** — ${d.title ?? ''}${m ? ` _(${m})_` : ''}`);
+      });
+      lines.push('');
+    }
+    // Open questions raised against this ADR (RAISED_IN).
+    if (questions.length) {
+      lines.push(`## ${t('lore.adrPassportView.questions', 'Открытые вопросы этого ADR')}`, '');
+      questions.forEach(qn => {
+        const m = [qn.status, qn.priority, qn.due_date && `due ${qn.due_date.slice(0, 10)}`].filter(Boolean).join(', ');
+        lines.push(`- **${qn.question_id}** — ${qn.title ?? ''}${m ? ` _(${m})_` : ''}`);
+      });
+      lines.push('');
+    }
     const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
