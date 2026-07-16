@@ -416,9 +416,14 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               {st === 'closed' && ans.length > 0 && (
                 <span style={S.ansChip} title={t('lore.oqBoard.answeredTitle', 'закрыт решением')}>← #{ans.join(', #')}</span>
               )}
-              {r.due_date && (
-                <span style={{ ...S.due, ...(overdue ? S.dueOverdue : {}) }} title={r.due_date.slice(0, 10)}>
-                  {overdue ? '⚠ ' : ''}{r.due_date.slice(0, 10)}
+              {/* Срок виден у живых вопросов ВСЕГДА: дата (красная при просрочке) или «без срока» приглушённо. */}
+              {r.due_date ? (
+                <span style={{ ...S.due, ...(overdue ? S.dueOverdue : {}) }} title={t('lore.oqBoard.dueTitle', 'срок ответа')}>
+                  {overdue ? '⚠ ' : '📅 '}{r.due_date.slice(0, 10)}
+                </span>
+              ) : (st === 'open' || st === 'deferred') && (
+                <span style={{ ...S.due, opacity: 0.45 }} title={t('lore.oqBoard.noDueTitle', 'срок ответа не задан — поставьте через ✎')}>
+                  {t('lore.oqBoard.noDue', 'без срока')}
                 </span>
               )}
               <button style={S.editBtn} title={t('lore.oqBoard.edit', 'Править')} onClick={() => startEdit(r)}>✎</button>
