@@ -102,7 +102,7 @@ function DictsTab({ onError }: { onError: (e: unknown) => void }) {
     if (canon && !confirmCanon) return;
     setSaving(true);
     try {
-      await loreMutate('/dict', {
+      await loreMutate('/dict/entry', {
         dict_type: dt, code: edit.code.trim(),
         label_ru: edit.label_ru ?? null, label_en: edit.label_en || null,
         color: edit.color || null, icon: edit.icon || null,
