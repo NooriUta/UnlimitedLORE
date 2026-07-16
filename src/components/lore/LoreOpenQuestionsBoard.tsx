@@ -75,9 +75,17 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   // Закрытие вопроса: только через ребро ANSWERS (инвариант ADR-021) — форма даёт
   // легальный путь: выбрать решение-ответ, бэкенд сам переведёт в closed.
   const [decisionIds, setDecisionIds] = useState<string[]>([]);
-  const [answerPick, setAnswerPick] = useState('');   // id решения-ответа (новое или существующее)
-  const [answerTitle, setAnswerTitle] = useState(''); // сам ответ (для нового решения)
+  const [answerPick, setAnswerPick] = useState('');   // существующее решение (опц. — иначе создаём новое)
+  const [answerTitle, setAnswerTitle] = useState(''); // сам ответ — то, что человек пишет
   const [answerBody, setAnswerBody] = useState('');   // обоснование (опц.)
+  const [pickMode, setPickMode] = useState(false);    // false = пишем ответ, true = берём существующее
+
+  // Код ответа человек не придумывает: следующий свободный числовой id (max+1).
+  // Корпус исторически нумерует решения числами (129 из 243), максимум = 132.
+  const nextDecisionId = useMemo(() => {
+    const nums = decisionIds.map(Number).filter(n => Number.isFinite(n) && n > 0);
+    return String((nums.length ? Math.max(...nums) : 0) + 1);
+  }, [decisionIds]);
   // QANS-01: раскрывающийся ответ у закрытого вопроса (лениво тянем решение).
   const [openAns, setOpenAns] = useState<string | null>(null);
   const [ansCache, setAnsCache] = useState<Record<string, LoreDecisionPassport>>({});
@@ -148,13 +156,14 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
    * линкуем. Бэкенд сам переводит вопрос в closed.
    */
   async function answerAndClose(q: LoreQuestionRow) {
-    const id = answerPick.trim();
-    if (!id) return;
-    const isNew = !decisionIds.includes(id);
-    if (isNew && !answerTitle.trim()) { onError(new Error('для нового решения нужен заголовок — это и есть ответ')); return; }
+    // Код не спрашиваем: пишем ответ → id присваивается сам (max+1). Ветка
+    // «взять существующее» — для случая, когда решение уже принято раньше.
+    const id = pickMode ? answerPick.trim() : nextDecisionId;
+    if (pickMode && !id) { onError(new Error('выберите решение или переключитесь на «написать ответ»')); return; }
+    if (!pickMode && !answerTitle.trim()) { onError(new Error('напишите ответ — это и есть решение')); return; }
     setSaving(true);
     try {
-      if (isNew) {
+      if (!pickMode) {
         await loreMutate('/decision', {
           decision_id: id, title: answerTitle.trim(), body_md: answerBody.trim() || null,
           // компонент и родительский ADR наследуем у вопроса — ответ живёт там же
@@ -165,7 +174,7 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
         setDecisionIds(prev => [...prev, id].sort());
       }
       await loreMutate('/question/answers', { question_id: q.question_id, decision_id: id, action: 'add' });
-      setAnswerPick(''); setAnswerTitle(''); setAnswerBody('');
+      setAnswerPick(''); setAnswerTitle(''); setAnswerBody(''); setPickMode(false);
       setEditId(null); setForm(EMPTY_FORM); load();
     } catch (e) { onError(e); } finally { setSaving(false); }
   }
@@ -410,38 +419,50 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                       ещё нет, его пишут здесь. Новый id → создаём решение и линкуем;
                       существующий → просто линкуем. ANSWERS закрывает вопрос (ADR-021). */}
                   {er && er.status !== 'closed' && (() => {
-                    const isNew = !!answerPick.trim() && !decisionIds.includes(answerPick.trim());
                     const parentAdr = (er.raised_adr ?? []).filter(Boolean)[0];
                     return (
                       <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column' as const, gap: 5, padding: '8px 10px', border: '1px solid var(--b3)', borderRadius: 6, background: 'color-mix(in srgb, var(--suc) 5%, transparent)' }}>
                         <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const, color: 'var(--t3)' }}>
                           {t('lore.oqBoard.answerHead', 'Ответить решением — закроет вопрос')}
                         </div>
-                        <input style={S.input} list="lore-qform-decisions"
-                          placeholder={t('lore.oqBoard.answerId', 'id решения: новый (напишем ответ) или существующий из списка')}
-                          value={answerPick} onChange={e => setAnswerPick(e.target.value)} />
-                        <datalist id="lore-qform-decisions">
-                          {decisionIds.map(d => <option key={d} value={d} />)}
-                        </datalist>
-                        {isNew && (
+                        {pickMode ? (
                           <>
-                            <input style={S.input} placeholder={t('lore.oqBoard.answerTitle', 'Ответ — правило одной строкой (это и есть решение)')}
+                            <input style={S.input} list="lore-qform-decisions"
+                              placeholder={t('lore.oqBoard.answerExisting', 'решение, которое уже отвечает на этот вопрос')}
+                              value={answerPick} onChange={e => setAnswerPick(e.target.value)} />
+                            <datalist id="lore-qform-decisions">
+                              {decisionIds.map(d => <option key={d} value={d} />)}
+                            </datalist>
+                          </>
+                        ) : (
+                          <>
+                            {/* Ответ — первым и главным. Код не спрашиваем. */}
+                            <input style={S.input} autoFocus
+                              placeholder={t('lore.oqBoard.answerTitle', 'Ответ — правило одной строкой (это и есть решение)')}
                               value={answerTitle} onChange={e => setAnswerTitle(e.target.value)} />
                             <textarea style={{ ...S.input, minHeight: 44, resize: 'vertical' as const }}
                               placeholder={t('lore.oqBoard.answerBody', 'Обоснование / детали (опц.)')}
                               value={answerBody} onChange={e => setAnswerBody(e.target.value)} />
                             <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
-                              {t('lore.oqBoard.answerInherit', 'Новое решение унаследует компонент вопроса{{adr}}', { adr: parentAdr ? ` и родителя ${parentAdr}` : '' })}
+                              {t('lore.oqBoard.answerAuto', 'код ответа: {{id}} (авто) · унаследует компонент вопроса{{adr}}', {
+                                id: nextDecisionId, adr: parentAdr ? ` и родителя ${parentAdr}` : '',
+                              })}
                             </div>
                           </>
                         )}
-                        <div>
-                          <button style={S.saveBtn} disabled={saving || !answerPick.trim() || (isNew && !answerTitle.trim())}
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button style={S.saveBtn} disabled={saving || (pickMode ? !answerPick.trim() : !answerTitle.trim())}
                             onClick={() => answerAndClose(er)}>
-                            {saving ? '…' : isNew
-                              ? t('lore.oqBoard.answerNewBtn', 'создать решение и закрыть ✓')
-                              : t('lore.oqBoard.answerLinkBtn', 'закрыть этим решением ✓')}
+                            {saving ? '…' : pickMode
+                              ? t('lore.oqBoard.answerLinkBtn', 'закрыть этим решением ✓')
+                              : t('lore.oqBoard.answerNewBtn', 'ответить и закрыть ✓')}
                           </button>
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)', cursor: 'pointer' }}
+                            {...a11yClick(() => { setPickMode(m => !m); setAnswerPick(''); })}>
+                            {pickMode
+                              ? t('lore.oqBoard.modeWrite', '← написать новый ответ')
+                              : t('lore.oqBoard.modePick', 'или взять уже принятое решение →')}
+                          </span>
                         </div>
                       </div>
                     );
