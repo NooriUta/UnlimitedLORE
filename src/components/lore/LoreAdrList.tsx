@@ -4,6 +4,7 @@ import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreAdrRow } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { areaColor } from './LoreComponentList';
+import { SortControl } from './FilterPrimitives';
 
 interface CompMeta { area: string | null; full_name: string | null; game_icon: string | null }
 
@@ -81,6 +82,15 @@ const S = {
     color: 'var(--acc)', border: '1px dashed color-mix(in srgb, var(--acc) 40%, transparent)',
     borderRadius: 5, cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 600,
   },
+  controls: { display: 'flex', flexDirection: 'column' as const, gap: 4, padding: '2px 8px 7px', flexShrink: 0, borderBottom: '1px solid var(--bd)' },
+  ctrlRow: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const },
+  ctrlLabel: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase' as const, color: 'var(--t3)', width: 74, flexShrink: 0 },
+  dateBtn: (on: boolean) => ({
+    padding: '2px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', cursor: 'pointer',
+    border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
+    background: on ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
+    color: on ? 'var(--acc)' : 'var(--t3)',
+  }),
   list: { flex: 1, overflowY: 'auto' as const },
   row: {
     display: 'flex', flexDirection: 'column' as const, gap: 2,
@@ -134,9 +144,6 @@ interface Props {
   statusSel: Set<string>;
   compSel: Set<string>;
   tagSel: Set<string>;
-  sortKey: AdrSortKey;
-  sortDir: 'asc' | 'desc';
-  datePreset: DatePreset;
   selectedId?: string;
   onError: (e: unknown) => void;
   onOpen: (id: string) => void;
@@ -146,11 +153,16 @@ interface Props {
   onTagCounts: (counts: Record<string, number>) => void;
 }
 
-export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sortKey, sortDir, datePreset, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts }: Props) {
+export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts }: Props) {
   const { t } = useTranslation();
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
   const [comps, setComps]           = useState<Record<string, CompMeta>>({});
+  // Sort + time-range live in the list panel, under the «+ Новый ADR» button
+  // (always visible, not hidden when the filter band collapses).
+  const [sortKey, setSortKey]       = useState<AdrSortKey>('date');
+  const [sortDir, setSortDir]       = useState<'asc' | 'desc'>('desc');
+  const [datePreset, setDatePreset] = useState<DatePreset>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -206,6 +218,30 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sor
   return (
     <div style={S.root}>
       <button style={S.newBtn} onClick={onNew}>{t('lore.adrList.newButton', '+ Новый ADR')}</button>
+      <div style={S.controls}>
+        <div style={S.ctrlRow}>
+          <span style={S.ctrlLabel}>{t('lore.page.adrs.sortDim', 'Сортировка')}</span>
+          <SortControl
+            options={[
+              { key: 'date',      label: t('lore.page.adrs.sortDate', 'Дата') },
+              { key: 'id',        label: t('lore.page.adrs.sortId', 'ID') },
+              { key: 'status',    label: t('lore.page.adrs.sortStatus', 'Статус') },
+              { key: 'component', label: t('lore.page.adrs.sortComp', 'Компонент') },
+            ]}
+            sortKey={sortKey}
+            direction={sortDir}
+            onChange={(k, d) => { setSortKey(k as AdrSortKey); setSortDir(d); }}
+          />
+        </div>
+        <div style={S.ctrlRow}>
+          <span style={S.ctrlLabel}>{t('lore.page.adrs.periodDim', 'Период')}</span>
+          {DATE_PRESETS.map(p => (
+            <button key={String(p.key)} style={S.dateBtn(datePreset === p.key)} onClick={() => setDatePreset(p.key)}>
+              {t(p.labelKey, p.labelFallback)}
+            </button>
+          ))}
+        </div>
+      </div>
       <div style={S.list}>
         {loading && <div style={S.empty}>{t('lore.adrList.loading', 'Загрузка ADR…')}</div>}
         {!loading && !shown.length && <div style={S.empty}>{t('lore.adrList.empty', 'ADR не найдены.')}</div>}

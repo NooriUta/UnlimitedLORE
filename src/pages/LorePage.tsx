@@ -12,7 +12,7 @@ import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type D
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT, DATE_PRESETS, type AdrSortKey, type DatePreset } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
@@ -32,7 +32,7 @@ import { GameIcon }        from '../components/lore/GameIcon';
 import { statusMeta, resolveStatusMeta, statusLabel, taskTick } from '../components/lore/lore-status';
 import { useIsNarrow } from '../hooks/useMediaQuery';
 import { a11yClick } from '../components/lore/a11y';
-import { FilterBar, SortControl, FilterDimensionMulti, type FilterTagData } from '../components/lore/FilterPrimitives';
+import { FilterBar, FilterDimensionMulti, type FilterTagData } from '../components/lore/FilterPrimitives';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
@@ -214,9 +214,6 @@ export default function LorePage() {
   const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
   const [adrCompCollapsed, setAdrCompCollapsed] = useState(true);
   const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
-  const [adrDatePreset, setAdrDatePreset] = useState<DatePreset>(null);
-  const [adrSortKey, setAdrSortKey]     = useState<AdrSortKey>('date');
-  const [adrSortDir, setAdrSortDir]     = useState<'asc' | 'desc'>('desc');
   // T34: filter chrome bars collapse to one summary line by default (approved
   // design, docs/prototypes/two-tier-filter.html) — one toggle per section,
   // not per-dimension (tried, rejected as noisy, see [[feedback_ux_change_process]]).
@@ -677,7 +674,7 @@ export default function LorePage() {
         <FilterBar
           tier="local"
           label={t('lore.page.adrs.filtersLabel', 'Фильтры')}
-          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size + (adrDatePreset ? 1 : 0)}
+          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size}
           summaryTags={[
             ...ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
               key: 'st:' + f.key, label: adrStatusLabel(t, f.key), color: f.color,
@@ -691,12 +688,8 @@ export default function LorePage() {
               key: 'tg:' + tg, label: tg === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : tg,
               onRemove: () => setAdrTagSel(prev => { const n = new Set(prev); n.delete(tg); return n; }),
             })),
-            ...(adrDatePreset ? [{
-              key: 'dp', label: DATE_PRESETS.find(p => p.key === adrDatePreset)!.labelFallback,
-              onRemove: () => setAdrDatePreset(null),
-            } as FilterTagData] : []),
           ]}
-          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); setAdrDatePreset(null); }}
+          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }}
           open={adrFilterOpen}
           onToggleOpen={() => setAdrFilterOpen(v => !v)}
         >
@@ -763,42 +756,6 @@ export default function LorePage() {
                 onToggleCollapsed={() => setAdrTagCollapsed(v => !v)}
               />
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--t3)' }}>
-                {t('lore.page.adrs.sortDim', 'Сортировка')}
-              </span>
-              <SortControl
-                options={[
-                  { key: 'date',      label: t('lore.page.adrs.sortDate', 'Дата') },
-                  { key: 'id',        label: t('lore.page.adrs.sortId', 'ID') },
-                  { key: 'status',    label: t('lore.page.adrs.sortStatus', 'Статус') },
-                  { key: 'component', label: t('lore.page.adrs.sortComp', 'Компонент') },
-                ]}
-                sortKey={adrSortKey}
-                direction={adrSortDir}
-                onChange={(k, d) => { setAdrSortKey(k as AdrSortKey); setAdrSortDir(d); }}
-              />
-              <div style={{ width: 1, height: 14, background: 'var(--b2)', margin: '0 2px' }} />
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--t3)' }}>
-                {t('lore.page.adrs.periodDim', 'Период')}
-              </span>
-              {DATE_PRESETS.map(p => {
-                const on = adrDatePreset === p.key;
-                return (
-                  <span key={String(p.key)}
-                    {...a11yClick(() => setAdrDatePreset(p.key))}
-                    aria-pressed={on}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none',
-                      fontSize: 'var(--fs-sm)', padding: '3px 8px', borderRadius: 6, whiteSpace: 'nowrap',
-                      border: `1px solid ${on ? 'color-mix(in srgb, var(--acc) 55%, var(--bd))' : 'var(--b3)'}`,
-                      background: on ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
-                      color: on ? 'var(--acc)' : 'var(--t3)',
-                    }}
-                  >{t(p.labelKey, p.labelFallback)}</span>
-                );
-              })}
-            </div>
           </div>
         </FilterBar>
       )}
@@ -932,9 +889,6 @@ export default function LorePage() {
                 statusSel={adrStatusSel}
                 compSel={adrCompSel}
                 tagSel={adrTagSel}
-                sortKey={adrSortKey}
-                sortDir={adrSortDir}
-                datePreset={adrDatePreset}
                 selectedId={passport === '__new' ? undefined : passport}
                 onError={handleFetchError}
                 onOpen={selectItem}
