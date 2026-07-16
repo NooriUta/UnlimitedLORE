@@ -366,16 +366,17 @@ export function registerLoreWrite(server: McpServer): void {
       supersedes_ids:   z.array(z.string()).optional().describe('adr_id(s) this ADR supersedes — creates SUPERSEDES edges FROM this adr TO each listed one, replaces the full set. Pair with status="SUPERSEDED" on the OLD adr_id (separate adr_new call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('free-text tags — upserts KnowTag + TAGGED_WITH edges, replaces the full set'),
       file_path:        z.string().optional().describe('source .md path relative to docs root, e.g. "engine/specs/adr/ADR-HND-022.md"'),
+      checkpoint:       z.boolean().optional().describe('LH-02: true = a body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
     },
     path: '/lore/adr',
-    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => ({
+    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path, checkpoint }) => ({
           adr_id, name,
           status: status ?? null, date_created: date_created ?? null,
           component_id: component_id ?? null, component_ids: component_ids ?? null,
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null, file_path: file_path ?? null,
+          tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
   });
 
@@ -401,16 +402,17 @@ export function registerLoreWrite(server: McpServer): void {
       supersedes_ids:   z.array(z.string()).optional().describe('replaces the full SUPERSEDES edge set, omit to leave untouched. Pair with status="SUPERSEDED" on the OLD adr_id (separate call) to mark it retired.'),
       tags:             z.array(z.string()).optional().describe('replaces the full tag set, omit to leave untouched'),
       file_path:        z.string().optional().describe('source .md path relative to docs root — omit to leave untouched'),
+      checkpoint:       z.boolean().optional().describe('LH-02: true = amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
     },
     path: '/lore/adr',
-    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path }) => ({
+    body: ({ adr_id, name, status, date_created, component_id, component_ids, context_md, decision_md, consequences_md, depends_on_ids, supersedes_ids, tags, file_path, checkpoint }) => ({
           adr_id, name,
           status: status ?? null, date_created: date_created ?? null,
           component_id: component_id ?? null, component_ids: component_ids ?? null,
           context_md: context_md ?? null,
           decision_md: decision_md ?? null, consequences_md: consequences_md ?? null,
           depends_on_ids: depends_on_ids ?? null, supersedes_ids: supersedes_ids ?? null,
-          tags: tags ?? null, file_path: file_path ?? null,
+          tags: tags ?? null, file_path: file_path ?? null, checkpoint: checkpoint ?? null,
         }),
   });
 
@@ -750,6 +752,7 @@ export function registerLoreWrite(server: McpServer): void {
       content_md:   z.string().optional().describe('spec body in Markdown'),
       summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
+      checkpoint:   z.boolean().optional().describe('LH-02: true = body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
@@ -772,6 +775,7 @@ export function registerLoreWrite(server: McpServer): void {
       content_md:   z.string().optional().describe('omit to leave the existing body untouched'),
       summary:      z.string().optional().describe('omit to leave untouched'),
       file_path:    z.string().optional().describe('omit to leave untouched'),
+      checkpoint:   z.boolean().optional().describe('LH-02: true = body amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }

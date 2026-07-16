@@ -24,7 +24,10 @@ public class LoreSpecResource extends LoreResourceBase {
     private static final Logger LOG = Logger.getLogger(LoreSpecResource.class);
 
     public record SpecUpsertRequest(String spec_id, String title, String version,
-        String component_id, String content_md, String file_path, String summary) {}
+        String component_id, String content_md, String file_path, String summary,
+        // LH-02: true = a body edit opens a new hist version (SCD2 close-open) instead
+        // of amending the open row in place, preserving the previous edition.
+        Boolean checkpoint) {}
     public record SpecDeleteRequest(String spec_id) {}
 
     @POST
@@ -67,11 +70,27 @@ public class LoreSpecResource extends LoreResourceBase {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "SELECT @rid as rid FROM KnowSpecHist " +
+                        "SELECT @rid as rid, content_md, version, summary FROM KnowSpecHist " +
                         "WHERE in('HAS_STATE').spec_id[0] = :id AND valid_to IS NULL LIMIT 1",
                         Map.of("id", req.spec_id())))
                     .await().indefinitely().result();
-                if (histRows != null && !histRows.isEmpty()) {
+                if (histRows != null && !histRows.isEmpty() && Boolean.TRUE.equals(req.checkpoint())) {
+                    // LH-02: close the open row + open a fresh one, carrying forward fields
+                    // not being changed — the previous edition survives as a closed row.
+                    String nsid = UUID.randomUUID().toString();
+                    Map<String, Object> hp = new java.util.HashMap<>();
+                    hp.put("id", req.spec_id()); hp.put("nsid", nsid); hp.put("now", Instant.now().toString());
+                    hp.put("rid", histRows.get(0).get("rid"));
+                    hp.put("content", req.content_md() != null ? req.content_md() : histRows.get(0).get("content_md"));
+                    hp.put("version", req.version()    != null ? req.version()    : histRows.get(0).get("version"));
+                    hp.put("summary", req.summary()    != null ? req.summary()    : histRows.get(0).get("summary"));
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+                        "UPDATE KnowSpecHist SET valid_to=:now WHERE @rid=:rid;" +
+                        "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
+                        "content_md=:content, version=:version, summary=:summary;" +
+                        "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
+                        "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
+                } else if (histRows != null && !histRows.isEmpty()) {
                     // Match by @rid — state_uid can be null on legacy rows (same silent
                     // no-op class as the ADR fix, 162cc18).
                     StringBuilder hsql = new StringBuilder("UPDATE KnowSpecHist SET spec_id=:id");
