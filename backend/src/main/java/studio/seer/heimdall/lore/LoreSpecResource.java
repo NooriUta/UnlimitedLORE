@@ -119,6 +119,11 @@ public class LoreSpecResource extends LoreResourceBase {
                 }
                 histWritten = true;
             }
+            // Поле component_id само по себе невидимо: паспорт компонента читает
+            // ребро out('DOCUMENTED_IN'). Раньше писалось только поле — спека не
+            // появлялась на своём компоненте (107 таких вершин). Держим ребро в
+            // синхроне, как T01 сделал для PARENT_OF.
+            if (req.component_id() != null) relinkSpecComponentEdge(req.spec_id(), req.component_id());
             return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id(),
                 "body_written", histWritten)));
         } catch (Exception e) {

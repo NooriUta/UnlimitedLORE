@@ -748,7 +748,14 @@ export function registerLoreWrite(server: McpServer): void {
       spec_id:      z.string().describe('unique spec id, e.g. "SPEC-AUTH-001"'),
       title:        z.string(),
       version:      z.string().optional().describe('e.g. "1.0.0"'),
-      component_id: z.string().optional().describe('e.g. "AUTH"'),
+      // Правило (v1.0.50): поле-владелец ОБЯЗАНО ехать ребром, иначе связи нет.
+      // Паспорт компонента читает out('DOCUMENTED_IN'), а не поле — раньше
+      // писалось только поле и спека не появлялась на компоненте (107 вершин).
+      // Теперь backend сам держит ребро в синхроне при каждом upsert.
+      component_id: z.string().optional().describe(
+        'owning component, e.g. "AUTH". Backend keeps the DOCUMENTED_IN edge (component → spec) in sync ' +
+        'with this field — the component passport reads the EDGE, not the field, so passing component_id ' +
+        'is what actually puts the spec on its component. Omit = leave as is; "" = detach.'),
       content_md:   z.string().optional().describe('spec body in Markdown'),
       summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
