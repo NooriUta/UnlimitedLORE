@@ -1,29 +1,32 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { iconLoaded } from '@iconify/react';
+import gameIconsData from '@iconify-json/game-icons/icons.json';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { GameIcon } from './GameIcon';
 import { AUTH_ENABLED } from '../../auth/session';
 import { useRole } from '../../auth/useRole';
 
-// ⚙ Admin LORE (ADR-LORE-025): reference-data management behind the admin gate.
-// Write path = the SAME endpoints MCP uses (dict_set → /lore/dict, project_new
-// → /lore/project) — no parallel admin API (D4). Canon dictionaries get a
-// two-step confirm before write (D5, MVP: confirm + area-usage reconcile line).
+// ⚙ Admin LORE (ADR-LORE-025, SPEC-ADMIN-LORE-UC): администрирование доступа и
+// единого языка графа. Структура — ОДОБРЕННЫЙ прототип AL-44: навигация по РИСКУ
+// (Доступ / Справочники / Система), а не по таблицам БД; выдача admin-роли и правка
+// подписи справочника не равны по весу и не стоят рядом.
+// Write path = те же эндпоинты, что у MCP (D4) — параллельного admin-API нет.
 
 interface DictRow { dict_type: string; code: string; label_ru: string | null; label_en: string | null; color: string | null; icon: string | null; sort_order: number | null; is_active: boolean; is_extensible: boolean }
 interface ProjRow { slug: string; name: string | null; default_branch: string | null; is_private: boolean | null; hosts: string | null }
 interface TagRow { tag_id: string; uses: number }
 interface HostRow { remote: string; role: string; base_url: string; file_url_template: string; pr_url_template: string; default_branch?: string }
-
-const CANON_TYPES = new Set(['adr_status', 'sprint_status', 'task_status', 'priority']);
-type Tab = 'dicts' | 'projects' | 'users' | 'agents' | 'roles' | 'tags' | 'settings';
-
-// KC-мост (ADR-LORE-025 D11/D12): люди — realm-роли, агенты — client-роли.
 interface KcUser { id: string; username: string; email: string | null; enabled: boolean; roles: string[] }
 interface KcAgent { clientId: string; id: string; enabled: boolean; agent_scope: string[] }
+interface Preflight { auth_enabled: boolean; kc_configured: boolean; kc_reachable: boolean; kc_error: string; admin_count: number; agent_scope_enforced: boolean; can_enable_auth: boolean; hint: string }
+interface Denial { ts: string; method: string; path: string; status: number; error: string; role: string }
 
-// RBAC scope per ADR-LORE-014 §3 (agent-profiles are files; read-only view).
+const CANON_TYPES = new Set(['adr_status', 'sprint_status', 'task_status', 'priority']);
+type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'settings';
+
+// RBAC scope per ADR-LORE-014 §3 (agent-profiles — файлы; read-only отображение).
 const PROFILE_SCOPE: [string, string][] = [
   ['full', '"*": allow (primary — Claude/backfill)'],
   ['architect', 'adr_* · component_* · tech_* · spec_* · runbook_* · doc_* · decision_* · question_* · project_new · status_set'],
@@ -34,14 +37,33 @@ const PROFILE_SCOPE: [string, string][] = [
   ['marketer', 'bragi_* · task_* · insight_* · rec_* · doc_* · status_set'],
 ];
 
+// Обратная матрица (AL-32/36, SPEC-RBAC-OMILORE-AGENTS §4): «кто имеет доступ к X» —
+// вопрос, который задают на ревью доступа. humanOnly-строки = запрет §4.
+const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: string[] }[] = [
+  { what: 'Словари', api: '/lore/dict/entry', humanOnly: true, agents: [] },
+  { what: 'Учётные записи', api: '/lore/kc/*', humanOnly: true, agents: [] },
+  { what: 'Включение auth', api: 'LORE_AUTH_ENABLED', humanOnly: true, agents: [] },
+  { what: 'ADR и решения', api: '/lore/adr*, /lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
+  { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },
+  { what: 'Спринты и вехи', api: '/lore/sprint*, milestone*', humanOnly: false, agents: ['full', 'pm'] },
+  { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst'] },
+  { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
+  { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },
+  { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm'] },
+  { what: 'Метрики/инсайты', api: 'metric/insight/rec', humanOnly: false, agents: ['full', 'analyst'] },
+  { what: 'Чтение (слайсы)', api: '/lore/slice/*', humanOnly: false, agents: ['все агенты'] },
+];
+
+// AL-38: реестр известных app_setting-ключей. Сейчас приложение НЕ читает ни одного —
+// реестр пуст, и это честно: всё, что лежит в dict_type=app_setting, попадает в
+// «неопознанные». Появится реальный ключ → строка здесь + чтение в коде одним PR.
+const KNOWN_SETTINGS: { key: string; type: string; def: string; descr: string }[] = [];
+
 // AL-31: у KC-моста ЧЕТЫРЕ разных исхода, и «пусто» — только один из них.
-// Раньше 403/5xx уходили в onError (страничная ошибка) или молча давали пустой
-// список, и экран одинаково бодро предлагал «завести первого» — при том что
-// отказ в доступе и неподнятый KC требуют противоположных действий.
 type KcState<T> =
   | { k: 'loading' }
   | { k: 'ok'; rows: T[] }
-  | { k: 'forbidden' }              // 403 — роль не пускает; люди могут быть
+  | { k: 'forbidden' }              // 403 — роль не пускает; записи могут существовать
   | { k: 'off'; detail: string }    // 503 — моста нет, состояние неизвестно
   | { k: 'error'; detail: string }; // сеть/5xx — то же, но без внятной причины
 
@@ -55,50 +77,111 @@ async function loadKc<T>(path: string): Promise<KcState<T>> {
   } catch (e) { return { k: 'error', detail: e instanceof Error ? e.message : String(e) }; }
 }
 
+async function loadKcObj<T>(path: string): Promise<T | null> {
+  try {
+    const r = await fetch(path, { headers: { 'X-Seer-Role': 'admin' } });
+    if (!r.ok) return null;
+    return (await r.json()) as T;
+  } catch { return null; }
+}
+
+// Узкий экран: группы навигации схлопываются в горизонтальные ряды (mobile-проверка фазы UI).
+const narrowQuery = typeof window !== 'undefined' ? window.matchMedia('(max-width: 760px)') : null;
+function useIsNarrow(): boolean {
+  return useSyncExternalStore(
+    cb => { narrowQuery?.addEventListener('change', cb); return () => narrowQuery?.removeEventListener('change', cb); },
+    () => narrowQuery?.matches ?? false,
+  );
+}
+
 const S = {
-  root: { flex: 1, overflowY: 'auto' as const, padding: '10px 16px' },
-  tabs: { display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const },
-  tab: (on: boolean) => ({
-    font: 'inherit', fontSize: 'var(--fs-sm)', padding: '4px 12px', borderRadius: 6, cursor: 'pointer',
-    border: `1px solid ${on ? 'color-mix(in srgb, var(--acc) 55%, var(--bd))' : 'var(--b3)'}`,
-    background: on ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
-    color: on ? 'var(--acc)' : 'var(--t3)', fontWeight: on ? 600 : 400,
+  shell: (narrow: boolean) => ({
+    display: narrow ? 'block' : 'grid',
+    gridTemplateColumns: '212px 1fr',
+    gap: 0, flex: 1, minHeight: 0, overflow: 'hidden' as const,
   }),
+  side: (narrow: boolean) => ({
+    background: 'var(--bg1)', padding: narrow ? '8px 10px' : '12px 8px',
+    borderRight: narrow ? 'none' : '1px solid var(--bd)',
+    borderBottom: narrow ? '1px solid var(--bd)' : 'none',
+    display: 'flex', flexDirection: (narrow ? 'row' : 'column') as 'row' | 'column',
+    gap: narrow ? 14 : 16, overflowX: 'auto' as const, flexWrap: (narrow ? 'wrap' : 'nowrap') as 'wrap' | 'nowrap',
+  }),
+  grpLabel: { fontSize: 'var(--fs-2xs)', letterSpacing: '.12em', textTransform: 'uppercase' as const, color: 'var(--t3)', padding: '0 8px 5px', display: 'flex', alignItems: 'center', gap: 6 },
+  dot: (c: string) => ({ width: 6, height: 6, borderRadius: '50%', background: c, flexShrink: 0 }),
+  nav: (on: boolean) => ({
+    display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left' as const,
+    background: on ? 'var(--bg2)' : 'transparent', font: 'inherit',
+    border: `1px solid ${on ? 'var(--bdh)' : 'transparent'}`, borderRadius: 6,
+    padding: '6px 8px', color: on ? 'var(--t1)' : 'var(--t2)', cursor: 'pointer',
+    fontSize: 'var(--fs-sm)', fontWeight: on ? 600 : 400, whiteSpace: 'nowrap' as const,
+  }),
+  rail: (c: string | null) => ({ width: 3, height: 14, borderRadius: 2, background: c ?? 'transparent', flexShrink: 0 }),
+  navN: { marginLeft: 'auto', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' },
+  main: { padding: '12px 16px', minWidth: 0, overflowY: 'auto' as const },
+  crumb: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 8 },
+  crumbB: { color: 'var(--t1)', fontWeight: 600 },
+  toolbar: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' as const },
+  search: { fontSize: 'var(--fs-sm)', padding: '4px 10px', borderRadius: 5, border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'inherit', flex: 1, minWidth: 150, maxWidth: 280 },
+  count: { fontSize: 'var(--fs-xs)', color: 'var(--t2)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' as const },
+  seg: { display: 'inline-flex', border: '1px solid var(--b3)', borderRadius: 5, overflow: 'hidden' },
+  segBtn: (on: boolean) => ({
+    font: 'inherit', fontSize: 'var(--fs-xs)', padding: '3px 10px', cursor: 'pointer', border: 'none',
+    background: on ? 'var(--bg3)' : 'var(--bg1)', color: on ? 'var(--t1)' : 'var(--t3)', fontWeight: on ? 600 : 400,
+  }),
+  tw: { overflowX: 'auto' as const },
+  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 'var(--fs-sm)' },
+  th: { textAlign: 'left' as const, padding: '4px 8px', color: 'var(--t3)', fontSize: 'var(--fs-2xs)', textTransform: 'uppercase' as const, letterSpacing: '.05em', borderBottom: '1px solid var(--bd)', whiteSpace: 'nowrap' as const, cursor: 'pointer', userSelect: 'none' as const },
+  td: { padding: '4px 8px', borderBottom: '1px solid var(--bd)', color: 'var(--t2)' },
+  num: { textAlign: 'right' as const, fontVariantNumeric: 'tabular-nums' as const, fontFamily: 'var(--mono)' },
+  input: { fontSize: 'var(--fs-sm)', padding: '3px 8px', borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'inherit' },
+  select: { fontSize: 'var(--fs-sm)', padding: '3px 8px', borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'var(--mono)' },
+  btn: { fontSize: 'var(--fs-sm)', padding: '3px 10px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t2)' },
+  primary: { fontSize: 'var(--fs-sm)', padding: '3px 12px', borderRadius: 4, cursor: 'pointer', fontWeight: 600, border: '1px solid var(--acc)', background: 'var(--acc)', color: 'var(--on-accent)' },
+  danger: { fontSize: 'var(--fs-sm)', padding: '3px 10px', borderRadius: 4, cursor: 'pointer', border: '1px solid color-mix(in srgb, var(--dng) 55%, var(--bd))', background: 'transparent', color: 'var(--dng)' },
+  warn: { fontSize: 'var(--fs-sm)', color: 'var(--wrn)', border: '1px solid color-mix(in srgb, var(--wrn) 40%, transparent)', background: 'color-mix(in srgb, var(--wrn) 8%, transparent)', borderRadius: 5, padding: '6px 10px', margin: '6px 0' },
+  card: { border: '1px solid var(--bd)', borderRadius: 6, padding: '10px 12px', marginBottom: 8, fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
+  form: { display: 'flex', flexDirection: 'column' as const, gap: 6, padding: 10, margin: '8px 0', border: '1px solid var(--b3)', borderRadius: 6, background: 'var(--bg2)' },
   chip: (on: boolean) => ({
     font: 'inherit', fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 999, cursor: 'pointer',
     border: `1px solid ${on ? 'var(--acc)' : 'var(--b3)'}`,
     background: on ? 'color-mix(in srgb, var(--acc) 14%, transparent)' : 'transparent',
     color: on ? 'var(--acc)' : 'var(--t3)',
   }),
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 'var(--fs-sm)' },
-  th: { textAlign: 'left' as const, padding: '4px 8px', color: 'var(--t3)', fontSize: 'var(--fs-2xs)', textTransform: 'uppercase' as const, letterSpacing: '.05em', borderBottom: '1px solid var(--bd)' },
-  td: { padding: '4px 8px', borderBottom: '1px solid var(--bd)', color: 'var(--t2)' },
-  input: { fontSize: 'var(--fs-sm)', padding: '3px 8px', borderRadius: 4, border: '1px solid var(--b3)', background: 'var(--bg1)', color: 'var(--t1)', fontFamily: 'inherit' },
-  btn: { fontSize: 'var(--fs-sm)', padding: '3px 10px', borderRadius: 4, cursor: 'pointer', border: '1px solid var(--b3)', background: 'transparent', color: 'var(--t2)' },
-  primary: { fontSize: 'var(--fs-sm)', padding: '3px 12px', borderRadius: 4, cursor: 'pointer', fontWeight: 600, border: '1px solid var(--acc)', background: 'var(--acc)', color: 'var(--bg1)' },
-  warn: { fontSize: 'var(--fs-sm)', color: 'var(--wrn)', border: '1px solid color-mix(in srgb, var(--wrn) 40%, transparent)', background: 'color-mix(in srgb, var(--wrn) 8%, transparent)', borderRadius: 5, padding: '6px 10px', margin: '6px 0' },
-  card: { border: '1px solid var(--bd)', borderRadius: 6, padding: '10px 12px', marginBottom: 8, fontSize: 'var(--fs-sm)', color: 'var(--t2)' },
-  form: { display: 'flex', flexDirection: 'column' as const, gap: 6, padding: 10, margin: '8px 0', border: '1px solid var(--b3)', borderRadius: 6, background: 'var(--bg2)' },
-  sw: (c: string | null) => ({ display: 'inline-block', width: 12, height: 12, borderRadius: 3, background: c ?? 'transparent', border: '1px solid var(--b3)', verticalAlign: 'middle' }),
-  // AL-37: небезопасное состояние — во всю ширину. Было — серым шёпотом в углу,
-  // тише декоративной плашки палитры, хотя означает «админ — любой, кто открыл адрес».
+  pill: (c: string) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: 999, padding: '1px 8px',
+    fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', border: `1px solid color-mix(in srgb, ${c} 45%, var(--bd))`,
+    color: c, background: `color-mix(in srgb, ${c} 10%, transparent)`,
+  }),
+  live: (c: string) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 999, padding: '2px 10px',
+    fontSize: 'var(--fs-sm)', border: `1px solid ${c}`, color: c,
+    background: `color-mix(in srgb, ${c} 12%, transparent)`,
+  }),
   banner: {
     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 10,
     borderRadius: 5, fontSize: 'var(--fs-sm)', color: 'var(--t1)',
     background: 'color-mix(in srgb, var(--wrn) 16%, transparent)',
     border: '1px solid color-mix(in srgb, var(--wrn) 45%, var(--bd))',
   },
-  // AL-31: пустое / отказ / мост недоступен — разные экраны, а не один текст.
   state: (tone: 'neutral' | 'bad') => ({
     border: `1px ${tone === 'bad' ? 'solid' : 'dashed'} ${tone === 'bad' ? 'color-mix(in srgb, var(--dng) 50%, var(--bd))' : 'var(--bd)'}`,
     borderRadius: 6, padding: '18px 14px', textAlign: 'center' as const, color: 'var(--t2)', fontSize: 'var(--fs-sm)',
   }),
   stateH: (tone: 'neutral' | 'bad') => ({ fontWeight: 600, marginBottom: 4, color: tone === 'bad' ? 'var(--dng)' : 'var(--t1)' }),
   stateCode: { display: 'block', marginTop: 8, fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' },
+  check: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)', fontSize: 'var(--fs-sm)' },
+  mark: (ok: boolean) => ({
+    width: 16, height: 16, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0,
+    fontSize: 10, marginTop: 1, color: ok ? 'var(--suc)' : 'var(--dng)',
+    border: `1px solid ${ok ? 'var(--suc)' : 'var(--dng)'}`,
+    background: `color-mix(in srgb, ${ok ? 'var(--suc)' : 'var(--dng)'} 18%, transparent)`,
+  }),
+  kv: { display: 'grid', gridTemplateColumns: '130px 1fr', gap: '6px 12px', fontSize: 'var(--fs-sm)' },
 };
 
-/** AL-31: один и тот же разбор исходов для «Людей» и «Агентов». */
-function KcStateView({ s, empty }: { s: KcState<unknown>; empty: React.ReactNode }) {
+/** AL-31: один разбор исходов для всех KC-вкладок. */
+function KcStateView({ s, empty }: { s: KcState<unknown>; empty: ReactNode }) {
   const { t } = useTranslation();
   if (s.k === 'loading') return <div style={S.state('neutral')}>{t('lore.admin.kcLoading', 'Спрашиваем Keycloak…')}</div>;
   if (s.k === 'forbidden') return (
@@ -125,28 +208,110 @@ function KcStateView({ s, empty }: { s: KcState<unknown>; empty: React.ReactNode
   return s.rows.length ? null : <>{empty}</>;
 }
 
-const TABS: [Tab, string][] = [
-  ['dicts', 'Словари'], ['projects', 'Проекты'], ['users', 'Пользователи'],
-  ['agents', 'Агенты'], ['roles', 'Роли'], ['tags', 'Теги'], ['settings', 'Настройки'],
+// AL-33: экран не имеет права утверждать наличие защиты, которой нет. Снять вместе с AL-17 (R2).
+function NotEnforcedNotice() {
+  const { t } = useTranslation();
+  return (
+    <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>
+      <b>{t('lore.admin.notEnforcedH', 'Права из этой таблицы пока не проверяются.')}</b>{' '}
+      {t('lore.admin.notEnforcedB', 'Клейм agent_scope бэкенд ещё не читает: сейчас это фильтр видимости инструментов, не защита. Включится в R2 — задача AL-17.')}
+    </div>
+  );
+}
+
+/** AL-40: единый тулбар таблиц — поиск + «показано N из M» + опциональный сегмент-фильтр. */
+function Toolbar({ q, setQ, shown, total, seg }: {
+  q: string; setQ: (v: string) => void; shown: number; total: number;
+  seg?: { options: [string, string][]; value: string; set: (v: string) => void };
+}) {
+  const { t } = useTranslation();
+  return (
+    <div style={S.toolbar}>
+      <input style={S.search} placeholder={t('lore.admin.search', 'Поиск…')} value={q} onChange={e => setQ(e.target.value)} />
+      <span style={S.count}>{t('lore.admin.shownOf', 'показано {{n}} из {{m}}', { n: shown, m: total })}</span>
+      {seg && (
+        <span style={S.seg}>
+          {seg.options.map(([v, l]) => (
+            <button key={v} style={S.segBtn(seg.value === v)} onClick={() => seg.set(v)}>{l}</button>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
+const NAV_GROUPS: { label: string; rail: string; tabs: [Tab, string][] }[] = [
+  { label: 'Доступ', rail: 'var(--dng)', tabs: [['users', 'Люди'], ['agents', 'Агенты'], ['roles', 'Роли и права']] },
+  { label: 'Справочники', rail: 'var(--acc)', tabs: [['dicts', 'Словари'], ['projects', 'Проекты'], ['tags', 'Теги']] },
+  { label: 'Система', rail: 'var(--inf)', tabs: [['settings', 'Настройки']] },
 ];
+const TAB_TITLES: Record<Tab, string> = {
+  users: 'Люди', agents: 'Агенты', roles: 'Роли и права',
+  dicts: 'Словари', projects: 'Проекты', tags: 'Теги', settings: 'Настройки',
+};
+const ALL_TABS = NAV_GROUPS.flatMap(g => g.tabs.map(([k]) => k));
 
 export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
   const role = useRole();
-  // AL-39: вкладка живёт в URL (?section=admin&tab=agents) — как паспорт сущности.
-  // Было: состояние только в useState → F5 ронял на «Словари», ссылку на вкладку
-  // дать было нельзя, «назад» уводил из панели целиком.
+  const narrow = useIsNarrow();
   const [params, setParams] = useSearchParams();
-  const tab = (TABS.find(([k]) => k === params.get('tab'))?.[0] ?? 'dicts') as Tab;
+  const tab = (ALL_TABS.find(k => k === params.get('tab')) ?? 'dicts') as Tab;
   const setTab = (k: Tab) => {
     const p = new URLSearchParams(params);
-    p.set('tab', k);
-    setParams(p, { replace: true }); // replace: вкладки не копят историю, «назад» уходит из панели
+    p.set('tab', k); p.delete('user');
+    setParams(p, { replace: true });
   };
+
+  // Все данные грузятся здесь один раз и раздаются вкладкам: счётчики в навигации
+  // и вкладки видят ОДНО состояние (иначе «Люди» и счётчик могли бы противоречить).
+  const [dicts, setDicts] = useState<DictRow[]>([]);
+  const [projects, setProjects] = useState<ProjRow[]>([]);
+  const [knowTags, setKnowTags] = useState<TagRow[]>([]);
+  const [loreTags, setLoreTags] = useState<TagRow[]>([]);
+  const [sprintsByProject, setSprintsByProject] = useState<Record<string, number>>({});
+  const [areaUsage, setAreaUsage] = useState<Record<string, number>>({});
+  const [users, setUsers] = useState<KcState<KcUser>>({ k: 'loading' });
+  const [agents, setAgents] = useState<KcState<KcAgent>>({ k: 'loading' });
+  const [preflight, setPreflight] = useState<Preflight | null>(null);
+  const [reload, setReload] = useState(0);
+  const bump = () => setReload(x => x + 1);
+
+  useEffect(() => {
+    fetchLoreSlice<DictRow>('dictionary', {}).then(setDicts).catch(onError);
+    fetchLoreSlice<ProjRow>('git_projects', {}).then(setProjects).catch(onError);
+    fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnowTags).catch(onError);
+    fetchLoreSlice<TagRow>('lore_tags_usage', {}).then(setLoreTags).catch(() => { /* optional */ });
+    fetchLoreSlice<{ sprint_id: string; git_projects: string[] | null }>('sprints', {})
+      .then(rows => {
+        const m: Record<string, number> = {};
+        rows.forEach(r => (r.git_projects ?? []).forEach(p => { m[p] = (m[p] ?? 0) + 1; }));
+        setSprintsByProject(m);
+      }).catch(() => { /* счётчик спринтов — украшение, не блокер */ });
+    fetchLoreSlice<{ component_id: string; area: string | null }>('components', {})
+      .then(rows => {
+        const m: Record<string, number> = {};
+        rows.forEach(c => { if (c.area) m[c.area] = (m[c.area] ?? 0) + 1; });
+        setAreaUsage(m);
+      }).catch(() => { /* usage-колонка деградирует в «н/д» */ });
+    loadKc<KcUser>('/lore/kc/users').then(setUsers);
+    loadKc<KcAgent>('/lore/kc/agents').then(setAgents);
+    loadKcObj<Preflight>('/lore/kc/auth-preflight').then(setPreflight);
+  }, [onError, reload]);
+
+  const dictTypes = useMemo(() => [...new Set(dicts.map(r => r.dict_type))].sort(), [dicts]);
+  const counters: Partial<Record<Tab, number>> = {
+    users: users.k === 'ok' ? users.rows.length : undefined,
+    agents: agents.k === 'ok' ? agents.rows.length : undefined,
+    dicts: dictTypes.length || undefined,
+    projects: projects.length || undefined,
+    tags: (knowTags.length + loreTags.length) || undefined,
+  };
+
   return (
-    <div style={S.root}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
       {!AUTH_ENABLED && (
-        <div style={S.banner}>
+        <div style={{ ...S.banner, margin: '8px 12px 0' }}>
           <span aria-hidden>⚠</span>
           <span>
             <b>{t('lore.admin.devBannerH', 'Аутентификация выключена.')}</b>{' '}
@@ -154,44 +319,410 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           </span>
         </div>
       )}
-      <div style={S.tabs}>
-        {TABS.map(([k, l]) => (
-          <button key={k} style={S.tab(tab === k)} onClick={() => setTab(k)}>{l}</button>
-        ))}
-        <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
-          {t('lore.admin.roleBadge', 'роль: {{role}} · auth: {{auth}}', { role, auth: AUTH_ENABLED ? 'on' : 'off (dev)' })}
-        </span>
+      <div style={S.shell(narrow)}>
+        <nav style={S.side(narrow)}>
+          {NAV_GROUPS.map(g => (
+            <div key={g.label} style={{ minWidth: narrow ? 'auto' : undefined }}>
+              <div style={S.grpLabel}><span style={S.dot(g.rail)} />{g.label}</div>
+              <div style={{ display: 'flex', flexDirection: narrow ? 'row' : 'column', gap: 2 }}>
+                {g.tabs.map(([k, l]) => (
+                  <button key={k} style={S.nav(tab === k)} onClick={() => setTab(k)} aria-current={tab === k}>
+                    <span style={S.rail(tab === k ? g.rail : null)} />
+                    {l}
+                    {counters[k] !== undefined && <span style={S.navN}>{counters[k]}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {!narrow && (
+            <span style={{ marginTop: 'auto', padding: '0 8px', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+              {t('lore.admin.roleBadge', 'роль: {{role}} · auth: {{auth}}', { role, auth: AUTH_ENABLED ? 'on' : 'off (dev)' })}
+            </span>
+          )}
+        </nav>
+        <main style={S.main}>
+          <div style={S.crumb}>{t('lore.admin.crumb', 'Администрирование')} · <span style={S.crumbB}>{TAB_TITLES[tab]}</span></div>
+          {tab === 'users' && <UsersTab st={users} preflight={preflight} onError={onError} reload={bump} />}
+          {tab === 'agents' && <AgentsTab st={agents} onError={onError} />}
+          {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} />}
+          {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
+          {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} onError={onError} reload={bump} />}
+          {tab === 'tags' && <TagsTab know={knowTags} lore={loreTags} />}
+          {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
+        </main>
       </div>
-      {tab === 'dicts' && <DictsTab onError={onError} />}
-      {tab === 'projects' && <ProjectsTab onError={onError} />}
-      {tab === 'users' && <UsersTab onError={onError} />}
-      {tab === 'agents' && <AgentsTab onError={onError} />}
-      {tab === 'roles' && <RolesTab onError={onError} />}
-      {tab === 'tags' && <TagsTab onError={onError} />}
-      {tab === 'settings' && <SettingsTab onError={onError} />}
     </div>
   );
 }
 
-function DictsTab({ onError }: { onError: (e: unknown) => void }) {
+// ── Люди: список + карточка (AL-36) ─────────────────────────────────────────
+function UsersTab({ st, preflight, onError, reload }: {
+  st: KcState<KcUser>; preflight: Preflight | null; onError: (e: unknown) => void; reload: () => void;
+}) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<DictRow[]>([]);
-  const [dt, setDt] = useState<string>('area');
-  const [edit, setEdit] = useState<DictRow | null>(null); // code '' = new
-  const [confirmCanon, setConfirmCanon] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [reload, setReload] = useState(0);
-  const [reconcile, setReconcile] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [nu, setNu] = useState<{ username: string; email: string } | null>(null);
+  const [confirmAdmin, setConfirmAdmin] = useState<string | null>(null);
+  const [opError, setOpError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchLoreSlice<DictRow>('dictionary', {}).then(setRows).catch(onError);
-  }, [onError, reload]);
+  const rows = st.k === 'ok' ? st.rows : [];
+  const selectedId = params.get('user');
+  const selected = rows.find(u => u.id === selectedId) ?? null;
+  const openCard = (id: string | null) => {
+    const p = new URLSearchParams(params);
+    if (id) p.set('user', id); else p.delete('user');
+    setParams(p, { replace: true });
+  };
 
+  async function setRole(id: string, role: string, action: 'add' | 'remove') {
+    setBusy(true); setOpError(null);
+    try {
+      await loreMutate(`/kc/user/${id}/role`, { role, action });
+      reload(); setConfirmAdmin(null);
+    } catch (e) {
+      // 409 LAST_ADMIN (AL-35) — не страничная ошибка, а ответ по существу: показать на месте.
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('LAST_ADMIN') || msg.includes('409')) setOpError(msg);
+      else onError(e);
+    } finally { setBusy(false); }
+  }
+  async function create() {
+    if (!nu?.username.trim()) return;
+    setBusy(true);
+    try { await loreMutate('/kc/user', { username: nu.username.trim(), email: nu.email.trim() || null }); setNu(null); reload(); }
+    catch (e) { onError(e); } finally { setBusy(false); }
+  }
+
+  const note = <div style={S.card}>{t('lore.admin.usersNote', 'Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).')}</div>;
+  if (st.k !== 'ok') return <div>{note}<KcStateView s={st} empty={null} /></div>;
+
+  // Карточка человека (AL-36): всё про одного субъекта на одном экране, deep-link через ?user=.
+  if (selected) {
+    const adminCount = preflight?.admin_count ?? -1;
+    const isAdminHolder = selected.roles?.some(r => r === 'admin' || r === 'super-admin');
+    const lastAdmin = isAdminHolder && adminCount === 1;
+    return (
+      <div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <button style={S.btn} onClick={() => openCard(null)}>← {t('lore.admin.backToList', 'К списку')}</button>
+        </div>
+        <div style={{ border: '1px solid var(--bd)', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, background: 'var(--bg2)', borderBottom: '1px solid var(--bd)' }}>
+            <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--bdh)', display: 'grid', placeItems: 'center', fontWeight: 700, color: 'var(--t2)' }}>
+              {selected.username.slice(0, 1).toUpperCase()}
+            </span>
+            <span>
+              <span style={{ fontFamily: 'var(--mono)', fontWeight: 600 }}>{selected.username}</span>{' '}
+              {(selected.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
+                <span key={r} style={{ ...S.pill(r === 'viewer' ? 'var(--t2)' : 'var(--dng)'), marginLeft: 4 }}>{r}</span>
+              ))}
+              <span style={{ ...S.pill(selected.enabled ? 'var(--suc)' : 'var(--t3)'), marginLeft: 4 }}>{selected.enabled ? t('lore.admin.enabled', 'включён') : t('lore.admin.disabled', 'отключён')}</span>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{selected.email ?? '—'}</div>
+            </span>
+          </div>
+          <div style={{ padding: 12, display: 'grid', gap: 10 }}>
+            {lastAdmin && (
+              <div style={S.warn}>
+                <b>{t('lore.admin.lastAdminH', 'Последняя администрирующая учётка.')}</b>{' '}
+                {t('lore.admin.lastAdminB', 'Снятие роли оставит LORE без администратора — бэкенд отклонит операцию (AL-35), пока не появится второй admin.')}
+              </div>
+            )}
+            {opError && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>{opError}</div>}
+            <dl style={S.kv}>
+              <dt style={{ color: 'var(--t3)' }}>{t('lore.admin.cardRoles', 'Роли (люди)')}</dt>
+              <dd style={{ margin: 0 }}>
+                {(selected.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
+                  <span key={r} style={{ ...S.pill(r === 'viewer' ? 'var(--t2)' : 'var(--dng)'), marginRight: 6 }}>
+                    {r}
+                    {r !== 'super-admin' && (
+                      <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', font: 'inherit' }}
+                        disabled={busy} title={t('lore.admin.removeRole', 'снять роль')}
+                        onClick={() => setRole(selected.id, r, 'remove')}>✕</button>
+                    )}
+                  </span>
+                ))}
+                {!selected.roles?.includes('viewer') && <button style={S.btn} disabled={busy} onClick={() => setRole(selected.id, 'viewer', 'add')}>+viewer</button>}{' '}
+                {!selected.roles?.includes('admin') && (confirmAdmin === selected.id
+                  ? <button style={S.primary} disabled={busy} onClick={() => setRole(selected.id, 'admin', 'add')}>{t('lore.admin.confirmAdmin', 'точно admin?')}</button>
+                  : <button style={S.btn} disabled={busy} onClick={() => setConfirmAdmin(selected.id)}>+admin</button>)}
+              </dd>
+              <dt style={{ color: 'var(--t3)' }}>{t('lore.admin.cardId', 'KC id')}</dt>
+              <dd style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{selected.id}</dd>
+            </dl>
+            <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
+              <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>
+                {t('lore.admin.cardHistory', 'История доступа и действий')}
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
+                {t('lore.admin.cardHistoryNone', 'Истории пока нет: аудит админ-операций появится с AL-20/AL-43 и ляжет сюда. Экран не показывает то, чего система ещё не пишет.')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const shown = rows.filter(u => !q || u.username.toLowerCase().includes(q.toLowerCase()) || (u.email ?? '').toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div>
+      {note}
+      <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
+      {rows.length > 0 && (
+        <div style={S.tw}>
+          <table style={S.table}>
+            <thead><tr>{['логин', 'email', 'вкл', 'роли', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>
+              {shown.map(u => (
+                <tr key={u.id}>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{u.username}</td>
+                  <td style={S.td}>{u.email ?? '—'}</td>
+                  <td style={S.td}>{u.enabled ? '✓' : '✗'}</td>
+                  <td style={S.td}>
+                    {(u.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
+                      <span key={r} style={{ ...S.pill(r === 'viewer' ? 'var(--t2)' : 'var(--dng)'), marginRight: 4 }}>{r}</span>
+                    ))}
+                  </td>
+                  <td style={S.td}><button style={S.btn} onClick={() => openCard(u.id)}>{t('lore.admin.open', 'Открыть')}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rows.length === 0 && (
+        <div style={S.state('neutral')}>
+          <div style={S.stateH('neutral')}>{t('lore.admin.noUsersH', 'Ни одного человека ещё не заведено')}</div>
+          <div>{t('lore.admin.noUsersB', 'Keycloak отвечает нормально, в realm просто нет учётных записей. Заведите себя первой — ДО включения аутентификации: она отключит доступ по конфигу, и войти станет некому.')}</div>
+          <code style={S.stateCode}>GET /lore/kc/users → 200 · []</code>
+        </div>
+      )}
+      <div style={{ marginTop: 8 }}>
+        {nu ? (
+          <div style={S.form}>
+            <input style={S.input} placeholder={t('lore.admin.phLogin', 'логин')} value={nu.username} onChange={e => setNu(v => v && ({ ...v, username: e.target.value }))} />
+            <input style={S.input} placeholder={t('lore.admin.phEmail', 'email (опц.)')} value={nu.email} onChange={e => setNu(v => v && ({ ...v, email: e.target.value }))} />
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{t('lore.admin.noPassNote', 'Пароль задаётся в Keycloak (reset-link/консоль) — LORE его не принимает и не хранит.')}</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button style={S.primary} disabled={busy} onClick={create}>{busy ? '…' : t('lore.admin.create', 'Создать')}</button>
+              <button style={S.btn} onClick={() => setNu(null)}>{t('lore.admin.cancel', 'Отмена')}</button>
+            </div>
+          </div>
+        ) : <button style={S.primary} onClick={() => setNu({ username: '', email: '' })}>{t('lore.admin.addUser', '+ Человек')}</button>}
+      </div>
+    </div>
+  );
+}
+
+// ── Агенты ───────────────────────────────────────────────────────────────────
+function AgentsTab({ st, onError }: { st: KcState<KcAgent>; onError: (e: unknown) => void }) {
+  const { t } = useTranslation();
+  const [q, setQ] = useState('');
+  const [secret, setSecret] = useState<{ client: string; value: string } | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function rotate(a: KcAgent) {
+    setBusy(true);
+    try {
+      const res = await loreMutate<{ value?: string }>(`/kc/agent/${a.id}/rotate`, {});
+      setSecret({ client: a.clientId, value: res?.value ?? '(секрет не возвращён)' });
+      setConfirm(null);
+    } catch (e) { onError(e); } finally { setBusy(false); }
+  }
+
+  const note = <div style={S.card}>{t('lore.admin.agentsNote', 'AI-агенты — client-роли сервис-аккаунтов (ось «агенты», клейм agent_scope). Провижинятся скриптом, не заводятся руками. Ротация показывает секрет ОДИН раз — LORE его не хранит.')}</div>;
+  if (st.k !== 'ok') return <div>{note}<KcStateView s={st} empty={null} /></div>;
+
+  const rows = st.rows;
+  const shown = rows.filter(a => !q || a.clientId.includes(q) || a.agent_scope.some(s => s.includes(q)));
+  return (
+    <div>
+      {note}
+      <NotEnforcedNotice />
+      {secret && (
+        <div style={{ ...S.warn, color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)', background: 'color-mix(in srgb, var(--suc) 8%, transparent)' }}>
+          <div>{t('lore.admin.newSecret', 'Новый секрет {{c}} — скопируйте сейчас, больше не покажем:', { c: secret.client })}</div>
+          <code style={{ fontSize: 'var(--fs-sm)', wordBreak: 'break-all' }}>{secret.value}</code>
+          <div><button style={S.btn} onClick={() => setSecret(null)}>{t('lore.admin.hide', 'скрыть')}</button></div>
+        </div>
+      )}
+      <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
+      <div style={S.tw}>
+        <table style={S.table}>
+          <thead><tr>{['клиент', 'agent_scope', 'вкл', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {shown.map(a => (
+              <tr key={a.id}>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{a.clientId}</td>
+                <td style={S.td}>
+                  {(a.agent_scope ?? []).length
+                    ? a.agent_scope.map(s => <span key={s} style={{ ...S.pill('var(--inf)'), marginRight: 4 }}>{s}</span>)
+                    : <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noScope', '— (оси не несёт, легаси)')}</span>}
+                </td>
+                <td style={S.td}>{a.enabled ? '✓' : '✗'}</td>
+                <td style={S.td}>
+                  {confirm === a.id
+                    ? <button style={S.primary} disabled={busy} onClick={() => rotate(a)}>{t('lore.admin.confirmRotate', 'точно ротировать?')}</button>
+                    : <button style={S.btn} onClick={() => setConfirm(a.id)}>{t('lore.admin.rotate', 'ротировать секрет')}</button>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Роли и права: обе оси + обратная матрица (AL-32) ─────────────────────────
+function RolesTab({ dicts, users, agents }: { dicts: DictRow[]; users: KcState<KcUser>; agents: KcState<KcAgent> }) {
+  const { t } = useTranslation();
+  const [mode, setMode] = useState<'by-role' | 'by-object'>('by-role');
+  const agentRoles = dicts.filter(r => r.dict_type === 'agent_role');
+  const humanCounts = useMemo(() => {
+    if (users.k !== 'ok') return null;
+    const m: Record<string, string[]> = { 'super-admin': [], admin: [], viewer: [] };
+    users.rows.filter(u => u.enabled).forEach(u => (u.roles ?? []).forEach(r => { if (m[r]) m[r].push(u.username); }));
+    return m;
+  }, [users]);
+  const agentByScope = useMemo(() => {
+    if (agents.k !== 'ok') return null;
+    const m: Record<string, string> = {};
+    agents.rows.forEach(a => a.agent_scope.forEach(s => { m[s.replace(/^agent-/, '')] = a.clientId; }));
+    return m;
+  }, [agents]);
+
+  const holders = (r: string) => humanCounts
+    ? (humanCounts[r].length ? `${humanCounts[r].length} · ${humanCounts[r].join(', ')}` : 'никому')
+    : 'н/д (KC недоступен)';
+
+  return (
+    <div>
+      <div style={S.card}>{t('lore.admin.rolesNote2', 'Две оси, которые не смешиваются: люди входят паролем и несут realm-роли (seer_roles), агенты — секретом и несут agent_scope. Скоуп агентов правится в mcp-server/agent-profiles/*.json (D6, read-only здесь).')}</div>
+      <NotEnforcedNotice />
+      <div style={{ marginBottom: 8 }}>
+        <span style={S.seg}>
+          <button style={S.segBtn(mode === 'by-role')} onClick={() => setMode('by-role')}>{t('lore.admin.byRole', 'Кто что может')}</button>
+          <button style={S.segBtn(mode === 'by-object')} onClick={() => setMode('by-object')}>{t('lore.admin.byObject', 'Кто имеет доступ к…')}</button>
+        </span>
+      </div>
+
+      {mode === 'by-role' && (
+        <>
+          <div style={S.tw}>
+            <table style={S.table}>
+              <thead><tr>{['люди · realm-роль', 'что даёт', 'где назначается', 'кому выдана'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <tbody>
+                <tr>
+                  <td style={S.td}><span style={S.pill('var(--dng)')}>super-admin</span></td>
+                  <td style={S.td}>{t('lore.admin.superAdminGives', 'Всё, включая выдачу admin')}</td>
+                  <td style={S.td}>{t('lore.admin.kcConsoleOnly', 'Только консоль Keycloak (D11)')}</td>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{holders('super-admin')}</td>
+                </tr>
+                <tr>
+                  <td style={S.td}><span style={S.pill('var(--dng)')}>admin</span></td>
+                  <td style={S.td}>{t('lore.admin.adminGives', 'Администрирование: люди, словари, настройки, включение auth')}</td>
+                  <td style={S.td}>{t('lore.admin.herePeople', 'Здесь → Люди')}</td>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{holders('admin')}</td>
+                </tr>
+                <tr>
+                  <td style={S.td}><span style={S.pill('var(--t2)')}>viewer</span></td>
+                  <td style={S.td}>{t('lore.admin.viewerGives', 'Только чтение LORE. В администрирование не пускает')}</td>
+                  <td style={S.td}>{t('lore.admin.herePeople', 'Здесь → Люди')}</td>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{holders('viewer')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style={{ height: 12 }} />
+          <div style={S.tw}>
+            <table style={S.table}>
+              <thead><tr>{['агенты · роль', 'label (словарь)', 'что может писать', 'клиент'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {PROFILE_SCOPE.map(([p, allow]) => (
+                  <tr key={p}>
+                    <td style={S.td}><span style={S.pill('var(--inf)')}>agent-{p}</span></td>
+                    <td style={S.td}>{agentRoles.find(r => r.code === p)?.label_ru ?? '—'}</td>
+                    <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{allow}</td>
+                    <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{agentByScope ? (agentByScope[p] ?? '—') : 'н/д'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {mode === 'by-object' && (
+        <>
+          <div style={S.card}>{t('lore.admin.byObjectNote', 'Обратный вопрос — тот, который задают на ревью доступа: кто может трогать вот это? Красным подсвечены операции, доступные только людям (§4 спеки RBAC).')}</div>
+          <div style={S.tw}>
+            <table style={S.table}>
+              <thead><tr>{['что', 'люди', 'агенты'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {REVERSE_MATRIX.map(r => (
+                  <tr key={r.what} style={r.humanOnly ? { background: 'color-mix(in srgb, var(--dng) 7%, transparent)' } : undefined}>
+                    <td style={S.td}>
+                      <b style={{ color: 'var(--t1)' }}>{r.what}</b>{' '}
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{r.api}</span>
+                    </td>
+                    <td style={S.td}>
+                      <span style={S.pill('var(--dng)')}>admin</span>
+                      {r.what === 'Чтение (слайсы)' && <span style={{ ...S.pill('var(--t2)'), marginLeft: 4 }}>viewer</span>}
+                    </td>
+                    <td style={S.td}>
+                      {r.humanOnly
+                        ? <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noAgents', 'никто — запрещено всем агентам, включая agent-full')}</span>
+                        : r.agents.map(a => <span key={a} style={{ ...S.pill('var(--inf)'), marginRight: 4 }}>{a}</span>)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Словари (AL-34/41/42) ────────────────────────────────────────────────────
+const COLOR_TOKENS: [string, string][] = [
+  ['var(--acc)', 'акцент · --acc'], ['var(--suc)', 'успех · --suc'], ['var(--inf)', 'инфо · --inf'],
+  ['var(--wrn)', 'внимание · --wrn'], ['var(--dng)', 'опасность · --dng'], ['var(--t2)', 'приглушённый · --t2'],
+];
+const GAME_ICON_NAMES: string[] = Object.keys((gameIconsData as { icons: Record<string, unknown> }).icons);
+
+function DictsTab({ rows, areaUsage, onError, reload }: {
+  rows: DictRow[]; areaUsage: Record<string, number>; onError: (e: unknown) => void; reload: () => void;
+}) {
+  const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
   const types = useMemo(() => [...new Set(rows.map(r => r.dict_type))].sort(), [rows]);
-  const shown = rows.filter(r => r.dict_type === dt);
-  const canon = CANON_TYPES.has(dt);
+  const dt = params.get('dict') ?? 'area';
+  const setDt = (v: string) => {
+    const p = new URLSearchParams(params); p.set('dict', v); setParams(p, { replace: true });
+  };
+  const [q, setQ] = useState('');
+  const [active, setActive] = useState<'active' | 'all'>('active');
+  const [edit, setEdit] = useState<DictRow | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [confirmCanon, setConfirmCanon] = useState(false);
+  const [confirmDeact, setConfirmDeact] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  async function save() {
+  const all = rows.filter(r => r.dict_type === dt);
+  const shown = all
+    .filter(r => active === 'all' || r.is_active)
+    .filter(r => !q || r.code.includes(q.toLowerCase()) || (r.label_ru ?? '').toLowerCase().includes(q.toLowerCase()));
+  const canon = CANON_TYPES.has(dt);
+  const usage = (code: string): number | null => (dt === 'area' ? (areaUsage[code] ?? 0) : null);
+
+  async function save(activeOverride?: boolean) {
     if (!edit || !edit.code.trim()) { onError(new Error('code обязателен')); return; }
     if (canon && !confirmCanon) return;
     setSaving(true);
@@ -200,67 +731,141 @@ function DictsTab({ onError }: { onError: (e: unknown) => void }) {
         dict_type: dt, code: edit.code.trim(),
         label_ru: edit.label_ru ?? null, label_en: edit.label_en || null,
         color: edit.color || null, icon: edit.icon || null,
-        sort_order: edit.sort_order ?? null, is_active: edit.is_active, is_extensible: null,
+        sort_order: edit.sort_order ?? null,
+        is_active: activeOverride ?? edit.is_active, is_extensible: null,
       });
-      // D5 reconcile (MVP): для area — сколько компонентов ссылаются на код.
-      if (dt === 'area') {
-        const comps = await fetchLoreSlice<{ component_id: string; area: string | null }>('components', {});
-        const n = comps.filter(c => c.area === edit.code.trim()).length;
-        setReconcile(t('lore.admin.reconcileArea', 'reconcile: {{n}} компонентов ссылаются на area «{{code}}»', { n, code: edit.code.trim() }));
-      } else setReconcile(null);
-      setEdit(null); setConfirmCanon(false); setReload(x => x + 1);
+      setEdit(null); setIsNew(false); setConfirmCanon(false); setConfirmDeact(false); reload();
     } catch (e) { onError(e); } finally { setSaving(false); }
   }
+
+  const iconOk = !edit?.icon || iconLoaded(`game-icons:${edit.icon}`);
+  const iconSuggestions = edit?.icon && !iconOk
+    ? GAME_ICON_NAMES.filter(n => n.includes(edit.icon!.toLowerCase())).slice(0, 6)
+    : [];
+  const editUsage = edit ? usage(edit.code) : null;
 
   return (
     <div>
       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
         {types.map(x => <button key={x} style={S.chip(dt === x)} onClick={() => { setDt(x); setEdit(null); }}>{x}</button>)}
       </div>
-      {canon && <div style={S.warn}>{t('lore.admin.canonWarn', '⚠ Канон-словарь (ADR-LORE-010): смена code ломает денормализацию и группировки. Правка label/color/icon — безопасна.')}</div>}
-      {reconcile && <div style={{ ...S.card, color: 'var(--inf)' }}>{reconcile}</div>}
-      <table style={S.table}>
-        <thead><tr>{['code', 'label', 'цвет', 'иконка', 'поряд.', 'акт.', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>
-          {shown.map(r => (
-            <tr key={r.code}>
-              <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td>
-              <td style={S.td}>{r.label_ru ?? '—'}</td>
-              <td style={S.td}><span style={S.sw(r.color)} /> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{r.color ?? ''}</span></td>
-              <td style={S.td}>{r.icon ? <GameIcon slug={r.icon} size={13} /> : '—'}</td>
-              <td style={S.td}>{r.sort_order ?? '—'}</td>
-              <td style={S.td}>{r.is_active ? '✓' : '✗'}</td>
-              <td style={S.td}><button style={S.btn} onClick={() => { setEdit({ ...r }); setConfirmCanon(false); }}>✎</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {canon && <div style={S.warn}>{t('lore.admin.canonWarn', '⚠ Канон-словарь (ADR-LORE-010): значения зашиты в статусы всего корпуса. Правка label/color/icon безопасна; коды здесь не правятся вовсе.')}</div>}
+      <Toolbar q={q} setQ={setQ} shown={shown.length} total={all.length}
+        seg={{ options: [['active', t('lore.admin.fltActive', 'Активные')], ['all', t('lore.admin.fltAll', 'Все')]], value: active, set: v => setActive(v as 'active' | 'all') }} />
+      <div style={S.tw}>
+        <table style={S.table}>
+          <thead><tr>{['код', 'подпись', 'вид', 'использований', 'поряд.', 'акт.', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {shown.map(r => {
+              const u = usage(r.code);
+              return (
+                <tr key={r.code} style={r.is_active ? undefined : { opacity: 0.55 }}>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td>
+                  <td style={S.td}>{r.label_ru ?? '—'}</td>
+                  <td style={S.td}>
+                    {/* AL-34: готовый чип вместо «квадратик + сырой CSS-текст» */}
+                    <span style={S.live(r.color ?? 'var(--t3)')}>
+                      {r.icon ? <GameIcon slug={r.icon} size={13} style={{ color: 'inherit' }} /> : null}
+                      {r.label_ru ?? r.code}
+                    </span>
+                  </td>
+                  <td style={{ ...S.td, ...S.num }} title={u === null ? t('lore.admin.usageNA', 'подсчёт для этого словаря появится с AL-30/SV-10') : undefined}>
+                    {u === null ? <span style={{ color: 'var(--t3)' }}>н/д</span> : <span style={{ color: u ? 'var(--t2)' : 'var(--t3)' }}>{u}</span>}
+                  </td>
+                  <td style={{ ...S.td, ...S.num }}>{r.sort_order ?? '—'}</td>
+                  <td style={S.td}>{r.is_active ? '✓' : '✗'}</td>
+                  <td style={S.td}><button style={S.btn} onClick={() => { setEdit({ ...r }); setIsNew(false); setConfirmCanon(false); setConfirmDeact(false); }}>{t('lore.admin.edit', 'Править')}</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       <div style={{ marginTop: 8 }}>
-        <button style={S.btn} onClick={() => setEdit({ dict_type: dt, code: '', label_ru: '', label_en: null, color: null, icon: null, sort_order: (shown.length + 1) * 10, is_active: true, is_extensible: true })}>
+        <button style={S.btn} onClick={() => { setEdit({ dict_type: dt, code: '', label_ru: '', label_en: null, color: null, icon: null, sort_order: (all.length + 1) * 10, is_active: true, is_extensible: true }); setIsNew(true); }}>
           {t('lore.admin.addValue', '+ значение')}
         </button>
       </div>
       {edit && (
         <div style={S.form}>
-          <input style={S.input} placeholder="code" value={edit.code} disabled={shown.some(r => r.code === edit.code) && edit.code !== ''}
-            onChange={e => setEdit(f => f && ({ ...f, code: e.target.value }))} />
-          <input style={S.input} placeholder="label_ru" value={edit.label_ru ?? ''} onChange={e => setEdit(f => f && ({ ...f, label_ru: e.target.value }))} />
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input style={{ ...S.input, flex: 1 }} placeholder="color (var(--suc))" value={edit.color ?? ''} onChange={e => setEdit(f => f && ({ ...f, color: e.target.value }))} />
-            <input style={{ ...S.input, flex: 1 }} placeholder="icon (game-icons slug)" value={edit.icon ?? ''} onChange={e => setEdit(f => f && ({ ...f, icon: e.target.value }))} />
-            <input style={{ ...S.input, width: 80 }} type="number" placeholder="order" value={edit.sort_order ?? 0} onChange={e => setEdit(f => f && ({ ...f, sort_order: Number(e.target.value) }))} />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              {t('lore.admin.fCode', 'Код')}
+              {/* AL-41: code — ключ, которым связаны данные; правится только при создании */}
+              <input style={{ ...S.input, fontFamily: 'var(--mono)', ...(isNew ? {} : { background: 'var(--bg3)', color: 'var(--t2)', cursor: 'not-allowed' }) }}
+                value={edit.code} readOnly={!isNew}
+                title={isNew ? undefined : t('lore.admin.codeLocked', 'Ключ — правке не подлежит (OQ-ADMIN-DICT-CODE)')}
+                onChange={e => isNew && setEdit(f => f && ({ ...f, code: e.target.value }))} />
+              {!isNew && <span style={{ textTransform: 'none', letterSpacing: 0 }}>{t('lore.admin.codeLockedHint', 'ключ — правке не подлежит')}</span>}
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              {t('lore.admin.fLabel', 'Подпись')}
+              <input style={S.input} value={edit.label_ru ?? ''} onChange={e => setEdit(f => f && ({ ...f, label_ru: e.target.value }))} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              {t('lore.admin.fColor', 'Цвет')}
+              {/* AL-42: выбор токена темы; смесь/произвольный CSS — в «расширенном» поле */}
+              <select style={S.select} value={COLOR_TOKENS.some(([v]) => v === edit.color) ? edit.color! : '_custom'}
+                onChange={e => { if (e.target.value !== '_custom') setEdit(f => f && ({ ...f, color: e.target.value })); }}>
+                {COLOR_TOKENS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                <option value="_custom">{t('lore.admin.colorCustom', 'расширенный (CSS)…')}</option>
+              </select>
+              <input style={{ ...S.input, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }} placeholder="color-mix(in srgb, var(--acc) 55%, var(--inf))"
+                value={edit.color ?? ''} onChange={e => setEdit(f => f && ({ ...f, color: e.target.value || null }))} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              {t('lore.admin.fIcon', 'Иконка (game-icons)')}
+              <input style={{ ...S.input, fontFamily: 'var(--mono)' }} placeholder="tied-scroll" list="gi-suggest"
+                value={edit.icon ?? ''} onChange={e => setEdit(f => f && ({ ...f, icon: e.target.value || null }))} />
+              <datalist id="gi-suggest">
+                {(edit.icon ? GAME_ICON_NAMES.filter(n => n.includes(edit.icon!.toLowerCase())).slice(0, 20) : []).map(n => <option key={n} value={n} />)}
+              </datalist>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              {t('lore.admin.fOrder', 'Порядок')}
+              <input style={{ ...S.input, width: 70 }} type="number" value={edit.sort_order ?? 0} onChange={e => setEdit(f => f && ({ ...f, sort_order: Number(e.target.value) }))} />
+            </label>
           </div>
-          <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>
-            <input type="checkbox" checked={edit.is_active} onChange={e => setEdit(f => f && ({ ...f, is_active: e.target.checked }))} /> is_active (soft-delete при снятии)
-          </label>
+
+          {/* AL-42: живое превью — цвет и иконка вместе, как они встанут в UI */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', border: '1px solid var(--bd)', borderRadius: 5, background: 'var(--bg1)' }}>
+            <span style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t3)' }}>{t('lore.admin.preview', 'Так это будет выглядеть')}</span>
+            <span style={S.live(edit.color ?? 'var(--t3)')}>
+              {edit.icon && iconOk ? <GameIcon slug={edit.icon} size={14} style={{ color: 'inherit' }} /> : null}
+              {edit.label_ru || edit.code || '—'}
+            </span>
+            {!iconOk && (
+              <span style={{ color: 'var(--dng)', fontSize: 'var(--fs-xs)' }}>
+                ✕ {t('lore.admin.iconBad', 'иконки с таким именем нет — будет пусто.')}{' '}
+                {iconSuggestions.length > 0 && <>{t('lore.admin.iconMaybe', 'Похожие:')} {iconSuggestions.join(', ')}</>}
+              </span>
+            )}
+          </div>
+
+          {editUsage !== null && editUsage > 0 && (
+            <div style={S.warn}>
+              <b>{t('lore.admin.usageWarn', '{{n}} сущностей несут этот код.', { n: editUsage })}</b>{' '}
+              {t('lore.admin.usageWarn2', 'Изменение цвета/иконки поменяет их вид во всём LORE; деактивация потребует подтверждения.')}
+            </div>
+          )}
           {canon && (
             <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--wrn)' }}>
-              <input type="checkbox" checked={confirmCanon} onChange={e => setConfirmCanon(e.target.checked)} /> {t('lore.admin.canonConfirm', 'Понимаю: это канон-словарь, изменение затрагивает весь корпус')}
+              <input type="checkbox" checked={confirmCanon} onChange={e => setConfirmCanon(e.target.checked)} />{' '}
+              {t('lore.admin.canonConfirm', 'Понимаю: это канон-словарь, изменение затрагивает весь корпус')}
             </label>
           )}
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={S.primary} disabled={saving || (canon && !confirmCanon)} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
-            <button style={S.btn} onClick={() => { setEdit(null); setConfirmCanon(false); }}>{t('lore.admin.cancel', 'Отмена')}</button>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button style={S.primary} disabled={saving || (canon && !confirmCanon)} onClick={() => save()}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
+            <button style={S.btn} onClick={() => { setEdit(null); setIsNew(false); setConfirmCanon(false); setConfirmDeact(false); }}>{t('lore.admin.cancel', 'Отмена')}</button>
+            {!isNew && edit.is_active && (
+              <span style={{ marginLeft: 'auto' }}>
+                {confirmDeact
+                  ? <button style={S.danger} disabled={saving || (canon && !confirmCanon)} onClick={() => save(false)}>
+                      {t('lore.admin.deactConfirm', 'Точно деактивировать{{u}}?', { u: editUsage ? ` (${editUsage} использований)` : '' })}
+                    </button>
+                  : <button style={S.danger} onClick={() => setConfirmDeact(true)}>{t('lore.admin.deact', 'Деактивировать…')}</button>}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -268,15 +873,15 @@ function DictsTab({ onError }: { onError: (e: unknown) => void }) {
   );
 }
 
-function ProjectsTab({ onError }: { onError: (e: unknown) => void }) {
+// ── Проекты ──────────────────────────────────────────────────────────────────
+function ProjectsTab({ rows, sprints, onError, reload }: {
+  rows: ProjRow[]; sprints: Record<string, number>; onError: (e: unknown) => void; reload: () => void;
+}) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<ProjRow[]>([]);
+  const [q, setQ] = useState('');
   const [edit, setEdit] = useState<ProjRow | null>(null);
   const [hosts, setHosts] = useState<HostRow[]>([]);
   const [saving, setSaving] = useState(false);
-  const [reload, setReload] = useState(0);
-
-  useEffect(() => { fetchLoreSlice<ProjRow>('git_projects', {}).then(setRows).catch(onError); }, [onError, reload]);
 
   function startEdit(p: ProjRow) {
     setEdit({ ...p });
@@ -291,28 +896,34 @@ function ProjectsTab({ onError }: { onError: (e: unknown) => void }) {
         hosts: hosts.length ? JSON.stringify(hosts) : null,
         default_branch: edit.default_branch || null,
       });
-      setEdit(null); setReload(x => x + 1);
+      setEdit(null); reload();
     } catch (e) { onError(e); } finally { setSaving(false); }
   }
   const setHost = (i: number, k: keyof HostRow, v: string) => setHosts(hs => hs.map((h, j) => j === i ? { ...h, [k]: v } : h));
 
+  const shown = rows.filter(p => !q || p.slug.toLowerCase().includes(q.toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.toLowerCase()));
   return (
     <div>
-      <table style={S.table}>
-        <thead><tr>{['slug', 'name', 'branch', 'private', 'hosts', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>
-          {rows.map(p => (
-            <tr key={p.slug}>
-              <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{p.slug}</td>
-              <td style={S.td}>{p.name ?? '—'}</td>
-              <td style={S.td}>{p.default_branch ?? '—'}</td>
-              <td style={S.td}>{p.is_private ? '🔒' : '—'}</td>
-              <td style={S.td}>{p.hosts ? (() => { try { return (JSON.parse(p.hosts) as HostRow[]).map(h => h.remote).join(', '); } catch { return '⚠ bad JSON'; } })() : '—'}</td>
-              <td style={S.td}><button style={S.btn} onClick={() => startEdit(p)}>✎</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
+      <div style={S.tw}>
+        <table style={S.table}>
+          <thead><tr>{['slug', 'имя', 'branch', 'хосты', 'спринтов', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {shown.map(p => (
+              <tr key={p.slug}>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{p.slug}</td>
+                <td style={S.td}>{p.name ?? '—'}</td>
+                <td style={S.td}>{p.default_branch ?? '—'}</td>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+                  {p.hosts ? (() => { try { return (JSON.parse(p.hosts) as HostRow[]).map(h => h.remote).join(' · '); } catch { return '⚠ bad JSON'; } })() : '—'}
+                </td>
+                <td style={{ ...S.td, ...S.num }}><span style={{ color: sprints[p.slug] ? 'var(--t2)' : 'var(--t3)' }}>{sprints[p.slug] ?? 0}</span></td>
+                <td style={S.td}><button style={S.btn} onClick={() => startEdit(p)}>{t('lore.admin.edit', 'Править')}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {edit && (
         <div style={S.form}>
           <div style={{ fontFamily: 'var(--mono)', color: 'var(--acc)' }}>{edit.slug}</div>
@@ -344,206 +955,45 @@ function ProjectsTab({ onError }: { onError: (e: unknown) => void }) {
   );
 }
 
-// ── Пользователи (люди: realm-роли, KC-мост) ────────────────────────────────
-// D11: паролей здесь нет — создание отдаёт пользователя в KC (reset-link).
-// D12: только человеческий admin; эскалация до super-admin — вне моста.
-function UsersTab({ onError }: { onError: (e: unknown) => void }) {
+// ── Теги (AL-40: поиск/сортировка по 93 строкам) ────────────────────────────
+function TagsTab({ know, lore }: { know: TagRow[]; lore: TagRow[] }) {
   const { t } = useTranslation();
-  const [st, setSt] = useState<KcState<KcUser>>({ k: 'loading' });
-  const [reload, setReload] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const [nu, setNu] = useState<{ username: string; email: string } | null>(null);
-  const [confirmAdmin, setConfirmAdmin] = useState<string | null>(null); // userId, кому даём admin
-
-  useEffect(() => { loadKc<KcUser>('/lore/kc/users').then(setSt); }, [reload]);
-  const rows = st.k === 'ok' ? st.rows : [];
-
-  async function setRole(id: string, role: string, action: 'add' | 'remove') {
-    setBusy(true);
-    try { await loreMutate(`/kc/user/${id}/role`, { role, action }); setReload(x => x + 1); setConfirmAdmin(null); }
-    catch (e) { onError(e); } finally { setBusy(false); }
-  }
-  async function create() {
-    if (!nu?.username.trim()) return;
-    setBusy(true);
-    try { await loreMutate('/kc/user', { username: nu.username.trim(), email: nu.email.trim() || null }); setNu(null); setReload(x => x + 1); }
-    catch (e) { onError(e); } finally { setBusy(false); }
-  }
-
-  // AL-31: не-ok исходы (403/503/сеть) заменяют таблицу целиком — иначе экран
-  // предлагает «завести первого» там, где на самом деле отказ или мёртвый мост.
-  if (st.k !== 'ok') return (
-    <div>
-      <div style={S.card}>{t('lore.admin.usersNote', 'Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).')}</div>
-      <KcStateView s={st} empty={null} />
-    </div>
-  );
-  return (
-    <div>
-      <div style={S.card}>{t('lore.admin.usersNote', 'Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).')}</div>
-      <table style={S.table}>
-        <thead><tr>{['логин', 'email', 'вкл', 'роли', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>
-          {(rows ?? []).map(u => (
-            <tr key={u.id}>
-              <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{u.username}</td>
-              <td style={S.td}>{u.email ?? '—'}</td>
-              <td style={S.td}>{u.enabled ? '✓' : '✗'}</td>
-              <td style={S.td}>
-                {(u.roles ?? []).filter(r => ['admin', 'super-admin', 'viewer'].includes(r)).map(r => (
-                  <span key={r} style={{ ...S.chip(true), marginRight: 4 }}>
-                    {r}{r !== 'super-admin' && <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
-                      disabled={busy} onClick={() => setRole(u.id, r, 'remove')}> ✕</button>}
-                  </span>
-                ))}
-              </td>
-              <td style={S.td}>
-                {!u.roles?.includes('viewer') && <button style={S.btn} disabled={busy} onClick={() => setRole(u.id, 'viewer', 'add')}>+viewer</button>}{' '}
-                {!u.roles?.includes('admin') && (confirmAdmin === u.id
-                  ? <button style={S.primary} disabled={busy} onClick={() => setRole(u.id, 'admin', 'add')}>{t('lore.admin.confirmAdmin', 'точно admin?')}</button>
-                  : <button style={S.btn} disabled={busy} onClick={() => setConfirmAdmin(u.id)}>+admin</button>)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {rows.length === 0 && (
-        <div style={S.state('neutral')}>
-          <div style={S.stateH('neutral')}>{t('lore.admin.noUsersH', 'Ни одного человека ещё не заведено')}</div>
-          <div>{t('lore.admin.noUsersB', 'Keycloak отвечает нормально, в realm просто нет учётных записей. Заведите себя первой — ДО включения аутентификации: она отключит доступ по конфигу, и войти станет некому.')}</div>
-          <code style={S.stateCode}>GET /lore/kc/users → 200 · []</code>
+  const [q, setQ] = useState('');
+  const [sort, setSort] = useState<'uses' | 'alpha'>('uses');
+  const list = (title: string, rows: TagRow[]) => {
+    const shown = rows
+      .filter(r => !q || r.tag_id.toLowerCase().includes(q.toLowerCase()))
+      .sort((a, b) => sort === 'uses' ? b.uses - a.uses : a.tag_id.localeCompare(b.tag_id));
+    return (
+      <div style={{ flex: 1, minWidth: 240 }}>
+        <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>
+          {title} · {shown.length}/{rows.length}
         </div>
-      )}
-      <div style={{ marginTop: 8 }}>
-        {nu ? (
-          <div style={S.form}>
-            <input style={S.input} placeholder="логин" value={nu.username} onChange={e => setNu(v => v && ({ ...v, username: e.target.value }))} />
-            <input style={S.input} placeholder="email (опц.)" value={nu.email} onChange={e => setNu(v => v && ({ ...v, email: e.target.value }))} />
-            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{t('lore.admin.noPassNote', 'Пароль задаётся в Keycloak (reset-link/консоль) — LORE его не принимает и не хранит.')}</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button style={S.primary} disabled={busy} onClick={create}>{busy ? '…' : t('lore.admin.create', 'Создать')}</button>
-              <button style={S.btn} onClick={() => setNu(null)}>{t('lore.admin.cancel', 'Отмена')}</button>
-            </div>
-          </div>
-        ) : <button style={S.btn} onClick={() => setNu({ username: '', email: '' })}>{t('lore.admin.addUser', '+ пользователь')}</button>}
+        <div style={S.tw}>
+          <table style={S.table}>
+            <thead><tr><th style={S.th}>тег</th><th style={S.th}>использований</th></tr></thead>
+            <tbody>
+              {shown.map(r => (
+                <tr key={r.tag_id} style={r.uses === 0 ? { opacity: 0.55 } : undefined}>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.tag_id}</td>
+                  <td style={{ ...S.td, ...S.num }}>
+                    {r.uses}{r.uses === 0 && <span style={{ color: 'var(--t3)', fontFamily: 'inherit' }}> · {t('lore.admin.tagOrphan', 'кандидат на удаление')}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
-}
-
-// ── Агенты (client-роли: ось агентов) — read + ротация секрета ──────────────
-function AgentsTab({ onError }: { onError: (e: unknown) => void }) {
-  const { t } = useTranslation();
-  const [st, setSt] = useState<KcState<KcAgent>>({ k: 'loading' });
-  const [secret, setSecret] = useState<{ client: string; value: string } | null>(null);
-  const [confirm, setConfirm] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => { loadKc<KcAgent>('/lore/kc/agents').then(setSt); }, []);
-  const rows = st.k === 'ok' ? st.rows : [];
-
-  async function rotate(a: KcAgent) {
-    setBusy(true);
-    try {
-      const res = await loreMutate<{ value?: string }>(`/kc/agent/${a.id}/rotate`, {});
-      setSecret({ client: a.clientId, value: res?.value ?? '(секрет не возвращён)' });
-      setConfirm(null);
-    } catch (e) { onError(e); } finally { setBusy(false); }
-  }
-
-  const note = <div style={S.card}>{t('lore.admin.agentsNote', 'AI-агенты — client-роли сервис-аккаунтов (ось «агенты», клейм agent_scope). Провижинятся скриптом, не заводятся руками. Ротация показывает секрет ОДИН раз — LORE его не хранит.')}</div>;
-  if (st.k !== 'ok') return <div>{note}<KcStateView s={st} empty={null} /></div>;
+    );
+  };
   return (
     <div>
-      {note}
-      <NotEnforcedNotice />
-      {secret && (
-        <div style={{ ...S.warn, color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)' }}>
-          <div>{t('lore.admin.newSecret', 'Новый секрет {{c}} — скопируйте сейчас, больше не покажем:', { c: secret.client })}</div>
-          <code style={{ fontSize: 'var(--fs-sm)', wordBreak: 'break-all' }}>{secret.value}</code>
-          <div><button style={S.btn} onClick={() => setSecret(null)}>{t('lore.admin.hide', 'скрыть')}</button></div>
-        </div>
-      )}
-      <table style={S.table}>
-        <thead><tr>{['клиент', 'agent_scope', 'вкл', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>
-          {(rows ?? []).map(a => (
-            <tr key={a.id}>
-              <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{a.clientId}</td>
-              <td style={S.td}>
-                {(a.agent_scope ?? []).length
-                  ? a.agent_scope.map(s => <span key={s} style={{ ...S.chip(true), marginRight: 4 }}>{s}</span>)
-                  : <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noScope', '— (оси не несёт, легаси)')}</span>}
-              </td>
-              <td style={S.td}>{a.enabled ? '✓' : '✗'}</td>
-              <td style={S.td}>
-                {confirm === a.id
-                  ? <button style={S.primary} disabled={busy} onClick={() => rotate(a)}>{t('lore.admin.confirmRotate', 'точно ротировать?')}</button>
-                  : <button style={S.btn} onClick={() => setConfirm(a.id)}>{t('lore.admin.rotate', 'ротировать секрет')}</button>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// AL-33: экран не имеет права утверждать наличие защиты, которой нет.
-// Матрица ниже — клиентский JSON-вайтлист (SPEC-RBAC-OMILORE-AGENTS §1: «фильтр
-// видимости, не безопасность»). AgentScopeFilter не написан (AL-17) → клейм
-// agent_scope бэкендом не читается вообще. Плашка снимается вместе с R2.
-function NotEnforcedNotice() {
-  const { t } = useTranslation();
-  return (
-    <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>
-      <b>{t('lore.admin.notEnforcedH', 'Права из этой таблицы пока не проверяются.')}</b>{' '}
-      {t('lore.admin.notEnforcedB', 'Клейм agent_scope бэкенд ещё не читает: сейчас это фильтр видимости инструментов, не защита. Включится в R2 — задача AL-17.')}
-    </div>
-  );
-}
-
-function RolesTab({ onError }: { onError: (e: unknown) => void }) {
-  const { t } = useTranslation();
-  const [roles, setRoles] = useState<DictRow[]>([]);
-  useEffect(() => { fetchLoreSlice<DictRow>('dictionary', { dict_type: 'agent_role' }).then(setRoles).catch(onError); }, [onError]);
-  return (
-    <div>
-      <div style={S.card}>{t('lore.admin.rolesNote', 'Read-only (ADR-LORE-025 D6): RBAC-скоуп правится в mcp-server/agent-profiles/*.json, роли-значения — в словаре agent_role.')}</div>
-      <NotEnforcedNotice />
-      <table style={S.table}>
-        <thead><tr>{['роль (словарь)', 'label'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>{roles.map(r => <tr key={r.code}><td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td><td style={S.td}>{r.label_ru ?? '—'}</td></tr>)}</tbody>
-      </table>
-      <div style={{ height: 10 }} />
-      <table style={S.table}>
-        <thead><tr>{['профиль', 'allow (write)'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>{PROFILE_SCOPE.map(([p, a]) => <tr key={p}><td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{p}</td><td style={S.td}>{a}</td></tr>)}</tbody>
-      </table>
-    </div>
-  );
-}
-
-function TagsTab({ onError }: { onError: (e: unknown) => void }) {
-  const { t } = useTranslation();
-  const [know, setKnow] = useState<TagRow[]>([]);
-  const [lore, setLore] = useState<TagRow[]>([]);
-  useEffect(() => {
-    fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnow).catch(onError);
-    fetchLoreSlice<TagRow>('lore_tags_usage', {}).then(setLore).catch(() => { /* optional */ });
-  }, [onError]);
-  const list = (title: string, rows: TagRow[]) => (
-    <div style={{ flex: 1, minWidth: 220 }}>
-      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>{title}</div>
-      <table style={S.table}>
-        <thead><tr><th style={S.th}>тег</th><th style={S.th}>использований</th></tr></thead>
-        <tbody>{rows.map(r => <tr key={r.tag_id}><td style={S.td}>{r.tag_id}</td><td style={S.td}>{r.uses}</td></tr>)}</tbody>
-      </table>
-    </div>
-  );
-  return (
-    <div>
-      <div style={S.card}>{t('lore.admin.tagsNote', 'Read-only (D6): слияние/переименование — 2-я итерация (миграция рёбер TAGGED_WITH).')}</div>
+      <div style={S.card}>{t('lore.admin.tagsNote', 'Read-only (D6): слияние/переименование — 2-я итерация (миграция рёбер TAGGED_WITH, AL-29 ждёт решения владельца).')}</div>
+      <Toolbar q={q} setQ={setQ}
+        shown={know.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length + lore.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length}
+        total={know.length + lore.length}
+        seg={{ options: [['uses', t('lore.admin.byUses', 'По использованию')], ['alpha', t('lore.admin.byAlpha', 'По алфавиту')]], value: sort, set: v => setSort(v as 'uses' | 'alpha') }} />
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {list('KnowTag (ADR/решения/задачи)', know)}
         {list('LoreTag (темы вопросов)', lore)}
@@ -552,73 +1002,156 @@ function TagsTab({ onError }: { onError: (e: unknown) => void }) {
   );
 }
 
-// AL-19: настройки app-level — редактируемые (dict_type=app_setting, механизм
-// ADR-012, дефолт-предложение ОВ OQ-ADMIN-APPSETTING). Вкладка перестаёт быть
-// витриной: code = ключ настройки, label_ru = значение, пишется тем же
-// /lore/dict/entry, что и остальные словари (D4 — один контракт с MCP).
-function SettingsTab({ onError }: { onError: (e: unknown) => void }) {
+// ── Настройки (AL-38 + чеклист AL-35 + отказы AL-45) ────────────────────────
+function SettingsTab({ dicts, preflight, onError, reload }: {
+  dicts: DictRow[]; preflight: Preflight | null; onError: (e: unknown) => void; reload: () => void;
+}) {
   const { t } = useTranslation();
   const role = useRole();
-  const [rows, setRows] = useState<DictRow[]>([]);
-  const [edit, setEdit] = useState<{ code: string; value: string; isNew: boolean } | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [denials, setDenials] = useState<Denial[] | null>(null);
 
   useEffect(() => {
-    fetchLoreSlice<DictRow>('dictionary', { dict_type: 'app_setting' })
-      .then(setRows).catch(onError);
-  }, [onError, reload]);
+    loadKcObj<{ denials: Denial[] }>('/lore/kc/denials').then(r => setDenials(r?.denials ?? null));
+  }, []);
 
-  async function save() {
-    if (!edit?.code.trim()) return;
-    setSaving(true);
+  const settings = dicts.filter(r => r.dict_type === 'app_setting' && r.is_active);
+  const known = settings.filter(s => KNOWN_SETTINGS.some(k => k.key === s.code));
+  const unknown = settings.filter(s => !KNOWN_SETTINGS.some(k => k.key === s.code));
+
+  async function removeUnknown(code: string) {
+    setBusy(true);
     try {
-      await loreMutate('/dict/entry', {
-        dict_type: 'app_setting', code: edit.code.trim(), label_ru: edit.value,
-        sort_order: null, is_active: true, is_extensible: true,
-      });
-      setEdit(null); setReload(x => x + 1);
-    } catch (e) { onError(e); } finally { setSaving(false); }
+      await loreMutate('/dict/entry', { dict_type: 'app_setting', code, is_active: false, label_ru: null, label_en: null, color: null, icon: null, sort_order: null, is_extensible: null });
+      reload();
+    } catch (e) { onError(e); } finally { setBusy(false); }
   }
+
+  const pf = preflight;
+  const checks: { ok: boolean; title: string; sub: string }[] = pf ? [
+    {
+      ok: pf.admin_count > 0,
+      title: t('lore.admin.chkAdmins', 'Есть хотя бы один человек с ролью admin'),
+      sub: pf.admin_count === -1
+        ? t('lore.admin.chkAdminsUnknown', 'Число админов неизвестно: KC-мост не настроен или не ответил.')
+        : t('lore.admin.chkAdminsN', 'Сейчас: {{n}}. Заведите себя на вкладке «Люди» и назначьте admin.', { n: pf.admin_count }),
+    },
+    {
+      ok: pf.kc_configured && pf.kc_reachable,
+      title: t('lore.admin.chkKc', 'Keycloak доступен'),
+      sub: pf.kc_configured
+        ? (pf.kc_reachable ? t('lore.admin.chkKcOk', 'Мост отвечает.') : `KC не ответил: ${pf.kc_error}`)
+        : t('lore.admin.chkKcOff', 'KC_ADMIN_CLIENT_SECRET не задан.'),
+    },
+    {
+      ok: pf.agent_scope_enforced,
+      title: t('lore.admin.chkScope', 'Права агентов проверяются на бэкенде'),
+      sub: t('lore.admin.chkScopeSub', 'AgentScopeFilter ещё не включён (AL-17): после включения auth агенты пройдут в любое семейство.'),
+    },
+  ] : [];
 
   return (
     <div>
-      <div style={S.card}>
-        {t('lore.admin.setsNote', 'App-level настройки живут значениями словаря (dict_type=app_setting) — тот же путь записи, что у остальных словарей и MCP. Ниже — рабочая правка; серые карточки — состояние среды, оно задаётся не здесь.')}
-      </div>
-      <table style={S.table}>
-        <thead><tr>{['ключ', 'значение', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
-        <tbody>
-          {rows.map(r => (
-            <tr key={r.code}>
-              <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td>
-              <td style={S.td}>{r.label_ru ?? '—'}</td>
-              <td style={S.td}><button style={S.btn} onClick={() => setEdit({ code: r.code, value: r.label_ru ?? '', isNew: false })}>✎</button></td>
-            </tr>
-          ))}
-          {!rows.length && <tr><td style={S.td} colSpan={3}>{t('lore.admin.noSets', 'Настроек пока нет — добавьте первую')}</td></tr>}
-        </tbody>
-      </table>
-      <div style={{ marginTop: 8 }}>
-        <button style={S.btn} onClick={() => setEdit({ code: '', value: '', isNew: true })}>{t('lore.admin.addSet', '+ настройка')}</button>
-      </div>
-      {edit && (
-        <div style={S.form}>
-          <input style={S.input} placeholder="ключ, напр. default_palette" value={edit.code}
-            disabled={!edit.isNew} onChange={e => setEdit(v => v && ({ ...v, code: e.target.value }))} />
-          <input style={S.input} placeholder="значение, напр. amber" value={edit.value}
-            onChange={e => setEdit(v => v && ({ ...v, value: e.target.value }))} />
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={S.primary} disabled={saving || !edit.code.trim()} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
-            <button style={S.btn} onClick={() => setEdit(null)}>{t('lore.admin.cancel', 'Отмена')}</button>
+      <h3 style={{ fontSize: 'var(--fs-md)', margin: '0 0 6px' }}>{t('lore.admin.authBlockH', 'Включение аутентификации')}</h3>
+      {pf ? (
+        <>
+          {!pf.can_enable_auth && (
+            <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>
+              <b>{t('lore.admin.cantEnableH', 'Включать auth сейчас нельзя.')}</b> {pf.hint}
+            </div>
+          )}
+          <div style={{ border: '1px solid var(--bd)', borderRadius: 6, padding: '2px 12px', marginBottom: 8 }}>
+            {checks.map(c => (
+              <div key={c.title} style={S.check}>
+                <span style={S.mark(c.ok)}>{c.ok ? '✓' : '✕'}</span>
+                <span>
+                  <b style={{ color: 'var(--t1)' }}>{c.title}</b>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{c.sub}</div>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 18, flexWrap: 'wrap' }}>
+            <button style={{ ...S.primary, opacity: pf.can_enable_auth ? 1 : 0.45, cursor: pf.can_enable_auth ? 'pointer' : 'not-allowed' }} disabled>
+              {t('lore.admin.enableAuth', 'Включить аутентификацию')}
+            </button>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>
+              {t('lore.admin.enableAuthNote', 'Сам флип — env (LORE_AUTH_ENABLED=true) + рестарт по RUNBOOK-AUTH-OMILORE, все флаги вместе (AL-12 — владелец лично). Кнопка станет активной формой, когда появится рантайм-ручка.')}
+            </span>
+          </div>
+        </>
+      ) : (
+        <div style={S.card}>{t('lore.admin.pfLoading', 'Проверки грузятся (или KC-мост недоступен — тогда чеклист покажет это явно после ответа).')}</div>
+      )}
+
+      <h3 style={{ fontSize: 'var(--fs-md)', margin: '0 0 6px' }}>{t('lore.admin.paramsH', 'Параметры приложения')}</h3>
+      {KNOWN_SETTINGS.length === 0 && (
+        <div style={S.card}>
+          {t('lore.admin.noKnownSettings', 'Приложение пока не читает ни одного ключа app_setting — реестр известных параметров пуст (AL-38). Появится реальный параметр → он получит здесь строку с типом, дефолтом и описанием; свободного ввода ключей больше нет: выдуманный ключ не прочитает никто.')}
+        </div>
+      )}
+      {known.length > 0 && (
+        <div style={S.tw}>
+          <table style={S.table}>
+            <thead><tr>{['ключ', 'значение', 'описание'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>{known.map(s => (
+              <tr key={s.code}>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{s.code}</td>
+                <td style={S.td}>{s.label_ru}</td>
+                <td style={S.td}>{KNOWN_SETTINGS.find(k => k.key === s.code)?.descr}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+      {unknown.length > 0 && (
+        <div style={{ ...S.warn, marginTop: 10 }}>
+          <b>{t('lore.admin.unknownH', 'Неопознанные значения · {{n}}', { n: unknown.length })}</b>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)', margin: '4px 0 8px' }}>
+            {t('lore.admin.unknownB', 'Эти ключи лежат в базе (dict_type=app_setting), но приложение их не читает — скорее всего, остались от ручной правки. Удаление ни на что не повлияет (soft-delete: is_active=false).')}
+          </div>
+          <div style={S.tw}>
+            <table style={S.table}>
+              <thead><tr>{['ключ', 'значение', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+              <tbody>{unknown.map(s => (
+                <tr key={s.code}>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{s.code}</td>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{s.label_ru}</td>
+                  <td style={S.td}><button style={S.danger} disabled={busy} onClick={() => removeUnknown(s.code)}>{t('lore.admin.remove', 'Удалить')}</button></td>
+                </tr>
+              ))}</tbody>
+            </table>
           </div>
         </div>
       )}
 
+      <h3 style={{ fontSize: 'var(--fs-md)', margin: '18px 0 6px' }}>{t('lore.admin.denialsH', 'Последние отказы доступа')}</h3>
+      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 6 }}>
+        {t('lore.admin.denialsSrc', 'Источник: память процесса с последнего рестарта (кольцевой буфер, AL-45). Долговременный аудит по осям — AL-20.')}
+      </div>
+      {denials === null && <div style={S.card}>{t('lore.admin.denialsNA', 'Недоступно (нужна роль admin или бэкенд старой версии).')}</div>}
+      {denials !== null && denials.length === 0 && <div style={S.card}>{t('lore.admin.denialsEmpty', 'С последнего рестарта отказов не было.')}</div>}
+      {denials !== null && denials.length > 0 && (
+        <div style={S.tw}>
+          <table style={S.table}>
+            <thead><tr>{['когда', 'метод', 'путь', 'статус', 'ошибка', 'роль'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <tbody>{denials.slice(0, 30).map((d, i) => (
+              <tr key={i}>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', whiteSpace: 'nowrap' }}>{d.ts.replace('T', ' ').slice(0, 19)}</td>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{d.method}</td>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{d.path}</td>
+                <td style={{ ...S.td, color: 'var(--dng)', fontFamily: 'var(--mono)' }}>{d.status}</td>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{d.error || '—'}</td>
+                <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{d.role}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+
       <div style={{ height: 12 }} />
-      <div style={{ ...S.card, opacity: 0.75 }}><b>{t('lore.admin.setAuth', 'Auth')}:</b> {AUTH_ENABLED ? 'включён (JWT, роль из seer_roles)' : 'выключен — dev-режим, роль из конфига (VITE_LORE_ROLE)'} · {t('lore.admin.roleNow', 'текущая роль')}: <b>{role}</b></div>
+      <div style={{ ...S.card, opacity: 0.75 }}><b>Auth:</b> {AUTH_ENABLED ? 'включён (JWT, роль из seer_roles)' : 'выключен — dev-режим, роль из конфига (VITE_LORE_ROLE)'} · {t('lore.admin.roleNow', 'текущая роль')}: <b>{role}</b></div>
       <div style={{ ...S.card, opacity: 0.75 }}><b>LORE_ACTIVE_PROJECT:</b> {t('lore.admin.setProj', 'сессионный дефолт проекта MCP-процесса (env, ADR-LORE-017) — задаётся в .mcp.json/OpenCode-конфиге, из UI не читается')}</div>
-      <div style={{ ...S.card, opacity: 0.75 }}><b>{t('lore.admin.setEnable', 'Включение auth')}:</b> {t('lore.admin.setEnableNote', 'AL-12 — только после проверки администрирования; все флаги вместе по RUNBOOK-AUTH-OMILORE')}</div>
     </div>
   );
 }
