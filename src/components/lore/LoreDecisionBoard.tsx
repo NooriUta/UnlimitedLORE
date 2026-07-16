@@ -233,7 +233,7 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
               </span>
             : <span style={S.parentChip} title={d.parent_adr}>{d.parent_adr}</span>
         ) : (
-          <span style={S.orphanChip} title={t('lore.decisionBoard.parentOrphan', 'сирота')}>
+          <span style={S.orphanChip} title={t('lore.decisionBoard.parentOrphan', 'Независимые')}>
             <OrphanIcon size={10} />
           </span>
         )}
@@ -300,7 +300,7 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
               onRemove: () => setCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
             })),
             ...(parentFilter !== 'all' ? [{
-              key: 'p', label: parentFilter === 'has' ? t('lore.decisionBoard.parentHas', 'есть ADR') : t('lore.decisionBoard.parentOrphan', 'сирота'),
+              key: 'p', label: parentFilter === 'has' ? t('lore.decisionBoard.parentHas', 'Под ADR') : t('lore.decisionBoard.parentOrphan', 'Независимые'),
               onRemove: () => setParentFilter('all'),
             } as FilterTagData] : []),
           ]}
@@ -330,11 +330,11 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
               </div>
             )}
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
-              <span style={dimLbl}>{t('lore.decisionBoard.parentLabel', 'Родитель')}</span>
-              <Chip label={t('lore.decisionBoard.parentHas', 'есть ADR')} pressed={parentFilter === 'has'}
+              <span style={dimLbl}>{t('lore.decisionBoard.parentLabel', 'Привязка к ADR')}</span>
+              <Chip label={t('lore.decisionBoard.parentHas', 'Под ADR')} pressed={parentFilter === 'has'}
                 onClick={() => setParentFilter(p => p === 'has' ? 'all' : 'has')} count={rows.length - orphanCount} />
               <Chip
-                label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><OrphanIcon />{t('lore.decisionBoard.parentOrphan', 'сирота')}</span>}
+                label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><OrphanIcon />{t('lore.decisionBoard.parentOrphan', 'Независимые')}</span>}
                 pressed={parentFilter === 'orphan'}
                 onClick={() => setParentFilter(p => p === 'orphan' ? 'all' : 'orphan')} count={orphanCount} />
             </div>
