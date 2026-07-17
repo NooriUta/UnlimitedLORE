@@ -123,6 +123,60 @@ final class LoreSchemaMigrations {
         // V4 первой редакции брал LIMIT 5000 БЕЗ цикла — на живой БД KnowTaskHist
         // упёрся в лимит, хвост остался без хэша. Выпущенный шаг неизменяем
         // (checksum-гард) — добор оформлен новым шагом, backfill теперь циклом.
-        new Step(5, "java__backfill_content_hash_tail", List.of())
+        new Step(5, "java__backfill_content_hash_tail", List.of()),
+        // ADR-LORE-022 (ACCEPTED 2026-07-17): продуктовый слой Feature → UC +
+        // ось work_class. Feature/UC — vertex-only (без Hist, как KnowDecision/
+        // KnowQuestion); work_class — на ВЕРШИНЕ KnowTask (carry-forward ловушка
+        // Hist, ADR-021). Словарь work_class — канон (правят люди, D10) — сидится
+        // идемпотентными UPSERT'ами здесь же.
+        new Step(6, "product_layer_feature_uc_workclass", List.of(
+            "CREATE VERTEX TYPE KnowFeature IF NOT EXISTS",
+            "CREATE PROPERTY KnowFeature.feature_id   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFeature.title        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFeature.body_md      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFeature.status       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFeature.component_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFeature.context_md   IF NOT EXISTS STRING", // D13: большое контекстное поле, как у спринта
+            "CREATE PROPERTY KnowFeature.date_created IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowFeature (feature_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowFeature (title)   FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowFeature (body_md)    FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowFeature (context_md) FULL_TEXT",
+            "CREATE VERTEX TYPE KnowUseCase IF NOT EXISTS",
+            "CREATE PROPERTY KnowUseCase.uc_id         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.title         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.scenario_md   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.acceptance_md IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.status        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.feature_id    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.date_created  IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (uc_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (feature_id) NOTUNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (title)         FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (scenario_md)   FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (acceptance_md) FULL_TEXT",
+            "CREATE EDGE TYPE DECOMPOSES_INTO IF NOT EXISTS", // KnowFeature -> KnowUseCase
+            "CREATE EDGE TYPE REALIZES        IF NOT EXISTS", // KnowTask    -> KnowUseCase
+            "CREATE EDGE TYPE TRACED_TO       IF NOT EXISTS", // KnowUseCase -> KnowADR | KnowDecision (опц., D9)
+            // D12: актор — первоклассная вершина («проектируемая роль приложения»),
+            // у UC акторов может быть НЕСКОЛЬКО (multi-ребро HAS_ACTOR).
+            "CREATE VERTEX TYPE KnowActor IF NOT EXISTS",
+            "CREATE PROPERTY KnowActor.actor_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowActor.name     IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowActor.kind     IF NOT EXISTS STRING", // human-role | system | agent
+            "CREATE PROPERTY KnowActor.body_md  IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (actor_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (body_md) FULL_TEXT",
+            "CREATE EDGE TYPE HAS_ACTOR   IF NOT EXISTS", // KnowUseCase -> KnowActor (multi)
+            // D13: граф UC не только иерархия — классические include/extend.
+            "CREATE EDGE TYPE UC_INCLUDES IF NOT EXISTS", // UC -> UC (обязательный под-сценарий)
+            "CREATE EDGE TYPE UC_EXTENDS  IF NOT EXISTS", // UC -> UC (вариант-расширение)
+            "CREATE PROPERTY KnowTask.work_class IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowTask (work_class) NOTUNIQUE",
+            // Сид канон-словаря work_class (идемпотентно; канон — правят люди, D10).
+            "UPDATE KnowDictEntry SET dict_type='work_class', code='uc',  label_ru='Use Case — реализует сценарий', color='#5AB4E8', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='work_class' AND code='uc'",
+            "UPDATE KnowDictEntry SET dict_type='work_class', code='jtd', label_ru='Job to be Done — задача-хелпер', color='#C0A36E', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='work_class' AND code='jtd'",
+            "UPDATE KnowDictEntry SET dict_type='work_class', code='enb', label_ru='Enabler — расчищает дорогу', color='#9A8CDB', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='work_class' AND code='enb'"
+        ))
     );
 }

@@ -50,7 +50,9 @@ class LoreSchemaMigrationsTest {
         // (или прогон на живой БД, где DDL уже исполнялся out-of-band) безвреден.
         for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS) {
             for (String sql : s.sql()) {
-                assertTrue(sql.contains("IF NOT EXISTS"),
+                // Две легальные формы идемпотентности: DDL c IF NOT EXISTS и
+                // data-seed через UPSERT WHERE (повторный прогон обновляет ту же строку).
+                assertTrue(sql.contains("IF NOT EXISTS") || sql.contains("UPSERT WHERE"),
                     "V" + s.version() + ": не-идемпотентный стейтмент: " + sql);
             }
         }
