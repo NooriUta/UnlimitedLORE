@@ -1459,6 +1459,34 @@ export function registerLoreWrite(server: McpServer): void {
   // BragiAsset (paths /lore/bragi/asset/upload, /lore/bragi/asset), not KnowDoc —
   // renamed to match what they actually touch; flagged as an ADR-text inconsistency
   // to fix separately (not a code bug), see MIGRATION.md.
+  // ADR-LORE-031 (PL-22): generic-ассет для MD-поля ЛЮБОЙ сущности. В отличие от
+  // bragi_asset_up (плоский bragi/{uuid}, отдельный attach-вызов), здесь ключ —
+  // контент-адрес {entity_type}/{entity_id}/{sha256-16}.{ext}, а вершина KnowAsset
+  // и ребро ATTACHED_TO создаются тем же запросом: ассет-сирота невозможен.
+  server.tool(
+    'asset_up',
+    'Upload a base64-encoded image and attach it to an existing LORE entity in one call (ADR-LORE-031). ' +
+      'Key is content-addressed ({entity_type}/{entity_id}/{sha256-16}.{ext}) — re-uploading identical bytes ' +
+      'dedupes to the same key. The response carries `md` — a ready ![alt](url) snippet to paste into the ' +
+      'entity\'s *_md body (MartProse renders it). Fails 404 if the entity does not exist (nothing is written), ' +
+      '400 on non-image mime, 409 when md_images_enabled=false in admin settings.',
+    {
+      entity_type: z.enum(['adr', 'sprint', 'task', 'feature', 'uc', 'actor', 'component',
+        'spec', 'doc', 'runbook', 'question', 'decision', 'milestone']),
+      entity_id: z.string().describe('key of the target entity, e.g. "ADR-LORE-031" or "SPRINT_X/T-1"'),
+      filename: z.string().describe('original filename, e.g. "vp-canvas.svg" — extension comes from mime, not from here'),
+      base64_data: z.string().describe('raw file bytes, base64-encoded (no data: URI prefix)'),
+      content_type: z.string().describe('image/png | image/jpeg | image/webp | image/gif | image/svg+xml'),
+      alt: z.string().optional().describe('alt-текст — попадает в готовый md-сниппет'),
+    },
+    async ({ entity_type, entity_id, filename, base64_data, content_type, alt }) => {
+      try {
+        return json(await loreUpload('/lore/asset/upload', filename, base64_data, content_type,
+          { entity_type, entity_id, ...(alt ? { alt } : {}) }));
+      } catch (e) { return err(e); }
+    },
+  );
+
   server.tool(
     'bragi_asset_up',
     'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +
