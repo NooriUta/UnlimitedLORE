@@ -33,6 +33,7 @@ services:
     extra_hosts:
       - "arcade:host-gateway"          # ArcadeDB runs on the host :2480
       - "kc:host-gateway"              # Keycloak runs on the host :18180
+      - "forgejo:host-gateway"         # Forgejo runs on the host :3030 (FJ-02)
     depends_on:
       - minio
     environment:
@@ -48,6 +49,14 @@ services:
       - kc.admin.url=http://kc:18180/kc
       - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
       - lore.secrets.provider=${LORE_SECRETS_PROVIDER:-env}
+      # Forgejo-мост (ADR-LORE-024, FJ-02): пусто → /lore/forgejo/* отвечает 503,
+      # LORE без self-hosted Forgejo работает как раньше. Токен вводит ВЛАДЕЛЕЦ
+      # в .env — агенты его не трогают; чтение только через SecretProvider.
+      - FORGEJO_API_TOKEN=${FORGEJO_API_TOKEN:-}
+      # base_url в KnowGitProject.hosts — localhost:3030 (адрес для ХОСТА);
+      # из контейнера это сам контейнер, поэтому API-адрес переопределяется,
+      # а owner/repo продолжают резолвиться из hosts[] (FJ-02).
+      - lore.forgejo.base-override=${FORGEJO_BASE_OVERRIDE:-http://forgejo:3030}
       # ADR-LORE-023: dev-стенд получает версию-маркер и раннер миграций
       # (OQ-023-DEVSTAND). При pending-шагах на БД с данными раннер сначала
       # снимает BACKUP DATABASE (SV-04); упавший шаг валит старт ГРОМКО.
