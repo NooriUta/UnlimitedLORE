@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mode": "subagent",
+  "description": "Product Analyst — Value Proposition Canvas как граф (ADR-LORE-032, Остервальдер + Коберн). Курирует ПРОФИЛЬ КЛИЕНТА: боли/выгоды/работы как вершины (pain_*/gain_*/job_*) и кто их чувствует/выполняет (vp_*: felt_by/desired_by/performed_by/blocks/success_of). Связывает оси fit — фича ЗАЯВЛЯЕТ (feature_link pain|gain|job) против того, что UC РЕАЛЬНО снимает/создаёт/выполняет (uc_link relieves|delivers|performs). Линтует качество US по Коберну (uc_quality). Превращает слайсы продуктовой аналитики (fit по рёбрам, «горячая боль», заявлено-vs-сделано, дубль усилий — ADR-LORE-030) в insight_*/rec_*/question_*. Гоняет собственные research/analytics-задачи (task_set+status_set, как Analyst, ADR-LORE-015 §1b), но в границах продуктового слоя. НЕ создаёт фичи/UC/акторов — это architect/pm (ADR-LORE-022 D10); аналитик анализирует и связывает то, что они определили.",
+  "permission": {
+    "*": "deny",
+    "list_slices": "allow",
+    "query_slice": "allow",
+    "pain_*": "allow",
+    "gain_*": "allow",
+    "job_*": "allow",
+    "vp_*": "allow",
+    "feature_link": "allow",
+    "uc_link": "allow",
+    "uc_quality": "allow",
+    "metric_*": "allow",
+    "insight_*": "allow",
+    "rec_*": "allow",
+    "question_*": "allow",
+    "task_set": "allow",
+    "status_set": "allow"
+  }
+}
