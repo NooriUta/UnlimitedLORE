@@ -177,6 +177,27 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='work_class', code='uc',  label_ru='Use Case — реализует сценарий', color='#5AB4E8', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='work_class' AND code='uc'",
             "UPDATE KnowDictEntry SET dict_type='work_class', code='jtd', label_ru='Job to be Done — задача-хелпер', color='#C0A36E', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='work_class' AND code='jtd'",
             "UPDATE KnowDictEntry SET dict_type='work_class', code='enb', label_ru='Enabler — расчищает дорогу', color='#9A8CDB', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='work_class' AND code='enb'"
+        )),
+
+        // ADR-LORE-031: generic-ассеты для всех MD-полей. Ключ = контент-адрес
+        // {entity_type}/{entity_id}/{sha256-16}.{ext} — бакет самодокументируемый,
+        // дедуп по содержимому; вершина+ребро создаются В ТОМ ЖЕ запросе, что и
+        // файл (сирота невозможен на записи). Настройки — словарь app_setting
+        // (реестр Админки AL-38); value живёт в label_ru.
+        new Step(7, "generic_assets_knowasset", List.of(
+            "CREATE VERTEX TYPE KnowAsset IF NOT EXISTS",
+            "CREATE PROPERTY KnowAsset.asset_key    IF NOT EXISTS STRING", // {type}/{id}/{hash}.{ext}
+            "CREATE PROPERTY KnowAsset.entity_type  IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAsset.entity_id    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAsset.mime         IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAsset.size_bytes   IF NOT EXISTS LONG",
+            "CREATE PROPERTY KnowAsset.alt          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAsset.created_at   IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowAsset (asset_key) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowAsset (entity_id) NOTUNIQUE",
+            "CREATE EDGE TYPE ATTACHED_TO IF NOT EXISTS", // сущность -> KnowAsset
+            "UPDATE KnowDictEntry SET dict_type='app_setting', code='md_images_enabled', label_ru='true', sort_order=10, is_active=true, is_extensible=true UPSERT WHERE dict_type='app_setting' AND code='md_images_enabled'",
+            "UPDATE KnowDictEntry SET dict_type='app_setting', code='md_image_max_mb', label_ru='5', sort_order=20, is_active=true, is_extensible=true UPSERT WHERE dict_type='app_setting' AND code='md_image_max_mb'"
         ))
     );
 }

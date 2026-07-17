@@ -32,11 +32,17 @@ describe('registerLoreWrite', () => {
     expect(stragglers).toEqual([]);
   });
 
-  it('registers the expected total tool count (64 — 62 in loreWrite + 2 in loreRead)', () => {
+  it('registers the expected total tool count', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
-    // 58 baseline + question_new/question_set/question_link (ADR-020/021, T25) + decision_link (T43).
-    expect(names).toHaveLength(67);
+    // 67 (после ADR-022 продуктового слоя) + asset_up (ADR-LORE-031, PL-22).
+    expect(names).toHaveLength(68);
+  });
+
+  it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    expect(names).toContain('asset_up');
   });
 
   it('registers every name exactly once (no accidental duplicate registration)', () => {

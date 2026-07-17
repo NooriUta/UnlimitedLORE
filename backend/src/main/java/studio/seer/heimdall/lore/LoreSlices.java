@@ -351,6 +351,14 @@ public final class LoreSlices {
             new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")),
             " ORDER BY actor_id");
 
+        // ADR-LORE-031 §3: ассеты, потерявшие вход ATTACHED_TO (сущность удалена) —
+        // кормит двухшаговый GC в Админке. По построению upload сироту создать
+        // не может, так что непустой срез = следы удалённых сущностей.
+        slice("asset_orphans",
+            "SELECT asset_key, entity_type, entity_id, mime, size_bytes, created_at " +
+            "FROM KnowAsset WHERE inE('ATTACHED_TO').size() = 0",
+            List.of(), new LinkedHashMap<>(), " ORDER BY created_at");
+
         slice("tasks_of_uc",
             "SELECT task_uid, task_id, title, task_type, work_class, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
