@@ -66,5 +66,30 @@ jobs:
         run: ./gradlew test --no-daemon
 
       # Validates the multi-stage Dockerfile compiles the app from source.
+      # Gradle INSIDE the image build fetches deps from Maven Central directly:
+      # unlike the job container, it does not inherit the runner's proxy envs, and
+      # on this Docker Desktop/WSL2 host that direct path intermittently drops the
+      # TLS handshake ("Remote host terminated the handshake") — the same flake the
+      # JDK-download step above already had to design around. It red-lit a PR whose
+      # tests were green (2026-07-17). Two mitigations, in order:
+      #   1. pass the runner's proxy through as build-args when one is configured,
+      #      so the in-image Gradle takes the same route as everything else;
+      #   2. retry the build twice — a dropped handshake is transient, and the
+      #      layer cache makes the retry cheap.
       - name: Docker image build (backend)
-        run: docker build -f backend/Dockerfile.local -t lore-backend:ci backend/
+        run: |
+          ARGS=""
+          for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
+            eval "val=\${$v:-}"
+            [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
+          done
+          for attempt in 1 2 3; do
+            echo "::group::docker build (attempt $attempt)"
+            # shellcheck disable=SC2086
+            docker build $ARGS -f backend/Dockerfile.local -t lore-backend:ci backend/ && exit 0
+            echo "::endgroup::"
+            echo "::warning::image build attempt $attempt failed (transient network?) — retrying"
+            sleep 10
+          done
+          echo "::error::docker image build failed after 3 attempts"
+          exit 1

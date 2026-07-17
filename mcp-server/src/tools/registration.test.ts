@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerLoreRead } from './loreRead.js';
 import { registerLoreWrite } from './loreWrite.js';
+import { registerForgejo, forgejoConfigured } from './forgejo.js';
 
 // Regression guard for ADR-LORE-014 §2 (T02): every tool renamed lore_* -> <category>_<verb>,
 // ~22 lore_link_*/lore_unlink_* collapsed into 8 <category>_link(rel, ...) tools. A stray
@@ -108,5 +109,40 @@ describe('registerLoreWrite', () => {
     expect(names.filter(n => n === 'sprint_set')).toHaveLength(1);
     expect(names).not.toContain('lore_update_sprint');
     expect(names).not.toContain('lore_update_sprint_refs');
+  });
+});
+
+// FJ-04 (ADR-LORE-024): forgejo_* — условная регистрация. Обе моды под тестом:
+// мост заявлен env'ом → ровно 5 инструментов; не заявлен → ноль (а не 5 вечных 503).
+describe('registerForgejo', () => {
+  const FORGEJO_TOOLS = [
+    'forgejo_pr_new', 'forgejo_pr_status', 'forgejo_pr_merge',
+    'forgejo_ci_status', 'forgejo_branch_protection',
+  ];
+
+  it('registers all 5 tools when LORE_FORGEJO=true', () => {
+    const { server, names } = fakeServer();
+    registerForgejo(server, { LORE_FORGEJO: 'true' } as NodeJS.ProcessEnv);
+    expect(names).toEqual(FORGEJO_TOOLS);
+  });
+
+  it('registers when any non-empty FORGEJO_* env is present', () => {
+    const { server, names } = fakeServer();
+    registerForgejo(server, { FORGEJO_BASE_URL: 'http://localhost:3030' } as NodeJS.ProcessEnv);
+    expect(names).toEqual(FORGEJO_TOOLS);
+  });
+
+  it('registers nothing when the bridge is not declared', () => {
+    const { server, names } = fakeServer();
+    registerForgejo(server, {} as NodeJS.ProcessEnv);
+    expect(names).toEqual([]);
+  });
+
+  it('empty FORGEJO_* values do not count as configured', () => {
+    expect(forgejoConfigured({ FORGEJO_BASE_URL: '' } as NodeJS.ProcessEnv)).toBe(false);
+  });
+
+  it('LORE_FORGEJO=false wins over stray FORGEJO_* env (explicit off-switch)', () => {
+    expect(forgejoConfigured({ LORE_FORGEJO: 'false', FORGEJO_X: 'y' } as NodeJS.ProcessEnv)).toBe(false);
   });
 });
