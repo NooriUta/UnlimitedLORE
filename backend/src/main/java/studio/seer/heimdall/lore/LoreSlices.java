@@ -325,6 +325,7 @@ public final class LoreSlices {
             // замкнутость на UC (RELIEVES/DELIVERS) считает слайс feature_vp (AN-01).
             "out('ADDRESSES').pain_id AS pain_ids, " +
             "out('PROMISES').gain_id  AS gain_ids, " +
+            "out('HELPS_WITH').job_id AS job_ids, " + // Остервальдер: третья ось профиля
             "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id " +
             "FROM KnowFeature",
             List.of(),
@@ -340,6 +341,7 @@ public final class LoreSlices {
             // ADR-032 D5: что этот UC реально снимает/создаёт — правая половина VP-канвы.
             "out('RELIEVES').pain_id AS relieves_pain_ids, " +
             "out('DELIVERS').gain_id AS delivers_gain_ids, " +
+            "out('PERFORMS').job_id  AS performs_job_ids, " +
             "in('REALIZES').task_uid AS task_uids, " +
             "out('TRACED_TO').adr_id AS traced_adr_ids, " +
             "out('TRACED_TO').decision_id AS traced_decision_ids, " +
@@ -359,6 +361,7 @@ public final class LoreSlices {
         slice("pains",
             "SELECT pain_id, title, body_md, severity, date_created, " +
             "out('FELT_BY').actor_id       AS actor_ids, " +   // чья боль
+            "out('BLOCKS').job_id          AS blocks_job_ids, " + // Остервальдер: какой работе мешает
             "in('ADDRESSES').feature_id    AS feature_ids, " + // кто заявил, что адресует
             "in('ADDRESSES').size()        AS addressed_by, " +
             "in('RELIEVES').uc_id          AS relieved_by_ucs, " + // кто РЕАЛЬНО снимает
@@ -368,14 +371,31 @@ public final class LoreSlices {
             " ORDER BY pain_id");
 
         slice("gains",
-            "SELECT gain_id, title, body_md, metric_md, date_created, " +
+            "SELECT gain_id, title, body_md, metric_md, rank, date_created, " +
             "out('DESIRED_BY').actor_id    AS actor_ids, " +
+            "out('SUCCESS_OF').job_id      AS success_of_job_ids, " + // успех в какой работе
             "in('PROMISES').feature_id     AS feature_ids, " +
             "in('PROMISES').size()         AS promised_by, " +
             "in('DELIVERS').uc_id          AS delivered_by_ucs, " +
             "in('DELIVERS').size()         AS delivered_by " +
             "FROM KnowGain",
-            List.of(), new LinkedHashMap<>(), " ORDER BY gain_id");
+            List.of(), new LinkedHashMap<>(Map.of("rank", " WHERE rank = :rank")), " ORDER BY gain_id");
+
+        // Остервальдер VPC: РАБОТЫ — третий столп профиля клиента. Боли и выгоды
+        // производны от работы («боль мешает работе», «выгода — успех в работе»),
+        // поэтому реестр работ отдаёт и то, и другое: вокруг чего вообще всё крутится.
+        slice("jobs",
+            "SELECT job_id, title, body_md, kind, importance, date_created, " +
+            "out('PERFORMED_BY').actor_id AS actor_ids, " +       // чья работа
+            "in('BLOCKS').pain_id         AS blocking_pain_ids, " + // что мешает
+            "in('BLOCKS').size()          AS blocked_by, " +
+            "in('SUCCESS_OF').gain_id     AS gain_ids, " +        // что значит успех
+            "in('HELPS_WITH').feature_id  AS feature_ids, " +     // кто ЗАЯВИЛ помощь
+            "in('HELPS_WITH').size()      AS helped_by, " +
+            "in('PERFORMS').uc_id         AS performed_by_ucs, " + // кто РЕАЛЬНО выполняет
+            "in('PERFORMS').size()        AS performed_by " +
+            "FROM KnowJob",
+            List.of(), new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")), " ORDER BY job_id");
 
         // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
         slice("actors",

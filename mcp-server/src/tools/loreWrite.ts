@@ -338,30 +338,78 @@ export function registerLoreWrite(server: McpServer): void {
     description: 'Create or update a KnowGain — a customer gain as a graph vertex (ADR-LORE-032 §2). ' +
       'metric_md is what makes the gain COUNT: a gain without a measurable metric never closes the VP fit, ' +
       'and the response says so. Wire it up: feature_link(rel="gain") = the feature PROMISES it, ' +
-      'uc_link(rel="delivers") = a use case ACTUALLY creates it.',
+      'uc_link(rel="delivers") = a use case ACTUALLY creates it, vp_link(rel="success_of") = which job the ' +
+      'gain is success in.',
     schema: {
       gain_id:   z.string().describe('e.g. "GAIN-LORE-LINKED-RELEASES" (GAIN-<PROJ>-<slug>)'),
       title:     z.string().optional().describe('выгода одной строкой'),
       body_md:   z.string().optional(),
       metric_md: z.string().optional().describe('ЧЕМ МЕРЯЕМ — без метрики выгода не засчитывается в fit'),
+      rank:      z.enum(['essential', 'expected', 'desired', 'unexpected']).optional()
+        .describe('Osterwalder gain rank (dict gain_rank): essential=без неё решение не работает … unexpected=превосходит ожидания'),
     },
     path: '/lore/gain',
-    body: ({ gain_id, title, body_md, metric_md }) => ({
-      gain_id, title: title ?? null, body_md: body_md ?? null, metric_md: metric_md ?? null,
+    body: ({ gain_id, title, body_md, metric_md, rank }) => ({
+      gain_id, title: title ?? null, body_md: body_md ?? null, metric_md: metric_md ?? null, rank: rank ?? null,
     }),
+  });
+
+  // ADR-LORE-032 §2 — третий столп профиля клиента (Остервальдер VPC): работа.
+  // Боли мешают работе (BLOCKS), выгоды — успех в работе (SUCCESS_OF), UC её
+  // ВЫПОЛНЯЕТ (PERFORMS). Глобальная вершина: одна работа переиспользуется
+  // несколькими продуктами, продуктовый контекст — на рёбрах.
+  definePostTool(server, {
+    name: 'job_new',
+    description: 'Create or update a KnowJob — a customer JOB-TO-BE-DONE as a graph vertex (ADR-LORE-032 §2, ' +
+      'Osterwalder VPC). The third pillar of the customer profile: a pain BLOCKS a job, a gain is the SUCCESS_OF ' +
+      'a job, and a use case PERFORMS it (uc_link rel="performs"). Whose job it is = vp_link(rel="performed_by") ' +
+      'to a KnowActor. GLOBAL vertex (no project) — the same job is felt across products; product context lives ' +
+      'on the edges. Upsert by job_id.',
+    schema: {
+      job_id:     z.string().describe('e.g. "JOB-RELEASE" (JOB-<slug>) — global, no project prefix required'),
+      title:      z.string().optional().describe('работа одной строкой, языком клиента («выпустить релиз, не покидая сессии»)'),
+      body_md:    z.string().optional(),
+      kind:       z.enum(['functional', 'social', 'emotional', 'supporting']).optional()
+        .describe('Osterwalder job type (dict job_kind)'),
+      importance: z.enum(['high', 'normal', 'low']).optional().describe('насколько работа важна клиенту'),
+    },
+    path: '/lore/job',
+    body: ({ job_id, title, body_md, kind, importance }) => ({
+      job_id, title: title ?? null, body_md: body_md ?? null, kind: kind ?? null, importance: importance ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'vp_link',
+    description: 'Link (or unlink) the CUSTOMER-PROFILE edges of the Value Proposition Canvas (ADR-LORE-032 §2, ' +
+      'Osterwalder). rel="felt_by": a KnowPain is felt by a KnowActor; rel="desired_by": a KnowGain is desired ' +
+      'by an actor; rel="performed_by": a KnowJob is performed by an actor — these say WHOSE pain/gain/job it is ' +
+      '(the segment). rel="blocks": a pain BLOCKS a job; rel="success_of": a gain is the SUCCESS_OF a job — these ' +
+      'wire the three pillars into one canvas instead of three loose lists. linked:false = edge NOT created ' +
+      '(target missing), never a silent no-op. Mutates system_aida_lore.',
+    schema: {
+      source_id: z.string().describe('pain_id (felt_by/blocks) | gain_id (desired_by/success_of) | job_id (performed_by)'),
+      rel:       z.enum(['felt_by', 'desired_by', 'performed_by', 'blocks', 'success_of']),
+      target_id: z.string().describe('actor_id (felt_by/desired_by/performed_by) | job_id (blocks/success_of)'),
+      action:    z.enum(['add', 'remove']).default('add'),
+    },
+    path: '/lore/vp/link',
+    body: ({ source_id, rel, target_id, action }) => ({ source_id, rel, target_id, action: action ?? 'add' }),
   });
 
   definePostTool(server, {
     name: 'feature_link',
     description: 'Link (or unlink) a KnowFeature. rel="pain": ADDRESSES — the feature claims to address a pain; ' +
       'rel="gain": PROMISES — it promises a gain (relieving/delivering is the UCs\' job, see uc_link ' +
-      'rel="relieves"/"delivers"). rel="milestone": TARGETS_MILESTONE — the strategic goal the feature refines ' +
-      '(KAOS reading: milestone = goal, feature = refinement, UCs = operationalisations). rel="component": ' +
-      'BELONGS_TO. linked:false in the response = edge NOT created (target missing) — never a silent no-op.',
+      'rel="relieves"/"delivers"). rel="job": HELPS_WITH — the feature claims to help with a customer job ' +
+      '(performing it is the UCs\' job, see uc_link rel="performs"). rel="milestone": TARGETS_MILESTONE — the ' +
+      'strategic goal the feature refines (KAOS reading: milestone = goal, feature = refinement, UCs = ' +
+      'operationalisations). rel="component": BELONGS_TO. linked:false in the response = edge NOT created ' +
+      '(target missing) — never a silent no-op.',
     schema: {
       feature_id: z.string(),
-      rel:        z.enum(['pain', 'gain', 'milestone', 'component']),
-      target_id:  z.string().describe('pain_id | gain_id | milestone_id | component_id, matching rel'),
+      rel:        z.enum(['pain', 'gain', 'job', 'milestone', 'component']),
+      target_id:  z.string().describe('pain_id | gain_id | job_id | milestone_id | component_id, matching rel'),
       action:     z.enum(['add', 'remove']).default('add'),
     },
     path: '/lore/feature/link',
@@ -376,12 +424,13 @@ export function registerLoreWrite(server: McpServer): void {
       'KnowActor (create via actor_new first). rel="includes"/"extends": UC→UC graph relations (D13): ' +
       'includes = mandatory sub-scenario, extends = variant. rel="relieves"/"delivers" (ADR-LORE-032 §2): ' +
       'the UC actually relieves a KnowPain / delivers a KnowGain — these edges are what CLOSE the VP fit ' +
-      'the feature only claimed via feature_link(pain|gain). linked:false in the response = edge NOT created ' +
-      '(target missing) — never a silent no-op. Mutates system_aida_lore.',
+      'the feature only claimed via feature_link(pain|gain). rel="performs" (ADR-LORE-032 §2): the UC actually ' +
+      'PERFORMS a KnowJob — the third fit axis, closing what feature_link(job) only claimed. linked:false in ' +
+      'the response = edge NOT created (target missing) — never a silent no-op. Mutates system_aida_lore.',
     {
       uc_id:     z.string().describe('e.g. "UC-GIT-MERGE"'),
-      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends', 'relieves', 'delivers']),
-      target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers)'),
+      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
+      target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers) | job_id (performs)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
       actor_role: z.enum(['primary', 'supporting']).optional()
         .describe('rel="actor" only (ADR-LORE-028 D19): the first linked actor becomes primary by default — ' +

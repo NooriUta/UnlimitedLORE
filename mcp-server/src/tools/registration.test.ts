@@ -37,8 +37,9 @@ describe('registerLoreWrite', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
     // 67 (ADR-022 продуктовый слой) + asset_up (ADR-031, PL-22)
-    // + pain_new/gain_new/feature_link (ADR-032 §2, PL-27) + uc_quality (ADR-027-D3, PL-12).
-    expect(names).toHaveLength(72);
+    // + pain_new/gain_new/feature_link (ADR-032 §2, PL-27) + uc_quality (ADR-027-D3, PL-12)
+    // + job_new/vp_link (ADR-032 §2 Остервальдер, V10 — третий столп профиля).
+    expect(names).toHaveLength(74);
   });
 
   it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
@@ -47,10 +48,10 @@ describe('registerLoreWrite', () => {
     expect(names).toContain('asset_up');
   });
 
-  it('registers the VP-layer tools (ADR-LORE-032 §2 — pains/gains as vertices)', () => {
+  it('registers the VP-layer tools (ADR-LORE-032 §2 — pains/gains/jobs as vertices, Остервальдер)', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
-    for (const expected of ['pain_new', 'gain_new', 'feature_link']) {
+    for (const expected of ['pain_new', 'gain_new', 'job_new', 'feature_link', 'vp_link']) {
       expect(names, `missing VP tool: ${expected}`).toContain(expected);
     }
   });
