@@ -86,13 +86,15 @@ export function registerLoreWrite(server: McpServer): void {
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
       task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
+      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case (link it via uc_link rel="task"), jtd=helper job, enb=enabler; omit when unclassified — legal'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type }) => ({
+    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class }) => ({
           sprint_id, task_id, title,
           note_md: note_md ?? null, phase_uid: phase_uid ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
           reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
+          work_class: work_class ?? null,
         }),
   });
 
@@ -247,6 +249,90 @@ export function registerLoreWrite(server: McpServer): void {
       } catch (e) { return err(e); }
     },
   );
+
+
+  // ── ADR-LORE-022: продуктовый слой Feature → UC (ACCEPTED 2026-07-17) ──
+  // RBAC D10: пишут architect/pm (+full); клиентские профили зеркалируют.
+  definePostTool(server, {
+    name: 'feature_new',
+    description: 'Create or update a KnowFeature (product capability, ADR-LORE-022). Upserts by feature_id. ' +
+      'status: proposed|active|dropped — "shipped" is COMPUTED (D4: all UCs shipped), the endpoint rejects it. ' +
+      'Decompose into UCs via uc_new(feature_id). Feature→Release edge does NOT exist by design (D8 — derived). ' +
+      'Mutates system_aida_lore.',
+    schema: {
+      feature_id:   z.string().describe('e.g. "FEAT-GITCYCLE"'),
+      title:        z.string().optional(),
+      body_md:      z.string().optional().describe('ценность + критерий готовности'),
+      context_md:   z.string().optional().describe('БОЛЬШОЙ контекст (D13, как у спринта): зачем фича, ссылки на ADR/спринты'),
+      status:       z.enum(['proposed', 'active', 'dropped']).optional(),
+      component_id: z.string().optional(),
+    },
+    path: '/lore/feature',
+    body: ({ feature_id, title, body_md, context_md, status, component_id }) => ({
+      feature_id, title: title ?? null, body_md: body_md ?? null, context_md: context_md ?? null,
+      status: status ?? null, component_id: component_id ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'uc_new',
+    description: 'Create or update a KnowUseCase (unit of user value, ADR-LORE-022). Upserts by uc_id; ' +
+      'feature_id keeps the DECOMPOSES_INTO edge in sync (response carries feature_linked:false when the ' +
+      'feature is missing — not a silent no-op). scenario_md/acceptance_md are separate fields; actors are ' +
+      'KnowActor VERTICES (D12, can be several) — attach via uc_link rel="actor", never a free-text string. ' +
+      'UC shipped ⇔ its uc-tasks are done (advisory). Mutates system_aida_lore.',
+    schema: {
+      uc_id:         z.string().describe('e.g. "UC-GIT-MERGE"'),
+      title:         z.string().optional().describe('сценарий одной строкой'),
+      scenario_md:   z.string().optional(),
+      acceptance_md: z.string().optional().describe('критерий приёмки'),
+      status:        z.enum(['proposed', 'active', 'shipped', 'dropped']).optional(),
+      feature_id:    z.string().optional().describe('родитель — держит DECOMPOSES_INTO в синхроне'),
+    },
+    path: '/lore/uc',
+    body: ({ uc_id, title, scenario_md, acceptance_md, status, feature_id }) => ({
+      uc_id, title: title ?? null, scenario_md: scenario_md ?? null,
+      acceptance_md: acceptance_md ?? null, status: status ?? null, feature_id: feature_id ?? null,
+    }),
+  });
+
+  server.tool(
+    'uc_link',
+    'Link (or unlink) a KnowUseCase. rel="task": REALIZES edge (KnowTask→UC), target_id=full task_uid — ' +
+      'REQUIRED discipline for tasks with work_class=uc (advisory, D3). rel="adr"/"decision": TRACED_TO ' +
+      'edge (UC→justification) — OPTIONAL by design (D9). rel="actor": HAS_ACTOR edge (MULTI, D12) to a ' +
+      'KnowActor (create via actor_new first). rel="includes"/"extends": UC→UC graph relations (D13): ' +
+      'includes = mandatory sub-scenario, extends = variant. linked:false in the response = edge NOT created ' +
+      '(target missing) — never a silent no-op. Mutates system_aida_lore.',
+    {
+      uc_id:     z.string().describe('e.g. "UC-GIT-MERGE"'),
+      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends']),
+      target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends)'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
+    },
+    async ({ uc_id, rel, target_id, action }) => {
+      try {
+        return json(await lorePost('/lore/uc/link', { uc_id, rel, target_id, action: action ?? 'add' }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  definePostTool(server, {
+    name: 'actor_new',
+    description: 'Create or update a KnowActor — проектируемая роль приложения (D12): human-role | system | ' +
+      'agent. Upserts by actor_id. Один актор ссылается многими UC (HAS_ACTOR via uc_link rel="actor") — ' +
+      'реестр ролей и карта «сценарии роли» живут на этой вершине. Mutates system_aida_lore.',
+    schema: {
+      actor_id: z.string().describe('e.g. "ACT-ADMIN", "ACT-AGENT-SESSION"'),
+      name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Администратор LORE"'),
+      kind:     z.enum(['human-role', 'system', 'agent']).optional(),
+      body_md:  z.string().optional().describe('кто это, права, ожидания'),
+    },
+    path: '/lore/actor',
+    body: ({ actor_id, name, kind, body_md }) => ({
+      actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+    }),
+  });
 
   // sprint_plan_set (MCPSYNC-01): закрывает единственную содержательную дыру
   // сверки REST↔MCP 2026-07-17 — /lore/sprint/plan (приоритет + плановые даты +
@@ -1000,6 +1086,7 @@ export function registerLoreWrite(server: McpServer): void {
       executor_agent: z.string().optional().describe('single-mode: who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
       task_type:      z.string().optional().describe('single-mode: ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content)'),
+      work_class:     z.enum(['uc', 'jtd', 'enb']).optional().describe('single-mode: ADR-LORE-022 WHY-axis, orthogonal to task_type'),
       tasks: z.array(z.object({
         task_uid:       z.string(),
         title:          z.string(),
@@ -1009,23 +1096,24 @@ export function registerLoreWrite(server: McpServer): void {
         executor_agent: z.string().optional(),
         reviewer_agent: z.string().optional(),
         task_type:      z.string().optional(),
+        work_class:     z.enum(['uc', 'jtd', 'enb']).optional(),
       })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, work_class, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
             tasks.map(t => ({
               task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
-              task_type: t.task_type ?? null,
+              task_type: t.task_type ?? null, work_class: t.work_class ?? null,
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', {
           task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
-          task_type: task_type ?? null,
+          task_type: task_type ?? null, work_class: work_class ?? null,
         }));
       } catch (e) { return err(e); }
     },

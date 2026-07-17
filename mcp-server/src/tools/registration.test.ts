@@ -36,7 +36,7 @@ describe('registerLoreWrite', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
     // 58 baseline + question_new/question_set/question_link (ADR-020/021, T25) + decision_link (T43).
-    expect(names).toHaveLength(63);
+    expect(names).toHaveLength(67);
   });
 
   it('registers every name exactly once (no accidental duplicate registration)', () => {

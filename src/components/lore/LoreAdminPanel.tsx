@@ -30,10 +30,10 @@ type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'setti
 // RBAC scope per ADR-LORE-014 §3 (agent-profiles — файлы; read-only отображение).
 const PROFILE_SCOPE: [string, string][] = [
   ['full', '"*": allow (primary — Claude/backfill)'],
-  ['architect', 'adr_* · component_* · tech_* · spec_* · runbook_* · doc_* · decision_* · question_* · project_new · status_set'],
+  ['architect', 'adr_* · component_* · tech_* · spec_* · runbook_* · doc_* · decision_* · question_* · feature_* · uc_* · project_new · status_set'],
   ['developer', 'task_* · release_* · tech_* · spec_* · runbook_* · doc_* · adr_new · status_set'],
   ['tester', 'qg_* · task_* · status_set · status_set_batch'],
-  ['pm', 'sprint_* · task_* · milestone_* · question_* · project_new · status_set · status_set_batch'],
+  ['pm', 'sprint_* · task_* · milestone_* · question_* · feature_* · uc_* · project_new · status_set · status_set_batch'],
   ['analyst', 'metric_* · insight_* · rec_* · question_* · task_set · status_set'],
   ['marketer', 'bragi_* · task_* · insight_* · rec_* · doc_* · status_set'],
 ];

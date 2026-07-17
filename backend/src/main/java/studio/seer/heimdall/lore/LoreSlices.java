@@ -305,10 +305,65 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
             // (ADR-LORE-015, T14) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent, task_type " +
+            "author_agent, executor_agent, reviewer_agent, task_type, " +
+            // ADR-LORE-022: ЗАЧЕМ-ось + какой UC задача реализует (REALIZES).
+            "work_class, out('REALIZES').uc_id AS realizes_uc " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
+
+        // ── ADR-LORE-022: продуктовый слой ───────────────────────────────────
+        // «Фича целиком» — вычисляемый факт (D4): shipped ⇔ все UC shipped.
+        // Слайс отдаёт счётчики, вывод статуса — на клиенте/потребителе.
+        slice("features",
+            "SELECT feature_id, title, body_md, context_md, status, component_id, date_created, " +
+            "out('DECOMPOSES_INTO').uc_id AS uc_ids, " +
+            "out('DECOMPOSES_INTO').size() AS uc_total, " +
+            "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS uc_shipped " +
+            "FROM KnowFeature",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "component", " WHERE component_id = :component")),
+            " ORDER BY feature_id");
+
+        slice("use_cases_of_feature",
+            "SELECT uc_id, title, scenario_md, acceptance_md, status, feature_id, date_created, " +
+            "in('REALIZES').task_uid AS task_uids, " +
+            "out('TRACED_TO').adr_id AS traced_adr_ids, " +
+            "out('TRACED_TO').decision_id AS traced_decision_ids, " +
+            // D12/D13: акторы (multi) и поперечные связи графа UC.
+            "out('HAS_ACTOR').actor_id AS actor_ids, " +
+            "out('HAS_ACTOR').name     AS actor_names, " +
+            "out('UC_INCLUDES').uc_id  AS includes_uc, " +
+            "out('UC_EXTENDS').uc_id   AS extends_uc, " +
+            "in('UC_INCLUDES').uc_id   AS included_by, " +
+            "in('UC_EXTENDS').uc_id    AS extended_by " +
+            "FROM KnowUseCase WHERE feature_id = :id ORDER BY uc_id",
+            List.of("id"), Map.of(), "");
+
+        // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
+        slice("actors",
+            "SELECT actor_id, name, kind, body_md, " +
+            "in('HAS_ACTOR').uc_id AS uc_ids, " +
+            "in('HAS_ACTOR').size() AS uc_count " +
+            "FROM KnowActor",
+            List.of(),
+            new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")),
+            " ORDER BY actor_id");
+
+        slice("tasks_of_uc",
+            "SELECT task_uid, task_id, title, task_type, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE out('REALIZES').uc_id CONTAINS :id ORDER BY task_uid",
+            List.of("id"), Map.of(), "");
+
+        // Обзор дисциплины (D3): uc-задачи без REALIZES — advisory, не ошибка.
+        slice("unlinked_uc_tasks",
+            "SELECT task_uid, task_id, title, work_class, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE work_class = 'uc' AND out('REALIZES').size() = 0 " +
+            "ORDER BY task_uid",
+            List.of(), Map.of(), "");
 
         // Batch variant: fetch tasks for multiple sprints in one query.
         // sprint_ids is a comma-separated string that the slice layer splits into a list.
