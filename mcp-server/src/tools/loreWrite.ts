@@ -383,10 +383,33 @@ export function registerLoreWrite(server: McpServer): void {
       rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends', 'relieves', 'delivers']),
       target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
+      actor_role: z.enum(['primary', 'supporting']).optional()
+        .describe('rel="actor" only (ADR-LORE-028 D19): the first linked actor becomes primary by default — ' +
+          'a UC needs exactly one primary (quality check #7); pass this to override'),
     },
-    async ({ uc_id, rel, target_id, action }) => {
+    async ({ uc_id, rel, target_id, action, actor_role }) => {
       try {
-        return json(await lorePost('/lore/uc/link', { uc_id, rel, target_id, action: action ?? 'add' }));
+        return json(await lorePost('/lore/uc/link',
+          { uc_id, rel, target_id, action: action ?? 'add', actor_role: actor_role ?? null }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // ADR-LORE-027-D3 режим (б): re-lint без записи. Тот же алгоритм, что панель
+  // качества в форме и ответ uc_new/uc_set — расхождение невозможно по построению.
+  server.tool(
+    'uc_quality',
+    'Re-lint a use case against the Cockburn quality rules (ADR-LORE-027 §3-4) WITHOUT writing anything. ' +
+      'Returns {rigor, score, max, findings[]} where score/max counts only the checks REQUIRED at the UC\'s ' +
+      'weight (casual has a smaller denominator than fully-dressed — optional sections become hints, not ' +
+      'penalties). Section headings are matched by convention; extension refs ("2a.") are checked against ' +
+      'existing main-scenario steps; primary-actor and TRACED_TO are read from edges, not prose. Advisory — ' +
+      'the same numbers come back inside uc_new/uc_set responses, so you rarely need this except to review ' +
+      'someone else\'s UC.',
+    { uc_id: z.string().describe('e.g. "UC-GIT-MERGE"') },
+    async ({ uc_id }) => {
+      try {
+        return json(await lorePost('/lore/uc/quality', { uc_id }));
       } catch (e) { return err(e); }
     },
   );

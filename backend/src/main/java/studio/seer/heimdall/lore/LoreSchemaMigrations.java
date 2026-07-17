@@ -257,6 +257,14 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='uc_goal_level', code='subfunction', label_ru='🐟 Рыба — подфункция', color='#665C48', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_goal_level' AND code='subfunction'",
             "UPDATE KnowDictEntry SET dict_type='uc_rigor', code='casual',        label_ru='⚡ Лёгкий (casual)', color='#D4922A', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_rigor' AND code='casual'",
             "UPDATE KnowDictEntry SET dict_type='uc_rigor', code='fully-dressed', label_ru='📋 Полный (fully dressed)', color='#88B8A8', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_rigor' AND code='fully-dressed'"
+        )),
+
+        // ADR-LORE-028 (D19): primary|supporting — свойство role на ребре HAS_ACTOR.
+        // У сценария ровно один primary-актор (правило линтера ADR-027 №7); первый
+        // привязанный становится primary по умолчанию (D19). Свойство на РЕБРЕ, не
+        // на вершине: одна роль может быть primary в одном UC и supporting в другом.
+        new Step(9, "has_actor_role_property", List.of(
+            "CREATE PROPERTY HAS_ACTOR.role IF NOT EXISTS STRING"
         ))
     );
 }

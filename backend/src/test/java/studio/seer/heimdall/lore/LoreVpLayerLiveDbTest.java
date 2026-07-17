@@ -11,6 +11,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
@@ -170,5 +171,43 @@ class LoreVpLayerLiveDbTest {
             .body("ok", equalTo(true))
             .body("linked", equalTo(false))
             .body("hint", not(equalTo("")));
+    }
+
+    @Test
+    @Order(7)
+    void emptyScenarioGetsTemplateAndQualityInResponse() {
+        // ADR-027 §5: пустой scenario_md → каркас ВЫБРАННОГО веса; D3: quality в ответе.
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"uc_id\":\"UC-VP-TPL\",\"title\":\"Свежий UC\",\"feature_id\":\"FEAT-VP\",\"goal_level\":\"sea-level\"}")
+        .when().post("/lore/uc")
+        .then().statusCode(200)
+            .body("template_inserted", equalTo("fully-dressed"))
+            .body("quality.rigor", equalTo("fully-dressed"))
+            // Триггер из шаблона есть, primary-актора и приёмки ещё нет — недобор честный.
+            .body("quality.max", greaterThan(0))
+            .body("quality.findings.find { it.code == 'trigger' }.ok", equalTo(true))
+            .body("quality.findings.find { it.code == 'primary_actor' }.ok", equalTo(false));
+    }
+
+    @Test
+    @Order(8)
+    void firstActorIsPrimaryThenQualityPasses() {
+        // D19: первый актор — primary по умолчанию; линтер видит рёбра, не текст.
+        post("/lore/actor", "{\"actor_id\":\"ACT-VP-2\",\"name\":\"Второй\",\"kind\":\"system\"}");
+        post("/lore/uc/link", "{\"uc_id\":\"UC-VP-TPL\",\"rel\":\"actor\",\"target_id\":\"ACT-VP-AGENT\"}");
+        post("/lore/uc/link", "{\"uc_id\":\"UC-VP-TPL\",\"rel\":\"actor\",\"target_id\":\"ACT-VP-2\"}");
+
+        // uc/quality — режим (б): re-lint без записи.
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"uc_id\":\"UC-VP-TPL\"}")
+        .when().post("/lore/uc/quality")
+        .then().statusCode(200)
+            .body("findings.find { it.code == 'primary_actor' }.ok", equalTo(true));
+
+        // Ровно один primary (первый), второй — supporting.
+        given().when().get("/lore/slice/use_cases_of_feature?id=FEAT-VP")
+        .then().statusCode(200)
+            .body("rows.find { it.uc_id == 'UC-VP-TPL' }.actor_ids", hasItem("ACT-VP-AGENT"))
+            .body("rows.find { it.uc_id == 'UC-VP-TPL' }.actor_ids", hasItem("ACT-VP-2"));
     }
 }

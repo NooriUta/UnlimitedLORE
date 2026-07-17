@@ -130,20 +130,36 @@ public class LoreProductResource extends LoreResourceBase {
         if (req.rigor() != null && !UC_RIGORS.contains(req.rigor()))
             return badParams("rigor must be one of: " + UC_RIGORS);
         try {
+            // Уровень цели задан — вес по умолчанию выводится из него (ADR-027-D1),
+            // но явный rigor автора сильнее вычисленного дефолта.
+            String goal = req.goal_level();
+            String rigor = req.rigor() != null ? req.rigor() : (goal != null ? defaultRigor(goal) : null);
+            // ADR-027 §5: пустой scenario_md → сервер вставляет скелет ВЫБРАННОГО веса
+            // (заголовки-конвенция §1) — свежий UC сразу знает, что заполнять.
+            String scenario = req.scenario_md();
+            boolean templateInserted = false;
+            if ((scenario == null || scenario.isBlank())) {
+                scenario = CockburnTemplate.forRigor(rigor);
+                templateInserted = true;
+            }
+
             StringBuilder sql = new StringBuilder("UPDATE KnowUseCase SET uc_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("id", req.uc_id());
             if (req.title() != null)         { sql.append(", title=:t");          p.put("t", req.title()); }
-            if (req.scenario_md() != null)   { sql.append(", scenario_md=:sc");   p.put("sc", req.scenario_md()); }
+            if (req.scenario_md() != null) {
+                // Явный текст автора ПЕРЕЗАПИСЫВАЕТ.
+                sql.append(", scenario_md=:sc"); p.put("sc", req.scenario_md());
+            } else if (templateInserted) {
+                // Шаблон-каркас ставим ТОЛЬКО в отсутствующий scenario_md — ifnull не
+                // затирает уже написанный сценарий при повторном upsert без текста.
+                sql.append(", scenario_md = ifnull(scenario_md, :sc)"); p.put("sc", scenario);
+            }
             if (req.acceptance_md() != null) { sql.append(", acceptance_md=:ac"); p.put("ac", req.acceptance_md()); }
             if (req.status() != null)        { sql.append(", status=:s");         p.put("s", req.status()); }
             if (req.feature_id() != null)    { sql.append(", feature_id=:f");     p.put("f", req.feature_id()); }
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
-            // Уровень цели задан — вес по умолчанию выводится из него (ADR-027-D1),
-            // но явный rigor автора сильнее вычисленного дефолта.
-            String goal = req.goal_level();
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
-            String rigor = req.rigor() != null ? req.rigor() : (goal != null ? defaultRigor(goal) : null);
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now().toString());
@@ -155,6 +171,10 @@ public class LoreProductResource extends LoreResourceBase {
             // (класс багов «поле есть — ребра нет», relinkParentEdge/SpecComponentEdge).
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
+            if (templateInserted) out.put("template_inserted", rigor == null ? "fully-dressed" : rigor);
+            // ADR-027-D3: quality возвращается В ОТВЕТЕ uc_new/uc_set всегда — агент
+            // чинит оформление в той же сессии, не дожидаясь ревью.
+            out.put("quality", qualityOf(req.uc_id()));
             out.put("uc_id", req.uc_id());
             if (req.feature_id() != null && !req.feature_id().isBlank()) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -354,7 +374,7 @@ public class LoreProductResource extends LoreResourceBase {
 
     // ── UC links: REALIZES (task→uc) и TRACED_TO (uc→adr|decision) ──────────
 
-    public record UcLinkRequest(String uc_id, String rel, String target_id, String action) {}
+    public record UcLinkRequest(String uc_id, String rel, String target_id, String action, String actor_role) {}
 
     @POST
     @Path("uc/link")
@@ -431,6 +451,24 @@ public class LoreProductResource extends LoreResourceBase {
                     "CREATE EDGE " + edge + " FROM " + fromSql + " TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
+
+            // ADR-028 D19: у HAS_ACTOR есть role (primary|supporting). Первый актор
+            // сценария становится primary по умолчанию; явный actor_role сильнее и
+            // проставляется даже на УЖЕ существующее ребро (иначе role legacy-рёбер
+            // не выставить). Дефолт-role ставим только на свежесозданное ребро.
+            if ("actor".equals(req.rel()) && (linked || req.actor_role() != null)) {
+                String desired = req.actor_role() != null ? req.actor_role()
+                    : (countPrimaryActors(req.uc_id()) == 0 ? "primary" : "supporting");
+                if (!List.of("primary", "supporting").contains(desired))
+                    return badParams("actor_role must be primary|supporting");
+                // Проставляем на ТОЛЬКО что созданное ребро к этому актору.
+                // ArcadeDB edge-query: @out/@in (правило корпуса feedback_arcadedb_edge_syntax).
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE HAS_ACTOR SET role=:r " +
+                    "WHERE @out.uc_id=:uid AND @in.actor_id=:tid",
+                    Map.of("r", desired, "uid", req.uc_id(), "tid", req.target_id())))
+                    .await().indefinitely();
+            }
             return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
                 "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
                 "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют")));
@@ -438,6 +476,79 @@ public class LoreProductResource extends LoreResourceBase {
             LOG.warnf("[LORE UC LINK] %s: %s", req.uc_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    // ── Качество UC по Коберну (ADR-LORE-027 §4, PL-12) ──────────────────────
+
+    /**
+     * Собирает факты об UC из графа и судит их линтером {@link UcQuality}.
+     * primary-актор и TRACED_TO — рёбра (HAS_ACTOR role='primary', TRACED_TO),
+     * а не текст: линтер этого не знает, эндпоинт достаёт и передаёт готовые булы.
+     * Тот же метод питает и ответ uc_new/uc_set (D3) — расхождение невозможно.
+     */
+    Map<String, Object> qualityOf(String ucId) {
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT rigor, goal_level, scenario_md, acceptance_md, " +
+                "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
+                "out('TRACED_TO').size() AS traced " +
+                "FROM KnowUseCase WHERE uc_id=:id", Map.of("id", ucId));
+            if (rows.isEmpty()) return Map.of("error", "uc not found");
+            Map<String, Object> r = rows.get(0);
+            boolean primary = num(r.get("primary_actors")) > 0;
+            boolean traced = num(r.get("traced")) > 0;
+            UcQuality.Result res = UcQuality.evaluate(
+                str(r.get("rigor")), str(r.get("goal_level")),
+                str(r.get("scenario_md")), str(r.get("acceptance_md")), primary, traced);
+            List<Map<String, Object>> findings = new java.util.ArrayList<>();
+            for (UcQuality.Finding fnd : res.findings())
+                findings.add(Map.of("code", fnd.code(), "ok", fnd.ok(),
+                    "required", fnd.required(), "message", fnd.message()));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("rigor", res.rigor());
+            out.put("score", res.score());
+            out.put("max", res.max());
+            out.put("findings", findings);
+            return out;
+        } catch (Exception e) {
+            LOG.warnf("[LORE UC QUALITY] %s: %s", ucId, e.getMessage());
+            return Map.of("error", e.getMessage());
+        }
+    }
+
+    private static long num(Object o) {
+        return o instanceof Number n ? n.longValue() : 0L;
+    }
+
+    /** Сколько у UC уже primary-акторов (D19: должен быть ровно один). */
+    private long countPrimaryActors(String ucId) {
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT outE('HAS_ACTOR')[role='primary'].size() AS n FROM KnowUseCase WHERE uc_id=:id",
+                Map.of("id", ucId));
+            return rows.isEmpty() ? 0 : num(rows.get(0).get("n"));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public record UcQualityRequest(String uc_id) {}
+
+    /** ADR-027-D3 режим (б): re-lint без записи — для ревью чужих UC и панели UI. */
+    @POST
+    @Path("uc/quality")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response ucQuality(UcQualityRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.uc_id() == null || req.uc_id().isBlank())
+            return badParams("uc_id required");
+        Map<String, Object> q = qualityOf(req.uc_id());
+        if (q.containsKey("error") && "uc not found".equals(q.get("error")))
+            return noStore(Response.status(Response.Status.NOT_FOUND)
+                .entity(new LoreError("NOT_FOUND", "UC " + req.uc_id() + " не найден")));
+        return noStore(Response.ok(q));
     }
 
     private Response upstream(Exception e) {
