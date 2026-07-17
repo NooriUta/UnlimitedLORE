@@ -57,7 +57,8 @@ public class LoreProductResource extends LoreResourceBase {
     // ── Feature ──────────────────────────────────────────────────────────────
 
     public record FeatureRequest(String feature_id, String title, String body_md,
-                                 String context_md, String status, String component_id) {}
+                                 String context_md, String status, String component_id,
+                                 String goal_level) {}
 
     @POST
     @Path("feature")
@@ -75,6 +76,11 @@ public class LoreProductResource extends LoreResourceBase {
         // D4: shipped у фичи не назначается рукой — он выводится из UC.
         if ("shipped".equals(req.status()))
             return badParams("feature 'shipped' is computed from its UCs (D4), not set directly");
+        // ADR-032 §1: фича — UC уровня стратегии, поэтому живёт на ВЕРХНИХ ступенях
+        // той же шкалы Коберна; sea-level/subfunction — высота сценария, не фичи.
+        if (req.goal_level() != null && !List.of("cloud", "kite").contains(req.goal_level()))
+            return badParams("feature goal_level must be cloud|kite (☁ стратегия / 🪁 обзор); "
+                + "sea-level и subfunction — уровни UC, не фичи (ADR-LORE-032 §1)");
         try {
             StringBuilder sql = new StringBuilder("UPDATE KnowFeature SET feature_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
@@ -84,6 +90,7 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.context_md() != null)   { sql.append(", context_md=:cx");  p.put("cx", req.context_md()); } // D13
             if (req.status() != null)       { sql.append(", status=:s");       p.put("s", req.status()); }
             if (req.component_id() != null) { sql.append(", component_id=:c"); p.put("c", req.component_id()); }
+            if (req.goal_level() != null)   { sql.append(", goal_level=:gl");  p.put("gl", req.goal_level()); }
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now().toString());
             sql.append(" UPSERT WHERE feature_id=:id");

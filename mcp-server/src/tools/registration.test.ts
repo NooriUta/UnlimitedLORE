@@ -36,14 +36,23 @@ describe('registerLoreWrite', () => {
   it('registers the expected total tool count', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
-    // 67 (после ADR-022 продуктового слоя) + asset_up (ADR-LORE-031, PL-22).
-    expect(names).toHaveLength(68);
+    // 67 (ADR-022 продуктовый слой) + asset_up (ADR-031, PL-22)
+    // + pain_new/gain_new/feature_link (ADR-032 §2, PL-27).
+    expect(names).toHaveLength(71);
   });
 
   it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
     expect(names).toContain('asset_up');
+  });
+
+  it('registers the VP-layer tools (ADR-LORE-032 §2 — pains/gains as vertices)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    for (const expected of ['pain_new', 'gain_new', 'feature_link']) {
+      expect(names, `missing VP tool: ${expected}`).toContain(expected);
+    }
   });
 
   it('registers every name exactly once (no accidental duplicate registration)', () => {

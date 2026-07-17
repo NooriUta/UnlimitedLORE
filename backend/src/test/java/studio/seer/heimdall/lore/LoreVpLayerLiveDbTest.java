@@ -137,6 +137,22 @@ class LoreVpLayerLiveDbTest {
 
     @Test
     @Order(5)
+    void featureLivesOnTheUpperRungsOfTheSameScale() {
+        // ADR-032 §1: «Фича = UC уровня облака» — значит шкала одна, но высоты
+        // разные: фича на cloud/kite, сценарий на sea-level/subfunction.
+        post("/lore/feature", "{\"feature_id\":\"FEAT-VP\",\"goal_level\":\"cloud\"}");
+        given().when().get("/lore/slice/features")
+        .then().statusCode(200)
+            .body("rows.find { it.feature_id == 'FEAT-VP' }.goal_level", equalTo("cloud"));
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"feature_id\":\"FEAT-VP\",\"goal_level\":\"sea-level\"}")
+        .when().post("/lore/feature")
+        .then().statusCode(400).body("detail", containsString("cloud|kite"));
+    }
+
+    @Test
+    @Order(6)
     void featureTargetsMilestoneAndSilentNoOpIsSurfaced() {
         // Стратегическая цель фичи (ADR-032 §1, KAOS: веха = goal).
         post("/lore/milestone", "{\"milestone_id\":\"M-VP\",\"name\":\"Автономная поставка\"}");
