@@ -67,4 +67,49 @@ class LoreSchemaMigrationsTest {
             "null-тело эквивалентно пустому — отсутствие тела не ошибка");
         assertEquals(16, LoreContentHash.of("x").length());
     }
+
+    // ── ADR-023 ось совместимости (major.minor): аддитивный шаг не блокирует старый бинарь ──
+
+    @Test
+    void compatMajorNeverDecreasesAndNeverExceedsOrdinal() {
+        int prevMajor = 0;
+        for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS) {
+            assertTrue(s.compatMajor() >= prevMajor, "major не должен убывать: V" + s.version());
+            assertTrue(s.compatMajor() <= s.version(), "major не может превышать ordinal: V" + s.version());
+            prevMajor = s.compatMajor();
+        }
+    }
+
+    @Test
+    void codeCompatMajorIsTheMaxMajor() {
+        int max = LoreSchemaMigrations.STEPS.stream()
+            .mapToInt(LoreSchemaMigrations.Step::compatMajor).max().orElse(0);
+        assertEquals(max, LoreSchemaMigrations.codeCompatMajor());
+    }
+
+    @Test
+    void humanVersionIsMajorDotMinor() {
+        // Пока все шаги — свои major (3-арг ctor), поэтому minor=0.
+        assertTrue(LoreSchemaMigrations.codeHuman().matches("\\d+\\.\\d+"), "формат major.minor");
+        assertTrue(LoreSchemaMigrations.codeHuman().endsWith(".0"),
+            "все текущие шаги — свои major, последний = major.0");
+    }
+
+    @Test
+    void decideBlocksOnlyOnMajorRegression() {
+        // db == code
+        assertEquals(LoreSchemaMigrations.StartupDecision.UP_TO_DATE,
+            LoreSchemaMigrations.decide(10, 10, 10, 10));
+        // db позади — доиграть недостающее
+        assertEquals(LoreSchemaMigrations.StartupDecision.RUN_PENDING,
+            LoreSchemaMigrations.decide(8, 8, 10, 10));
+        // db 10.1/10.3 впереди кода 10.0, major тот же — РАБОТАЕМ (это и есть фикс простоя)
+        assertEquals(LoreSchemaMigrations.StartupDecision.FORWARD_COMPAT,
+            LoreSchemaMigrations.decide(11, 10, 10, 10), "db 10.1 vs code 10.0 — не отказ");
+        assertEquals(LoreSchemaMigrations.StartupDecision.FORWARD_COMPAT,
+            LoreSchemaMigrations.decide(13, 10, 10, 10), "db 10.3 vs code 10.0 — не отказ");
+        // db major 11 vs код major 10 — несовместимо, ТОЛЬКО тут отказ
+        assertEquals(LoreSchemaMigrations.StartupDecision.INCOMPATIBLE,
+            LoreSchemaMigrations.decide(14, 11, 13, 10), "db major 11 vs code major 10 — отказ");
+    }
 }

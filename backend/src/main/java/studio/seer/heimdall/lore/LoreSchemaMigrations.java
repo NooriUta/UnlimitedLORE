@@ -21,7 +21,19 @@ import java.util.List;
  */
 final class LoreSchemaMigrations {
 
-    record Step(int version, String name, List<String> sql) {
+    /**
+     * version — сквозной ordinal: порядок применения и ключ ledger, неизменяем.
+     * compatMajor — ось СОВМЕСТИМОСТИ (major версии схемы). Аддитивные шаги делят
+     * major с предыдущими (10.1/10.2/10.3 — старый бинарь major=10 их спокойно
+     * переживёт, форвард-совместимость), несовместимый шаг ПОДНИМАЕТ major (11) —
+     * и только тогда дрейф-гард отказывает старту старого кода.
+     * Историческим шагам (3-арг конструктор) compatMajor=version — каждый сам себе
+     * major; НОВЫЙ аддитивный шаг передаёт МЕНЬШИЙ compatMajor явно (4-арг), напр.
+     * new Step(11, 10, "…", …) = ordinal 11, но major 10 → человеку это «10.1».
+     */
+    record Step(int version, int compatMajor, String name, List<String> sql) {
+        Step(int version, String name, List<String> sql) { this(version, version, name, sql); }
+
         String checksum() {
             try {
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -32,12 +44,40 @@ final class LoreSchemaMigrations {
                 return sb.toString();
             } catch (Exception e) { throw new IllegalStateException(e); }
         }
+
+        /** Человекочитаемая версия major.minor (minor = порядковый среди шагов того же major). */
+        String human() {
+            long minor = STEPS.stream()
+                .filter(s -> s.compatMajor() == compatMajor && s.version() <= version).count() - 1;
+            return compatMajor + "." + minor;
+        }
     }
 
     private LoreSchemaMigrations() {}
 
-    /** Код-ожидаемая версия схемы = максимум реестра. */
+    /** Код-ожидаемая версия схемы = максимум реестра (ordinal). */
     static int codeVersion() { return STEPS.get(STEPS.size() - 1).version(); }
+
+    /** Ось совместимости: максимальный major в реестре. Отстал от него бинарь → отказ старта. */
+    static int codeCompatMajor() { return STEPS.stream().mapToInt(Step::compatMajor).max().orElse(0); }
+
+    /** major.minor последнего шага — для логов и сообщений. */
+    static String codeHuman() { return STEPS.get(STEPS.size() - 1).human(); }
+
+    /** Решение раннера о старте по версиям — чистое, тестируется без БД (ADR-023). */
+    enum StartupDecision {
+        UP_TO_DATE,      // db == code
+        RUN_PENDING,     // db < code — доиграть недостающие шаги
+        FORWARD_COMPAT,  // db впереди по аддитивным шагам того же major — работаем, варнинг
+        INCOMPATIBLE     // у БД major новее кода — ломающий шаг, которого нет в коде → отказ
+    }
+
+    static StartupDecision decide(int dbVersion, int dbCompatMajor, int codeVersion, int codeCompatMajor) {
+        if (dbCompatMajor > codeCompatMajor) return StartupDecision.INCOMPATIBLE;
+        if (dbVersion > codeVersion)         return StartupDecision.FORWARD_COMPAT;
+        if (dbVersion < codeVersion)         return StartupDecision.RUN_PENDING;
+        return StartupDecision.UP_TO_DATE;
+    }
 
     // SV-06: DDL сессий 2026-07 задним числом. На живой БД эти стейтменты уже
     // исполнялись out-of-band — идемпотентный replay безвреден и ставит ledger.

@@ -102,22 +102,43 @@ public class LoreSchemaMigrationRunner {
             exec("CREATE PROPERTY LoreSchemaVersion.name       IF NOT EXISTS STRING");
             exec("CREATE PROPERTY LoreSchemaVersion.checksum   IF NOT EXISTS STRING");
             exec("CREATE PROPERTY LoreSchemaVersion.applied_at IF NOT EXISTS STRING");
+            // Ось совместимости (ADR-023): major аддитивных шагов не растёт, ломающий — растит.
+            exec("CREATE PROPERTY LoreSchemaVersion.compat_major IF NOT EXISTS INTEGER");
             exec("CREATE INDEX IF NOT EXISTS ON LoreSchemaVersion (version) UNIQUE");
             return null;
         });
 
         Map<Integer, String> applied = new HashMap<>();
-        withRetry("чтение ledger", () -> ingest.queryPublic("SELECT version, checksum FROM LoreSchemaVersion", Map.of()))
-            .forEach(r -> applied.put(((Number) r.get("version")).intValue(), String.valueOf(r.get("checksum"))));
+        Map<Integer, Integer> appliedCompat = new HashMap<>();
+        withRetry("чтение ledger", () -> ingest.queryPublic("SELECT version, checksum, compat_major FROM LoreSchemaVersion", Map.of()))
+            .forEach(r -> {
+                int v = ((Number) r.get("version")).intValue();
+                applied.put(v, String.valueOf(r.get("checksum")));
+                // Легаси-строка без compat_major: major = ordinal (историческая семантика).
+                Object cm = r.get("compat_major");
+                appliedCompat.put(v, cm != null ? ((Number) cm).intValue() : v);
+            });
 
         int dbVersion = applied.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
+        int dbCompatMajor = appliedCompat.values().stream().mapToInt(Integer::intValue).max().orElse(0);
         int codeVersion = LoreSchemaMigrations.codeVersion();
-        LOG.infof("[LORE MIGRATE] db=%s: db_version=%d, code_version=%d", db, dbVersion, codeVersion);
+        int codeCompatMajor = LoreSchemaMigrations.codeCompatMajor();
+        long dbMinor = appliedCompat.entrySet().stream()
+            .filter(e -> e.getValue() == dbCompatMajor && e.getKey() <= dbVersion).count() - 1;
+        LOG.infof("[LORE MIGRATE] db=%s: db=%d.%d (ordinal v%d), code=%s (ordinal v%d)",
+            db, dbCompatMajor, dbMinor, dbVersion, LoreSchemaMigrations.codeHuman(), codeVersion);
 
-        if (dbVersion > codeVersion) {
-            throw new IllegalStateException("[LORE MIGRATE] Отказ старта: версия схемы БД (" + dbVersion
-                + ") НОВЕЕ кода (" + codeVersion + ") — этот бинарь старше базы. Обновите приложение, "
-                + "миграции назад не откатываются (ADR-LORE-023).");
+        // Хард-стоп ТОЛЬКО на несовместимости: у БД применён major, которого этот
+        // бинарь не знает — реально ломающий шаг. Аддитивный отрыв БД по ordinal в
+        // пределах ТОГО ЖЕ major — не отказ, а форвард-совместимость (ADR-LORE-023).
+        switch (LoreSchemaMigrations.decide(dbVersion, dbCompatMajor, codeVersion, codeCompatMajor)) {
+            case INCOMPATIBLE -> throw new IllegalStateException("[LORE MIGRATE] Отказ старта: major схемы БД ("
+                + dbCompatMajor + ") НОВЕЕ кода (" + codeCompatMajor + ") — в БД применён НЕСОВМЕСТИМЫЙ шаг, "
+                + "которого нет в коде. Обновите приложение; миграции назад не откатываются (ADR-LORE-023).");
+            case FORWARD_COMPAT -> LOG.warnf("[LORE MIGRATE] БД впереди кода по аддитивным шагам (db ordinal v%d > "
+                + "code v%d, major %d = %d) — форвард-совместимый режим: новых структур этот бинарь не использует, "
+                + "но и работать не мешает. Обновите приложение при случае.", dbVersion, codeVersion, dbCompatMajor, codeCompatMajor);
+            case UP_TO_DATE, RUN_PENDING -> { /* обычный путь: checksum-verify + недостающие шаги ниже */ }
         }
 
         // Checksum-verify применённой истории (дрейф выпущенного шага = отказ).
@@ -144,7 +165,7 @@ public class LoreSchemaMigrationRunner {
         else LOG.infof("[LORE MIGRATE] бэкап пропущен (%s)", hasData ? "lore.migrate.backup=false" : "fresh БД, терять нечего");
 
         for (LoreSchemaMigrations.Step s : pending) {
-            LOG.infof("[LORE MIGRATE] применяю V%d__%s (%d стейтментов)", s.version(), s.name(), s.sql().size());
+            LOG.infof("[LORE MIGRATE] применяю %s (V%d__%s, %d стейтментов)", s.human(), s.version(), s.name(), s.sql().size());
             for (String sql : s.sql()) {
                 try {
                     withRetry("V" + s.version(), () -> { exec(sql); return null; });
@@ -156,11 +177,11 @@ public class LoreSchemaMigrationRunner {
                 }
             }
             javaStep(s.version());
-            Map<String, Object> p = Map.of("v", s.version(), "n", s.name(), "c", s.checksum(),
-                "t", Instant.now().toString());
-            command("INSERT INTO LoreSchemaVersion SET version=:v, name=:n, checksum=:c, applied_at=:t", p);
+            Map<String, Object> p = Map.of("v", s.version(), "cm", s.compatMajor(), "n", s.name(),
+                "c", s.checksum(), "t", Instant.now().toString());
+            command("INSERT INTO LoreSchemaVersion SET version=:v, compat_major=:cm, name=:n, checksum=:c, applied_at=:t", p);
         }
-        LOG.infof("[LORE MIGRATE] готово: схема на версии %d", codeVersion);
+        LOG.infof("[LORE MIGRATE] готово: схема на версии %s (ordinal v%d)", LoreSchemaMigrations.codeHuman(), codeVersion);
     }
 
     /** Java-шаги (то, что SQL не умеет). Нумерация совпадает с реестром. */
