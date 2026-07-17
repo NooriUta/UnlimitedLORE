@@ -198,6 +198,73 @@ final class LoreSchemaMigrations {
             "CREATE EDGE TYPE ATTACHED_TO IF NOT EXISTS", // сущность -> KnowAsset
             "UPDATE KnowDictEntry SET dict_type='app_setting', code='md_images_enabled', label_ru='true', sort_order=10, is_active=true, is_extensible=true UPSERT WHERE dict_type='app_setting' AND code='md_images_enabled'",
             "UPDATE KnowDictEntry SET dict_type='app_setting', code='md_image_max_mb', label_ru='5', sort_order=20, is_active=true, is_extensible=true UPSERT WHERE dict_type='app_setting' AND code='md_image_max_mb'"
+        )),
+
+        // ADR-LORE-032 (§2, решение D5) + ADR-LORE-027 (D1) + ADR-LORE-029 (§2):
+        // ценность фичи становится ВЫЧИСЛИМОЙ — боли и выгоды выносятся из прозы
+        // в вершины, а fit VP-канвы считается по рёбрам, не парсингом MD.
+        // Единая шкала целей Коберна на весь слой (☁ cloud/🪁 kite — фичи,
+        // 🌊 sea-level/🐟 subfunction — UC) + два веса оформления (casual|fully-dressed).
+        new Step(8, "product_layer_vp_pain_gain_cockburn_scale", List.of(
+            // Боль клиента: чья (FELT_BY), какая фича адресует (ADDRESSES), какой UC снимает (RELIEVES).
+            "CREATE VERTEX TYPE KnowPain IF NOT EXISTS",
+            "CREATE PROPERTY KnowPain.pain_id      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPain.title        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPain.body_md      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPain.severity     IF NOT EXISTS STRING", // high|normal|low (словарь priority)
+            "CREATE PROPERTY KnowPain.date_created IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowPain (pain_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowPain (title)   FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowPain (body_md) FULL_TEXT",
+            // Выгода: metric_md — ОБЯЗАТЕЛЬНОЕ поле для fit (выгода без метрики не замкнута).
+            "CREATE VERTEX TYPE KnowGain IF NOT EXISTS",
+            "CREATE PROPERTY KnowGain.gain_id      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowGain.title        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowGain.body_md      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowGain.metric_md    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowGain.date_created IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowGain (gain_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowGain (title)     FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowGain (body_md)   FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowGain (metric_md) FULL_TEXT",
+            // Шесть рёбер VP-канвы: левая половина (профиль) и правая (value map).
+            "CREATE EDGE TYPE FELT_BY    IF NOT EXISTS", // KnowPain    -> KnowActor
+            "CREATE EDGE TYPE DESIRED_BY IF NOT EXISTS", // KnowGain    -> KnowActor
+            "CREATE EDGE TYPE ADDRESSES  IF NOT EXISTS", // KnowFeature -> KnowPain
+            "CREATE EDGE TYPE PROMISES   IF NOT EXISTS", // KnowFeature -> KnowGain
+            "CREATE EDGE TYPE RELIEVES   IF NOT EXISTS", // KnowUseCase -> KnowPain (pain reliever)
+            "CREATE EDGE TYPE DELIVERS   IF NOT EXISTS", // KnowUseCase -> KnowGain (gain creator)
+            // Стратегическая цель фичи (ADR-032 §1, KAOS: веха = goal, фича = refinement).
+            // Тип ребра уже существует у спринтов — объявление идемпотентно.
+            "CREATE EDGE TYPE TARGETS_MILESTONE IF NOT EXISTS",
+            // Обоснование enb-задачи (D16): KnowTask -> KnowADR.
+            "CREATE EDGE TYPE JUSTIFIED_BY IF NOT EXISTS",
+            // Классификация Коберна: уровень цели и вес оформления (ADR-027 §2).
+            "CREATE PROPERTY KnowUseCase.goal_level IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.rigor      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUseCase.priority   IF NOT EXISTS STRING",
+            // shipped_at ставит СИСТЕМА при первом переходе вычислителя в shipped
+            // (ADR-029 §2) — факт первого выхода переживает реинжиниринг.
+            "CREATE PROPERTY KnowUseCase.shipped_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (goal_level) NOTUNIQUE",
+            // Фича живёт на той же шкале — ☁ cloud/🪁 kite (ADR-032 §1).
+            "CREATE PROPERTY KnowFeature.goal_level IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFeature.shipped_at IF NOT EXISTS STRING",
+            // Канон-словари (правят люди, механизм ADR-012). Уровни целей — по Коберну.
+            "UPDATE KnowDictEntry SET dict_type='uc_goal_level', code='cloud',      label_ru='☁ Облако — стратегическая цель (фича)', color='#88B8A8', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_goal_level' AND code='cloud'",
+            "UPDATE KnowDictEntry SET dict_type='uc_goal_level', code='kite',       label_ru='🪁 Змей — обзорная цель', color='#A8B860', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_goal_level' AND code='kite'",
+            "UPDATE KnowDictEntry SET dict_type='uc_goal_level', code='sea-level',  label_ru='🌊 Уровень моря — пользовательская цель', color='#5AB4E8', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_goal_level' AND code='sea-level'",
+            "UPDATE KnowDictEntry SET dict_type='uc_goal_level', code='subfunction', label_ru='🐟 Рыба — подфункция', color='#665C48', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_goal_level' AND code='subfunction'",
+            "UPDATE KnowDictEntry SET dict_type='uc_rigor', code='casual',        label_ru='⚡ Лёгкий (casual)', color='#D4922A', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_rigor' AND code='casual'",
+            "UPDATE KnowDictEntry SET dict_type='uc_rigor', code='fully-dressed', label_ru='📋 Полный (fully dressed)', color='#88B8A8', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='uc_rigor' AND code='fully-dressed'"
+        )),
+
+        // ADR-LORE-028 (D19): primary|supporting — свойство role на ребре HAS_ACTOR.
+        // У сценария ровно один primary-актор (правило линтера ADR-027 №7); первый
+        // привязанный становится primary по умолчанию (D19). Свойство на РЕБРЕ, не
+        // на вершине: одна роль может быть primary в одном UC и supporting в другом.
+        new Step(9, "has_actor_role_property", List.of(
+            "CREATE PROPERTY HAS_ACTOR.role IF NOT EXISTS STRING"
         ))
     );
 }

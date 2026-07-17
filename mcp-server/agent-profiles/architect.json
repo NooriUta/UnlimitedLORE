@@ -17,6 +17,8 @@
     "project_new": "allow",
     "status_set": "allow",
     "feature_*": "allow",
-    "uc_*": "allow"
+    "uc_*": "allow",
+    "pain_*": "allow",
+    "gain_*": "allow"
   }
 }

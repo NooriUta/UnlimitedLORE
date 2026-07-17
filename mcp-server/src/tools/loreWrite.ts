@@ -284,16 +284,88 @@ export function registerLoreWrite(server: McpServer): void {
     schema: {
       uc_id:         z.string().describe('e.g. "UC-GIT-MERGE"'),
       title:         z.string().optional().describe('сценарий одной строкой'),
-      scenario_md:   z.string().optional(),
-      acceptance_md: z.string().optional().describe('критерий приёмки'),
+      scenario_md:   z.string().optional()
+        .describe('Cockburn template (ADR-LORE-027 §1) — section headings are a machine-read convention: ' +
+          '"### Триггер", "### Предусловия", "### Основной сценарий" (numbered 1..N), "### Расширения" ' +
+          '(items "2a. …"/"3b. …" — the number MUST reference an existing step), "### Вариации", ' +
+          '"### Минимальные гарантии", "### Гарантии успеха", "### Диаграмма" (```mermaid``` renders natively). ' +
+          'Images: upload via asset_up and paste the returned md snippet.'),
+      acceptance_md: z.string().optional()
+        .describe('критерий приёмки; fully-dressed wants "### Проверки" (numbered) + "### Покрытие расширений" ' +
+          '(each Na from the scenario named), casual — just a numbered list of checks (ADR-LORE-027 §3)'),
       status:        z.enum(['proposed', 'active', 'shipped', 'dropped']).optional(),
       feature_id:    z.string().optional().describe('родитель — держит DECOMPOSES_INTO в синхроне'),
+      goal_level:    z.enum(['cloud', 'kite', 'sea-level', 'subfunction']).optional()
+        .describe('Cockburn goal level, one scale for the whole layer: ☁ cloud / 🪁 kite = feature altitude, ' +
+          '🌊 sea-level (user goal) / 🐟 subfunction = UC altitude'),
+      rigor:         z.enum(['casual', 'fully-dressed']).optional()
+        .describe('writing weight (ADR-LORE-027-D1) — omit to derive from goal_level ' +
+          '(subfunction → casual, everything else → fully-dressed); passing it explicitly always wins'),
+      priority:      z.enum(['high', 'normal', 'low']).optional(),
     },
     path: '/lore/uc',
-    body: ({ uc_id, title, scenario_md, acceptance_md, status, feature_id }) => ({
+    body: ({ uc_id, title, scenario_md, acceptance_md, status, feature_id, goal_level, rigor, priority }) => ({
       uc_id, title: title ?? null, scenario_md: scenario_md ?? null,
       acceptance_md: acceptance_md ?? null, status: status ?? null, feature_id: feature_id ?? null,
+      goal_level: goal_level ?? null, rigor: rigor ?? null, priority: priority ?? null,
     }),
+  });
+
+  // ADR-LORE-032 §2 (D5): боли и выгоды — ВЕРШИНЫ, не проза. Только так fit
+  // VP-канвы считается рёбрами, боль переиспользуется несколькими фичами, и
+  // «самая горячая боль» + дубль усилий становятся видимы (аналитика ADR-030).
+  definePostTool(server, {
+    name: 'pain_new',
+    description: 'Create or update a KnowPain — a customer pain as a graph vertex (ADR-LORE-032 §2). ' +
+      'Upsert by pain_id. Wire it up: feature_link(rel="pain") = the feature CLAIMS to address it, ' +
+      'uc_link(rel="relieves") = a use case ACTUALLY relieves it, uc_link on the actor side tells whose pain ' +
+      'it is. A pain with claims but no reliever is exactly what the hygiene slice reports. ' +
+      'Reuse the same pain across features — that is the point of it being a vertex.',
+    schema: {
+      pain_id:  z.string().describe('e.g. "PAIN-LORE-RAW-TOKEN" (PAIN-<PROJ>-<slug>)'),
+      title:    z.string().optional().describe('боль одной строкой, языком клиента'),
+      body_md:  z.string().optional().describe('подробности: когда возникает, чем сейчас обходят'),
+      severity: z.enum(['high', 'normal', 'low']).optional(),
+    },
+    path: '/lore/pain',
+    body: ({ pain_id, title, body_md, severity }) => ({
+      pain_id, title: title ?? null, body_md: body_md ?? null, severity: severity ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'gain_new',
+    description: 'Create or update a KnowGain — a customer gain as a graph vertex (ADR-LORE-032 §2). ' +
+      'metric_md is what makes the gain COUNT: a gain without a measurable metric never closes the VP fit, ' +
+      'and the response says so. Wire it up: feature_link(rel="gain") = the feature PROMISES it, ' +
+      'uc_link(rel="delivers") = a use case ACTUALLY creates it.',
+    schema: {
+      gain_id:   z.string().describe('e.g. "GAIN-LORE-LINKED-RELEASES" (GAIN-<PROJ>-<slug>)'),
+      title:     z.string().optional().describe('выгода одной строкой'),
+      body_md:   z.string().optional(),
+      metric_md: z.string().optional().describe('ЧЕМ МЕРЯЕМ — без метрики выгода не засчитывается в fit'),
+    },
+    path: '/lore/gain',
+    body: ({ gain_id, title, body_md, metric_md }) => ({
+      gain_id, title: title ?? null, body_md: body_md ?? null, metric_md: metric_md ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'feature_link',
+    description: 'Link (or unlink) a KnowFeature. rel="pain": ADDRESSES — the feature claims to address a pain; ' +
+      'rel="gain": PROMISES — it promises a gain (relieving/delivering is the UCs\' job, see uc_link ' +
+      'rel="relieves"/"delivers"). rel="milestone": TARGETS_MILESTONE — the strategic goal the feature refines ' +
+      '(KAOS reading: milestone = goal, feature = refinement, UCs = operationalisations). rel="component": ' +
+      'BELONGS_TO. linked:false in the response = edge NOT created (target missing) — never a silent no-op.',
+    schema: {
+      feature_id: z.string(),
+      rel:        z.enum(['pain', 'gain', 'milestone', 'component']),
+      target_id:  z.string().describe('pain_id | gain_id | milestone_id | component_id, matching rel'),
+      action:     z.enum(['add', 'remove']).default('add'),
+    },
+    path: '/lore/feature/link',
+    body: ({ feature_id, rel, target_id, action }) => ({ feature_id, rel, target_id, action: action ?? 'add' }),
   });
 
   server.tool(
@@ -302,17 +374,42 @@ export function registerLoreWrite(server: McpServer): void {
       'REQUIRED discipline for tasks with work_class=uc (advisory, D3). rel="adr"/"decision": TRACED_TO ' +
       'edge (UC→justification) — OPTIONAL by design (D9). rel="actor": HAS_ACTOR edge (MULTI, D12) to a ' +
       'KnowActor (create via actor_new first). rel="includes"/"extends": UC→UC graph relations (D13): ' +
-      'includes = mandatory sub-scenario, extends = variant. linked:false in the response = edge NOT created ' +
+      'includes = mandatory sub-scenario, extends = variant. rel="relieves"/"delivers" (ADR-LORE-032 §2): ' +
+      'the UC actually relieves a KnowPain / delivers a KnowGain — these edges are what CLOSE the VP fit ' +
+      'the feature only claimed via feature_link(pain|gain). linked:false in the response = edge NOT created ' +
       '(target missing) — never a silent no-op. Mutates system_aida_lore.',
     {
       uc_id:     z.string().describe('e.g. "UC-GIT-MERGE"'),
-      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends']),
-      target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends)'),
+      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends', 'relieves', 'delivers']),
+      target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
+      actor_role: z.enum(['primary', 'supporting']).optional()
+        .describe('rel="actor" only (ADR-LORE-028 D19): the first linked actor becomes primary by default — ' +
+          'a UC needs exactly one primary (quality check #7); pass this to override'),
     },
-    async ({ uc_id, rel, target_id, action }) => {
+    async ({ uc_id, rel, target_id, action, actor_role }) => {
       try {
-        return json(await lorePost('/lore/uc/link', { uc_id, rel, target_id, action: action ?? 'add' }));
+        return json(await lorePost('/lore/uc/link',
+          { uc_id, rel, target_id, action: action ?? 'add', actor_role: actor_role ?? null }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // ADR-LORE-027-D3 режим (б): re-lint без записи. Тот же алгоритм, что панель
+  // качества в форме и ответ uc_new/uc_set — расхождение невозможно по построению.
+  server.tool(
+    'uc_quality',
+    'Re-lint a use case against the Cockburn quality rules (ADR-LORE-027 §3-4) WITHOUT writing anything. ' +
+      'Returns {rigor, score, max, findings[]} where score/max counts only the checks REQUIRED at the UC\'s ' +
+      'weight (casual has a smaller denominator than fully-dressed — optional sections become hints, not ' +
+      'penalties). Section headings are matched by convention; extension refs ("2a.") are checked against ' +
+      'existing main-scenario steps; primary-actor and TRACED_TO are read from edges, not prose. Advisory — ' +
+      'the same numbers come back inside uc_new/uc_set responses, so you rarely need this except to review ' +
+      'someone else\'s UC.',
+    { uc_id: z.string().describe('e.g. "UC-GIT-MERGE"') },
+    async ({ uc_id }) => {
+      try {
+        return json(await lorePost('/lore/uc/quality', { uc_id }));
       } catch (e) { return err(e); }
     },
   );
