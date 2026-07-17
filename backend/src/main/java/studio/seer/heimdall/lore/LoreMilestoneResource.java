@@ -22,6 +22,9 @@ public class LoreMilestoneResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreMilestoneResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
+
     // Direct edge so the milestone-management UI can link ANY sprint (not only
     // the 160/186 that have a plan-item bridge). Read paths union both sources.
 
@@ -111,6 +114,8 @@ public class LoreMilestoneResource extends LoreResourceBase {
                         "UPDATE " + rid + " SET goal_md=:g", Map.of("g", req.goal_md()))).await().indefinitely();
                 }
             }
+            if (req.goal_md() != null)
+                hashStamper.stampOpenHist("KnowMilestoneHist", "KnowMilestone", "milestone_id", req.milestone_id());
             return noStore(Response.ok(Map.of("ok", true, "milestone_id", req.milestone_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE] %s: %s", req.milestone_id(), e.getMessage());

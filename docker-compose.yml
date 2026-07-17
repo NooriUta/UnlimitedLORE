@@ -48,6 +48,10 @@ services:
       - kc.admin.url=http://kc:18180/kc
       - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
       - lore.secrets.provider=${LORE_SECRETS_PROVIDER:-env}
+      # ADR-LORE-023: dev-стенд получает версию-маркер и раннер миграций
+      # (OQ-023-DEVSTAND). При pending-шагах на БД с данными раннер сначала
+      # снимает BACKUP DATABASE (SV-04); упавший шаг валит старт ГРОМКО.
+      - lore.migrate=${LORE_MIGRATE:-true}
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs
       - S3_ENDPOINT=http://minio:9000

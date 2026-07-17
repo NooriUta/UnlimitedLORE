@@ -97,9 +97,13 @@ public final class LoreSlices {
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 
-        // SCD2 history chain for one ADR
+        // SCD2 history chain for one ADR. AL-30: ревизия версионирует ВСЁ — слайс
+        // обязан отдавать тела, а не только хэш; иначе история из 200 ревизий тел
+        // показывала прочерки. content_hash (SV-10) = дешёвый «менялось ли», тела =
+        // «что именно» для пополевого диффа в UI.
         slice("adr_history",
-            "SELECT valid_from, valid_to, content_hash, source_commit " +
+            "SELECT valid_from, valid_to, content_hash, source_commit, " +
+            "context_md, decision_md, consequences_md " +
             "FROM KnowADRHist WHERE in('HAS_STATE').adr_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -477,8 +481,12 @@ public final class LoreSlices {
             " ORDER BY spec_id LIMIT 200");
 
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
+        // AL-30: + все версионируемые поля ревизии (тела, план, pr_refs) — история
+        // перестаёт показывать «только статус» при полных данных под ней.
         slice("history_sprint",
-            "SELECT valid_from, valid_to, content_hash, source_commit, status_raw " +
+            "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
+            "priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
+            "context_md, outcome_md " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
