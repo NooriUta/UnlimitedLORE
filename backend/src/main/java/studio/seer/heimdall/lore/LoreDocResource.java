@@ -28,6 +28,9 @@ public class LoreDocResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreDocResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
+
     // ── KnowDoc write ────────────────────────────────────────────────────────
     // content_html is legacy (pre-existing HTML-fragment docs, rendered sandboxed);
     // content_md_en/content_md_ru are the current authoring path — clean Markdown
@@ -88,6 +91,7 @@ public class LoreDocResource extends LoreResourceBase {
                         Map.of("id", req.doc_id(), "pid", req.parent_doc_id()))).await().indefinitely();
                 }
             }
+            hashStamper.stampOpenHist("KnowDocHist", "KnowDoc", "doc_id", req.doc_id());
             return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());

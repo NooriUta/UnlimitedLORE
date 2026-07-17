@@ -44,6 +44,15 @@ public class LoreSchemaInitializer {
     @RestClient
     LoreCommandClient client;
 
+    /**
+     * Явная точка синхронизации для LoreSchemaMigrationRunner: инъекция
+     * @ApplicationScoped-бина даёт ленивый прокси, и @PostConstruct НЕ выполняется
+     * до первого вызова метода. Раннер зовёт этот no-op, чтобы bootstrap-DDL
+     * гарантированно отработал ДО миграций (иначе порядок @Startup-бинов — лотерея,
+     * и раннер вставал на БД без базовых типов).
+     */
+    public void ensureReady() { /* всё делает @PostConstruct при создании бина */ }
+
     @PostConstruct
     void init() {
         if (!enabled || !bootstrap) {
@@ -51,6 +60,24 @@ public class LoreSchemaInitializer {
             return;
         }
         LOG.infof("[LORE] Initializing schema in %s", db);
+        // Свежесозданная БД первые мгновения отвечает 500 на команды — DDL,
+        // запущенный сразу после create database, молча падал на ПЕРВЫХ типах
+        // (execIgnoreError глотал), и корпус жил без KnowADR/LoreComponent.
+        // Пробуем реальную команду до успеха, потом катим DDL.
+        // Проба обязана быть ПИШУЩЕЙ: чтение готово раньше, чем коммиты DDL, —
+        // read-проба проходила, а CREATE TYPE следом всё ещё падал.
+        boolean ready = false;
+        for (int i = 0; i < 20 && !ready; i++) {
+            try {
+                client.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sql", "CREATE VERTEX TYPE LoreBootProbe IF NOT EXISTS"))
+                    .await().indefinitely();
+                ready = true;
+            } catch (Exception e) {
+                try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+            }
+        }
+        if (!ready) LOG.errorf("[LORE] БД %s не ответила на пробу — DDL пойдёт наудачу (смотри ошибки ниже)", db);
         DDL.forEach(this::execIgnoreError);
         LOG.infof("[LORE] Schema init complete for %s", db);
     }

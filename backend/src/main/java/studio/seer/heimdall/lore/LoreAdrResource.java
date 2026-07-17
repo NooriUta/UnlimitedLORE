@@ -27,6 +27,9 @@ public class LoreAdrResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreAdrResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
+
     public record AdrCreateRequest(String adr_id, String name, String status, String date_created,
         String component_id, String context_md, String decision_md, String consequences_md,
         List<String> depends_on_ids, List<String> supersedes_ids,
@@ -294,6 +297,7 @@ public class LoreAdrResource extends LoreResourceBase {
             // решением. Ловим на записи и подсказываем вызывающему (агенту).
             String qHint = questionsInBodyHint(req);
             if (qHint != null) out.put("hint", qHint);
+            hashStamper.stampOpenHist("KnowADRHist", "KnowADR", "adr_id", req.adr_id());
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ADR CREATE] %s: %s", req.adr_id(), e.getMessage());

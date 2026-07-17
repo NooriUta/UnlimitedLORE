@@ -23,6 +23,9 @@ public class LoreRunbookResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreRunbookResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
+
     // MG3-01 (SPRINT_LORE_MCP_GAPS_3): runbooks previously only referenced an
     // ADR via a text-only [[ADR-ID]] wiki link inside content_md — no real
     // graph edge existed, so nothing queryable connected the two. Real edge:
@@ -141,6 +144,7 @@ public class LoreRunbookResource extends LoreResourceBase {
                 histCreated = true;
             }
 
+            hashStamper.stampOpenHist("KnowRunbookHist", "KnowRunbook", "runbook_id", req.runbook_id());
             return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
                 "hist_created", histCreated)));
         } catch (Exception e) {

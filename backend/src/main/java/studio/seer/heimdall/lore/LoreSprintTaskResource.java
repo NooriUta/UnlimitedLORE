@@ -30,6 +30,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreSprintTaskResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
+
     // ADR-LORE-013 (task/move) reuses LoreStatusResource's SCD2 transition + task
     // carry-forward helpers to cancel the source task — see updateScd2Status's
     // Javadoc for why those are package-private instead of duplicated here.
@@ -101,6 +104,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     "TO   (SELECT FROM KnowGitProject WHERE slug=:gp) IF NOT EXISTS",
                     Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
             }
+            hashStamper.stampOpenHist("KnowSprintHist", "KnowSprint", "sprint_id", req.sprint_id());
             java.util.LinkedHashMap<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
@@ -192,7 +196,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 }
                 return writeClient.command(db, basicAuth(),
                         new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
-                    .map(__ -> noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order))));
+                    .map(__ -> {
+                        hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
+                        return noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order)));
+                    });
             })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK CREATE] %s: %s", uid, ex.getMessage());
@@ -492,6 +499,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                         req.author_agent(), req.executor_agent(), req.reviewer_agent(), req.task_type()))
                     .await().indefinitely();
                 mirrorTaskHist(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely();
+                if (req.note_md() != null)
+                    hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.task_uid());
                 updated++;
             } catch (Exception e) {
                 errors.add(req.task_uid() + ": " + e.getMessage());
@@ -570,7 +579,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
             // were actually supplied, so a title-only edit never wipes note/effort.
             .chain(__ -> mirrorTaskHist(uid, req.note_md(), req.effort_days()))
-            .map(__ -> noStore(Response.ok(new TaskWriteResponse(true, uid, null, null))))
+            .map(__ -> {
+                if (req.note_md() != null)
+                    hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
+                return noStore(Response.ok(new TaskWriteResponse(true, uid, null, null)));
+            })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK EDIT] %s: %s", uid, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)

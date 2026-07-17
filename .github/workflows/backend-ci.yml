@@ -12,17 +12,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # LoreScd2AndRollbackLiveDbTest needs a real ArcadeDB via Testcontainers.
-      # That works on GitHub-hosted runners but not on self-hosted Docker-in-Docker
-      # stands (e.g. the Forgejo act_runner), where the job container can't reach
-      # Testcontainers' Ryuk/DB on the default bridge network. Export a skip flag
-      # for that one test off github-hosted; every other backend test still runs
-      # everywhere. Must be a STEP (via $GITHUB_ENV) — the `runner` context is not
-      # available in a job-level `env:`. runner.environment is 'github-hosted' on
-      # GitHub's hosted runners and 'self-hosted'/empty elsewhere, so the value is
-      # 'false' only on GitHub-hosted; subsequent steps inherit it.
-      - name: Flag self-hosted DooD (skip live-DB test off github-hosted)
-        run: echo "LORE_SKIP_LIVE_DB_TESTS=${{ runner.environment != 'github-hosted' }}" >> "$GITHUB_ENV"
+      # Live-DB тесты нужны настоящему ArcadeDB. GitHub-hosted: Testcontainers.
+      # Self-hosted Forgejo act_runner: Testcontainers/Ryuk не работает в DooD,
+      # и раньше тесты просто СКИПАЛИСЬ — регрессия схемы на чистой БД на нашем
+      # CI не ловилась вообще (слепота найдена 2026-07-17). Теперь вместо скипа —
+      # ПОСТОЯННАЯ тест-БД lore_ci_test на хостовом ArcadeDB :2480 (решение
+      # владельца): LoreArcadeDbTestResource видит LORE_TEST_DB_URL и идёт в неё,
+      # пересоздавая базу на каждый прогон. system_aida_lore не затрагивается.
+      # Пароль — локальный dev-стенд (он уже в docs/DEPLOYMENT.md), не секрет прода.
+      # Must be a STEP (via $GITHUB_ENV) — the `runner` context is not available
+      # in a job-level `env:`.
+      - name: Point live-DB tests at the standing test DB (self-hosted) / Testcontainers (github-hosted)
+        run: |
+          if [ "${{ runner.environment }}" != "github-hosted" ]; then
+            echo "LORE_TEST_DB_URL=http://host.docker.internal:2480" >> "$GITHUB_ENV"
+            echo "LORE_TEST_DB_NAME=lore_ci_test" >> "$GITHUB_ENV"
+            echo "LORE_TEST_DB_PASSWORD=playwithdata" >> "$GITHUB_ENV"
+          fi
 
       # GitHub-hosted: fetch the JDK the normal way.
       - name: Set up JDK 21 (github-hosted)
