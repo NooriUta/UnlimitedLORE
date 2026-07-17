@@ -31,6 +31,22 @@ public class LoreProductResource extends LoreResourceBase {
 
     private static final List<String> PRODUCT_STATUSES = List.of("proposed", "active", "shipped", "dropped");
 
+    /** Шкала целей Коберна — одна на весь слой (ADR-LORE-032 §1): фичи живут на
+     *  cloud/kite, UC — на sea-level/subfunction. Канон, словарь uc_goal_level. */
+    static final List<String> UC_GOAL_LEVELS = List.of("cloud", "kite", "sea-level", "subfunction");
+
+    /** Два веса оформления по Коберну (ADR-LORE-027-D1), словарь uc_rigor. */
+    static final List<String> UC_RIGORS = List.of("casual", "fully-dressed");
+
+    /**
+     * Дефолтный вес из уровня цели (ADR-027-D1): обзорные и пользовательские цели
+     * пишутся полно, подфункции — легко. Автор вправе переопределить — поэтому это
+     * дефолт, а не правило: явный rigor в запросе всегда сильнее.
+     */
+    static String defaultRigor(String goalLevel) {
+        return "subfunction".equals(goalLevel) ? "casual" : "fully-dressed";
+    }
+
     @Inject
     @RestClient
     LoreCommandClient writeClient;
@@ -84,7 +100,8 @@ public class LoreProductResource extends LoreResourceBase {
 
     // actor-строки нет (D12): акторы — вершины KnowActor, связь HAS_ACTOR через uc/link.
     public record UcRequest(String uc_id, String title, String scenario_md,
-                            String acceptance_md, String status, String feature_id) {}
+                            String acceptance_md, String status, String feature_id,
+                            String goal_level, String rigor, String priority) {}
 
     @POST
     @Path("uc")
@@ -99,6 +116,12 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("uc_id contains illegal characters");
         if (req.status() != null && !PRODUCT_STATUSES.contains(req.status()))
             return badParams("status must be one of: " + PRODUCT_STATUSES);
+        // ADR-027 §2: классификация Коберна — канон словарей, свободных значений нет.
+        if (req.goal_level() != null && !UC_GOAL_LEVELS.contains(req.goal_level()))
+            return badParams("goal_level must be one of: " + UC_GOAL_LEVELS
+                + " (☁ cloud/🪁 kite — уровень фичи, 🌊 sea-level/🐟 subfunction — уровень UC)");
+        if (req.rigor() != null && !UC_RIGORS.contains(req.rigor()))
+            return badParams("rigor must be one of: " + UC_RIGORS);
         try {
             StringBuilder sql = new StringBuilder("UPDATE KnowUseCase SET uc_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
@@ -108,6 +131,13 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.acceptance_md() != null) { sql.append(", acceptance_md=:ac"); p.put("ac", req.acceptance_md()); }
             if (req.status() != null)        { sql.append(", status=:s");         p.put("s", req.status()); }
             if (req.feature_id() != null)    { sql.append(", feature_id=:f");     p.put("f", req.feature_id()); }
+            if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
+            // Уровень цели задан — вес по умолчанию выводится из него (ADR-027-D1),
+            // но явный rigor автора сильнее вычисленного дефолта.
+            String goal = req.goal_level();
+            if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
+            String rigor = req.rigor() != null ? req.rigor() : (goal != null ? defaultRigor(goal) : null);
+            if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now().toString());
             sql.append(" UPSERT WHERE uc_id=:id");
@@ -176,6 +206,145 @@ public class LoreProductResource extends LoreResourceBase {
         }
     }
 
+    // ── Pain / Gain (ADR-LORE-032 §2, D5) ────────────────────────────────────
+    // Боли и выгоды — ВЕРШИНЫ, а не проза в context_md: только тогда fit VP-канвы
+    // считается рёбрами, боль переиспользуется несколькими фичами, и видно «самую
+    // горячую боль» + дубль усилий. Проектные — как акторы (D18).
+
+    public record PainRequest(String pain_id, String title, String body_md, String severity) {}
+
+    @POST
+    @Path("pain")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertPain(PainRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.pain_id() == null || req.pain_id().isBlank())
+            return badParams("pain_id required");
+        if (!SAFE_ID.matcher(req.pain_id()).matches())
+            return badParams("pain_id contains illegal characters");
+        if (req.severity() != null && !List.of("high", "normal", "low").contains(req.severity()))
+            return badParams("severity must be high|normal|low");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE KnowPain SET pain_id=:id");
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("id", req.pain_id());
+            if (req.title() != null)    { sql.append(", title=:t");    p.put("t", req.title()); }
+            if (req.body_md() != null)  { sql.append(", body_md=:b");  p.put("b", req.body_md()); }
+            if (req.severity() != null) { sql.append(", severity=:s"); p.put("s", req.severity()); }
+            sql.append(", date_created = ifnull(date_created, :d)");
+            p.put("d", LocalDate.now().toString());
+            sql.append(" UPSERT WHERE pain_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
+                .await().indefinitely();
+            return noStore(Response.ok(Map.of("ok", true, "pain_id", req.pain_id())));
+        } catch (Exception e) {
+            LOG.warnf("[LORE PAIN] %s: %s", req.pain_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    public record GainRequest(String gain_id, String title, String body_md, String metric_md) {}
+
+    @POST
+    @Path("gain")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertGain(GainRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.gain_id() == null || req.gain_id().isBlank())
+            return badParams("gain_id required");
+        if (!SAFE_ID.matcher(req.gain_id()).matches())
+            return badParams("gain_id contains illegal characters");
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE KnowGain SET gain_id=:id");
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("id", req.gain_id());
+            if (req.title() != null)     { sql.append(", title=:t");     p.put("t", req.title()); }
+            if (req.body_md() != null)   { sql.append(", body_md=:b");   p.put("b", req.body_md()); }
+            if (req.metric_md() != null) { sql.append(", metric_md=:m"); p.put("m", req.metric_md()); }
+            sql.append(", date_created = ifnull(date_created, :d)");
+            p.put("d", LocalDate.now().toString());
+            sql.append(" UPSERT WHERE gain_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
+                .await().indefinitely();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("gain_id", req.gain_id());
+            // metric_md — не required на записи (выгоду формулируют раньше, чем метрику),
+            // но БЕЗ него выгода никогда не будет замкнута в fit (ADR-032 §2): говорим сразу.
+            if (req.metric_md() == null || req.metric_md().isBlank())
+                out.put("hint", "metric_md пуст — выгода не будет засчитана в fit VP-канвы, пока не появится метрика");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE GAIN] %s: %s", req.gain_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    // ── Feature links: VP-профиль (pain/gain), стратегическая цель, компонент ──
+
+    public record FeatureLinkRequest(String feature_id, String rel, String target_id, String action) {}
+
+    @POST
+    @Path("feature/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkFeature(FeatureLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.feature_id() == null || req.feature_id().isBlank()
+                || req.rel() == null || req.target_id() == null || req.target_id().isBlank())
+            return badParams("feature_id, rel (pain|gain|milestone|component), target_id required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            String edge, toSql;
+            Map<String, Object> p = Map.of("fid", req.feature_id(), "tid", req.target_id());
+            switch (req.rel()) {
+                case "pain" -> { // фича ЗАЯВЛЯЕТ, что адресует боль; снимает её — UC (RELIEVES)
+                    edge = "ADDRESSES";
+                    toSql = "(SELECT FROM KnowPain WHERE pain_id=:tid)";
+                }
+                case "gain" -> { // фича ОБЕЩАЕТ выгоду; создаёт её — UC (DELIVERS)
+                    edge = "PROMISES";
+                    toSql = "(SELECT FROM KnowGain WHERE gain_id=:tid)";
+                }
+                case "milestone" -> { // ADR-032 §1: стратегическая цель (KAOS: веха = goal)
+                    edge = "TARGETS_MILESTONE";
+                    toSql = "(SELECT FROM KnowMilestone WHERE milestone_id=:tid)";
+                }
+                case "component" -> {
+                    edge = "BELONGS_TO";
+                    toSql = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                }
+                default -> { return badParams("rel must be pain|gain|milestone|component"); }
+            }
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowFeature WHERE feature_id=:fid) " +
+                    "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.milestone_id=:tid OR @in.component_id=:tid", p))
+                    .await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id(),
+                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowFeature WHERE feature_id=:fid) " +
+                    "TO " + toSql + " IF NOT EXISTS", p))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id(),
+                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — проверьте, что фича и target существуют")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE FEATURE LINK] %s: %s", req.feature_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
     // ── UC links: REALIZES (task→uc) и TRACED_TO (uc→adr|decision) ──────────
 
     public record UcLinkRequest(String uc_id, String rel, String target_id, String action) {}
@@ -225,13 +394,24 @@ public class LoreProductResource extends LoreResourceBase {
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowUseCase WHERE uc_id=:tid)";
                 }
-                default -> { return badParams("rel must be task|adr|decision|actor|includes|extends"); }
+                case "relieves" -> { // ADR-032 D5: pain reliever — UC снимает боль
+                    edge = "RELIEVES";
+                    fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    toSql   = "(SELECT FROM KnowPain WHERE pain_id=:tid)";
+                }
+                case "delivers" -> { // ADR-032 D5: gain creator — UC создаёт выгоду
+                    edge = "DELIVERS";
+                    fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    toSql   = "(SELECT FROM KnowGain WHERE gain_id=:tid)";
+                }
+                default -> { return badParams("rel must be task|adr|decision|actor|includes|extends|relieves|delivers"); }
             }
             if (remove) {
                 boolean fromUc = !"task".equals(req.rel());
                 String delSql = fromUc
                     ? "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) " +
-                      "WHERE @in.adr_id=:tid OR @in.decision_id=:tid OR @in.actor_id=:tid OR @in.uc_id=:tid"
+                      "WHERE @in.adr_id=:tid OR @in.decision_id=:tid OR @in.actor_id=:tid OR @in.uc_id=:tid " +
+                      "OR @in.pain_id=:tid OR @in.gain_id=:tid"
                     : "DELETE FROM (SELECT expand(inE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) WHERE @out.task_uid=:tid";
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", delSql, p))
                     .await().indefinitely();

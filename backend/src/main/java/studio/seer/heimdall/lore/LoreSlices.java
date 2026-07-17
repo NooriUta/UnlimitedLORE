@@ -317,9 +317,15 @@ public final class LoreSlices {
         // Слайс отдаёт счётчики, вывод статуса — на клиенте/потребителе.
         slice("features",
             "SELECT feature_id, title, body_md, context_md, status, component_id, date_created, " +
+            "goal_level, shipped_at, " +
             "out('DECOMPOSES_INTO').uc_id AS uc_ids, " +
             "out('DECOMPOSES_INTO').size() AS uc_total, " +
-            "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS uc_shipped " +
+            "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS uc_shipped, " +
+            // VP-профиль фичи (ADR-032 D5): что она ЗАЯВЛЯЕТ (ADDRESSES/PROMISES) —
+            // замкнутость на UC (RELIEVES/DELIVERS) считает слайс feature_vp (AN-01).
+            "out('ADDRESSES').pain_id AS pain_ids, " +
+            "out('PROMISES').gain_id  AS gain_ids, " +
+            "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id " +
             "FROM KnowFeature",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -328,6 +334,12 @@ public final class LoreSlices {
 
         slice("use_cases_of_feature",
             "SELECT uc_id, title, scenario_md, acceptance_md, status, feature_id, date_created, " +
+            // ADR-027 (D1/§2): классификация Коберна — уровень цели, вес оформления,
+            // приоритет; shipped_at ставит система (ADR-029 §2).
+            "goal_level, rigor, priority, shipped_at, " +
+            // ADR-032 D5: что этот UC реально снимает/создаёт — правая половина VP-канвы.
+            "out('RELIEVES').pain_id AS relieves_pain_ids, " +
+            "out('DELIVERS').gain_id AS delivers_gain_ids, " +
             "in('REALIZES').task_uid AS task_uids, " +
             "out('TRACED_TO').adr_id AS traced_adr_ids, " +
             "out('TRACED_TO').decision_id AS traced_decision_ids, " +
@@ -340,6 +352,30 @@ public final class LoreSlices {
             "in('UC_EXTENDS').uc_id    AS extended_by " +
             "FROM KnowUseCase WHERE feature_id = :id ORDER BY uc_id",
             List.of("id"), Map.of(), "");
+
+        // ADR-LORE-032 §2 (D5): реестры болей и выгод. Боль/выгода переиспользуются
+        // НЕСКОЛЬКИМИ фичами — потому реестр проектный, а не «внутри фичи»; отсюда же
+        // растёт кросс-фичевая канва по актору и «самая горячая боль» (AN-01/AN-07).
+        slice("pains",
+            "SELECT pain_id, title, body_md, severity, date_created, " +
+            "out('FELT_BY').actor_id       AS actor_ids, " +   // чья боль
+            "in('ADDRESSES').feature_id    AS feature_ids, " + // кто заявил, что адресует
+            "in('ADDRESSES').size()        AS addressed_by, " +
+            "in('RELIEVES').uc_id          AS relieved_by_ucs, " + // кто РЕАЛЬНО снимает
+            "in('RELIEVES').size()         AS relieved_by " +
+            "FROM KnowPain",
+            List.of(), new LinkedHashMap<>(Map.of("severity", " WHERE severity = :severity")),
+            " ORDER BY pain_id");
+
+        slice("gains",
+            "SELECT gain_id, title, body_md, metric_md, date_created, " +
+            "out('DESIRED_BY').actor_id    AS actor_ids, " +
+            "in('PROMISES').feature_id     AS feature_ids, " +
+            "in('PROMISES').size()         AS promised_by, " +
+            "in('DELIVERS').uc_id          AS delivered_by_ucs, " +
+            "in('DELIVERS').size()         AS delivered_by " +
+            "FROM KnowGain",
+            List.of(), new LinkedHashMap<>(), " ORDER BY gain_id");
 
         // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
         slice("actors",
