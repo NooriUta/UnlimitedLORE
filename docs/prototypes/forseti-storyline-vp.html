@@ -1,0 +1,512 @@
+<title>Forseti — рабочее пространство продукта (VP)</title>
+<style>
+  :root {
+    --bg0:#141108; --bg1:#1C1810; --bg2:#252019; --bg3:#302A20; --bd:#42382A; --bdh:#584C38;
+    --t1:#EDE5D0; --t2:#9A8C6E; --t3:#665C48;
+    --acc:#A8B860; --suc:#7DBF78; --wrn:#D4922A; --inf:#88B8A8; --dng:#C85848;
+    --job:#88B8A8; --pain:#C85848; --gain:#7DBF78;
+    --g-value:#A8B860; --g-do:#5AB4E8; --g-know:#C0A36E; --g-tech:#9A8CDB; --g-ctrl:#D4922A;
+    --font:'Manrope', ui-sans-serif, system-ui, sans-serif; --mono:'IBM Plex Mono', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: light){ :root{ --bg0:#F3EFE4; --bg1:#EAE4D5; --bg2:#E1DAC7; --bg3:#D6CDB6; --bd:#C6BB9F; --bdh:#A99C7C;
+    --t1:#2A2418; --t2:#6B6046; --t3:#8C8164; --acc:#6E7D2A; --suc:#3E7C3A; --wrn:#9A6410; --inf:#3E7263; --dng:#A33526;
+    --job:#3E7263; --pain:#A33526; --gain:#3E7C3A; --g-value:#6E7D2A; --g-do:#2478B8; --g-know:#8A6B2E; --g-tech:#6A5CB8; --g-ctrl:#9A6410; } }
+  :root[data-theme="light"]{ --bg0:#F3EFE4; --bg1:#EAE4D5; --bg2:#E1DAC7; --bg3:#D6CDB6; --bd:#C6BB9F; --bdh:#A99C7C;
+    --t1:#2A2418; --t2:#6B6046; --t3:#8C8164; --acc:#6E7D2A; --suc:#3E7C3A; --wrn:#9A6410; --inf:#3E7263; --dng:#A33526;
+    --job:#3E7263; --pain:#A33526; --gain:#3E7C3A; --g-value:#6E7D2A; --g-do:#2478B8; --g-know:#8A6B2E; --g-tech:#6A5CB8; --g-ctrl:#9A6410; }
+  :root[data-theme="dark"]{ --bg0:#141108; --bg1:#1C1810; --bg2:#252019; --bg3:#302A20; --bd:#42382A; --bdh:#584C38;
+    --t1:#EDE5D0; --t2:#9A8C6E; --t3:#665C48; --acc:#A8B860; --suc:#7DBF78; --wrn:#D4922A; --inf:#88B8A8; --dng:#C85848;
+    --job:#88B8A8; --pain:#C85848; --gain:#7DBF78; --g-value:#A8B860; --g-do:#5AB4E8; --g-know:#C0A36E; --g-tech:#9A8CDB; --g-ctrl:#D4922A; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg0); color:var(--t1); font-family:var(--font); font-size:14px; line-height:1.5; padding:14px; }
+  button, input { font:inherit; color:inherit; }
+  .mono { font-family:var(--mono); }
+  h1 { font-size:18px; margin:0 0 3px; }
+  .sub { color:var(--t2); font-size:12px; margin-bottom:12px; max-width:96ch; }
+
+  .frame { border:1px solid var(--bd); border-radius:10px; background:var(--bg1); overflow:visible; max-width:1200px; position:relative; }
+
+  /* ── appbar: Seiðr Studio-стиль — бренд · тенант · пространство+модули · тулбар ── */
+  .appbar { display:flex; align-items:center; gap:7px; padding:0 12px; height:44px; background:var(--bg2); border-bottom:1px solid var(--bd); }
+  .dd-wrap { position:relative; flex-shrink:0; }
+  .navpill, .iconbtn { display:inline-flex; align-items:center; gap:7px; cursor:pointer; background:var(--bg1); border:1px solid var(--bd); border-radius:999px; padding:5px 11px; font-size:12px; color:var(--t1); white-space:nowrap; }
+  .navpill:hover, .iconbtn:hover { border-color:var(--bdh); }
+  .navpill.brand { font-weight:800; letter-spacing:.06em; }
+  .navpill .live { width:7px; height:7px; border-radius:50%; background:var(--suc); box-shadow:0 0 0 2px color-mix(in srgb,var(--suc) 28%,transparent); flex-shrink:0; }
+  .caret { color:var(--t3); font-size:10px; }
+  .modbar { display:flex; align-items:center; gap:2px; flex:1; min-width:0; overflow-x:auto; padding-left:4px; }
+  .spacelabel { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13px; letter-spacing:.02em; padding:0 11px 0 6px; margin-right:3px; border-right:1px solid var(--bd); white-space:nowrap; flex-shrink:0; }
+  .modtab { display:inline-flex; align-items:center; gap:6px; border:none; background:transparent; color:var(--t2); font-size:12.5px; font-weight:600; padding:6px 11px; border-radius:7px; cursor:pointer; white-space:nowrap; }
+  .modtab:hover { color:var(--t1); background:var(--bg3); }
+  .modtab[aria-pressed="true"] { color:var(--t1); background:var(--bg3); box-shadow:inset 0 0 0 1px var(--bd); }
+  .modtab .mdot { width:6px; height:6px; border-radius:50%; background:var(--t3); flex-shrink:0; }
+  .modtab[aria-pressed="true"] .mdot { background:var(--gc); }
+  .rtools { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .iconbtn { border-radius:8px; padding:6px 9px; font-size:14px; }
+  .iconbtn .kbd, .dd-item .kbd { font-family:var(--mono); font-size:9px; color:var(--t3); border:1px solid var(--bd); border-radius:4px; padding:0 4px; }
+  .userbtn { display:inline-flex; align-items:center; gap:7px; background:transparent; border:none; cursor:pointer; padding:3px 5px 3px 3px; color:var(--t2); font-size:12px; }
+  .userbtn .ava { width:26px; height:26px; border-radius:7px; background:var(--acc); color:#141108; display:grid; place-items:center; font-size:10px; font-weight:800; }
+  .userbtn:hover { color:var(--t1); }
+
+  .dd { position:absolute; top:calc(100% + 5px); left:0; z-index:40; min-width:248px;
+    background:var(--bg2); border:1px solid var(--bdh); border-radius:10px; padding:5px; box-shadow:0 14px 34px rgba(0,0,0,.45); }
+  .dd[hidden] { display:none; }
+  .dd.right { left:auto; right:0; }
+  .dd-h { font-size:9px; text-transform:uppercase; letter-spacing:.07em; color:var(--t3); padding:6px 9px 3px; }
+  .dd-item { display:flex; align-items:center; gap:9px; width:100%; text-align:left; border:none; background:transparent; color:var(--t1); font-size:12.5px; padding:7px 9px; border-radius:6px; cursor:pointer; }
+  .dd-item:hover:not([disabled]) { background:var(--bg3); }
+  .dd-item[disabled] { color:var(--t3); cursor:not-allowed; opacity:.75; }
+  .dd-item .em { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
+  .dd-item .col { display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .dd-item .sname { font-weight:600; }
+  .dd-item .desc { font-size:10px; color:var(--t3); }
+  .dd-item.active .sname { color:var(--acc); }
+  .dd-item.active .em { color:var(--acc); }
+  .horizon { margin-left:auto; font-family:var(--mono); font-size:8px; border:1px solid var(--bd); border-radius:999px; padding:1px 5px; color:var(--t3); flex-shrink:0; }
+  .horizon.gate { color:var(--dng); border-color:var(--dng); }
+  .dd-sep { height:1px; background:var(--bd); margin:5px 3px; }
+  .dd-note { font-size:9.5px; color:var(--t3); padding:4px 9px 2px; line-height:1.35; }
+  .dd-proj { display:flex; align-items:center; gap:9px; padding:7px 9px 3px; font-size:12.5px; color:var(--t2); }
+  .dd-proj .em { font-size:14px; width:18px; text-align:center; flex-shrink:0; }
+  .dd-proj .sname { font-weight:700; color:var(--t1); }
+  .dd-item.dd-prod { padding-left:28px; }
+
+  /* ── row 2: контекст активного модуля (Seiðr: строка инструментов) ── */
+  .ctxbar { display:flex; align-items:center; gap:4px; padding:6px 12px; background:var(--bg1); border-bottom:1px solid var(--bd); flex-wrap:wrap; }
+  .ctx-item { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:7px; font-size:12px; cursor:pointer; color:var(--t2); border:1px solid transparent; background:transparent; white-space:nowrap; }
+  .ctx-item:hover { color:var(--t1); background:var(--bg2); }
+  .ctx-item[aria-pressed="true"] { color:var(--t1); background:var(--bg3); border-color:var(--bd); font-weight:600; }
+  .ctx-path { margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:9.5px; color:var(--t3); white-space:nowrap; }
+  .ctx-path .src { color:var(--acc); }
+
+  /* ── mobile picker (одна кнопка) ── */
+  .navpicker { display:none; align-items:center; gap:8px; padding:7px 12px; background:var(--bg1); border-bottom:1px solid var(--bd); }
+  .navpicker .pk { display:inline-flex; align-items:center; gap:8px; background:var(--bg2); border:1px solid var(--bd); border-radius:8px; padding:6px 10px; font-size:12.5px; cursor:pointer; }
+
+  .filterbar-w { display:flex; gap:6px; padding:6px 12px; background:var(--bg0); border-bottom:1px solid var(--bd); align-items:center; flex-wrap:wrap; }
+  .flabel { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--t3); }
+  .fchip { font-size:11px; padding:2px 9px; border-radius:999px; border:1px solid var(--bd); background:var(--bg1); color:var(--t2); cursor:pointer; }
+  .fchip:hover { border-color:var(--bdh); }
+  .fchip.on { background:var(--bg3); color:var(--t1); border-color:var(--bdh); font-weight:600; }
+  .fcount { margin-left:auto; font-family:var(--mono); font-size:10.5px; color:var(--t3); }
+
+  .md { display:flex; min-height:360px; background:var(--bg0); }
+  .md-list { width:280px; flex-shrink:0; border-right:1px solid var(--bd); background:var(--bg1); overflow:auto; max-height:540px; }
+  .md-row { display:block; width:100%; text-align:left; border:none; background:transparent; padding:7px 11px; cursor:pointer;
+    border-bottom:1px solid color-mix(in srgb,var(--bd) 45%,transparent); font-size:12.5px; color:var(--t2); }
+  .md-row:hover { background:var(--bg2); }
+  .md-row[aria-pressed="true"] { background:var(--bg2); color:var(--t1); border-left:3px solid var(--gc); padding-left:8px; font-weight:600; }
+  .md-row .rid { font-family:var(--mono); font-size:9.5px; display:block; }
+  .md-detail { flex:1; min-width:0; padding:14px; overflow:auto; max-height:540px; }
+  .empty { padding:24px; text-align:center; color:var(--t3); font-size:12px; }
+
+  .pass-h { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:4px; }
+  .pass-h h3 { margin:0; font-size:15px; }
+  .pill { font-size:10px; font-family:var(--mono); border:1px solid var(--bd); border-radius:999px; padding:1px 7px; color:var(--t2); }
+  .pill.ok { color:var(--suc); border-color:var(--suc); } .pill.act { color:var(--inf); border-color:var(--inf); } .pill.warn { color:var(--wrn); border-color:var(--wrn); }
+  .kv { display:grid; grid-template-columns:120px 1fr; gap:3px 10px; font-size:12.5px; margin:9px 0; }
+  .kv dt { color:var(--t3); } .kv dd { margin:0; color:var(--t2); }
+  .psec { border:1px solid var(--bd); border-radius:6px; background:var(--bg1); padding:8px 11px; margin-top:8px; }
+  .psec-t { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--t3); margin-bottom:5px; }
+  .trow { display:flex; align-items:center; gap:7px; padding:4px 0; font-size:12px; color:var(--t2); border-top:1px solid color-mix(in srgb,var(--bd) 40%,transparent); }
+  .trow:first-of-type { border-top:none; }
+  .lnk { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-family:var(--mono); border:1px solid var(--bd); border-radius:5px; padding:1px 6px; margin:2px 3px 2px 0; background:var(--bg2); color:var(--t2); cursor:pointer; text-decoration:underline dotted; }
+  .lnk:hover { border-color:var(--bdh); color:var(--t1); }
+  .board { padding:16px; min-height:360px; }
+  .board-mock { border:1px dashed var(--bd); border-radius:8px; padding:22px; display:grid; place-items:center; text-align:center; color:var(--t2); font-size:12.5px; min-height:290px; }
+  .note { border:1px solid var(--bd); border-left:3px solid var(--suc); background:var(--bg1); border-radius:6px; padding:9px 12px; font-size:12px; color:var(--t2); margin:12px 0; max-width:96ch; }
+  .note b { color:var(--t1); }
+  mark { background:color-mix(in srgb,var(--acc) 40%,transparent); color:inherit; border-radius:2px; padding:0 1px; }
+  .segbtn { border:1px solid var(--bd); background:var(--bg1); color:var(--t2); font-size:11px; padding:2px 9px; border-radius:999px; margin-left:3px; cursor:pointer; }
+  .segbtn.on { background:var(--acc); border-color:var(--acc); color:#fff; font-weight:700; }
+
+  /* ── palette (⌘K команды / «/» поиск) — модалка ── */
+  .pal-back { position:fixed; inset:0; background:rgba(0,0,0,.48); z-index:100; display:flex; align-items:flex-start; justify-content:center; padding-top:11vh; }
+  .pal-back[hidden] { display:none; }
+  .pal { width:min(580px,93vw); background:var(--bg2); border:1px solid var(--bdh); border-radius:12px; box-shadow:0 22px 64px rgba(0,0,0,.55); overflow:hidden; }
+  .pal-in { display:flex; align-items:center; gap:9px; padding:11px 14px; border-bottom:1px solid var(--bd); }
+  .pal-in .ico { font-size:15px; }
+  .pal-in input { flex:1; background:transparent; border:none; font-size:15px; outline:none; color:var(--t1); }
+  .pal-kind { font-size:9px; font-family:var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--acc); border:1px solid var(--acc); border-radius:999px; padding:1px 8px; }
+  .pal-chips { display:flex; gap:5px; padding:7px 12px; border-bottom:1px solid var(--bd); flex-wrap:wrap; }
+  .pal-body { max-height:52vh; overflow:auto; padding:5px; }
+  .pal-h { font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--t3); padding:8px 10px 3px; }
+  .pal-row { display:flex; align-items:center; gap:9px; width:100%; text-align:left; border:none; background:transparent; color:var(--t1); font-size:13px; padding:8px 10px; border-radius:7px; cursor:pointer; }
+  .pal-row:hover, .pal-row.sel { background:var(--bg3); }
+  .pal-row .em { width:18px; text-align:center; }
+  .pal-row .rid { font-family:var(--mono); font-size:10px; }
+  .pal-row .meta { margin-left:auto; font-size:10px; color:var(--t3); }
+  .pal-foot { display:flex; gap:14px; padding:7px 13px; border-top:1px solid var(--bd); font-size:10px; color:var(--t3); font-family:var(--mono); }
+
+  @media (max-width:640px){ .modbar { display:none; } .navpicker { display:flex; } .userbtn { font-size:0; gap:0; } }
+</style>
+
+<h1>🧭 Forseti — рабочее пространство продукта</h1>
+<div class="sub">Шапка собрана <b>1:1 по Seiðr Studio</b>: слева направо — бренд-пилюля <b>«● LORE ⌄»</b> (dropdown пространств), отдельная пилюля <b>тенанта «● UnlimitedLORE · LORE ⌄»</b> (проект → продукт: в dropdown проект, под ним 📦-продукты; ⟂ навигация; «все проекты» — сквозной вид), затем активное пространство <b>🧭 Forseti</b> с его модулями-главами инлайн (активная в рамке), справа — <b>⌕ /</b> поиск · <b>⚏</b> ещё · аватар с именем. Вторая строка — контекст активного модуля (подвкладки) + путь <span class="mono">lore://…</span> из URL.</div>
+
+<div class="frame">
+  <div class="appbar">
+    <div class="dd-wrap"><button class="navpill brand" onclick="toggleDD('space',event)"><span class="live"></span>LORE<span class="caret">⌄</span></button><div class="dd" id="dd-space" hidden></div></div>
+    <div class="dd-wrap"><button class="navpill" onclick="toggleDD('tenant',event)"><span class="live"></span><span id="tenantname">UnlimitedLORE · LORE</span><span class="caret">⌄</span></button><div class="dd" id="dd-tenant" hidden></div></div>
+    <div class="modbar" id="groups"></div>
+    <div class="rtools">
+      <button class="iconbtn" onclick="openPal('search')" title="Поиск по данным">⌕<span class="kbd">/</span></button>
+      <div class="dd-wrap"><button class="iconbtn" onclick="toggleDD('more',event)" title="Ещё">⚏</button><div class="dd right" id="dd-more" hidden></div></div>
+      <button class="userbtn" title="Профиль"><span class="ava">АЛ</span>Алекса</button>
+    </div>
+  </div>
+  <div class="navpicker" id="navpicker"><button class="pk" onclick="openPal('nav')">☰ <span id="pkname">раздел</span> <span class="caret">⌄</span></button></div>
+  <div class="ctxbar" id="subbar"></div>
+  <div id="prodfilter"></div>
+  <div id="filterbar"></div>
+  <div id="content"></div>
+</div>
+
+<div class="pal-back" id="palette" hidden onmousedown="if(event.target===this)closePal()"></div>
+
+<div class="note">
+  <b>7 принципов Seiðr, перенесённых в прототип:</b> ① бренд-пилюля «● LORE ⌄» = единственный вход в смену мира — dropdown пространств (Forseti/MUNINN/BRAGI/TYR) + другие продукты AIDA + «Админка»-gate + «На сайт»; невыпущенные видны с бейджем горизонта, но disabled; ② пространство → модули двухуровнево, активность <b>вычислена из URL</b> (строка 2 справа — <span class="mono">refresh/дип-линк восстановят</span>); ③ тенант = проект → продукт «● UnlimitedLORE · LORE ⌄» (двухуровневый: проект, под ним 📦-продукты; ⟂ навигация; «все проекты» — сквозной вид); ④ поиск — два поповера: <span class="kbd">⌘K</span> команды ↔ <span class="kbd">/</span> доменный поиск; ⑤ админка — один gated-раздел; ⑥ правый тулбар — только ⌕/⚏/профиль (тема, язык, легенда, ⌘K — в «⚏ ещё»); ⑦ mobile (&lt;640px) — навигация в одну кнопку-пикер. На потом: стартовый дашборд «здоровье ценности».
+</div>
+
+<script>
+// ── ось 1: пространства LORE (бренд-переключатель = «мир» LORE) ──
+const SPACES = [
+  { id:'forseti', em:'🧭', name:'Forseti', desc:'Продукт и планирование', h:null },
+  { id:'muninn',  em:'🧠', name:'MUNINN',  desc:'Память и инсайты',       h:null },
+  { id:'bragi',   em:'📣', name:'BRAGI',   desc:'Маркетинг-архив',        h:null },
+  { id:'tyr',     em:'⚖',  name:'TYR',     desc:'Тесты и качество',       h:null },
+];
+const WORLDS = [ ['🖼','DALI','Парсинг SQL → граф происхождения'] ];  // другие продукты AIDA (кросс-мир)
+const CROSS = [ ['🎨','В Seiðr Studio',false], ['🌐','На сайт',false], ['🐺','Админка (FENRIR)',true] ];
+
+// ── ось 2: тенант (продукт) ──
+// тенант = ПРОЕКТ → ПРОДУКТ (⟂ навигация); в проекте несколько продуктов, «все проекты» — сквозной вид
+const PROJECTS = [
+  { id:'все проекты', desc:'сквозной вид — как было', prods:[] },
+  { id:'UnlimitedLORE', desc:'граф знаний проекта', prods:['LORE','BRAGI'] },
+  { id:'AIDA', desc:'платформа AIDA', prods:['DALI','платформа'] },
+];
+
+// ── ось 3: навигация (разделы) ──
+const STORY = [
+  { id:'value', n:'01', name:'Зачем', q:'ценность', color:'var(--g-value)', badge:'нов.',
+    subs:[ ['Клиент (сегмент)','🎭','md'], ['Работы · Боли · Ожидания','🎯','md'],
+           ['VP-канва','🖼','canvas'], ['Фичи','🌉','md'], ['US · Пользовательские истории','🌊','md'] ] },
+  { id:'do', n:'02', name:'Как делаем', q:'план · спринты', color:'var(--g-do)', badge:'4 активн.',
+    subs:[ ['Вехи','⚔','board'], ['План','🧭','board'], ['Спринты','🏃','md'], ['Релизы','📖','board'] ] },
+  { id:'know', n:'03', name:'Что решили', q:'решения · знания', color:'var(--g-know)', badge:'',
+    subs:[ ['ADR','📜','md'], ['Вопросы','❓','board'], ['Знания','📕','md'] ] },
+  { id:'tech', n:'04', name:'Основа', q:'компоненты · MCP', color:'var(--g-tech)', badge:'',
+    subs:[ ['Продукт (справка)','📦','prodref'], ['Компоненты','⚙','md'], ['Технологии','🔧','board'], ['MCP API','🔌','board'] ] },
+  { id:'ctrl', n:'05', name:'Контроль', q:'качество · аналитика', color:'var(--g-ctrl)', badge:'',
+    subs:[ ['Аналитика','📊','board'], ['QG','🏁','md'], ['Лента','📃','board'] ] },
+];
+
+const LISTS = {
+  'Клиент (сегмент)':[ {id:'ACT-OWNER',t:'Владелец',st:'human · 4 US'},{id:'ACT-ADMIN',t:'Администратор',st:'human · 6 US'},{id:'ACT-VIEWER',t:'Читатель / демо',st:'human · 1 US'},{id:'ACT-AGENT',t:'Агент сессии',st:'agent · 9 US'},{id:'ACT-FMCP',t:'forgejo-mcp',st:'system · 2 US'} ],
+  'Работы · Боли · Ожидания':[
+    {id:'JOB-RELEASE',t:'Выпустить релиз, не покидая сессии',st:'🎯 работа · глоб',ty:'job'},
+    {id:'JOB-KNOW-CI',t:'Знать состояние CI без веб-морды',st:'🎯 работа · глоб',ty:'job'},
+    {id:'PAIN-MANUAL-HANDOFF',t:'Ручной хендофф на PR/merge',st:'🔴 боль · high · глоб',ty:'pain'},
+    {id:'PAIN-RAW-TOKEN',t:'Сырые токены у агента',st:'🔴 боль · high · глоб',ty:'pain'},
+    {id:'PAIN-BROKEN-LINKS',t:'Релизы с prs_linked:0',st:'🔴 боль · normal · глоб',ty:'pain'},
+    {id:'GAIN-LINKED-RELEASES',t:'Связный граф релизов',st:'🟢 выгода · essential · LORE',ty:'gain'},
+    {id:'GAIN-LESS-CHORES',t:'Меньше рутины у владельца',st:'🟢 выгода · desired · LORE ⚠без метрики',ty:'gain'} ],
+  'Фичи':[ {id:'FEAT-GITCYCLE',t:'Полный git-цикл без токена у агента',st:'active · ☁ · fit 5/6'},{id:'FEAT-ADMIN',t:'Администрирование без потери доступа',st:'active · ☁'},{id:'FEAT-PRODLAYER',t:'Продуктовый слой',st:'proposed · 🪁'} ],
+  'US · Пользовательские истории':[
+    {id:'US-GIT-PR',t:'Агент открывает PR с телом из релиза',st:'🌊 shipped · 📋'},
+    {id:'US-GIT-MERGE',t:'Merge по зелёному CI одним вызовом',st:'🌊 active · 📋 · кач.10/10'},
+    {id:'US-GIT-WATCH',t:'Слежение за CI-статусом ветки',st:'🐟 proposed · ⚡'},
+    {id:'US-ADM-LOCKOUT',t:'Включение auth без потери доступа',st:'🌊 shipped · 📋'},
+    {id:'US-ADM-ROLES',t:'Выдача роли admin другому человеку',st:'🌊 active · 📋'},
+    {id:'US-ADM-AUDIT',t:'Кто и что менял в администрировании',st:'🐟 proposed · ⚡ · ⚠без приёмки'} ],
+  'Спринты':[ {id:'SPRINT_LORE_PRODUCT_LAYER',t:'Продуктовый слой → v1.0.53',st:'active'},{id:'SPRINT_LORE_FORGEJO_INTEGRATION',t:'Forgejo-мост → v1.0.52',st:'done'},{id:'SPRINT_LORE_PRODUCT_ANALYTICS',t:'Аналитика слоя → v1.0.54',st:'planned'} ],
+  'ADR':[ {id:'ADR-LORE-024',t:'Forgejo-мост: граница по типу операции',st:'ACCEPTED'},{id:'ADR-LORE-027',t:'US по Коберну: шаблон, веса, линтер',st:'ACCEPTED'},{id:'ADR-LORE-032',t:'Feature-мост: VP + cloud-US',st:'PROPOSED'} ],
+  'Знания':[ {id:'LORE_DB_SPEC',t:'Граф знаний — спека',st:'spec'},{id:'RUNBOOK-FORGEJO-BRIDGE',t:'Какой инструмент для чего',st:'runbook'} ],
+  'Компоненты':[ {id:'OMILORE',t:'LORE backend (Quarkus)',st:'core'},{id:'FORSETI',t:'LORE UI (React)',st:'ui'},{id:'FORSETI_MCP',t:'MCP-сервер aida-lore',st:'mcp'} ],
+  'QG':[ {id:'QG-LORE-CORE',t:'Ядро LORE',st:''} ],
+};
+const PASS = { 'FEAT-GITCYCLE':'feature','US-GIT-MERGE':'us','ACT-AGENT':'actor','PAIN-MANUAL-HANDOFF':'pain','JOB-RELEASE':'job','GAIN-LINKED-RELEASES':'gain' };
+
+function typeColor(id){
+  if(id.startsWith('JOB-')) return 'var(--job)';
+  if(id.startsWith('PAIN-')) return 'var(--pain)';
+  if(id.startsWith('GAIN-')) return 'var(--gain)';
+  if(id.startsWith('FEAT-')) return 'var(--g-value)';
+  if(id.startsWith('US-')) return 'var(--g-do)';
+  if(id.startsWith('ACT-')) return 'var(--wrn)';
+  if(id.startsWith('ADR-')) return 'var(--g-know)';
+  if(id.startsWith('SPRINT')) return 'var(--g-do)';
+  return 'var(--gc)';
+}
+
+// ── state (четыре независимые оси) ──
+let space='forseti';                      // ось 1
+let product='LORE', role='admin';         // ось 2 (+ роль для gating)
+let projName='UnlimitedLORE', prodName='LORE';   // тенант: проект → продукт
+let g='value', sub={value:0,do:2,know:0,tech:0,ctrl:1}, rows={};  // ось 3
+let vpSeg='agent', gQuery='', typeFilter='all', statusFilter='all';
+let openDDId=null, palKind=null, palQ='', palType='all', palSel=0;
+const RECENT=['US-GIT-MERGE','FEAT-GITCYCLE','ADR-LORE-024'];
+
+// ── ось 3 источник правды = URL (hash). refresh/дип-линк восстанавливают ──
+function readHash(){ const m=(location.hash||'').match(/^#\/([\w]+)\/([\w]+)\/(\d+)/); if(m){ if(SPACES.find(s=>s.id===m[1]))space=m[1]; const gg=STORY.find(x=>x.id===m[2]); if(gg){ g=m[2]; sub[g]=Math.min(+m[3], gg.subs.length-1); } } }
+function writeHash(){ try{ history.replaceState(null,'','#/'+space+'/'+g+'/'+(sub[g]||0)); }catch(e){} }
+window.addEventListener('hashchange',function(){ readHash(); render(); });
+
+function chapterOfSub(name){ const gg=STORY.find(x=>x.subs.some(s=>s[0]===name)); return gg?gg.id:'value'; }
+function updateTenantLabel(){ document.getElementById('tenantname').textContent = projName==='все проекты' ? 'все проекты' : (projName+' · '+(prodName||'все продукты')); }
+function setCtx(proj,prod){ projName=proj; prodName=prod||''; product = (proj==='все проекты' || !prod) ? '__all' : prod; updateTenantLabel(); closeAllDD(); render(); }  // проект (или продукт под ним); тенант ⟂ навигация (раздел не меняется)
+function setSpace(id){ const s=SPACES.find(x=>x.id===id); if(!s||s.h) return; space=id; closeAllDD(); render(); }
+function onSearch(v){ gQuery=v.trim().toLowerCase(); render(); }
+function setSeg(x){ vpSeg=x; render(); }
+function setType(t){ typeFilter=t; render(); }
+function setStatus(t){ statusFilter=t; render(); }
+function pickRow(name,i){ rows[name]=i; render(); }
+function goto(grp,subName,rowId){ g=grp; const gg=STORY.find(x=>x.id===grp); const i=gg.subs.findIndex(s=>s[0]===subName); if(i>=0) sub[grp]=i; if(rowId&&LISTS[subName]){const r=LISTS[subName].findIndex(x=>x.id===rowId); if(r>=0) rows[subName]=r;} gQuery=''; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function hl(txt){ if(!gQuery) return txt; const i=txt.toLowerCase().indexOf(gQuery); if(i<0) return txt; return txt.slice(0,i)+'<mark>'+txt.slice(i,i+gQuery.length)+'</mark>'+txt.slice(i+gQuery.length); }
+function matchRow(it){ if(gQuery && !(it.id.toLowerCase().includes(gQuery)||it.t.toLowerCase().includes(gQuery))) return false;
+  if(typeFilter!=='all' && it.ty!==typeFilter) return false;
+  if(statusFilter!=='all' && !(it.st||'').toLowerCase().includes(statusFilter)) return false; return true; }
+
+// ── dropdowns (закрытие: outside mousedown + Esc, НЕ blur) ──
+function toggleDD(which,ev){ if(ev) ev.stopPropagation(); const id='dd-'+which; if(openDDId===id){ closeAllDD(); return; } closeAllDD(); buildDD(which); const el=document.getElementById(id); el.hidden=false; openDDId=id; }
+function closeAllDD(){ ['dd-space','dd-tenant','dd-more'].forEach(function(i){ const e=document.getElementById(i); if(e) e.hidden=true; }); openDDId=null; }
+function buildDD(which){
+  if(which==='space'){ let h='<div class="dd-h">LORE · пространства</div>';
+    SPACES.forEach(function(s){ const on=s.id===space; const dis=s.h?'disabled':''; h+='<button class="dd-item'+(on?' active':'')+'" '+dis+' onclick="setSpace(\''+s.id+'\')"><span class="em">'+s.em+'</span><span class="col"><span class="sname">'+s.name+'</span><span class="desc">'+s.desc+'</span></span>'+(s.h?'<span class="horizon">'+s.h+'</span>':(on?'<span class="horizon">здесь</span>':''))+'</button>'; });
+    h+='<div class="dd-sep"></div><div class="dd-h">Другие продукты AIDA</div>';
+    WORLDS.forEach(function(w){ h+='<button class="dd-item" onclick="closeAllDD()"><span class="em">'+w[0]+'</span><span class="col"><span class="sname">'+w[1]+'</span><span class="desc">'+w[2]+'</span></span><span class="horizon">мир</span></button>'; });
+    h+='<div class="dd-sep"></div><div class="dd-h">Переходы</div>';
+    CROSS.forEach(function(c){ const gated=c[2]; if(gated&&role!=='admin') return; h+='<button class="dd-item" onclick="closeAllDD()"><span class="em">'+c[0]+'</span><span class="col"><span class="sname">'+c[1]+'</span></span>'+(gated?'<span class="horizon gate">admin</span>':'')+'</button>'; });
+    h+='<div class="dd-note">LORE — продукт-мир, внутри его пространства. Другой продукт (DALI) и Студия/сайт/админка — кросс-переход одним кликом. Невыпущенное видно (карта роста), но не кликается.</div>';
+    document.getElementById('dd-space').innerHTML=h;
+  } else if(which==='tenant'){ let h='<div class="dd-h">Проект → продукт · контекст данных</div>';
+    PROJECTS.forEach(function(p){ const onP=p.id===projName;
+      if(p.prods.length===0){ h+='<button class="dd-item'+(onP?' active':'')+'" onclick="setCtx(\''+p.id+'\')"><span class="em">⊞</span><span class="col"><span class="sname">'+p.id+'</span><span class="desc">'+p.desc+'</span></span>'+(onP?'<span class="horizon">здесь</span>':'')+'</button>'; }
+      else { const onAll=onP&&!prodName; h+='<button class="dd-item'+(onAll?' active':'')+'" onclick="setCtx(\''+p.id+'\')"><span class="em">◉</span><span class="col"><span class="sname">'+p.id+'</span><span class="desc">'+p.desc+' · все продукты</span></span>'+(onAll?'<span class="horizon">здесь</span>':'')+'</button>';
+        p.prods.forEach(function(pr){ const on=onP&&pr===prodName; h+='<button class="dd-item dd-prod'+(on?' active':'')+'" onclick="setCtx(\''+p.id+'\',\''+pr+'\')"><span class="em">📦</span><span class="col"><span class="sname">'+pr+'</span></span>'+(on?'<span class="horizon">здесь</span>':'')+'</button>'; }); }
+    });
+    h+='<div class="dd-note">Проект ⟂ навигация: меняет данные, не раздел. В проекте несколько продуктов — продукт выбираешь под проектом. «Все проекты» — сквозной вид, чтобы не терять старое.</div>';
+    document.getElementById('dd-tenant').innerHTML=h;
+  } else if(which==='more'){ const th=(document.documentElement.getAttribute('data-theme')==='light')?'светлая':'тёмная';
+    let h='<div class="dd-h">Вторичное</div>'+
+    '<button class="dd-item" onclick="toggleTheme()"><span class="em">🌓</span><span class="col"><span class="sname">Тема: '+th+'</span></span></button>'+
+    '<button class="dd-item" onclick="closeAllDD()"><span class="em">🌐</span><span class="col"><span class="sname">Язык: RU</span><span class="desc">описания · не имена модулей</span></span></button>'+
+    '<button class="dd-item" onclick="closeAllDD()"><span class="em">🎨</span><span class="col"><span class="sname">Легенда типов</span></span></button>'+
+    '<button class="dd-item" onclick="openPal(\'cmd\')"><span class="em">⌘</span><span class="col"><span class="sname">Команды</span></span><span class="kbd">⌘K</span></button>';
+    document.getElementById('dd-more').innerHTML=h;
+  }
+}
+function toggleTheme(){ const r=document.documentElement; const cur=r.getAttribute('data-theme'); r.setAttribute('data-theme', cur==='light'?'dark':'light'); closeAllDD(); }
+
+// ── palettes: ⌘K команды ↔ «/» доменный поиск (+ mobile nav-picker) ──
+const CMDS = [
+  {em:'🧭',t:'Перейти: Зачем — ценность',run:function(){g='value';sub.value=2;}},
+  {em:'📖',t:'Перейти: Как делаем — план',run:function(){g='do';}},
+  {em:'📜',t:'Перейти: Что решили — ADR',run:function(){g='know';sub.know=0;}},
+  {em:'📦',t:'Перейти: Основа — Продукт (справка)',run:function(){g='tech';sub.tech=0;}},
+  {em:'📊',t:'Перейти: Контроль — Аналитика',run:function(){g='ctrl';sub.ctrl=0;}},
+  {em:'🖼',t:'Открыть VP-канву',run:function(){g='value';sub.value=2;}},
+  {em:'🔍',t:'Fit VP-канву по экрану',run:function(){}},
+  {em:'🌓',t:'Сменить тему',run:function(){toggleTheme();}},
+  {em:'🐺',t:'Открыть Админку (FENRIR)',gate:true,run:function(){}},
+];
+function poolAll(){ const out=[]; Object.keys(LISTS).forEach(function(name){ LISTS[name].forEach(function(it){ out.push({id:it.id,t:it.t,st:it.st,ty:it.ty,sub:name}); }); }); return out; }
+function openPal(kind){ palKind=kind; palQ=''; palType='all'; palSel=0; closeAllDD(); document.getElementById('palette').hidden=false; renderPal(); setTimeout(function(){ const i=document.getElementById('palinput'); if(i) i.focus(); },0); }
+function closePal(){ document.getElementById('palette').hidden=true; palKind=null; }
+function palInput(v){ palQ=v.trim().toLowerCase(); palSel=0; renderPal(); }
+function palSetType(t){ palType=t; palSel=0; renderPal(); }
+function palResults(){
+  if(palKind==='cmd'){ return CMDS.filter(function(c){ return (!c.gate||role==='admin') && (!palQ||c.t.toLowerCase().includes(palQ)); }); }
+  let pool=poolAll(); if(palType!=='all') pool=pool.filter(function(x){ return x.ty===palType; });
+  if(palQ) pool=pool.filter(function(x){ return x.id.toLowerCase().includes(palQ)||x.t.toLowerCase().includes(palQ); });
+  else pool=pool.filter(function(x){ return RECENT.includes(x.id); });
+  return pool;
+}
+function navPickItems(){ const gg=STORY.find(x=>x.id===g); const out=[]; gg.subs.forEach(function(s,i){ out.push({kind:'sub',em:s[1],t:s[0],i:i}); }); STORY.filter(x=>x.id!==g).forEach(function(x){ out.push({kind:'grp',em:'§',t:x.name,gid:x.id}); }); return out; }
+function palRun(idx){
+  const r=palResults();
+  if(palKind==='cmd'){ const c=r[idx]; if(c){ c.run(); closePal(); render(); } return; }
+  if(palKind==='nav'){ const items=navPickItems(); const it=items[idx]; if(!it) return; if(it.kind==='sub'){ sub[g]=it.i; } else { g=it.gid; } closePal(); render(); return; }
+  const it=r[idx]; if(it){ goto(chapterOfSub(it.sub), it.sub, it.id); closePal(); }
+}
+function renderPal(){
+  const P=document.getElementById('palette'); if(P.hidden){ P.innerHTML=''; return; }
+  if(palKind==='nav'){ const items=navPickItems(); const gg=STORY.find(x=>x.id===g);
+    let body='<div class="pal-h">Вкладки раздела «'+gg.name+'»</div>';
+    items.forEach(function(it,i){ if(i===gg.subs.length) body+='<div class="dd-sep"></div><div class="pal-h">Другие разделы</div>'; body+='<button class="pal-row'+(i===palSel?' sel':'')+'" onclick="palRun('+i+')"><span class="em">'+it.em+'</span>'+it.t+'</button>'; });
+    P.innerHTML='<div class="pal-back-inner" style="width:min(560px,93vw)"><div class="pal"><div class="pal-in"><span class="ico">☰</span><span class="pal-kind">навигация</span><input id="palinput" placeholder="раздел или вкладка…" oninput="palInput(this.value)"></div><div class="pal-body">'+body+'</div><div class="pal-foot"><span>↵ перейти</span><span>esc закрыть</span></div></div></div>';
+    P.onmousedown=function(e){ if(e.target===P) closePal(); }; return;
+  }
+  const r=palResults();
+  let head, chips='';
+  if(palKind==='cmd'){ head='<span class="ico">⌘</span><span class="pal-kind">команды</span><input id="palinput" placeholder="действие или переход…" oninput="palInput(this.value)">'; }
+  else { head='<span class="ico">🔍</span><span class="pal-kind">поиск по данным</span><input id="palinput" placeholder="id, название сущности…" oninput="palInput(this.value)">';
+    chips='<div class="pal-chips">'+[['all','всё'],['job','🎯 работы'],['pain','🔴 боли'],['gain','🟢 выгоды']].map(function(x){ return '<button class="fchip'+(palType===x[0]?' on':'')+'" onclick="palSetType(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div>'; }
+  let body='';
+  if(palKind==='search' && !palQ) body+='<div class="pal-h">Недавние</div>';
+  if(!r.length) body+='<div class="empty">ничего не найдено</div>';
+  r.forEach(function(it,i){ const sel=i===palSel?' sel':'';
+    if(palKind==='cmd') body+='<button class="pal-row'+sel+'" onclick="palRun('+i+')"><span class="em">'+it.em+'</span>'+it.t+'</button>';
+    else body+='<button class="pal-row'+sel+'" onclick="palRun('+i+')"><span class="rid" style="color:'+typeColor(it.id)+'">'+it.id+'</span>'+it.t+'<span class="meta">'+it.sub+'</span></button>'; });
+  const foot = palKind==='cmd' ? '<span>↵ выполнить</span><span>↑↓ выбор</span><span>esc</span>' : '<span>↵ открыть</span><span>↑↓ выбор</span><span>«/» этот поиск · ⌘K команды</span>';
+  P.innerHTML='<div class="pal"><div class="pal-in">'+head+'</div>'+chips+'<div class="pal-body">'+body+'</div><div class="pal-foot">'+foot+'</div></div>';
+  P.onmousedown=function(e){ if(e.target===P) closePal(); };
+}
+
+// ── глобальная клавиатура: «/» поиск, ⌘K команды, Esc, ↑↓↵ ──
+document.addEventListener('keydown',function(e){
+  const typing = /^(INPUT|TEXTAREA)$/.test((e.target.tagName||'')) && !document.getElementById('palette').hidden===false;
+  const palOpen = !document.getElementById('palette').hidden;
+  if((e.metaKey||e.ctrlKey) && (e.key==='k'||e.key==='K')){ e.preventDefault(); openPal('cmd'); return; }
+  if(e.key==='/' && !palOpen && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName||'')){ e.preventDefault(); openPal('search'); return; }
+  if(e.key==='Escape'){ if(palOpen) closePal(); else closeAllDD(); return; }
+  if(palOpen){ const n=palResults? (palKind==='nav'?navPickItems().length:palResults().length):0;
+    if(e.key==='ArrowDown'){ e.preventDefault(); palSel=Math.min(palSel+1,n-1); renderPal(); setTimeout(function(){const i=document.getElementById('palinput');if(i)i.focus();},0); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); palSel=Math.max(palSel-1,0); renderPal(); setTimeout(function(){const i=document.getElementById('palinput');if(i)i.focus();},0); }
+    else if(e.key==='Enter'){ e.preventDefault(); palRun(palSel); } }
+});
+document.addEventListener('mousedown',function(e){ if(!e.target.closest('.dd-wrap')) closeAllDD(); });
+
+function renderCrumbs(){}  // путь теперь читается прямо из строки-навигации (пространство + модули)
+
+function renderFilters(name,shown,total){ const F=document.getElementById('filterbar');
+  const isRBO = name==='Работы · Боли · Ожидания';
+  let chips='<span class="flabel">фильтр:</span>';
+  if(isRBO){ [['all','все'],['job','🎯 работы'],['pain','🔴 боли'],['gain','🟢 выгоды']].forEach(function(x){ chips+='<button class="fchip'+(typeFilter===x[0]?' on':'')+'" onclick="setType(\''+x[0]+'\')">'+x[1]+'</button>'; }); }
+  [['all','любой статус'],['active','active'],['shipped','shipped'],['proposed','proposed']].forEach(function(x){ chips+='<button class="fchip'+(statusFilter===x[0]?' on':'')+'" onclick="setStatus(\''+x[0]+'\')">'+x[1]+'</button>'; });
+  chips+='<span class="fcount">'+(product==='__all'?'все продукты':'в '+product)+' · показано '+shown+' из '+total+(gQuery?' · поиск «'+gQuery+'»':'')+'</span>';
+  F.innerHTML='<div class="filterbar-w">'+chips+'</div>';
+}
+function renderGroups(){
+  const sp=SPACES.find(s=>s.id===space)||SPACES[0];
+  const gg=STORY.find(x=>x.id===g); const cur=gg.subs[sub[g]];
+  // строка навигации: активное пространство + его модули (главы) инлайн
+  let h='<span class="spacelabel">'+sp.em+' '+sp.name+'</span>';
+  STORY.forEach(function(x){ h+='<button class="modtab" aria-pressed="'+(x.id===g)+'" style="--gc:'+x.color+'" onclick="g=\''+x.id+'\';render()"><span class="mdot"></span>'+x.name+'</button>'; });
+  document.getElementById('groups').innerHTML=h;
+  // строка 2: контекст активного модуля (подвкладки) + путь из URL
+  let s2='';
+  gg.subs.forEach(function(sx,i){ s2+='<button class="ctx-item" aria-pressed="'+(i===sub[g])+'" onclick="sub[\''+g+'\']='+i+';render()"><span>'+sx[1]+'</span>'+sx[0]+'</button>'; });
+  const lay = cur[2]==='md'?'список + карточка':(cur[2]==='canvas'?'канва':'доска');
+  s2+='<span class="ctx-path"><span>'+lay+'</span><span><span class="src">URL⟵</span> lore://'+space+'/'+g+'/'+sub[g]+'</span></span>';
+  document.getElementById('subbar').innerHTML=s2;
+  const pk=document.getElementById('pkname'); if(pk) pk.textContent=gg.name+' · '+cur[0];
+}
+function mdView(name,gc){
+  const all=LISTS[name]||[]; const items=all.filter(matchRow);
+  renderFilters(name,items.length,all.length);
+  const sel=Math.min(rows[name]||0, Math.max(0,items.length-1));
+  let list=items.length? items.map(function(it,i){ return '<button class="md-row" aria-pressed="'+(i===sel)+'" onclick="pickRow(\''+name+'\','+i+')">'+
+    '<span class="rid" style="color:'+typeColor(it.id)+'">'+hl(it.id)+'</span>'+hl(it.t)+(it.st?' <span class="pill" style="font-size:8.5px">'+it.st+'</span>':'')+'</button>'; }).join('')
+    : '<div class="empty">ничего не найдено<br><span class="mono" style="font-size:11px">сбросьте поиск/фильтр</span></div>';
+  const item=items[sel];
+  const detail = item ? passport(item) : '<div class="empty">—</div>';
+  return '<div class="md"><div class="md-list" style="--gc:'+gc+'">'+list+'</div><div class="md-detail">'+detail+'</div></div>';
+}
+function passport(item){
+  const k=PASS[item.id];
+  if(k==='feature') return featureP();
+  if(k==='us') return usP();
+  if(k==='actor') return actorP();
+  if(k==='pain') return painP();
+  if(k==='job') return jobP();
+  if(k==='gain') return gainP();
+  return '<div class="pass-h"><h3>'+item.t+'</h3><span class="pill" style="color:'+typeColor(item.id)+'">'+item.id+'</span>'+(item.st?'<span class="pill">'+item.st+'</span>':'')+'</div>'+
+    '<div class="psec"><div class="psec-t">Паспорт</div><p style="font-size:12.5px; color:var(--t2); margin:0">Детальная карточка — как в проде. В прототипе схематично.</p></div>';
+}
+function featureP(){ return '<div class="pass-h"><h3>Полный git-цикл без токена у агента</h3><span class="pill act">active</span><span class="pill">☁ cloud</span><span class="pill warn">fit 5/6</span></div>'+
+  '<dl class="kv"><dt>Готовность</dt><dd>1/3 US — вычислено</dd><dt>Веха</dt><dd>M-AUTONOMOUS-DELIVERY</dd></dl>'+
+  '<div class="psec"><div class="psec-t">🌉 Мост в профиль (что заявляет)</div>'+
+  '<p style="margin:0 0 3px"><b style="color:var(--t3);font-size:11px">РАБОТА:</b> <span class="lnk" style="color:var(--job)" onclick="goto(\'value\',\'Работы · Боли · Ожидания\',\'JOB-RELEASE\')">🎯 выпустить релиз</span></p>'+
+  '<p style="margin:0 0 3px"><b style="color:var(--t3);font-size:11px">БОЛИ:</b> <span class="lnk" style="color:var(--pain)" onclick="goto(\'value\',\'Работы · Боли · Ожидания\',\'PAIN-MANUAL-HANDOFF\')">🔴 хендофф ✓</span><span class="lnk" style="color:var(--pain)" onclick="goto(\'value\',\'Работы · Боли · Ожидания\',\'PAIN-RAW-TOKEN\')">🔴 токены ✓</span><span class="lnk" style="color:var(--pain);opacity:.7">🔴 prs_linked:0 ⚠</span></p>'+
+  '<p style="margin:0"><b style="color:var(--t3);font-size:11px">ОЖИДАНИЯ:</b> <span class="lnk" style="color:var(--gain)" onclick="goto(\'value\',\'Работы · Боли · Ожидания\',\'GAIN-LINKED-RELEASES\')">🟢 граф релизов ✓</span></p></div>'+
+  '<div class="psec"><div class="psec-t">🌊 Реализация — US (шаги cloud-сценария)</div>'+
+  '<div class="trow"><span>✅</span><span class="lnk" style="color:var(--g-do)" onclick="goto(\'value\',\'US · Пользовательские истории\',\'US-GIT-PR\')">US-GIT-PR</span>Открыть PR<span class="pill ok" style="margin-left:auto">shipped</span></div>'+
+  '<div class="trow"><span>🔄</span><span class="lnk" style="color:var(--g-do)" onclick="goto(\'value\',\'US · Пользовательские истории\',\'US-GIT-MERGE\')">US-GIT-MERGE</span>Merge по зелёному<span class="pill act" style="margin-left:auto">active</span></div></div>'; }
+function usP(){ return '<div class="pass-h"><h3>Merge по зелёному CI одним вызовом</h3><span class="pill act">active·1/2</span><span class="pill">🌊 sea-level</span><span class="pill">📋 fully dressed</span><span class="pill ok">качество 10/10</span></div>'+
+  '<div class="sub" style="margin:2px 0 6px">US · Пользовательская история (User Story) — тело по Коберну</div>'+
+  '<dl class="kv"><dt>Фича</dt><dd><span class="lnk" onclick="goto(\'value\',\'Фичи\',\'FEAT-GITCYCLE\')">🌉 FEAT-GITCYCLE</span></dd><dt>Primary-актор</dt><dd><span class="lnk" style="color:var(--wrn)" onclick="goto(\'value\',\'Клиент (сегмент)\',\'ACT-AGENT\')">🎭 Агент сессии</span></dd></dl>'+
+  '<div class="psec"><div class="psec-t">Что реально делает (ноги в профиль)</div><p style="margin:0"><span class="lnk" style="color:var(--pain)">RELIEVES → хендофф</span><span class="lnk" style="color:var(--pain)">RELIEVES → токены</span><span class="lnk" style="color:var(--gain)">DELIVERS → граф релизов</span><span class="lnk" style="color:var(--job)">PERFORMS → выпустить релиз</span></p></div>'+
+  '<div class="psec"><div class="psec-t">Сценарий (Коберн)</div><p style="font-family:var(--mono);font-size:11px;white-space:pre-wrap;margin:0;color:var(--t2)">### Триггер\nforgejo_pr_merge(N)\n### Основной сценарий\n1. required-чеки проекта\n2. статусы по head-sha\n3. GREEN → merge\n### Расширения\n3a. RED → 409; чинить, повтор с 1</p></div>'; }
+function actorP(){ return '<div class="pass-h"><h3>Агент сессии</h3><span class="pill act">agent</span><span class="pill">сегмент клиента</span></div>'+
+  '<div class="psec"><div class="psec-t">Профиль сегмента (Остервальдер)</div>'+
+  '<p style="margin:0 0 3px"><b style="color:var(--t3);font-size:11px">РАБОТЫ:</b> <span class="lnk" style="color:var(--job)">🎯 выпустить релиз</span></p>'+
+  '<p style="margin:0 0 3px"><b style="color:var(--t3);font-size:11px">БОЛИ:</b> <span class="lnk" style="color:var(--pain)">🔴 хендофф</span><span class="lnk" style="color:var(--pain)">🔴 токены</span></p>'+
+  '<p style="margin:0"><b style="color:var(--t3);font-size:11px">ОЖИДАНИЯ:</b> <span class="lnk" style="color:var(--gain)">🟢 граф релизов</span></p></div>'+
+  '<div class="psec"><div class="psec-t">US роли · отсюда строится RBAC</div>'+
+  '<div class="trow"><span class="lnk" style="color:var(--g-do)" onclick="goto(\'value\',\'US · Пользовательские истории\',\'US-GIT-MERGE\')">US-GIT-MERGE</span>primary</div>'+
+  '<div class="trow"><span class="lnk" style="color:var(--g-do)" onclick="goto(\'value\',\'US · Пользовательские истории\',\'US-GIT-PR\')">US-GIT-PR</span>primary</div></div>'; }
+function painP(){ return '<div class="pass-h"><h3>Ручной хендофф на PR/merge</h3><span class="pill">🔴 боль · глобальная</span></div>'+
+  '<div class="psec"><div class="psec-t">Скоринг по сегментам (вес на ребре FELT_BY)</div>'+
+  '<div class="trow"><span class="lnk" style="color:var(--wrn)">🎭 Агент</span>severity высокая × работа высокая<span class="pill warn" style="margin-left:auto">9 · горячая</span></div>'+
+  '<div class="trow"><span class="lnk" style="color:var(--wrn)">🎭 Владелец</span>средняя<span class="pill" style="margin-left:auto">6 · тёплая</span></div></div>'+
+  '<div class="psec"><div class="psec-t">Где живёт (глобальная, контекст на рёбрах)</div>'+
+  '<div class="trow"><span class="lnk" onclick="goto(\'value\',\'Фичи\',\'FEAT-GITCYCLE\')">🌉 FEAT-GITCYCLE</span><span class="pill">LORE</span><span class="pill ok" style="margin-left:auto">снята US-GIT-PR</span></div></div>'; }
+function jobP(){ return '<div class="pass-h"><h3>Выпустить релиз, не покидая сессии</h3><span class="pill">🎯 работа · глобальная</span><span class="pill">functional</span></div>'+
+  '<div class="psec"><div class="psec-t">Что вокруг работы</div><p style="margin:0 0 3px"><b style="color:var(--t3);font-size:11px">МЕШАЮТ:</b> <span class="lnk" style="color:var(--pain)">🔴 хендофф</span><span class="lnk" style="color:var(--pain)">🔴 токены</span></p><p style="margin:0"><b style="color:var(--t3);font-size:11px">УСПЕХ:</b> <span class="lnk" style="color:var(--gain)">🟢 граф релизов</span></p></div>'+
+  '<div class="psec"><div class="psec-t">🌊 Кто выполняет — US фичи продукта (PERFORMS)</div><div style="font-size:10.5px;color:var(--t3);margin-bottom:4px">через <span class="lnk" onclick="goto(\'value\',\'Фичи\',\'FEAT-GITCYCLE\')">🌉 FEAT-GITCYCLE</span> · LORE · сегмент Агент</div>'+
+  '<div class="trow"><span class="lnk" style="color:var(--g-do)" onclick="goto(\'value\',\'US · Пользовательские истории\',\'US-GIT-MERGE\')">US-GIT-MERGE</span>Merge<span class="pill act" style="margin-left:auto">active</span></div></div>'; }
+function gainP(){ return '<div class="pass-h"><h3>Связный граф релизов</h3><span class="pill ok">🟢 выгода · проектная</span><span class="pill">LORE</span></div>'+
+  '<dl class="kv"><dt>Метрика</dt><dd class="mono" style="font-size:11px">prs_linked > 0 у каждого релиза</dd><dt>Ранг</dt><dd>essential</dd></dl>'+
+  '<div class="psec"><div class="psec-t">Создаётся US (DELIVERS)</div><div class="trow"><span class="lnk" style="color:var(--g-do)" onclick="goto(\'value\',\'US · Пользовательские истории\',\'US-GIT-MERGE\')">US-GIT-MERGE</span><span class="pill act" style="margin-left:auto">active</span></div></div>'; }
+function productP(){
+  const P={ LORE:{t:'LORE — граф знаний проекта',v:'Знание проекта живёт графом, а не в чатах: решения, сценарии, исполнение и ценность связаны рёбрами и проверяемы.',comp:'OMILORE · FORSETI · FORSETI_MCP',repo:'NooriUta/UnlimitedLORE',seg:'Владелец · Администратор · Читатель · Агент · forgejo-mcp',feat:'3 (1 shipped)',fit:'74%'},
+    BRAGI:{t:'BRAGI — маркетинг-архив',v:'Публикации, кампании, каналы — единый архив нарратива продукта.',comp:'BRAGI',repo:'NooriUta/UnlimitedLORE (внутри)',seg:'Маркетолог · Редактор',feat:'1',fit:'—'},
+    DALI:{t:'DALI — парсинг SQL',v:'Извлечение структуры из SQL-корпуса в граф происхождения данных.',comp:'DALI',repo:'NooriUta/AIDA',seg:'Аналитик · Агент',feat:'—',fit:'—'},
+    __all:{t:'Все продукты AIDA',v:'Каталог продуктов с их канвами; переключатель-тенант вверху задаёт контекст раздела.',comp:'—',repo:'—',seg:'—',feat:'—',fit:'—'} };
+  const x=P[product]||P.LORE;
+  document.getElementById('filterbar').innerHTML='';
+  return '<div class="board" style="padding:16px"><div class="pass-h"><h3>'+x.t+'</h3><span class="pill">продукт</span>'+(x.fit!=='—'?'<span class="pill ok">fit '+x.fit+'</span>':'')+'</div>'+
+    '<dl class="kv"><dt>Сегменты</dt><dd>'+x.seg+'</dd><dt>Фичи</dt><dd>'+x.feat+'</dd><dt>Компоненты</dt><dd>'+x.comp+'</dd><dt>Репозиторий</dt><dd class="mono" style="font-size:11px">'+x.repo+'</dd></dl>'+
+    '<div class="psec"><div class="psec-t">Ценность продукта</div><p style="margin:0;font-size:12.5px;color:var(--t2)">'+x.v+'</p></div>'+
+    '<div class="note" style="margin:12px 0 0">Продукт — это ось <b>тенант</b> (контекст данных), переключается вверху и ⟂ навигации. Здесь его справочный паспорт (корень над деревом компонентов). VP-канва, фичи, US главы «Зачем» показывают срез выбранного продукта.</div></div>';
+}
+function vpCanvas(){
+  document.getElementById('filterbar').innerHTML='';
+  const SEG={ agent:{name:'🎭 Агент',pains:[['ручной хендофф',1],['сырые токены',1],['prs_linked:0',0]],gains:[['граф релизов',1],['меньше рутины',0]],fit:'86%'},
+    owner:{name:'🎭 Владелец',pains:[['ручной хендофф',1],['prs_linked:0',0]],gains:[['граф релизов',1]],fit:'70%'},
+    admin:{name:'🎭 Администратор',pains:[['(эта фича не для него)',0]],gains:[],fit:'0%'} };
+  const seg=SEG[vpSeg];
+  const p=seg.pains.map(function(x){ return '<div class="trow"><span>'+(x[1]?'🔴':'⚪')+'</span>'+x[0]+'<span class="pill'+(x[1]?' ok':' warn')+'" style="margin-left:auto">'+(x[1]?'снята':'⚠ не снята')+'</span></div>'; }).join('');
+  const gg=seg.gains.length? seg.gains.map(function(x){ return '<div class="trow"><span>'+(x[1]?'🟢':'⚪')+'</span>'+x[0]+'<span class="pill'+(x[1]?' ok':' warn')+'" style="margin-left:auto">'+(x[1]?'создана':'⚠')+'</span></div>'; }).join('') : '<div class="trow" style="color:var(--t3)">— нет ожиданий у этого сегмента</div>';
+  const sb=function(id,l){ return '<button class="segbtn'+(vpSeg===id?' on':'')+'" onclick="setSeg(\''+id+'\')">'+l+'</button>'; };
+  return '<div class="board"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap"><span style="font-weight:700">VP-канва · зеркальная (Остервальдер)</span><span class="pill">'+product+'</span><span style="font-size:11px;color:var(--t3)">сегмент:</span>'+sb('agent','Агент')+sb('owner','Владелец')+sb('admin','Администратор')+'<span class="pill" style="margin-left:auto">в проде — ReactFlow (как LOOM)</span></div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="psec" style="margin:0"><div class="psec-t">🎭 ПРОФИЛЬ КЛИЕНТА · '+seg.name+'</div>'+
+  '<div style="font-size:10px;color:var(--job);text-transform:uppercase;margin:4px 0 2px">🎯 Работы</div><div class="trow">выпустить релиз, не покидая сессии</div>'+
+  '<div style="font-size:10px;color:var(--pain);text-transform:uppercase;margin:6px 0 2px">🔴 Боли</div>'+p+
+  '<div style="font-size:10px;color:var(--gain);text-transform:uppercase;margin:6px 0 2px">🟢 Ожидания</div>'+gg+'</div>'+
+  '<div class="psec" style="margin:0"><div class="psec-t">🌉 КАРТА ЦЕННОСТИ</div>'+
+  '<div style="font-size:10px;color:var(--acc);text-transform:uppercase;margin:4px 0 2px">📦 Продукты и услуги</div><div class="trow">🌉 FEAT-GITCYCLE <span class="pill" style="margin-left:auto">fit '+seg.fit+'</span></div>'+
+  '<div style="font-size:10px;color:var(--pain);text-transform:uppercase;margin:6px 0 2px">💊 Обезболивающие · US</div><div class="trow">🌊 US-GIT-PR · US-GIT-MERGE</div>'+
+  '<div style="font-size:10px;color:var(--gain);text-transform:uppercase;margin:6px 0 2px">✨ Создатели выгод · US</div><div class="trow">🌊 US-GIT-MERGE</div></div></div>'+
+  '<div class="note" style="margin:10px 0 0"><b>fit '+seg.fit+'</b> · сегмент '+seg.name+'. Слева профиль, справа зеркально карта ценности. Feature = продукт/услуга, боли снимают обезболивающие-US, ожидания создают создатели-US. Переключите сегмент — у Администратора fit 0%.</div></div>';
+}
+function renderProdFilter(){
+  const F=document.getElementById('prodfilter'); if(!F) return;
+  if(g!=='value' || prodName!==''){ F.innerHTML=''; return; }  // фильтр продуктов — только в «Зачем» и только когда выбран проект целиком
+  let prods = projName==='все проекты' ? PROJECTS.filter(function(p){return p.prods.length;}).reduce(function(a,p){return a.concat(p.prods);},[]) : (PROJECTS.find(function(p){return p.id===projName;})||{prods:[]}).prods;
+  prods = prods.filter(function(pr){ return pr!=='платформа'; });
+  let chips='<span class="flabel">📦 продукт:</span>';
+  chips+='<button class="fchip'+(product==='__all'?' on':'')+'" onclick="setCtx(\''+projName+'\')">все продукты</button>';
+  prods.forEach(function(pr){ chips+='<button class="fchip'+(product===pr?' on':'')+'" onclick="setCtx(\''+projName+'\',\''+pr+'\')">'+pr+'</button>'; });
+  chips+='<span class="fcount">'+(projName==='все проекты'?'все проекты':projName)+' · все продукты — сравнительный срез канв</span>';
+  F.innerHTML='<div class="filterbar-w" style="background:var(--bg1)">'+chips+'</div>';
+}
+function render(){
+  writeHash();
+  renderCrumbs();
+  renderGroups();
+  renderProdFilter();
+  const gg=STORY.find(x=>x.id===g); const cur=gg.subs[sub[g]]; const C=document.getElementById('content');
+  if(cur[2]==='prodref'){ C.innerHTML=productP(); return; }
+  if(cur[2]==='canvas'){ C.innerHTML=vpCanvas(); return; }
+  if(cur[2]==='md' && LISTS[cur[0]]){ C.innerHTML=mdView(cur[0], gg.color); return; }
+  document.getElementById('filterbar').innerHTML='';
+  C.innerHTML='<div class="board"><div class="board-mock">доска «'+cur[0]+'»<br><span class="mono" style="font-size:11px">'+gg.n+' · '+gg.name+' → '+cur[0]+'</span>'+(gQuery?'<br><span style="color:var(--wrn);font-size:11px">поиск «'+gQuery+'» — доски пока не индексируются в прототипе</span>':'')+'</div></div>';
+}
+readHash();
+render();
+</script>
