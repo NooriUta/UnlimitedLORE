@@ -1,8 +1,9 @@
 // Open-questions register (KnowQuestion, ADR-LORE-020/021) — flat scrollable
 // feed, sibling to LoreDecisionBoard. "What we haven't answered yet" vs the
 // decisions board's "what rule". Client-side filter/sort (data is small).
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, loreMutate, type LoreQuestionRow, type LoreDecisionPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
@@ -108,6 +109,18 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
       .catch(e => { onError(e); setLoading(false); });
   }, [onError]);
   useEffect(() => { load(); }, [load]);
+
+  // QLINK-01: deep-link ?passport=<question_id> (например из паспорта ADR) —
+  // однократно открыть форму правки этого вопроса, когда строки приехали.
+  const [searchParams] = useSearchParams();
+  const passportOpened = useRef<string | null>(null);
+  useEffect(() => {
+    const qid = searchParams.get('passport');
+    if (!qid || passportOpened.current === qid || rows.length === 0) return;
+    const row = rows.find(r => r.question_id === qid);
+    if (row) { passportOpened.current = qid; startEdit(row); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, searchParams]);
   useEffect(() => {
     fetchLoreSlice<{ component_id: string; game_icon: string | null; area: string | null; full_name: string | null }>('components', {})
       .then(cs => {
