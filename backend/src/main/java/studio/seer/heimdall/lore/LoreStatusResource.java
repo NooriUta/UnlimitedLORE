@@ -312,9 +312,11 @@ public class LoreStatusResource extends LoreResourceBase {
         final String now  = Instant.now().toString();
         final String nsid = UUID.randomUUID().toString();
 
+        // + context_md/outcome_md/content_hash (2026-07-17): этот close-open нёс тот же
+        // carry-forward баг, что и статус-флип, — тела спринта терялись при правке плана.
         MartQuery readQ = new MartQuery("sql",
             "SELECT @rid AS rid, status_raw, priority, planned_start_date, planned_end_date, " +
-            "track_id, pr_refs FROM KnowSprintHist " +
+            "track_id, pr_refs, context_md, outcome_md, content_hash FROM KnowSprintHist " +
             "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sid), -1);
 
@@ -332,6 +334,9 @@ public class LoreStatusResource extends LoreResourceBase {
             next.put("planned_end_date",     req.planned_end_date()     != null ? req.planned_end_date()     : cur.get("planned_end_date"));
             next.put("track_id",             req.track_id()             != null ? req.track_id()             : cur.get("track_id"));
             next.put("pr_refs",              cur.get("pr_refs"));
+            next.put("context_md",           cur.get("context_md"));
+            next.put("outcome_md",           cur.get("outcome_md"));
+            next.put("content_hash",         cur.get("content_hash"));
 
             Uni<LoreCommandClient.LoreCommandResult> closeOld = oldRid.startsWith("#")
                 ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -348,7 +353,8 @@ public class LoreStatusResource extends LoreResourceBase {
                     "INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
                     "planned_end_date = :planned_end_date, " +
-                    "track_id = :track_id, pr_refs = :pr_refs",
+                    "track_id = :track_id, pr_refs = :pr_refs, " +
+                    "context_md = :context_md, outcome_md = :outcome_md, content_hash = :content_hash",
                     insertParams)))
                 .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
                     "KnowSprint", "KnowSprintHist", "sprint_id", sid, nsid)))

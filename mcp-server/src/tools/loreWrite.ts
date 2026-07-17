@@ -206,7 +206,7 @@ export function registerLoreWrite(server: McpServer): void {
       'only supplied fields written) and/or PR refs (pr_numbers — appended to the sprint\'s pr_refs ' +
       'string, existing ones skipped; pass pr_replace=true to discard existing pr_refs first instead of ' +
       'appending, e.g. to fix entries baked with the wrong repo). Does NOT change status — use status_set. ' +
-      'Does NOT change priority (SCD2-tracked field, no MCP tool wired to it yet). ' +
+      'Does NOT change priority/planned dates — use sprint_plan_set (SCD2 close-open). ' +
       'RULE: always fill context_md when you know WHY the sprint exists. Mutates system_aida_lore.',
     {
       sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
@@ -244,6 +244,37 @@ export function registerLoreWrite(server: McpServer): void {
           return err(new Error('provide at least one metadata field or pr_numbers'));
         }
         return json({ sprint_id, ...results });
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // sprint_plan_set (MCPSYNC-01): закрывает единственную содержательную дыру
+  // сверки REST↔MCP 2026-07-17 — /lore/sprint/plan (приоритет + плановые даты +
+  // track_id, SCD2 close-open) был недостижим из агентов; sprint_set честно
+  // писал об этом в описании. Свой инструмент, а не поле в sprint_set: у /plan
+  // другой SCD2-контракт (открывает новую ревизию), смешивать с partial-update
+  // метаданных значило бы прятать это различие.
+  server.tool(
+    'sprint_plan_set',
+    'Set SCD2 plan fields of a KnowSprint: priority, planned_start_date/planned_end_date (YYYY-MM-DD), ' +
+      'track_id. Opens a NEW hist revision (close-open), carrying everything else forward. ' +
+      'At least one field required. Does NOT change status — use status_set. Mutates system_aida_lore.',
+    {
+      sprint_id:          z.string().describe('e.g. "SPRINT_LORE_ADMIN_PANEL"'),
+      priority:           z.string().optional().describe('e.g. "high" | "normal" | "low" (dict priority)'),
+      planned_start_date: z.string().optional().describe('YYYY-MM-DD'),
+      planned_end_date:   z.string().optional().describe('YYYY-MM-DD'),
+      track_id:           z.string().optional(),
+    },
+    async ({ sprint_id, priority, planned_start_date, planned_end_date, track_id }) => {
+      try {
+        return json(await lorePost('/lore/sprint/plan', {
+          sprint_id,
+          priority: priority ?? null,
+          planned_start_date: planned_start_date ?? null,
+          planned_end_date: planned_end_date ?? null,
+          track_id: track_id ?? null,
+        }));
       } catch (e) { return err(e); }
     },
   );
@@ -428,10 +459,12 @@ export function registerLoreWrite(server: McpServer): void {
       'rel="depends_on": DEPENDS_ON edge, target_id=the ADR this one depends on. rel="supersedes": ' +
       'SUPERSEDES edge, target_id=the OLDER ADR this one supersedes (pair with status="SUPERSEDED" on ' +
       'the old adr_id via a separate adr_set call). rel="tag": TAGGED_WITH edge (upserts the KnowTag ' +
-      'vertex if new), target_id=tag_id. Idempotent on add. Mutates system_aida_lore.',
+      'vertex if new), target_id=tag_id. rel="project": BELONGS_TO_PROJECT edge (MULTI), target_id=git ' +
+      'project slug (must be registered via project_new — response carries linked:false on silent no-op). ' +
+      'Idempotent on add. Mutates system_aida_lore.',
     {
       adr_id:      z.string().describe('e.g. "ADR-HND-022"'),
-      rel:         z.enum(['sprint', 'release', 'component', 'depends_on', 'supersedes', 'tag']),
+      rel:         z.enum(['sprint', 'release', 'component', 'depends_on', 'supersedes', 'tag', 'project']),
       target_id:   z.string().describe('sprint_id / release_id / component_id / dep_adr_id / superseded_adr_id / tag_id, matching rel'),
       git_project: z.string().optional().describe('rel="release" only: GitHub project slug, e.g. "NooriUta/AIDA"'),
       action:      z.enum(['add', 'remove']).optional().default('add'),
@@ -452,6 +485,8 @@ export function registerLoreWrite(server: McpServer): void {
             return json(await lorePost('/lore/adr/supersedes', { adr_id, superseded_adr_id: target_id, action: act }));
           case 'tag':
             return json(await lorePost('/lore/adr/tag', { adr_id, tag_id: target_id, action: act }));
+          case 'project':
+            return json(await lorePost('/lore/adr/project', { adr_id, project: target_id, action: act }));
         }
       } catch (e) { return err(e); }
     },

@@ -73,6 +73,7 @@ public final class LoreSlices {
             "out('BELONGS_TO').component_id[0] AS component, " +
             "out('BELONGS_TO').component_id    AS components, " +
             "out('TAGGED_WITH').tag_id         AS tags, " +
+            "out('BELONGS_TO_PROJECT').slug    AS git_projects, " + // ADRPROJ-01
             "in('DECIDED_IN').size()           AS decision_count " +
             "FROM KnowADR",
             List.of(),
@@ -93,7 +94,8 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN').sprint_id      AS implemented_in_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " +
             "out('SUPERSEDES').adr_id             AS supersedes_ids, " +
-            "out('TAGGED_WITH').tag_id            AS tags " +
+            "out('TAGGED_WITH').tag_id            AS tags, " +
+            "out('BELONGS_TO_PROJECT').slug       AS git_projects " + // ADRPROJ-01
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 

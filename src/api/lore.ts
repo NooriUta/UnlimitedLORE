@@ -233,6 +233,8 @@ export interface LoreAdrPassport {
   release_ids: string[] | null;
   supersedes_ids: string[] | null;
   tags: string[] | null;
+  /** ADRPROJ-01: git-проекты ADR (BELONGS_TO_PROJECT, multi). */
+  git_projects?: string[] | null;
 }
 
 export interface LoreSprintDep {

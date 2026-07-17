@@ -397,6 +397,52 @@ public class LoreAdrResource extends LoreResourceBase {
     public record AdrSupersedesLinkRequest(String adr_id, String superseded_adr_id, String action) {}
     public record AdrTagLinkRequest(String adr_id, String tag_id, String action) {}
 
+    // ── ADR ↔ git-проект (ADRPROJ-01): мультипривязка BELONGS_TO_PROJECT ────────
+    // Тот же паттерн, что adr/component: linked-валидация обязательна — CREATE EDGE
+    // в пустой FROM/TO — тихий no-op (правило корпуса: линковка к незарегистри-
+    // рованному проекту «успешно» ничего не делает).
+
+    public record AdrProjectLinkRequest(String adr_id, String project, String action) {}
+
+    @POST
+    @Path("adr/project")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkAdrProject(AdrProjectLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.adr_id() == null || req.adr_id().isBlank()
+                || req.project() == null || req.project().isBlank())
+            return badParams("adr_id and project (slug) required");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowADR WHERE adr_id=:id) " +
+                    "WHERE @in.slug = :gp",
+                    Map.of("id", req.adr_id(), "gp", req.project()))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "project", req.project(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT " +
+                    "FROM (SELECT FROM KnowADR        WHERE adr_id = :id) " +
+                    "TO   (SELECT FROM KnowGitProject WHERE slug   = :gp) IF NOT EXISTS",
+                    Map.of("id", req.adr_id(), "gp", req.project())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
+                "project", req.project(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — check adr_id exists and project is registered (project_new)")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ADR PROJECT] %s: %s", req.adr_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     @POST
     @Path("adr/component")
     @Consumes(MediaType.APPLICATION_JSON)

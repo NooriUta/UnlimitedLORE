@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { fetchLoreSlice, loreMutate, type LoreAdrPassport, type LoreDecisionRow, type LoreQuestionRow } from '../../api/lore';
 import { isOverdue } from './LoreOpenQuestionsBoard';
 import { LoreLinkChips, type LinkMeta } from './LoreLinkChips';
@@ -94,6 +95,7 @@ interface Props {
 
 export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate }: Props) {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams(); // QLINK-01: deep-link в реестр ОВ
   const [data, setData]       = useState<LoreAdrPassport | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -293,6 +295,25 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
         </div>
       )}
 
+      {/* ADRPROJ-01: ADR ↔ git-проекты (BELONGS_TO_PROJECT, multi) — тот же
+          LoreLinkChips, что у решений; запись через /lore/adr/project с
+          linked-валидацией (незарегистрированный проект = честная подсказка). */}
+      <div style={S.section}>
+        <LoreLinkChips label={t('lore.adrPassportView.projectsMulti', 'Проекты')} color="var(--suc)"
+          values={(data.git_projects ?? []).filter(Boolean) as string[]} options={projectIds}
+          onAdd={async v => {
+            try {
+              const r = await loreMutate<{ linked?: boolean; hint?: string }>('/adr/project', { adr_id: adrId, project: v, action: 'add' });
+              if (r && r.linked === false) onError(new Error(r.hint || 'ребро не создано'));
+              setReload(x => x + 1);
+            } catch (e) { onError(e); }
+          }}
+          onRemove={async v => {
+            try { await loreMutate('/adr/project', { adr_id: adrId, project: v, action: 'remove' }); setReload(x => x + 1); }
+            catch (e) { onError(e); }
+          }} />
+      </div>
+
       {dependsOn.length > 0 && (
         <div style={S.section}>
           <div style={S.sLabel}>{t('lore.adrPassportView.dependsOn', 'Depends on')}</div>
@@ -385,7 +406,15 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
               return (
                 <div key={qn.question_id} style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 'var(--fs-sm)', minWidth: 0 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} title={qn.status ?? 'open'} />
-                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--acc)', flexShrink: 0 }}>{qn.question_id}</span>
+                  {/* QLINK-01: вопрос из ADR открывается в реестре ОВ (deep-link
+                      ?section=openQuestions&passport=id) — с правкой на месте там. */}
+                  <span style={{ fontFamily: 'var(--mono)', color: 'var(--acc)', flexShrink: 0, cursor: 'pointer', textDecoration: 'underline dotted' }}
+                    title={t('lore.adrPassportView.openInRegister', 'Открыть в реестре вопросов (с правкой)')}
+                    onClick={() => {
+                      const p = new URLSearchParams(searchParams);
+                      p.set('section', 'openQuestions'); p.set('passport', qn.question_id);
+                      setSearchParams(p);
+                    }}>{qn.question_id}</span>
                   <span style={{ color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{qn.title}</span>
                   {qn.priority && qn.priority !== 'normal' && (
                     <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', flexShrink: 0 }}>{qn.priority}</span>
