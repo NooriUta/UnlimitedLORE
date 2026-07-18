@@ -21,7 +21,19 @@ import java.util.List;
  */
 final class LoreSchemaMigrations {
 
-    record Step(int version, String name, List<String> sql) {
+    /**
+     * version — сквозной ordinal: порядок применения и ключ ledger, неизменяем.
+     * compatMajor — ось СОВМЕСТИМОСТИ (major версии схемы). Аддитивные шаги делят
+     * major с предыдущими (10.1/10.2/10.3 — старый бинарь major=10 их спокойно
+     * переживёт, форвард-совместимость), несовместимый шаг ПОДНИМАЕТ major (11) —
+     * и только тогда дрейф-гард отказывает старту старого кода.
+     * Историческим шагам (3-арг конструктор) compatMajor=version — каждый сам себе
+     * major; НОВЫЙ аддитивный шаг передаёт МЕНЬШИЙ compatMajor явно (4-арг), напр.
+     * new Step(11, 10, "…", …) = ordinal 11, но major 10 → человеку это «10.1».
+     */
+    record Step(int version, int compatMajor, String name, List<String> sql) {
+        Step(int version, String name, List<String> sql) { this(version, version, name, sql); }
+
         String checksum() {
             try {
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -32,12 +44,40 @@ final class LoreSchemaMigrations {
                 return sb.toString();
             } catch (Exception e) { throw new IllegalStateException(e); }
         }
+
+        /** Человекочитаемая версия major.minor (minor = порядковый среди шагов того же major). */
+        String human() {
+            long minor = STEPS.stream()
+                .filter(s -> s.compatMajor() == compatMajor && s.version() <= version).count() - 1;
+            return compatMajor + "." + minor;
+        }
     }
 
     private LoreSchemaMigrations() {}
 
-    /** Код-ожидаемая версия схемы = максимум реестра. */
+    /** Код-ожидаемая версия схемы = максимум реестра (ordinal). */
     static int codeVersion() { return STEPS.get(STEPS.size() - 1).version(); }
+
+    /** Ось совместимости: максимальный major в реестре. Отстал от него бинарь → отказ старта. */
+    static int codeCompatMajor() { return STEPS.stream().mapToInt(Step::compatMajor).max().orElse(0); }
+
+    /** major.minor последнего шага — для логов и сообщений. */
+    static String codeHuman() { return STEPS.get(STEPS.size() - 1).human(); }
+
+    /** Решение раннера о старте по версиям — чистое, тестируется без БД (ADR-023). */
+    enum StartupDecision {
+        UP_TO_DATE,      // db == code
+        RUN_PENDING,     // db < code — доиграть недостающие шаги
+        FORWARD_COMPAT,  // db впереди по аддитивным шагам того же major — работаем, варнинг
+        INCOMPATIBLE     // у БД major новее кода — ломающий шаг, которого нет в коде → отказ
+    }
+
+    static StartupDecision decide(int dbVersion, int dbCompatMajor, int codeVersion, int codeCompatMajor) {
+        if (dbCompatMajor > codeCompatMajor) return StartupDecision.INCOMPATIBLE;
+        if (dbVersion > codeVersion)         return StartupDecision.FORWARD_COMPAT;
+        if (dbVersion < codeVersion)         return StartupDecision.RUN_PENDING;
+        return StartupDecision.UP_TO_DATE;
+    }
 
     // SV-06: DDL сессий 2026-07 задним числом. На живой БД эти стейтменты уже
     // исполнялись out-of-band — идемпотентный replay безвреден и ставит ledger.
@@ -265,6 +305,53 @@ final class LoreSchemaMigrations {
         // на вершине: одна роль может быть primary в одном UC и supporting в другом.
         new Step(9, "has_actor_role_property", List.of(
             "CREATE PROPERTY HAS_ACTOR.role IF NOT EXISTS STRING"
+        )),
+
+        // ADR-LORE-032 §2.1: добор канвы Остервальдера до полной. Боли и выгоды
+        // (V8) — только ДВА столпа профиля клиента; третий, из которого растут оба,
+        // — РАБОТЫ (customer jobs): «боль мешает работе», «выгода — успех в работе».
+        // Без Job'а как вершины job-строки в тексте фичи не проверить рёбрами (fit
+        // считался по 2 осям из 3) и не переиспользовать между фичами, как pain/gain.
+        new Step(10, "vpc_osterwalder_jobs_and_ranks", List.of(
+            "CREATE VERTEX TYPE KnowJob IF NOT EXISTS",
+            "CREATE PROPERTY KnowJob.job_id       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowJob.title        IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowJob.body_md      IF NOT EXISTS STRING",
+            // Остервальдер: тип работы — функциональная | социальная | эмоциональная
+            // | supporting (вспомогательная). Словарь job_kind ниже.
+            "CREATE PROPERTY KnowJob.kind         IF NOT EXISTS STRING",
+            // importance: насколько работа важна клиенту (Остервальдер ранжирует
+            // jobs по important|insignificant — у нас словарь priority-шкалы).
+            "CREATE PROPERTY KnowJob.importance   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowJob.date_created IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowJob (job_id) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowJob (title)   FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowJob (body_md) FULL_TEXT",
+            // Профиль клиента: чья работа (как FELT_BY/DESIRED_BY у pain/gain).
+            "CREATE EDGE TYPE PERFORMED_BY IF NOT EXISTS", // KnowJob     -> KnowActor
+            // Фича ЗАЯВЛЯЕТ, что помогает с работой (симметрия ADDRESSES/PROMISES).
+            "CREATE EDGE TYPE HELPS_WITH   IF NOT EXISTS", // KnowFeature -> KnowJob
+            // UC РЕАЛЬНО выполняет работу — это ребро и замыкает третью ось fit
+            // (симметрия RELIEVES/DELIVERS).
+            "CREATE EDGE TYPE PERFORMS     IF NOT EXISTS", // KnowUseCase -> KnowJob
+            // Остервальдер связывает боли и выгоды С РАБОТАМИ: боль мешает работе,
+            // выгода — желаемый успех в работе. Без этих рёбер профиль клиента —
+            // три несвязанных списка, а не канва.
+            "CREATE EDGE TYPE BLOCKS   IF NOT EXISTS",     // KnowPain -> KnowJob
+            "CREATE EDGE TYPE SUCCESS_OF IF NOT EXISTS",   // KnowGain -> KnowJob
+            // Ранги Остервальдера: боль severe|moderate (у нас severity уже есть,
+            // V8), выгода — essential|expected|desired|unexpected.
+            "CREATE PROPERTY KnowGain.rank IF NOT EXISTS STRING",
+            // Словарь типов работ (канон, правят люди — механизм ADR-012).
+            "UPDATE KnowDictEntry SET dict_type='job_kind', code='functional', label_ru='⚙ Функциональная — выполнить задачу', color='#5AB4E8', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='job_kind' AND code='functional'",
+            "UPDATE KnowDictEntry SET dict_type='job_kind', code='social', label_ru='👥 Социальная — как выглядеть в глазах других', color='#C0A36E', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='job_kind' AND code='social'",
+            "UPDATE KnowDictEntry SET dict_type='job_kind', code='emotional', label_ru='💭 Эмоциональная — как себя чувствовать', color='#9A8CDB', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='job_kind' AND code='emotional'",
+            "UPDATE KnowDictEntry SET dict_type='job_kind', code='supporting', label_ru='🔧 Вспомогательная — обслуживает основную работу', color='#665C48', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='job_kind' AND code='supporting'",
+            // Словарь рангов выгоды (Остервальдер, VPC).
+            "UPDATE KnowDictEntry SET dict_type='gain_rank', code='essential', label_ru='🔴 Обязательная — без неё решение не работает', color='#C85848', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='essential'",
+            "UPDATE KnowDictEntry SET dict_type='gain_rank', code='expected', label_ru='🟠 Ожидаемая — клиент считает её само собой', color='#D4922A', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='expected'",
+            "UPDATE KnowDictEntry SET dict_type='gain_rank', code='desired', label_ru='🟢 Желаемая — обрадуется, но не ждёт', color='#7DBF78', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='desired'",
+            "UPDATE KnowDictEntry SET dict_type='gain_rank', code='unexpected', label_ru='✨ Неожиданная — превосходит ожидания', color='#88B8A8', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='unexpected'"
         ))
     );
 }

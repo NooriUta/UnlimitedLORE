@@ -210,4 +210,56 @@ class LoreVpLayerLiveDbTest {
             .body("rows.find { it.uc_id == 'UC-VP-TPL' }.actor_ids", hasItem("ACT-VP-AGENT"))
             .body("rows.find { it.uc_id == 'UC-VP-TPL' }.actor_ids", hasItem("ACT-VP-2"));
     }
+
+    @Test
+    @Order(9)
+    void jobIsTheThirdPillarAndClosesTheThirdFitAxis() {
+        // Остервальдер (V10): работа — третий столп профиля. Боль МЕШАЕТ ей (BLOCKS),
+        // выгода = УСПЕХ в ней (SUCCESS_OF), фича ЗАЯВЛЯЕТ помощь (HELPS_WITH),
+        // UC её ВЫПОЛНЯЕТ (PERFORMS). Глобальная вершина — контекст на рёбрах.
+        post("/lore/job", "{\"job_id\":\"JOB-RELEASE\",\"title\":\"Выпустить релиз, не покидая сессии\","
+            + "\"kind\":\"functional\",\"importance\":\"high\"}");
+        // Чья это работа (сегмент профиля).
+        post("/lore/vp/link", "{\"source_id\":\"JOB-RELEASE\",\"rel\":\"performed_by\",\"target_id\":\"ACT-VP-AGENT\"}");
+        // Боль мешает работе, выгода — успех в работе (замыкают три списка в канву).
+        post("/lore/vp/link", "{\"source_id\":\"PAIN-VP-TOKEN\",\"rel\":\"blocks\",\"target_id\":\"JOB-RELEASE\"}");
+        post("/lore/vp/link", "{\"source_id\":\"GAIN-VP-LINKED\",\"rel\":\"success_of\",\"target_id\":\"JOB-RELEASE\"}");
+        // Фича ЗАЯВЛЯЕТ помощь, UC РЕАЛЬНО выполняет — третья ось fit.
+        post("/lore/feature/link", "{\"feature_id\":\"FEAT-VP\",\"rel\":\"job\",\"target_id\":\"JOB-RELEASE\"}");
+        post("/lore/uc/link", "{\"uc_id\":\"UC-VP-MERGE\",\"rel\":\"performs\",\"target_id\":\"JOB-RELEASE\"}");
+
+        // Слайс jobs собирает профиль работы из рёбер.
+        given().when().get("/lore/slice/jobs")
+        .then().statusCode(200)
+            .body("rows.find { it.job_id == 'JOB-RELEASE' }.actor_ids", hasItem("ACT-VP-AGENT"))
+            .body("rows.find { it.job_id == 'JOB-RELEASE' }.blocking_pain_ids", hasItem("PAIN-VP-TOKEN"))
+            .body("rows.find { it.job_id == 'JOB-RELEASE' }.gain_ids", hasItem("GAIN-VP-LINKED"))
+            // ЗАЯВЛЕНО фичей, ВЫПОЛНЕНО одним UC — третья ось замкнута цифрой.
+            .body("rows.find { it.job_id == 'JOB-RELEASE' }.performed_by", equalTo(1))
+            .body("rows.find { it.job_id == 'JOB-RELEASE' }.performed_by_ucs", hasItem("UC-VP-MERGE"));
+
+        // Обратные рёбра видны со сторон боли и фичи (симметрия ADDRESSES/HELPS_WITH).
+        given().when().get("/lore/slice/pains")
+        .then().statusCode(200)
+            .body("rows.find { it.pain_id == 'PAIN-VP-TOKEN' }.blocks_job_ids", hasItem("JOB-RELEASE"));
+        given().when().get("/lore/slice/features")
+        .then().statusCode(200)
+            .body("rows.find { it.feature_id == 'FEAT-VP' }.job_ids", hasItem("JOB-RELEASE"));
+    }
+
+    @Test
+    @Order(10)
+    void gainRankIsCanonAndInvalidIsRejected() {
+        // Ранг выгоды (Остервальдер) — канон словаря gain_rank; upsert хранит его,
+        // невалидный ранг отклоняется 400 (как goal_level/work_class).
+        post("/lore/gain", "{\"gain_id\":\"GAIN-VP-LINKED\",\"rank\":\"essential\"}");
+        given().when().get("/lore/slice/gains")
+        .then().statusCode(200)
+            .body("rows.find { it.gain_id == 'GAIN-VP-LINKED' }.rank", equalTo("essential"))
+            .body("rows.find { it.gain_id == 'GAIN-VP-LINKED' }.success_of_job_ids", hasItem("JOB-RELEASE"));
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"gain_id\":\"GAIN-VP-LINKED\",\"rank\":\"nonsense\"}")
+        .when().post("/lore/gain").then().statusCode(400);
+    }
 }
