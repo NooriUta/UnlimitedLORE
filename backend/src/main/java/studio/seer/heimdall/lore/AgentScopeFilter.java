@@ -77,10 +77,27 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("status",    Set.of("full", "pm", "developer", "tester", "marketer", "analyst")),
         Map.entry("release",   Set.of("full", "developer")),
         Map.entry("qg",        Set.of("full", "tester")),
-        Map.entry("question",  Set.of("full", "architect", "analyst", "pm")),
-        Map.entry("metric",    Set.of("full", "analyst")),
-        Map.entry("insight",   Set.of("full", "analyst")),
-        Map.entry("rec",       Set.of("full", "analyst")));
+        Map.entry("question",  Set.of("full", "architect", "analyst", "pm", "product-analyst")),
+        Map.entry("metric",    Set.of("full", "analyst", "product-analyst")),
+        Map.entry("insight",   Set.of("full", "analyst", "marketer", "product-analyst")),
+        Map.entry("rec",       Set.of("full", "analyst", "marketer", "product-analyst")),
+        // ── Продуктовый слой (ADR-LORE-022/030/032) ──────────────────────────
+        // Владельцы по mcp-server/agent-profiles/README.md. Раньше эти семейства
+        // были ВНЕ таблицы и пропускались как «неизвестные» — писать в них мог
+        // любой профиль. Ключевой владелец, product-analyst, до этого коммита не
+        // существовал в KC вовсе, хотя профиль был описан ещё в v1.0.53.
+        Map.entry("feature",   Set.of("full", "architect", "pm", "product-analyst")),
+        Map.entry("uc",        Set.of("full", "architect", "pm", "product-analyst")),
+        Map.entry("pain",      Set.of("full", "architect", "pm", "product-analyst")),
+        Map.entry("gain",      Set.of("full", "architect", "pm", "product-analyst")),
+        Map.entry("job",       Set.of("full", "architect", "pm", "product-analyst")),
+        Map.entry("vp",        Set.of("full", "architect", "pm", "product-analyst")),
+        Map.entry("actor",     Set.of("full", "architect", "pm")),
+        // ── Прочее из README, чего тоже не было ──────────────────────────────
+        Map.entry("component", Set.of("full", "architect")),
+        Map.entry("tech",      Set.of("full", "architect", "developer")),
+        Map.entry("project",   Set.of("full", "architect", "pm")),
+        Map.entry("bragi",     Set.of("full", "marketer")));
 
     /** Методы, которые ничего не меняют — вне проверки. */
     private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");

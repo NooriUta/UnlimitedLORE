@@ -55,7 +55,13 @@ function req(method, path, body, token, form) {
   });
 }
 
-const PROFILES = ['full', 'architect', 'developer', 'tester', 'pm', 'analyst', 'marketer'];
+// ВОСЕМЬ профилей — ровно те, что лежат в mcp-server/agent-profiles/*.json.
+// product-analyst отсутствовал здесь с момента появления (v1.0.53): профиль был
+// описан и роздан агентам, но клиента в KC под него не создавалось. Пока auth был
+// выключен, это ничего не значило; после включения такой агент не получил бы токен
+// вовсе. Заодно он единственный владелец продуктового слоя (pain/gain/job/vp) —
+// без него эти объекты остались бы без владельца и в матрице AgentScopeFilter.
+const PROFILES = ['full', 'architect', 'developer', 'tester', 'pm', 'analyst', 'marketer', 'product-analyst'];
 
 (async () => {
   // 1. admin token (master realm)

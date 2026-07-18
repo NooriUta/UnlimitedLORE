@@ -50,8 +50,24 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst'] },
   { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
   { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },
-  { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm'] },
-  { what: 'Метрики/инсайты', api: 'metric/insight/rec', humanOnly: false, agents: ['full', 'analyst'] },
+  { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm', 'product-analyst'] },
+  { what: 'Метрики', api: '/lore/metric*', humanOnly: false, agents: ['full', 'analyst', 'product-analyst'] },
+  { what: 'Инсайты', api: '/lore/insight*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
+  { what: 'Рекомендации', api: '/lore/rec*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
+  // Продуктовый слой (ADR-LORE-022/030/032). Владелец — product-analyst, восьмой
+  // профиль: он курирует VP-канву. До AL-17 эти строки в матрице отсутствовали, и
+  // писать в них мог любой профиль — проверять было нечему.
+  { what: 'Фичи', api: '/lore/feature*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'US (сценарии)', api: '/lore/uc*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Боли', api: '/lore/pain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Ожидания', api: '/lore/gain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Работы', api: '/lore/job*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'VP-связи', api: '/lore/vp*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Акторы', api: '/lore/actor*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
+  { what: 'Тех-реестр', api: '/lore/tech*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
+  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
   { what: 'Чтение (слайсы)', api: '/lore/slice/*', humanOnly: false, agents: ['все агенты'] },
 ];
 
