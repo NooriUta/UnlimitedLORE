@@ -40,7 +40,9 @@ import { FilterBar, FilterDimensionMulti, type FilterTagData } from '../componen
 type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'openQuestions' | 'releases' | 'milestones' | 'admin'
   | 'knowledge' | 'components' | 'qg' | 'tech'
-  | 'evolution' | 'timeline' | 'analytics' | 'mcp';
+  | 'evolution' | 'timeline' | 'analytics' | 'mcp'
+  // Продуктовый слой (ADR-LORE-022/032) — глава «Зачем».
+  | 'actors' | 'vpProfile' | 'vpCanvas' | 'features' | 'userStories';
 
 // Module-scope constant (not recreated per render) — ADR/QG already have their
 // own top-level nav sections, so «Знания» adds spec+runbook+doc. Specs have no
@@ -51,6 +53,13 @@ const KNOWLEDGE_ARTIFACT_KINDS: ArtifactKind[] = ['spec', 'runbook', 'doc'];
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string }[] = [
+  // ── Глава «Зачем» — продуктовый слой (ADR-LORE-022/032, Остервальдер) ──
+  { id: 'actors',      icon: 'hooded-figure',  labelKey: 'lore.page.nav.actors',      fallback: 'Клиент'     },
+  { id: 'vpProfile',   icon: 'bullseye',       labelKey: 'lore.page.nav.vpProfile',   fallback: 'Работы · Боли · Ожидания' },
+  { id: 'vpCanvas',    icon: 'easel',          labelKey: 'lore.page.nav.vpCanvas',    fallback: 'VP-канва'   },
+  { id: 'features',    icon: 'stone-bridge',   labelKey: 'lore.page.nav.features',    fallback: 'Фичи'       },
+  { id: 'userStories', icon: 'book-cover',     labelKey: 'lore.page.nav.userStories', fallback: 'US'         },
+  // ── остальные главы ──
   { id: 'milestones', icon: 'crossed-axes',   labelKey: 'lore.page.nav.milestones', fallback: 'Вехи'       },
   { id: 'plan',       icon: 'compass',        labelKey: 'lore.page.nav.plan',       fallback: 'План'       },
   { id: 'sprints',    icon: 'sprint',         labelKey: 'lore.page.nav.sprints',    fallback: 'Спринты'    },
@@ -72,6 +81,41 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   // Секция остаётся валидным роутом ?section=admin и рендерится ниже под гейтом.
 ];
 
+// ── Storyline: главы группируют разделы (редизайн навигации, прототип
+// forseti-storyline-vp.html). Порядок разделов внутри главы = порядок подвкладок;
+// первый раздел главы — её маршрут по умолчанию. «активность из URL» сохранена. ──
+type Chapter = { id: string; n: string; name: string; q: string; color: string; sections: Section[] };
+const CHAPTERS: Chapter[] = [
+  { id: 'value', n: '01', name: 'Зачем',      q: 'ценность',            color: 'var(--g-value)', sections: ['actors', 'vpProfile', 'vpCanvas', 'features', 'userStories'] },
+  { id: 'do',    n: '02', name: 'Как делаем', q: 'план · спринты',      color: 'var(--g-do)',    sections: ['milestones', 'plan', 'sprints', 'releases'] },
+  { id: 'know',  n: '03', name: 'Что решили', q: 'решения · знания',    color: 'var(--g-know)',  sections: ['adrs', 'openQuestions', 'knowledge'] },
+  { id: 'tech',  n: '04', name: 'Основа',     q: 'компоненты · MCP',    color: 'var(--g-tech)',  sections: ['components', 'tech', 'mcp'] },
+  { id: 'ctrl',  n: '05', name: 'Контроль',   q: 'качество · аналитика', color: 'var(--g-ctrl)', sections: ['analytics', 'qg', 'timeline', 'evolution'] },
+];
+const chapterOf = (s: Section): Chapter => CHAPTERS.find(c => c.sections.includes(s)) ?? CHAPTERS[0];
+
+// Стили двухуровневой Storyline-навигации (тот же plain-object + `as const` стиль, что S).
+const STORY_S = {
+  chapterBar: { display: 'flex', borderBottom: '1px solid var(--bd)', background: 'var(--bg1)', overflowX: 'auto' as const },
+  chapterTab: (on: boolean, gc: string) => ({
+    border: 'none', borderRight: '1px solid var(--bd)', background: on ? 'var(--bg2)' : 'transparent',
+    padding: '9px 16px 8px', position: 'relative' as const, whiteSpace: 'nowrap' as const,
+    display: 'flex', flexDirection: 'column' as const, gap: 1, minWidth: 116,
+    color: on ? 'var(--t1)' : 'var(--t2)', textAlign: 'left' as const, cursor: 'pointer',
+    boxShadow: on ? `inset 0 -2.5px 0 ${gc}` : 'none',
+  }),
+  chapterNum: (on: boolean, gc: string) => ({ fontFamily: 'var(--mono)', fontSize: 9, color: on ? gc : 'var(--t3)', letterSpacing: '.12em' }),
+  chapterName: { fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 },
+  chapterDot: (gc: string) => ({ width: 7, height: 7, borderRadius: '50%', background: gc, display: 'inline-block' as const }),
+  chapterQ: { fontSize: 10, color: 'var(--t3)' },
+  subBar: { display: 'flex', gap: 3, padding: '6px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap' as const, alignItems: 'center', overflowX: 'auto' as const },
+  subItem: (on: boolean, gc: string) => ({
+    display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+    color: on ? '#fff' : 'var(--t2)', border: `1px solid ${on ? gc : 'var(--bd)'}`, background: on ? gc : 'var(--bg1)',
+    whiteSpace: 'nowrap' as const, fontWeight: (on ? 600 : 400) as number,
+  }),
+};
+
 // MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
 // section nav collapses to icons only, so colour is what tells the types apart.
 const SECTION_COLORS: Record<Section, string> = {
@@ -79,10 +123,11 @@ const SECTION_COLORS: Record<Section, string> = {
   decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
   analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', admin: 'var(--wrn)',
+  actors: 'var(--section-actors)', vpProfile: 'var(--section-rbjg)', vpCanvas: 'var(--section-vp)', features: 'var(--section-features)', userStories: 'var(--section-us)',
 };
 
 // Sections that use master-detail layout (list panel + detail panel)
-const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg'];
+const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg', 'features', 'userStories', 'actors', 'vpProfile'];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const LIST_W_DEFAULT = 260;
@@ -387,29 +432,42 @@ export default function LorePage() {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
 
-  // ── Section nav — horizontal bar (План · Спринты · ADR · …) ──────────────────
+  // ── Storyline nav — двухуровневая (главы + подвкладки), редизайн ──────────────
+  const activeChapter = chapterOf(section);
   const sectionNav = (
-    <nav style={S.navBar} className="lore-nav-scroll" role="tablist" aria-label={t('lore.page.nav.ariaLabel', 'Разделы LORE')}>
-      {SECTIONS.map(s => {
-        const isActive = section === s.id;
-        const col = SECTION_COLORS[s.id];
-        const label = t(s.labelKey, s.fallback);
-        return (
-          <button
-            key={s.id}
-            role="tab"
-            aria-selected={isActive}
-            aria-label={label}
-            style={narrow ? S.navItemNarrow(isActive, col) : S.navItem(isActive)}
-            onClick={() => go(s.id)}
-            title={label}
-          >
-            {s.icon && <GameIcon slug={s.icon} size={narrow ? 18 : 15} style={{ color: narrow ? col : 'inherit' }} />}
-            {!narrow && <span>{label}</span>}
-          </button>
-        );
-      })}
-    </nav>
+    <div>
+      {/* Уровень 1: главы Storyline */}
+      <nav style={STORY_S.chapterBar} className="lore-nav-scroll" role="tablist" aria-label={t('lore.page.nav.chaptersAria', 'Главы LORE')}>
+        {CHAPTERS.map(c => {
+          const on = c.id === activeChapter.id;
+          return (
+            <button key={c.id} role="tab" aria-selected={on} title={c.name}
+              style={STORY_S.chapterTab(on, c.color)}
+              onClick={() => go(c.sections[0])}>
+              <span style={STORY_S.chapterNum(on, c.color)}>{c.n}</span>
+              <span style={STORY_S.chapterName}><span style={STORY_S.chapterDot(c.color)} />{c.name}</span>
+              {!narrow && <span style={STORY_S.chapterQ}>{c.q}</span>}
+            </button>
+          );
+        })}
+      </nav>
+      {/* Уровень 2: подвкладки активной главы (контекст) */}
+      <nav style={STORY_S.subBar} className="lore-nav-scroll" role="tablist" aria-label={activeChapter.name}>
+        {activeChapter.sections.map(sid => {
+          const s = SECTIONS.find(x => x.id === sid)!;
+          const on = section === sid;
+          const label = t(s.labelKey, s.fallback);
+          return (
+            <button key={sid} role="tab" aria-selected={on} title={label}
+              style={STORY_S.subItem(on, activeChapter.color)}
+              onClick={() => go(sid)}>
+              {s.icon && <GameIcon slug={s.icon} size={14} style={{ color: on ? '#fff' : SECTION_COLORS[sid] }} />}
+              <span>{label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
   );
 
   if (loreDisabled) return (
