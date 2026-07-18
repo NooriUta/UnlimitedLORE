@@ -36,8 +36,10 @@ services:
       #   192.168.3.131   — ci-server, куда база переехала (три СУБД на ноуте — перебор).
       # Переключение обратно = одна строка в .env, без правки compose.
       - "arcade:${ARCADE_HOST:-host-gateway}"
-      - "kc:host-gateway"              # Keycloak runs on the host :18180
-      - "forgejo:host-gateway"         # Forgejo runs on the host :3030 (FJ-02)
+      - "kc:host-gateway"              # Keycloak: пока только локально, на ci-server его нет
+      # FORGEJO_HOST — по той же схеме, что ARCADE_HOST. Переключение на ci-server
+      # ждёт доступа: SSH-ключ ноута там не авторизован, API-токена в .env нет.
+      - "forgejo:${FORGEJO_HOST:-host-gateway}"
     depends_on:
       - minio
     environment:
