@@ -121,12 +121,35 @@ export default function AppShell() {
       case 'runbook':      return `/lore?section=knowledge&passport=${encodeURIComponent('runbook:' + h.ref_id)}`;
       case 'spec':         return `/lore?section=knowledge&spec=${id}`;
       case 'task':         return `/lore?section=sprints`;
+      // Продуктовый слой: SRCH-01 добавил эти типы в выдачу поиска, но без веток
+      // здесь они падали в default и уводили на план-борд вместо самой сущности.
+      case 'feature':      return `/lore?section=features&passport=${id}`;
+      case 'use_case':     return `/lore?section=userStories&passport=${id}`;
+      case 'actor':        return `/lore?section=actors&passport=${id}`;
+      // Работы/боли/ожидания живут одним реестром — профилем ценности.
+      case 'job':
+      case 'pain':
+      case 'gain':         return `/lore?section=vpProfile&passport=${id}`;
       default:             return `/lore?section=plan`;
     }
   };
+  // Подписи типов в выдаче поиска. Продуктовые типы (feature…gain) поиск отдаёт
+  // с SRCH-01 — без них в этой карте они показывались сырым кодом типа.
   const HIT_LABEL: Record<string, string> = {
-    adr: 'ADR', sprint: 'Спринт', quality_gate: 'QG', decision: 'Решение',
-    doc: 'Документ', runbook: 'Runbook', spec: 'Спека', task: 'Задача',
+    adr:          'ADR',
+    runbook:      'Runbook',
+    quality_gate: 'QG',
+    sprint:       t('shell.hit.sprint',    'Спринт'),
+    decision:     t('shell.hit.decision',  'Решение'),
+    doc:          t('shell.hit.doc',       'Документ'),
+    spec:         t('shell.hit.spec',      'Спека'),
+    task:         t('shell.hit.task',      'Задача'),
+    feature:      t('shell.hit.feature',   'Фича'),
+    use_case:     t('shell.hit.useCase',   'US'),
+    actor:        t('shell.hit.actor',     'Клиент'),
+    job:          t('shell.hit.job',       'Работа'),
+    pain:         t('shell.hit.pain',      'Боль'),
+    gain:         t('shell.hit.gain',      'Ожидание'),
   };
 
   const openHit = (h: Hit) => { setPalOpen(false); setPalQ(''); navigate(hitHref(h)); };
@@ -201,7 +224,7 @@ export default function AppShell() {
             type="button"
             aria-expanded={openDD === 'brand'}
             aria-haspopup="menu"
-            title="LORE — пространства"
+            title={t('shell.brandTitle', 'LORE — пространства')}
             onClick={() => setOpenDD(d => d === 'brand' ? null : 'brand')}
             style={{
               // Бренд без окантовки — прежний вид логотипа (display-шрифт),
@@ -251,7 +274,7 @@ export default function AppShell() {
         {!narrow && (
           <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
             <button type="button" aria-expanded={openDD === 'tenant'} aria-haspopup="menu"
-              title="Рабочее пространство данных"
+              title={t('shell.tenantTitle', 'Рабочее пространство данных')}
               onClick={() => setOpenDD(d => d === 'tenant' ? null : 'tenant')}
               style={pill(false)}>
               <span style={liveDot} />{tenant}<span style={caret}>⌄</span>
@@ -315,14 +338,14 @@ export default function AppShell() {
 
         {/* ── Правый тулбар: только первичное (поиск · ещё · профиль) ── */}
         <button type="button" onClick={() => setPalOpen(true)}
-          title="Поиск по данным (/)" aria-label="Поиск"
+          title={t('shell.searchTitle', 'Поиск по данным (/)')} aria-label={t('shell.searchAria', 'Поиск')}
           style={{ ...btnStyle, textTransform: 'none' as const }}>
           ⌕{!narrow && <span style={{ ...kbd, marginLeft: 6 }}>/</span>}
         </button>
 
         <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
           <button type="button" aria-expanded={openDD === 'more'} aria-haspopup="menu"
-            title="Ещё — тема, палитра, язык"
+            title={t('shell.moreTitle', 'Ещё — тема, палитра, язык')}
             onClick={() => setOpenDD(d => d === 'more' ? null : 'more')} style={btnStyle}>⋯</button>
           {openDD === 'more' && (
             <div style={{ ...dd, left: 'auto', right: 0 }} role="menu">
@@ -333,11 +356,14 @@ export default function AppShell() {
               </button>
               <button type="button" role="menuitem" style={ddItem(false)} onClick={toggleMode}>
                 <span style={{ width: 15, textAlign: 'center' }}>{mode === 'dark' ? '🌙' : '☀'}</span>
-                {mode === 'dark' ? 'Тёмная тема' : 'Светлая тема'}
+                {mode === 'dark' ? t('shell.themeDark', 'Тёмная тема') : t('shell.themeLight', 'Светлая тема')}
               </button>
               <button type="button" role="menuitem" style={ddItem(false)}
                 onClick={() => { void i18n.changeLanguage(lang === 'ru' ? 'en' : 'ru'); setOpenDD(null); }}>
                 <span style={{ width: 15, textAlign: 'center' }}>🌐</span>
+                {/* Намеренно НЕ через t(): переключатель показывает целевой язык
+                    на нём самом. Пропустив через локализацию, мы бы предлагали
+                    англоязычному «Переключить на русский» по-английски. */}
                 {lang === 'ru' ? 'Switch to English' : 'Переключить на русский'}
               </button>
               <div style={ddSep} />
@@ -350,12 +376,12 @@ export default function AppShell() {
 
         {/* A2: only rendered once VITE_LORE_AUTH_ENABLED is actually on. */}
         {AUTH_ENABLED ? (
-          <button type="button" onClick={() => { void logout(); }} title="Выйти"
+          <button type="button" onClick={() => { void logout(); }} title={t('shell.logout', 'Выйти')}
             style={{ ...btnStyle, textTransform: 'none' as const }}>
             {displayName() ?? '…'} ⏻
           </button>
         ) : (
-          <div title="Профиль" aria-hidden
+          <div title={t('shell.profile', 'Профиль')} aria-hidden
             style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--acc)', color: 'var(--bg0)', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
             {(displayName() ?? 'АЛ').slice(0, 2).toUpperCase()}
           </div>
@@ -381,7 +407,7 @@ export default function AppShell() {
                   else if (e.key === 'ArrowDown') { e.preventDefault(); setPalSel(i => Math.min(i + 1, palRows.length - 1)); }
                   else if (e.key === 'ArrowUp')   { e.preventDefault(); setPalSel(i => Math.max(i - 1, 0)); }
                 }}
-                placeholder="id, название, текст…"
+                placeholder={t('shell.searchPlaceholder', 'id, название, текст…')}
                 style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 15, color: 'var(--t1)' }}
               />
               {palBusy && <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>…</span>}

@@ -1,6 +1,7 @@
 // Экран «Работы · Боли · Ожидания» продуктового слоя (ADR-LORE-022/032, Остервальдер).
 // ЕДИНЫЙ реестр jobs/pains/gains: фильтр по типу + master-detail (список + паспорт на тип).
 // Это реестр профиля клиента — зеркалит прототипы jobP/painP/gainP forseti-storyline-vp.
+import { useTranslation } from 'react-i18next';
 import { useState, type ReactNode } from 'react';
 import type { LoreJobRow, LorePainRow, LoreGainRow } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
@@ -51,6 +52,7 @@ function LabeledChips({ label, children }: { label: string; children: ReactNode 
 }
 
 export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+  const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useState<VpType>('all');
 
   const jobsQ = useSlice<LoreJobRow>('jobs', undefined, onError, []);
@@ -77,10 +79,10 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
   // ── фильтр по типу (над списком) ──
   const chipDefs: { key: VpType; label: string }[] = [
-    { key: 'all', label: 'все' },
-    { key: 'job', label: '🎯 работы' },
-    { key: 'pain', label: '🔴 боли' },
-    { key: 'gain', label: '🟢 ожидания' },
+    { key: 'all', label: t('lore.product.vp.all', 'все') },
+    { key: 'job', label: `🎯 ${t('lore.product.vp.jobs', 'работы')}` },
+    { key: 'pain', label: `🔴 ${t('lore.product.vp.pains', 'боли')}` },
+    { key: 'gain', label: `🟢 ${t('lore.product.vp.gains', 'ожидания')}` },
   ];
   const filterChips = (
     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '8px 9px', borderBottom: '1px solid var(--bd)', background: 'var(--bg1)' }}>
@@ -116,7 +118,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
   if (loading) {
     rows = <LoreSkeleton rows={6} />;
   } else if (filtered.length === 0) {
-    rows = <EmptyState message="Реестр пуст" />;
+    rows = <EmptyState message={t('lore.product.vp.empty', 'Реестр пуст')} />;
   } else {
     rows = (
       <>
@@ -150,10 +152,10 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
   // ── паспорт по префиксу выбранного id ──
   let detail: ReactNode;
   if (!selectedId) {
-    detail = <EmptyDetail text="Выберите работу / боль / ожидание слева" />;
+    detail = <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} />;
   } else if (selectedId.startsWith('JOB-')) {
     const j = jobs.find(x => x.job_id === selectedId);
-    detail = !j ? <EmptyDetail text="Выберите работу / боль / ожидание слева" /> : (
+    detail = !j ? <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} /> : (
       <div>
         <PassportHeader title={j.title ?? j.job_id}>
           <Pill>🎯 работа · глобальная</Pill>
@@ -161,16 +163,16 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(j.job_id), marginBottom: 8 }}>{j.job_id}</div>
 
-        <PSection title="Что вокруг работы">
-          <LabeledChips label="МЕШАЮТ">
+        <PSection title={t('lore.product.vp.around', 'Что вокруг работы')}>
+          <LabeledChips label={t('lore.product.vp.blockers', 'МЕШАЮТ')}>
             <ChipRow ids={asArray(j.blocking_pain_ids)} color="var(--pain)" onGo={id => onNavigate('vpProfile', id)} />
           </LabeledChips>
-          <LabeledChips label="УСПЕХ">
+          <LabeledChips label={t('lore.product.vp.success', 'УСПЕХ')}>
             <ChipRow ids={asArray(j.gain_ids)} color="var(--gain)" onGo={id => onNavigate('vpProfile', id)} />
           </LabeledChips>
         </PSection>
 
-        <PSection title="🌊 Кто ВЫПОЛНЯЕТ — US фичи (PERFORMS)">
+        <PSection title={t('lore.product.vp.performers', '🌊 Кто ВЫПОЛНЯЕТ — US фичи (PERFORMS)')}>
           <div style={{ fontSize: 10.5, color: 'var(--t3)', marginBottom: 5 }}>
             заявили фичи: {asArray(j.feature_ids).join(', ') || '—'}
           </div>
@@ -183,7 +185,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
             ))}
         </PSection>
 
-        <PSection title="Чья работа">
+        <PSection title={t('lore.product.vp.whose', 'Чья работа')}>
           {asArray(j.actor_ids).length === 0
             ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
             : asArray(j.actor_ids).map(id => (
@@ -194,15 +196,15 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     );
   } else if (selectedId.startsWith('PAIN-')) {
     const p = pains.find(x => x.pain_id === selectedId);
-    detail = !p ? <EmptyDetail text="Выберите работу / боль / ожидание слева" /> : (
+    detail = !p ? <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} /> : (
       <div>
         <PassportHeader title={p.title ?? p.pain_id}>
-          <Pill tone="warn">🔴 боль</Pill>
+          <Pill tone="warn">🔴 {t('lore.product.vp.pain', 'боль')}</Pill>
           <Pill>{p.severity ?? '—'}</Pill>
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(p.pain_id), marginBottom: 8 }}>{p.pain_id}</div>
 
-        <PSection title="Скоринг по сегментам (FELT_BY)">
+        <PSection title={t('lore.product.vp.scoring', 'Скоринг по сегментам (FELT_BY)')}>
           {asArray(p.actor_ids).length === 0
             ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>—</div>
             : asArray(p.actor_ids).map((id, i) => (
@@ -212,40 +214,40 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
             ))}
         </PSection>
 
-        <PSection title="Заявлено vs снято">
-          <LabeledChips label={`заявили ${p.addressed_by ?? 0}`}>
+        <PSection title={t('lore.product.vp.claimedVsRelieved', 'Заявлено vs снято')}>
+          <LabeledChips label={`${t('lore.product.vp.claimed', 'заявили')} ${p.addressed_by ?? 0}`}>
             <ChipRow ids={asArray(p.feature_ids)} color="var(--g-value)" onGo={id => onNavigate('features', id)} />
           </LabeledChips>
-          <LabeledChips label={`снимают ${p.relieved_by ?? 0}`}>
+          <LabeledChips label={`${t('lore.product.vp.relieved', 'снимают')} ${p.relieved_by ?? 0}`}>
             <ChipRow ids={asArray(p.relieved_by_ucs)} color="var(--g-do)" onGo={id => onNavigate('userStories', id)} />
           </LabeledChips>
         </PSection>
 
-        <PSection title="Мешает работе">
+        <PSection title={t('lore.product.vp.blocksJob', 'Мешает работе')}>
           <ChipRow ids={asArray(p.blocks_job_ids)} color="var(--job)" onGo={id => onNavigate('vpProfile', id)} />
         </PSection>
       </div>
     );
   } else if (selectedId.startsWith('GAIN-')) {
     const g = gains.find(x => x.gain_id === selectedId);
-    detail = !g ? <EmptyDetail text="Выберите работу / боль / ожидание слева" /> : (
+    detail = !g ? <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} /> : (
       <div>
         <PassportHeader title={g.title ?? g.gain_id}>
-          <Pill tone="ok">🟢 выгода</Pill>
+          <Pill tone="ok">🟢 {t('lore.product.vp.gain', 'выгода')}</Pill>
           <Pill>{g.rank ?? '—'}</Pill>
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(g.gain_id), marginBottom: 8 }}>{g.gain_id}</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
-          <span style={{ color: 'var(--t3)' }}>Метрика</span>
+          <span style={{ color: 'var(--t3)' }}>{t('lore.product.vp.metric', 'Метрика')}</span>
           {g.metric_md
             ? <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{g.metric_md}</span>
-            : <span style={{ color: 'var(--t3)', opacity: 0.7 }}>⚠ без метрики — не в fit</span>}
-          <span style={{ color: 'var(--t3)' }}>Ранг</span>
+            : <span style={{ color: 'var(--t3)', opacity: 0.7 }}>⚠ {t('lore.product.vp.noMetric', 'без метрики — не в fit')}</span>}
+          <span style={{ color: 'var(--t3)' }}>{t('lore.product.vp.rank', 'Ранг')}</span>
           <span>{g.rank ?? '—'}</span>
         </div>
 
-        <PSection title="Создаётся US (DELIVERS)">
+        <PSection title={t('lore.product.vp.deliveredBy', 'Создаётся US (DELIVERS)')}>
           {asArray(g.delivered_by_ucs).length === 0
             ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
             : asArray(g.delivered_by_ucs).map((uc, i) => (
@@ -255,11 +257,11 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
             ))}
         </PSection>
 
-        <PSection title="Успех в работе">
+        <PSection title={t('lore.product.vp.jobSuccess', 'Успех в работе')}>
           <ChipRow ids={asArray(g.success_of_job_ids)} color="var(--job)" onGo={id => onNavigate('vpProfile', id)} />
         </PSection>
 
-        <PSection title="Желает">
+        <PSection title={t('lore.product.vp.desiredBy', 'Желает')}>
           {asArray(g.actor_ids).length === 0
             ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
             : asArray(g.actor_ids).map(id => (
@@ -269,7 +271,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
       </div>
     );
   } else {
-    detail = <EmptyDetail text="Выберите работу / боль / ожидание слева" />;
+    detail = <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} />;
   }
 
   return <MasterDetail list={<>{filterChips}{rows}</>} detail={detail} />;

@@ -11,7 +11,30 @@
     "here": "here",
     "tenant": "Workspace (tenant)",
     "secondary": "Secondary",
-    "searchData": "search data"
+    "searchData": "search data",
+    "hit": {
+      "sprint": "Sprint",
+      "decision": "Decision",
+      "doc": "Doc",
+      "spec": "Spec",
+      "task": "Task",
+      "feature": "Feature",
+      "useCase": "US",
+      "actor": "Customer",
+      "job": "Job",
+      "pain": "Pain",
+      "gain": "Gain"
+    },
+    "brandTitle": "LORE — spaces",
+    "tenantTitle": "Data workspace",
+    "searchTitle": "Search data (/)",
+    "searchAria": "Search",
+    "moreTitle": "More — theme, palette, language",
+    "themeDark": "Dark theme",
+    "themeLight": "Light theme",
+    "logout": "Sign out",
+    "profile": "Profile",
+    "searchPlaceholder": "id, title, text…"
   },
   "nav": {
     "lore": "LORE",
@@ -1325,6 +1348,76 @@
         "name": "Control",
         "q": "quality · analytics"
       }
+    },
+    "product": {
+      "actor": {
+        "empty": "No actors yet",
+        "pick": "Pick a segment on the left",
+        "profile": "Segment profile (Osterwalder)",
+        "jobs": "Jobs",
+        "pains": "Pains",
+        "gains": "Gains",
+        "ucRbac": "Role user stories · RBAC is built from these",
+        "about": "About the role"
+      },
+      "feat": {
+        "empty": "No features yet",
+        "emptyHint": "Created via MCP feature_new",
+        "pick": "Pick a feature on the left",
+        "covered": "closed by US",
+        "uncovered": "claimed, but not covered by US",
+        "readiness": "Readiness",
+        "milestone": "Milestone",
+        "component": "Component",
+        "bridge": "🌉 Bridge into the profile (what the feature CLAIMS)",
+        "jobs": "JOBS",
+        "pains": "PAINS",
+        "gains": "GAINS",
+        "impl": "🌊 Implementation — US (what is DONE)"
+      },
+      "us": {
+        "empty": "No user stories yet",
+        "pick": "Pick a story on the left",
+        "feature": "Feature",
+        "primaryActor": "Primary actor",
+        "doesWhat": "What it actually does (legs into the profile)",
+        "scenario": "Scenario (Cockburn)",
+        "noScenario": "scenario not filled in",
+        "acceptance": "Acceptance",
+        "graph": "UC graph"
+      },
+      "canvas": {
+        "claimed": "claimed",
+        "done": "done",
+        "empty": "No features for the canvas"
+      },
+      "vp": {
+        "all": "all",
+        "jobs": "jobs",
+        "pains": "pains",
+        "gains": "gains",
+        "empty": "Registry is empty",
+        "pick": "Pick a job / pain / gain on the left",
+        "around": "Around this job",
+        "blockers": "BLOCKERS",
+        "success": "SUCCESS",
+        "performers": "🌊 Who PERFORMS it — feature user stories (PERFORMS)",
+        "whose": "Whose job",
+        "pain": "pain",
+        "scoring": "Scoring by segment (FELT_BY)",
+        "claimedVsRelieved": "Claimed vs relieved",
+        "claimed": "claimed by",
+        "relieved": "relieved by",
+        "blocksJob": "Blocks the job",
+        "gain": "gain",
+        "metric": "Metric",
+        "noMetric": "no metric — out of fit",
+        "rank": "Rank",
+        "deliveredBy": "Delivered by US (DELIVERS)",
+        "jobSuccess": "Job success",
+        "desiredBy": "Desired by"
+      },
+      "pickItem": "Pick an item on the left"
     }
   },
   "bragi": {
