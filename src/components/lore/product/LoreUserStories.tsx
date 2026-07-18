@@ -1,0 +1,208 @@
+// Экран «US · Пользовательские истории» продуктового слоя (ADR-LORE-022/032, Коберн).
+// Master-detail: список историй слева + паспорт по Коберну справа.
+// Нет слайса «все UC» — собираем UC по каждой фиче (use_cases_of_feature) и склеиваем.
+// Дизайн зеркалит утверждённый прототип usP. Данные — через useSlice/fetchLoreSlice.
+import { useEffect, useState } from 'react';
+import type { LoreFeatureRow, LoreUcRow } from '../../../api/lore';
+import { fetchLoreSlice } from '../../../api/lore';
+import LoreSkeleton from '../LoreSkeleton';
+import { EmptyState } from '../EmptyState';
+import {
+  type ProductScreenProps,
+  useSlice,
+  asArray,
+  Pill,
+  PSection,
+  LinkChip,
+  MasterDetail,
+  ListRow,
+  PassportHeader,
+  EmptyDetail,
+} from './shared';
+
+// Уровень цели (Коберн, D2): море / рыба.
+function goalGlyphOf(level: string | null | undefined): string {
+  const v = (level ?? '').toLowerCase();
+  if (v.includes('sea') || v.includes('🌊')) return '🌊';
+  if (v.includes('sub') || v.includes('🐟')) return '🐟';
+  return '';
+}
+
+// Строгость изложения (Коберн): полное тело / набросок.
+function rigorGlyphOf(rigor: string | null | undefined): string {
+  const v = (rigor ?? '').toLowerCase();
+  if (v.includes('full')) return '📋 fully-dressed';
+  if (v.includes('casual')) return '⚡ casual';
+  return rigor ?? '';
+}
+
+export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+  // Нет слайса «все UC» → тянем фичи, затем UC каждой фичи и склеиваем (дедуп по uc_id).
+  const { rows: features, loading: featLoading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
+
+  const [ucs, setUcs] = useState<LoreUcRow[]>([]);
+  const [ucsLoading, setUcsLoading] = useState(true);
+  const featKey = features.map(f => f.feature_id).join('|');
+
+  useEffect(() => {
+    if (features.length === 0) {
+      // Пока фичи не пришли — не сбрасываем в «загрузка» после их отсутствия.
+      if (!featLoading) { setUcs([]); setUcsLoading(false); }
+      return;
+    }
+    const ctrl = new AbortController();
+    setUcsLoading(true);
+    Promise.all(
+      features.map(f => fetchLoreSlice<LoreUcRow>('use_cases_of_feature', { id: f.feature_id }, ctrl.signal)),
+    )
+      .then(chunks => {
+        if (ctrl.signal.aborted) return;
+        const byId = new Map<string, LoreUcRow>();
+        for (const chunk of chunks) {
+          for (const uc of chunk) {
+            if (!byId.has(uc.uc_id)) byId.set(uc.uc_id, uc);
+          }
+        }
+        setUcs(Array.from(byId.values()));
+        setUcsLoading(false);
+      })
+      .catch(e => { if (!ctrl.signal.aborted) { onError(e); setUcsLoading(false); } });
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [featKey, featLoading]);
+
+  const loading = featLoading || ucsLoading;
+
+  // ── список ──
+  const q = (listSearch ?? '').trim().toLowerCase();
+  const filtered = q
+    ? ucs.filter(u => u.uc_id.toLowerCase().includes(q) || (u.title ?? '').toLowerCase().includes(q))
+    : ucs;
+
+  let list;
+  if (loading) {
+    list = <LoreSkeleton rows={6} />;
+  } else if (filtered.length === 0) {
+    list = <EmptyState message="Пользовательских историй пока нет" />;
+  } else {
+    list = (
+      <>
+        {filtered.map(uc => {
+          const glyph = goalGlyphOf(uc.goal_level);
+          const statusShort = uc.status ?? '—';
+          return (
+            <ListRow
+              key={uc.uc_id}
+              id={uc.uc_id}
+              title={uc.title}
+              selected={uc.uc_id === selectedId}
+              onClick={() => onSelect(uc.uc_id)}
+              meta={<Pill>{glyph} {statusShort}</Pill>}
+            />
+          );
+        })}
+      </>
+    );
+  }
+
+  // ── паспорт (по Коберну) ──
+  let detail;
+  if (!selectedId) {
+    detail = <EmptyDetail text="Выберите историю слева" />;
+  } else {
+    const uc = ucs.find(x => x.uc_id === selectedId);
+    if (!uc) {
+      detail = <EmptyDetail text="Выберите историю слева" />;
+    } else {
+      const status = (uc.status ?? '').toLowerCase();
+      const glyph = goalGlyphOf(uc.goal_level);
+      const rigor = rigorGlyphOf(uc.rigor);
+
+      const painIds = asArray(uc.relieves_pain_ids);
+      const gainIds = asArray(uc.delivers_gain_ids);
+      const jobIds = asArray(uc.performs_job_ids);
+      const includes = asArray(uc.includes_uc);
+      const extendsUc = asArray(uc.extends_uc);
+      const actorIds = asArray(uc.actor_ids);
+      const actorNames = asArray(uc.actor_names);
+
+      const preStyle = {
+        margin: 0,
+        fontFamily: 'var(--mono)',
+        fontSize: 11,
+        whiteSpace: 'pre-wrap' as const,
+        color: 'var(--t2)',
+      };
+
+      detail = (
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>
+            US · Пользовательская история (User Story) — тело по Коберну
+          </div>
+
+          <PassportHeader title={uc.title ?? uc.uc_id}>
+            <Pill tone={status === 'shipped' ? 'ok' : status === 'active' ? 'act' : 'muted'}>{uc.status ?? '—'}</Pill>
+            {glyph && <Pill>{glyph} {uc.goal_level}</Pill>}
+            {rigor && <Pill>{rigor}</Pill>}
+          </PassportHeader>
+
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-do)', marginBottom: 8 }}>{uc.uc_id}</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
+            <span style={{ color: 'var(--t3)' }}>Фича</span>
+            <span>{uc.feature_id
+              ? <LinkChip color="var(--g-value)" onClick={() => onNavigate('features', uc.feature_id ?? undefined)}>{uc.feature_id}</LinkChip>
+              : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
+            <span style={{ color: 'var(--t3)' }}>Primary-актор</span>
+            <span>{actorNames.length > 0
+              ? <LinkChip color="var(--wrn)" onClick={() => onNavigate('actors', actorIds[0])}>{actorNames[0]}</LinkChip>
+              : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
+          </div>
+
+          <PSection title="Что реально делает (ноги в профиль)">
+            {painIds.length + gainIds.length + jobIds.length === 0
+              ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
+              : (
+                <>
+                  {painIds.map(id => (
+                    <LinkChip key={`p-${id}`} color="var(--pain)" onClick={() => onNavigate('vpProfile', id)}>RELIEVES → {id}</LinkChip>
+                  ))}
+                  {gainIds.map(id => (
+                    <LinkChip key={`g-${id}`} color="var(--gain)" onClick={() => onNavigate('vpProfile', id)}>DELIVERS → {id}</LinkChip>
+                  ))}
+                  {jobIds.map(id => (
+                    <LinkChip key={`j-${id}`} color="var(--job)" onClick={() => onNavigate('vpProfile', id)}>PERFORMS → {id}</LinkChip>
+                  ))}
+                </>
+              )}
+          </PSection>
+
+          <PSection title="Сценарий (Коберн)">
+            {(uc.scenario_md ?? '').trim()
+              ? <pre style={preStyle}>{uc.scenario_md ?? ''}</pre>
+              : <span style={{ fontSize: 11, color: 'var(--t3)' }}>— сценарий не заполнен</span>}
+          </PSection>
+
+          {(uc.acceptance_md ?? '').trim() && (
+            <PSection title="Приёмка">
+              <pre style={preStyle}>{uc.acceptance_md ?? ''}</pre>
+            </PSection>
+          )}
+
+          {includes.length + extendsUc.length > 0 && (
+            <PSection title="Граф UC">
+              {includes.map(id => (
+                <LinkChip key={`inc-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>includes → {id}</LinkChip>
+              ))}
+              {extendsUc.map(id => (
+                <LinkChip key={`ext-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>extends → {id}</LinkChip>
+              ))}
+            </PSection>
+          )}
+        </div>
+      );
+    }
+  }
+
+  return <MasterDetail list={list} detail={detail} />;
+}

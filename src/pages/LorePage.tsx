@@ -35,6 +35,12 @@ import { useIsNarrow } from '../hooks/useMediaQuery';
 import { a11yClick } from '../components/lore/a11y';
 import { useIsAdmin } from '../auth/useRole';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from '../components/lore/FilterPrimitives';
+// Продуктовый слой (ADR-LORE-022/032) — глава «Зачем».
+import LoreFeatures    from '../components/lore/product/LoreFeatures';
+import LoreUserStories from '../components/lore/product/LoreUserStories';
+import LoreActors      from '../components/lore/product/LoreActors';
+import LoreVpRegistry  from '../components/lore/product/LoreVpRegistry';
+import LoreVpCanvas    from '../components/lore/product/LoreVpCanvas';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 type Section =
@@ -126,8 +132,9 @@ const SECTION_COLORS: Record<Section, string> = {
   actors: 'var(--section-actors)', vpProfile: 'var(--section-rbjg)', vpCanvas: 'var(--section-vp)', features: 'var(--section-features)', userStories: 'var(--section-us)',
 };
 
-// Sections that use master-detail layout (list panel + detail panel)
-const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg', 'features', 'userStories', 'actors', 'vpProfile'];
+// Sections that use the SHARED list panel + detail. Продуктовые разделы —
+// самодостаточны (свой master-detail внутри компонента), поэтому здесь их НЕТ.
+const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg'];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const LIST_W_DEFAULT = 260;
@@ -390,6 +397,13 @@ export default function LorePage() {
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  // Кросс-переходы продуктового слоя (feature↔uc↔pain/gain/job↔actor): section + passport.
+  const navigateProduct = (sec: string, id?: string) => setParams(p => {
+    p.set('section', sec);
+    if (id) p.set('passport', id); else p.delete('passport');
+    p.delete('spec'); p.delete('kind'); p.delete('art');
+    return p;
+  });
   // T19: encode Knowledge doc/runbook selection into the unified `passport`.
   const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('passport', `${kind}:${id}`); p.delete('kind'); p.delete('art'); p.delete('spec'); return p; });
   const closeArt  = () => setParams(p => { p.delete('passport'); p.delete('kind'); p.delete('art'); return p; });
@@ -1108,6 +1122,12 @@ export default function LorePage() {
           <LoreErrorBoundary label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
+          {/* ── Продуктовый слой (глава «Зачем», ADR-LORE-022/032) — самодостаточные экраны ── */}
+          {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={null} onSelect={() => {}} onNavigate={navigateProduct} onError={handleFetchError} />}
+          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
 
           {/* ADR — new */}
           {section === 'adrs' && passport === '__new' && (
