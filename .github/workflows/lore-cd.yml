@@ -1,7 +1,13 @@
-name: LORE CD (local Docker stand)
+name: LORE CD (ci-server stand)
 
-# Continuous deployment to the local docker-compose stand this repo shares
-# with the developer session (lore-backend :9100 / lore-app :4400). Deliberately
+# Continuous deployment to the docker-compose stand on ci-server (lore-backend
+# :9100 / lore-app :4400). До 2026-07-18 это был стенд на ноуте разработчика —
+# отсюда «local» в прежнем названии и упоминания Docker Desktop ниже. После
+# переезда БД, Keycloak, Forgejo и самого стенда на ci-server workflow не
+# пережил смену топологии сразу по трём причинам, и все три чинятся тут:
+# windows-пути томов (валидны на ноуте, отвергаются Linux-демоном), пустые
+# секреты мостов и имя compose-проекта, выведенное из каталога раннера.
+# Deliberately
 # NOT modeled on aida-root's cd.yml (tag-triggered, SSH-to-remote-host, backup/
 # rollback, Telegram) — there is no remote staging/prod target here, just this
 # machine's Docker Desktop. Borrowed from that pattern: workflow_dispatch for an
@@ -50,11 +56,49 @@ jobs:
     # health check didn't catch it.
     env:
       ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+      # Секреты мостов НЕ передаются сюда по одному — вместо них учётка
+      # Infisical, а KC_ADMIN_CLIENT_SECRET/FORGEJO_API_TOKEN бэкенд забирает
+      # оттуда сам (SecretProvider, D15). Так в Forgejo лежит бутстрап, а не
+      # живые секреты, и ротация делается в одном месте.
+      #
+      # Почему это вообще понадобилось: у job'а нет .env (gitignored), поэтому
+      # без явной передачи деплой поднимал бы бэкенд с ПУСТЫМИ секретами — оба
+      # моста молча уходили бы в 503 «not configured» при зелёном деплое.
+      LORE_SECRETS_PROVIDER: infisical
+      LORE_SECRETS_URL: http://infisical:18080
+      LORE_SECRETS_CLIENT_ID: ${{ secrets.LORE_SECRETS_CLIENT_ID }}
+      LORE_SECRETS_CLIENT_SECRET: ${{ secrets.LORE_SECRETS_CLIENT_SECRET }}
+      LORE_SECRETS_PROJECT_ID: ${{ secrets.LORE_SECRETS_PROJECT_ID }}
+      LORE_SECRETS_ENVIRONMENT: prod
+      LORE_SECRETS_SCOPE: /
+      # Стенд переехал на ci-server: ArcadeDB, Keycloak, Forgejo и Infisical
+      # живут на ТОМ ЖЕ хосте, поэтому host-gateway (дефолт compose) верен для
+      # всех четырёх и переопределять их здесь не нужно.
+      #
+      # Имя compose-проекта прибито ЯВНО. Иначе оно выводится из каталога
+      # checkout'а раннера, и деплой создал бы ВТОРОЙ параллельный стенд: он
+      # либо упёрся бы в занятый порт 4400, либо развёл два набора контейнеров
+      # и named-volume minio. Живой стенд поднят как проект `unlimitedlore` —
+      # под этим именем его и обновляем.
+      COMPOSE_PROJECT_NAME: unlimitedlore
     steps:
       - uses: actions/checkout@v7
 
       - name: Verify required secrets are configured
         run: |
+          # Учётка Infisical проверяется ЗДЕСЬ, а не «по факту работы»: без неё
+          # деплой проходит зелёным, а /lore/kc/* и /lore/forgejo/* отвечают
+          # 503. Это ровно тот класс отказов, который уже прятался за успешным
+          # деплоем (см. историю с ARCADEDB_ROOT_PASSWORD ниже) — падаем сразу.
+          missing=""
+          for v in LORE_SECRETS_CLIENT_ID LORE_SECRETS_CLIENT_SECRET LORE_SECRETS_PROJECT_ID; do
+            eval "val=\${$v:-}"
+            [ -z "$val" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::не заданы секреты:$missing. Добавьте в Forgejo: Settings -> Actions -> Secrets. Это machine identity Infisical (org -> Access Control -> Identities -> Universal Auth), из неё бэкенд берёт KC_ADMIN_CLIENT_SECRET и FORGEJO_API_TOKEN."
+            exit 1
+          fi
           if [ -z "${ARCADEDB_ROOT_PASSWORD}" ]; then
             echo "::error::secrets.ARCADEDB_ROOT_PASSWORD is not set on this repo — deploy would silently break the backend's ArcadeDB auth (see comment above). Add it in Forgejo: Settings -> Actions -> Secrets."
             exit 1
@@ -107,6 +151,25 @@ jobs:
           done
           echo "::error::backend did not report healthy within 120s (last status: $status)"
           exit 1
+
+      # «Контейнер healthy» не значит «мосты настроены»: healthcheck смотрит
+      # только /q/health/live. Пустой секрет даёт живой контейнер и мёртвый
+      # KC-мост — именно так выглядел бы зелёный деплой без учётки Infisical.
+      # Поэтому проверяем ФАКТ: preflight должен сказать, что KC настроен.
+      - name: Verify KC bridge actually got its secret
+        if: steps.which.outputs.backend == 'true'
+        run: |
+          cid=$(docker compose ps -q lore-backend)
+          # X-Seer-Role обязателен: эндпоинт под requireAdmin, без заголовка
+          # отвечает 403 — и проверка ложно объявила бы мост несконфигуренным.
+          # Пока auth выключен, заголовок и есть способ представиться админом.
+          out=$(docker exec "$cid" curl -s -m 10 -H 'X-Seer-Role: admin' \
+            http://127.0.0.1:9100/lore/kc/auth-preflight || true)
+          echo "$out"
+          case "$out" in
+            *'"kc_configured":true'*) echo "KC-мост настроен" ;;
+            *) echo "::error::KC-мост не получил секрет (kc_configured != true). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."; exit 1 ;;
+          esac
 
       - name: Verify frontend serves
         if: steps.which.outputs.frontend == 'true'

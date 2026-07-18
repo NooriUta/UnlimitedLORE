@@ -46,6 +46,10 @@ services:
       # FORGEJO_HOST — по той же схеме, что ARCADE_HOST. Переключение на ci-server
       # ждёт доступа: SSH-ключ ноута там не авторизован, API-токена в .env нет.
       - "forgejo:${FORGEJO_HOST:-host-gateway}"
+      # INFISICAL_HOST — секрет-сервис (D15). Нужен, только когда
+      # lore.secrets.provider=infisical; при provider=env имя просто не
+      # используется, и его недоступность ничего не значит.
+      - "infisical:${INFISICAL_HOST:-host-gateway}"
     depends_on:
       - minio
     environment:
@@ -61,6 +65,16 @@ services:
       - kc.admin.url=http://kc:18180/kc
       - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
       - lore.secrets.provider=${LORE_SECRETS_PROVIDER:-env}
+      # Machine identity (Universal Auth) — единственный путь в свежих сборках
+      # Infisical: сервисные токены оттуда убраны. project-id и environment
+      # ОБЯЗАТЕЛЬНЫ: access-token сам по себе не говорит, из какого проекта
+      # читать, и без них сервис отвечает 400 — а выглядит это как «секрета нет».
+      - lore.secrets.url=${LORE_SECRETS_URL:-http://infisical:18080}
+      - lore.secrets.client-id=${LORE_SECRETS_CLIENT_ID:-}
+      - lore.secrets.client-secret=${LORE_SECRETS_CLIENT_SECRET:-}
+      - lore.secrets.project-id=${LORE_SECRETS_PROJECT_ID:-}
+      - lore.secrets.environment=${LORE_SECRETS_ENVIRONMENT:-prod}
+      - lore.secrets.scope=${LORE_SECRETS_SCOPE:-/lore}
       # Forgejo-мост (ADR-LORE-024, FJ-02): пусто → /lore/forgejo/* отвечает 503,
       # LORE без self-hosted Forgejo работает как раньше. Токен вводит ВЛАДЕЛЕЦ
       # в .env — агенты его не трогают; чтение только через SecretProvider.
