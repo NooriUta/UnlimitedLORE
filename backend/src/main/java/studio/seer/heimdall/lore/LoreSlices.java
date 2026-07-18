@@ -463,8 +463,15 @@ public final class LoreSlices {
         // ── §4 Search — cross-entity, case-insensitive substring ─────────────
         // pattern is wrapped in %…% server-side (callers pass a bare term, e.g. "geoid").
         // Matches id + title/name; for ADRs also the body sections on the OPEN hist row.
+        // Сквозной поиск единого окна (SRCH-01). Продуктовый слой ищется по
+        // FULL_TEXT-индексам через SEARCH_FIELDS + '*' (префикс: иначе поиск-как-
+        // набираешь не работает — токенный поиск не ловит незавершённое слово).
+        // ВАЖНО: SEARCH_FIELDS требует индекс РОВНО на перечисленные поля, а у нас
+        // индексы по одному полю → OR однополевых вызовов. Схлопывание в
+        // мультиполевые + русская морфология — SRCH-03 (миграция V11).
+        // Замеры и ловушки: SPEC-TECH-LORE-ARCADEDB §Полнотекстовый поиск.
         slice("search",
-            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c)) LET " +
+            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c, $f, $u, $pn, $gn, $jb, $ac)) LET " +
             "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
             "      WHERE adr_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR out('HAS_STATE')[valid_to IS NULL].context_md[0] ILIKE ('%' + :pattern + '%') " +
@@ -485,7 +492,34 @@ public final class LoreSlices {
             "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
             "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
-            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10)",
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            // ── продуктовый слой (ADR-LORE-022/032) — по FULL_TEXT-индексам ──
+            "$f = (SELECT 'feature' AS type, feature_id AS ref_id, title FROM KnowFeature " +
+            "      WHERE feature_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['context_md'], :pattern + '*') = true LIMIT 10), " +
+            "$u = (SELECT 'use_case' AS type, uc_id AS ref_id, title FROM KnowUseCase " +
+            "      WHERE uc_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['scenario_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['acceptance_md'], :pattern + '*') = true LIMIT 10), " +
+            "$pn = (SELECT 'pain' AS type, pain_id AS ref_id, title FROM KnowPain " +
+            "      WHERE pain_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "$gn = (SELECT 'gain' AS type, gain_id AS ref_id, title FROM KnowGain " +
+            "      WHERE gain_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['metric_md'], :pattern + '*') = true LIMIT 10), " +
+            "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
+            "      WHERE job_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
+            "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10)",
             List.of("pattern"), Map.of(), "");
 
         // ── §5 Plan ──────────────────────────────────────────────────────────
