@@ -35,18 +35,41 @@ jobs:
       # npm при этом работают), и такая проба ложно объявила бы живой прокси
       # мёртвым — переменные снялись бы, npm ушёл бы напрямую и job умер бы по
       # таймауту, причём с невнятной ошибкой npm вместо внятной причины.
-      - name: Drop proxy env if the proxy is unreachable
+      - name: Resolve a working proxy address (or drop it)
         shell: bash
         run: |
           P="${HTTP_PROXY:-${http_proxy:-}}"
           [ -z "$P" ] && { echo "прокси не задан — ничего не делаем"; exit 0; }
           hostport="${P#*://}"; hostport="${hostport%%/*}"
           h="${hostport%%:*}"; p="${hostport##*:}"; [ "$p" = "$h" ] && p=8080
-          if timeout 3 bash -c "exec 3<>/dev/tcp/$h/$p" 2>/dev/null; then
-            echo "прокси $P доступен — оставляем"
-          else
-            echo "::warning::прокси $P недоступен — снимаю proxy-переменные на этот job. Если ниже npm ci упадёт по ETIMEDOUT к registry.npmjs.org — причина ЗДЕСЬ: прямой выход у этого хоста деградирован (минуты вместо секунд). Чинить надо прокси в конфигурации раннера, а не npm."
+          # Шлюз docker-моста — то, чем «host.docker.internal» является на Linux.
+          GW="$(ip route 2>/dev/null | awk '/^default/ {print $3; exit}')"
+          try() { timeout 3 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null; }
+
+          PICKED=""
+          for cand in "$h" "$GW" 172.17.0.1 host.docker.internal; do
+            [ -z "$cand" ] && continue
+            if try "$cand" "$p"; then PICKED="$cand"; break; fi
+            echo "  $cand:$p — не отвечает"
+          done
+
+          if [ -z "$PICKED" ]; then
+            echo "::warning::прокси не найден ни по одному адресу ($h, $GW, 172.17.0.1, host.docker.internal на порту $p) — снимаю proxy-переменные. Если ниже npm ci упадёт по ETIMEDOUT к registry.npmjs.org — причина ЗДЕСЬ: прямой выход у этого хоста деградирован (минуты вместо секунд). Чинить прокси в конфигурации раннера, а не npm."
             for v in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do echo "$v=" >> "$GITHUB_ENV"; done
+            exit 0
+          fi
+
+          # Подставляем ИМЕННО тот адрес, который отозвался. Если это оказался
+          # IP, а не имя — тем лучше: такой прокси-URL одинаково понятен и job'у,
+          # и билд-контейнеру внутри docker build, где host.docker.internal сам
+          # по себе не резолвится (на Docker Desktop его добавляет движок, на
+          # Linux-демоне — нет).
+          NEW="http://$PICKED:$p"
+          if [ "$NEW" = "$P" ]; then
+            echo "прокси $P доступен как есть"
+          else
+            echo "прокси доступен по $NEW (в конфигурации было $P) — подставляю рабочий адрес"
+            for v in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do echo "$v=$NEW" >> "$GITHUB_ENV"; done
           fi
 
       - name: Set up Node.js
