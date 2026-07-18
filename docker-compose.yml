@@ -31,7 +31,11 @@ services:
       # 9001 console port already uses below.
       - "127.0.0.1:9100:9100"          # published so the host-side MCP server can reach it
     extra_hosts:
-      - "arcade:host-gateway"          # ArcadeDB runs on the host :2480
+      # ARCADE_HOST: где живёт ArcadeDB с system_aida_lore.
+      #   host-gateway    — локальный контейнер Ygg на ноуте (как было);
+      #   192.168.3.131   — ci-server, куда база переехала (три СУБД на ноуте — перебор).
+      # Переключение обратно = одна строка в .env, без правки compose.
+      - "arcade:${ARCADE_HOST:-host-gateway}"
       - "kc:host-gateway"              # Keycloak runs on the host :18180
       - "forgejo:host-gateway"         # Forgejo runs on the host :3030 (FJ-02)
     depends_on:
