@@ -21,6 +21,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.local
+      args:
+        # Build-time, а не runtime: quarkus.oidc.enabled фиксируется на сборке,
+        # и запечённое значение побеждает переменную окружения контейнера.
+        # Флипать ВМЕСТЕ с VITE_* у фронта (docs/AUTH_OMILORE.md).
+        LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-}
+        LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
     ports:
       # IPv4-only bind: Docker's bare "9100:9100" shorthand also publishes an
       # IPv6 [::]:9100 listener, and on this host `localhost` resolves to ::1

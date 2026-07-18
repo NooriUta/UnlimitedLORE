@@ -53,6 +53,23 @@ RUN chmod +x gradlew && ./gradlew --no-daemon --version
 # ArcadeDB), so the image build stays hermetic with -x test.
 COPY src ./src
 COPY db-schema ./db-schema
+
+# Флаги auth — build-time, ровно как VITE_* у фронта, но по другой причине:
+# `quarkus.oidc.enabled` в Quarkus фиксируется НА СБОРКЕ (BUILD_AND_RUN_TIME_FIXED).
+# Значение, запечённое в образ, побеждает переменную окружения у запущенного
+# контейнера — то есть выставить LORE_AUTH_ENABLED=true в compose и перезапустить
+# НЕДОСТАТОЧНО, auth останется выключенным, а выглядеть это будет как «флаг не
+# сработал». Ровно поэтому docs/AUTH_OMILORE.md требует «Rebuild the image» для
+# ОБЕИХ сторон, а не только для фронта.
+#
+# Пусто по умолчанию → auth выключен, поведение как раньше.
+# LORE_OIDC_ISSUER нужен здесь же: без него Quarkus запечёт дефолтный
+# localhost-issuer, и валидация токенов пойдёт не туда.
+ARG LORE_AUTH_ENABLED=""
+ARG LORE_OIDC_ISSUER=""
+ENV LORE_AUTH_ENABLED=$LORE_AUTH_ENABLED \
+    LORE_OIDC_ISSUER=$LORE_OIDC_ISSUER
+
 RUN ./gradlew --no-daemon clean build -x test
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
