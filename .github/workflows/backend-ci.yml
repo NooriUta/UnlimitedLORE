@@ -137,7 +137,13 @@ jobs:
       #      layer cache makes the retry cheap.
       - name: Docker image build (backend)
         run: |
-          ARGS=""
+          # host.docker.internal внутри docker build НЕ резолвится сам: на Docker
+          # Desktop это имя добавляет сам движок, на Linux-демоне ci-server — нет.
+          # Прокси у раннера прописан именно так, поэтому без --add-host сборка
+          # получала build-arg с неразрешимым хостом, шла напрямую и умирала по
+          # таймауту — три попытки подряд «transient network?», хотя сеть тут ни
+          # при чём. Даём билд-контейнеру тот же резолв, что есть у job'а.
+          ARGS="--add-host=host.docker.internal:host-gateway"
           for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
             eval "val=\${$v:-}"
             [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"

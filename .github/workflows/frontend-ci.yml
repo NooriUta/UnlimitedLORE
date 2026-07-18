@@ -71,5 +71,18 @@ jobs:
           npm run build
 
       # Validates the frontend Dockerfile (npm build + nginx.conf) as shipped.
+      # Внутри образа идёт `npm ci`, а прямой выход у ci-server деградирован
+      # (см. комментарий к шагу отсечения прокси выше) — без прокси эта сборка
+      # либо тянется минутами, либо падает по таймауту. Прокси у раннера задан
+      # как host.docker.internal, а внутри docker build это имя само НЕ
+      # резолвится на Linux-демоне: нужен --add-host, иначе build-arg указывает
+      # в никуда. Та же правка, что в backend-ci.yml.
       - name: Docker image build (frontend + nginx)
-        run: docker build -t lore-app:ci .
+        run: |
+          ARGS="--add-host=host.docker.internal:host-gateway"
+          for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
+            eval "val=\${$v:-}"
+            [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
+          done
+          # shellcheck disable=SC2086
+          docker build $ARGS -t lore-app:ci .
