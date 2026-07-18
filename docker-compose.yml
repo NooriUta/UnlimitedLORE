@@ -64,6 +64,14 @@ services:
       # контейнера localhost = сам контейнер. Ходим через kc:host-gateway.
       - kc.admin.url=http://kc:18180/kc
       - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
+      # CORS: перечислять надо СЕРВИРУЮЩИЕ адреса — те, по которым UI открывают
+      # в браузере. Пусто → дефолт из application.properties (localhost + адрес
+      # стенда + lore.odal). Отсутствие нужного адреса даёт 403 ТОЛЬКО на записи:
+      # на GET браузер Origin не шлёт, поэтому выглядит как «кнопки не работают».
+      # Форма БЕЗ "=" намеренна: так compose пробрасывает переменную, только
+      # если она задана, и не подставляет пустую строку. Пустая строка здесь
+      # перекрыла бы дефолт и заблокировала запись со ВСЕХ адресов сразу.
+      - CORS_ORIGINS
       - lore.secrets.provider=${LORE_SECRETS_PROVIDER:-env}
       # Machine identity (Universal Auth) — единственный путь в свежих сборках
       # Infisical: сервисные токены оттуда убраны. project-id и environment
