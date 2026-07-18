@@ -371,6 +371,22 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowSprint.name           IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowDoc.title             IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowReleaseHist.description_md IF NOT EXISTS STRING"
+        )),
+
+        // ── V12 (10.2) SRCH-06: полный охват + область поиска ────────────────
+        // Аудит схемы показал текст, который в поиск не попадал вовсе: тела
+        // релизной истории, сводки по файлам, цели вех, двуязычные тела доков,
+        // а также два соседних продукта в той же БД — Bragi и QG-рутины.
+        // Индексируем ВСЁ, но каждая ветка несёт область (FtScope), и поиск
+        // отсекает лишнее ДО запроса, а не фильтрует выдачу после.
+        new Step(12, 10, "fulltext_full_coverage_and_scope", List.of(
+            "CREATE PROPERTY KnowPhase.title       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPR.title          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRelease.release_name IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFinding.summary   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpecHist.summary  IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.content_md_en IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.content_md_ru IF NOT EXISTS STRING"
         ))
     );
 
@@ -397,8 +413,18 @@ final class LoreSchemaMigrations {
      */
     static final String FT_SIMILARITY = "BM25";
 
+    /**
+     * Область поиска — «куда ходить». Отсекает ветки ДО запроса, а не фильтрует
+     * выдачу после: Bragi и QG живут в той же БД, но это другие продукты, и по
+     * умолчанию в выдачу Forseti попадать не должны. Заодно дешевле: меньше
+     * веток unionall на запрос.
+     */
+    enum FtScope { LORE, BRAGI, QUALITY }
+
     /** Именованный мультиполевой FULL_TEXT-индекс: одна ветка поиска = один вызов. */
-    record FtIndex(String name, String type, List<String> fields) {
+    record FtIndex(String name, String type, List<String> fields, FtScope scope) {
+        FtIndex(String name, String type, List<String> fields) { this(name, type, fields, FtScope.LORE); }
+
         String createSql() {
             return "CREATE INDEX `" + name + "` ON " + type + " (" + String.join(", ", fields) + ")"
                  + " FULL_TEXT METADATA {\"analyzer\":\"" + FT_ANALYZER + "\","
@@ -430,7 +456,9 @@ final class LoreSchemaMigrations {
         new FtIndex("ftKnowSprintHist",  "KnowSprintHist",  List.of("context_md", "outcome_md")),
         new FtIndex("ftKnowRunbook",     "KnowRunbook",     List.of("name")),
         new FtIndex("ftKnowRunbookHist", "KnowRunbookHist", List.of("content_md")),
-        new FtIndex("ftKnowDoc",         "KnowDoc",         List.of("title", "content_md")),
+        // content_md_en/ru — двуязычные тела доков: без них искалась только
+        // основная колонка, а переводы в выдачу не попадали вовсе.
+        new FtIndex("ftKnowDoc",         "KnowDoc",         List.of("title", "content_md", "content_md_en", "content_md_ru")),
         new FtIndex("ftKnowDocHist",     "KnowDocHist",     List.of("content_md")),
         new FtIndex("ftKnowDecision",    "KnowDecision",    List.of("title", "body_md")),
         new FtIndex("ftKnowQuestion",    "KnowQuestion",    List.of("title", "body_md")),
@@ -440,6 +468,33 @@ final class LoreSchemaMigrations {
         new FtIndex("ftKnowGain",        "KnowGain",        List.of("title", "body_md", "metric_md")),
         new FtIndex("ftKnowJob",         "KnowJob",         List.of("title", "body_md")),
         new FtIndex("ftKnowActor",       "KnowActor",       List.of("name", "body_md")),
-        new FtIndex("ftKnowRelease",     "KnowRelease",     List.of("description_md"))
+        new FtIndex("ftKnowRelease",     "KnowRelease",     List.of("description_md")),
+
+        // ── V12: добор по аудиту схемы ──────────────────────────────────────
+        // Тела релизов жили только на вершине; история описаний не искалась.
+        new FtIndex("ftKnowReleaseHist", "KnowReleaseHist", List.of("description_md")),
+        // Сводки по файлам репозитория — единственный текст, связывающий код с задачами.
+        new FtIndex("ftKnowFile",        "KnowFile",        List.of("summary_md")),
+        // Цели вех: короткие, но это формулировка «зачем», её ищут.
+        new FtIndex("ftKnowMilestoneHist", "KnowMilestoneHist", List.of("goal_md")),
+        // Реестр git-проектов: имя и описание.
+        new FtIndex("ftKnowGitProject",  "KnowGitProject",  List.of("name", "description")),
+        // Русские подписи словарей — по ним ищут «как это называется в интерфейсе».
+        new FtIndex("ftKnowDictEntry",   "KnowDictEntry",   List.of("label_ru")),
+
+        // ── BRAGI: другой продукт в той же БД, отсекается областью ───────────
+        new FtIndex("ftBragiPublication", "BragiPublication", List.of("title", "topic", "main_text_md"), FtScope.BRAGI),
+        new FtIndex("ftBragiRubric",      "BragiRubric",      List.of("name", "description"),            FtScope.BRAGI),
+        new FtIndex("ftBragiPage",        "BragiPage",        List.of("title", "description"),           FtScope.BRAGI),
+        new FtIndex("ftBragiChannel",     "BragiChannel",     List.of("rules_md"),                       FtScope.BRAGI),
+        new FtIndex("ftBragiCompetitor",  "BragiCompetitor",  List.of("name"),                           FtScope.BRAGI),
+        new FtIndex("ftBragiInsight",     "BragiInsight",     List.of("statement_md"),                   FtScope.BRAGI),
+        new FtIndex("ftBragiVariant",     "BragiVariant",     List.of("text_md"),                        FtScope.BRAGI),
+
+        // ── КАЧЕСТВО: прогоны рутин и рекомендации ──────────────────────────
+        new FtIndex("ftClRoutineRun",    "ClRoutineRun",    List.of("detail_md"),          FtScope.QUALITY),
+        new FtIndex("ftClRoutineOutput", "ClRoutineOutput", List.of("title", "content_md"),FtScope.QUALITY),
+        new FtIndex("ftQGRecommendation","QGRecommendation",List.of("title", "body_md"),   FtScope.QUALITY),
+        new FtIndex("ftQGJobTask",       "QGJobTask",       List.of("note_md"),            FtScope.QUALITY)
     );
 }

@@ -189,7 +189,7 @@ public class LoreSchemaMigrationRunner {
     /** Java-шаги (то, что SQL не умеет). Нумерация совпадает с реестром. */
     private void javaStep(int version) {
         if (version == 4 || version == 5) backfillContentHash(version);
-        if (version == 11) createFullTextIndexes();
+        if (version == 11 || version == 12) createFullTextIndexes();
     }
 
     /**
@@ -216,18 +216,32 @@ public class LoreSchemaMigrationRunner {
         }
 
         Set<String> byName = new HashSet<>();
-        Map<String, String> byFields = new HashMap<>(); // "Тип[поле,поле]" → имя индекса
+        Map<String, String> byFields = new HashMap<>();   // "Тип[поле,поле]" → имя индекса
+        Map<String, String> nameToKey = new HashMap<>();  // имя индекса → его набор полей
         for (Map<String, Object> r : ingest.queryPublic("SELECT name, typeName, properties FROM schema:indexes", Map.of())) {
             String n = String.valueOf(r.get("name"));
+            String key = fieldKey(String.valueOf(r.get("typeName")), r.get("properties"));
             byName.add(n);
-            byFields.put(fieldKey(String.valueOf(r.get("typeName")), r.get("properties")), n);
+            byFields.put(key, n);
+            nameToKey.put(n, key);
         }
 
         int created = 0, skipped = 0, replaced = 0, absent = 0;
         for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
-            if (byName.contains(ix.name())) { skipped++; continue; }
+            String want = fieldKey(ix.type(), ix.fields());
+            if (byName.contains(ix.name())) {
+                // Имя занято, но набор полей мог измениться между версиями кода
+                // (напр. в ftKnowDoc добавились content_md_en/ru). Пропустить по
+                // имени значило бы тихо оставить старый охват — тот же класс
+                // молчаливой полуправды, что уже ловили в V11.
+                if (want.equals(nameToKey.get(ix.name()))) { skipped++; continue; }
+                LOG.infof("[LORE MIGRATE] %s: набор полей изменился (%s → %s) — пересоздаю",
+                    ix.name(), nameToKey.get(ix.name()), want);
+                exec("DROP INDEX `" + ix.name() + "`");
+                byFields.remove(nameToKey.get(ix.name()));
+            }
             if (!types.contains(ix.type())) {
-                LOG.warnf("[LORE MIGRATE] V11: тип %s отсутствует — индекс %s пропущен", ix.type(), ix.name());
+                LOG.warnf("[LORE MIGRATE] тип %s отсутствует — индекс %s пропущен", ix.type(), ix.name());
                 absent++;
                 continue;
             }
@@ -238,9 +252,9 @@ public class LoreSchemaMigrationRunner {
             // полностью перекрывает именованный, а без имени он бесполезен для
             // SEARCH_INDEX. SEARCH_FIELDS резолвит индекс по полям и продолжает
             // находить новый — старый путь не ломается.
-            String clash = byFields.get(fieldKey(ix.type(), ix.fields()));
+            String clash = byFields.get(want);
             if (clash != null) {
-                LOG.infof("[LORE MIGRATE] V11: снимаю %s — тот же набор полей, что у %s", clash, ix.name());
+                LOG.infof("[LORE MIGRATE] снимаю %s — тот же набор полей, что у %s", clash, ix.name());
                 exec("DROP INDEX `" + clash + "`");
                 replaced++;
             }
@@ -251,12 +265,12 @@ public class LoreSchemaMigrationRunner {
             exec(ix.createSql());
             created++;
         }
-        LOG.infof("[LORE MIGRATE] V11 полнотекст: создано %d (из них взамен старых %d), уже было %d, типов нет %d — реестр %d",
+        LOG.infof("[LORE MIGRATE] полнотекст: создано %d (взамен старых %d), уже было %d, типов нет %d — реестр %d",
             created, replaced, skipped, absent, LoreSchemaMigrations.FT_INDEXES.size());
 
         int expected = LoreSchemaMigrations.FT_INDEXES.size() - absent;
         if (created + skipped < expected) {
-            throw new IllegalStateException("[LORE MIGRATE] V11: создано " + created + " + уже было " + skipped
+            throw new IllegalStateException("[LORE MIGRATE] полнотекст: создано " + created + " + уже было " + skipped
                 + ", ожидалось " + expected + " — часть индексов отсутствует, поиск пошёл бы сканом при «успешной» миграции.");
         }
     }

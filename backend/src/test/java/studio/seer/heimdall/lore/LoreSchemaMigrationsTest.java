@@ -105,14 +105,35 @@ class LoreSchemaMigrationsTest {
     @Test
     void additiveStepRaisesOrdinalButNotCompatMajor() {
         var last = LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1);
-        assertEquals(11, last.version(), "V11 — последний шаг реестра");
-        assertEquals(10, last.compatMajor(), "аддитивный: делит major с V10");
-        assertEquals("10.1", LoreSchemaMigrations.codeHuman(), "человеку это 10.1");
+        assertEquals(12, last.version(), "V12 — последний шаг реестра");
+        assertEquals(10, last.compatMajor(), "аддитивный: делит major с V10/V11");
+        assertEquals("10.2", LoreSchemaMigrations.codeHuman(), "человеку это 10.2");
         assertEquals(10, LoreSchemaMigrations.codeCompatMajor(),
             "ось совместимости не сдвинулась — старый бинарь переживёт новые индексы");
         assertEquals(LoreSchemaMigrations.StartupDecision.FORWARD_COMPAT,
-            LoreSchemaMigrations.decide(11, 10, 10, 10),
-            "бинарь без V11 на мигрированной БД обязан работать, а не падать");
+            LoreSchemaMigrations.decide(12, 10, 10, 10),
+            "бинарь без V12 на мигрированной БД обязан работать, а не падать");
+    }
+
+    /**
+     * Область поиска (D14): «куда ходить» отсекается ДО запроса. Тип из чужого
+     * продукта, попавший в область LORE, протёк бы в выдачу Forseti — это не
+     * косметика, а смешение продуктов.
+     */
+    @Test
+    void everyIndexDeclaresScopeMatchingItsProduct() {
+        for (var ix : LoreSchemaMigrations.FT_INDEXES) {
+            var expected = ix.type().startsWith("Bragi") ? LoreSchemaMigrations.FtScope.BRAGI
+                         : (ix.type().startsWith("Cl") || ix.type().startsWith("QG"))
+                             ? LoreSchemaMigrations.FtScope.QUALITY
+                             : LoreSchemaMigrations.FtScope.LORE;
+            assertEquals(expected, ix.scope(),
+                ix.name() + " (" + ix.type() + "): область не совпадает с продуктом типа");
+        }
+        // все три области реально представлены — иначе проверка выше вырождается
+        var scopes = LoreSchemaMigrations.FT_INDEXES.stream()
+            .map(LoreSchemaMigrations.FtIndex::scope).collect(java.util.stream.Collectors.toSet());
+        assertEquals(3, scopes.size(), "в реестре должны быть все три области");
     }
 
     /** Реестр индексов (D10): у типа ровно один индекс, имена уникальны и стабильны. */
