@@ -4,7 +4,14 @@
     "research": "MUNINN",
     "muninn": "HUGINN",
     "tyr": "TYR",
-    "bragi": "BRAGI"
+    "bragi": "BRAGI",
+    "chapters": "Главы Forseti",
+    "spaces": "LORE · пространства",
+    "transitions": "Переходы",
+    "here": "здесь",
+    "tenant": "Рабочее пространство (тенант)",
+    "secondary": "Вторичное",
+    "searchData": "поиск по данным"
   },
   "nav": {
     "lore": "LORE",
@@ -1256,7 +1263,13 @@
         "evolution": "История",
         "timeline": "Лента",
         "analytics": "Аналитика",
-        "mcp": "MCP API"
+        "mcp": "MCP API",
+        "actors": "Клиент",
+        "vpProfile": "Работы · Боли · Ожидания",
+        "vpCanvas": "VP-канва",
+        "features": "Фичи",
+        "userStories": "US",
+        "openQuestions": "Вопросы"
       }
     },
     "techRegistry": {
@@ -1283,6 +1296,28 @@
         "usage": "Использование (где/как используется)",
         "source": "Источник",
         "save": "Сохранить"
+      }
+    },
+    "chapters": {
+      "value": {
+        "name": "Зачем",
+        "q": "ценность"
+      },
+      "do": {
+        "name": "Как делаем",
+        "q": "план · спринты"
+      },
+      "know": {
+        "name": "Что решили",
+        "q": "решения · знания"
+      },
+      "tech": {
+        "name": "Основа",
+        "q": "компоненты · MCP"
+      },
+      "ctrl": {
+        "name": "Контроль",
+        "q": "качество · аналитика"
       }
     }
   },
@@ -1547,5 +1582,8 @@
     "accepted": "Принято",
     "deprecated": "Устарело",
     "superseded": "Заменено"
+  },
+  "app": {
+    "admin": "Админка"
   }
 }

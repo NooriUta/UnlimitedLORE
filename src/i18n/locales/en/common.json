@@ -4,7 +4,14 @@
     "research": "MUNINN",
     "muninn": "HUGINN",
     "tyr": "TYR",
-    "bragi": "BRAGI"
+    "bragi": "BRAGI",
+    "chapters": "Forseti chapters",
+    "spaces": "LORE · spaces",
+    "transitions": "Go to",
+    "here": "here",
+    "tenant": "Workspace (tenant)",
+    "secondary": "Secondary",
+    "searchData": "search data"
   },
   "nav": {
     "lore": "LORE",
@@ -1256,7 +1263,13 @@
         "evolution": "History",
         "timeline": "Feed",
         "analytics": "Analytics",
-        "mcp": "MCP API"
+        "mcp": "MCP API",
+        "actors": "Client",
+        "vpProfile": "Jobs · Pains · Gains",
+        "vpCanvas": "VP canvas",
+        "features": "Features",
+        "userStories": "US",
+        "openQuestions": "Open questions"
       }
     },
     "techRegistry": {
@@ -1283,6 +1296,28 @@
         "usage": "Usage (where/how it's used)",
         "source": "Source",
         "save": "Save"
+      }
+    },
+    "chapters": {
+      "value": {
+        "name": "Why",
+        "q": "value"
+      },
+      "do": {
+        "name": "How we build",
+        "q": "plan · sprints"
+      },
+      "know": {
+        "name": "Decisions",
+        "q": "decisions · knowledge"
+      },
+      "tech": {
+        "name": "Foundation",
+        "q": "components · MCP"
+      },
+      "ctrl": {
+        "name": "Control",
+        "q": "quality · analytics"
       }
     }
   },
@@ -1547,5 +1582,8 @@
     "accepted": "Accepted",
     "deprecated": "Deprecated",
     "superseded": "Superseded"
+  },
+  "app": {
+    "admin": "Admin"
   }
 }

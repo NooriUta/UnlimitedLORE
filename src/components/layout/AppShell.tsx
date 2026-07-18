@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { GameIcon } from '../lore/GameIcon';
 import { SHELL_TABS, type ShellTab } from './shellNav';
+import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { AUTH_ENABLED, displayName, logout } from '../../auth/session';
 import { useIsAdmin } from '../../auth/useRole';
@@ -22,7 +23,7 @@ function activeTabId(pathname: string): ShellTab['id'] {
 }
 
 export default function AppShell() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const active = activeTabId(pathname);
@@ -62,6 +63,11 @@ export default function AppShell() {
   const [palOpen, setPalOpen] = useState(false);
   const [palQ, setPalQ] = useState('');
   const activeTab = SHELL_TABS.find(x => x.id === active);
+  // Модули активного пространства = главы Storyline (пока определены у Forseti).
+  // Активная глава выводится из URL (?section=…), а не хранится в сторе.
+  const curSection = ((new URLSearchParams(search).get('section')) as Section | null) ?? 'plan';
+  const curChapter = chapterOf(curSection);
+  const showModules = active === 'projects' && !narrow;
 
   // Закрытие dropdown — outside-click (mousedown) + Esc, НЕ onBlur: blur
   // срабатывает раньше клика в Firefox/Safari и съедает выбор.
@@ -150,13 +156,20 @@ export default function AppShell() {
             aria-haspopup="menu"
             title="LORE — пространства"
             onClick={() => setOpenDD(d => d === 'brand' ? null : 'brand')}
-            style={pill(true)}
+            style={{
+              // Бренд без окантовки — прежний вид логотипа (display-шрифт),
+              // но поведение кнопки-dropdown (эталон Студии).
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              color: 'var(--t1)', fontFamily: 'var(--display)', fontSize: 18,
+              fontWeight: 800, letterSpacing: '0.04em', lineHeight: 1,
+            }}
           >
-            <span style={liveDot} />LORE<span style={caret}>⌄</span>
+            LORE<span style={caret}>⌄</span>
           </button>
           {openDD === 'brand' && (
             <div style={dd} role="menu">
-              <div style={ddHead}>LORE · пространства</div>
+              <div style={ddHead}>{t('shell.spaces', 'LORE · пространства')}</div>
               {SHELL_TABS.map(tab => {
                 const on = tab.id === active;
                 return (
@@ -164,7 +177,7 @@ export default function AppShell() {
                     onClick={() => { setOpenDD(null); navigate(tab.to); }}>
                     <GameIcon slug={tab.icon} size={15} style={{ color: on ? 'var(--acc)' : 'var(--t2)', transform: tab.flipX ? 'scaleX(-1)' : undefined }} />
                     <span style={{ fontWeight: on ? 700 : 500, color: on ? 'var(--acc)' : 'var(--t1)' }}>{t(tab.labelKey, tab.fallback)}</span>
-                    {on && <span style={ddBadge}>здесь</span>}
+                    {on && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
                   </button>
                 );
               })}
@@ -172,7 +185,7 @@ export default function AppShell() {
               {isAdmin && (
                 <>
                   <div style={ddSep} />
-                  <div style={ddHead}>Переходы</div>
+                  <div style={ddHead}>{t('shell.transitions', 'Переходы')}</div>
                   <button type="button" role="menuitem" style={ddItem(false)}
                     onClick={() => { setOpenDD(null); navigate('/lore?section=admin'); }}>
                     <span style={{ width: 15, textAlign: 'center' }}>⚙</span>
@@ -196,13 +209,13 @@ export default function AppShell() {
             </button>
             {openDD === 'tenant' && (
               <div style={dd} role="menu">
-                <div style={ddHead}>Рабочее пространство (тенант)</div>
+                <div style={ddHead}>{t('shell.tenant', 'Рабочее пространство (тенант)')}</div>
                 {['DEFAULT', 'DEMO'].map(tn => (
                   <button key={tn} type="button" role="menuitem" style={ddItem(tn === tenant)}
                     onClick={() => { setTenant(tn); setOpenDD(null); }}>
                     <span style={{ width: 15, textAlign: 'center' }}>{tn === 'DEMO' ? '◐' : '◉'}</span>
                     <span style={{ fontWeight: tn === tenant ? 700 : 500 }}>{tn}</span>
-                    {tn === tenant && <span style={ddBadge}>здесь</span>}
+                    {tn === tenant && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
                   </button>
                 ))}
                 <div style={ddNote}>Тенант ⟂ навигация: смена пространства данных не меняет раздел — вы остаётесь там же.</div>
@@ -213,11 +226,34 @@ export default function AppShell() {
 
         <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px' }} />
 
-        {/* Активное пространство (его модули — главы Storyline ниже, в LorePage) */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 13, letterSpacing: '0.02em', color: 'var(--t1)' }}>
+        {/* Активное пространство КАПСОМ + его модули (главы) инлайн — эталон Seiðr */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
           {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
           {!narrow && activeTab && <span>{t(activeTab.labelKey, activeTab.fallback)}</span>}
         </div>
+
+        {showModules && (
+          <nav className="lore-nav-scroll" role="tablist" aria-label={t('shell.chapters', 'Главы Forseti')}
+            style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, overflowX: 'auto' }}>
+            {CHAPTERS.map(c => {
+              const on = c.id === curChapter.id;
+              return (
+                <button key={c.id} type="button" role="tab" aria-selected={on} title={t(c.qKey, c.q)}
+                  onClick={() => navigate(`/lore?section=${c.sections[0]}`)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                    border: 'none', background: on ? 'var(--bg3)' : 'transparent',
+                    boxShadow: on ? 'inset 0 0 0 1px var(--bd)' : 'none',
+                    color: on ? 'var(--t1)' : 'var(--t2)', fontSize: 12.5,
+                    fontWeight: on ? 700 : 600, padding: '6px 11px', borderRadius: 7, cursor: 'pointer',
+                  }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: on ? c.color : 'var(--t3)', flexShrink: 0 }} />
+                  {t(c.nameKey, c.name)}
+                </button>
+              );
+            })}
+          </nav>
+        )}
 
         <div style={{ flex: 1, minWidth: 0 }} />
 
@@ -234,7 +270,7 @@ export default function AppShell() {
             onClick={() => setOpenDD(d => d === 'more' ? null : 'more')} style={btnStyle}>⋯</button>
           {openDD === 'more' && (
             <div style={{ ...dd, left: 'auto', right: 0 }} role="menu">
-              <div style={ddHead}>Вторичное</div>
+              <div style={ddHead}>{t('shell.secondary', 'Вторичное')}</div>
               <button type="button" role="menuitem" style={ddItem(false)} onClick={togglePalette}>
                 <span style={{ width: 15, textAlign: 'center' }}>{palette === 'amber' ? '◑' : '◐'}</span>
                 Палитра: {palette}
@@ -279,7 +315,7 @@ export default function AppShell() {
           <div style={{ width: 'min(560px, 92vw)', background: 'var(--bg2)', border: '1px solid var(--bdh)', borderRadius: 12, boxShadow: '0 22px 64px rgba(0,0,0,.55)', overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', borderBottom: '1px solid var(--bd)' }}>
               <span style={{ fontSize: 15 }}>⌕</span>
-              <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--acc)', border: '1px solid var(--acc)', borderRadius: 999, padding: '1px 8px' }}>поиск по данным</span>
+              <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--acc)', border: '1px solid var(--acc)', borderRadius: 999, padding: '1px 8px' }}>{t('shell.searchData', 'поиск по данным')}</span>
               <input
                 autoFocus
                 value={palQ}
