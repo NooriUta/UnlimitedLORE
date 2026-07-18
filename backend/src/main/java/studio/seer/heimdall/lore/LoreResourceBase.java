@@ -69,11 +69,8 @@ public abstract class LoreResourceBase {
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
     String db;
 
-    @ConfigProperty(name = "bench.mart.user", defaultValue = "root")
-    String user;
-
-    @ConfigProperty(name = "bench.mart.password", defaultValue = "")
-    String password;
+    @Inject
+    MartCredentials mart;
 
     @Inject
     @RestClient
@@ -108,8 +105,7 @@ public abstract class LoreResourceBase {
     }
 
     String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-            (user + ":" + password).getBytes(StandardCharsets.UTF_8));
+        return mart.basicAuth();
     }
 
     /** Param map that tolerates null values (Map.of forbids them) — used for nullable note_md. */

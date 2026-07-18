@@ -2,6 +2,7 @@ package studio.seer.heimdall.bench;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
+import studio.seer.heimdall.lore.MartCredentials;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -45,11 +46,8 @@ public class MuninnMartResource {
     @ConfigProperty(name = "bench.mart.db", defaultValue = "RAGVSDL")
     String db;
 
-    @ConfigProperty(name = "bench.mart.user", defaultValue = "root")
-    String user;
-
-    @ConfigProperty(name = "bench.mart.password", defaultValue = "")
-    String password;
+    @Inject
+    MartCredentials mart;
 
     @Inject
     @RestClient
@@ -113,8 +111,7 @@ public class MuninnMartResource {
     }
 
     private String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-            (user + ":" + password).getBytes(StandardCharsets.UTF_8));
+        return mart.basicAuth();
     }
 
     private static Response noStore(Response.ResponseBuilder builder) {
