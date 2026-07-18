@@ -1,0 +1,86 @@
+name: LORE Release (publish on tag)
+
+# Публикация Release по пушу тега.
+#
+# Зачем понадобилось. Теги v1.0.50…v1.0.54 были запушены, а объектов Release для
+# них не создано — список опубликованных обрывался на v1.0.49. Витрина при этом
+# писала «97 коммитов develop с этого выпуска», то есть показывала состояние
+# двухдневной давности при сделанной и оттегированной работе (MIG-26).
+#
+# Автоматизации не существовало НИКОГДА: до переезда стенд жил на ноутбуке,
+# релизы публиковались руками, и это было нормально. С появлением сервера и
+# раннеров ручной шаг стал единственным, который никто не выполняет.
+#
+# Тег — и есть событие релиза, поэтому триггер по тегу, а не по ветке: релизы
+# режутся на develop, и привязка к ветке ничего бы не дала.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write        # нужно для создания Release
+
+concurrency:
+  group: lore-release-${{ github.ref }}
+  cancel-in-progress: false   # публикация не гонка — очередь, а не отмена
+
+jobs:
+  publish:
+    name: Publish Forgejo release from RELEASE-<tag>.md
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Publish
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          TAG="${GITHUB_REF#refs/tags/}"
+          FILE="RELEASE-${TAG}.md"
+
+          # Адрес API — тот же, по которому в этом же job'е ходит actions/checkout
+          # (http://forgejo:3000). Публичное имя из github.server_url изнутри
+          # раннера может не резолвиться: раннер живёт в сети forgejo-net.
+          API="http://forgejo:3000/api/v1/repos/${GITHUB_REPOSITORY}"
+
+          # ТЕЛО ОБЯЗАТЕЛЬНО. Пустой релиз хуже отсутствующего: он выглядит
+          # опубликованным, и пропажу описания замечают через недели. Тот же
+          # принцип, что в lore-cd.yml — проверять факт, а не код возврата.
+          if [ ! -f "$FILE" ]; then
+            echo "::error::нет $FILE — релиз $TAG не публикуется. Опишите релиз в этом файле и перезапустите: пустое тело выглядит опубликованным и прячет пропажу."
+            exit 1
+          fi
+
+          # Идемпотентность: тег могли перезапушить, а workflow — перезапустить
+          # вручную. Существующий релиз НЕ трогаем: тело могли отредактировать
+          # руками, и повторная запись затёрла бы правку.
+          code=$(curl -s -o /tmp/existing.json -w '%{http_code}' \
+            -H "Authorization: token $TOKEN" "$API/releases/tags/$TAG")
+          if [ "$code" = "200" ]; then
+            echo "релиз $TAG уже опубликован — ничего не меняю"
+            exit 0
+          fi
+
+          # Первая строка файла — заголовок релиза, остальное — тело.
+          TITLE=$(head -1 "$FILE" | sed 's/^#\+[[:space:]]*//')
+          [ -z "$TITLE" ] && TITLE="$TAG"
+
+          # jq собирает JSON сам: тело — многострочный markdown с кавычками и
+          # обратными слэшами, ручная сборка строки его бы поломала.
+          jq -n --arg tag "$TAG" --arg name "$TITLE" --rawfile body "$FILE" \
+            '{tag_name:$tag, name:$name, body:$body, draft:false, prerelease:false}' \
+            > /tmp/release.json
+
+          code=$(curl -s -o /tmp/created.json -w '%{http_code}' -X POST \
+            -H "Authorization: token $TOKEN" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/release.json "$API/releases")
+
+          if [ "$code" != "201" ]; then
+            echo "::error::создание релиза $TAG вернуло HTTP $code"
+            head -c 500 /tmp/created.json
+            exit 1
+          fi
+          echo "релиз $TAG опубликован: $TITLE"
