@@ -377,16 +377,32 @@ final class LoreSchemaMigrations {
     /**
      * SRCH-03: анализатор для русскоязычного корпуса. Замерено: с ним документ
      * со словом «релиза» находится по запросу «релиз», на дефолтном — нет.
-     * `similarity` НЕ задаём: BM25 — умолчание для новых индексов (26.7.1+),
-     * проверено сравнением индексов с METADATA и без.
      */
     static final String FT_ANALYZER = "org.apache.lucene.analysis.ru.RussianAnalyzer";
+
+    /**
+     * similarity ОБЯЗАН быть указан ЯВНО, хотя BM25 и заявлен умолчанием.
+     *
+     * Замерено на ArcadeDB 26.7.2, три варианта одного индекса на одних данных
+     * (документы: 5 вхождений термина / 1 вхождение / 1 вхождение + 150 слов балласта):
+     *   без METADATA вообще        → 0.272 / 0.218 / 0.076 — BM25, ранжирует
+     *   METADATA только analyzer   → 1 / 1 / 1             — CLASSIC, НЕ ранжирует
+     *   METADATA analyzer+similarity → 0.272 / 0.218 / 0.076 — BM25, ранжирует
+     *
+     * То есть передача METADATA БЕЗ similarity молча сбрасывает модель в CLASSIC.
+     * Умолчание «BM25 для новых индексов» действует, только пока METADATA не
+     * передан вовсе — а нам он нужен ради анализатора. Первая редакция этого
+     * шага задавала лишь analyzer, и на проде получился корпус без ранжирования:
+     * все совпадения со скором 1.
+     */
+    static final String FT_SIMILARITY = "BM25";
 
     /** Именованный мультиполевой FULL_TEXT-индекс: одна ветка поиска = один вызов. */
     record FtIndex(String name, String type, List<String> fields) {
         String createSql() {
             return "CREATE INDEX `" + name + "` ON " + type + " (" + String.join(", ", fields) + ")"
-                 + " FULL_TEXT METADATA {\"analyzer\":\"" + FT_ANALYZER + "\"}";
+                 + " FULL_TEXT METADATA {\"analyzer\":\"" + FT_ANALYZER + "\","
+                 + "\"similarity\":\"" + FT_SIMILARITY + "\"}";
         }
     }
 

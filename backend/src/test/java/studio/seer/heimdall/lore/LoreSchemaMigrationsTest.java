@@ -129,6 +129,11 @@ class LoreSchemaMigrationsTest {
             assertFalse(ix.fields().isEmpty(), ix.name() + ": пустой список полей");
             assertTrue(ix.createSql().contains(LoreSchemaMigrations.FT_ANALYZER),
                 ix.name() + ": без RussianAnalyzer морфология русского не работает");
+            // Замерено: METADATA без similarity молча сбрасывает модель в CLASSIC,
+            // и все совпадения получают скор 1 — ранжирования нет. Умолчание BM25
+            // действует, только если METADATA не передан вовсе.
+            assertTrue(ix.createSql().contains("\"similarity\":\"BM25\""),
+                ix.name() + ": similarity обязан быть ЯВНЫМ, иначе METADATA даёт CLASSIC");
             assertFalse(ix.createSql().contains("IF NOT EXISTS"),
                 ix.name() + ": именованный индекс НЕ принимает IF NOT EXISTS — "
                 + "существование проверяет Java-шаг (замерено на 26.7.2)");

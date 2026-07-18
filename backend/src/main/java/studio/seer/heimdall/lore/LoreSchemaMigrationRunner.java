@@ -208,27 +208,70 @@ public class LoreSchemaMigrationRunner {
      * миграции.
      */
     private void createFullTextIndexes() {
-        Set<String> existing = new HashSet<>();
-        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:indexes", Map.of())) {
-            Object n = r.get("name");
-            if (n != null) existing.add(String.valueOf(n));
+        // Какие типы вообще есть: на свежей БД часть может отсутствовать, и это
+        // единственная причина, по которой пропуск индекса допустим.
+        Set<String> types = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:types", Map.of())) {
+            types.add(String.valueOf(r.get("name")));
         }
-        int created = 0, skipped = 0;
+
+        Set<String> byName = new HashSet<>();
+        Map<String, String> byFields = new HashMap<>(); // "Тип[поле,поле]" → имя индекса
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name, typeName, properties FROM schema:indexes", Map.of())) {
+            String n = String.valueOf(r.get("name"));
+            byName.add(n);
+            byFields.put(fieldKey(String.valueOf(r.get("typeName")), r.get("properties")), n);
+        }
+
+        int created = 0, skipped = 0, replaced = 0, absent = 0;
         for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
-            if (existing.contains(ix.name())) { skipped++; continue; }
-            try {
-                exec(ix.createSql());
-                created++;
-            } catch (Exception e) {
-                // Тип может отсутствовать на свежей БД, где его ещё не создали
-                // прошлые шаги — это не повод валить миграцию целиком, но и
-                // молчать нельзя: индекса не будет, поиск по типу пойдёт сканом.
-                LOG.warnf("[LORE MIGRATE] V11: индекс %s на %s не создан: %s",
-                    ix.name(), ix.type(), e.getMessage());
+            if (byName.contains(ix.name())) { skipped++; continue; }
+            if (!types.contains(ix.type())) {
+                LOG.warnf("[LORE MIGRATE] V11: тип %s отсутствует — индекс %s пропущен", ix.type(), ix.name());
+                absent++;
+                continue;
+            }
+            // ArcadeDB 26.7.2 запрещает ВТОРОЙ индекс на том же наборе полей:
+            // «Found the existent index 'KnowTaskHist[note_md]' defined on the
+            // properties '[[note_md]]'». Там, где набор совпал с уже имеющимся
+            // (однополевые Hist-тела), старый снимаем ОСОЗНАННО: его роль
+            // полностью перекрывает именованный, а без имени он бесполезен для
+            // SEARCH_INDEX. SEARCH_FIELDS резолвит индекс по полям и продолжает
+            // находить новый — старый путь не ломается.
+            String clash = byFields.get(fieldKey(ix.type(), ix.fields()));
+            if (clash != null) {
+                LOG.infof("[LORE MIGRATE] V11: снимаю %s — тот же набор полей, что у %s", clash, ix.name());
+                exec("DROP INDEX `" + clash + "`");
+                replaced++;
+            }
+            // БЕЗ catch: если создание упало по любой другой причине — валим
+            // миграцию. Шаг, записанный в ledger как применённый при не созданных
+            // индексах, — это молчаливая полуправда: поиск идёт сканом, а версия
+            // схемы утверждает, что всё на месте. Ровно этот случай уже произошёл.
+            exec(ix.createSql());
+            created++;
+        }
+        LOG.infof("[LORE MIGRATE] V11 полнотекст: создано %d (из них взамен старых %d), уже было %d, типов нет %d — реестр %d",
+            created, replaced, skipped, absent, LoreSchemaMigrations.FT_INDEXES.size());
+
+        int expected = LoreSchemaMigrations.FT_INDEXES.size() - absent;
+        if (created + skipped < expected) {
+            throw new IllegalStateException("[LORE MIGRATE] V11: создано " + created + " + уже было " + skipped
+                + ", ожидалось " + expected + " — часть индексов отсутствует, поиск пошёл бы сканом при «успешной» миграции.");
+        }
+    }
+
+    /** Ключ «тип + набор полей» — ArcadeDB не разрешает два индекса на одном наборе. */
+    @SuppressWarnings("unchecked")
+    private static String fieldKey(String type, Object props) {
+        List<String> flat = new java.util.ArrayList<>();
+        if (props instanceof List<?> l) {
+            for (Object o : l) {
+                if (o instanceof List<?> inner) inner.forEach(x -> flat.add(String.valueOf(x)));
+                else flat.add(String.valueOf(o));
             }
         }
-        LOG.infof("[LORE MIGRATE] V11 полнотекст: создано %d, уже было %d (всего в реестре %d)",
-            created, skipped, LoreSchemaMigrations.FT_INDEXES.size());
+        return type + "[" + String.join(",", flat) + "]";
     }
 
     // SV-10 backfill: content_hash по существующим Hist-строкам, батчами ДО
