@@ -112,7 +112,16 @@ services:
       start_period: 40s
 
   lore-app:
-    build: .
+    build:
+      context: .
+      args:
+        # Vite впекает эти значения в бандл на сборке — переменной окружения у
+        # готового контейнера их не поменять, поэтому именно build-args.
+        # Пусто → auth выключен, поведение как раньше. Флипать ВМЕСТЕ с
+        # LORE_AUTH_ENABLED у бэкенда (docs/AUTH_OMILORE.md).
+        VITE_LORE_AUTH_ENABLED: ${VITE_LORE_AUTH_ENABLED:-}
+        VITE_OIDC_ISSUER: ${VITE_OIDC_ISSUER:-}
+        VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
     ports:
       - "4400:80"
     # host.docker.internal is auto-provided by Docker Desktop but NOT by plain
