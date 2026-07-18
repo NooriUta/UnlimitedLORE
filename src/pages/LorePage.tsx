@@ -88,10 +88,14 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
 // Стили строки подвкладок (главы теперь в шапке — AppShell).
 const STORY_S = {
   subBar: { display: 'flex', gap: 3, padding: '6px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap' as const, alignItems: 'center', overflowX: 'auto' as const },
+  // Выделение подвкладки — как у глав в шапке: скруглённый прямоугольник с
+  // рамкой и лёгкой подсветкой цвета главы, без залитого эллипса.
   subItem: (on: boolean, gc: string) => ({
-    display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
-    color: on ? '#fff' : 'var(--t2)', border: `1px solid ${on ? gc : 'var(--bd)'}`, background: on ? gc : 'var(--bg1)',
-    whiteSpace: 'nowrap' as const, fontWeight: (on ? 600 : 400) as number,
+    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+    color: on ? 'var(--t1)' : 'var(--t2)',
+    border: `1px solid ${on ? `color-mix(in srgb, ${gc} 55%, var(--bd))` : 'transparent'}`,
+    background: on ? `color-mix(in srgb, ${gc} 12%, transparent)` : 'transparent',
+    whiteSpace: 'nowrap' as const, fontWeight: (on ? 700 : 500) as number,
   }),
 };
 
@@ -428,7 +432,7 @@ export default function LorePage() {
           <button key={sid} role="tab" aria-selected={on} title={label}
             style={STORY_S.subItem(on, activeChapter.color)}
             onClick={() => go(sid)}>
-            {s.icon && <GameIcon slug={s.icon} size={14} style={{ color: on ? '#fff' : SECTION_COLORS[sid] }} />}
+            {s.icon && <GameIcon slug={s.icon} size={14} style={{ color: on ? activeChapter.color : SECTION_COLORS[sid] }} />}
             <span>{label}</span>
           </button>
         );

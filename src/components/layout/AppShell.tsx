@@ -142,7 +142,7 @@ export default function AppShell() {
   // Пилюля тенанта — как «● DEFAULT ⌄» в эталоне: моноширинный капс с трекингом.
   const pill = (brand: boolean) => ({
     display: 'inline-flex' as const, alignItems: 'center', gap: 7, cursor: 'pointer',
-    background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 999,
+    background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 7,
     padding: '5px 11px', fontSize: brand ? 12 : 11.5, color: 'var(--t1)', whiteSpace: 'nowrap' as const,
     fontFamily: brand ? undefined : 'var(--mono)',
     textTransform: (brand ? undefined : 'uppercase') as 'uppercase' | undefined,
@@ -281,9 +281,11 @@ export default function AppShell() {
           {!narrow && activeTab && <span>{t(activeTab.labelKey, activeTab.fallback)}</span>}
         </div>
 
+        {showModules && <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 8px', flexShrink: 0 }} />}
+
         {showModules && (
           <nav className="lore-nav-scroll" role="tablist" aria-label={t('shell.chapters', 'Главы Forseti')}
-            style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, overflowX: 'auto', marginLeft: 10 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, overflowX: 'auto' }}>
             {CHAPTERS.map(c => {
               const on = c.id === curChapter.id;
               return (
