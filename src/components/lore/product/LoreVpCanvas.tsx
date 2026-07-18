@@ -16,6 +16,7 @@ import {
 } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
+import { useTranslation } from 'react-i18next';
 
 /* ── ReactFlow custom node (module scope for stable reference) ──────────────
  * Data carries {label, tone}; tone (цвет-акцент) задаёт и рамку, и тонировку
@@ -52,6 +53,7 @@ const COL_RIGHT = 420;  // карта ценности
 const Y_STEP    = 70;
 
 export default function LoreVpCanvas({ onError }: ProductScreenProps) {
+  const { t } = useTranslation();
   const { rows: features, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
   const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
   const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
@@ -190,13 +192,13 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
           <svg width={26} height={8} style={{ overflow: 'visible' }}>
             <line x1={0} y1={4} x2={26} y2={4} stroke="var(--t3)" strokeWidth={1.5} strokeDasharray="5 4" />
           </svg>
-          <span style={{ fontSize: 10, color: 'var(--t2)' }}>заявлено</span>
+          <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.product.canvas.claimed', 'заявлено')}</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <svg width={26} height={8} style={{ overflow: 'visible' }}>
             <line x1={0} y1={4} x2={26} y2={4} stroke="var(--acc)" strokeWidth={2} />
           </svg>
-          <span style={{ fontSize: 10, color: 'var(--t2)' }}>сделано</span>
+          <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.product.canvas.done', 'сделано')}</span>
         </span>
         <Pill tone="muted" style={{ marginLeft: 'auto' }}>в проде — ReactFlow (как LOOM)</Pill>
       </div>
@@ -205,7 +207,7 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
       {loading ? (
         <LoreSkeleton rows={4} />
       ) : !features.length ? (
-        <EmptyState message="Нет фич для канвы" />
+        <EmptyState message={t('lore.product.canvas.empty', 'Нет фич для канвы')} />
       ) : (
         <div style={{ position: 'relative', height: 'calc(100vh - 230px)', minHeight: 420 }}>
           <div style={{ position: 'absolute', inset: 0 }}>

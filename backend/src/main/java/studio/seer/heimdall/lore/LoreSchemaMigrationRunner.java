@@ -14,6 +14,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * ADR-LORE-023: раннер миграций схемы. Свой, не ADR-HND-022 (OQ-023-RUNNER):
@@ -187,6 +189,117 @@ public class LoreSchemaMigrationRunner {
     /** Java-шаги (то, что SQL не умеет). Нумерация совпадает с реестром. */
     private void javaStep(int version) {
         if (version == 4 || version == 5) backfillContentHash(version);
+        if (version == 11 || version == 12) createFullTextIndexes();
+    }
+
+    /**
+     * SRCH-03: именованные мультиполевые FULL_TEXT-индексы.
+     *
+     * Почему Java, а не список SQL в шаге. Замерено на ArcadeDB 26.7.2:
+     * `CREATE INDEX IF NOT EXISTS `имя` …` — синтаксическая ошибка (грамматика
+     * ждёт ON сразу после IF NOT EXISTS), а `DROP INDEX IF EXISTS` не
+     * поддерживается вовсе. То есть для ИМЕНОВАННОГО индекса нет ни
+     * «создай, если нет», ни «удали, если есть», и чисто-SQL шаг падал бы на
+     * любом повторе с «already exists». Поэтому существование проверяем сами.
+     *
+     * Старые однополевые индексы НЕ трогаем: действующий слайс `search` ходит
+     * через SEARCH_FIELDS, который на них и опирается. Снимать их можно только
+     * после перевода слайса на SEARCH_INDEX, иначе поиск сломается в момент
+     * миграции.
+     */
+    private void createFullTextIndexes() {
+        // Какие типы вообще есть: на свежей БД часть может отсутствовать, и это
+        // единственная причина, по которой пропуск индекса допустим.
+        Set<String> types = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:types", Map.of())) {
+            types.add(String.valueOf(r.get("name")));
+        }
+
+        Set<String> byName = new HashSet<>();
+        Map<String, String> byFields = new HashMap<>();   // "Тип[поле,поле]" → имя индекса
+        Map<String, String> nameToKey = new HashMap<>();  // имя индекса → его набор полей
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name, typeName, properties FROM schema:indexes", Map.of())) {
+            String n = String.valueOf(r.get("name"));
+            String key = fieldKey(String.valueOf(r.get("typeName")), r.get("properties"));
+            byName.add(n);
+            byFields.put(key, n);
+            nameToKey.put(n, key);
+        }
+
+        int created = 0, skipped = 0, replaced = 0, absent = 0;
+        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
+            String want = fieldKey(ix.type(), ix.fields());
+            if (byName.contains(ix.name())) {
+                // Имя занято, но набор полей мог измениться между версиями кода
+                // (напр. в ftKnowDoc добавились content_md_en/ru). Пропустить по
+                // имени значило бы тихо оставить старый охват — тот же класс
+                // молчаливой полуправды, что уже ловили в V11.
+                if (want.equals(nameToKey.get(ix.name()))) { skipped++; continue; }
+                LOG.infof("[LORE MIGRATE] %s: набор полей изменился (%s → %s) — пересоздаю",
+                    ix.name(), nameToKey.get(ix.name()), want);
+                exec("DROP INDEX `" + ix.name() + "`");
+                byFields.remove(nameToKey.get(ix.name()));
+            }
+            if (!types.contains(ix.type())) {
+                LOG.warnf("[LORE MIGRATE] тип %s отсутствует — индекс %s пропущен", ix.type(), ix.name());
+                absent++;
+                continue;
+            }
+            // ArcadeDB 26.7.2 запрещает ВТОРОЙ индекс на том же наборе полей:
+            // «Found the existent index 'KnowTaskHist[note_md]' defined on the
+            // properties '[[note_md]]'». Там, где набор совпал с уже имеющимся
+            // (однополевые Hist-тела), старый снимаем ОСОЗНАННО: его роль
+            // полностью перекрывает именованный, а без имени он бесполезен для
+            // SEARCH_INDEX. SEARCH_FIELDS резолвит индекс по полям и продолжает
+            // находить новый — старый путь не ломается.
+            // Свойства объявляем САМИ, а не полагаемся на то, что они уже есть.
+            // На проде часть полей существовала исторически, поэтому V11 там
+            // прошёл; на ЧИСТОЙ базе (lore_ci_test пересоздаётся на каждый
+            // прогон CI) их нет, и ArcadeDB отказывает:
+            //   Cannot create the index on type 'KnowSprint.context_md'
+            //   because the property does not exist
+            // Делать это SQL-строкой в самом шаге нельзя: checksum V11/V12 уже
+            // записан в ledger прода, изменение SQL уронило бы старт по дрейф-
+            // гарду. Java-часть в checksum не входит — правка безопасна и делает
+            // шаг самодостаточным на любой базе.
+            for (String f : ix.fields()) {
+                exec("CREATE PROPERTY " + ix.type() + "." + f + " IF NOT EXISTS STRING");
+            }
+
+            String clash = byFields.get(want);
+            if (clash != null) {
+                LOG.infof("[LORE MIGRATE] снимаю %s — тот же набор полей, что у %s", clash, ix.name());
+                exec("DROP INDEX `" + clash + "`");
+                replaced++;
+            }
+            // БЕЗ catch: если создание упало по любой другой причине — валим
+            // миграцию. Шаг, записанный в ledger как применённый при не созданных
+            // индексах, — это молчаливая полуправда: поиск идёт сканом, а версия
+            // схемы утверждает, что всё на месте. Ровно этот случай уже произошёл.
+            exec(ix.createSql());
+            created++;
+        }
+        LOG.infof("[LORE MIGRATE] полнотекст: создано %d (взамен старых %d), уже было %d, типов нет %d — реестр %d",
+            created, replaced, skipped, absent, LoreSchemaMigrations.FT_INDEXES.size());
+
+        int expected = LoreSchemaMigrations.FT_INDEXES.size() - absent;
+        if (created + skipped < expected) {
+            throw new IllegalStateException("[LORE MIGRATE] полнотекст: создано " + created + " + уже было " + skipped
+                + ", ожидалось " + expected + " — часть индексов отсутствует, поиск пошёл бы сканом при «успешной» миграции.");
+        }
+    }
+
+    /** Ключ «тип + набор полей» — ArcadeDB не разрешает два индекса на одном наборе. */
+    @SuppressWarnings("unchecked")
+    private static String fieldKey(String type, Object props) {
+        List<String> flat = new java.util.ArrayList<>();
+        if (props instanceof List<?> l) {
+            for (Object o : l) {
+                if (o instanceof List<?> inner) inner.forEach(x -> flat.add(String.valueOf(x)));
+                else flat.add(String.valueOf(o));
+            }
+        }
+        return type + "[" + String.join(",", flat) + "]";
     }
 
     // SV-10 backfill: content_hash по существующим Hist-строкам, батчами ДО

@@ -2,6 +2,7 @@
 // Master-detail: список историй слева + паспорт по Коберну справа.
 // Нет слайса «все UC» — собираем UC по каждой фиче (use_cases_of_feature) и склеиваем.
 // Дизайн зеркалит утверждённый прототип usP. Данные — через useSlice/fetchLoreSlice.
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import type { LoreFeatureRow, LoreUcRow } from '../../../api/lore';
 import { fetchLoreSlice } from '../../../api/lore';
@@ -37,6 +38,7 @@ function rigorGlyphOf(rigor: string | null | undefined): string {
 }
 
 export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+  const { t } = useTranslation();
   // Нет слайса «все UC» → тянем фичи, затем UC каждой фичи и склеиваем (дедуп по uc_id).
   const { rows: features, loading: featLoading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
 
@@ -83,7 +85,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
   if (loading) {
     list = <LoreSkeleton rows={6} />;
   } else if (filtered.length === 0) {
-    list = <EmptyState message="Пользовательских историй пока нет" />;
+    list = <EmptyState message={t('lore.product.us.empty', 'Пользовательских историй пока нет')} />;
   } else {
     list = (
       <>
@@ -108,11 +110,11 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
   // ── паспорт (по Коберну) ──
   let detail;
   if (!selectedId) {
-    detail = <EmptyDetail text="Выберите историю слева" />;
+    detail = <EmptyDetail text={t('lore.product.us.pick', 'Выберите историю слева')} />;
   } else {
     const uc = ucs.find(x => x.uc_id === selectedId);
     if (!uc) {
-      detail = <EmptyDetail text="Выберите историю слева" />;
+      detail = <EmptyDetail text={t('lore.product.us.pick', 'Выберите историю слева')} />;
     } else {
       const status = (uc.status ?? '').toLowerCase();
       const glyph = goalGlyphOf(uc.goal_level);
@@ -149,17 +151,17 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-do)', marginBottom: 8 }}>{uc.uc_id}</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
-            <span style={{ color: 'var(--t3)' }}>Фича</span>
+            <span style={{ color: 'var(--t3)' }}>{t('lore.product.us.feature', 'Фича')}</span>
             <span>{uc.feature_id
               ? <LinkChip color="var(--g-value)" onClick={() => onNavigate('features', uc.feature_id ?? undefined)}>{uc.feature_id}</LinkChip>
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
-            <span style={{ color: 'var(--t3)' }}>Primary-актор</span>
+            <span style={{ color: 'var(--t3)' }}>{t('lore.product.us.primaryActor', 'Primary-актор')}</span>
             <span>{actorNames.length > 0
               ? <LinkChip color="var(--wrn)" onClick={() => onNavigate('actors', actorIds[0])}>{actorNames[0]}</LinkChip>
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
           </div>
 
-          <PSection title="Что реально делает (ноги в профиль)">
+          <PSection title={t('lore.product.us.doesWhat', 'Что реально делает (ноги в профиль)')}>
             {painIds.length + gainIds.length + jobIds.length === 0
               ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
               : (
@@ -177,20 +179,20 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               )}
           </PSection>
 
-          <PSection title="Сценарий (Коберн)">
+          <PSection title={t('lore.product.us.scenario', 'Сценарий (Коберн)')}>
             {(uc.scenario_md ?? '').trim()
               ? <pre style={preStyle}>{uc.scenario_md ?? ''}</pre>
-              : <span style={{ fontSize: 11, color: 'var(--t3)' }}>— сценарий не заполнен</span>}
+              : <span style={{ fontSize: 11, color: 'var(--t3)' }}>— {t('lore.product.us.noScenario', 'сценарий не заполнен')}</span>}
           </PSection>
 
           {(uc.acceptance_md ?? '').trim() && (
-            <PSection title="Приёмка">
+            <PSection title={t('lore.product.us.acceptance', 'Приёмка')}>
               <pre style={preStyle}>{uc.acceptance_md ?? ''}</pre>
             </PSection>
           )}
 
           {includes.length + extendsUc.length > 0 && (
-            <PSection title="Граф UC">
+            <PSection title={t('lore.product.us.graph', 'Граф UC')}>
               {includes.map(id => (
                 <LinkChip key={`inc-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>includes → {id}</LinkChip>
               ))}

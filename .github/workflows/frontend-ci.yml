@@ -12,6 +12,32 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Раннер получает HTTP_PROXY из своей конфигурации, и она переезжает вместе
+      # с ним. После переноса раннеров на ci-server прокси остался прописанным
+      # (…:10809), но там его нет — setup-node падал за 0 секунд с
+      # «tunneling socket could not be established, ECONNREFUSED 172.17.0.1:10809»,
+      # и красным был ЛЮБОЙ PR, независимо от содержимого.
+      #
+      # Не «убрать прокси», а не зависеть от того, жив ли он: проверяем
+      # доступность и, если не отвечает, снимаем переменные на остаток job'а.
+      # Так один и тот же workflow работает и с прокси, и без него.
+      #
+      # ПРОКСИ НУЖЕН, а не «желателен» — снимать его из конфигурации раннера
+      # нельзя. Прямой выход у ci-server есть, но деградирован: 20 пакетов через
+      # прокси — 20 секунд, напрямую — 2 мин 55 с, а `apk add curl` напрямую
+      # вообще отваливается по таймауту. Ускоряет при этом не VPN (npm по
+      # правилам маршрутизации идёт мимо него, direct), а сам xray —
+      # переиспользованием соединений. Тем же прокси ходит Telegram-уведомление
+      # из lore-cd.yml.
+      #
+      # ПРОВЕРКА ИМЕННО TCP-КОННЕКТОМ, И ЭТО НАМЕРЕННО. Не заменять на HTTP-пробу
+      # через busybox wget: он получает через этот прокси 400 Bad Request (curl и
+      # npm при этом работают), и такая проба ложно объявила бы живой прокси
+      # мёртвым — переменные снялись бы, npm ушёл бы напрямую и job умер бы по
+      # таймауту, причём с невнятной ошибкой npm вместо внятной причины.
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
@@ -34,5 +60,18 @@ jobs:
           npm run build
 
       # Validates the frontend Dockerfile (npm build + nginx.conf) as shipped.
+      # Внутри образа идёт `npm ci`, а прямой выход у ci-server деградирован
+      # (см. комментарий к шагу отсечения прокси выше) — без прокси эта сборка
+      # либо тянется минутами, либо падает по таймауту. Прокси у раннера задан
+      # как host.docker.internal, а внутри docker build это имя само НЕ
+      # резолвится на Linux-демоне: нужен --add-host, иначе build-arg указывает
+      # в никуда. Та же правка, что в backend-ci.yml.
       - name: Docker image build (frontend + nginx)
-        run: docker build -t lore-app:ci .
+        run: |
+          ARGS="--add-host=host.docker.internal:host-gateway"
+          for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
+            eval "val=\${$v:-}"
+            [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
+          done
+          # shellcheck disable=SC2086
+          docker build $ARGS -t lore-app:ci .

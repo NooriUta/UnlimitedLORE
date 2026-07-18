@@ -1,0 +1,428 @@
+{
+ "токен": [
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-012-D3",
+   "title": "Матрица доменов: area/bragi_channel/tag = (A)+(B) расширяемые; artifact_kind = (A)+(B) нерасширяемый; status/priority/adr_status = ТОЛЬКО (A); CSS-палитры не входят (остаются токенами)",
+   "score": 5.367184,
+   "where": "заголовок",
+   "rank": 6.4406208
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D2",
+   "title": "Lucene-выражение строит сервер; пользовательский ввод синтаксисом не считается",
+   "score": 4.870614,
+   "where": "заголовок",
+   "rank": 5.8447368
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_LORE_UX_OPTIMIZATION/T16",
+   "title": "W5 · Токенизация цвета (~50 hex → CSS-переменные) (P1)",
+   "score": 8.154951,
+   "where": "заголовок",
+   "rank": 5.7084657
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-MT-001",
+   "title": "Keycloak Organizations как источник истины для тенантов",
+   "score": 4.277822,
+   "where": "тело ADR",
+   "rank": 5.3472775
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_HOUND_MYSQL_LISTENER/ML-01",
+   "title": "MySqlTokenMapper — полный маппинг токенов → CanonicalTokenType (§3 спека)",
+   "score": 7.2980585,
+   "where": "заголовок",
+   "rank": 5.10864095
+  },
+  {
+   "type": "spec",
+   "ref_id": "MYSQL_MARIADB_GRAMMAR_MAPPING",
+   "title": "",
+   "score": 4.571217,
+   "where": "тело спеки",
+   "rank": 5.0283387
+  },
+  {
+   "type": "spec",
+   "ref_id": "MTN-34",
+   "title": "MTN-34 — Service account / API key per tenant",
+   "score": 4.479089,
+   "where": "тело спеки",
+   "rank": 4.926997900000001
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-QG-001",
+   "title": "Архитектура QG-рутин: LORE-native метрики, LLM-исполнение, проверяемые инварианты",
+   "score": 3.920737,
+   "where": "тело ADR",
+   "rank": 4.90092125
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_HOUND_MYSQL_LISTENER/TR-01",
+   "title": "TrinoTokenMapper — полный маппинг токенов (Trino идентификаторы case-insensitive)",
+   "score": 6.968139,
+   "where": "заголовок",
+   "rank": 4.8776972999999995
+  },
+  {
+   "type": "spec",
+   "ref_id": "HOUND_PLSQL_GRAMMAR_GAPS_CORPUS_RULES",
+   "title": "HOUND — PL/SQL Grammar Gaps + Corpus Preparation Rules",
+   "score": 3.9823356,
+   "where": "тело спеки",
+   "rank": 4.38056916
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_COMPONENT_IDENTITY/CI-25",
+   "title": "Area color palette: переход на CSS-var color-mix от 4 токенов темы",
+   "score": 6.135982,
+   "where": "заголовок",
+   "rank": 4.2951874
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D13",
+   "title": "Смешанный корпус: RussianAnalyzer не лемматизирует английский — компенсирует префикс, а не анализатор",
+   "score": 3.5323899,
+   "where": "заголовок",
+   "rank": 4.23886788
+  }
+ ],
+ "релиз": [
+  {
+   "type": "adr",
+   "ref_id": "ADR-FE-002",
+   "title": "Вынести публичный сайт в отдельный модуль/сборку",
+   "score": 6.8031683,
+   "where": "тело ADR",
+   "rank": 8.503960375
+  },
+  {
+   "type": "sprint",
+   "ref_id": "SPRINT_ELK_M2_KNOT",
+   "title": "SPRINT_ELK_M2_KNOT",
+   "score": 7.147217,
+   "where": "заголовок",
+   "rank": 6.4324953
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_LORE_SCHEMA_VERSIONING/SV-08",
+   "title": "Runbook апгрейда клиента + раздел версионирования в LORE_DB_SPEC",
+   "score": 8.496517,
+   "where": "заметка задачи",
+   "rank": 5.9475619
+  },
+  {
+   "type": "sprint",
+   "ref_id": "SPRINT_BLOG2",
+   "title": "Blog #2 — HEIMDALL observability",
+   "score": 6.2788954,
+   "where": "заголовок",
+   "rank": 5.65100586
+  },
+  {
+   "type": "sprint",
+   "ref_id": "SPRINT_HEIMDALL_SPRINT4",
+   "title": "Heimdall Sprint 4b — Nav UX (HX-01..07)",
+   "score": 6.150698,
+   "where": "заголовок",
+   "rank": 5.5356282000000006
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_LORE_FORGEJO_INTEGRATION/FJ-05",
+   "title": "Замыкание релиз-цикла: авто-привязка PR→релиз (SHIPPED_IN) + спринт→релиз на merge",
+   "score": 7.27796,
+   "where": "заголовок",
+   "rank": 5.094571999999999
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-YGG-REST-ONLY",
+   "title": "ArcadeDB только через REST — без Java SDK; возможности берём волнами релизов",
+   "score": 4.04521,
+   "where": "заголовок",
+   "rank": 5.0565125
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-ARCH-001",
+   "title": "Тонкая интеграция: не втягивать чужой слой в свой процесс; протокол — наружу",
+   "score": 4.0315585,
+   "where": "тело ADR",
+   "rank": 5.039448125
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_SEO_SITE_WAVE2/SITE2-03",
+   "title": "Блог: дополнить «Как машина читает SQL» блоком Dragon Book (синк с релизной версией)",
+   "score": 7.1810603,
+   "where": "заголовок",
+   "rank": 5.02674221
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_DALI_DIALECTS_LORE_VIZ/LSL-04",
+   "title": "LoreSprintTree: ряд = дата спринта · иконка · № релиза · дата релиза",
+   "score": 6.891172,
+   "where": "заголовок",
+   "rank": 4.8238204
+  },
+  {
+   "type": "question",
+   "ref_id": "OQ-022-FEATURE-RELEASE",
+   "title": "Нужна ли прямая связь Feature → Release («в релизе такие-то фичи целиком»)?",
+   "score": 4.794352,
+   "where": "заголовок",
+   "rank": 4.794352
+  },
+  {
+   "type": "spec",
+   "ref_id": "SAGA_RELEASES_DATA_MODEL",
+   "title": "SAGA — вкладка «Релизы»: источники данных и связи со спринтами",
+   "score": 4.328175,
+   "where": "заголовок",
+   "rank": 4.7609925
+  }
+ ],
+ "поиск": [
+  {
+   "type": "adr",
+   "ref_id": "ADR-LORE-033",
+   "title": "Сквозной поиск на FULL_TEXT ArcadeDB: API, ранжирование, охват",
+   "score": 8.572613,
+   "where": "тело ADR",
+   "rank": 10.715766250000001
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D1",
+   "title": "Сквозной поиск — отдельный эндпоинт /lore/search, а не generic-слайс",
+   "score": 7.789821,
+   "where": "заголовок",
+   "rank": 9.347785199999999
+  },
+  {
+   "type": "adr",
+   "ref_id": "D-126",
+   "title": "SAGA-визуализация LORE — 7 вкладок под схему v1.1, Plan из БД (SPRINT_SYSTEM_AIDA_LORE)",
+   "score": 6.775973,
+   "where": "тело ADR",
+   "rank": 8.469966249999999
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_HEIMDALL_OVERVIEW_POLISH/U3-db-search",
+   "title": "🟡 U3 [/overview/services + /team-archive]: поиск/фильтр по длинным спискам",
+   "score": 10.141943,
+   "where": "заметка задачи",
+   "rank": 7.099360099999999
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D8",
+   "title": "Платформенное: whitelist на \\w обязан нести UNICODE_CHARACTER_CLASS; 400 нельзя отдавать как пустую выдачу",
+   "score": 5.850879,
+   "where": "заголовок",
+   "rank": 7.0210548
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D7",
+   "title": "Платформенное: полнотекстовый поиск в ArcadeDB — только CONTAINSTEXT/SEARCH_INDEX; LIKE для поиска запрещён",
+   "score": 5.1132565,
+   "where": "заголовок",
+   "rank": 6.1359078
+  },
+  {
+   "type": "spec",
+   "ref_id": "SPEC-TECH-LORE-ARCADEDB",
+   "title": "ArcadeDB",
+   "score": 5.006051,
+   "where": "тело спеки",
+   "rank": 5.506656100000001
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_LORE_UX_OPTIMIZATION/T17",
+   "title": "W3 · Поиск в QG + единый паттерн поиска (P1)",
+   "score": 7.609441,
+   "where": "заголовок",
+   "rank": 5.3266086999999995
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D4",
+   "title": "Охват включает *Hist-тела со схлопыванием результата к родительской сущности",
+   "score": 4.3144174,
+   "where": "заголовок",
+   "rank": 5.17730088
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-009-D5",
+   "title": "Вкладка «Компоненты» — master-detail: слева area-чипы со счётчиками + поиск + список; справа паспорт (tech stack, submodules кликабельны, ADRs → вкладка ADR, specs)",
+   "score": 4.3001947,
+   "where": "заголовок",
+   "rank": 5.1602336399999995
+  },
+  {
+   "type": "spec",
+   "ref_id": "OL_IDENTIFIER_MAPPING_SPEC",
+   "title": "Спецификация маппинга идентификаторов OL",
+   "score": 4.356917,
+   "where": "тело спеки",
+   "rank": 4.792608700000001
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_SEO_MARKETING_ACTIONS/SEO-MKT-01",
+   "title": "Яндекс Вебмастер: указать регион сайта",
+   "score": 6.5470653,
+   "where": "заметка задачи",
+   "rank": 4.58294571
+  }
+ ],
+ "Остервальдер": [
+  {
+   "type": "adr",
+   "ref_id": "ADR-LORE-033",
+   "title": "Сквозной поиск на FULL_TEXT ArcadeDB: API, ранжирование, охват",
+   "score": 4.280763,
+   "where": "тело ADR",
+   "rank": 5.35095375
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D4",
+   "title": "Охват включает *Hist-тела со схлопыванием результата к родительской сущности",
+   "score": 3.0519617,
+   "where": "заголовок",
+   "rank": 3.66235404
+  },
+  {
+   "type": "decision",
+   "ref_id": "ADR-LORE-033-D9",
+   "title": "FULL_TEXT-индексы: явные имена, RussianAnalyzer и ОБЯЗАТЕЛЬНО явный similarity=BM25",
+   "score": 2.190979,
+   "where": "заголовок",
+   "rank": 2.6291748
+  },
+  {
+   "type": "task",
+   "ref_id": "SPRINT_LORE_PRODUCT_LAYER/SRCH-03",
+   "title": "Миграция FULL_TEXT V11 (10.1): именованные мультиполевые индексы, RussianAnalyzer, явный BM25",
+   "score": 2.2270553,
+   "where": "заметка задачи",
+   "rank": 1.5589387099999998
+  }
+ ],
+ "tenant": [
+  {
+   "type": "spec",
+   "ref_id": "SHUTTLE_TENANT_ISOLATION",
+   "title": "SHUTTLE_TENANT_ISOLATION — Tenant isolation contract",
+   "score": 62.180542,
+   "where": "тело спеки",
+   "rank": 68.39859620000001
+  },
+  {
+   "type": "spec",
+   "ref_id": "RBAC_MULTITENANT",
+   "title": "AIDA — RBAC & Multi-Tenant Architecture",
+   "score": 40.179577,
+   "where": "тело спеки",
+   "rank": 44.197534700000006
+  },
+  {
+   "type": "spec",
+   "ref_id": "MIMIR_SPEC",
+   "title": "MIMIR — Service Specification v3.0",
+   "score": 39.046856,
+   "where": "тело спеки",
+   "rank": 42.9515416
+  },
+  {
+   "type": "spec",
+   "ref_id": "MTN-01",
+   "title": "MTN-01 — FriggYggLineageRegistry production lookup",
+   "score": 37.18498,
+   "where": "тело спеки",
+   "rank": 40.90347800000001
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-MT-007",
+   "title": "Tenant Eviction Semantics: Lease-based Drain",
+   "score": 30.473677,
+   "where": "тело ADR",
+   "rank": 38.09209625
+  },
+  {
+   "type": "spec",
+   "ref_id": "MTN-02",
+   "title": "MTN-02 — Cypher/query tenant-filter guarantee",
+   "score": 34.462505,
+   "where": "тело спеки",
+   "rank": 37.908755500000005
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-MIMIR-002",
+   "title": "BYOK Direct (Per-Tenant API Keys)",
+   "score": 29.239674,
+   "where": "тело ADR",
+   "rank": 36.5495925
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-CHUR-MULTITORG-001",
+   "title": "Multi-org active tenant switching",
+   "score": 26.843067,
+   "where": "тело ADR",
+   "rank": 33.55383375
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-MT-004",
+   "title": "Leader election + fence token для control-plane dispatch",
+   "score": 25.661139,
+   "where": "тело ADR",
+   "rank": 32.07642375
+  },
+  {
+   "type": "spec",
+   "ref_id": "USER_EDITING_UI_MODEL",
+   "title": "User editing UI — combined KC + FRIGG view",
+   "score": 28.073092,
+   "where": "тело спеки",
+   "rank": 30.8804012
+  },
+  {
+   "type": "spec",
+   "ref_id": "MTN-06",
+   "title": "MTN-06 — Anvil TenantContextFilter",
+   "score": 28.064213,
+   "where": "тело спеки",
+   "rank": 30.870634300000003
+  },
+  {
+   "type": "adr",
+   "ref_id": "ADR-MIMIR-004",
+   "title": "Variants C (Hybrid) + D (On-prem Ollama per-tenant)",
+   "score": 23.358276,
+   "where": "тело ADR",
+   "rank": 29.197845
+  }
+ ]
+}

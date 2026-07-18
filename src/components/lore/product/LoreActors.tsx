@@ -1,6 +1,7 @@
 // Экран «Клиент (сегмент)» продуктового слоя (ADR-LORE-022/032, Остервальдер + Коберн).
 // Акторы как сегменты клиентов: master-detail (список слева + профиль сегмента справа).
 // Дизайн зеркалит утверждённый прототип actorP. Данные — через useSlice/fetchLoreSlice.
+import { useTranslation } from 'react-i18next';
 import type {
   LoreActorRow,
   LorePainRow,
@@ -56,6 +57,7 @@ function ProfileLine({
 }
 
 export default function LoreActors({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+  const { t } = useTranslation();
   const { rows: actors, loading } = useSlice<LoreActorRow>('actors', undefined, onError, []);
   const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
   const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
@@ -71,7 +73,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
   if (loading) {
     list = <LoreSkeleton rows={5} />;
   } else if (filtered.length === 0) {
-    list = <EmptyState message="Акторов пока нет" />;
+    list = <EmptyState message={t('lore.product.actor.empty', 'Акторов пока нет')} />;
   } else {
     list = (
       <>
@@ -92,11 +94,11 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
   // ── паспорт (профиль сегмента) ──
   let detail;
   if (!selectedId) {
-    detail = <EmptyDetail text="Выберите сегмент слева" />;
+    detail = <EmptyDetail text={t('lore.product.actor.pick', 'Выберите сегмент слева')} />;
   } else {
     const a = actors.find(x => x.actor_id === selectedId);
     if (!a) {
-      detail = <EmptyDetail text="Выберите сегмент слева" />;
+      detail = <EmptyDetail text={t('lore.product.actor.pick', 'Выберите сегмент слева')} />;
     } else {
       const actorId = a.actor_id;
 
@@ -121,13 +123,13 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--wrn)', marginBottom: 8 }}>{a.actor_id}</div>
 
-          <PSection title="Профиль сегмента (Остервальдер)">
-            <ProfileLine glyph="🎯" label="Работы" items={jobItems} color="var(--job)" onNavigate={onNavigate} />
-            <ProfileLine glyph="🔴" label="Боли" items={painItems} color="var(--pain)" onNavigate={onNavigate} />
-            <ProfileLine glyph="🟢" label="Ожидания" items={gainItems} color="var(--gain)" onNavigate={onNavigate} />
+          <PSection title={t('lore.product.actor.profile', 'Профиль сегмента (Остервальдер)')}>
+            <ProfileLine glyph="🎯" label={t('lore.product.actor.jobs', 'Работы')} items={jobItems} color="var(--job)" onNavigate={onNavigate} />
+            <ProfileLine glyph="🔴" label={t('lore.product.actor.pains', 'Боли')} items={painItems} color="var(--pain)" onNavigate={onNavigate} />
+            <ProfileLine glyph="🟢" label={t('lore.product.actor.gains', 'Ожидания')} items={gainItems} color="var(--gain)" onNavigate={onNavigate} />
           </PSection>
 
-          <PSection title="US роли · отсюда строится RBAC">
+          <PSection title={t('lore.product.actor.ucRbac', 'US роли · отсюда строится RBAC')}>
             {ucIds.length === 0 ? (
               <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
             ) : (
@@ -140,7 +142,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
           </PSection>
 
           {a.body_md && (
-            <PSection title="О роли">
+            <PSection title={t('lore.product.actor.about', 'О роли')}>
               <div style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'pre-wrap' }}>{a.body_md}</div>
             </PSection>
           )}

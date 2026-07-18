@@ -352,6 +352,160 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='gain_rank', code='expected', label_ru='🟠 Ожидаемая — клиент считает её само собой', color='#D4922A', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='expected'",
             "UPDATE KnowDictEntry SET dict_type='gain_rank', code='desired', label_ru='🟢 Желаемая — обрадуется, но не ждёт', color='#7DBF78', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='desired'",
             "UPDATE KnowDictEntry SET dict_type='gain_rank', code='unexpected', label_ru='✨ Неожиданная — превосходит ожидания', color='#88B8A8', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='unexpected'"
+        )),
+
+        // ── V11 (10.1) SRCH-03: полнотекст под сквозной поиск ────────────────
+        // Аддитивный шаг: объявляем недостающие текстовые свойства, индексы
+        // создаёт Java-шаг (см. ниже, почему не SQL).
+        //
+        // Замерено на ArcadeDB 26.7.2: заголовки ADR/спек/задач/ранбуков/спринтов
+        // ЛЕЖАТ В ДАННЫХ, но в схеме не объявлены — а необъявленное поле
+        // проиндексировать нельзя. Отсюда поиск по названию ADR шёл сканом.
+        // Проверено там же: поздно объявленное свойство индексируется вместе с
+        // уже лежащими значениями, ручной backfill не нужен.
+        new Step(11, 10, "fulltext_named_multifield_indexes", List.of(
+            "CREATE PROPERTY KnowADR.name              IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpec.title            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTask.title            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRunbook.name          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSprint.name           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.title             IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowReleaseHist.description_md IF NOT EXISTS STRING"
+        )),
+
+        // ── V12 (10.2) SRCH-06: полный охват + область поиска ────────────────
+        // Аудит схемы показал текст, который в поиск не попадал вовсе: тела
+        // релизной истории, сводки по файлам, цели вех, двуязычные тела доков,
+        // а также два соседних продукта в той же БД — Bragi и QG-рутины.
+        // Индексируем ВСЁ, но каждая ветка несёт область (FtScope), и поиск
+        // отсекает лишнее ДО запроса, а не фильтрует выдачу после.
+        new Step(12, 10, "fulltext_full_coverage_and_scope", List.of(
+            "CREATE PROPERTY KnowPhase.title       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowPR.title          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRelease.release_name IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowFinding.summary   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpecHist.summary  IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.content_md_en IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.content_md_ru IF NOT EXISTS STRING"
         ))
+    );
+
+    /**
+     * SRCH-03: анализатор для русскоязычного корпуса. Замерено: с ним документ
+     * со словом «релиза» находится по запросу «релиз», на дефолтном — нет.
+     */
+    static final String FT_ANALYZER = "org.apache.lucene.analysis.ru.RussianAnalyzer";
+
+    /**
+     * similarity ОБЯЗАН быть указан ЯВНО, хотя BM25 и заявлен умолчанием.
+     *
+     * Замерено на ArcadeDB 26.7.2, три варианта одного индекса на одних данных
+     * (документы: 5 вхождений термина / 1 вхождение / 1 вхождение + 150 слов балласта):
+     *   без METADATA вообще        → 0.272 / 0.218 / 0.076 — BM25, ранжирует
+     *   METADATA только analyzer   → 1 / 1 / 1             — CLASSIC, НЕ ранжирует
+     *   METADATA analyzer+similarity → 0.272 / 0.218 / 0.076 — BM25, ранжирует
+     *
+     * То есть передача METADATA БЕЗ similarity молча сбрасывает модель в CLASSIC.
+     * Умолчание «BM25 для новых индексов» действует, только пока METADATA не
+     * передан вовсе — а нам он нужен ради анализатора. Первая редакция этого
+     * шага задавала лишь analyzer, и на проде получился корпус без ранжирования:
+     * все совпадения со скором 1.
+     */
+    static final String FT_SIMILARITY = "BM25";
+
+    /**
+     * Область поиска — «куда ходить». Отсекает ветки ДО запроса, а не фильтрует
+     * выдачу после: Bragi и QG живут в той же БД, но это другие продукты, и по
+     * умолчанию в выдачу Forseti попадать не должны. Заодно дешевле: меньше
+     * веток unionall на запрос.
+     *
+     * Имена совпадают с ПРОСТРАНСТВАМИ в шапке Seiðr (FORSETI / BRAGI), а не с
+     * внутренними («LORE»): иначе реестр и интерфейс называют одно разными
+     * словами, и «искать в LORE» перестаёт совпадать с тем, где пользователь стоит.
+     *
+     * Почему НЕ разносим по разным БД, хотя связность почти нулевая: замерено
+     * 23 ребра из 21754 пересекают границу продуктов (QGRecommendation→KnowTask
+     * ×10, QualityGate→LoreComponent ×12, BragiInsight→KnowTask ×1). Но это ровно
+     * те рёбра, ради которых слой существует — рекомендация гейта, ставшая
+     * задачей. Рёбер между базами в ArcadeDB нет: разделение превратило бы их в
+     * мягкие ссылки по id, без обхода и без целостности.
+     */
+    enum FtScope { FORSETI, BRAGI, QUALITY }
+
+    /** Именованный мультиполевой FULL_TEXT-индекс: одна ветка поиска = один вызов. */
+    record FtIndex(String name, String type, List<String> fields, FtScope scope) {
+        FtIndex(String name, String type, List<String> fields) { this(name, type, fields, FtScope.FORSETI); }
+
+        String createSql() {
+            return "CREATE INDEX `" + name + "` ON " + type + " (" + String.join(", ", fields) + ")"
+                 + " FULL_TEXT METADATA {\"analyzer\":\"" + FT_ANALYZER + "\","
+                 + "\"similarity\":\"" + FT_SIMILARITY + "\"}";
+        }
+    }
+
+    /**
+     * Реестр индексов сквозного поиска (ADR-LORE-033 D10): у типа РОВНО ОДИН
+     * индекс на заголовок + все его *_md. Тогда ветка unionall — один вызов
+     * SEARCH_INDEX, а не вызов на поле.
+     *
+     * Имена явные и стабильные: ранжирование доступно только через
+     * SEARCH_INDEX('<имя>', …), а автоимена вида KnowADR_0_4240054376237
+     * привязаны к внутренним id и меняются при пересоздании.
+     *
+     * Тела ADR/спек/задач/спринтов/ранбуков берём из *Hist: на самих вершинах
+     * те же поля не объявлены, а в Hist объявлены и заполнены — так текст не
+     * дублируется в индексах (ADR-LORE-033 D4/D10).
+     */
+    static final List<FtIndex> FT_INDEXES = List.of(
+        new FtIndex("ftKnowADR",         "KnowADR",         List.of("name")),
+        new FtIndex("ftKnowADRHist",     "KnowADRHist",     List.of("context_md", "decision_md", "consequences_md")),
+        new FtIndex("ftKnowSpec",        "KnowSpec",        List.of("title")),
+        new FtIndex("ftKnowSpecHist",    "KnowSpecHist",    List.of("content_md")),
+        new FtIndex("ftKnowTask",        "KnowTask",        List.of("title")),
+        new FtIndex("ftKnowTaskHist",    "KnowTaskHist",    List.of("note_md")),
+        new FtIndex("ftKnowSprint",      "KnowSprint",      List.of("name", "context_md")),
+        new FtIndex("ftKnowSprintHist",  "KnowSprintHist",  List.of("context_md", "outcome_md")),
+        new FtIndex("ftKnowRunbook",     "KnowRunbook",     List.of("name")),
+        new FtIndex("ftKnowRunbookHist", "KnowRunbookHist", List.of("content_md")),
+        // content_md_en/ru — двуязычные тела доков: без них искалась только
+        // основная колонка, а переводы в выдачу не попадали вовсе.
+        new FtIndex("ftKnowDoc",         "KnowDoc",         List.of("title", "content_md", "content_md_en", "content_md_ru")),
+        new FtIndex("ftKnowDocHist",     "KnowDocHist",     List.of("content_md")),
+        new FtIndex("ftKnowDecision",    "KnowDecision",    List.of("title", "body_md")),
+        new FtIndex("ftKnowQuestion",    "KnowQuestion",    List.of("title", "body_md")),
+        new FtIndex("ftKnowFeature",     "KnowFeature",     List.of("title", "body_md", "context_md")),
+        new FtIndex("ftKnowUseCase",     "KnowUseCase",     List.of("title", "scenario_md", "acceptance_md")),
+        new FtIndex("ftKnowPain",        "KnowPain",        List.of("title", "body_md")),
+        new FtIndex("ftKnowGain",        "KnowGain",        List.of("title", "body_md", "metric_md")),
+        new FtIndex("ftKnowJob",         "KnowJob",         List.of("title", "body_md")),
+        new FtIndex("ftKnowActor",       "KnowActor",       List.of("name", "body_md")),
+        new FtIndex("ftKnowRelease",     "KnowRelease",     List.of("description_md")),
+
+        // ── V12: добор по аудиту схемы ──────────────────────────────────────
+        // Тела релизов жили только на вершине; история описаний не искалась.
+        new FtIndex("ftKnowReleaseHist", "KnowReleaseHist", List.of("description_md")),
+        // Сводки по файлам репозитория — единственный текст, связывающий код с задачами.
+        new FtIndex("ftKnowFile",        "KnowFile",        List.of("summary_md")),
+        // Цели вех: короткие, но это формулировка «зачем», её ищут.
+        new FtIndex("ftKnowMilestoneHist", "KnowMilestoneHist", List.of("goal_md")),
+        // Реестр git-проектов: имя и описание.
+        new FtIndex("ftKnowGitProject",  "KnowGitProject",  List.of("name", "description")),
+        // Русские подписи словарей — по ним ищут «как это называется в интерфейсе».
+        new FtIndex("ftKnowDictEntry",   "KnowDictEntry",   List.of("label_ru")),
+
+        // ── BRAGI: другой продукт в той же БД, отсекается областью ───────────
+        new FtIndex("ftBragiPublication", "BragiPublication", List.of("title", "topic", "main_text_md"), FtScope.BRAGI),
+        new FtIndex("ftBragiRubric",      "BragiRubric",      List.of("name", "description"),            FtScope.BRAGI),
+        new FtIndex("ftBragiPage",        "BragiPage",        List.of("title", "description"),           FtScope.BRAGI),
+        new FtIndex("ftBragiChannel",     "BragiChannel",     List.of("rules_md"),                       FtScope.BRAGI),
+        new FtIndex("ftBragiCompetitor",  "BragiCompetitor",  List.of("name"),                           FtScope.BRAGI),
+        new FtIndex("ftBragiInsight",     "BragiInsight",     List.of("statement_md"),                   FtScope.BRAGI),
+        new FtIndex("ftBragiVariant",     "BragiVariant",     List.of("text_md"),                        FtScope.BRAGI),
+
+        // ── КАЧЕСТВО: прогоны рутин и рекомендации ──────────────────────────
+        new FtIndex("ftClRoutineRun",    "ClRoutineRun",    List.of("detail_md"),          FtScope.QUALITY),
+        new FtIndex("ftClRoutineOutput", "ClRoutineOutput", List.of("title", "content_md"),FtScope.QUALITY),
+        new FtIndex("ftQGRecommendation","QGRecommendation",List.of("title", "body_md"),   FtScope.QUALITY),
+        new FtIndex("ftQGJobTask",       "QGJobTask",       List.of("note_md"),            FtScope.QUALITY)
     );
 }

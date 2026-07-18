@@ -89,10 +89,76 @@ class LoreSchemaMigrationsTest {
 
     @Test
     void humanVersionIsMajorDotMinor() {
-        // Пока все шаги — свои major (3-арг ctor), поэтому minor=0.
         assertTrue(LoreSchemaMigrations.codeHuman().matches("\\d+\\.\\d+"), "формат major.minor");
-        assertTrue(LoreSchemaMigrations.codeHuman().endsWith(".0"),
-            "все текущие шаги — свои major, последний = major.0");
+    }
+
+    /**
+     * V11 (SRCH-03, полнотекстовые индексы) — ПЕРВЫЙ аддитивный шаг: ordinal 11
+     * при compatMajor 10, то есть «10.1». До него все шаги были сами себе major
+     * и codeHuman() всегда оканчивался на «.0» — прежняя редакция теста
+     * фиксировала именно это временное совпадение и потому здесь падала.
+     *
+     * Существенно тут другое: аддитивный шаг НЕ поднимает ось совместимости.
+     * Поднялся бы major — дрейф-гард отказал бы в старте всем бинарям без него,
+     * а добавление индексов такого не заслуживает.
+     */
+    @Test
+    void additiveStepRaisesOrdinalButNotCompatMajor() {
+        var last = LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1);
+        assertEquals(12, last.version(), "V12 — последний шаг реестра");
+        assertEquals(10, last.compatMajor(), "аддитивный: делит major с V10/V11");
+        assertEquals("10.2", LoreSchemaMigrations.codeHuman(), "человеку это 10.2");
+        assertEquals(10, LoreSchemaMigrations.codeCompatMajor(),
+            "ось совместимости не сдвинулась — старый бинарь переживёт новые индексы");
+        assertEquals(LoreSchemaMigrations.StartupDecision.FORWARD_COMPAT,
+            LoreSchemaMigrations.decide(12, 10, 10, 10),
+            "бинарь без V12 на мигрированной БД обязан работать, а не падать");
+    }
+
+    /**
+     * Область поиска (D14): «куда ходить» отсекается ДО запроса. Тип из чужого
+     * продукта, попавший в область FORSETI, протёк бы в выдачу Forseti — это не
+     * косметика, а смешение продуктов.
+     */
+    @Test
+    void everyIndexDeclaresScopeMatchingItsProduct() {
+        for (var ix : LoreSchemaMigrations.FT_INDEXES) {
+            var expected = ix.type().startsWith("Bragi") ? LoreSchemaMigrations.FtScope.BRAGI
+                         : (ix.type().startsWith("Cl") || ix.type().startsWith("QG"))
+                             ? LoreSchemaMigrations.FtScope.QUALITY
+                             : LoreSchemaMigrations.FtScope.FORSETI;
+            assertEquals(expected, ix.scope(),
+                ix.name() + " (" + ix.type() + "): область не совпадает с продуктом типа");
+        }
+        // все три области реально представлены — иначе проверка выше вырождается
+        var scopes = LoreSchemaMigrations.FT_INDEXES.stream()
+            .map(LoreSchemaMigrations.FtIndex::scope).collect(java.util.stream.Collectors.toSet());
+        assertEquals(3, scopes.size(), "в реестре должны быть все три области");
+    }
+
+    /** Реестр индексов (D10): у типа ровно один индекс, имена уникальны и стабильны. */
+    @Test
+    void fullTextIndexRegistryIsOnePerTypeWithUniqueNames() {
+        var names = LoreSchemaMigrations.FT_INDEXES.stream().map(LoreSchemaMigrations.FtIndex::name).toList();
+        assertEquals(names.size(), Set.copyOf(names).size(), "имена индексов уникальны");
+
+        var types = LoreSchemaMigrations.FT_INDEXES.stream().map(LoreSchemaMigrations.FtIndex::type).toList();
+        assertEquals(types.size(), Set.copyOf(types).size(),
+            "ровно ОДИН индекс на тип: иначе ветка поиска перестаёт быть одним вызовом SEARCH_INDEX (D10)");
+
+        for (var ix : LoreSchemaMigrations.FT_INDEXES) {
+            assertFalse(ix.fields().isEmpty(), ix.name() + ": пустой список полей");
+            assertTrue(ix.createSql().contains(LoreSchemaMigrations.FT_ANALYZER),
+                ix.name() + ": без RussianAnalyzer морфология русского не работает");
+            // Замерено: METADATA без similarity молча сбрасывает модель в CLASSIC,
+            // и все совпадения получают скор 1 — ранжирования нет. Умолчание BM25
+            // действует, только если METADATA не передан вовсе.
+            assertTrue(ix.createSql().contains("\"similarity\":\"BM25\""),
+                ix.name() + ": similarity обязан быть ЯВНЫМ, иначе METADATA даёт CLASSIC");
+            assertFalse(ix.createSql().contains("IF NOT EXISTS"),
+                ix.name() + ": именованный индекс НЕ принимает IF NOT EXISTS — "
+                + "существование проверяет Java-шаг (замерено на 26.7.2)");
+        }
     }
 
     @Test

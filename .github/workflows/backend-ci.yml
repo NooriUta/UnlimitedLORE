@@ -9,8 +9,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Пароль ArcadeDB для live-DB тестов приходит секретом, как в lore-cd.yml.
+    # Раньше он был захардкожен в шаге ниже (dev-стенд, задокументирован в
+    # docs/DEPLOYMENT.md). После переезда БД на ci-server это перестало быть
+    # верным: пароль там свой. Секрет не задан — шаг ниже упадёт с внятным
+    # объяснением, а не непрозрачными 500 из сидера.
+    env:
+      ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
+
+      # См. подробный комментарий в frontend-ci.yml — там же зафиксировано, что
+      # прокси на ci-server НУЖЕН (прямой выход деградирован: минуты вместо
+      # секунд, apk add curl отваливается по таймауту) и что проверка сделана
+      # TCP-коннектом намеренно: busybox wget через этот прокси получает
+      # 400 Bad Request и HTTP-проба ложно объявила бы живой прокси мёртвым.
+      # Здесь это критично вдвойне: ниже proxy-переменные ПРОБРАСЫВАЮТСЯ в
+      # docker build как build-args — мёртвый прокси уронил бы и сборку образа.
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
 
       # Live-DB тесты нужны настоящему ArcadeDB. GitHub-hosted: Testcontainers.
       # Self-hosted Forgejo act_runner: Testcontainers/Ryuk не работает в DooD,
@@ -22,13 +39,44 @@ jobs:
       # Пароль — локальный dev-стенд (он уже в docs/DEPLOYMENT.md), не секрет прода.
       # Must be a STEP (via $GITHUB_ENV) — the `runner` context is not available
       # in a job-level `env:`.
+      # Адрес тест-БД ПОДБИРАЕТСЯ, а не задаётся строкой. Раньше здесь было
+      # жёсткое host.docker.internal:2480 — имя Docker Desktop, которое на
+      # Linux-раннере ci-server не резолвится. После переезда БД на ci-server
+      # (июль 2026) фиксированный адрес перестал быть верным хоть где-то одном:
+      # на ноуте это host.docker.internal, на сервере — шлюз docker-моста.
+      # Проверяем кандидатов по /api/v1/ready и берём первого живого; не нашли —
+      # падаем ГРОМКО, потому что молчаливый скип live-DB тестов уже прятал
+      # регрессию схемы (слепота CI, найдена 2026-07-17).
       - name: Point live-DB tests at the standing test DB (self-hosted) / Testcontainers (github-hosted)
+        shell: bash
         run: |
-          if [ "${{ runner.environment }}" != "github-hosted" ]; then
-            echo "LORE_TEST_DB_URL=http://host.docker.internal:2480" >> "$GITHUB_ENV"
-            echo "LORE_TEST_DB_NAME=lore_ci_test" >> "$GITHUB_ENV"
-            echo "LORE_TEST_DB_PASSWORD=playwithdata" >> "$GITHUB_ENV"
+          if [ "${{ runner.environment }}" = "github-hosted" ]; then
+            echo "github-hosted — тесты пойдут через Testcontainers"; exit 0
           fi
+          PW="${ARCADEDB_ROOT_PASSWORD:-playwithdata}"
+          # Проверяем ДОСТУП, а не доступность. /api/v1/ready отвечает 204 кому
+          # угодно — по нему сервер «живой» даже с неверным паролем, и тесты потом
+          # падают вглубь непрозрачными 500 от сидера ([LORE SEED] ... status 500).
+          # Поэтому кандидат считается годным, только если под нашей учёткой
+          # отдаёт список баз.
+          FOUND=""
+          for cand in ${LORE_CI_DB_URL:-} http://host.docker.internal:2480 http://172.17.0.1:2480 http://127.0.0.1:2480; do
+            if ! curl -sf -m 4 "$cand/api/v1/ready" >/dev/null 2>&1; then
+              echo "  $cand — не отвечает"; continue
+            fi
+            if curl -sf -m 6 -u "root:$PW" "$cand/api/v1/databases" >/dev/null 2>&1; then
+              FOUND="$cand"; break
+            fi
+            echo "  $cand — отвечает, но НЕ пускает под root с текущим паролем"
+          done
+          if [ -z "$FOUND" ]; then
+            echo "::error::ArcadeDB для live-DB тестов недоступен ЛИБО не пускает под root. Пробовали: LORE_CI_DB_URL, host.docker.internal, 172.17.0.1, 127.0.0.1 (все :2480). Если сервер отвечает, но не пускает — задайте секрет ARCADEDB_ROOT_PASSWORD в Forgejo (Settings -> Actions -> Secrets): после переезда БД на ci-server прежний dev-пароль может не подходить. Молча пропускать live-DB тесты нельзя — так уже пряталась регрессия схемы (2026-07-17)."
+            exit 1
+          fi
+          echo "тест-БД: $FOUND"
+          echo "LORE_TEST_DB_URL=$FOUND" >> "$GITHUB_ENV"
+          echo "LORE_TEST_DB_NAME=lore_ci_test" >> "$GITHUB_ENV"
+          echo "LORE_TEST_DB_PASSWORD=$PW" >> "$GITHUB_ENV"
 
       # GitHub-hosted: fetch the JDK the normal way.
       - name: Set up JDK 21 (github-hosted)
@@ -78,7 +126,13 @@ jobs:
       #      layer cache makes the retry cheap.
       - name: Docker image build (backend)
         run: |
-          ARGS=""
+          # host.docker.internal внутри docker build НЕ резолвится сам: на Docker
+          # Desktop это имя добавляет сам движок, на Linux-демоне ci-server — нет.
+          # Прокси у раннера прописан именно так, поэтому без --add-host сборка
+          # получала build-arg с неразрешимым хостом, шла напрямую и умирала по
+          # таймауту — три попытки подряд «transient network?», хотя сеть тут ни
+          # при чём. Даём билд-контейнеру тот же резолв, что есть у job'а.
+          ARGS="--add-host=host.docker.internal:host-gateway"
           for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
             eval "val=\${$v:-}"
             [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"

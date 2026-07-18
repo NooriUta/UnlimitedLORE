@@ -1,6 +1,7 @@
 // Экран «Фичи» продуктового слоя (ADR-LORE-022/032, Остервальдер + Коберн).
 // Master-detail: список фич слева + паспорт справа (мост в профиль VP + реализация US).
 // Дизайн зеркалит утверждённый прототип featureP. Данные — через useSlice/fetchLoreSlice.
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import type { LoreFeatureRow, LoreUcRow } from '../../../api/lore';
 import { fetchLoreSlice } from '../../../api/lore';
@@ -21,11 +22,14 @@ import {
 } from './shared';
 
 // Уровень цели (Коберн, D1): облако / воздушный змей.
-function goalOf(level: string | null | undefined): { glyph: string; label: string } {
+// Хелпер модульного уровня — `t` здесь недоступен, поэтому отдаём КЛЮЧ, а
+// разрешает его вызывающий компонент. Для неизвестного уровня ключа нет:
+// показываем сырое значение из данных как есть.
+function goalOf(level: string | null | undefined): { glyph: string; labelKey: string | null; raw: string } {
   const v = (level ?? '').toLowerCase();
-  if (v.includes('cloud') || v.includes('☁')) return { glyph: '☁', label: 'облако' };
-  if (v.includes('kite') || v.includes('🪁')) return { glyph: '🪁', label: 'змей' };
-  return { glyph: '', label: level ?? '' };
+  if (v.includes('cloud') || v.includes('☁')) return { glyph: '☁', labelKey: 'lore.product.goal.cloud', raw: 'облако' };
+  if (v.includes('kite') || v.includes('🪁')) return { glyph: '🪁', labelKey: 'lore.product.goal.kite', raw: 'змей' };
+  return { glyph: '', labelKey: null, raw: level ?? '' };
 }
 
 // Глиф статуса US.
@@ -37,6 +41,7 @@ function ucGlyph(status: string | null | undefined): string {
 }
 
 export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+  const { t } = useTranslation();
   const { rows, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
 
   // Use cases выбранной фичи (замыкают fit-мост).
@@ -60,7 +65,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
   if (loading) {
     list = <LoreSkeleton rows={6} />;
   } else if (filtered.length === 0) {
-    list = <EmptyState message="Фичей пока нет" hint="Заводятся через MCP feature_new" />;
+    list = <EmptyState message={t('lore.product.feat.empty', 'Фичей пока нет')} hint={t('lore.product.feat.emptyHint', 'Заводятся через MCP feature_new')} />;
   } else {
     list = (
       <>
@@ -84,11 +89,11 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
   // ── паспорт ──
   let detail;
   if (!selectedId) {
-    detail = <EmptyDetail text="Выберите фичу слева" />;
+    detail = <EmptyDetail text={t('lore.product.feat.pick', 'Выберите фичу слева')} />;
   } else {
     const f = rows.find(x => x.feature_id === selectedId);
     if (!f) {
-      detail = <EmptyDetail text="Выберите фичу слева" />;
+      detail = <EmptyDetail text={t('lore.product.feat.pick', 'Выберите фичу слева')} />;
     } else {
       const goal = goalOf(f.goal_level);
       const status = (f.status ?? '').toLowerCase();
@@ -131,7 +136,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                   color={color}
                   onClick={() => onNavigate('vpProfile', id)}
                   dim={!ok}
-                  title={ok ? 'замкнуто US' : 'заявлено, но не покрыто US'}
+                  title={ok ? t('lore.product.feat.covered', 'замкнуто US') : t('lore.product.feat.uncovered', 'заявлено, но не покрыто US')}
                 >
                   {id} {ok ? '✓' : '⚠'}
                 </LinkChip>
@@ -144,30 +149,30 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
         <div>
           <PassportHeader title={f.title ?? f.feature_id}>
             <Pill tone={status === 'active' ? 'act' : status === 'shipped' ? 'ok' : 'muted'}>{f.status ?? '—'}</Pill>
-            {goal.glyph && <Pill>{goal.glyph} {goal.label}</Pill>}
+            {goal.glyph && <Pill>{goal.glyph} {goal.labelKey ? t(goal.labelKey, goal.raw) : goal.raw}</Pill>}
             <Pill tone={relievedCount >= claimedCount && claimedCount > 0 ? 'ok' : 'warn'}>fit {relievedCount}/{claimedCount}</Pill>
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-value)', marginBottom: 8 }}>{f.feature_id}</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
-            <span style={{ color: 'var(--t3)' }}>Готовность</span>
+            <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.readiness', 'Готовность')}</span>
             <span style={{ fontFamily: 'var(--mono)' }}>{f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</span>
-            <span style={{ color: 'var(--t3)' }}>Веха</span>
+            <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.milestone', 'Веха')}</span>
             <span>{f.milestone_id
               ? <LinkChip color="var(--acc)" onClick={() => onNavigate('milestones', f.milestone_id ?? undefined)}>{f.milestone_id}</LinkChip>
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
-            <span style={{ color: 'var(--t3)' }}>Компонент</span>
+            <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.component', 'Компонент')}</span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{f.component_id ?? '—'}</span>
           </div>
 
-          <PSection title="🌉 Мост в профиль (что ЗАЯВЛЯЕТ фича)">
-            {bridgeRow('РАБОТЫ', jobIds, 'var(--job)', coveredJobs)}
-            {bridgeRow('БОЛИ', painIds, 'var(--pain)', coveredPains)}
-            {bridgeRow('ОЖИДАНИЯ', gainIds, 'var(--gain)', coveredGains)}
+          <PSection title={t('lore.product.feat.bridge', '🌉 Мост в профиль (что ЗАЯВЛЯЕТ фича)')}>
+            {bridgeRow(t('lore.product.feat.jobs', 'РАБОТЫ'), jobIds, 'var(--job)', coveredJobs)}
+            {bridgeRow(t('lore.product.feat.pains', 'БОЛИ'), painIds, 'var(--pain)', coveredPains)}
+            {bridgeRow(t('lore.product.feat.gains', 'ОЖИДАНИЯ'), gainIds, 'var(--gain)', coveredGains)}
           </PSection>
 
-          <PSection title="🌊 Реализация — US (что СДЕЛАНО)">
+          <PSection title={t('lore.product.feat.impl', '🌊 Реализация — US (что СДЕЛАНО)')}>
             {ucs.length === 0
               ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
               : ucs.map((uc, i) => (

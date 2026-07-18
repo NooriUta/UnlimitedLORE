@@ -2,6 +2,7 @@
 // Единый стиль паспортов/списков как в прототипе forseti-storyline-vp.html,
 // на реальных токенах темы. Данные — через fetchLoreSlice (идиома LoreReleasesBoard).
 import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../../api/lore';
 
 // Навигация между продуктовыми разделами (section = ?section=, id = ?passport=).
@@ -108,6 +109,13 @@ export function PassportHeader({ title, children }: { title: string; children?: 
   );
 }
 
-export function EmptyDetail({ text = 'Выберите элемент слева' }: { text?: string }) {
-  return <div style={{ padding: 24, textAlign: 'center', color: 'var(--t3)', fontSize: 12 }}>{text}</div>;
+export function EmptyDetail({ text }: { text?: string }) {
+  // Дефолт разрешается ВНУТРИ компонента, а не в сигнатуре: значение по умолчанию
+  // в параметрах вычисляется до вызова хука и локализовать его там нечем.
+  const { t } = useTranslation();
+  return (
+    <div style={{ padding: 24, textAlign: 'center', color: 'var(--t3)', fontSize: 12 }}>
+      {text ?? t('lore.product.pickItem', 'Выберите элемент слева')}
+    </div>
+  );
 }

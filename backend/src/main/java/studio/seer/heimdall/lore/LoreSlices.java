@@ -26,8 +26,19 @@ public final class LoreSlices {
 
     public record Composed(String sql, Map<String, Object> params) {}
 
-    /** Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards, release_uid (contains #). */
-    static final Pattern VALUE_RE = Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}");
+    /**
+     * Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards,
+     * release_uid (contains #), а также ПОИСКОВЫЕ ЗАПРОСЫ пользователя.
+     *
+     * UNICODE_CHARACTER_CLASS обязателен: без него java-шный `\w` — это ASCII-только
+     * [a-zA-Z_0-9], поэтому любой запрос на кириллице отбивался как BAD_PARAMS (400),
+     * и сквозной поиск по русскоязычной базе не работал в принципе. Флаг расширяет
+     * \w до юникодных букв/цифр; набор пунктуации и лимит длины НЕ меняются — кавычек,
+     * точки с запятой и скобок в whitelist по-прежнему нет, так что поверхность
+     * инъекции та же (плюс значения уходят связанными параметрами, не конкатенацией).
+     */
+    static final Pattern VALUE_RE =
+        Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}", Pattern.UNICODE_CHARACTER_CLASS);
 
     private static final Map<String, SliceDef> SLICES = new LinkedHashMap<>();
 
@@ -78,7 +89,10 @@ public final class LoreSlices {
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY adr_id");
 
         // ADR passport — full context with traversals
@@ -463,8 +477,15 @@ public final class LoreSlices {
         // ── §4 Search — cross-entity, case-insensitive substring ─────────────
         // pattern is wrapped in %…% server-side (callers pass a bare term, e.g. "geoid").
         // Matches id + title/name; for ADRs also the body sections on the OPEN hist row.
+        // Сквозной поиск единого окна (SRCH-01). Продуктовый слой ищется по
+        // FULL_TEXT-индексам через SEARCH_FIELDS + '*' (префикс: иначе поиск-как-
+        // набираешь не работает — токенный поиск не ловит незавершённое слово).
+        // ВАЖНО: SEARCH_FIELDS требует индекс РОВНО на перечисленные поля, а у нас
+        // индексы по одному полю → OR однополевых вызовов. Схлопывание в
+        // мультиполевые + русская морфология — SRCH-03 (миграция V11).
+        // Замеры и ловушки: SPEC-TECH-LORE-ARCADEDB §Полнотекстовый поиск.
         slice("search",
-            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c)) LET " +
+            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c, $f, $u, $pn, $gn, $jb, $ac)) LET " +
             "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
             "      WHERE adr_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR out('HAS_STATE')[valid_to IS NULL].context_md[0] ILIKE ('%' + :pattern + '%') " +
@@ -485,7 +506,34 @@ public final class LoreSlices {
             "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
             "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
-            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10)",
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            // ── продуктовый слой (ADR-LORE-022/032) — по FULL_TEXT-индексам ──
+            "$f = (SELECT 'feature' AS type, feature_id AS ref_id, title FROM KnowFeature " +
+            "      WHERE feature_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['context_md'], :pattern + '*') = true LIMIT 10), " +
+            "$u = (SELECT 'use_case' AS type, uc_id AS ref_id, title FROM KnowUseCase " +
+            "      WHERE uc_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['scenario_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['acceptance_md'], :pattern + '*') = true LIMIT 10), " +
+            "$pn = (SELECT 'pain' AS type, pain_id AS ref_id, title FROM KnowPain " +
+            "      WHERE pain_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "$gn = (SELECT 'gain' AS type, gain_id AS ref_id, title FROM KnowGain " +
+            "      WHERE gain_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['metric_md'], :pattern + '*') = true LIMIT 10), " +
+            "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
+            "      WHERE job_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
+            "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10)",
             List.of("pattern"), Map.of(), "");
 
         // ── §5 Plan ──────────────────────────────────────────────────────────
@@ -570,7 +618,10 @@ public final class LoreSlices {
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY spec_id LIMIT 400");
 
         slice("spec_by_id",
@@ -598,7 +649,8 @@ public final class LoreSlices {
             "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%'",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " AND (out('BELONGS_TO').component_id[0] = :component OR component_id = :component)")),
+                // CONTAINS, не [0] — см. комментарий в слайсе adrs.
+                "component", " AND (out('BELONGS_TO').component_id CONTAINS :component OR component_id = :component)")),
             " ORDER BY spec_id LIMIT 200");
 
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
@@ -663,7 +715,10 @@ public final class LoreSlices {
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY doc_id LIMIT 200");
 
         slice("doc_by_id",
