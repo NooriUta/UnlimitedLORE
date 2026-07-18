@@ -26,8 +26,19 @@ public final class LoreSlices {
 
     public record Composed(String sql, Map<String, Object> params) {}
 
-    /** Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards, release_uid (contains #). */
-    static final Pattern VALUE_RE = Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}");
+    /**
+     * Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards,
+     * release_uid (contains #), а также ПОИСКОВЫЕ ЗАПРОСЫ пользователя.
+     *
+     * UNICODE_CHARACTER_CLASS обязателен: без него java-шный `\w` — это ASCII-только
+     * [a-zA-Z_0-9], поэтому любой запрос на кириллице отбивался как BAD_PARAMS (400),
+     * и сквозной поиск по русскоязычной базе не работал в принципе. Флаг расширяет
+     * \w до юникодных букв/цифр; набор пунктуации и лимит длины НЕ меняются — кавычек,
+     * точки с запятой и скобок в whitelist по-прежнему нет, так что поверхность
+     * инъекции та же (плюс значения уходят связанными параметрами, не конкатенацией).
+     */
+    static final Pattern VALUE_RE =
+        Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}", Pattern.UNICODE_CHARACTER_CLASS);
 
     private static final Map<String, SliceDef> SLICES = new LinkedHashMap<>();
 
