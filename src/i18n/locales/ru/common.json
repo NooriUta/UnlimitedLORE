@@ -1193,10 +1193,6 @@
         "message": "LORE недоступен — lore-backend (:9100) не отвечает.",
         "retry": "Повторить"
       },
-      "search": {
-        "knowledgePlaceholder": "поиск по базе знаний…",
-        "knowledgeAriaLabel": "поиск по базе знаний"
-      },
       "sprints": {
         "presetWorkingTitle": "В работе + Частично",
         "presetWorking": "В работе",
@@ -1270,6 +1266,16 @@
         "features": "Фичи",
         "userStories": "US",
         "openQuestions": "Вопросы"
+      },
+      "filter": {
+        "decisions": "фильтр по решениям…",
+        "openQuestions": "фильтр по открытым вопросам…",
+        "releases": "фильтр по релизам…",
+        "timeline": "фильтр по событиям…",
+        "actors": "фильтр по акторам…",
+        "vpProfile": "фильтр по профилю ценности…",
+        "features": "фильтр по фичам…",
+        "userStories": "фильтр по пользовательским историям…"
       }
     },
     "techRegistry": {

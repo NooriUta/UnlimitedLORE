@@ -1193,10 +1193,6 @@
         "message": "LORE is unreachable — lore-backend (:9100) is not responding.",
         "retry": "Retry"
       },
-      "search": {
-        "knowledgePlaceholder": "search knowledge base…",
-        "knowledgeAriaLabel": "search knowledge base"
-      },
       "sprints": {
         "presetWorkingTitle": "In progress + Partial",
         "presetWorking": "In progress",
@@ -1270,6 +1266,16 @@
         "features": "Features",
         "userStories": "US",
         "openQuestions": "Open questions"
+      },
+      "filter": {
+        "decisions": "filter decisions…",
+        "openQuestions": "filter open questions…",
+        "releases": "filter releases…",
+        "timeline": "filter events…",
+        "actors": "filter actors…",
+        "vpProfile": "filter value profile…",
+        "features": "filter features…",
+        "userStories": "filter user stories…"
       }
     },
     "techRegistry": {

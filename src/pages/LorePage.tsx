@@ -301,9 +301,22 @@ export default function LorePage() {
   // detail pane (passport stayed empty forever).
   const hasDetailSelection = section === 'knowledge' ? !!((artKind && artId) || spec) : !!passport;
 
-  // Sections where the global search bar is actually passed to children
-  const SEARCH_SECTIONS: Section[] = ['decisions', 'openQuestions', 'releases', 'timeline'];
-  const showGlobalSearch = SEARCH_SECTIONS.includes(section);
+  // SRCH-02: сквозной поиск переехал в палитру шапки (⌕ /). Эта строка — НЕ он:
+  // это фильтр СПИСКА текущего раздела, у разделов ниже другого фильтра нет.
+  // Продуктовые экраны уже принимали `listSearch`, но в набор не входили — их
+  // фильтр был недостижим из интерфейса (задавался только через ?q= в URL).
+  const FILTER_SECTIONS: Record<string, string> = {
+    decisions:     'lore.page.filter.decisions',
+    openQuestions: 'lore.page.filter.openQuestions',
+    releases:      'lore.page.filter.releases',
+    timeline:      'lore.page.filter.timeline',
+    actors:        'lore.page.filter.actors',
+    vpProfile:     'lore.page.filter.vpProfile',
+    features:      'lore.page.filter.features',
+    userStories:   'lore.page.filter.userStories',
+  };
+  const filterKey = FILTER_SECTIONS[section];
+  const showGlobalSearch = !!filterKey;
   // MOB: collapse the section nav to type-coloured icons on narrow screens.
   const narrow = useIsNarrow(720);
   // MOB-08: touch targets — icon-only chips get taller padding on narrow so
@@ -465,14 +478,14 @@ export default function LorePage() {
   return (
     <DictionaryProvider>
     <div style={S.root}>
-      {/* ── Top search bar — only on sections that use global q ───────────── */}
+      {/* ── Фильтр списка текущего раздела (не сквозной поиск — тот в палитре) ── */}
       {showGlobalSearch && (
         <div style={S.topBar}>
           <span style={S.searchIcon}>🔍</span>
           <input
             style={S.searchInput}
-            placeholder={t('lore.page.search.knowledgePlaceholder', 'поиск по базе знаний…')}
-            aria-label={t('lore.page.search.knowledgeAriaLabel', 'поиск по базе знаний')}
+            placeholder={t(filterKey, 'фильтр по списку…')}
+            aria-label={t(filterKey, 'фильтр по списку…')}
             value={search}
             onChange={e => onSearchChange(e.target.value)}
           />
