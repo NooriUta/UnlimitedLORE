@@ -62,11 +62,26 @@ COPY db-schema ./db-schema
 # сработал». Ровно поэтому docs/AUTH_OMILORE.md требует «Rebuild the image» для
 # ОБЕИХ сторон, а не только для фронта.
 #
-# Пусто по умолчанию → auth выключен, поведение как раньше.
 # LORE_OIDC_ISSUER нужен здесь же: без него Quarkus запечёт дефолтный
 # localhost-issuer, и валидация токенов пойдёт не туда.
-ARG LORE_AUTH_ENABLED=""
-ARG LORE_OIDC_ISSUER=""
+#
+# ДЕФОЛТЫ ПОВТОРЯЮТ ДЕФОЛТЫ application.properties, и пустыми быть НЕ МОГУТ.
+# `${LORE_AUTH_ENABLED:false}` подставляет `false`, только когда переменная НЕ
+# ОПРЕДЕЛЕНА вовсе. `ENV LORE_AUTH_ENABLED=""` определяет её пустой строкой —
+# значение есть, оно просто пустое, дефолт не срабатывает, и сборка падает:
+#
+#   Task :quarkusAppPartsBuild FAILED
+#   SRCFG00040: The config property quarkus.oidc.enabled is defined as the empty
+#   String ("") which the following Converter considered to be null
+#
+# Падает именно на СБОРКЕ образа, потому что quarkus.oidc.enabled фиксируется на
+# сборке (см. комментарий выше). Ретрай в backend-ci при этом маркирует отказ как
+# «transient network?» и честно повторяет три раза — повтор обречён, сеть ни при чём.
+#
+# Тот же класс отказа уже ловили на CORS_ORIGINS (MIG-23): пустая строка из
+# `${VAR:-}` перекрывает дефолт конфига и выглядит как «настройка не применилась».
+ARG LORE_AUTH_ENABLED=false
+ARG LORE_OIDC_ISSUER=http://localhost:18180/kc/realms/omilore
 ENV LORE_AUTH_ENABLED=$LORE_AUTH_ENABLED \
     LORE_OIDC_ISSUER=$LORE_OIDC_ISSUER
 
