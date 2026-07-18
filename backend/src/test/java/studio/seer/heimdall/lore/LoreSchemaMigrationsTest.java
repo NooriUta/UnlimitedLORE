@@ -117,7 +117,7 @@ class LoreSchemaMigrationsTest {
 
     /**
      * Область поиска (D14): «куда ходить» отсекается ДО запроса. Тип из чужого
-     * продукта, попавший в область LORE, протёк бы в выдачу Forseti — это не
+     * продукта, попавший в область FORSETI, протёк бы в выдачу Forseti — это не
      * косметика, а смешение продуктов.
      */
     @Test
@@ -126,7 +126,7 @@ class LoreSchemaMigrationsTest {
             var expected = ix.type().startsWith("Bragi") ? LoreSchemaMigrations.FtScope.BRAGI
                          : (ix.type().startsWith("Cl") || ix.type().startsWith("QG"))
                              ? LoreSchemaMigrations.FtScope.QUALITY
-                             : LoreSchemaMigrations.FtScope.LORE;
+                             : LoreSchemaMigrations.FtScope.FORSETI;
             assertEquals(expected, ix.scope(),
                 ix.name() + " (" + ix.type() + "): область не совпадает с продуктом типа");
         }

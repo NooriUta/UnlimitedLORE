@@ -418,12 +418,23 @@ final class LoreSchemaMigrations {
      * выдачу после: Bragi и QG живут в той же БД, но это другие продукты, и по
      * умолчанию в выдачу Forseti попадать не должны. Заодно дешевле: меньше
      * веток unionall на запрос.
+     *
+     * Имена совпадают с ПРОСТРАНСТВАМИ в шапке Seiðr (FORSETI / BRAGI), а не с
+     * внутренними («LORE»): иначе реестр и интерфейс называют одно разными
+     * словами, и «искать в LORE» перестаёт совпадать с тем, где пользователь стоит.
+     *
+     * Почему НЕ разносим по разным БД, хотя связность почти нулевая: замерено
+     * 23 ребра из 21754 пересекают границу продуктов (QGRecommendation→KnowTask
+     * ×10, QualityGate→LoreComponent ×12, BragiInsight→KnowTask ×1). Но это ровно
+     * те рёбра, ради которых слой существует — рекомендация гейта, ставшая
+     * задачей. Рёбер между базами в ArcadeDB нет: разделение превратило бы их в
+     * мягкие ссылки по id, без обхода и без целостности.
      */
-    enum FtScope { LORE, BRAGI, QUALITY }
+    enum FtScope { FORSETI, BRAGI, QUALITY }
 
     /** Именованный мультиполевой FULL_TEXT-индекс: одна ветка поиска = один вызов. */
     record FtIndex(String name, String type, List<String> fields, FtScope scope) {
-        FtIndex(String name, String type, List<String> fields) { this(name, type, fields, FtScope.LORE); }
+        FtIndex(String name, String type, List<String> fields) { this(name, type, fields, FtScope.FORSETI); }
 
         String createSql() {
             return "CREATE INDEX `" + name + "` ON " + type + " (" + String.join(", ", fields) + ")"
