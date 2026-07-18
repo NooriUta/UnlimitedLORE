@@ -54,6 +54,27 @@ class AgentScopeFilterTest {
         }
     }
 
+    // ── Разрушающие операции внутри разрешённого семейства ───────────────────
+
+    @Test
+    void подпутьРазбираетсяИзДвухСегментов() {
+        assertEquals("adr/delete", AgentScopeFilter.subPathOf("/lore/adr/delete"));
+        assertEquals("adr/link", AgentScopeFilter.subPathOf("lore/adr/link"));
+        assertEquals("", AgentScopeFilter.subPathOf("/lore/adr"));
+        assertEquals("", AgentScopeFilter.subPathOf("/api/v1/ready"));
+    }
+
+    @Test
+    void developerЗаводитADRноНеСноситИНеПереименовывает() {
+        // Решение владельца: developer владеет adr_new. Создание и правка
+        // неразделимы по пути (общий upsert), поэтому семейство ему открыто —
+        // но снос и переименование изъяты отдельным правилом.
+        assertTrue(allowedFor("adr").contains("developer"), "developer заводит ADR");
+        assertTrue(!narrowedFor("adr/delete").contains("developer"), "developer не удаляет ADR");
+        assertTrue(!narrowedFor("adr/rename").contains("developer"), "developer не переименовывает ADR");
+        assertTrue(narrowedFor("adr/delete").contains("architect"), "architect удаляет");
+    }
+
     @Test
     void узкиеПрофилиНеПишутВЧужиеСемейства() {
         assertTrue(!allowedFor("adr").contains("marketer"), "маркетолог не правит ADR");
@@ -107,6 +128,22 @@ class AgentScopeFilterTest {
             if (v != null && !v.isBlank()) out.add(v);
         }
         return List.copyOf(out);
+    }
+
+    private static Set<String> narrowedFor(String subPath) {
+        return tableOf("SUBPATH_AGENTS").getOrDefault(subPath, Set.of());
+    }
+
+    private static java.util.Map<String, Set<String>> tableOf(String fieldName) {
+        try {
+            var f = AgentScopeFilter.class.getDeclaredField(fieldName);
+            f.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            var map = (java.util.Map<String, Set<String>>) f.get(null);
+            return map;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static Set<String> allowedFor(String family) {

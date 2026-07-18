@@ -65,7 +65,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      * после {@code /lore/}. Значения без префикса {@code agent-}.
      */
     private static final Map<String, Set<String>> FAMILY_AGENTS = Map.ofEntries(
-        Map.entry("adr",       Set.of("full", "architect")),
+        // developer заводит ADR (README профилей: adr_new) — решение владельца
+        // 2026-07-18. Создание и правка неразделимы по пути: adr_new и adr_set
+        // оба идут в POST /lore/adr (upsert). А вот разрушающие операции
+        // разделимы, и они у developer'а изъяты — см. SUBPATH_AGENTS ниже.
+        Map.entry("adr",       Set.of("full", "architect", "developer")),
         Map.entry("decision",  Set.of("full", "architect")),
         Map.entry("spec",      Set.of("full", "architect", "developer", "marketer")),
         Map.entry("runbook",   Set.of("full", "architect", "developer", "marketer")),
@@ -99,6 +103,21 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("project",   Set.of("full", "architect", "pm")),
         Map.entry("bragi",     Set.of("full", "marketer")));
 
+    /**
+     * Исключения УЖЕ семейства: конкретный подпуть с более узким списком.
+     * Проверяется раньше семейства и только точным совпадением.
+     *
+     * <p>Нужны там, где «завести» и «снести» — разные по последствиям операции на
+     * одном семействе. developer'у положено авторствовать ADR, но не удалять и не
+     * переименовывать чужие: восстановление после ошибочного сноса стоит несопоставимо
+     * дороже, чем сам снос, а отличить «ошибся» от «так и хотел» постфактум нельзя.
+     */
+    private static final Map<String, Set<String>> SUBPATH_AGENTS = Map.of(
+        "adr/delete",   Set.of("full", "architect"),
+        "adr/rename",   Set.of("full", "architect"),
+        "spec/delete",  Set.of("full", "architect"),
+        "doc/delete",   Set.of("full", "architect"));
+
     /** Методы, которые ничего не меняют — вне проверки. */
     private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
@@ -120,8 +139,16 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         String scope = agentScope();
         if (scope == null) return;                      // человек, а не агент
 
-        String family = familyOf(ctx.getUriInfo().getPath());
+        String path = ctx.getUriInfo().getPath();
+        String family = familyOf(path);
         if (family == null) return;
+
+        // Подпуть проверяется ПЕРВЫМ: он сужает права внутри разрешённого семейства.
+        Set<String> narrowed = SUBPATH_AGENTS.get(subPathOf(path));
+        if (narrowed != null && !narrowed.contains(scope)) {
+            deny(ctx, scope, subPathOf(path), "разрушающая операция; доступна: " + String.join(", ", narrowed));
+            return;
+        }
 
         if (HUMAN_ONLY.contains(family)) {
             deny(ctx, scope, family, "это семейство правит только человек");
@@ -169,6 +196,15 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         int slash = rest.indexOf('/');
         String head = slash < 0 ? rest : rest.substring(0, slash);
         return head.isBlank() ? null : head;
+    }
+
+    /** Два первых сегмента после {@code lore/}: "lore/adr/delete" → "adr/delete". */
+    static String subPathOf(String path) {
+        if (path == null) return "";
+        String p = path.startsWith("/") ? path.substring(1) : path;
+        if (!p.startsWith("lore/")) return "";
+        String[] parts = p.substring("lore/".length()).split("/");
+        return parts.length >= 2 ? parts[0] + "/" + parts[1] : "";
     }
 
     private void deny(ContainerRequestContext ctx, String scope, String family, String why) {
