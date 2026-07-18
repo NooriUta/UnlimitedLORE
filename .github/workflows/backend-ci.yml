@@ -26,19 +26,8 @@ jobs:
       # 400 Bad Request и HTTP-проба ложно объявила бы живой прокси мёртвым.
       # Здесь это критично вдвойне: ниже proxy-переменные ПРОБРАСЫВАЮТСЯ в
       # docker build как build-args — мёртвый прокси уронил бы и сборку образа.
-      - name: Drop proxy env if the proxy is unreachable
-        shell: bash
-        run: |
-          P="${HTTP_PROXY:-${http_proxy:-}}"
-          [ -z "$P" ] && { echo "прокси не задан — ничего не делаем"; exit 0; }
-          hostport="${P#*://}"; hostport="${hostport%%/*}"
-          h="${hostport%%:*}"; p="${hostport##*:}"; [ "$p" = "$h" ] && p=8080
-          if timeout 3 bash -c "exec 3<>/dev/tcp/$h/$p" 2>/dev/null; then
-            echo "прокси $P доступен — оставляем"
-          else
-            echo "::warning::прокси $P недоступен — снимаю proxy-переменные на этот job. Если ниже Gradle или docker build упрётся в таймаут при скачивании зависимостей — причина ЗДЕСЬ: прямой выход у этого хоста деградирован. Чинить прокси в конфигурации раннера."
-            for v in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do echo "$v=" >> "$GITHUB_ENV"; done
-          fi
+      - name: Resolve a working proxy address (or drop it)
+        run: bash .github/scripts/resolve-proxy.sh
 
       # Live-DB тесты нужны настоящему ArcadeDB. GitHub-hosted: Testcontainers.
       # Self-hosted Forgejo act_runner: Testcontainers/Ryuk не работает в DooD,
