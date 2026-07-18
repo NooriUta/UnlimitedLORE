@@ -95,11 +95,14 @@ export default function AppShell() {
 
   const liveDot = { width: 7, height: 7, borderRadius: '50%', background: 'var(--suc)', flexShrink: 0, display: 'inline-block' as const };
   const caret   = { color: 'var(--t3)', fontSize: 10 };
+  // Пилюля тенанта — как «● DEFAULT ⌄» в эталоне: моноширинный капс с трекингом.
   const pill = (brand: boolean) => ({
     display: 'inline-flex' as const, alignItems: 'center', gap: 7, cursor: 'pointer',
     background: 'var(--bg1)', border: '1px solid var(--bd)', borderRadius: 999,
-    padding: '5px 11px', fontSize: 12, color: 'var(--t1)', whiteSpace: 'nowrap' as const,
-    fontWeight: (brand ? 800 : 600) as number, letterSpacing: brand ? '0.06em' : undefined,
+    padding: '5px 11px', fontSize: brand ? 12 : 11.5, color: 'var(--t1)', whiteSpace: 'nowrap' as const,
+    fontFamily: brand ? undefined : 'var(--mono)',
+    textTransform: (brand ? undefined : 'uppercase') as 'uppercase' | undefined,
+    fontWeight: (brand ? 800 : 600) as number, letterSpacing: '0.06em',
   });
   const dd = {
     position: 'absolute' as const, top: 'calc(100% + 6px)', left: 0, zIndex: 200, minWidth: 246,
@@ -198,6 +201,8 @@ export default function AppShell() {
           )}
         </div>
 
+        {!narrow && <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px', flexShrink: 0 }} />}
+
         {/* ── Тенант — самостоятельный контрол: контекст ДАННЫХ, а не «куда идём» ── */}
         {!narrow && (
           <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
@@ -234,20 +239,25 @@ export default function AppShell() {
 
         {showModules && (
           <nav className="lore-nav-scroll" role="tablist" aria-label={t('shell.chapters', 'Главы Forseti')}
-            style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, overflowX: 'auto' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, overflowX: 'auto', marginLeft: 10 }}>
             {CHAPTERS.map(c => {
               const on = c.id === curChapter.id;
               return (
                 <button key={c.id} type="button" role="tab" aria-selected={on} title={t(c.qKey, c.q)}
                   onClick={() => navigate(`/lore?section=${c.sections[0]}`)}
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-                    border: 'none', background: on ? 'var(--bg3)' : 'transparent',
-                    boxShadow: on ? 'inset 0 0 0 1px var(--bd)' : 'none',
+                    // Активный модуль — оливковая рамка + подсветка, неактивные приглушены
+                    // (эталон Seiðr: LOOM активен, KNOT тусклее, ANVIL почти невидим).
+                    display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap',
+                    border: `1px solid ${on ? 'color-mix(in srgb, var(--acc) 45%, var(--bd))' : 'transparent'}`,
+                    background: on ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent',
                     color: on ? 'var(--t1)' : 'var(--t2)', fontSize: 12.5,
-                    fontWeight: on ? 700 : 600, padding: '6px 11px', borderRadius: 7, cursor: 'pointer',
-                  }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: on ? c.color : 'var(--t3)', flexShrink: 0 }} />
+                    fontWeight: on ? 700 : 600, padding: '5px 11px', borderRadius: 7, cursor: 'pointer',
+                    transition: 'background 120ms, color 120ms, border-color 120ms',
+                  }}
+                  onMouseEnter={e => { if (!on) { e.currentTarget.style.background = 'var(--bg2)'; e.currentTarget.style.color = 'var(--t1)'; } }}
+                  onMouseLeave={e => { if (!on) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--t2)'; } }}>
+                  <GameIcon slug={c.icon} size={15} style={{ color: on ? 'var(--acc)' : 'var(--t3)' }} />
                   {t(c.nameKey, c.name)}
                 </button>
               );

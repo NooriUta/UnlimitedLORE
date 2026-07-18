@@ -13,6 +13,8 @@ export type Section =
 export interface Chapter {
   id: string;
   n: string;
+  /** game-icons slug — модуль в шапке рисуется иконкой (эталон Seiðr) */
+  icon: string;
   /** i18n-ключ имени главы; `name` — fallback, если перевода нет */
   nameKey: string;
   name: string;
@@ -25,11 +27,11 @@ export interface Chapter {
 }
 
 export const CHAPTERS: Chapter[] = [
-  { id: 'value', n: '01', nameKey: 'lore.chapters.value.name', name: 'Зачем',      qKey: 'lore.chapters.value.q', q: 'ценность',             color: 'var(--g-value)', sections: ['actors', 'vpProfile', 'vpCanvas', 'features', 'userStories'] },
-  { id: 'do',    n: '02', nameKey: 'lore.chapters.do.name',    name: 'Как делаем', qKey: 'lore.chapters.do.q',    q: 'план · спринты',       color: 'var(--g-do)',    sections: ['milestones', 'plan', 'sprints', 'releases'] },
-  { id: 'know',  n: '03', nameKey: 'lore.chapters.know.name',  name: 'Что решили', qKey: 'lore.chapters.know.q',  q: 'решения · знания',     color: 'var(--g-know)',  sections: ['adrs', 'decisions', 'openQuestions', 'knowledge'] },
-  { id: 'tech',  n: '04', nameKey: 'lore.chapters.tech.name',  name: 'Основа',     qKey: 'lore.chapters.tech.q',  q: 'компоненты · MCP',     color: 'var(--g-tech)',  sections: ['components', 'tech', 'mcp'] },
-  { id: 'ctrl',  n: '05', nameKey: 'lore.chapters.ctrl.name',  name: 'Контроль',   qKey: 'lore.chapters.ctrl.q',  q: 'качество · аналитика', color: 'var(--g-ctrl)',  sections: ['analytics', 'qg', 'timeline', 'evolution'] },
+  { id: 'value', n: '01', icon: 'bullseye',       nameKey: 'lore.chapters.value.name', name: 'Зачем',      qKey: 'lore.chapters.value.q', q: 'ценность',             color: 'var(--g-value)', sections: ['actors', 'vpProfile', 'vpCanvas', 'features', 'userStories'] },
+  { id: 'do',    n: '02', icon: 'sprint',         nameKey: 'lore.chapters.do.name',    name: 'Как делаем', qKey: 'lore.chapters.do.q',    q: 'план · спринты',       color: 'var(--g-do)',    sections: ['milestones', 'plan', 'sprints', 'releases'] },
+  { id: 'know',  n: '03', icon: 'scroll-quill',   nameKey: 'lore.chapters.know.name',  name: 'Что решили', qKey: 'lore.chapters.know.q',  q: 'решения · знания',     color: 'var(--g-know)',  sections: ['adrs', 'decisions', 'openQuestions', 'knowledge'] },
+  { id: 'tech',  n: '04', icon: 'gears',          nameKey: 'lore.chapters.tech.name',  name: 'Основа',     qKey: 'lore.chapters.tech.q',  q: 'компоненты · MCP',     color: 'var(--g-tech)',  sections: ['components', 'tech', 'mcp'] },
+  { id: 'ctrl',  n: '05', icon: 'checkered-flag', nameKey: 'lore.chapters.ctrl.name',  name: 'Контроль',   qKey: 'lore.chapters.ctrl.q',  q: 'качество · аналитика', color: 'var(--g-ctrl)',  sections: ['analytics', 'qg', 'timeline', 'evolution'] },
 ];
 
 export const chapterOf = (s: Section): Chapter =>
