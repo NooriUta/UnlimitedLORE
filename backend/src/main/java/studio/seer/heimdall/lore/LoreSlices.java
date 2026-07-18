@@ -89,7 +89,10 @@ public final class LoreSlices {
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY adr_id");
 
         // ADR passport — full context with traversals
@@ -615,7 +618,10 @@ public final class LoreSlices {
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY spec_id LIMIT 400");
 
         slice("spec_by_id",
@@ -643,7 +649,8 @@ public final class LoreSlices {
             "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%'",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " AND (out('BELONGS_TO').component_id[0] = :component OR component_id = :component)")),
+                // CONTAINS, не [0] — см. комментарий в слайсе adrs.
+                "component", " AND (out('BELONGS_TO').component_id CONTAINS :component OR component_id = :component)")),
             " ORDER BY spec_id LIMIT 200");
 
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
@@ -708,7 +715,10 @@ public final class LoreSlices {
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY doc_id LIMIT 200");
 
         slice("doc_by_id",
