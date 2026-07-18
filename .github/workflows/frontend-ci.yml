@@ -47,14 +47,19 @@ jobs:
           try() { timeout 3 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null; }
 
           PICKED=""
-          for cand in "$h" "$GW" 172.17.0.1 host.docker.internal; do
+          # ПОРЯДОК ВАЖЕН: IP первыми. Адрес из конфигурации — обычно
+          # host.docker.internal, и job его резолвит; если начать с него, выбор
+          # на нём и остановится, а в docker build уедет имя, которое ВНУТРИ
+          # сборки не резолвится — ровно та поломка, ради которой шаг и писался.
+          # Поэтому сперва пробуем то, что понятно всем: шлюз моста и 172.17.0.1.
+          for cand in "$GW" 172.17.0.1 "$h" host.docker.internal; do
             [ -z "$cand" ] && continue
             if try "$cand" "$p"; then PICKED="$cand"; break; fi
             echo "  $cand:$p — не отвечает"
           done
 
           if [ -z "$PICKED" ]; then
-            echo "::warning::прокси не найден ни по одному адресу ($h, $GW, 172.17.0.1, host.docker.internal на порту $p) — снимаю proxy-переменные. Если ниже npm ci упадёт по ETIMEDOUT к registry.npmjs.org — причина ЗДЕСЬ: прямой выход у этого хоста деградирован (минуты вместо секунд). Чинить прокси в конфигурации раннера, а не npm."
+            echo "::warning::прокси не найден ни по одному адресу ($GW, 172.17.0.1, $h, host.docker.internal на порту $p) — снимаю proxy-переменные. Если ниже npm ci упадёт по ETIMEDOUT к registry.npmjs.org — причина ЗДЕСЬ: прямой выход у этого хоста деградирован (минуты вместо секунд). Чинить прокси в конфигурации раннера, а не npm."
             for v in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do echo "$v=" >> "$GITHUB_ENV"; done
             exit 0
           fi
