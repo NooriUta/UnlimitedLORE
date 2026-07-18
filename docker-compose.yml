@@ -36,7 +36,13 @@ services:
       #   192.168.3.131   — ci-server, куда база переехала (три СУБД на ноуте — перебор).
       # Переключение обратно = одна строка в .env, без правки compose.
       - "arcade:${ARCADE_HOST:-host-gateway}"
-      - "kc:host-gateway"              # Keycloak: пока только локально, на ci-server его нет
+      # KC_HOST — по той же схеме, что ARCADE_HOST и FORGEJO_HOST. Keycloak
+      # переехал на ci-server вместе со своей БД (realm omilore и master на
+      # месте, пароль админа прежний: admin/admin из compose применяется только
+      # к ПУСТОЙ базе, а её перевезли целиком).
+      # Путь одинаков на обоих хостах — /kc/realms/…, без префикса оба дают 404,
+      # так что смена хоста ничего в маршрутах не ломает.
+      - "kc:${KC_HOST:-host-gateway}"
       # FORGEJO_HOST — по той же схеме, что ARCADE_HOST. Переключение на ci-server
       # ждёт доступа: SSH-ключ ноута там не авторизован, API-токена в .env нет.
       - "forgejo:${FORGEJO_HOST:-host-gateway}"
@@ -75,8 +81,13 @@ services:
       - S3_SECRET_KEY=${MINIO_PASSWORD:-aidapassword}
       - S3_REGION=us-east-1
     volumes:
-      - C:/AIDA/rag-vs-parse:/bench-data:ro   # STATUS.json + report html
-      - C:/AIDA/docs:/team-docs:ro            # ingestion source (opt-in)
+      # Пути вынесены в переменные: были зашиты как C:/AIDA/... — валидно на
+      # ноуте, но на Linux-сервере docker отвергает такую спецификацию тома
+      # («invalid volume specification»), и контейнер не стартует вовсе.
+      # Дефолты — внутрирепозиторные, поэтому на сервере стенд поднимается
+      # без настройки; на ноуте прежние пути задаются в .env.
+      - ${BENCH_DATA_DIR:-./docs/bench-data}:/bench-data:ro   # STATUS.json + report html
+      - ${TEAM_DOCS_DIR:-./docs}:/team-docs:ro                # ingestion source (opt-in)
     healthcheck:
       # Liveness (process up), not readiness — so an ArcadeDB blip doesn't flap
       # the container. Readiness (DB-gated) lives at /q/health/ready for monitoring.
@@ -101,7 +112,8 @@ services:
       lore-backend:
         condition: service_healthy
     volumes:
-      - C:/AIDA/TestPlayGround/runs:/tyr-runs:ro
+      # См. комментарий выше — тот же случай зашитого Windows-пути.
+      - ${TYR_RUNS_DIR:-./docs/tyr-runs}:/tyr-runs:ro
 
 volumes:
   lore-minio-data:
