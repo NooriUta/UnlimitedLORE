@@ -36,10 +36,20 @@ services:
       #   192.168.3.131   — ci-server, куда база переехала (три СУБД на ноуте — перебор).
       # Переключение обратно = одна строка в .env, без правки compose.
       - "arcade:${ARCADE_HOST:-host-gateway}"
-      - "kc:host-gateway"              # Keycloak: пока только локально, на ci-server его нет
+      # KC_HOST — по той же схеме, что ARCADE_HOST и FORGEJO_HOST. Keycloak
+      # переехал на ci-server вместе со своей БД (realm omilore и master на
+      # месте, пароль админа прежний: admin/admin из compose применяется только
+      # к ПУСТОЙ базе, а её перевезли целиком).
+      # Путь одинаков на обоих хостах — /kc/realms/…, без префикса оба дают 404,
+      # так что смена хоста ничего в маршрутах не ломает.
+      - "kc:${KC_HOST:-host-gateway}"
       # FORGEJO_HOST — по той же схеме, что ARCADE_HOST. Переключение на ci-server
       # ждёт доступа: SSH-ключ ноута там не авторизован, API-токена в .env нет.
       - "forgejo:${FORGEJO_HOST:-host-gateway}"
+      # INFISICAL_HOST — секрет-сервис (D15). Нужен, только когда
+      # lore.secrets.provider=infisical; при provider=env имя просто не
+      # используется, и его недоступность ничего не значит.
+      - "infisical:${INFISICAL_HOST:-host-gateway}"
     depends_on:
       - minio
     environment:
@@ -55,6 +65,16 @@ services:
       - kc.admin.url=http://kc:18180/kc
       - kc.admin.realm=${KC_ADMIN_REALM:-omilore}
       - lore.secrets.provider=${LORE_SECRETS_PROVIDER:-env}
+      # Machine identity (Universal Auth) — единственный путь в свежих сборках
+      # Infisical: сервисные токены оттуда убраны. project-id и environment
+      # ОБЯЗАТЕЛЬНЫ: access-token сам по себе не говорит, из какого проекта
+      # читать, и без них сервис отвечает 400 — а выглядит это как «секрета нет».
+      - lore.secrets.url=${LORE_SECRETS_URL:-http://infisical:18080}
+      - lore.secrets.client-id=${LORE_SECRETS_CLIENT_ID:-}
+      - lore.secrets.client-secret=${LORE_SECRETS_CLIENT_SECRET:-}
+      - lore.secrets.project-id=${LORE_SECRETS_PROJECT_ID:-}
+      - lore.secrets.environment=${LORE_SECRETS_ENVIRONMENT:-prod}
+      - lore.secrets.scope=${LORE_SECRETS_SCOPE:-/lore}
       # Forgejo-мост (ADR-LORE-024, FJ-02): пусто → /lore/forgejo/* отвечает 503,
       # LORE без self-hosted Forgejo работает как раньше. Токен вводит ВЛАДЕЛЕЦ
       # в .env — агенты его не трогают; чтение только через SecretProvider.
@@ -75,8 +95,13 @@ services:
       - S3_SECRET_KEY=${MINIO_PASSWORD:-aidapassword}
       - S3_REGION=us-east-1
     volumes:
-      - C:/AIDA/rag-vs-parse:/bench-data:ro   # STATUS.json + report html
-      - C:/AIDA/docs:/team-docs:ro            # ingestion source (opt-in)
+      # Пути вынесены в переменные: были зашиты как C:/AIDA/... — валидно на
+      # ноуте, но на Linux-сервере docker отвергает такую спецификацию тома
+      # («invalid volume specification»), и контейнер не стартует вовсе.
+      # Дефолты — внутрирепозиторные, поэтому на сервере стенд поднимается
+      # без настройки; на ноуте прежние пути задаются в .env.
+      - ${BENCH_DATA_DIR:-./docs/bench-data}:/bench-data:ro   # STATUS.json + report html
+      - ${TEAM_DOCS_DIR:-./docs}:/team-docs:ro                # ingestion source (opt-in)
     healthcheck:
       # Liveness (process up), not readiness — so an ArcadeDB blip doesn't flap
       # the container. Readiness (DB-gated) lives at /q/health/ready for monitoring.
@@ -101,7 +126,8 @@ services:
       lore-backend:
         condition: service_healthy
     volumes:
-      - C:/AIDA/TestPlayGround/runs:/tyr-runs:ro
+      # См. комментарий выше — тот же случай зашитого Windows-пути.
+      - ${TYR_RUNS_DIR:-./docs/tyr-runs}:/tyr-runs:ro
 
 volumes:
   lore-minio-data:
