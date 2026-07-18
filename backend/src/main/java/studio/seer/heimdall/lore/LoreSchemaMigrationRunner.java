@@ -252,6 +252,20 @@ public class LoreSchemaMigrationRunner {
             // полностью перекрывает именованный, а без имени он бесполезен для
             // SEARCH_INDEX. SEARCH_FIELDS резолвит индекс по полям и продолжает
             // находить новый — старый путь не ломается.
+            // Свойства объявляем САМИ, а не полагаемся на то, что они уже есть.
+            // На проде часть полей существовала исторически, поэтому V11 там
+            // прошёл; на ЧИСТОЙ базе (lore_ci_test пересоздаётся на каждый
+            // прогон CI) их нет, и ArcadeDB отказывает:
+            //   Cannot create the index on type 'KnowSprint.context_md'
+            //   because the property does not exist
+            // Делать это SQL-строкой в самом шаге нельзя: checksum V11/V12 уже
+            // записан в ledger прода, изменение SQL уронило бы старт по дрейф-
+            // гарду. Java-часть в checksum не входит — правка безопасна и делает
+            // шаг самодостаточным на любой базе.
+            for (String f : ix.fields()) {
+                exec("CREATE PROPERTY " + ix.type() + "." + f + " IF NOT EXISTS STRING");
+            }
+
             String clash = byFields.get(want);
             if (clash != null) {
                 LOG.infof("[LORE MIGRATE] снимаю %s — тот же набор полей, что у %s", clash, ix.name());
