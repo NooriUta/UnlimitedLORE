@@ -12,6 +12,30 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Раннер получает HTTP_PROXY из своей конфигурации, и она переезжает вместе
+      # с ним. После переноса раннеров на ci-server прокси остался прописанным
+      # (…:10809), но там его нет — setup-node падал за 0 секунд с
+      # «tunneling socket could not be established, ECONNREFUSED 172.17.0.1:10809»,
+      # и красным был ЛЮБОЙ PR, независимо от содержимого.
+      #
+      # Не «убрать прокси» (на ноуте он нужен — там xray и без него нет выхода
+      # наружу), а не зависеть от того, жив ли он: проверяем доступность и, если
+      # не отвечает, снимаем переменные на остаток job'а. Так один и тот же
+      # workflow работает и с прокси, и без него.
+      - name: Drop proxy env if the proxy is unreachable
+        shell: bash
+        run: |
+          P="${HTTP_PROXY:-${http_proxy:-}}"
+          [ -z "$P" ] && { echo "прокси не задан — ничего не делаем"; exit 0; }
+          hostport="${P#*://}"; hostport="${hostport%%/*}"
+          h="${hostport%%:*}"; p="${hostport##*:}"; [ "$p" = "$h" ] && p=8080
+          if timeout 3 bash -c "exec 3<>/dev/tcp/$h/$p" 2>/dev/null; then
+            echo "прокси $P доступен — оставляем"
+          else
+            echo "::warning::прокси $P недоступен — снимаю proxy-переменные на этот job"
+            for v in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do echo "$v=" >> "$GITHUB_ENV"; done
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
