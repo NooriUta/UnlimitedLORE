@@ -203,8 +203,10 @@ public class LoreKcResource extends LoreResourceBase {
      * админов, жив ли мост, включён ли auth, enforced ли agent_scope. UI рисует
      * чеклист из ЭТОГО ответа, а не из своих предположений — тот же инвариант, что
      * проверяет LoreAuthStartupGuard, но до рестарта.
-     * agent_scope_enforced=false захардкожен до AL-17 (AgentScopeFilter ещё не написан) —
-     * поле переводится на реальную проверку вместе с R2.
+     * agent_scope_enforced (AL-17/R2) больше не захардкожен: он отражает то же
+     * условие, при котором реально работает AgentScopeFilter — включённый OIDC.
+     * Без токенов проверять нечего, поэтому при auth=false честнее false, чем
+     * «фильтр есть».
      */
     @GET
     @Path("auth-preflight")
@@ -226,7 +228,8 @@ public class LoreKcResource extends LoreResourceBase {
             "kc_reachable", conf && kcError == null,
             "kc_error", kcError == null ? "" : kcError,
             "admin_count", adminCount,
-            "agent_scope_enforced", false,   // AL-17 (R2) ещё не реализован
+            "agent_scope_enforced", oidcEnabled,   // AL-17 (R2): AgentScopeFilter работает только при включённом OIDC
+            "agent_scope_families", AgentScopeFilter.enforcedFamilies(),
             "can_enable_auth", canEnable,
             "hint", canEnable
                 ? "включение: LORE_AUTH_ENABLED=true + рестарт (RUNBOOK-AUTH-OMILORE, все флаги вместе)"
