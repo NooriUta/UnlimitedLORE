@@ -9,6 +9,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Пароль ArcadeDB для live-DB тестов приходит секретом, как в lore-cd.yml.
+    # Раньше он был захардкожен в шаге ниже (dev-стенд, задокументирован в
+    # docs/DEPLOYMENT.md). После переезда БД на ci-server это перестало быть
+    # верным: пароль там свой. Секрет не задан — шаг ниже упадёт с внятным
+    # объяснением, а не непрозрачными 500 из сидера.
+    env:
+      ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
 
@@ -56,13 +63,23 @@ jobs:
             echo "github-hosted — тесты пойдут через Testcontainers"; exit 0
           fi
           PW="${ARCADEDB_ROOT_PASSWORD:-playwithdata}"
+          # Проверяем ДОСТУП, а не доступность. /api/v1/ready отвечает 204 кому
+          # угодно — по нему сервер «живой» даже с неверным паролем, и тесты потом
+          # падают вглубь непрозрачными 500 от сидера ([LORE SEED] ... status 500).
+          # Поэтому кандидат считается годным, только если под нашей учёткой
+          # отдаёт список баз.
           FOUND=""
           for cand in ${LORE_CI_DB_URL:-} http://host.docker.internal:2480 http://172.17.0.1:2480 http://127.0.0.1:2480; do
-            if curl -sf -m 4 "$cand/api/v1/ready" >/dev/null 2>&1; then FOUND="$cand"; break; fi
-            echo "  $cand — не отвечает"
+            if ! curl -sf -m 4 "$cand/api/v1/ready" >/dev/null 2>&1; then
+              echo "  $cand — не отвечает"; continue
+            fi
+            if curl -sf -m 6 -u "root:$PW" "$cand/api/v1/databases" >/dev/null 2>&1; then
+              FOUND="$cand"; break
+            fi
+            echo "  $cand — отвечает, но НЕ пускает под root с текущим паролем"
           done
           if [ -z "$FOUND" ]; then
-            echo "::error::ArcadeDB для live-DB тестов не найден. Пробовали: LORE_CI_DB_URL, host.docker.internal, 172.17.0.1, 127.0.0.1 (все :2480). Тесты со схемой без БД не проверяются — молча пропускать их нельзя."
+            echo "::error::ArcadeDB для live-DB тестов недоступен ЛИБО не пускает под root. Пробовали: LORE_CI_DB_URL, host.docker.internal, 172.17.0.1, 127.0.0.1 (все :2480). Если сервер отвечает, но не пускает — задайте секрет ARCADEDB_ROOT_PASSWORD в Forgejo (Settings -> Actions -> Secrets): после переезда БД на ci-server прежний dev-пароль может не подходить. Молча пропускать live-DB тесты нельзя — так уже пряталась регрессия схемы (2026-07-17)."
             exit 1
           fi
           echo "тест-БД: $FOUND"
