@@ -6,6 +6,7 @@ import { SHELL_TABS, type ShellTab } from './shellNav';
 import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { AUTH_ENABLED, displayName, logout } from '../../auth/session';
+import { fetchLoreSlice } from '../../api/lore';
 import { useIsAdmin } from '../../auth/useRole';
 
 const HEADER_H = 42;
@@ -87,7 +88,50 @@ export default function AppShell() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, [palOpen]);
 
+  // ── Единое окно поиска: реальный поиск по графу через слайс `search` ──────────
+  // Фильтры по спискам внутри вкладок остаются на местах — сюда сведён только
+  // сквозной поиск (решение владельца).
+  type Hit = { type: string; ref_id: string; title: string | null };
+  const [palRows, setPalRows] = useState<Hit[]>([]);
+  const [palBusy, setPalBusy] = useState(false);
+  const [palSel, setPalSel] = useState(0);
+
+  useEffect(() => {
+    const q = palQ.trim();
+    if (!palOpen || q.length < 2) { setPalRows([]); setPalBusy(false); return; }
+    const ctrl = new AbortController();
+    setPalBusy(true);
+    const timer = setTimeout(() => {
+      fetchLoreSlice<Hit>('search', { pattern: q }, ctrl.signal)
+        .then(rows => { setPalRows(rows); setPalSel(0); setPalBusy(false); })
+        .catch(() => { if (!ctrl.signal.aborted) { setPalRows([]); setPalBusy(false); } });
+    }, 250);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [palQ, palOpen]);
+
+  // Куда ведёт результат: раздел + паспорт (тот же URL-контракт, что у остальной навигации).
+  const hitHref = (h: Hit): string => {
+    const id = encodeURIComponent(h.ref_id);
+    switch (h.type) {
+      case 'adr':          return `/lore?section=adrs&passport=${id}`;
+      case 'sprint':       return `/lore?section=sprints&passport=${id}`;
+      case 'quality_gate': return `/lore?section=qg&passport=${id}`;
+      case 'decision':     return `/lore?section=decisions`;
+      case 'doc':          return `/lore?section=knowledge&passport=${encodeURIComponent('doc:' + h.ref_id)}`;
+      case 'runbook':      return `/lore?section=knowledge&passport=${encodeURIComponent('runbook:' + h.ref_id)}`;
+      case 'spec':         return `/lore?section=knowledge&spec=${id}`;
+      case 'task':         return `/lore?section=sprints`;
+      default:             return `/lore?section=plan`;
+    }
+  };
+  const HIT_LABEL: Record<string, string> = {
+    adr: 'ADR', sprint: 'Спринт', quality_gate: 'QG', decision: 'Решение',
+    doc: 'Документ', runbook: 'Runbook', spec: 'Спека', task: 'Задача',
+  };
+
+  const openHit = (h: Hit) => { setPalOpen(false); setPalQ(''); navigate(hitHref(h)); };
   const submitSearch = () => {
+    if (palRows.length) { openHit(palRows[Math.min(palSel, palRows.length - 1)]); return; }
     const q = palQ.trim();
     setPalOpen(false); setPalQ('');
     navigate(q ? `/lore?section=plan&q=${encodeURIComponent(q)}` : '/lore?section=plan');
@@ -330,13 +374,51 @@ export default function AppShell() {
                 autoFocus
                 value={palQ}
                 onChange={e => setPalQ(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') submitSearch(); }}
-                placeholder="id, название сущности…"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); submitSearch(); }
+                  else if (e.key === 'ArrowDown') { e.preventDefault(); setPalSel(i => Math.min(i + 1, palRows.length - 1)); }
+                  else if (e.key === 'ArrowUp')   { e.preventDefault(); setPalSel(i => Math.max(i - 1, 0)); }
+                }}
+                placeholder="id, название, текст…"
                 style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 15, color: 'var(--t1)' }}
               />
+              {palBusy && <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>…</span>}
             </div>
-            <div style={{ display: 'flex', gap: 14, padding: '7px 13px', fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
-              <span>↵ искать</span><span>esc закрыть</span><span>«/» открыть</span>
+
+            {/* Результаты */}
+            <div style={{ maxHeight: '52vh', overflow: 'auto', padding: 5 }}>
+              {palQ.trim().length < 2 && (
+                <div style={{ padding: '14px 10px', fontSize: 12, color: 'var(--t3)' }}>
+                  Введите минимум 2 символа — ищу по ADR, решениям, спринтам, задачам, спекам, ранбукам, документам и QG.
+                </div>
+              )}
+              {palQ.trim().length >= 2 && !palBusy && palRows.length === 0 && (
+                <div style={{ padding: '14px 10px', fontSize: 12, color: 'var(--t3)' }}>Ничего не найдено</div>
+              )}
+              {palRows.map((h, i) => {
+                const on = i === palSel;
+                return (
+                  <button key={`${h.type}:${h.ref_id}:${i}`} type="button"
+                    onMouseEnter={() => setPalSel(i)}
+                    onClick={() => openHit(h)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left',
+                      border: 'none', background: on ? 'var(--bg3)' : 'transparent', color: 'var(--t1)',
+                      fontSize: 13, padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
+                    }}>
+                    <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 6px', flexShrink: 0 }}>
+                      {HIT_LABEL[h.type] ?? h.type}
+                    </span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)', flexShrink: 0 }}>{h.ref_id}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title ?? ''}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 14, padding: '7px 13px', fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', borderTop: '1px solid var(--bd)' }}>
+              <span>↑↓ выбор</span><span>↵ открыть</span><span>esc закрыть</span>
+              {palRows.length > 0 && <span style={{ marginLeft: 'auto' }}>найдено: {palRows.length}</span>}
             </div>
           </div>
         </div>
