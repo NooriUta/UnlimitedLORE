@@ -352,6 +352,78 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='gain_rank', code='expected', label_ru='🟠 Ожидаемая — клиент считает её само собой', color='#D4922A', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='expected'",
             "UPDATE KnowDictEntry SET dict_type='gain_rank', code='desired', label_ru='🟢 Желаемая — обрадуется, но не ждёт', color='#7DBF78', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='desired'",
             "UPDATE KnowDictEntry SET dict_type='gain_rank', code='unexpected', label_ru='✨ Неожиданная — превосходит ожидания', color='#88B8A8', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='gain_rank' AND code='unexpected'"
+        )),
+
+        // ── V11 (10.1) SRCH-03: полнотекст под сквозной поиск ────────────────
+        // Аддитивный шаг: объявляем недостающие текстовые свойства, индексы
+        // создаёт Java-шаг (см. ниже, почему не SQL).
+        //
+        // Замерено на ArcadeDB 26.7.2: заголовки ADR/спек/задач/ранбуков/спринтов
+        // ЛЕЖАТ В ДАННЫХ, но в схеме не объявлены — а необъявленное поле
+        // проиндексировать нельзя. Отсюда поиск по названию ADR шёл сканом.
+        // Проверено там же: поздно объявленное свойство индексируется вместе с
+        // уже лежащими значениями, ручной backfill не нужен.
+        new Step(11, 10, "fulltext_named_multifield_indexes", List.of(
+            "CREATE PROPERTY KnowADR.name              IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSpec.title            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowTask.title            IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowRunbook.name          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowSprint.name           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDoc.title             IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowReleaseHist.description_md IF NOT EXISTS STRING"
         ))
+    );
+
+    /**
+     * SRCH-03: анализатор для русскоязычного корпуса. Замерено: с ним документ
+     * со словом «релиза» находится по запросу «релиз», на дефолтном — нет.
+     * `similarity` НЕ задаём: BM25 — умолчание для новых индексов (26.7.1+),
+     * проверено сравнением индексов с METADATA и без.
+     */
+    static final String FT_ANALYZER = "org.apache.lucene.analysis.ru.RussianAnalyzer";
+
+    /** Именованный мультиполевой FULL_TEXT-индекс: одна ветка поиска = один вызов. */
+    record FtIndex(String name, String type, List<String> fields) {
+        String createSql() {
+            return "CREATE INDEX `" + name + "` ON " + type + " (" + String.join(", ", fields) + ")"
+                 + " FULL_TEXT METADATA {\"analyzer\":\"" + FT_ANALYZER + "\"}";
+        }
+    }
+
+    /**
+     * Реестр индексов сквозного поиска (ADR-LORE-033 D10): у типа РОВНО ОДИН
+     * индекс на заголовок + все его *_md. Тогда ветка unionall — один вызов
+     * SEARCH_INDEX, а не вызов на поле.
+     *
+     * Имена явные и стабильные: ранжирование доступно только через
+     * SEARCH_INDEX('<имя>', …), а автоимена вида KnowADR_0_4240054376237
+     * привязаны к внутренним id и меняются при пересоздании.
+     *
+     * Тела ADR/спек/задач/спринтов/ранбуков берём из *Hist: на самих вершинах
+     * те же поля не объявлены, а в Hist объявлены и заполнены — так текст не
+     * дублируется в индексах (ADR-LORE-033 D4/D10).
+     */
+    static final List<FtIndex> FT_INDEXES = List.of(
+        new FtIndex("ftKnowADR",         "KnowADR",         List.of("name")),
+        new FtIndex("ftKnowADRHist",     "KnowADRHist",     List.of("context_md", "decision_md", "consequences_md")),
+        new FtIndex("ftKnowSpec",        "KnowSpec",        List.of("title")),
+        new FtIndex("ftKnowSpecHist",    "KnowSpecHist",    List.of("content_md")),
+        new FtIndex("ftKnowTask",        "KnowTask",        List.of("title")),
+        new FtIndex("ftKnowTaskHist",    "KnowTaskHist",    List.of("note_md")),
+        new FtIndex("ftKnowSprint",      "KnowSprint",      List.of("name", "context_md")),
+        new FtIndex("ftKnowSprintHist",  "KnowSprintHist",  List.of("context_md", "outcome_md")),
+        new FtIndex("ftKnowRunbook",     "KnowRunbook",     List.of("name")),
+        new FtIndex("ftKnowRunbookHist", "KnowRunbookHist", List.of("content_md")),
+        new FtIndex("ftKnowDoc",         "KnowDoc",         List.of("title", "content_md")),
+        new FtIndex("ftKnowDocHist",     "KnowDocHist",     List.of("content_md")),
+        new FtIndex("ftKnowDecision",    "KnowDecision",    List.of("title", "body_md")),
+        new FtIndex("ftKnowQuestion",    "KnowQuestion",    List.of("title", "body_md")),
+        new FtIndex("ftKnowFeature",     "KnowFeature",     List.of("title", "body_md", "context_md")),
+        new FtIndex("ftKnowUseCase",     "KnowUseCase",     List.of("title", "scenario_md", "acceptance_md")),
+        new FtIndex("ftKnowPain",        "KnowPain",        List.of("title", "body_md")),
+        new FtIndex("ftKnowGain",        "KnowGain",        List.of("title", "body_md", "metric_md")),
+        new FtIndex("ftKnowJob",         "KnowJob",         List.of("title", "body_md")),
+        new FtIndex("ftKnowActor",       "KnowActor",       List.of("name", "body_md")),
+        new FtIndex("ftKnowRelease",     "KnowRelease",     List.of("description_md"))
     );
 }

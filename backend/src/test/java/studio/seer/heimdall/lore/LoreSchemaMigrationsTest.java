@@ -89,10 +89,50 @@ class LoreSchemaMigrationsTest {
 
     @Test
     void humanVersionIsMajorDotMinor() {
-        // Пока все шаги — свои major (3-арг ctor), поэтому minor=0.
         assertTrue(LoreSchemaMigrations.codeHuman().matches("\\d+\\.\\d+"), "формат major.minor");
-        assertTrue(LoreSchemaMigrations.codeHuman().endsWith(".0"),
-            "все текущие шаги — свои major, последний = major.0");
+    }
+
+    /**
+     * V11 (SRCH-03, полнотекстовые индексы) — ПЕРВЫЙ аддитивный шаг: ordinal 11
+     * при compatMajor 10, то есть «10.1». До него все шаги были сами себе major
+     * и codeHuman() всегда оканчивался на «.0» — прежняя редакция теста
+     * фиксировала именно это временное совпадение и потому здесь падала.
+     *
+     * Существенно тут другое: аддитивный шаг НЕ поднимает ось совместимости.
+     * Поднялся бы major — дрейф-гард отказал бы в старте всем бинарям без него,
+     * а добавление индексов такого не заслуживает.
+     */
+    @Test
+    void additiveStepRaisesOrdinalButNotCompatMajor() {
+        var last = LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1);
+        assertEquals(11, last.version(), "V11 — последний шаг реестра");
+        assertEquals(10, last.compatMajor(), "аддитивный: делит major с V10");
+        assertEquals("10.1", LoreSchemaMigrations.codeHuman(), "человеку это 10.1");
+        assertEquals(10, LoreSchemaMigrations.codeCompatMajor(),
+            "ось совместимости не сдвинулась — старый бинарь переживёт новые индексы");
+        assertEquals(LoreSchemaMigrations.StartupDecision.FORWARD_COMPAT,
+            LoreSchemaMigrations.decide(11, 10, 10, 10),
+            "бинарь без V11 на мигрированной БД обязан работать, а не падать");
+    }
+
+    /** Реестр индексов (D10): у типа ровно один индекс, имена уникальны и стабильны. */
+    @Test
+    void fullTextIndexRegistryIsOnePerTypeWithUniqueNames() {
+        var names = LoreSchemaMigrations.FT_INDEXES.stream().map(LoreSchemaMigrations.FtIndex::name).toList();
+        assertEquals(names.size(), Set.copyOf(names).size(), "имена индексов уникальны");
+
+        var types = LoreSchemaMigrations.FT_INDEXES.stream().map(LoreSchemaMigrations.FtIndex::type).toList();
+        assertEquals(types.size(), Set.copyOf(types).size(),
+            "ровно ОДИН индекс на тип: иначе ветка поиска перестаёт быть одним вызовом SEARCH_INDEX (D10)");
+
+        for (var ix : LoreSchemaMigrations.FT_INDEXES) {
+            assertFalse(ix.fields().isEmpty(), ix.name() + ": пустой список полей");
+            assertTrue(ix.createSql().contains(LoreSchemaMigrations.FT_ANALYZER),
+                ix.name() + ": без RussianAnalyzer морфология русского не работает");
+            assertFalse(ix.createSql().contains("IF NOT EXISTS"),
+                ix.name() + ": именованный индекс НЕ принимает IF NOT EXISTS — "
+                + "существование проверяет Java-шаг (замерено на 26.7.2)");
+        }
     }
 
     @Test

@@ -14,6 +14,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * ADR-LORE-023: раннер миграций схемы. Свой, не ADR-HND-022 (OQ-023-RUNNER):
@@ -187,6 +189,46 @@ public class LoreSchemaMigrationRunner {
     /** Java-шаги (то, что SQL не умеет). Нумерация совпадает с реестром. */
     private void javaStep(int version) {
         if (version == 4 || version == 5) backfillContentHash(version);
+        if (version == 11) createFullTextIndexes();
+    }
+
+    /**
+     * SRCH-03: именованные мультиполевые FULL_TEXT-индексы.
+     *
+     * Почему Java, а не список SQL в шаге. Замерено на ArcadeDB 26.7.2:
+     * `CREATE INDEX IF NOT EXISTS `имя` …` — синтаксическая ошибка (грамматика
+     * ждёт ON сразу после IF NOT EXISTS), а `DROP INDEX IF EXISTS` не
+     * поддерживается вовсе. То есть для ИМЕНОВАННОГО индекса нет ни
+     * «создай, если нет», ни «удали, если есть», и чисто-SQL шаг падал бы на
+     * любом повторе с «already exists». Поэтому существование проверяем сами.
+     *
+     * Старые однополевые индексы НЕ трогаем: действующий слайс `search` ходит
+     * через SEARCH_FIELDS, который на них и опирается. Снимать их можно только
+     * после перевода слайса на SEARCH_INDEX, иначе поиск сломается в момент
+     * миграции.
+     */
+    private void createFullTextIndexes() {
+        Set<String> existing = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:indexes", Map.of())) {
+            Object n = r.get("name");
+            if (n != null) existing.add(String.valueOf(n));
+        }
+        int created = 0, skipped = 0;
+        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
+            if (existing.contains(ix.name())) { skipped++; continue; }
+            try {
+                exec(ix.createSql());
+                created++;
+            } catch (Exception e) {
+                // Тип может отсутствовать на свежей БД, где его ещё не создали
+                // прошлые шаги — это не повод валить миграцию целиком, но и
+                // молчать нельзя: индекса не будет, поиск по типу пойдёт сканом.
+                LOG.warnf("[LORE MIGRATE] V11: индекс %s на %s не создан: %s",
+                    ix.name(), ix.type(), e.getMessage());
+            }
+        }
+        LOG.infof("[LORE MIGRATE] V11 полнотекст: создано %d, уже было %d (всего в реестре %d)",
+            created, skipped, LoreSchemaMigrations.FT_INDEXES.size());
     }
 
     // SV-10 backfill: content_hash по существующим Hist-строкам, батчами ДО
