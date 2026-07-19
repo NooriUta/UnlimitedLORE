@@ -59,8 +59,8 @@
     },
     {
       "clientId": "lore-mcp",
-      "name": "LORE MCP server (service account)",
-      "enabled": true,
+      "name": "LORE MCP server (ОТКЛЮЧЁН — нет маппера agent_scope, см. AUTH_OMILORE шаг 4)",
+      "enabled": false,
       "publicClient": false,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
