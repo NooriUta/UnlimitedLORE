@@ -233,6 +233,8 @@ export interface LoreAdrPassport {
   release_ids: string[] | null;
   supersedes_ids: string[] | null;
   tags: string[] | null;
+  /** ADRPROJ-01: git-проекты ADR (BELONGS_TO_PROJECT, multi). */
+  git_projects?: string[] | null;
 }
 
 export interface LoreSprintDep {
@@ -408,6 +410,102 @@ export interface LoreSpecPassport extends LoreSpecRow {
   summary: string | null;
   version: string | null;
   valid_from: string | null;
+}
+
+// ── Продуктовый слой: Value Proposition как граф (ADR-LORE-022/032, Остервальдер + Коберн).
+// Поля-массивы (*_ids/*_ucs) — рёбра графа; счётчики (*_by) — их размер. Слайсы:
+// features · use_cases_of_feature(id) · pains · gains · jobs · actors.
+export interface LoreFeatureRow {
+  feature_id: string;
+  title: string | null;
+  body_md?: string | null;
+  context_md?: string | null;
+  status?: string | null;
+  component_id?: string | null;
+  goal_level?: string | null;      // ☁ cloud | 🪁 kite (Коберн, D1)
+  shipped_at?: string | null;
+  uc_ids?: string[] | null;
+  uc_total?: number | null;
+  uc_shipped?: number | null;       // D4 — вычислено рёбрами
+  pain_ids?: string[] | null;       // ADDRESSES — заявлено
+  gain_ids?: string[] | null;       // PROMISES
+  job_ids?: string[] | null;        // HELPS_WITH (Остервальдер, третья ось)
+  milestone_id?: string | null;
+}
+
+export interface LoreUcRow {
+  uc_id: string;
+  title: string | null;
+  scenario_md?: string | null;
+  acceptance_md?: string | null;
+  status?: string | null;
+  feature_id?: string | null;
+  goal_level?: string | null;       // 🌊 sea-level | 🐟 subfunction
+  rigor?: string | null;            // casual | fully-dressed
+  relieves_pain_ids?: string[] | null;   // RELIEVES — сделано (замыкает fit)
+  delivers_gain_ids?: string[] | null;   // DELIVERS
+  performs_job_ids?: string[] | null;    // PERFORMS — третья ось fit
+  task_uids?: string[] | null;
+  traced_adr_ids?: string[] | null;
+  traced_decision_ids?: string[] | null;
+  actor_ids?: string[] | null;
+  actor_names?: string[] | null;
+  includes_uc?: string[] | null;
+  extends_uc?: string[] | null;
+  included_by?: string[] | null;
+  extended_by?: string[] | null;
+}
+
+export interface LorePainRow {
+  pain_id: string;
+  title: string | null;
+  body_md?: string | null;
+  severity?: string | null;
+  actor_ids?: string[] | null;       // FELT_BY — чья боль
+  blocks_job_ids?: string[] | null;  // BLOCKS — какой работе мешает
+  feature_ids?: string[] | null;     // кто ЗАЯВИЛ, что адресует
+  addressed_by?: number | null;
+  relieved_by_ucs?: string[] | null; // кто РЕАЛЬНО снимает
+  relieved_by?: number | null;
+}
+
+export interface LoreGainRow {
+  gain_id: string;
+  title: string | null;
+  body_md?: string | null;
+  metric_md?: string | null;         // без метрики выгода не в fit
+  rank?: string | null;              // essential | expected | desired | unexpected
+  actor_ids?: string[] | null;       // DESIRED_BY
+  success_of_job_ids?: string[] | null; // SUCCESS_OF — успех в какой работе
+  feature_ids?: string[] | null;
+  promised_by?: number | null;
+  delivered_by_ucs?: string[] | null;
+  delivered_by?: number | null;
+}
+
+export interface LoreJobRow {
+  job_id: string;
+  title: string | null;
+  body_md?: string | null;
+  kind?: string | null;              // functional | social | emotional | supporting
+  importance?: string | null;        // high | normal | low
+  actor_ids?: string[] | null;       // PERFORMED_BY — чья работа
+  blocking_pain_ids?: string[] | null;
+  blocked_by?: number | null;
+  gain_ids?: string[] | null;        // SUCCESS_OF
+  feature_ids?: string[] | null;     // HELPS_WITH — кто ЗАЯВИЛ помощь
+  helped_by?: number | null;
+  performed_by_ucs?: string[] | null; // PERFORMS — кто РЕАЛЬНО выполняет
+  performed_by?: number | null;
+}
+
+export interface LoreActorRow {
+  actor_id: string;
+  name?: string | null;
+  kind?: string | null;              // human-role | system | agent
+  body_md?: string | null;
+  uc_ids?: string[] | null;
+  uc_count?: number | null;
 }
 
 export async function fetchLoreSpec(

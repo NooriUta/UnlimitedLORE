@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ранжирование сквозного поиска LORE — прототип на живых данных</title>
+<style>
+  :root {
+    --paper: #F7F4EC; --ink: #211F18; --ink-2: #55503F; --ink-3: #857F6B;
+    --rule: #DFD8C6; --panel: #FFFDF7; --accent: #8A6D2A; --accent-soft: #EFE6CE;
+    --title-hit: #4F6B44; --body-hit: #8A8371;
+    --bar: #D9CFB2;
+    --shadow: 0 1px 2px rgba(33,31,24,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #14130E; --ink: #E9E4D5; --ink-2: #B3AC97; --ink-3: #7E7864;
+      --rule: #2E2B21; --panel: #1B1A13; --accent: #C6A257; --accent-soft: #332D1C;
+      --title-hit: #8FB37E; --body-hit: #8A8371; --bar: #3A3527;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14130E; --ink: #E9E4D5; --ink-2: #B3AC97; --ink-3: #7E7864;
+    --rule: #2E2B21; --panel: #1B1A13; --accent: #C6A257; --accent-soft: #332D1C;
+    --title-hit: #8FB37E; --body-hit: #8A8371; --bar: #3A3527; --shadow: none;
+  }
+  :root[data-theme="light"] {
+    --paper: #F7F4EC; --ink: #211F18; --ink-2: #55503F; --ink-3: #857F6B;
+    --rule: #DFD8C6; --panel: #FFFDF7; --accent: #8A6D2A; --accent-soft: #EFE6CE;
+    --title-hit: #4F6B44; --body-hit: #8A8371; --bar: #D9CFB2;
+    --shadow: 0 1px 2px rgba(33,31,24,.05);
+  }
+
+  body {
+    background: var(--paper); color: var(--ink);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    margin: 0; padding: 40px 20px 72px;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; display: flex; flex-direction: column; gap: 34px; }
+
+  .lede { display: flex; flex-direction: column; gap: 12px; }
+  .eyebrow {
+    font: 600 11px/1 ui-monospace, "Cascadia Code", Consolas, monospace;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+  }
+  h1 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: clamp(26px, 4vw, 38px); line-height: 1.15; margin: 0; text-wrap: balance;
+    font-weight: 600; letter-spacing: -.01em;
+  }
+  .lede p { margin: 0; max-width: 66ch; color: var(--ink-2); }
+
+  .legend {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 16px 0;
+  }
+  .legend div { display: flex; flex-direction: column; gap: 3px; }
+  .legend dt, .legend b {
+    font: 600 10.5px/1 ui-monospace, Consolas, monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+  }
+  .legend span { font-size: 13.5px; color: var(--ink-2); }
+
+  .q { display: flex; flex-direction: column; gap: 10px; }
+  .q-head { display: flex; flex-direction: column; gap: 2px; }
+  .q-head h2 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 21px; font-weight: 600; margin: 0;
+  }
+  .q-head h2::before { content: "⌕ "; color: var(--accent); }
+  .translate { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+  .translate code, .rid {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 11.5px;
+  }
+  .translate code { background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
+
+  .hits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px;
+          background: var(--rule); border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; }
+  .hit {
+    position: relative; background: var(--panel); padding: 8px 12px 9px 40px;
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 14px; align-items: baseline;
+  }
+  .pos {
+    position: absolute; left: 0; top: 8px; width: 30px; text-align: right;
+    font: 500 12px/1.5 ui-monospace, Consolas, monospace;
+    font-variant-numeric: tabular-nums; color: var(--ink-3);
+  }
+  .bar {
+    position: absolute; left: 0; bottom: 0; height: 2px; width: var(--w);
+    background: var(--bar);
+  }
+  .meta { grid-column: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ttl { grid-column: 1; color: var(--ink-2); font-size: 13.5px; }
+  .math {
+    grid-column: 2; grid-row: 1 / span 2; align-self: center; white-space: nowrap;
+    font: 12.5px/1.4 ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums;
+  }
+  .math b { font-weight: 600; color: var(--ink); }
+  .muted { color: var(--ink-3); }
+
+  .chip {
+    font: 600 10px/1 ui-monospace, Consolas, monospace; letter-spacing: .06em;
+    text-transform: uppercase; padding: 3px 6px; border-radius: 3px;
+    border: 1px solid var(--rule); color: var(--ink-2);
+  }
+  .chip--adr, .chip--decision { border-color: var(--accent); color: var(--accent); }
+  .chip--task, .chip--sprint { opacity: .72; }
+  .rid { color: var(--ink); }
+  .where { font-size: 11px; }
+  .where--t { color: var(--title-hit); font-weight: 600; }
+  .where--b { color: var(--body-hit); }
+
+  .q-note { margin: 0; font-size: 13px; color: var(--ink-2); max-width: 72ch; font-style: italic; }
+
+  .caveats { border: 1px solid var(--rule); border-radius: 5px; background: var(--panel);
+             padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+  .caveats h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .caveats ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .caveats li { color: var(--ink-2); font-size: 13.5px; }
+  .caveats strong { color: var(--ink); font-weight: 600; }
+  @media (max-width: 600px) {
+    .hit { grid-template-columns: 1fr; }
+    .math { grid-column: 1; grid-row: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lede">
+    <span class="eyebrow">SRCH-05 · прототип до реализации</span>
+    <h1>Ранжирование сквозного поиска — на живых данных, а не на макете</h1>
+    <p>Те же индексы, тот же BM25 и те же правила, что лягут в код. Смотреть надо на <em>порядок</em>: если он спорный, правило меняется сейчас — дешевле, чем после реализации.</p>
+  </div>
+
+  <div class="legend">
+    <div><b>ранг</b><span>BM25 × приоритет типа. Приоритет — единственное, что я задал руками.</span></div>
+    <div><b>приоритет</b><span>знание выше следа работы: фича 1.30, ADR 1.25, спека 1.10, спринт 0.90, задача 0.70</span></div>
+    <div><b>где совпало</b><span>считаем сами: ArcadeDB не сообщает, какое поле дало попадание</span></div>
+    <div><b>полоса</b><span>ранг относительно первого места в этом же запросе</span></div>
+  </div>
+
+  <section class="q">
+    <header class="q-head">
+      <h2>токен</h2>
+      <p class="translate">уходит в индекс как <code>токен*</code> · 12 результатов</p>
+    </header>
+    <ol class="hits"><li class="hit">
+      <span class="pos">1</span>
+      <span class="bar" style="--w:100%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-012-D3</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Матрица доменов: area/bragi_channel/tag = (A)+(B) расширяемые; artifact_kind = (A)+(B) нерасширяемый; status/priority/adr_status = ТОЛЬКО (A); CSS-палитры не входят (остаются токенами)</span>
+      <span class="math"><b>6.44</b> <span class="muted">= 5.37 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">2</span>
+      <span class="bar" style="--w:91%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D2</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Lucene-выражение строит сервер; пользовательский ввод синтаксисом не считается</span>
+      <span class="math"><b>5.84</b> <span class="muted">= 4.87 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">3</span>
+      <span class="bar" style="--w:89%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_LORE_UX_OPTIMIZATION/T16</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">W5 · Токенизация цвета (~50 hex → CSS-переменные) (P1)</span>
+      <span class="math"><b>5.71</b> <span class="muted">= 8.15 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">4</span>
+      <span class="bar" style="--w:83%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-MT-001</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Keycloak Organizations как источник истины для тенантов</span>
+      <span class="math"><b>5.35</b> <span class="muted">= 4.28 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">5</span>
+      <span class="bar" style="--w:79%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_HOUND_MYSQL_LISTENER/ML-01</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">MySqlTokenMapper — полный маппинг токенов → CanonicalTokenType (§3 спека)</span>
+      <span class="math"><b>5.11</b> <span class="muted">= 7.30 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">6</span>
+      <span class="bar" style="--w:78%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">MYSQL_MARIADB_GRAMMAR_MAPPING</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl"><span class="muted">— без заголовка —</span></span>
+      <span class="math"><b>5.03</b> <span class="muted">= 4.57 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">7</span>
+      <span class="bar" style="--w:76%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">MTN-34</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">MTN-34 — Service account / API key per tenant</span>
+      <span class="math"><b>4.93</b> <span class="muted">= 4.48 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">8</span>
+      <span class="bar" style="--w:76%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-QG-001</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Архитектура QG-рутин: LORE-native метрики, LLM-исполнение, проверяемые инварианты</span>
+      <span class="math"><b>4.90</b> <span class="muted">= 3.92 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">9</span>
+      <span class="bar" style="--w:76%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_HOUND_MYSQL_LISTENER/TR-01</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">TrinoTokenMapper — полный маппинг токенов (Trino идентификаторы case-insensitive)</span>
+      <span class="math"><b>4.88</b> <span class="muted">= 6.97 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">10</span>
+      <span class="bar" style="--w:68%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">HOUND_PLSQL_GRAMMAR_GAPS_CORPUS_RULES</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">HOUND — PL/SQL Grammar Gaps + Corpus Preparation Rules</span>
+      <span class="math"><b>4.38</b> <span class="muted">= 3.98 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">11</span>
+      <span class="bar" style="--w:67%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_COMPONENT_IDENTITY/CI-25</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Area color palette: переход на CSS-var color-mix от 4 токенов темы</span>
+      <span class="math"><b>4.30</b> <span class="muted">= 6.14 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">12</span>
+      <span class="bar" style="--w:66%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D13</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Смешанный корпус: RussianAnalyzer не лемматизирует английский — компенсирует префикс, а не анализатор</span>
+      <span class="math"><b>4.24</b> <span class="muted">= 3.53 × 1.20</span></span>
+    </li></ol>
+    <p class="q-note">Первым встаёт решение, где «токен» в заголовке. Ниже — задачи про токенизацию цвета: слово то же, смысл другой. Разводить их поиск не умеет и не должен.</p>
+  </section><section class="q">
+    <header class="q-head">
+      <h2>релиз</h2>
+      <p class="translate">уходит в индекс как <code>релиз*</code> · 12 результатов</p>
+    </header>
+    <ol class="hits"><li class="hit">
+      <span class="pos">1</span>
+      <span class="bar" style="--w:100%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-FE-002</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Вынести публичный сайт в отдельный модуль/сборку</span>
+      <span class="math"><b>8.50</b> <span class="muted">= 6.80 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">2</span>
+      <span class="bar" style="--w:76%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--sprint">спринт</span>
+        <code class="rid">SPRINT_ELK_M2_KNOT</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">SPRINT_ELK_M2_KNOT</span>
+      <span class="math"><b>6.43</b> <span class="muted">= 7.15 × 0.90</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">3</span>
+      <span class="bar" style="--w:70%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_LORE_SCHEMA_VERSIONING/SV-08</code>
+        <span class="where where--b">заметка задачи</span>
+      </span>
+      <span class="ttl">Runbook апгрейда клиента + раздел версионирования в LORE_DB_SPEC</span>
+      <span class="math"><b>5.95</b> <span class="muted">= 8.50 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">4</span>
+      <span class="bar" style="--w:66%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--sprint">спринт</span>
+        <code class="rid">SPRINT_BLOG2</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Blog #2 — HEIMDALL observability</span>
+      <span class="math"><b>5.65</b> <span class="muted">= 6.28 × 0.90</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">5</span>
+      <span class="bar" style="--w:65%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--sprint">спринт</span>
+        <code class="rid">SPRINT_HEIMDALL_SPRINT4</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Heimdall Sprint 4b — Nav UX (HX-01..07)</span>
+      <span class="math"><b>5.54</b> <span class="muted">= 6.15 × 0.90</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">6</span>
+      <span class="bar" style="--w:60%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_LORE_FORGEJO_INTEGRATION/FJ-05</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Замыкание релиз-цикла: авто-привязка PR→релиз (SHIPPED_IN) + спринт→релиз на merge</span>
+      <span class="math"><b>5.09</b> <span class="muted">= 7.28 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">7</span>
+      <span class="bar" style="--w:59%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-YGG-REST-ONLY</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">ArcadeDB только через REST — без Java SDK; возможности берём волнами релизов</span>
+      <span class="math"><b>5.06</b> <span class="muted">= 4.05 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">8</span>
+      <span class="bar" style="--w:59%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-ARCH-001</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Тонкая интеграция: не втягивать чужой слой в свой процесс; протокол — наружу</span>
+      <span class="math"><b>5.04</b> <span class="muted">= 4.03 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">9</span>
+      <span class="bar" style="--w:59%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_SEO_SITE_WAVE2/SITE2-03</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Блог: дополнить «Как машина читает SQL» блоком Dragon Book (синк с релизной версией)</span>
+      <span class="math"><b>5.03</b> <span class="muted">= 7.18 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">10</span>
+      <span class="bar" style="--w:57%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_DALI_DIALECTS_LORE_VIZ/LSL-04</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">LoreSprintTree: ряд = дата спринта · иконка · № релиза · дата релиза</span>
+      <span class="math"><b>4.82</b> <span class="muted">= 6.89 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">11</span>
+      <span class="bar" style="--w:56%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--question">вопрос</span>
+        <code class="rid">OQ-022-FEATURE-RELEASE</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Нужна ли прямая связь Feature → Release («в релизе такие-то фичи целиком»)?</span>
+      <span class="math"><b>4.79</b> <span class="muted">= 4.79 × 1.00</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">12</span>
+      <span class="bar" style="--w:56%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">SAGA_RELEASES_DATA_MODEL</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">SAGA — вкладка «Релизы»: источники данных и связи со спринтами</span>
+      <span class="math"><b>4.76</b> <span class="muted">= 4.33 × 1.10</span></span>
+    </li></ol>
+    <p class="q-note">Спринты всплывают телом, а не названием. Приоритет типа держит их ниже ADR, но выше задач.</p>
+  </section><section class="q">
+    <header class="q-head">
+      <h2>поиск</h2>
+      <p class="translate">уходит в индекс как <code>поиск*</code> · 12 результатов</p>
+    </header>
+    <ol class="hits"><li class="hit">
+      <span class="pos">1</span>
+      <span class="bar" style="--w:100%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-LORE-033</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Сквозной поиск на FULL_TEXT ArcadeDB: API, ранжирование, охват</span>
+      <span class="math"><b>10.72</b> <span class="muted">= 8.57 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">2</span>
+      <span class="bar" style="--w:87%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D1</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Сквозной поиск — отдельный эндпоинт /lore/search, а не generic-слайс</span>
+      <span class="math"><b>9.35</b> <span class="muted">= 7.79 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">3</span>
+      <span class="bar" style="--w:79%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">D-126</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">SAGA-визуализация LORE — 7 вкладок под схему v1.1, Plan из БД (SPRINT_SYSTEM_AIDA_LORE)</span>
+      <span class="math"><b>8.47</b> <span class="muted">= 6.78 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">4</span>
+      <span class="bar" style="--w:66%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_HEIMDALL_OVERVIEW_POLISH/U3-db-search</code>
+        <span class="where where--b">заметка задачи</span>
+      </span>
+      <span class="ttl">🟡 U3 [/overview/services + /team-archive]: поиск/фильтр по длинным спискам</span>
+      <span class="math"><b>7.10</b> <span class="muted">= 10.14 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">5</span>
+      <span class="bar" style="--w:66%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D8</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Платформенное: whitelist на \w обязан нести UNICODE_CHARACTER_CLASS; 400 нельзя отдавать как пустую выдачу</span>
+      <span class="math"><b>7.02</b> <span class="muted">= 5.85 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">6</span>
+      <span class="bar" style="--w:57%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D7</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Платформенное: полнотекстовый поиск в ArcadeDB — только CONTAINSTEXT/SEARCH_INDEX; LIKE для поиска запрещён</span>
+      <span class="math"><b>6.14</b> <span class="muted">= 5.11 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">7</span>
+      <span class="bar" style="--w:51%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">SPEC-TECH-LORE-ARCADEDB</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">ArcadeDB</span>
+      <span class="math"><b>5.51</b> <span class="muted">= 5.01 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">8</span>
+      <span class="bar" style="--w:50%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_LORE_UX_OPTIMIZATION/T17</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">W3 · Поиск в QG + единый паттерн поиска (P1)</span>
+      <span class="math"><b>5.33</b> <span class="muted">= 7.61 × 0.70</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">9</span>
+      <span class="bar" style="--w:48%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D4</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Охват включает *Hist-тела со схлопыванием результата к родительской сущности</span>
+      <span class="math"><b>5.18</b> <span class="muted">= 4.31 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">10</span>
+      <span class="bar" style="--w:48%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-009-D5</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Вкладка «Компоненты» — master-detail: слева area-чипы со счётчиками + поиск + список; справа паспорт (tech stack, submodules кликабельны, ADRs → вкладка ADR, specs)</span>
+      <span class="math"><b>5.16</b> <span class="muted">= 4.30 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">11</span>
+      <span class="bar" style="--w:45%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">OL_IDENTIFIER_MAPPING_SPEC</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">Спецификация маппинга идентификаторов OL</span>
+      <span class="math"><b>4.79</b> <span class="muted">= 4.36 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">12</span>
+      <span class="bar" style="--w:43%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_SEO_MARKETING_ACTIONS/SEO-MKT-01</code>
+        <span class="where where--b">заметка задачи</span>
+      </span>
+      <span class="ttl">Яндекс Вебмастер: указать регион сайта</span>
+      <span class="math"><b>4.58</b> <span class="muted">= 6.55 × 0.70</span></span>
+    </li></ol>
+    <p class="q-note">Лучший случай: ADR-LORE-033 и его решения занимают верх — ровно то, что ищут по этому слову сегодня.</p>
+  </section><section class="q">
+    <header class="q-head">
+      <h2>Остервальдер</h2>
+      <p class="translate">уходит в индекс как <code>Остервальдер*</code> · 4 результатов</p>
+    </header>
+    <ol class="hits"><li class="hit">
+      <span class="pos">1</span>
+      <span class="bar" style="--w:100%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-LORE-033</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Сквозной поиск на FULL_TEXT ArcadeDB: API, ранжирование, охват</span>
+      <span class="math"><b>5.35</b> <span class="muted">= 4.28 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">2</span>
+      <span class="bar" style="--w:68%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D4</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">Охват включает *Hist-тела со схлопыванием результата к родительской сущности</span>
+      <span class="math"><b>3.66</b> <span class="muted">= 3.05 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">3</span>
+      <span class="bar" style="--w:49%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--decision">решение</span>
+        <code class="rid">ADR-LORE-033-D9</code>
+        <span class="where where--t">заголовок</span>
+      </span>
+      <span class="ttl">FULL_TEXT-индексы: явные имена, RussianAnalyzer и ОБЯЗАТЕЛЬНО явный similarity=BM25</span>
+      <span class="math"><b>2.63</b> <span class="muted">= 2.19 × 1.20</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">4</span>
+      <span class="bar" style="--w:29%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--task">задача</span>
+        <code class="rid">SPRINT_LORE_PRODUCT_LAYER/SRCH-03</code>
+        <span class="where where--b">заметка задачи</span>
+      </span>
+      <span class="ttl">Миграция FULL_TEXT V11 (10.1): именованные мультиполевые индексы, RussianAnalyzer, явный BM25</span>
+      <span class="math"><b>1.56</b> <span class="muted">= 2.23 × 0.70</span></span>
+    </li></ol>
+    <p class="q-note">Четыре результата там, где раньше был ноль. Слово живёт только в телах — до миграции поиск их не видел.</p>
+  </section><section class="q">
+    <header class="q-head">
+      <h2>tenant</h2>
+      <p class="translate">уходит в индекс как <code>tenant*</code> · 12 результатов</p>
+    </header>
+    <ol class="hits"><li class="hit">
+      <span class="pos">1</span>
+      <span class="bar" style="--w:100%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">SHUTTLE_TENANT_ISOLATION</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">SHUTTLE_TENANT_ISOLATION — Tenant isolation contract</span>
+      <span class="math"><b>68.40</b> <span class="muted">= 62.18 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">2</span>
+      <span class="bar" style="--w:65%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">RBAC_MULTITENANT</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">AIDA — RBAC &amp; Multi-Tenant Architecture</span>
+      <span class="math"><b>44.20</b> <span class="muted">= 40.18 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">3</span>
+      <span class="bar" style="--w:63%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">MIMIR_SPEC</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">MIMIR — Service Specification v3.0</span>
+      <span class="math"><b>42.95</b> <span class="muted">= 39.05 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">4</span>
+      <span class="bar" style="--w:60%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">MTN-01</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">MTN-01 — FriggYggLineageRegistry production lookup</span>
+      <span class="math"><b>40.90</b> <span class="muted">= 37.18 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">5</span>
+      <span class="bar" style="--w:56%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-MT-007</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Tenant Eviction Semantics: Lease-based Drain</span>
+      <span class="math"><b>38.09</b> <span class="muted">= 30.47 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">6</span>
+      <span class="bar" style="--w:55%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">MTN-02</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">MTN-02 — Cypher/query tenant-filter guarantee</span>
+      <span class="math"><b>37.91</b> <span class="muted">= 34.46 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">7</span>
+      <span class="bar" style="--w:53%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-MIMIR-002</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">BYOK Direct (Per-Tenant API Keys)</span>
+      <span class="math"><b>36.55</b> <span class="muted">= 29.24 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">8</span>
+      <span class="bar" style="--w:49%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-CHUR-MULTITORG-001</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Multi-org active tenant switching</span>
+      <span class="math"><b>33.55</b> <span class="muted">= 26.84 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">9</span>
+      <span class="bar" style="--w:47%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-MT-004</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Leader election + fence token для control-plane dispatch</span>
+      <span class="math"><b>32.08</b> <span class="muted">= 25.66 × 1.25</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">10</span>
+      <span class="bar" style="--w:45%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">USER_EDITING_UI_MODEL</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">User editing UI — combined KC + FRIGG view</span>
+      <span class="math"><b>30.88</b> <span class="muted">= 28.07 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">11</span>
+      <span class="bar" style="--w:45%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--spec">спека</span>
+        <code class="rid">MTN-06</code>
+        <span class="where where--b">тело спеки</span>
+      </span>
+      <span class="ttl">MTN-06 — Anvil TenantContextFilter</span>
+      <span class="math"><b>30.87</b> <span class="muted">= 28.06 × 1.10</span></span>
+    </li>
+<li class="hit">
+      <span class="pos">12</span>
+      <span class="bar" style="--w:43%" aria-hidden="true"></span>
+      <span class="meta">
+        <span class="chip chip--adr">ADR</span>
+        <code class="rid">ADR-MIMIR-004</code>
+        <span class="where where--b">тело ADR</span>
+      </span>
+      <span class="ttl">Variants C (Hybrid) + D (On-prem Ollama per-tenant)</span>
+      <span class="math"><b>29.20</b> <span class="muted">= 23.36 × 1.25</span></span>
+    </li></ol>
+    <p class="q-note">Английский: чужой корпус AIDA, совпадения в телах спек. Скоры на порядок выше — BM25 несравним между запросами, только внутри одного.</p>
+  </section>
+
+  <div class="caveats">
+    <h3>Что здесь ещё не так — и требует твоего решения</h3>
+    <ul>
+      <li><strong>Приоритеты типов взяты мной с потолка.</strong> Задача придавлена до 0.70, потому что это след работы, а не знание. Если ищешь чаще задачи — цифра неверная, и это главное, что стоит поправить.</li>
+      <li><strong>Заголовок не обгоняет тело.</strong> <code>title_boost</code> в ArcadeDB эффекта не дал, поэтому совпадение в заголовке пока весит столько же, сколько в теле. Видно на «релиз»: спринты всплывают телом.</li>
+      <li><strong>Одно слово — разные смыслы.</strong> На «токен» рядом стоят токен доступа и токенизация цвета. Поиск это не разведёт; поможет только фильтр по типу.</li>
+      <li><strong>Скоры несравнимы между запросами.</strong> «tenant» даёт 60+, «Остервальдер» — 2–5. Внутри одного запроса шкала общая, между запросами — нет.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

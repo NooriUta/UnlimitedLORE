@@ -2,10 +2,19 @@
   "mcpServers": {
     "aida-lore": {
       "command": "node",
-      "args": ["mcp-server/dist/index.js"],
+      "args": [
+        "mcp-server/dist/index.js"
+      ],
       "env": {
-        "LORE_BACKEND_URL": "http://localhost:9100",
+        "LORE_BACKEND_URL": "http://192.168.3.131:4400",
         "LORE_SEER_ROLE": "admin"
+      }
+    },
+    "forgejo-mcp": {
+      "type": "http",
+      "url": "http://192.168.3.131:3400/mcp",
+      "headers": {
+        "Authorization": "Bearer ${FORGEJO_MCP_API_KEY}"
       }
     }
   }

@@ -34,42 +34,26 @@ import java.util.Optional;
 public class LoreKcResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreKcResource.class);
-    private static final HttpClient HTTP = HttpClient.newHttpClient();
 
-    @ConfigProperty(name = "kc.admin.url", defaultValue = "http://localhost:18180/kc")
-    String kcUrl;
-    @ConfigProperty(name = "kc.admin.realm", defaultValue = "omilore")
-    String kcRealm;
-    @ConfigProperty(name = "kc.admin.client-id", defaultValue = "lore-admin")
-    String kcClientId;
-    @ConfigProperty(name = "kc.admin.client-secret")
-    Optional<String> kcSecret;
+    /** Вся KC-обвязка (токен, вызовы, подсчёт админов) — в KcBridge: ей же пользуется
+     * LoreAuthStartupGuard (AL-35), у guard'а и моста одно представление о «кто админ». */
+    @jakarta.inject.Inject
+    KcBridge bridge;
 
-    private boolean configured() { return kcSecret.isPresent() && !kcSecret.get().isBlank(); }
+    @ConfigProperty(name = "quarkus.oidc.enabled", defaultValue = "false")
+    boolean oidcEnabled;
+
+    private boolean configured() { return bridge.configured(); }
 
     private Response notConfigured() {
         return noStore(Response.status(503)
-            .entity(new LoreError("KC_NOT_CONFIGURED", "kc integration not configured (KC_ADMIN_CLIENT_SECRET unset)")));
+            .entity(new LoreError("KC_NOT_CONFIGURED", "kc integration not configured (" + KcBridge.KC_SECRET_KEY + " unset)")));
     }
 
-    /** client_credentials токен lore-admin — только внутри сервера. */
-    private String adminToken() throws Exception {
-        String body = "grant_type=client_credentials&client_id=" + URLEncoder.encode(kcClientId, StandardCharsets.UTF_8)
-            + "&client_secret=" + URLEncoder.encode(kcSecret.get(), StandardCharsets.UTF_8);
-        HttpRequest req = HttpRequest.newBuilder(URI.create(kcUrl + "/realms/" + kcRealm + "/protocol/openid-connect/token"))
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .POST(HttpRequest.BodyPublishers.ofString(body)).build();
-        HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
-        if (r.statusCode() != 200) throw new IllegalStateException("kc token " + r.statusCode());
-        return new io.vertx.core.json.JsonObject(r.body()).getString("access_token");
-    }
+    private String adminToken() throws Exception { return bridge.adminToken(); }
 
     private HttpResponse<String> kc(String method, String path, String json, String token) throws Exception {
-        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(kcUrl + "/admin/realms/" + kcRealm + path))
-            .header("Authorization", "Bearer " + token);
-        if (json != null) b.header("Content-Type", "application/json");
-        b.method(method, json == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json));
-        return HTTP.send(b.build(), HttpResponse.BodyHandlers.ofString());
+        return bridge.kc(method, path, json, token);
     }
 
     // ── Пользователи (люди, realm-роли) ─────────────────────────────────────
@@ -143,11 +127,19 @@ public class LoreKcResource extends LoreResourceBase {
             return badParams("role must be admin|viewer (super-admin is out of bridge scope by design)");
         try {
             String t = adminToken();
+            boolean remove = "remove".equalsIgnoreCase(req.action());
+            // AL-35: последняя администрирующая учётка неснимаема. Не «двухшаг», а отказ:
+            // свойство «администратор существует» защищается бэкендом, не интерфейсом.
+            if (remove && KcBridge.isLastAdminRemoval(bridge.enabledAdminHolders(t), userId, req.role())) {
+                return noStore(Response.status(Response.Status.CONFLICT)
+                    .entity(new LoreError("LAST_ADMIN",
+                        "это последняя включённая учётка с ролью admin/super-admin — снятие роли оставит LORE "
+                        + "без администратора. Сначала назначьте admin кому-то ещё (AL-35)")));
+            }
             HttpResponse<String> rr = kc("GET", "/roles/" + req.role(), null, t);
             if (rr.statusCode() != 200)
                 return noStore(Response.status(404).entity(new LoreError("NOT_FOUND", "realm role " + req.role())));
             String payload = "[" + rr.body() + "]";
-            boolean remove = "remove".equalsIgnoreCase(req.action());
             HttpResponse<String> r = kc(remove ? "DELETE" : "POST", "/users/" + userId + "/role-mappings/realm", payload, t);
             if (r.statusCode() >= 300)
                 return noStore(Response.status(r.statusCode()).entity(new LoreError("KC_UPSTREAM", r.body())));
@@ -202,6 +194,65 @@ public class LoreKcResource extends LoreResourceBase {
             // Секрет возвращается ОДИН раз вызывающему admin'у; нигде не сохраняется/не логируется.
             return noStore(Response.ok(r.body()));
         } catch (Exception e) { return upstream(e); }
+    }
+
+    // ── Предполётный чеклист включения auth (AL-35/AL-38) ────────────────────
+
+    /**
+     * Живые проверки для блока «Включение аутентификации» на Настройках: сколько
+     * админов, жив ли мост, включён ли auth, enforced ли agent_scope. UI рисует
+     * чеклист из ЭТОГО ответа, а не из своих предположений — тот же инвариант, что
+     * проверяет LoreAuthStartupGuard, но до рестарта.
+     * agent_scope_enforced=false захардкожен до AL-17 (AgentScopeFilter ещё не написан) —
+     * поле переводится на реальную проверку вместе с R2.
+     */
+    @GET
+    @Path("auth-preflight")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response authPreflight(@HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        boolean conf = configured();
+        int adminCount = -1;              // -1 = неизвестно (мост не настроен/не ответил)
+        String kcError = null;
+        if (conf) {
+            try { adminCount = bridge.enabledAdminHolders(adminToken()).size(); }
+            catch (Exception e) { kcError = e.getMessage(); }
+        }
+        boolean canEnable = adminCount > 0;
+        return noStore(Response.ok(Map.of(
+            "auth_enabled", oidcEnabled,
+            "kc_configured", conf,
+            "kc_reachable", conf && kcError == null,
+            "kc_error", kcError == null ? "" : kcError,
+            "admin_count", adminCount,
+            "agent_scope_enforced", false,   // AL-17 (R2) ещё не реализован
+            "can_enable_auth", canEnable,
+            "hint", canEnable
+                ? "включение: LORE_AUTH_ENABLED=true + рестарт (RUNBOOK-AUTH-OMILORE, все флаги вместе)"
+                : "сначала заведите хотя бы одного человека с ролью admin — иначе после включения auth войти не сможет никто (AL-35)")));
+    }
+
+    // ── Последние отказы (AL-45, UC-A7 реактивный минимум) ───────────────────
+
+    @jakarta.inject.Inject
+    LoreDenialRecorder denials;
+
+    /**
+     * «Почему агенту/человеку только что отказали» — снимок кольцевого буфера
+     * 401/403/409 по /lore/*. Память процесса, не БД: живёт до рестарта.
+     * Полноценный аудит по осям (long-term, с ролью из токена) — AL-20; UI обязан
+     * показывать это происхождение данных, а не выдавать буфер за аудит.
+     */
+    @GET
+    @Path("denials")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response recentDenials(@HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        return noStore(Response.ok(Map.of(
+            "source", "in-memory ring (до рестарта); долговременный аудит — AL-20",
+            "denials", denials.snapshot())));
     }
 
     private Response upstream(Exception e) {

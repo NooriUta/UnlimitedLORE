@@ -138,10 +138,12 @@ export async function loreUpload(
   filename: string,
   base64Data: string,
   contentType?: string,
+  extraFields?: Record<string, string>,
 ): Promise<unknown> {
   const bytes = Buffer.from(base64Data, 'base64');
   const form = new FormData();
   form.append('file', new Blob([bytes], { type: contentType ?? 'application/octet-stream' }), filename);
+  for (const [k, v] of Object.entries(extraFields ?? {})) form.append(k, v);
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { ...(await writeAuthHeaders()) },

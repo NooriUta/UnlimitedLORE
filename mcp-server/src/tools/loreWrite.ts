@@ -86,13 +86,15 @@ export function registerLoreWrite(server: McpServer): void {
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
       task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
+      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case (link it via uc_link rel="task"), jtd=helper job, enb=enabler; omit when unclassified — legal'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type }) => ({
+    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class }) => ({
           sprint_id, task_id, title,
           note_md: note_md ?? null, phase_uid: phase_uid ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
           reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
+          work_class: work_class ?? null,
         }),
   });
 
@@ -206,7 +208,7 @@ export function registerLoreWrite(server: McpServer): void {
       'only supplied fields written) and/or PR refs (pr_numbers — appended to the sprint\'s pr_refs ' +
       'string, existing ones skipped; pass pr_replace=true to discard existing pr_refs first instead of ' +
       'appending, e.g. to fix entries baked with the wrong repo). Does NOT change status — use status_set. ' +
-      'Does NOT change priority (SCD2-tracked field, no MCP tool wired to it yet). ' +
+      'Does NOT change priority/planned dates — use sprint_plan_set (SCD2 close-open). ' +
       'RULE: always fill context_md when you know WHY the sprint exists. Mutates system_aida_lore.',
     {
       sprint_id:   z.string().describe('e.g. "SPRINT_HOUND_ROWSET_V2"'),
@@ -244,6 +246,267 @@ export function registerLoreWrite(server: McpServer): void {
           return err(new Error('provide at least one metadata field or pr_numbers'));
         }
         return json({ sprint_id, ...results });
+      } catch (e) { return err(e); }
+    },
+  );
+
+
+  // ── ADR-LORE-022: продуктовый слой Feature → UC (ACCEPTED 2026-07-17) ──
+  // RBAC D10: пишут architect/pm (+full); клиентские профили зеркалируют.
+  definePostTool(server, {
+    name: 'feature_new',
+    description: 'Create or update a KnowFeature (product capability, ADR-LORE-022). Upserts by feature_id. ' +
+      'status: proposed|active|dropped — "shipped" is COMPUTED (D4: all UCs shipped), the endpoint rejects it. ' +
+      'Decompose into UCs via uc_new(feature_id). Feature→Release edge does NOT exist by design (D8 — derived). ' +
+      'Mutates system_aida_lore.',
+    schema: {
+      feature_id:   z.string().describe('e.g. "FEAT-GITCYCLE"'),
+      title:        z.string().optional(),
+      body_md:      z.string().optional().describe('ценность + критерий готовности'),
+      context_md:   z.string().optional().describe('БОЛЬШОЙ контекст (D13, как у спринта): зачем фича, ссылки на ADR/спринты'),
+      status:       z.enum(['proposed', 'active', 'dropped']).optional(),
+      component_id: z.string().optional(),
+    },
+    path: '/lore/feature',
+    body: ({ feature_id, title, body_md, context_md, status, component_id }) => ({
+      feature_id, title: title ?? null, body_md: body_md ?? null, context_md: context_md ?? null,
+      status: status ?? null, component_id: component_id ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'uc_new',
+    description: 'Create or update a KnowUseCase (unit of user value, ADR-LORE-022). Upserts by uc_id; ' +
+      'feature_id keeps the DECOMPOSES_INTO edge in sync (response carries feature_linked:false when the ' +
+      'feature is missing — not a silent no-op). scenario_md/acceptance_md are separate fields; actors are ' +
+      'KnowActor VERTICES (D12, can be several) — attach via uc_link rel="actor", never a free-text string. ' +
+      'UC shipped ⇔ its uc-tasks are done (advisory). Mutates system_aida_lore.',
+    schema: {
+      uc_id:         z.string().describe('e.g. "UC-GIT-MERGE"'),
+      title:         z.string().optional().describe('сценарий одной строкой'),
+      scenario_md:   z.string().optional()
+        .describe('Cockburn template (ADR-LORE-027 §1) — section headings are a machine-read convention: ' +
+          '"### Триггер", "### Предусловия", "### Основной сценарий" (numbered 1..N), "### Расширения" ' +
+          '(items "2a. …"/"3b. …" — the number MUST reference an existing step), "### Вариации", ' +
+          '"### Минимальные гарантии", "### Гарантии успеха", "### Диаграмма" (```mermaid``` renders natively). ' +
+          'Images: upload via asset_up and paste the returned md snippet.'),
+      acceptance_md: z.string().optional()
+        .describe('критерий приёмки; fully-dressed wants "### Проверки" (numbered) + "### Покрытие расширений" ' +
+          '(each Na from the scenario named), casual — just a numbered list of checks (ADR-LORE-027 §3)'),
+      status:        z.enum(['proposed', 'active', 'shipped', 'dropped']).optional(),
+      feature_id:    z.string().optional().describe('родитель — держит DECOMPOSES_INTO в синхроне'),
+      goal_level:    z.enum(['cloud', 'kite', 'sea-level', 'subfunction']).optional()
+        .describe('Cockburn goal level, one scale for the whole layer: ☁ cloud / 🪁 kite = feature altitude, ' +
+          '🌊 sea-level (user goal) / 🐟 subfunction = UC altitude'),
+      rigor:         z.enum(['casual', 'fully-dressed']).optional()
+        .describe('writing weight (ADR-LORE-027-D1) — omit to derive from goal_level ' +
+          '(subfunction → casual, everything else → fully-dressed); passing it explicitly always wins'),
+      priority:      z.enum(['high', 'normal', 'low']).optional(),
+    },
+    path: '/lore/uc',
+    body: ({ uc_id, title, scenario_md, acceptance_md, status, feature_id, goal_level, rigor, priority }) => ({
+      uc_id, title: title ?? null, scenario_md: scenario_md ?? null,
+      acceptance_md: acceptance_md ?? null, status: status ?? null, feature_id: feature_id ?? null,
+      goal_level: goal_level ?? null, rigor: rigor ?? null, priority: priority ?? null,
+    }),
+  });
+
+  // ADR-LORE-032 §2 (D5): боли и выгоды — ВЕРШИНЫ, не проза. Только так fit
+  // VP-канвы считается рёбрами, боль переиспользуется несколькими фичами, и
+  // «самая горячая боль» + дубль усилий становятся видимы (аналитика ADR-030).
+  definePostTool(server, {
+    name: 'pain_new',
+    description: 'Create or update a KnowPain — a customer pain as a graph vertex (ADR-LORE-032 §2). ' +
+      'Upsert by pain_id. Wire it up: feature_link(rel="pain") = the feature CLAIMS to address it, ' +
+      'uc_link(rel="relieves") = a use case ACTUALLY relieves it, uc_link on the actor side tells whose pain ' +
+      'it is. A pain with claims but no reliever is exactly what the hygiene slice reports. ' +
+      'Reuse the same pain across features — that is the point of it being a vertex.',
+    schema: {
+      pain_id:  z.string().describe('e.g. "PAIN-LORE-RAW-TOKEN" (PAIN-<PROJ>-<slug>)'),
+      title:    z.string().optional().describe('боль одной строкой, языком клиента'),
+      body_md:  z.string().optional().describe('подробности: когда возникает, чем сейчас обходят'),
+      severity: z.enum(['high', 'normal', 'low']).optional(),
+    },
+    path: '/lore/pain',
+    body: ({ pain_id, title, body_md, severity }) => ({
+      pain_id, title: title ?? null, body_md: body_md ?? null, severity: severity ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'gain_new',
+    description: 'Create or update a KnowGain — a customer gain as a graph vertex (ADR-LORE-032 §2). ' +
+      'metric_md is what makes the gain COUNT: a gain without a measurable metric never closes the VP fit, ' +
+      'and the response says so. Wire it up: feature_link(rel="gain") = the feature PROMISES it, ' +
+      'uc_link(rel="delivers") = a use case ACTUALLY creates it, vp_link(rel="success_of") = which job the ' +
+      'gain is success in.',
+    schema: {
+      gain_id:   z.string().describe('e.g. "GAIN-LORE-LINKED-RELEASES" (GAIN-<PROJ>-<slug>)'),
+      title:     z.string().optional().describe('выгода одной строкой'),
+      body_md:   z.string().optional(),
+      metric_md: z.string().optional().describe('ЧЕМ МЕРЯЕМ — без метрики выгода не засчитывается в fit'),
+      rank:      z.enum(['essential', 'expected', 'desired', 'unexpected']).optional()
+        .describe('Osterwalder gain rank (dict gain_rank): essential=без неё решение не работает … unexpected=превосходит ожидания'),
+    },
+    path: '/lore/gain',
+    body: ({ gain_id, title, body_md, metric_md, rank }) => ({
+      gain_id, title: title ?? null, body_md: body_md ?? null, metric_md: metric_md ?? null, rank: rank ?? null,
+    }),
+  });
+
+  // ADR-LORE-032 §2 — третий столп профиля клиента (Остервальдер VPC): работа.
+  // Боли мешают работе (BLOCKS), выгоды — успех в работе (SUCCESS_OF), UC её
+  // ВЫПОЛНЯЕТ (PERFORMS). Глобальная вершина: одна работа переиспользуется
+  // несколькими продуктами, продуктовый контекст — на рёбрах.
+  definePostTool(server, {
+    name: 'job_new',
+    description: 'Create or update a KnowJob — a customer JOB-TO-BE-DONE as a graph vertex (ADR-LORE-032 §2, ' +
+      'Osterwalder VPC). The third pillar of the customer profile: a pain BLOCKS a job, a gain is the SUCCESS_OF ' +
+      'a job, and a use case PERFORMS it (uc_link rel="performs"). Whose job it is = vp_link(rel="performed_by") ' +
+      'to a KnowActor. GLOBAL vertex (no project) — the same job is felt across products; product context lives ' +
+      'on the edges. Upsert by job_id.',
+    schema: {
+      job_id:     z.string().describe('e.g. "JOB-RELEASE" (JOB-<slug>) — global, no project prefix required'),
+      title:      z.string().optional().describe('работа одной строкой, языком клиента («выпустить релиз, не покидая сессии»)'),
+      body_md:    z.string().optional(),
+      kind:       z.enum(['functional', 'social', 'emotional', 'supporting']).optional()
+        .describe('Osterwalder job type (dict job_kind)'),
+      importance: z.enum(['high', 'normal', 'low']).optional().describe('насколько работа важна клиенту'),
+    },
+    path: '/lore/job',
+    body: ({ job_id, title, body_md, kind, importance }) => ({
+      job_id, title: title ?? null, body_md: body_md ?? null, kind: kind ?? null, importance: importance ?? null,
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'vp_link',
+    description: 'Link (or unlink) the CUSTOMER-PROFILE edges of the Value Proposition Canvas (ADR-LORE-032 §2, ' +
+      'Osterwalder). rel="felt_by": a KnowPain is felt by a KnowActor; rel="desired_by": a KnowGain is desired ' +
+      'by an actor; rel="performed_by": a KnowJob is performed by an actor — these say WHOSE pain/gain/job it is ' +
+      '(the segment). rel="blocks": a pain BLOCKS a job; rel="success_of": a gain is the SUCCESS_OF a job — these ' +
+      'wire the three pillars into one canvas instead of three loose lists. linked:false = edge NOT created ' +
+      '(target missing), never a silent no-op. Mutates system_aida_lore.',
+    schema: {
+      source_id: z.string().describe('pain_id (felt_by/blocks) | gain_id (desired_by/success_of) | job_id (performed_by)'),
+      rel:       z.enum(['felt_by', 'desired_by', 'performed_by', 'blocks', 'success_of']),
+      target_id: z.string().describe('actor_id (felt_by/desired_by/performed_by) | job_id (blocks/success_of)'),
+      action:    z.enum(['add', 'remove']).default('add'),
+    },
+    path: '/lore/vp/link',
+    body: ({ source_id, rel, target_id, action }) => ({ source_id, rel, target_id, action: action ?? 'add' }),
+  });
+
+  definePostTool(server, {
+    name: 'feature_link',
+    description: 'Link (or unlink) a KnowFeature. rel="pain": ADDRESSES — the feature claims to address a pain; ' +
+      'rel="gain": PROMISES — it promises a gain (relieving/delivering is the UCs\' job, see uc_link ' +
+      'rel="relieves"/"delivers"). rel="job": HELPS_WITH — the feature claims to help with a customer job ' +
+      '(performing it is the UCs\' job, see uc_link rel="performs"). rel="milestone": TARGETS_MILESTONE — the ' +
+      'strategic goal the feature refines (KAOS reading: milestone = goal, feature = refinement, UCs = ' +
+      'operationalisations). rel="component": BELONGS_TO. linked:false in the response = edge NOT created ' +
+      '(target missing) — never a silent no-op.',
+    schema: {
+      feature_id: z.string(),
+      rel:        z.enum(['pain', 'gain', 'job', 'milestone', 'component']),
+      target_id:  z.string().describe('pain_id | gain_id | job_id | milestone_id | component_id, matching rel'),
+      action:     z.enum(['add', 'remove']).default('add'),
+    },
+    path: '/lore/feature/link',
+    body: ({ feature_id, rel, target_id, action }) => ({ feature_id, rel, target_id, action: action ?? 'add' }),
+  });
+
+  server.tool(
+    'uc_link',
+    'Link (or unlink) a KnowUseCase. rel="task": REALIZES edge (KnowTask→UC), target_id=full task_uid — ' +
+      'REQUIRED discipline for tasks with work_class=uc (advisory, D3). rel="adr"/"decision": TRACED_TO ' +
+      'edge (UC→justification) — OPTIONAL by design (D9). rel="actor": HAS_ACTOR edge (MULTI, D12) to a ' +
+      'KnowActor (create via actor_new first). rel="includes"/"extends": UC→UC graph relations (D13): ' +
+      'includes = mandatory sub-scenario, extends = variant. rel="relieves"/"delivers" (ADR-LORE-032 §2): ' +
+      'the UC actually relieves a KnowPain / delivers a KnowGain — these edges are what CLOSE the VP fit ' +
+      'the feature only claimed via feature_link(pain|gain). rel="performs" (ADR-LORE-032 §2): the UC actually ' +
+      'PERFORMS a KnowJob — the third fit axis, closing what feature_link(job) only claimed. linked:false in ' +
+      'the response = edge NOT created (target missing) — never a silent no-op. Mutates system_aida_lore.',
+    {
+      uc_id:     z.string().describe('e.g. "UC-GIT-MERGE"'),
+      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
+      target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers) | job_id (performs)'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
+      actor_role: z.enum(['primary', 'supporting']).optional()
+        .describe('rel="actor" only (ADR-LORE-028 D19): the first linked actor becomes primary by default — ' +
+          'a UC needs exactly one primary (quality check #7); pass this to override'),
+    },
+    async ({ uc_id, rel, target_id, action, actor_role }) => {
+      try {
+        return json(await lorePost('/lore/uc/link',
+          { uc_id, rel, target_id, action: action ?? 'add', actor_role: actor_role ?? null }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  // ADR-LORE-027-D3 режим (б): re-lint без записи. Тот же алгоритм, что панель
+  // качества в форме и ответ uc_new/uc_set — расхождение невозможно по построению.
+  server.tool(
+    'uc_quality',
+    'Re-lint a use case against the Cockburn quality rules (ADR-LORE-027 §3-4) WITHOUT writing anything. ' +
+      'Returns {rigor, score, max, findings[]} where score/max counts only the checks REQUIRED at the UC\'s ' +
+      'weight (casual has a smaller denominator than fully-dressed — optional sections become hints, not ' +
+      'penalties). Section headings are matched by convention; extension refs ("2a.") are checked against ' +
+      'existing main-scenario steps; primary-actor and TRACED_TO are read from edges, not prose. Advisory — ' +
+      'the same numbers come back inside uc_new/uc_set responses, so you rarely need this except to review ' +
+      'someone else\'s UC.',
+    { uc_id: z.string().describe('e.g. "UC-GIT-MERGE"') },
+    async ({ uc_id }) => {
+      try {
+        return json(await lorePost('/lore/uc/quality', { uc_id }));
+      } catch (e) { return err(e); }
+    },
+  );
+
+  definePostTool(server, {
+    name: 'actor_new',
+    description: 'Create or update a KnowActor — проектируемая роль приложения (D12): human-role | system | ' +
+      'agent. Upserts by actor_id. Один актор ссылается многими UC (HAS_ACTOR via uc_link rel="actor") — ' +
+      'реестр ролей и карта «сценарии роли» живут на этой вершине. Mutates system_aida_lore.',
+    schema: {
+      actor_id: z.string().describe('e.g. "ACT-ADMIN", "ACT-AGENT-SESSION"'),
+      name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Администратор LORE"'),
+      kind:     z.enum(['human-role', 'system', 'agent']).optional(),
+      body_md:  z.string().optional().describe('кто это, права, ожидания'),
+    },
+    path: '/lore/actor',
+    body: ({ actor_id, name, kind, body_md }) => ({
+      actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+    }),
+  });
+
+  // sprint_plan_set (MCPSYNC-01): закрывает единственную содержательную дыру
+  // сверки REST↔MCP 2026-07-17 — /lore/sprint/plan (приоритет + плановые даты +
+  // track_id, SCD2 close-open) был недостижим из агентов; sprint_set честно
+  // писал об этом в описании. Свой инструмент, а не поле в sprint_set: у /plan
+  // другой SCD2-контракт (открывает новую ревизию), смешивать с partial-update
+  // метаданных значило бы прятать это различие.
+  server.tool(
+    'sprint_plan_set',
+    'Set SCD2 plan fields of a KnowSprint: priority, planned_start_date/planned_end_date (YYYY-MM-DD), ' +
+      'track_id. Opens a NEW hist revision (close-open), carrying everything else forward. ' +
+      'At least one field required. Does NOT change status — use status_set. Mutates system_aida_lore.',
+    {
+      sprint_id:          z.string().describe('e.g. "SPRINT_LORE_ADMIN_PANEL"'),
+      priority:           z.string().optional().describe('e.g. "high" | "normal" | "low" (dict priority)'),
+      planned_start_date: z.string().optional().describe('YYYY-MM-DD'),
+      planned_end_date:   z.string().optional().describe('YYYY-MM-DD'),
+      track_id:           z.string().optional(),
+    },
+    async ({ sprint_id, priority, planned_start_date, planned_end_date, track_id }) => {
+      try {
+        return json(await lorePost('/lore/sprint/plan', {
+          sprint_id,
+          priority: priority ?? null,
+          planned_start_date: planned_start_date ?? null,
+          planned_end_date: planned_end_date ?? null,
+          track_id: track_id ?? null,
+        }));
       } catch (e) { return err(e); }
     },
   );
@@ -428,10 +691,12 @@ export function registerLoreWrite(server: McpServer): void {
       'rel="depends_on": DEPENDS_ON edge, target_id=the ADR this one depends on. rel="supersedes": ' +
       'SUPERSEDES edge, target_id=the OLDER ADR this one supersedes (pair with status="SUPERSEDED" on ' +
       'the old adr_id via a separate adr_set call). rel="tag": TAGGED_WITH edge (upserts the KnowTag ' +
-      'vertex if new), target_id=tag_id. Idempotent on add. Mutates system_aida_lore.',
+      'vertex if new), target_id=tag_id. rel="project": BELONGS_TO_PROJECT edge (MULTI), target_id=git ' +
+      'project slug (must be registered via project_new — response carries linked:false on silent no-op). ' +
+      'Idempotent on add. Mutates system_aida_lore.',
     {
       adr_id:      z.string().describe('e.g. "ADR-HND-022"'),
-      rel:         z.enum(['sprint', 'release', 'component', 'depends_on', 'supersedes', 'tag']),
+      rel:         z.enum(['sprint', 'release', 'component', 'depends_on', 'supersedes', 'tag', 'project']),
       target_id:   z.string().describe('sprint_id / release_id / component_id / dep_adr_id / superseded_adr_id / tag_id, matching rel'),
       git_project: z.string().optional().describe('rel="release" only: GitHub project slug, e.g. "NooriUta/AIDA"'),
       action:      z.enum(['add', 'remove']).optional().default('add'),
@@ -452,6 +717,8 @@ export function registerLoreWrite(server: McpServer): void {
             return json(await lorePost('/lore/adr/supersedes', { adr_id, superseded_adr_id: target_id, action: act }));
           case 'tag':
             return json(await lorePost('/lore/adr/tag', { adr_id, tag_id: target_id, action: act }));
+          case 'project':
+            return json(await lorePost('/lore/adr/project', { adr_id, project: target_id, action: act }));
         }
       } catch (e) { return err(e); }
     },
@@ -748,7 +1015,14 @@ export function registerLoreWrite(server: McpServer): void {
       spec_id:      z.string().describe('unique spec id, e.g. "SPEC-AUTH-001"'),
       title:        z.string(),
       version:      z.string().optional().describe('e.g. "1.0.0"'),
-      component_id: z.string().optional().describe('e.g. "AUTH"'),
+      // Правило (v1.0.50): поле-владелец ОБЯЗАНО ехать ребром, иначе связи нет.
+      // Паспорт компонента читает out('DOCUMENTED_IN'), а не поле — раньше
+      // писалось только поле и спека не появлялась на компоненте (107 вершин).
+      // Теперь backend сам держит ребро в синхроне при каждом upsert.
+      component_id: z.string().optional().describe(
+        'owning component, e.g. "AUTH". Backend keeps the DOCUMENTED_IN edge (component → spec) in sync ' +
+        'with this field — the component passport reads the EDGE, not the field, so passing component_id ' +
+        'is what actually puts the spec on its component. Omit = leave as is; "" = detach.'),
       content_md:   z.string().optional().describe('spec body in Markdown'),
       summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
@@ -958,6 +1232,7 @@ export function registerLoreWrite(server: McpServer): void {
       executor_agent: z.string().optional().describe('single-mode: who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
       task_type:      z.string().optional().describe('single-mode: ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content)'),
+      work_class:     z.enum(['uc', 'jtd', 'enb']).optional().describe('single-mode: ADR-LORE-022 WHY-axis, orthogonal to task_type'),
       tasks: z.array(z.object({
         task_uid:       z.string(),
         title:          z.string(),
@@ -967,23 +1242,24 @@ export function registerLoreWrite(server: McpServer): void {
         executor_agent: z.string().optional(),
         reviewer_agent: z.string().optional(),
         task_type:      z.string().optional(),
+        work_class:     z.enum(['uc', 'jtd', 'enb']).optional(),
       })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, work_class, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
             tasks.map(t => ({
               task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
-              task_type: t.task_type ?? null,
+              task_type: t.task_type ?? null, work_class: t.work_class ?? null,
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', {
           task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
-          task_type: task_type ?? null,
+          task_type: task_type ?? null, work_class: work_class ?? null,
         }));
       } catch (e) { return err(e); }
     },
@@ -1329,6 +1605,34 @@ export function registerLoreWrite(server: McpServer): void {
   // BragiAsset (paths /lore/bragi/asset/upload, /lore/bragi/asset), not KnowDoc —
   // renamed to match what they actually touch; flagged as an ADR-text inconsistency
   // to fix separately (not a code bug), see MIGRATION.md.
+  // ADR-LORE-031 (PL-22): generic-ассет для MD-поля ЛЮБОЙ сущности. В отличие от
+  // bragi_asset_up (плоский bragi/{uuid}, отдельный attach-вызов), здесь ключ —
+  // контент-адрес {entity_type}/{entity_id}/{sha256-16}.{ext}, а вершина KnowAsset
+  // и ребро ATTACHED_TO создаются тем же запросом: ассет-сирота невозможен.
+  server.tool(
+    'asset_up',
+    'Upload a base64-encoded image and attach it to an existing LORE entity in one call (ADR-LORE-031). ' +
+      'Key is content-addressed ({entity_type}/{entity_id}/{sha256-16}.{ext}) — re-uploading identical bytes ' +
+      'dedupes to the same key. The response carries `md` — a ready ![alt](url) snippet to paste into the ' +
+      'entity\'s *_md body (MartProse renders it). Fails 404 if the entity does not exist (nothing is written), ' +
+      '400 on non-image mime, 409 when md_images_enabled=false in admin settings.',
+    {
+      entity_type: z.enum(['adr', 'sprint', 'task', 'feature', 'uc', 'actor', 'component',
+        'spec', 'doc', 'runbook', 'question', 'decision', 'milestone']),
+      entity_id: z.string().describe('key of the target entity, e.g. "ADR-LORE-031" or "SPRINT_X/T-1"'),
+      filename: z.string().describe('original filename, e.g. "vp-canvas.svg" — extension comes from mime, not from here'),
+      base64_data: z.string().describe('raw file bytes, base64-encoded (no data: URI prefix)'),
+      content_type: z.string().describe('image/png | image/jpeg | image/webp | image/gif | image/svg+xml'),
+      alt: z.string().optional().describe('alt-текст — попадает в готовый md-сниппет'),
+    },
+    async ({ entity_type, entity_id, filename, base64_data, content_type, alt }) => {
+      try {
+        return json(await loreUpload('/lore/asset/upload', filename, base64_data, content_type,
+          { entity_type, entity_id, ...(alt ? { alt } : {}) }));
+      } catch (e) { return err(e); }
+    },
+  );
+
   server.tool(
     'bragi_asset_up',
     'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +

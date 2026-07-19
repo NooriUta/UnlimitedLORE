@@ -79,6 +79,25 @@
   --section-timeline:   #6FB0A0;
   --section-analytics:  #D98E73;
   --section-mcp:        #8FA0C0;
+  /* Продуктовый слой (ADR-LORE-022/032) — секции главы «Зачем», та же стабильная идентичность. */
+  --section-actors:     #D4922A;
+  --section-rbjg:       #C85848;
+  --section-vp:         #A8B860;
+  --section-features:   #A8B860;
+  --section-us:         #5AB4E8;
+
+  /* VP-семантика Остервальдера — РЕАКТИВНЫ теме (алиасы семантических токенов):
+     работа ≈ инфо, боль ≈ опасность, выгода ≈ успех. */
+  --job:  var(--inf);
+  --pain: var(--dng);
+  --gain: var(--suc);
+  /* Шкала целей по Коберну ☁ cloud / 🪁 kite / 🌊 sea-level / 🐟 subfunction —
+     стабильная идентичность уровня (как --section-*), не контраст к палитре. */
+  --g-value: #A8B860;
+  --g-do:    #5AB4E8;
+  --g-know:  #C0A36E;
+  --g-tech:  #9A8CDB;
+  --g-ctrl:  #D4922A;
 
   /* Mermaid diagrams always render on a fixed light backdrop regardless of
      page theme/mode (T15) — the 'forest' theme's own line/text colors assume

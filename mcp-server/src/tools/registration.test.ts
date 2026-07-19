@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerLoreRead } from './loreRead.js';
 import { registerLoreWrite } from './loreWrite.js';
+import { registerForgejo, forgejoConfigured } from './forgejo.js';
 
 // Regression guard for ADR-LORE-014 §2 (T02): every tool renamed lore_* -> <category>_<verb>,
 // ~22 lore_link_*/lore_unlink_* collapsed into 8 <category>_link(rel, ...) tools. A stray
@@ -32,11 +33,33 @@ describe('registerLoreWrite', () => {
     expect(stragglers).toEqual([]);
   });
 
-  it('registers the expected total tool count (64 — 62 in loreWrite + 2 in loreRead)', () => {
+  it('registers the expected total tool count', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
-    // 58 baseline + question_new/question_set/question_link (ADR-020/021, T25) + decision_link (T43).
-    expect(names).toHaveLength(62);
+    // 67 (ADR-022 продуктовый слой) + asset_up (ADR-031, PL-22)
+    // + pain_new/gain_new/feature_link (ADR-032 §2, PL-27) + uc_quality (ADR-027-D3, PL-12)
+    // + job_new/vp_link (ADR-032 §2 Остервальдер, V10 — третий столп профиля).
+    expect(names).toHaveLength(74);
+  });
+
+  it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    expect(names).toContain('asset_up');
+  });
+
+  it('registers the VP-layer tools (ADR-LORE-032 §2 — pains/gains/jobs as vertices, Остервальдер)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    for (const expected of ['pain_new', 'gain_new', 'job_new', 'feature_link', 'vp_link']) {
+      expect(names, `missing VP tool: ${expected}`).toContain(expected);
+    }
+  });
+
+  it('registers uc_quality (ADR-LORE-027-D3 — Cockburn linter, re-lint mode)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    expect(names).toContain('uc_quality');
   });
 
   it('registers every name exactly once (no accidental duplicate registration)', () => {
@@ -102,5 +125,40 @@ describe('registerLoreWrite', () => {
     expect(names.filter(n => n === 'sprint_set')).toHaveLength(1);
     expect(names).not.toContain('lore_update_sprint');
     expect(names).not.toContain('lore_update_sprint_refs');
+  });
+});
+
+// FJ-04 (ADR-LORE-024): forgejo_* — условная регистрация. Обе моды под тестом:
+// мост заявлен env'ом → ровно 5 инструментов; не заявлен → ноль (а не 5 вечных 503).
+describe('registerForgejo', () => {
+  const FORGEJO_TOOLS = [
+    'forgejo_pr_new', 'forgejo_pr_status', 'forgejo_pr_merge',
+    'forgejo_ci_status', 'forgejo_branch_protection',
+  ];
+
+  it('registers all 5 tools when LORE_FORGEJO=true', () => {
+    const { server, names } = fakeServer();
+    registerForgejo(server, { LORE_FORGEJO: 'true' } as NodeJS.ProcessEnv);
+    expect(names).toEqual(FORGEJO_TOOLS);
+  });
+
+  it('registers when any non-empty FORGEJO_* env is present', () => {
+    const { server, names } = fakeServer();
+    registerForgejo(server, { FORGEJO_BASE_URL: 'http://localhost:3030' } as NodeJS.ProcessEnv);
+    expect(names).toEqual(FORGEJO_TOOLS);
+  });
+
+  it('registers nothing when the bridge is not declared', () => {
+    const { server, names } = fakeServer();
+    registerForgejo(server, {} as NodeJS.ProcessEnv);
+    expect(names).toEqual([]);
+  });
+
+  it('empty FORGEJO_* values do not count as configured', () => {
+    expect(forgejoConfigured({ FORGEJO_BASE_URL: '' } as NodeJS.ProcessEnv)).toBe(false);
+  });
+
+  it('LORE_FORGEJO=false wins over stray FORGEJO_* env (explicit off-switch)', () => {
+    expect(forgejoConfigured({ LORE_FORGEJO: 'false', FORGEJO_X: 'y' } as NodeJS.ProcessEnv)).toBe(false);
   });
 });

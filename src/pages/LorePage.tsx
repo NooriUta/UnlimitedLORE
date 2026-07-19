@@ -35,12 +35,18 @@ import { useIsNarrow } from '../hooks/useMediaQuery';
 import { a11yClick } from '../components/lore/a11y';
 import { useIsAdmin } from '../auth/useRole';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from '../components/lore/FilterPrimitives';
+// Продуктовый слой (ADR-LORE-022/032) — глава «Зачем».
+import LoreFeatures    from '../components/lore/product/LoreFeatures';
+import LoreUserStories from '../components/lore/product/LoreUserStories';
+import LoreActors      from '../components/lore/product/LoreActors';
+import LoreVpRegistry  from '../components/lore/product/LoreVpRegistry';
+import LoreVpCanvas    from '../components/lore/product/LoreVpCanvas';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
-type Section =
-  | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'openQuestions' | 'releases' | 'milestones' | 'admin'
-  | 'knowledge' | 'components' | 'qg' | 'tech'
-  | 'evolution' | 'timeline' | 'analytics' | 'mcp';
+// Тип Section и главы Storyline живут в общем словаре: главы рендерит ШАПКА
+// (AppShell — как модули активного пространства, эталон Seiðr), подвкладки и
+// контент — эта страница.
+import { chapterOf, type Section } from '../components/layout/forsetiChapters';
 
 // Module-scope constant (not recreated per render) — ADR/QG already have their
 // own top-level nav sections, so «Знания» adds spec+runbook+doc. Specs have no
@@ -51,13 +57,20 @@ const KNOWLEDGE_ARTIFACT_KINDS: ArtifactKind[] = ['spec', 'runbook', 'doc'];
 
 // icon = game-icons slug (bundled offline via addCollection in main.tsx)
 const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string }[] = [
+  // ── Глава «Зачем» — продуктовый слой (ADR-LORE-022/032, Остервальдер) ──
+  { id: 'actors',      icon: 'hooded-figure',  labelKey: 'lore.page.nav.actors',      fallback: 'Клиент'     },
+  { id: 'vpProfile',   icon: 'bullseye',       labelKey: 'lore.page.nav.vpProfile',   fallback: 'Работы · Боли · Ожидания' },
+  { id: 'vpCanvas',    icon: 'easel',          labelKey: 'lore.page.nav.vpCanvas',    fallback: 'VP-канва'   },
+  { id: 'features',    icon: 'stone-bridge',   labelKey: 'lore.page.nav.features',    fallback: 'Фичи'       },
+  { id: 'userStories', icon: 'book-cover',     labelKey: 'lore.page.nav.userStories', fallback: 'US'         },
+  // ── остальные главы ──
   { id: 'milestones', icon: 'crossed-axes',   labelKey: 'lore.page.nav.milestones', fallback: 'Вехи'       },
   { id: 'plan',       icon: 'compass',        labelKey: 'lore.page.nav.plan',       fallback: 'План'       },
   { id: 'sprints',    icon: 'sprint',         labelKey: 'lore.page.nav.sprints',    fallback: 'Спринты'    },
   { id: 'openQuestions', icon: 'help',        labelKey: 'lore.page.nav.openQuestions', fallback: 'Вопросы' },
   { id: 'adrs',       icon: 'scroll-quill',   labelKey: 'lore.page.nav.adrs',       fallback: 'ADR'        },
-  // 'decisions' parked as a sub-tab under Аналитика (not its own nav item) —
-  // temporary, pending the ADR-fold decision. See analyticsTab below.
+  // Решения снова самостоятельный раздел (глава «Что решили»), а не подвкладка Аналитики.
+  { id: 'decisions',  icon: 'gavel',          labelKey: 'lore.page.nav.decisions',  fallback: 'Решения'    },
   { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
@@ -67,9 +80,24 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
-  // ADR-LORE-025: admin-gated — скрывается из навигации для не-admin (см. sectionNav).
-  { id: 'admin',      icon: 'key',            labelKey: 'lore.page.nav.admin',      fallback: 'Админ'      },
+  // NB: 'admin' сознательно НЕ здесь — админка administers весь LORE, а не раздел
+  // Forseti, поэтому вход живёт в шапке приложения (AppShell, ADR-LORE-025).
+  // Секция остаётся валидным роутом ?section=admin и рендерится ниже под гейтом.
 ];
+
+// Стили строки подвкладок (главы теперь в шапке — AppShell).
+const STORY_S = {
+  subBar: { display: 'flex', gap: 3, padding: '6px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap' as const, alignItems: 'center', overflowX: 'auto' as const },
+  // Выделение подвкладки — как у глав в шапке: скруглённый прямоугольник с
+  // рамкой и лёгкой подсветкой цвета главы, без залитого эллипса.
+  subItem: (on: boolean, gc: string) => ({
+    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+    color: on ? 'var(--t1)' : 'var(--t2)',
+    border: `1px solid ${on ? `color-mix(in srgb, ${gc} 55%, var(--bd))` : 'transparent'}`,
+    background: on ? `color-mix(in srgb, ${gc} 12%, transparent)` : 'transparent',
+    whiteSpace: 'nowrap' as const, fontWeight: (on ? 700 : 500) as number,
+  }),
+};
 
 // MOB-01/nav: distinct per-section (per-type) colour. On narrow screens the
 // section nav collapses to icons only, so colour is what tells the types apart.
@@ -78,9 +106,11 @@ const SECTION_COLORS: Record<Section, string> = {
   decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
   analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', admin: 'var(--wrn)',
+  actors: 'var(--section-actors)', vpProfile: 'var(--section-rbjg)', vpCanvas: 'var(--section-vp)', features: 'var(--section-features)', userStories: 'var(--section-us)',
 };
 
-// Sections that use master-detail layout (list panel + detail panel)
+// Sections that use the SHARED list panel + detail. Продуктовые разделы —
+// самодостаточны (свой master-detail внутри компонента), поэтому здесь их НЕТ.
 const MASTER_DETAIL: Section[] = ['adrs', 'sprints', 'components', 'knowledge', 'qg'];
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -221,9 +251,6 @@ export default function LorePage() {
   const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
   // ADR-LORE-025 D8: role from the verified source — gates the ⚙ Админ section.
   const isAdmin = useIsAdmin();
-  // Аналитика hosts a temporary «Решения» sub-tab (decisions parked out of the
-  // main nav until the ADR-fold call is made).
-  const [analyticsTab, setAnalyticsTab] = useState<'analytics' | 'decisions'>('analytics');
   // T34: filter chrome bars collapse to one summary line by default (approved
   // design, docs/prototypes/two-tier-filter.html) — one toggle per section,
   // not per-dimension (tried, rejected as noisy, see [[feedback_ux_change_process]]).
@@ -274,10 +301,22 @@ export default function LorePage() {
   // detail pane (passport stayed empty forever).
   const hasDetailSelection = section === 'knowledge' ? !!((artKind && artId) || spec) : !!passport;
 
-  // Sections where the global search bar is actually passed to children
-  const SEARCH_SECTIONS: Section[] = ['decisions', 'openQuestions', 'releases', 'timeline'];
-  const showGlobalSearch = SEARCH_SECTIONS.includes(section)
-    || (section === 'analytics' && analyticsTab === 'decisions');
+  // SRCH-02: сквозной поиск переехал в палитру шапки (⌕ /). Эта строка — НЕ он:
+  // это фильтр СПИСКА текущего раздела, у разделов ниже другого фильтра нет.
+  // Продуктовые экраны уже принимали `listSearch`, но в набор не входили — их
+  // фильтр был недостижим из интерфейса (задавался только через ?q= в URL).
+  const FILTER_SECTIONS: Record<string, string> = {
+    decisions:     'lore.page.filter.decisions',
+    openQuestions: 'lore.page.filter.openQuestions',
+    releases:      'lore.page.filter.releases',
+    timeline:      'lore.page.filter.timeline',
+    actors:        'lore.page.filter.actors',
+    vpProfile:     'lore.page.filter.vpProfile',
+    features:      'lore.page.filter.features',
+    userStories:   'lore.page.filter.userStories',
+  };
+  const filterKey = FILTER_SECTIONS[section];
+  const showGlobalSearch = !!filterKey;
   // MOB: collapse the section nav to type-coloured icons on narrow screens.
   const narrow = useIsNarrow(720);
   // MOB-08: touch targets — icon-only chips get taller padding on narrow so
@@ -344,6 +383,13 @@ export default function LorePage() {
   const navigateToSprint = (id: string) => setParams(p => { p.set('section', 'sprints'); p.set('passport', id); p.delete('kind'); p.delete('art'); return p; });
   const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
+  // Кросс-переходы продуктового слоя (feature↔uc↔pain/gain/job↔actor): section + passport.
+  const navigateProduct = (sec: string, id?: string) => setParams(p => {
+    p.set('section', sec);
+    if (id) p.set('passport', id); else p.delete('passport');
+    p.delete('spec'); p.delete('kind'); p.delete('art');
+    return p;
+  });
   // T19: encode Knowledge doc/runbook selection into the unified `passport`.
   const openArt   = (kind: DocKind, id: string) => setParams(p => { p.set('passport', `${kind}:${id}`); p.delete('kind'); p.delete('art'); p.delete('spec'); return p; });
   const closeArt  = () => setParams(p => { p.delete('passport'); p.delete('kind'); p.delete('art'); return p; });
@@ -386,27 +432,21 @@ export default function LorePage() {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, []);
 
-  // ── Section nav — horizontal bar (План · Спринты · ADR · …) ──────────────────
+  // ── Storyline nav — двухуровневая (главы + подвкладки), редизайн ──────────────
+  const activeChapter = chapterOf(section);
   const sectionNav = (
-    <nav style={S.navBar} className="lore-nav-scroll" role="tablist" aria-label={t('lore.page.nav.ariaLabel', 'Разделы LORE')}>
-      {SECTIONS.map(s => {
-        // ADR-LORE-025: админ-секция не существует для не-admin (не disabled — отсутствует).
-        if (s.id === 'admin' && !isAdmin) return null;
-        const isActive = section === s.id;
-        const col = SECTION_COLORS[s.id];
+    // Уровень 2: подвкладки активной главы (контекст). Сами главы — в шапке.
+    <nav style={STORY_S.subBar} className="lore-nav-scroll" role="tablist" aria-label={activeChapter.name}>
+      {activeChapter.sections.map(sid => {
+        const s = SECTIONS.find(x => x.id === sid)!;
+        const on = section === sid;
         const label = t(s.labelKey, s.fallback);
         return (
-          <button
-            key={s.id}
-            role="tab"
-            aria-selected={isActive}
-            aria-label={label}
-            style={narrow ? S.navItemNarrow(isActive, col) : S.navItem(isActive)}
-            onClick={() => go(s.id)}
-            title={label}
-          >
-            {s.icon && <GameIcon slug={s.icon} size={narrow ? 18 : 15} style={{ color: narrow ? col : 'inherit' }} />}
-            {!narrow && <span>{label}</span>}
+          <button key={sid} role="tab" aria-selected={on} title={label}
+            style={STORY_S.subItem(on, activeChapter.color)}
+            onClick={() => go(sid)}>
+            {s.icon && <GameIcon slug={s.icon} size={14} style={{ color: on ? activeChapter.color : SECTION_COLORS[sid] }} />}
+            <span>{label}</span>
           </button>
         );
       })}
@@ -438,22 +478,24 @@ export default function LorePage() {
   return (
     <DictionaryProvider>
     <div style={S.root}>
-      {/* ── Top search bar — only on sections that use global q ───────────── */}
+      {/* ── Фильтр списка текущего раздела (не сквозной поиск — тот в палитре) ── */}
       {showGlobalSearch && (
         <div style={S.topBar}>
           <span style={S.searchIcon}>🔍</span>
           <input
             style={S.searchInput}
-            placeholder={t('lore.page.search.knowledgePlaceholder', 'поиск по базе знаний…')}
-            aria-label={t('lore.page.search.knowledgeAriaLabel', 'поиск по базе знаний')}
+            placeholder={t(filterKey, 'фильтр по списку…')}
+            aria-label={t(filterKey, 'фильтр по списку…')}
             value={search}
             onChange={e => onSearchChange(e.target.value)}
           />
         </div>
       )}
 
-      {/* ── Horizontal section nav ─────────────────────────────────────────── */}
-      {sectionNav}
+      {/* ── Horizontal section nav ───────────────────────────────────────────
+          Не показываем в Admin LORE: админка — уровень приложения (вход в шапке,
+          ADR-LORE-025), разделы Forseti к её содержимому отношения не имеют. */}
+      {section !== 'admin' && sectionNav}
 
       {/* ── Knowledge filter bar: Тип/Модуль chips portal in here from
           LoreArtifactList's own header (see knowledgeFilterBar above) ─── */}
@@ -1049,6 +1091,12 @@ export default function LorePage() {
           <LoreErrorBoundary label={t('lore.page.sectionError', 'Ошибка секции «{{section}}»', { section })}>
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
+          {/* ── Продуктовый слой (глава «Зачем», ADR-LORE-022/032) — самодостаточные экраны ── */}
+          {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={null} onSelect={() => {}} onNavigate={navigateProduct} onError={handleFetchError} />}
+          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
 
           {/* ADR — new */}
           {section === 'adrs' && passport === '__new' && (
@@ -1177,37 +1225,18 @@ export default function LorePage() {
           )}
 
           {section === 'analytics' && (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              <div style={{ display: 'flex', gap: 6, padding: '8px 16px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
-                {([
-                  { key: 'analytics', label: t('lore.page.analyticsTab.analytics', 'Аналитика') },
-                  { key: 'decisions', label: t('lore.page.analyticsTab.decisions', 'Решения') },
-                ] as const).map(tab => {
-                  const on = analyticsTab === tab.key;
-                  return (
-                    <button key={tab.key} type="button" onClick={() => setAnalyticsTab(tab.key)}
-                      style={{
-                        font: 'inherit', fontSize: 'var(--fs-sm)', padding: '4px 12px', borderRadius: 6, cursor: 'pointer',
-                        border: `1px solid ${on ? 'color-mix(in srgb, var(--acc) 55%, var(--bd))' : 'var(--b3)'}`,
-                        background: on ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
-                        color: on ? 'var(--acc)' : 'var(--t3)', fontWeight: on ? 600 : 400,
-                      }}>
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {analyticsTab === 'analytics' ? (
-                <LoreAnalyticsView
-                  onError={handleFetchError}
-                  onNavigateToSprint={navigateToSprint}
-                  onNavigateToComponent={navigateToComponent}
-                  onNavigateToQG={navigateToQG}
-                />
-              ) : (
-                <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
-              )}
-            </div>
+            <LoreAnalyticsView
+              onError={handleFetchError}
+              onNavigateToSprint={navigateToSprint}
+              onNavigateToComponent={navigateToComponent}
+              onNavigateToQG={navigateToQG}
+            />
+          )}
+
+          {/* Решения — снова самостоятельный раздел главы «Что решили»
+              (был временно припаркован подвкладкой Аналитики). */}
+          {section === 'decisions' && (
+            <LoreDecisionBoard q={debouncedQ} onError={handleFetchError} onNavigateAdr={navigateToAdr} />
           )}
 
           {/* MCP API — published reference for the aida-lore MCP server */}

@@ -34,15 +34,21 @@ public class LoreSchemaInitializer {
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
     String db;
 
-    @ConfigProperty(name = "bench.mart.user", defaultValue = "root")
-    String user;
-
-    @ConfigProperty(name = "bench.mart.password", defaultValue = "")
-    String password;
+    @Inject
+    MartCredentials mart;
 
     @Inject
     @RestClient
     LoreCommandClient client;
+
+    /**
+     * Явная точка синхронизации для LoreSchemaMigrationRunner: инъекция
+     * @ApplicationScoped-бина даёт ленивый прокси, и @PostConstruct НЕ выполняется
+     * до первого вызова метода. Раннер зовёт этот no-op, чтобы bootstrap-DDL
+     * гарантированно отработал ДО миграций (иначе порядок @Startup-бинов — лотерея,
+     * и раннер вставал на БД без базовых типов).
+     */
+    public void ensureReady() { /* всё делает @PostConstruct при создании бина */ }
 
     @PostConstruct
     void init() {
@@ -51,6 +57,24 @@ public class LoreSchemaInitializer {
             return;
         }
         LOG.infof("[LORE] Initializing schema in %s", db);
+        // Свежесозданная БД первые мгновения отвечает 500 на команды — DDL,
+        // запущенный сразу после create database, молча падал на ПЕРВЫХ типах
+        // (execIgnoreError глотал), и корпус жил без KnowADR/LoreComponent.
+        // Пробуем реальную команду до успеха, потом катим DDL.
+        // Проба обязана быть ПИШУЩЕЙ: чтение готово раньше, чем коммиты DDL, —
+        // read-проба проходила, а CREATE TYPE следом всё ещё падал.
+        boolean ready = false;
+        for (int i = 0; i < 20 && !ready; i++) {
+            try {
+                client.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sql", "CREATE VERTEX TYPE LoreBootProbe IF NOT EXISTS"))
+                    .await().indefinitely();
+                ready = true;
+            } catch (Exception e) {
+                try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+            }
+        }
+        if (!ready) LOG.errorf("[LORE] БД %s не ответила на пробу — DDL пойдёт наудачу (смотри ошибки ниже)", db);
         DDL.forEach(this::execIgnoreError);
         LOG.infof("[LORE] Schema init complete for %s", db);
     }
@@ -65,8 +89,7 @@ public class LoreSchemaInitializer {
     }
 
     private String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-                (user + ":" + password).getBytes(StandardCharsets.UTF_8));
+        return mart.basicAuth();
     }
 
     // ── Vertex types ──────────────────────────────────────────────────────────
@@ -100,6 +123,13 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE KnowSpec         IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowFinding      IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowRelease      IF NOT EXISTS EXTENDS V",
+        // KnowPR не создавался НИГДЕ — ни здесь, ни миграциями. На проде он есть
+        // (543 записи) только потому, что появился в обход схемы: ArcadeDB
+        // схемо-гибкий и создаёт тип на первой записи. На чистой БД его нет, и
+        // это вскрылось лишь когда V12 попытался объявить KnowPR.title —
+        // «Type with name 'KnowPR' was not found» на lore_ci_test.
+        // Свойства — по факту прода: pr_id/pr_number/title/git_project/pr_uid.
+        "CREATE VERTEX TYPE KnowPR           IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowMilestone    IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowPhase        IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowTask         IF NOT EXISTS EXTENDS V",
@@ -185,6 +215,12 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowSpec.spec_id             IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowFinding.finding_id       IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowRelease.release_id       IF NOT EXISTS STRING",
+        // KnowPR: состав по факту прода (см. комментарий у CREATE VERTEX TYPE).
+        "CREATE PROPERTY KnowPR.pr_id                 IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowPR.pr_uid                IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowPR.pr_number             IF NOT EXISTS INTEGER",
+        "CREATE PROPERTY KnowPR.title                 IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowPR.git_project           IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowMilestone.milestone_id   IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowPhase.phase_uid          IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowTask.task_uid            IF NOT EXISTS STRING",
@@ -605,6 +641,37 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowQuestion (question_id)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowQuestion (component_id) NOTUNIQUE",
         "CREATE EDGE TYPE ANSWERS   IF NOT EXISTS",   // KnowDecision -> KnowQuestion
-        "CREATE EDGE TYPE RAISED_IN IF NOT EXISTS"    // KnowQuestion -> KnowADR|KnowSprint|KnowTask
+        "CREATE EDGE TYPE RAISED_IN IF NOT EXISTS",   // KnowQuestion -> KnowADR|KnowSprint|KnowTask
+
+        // ── FULL_TEXT по телам (v1.0.50) ──────────────────────────────────────
+        // Слайс `search` гонял ILIKE '%…%' по каждому телу — полный скан корпуса
+        // на каждый запрос. FULL_TEXT даёт SEARCH_FIELDS(["decision_md"], "агентн*").
+        // ArcadeDB schema-less: индексировать можно только ОБЪЯВЛЕННОЕ свойство,
+        // поэтому перед каждым индексом идёт CREATE PROPERTY (поля уже живут в
+        // документах — объявление их не трогает).
+        "CREATE PROPERTY KnowADRHist.context_md      IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowADRHist.decision_md     IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowADRHist.consequences_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowADRHist (context_md)      FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowADRHist (decision_md)     FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowADRHist (consequences_md) FULL_TEXT",
+        "CREATE PROPERTY KnowDecision.title   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDecision.body_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowDecision (title)   FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowDecision (body_md) FULL_TEXT",
+        "CREATE PROPERTY KnowQuestion.title   IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowQuestion.body_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (title)   FULL_TEXT",
+        "CREATE INDEX IF NOT EXISTS ON KnowQuestion (body_md) FULL_TEXT",
+        "CREATE PROPERTY KnowSpecHist.content_md    IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowSpecHist (content_md)    FULL_TEXT",
+        "CREATE PROPERTY KnowRunbookHist.content_md IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (content_md) FULL_TEXT",
+        "CREATE PROPERTY KnowDocHist.content_md     IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowDocHist (content_md)     FULL_TEXT",
+        "CREATE PROPERTY KnowSprintHist.context_md  IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowSprintHist (context_md)  FULL_TEXT",
+        "CREATE PROPERTY KnowTaskHist.note_md       IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowTaskHist (note_md)       FULL_TEXT"
     );
 }

@@ -38,11 +38,8 @@ public class LoreIngestService {
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
     String db;
 
-    @ConfigProperty(name = "bench.mart.user", defaultValue = "root")
-    String user;
-
-    @ConfigProperty(name = "bench.mart.password", defaultValue = "")
-    String password;
+    @Inject
+    MartCredentials mart;
 
     @ConfigProperty(name = "team-docs.root", defaultValue = "C:/AIDA/docs")
     String defaultDocsRoot;
@@ -663,8 +660,7 @@ public class LoreIngestService {
     }
 
     private String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-                (user + ":" + password).getBytes(StandardCharsets.UTF_8));
+        return mart.basicAuth();
     }
 
     private static String nullToEmpty(String s) {

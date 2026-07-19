@@ -7,6 +7,42 @@
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /src
 
+# GRADLE НЕ ЧИТАЕТ HTTP_PROXY/HTTPS_PROXY из окружения — ему нужны системные
+# свойства Java. Обёртка gradlew качает дистрибутив через curl и переменные
+# видит, а сам Gradle при РАЗРЕШЕНИИ ЗАВИСИМОСТЕЙ — нет. Симптом ровно такой и
+# был: gradle-9.6.1-bin.zip скачался за 40 секунд, а следом
+#   Plugin [id: 'io.quarkus', version: '3.36.1'] was not found
+#   could not resolve plugin artifact 'io.quarkus:io.quarkus.gradle.plugin'
+# «Сеть вроде есть, а плагин не находится» — и три попытки подряд списывались в
+# «transient network?», хотя дело не в сети.
+#
+# На ноуте это сходило с рук: там прямой выход к Maven Central рабочий, и
+# отсутствие прокси у Gradle ничего не ломало. На ci-server прямой выход
+# деградирован, и шаг стал обязательным.
+ARG HTTP_PROXY=""
+ARG HTTPS_PROXY=""
+ARG NO_PROXY=""
+RUN set -eu; \
+    P="${HTTPS_PROXY:-$HTTP_PROXY}"; \
+    if [ -n "$P" ]; then \
+      hp="${P#*://}"; hp="${hp%%/*}"; h="${hp%%:*}"; pt="${hp##*:}"; \
+      [ "$pt" = "$h" ] && pt=8080; \
+      NP="$(printf '%s' "${NO_PROXY:-}" | tr ',' '|')"; \
+      { \
+        echo "systemProp.http.proxyHost=$h"; \
+        echo "systemProp.http.proxyPort=$pt"; \
+        echo "systemProp.https.proxyHost=$h"; \
+        echo "systemProp.https.proxyPort=$pt"; \
+        [ -n "$NP" ] && echo "systemProp.http.nonProxyHosts=$NP" || true; \
+        [ -n "$NP" ] && echo "systemProp.https.nonProxyHosts=$NP" || true; \
+      } > /root/.gradle-proxy.properties; \
+      mkdir -p /root/.gradle; \
+      cat /root/.gradle-proxy.properties >> /root/.gradle/gradle.properties; \
+      echo "прокси для Gradle: $h:$pt"; \
+    else \
+      echo "прокси не задан — Gradle пойдёт напрямую"; \
+    fi
+
 # Warm the dependency layer on build scripts alone, so source-only edits don't
 # re-resolve every dependency.
 COPY gradlew gradlew.bat settings.gradle build.gradle gradle.properties ./

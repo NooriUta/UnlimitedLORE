@@ -26,8 +26,19 @@ public final class LoreSlices {
 
     public record Composed(String sql, Map<String, Object> params) {}
 
-    /** Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards, release_uid (contains #). */
-    static final Pattern VALUE_RE = Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}");
+    /**
+     * Conservative value whitelist — ids, dates, semver, module codes, LIKE wildcards,
+     * release_uid (contains #), а также ПОИСКОВЫЕ ЗАПРОСЫ пользователя.
+     *
+     * UNICODE_CHARACTER_CLASS обязателен: без него java-шный `\w` — это ASCII-только
+     * [a-zA-Z_0-9], поэтому любой запрос на кириллице отбивался как BAD_PARAMS (400),
+     * и сквозной поиск по русскоязычной базе не работал в принципе. Флаг расширяет
+     * \w до юникодных букв/цифр; набор пунктуации и лимит длины НЕ меняются — кавычек,
+     * точки с запятой и скобок в whitelist по-прежнему нет, так что поверхность
+     * инъекции та же (плюс значения уходят связанными параметрами, не конкатенацией).
+     */
+    static final Pattern VALUE_RE =
+        Pattern.compile("[\\w@.,:+\\-/ %#]{1,160}", Pattern.UNICODE_CHARACTER_CLASS);
 
     private static final Map<String, SliceDef> SLICES = new LinkedHashMap<>();
 
@@ -73,11 +84,15 @@ public final class LoreSlices {
             "out('BELONGS_TO').component_id[0] AS component, " +
             "out('BELONGS_TO').component_id    AS components, " +
             "out('TAGGED_WITH').tag_id         AS tags, " +
+            "out('BELONGS_TO_PROJECT').slug    AS git_projects, " + // ADRPROJ-01
             "in('DECIDED_IN').size()           AS decision_count " +
             "FROM KnowADR",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY adr_id");
 
         // ADR passport — full context with traversals
@@ -93,13 +108,18 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN').sprint_id      AS implemented_in_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " +
             "out('SUPERSEDES').adr_id             AS supersedes_ids, " +
-            "out('TAGGED_WITH').tag_id            AS tags " +
+            "out('TAGGED_WITH').tag_id            AS tags, " +
+            "out('BELONGS_TO_PROJECT').slug       AS git_projects " + // ADRPROJ-01
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 
-        // SCD2 history chain for one ADR
+        // SCD2 history chain for one ADR. AL-30: ревизия версионирует ВСЁ — слайс
+        // обязан отдавать тела, а не только хэш; иначе история из 200 ревизий тел
+        // показывала прочерки. content_hash (SV-10) = дешёвый «менялось ли», тела =
+        // «что именно» для пополевого диффа в UI.
         slice("adr_history",
-            "SELECT valid_from, valid_to, content_hash, source_commit " +
+            "SELECT valid_from, valid_to, content_hash, source_commit, " +
+            "context_md, decision_md, consequences_md " +
             "FROM KnowADRHist WHERE in('HAS_STATE').adr_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -299,10 +319,129 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
             // (ADR-LORE-015, T14) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent, task_type " +
+            "author_agent, executor_agent, reviewer_agent, task_type, " +
+            // ADR-LORE-022: ЗАЧЕМ-ось + какой UC задача реализует (REALIZES).
+            "work_class, out('REALIZES').uc_id AS realizes_uc " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
             "ORDER BY order_index",
             List.of("sprint_id"), Map.of(), "");
+
+        // ── ADR-LORE-022: продуктовый слой ───────────────────────────────────
+        // «Фича целиком» — вычисляемый факт (D4): shipped ⇔ все UC shipped.
+        // Слайс отдаёт счётчики, вывод статуса — на клиенте/потребителе.
+        slice("features",
+            "SELECT feature_id, title, body_md, context_md, status, component_id, date_created, " +
+            "goal_level, shipped_at, " +
+            "out('DECOMPOSES_INTO').uc_id AS uc_ids, " +
+            "out('DECOMPOSES_INTO').size() AS uc_total, " +
+            "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS uc_shipped, " +
+            // VP-профиль фичи (ADR-032 D5): что она ЗАЯВЛЯЕТ (ADDRESSES/PROMISES) —
+            // замкнутость на UC (RELIEVES/DELIVERS) считает слайс feature_vp (AN-01).
+            "out('ADDRESSES').pain_id AS pain_ids, " +
+            "out('PROMISES').gain_id  AS gain_ids, " +
+            "out('HELPS_WITH').job_id AS job_ids, " + // Остервальдер: третья ось профиля
+            "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id " +
+            "FROM KnowFeature",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "component", " WHERE component_id = :component")),
+            " ORDER BY feature_id");
+
+        slice("use_cases_of_feature",
+            "SELECT uc_id, title, scenario_md, acceptance_md, status, feature_id, date_created, " +
+            // ADR-027 (D1/§2): классификация Коберна — уровень цели, вес оформления,
+            // приоритет; shipped_at ставит система (ADR-029 §2).
+            "goal_level, rigor, priority, shipped_at, " +
+            // ADR-032 D5: что этот UC реально снимает/создаёт — правая половина VP-канвы.
+            "out('RELIEVES').pain_id AS relieves_pain_ids, " +
+            "out('DELIVERS').gain_id AS delivers_gain_ids, " +
+            "out('PERFORMS').job_id  AS performs_job_ids, " +
+            "in('REALIZES').task_uid AS task_uids, " +
+            "out('TRACED_TO').adr_id AS traced_adr_ids, " +
+            "out('TRACED_TO').decision_id AS traced_decision_ids, " +
+            // D12/D13: акторы (multi) и поперечные связи графа UC.
+            "out('HAS_ACTOR').actor_id AS actor_ids, " +
+            "out('HAS_ACTOR').name     AS actor_names, " +
+            "out('UC_INCLUDES').uc_id  AS includes_uc, " +
+            "out('UC_EXTENDS').uc_id   AS extends_uc, " +
+            "in('UC_INCLUDES').uc_id   AS included_by, " +
+            "in('UC_EXTENDS').uc_id    AS extended_by " +
+            "FROM KnowUseCase WHERE feature_id = :id ORDER BY uc_id",
+            List.of("id"), Map.of(), "");
+
+        // ADR-LORE-032 §2 (D5): реестры болей и выгод. Боль/выгода переиспользуются
+        // НЕСКОЛЬКИМИ фичами — потому реестр проектный, а не «внутри фичи»; отсюда же
+        // растёт кросс-фичевая канва по актору и «самая горячая боль» (AN-01/AN-07).
+        slice("pains",
+            "SELECT pain_id, title, body_md, severity, date_created, " +
+            "out('FELT_BY').actor_id       AS actor_ids, " +   // чья боль
+            "out('BLOCKS').job_id          AS blocks_job_ids, " + // Остервальдер: какой работе мешает
+            "in('ADDRESSES').feature_id    AS feature_ids, " + // кто заявил, что адресует
+            "in('ADDRESSES').size()        AS addressed_by, " +
+            "in('RELIEVES').uc_id          AS relieved_by_ucs, " + // кто РЕАЛЬНО снимает
+            "in('RELIEVES').size()         AS relieved_by " +
+            "FROM KnowPain",
+            List.of(), new LinkedHashMap<>(Map.of("severity", " WHERE severity = :severity")),
+            " ORDER BY pain_id");
+
+        slice("gains",
+            "SELECT gain_id, title, body_md, metric_md, rank, date_created, " +
+            "out('DESIRED_BY').actor_id    AS actor_ids, " +
+            "out('SUCCESS_OF').job_id      AS success_of_job_ids, " + // успех в какой работе
+            "in('PROMISES').feature_id     AS feature_ids, " +
+            "in('PROMISES').size()         AS promised_by, " +
+            "in('DELIVERS').uc_id          AS delivered_by_ucs, " +
+            "in('DELIVERS').size()         AS delivered_by " +
+            "FROM KnowGain",
+            List.of(), new LinkedHashMap<>(Map.of("rank", " WHERE rank = :rank")), " ORDER BY gain_id");
+
+        // Остервальдер VPC: РАБОТЫ — третий столп профиля клиента. Боли и выгоды
+        // производны от работы («боль мешает работе», «выгода — успех в работе»),
+        // поэтому реестр работ отдаёт и то, и другое: вокруг чего вообще всё крутится.
+        slice("jobs",
+            "SELECT job_id, title, body_md, kind, importance, date_created, " +
+            "out('PERFORMED_BY').actor_id AS actor_ids, " +       // чья работа
+            "in('BLOCKS').pain_id         AS blocking_pain_ids, " + // что мешает
+            "in('BLOCKS').size()          AS blocked_by, " +
+            "in('SUCCESS_OF').gain_id     AS gain_ids, " +        // что значит успех
+            "in('HELPS_WITH').feature_id  AS feature_ids, " +     // кто ЗАЯВИЛ помощь
+            "in('HELPS_WITH').size()      AS helped_by, " +
+            "in('PERFORMS').uc_id         AS performed_by_ucs, " + // кто РЕАЛЬНО выполняет
+            "in('PERFORMS').size()        AS performed_by " +
+            "FROM KnowJob",
+            List.of(), new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")), " ORDER BY job_id");
+
+        // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
+        slice("actors",
+            "SELECT actor_id, name, kind, body_md, " +
+            "in('HAS_ACTOR').uc_id AS uc_ids, " +
+            "in('HAS_ACTOR').size() AS uc_count " +
+            "FROM KnowActor",
+            List.of(),
+            new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")),
+            " ORDER BY actor_id");
+
+        // ADR-LORE-031 §3: ассеты, потерявшие вход ATTACHED_TO (сущность удалена) —
+        // кормит двухшаговый GC в Админке. По построению upload сироту создать
+        // не может, так что непустой срез = следы удалённых сущностей.
+        slice("asset_orphans",
+            "SELECT asset_key, entity_type, entity_id, mime, size_bytes, created_at " +
+            "FROM KnowAsset WHERE inE('ATTACHED_TO').size() = 0",
+            List.of(), new LinkedHashMap<>(), " ORDER BY created_at");
+
+        slice("tasks_of_uc",
+            "SELECT task_uid, task_id, title, task_type, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE out('REALIZES').uc_id CONTAINS :id ORDER BY task_uid",
+            List.of("id"), Map.of(), "");
+
+        // Обзор дисциплины (D3): uc-задачи без REALIZES — advisory, не ошибка.
+        slice("unlinked_uc_tasks",
+            "SELECT task_uid, task_id, title, work_class, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE work_class = 'uc' AND out('REALIZES').size() = 0 " +
+            "ORDER BY task_uid",
+            List.of(), Map.of(), "");
 
         // Batch variant: fetch tasks for multiple sprints in one query.
         // sprint_ids is a comma-separated string that the slice layer splits into a list.
@@ -338,8 +477,15 @@ public final class LoreSlices {
         // ── §4 Search — cross-entity, case-insensitive substring ─────────────
         // pattern is wrapped in %…% server-side (callers pass a bare term, e.g. "geoid").
         // Matches id + title/name; for ADRs also the body sections on the OPEN hist row.
+        // Сквозной поиск единого окна (SRCH-01). Продуктовый слой ищется по
+        // FULL_TEXT-индексам через SEARCH_FIELDS + '*' (префикс: иначе поиск-как-
+        // набираешь не работает — токенный поиск не ловит незавершённое слово).
+        // ВАЖНО: SEARCH_FIELDS требует индекс РОВНО на перечисленные поля, а у нас
+        // индексы по одному полю → OR однополевых вызовов. Схлопывание в
+        // мультиполевые + русская морфология — SRCH-03 (миграция V11).
+        // Замеры и ловушки: SPEC-TECH-LORE-ARCADEDB §Полнотекстовый поиск.
         slice("search",
-            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c)) LET " +
+            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c, $f, $u, $pn, $gn, $jb, $ac)) LET " +
             "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
             "      WHERE adr_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR out('HAS_STATE')[valid_to IS NULL].context_md[0] ILIKE ('%' + :pattern + '%') " +
@@ -360,7 +506,34 @@ public final class LoreSlices {
             "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
             "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
-            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10)",
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            // ── продуктовый слой (ADR-LORE-022/032) — по FULL_TEXT-индексам ──
+            "$f = (SELECT 'feature' AS type, feature_id AS ref_id, title FROM KnowFeature " +
+            "      WHERE feature_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['context_md'], :pattern + '*') = true LIMIT 10), " +
+            "$u = (SELECT 'use_case' AS type, uc_id AS ref_id, title FROM KnowUseCase " +
+            "      WHERE uc_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['scenario_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['acceptance_md'], :pattern + '*') = true LIMIT 10), " +
+            "$pn = (SELECT 'pain' AS type, pain_id AS ref_id, title FROM KnowPain " +
+            "      WHERE pain_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "$gn = (SELECT 'gain' AS type, gain_id AS ref_id, title FROM KnowGain " +
+            "      WHERE gain_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['metric_md'], :pattern + '*') = true LIMIT 10), " +
+            "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
+            "      WHERE job_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
+            "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10)",
             List.of("pattern"), Map.of(), "");
 
         // ── §5 Plan ──────────────────────────────────────────────────────────
@@ -445,7 +618,10 @@ public final class LoreSlices {
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY spec_id LIMIT 400");
 
         slice("spec_by_id",
@@ -473,12 +649,17 @@ public final class LoreSlices {
             "FROM KnowSpec WHERE spec_id LIKE 'SPEC-TECH-%'",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " AND (out('BELONGS_TO').component_id[0] = :component OR component_id = :component)")),
+                // CONTAINS, не [0] — см. комментарий в слайсе adrs.
+                "component", " AND (out('BELONGS_TO').component_id CONTAINS :component OR component_id = :component)")),
             " ORDER BY spec_id LIMIT 200");
 
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
+        // AL-30: + все версионируемые поля ревизии (тела, план, pr_refs) — история
+        // перестаёт показывать «только статус» при полных данных под ней.
         slice("history_sprint",
-            "SELECT valid_from, valid_to, content_hash, source_commit, status_raw " +
+            "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
+            "priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
+            "context_md, outcome_md " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -534,7 +715,10 @@ public final class LoreSlices {
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE out('BELONGS_TO').component_id[0] = :component")),
+                // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
+                // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
+                // делало сущность видимой только под одним произвольным компонентом.
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY doc_id LIMIT 200");
 
         slice("doc_by_id",

@@ -69,11 +69,8 @@ public abstract class LoreResourceBase {
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
     String db;
 
-    @ConfigProperty(name = "bench.mart.user", defaultValue = "root")
-    String user;
-
-    @ConfigProperty(name = "bench.mart.password", defaultValue = "")
-    String password;
+    @Inject
+    MartCredentials mart;
 
     @Inject
     @RestClient
@@ -108,8 +105,7 @@ public abstract class LoreResourceBase {
     }
 
     String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-            (user + ":" + password).getBytes(StandardCharsets.UTF_8));
+        return mart.basicAuth();
     }
 
     /** Param map that tolerates null values (Map.of forbids them) — used for nullable note_md. */
@@ -170,6 +166,41 @@ public abstract class LoreResourceBase {
             }
         } catch (Exception e) {
             LOG.warnf("[LORE IN_AREA] relink %s→%s failed: %s", cid, area, e.getMessage());
+        }
+    }
+
+    /**
+     * Keep the DOCUMENTED_IN edge in sync with a spec's component_id field.
+     *
+     * Same class of bug as T01/PARENT_OF: spec upsert wrote only the field, while
+     * the component passport reads out('DOCUMENTED_IN').spec_id — so specs created
+     * with component_id simply never appeared on their component (107 such vertices
+     * against 135 edges, all of the latter left over from the old git-ETL).
+     *
+     * Direction is component → spec (the component documents itself in the spec),
+     * matching how the `component` slice traverses it. Blank component detaches.
+     */
+    void relinkSpecComponentEdge(String specId, String componentId) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT inE('DOCUMENTED_IN').@rid AS rids FROM KnowSpec WHERE spec_id=:sid",
+                Map.of("sid", specId));
+            if (!rows.isEmpty() && rows.get(0).get("rids") instanceof List<?> rids) {
+                for (Object rid : rids) {
+                    if (rid == null) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM DOCUMENTED_IN WHERE @rid=" + rid)).await().indefinitely();
+                }
+            }
+            if (componentId != null && !componentId.isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                    "CREATE EDGE DOCUMENTED_IN FROM (SELECT FROM LoreComponent WHERE component_id='%s') " +
+                    "TO (SELECT FROM KnowSpec WHERE spec_id='%s')",
+                    componentId, specId))).await().indefinitely();
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOCUMENTED_IN] relink spec %s→component %s failed: %s", specId, componentId, e.getMessage());
         }
     }
 

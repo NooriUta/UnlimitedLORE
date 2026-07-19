@@ -23,6 +23,9 @@ public class LoreSpecResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreSpecResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
+
     public record SpecUpsertRequest(String spec_id, String title, String version,
         String component_id, String content_md, String file_path, String summary,
         // LH-02: true = a body edit opens a new hist version (SCD2 close-open) instead
@@ -119,6 +122,12 @@ public class LoreSpecResource extends LoreResourceBase {
                 }
                 histWritten = true;
             }
+            // Поле component_id само по себе невидимо: паспорт компонента читает
+            // ребро out('DOCUMENTED_IN'). Раньше писалось только поле — спека не
+            // появлялась на своём компоненте (107 таких вершин). Держим ребро в
+            // синхроне, как T01 сделал для PARENT_OF.
+            if (req.component_id() != null) relinkSpecComponentEdge(req.spec_id(), req.component_id());
+            hashStamper.stampOpenHist("KnowSpecHist", "KnowSpec", "spec_id", req.spec_id());
             return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id(),
                 "body_written", histWritten)));
         } catch (Exception e) {

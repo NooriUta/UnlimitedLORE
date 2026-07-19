@@ -29,6 +29,9 @@ public class LoreStatusResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreStatusResource.class);
 
+    @jakarta.inject.Inject
+    LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
+
     public record StatusUpdateRequest(String entity_type, String id, String status) {}
     record StatusRevision(String valid_from, String plan_version) {}
     public record StatusUpdateResponse(
@@ -72,7 +75,7 @@ public class LoreStatusResource extends LoreResourceBase {
         }
         String now  = Instant.now().toString();
         String nsid = UUID.randomUUID().toString();
-        return switch (req.entity_type()) {
+        Uni<Response> flip = switch (req.entity_type()) {
             // Read the currently-open row's plan fields (priority/planned_*/track_id)
             // BEFORE the SCD2 flip, then restore them onto the freshly-opened row —
             // updateScd2Status's INSERT only carries state_uid/status_raw/valid_from,
@@ -124,6 +127,12 @@ public class LoreStatusResource extends LoreResourceBase {
                                     .entity(new LoreError("NOT_IMPLEMENTED",
                                         req.entity_type() + " not supported yet"))));
         };
+        // SV-10: у задач carry-forward несёт note_md, но не content_hash — доштамповать
+        // на свежеоткрытой строке (спринт несёт хэш через SPRINT_PLAN_FIELDS).
+        return flip.invoke(r -> {
+            if (r != null && r.getStatus() < 300 && "task".equals(req.entity_type()))
+                hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.id());
+        });
     }
 
     /**
@@ -225,12 +234,18 @@ public class LoreStatusResource extends LoreResourceBase {
     // edge (which needs no such handling — edges point at the stable KnowSprint
     // vertex, not the hist row, so they survive SCD2 transitions untouched) and
     // drifted on 62+ sprints in production before removal.
+    // SV-10/ADR-021 (2026-07-17): + context_md/outcome_md/content_hash. До этого
+    // смена статуса спринта ПЕРЕНОСИЛА план-поля, но НЕ тела — каждый флип
+    // осиротлял эссе спринта на закрытой строке (ровно carry-forward класс,
+    // от которого задачи защищены restoreTaskHistFields, а спринты не были).
     private static final List<String> SPRINT_PLAN_FIELDS = List.of(
-        "priority", "planned_start_date", "planned_end_date", "track_id", "pr_refs");
+        "priority", "planned_start_date", "planned_end_date", "track_id", "pr_refs",
+        "context_md", "outcome_md", "content_hash");
 
     private Uni<Map<String, Object>> readSprintPlanFields(String sprintId) {
         MartQuery q = new MartQuery("sql",
-            "SELECT priority, planned_start_date, planned_end_date, track_id, pr_refs " +
+            "SELECT priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
+            "context_md, outcome_md, content_hash " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sprintId), -1);
         return client.query(db, basicAuth(), q).map(res -> {
@@ -297,9 +312,11 @@ public class LoreStatusResource extends LoreResourceBase {
         final String now  = Instant.now().toString();
         final String nsid = UUID.randomUUID().toString();
 
+        // + context_md/outcome_md/content_hash (2026-07-17): этот close-open нёс тот же
+        // carry-forward баг, что и статус-флип, — тела спринта терялись при правке плана.
         MartQuery readQ = new MartQuery("sql",
             "SELECT @rid AS rid, status_raw, priority, planned_start_date, planned_end_date, " +
-            "track_id, pr_refs FROM KnowSprintHist " +
+            "track_id, pr_refs, context_md, outcome_md, content_hash FROM KnowSprintHist " +
             "WHERE in('HAS_STATE').sprint_id[0] = :sid AND valid_to IS NULL LIMIT 1",
             Map.of("sid", sid), -1);
 
@@ -317,6 +334,9 @@ public class LoreStatusResource extends LoreResourceBase {
             next.put("planned_end_date",     req.planned_end_date()     != null ? req.planned_end_date()     : cur.get("planned_end_date"));
             next.put("track_id",             req.track_id()             != null ? req.track_id()             : cur.get("track_id"));
             next.put("pr_refs",              cur.get("pr_refs"));
+            next.put("context_md",           cur.get("context_md"));
+            next.put("outcome_md",           cur.get("outcome_md"));
+            next.put("content_hash",         cur.get("content_hash"));
 
             Uni<LoreCommandClient.LoreCommandResult> closeOld = oldRid.startsWith("#")
                 ? writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -333,7 +353,8 @@ public class LoreStatusResource extends LoreResourceBase {
                     "INSERT INTO KnowSprintHist SET state_uid = :nsid, valid_from = :now, " +
                     "status_raw = :status_raw, priority = :priority, planned_start_date = :planned_start_date, " +
                     "planned_end_date = :planned_end_date, " +
-                    "track_id = :track_id, pr_refs = :pr_refs",
+                    "track_id = :track_id, pr_refs = :pr_refs, " +
+                    "context_md = :context_md, outcome_md = :outcome_md, content_hash = :content_hash",
                     insertParams)))
                 .chain(__ -> writeClient.command(db, basicAuth(), linkStateCmd(
                     "KnowSprint", "KnowSprintHist", "sprint_id", sid, nsid)))
