@@ -35,8 +35,9 @@ jobs:
       # Публичные репозитории остаются вторыми: Nexus отдаёт 404, когда не смог
       # сходить наверх, и без запасного пути это читалось бы как «нет такого
       # артефакта».
-      - name: Use Nexus mirror (gradle)
-        run: bash .github/scripts/use-nexus.sh
+      # ВРЕМЕННО ОТКЛЮЧЕНО — Nexus донастраивают, см. коммит.
+      # - name: Use Nexus mirror
+      #   run: bash .github/scripts/use-nexus.sh
 
       # Live-DB тесты нужны настоящему ArcadeDB. GitHub-hosted: Testcontainers.
       # Self-hosted Forgejo act_runner: Testcontainers/Ryuk не работает в DooD,

@@ -124,8 +124,20 @@ jobs:
       #
       # Если Nexus недоступен, сборка не падает: публичные репозитории остаются
       # в списке вторыми (см. Dockerfile.local).
-      LORE_MAVEN_MIRROR: http://192.168.3.131:8081/repository/maven-central-proxy/
-      LORE_PLUGIN_MIRROR: http://192.168.3.131:8081/repository/gradle-plugins-proxy/
+      # ВРЕМЕННО ПУСТО. Nexus донастраивают, и в этот период он отдаёт 404 на
+      # артефакты, которых ещё не закэшировал. Для Gradle это хуже, чем кажется:
+      # запасной публичный репозиторий спасает только на этапе МЕТАДАННЫХ.
+      # Gradle запоминает, откуда пришёл .pom, и за .jar идёт туда же — если
+      # зеркало отдало pom, но не отдало jar, повторного поиска не будет:
+      #
+      #   Could not find jandex-3.5.3.jar
+      #     Searched in the following locations:
+      #         http://192.168.3.131:8081/repository/maven-central-proxy/...
+      #
+      # Публичных репозиториев в списке нет вовсе. Вернуть адреса, когда Nexus
+      # устоится, — механизм рабочий и остаётся на месте.
+      LORE_MAVEN_MIRROR: ""
+      LORE_PLUGIN_MIRROR: ""
     steps:
       - uses: actions/checkout@v7
 
