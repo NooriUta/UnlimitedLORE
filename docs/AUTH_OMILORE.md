@@ -46,8 +46,33 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
 3. **Frontend:** set `VITE_LORE_AUTH_ENABLED=true`, `VITE_OIDC_ISSUER` (same issuer URL,
    reachable from the browser — likely a different host/port than the backend's internal
    one), `VITE_OIDC_CLIENT_ID=lore-app` (default). Rebuild.
-4. **MCP:** set `LORE_OIDC_ISSUER`, `LORE_MCP_CLIENT_ID=lore-mcp`, `LORE_MCP_CLIENT_SECRET`
-   (the rotated secret from step 1).
+4. **MCP:** set `LORE_OIDC_ISSUER`, **`LORE_MCP_CLIENT_ID=lore-mcp-full`**, `LORE_MCP_CLIENT_SECRET`
+   (the service-account secret of that client).
+
+   ⚠️ **Use the per-profile client, NOT the generic `lore-mcp`.** Both exist in the realm, and
+   the difference is invisible until it matters:
+
+   | client | protocol mappers | client role |
+   |---|---|---|
+   | `lore-mcp` | `lore-realm-role-mapper` only | — |
+   | `lore-mcp-full` | `agent_scope` + `seer_roles` | `agent-full` |
+
+   With the generic client the token arrives **without the `agent_scope` claim**, so
+   `AgentScopeFilter` (AL-17) treats the caller as "not an agent" and lets everything through.
+   Authorization would look enabled while its main consumer bypasses it entirely — no errors,
+   no denials, no protection. Verified against the live realm 2026-07-19.
+
+   `agent-full` is near-admin by design; that is fine. The point is that the claim is
+   **present**, so the filter passes the caller by right rather than by absence of a marker —
+   and the profile can be narrowed later. With `lore-mcp` there would be nothing to narrow.
+
+   The other seven clients (`lore-mcp-developer`, `-tester`, `-pm`, `-architect`, `-analyst`,
+   `-marketer`, `-product-analyst`) carry the same mappers with their own scope: an agent run
+   under one of them gets that profile's real restrictions rather than a declaration.
+
+   Ordering does not matter: since `mcp-server/src/backend.ts` sends **both** the Bearer token
+   and `X-Seer-Role`, configuring MCP before the flip is safe (the Bearer is ignored while auth
+   is off) and flipping auth afterwards does not interrupt it.
 5. **Verify:** a request without a bearer token → 401; a token carrying realm role
    `admin`/`super-admin` → writes succeed; forging `X-Seer-Role: admin` without a token →
    still 401/anonymous (the filter no longer honours the raw header once a token is required).
