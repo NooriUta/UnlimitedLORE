@@ -43,9 +43,29 @@ async function serviceAccountToken(): Promise<string> {
   return cachedToken.accessToken;
 }
 
+/**
+ * ОБА заголовка, когда OIDC настроен — намеренно, ради бесшовного включения auth.
+ *
+ * Раньше здесь было «либо-либо», и это создавало капкан порядка: настроить MCP
+ * заранее — он шлёт только Bearer, а бэкенд с ВЫКЛЮЧЕННЫМ auth его игнорирует и
+ * остаётся без роли; включить auth раньше — MCP всё ещё шлёт только заголовок,
+ * которому больше не верят. Любая односторонняя последовательность обрывала MCP.
+ *
+ * Слать оба безопасно в обоих состояниях, это свойство бэкенда, а не совпадение
+ * (SeerRoleFromTokenFilter):
+ *   auth ВЫКЛ → X-Seer-Role принимается как сегодня, Bearer не смотрят;
+ *   auth ВКЛ  → клиентский X-Seer-Role СНИМАЕТСЯ и переписывается ролью из
+ *               проверенного токена, то есть подделать заголовком нельзя.
+ *
+ * Благодаря этому MCP можно настроить заранее и включать auth когда угодно —
+ * без окна молчания и без согласованного рестарта двух сторон.
+ */
 async function writeAuthHeaders(): Promise<Record<string, string>> {
   if (!OIDC_CONFIGURED) return { 'X-Seer-Role': ROLE };
-  return { Authorization: `Bearer ${await serviceAccountToken()}` };
+  return {
+    Authorization: `Bearer ${await serviceAccountToken()}`,
+    'X-Seer-Role': ROLE,
+  };
 }
 
 async function detail(res: Response): Promise<string> {
