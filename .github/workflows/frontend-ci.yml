@@ -38,6 +38,22 @@ jobs:
       - name: Resolve a working proxy address (or drop it)
         run: bash .github/scripts/resolve-proxy.sh
 
+      # npm через зеркало в локальной сети. Прямой реестр на этом канале не
+      # доживает до конца установки:
+      #
+      #   npm error code EIDLETIMEOUT
+      #   npm error Idle timeout reached for host `registry.npmjs.org:443`
+      #
+      # `npm ci` берёт адреса из package-lock.json, и смена реестра сама по себе
+      # могла бы не подействовать — но npm с 9-й версии подменяет хост у
+      # npmjs-ссылок (`replace-registry-host=npmjs`, на раннере npm 11). Значит
+      # lock-файл пересоздавать не нужно и он остаётся пригодным вне этой сети.
+      #
+      # Если Nexus недоступен, скрипт молча ничего не меняет — установка идёт
+      # напрямую, как раньше.
+      - name: Use Nexus mirror (npm, gradle)
+        run: bash .github/scripts/use-nexus.sh
+
       - name: Set up Node.js (github-hosted)
         if: runner.environment == 'github-hosted'
         uses: actions/setup-node@v7
@@ -72,7 +88,7 @@ jobs:
 
       - name: LORE frontend — install + typecheck + test + build
         run: |
-          npm ci
+          bash .github/scripts/npm-retry.sh ci
           npm run check:statuses
           npm run lint
           npm test
@@ -81,7 +97,7 @@ jobs:
       - name: MCP server — install + typecheck + test + build
         working-directory: mcp-server
         run: |
-          npm ci
+          bash ../.github/scripts/npm-retry.sh ci
           npm test
           npm run build
 

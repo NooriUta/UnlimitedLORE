@@ -117,6 +117,27 @@ jobs:
       # Проверялось вечером 19.07: с выключенным оверлеем стенд отвечал 200 по
       # :4400 и выглядел рабочим, но получить сессию было неоткуда.
       COMPOSE_FILE: docker-compose.yml:docker-compose.traefik.yml
+      # ── Зеркало Nexus для Gradle внутри сборки образа ─────────────────────
+      # Адрес именно LAN-ый, а не host.docker.internal: на Linux-демоне это имя
+      # само не резолвится, и build-arg указывал бы в пустоту — ровно та
+      # ошибка, что уже стоила отказа с прокси.
+      #
+      # ⚠️ Публичные репозиториии в списке вторыми — это НЕ полноценный запас,
+      # и рассчитывать на него нельзя. Проверено отказом 2026-07-19: запас
+      # работает только на этапе МЕТАДАННЫХ. Gradle запоминает, откуда пришёл
+      # .pom, и за .jar идёт туда же:
+      #
+      #   Could not find jandex-3.5.3.jar
+      #     Searched in the following locations:
+      #         http://192.168.3.131:8081/repository/maven-central-proxy/...
+      #
+      # Публичных репозиториев в списке поиска нет вовсе. То есть если зеркало
+      # отдало pom и не отдало jar — сборка падает, сколько запасных ни пропиши.
+      #
+      # Поэтому защита здесь другая: скрипт use-nexus.sh перед переключением
+      # проверяет, что зеркало реально отдаёт .jar, а не просто отвечает.
+      LORE_MAVEN_MIRROR: http://192.168.3.131:8081/repository/maven-central-proxy/
+      LORE_PLUGIN_MIRROR: http://192.168.3.131:8081/repository/gradle-plugins-proxy/
     steps:
       - uses: actions/checkout@v7
 
@@ -155,11 +176,11 @@ jobs:
 
       - name: Build backend image
         if: steps.which.outputs.backend == 'true'
-        run: docker compose build lore-backend
+        run: bash .github/scripts/compose-build-retry.sh lore-backend
 
       - name: Build frontend image
         if: steps.which.outputs.frontend == 'true'
-        run: docker compose build lore-app
+        run: bash .github/scripts/compose-build-retry.sh lore-app
 
       - name: Deploy backend
         if: steps.which.outputs.backend == 'true'

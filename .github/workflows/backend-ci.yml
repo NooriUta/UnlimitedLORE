@@ -29,6 +29,15 @@ jobs:
       - name: Resolve a working proxy address (or drop it)
         run: bash .github/scripts/resolve-proxy.sh
 
+      # Зеркало для gradle-шагов раннера. Ретрай ниже остаётся страховкой, но
+      # успешный повтор теперь печатает ::notice — если повторы продолжатся уже
+      # с зеркалом, значит сборка идёт мимо него, и это будет видно сразу.
+      # Публичные репозитории остаются вторыми: Nexus отдаёт 404, когда не смог
+      # сходить наверх, и без запасного пути это читалось бы как «нет такого
+      # артефакта».
+      - name: Use Nexus mirror (gradle)
+        run: bash .github/scripts/use-nexus.sh
+
       # Live-DB тесты нужны настоящему ArcadeDB. GitHub-hosted: Testcontainers.
       # Self-hosted Forgejo act_runner: Testcontainers/Ryuk не работает в DooD,
       # и раньше тесты просто СКИПАЛИСЬ — регрессия схемы на чистой БД на нашем
