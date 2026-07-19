@@ -98,6 +98,18 @@ jobs:
       VITE_LORE_AUTH_ENABLED: "true"
       VITE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
       VITE_OIDC_CLIENT_ID: lore-app
+      # ── HTTPS на LAN ─────────────────────────────────────────────────────
+      # Оверлей подключается ТОЛЬКО здесь, а не в основном compose: сеть
+      # `headscale-net` существует лишь на ci-server, и объявление её в
+      # docker-compose.yml сломало бы `docker compose up` где угодно ещё —
+      # сети нет, стенд не поднимается.
+      #
+      # HTTPS тут не про «выставить наружу»: вход по OIDC физически невозможен
+      # на http://192.168.3.131:4400, потому что `crypto.subtle` (нужен
+      # oidc-client-ts для PKCE) существует только в защищённом контексте.
+      # На ноуте адрес был localhost — единственное исключение спецификации, и
+      # переезд молча отобрал криптографию вместе со сменой адреса.
+      COMPOSE_FILE: docker-compose.yml:docker-compose.traefik.yml
     steps:
       - uses: actions/checkout@v7
 
