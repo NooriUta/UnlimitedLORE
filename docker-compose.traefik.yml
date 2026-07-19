@@ -40,6 +40,17 @@ services:
       traefik.http.routers.lore.rule: Host(`lore.odal.seidrstudio.pro`)
       traefik.http.routers.lore.entrypoints: websecure
       traefik.http.routers.lore.tls.certresolver: regru
+      # Ограничение локальной сетью НА УРОВНЕ TRAEFIK, а не только тем, что имя
+      # резолвится в приватный адрес. Резолв — не защита: он определяет, куда
+      # пойдёт клиент, а не кого пустят. Кто угодно, добравшийся до 443 этого
+      # хоста с нужным Host-заголовком, дошёл бы до LORE без этого middleware.
+      #
+      # Диапазоны повторяют `lan-only` у infisical на том же Traefik — включая
+      # 100.64.0.0/10, это CGNAT-подсеть headscale: устройства в тоннеле обязаны
+      # остаться внутри, иначе доступ с телефона сломается, а причина будет
+      # выглядеть как «сертификат» или «DNS».
+      traefik.http.middlewares.lore-lan.ipallowlist.sourcerange: "192.168.0.0/16,172.16.0.0/12,10.0.0.0/8,100.64.0.0/10,127.0.0.1/32"
+      traefik.http.routers.lore.middlewares: lore-lan@docker
       # Порт ВНУТРИ контейнера (nginx слушает 80), не опубликованный 4400.
       traefik.http.services.lore.loadbalancer.server.port: "80"
 
