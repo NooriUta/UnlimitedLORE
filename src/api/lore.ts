@@ -48,7 +48,11 @@ export async function fetchLoreSlice<T>(
 ): Promise<T[]> {
   const url = new URL(`${LORE_BASE}/slice/${slice}`, location.origin);
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), { signal });
+  // MIG-30: чтение тоже под аутентификацией. До этого GET-и шли БЕЗ заголовков —
+  // работало, потому что бэкенд отдавал слайсы анониму. С закрытием чтения такой
+  // запрос стал бы 401 на каждом экране, то есть выглядел бы как «LORE сломался»,
+  // а не как «не хватает токена».
+  const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
   assertJson(res);
   if (!res.ok) return parseError(res);
   const body = (await res.json()) as { rows?: T[] };
@@ -110,7 +114,7 @@ export async function fetchBragiMetrics(
 ): Promise<BragiMetricPoint[]> {
   const url = new URL(`${LORE_BASE}/bragi/metric/query`, location.origin);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), { signal });
+  const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
   assertJson(res);
   if (!res.ok) return parseError(res);
   const body = (await res.json()) as { rows?: BragiMetricPoint[] };
@@ -126,7 +130,7 @@ export interface LoreSliceDescriptor {
 }
 
 export async function fetchLoreSliceCatalog(signal?: AbortSignal): Promise<LoreSliceDescriptor[]> {
-  const res = await fetch(`${LORE_BASE}/slices`, { signal });
+  const res = await fetch(`${LORE_BASE}/slices`, { signal, headers: { ...authHeaders() } });
   assertJson(res);
   if (!res.ok) return parseError(res);
   const body = (await res.json()) as { slices?: LoreSliceDescriptor[] };
@@ -160,7 +164,7 @@ export interface LoreAnalytics {
 }
 
 export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnalytics> {
-  const res = await fetch(`${LORE_BASE}/analytics`, { signal });
+  const res = await fetch(`${LORE_BASE}/analytics`, { signal, headers: { ...authHeaders() } });
   assertJson(res);
   if (!res.ok) return parseError(res);
   return (await res.json()) as LoreAnalytics;
