@@ -77,9 +77,23 @@ async function detail(res: Response): Promise<string> {
   }
 }
 
+/**
+ * MIG-30: чтение тоже под аутентификацией, поэтому заголовки нужны и GET-ам.
+ *
+ * Раньше их слали только записи — и это работало ровно потому, что бэкенд
+ * отдавал слайсы анониму. С закрытием чтения каждый GET стал отвечать
+ * `401 UNAUTHENTICATED`, то есть MCP замолчал бы целиком, хотя настроен верно.
+ *
+ * Поймано первым же чтением после деплоя. Симметричную правку на фронте я
+ * сделала, а здесь пропустила — тот же класс ошибки в другом файле: заголовки
+ * добавлены там, где о них помнили, и не добавлены там, где путь считался
+ * «просто чтением».
+ */
+const readAuthHeaders = writeAuthHeaders;
+
 /** GET /lore/slices — catalog of named slices with their required/optional params. */
 export async function loreSlices(): Promise<unknown> {
-  const res = await fetch(`${BASE}/lore/slices`);
+  const res = await fetch(`${BASE}/lore/slices`, { headers: await readAuthHeaders() });
   if (!res.ok) throw new Error(`GET /lore/slices → ${res.status} ${await detail(res)}`);
   return res.json();
 }
@@ -93,7 +107,9 @@ export async function loreSlice(
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
       : '';
-  const res = await fetch(`${BASE}/lore/slice/${encodeURIComponent(slice)}${qs}`);
+  const res = await fetch(`${BASE}/lore/slice/${encodeURIComponent(slice)}${qs}`, {
+    headers: await readAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`GET /lore/slice/${slice} → ${res.status} ${await detail(res)}`);
   const body = (await res.json()) as { rows?: unknown[] };
   return Array.isArray(body.rows) ? body.rows : [];
@@ -134,7 +150,7 @@ export async function loreGet(path: string, params?: Record<string, string>): Pr
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
       : '';
-  const res = await fetch(`${BASE}${path}${qs}`);
+  const res = await fetch(`${BASE}${path}${qs}`, { headers: await readAuthHeaders() });
   if (!res.ok) throw new Error(`GET ${path} → ${res.status} ${await detail(res)}`);
   return res.json();
 }
