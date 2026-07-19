@@ -103,15 +103,20 @@ jobs:
           echo "$JH/bin" >> "$GITHUB_PATH"
           "$JH/bin/java" -version
 
+      # Обе gradle-задачи под ретраем: канал до Maven Central нестабилен, и
+      # обрыв загрузки зависимостей выглядит как отказ сборки. Пример отказа —
+      # `Read timed out` на 52 артефактах подряд (PR #173, 2026-07-19).
+      # Ретрай тут уже был, но только на сборке образа ниже, и промах пришёлся
+      # ровно на непокрытый шаг. Настоящее решение — зеркало Nexus.
       - name: Gradle build (Quarkus backend)
         working-directory: backend
-        run: ./gradlew build --no-daemon
+        run: bash ../.github/scripts/gradle-retry.sh build --no-daemon
 
       # `build` already runs the test task; kept explicit so a future test
       # regression is obvious in the log even if `build` is later narrowed.
       - name: Gradle test (Quarkus backend)
         working-directory: backend
-        run: ./gradlew test --no-daemon
+        run: bash ../.github/scripts/gradle-retry.sh test --no-daemon
 
       # Validates the multi-stage Dockerfile compiles the app from source.
       # Gradle INSIDE the image build fetches deps from Maven Central directly:

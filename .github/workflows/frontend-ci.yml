@@ -38,11 +38,37 @@ jobs:
       - name: Resolve a working proxy address (or drop it)
         run: bash .github/scripts/resolve-proxy.sh
 
-      - name: Set up Node.js
+      - name: Set up Node.js (github-hosted)
+        if: runner.environment == 'github-hosted'
         uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: 'npm'
+
+      # Self-hosted стенд: образ раннера УЖЕ несёт Node нужной версии, но
+      # setup-node этого не видит и качает дистрибутив с GitHub. На этом канале
+      # загрузка обрывается:
+      #
+      #   Acquiring 24.18.0 - x64 from https://github.com/actions/node-versions/...
+      #   aborted
+      #   Waiting 20 seconds before trying again
+      #
+      # Пять минут ожидания и красный прогон — при том, что ровно эта версия
+      # лежит в образе. Проверено: `node --version` в forgejo-ci-runtime:jdk21
+      # отдаёт v24.18.0, то есть ту же, что скачивалась.
+      #
+      # Зеркальный случай уже был у бэкенда с JDK и лечился так же — брать из
+      # образа вместо загрузки. Здесь просто не заметили, потому что фронт падал
+      # реже: у setup-node есть собственный повтор, и он иногда спасал.
+      #
+      # Кэш npm тут не настраивается намеренно: его включал `cache: 'npm'` у
+      # setup-node, а без действия настраивать нечем. Потеря невелика — npm
+      # ходит в реестр, который после появления зеркала Nexus станет локальным.
+      - name: Use runner-image Node (self-hosted)
+        if: runner.environment != 'github-hosted'
+        run: |
+          command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
+          echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
       - name: LORE frontend — install + typecheck + test + build
         run: |

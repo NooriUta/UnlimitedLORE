@@ -6,6 +6,8 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -37,6 +39,31 @@ public class SeerRoleFromTokenFilter implements ContainerRequestFilter {
     @ConfigProperty(name = "quarkus.oidc.enabled", defaultValue = "false")
     boolean oidcEnabled;
 
+    /**
+     * MIG-30: чтение тоже требует входа, а не только запись.
+     *
+     * До этого снятие заголовка закрывало ЗАПИСЬ (requireAdmin не получал роли),
+     * но GET проходил дальше и отдавал данные анониму. Замер на живом стенде:
+     * `GET /lore/slice/sprints` без токена → 200 и 392 КБ содержимого — весь граф,
+     * включая ADR, решения и заметки о том, где что устроено слабо.
+     *
+     * На LAN это было осознанным решением. При публикации наружу оно превращается
+     * в утечку, и увидеть её трудно: браузер честно показывает форму входа, потому
+     * что `AuthGate` срабатывает раньше, — а API отдаёт то же самое мимо интерфейса.
+     * Защита интерфейса не является защитой данных.
+     *
+     * Проверяется факт входа, а не роль: роли уже разграничивают, что можно менять.
+     */
+    static boolean isProtected(String path) {
+        if (path == null) return false;
+        String p = path.startsWith("/") ? path.substring(1) : path;
+        // Только продуктовый слой. `/q/health/*` намеренно остаётся открытым:
+        // на него смотрят healthcheck в compose и проверка деплоя в CD, а данных
+        // он не отдаёт. Закрыть его значило бы сломать перезапуск стенда, и
+        // выглядело бы это как «контейнер не поднимается».
+        return p.equals("lore") || p.startsWith("lore/");
+    }
+
     @Override
     public void filter(ContainerRequestContext ctx) {
         if (identity == null || identity.isAnonymous()) {
@@ -45,6 +72,15 @@ public class SeerRoleFromTokenFilter implements ContainerRequestFilter {
                 // anonymous caller gets no role, full stop. Never trust a raw
                 // client header once verified auth is the source of truth.
                 ctx.getHeaders().remove("X-Seer-Role");
+                if (isProtected(ctx.getUriInfo().getPath())) {
+                    ctx.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+                        .header("Cache-Control", "no-store")
+                        .type(MediaType.APPLICATION_JSON)
+                        .entity(new LoreResourceBase.LoreError("UNAUTHENTICATED",
+                            "требуется вход: чтение и запись в LORE доступны только "
+                            + "аутентифицированным пользователям и агентам"))
+                        .build());
+                }
             }
             return; // OIDC off (dev/local): leave X-Seer-Role as received, today's behaviour
         }
