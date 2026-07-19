@@ -93,6 +93,17 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
 
    Port `4400` over http stays up and reading works there as before — only login cannot.
 
+   ⚠️ **If the browser sits behind a proxy, add `lore.odal.seidrstudio.pro` to its bypass list.**
+   Unlike `odal.seidrstudio.pro` (Keycloak) and `git.seidrstudio.pro`, which resolve to a public
+   address, this name deliberately resolves to the **LAN** address `192.168.3.131` — LORE is not
+   published outside. A proxy therefore tries to fetch a private address from the outside and
+   hangs, and the browser reports a plain **connection timeout**, which reads as "the stand is
+   down" rather than "this client cannot route to it". Bypassing by IP is not enough: the browser
+   goes by name.
+
+   This is the cost side of the LAN-only decision, not a defect — and the same bypass already
+   exists for `git.seidrstudio.pro` in some setups, so the pattern is not new.
+
 All three flags (backend/frontend/MCP) must flip together — flipping only one leaves that
 side either broken (frontend/MCP sending a token nothing checks) or unprotected (backend
 enforcing auth while a client still only sends the old header).
