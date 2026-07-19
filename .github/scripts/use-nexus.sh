@@ -30,11 +30,23 @@ MAVEN_MIRROR="$NEXUS/repository/maven-central-proxy/"
 PLUGIN_MIRROR="$NEXUS/repository/gradle-plugins-proxy/"
 NPM_MIRROR="$NEXUS/repository/npm-proxy/"
 
-if ! curl -sf --noproxy '*' -m 6 -o /dev/null "$NEXUS/service/rest/v1/repositories"; then
-  echo "::notice::Nexus ($NEXUS) недоступен — сборка идёт напрямую, как раньше"
+# Проверка здесь НАМЕРЕННО поверхностная — только «отвечает ли». Угадывать,
+# отдаст ли зеркало каждый нужный артефакт, бессмысленно: оно может ответить на
+# пробу и споткнуться на десятом jar-е. Настоящий запас устроен иначе — сборка
+# ПОВТОРЯЕТСЯ БЕЗ ЗЕРКАЛА, если попытка с ним не удалась (см. gradle-retry.sh,
+# compose-build-retry.sh, npm-retry.sh). Отказ зеркала стоит одной лишней
+# попытки, а не красного билда.
+#
+# Так получается и честнее: «публичные репозитории вторыми в списке» запасом НЕ
+# являются. Gradle запоминает, откуда пришёл .pom, и за .jar идёт туда же — если
+# зеркало отдало одно и не отдало другое, сборка падает, сколько запасных ни
+# пропиши. У npm запаса нет вовсе: реестр один. Единственный работающий откат —
+# повторить целиком, без зеркала.
+if ! curl -sf --noproxy '*' -m 8 -o /dev/null "$NEXUS/service/rest/v1/repositories"; then
+  echo "::notice::Nexus ($NEXUS) не отвечает — сборка идёт напрямую, как раньше"
   exit 0
 fi
-echo "Nexus доступен: $NEXUS"
+echo "Nexus отвечает: $NEXUS"
 
 # ── Gradle ───────────────────────────────────────────────────────────────────
 # Init-скриптом, а не правкой settings.gradle/build.gradle: файлы сборки должны
