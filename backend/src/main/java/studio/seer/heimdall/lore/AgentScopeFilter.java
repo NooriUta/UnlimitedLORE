@@ -198,12 +198,39 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         if (raw == null) return null;
         String first = null;
         if (raw instanceof Collection<?> c) {
-            for (Object o : c) { first = String.valueOf(o); break; }
+            for (Object o : c) { first = unquote(String.valueOf(o)); break; }
         } else {
-            first = String.valueOf(raw);
+            first = unquote(String.valueOf(raw));
         }
         if (first == null || first.isBlank()) return null;
         return first.startsWith("agent-") ? first.substring("agent-".length()) : first;
+    }
+
+    /**
+     * Снимает кавычки, которые приходят ВМЕСТЕ со значением из JSON-клейма.
+     *
+     * <p>Клейм многозначный, поэтому в токене это JSON-массив, а его элементы —
+     * {@code JsonString}. У них {@code toString()} отдаёт значение <b>в кавычках</b>:
+     * {@code "agent-full"}, а не {@code agent-full}. Без снятия кавычек проверка
+     * {@code startsWith("agent-")} ниже не срабатывает, префикс остаётся, и скоуп
+     * не совпадает ни с одной строкой матрицы — фильтр отсекает ВСЕХ агентов,
+     * включая full.
+     *
+     * <p>Найдено первым же живым запросом после включения auth (2026-07-19):
+     * <pre>AGENT_SCOPE_FORBIDDEN: профиль agent-"agent-full" не пишет в 'status'</pre>
+     * Двойной префикс в сообщении и есть след необрезанных кавычек. Юнит-тесты
+     * этого не ловили: они подставляли готовую строку, а не JSON-значение —
+     * то есть проверяли таблицу прав, но не путь получения скоупа.
+     *
+     * <p>Снимаем именно так, а не приведением к {@code JsonString}: клейм может
+     * прийти и обычной строкой (другой провайдер, другой маппер), и тогда
+     * приведение упало бы. Обрезка кавычек верна в обоих случаях.
+     */
+    static String unquote(String s) {
+        if (s == null) return null;
+        return (s.length() >= 2 && s.charAt(0) == '"' && s.charAt(s.length() - 1) == '"')
+            ? s.substring(1, s.length() - 1)
+            : s;
     }
 
     /** Первый сегмент после {@code lore/}: "lore/task/link" → "task". */
