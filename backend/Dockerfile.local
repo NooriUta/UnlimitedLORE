@@ -73,15 +73,31 @@ RUN set -eu; \
       { \
         echo "def mavenMirror  = '$LORE_MAVEN_MIRROR'"; \
         echo "def pluginMirror = '${LORE_PLUGIN_MIRROR:-$LORE_MAVEN_MIRROR}'"; \
+        echo "// Список ПЕРЕСОБИРАЕТСЯ, а не дополняется: блок repositories {}"; \
+        echo "// добавляет в конец, и зеркало оказалось бы ПОСЛЕ mavenCentral."; \
+        echo "// При оборванном канале Gradle сперва отработал бы таймаут на"; \
+        echo "// публичном репозитории и только потом дошёл до зеркала — то есть"; \
+        echo "// зеркало формально работает, а выигрыша нет."; \
         echo "settingsEvaluated { settings ->"; \
+        echo "    settings.pluginManagement.repositories.clear()"; \
         echo "    settings.pluginManagement.repositories {"; \
         echo "        maven { url = pluginMirror; allowInsecureProtocol = true }"; \
         echo "        maven { url = mavenMirror;  allowInsecureProtocol = true }"; \
+        echo "        gradlePluginPortal()"; \
+        echo "        mavenCentral()"; \
         echo "    }"; \
         echo "}"; \
         echo "allprojects {"; \
-        echo "    buildscript.repositories { maven { url = mavenMirror; allowInsecureProtocol = true } }"; \
-        echo "    repositories { maven { url = mavenMirror; allowInsecureProtocol = true } }"; \
+        echo "    buildscript.repositories.clear()"; \
+        echo "    buildscript.repositories {"; \
+        echo "        maven { url = mavenMirror; allowInsecureProtocol = true }"; \
+        echo "        mavenCentral()"; \
+        echo "    }"; \
+        echo "    repositories.clear()"; \
+        echo "    repositories {"; \
+        echo "        maven { url = mavenMirror; allowInsecureProtocol = true }"; \
+        echo "        mavenCentral()"; \
+        echo "    }"; \
         echo "}"; \
       } > /root/.gradle/init.d/nexus.gradle; \
       echo "зеркало Gradle: $LORE_MAVEN_MIRROR"; \
