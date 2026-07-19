@@ -81,6 +81,23 @@ jobs:
       # и named-volume minio. Живой стенд поднят как проект `unlimitedlore` —
       # под этим именем его и обновляем.
       COMPOSE_PROJECT_NAME: unlimitedlore
+      # ── Аутентификация (RUNBOOK-AUTH-OMILORE) ────────────────────────────
+      # ВСЕ пять флипаются вместе. Включённый фронт при выключенном бэкенде шлёт
+      # токен, который никто не проверяет; обратное — бэкенд требует токен,
+      # которого фронт не присылает.
+      #
+      # Обе стороны BUILD-TIME, и по разным причинам: Vite впекает import.meta.env
+      # в бандл, а quarkus.oidc.enabled фиксируется на сборке. Поэтому значения
+      # уходят в build-args (см. compose), а не только в окружение контейнера —
+      # иначе флаг «не срабатывает» без единой ошибки в логах.
+      #
+      # Issuer — ПУБЛИЧНЫЙ адрес KC: на него редиректит браузер, и по нему же
+      # бэкенд забирает JWKS (проверено из контейнера: 200).
+      LORE_AUTH_ENABLED: "true"
+      LORE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      VITE_LORE_AUTH_ENABLED: "true"
+      VITE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      VITE_OIDC_CLIENT_ID: lore-app
     steps:
       - uses: actions/checkout@v7
 
@@ -160,16 +177,36 @@ jobs:
         if: steps.which.outputs.backend == 'true'
         run: |
           cid=$(docker compose ps -q lore-backend)
-          # X-Seer-Role обязателен: эндпоинт под requireAdmin, без заголовка
-          # отвечает 403 — и проверка ложно объявила бы мост несконфигуренным.
-          # Пока auth выключен, заголовок и есть способ представиться админом.
-          out=$(docker exec "$cid" curl -s -m 10 -H 'X-Seer-Role: admin' \
-            http://127.0.0.1:9100/lore/kc/auth-preflight || true)
-          echo "$out"
-          case "$out" in
-            *'"kc_configured":true'*) echo "KC-мост настроен" ;;
-            *) echo "::error::KC-мост не получил секрет (kc_configured != true). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."; exit 1 ;;
-          esac
+          # Проверка зависит от режима, и это НЕ усложнение ради усложнения.
+          #
+          # Пока auth выключен, представиться админом можно заголовком
+          # X-Seer-Role — без него эндпоинт под requireAdmin отдаёт 403, и
+          # проверка ложно объявила бы мост несконфигуренным.
+          #
+          # После включения auth бэкенд этому заголовку НЕ ДОВЕРЯЕТ (в том и
+          # смысл), поэтому тот же запрос честно получает 401. Прежняя проверка
+          # уронила бы деплой ровно в момент успешного включения — отказ,
+          # неотличимый от настоящей поломки.
+          #
+          # Поэтому 401 при LORE_AUTH_ENABLED=true — это ПОДТВЕРЖДЕНИЕ: бэкенд
+          # поднялся и требует токен. А вот 200 в этом режиме означал бы, что
+          # флаг не доехал до сборки (build-time!) и auth молча остался выключен.
+          code=$(docker exec "$cid" curl -s -o /tmp/pf.json -w '%{http_code}' -m 10 \
+            -H 'X-Seer-Role: admin' http://127.0.0.1:9100/lore/kc/auth-preflight || echo 000)
+          body=$(docker exec "$cid" cat /tmp/pf.json 2>/dev/null || true)
+          echo "auth-preflight -> HTTP $code"
+          if [ "${LORE_AUTH_ENABLED}" = "true" ]; then
+            case "$code" in
+              401|403) echo "auth включён и ЗАСТАВЛЯЕТ предъявлять токен — заголовку больше не верят" ;;
+              200) echo "::error::auth должен быть включён, но эндпоинт пустил по заголовку X-Seer-Role. Значит LORE_AUTH_ENABLED не попал в СБОРКУ образа (quarkus.oidc.enabled фиксируется на build-time) — проверьте build-args в compose."; exit 1 ;;
+              *)   echo "::error::бэкенд не ответил на auth-preflight (HTTP $code)"; exit 1 ;;
+            esac
+          else
+            case "$body" in
+              *'"kc_configured":true'*) echo "KC-мост настроен" ;;
+              *) echo "::error::KC-мост не получил секрет (kc_configured != true). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."; exit 1 ;;
+            esac
+          fi
 
       - name: Verify frontend serves
         if: steps.which.outputs.frontend == 'true'

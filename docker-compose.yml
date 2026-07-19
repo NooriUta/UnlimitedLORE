@@ -6,6 +6,11 @@ services:
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
+    # unless-stopped, а НЕ always: при снятии бэкапов контейнеры останавливают
+    # намеренно, и always поднял бы их обратно посреди снимка, испортив его.
+    # Дефолт (no) означал, что после перезагрузки хоста стек не поднимется —
+    # а проявилось бы это как «MCP не отвечает», уводя диагностику не туда.
+    restart: unless-stopped
     ports:
       - "9000:9000"
       - "127.0.0.1:9001:9001"
@@ -18,9 +23,16 @@ services:
   # Independent Quarkus backend — copied lore+bench logic, talks to the SAME
   # ArcadeDB (:2480 on the host) as the main project. Replaces heimdall-backend :9093.
   lore-backend:
+    restart: unless-stopped          # см. комментарий у minio
     build:
       context: ./backend
       dockerfile: Dockerfile.local
+      args:
+        # Build-time, а не runtime: quarkus.oidc.enabled фиксируется на сборке,
+        # и запечённое значение побеждает переменную окружения контейнера.
+        # Флипать ВМЕСТЕ с VITE_* у фронта (docs/AUTH_OMILORE.md).
+        LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-}
+        LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
     ports:
       # IPv4-only bind: Docker's bare "9100:9100" shorthand also publishes an
       # IPv6 [::]:9100 listener, and on this host `localhost` resolves to ::1
@@ -120,6 +132,7 @@ services:
       start_period: 40s
 
   lore-app:
+    restart: unless-stopped          # см. комментарий у minio
     build:
       context: .
       args:
