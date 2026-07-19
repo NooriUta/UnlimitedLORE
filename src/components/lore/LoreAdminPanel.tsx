@@ -44,14 +44,37 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Словари', api: '/lore/dict/entry', humanOnly: true, agents: [] },
   { what: 'Учётные записи', api: '/lore/kc/*', humanOnly: true, agents: [] },
   { what: 'Включение auth', api: 'LORE_AUTH_ENABLED', humanOnly: true, agents: [] },
-  { what: 'ADR и решения', api: '/lore/adr*, /lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
+  { what: 'ADR', api: '/lore/adr*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
+  { what: 'Решения', api: '/lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
   { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },
   { what: 'Спринты и вехи', api: '/lore/sprint*, milestone*', humanOnly: false, agents: ['full', 'pm'] },
   { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst'] },
   { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
   { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },
-  { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm'] },
-  { what: 'Метрики/инсайты', api: 'metric/insight/rec', humanOnly: false, agents: ['full', 'analyst'] },
+  { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm', 'product-analyst'] },
+  { what: 'Метрики', api: '/lore/metric*', humanOnly: false, agents: ['full', 'analyst', 'product-analyst'] },
+  { what: 'Инсайты', api: '/lore/insight*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
+  { what: 'Рекомендации', api: '/lore/rec*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
+  // Продуктовый слой (ADR-LORE-022/030/032). Владелец — product-analyst, восьмой
+  // профиль: он курирует VP-канву. До AL-17 эти строки в матрице отсутствовали, и
+  // писать в них мог любой профиль — проверять было нечему.
+  { what: 'Фичи', api: '/lore/feature*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'US (сценарии)', api: '/lore/uc*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Боли', api: '/lore/pain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Ожидания', api: '/lore/gain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Работы', api: '/lore/job*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'VP-связи', api: '/lore/vp*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Акторы', api: '/lore/actor*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
+  { what: 'Тех-реестр', api: '/lore/tech*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
+  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
+  // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
+  // в ветку «неизвестное — пропускаю». Держать синхронно с FAMILY_AGENTS в
+  // AgentScopeFilter: расхождение = экран показывает не те права, что применяются.
+  { what: 'Forgejo (PR, мерж)', api: '/lore/forgejo*', humanOnly: false, agents: ['full'] },
+  { what: 'Файлы-ассеты', api: '/lore/asset*', humanOnly: false, agents: ['full'] },
+  { what: 'Гейты качества', api: '/lore/quality-gate*, qg*', humanOnly: false, agents: ['full', 'tester'] },
   { what: 'Чтение (слайсы)', api: '/lore/slice/*', humanOnly: false, agents: ['все агенты'] },
 ];
 
