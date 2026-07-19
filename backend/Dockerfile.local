@@ -85,7 +85,14 @@ ARG LORE_OIDC_ISSUER=http://localhost:18180/kc/realms/omilore
 ENV LORE_AUTH_ENABLED=$LORE_AUTH_ENABLED \
     LORE_OIDC_ISSUER=$LORE_OIDC_ISSUER
 
-RUN ./gradlew --no-daemon clean build -x test
+# Печать значения ПЕРЕД сборкой — вторая половина диагностики AL-53.
+# Первая (`docker compose config` в lore-cd.yml) показывает, что уходит в
+# --build-arg; эта показывает, что видит сам билд. Без обеих причина
+# «флаг не доехал» неотличима: compose, кэш слоя, ENV и Quarkus дают
+# одинаковый симптом — auth молча выключен в готовом образе.
+# Строка дешёвая и остаётся насовсем: она же поймает регрессию.
+RUN echo "[build] LORE_AUTH_ENABLED=[${LORE_AUTH_ENABLED}] LORE_OIDC_ISSUER=[${LORE_OIDC_ISSUER}]" \
+ && ./gradlew --no-daemon clean build -x test
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM eclipse-temurin:25-jre

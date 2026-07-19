@@ -128,6 +128,12 @@ jobs:
           echo "backend=$([ "$svc" != frontend ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "frontend=$([ "$svc" != backend ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
+      # Диагностика доставки флага (AL-53) — почему auth не включается, хотя
+      # флаги стоят в env выше. Логика в скрипте, а не здесь: bash внутри `run:`
+      # дважды ломал разбор workflow парсером Forgejo (см. resolve-proxy.sh).
+      - name: Что compose реально подставит в build-args
+        run: bash .github/scripts/build-args-probe.sh
+
       - name: Build backend image
         if: steps.which.outputs.backend == 'true'
         run: docker compose build lore-backend
