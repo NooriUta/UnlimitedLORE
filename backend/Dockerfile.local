@@ -51,6 +51,44 @@ RUN set -eu; \
       echo "прокси не задан — Gradle пойдёт напрямую"; \
     fi
 
+# ── Зеркало Nexus ────────────────────────────────────────────────────────────
+# Ставится ДО прогрева зависимостей: иначе первый же `gradlew --version` пойдёт
+# мимо зеркала.
+#
+# Почему это важнее прокси. Прокси у раннера решает задачу «дотянуться наружу»,
+# и когда он не передан в сборку, Gradle остаётся вовсе без маршрута — ровно так
+# CD упал 2026-07-19: `P=""`, затем `Plugin [id: 'io.quarkus'] was not found`.
+# Сообщение обманчиво: выглядит как отсутствующий плагин, а на деле нет пути до
+# plugins.gradle.org. Зеркало убирает саму зависимость от внешнего канала.
+#
+# Публичные репозитории остаются ВТОРЫМИ, а не заменяются. Nexus отвечает 404,
+# когда не смог сходить наверх и кэш пуст, и держит такой ответ в отрицательном
+# кэше (по умолчанию сутки). Без запасного репозитория один обрыв в неудачную
+# минуту прибил бы артефакт на день с сообщением «не существует».
+ARG LORE_MAVEN_MIRROR=""
+ARG LORE_PLUGIN_MIRROR=""
+RUN set -eu; \
+    if [ -n "$LORE_MAVEN_MIRROR" ]; then \
+      mkdir -p /root/.gradle/init.d; \
+      { \
+        echo "def mavenMirror  = '$LORE_MAVEN_MIRROR'"; \
+        echo "def pluginMirror = '${LORE_PLUGIN_MIRROR:-$LORE_MAVEN_MIRROR}'"; \
+        echo "settingsEvaluated { settings ->"; \
+        echo "    settings.pluginManagement.repositories {"; \
+        echo "        maven { url = pluginMirror; allowInsecureProtocol = true }"; \
+        echo "        maven { url = mavenMirror;  allowInsecureProtocol = true }"; \
+        echo "    }"; \
+        echo "}"; \
+        echo "allprojects {"; \
+        echo "    buildscript.repositories { maven { url = mavenMirror; allowInsecureProtocol = true } }"; \
+        echo "    repositories { maven { url = mavenMirror; allowInsecureProtocol = true } }"; \
+        echo "}"; \
+      } > /root/.gradle/init.d/nexus.gradle; \
+      echo "зеркало Gradle: $LORE_MAVEN_MIRROR"; \
+    else \
+      echo "зеркало не задано — Gradle пойдёт в публичные репозитории"; \
+    fi
+
 # Warm the dependency layer on build scripts alone, so source-only edits don't
 # re-resolve every dependency.
 COPY gradlew gradlew.bat settings.gradle build.gradle gradle.properties ./
