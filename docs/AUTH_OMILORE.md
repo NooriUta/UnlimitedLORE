@@ -36,7 +36,9 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
 
 ## Enabling auth (staging/prod)
 
-1. **Import the realm** into the shared KC (`aida-root-keycloak-1`, `http://localhost:18180/kc`):
+1. **Import the realm** into the shared KC — since the ci-server move that is
+   `https://odal.seidrstudio.pro/kc` (the `http://localhost:18180/kc` in earlier revisions of
+   this file was the laptop stand and no longer resolves anywhere useful):
    `kcadm.sh create realms -f backend/keycloak/omilore-realm.json` (or the admin UI →
    Add realm → import). Then: rotate the `lore-mcp` secret, assign the `admin` realm
    role to the `lore-mcp` service-account user, and create your admin user(s).
@@ -78,6 +80,18 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
    still 401/anonymous (the filter no longer honours the raw header once a token is required).
    In the browser: no session → redirected to Keycloak login; after login, writes work and
    the header shows a logout badge.
+
+   ⚠️ **Open the stand over https — `https://lore.odal.seidrstudio.pro`, not `http://<ip>:4400`.**
+   The browser exposes `window.crypto.subtle` only in a *secure context* (https, or `localhost`
+   as the sole exception). `oidc-client-ts` needs it for PKCE, so over plain http on a LAN
+   address the call throws, `AuthGate` never gets a session, and **the page just goes blank —
+   no redirect to Keycloak, no error explaining why.** The symptom points at Keycloak; the
+   cause is the address bar.
+
+   This worked on the laptop stand purely because it was served as `http://localhost:4400`.
+   The move to ci-server changed the address and silently took the crypto with it.
+
+   Port `4400` over http stays up and reading works there as before — only login cannot.
 
 All three flags (backend/frontend/MCP) must flip together — flipping only one leaves that
 side either broken (frontend/MCP sending a token nothing checks) or unprotected (backend
