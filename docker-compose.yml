@@ -68,6 +68,29 @@ services:
       - MART_ARCADE_URL=http://arcade:2480
       - ARCADEDB_USER=${ARCADEDB_USER:-root}
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
+      # ── Auth: флаги нужны и на СБОРКЕ, и в РАНТАЙМЕ ──────────────────────────
+      # Передавать их только в build.args НЕДОСТАТОЧНО, и это ровно тот отказ,
+      # на котором деплой падал (AL-53). Свойства расходятся по времени жизни:
+      #
+      #   quarkus.oidc.enabled  — BUILD-TIME: расширение OIDC впекается в образ;
+      #   quarkus.oidc.auth-server-url — RUNTIME: читается при старте;
+      #   SeerRoleFromTokenFilter читает quarkus.oidc.enabled ТОЖЕ В РАНТАЙМЕ,
+      #   а в application.properties это `${LORE_AUTH_ENABLED:false}`.
+      #
+      # Без переменной в окружении контейнера выражение резолвится в false, и
+      # фильтр НЕ снимает клиентский X-Seer-Role — при том что расширение OIDC
+      # в образе включено. Итог: auth «включён», заголовку по-прежнему верят,
+      # `auth_enabled` отвечает false. Ни одной ошибки в логах.
+      #
+      # Проверено на одном и том же артефакте (2026-07-19): запуск без этих
+      # переменных → подделанный `X-Seer-Role: admin` даёт 200; с ними → 403.
+      #
+      # Форма БЕЗ "=" намеренна, как у CORS_ORIGINS ниже: так compose передаёт
+      # переменную, только если она задана. Пустая строка здесь перекрыла бы
+      # дефолт `:false` и уронила бы преобразование в boolean (SRCFG00040,
+      # ADR-CI-001-D5).
+      - LORE_AUTH_ENABLED
+      - LORE_OIDC_ISSUER
       # KC-мост (ADR-LORE-025 D11/D14): пусто → /lore/kc/* отвечает 503
       # "not configured", остальной LORE работает как обычно (pluggable).
       # Секрет читается через SecretProvider (D15): env | infisical.
