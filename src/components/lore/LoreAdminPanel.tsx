@@ -44,14 +44,37 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Словари', api: '/lore/dict/entry', humanOnly: true, agents: [] },
   { what: 'Учётные записи', api: '/lore/kc/*', humanOnly: true, agents: [] },
   { what: 'Включение auth', api: 'LORE_AUTH_ENABLED', humanOnly: true, agents: [] },
-  { what: 'ADR и решения', api: '/lore/adr*, /lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
+  { what: 'ADR', api: '/lore/adr*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
+  { what: 'Решения', api: '/lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
   { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },
   { what: 'Спринты и вехи', api: '/lore/sprint*, milestone*', humanOnly: false, agents: ['full', 'pm'] },
   { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst'] },
   { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
   { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },
-  { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm'] },
-  { what: 'Метрики/инсайты', api: 'metric/insight/rec', humanOnly: false, agents: ['full', 'analyst'] },
+  { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm', 'product-analyst'] },
+  { what: 'Метрики', api: '/lore/metric*', humanOnly: false, agents: ['full', 'analyst', 'product-analyst'] },
+  { what: 'Инсайты', api: '/lore/insight*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
+  { what: 'Рекомендации', api: '/lore/rec*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
+  // Продуктовый слой (ADR-LORE-022/030/032). Владелец — product-analyst, восьмой
+  // профиль: он курирует VP-канву. До AL-17 эти строки в матрице отсутствовали, и
+  // писать в них мог любой профиль — проверять было нечему.
+  { what: 'Фичи', api: '/lore/feature*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'US (сценарии)', api: '/lore/uc*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Боли', api: '/lore/pain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Ожидания', api: '/lore/gain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Работы', api: '/lore/job*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'VP-связи', api: '/lore/vp*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
+  { what: 'Акторы', api: '/lore/actor*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
+  { what: 'Тех-реестр', api: '/lore/tech*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
+  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
+  // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
+  // в ветку «неизвестное — пропускаю». Держать синхронно с FAMILY_AGENTS в
+  // AgentScopeFilter: расхождение = экран показывает не те права, что применяются.
+  { what: 'Forgejo (PR, мерж)', api: '/lore/forgejo*', humanOnly: false, agents: ['full'] },
+  { what: 'Файлы-ассеты', api: '/lore/asset*', humanOnly: false, agents: ['full'] },
+  { what: 'Гейты качества', api: '/lore/quality-gate*, qg*', humanOnly: false, agents: ['full', 'tester'] },
   { what: 'Чтение (слайсы)', api: '/lore/slice/*', humanOnly: false, agents: ['все агенты'] },
 ];
 
@@ -185,13 +208,29 @@ function KcStateView({ s, empty }: { s: KcState<unknown>; empty: ReactNode }) {
   return s.rows.length ? null : <>{empty}</>;
 }
 
-// AL-33: экран не имеет права утверждать наличие защиты, которой нет. Снять вместе с AL-17 (R2).
-function NotEnforcedNotice() {
+// AL-33/AL-63: экран не имеет права утверждать наличие защиты, которой нет.
+//
+// Плашка НЕ УДАЛЕНА вместе с включением AL-17, а привязана к факту — к тому же
+// `agent_scope_enforced`, что показывает чек-лист в «Настройках». Удаление
+// вернуло бы исходную проблему зеркально: экран молча утверждал бы защиту,
+// которой может не быть (auth выключили флагом, откатили образ, поднялись без
+// KC). Теперь утверждение всегда соответствует состоянию бэкенда.
+//
+// preflight === null — состояние НЕИЗВЕСТНО (запрос не дошёл), и это не то же
+// самое, что «защита есть»: показываем предупреждение. Умолчание в пользу
+// недоверия здесь дешевле ошибки в другую сторону.
+function NotEnforcedNotice({ pf }: { pf: Preflight | null }) {
   const { t } = useTranslation();
+  if (pf?.agent_scope_enforced) return null;
+  const unknown = pf === null;
   return (
     <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>
-      <b>{t('lore.admin.notEnforcedH', 'Права из этой таблицы пока не проверяются.')}</b>{' '}
-      {t('lore.admin.notEnforcedB', 'Клейм agent_scope бэкенд ещё не читает: сейчас это фильтр видимости инструментов, не защита. Включится в R2 — задача AL-17.')}
+      <b>{unknown
+        ? t('lore.admin.notEnforcedUnkH', 'Проверяются ли эти права — сейчас неизвестно.')
+        : t('lore.admin.notEnforcedH', 'Права из этой таблицы не проверяются.')}</b>{' '}
+      {unknown
+        ? t('lore.admin.notEnforcedUnkB', 'Бэкенд не ответил на auth-preflight, поэтому состояние защиты не подтверждено. Считайте таблицу описанием намерения, пока не восстановится связь.')
+        : t('lore.admin.notEnforcedB', 'Клейм agent_scope бэкенд не читает: сейчас это фильтр видимости инструментов, не защита. Включается флагом LORE_AUTH_ENABLED — состояние видно в «Настройках».')}
     </div>
   );
 }
@@ -321,8 +360,8 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
         <main style={S.main}>
           <div style={S.crumb}>{t('lore.admin.crumb', 'Администрирование')} · <span style={S.crumbB}>{TAB_TITLES[tab]}</span></div>
           {tab === 'users' && <UsersTab st={users} preflight={preflight} onError={onError} reload={bump} />}
-          {tab === 'agents' && <AgentsTab st={agents} onError={onError} />}
-          {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} />}
+          {tab === 'agents' && <AgentsTab st={agents} preflight={preflight} onError={onError} />}
+          {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} preflight={preflight} />}
           {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
           {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} onError={onError} reload={bump} />}
           {tab === 'tags' && <TagsTab know={knowTags} lore={loreTags} />}
@@ -495,7 +534,9 @@ function UsersTab({ st, preflight, onError, reload }: {
 }
 
 // ── Агенты ───────────────────────────────────────────────────────────────────
-function AgentsTab({ st, onError }: { st: KcState<KcAgent>; onError: (e: unknown) => void }) {
+function AgentsTab({ st, preflight, onError }: {
+  st: KcState<KcAgent>; preflight: Preflight | null; onError: (e: unknown) => void;
+}) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [secret, setSecret] = useState<{ client: string; value: string } | null>(null);
@@ -519,7 +560,7 @@ function AgentsTab({ st, onError }: { st: KcState<KcAgent>; onError: (e: unknown
   return (
     <div>
       {note}
-      <NotEnforcedNotice />
+      <NotEnforcedNotice pf={preflight} />
       {secret && (
         <div style={{ ...S.warn, color: 'var(--suc)', borderColor: 'color-mix(in srgb, var(--suc) 40%, transparent)', background: 'color-mix(in srgb, var(--suc) 8%, transparent)' }}>
           <div>{t('lore.admin.newSecret', 'Новый секрет {{c}} — скопируйте сейчас, больше не покажем:', { c: secret.client })}</div>
@@ -556,7 +597,9 @@ function AgentsTab({ st, onError }: { st: KcState<KcAgent>; onError: (e: unknown
 }
 
 // ── Роли и права: обе оси + обратная матрица (AL-32) ─────────────────────────
-function RolesTab({ dicts, users, agents }: { dicts: DictRow[]; users: KcState<KcUser>; agents: KcState<KcAgent> }) {
+function RolesTab({ dicts, users, agents, preflight }: {
+  dicts: DictRow[]; users: KcState<KcUser>; agents: KcState<KcAgent>; preflight: Preflight | null;
+}) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<'by-role' | 'by-object'>('by-role');
   const agentRoles = dicts.filter(r => r.dict_type === 'agent_role');
@@ -580,7 +623,7 @@ function RolesTab({ dicts, users, agents }: { dicts: DictRow[]; users: KcState<K
   return (
     <div>
       <div style={S.card}>{t('lore.admin.rolesNote2', 'Две оси, которые не смешиваются: люди входят паролем и несут realm-роли (seer_roles), агенты — секретом и несут agent_scope. Скоуп агентов правится в mcp-server/agent-profiles/*.json (D6, read-only здесь).')}</div>
-      <NotEnforcedNotice />
+      <NotEnforcedNotice pf={preflight} />
       <div style={{ marginBottom: 8 }}>
         <span style={S.seg}>
           <button style={S.segBtn(mode === 'by-role')} onClick={() => setMode('by-role')}>{t('lore.admin.byRole', 'Кто что может')}</button>

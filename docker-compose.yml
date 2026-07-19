@@ -6,6 +6,11 @@ services:
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
+    # unless-stopped, а НЕ always: при снятии бэкапов контейнеры останавливают
+    # намеренно, и always поднял бы их обратно посреди снимка, испортив его.
+    # Дефолт (no) означал, что после перезагрузки хоста стек не поднимется —
+    # а проявилось бы это как «MCP не отвечает», уводя диагностику не туда.
+    restart: unless-stopped
     ports:
       - "9000:9000"
       - "127.0.0.1:9001:9001"
@@ -18,9 +23,47 @@ services:
   # Independent Quarkus backend — copied lore+bench logic, talks to the SAME
   # ArcadeDB (:2480 on the host) as the main project. Replaces heimdall-backend :9093.
   lore-backend:
+    restart: unless-stopped          # см. комментарий у minio
     build:
       context: ./backend
       dockerfile: Dockerfile.local
+      args:
+        # Build-time, а не runtime: quarkus.oidc.enabled фиксируется на сборке,
+        # и запечённое значение побеждает переменную окружения контейнера.
+        # Флипать ВМЕСТЕ с VITE_* у фронта (docs/AUTH_OMILORE.md).
+        LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-}
+        LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+        # Зеркало Nexus для Gradle ВНУТРИ сборки образа. Это отдельный Gradle,
+        # не тот, что на шагах раннера: он не наследует ни прокси раннера, ни
+        # его gradle.properties, и ходит наружу сам.
+        #
+        # Из-за этого CD упал 2026-07-19 за 27 секунд — не по таймауту, а вовсе
+        # не дотянувшись: `P=""` (прокси в сборку не передан) → «Gradle пойдёт
+        # напрямую» → `Plugin [id: 'io.quarkus'] was not found`. Формулировка
+        # уводит в сторону: выглядит как отсутствующий плагин, а на деле нет
+        # маршрута до plugins.gradle.org.
+        #
+        # Зеркало решает это лучше прокси: оно в локальной сети, из контейнера
+        # сборки видно напрямую, внешний канал с критического пути уходит.
+        # Пустое значение = зеркала нет, поведение прежнее (см. Dockerfile).
+        LORE_MAVEN_MIRROR: ${LORE_MAVEN_MIRROR:-}
+        LORE_PLUGIN_MIRROR: ${LORE_PLUGIN_MIRROR:-}
+        # Прокси — запасной путь на случай, если зеркало недоступно, и
+        # единственный для того, что через него не идёт: сам дистрибутив Gradle
+        # (~130 МБ) обёртка тянет с services.gradle.org, и в чистом базовом
+        # образе кэша нет. На раннере он лежит в образе, внутри сборки — нет.
+        #
+        # backend-ci это уже передаёт, а CD не передавал ничего — отсюда `P=""`
+        # и отказ 2026-07-19. Одна и та же сборка в двух workflow расходилась
+        # по способу запуска, и расхождение было невидимым.
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+      # Прокси у раннера прописан как host.docker.internal, а на Linux-демоне
+      # это имя само не резолвится — без явного отображения build-arg указывал
+      # бы на несуществующий хост, и сборка шла бы напрямую, то есть никуда.
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
     ports:
       # IPv4-only bind: Docker's bare "9100:9100" shorthand also publishes an
       # IPv6 [::]:9100 listener, and on this host `localhost` resolves to ::1
@@ -56,6 +99,29 @@ services:
       - MART_ARCADE_URL=http://arcade:2480
       - ARCADEDB_USER=${ARCADEDB_USER:-root}
       - ARCADEDB_ROOT_PASSWORD=${ARCADEDB_ROOT_PASSWORD:-unset}
+      # ── Auth: флаги нужны и на СБОРКЕ, и в РАНТАЙМЕ ──────────────────────────
+      # Передавать их только в build.args НЕДОСТАТОЧНО, и это ровно тот отказ,
+      # на котором деплой падал (AL-53). Свойства расходятся по времени жизни:
+      #
+      #   quarkus.oidc.enabled  — BUILD-TIME: расширение OIDC впекается в образ;
+      #   quarkus.oidc.auth-server-url — RUNTIME: читается при старте;
+      #   SeerRoleFromTokenFilter читает quarkus.oidc.enabled ТОЖЕ В РАНТАЙМЕ,
+      #   а в application.properties это `${LORE_AUTH_ENABLED:false}`.
+      #
+      # Без переменной в окружении контейнера выражение резолвится в false, и
+      # фильтр НЕ снимает клиентский X-Seer-Role — при том что расширение OIDC
+      # в образе включено. Итог: auth «включён», заголовку по-прежнему верят,
+      # `auth_enabled` отвечает false. Ни одной ошибки в логах.
+      #
+      # Проверено на одном и том же артефакте (2026-07-19): запуск без этих
+      # переменных → подделанный `X-Seer-Role: admin` даёт 200; с ними → 403.
+      #
+      # Форма БЕЗ "=" намеренна, как у CORS_ORIGINS ниже: так compose передаёт
+      # переменную, только если она задана. Пустая строка здесь перекрыла бы
+      # дефолт `:false` и уронила бы преобразование в boolean (SRCFG00040,
+      # ADR-CI-001-D5).
+      - LORE_AUTH_ENABLED
+      - LORE_OIDC_ISSUER
       # KC-мост (ADR-LORE-025 D11/D14): пусто → /lore/kc/* отвечает 503
       # "not configured", остальной LORE работает как обычно (pluggable).
       # Секрет читается через SecretProvider (D15): env | infisical.
@@ -120,6 +186,7 @@ services:
       start_period: 40s
 
   lore-app:
+    restart: unless-stopped          # см. комментарий у minio
     build:
       context: .
       args:

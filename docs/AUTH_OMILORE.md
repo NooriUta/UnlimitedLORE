@@ -36,7 +36,9 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
 
 ## Enabling auth (staging/prod)
 
-1. **Import the realm** into the shared KC (`aida-root-keycloak-1`, `http://localhost:18180/kc`):
+1. **Import the realm** into the shared KC — since the ci-server move that is
+   `https://odal.seidrstudio.pro/kc` (the `http://localhost:18180/kc` in earlier revisions of
+   this file was the laptop stand and no longer resolves anywhere useful):
    `kcadm.sh create realms -f backend/keycloak/omilore-realm.json` (or the admin UI →
    Add realm → import). Then: rotate the `lore-mcp` secret, assign the `admin` realm
    role to the `lore-mcp` service-account user, and create your admin user(s).
@@ -46,13 +48,61 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
 3. **Frontend:** set `VITE_LORE_AUTH_ENABLED=true`, `VITE_OIDC_ISSUER` (same issuer URL,
    reachable from the browser — likely a different host/port than the backend's internal
    one), `VITE_OIDC_CLIENT_ID=lore-app` (default). Rebuild.
-4. **MCP:** set `LORE_OIDC_ISSUER`, `LORE_MCP_CLIENT_ID=lore-mcp`, `LORE_MCP_CLIENT_SECRET`
-   (the rotated secret from step 1).
+4. **MCP:** set `LORE_OIDC_ISSUER`, **`LORE_MCP_CLIENT_ID=lore-mcp-full`**, `LORE_MCP_CLIENT_SECRET`
+   (the service-account secret of that client).
+
+   ⚠️ **Use the per-profile client, NOT the generic `lore-mcp`.** Both exist in the realm, and
+   the difference is invisible until it matters:
+
+   | client | protocol mappers | client role |
+   |---|---|---|
+   | `lore-mcp` | `lore-realm-role-mapper` only | — |
+   | `lore-mcp-full` | `agent_scope` + `seer_roles` | `agent-full` |
+
+   With the generic client the token arrives **without the `agent_scope` claim**, so
+   `AgentScopeFilter` (AL-17) treats the caller as "not an agent" and lets everything through.
+   Authorization would look enabled while its main consumer bypasses it entirely — no errors,
+   no denials, no protection. Verified against the live realm 2026-07-19.
+
+   `agent-full` is near-admin by design; that is fine. The point is that the claim is
+   **present**, so the filter passes the caller by right rather than by absence of a marker —
+   and the profile can be narrowed later. With `lore-mcp` there would be nothing to narrow.
+
+   The other seven clients (`lore-mcp-developer`, `-tester`, `-pm`, `-architect`, `-analyst`,
+   `-marketer`, `-product-analyst`) carry the same mappers with their own scope: an agent run
+   under one of them gets that profile's real restrictions rather than a declaration.
+
+   Ordering does not matter: since `mcp-server/src/backend.ts` sends **both** the Bearer token
+   and `X-Seer-Role`, configuring MCP before the flip is safe (the Bearer is ignored while auth
+   is off) and flipping auth afterwards does not interrupt it.
 5. **Verify:** a request without a bearer token → 401; a token carrying realm role
    `admin`/`super-admin` → writes succeed; forging `X-Seer-Role: admin` without a token →
    still 401/anonymous (the filter no longer honours the raw header once a token is required).
    In the browser: no session → redirected to Keycloak login; after login, writes work and
    the header shows a logout badge.
+
+   ⚠️ **Open the stand over https — `https://lore.odal.seidrstudio.pro`, not `http://<ip>:4400`.**
+   The browser exposes `window.crypto.subtle` only in a *secure context* (https, or `localhost`
+   as the sole exception). `oidc-client-ts` needs it for PKCE, so over plain http on a LAN
+   address the call throws, `AuthGate` never gets a session, and **the page just goes blank —
+   no redirect to Keycloak, no error explaining why.** The symptom points at Keycloak; the
+   cause is the address bar.
+
+   This worked on the laptop stand purely because it was served as `http://localhost:4400`.
+   The move to ci-server changed the address and silently took the crypto with it.
+
+   Port `4400` over http stays up and reading works there as before — only login cannot.
+
+   ⚠️ **If the browser sits behind a proxy, add `lore.odal.seidrstudio.pro` to its bypass list.**
+   Unlike `odal.seidrstudio.pro` (Keycloak) and `git.seidrstudio.pro`, which resolve to a public
+   address, this name deliberately resolves to the **LAN** address `192.168.3.131` — LORE is not
+   published outside. A proxy therefore tries to fetch a private address from the outside and
+   hangs, and the browser reports a plain **connection timeout**, which reads as "the stand is
+   down" rather than "this client cannot route to it". Bypassing by IP is not enough: the browser
+   goes by name.
+
+   This is the cost side of the LAN-only decision, not a defect — and the same bypass already
+   exists for `git.seidrstudio.pro` in some setups, so the pattern is not new.
 
 All three flags (backend/frontend/MCP) must flip together — flipping only one leaves that
 side either broken (frontend/MCP sending a token nothing checks) or unprotected (backend

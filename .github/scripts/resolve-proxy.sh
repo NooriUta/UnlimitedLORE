@@ -55,8 +55,56 @@ if [ -z "$PICKED" ]; then
   for v in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy; do
     echo "$v=" >> "$GITHUB_ENV"
   done
+  # Снимаем и свойства Gradle: раннер переиспользует $HOME между прогонами, и
+  # оставленный от прошлого раза адрес увёл бы Gradle в заведомо мёртвый прокси —
+  # отказ выглядел бы как «сборка сломалась», хотя сломан адрес.
+  gprops="$HOME/.gradle/gradle.properties"
+  if [ -f "$gprops" ]; then
+    grep -vE '^systemProp\.(http|https)\.(proxyHost|proxyPort|nonProxyHosts)=' "$gprops" > "$gprops.tmp" 2>/dev/null || true
+    mv "$gprops.tmp" "$gprops" 2>/dev/null || true
+    echo "прежние proxy-свойства Gradle сняты"
+  fi
   exit 0
 fi
+
+# ── Gradle ────────────────────────────────────────────────────────────────────
+# GRADLE НЕ ЧИТАЕТ HTTP_PROXY/HTTPS_PROXY ИЗ ОКРУЖЕНИЯ — ему нужны системные
+# свойства Java. Ровно это уже написано в backend/Dockerfile.local и решено ТАМ,
+# внутри сборки образа. Но шаги «Gradle build» и «Gradle test» идут НА РАННЕРЕ,
+# и до этой правки они такой трансляции не имели: скрипт честно выставлял
+# HTTP_PROXY, а Gradle его игнорировал и шёл напрямую.
+#
+# Прямой выход у этого хоста деградирован, поэтому отказ выглядел как случайный:
+# иногда проскакивало, иногда падало на
+#   Could not GET 'https://repo.maven.apache.org/maven2/...'
+#     > repo.maven.apache.org: Temporary failure in name resolution
+# при полностью исправном DNS (проверено: и хост, и контейнер раннера резолвят
+# имя в IPv4). Не флак — отсутствие прокси ровно на одном шаге из двух.
+#
+# Пишется в $HOME/.gradle/gradle.properties, а не в проектный: проектный лежит в
+# репозитории и правка испачкала бы рабочее дерево.
+write_gradle_proxy() {
+  gh="$1"; gp="$2"
+  mkdir -p "$HOME/.gradle"
+  gprops="$HOME/.gradle/gradle.properties"
+  # Прежние строки снимаем: шаг может выполниться повторно, а дублирующиеся
+  # systemProp с разными значениями дают неочевидный «последний выиграл».
+  if [ -f "$gprops" ]; then
+    grep -vE '^systemProp\.(http|https)\.(proxyHost|proxyPort|nonProxyHosts)=' "$gprops" > "$gprops.tmp" 2>/dev/null || true
+    mv "$gprops.tmp" "$gprops" 2>/dev/null || true
+  fi
+  NP="$(printf '%s' "${NO_PROXY:-${no_proxy:-}}" | tr ',' '|')"
+  {
+    echo "systemProp.http.proxyHost=$gh"
+    echo "systemProp.http.proxyPort=$gp"
+    echo "systemProp.https.proxyHost=$gh"
+    echo "systemProp.https.proxyPort=$gp"
+    [ -n "$NP" ] && echo "systemProp.http.nonProxyHosts=$NP" || true
+    [ -n "$NP" ] && echo "systemProp.https.nonProxyHosts=$NP" || true
+  } >> "$gprops"
+  echo "прокси для Gradle на раннере: $gh:$gp ($gprops)"
+}
+write_gradle_proxy "$PICKED" "$p"
 
 NEW="http://$PICKED:$p"
 if [ "$NEW" = "$P" ]; then

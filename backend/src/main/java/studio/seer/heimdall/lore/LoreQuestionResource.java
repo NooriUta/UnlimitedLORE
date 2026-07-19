@@ -60,7 +60,15 @@ public class LoreQuestionResource extends LoreResourceBase {
             putIf(sql, p, "title",        ":title", req.title());
             putIf(sql, p, "body_md",      ":body",  req.body_md());
             putIf(sql, p, "status",       ":status", req.status());
-            putIf(sql, p, "trigger",      ":trig",  req.trigger());
+            // `trigger` В ОБРАТНЫХ КАВЫЧКАХ — зарезервированное слово SQL ArcadeDB.
+            // Без них запрос не парсится вовсе:
+            //   CommandSQLParsingException: mismatched input ',' … trigger=:trig
+            // Из-за этого статус deferred был НЕДОСТИЖИМ: D3 требует непустой
+            // trigger, валидация выше не пускает deferred без него, а запись
+            // самого trigger падала на разборе. Замкнутый круг, который не
+            // проявлялся, пока никто не пробовал отложить вопрос по-настоящему
+            // (первый случай — 2026-07-19, вопросов с trigger было ноль).
+            putIf(sql, p, "`trigger`",    ":trig",  req.trigger());
             putIf(sql, p, "component_id", ":comp",  req.component_id());
             putIf(sql, p, "due_date",     ":due",   req.due_date());
             putIf(sql, p, "priority",     ":prio",  req.priority());
