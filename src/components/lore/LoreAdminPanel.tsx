@@ -69,6 +69,12 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Тех-реестр', api: '/lore/tech*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
   { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
   { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
+  // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
+  // в ветку «неизвестное — пропускаю». Держать синхронно с FAMILY_AGENTS в
+  // AgentScopeFilter: расхождение = экран показывает не те права, что применяются.
+  { what: 'Forgejo (PR, мерж)', api: '/lore/forgejo*', humanOnly: false, agents: ['full'] },
+  { what: 'Файлы-ассеты', api: '/lore/asset*', humanOnly: false, agents: ['full'] },
+  { what: 'Гейты качества', api: '/lore/quality-gate*, qg*', humanOnly: false, agents: ['full', 'tester'] },
   { what: 'Чтение (слайсы)', api: '/lore/slice/*', humanOnly: false, agents: ['все агенты'] },
 ];
 

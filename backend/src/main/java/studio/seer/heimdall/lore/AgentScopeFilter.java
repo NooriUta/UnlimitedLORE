@@ -101,7 +101,26 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("component", Set.of("full", "architect")),
         Map.entry("tech",      Set.of("full", "architect", "developer")),
         Map.entry("project",   Set.of("full", "architect", "pm")),
-        Map.entry("bragi",     Set.of("full", "marketer")));
+        Map.entry("bragi",     Set.of("full", "marketer")),
+        // ── Найдено сверкой таблицы с реальными путями записи (AL-62) ────────
+        // Три семейства имели живой POST под /lore, но в матрице отсутствовали,
+        // то есть попадали в ветку «неизвестное — пропускаю». Права выставлены
+        // ПО ФАКТУ, а не на глаз: forgejo_* и asset_* не разрешены ни в одном
+        // ограниченном профиле (agent-profiles/*.json — у всех "*": "deny" плюс
+        // allow-лист), у tester разрешён qg_*. Поэтому ни одна строка не
+        // создаёт новых отказов — требование, которое фильтр сам себе ставит.
+        //
+        // forgejo: POST /lore/forgejo/pr и pr/{n}/merge. Мерж PR мог сделать
+        // ЛЮБОЙ профиль, хотя ADR-LORE-024 прямо говорит «merge только full».
+        // Отделить merge подпутём нельзя: subPathOf берёт два сегмента, и
+        // forgejo/pr/{n}/merge сворачивается в forgejo/pr вместе с созданием PR.
+        Map.entry("forgejo",   Set.of("full")),
+        // asset: POST /lore/asset/upload, единственный вызывающий — asset_up.
+        Map.entry("asset",     Set.of("full")),
+        // quality-gate: СОЗДАНИЕ гейта. В таблице был только "qg" — прогоны и
+        // рекомендации, — из-за чего получилось расщепление, которого никто не
+        // задумывал: записать прогон нельзя, а завести сам гейт можно кому угодно.
+        Map.entry("quality-gate", Set.of("full", "tester")));
 
     /**
      * Исключения УЖЕ семейства: конкретный подпуть с более узким списком.

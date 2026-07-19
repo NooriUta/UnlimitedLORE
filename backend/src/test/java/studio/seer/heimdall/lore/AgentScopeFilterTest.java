@@ -54,6 +54,29 @@ class AgentScopeFilterTest {
         }
     }
 
+    @Test
+    void семействаСЖивойЗаписьюНеВыпадаютИзМатрицы() {
+        // AL-62. Неперечисленное семейство фильтр ПРОПУСКАЕТ — решение осознанное
+        // (иначе продуктовый слой отвалился бы у architect/pm посреди работы), но
+        // из-за него дыра выглядит как штатная работа: ни отказа, ни лога об отказе.
+        //
+        // Эти три имели живой POST под /lore и в матрице отсутствовали. Самое
+        // дорогое — forgejo: мерж PR мог сделать любой профиль, хотя ADR-LORE-024
+        // говорит «merge только full».
+        for (String f : Set.of("forgejo", "asset", "quality-gate")) {
+            assertTrue(AgentScopeFilter.enforcedFamilies().contains(f),
+                "семейство '" + f + "' обязано быть в матрице: под ним есть POST, "
+                + "а вне матрицы оно молча пропускается");
+        }
+        assertEquals(Set.of("full"), allowedFor("forgejo"),
+            "merge PR — full-only (ADR-LORE-024); подпутём его не выделить, "
+            + "subPathOf сворачивает forgejo/pr/{n}/merge в forgejo/pr");
+        assertEquals(Set.of("full"), allowedFor("asset"));
+        assertEquals(allowedFor("qg"), allowedFor("quality-gate"),
+            "создание гейта и запись прогона — одна деятельность; расхождение "
+            + "дало бы «прогон записать нельзя, а гейт завести можно кому угодно»");
+    }
+
     // ── Разрушающие операции внутри разрешённого семейства ───────────────────
 
     @Test
