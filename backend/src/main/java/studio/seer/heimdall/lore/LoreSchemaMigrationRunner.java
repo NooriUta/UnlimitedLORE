@@ -280,6 +280,50 @@ public class LoreSchemaMigrationRunner {
         LOG.infof("[LORE MIGRATE] полнотекст: создано %d (взамен старых %d), уже было %d, типов нет %d — реестр %d",
             created, replaced, skipped, absent, LoreSchemaMigrations.FT_INDEXES.size());
 
+        // ── Ретайр легаси-FT (SRCH-01, ADR-LORE-033 D10) ─────────────────────
+        // Реестр — ЕДИНСТВЕННЫЙ источник FULL_TEXT-индексов: «у типа ровно один».
+        // Исторические однополевые (из шагов 2/3 и авто-именованные Тип_0_…)
+        // держались, пока слайс искал через SEARCH_FIELDS — он резолвит индекс
+        // по полям. После перевода слайса на SEARCH_INDEX('ftИмя', …) безымянные
+        // не читаются НИКЕМ, а каждое проиндексированное поле оплачивается на
+        // каждой записи дважды (на проде их скопилось 88). Снимаем всё
+        // FULL_TEXT, чего нет в реестре.
+        //
+        // Именно здесь, а не новым шагом миграции: чистка идемпотентна, а шаги
+        // 2/3 трогать нельзя — их checksum уже в ledger, правка уронила бы старт
+        // по дрейф-гарду. Не-FULL_TEXT индексы (уникальные ключи и т.п.) не
+        // затрагиваются по построению — фильтр по indexType.
+        // schema:indexes отдаёт ДВА сорта строк одного и того же индекса:
+        // логическое имя (`ftKnowTask` или легаси `KnowTask[title]`) и его
+        // бакетные части (`KnowTask_0_<ts>`). Бакетные строки НЕ трогаем ВООБЩЕ:
+        // они принадлежат либо именованному индексу (снести бакет = каскадно
+        // уничтожить сам ftKnow* — ровно так первый вариант этой чистки оставил
+        // тест-БД без единого FT-индекса), либо легаси-логическому, который
+        // уходит вместе со своим bracket-именем. Поэтому критерий легаси —
+        // только логическая bracket-форма `Тип[поле]`, не из реестра.
+        Set<String> declared = new HashSet<>();
+        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) declared.add(ix.name());
+        int retired = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT name FROM schema:indexes WHERE indexType = 'FULL_TEXT'", Map.of())) {
+            String n = String.valueOf(r.get("name"));
+            if (declared.contains(n) || !n.contains("[")) continue;
+            // «Index not found» — не ошибка: снятие соседней bracket-формы могло
+            // уже унести эту каскадом, цель «индекса нет» достигнута. Любая
+            // ДРУГАЯ ошибка валит миграцию (урок V11: шаг в ledger при
+            // несделанной работе хуже падения).
+            try {
+                exec("DROP INDEX `" + n + "`");
+                retired++;
+            } catch (RuntimeException e) {
+                String msg = String.valueOf(e.getMessage());
+                if (!msg.contains("Index not found")) throw e;
+            }
+        }
+        if (retired > 0) {
+            LOG.infof("[LORE MIGRATE] полнотекст: снято %d легаси-индексов вне реестра", retired);
+        }
+
         int expected = LoreSchemaMigrations.FT_INDEXES.size() - absent;
         if (created + skipped < expected) {
             throw new IllegalStateException("[LORE MIGRATE] полнотекст: создано " + created + " + уже было " + skipped
