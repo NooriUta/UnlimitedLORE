@@ -21,6 +21,7 @@
     "pain_*": "allow",
     "gain_*": "allow",
     "job_*": "allow",
-    "vp_*": "allow"
+    "vp_*": "allow",
+    "task_*": "allow"
   }
 }
