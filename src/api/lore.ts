@@ -5,7 +5,7 @@
 //
 // In prod lore.enabled=false → backend returns 404 LORE_DISABLED → LoreDisabledError.
 
-import { authHeaders } from '../auth/session';
+import { authHeaders, sessionExpired } from '../auth/session';
 
 const LORE_BASE = '/lore';
 
@@ -35,6 +35,12 @@ async function parseError(res: Response): Promise<never> {
     code = body.error ?? '';
     detail = body.detail ?? '';
   } catch { /* fall through */ }
+  // 401 — сессия недействительна, а не «данных нет». Без этой ветки протухший
+  // токен выглядел как пустой экран: `authHeaders()` не находит валидного
+  // токена и шлёт запрос БЕЗ заголовка, бэкенд отвечает 401, а список
+  // рендерится как «не найдено». Уводим в состояние «нет сессии» — дальше
+  // AuthGate сам отправит на вход.
+  if (res.status === 401) sessionExpired();
   if (code === 'LORE_DISABLED') throw new LoreDisabledError();
   if (code === 'LORE_UPSTREAM') throw new LoreUpstreamError(detail);
   if (code === 'NOT_FOUND')     throw new LoreNotFoundError(detail);
