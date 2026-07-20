@@ -113,6 +113,18 @@ public class LoreQuestionResource extends LoreResourceBase {
             if (remove) {
                 deleteEdges("ANSWERS", "@out.decision_id=:d AND @in.question_id=:q",
                     Map.of("d", req.decision_id(), "q", req.question_id()));
+                // AL-26: инвариант «closed ⇔ на вопрос есть ANSWERS» должен работать
+                // в ОБЕ стороны. Раньше remove снимал ребро и оставлял status=closed —
+                // вопрос повисал закрытым без единого ответа, и состояние врало.
+                //
+                // Возвращаем в open ТОЛЬКО когда снят ПОСЛЕДНИЙ ответ: если у вопроса
+                // остаются другие ANSWERS, он закрыт по праву. Условие `in('ANSWERS').size()=0`
+                // проверяет это на самой вершине, а не доверяет тому, что снятое ребро
+                // было единственным.
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "UPDATE KnowQuestion SET status='open', closed_date=null " +
+                    "WHERE question_id=:q AND status='closed' AND in('ANSWERS').size()=0",
+                    Map.of("q", req.question_id()))).await().indefinitely();
             } else {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE ANSWERS FROM (SELECT FROM KnowDecision WHERE decision_id=:d) " +
