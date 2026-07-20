@@ -839,7 +839,14 @@ public final class LoreSlices {
             List.of(), Map.of(), " ORDER BY task_uid LIMIT 200");
 
         slice("all_tasks",
+            // author/executor/reviewer_agent (ADR-LORE-014 §4) выбираются наравне
+            // с остальными слайсами задач (tasks_of_sprint, tasks_of_phase). Без
+            // них таблица показывала роли пустыми ДАЖЕ когда они заданы — то есть
+            // «нет роли» в UI не означало отсутствие роли, а означало, что слайс её
+            // не отдал. Ровно тот класс, что ловили весь спринт: данные есть, путь
+            // их не доносит.
             "SELECT task_uid, task_id, title, status_raw, priority, component_id, task_type, " +
+            "author_agent, executor_agent, reviewer_agent, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
