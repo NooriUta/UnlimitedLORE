@@ -77,8 +77,19 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("sprint",    Set.of("full", "pm")),
         Map.entry("milestone", Set.of("full", "pm")),
         Map.entry("phase",     Set.of("full", "pm")),
-        Map.entry("task",      Set.of("full", "pm", "developer", "tester", "marketer", "analyst")),
-        Map.entry("status",    Set.of("full", "pm", "developer", "tester", "marketer", "analyst")),
+        // architect добавлен по решению владельца 2026-07-20. Причина не в
+        // удобстве: по ADR-LORE-014 §4 архитектор фигурирует АВТОРОМ и
+        // РЕВЬЮЕРОМ задач — а завести задачу или перевести её в done не мог.
+        // Роль, которая принимает работу, но не может отметить приёмку,
+        // недееспособна.
+        //
+        // Заодно снято живое противоречие между осями: в профиле architect
+        // стоял `status_set: allow`, то есть профиль разрешал то, что фильтр
+        // запрещал. Не задело никого лишь потому, что под этим профилем ещё
+        // не работали — а проявилось бы как AGENT_SCOPE_FORBIDDEN на действии,
+        // которое админка показывает разрешённым.
+        Map.entry("task",      Set.of("full", "pm", "developer", "tester", "marketer", "analyst", "architect")),
+        Map.entry("status",    Set.of("full", "pm", "developer", "tester", "marketer", "analyst", "architect")),
         Map.entry("release",   Set.of("full", "developer")),
         Map.entry("qg",        Set.of("full", "tester")),
         Map.entry("question",  Set.of("full", "architect", "analyst", "pm", "product-analyst")),
