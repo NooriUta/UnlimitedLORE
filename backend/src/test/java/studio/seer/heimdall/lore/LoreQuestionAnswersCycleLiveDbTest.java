@@ -35,11 +35,15 @@ class LoreQuestionAnswersCycleLiveDbTest {
     private static final String D1 = "DEC-TEST-ANSWERS-1";
     private static final String D2 = "DEC-TEST-ANSWERS-2";
 
+    // Слайс open_questions отдаёт ВСЕ вопросы (WHERE по статусу в нём нет — имя
+    // историческое), поэтому статус читается прямо из строки, а не выводится из
+    // присутствия/отсутствия. Первая редакция теста проверяла отсутствие строки
+    // при закрытии — и падала, потому что закрытый вопрос из слайса не исчезает.
     private static String questionStatus() {
         return given().header("X-Seer-Role", "admin")
             .when().get("/lore/slice/open_questions")
             .then().extract().jsonPath()
-            .getString("rows.find { it.question_id == '" + QID + "' }?.status");
+            .getString("rows.find { it.question_id == '" + QID + "' }.status");
     }
 
     @Test
@@ -65,9 +69,8 @@ class LoreQuestionAnswersCycleLiveDbTest {
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body(Map.of("decision_id", D2, "question_id", QID, "action", "add"))
         .when().post("/lore/question/answers").then().statusCode(200);
-        // Вопрос ушёл из open_questions — значит closed. Slice отдаёт только открытые.
-        org.junit.jupiter.api.Assertions.assertNull(questionStatus(),
-            "два ответа — вопрос должен быть закрыт и уйти из open_questions");
+        org.junit.jupiter.api.Assertions.assertEquals("closed", questionStatus(),
+            "два ответа — вопрос должен быть закрыт");
     }
 
     @Test
@@ -77,7 +80,7 @@ class LoreQuestionAnswersCycleLiveDbTest {
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body(Map.of("decision_id", D1, "question_id", QID, "action", "remove"))
         .when().post("/lore/question/answers").then().statusCode(200);
-        org.junit.jupiter.api.Assertions.assertNull(questionStatus(),
+        org.junit.jupiter.api.Assertions.assertEquals("closed", questionStatus(),
             "остался один ответ — вопрос обязан оставаться закрытым");
     }
 
