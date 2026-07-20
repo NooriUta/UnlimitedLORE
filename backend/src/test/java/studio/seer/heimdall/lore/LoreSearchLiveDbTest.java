@@ -144,6 +144,19 @@ class LoreSearchLiveDbTest {
 
     @Test
     @Order(7)
+    void noBranchSilentlyFails() {
+        // -1 в by_type = ветка упала (эндпоинт честно это показывает, а не
+        // молчит). Ловит класс «SQL одной ветки не парсится»: так quality_gate
+        // падала на вложенных скобках ILIKE-fallback'а, пока остальные 14
+        // веток выглядели здоровыми.
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/search?q=" + WORD)
+        .then().statusCode(200)
+            .body("by_type.findAll { it.value == -1 }.size()", equalTo(0));
+    }
+
+    @Test
+    @Order(8)
     void morphologyWorksInSmartMode() {
         // «мангустина» (родительный) — заголовок несёт «мангустин»/«мангустином».
         given().header("X-Seer-Role", "admin")

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ACTIVE_PROJECT, loreSlice, loreSlices } from '../backend.js';
+import { ACTIVE_PROJECT, loreGet, loreSlice, loreSlices } from '../backend.js';
 
 // ADR-LORE-017 (T16): Tier 1 — slices with a direct project relationship (today: sprints,
 // via BELONGS_TO_PROJECT — see LoreSlices.java's "sprints" optionalFilters). Extend this set
@@ -65,6 +65,46 @@ export function registerLoreRead(server: McpServer): void {
         }
         const rows = await loreSlice(slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
         return json(warning ? { rows, _warning: warning } : rows);
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
+  // SRCH-07 (ADR-LORE-033): агент ищет ТЕМ ЖЕ эндпоинтом, что UI — ранжирование,
+  // сниппеты и фасеты одинаковы для человека и машины. До этого агенты ходили
+  // через query_slice('search') и получали плоский список без релевантности —
+  // худший поиск, чем в интерфейсе.
+  server.tool(
+    'search',
+    'Cross-entity ranked search over the whole LORE corpus (GET /lore/search, ADR-LORE-033). ' +
+      'Finds by Russian morphology (запрос «релиз» находит «релиза»), prefix-as-you-type and ' +
+      'body text (*Hist rows collapse to their parent entity). Returns {hits[], by_type, ' +
+      'by_component, took_ms}; each hit carries type, ref_id, title, score, snippet, ' +
+      'matched_field, components (inherited_from marks parent-derived links) and projects. ' +
+      'Facets: types/components are CSV filters applied INSIDE each search branch, not as a ' +
+      'post-filter. Prefer this over query_slice("search") — the slice is a flat unranked ' +
+      'palette list kept for legacy consumers.',
+    {
+      q: z.string().min(2).max(160).describe('plain words; Lucene syntax is built server-side, metacharacters are stripped'),
+      types: z.string().optional().describe('CSV type filter, e.g. "adr,task,question"'),
+      components: z.string().optional().describe('CSV component filter, e.g. "FORSETI,OMILORE" — matches direct AND parent-inherited links'),
+      project: z.string().optional().describe('git_project slug filter'),
+      limit: z.number().int().min(1).max(100).optional(),
+      offset: z.number().int().min(0).optional(),
+      mode: z.enum(['smart', 'exact', 'fuzzy']).optional()
+        .describe('smart (default): AND tokens + prefix on last; exact: whole phrase; fuzzy: ~ on words ≥5 chars'),
+    },
+    async ({ q, types, components, project, limit, offset, mode }) => {
+      try {
+        const params: Record<string, string> = { q };
+        if (types) params.types = types;
+        if (components) params.components = components;
+        if (project) params.project = project;
+        if (limit !== undefined) params.limit = String(limit);
+        if (offset !== undefined) params.offset = String(offset);
+        if (mode) params.mode = mode;
+        return json(await loreGet('/lore/search', params));
       } catch (e) {
         return err(e);
       }

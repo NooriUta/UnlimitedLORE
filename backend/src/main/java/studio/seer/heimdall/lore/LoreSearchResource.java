@@ -310,12 +310,17 @@ public class LoreSearchResource extends LoreResourceBase {
         return out;
     }
 
-    /** ILIKE-fallback для ветки без FT-индекса (QualityGate). */
+    /**
+     * ILIKE-fallback для ветки без FT-индекса (QualityGate).
+     * БЕЗ собственных скобок: снаружи выражение уже в скобках, а вложенную
+     * группу `(x OR (a OR b))` парсер ArcadeDB 26.7.2 не принимает вовсе —
+     * «no viable alternative at input». Плоское OR разбирается нормально.
+     */
     private String ilikeMatcher(Branch b, Map<String, Object> params, String rawQ) {
-        params.put("ilike", "%" + rawQ + "%");
+        params.put("txtlike", "%" + rawQ + "%");
         List<String> parts = new ArrayList<>();
-        for (String f : b.vertexTextFields()) parts.add(f + " ILIKE :ilike");
-        return "(" + String.join(" OR ", parts) + ")";
+        for (String f : b.vertexTextFields()) parts.add(f + " ILIKE :txtlike");
+        return String.join(" OR ", parts);
     }
 
     /** Фасет-фильтр по компонентам: ОБА пути (прямой и выведенный), OR по значениям. */
