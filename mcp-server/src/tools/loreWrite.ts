@@ -255,30 +255,39 @@ export function registerLoreWrite(server: McpServer): void {
   // RBAC D10: пишут architect/pm (+full); клиентские профили зеркалируют.
   definePostTool(server, {
     name: 'feature_new',
-    description: 'Create or update a KnowFeature (product capability, ADR-LORE-022). Upserts by feature_id. ' +
-      'status: proposed|active|dropped — "shipped" is COMPUTED (D4: all UCs shipped), the endpoint rejects it. ' +
-      'Decompose into UCs via uc_new(feature_id). Feature→Release edge does NOT exist by design (D8 — derived). ' +
-      'Mutates system_aida_lore.',
+    description: 'Create or update a ROOT use case — what used to be a separate "feature" type (PL-28, ' +
+      'decision #141: ONE type with self-hierarchy). A feature IS a use case at the top of the Cockburn ' +
+      'scale, so this writes KnowUseCase with goal_level ☁ cloud (default) or 🪁 kite; lower altitudes ' +
+      'are rejected here — use uc_new for those. Upserts by feature_id (stored as uc_id). ' +
+      'status: proposed|active|dropped — "shipped" is COMPUTED (D4: all children shipped), the endpoint ' +
+      'rejects it. Attach children via uc_new(parent_uc_id). Feature→Release edge does NOT exist by ' +
+      'design (D8 — derived). Mutates system_aida_lore.',
     schema: {
-      feature_id:   z.string().describe('e.g. "FEAT-GITCYCLE"'),
+      feature_id:   z.string().describe('e.g. "FEAT-GITCYCLE" — stored as uc_id'),
       title:        z.string().optional(),
       body_md:      z.string().optional().describe('ценность + критерий готовности'),
       context_md:   z.string().optional().describe('БОЛЬШОЙ контекст (D13, как у спринта): зачем фича, ссылки на ADR/спринты'),
       status:       z.enum(['proposed', 'active', 'dropped']).optional(),
       component_id: z.string().optional(),
+      // PL-29 закрыт заодно: REST принимал goal_level, а MCP его не пробрасывал —
+      // выставить 🪁 kite через мост было нельзя.
+      goal_level:   z.enum(['cloud', 'kite']).optional()
+        .describe('altitude of the root: ☁ cloud (strategic, default) or 🪁 kite (overview)'),
     },
     path: '/lore/feature',
-    body: ({ feature_id, title, body_md, context_md, status, component_id }) => ({
+    body: ({ feature_id, title, body_md, context_md, status, component_id, goal_level }) => ({
       feature_id, title: title ?? null, body_md: body_md ?? null, context_md: context_md ?? null,
-      status: status ?? null, component_id: component_id ?? null,
+      status: status ?? null, component_id: component_id ?? null, goal_level: goal_level ?? null,
     }),
   });
 
   definePostTool(server, {
     name: 'uc_new',
-    description: 'Create or update a KnowUseCase (unit of user value, ADR-LORE-022). Upserts by uc_id; ' +
-      'feature_id keeps the DECOMPOSES_INTO edge in sync (response carries feature_linked:false when the ' +
-      'feature is missing — not a silent no-op). scenario_md/acceptance_md are separate fields; actors are ' +
+    description: 'Create or update a KnowUseCase (unit of user value, ADR-LORE-022). Since PL-28 this is the ' +
+      'ONLY product-layer vertex type — a "feature" is just a root use case at cloud/kite altitude. ' +
+      'Upserts by uc_id; parent_uc_id keeps the DECOMPOSES_INTO edge in sync (response carries ' +
+      'parent_linked:false when the parent is missing — not a silent no-op, and a cycle is rejected ' +
+      'outright). scenario_md/acceptance_md are separate fields; actors are ' +
       'KnowActor VERTICES (D12, can be several) — attach via uc_link rel="actor", never a free-text string. ' +
       'UC shipped ⇔ its uc-tasks are done (advisory). Mutates system_aida_lore.',
     schema: {
@@ -294,7 +303,8 @@ export function registerLoreWrite(server: McpServer): void {
         .describe('критерий приёмки; fully-dressed wants "### Проверки" (numbered) + "### Покрытие расширений" ' +
           '(each Na from the scenario named), casual — just a numbered list of checks (ADR-LORE-027 §3)'),
       status:        z.enum(['proposed', 'active', 'shipped', 'dropped']).optional(),
-      feature_id:    z.string().optional().describe('родитель — держит DECOMPOSES_INTO в синхроне'),
+      parent_uc_id:  z.string().optional()
+        .describe('родитель того же типа — держит DECOMPOSES_INTO в синхроне; цикл отбивается 400'),
       goal_level:    z.enum(['cloud', 'kite', 'sea-level', 'subfunction']).optional()
         .describe('Cockburn goal level, one scale for the whole layer: ☁ cloud / 🪁 kite = feature altitude, ' +
           '🌊 sea-level (user goal) / 🐟 subfunction = UC altitude'),
@@ -304,9 +314,9 @@ export function registerLoreWrite(server: McpServer): void {
       priority:      z.enum(['high', 'normal', 'low']).optional(),
     },
     path: '/lore/uc',
-    body: ({ uc_id, title, scenario_md, acceptance_md, status, feature_id, goal_level, rigor, priority }) => ({
+    body: ({ uc_id, title, scenario_md, acceptance_md, status, parent_uc_id, goal_level, rigor, priority }) => ({
       uc_id, title: title ?? null, scenario_md: scenario_md ?? null,
-      acceptance_md: acceptance_md ?? null, status: status ?? null, feature_id: feature_id ?? null,
+      acceptance_md: acceptance_md ?? null, status: status ?? null, parent_uc_id: parent_uc_id ?? null,
       goal_level: goal_level ?? null, rigor: rigor ?? null, priority: priority ?? null,
     }),
   });
@@ -399,7 +409,8 @@ export function registerLoreWrite(server: McpServer): void {
 
   definePostTool(server, {
     name: 'feature_link',
-    description: 'Link (or unlink) a KnowFeature. rel="pain": ADDRESSES — the feature claims to address a pain; ' +
+    description: 'Link (or unlink) a ROOT use case (what used to be a "feature" — PL-28). The CLAIM half of ' +
+      'the value pairs: rel="pain": ADDRESSES — it claims to address a pain; ' +
       'rel="gain": PROMISES — it promises a gain (relieving/delivering is the UCs\' job, see uc_link ' +
       'rel="relieves"/"delivers"). rel="job": HELPS_WITH — the feature claims to help with a customer job ' +
       '(performing it is the UCs\' job, see uc_link rel="performs"). rel="milestone": TARGETS_MILESTONE — the ' +

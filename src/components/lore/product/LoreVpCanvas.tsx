@@ -64,7 +64,7 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
 
   // Дефолт — первая фича, как только список загрузился.
   useEffect(() => {
-    if (!featureId && features.length) setFeatureId(features[0].feature_id);
+    if (!featureId && features.length) setFeatureId(features[0].uc_id);
   }, [features, featureId]);
 
   // UC выбранной фичи — снимают/создают/выполняют (сторона «СДЕЛАНО»).
@@ -87,7 +87,7 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
   }, [jobs, pains, gains]);
 
   const feature = useMemo(
-    () => features.find(f => f.feature_id === featureId) ?? null,
+    () => features.find(f => f.uc_id === featureId) ?? null,
     [features, featureId],
   );
 
@@ -114,10 +114,10 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
 
     // ── RIGHT: карта ценности (фича сверху, ниже её UC/US) ──
     nodes.push({
-      id:       `f:${feature.feature_id}`,
+      id:       `f:${feature.uc_id}`,
       type:     'vp',
       position: { x: COL_RIGHT, y: 0 },
-      data:     { label: feature.title ?? feature.feature_id, tone: productColor(feature.feature_id) } satisfies VpNodeData,
+      data:     { label: feature.title ?? feature.uc_id, tone: productColor(feature.uc_id) } satisfies VpNodeData,
     });
     ucs.forEach((uc, i) => {
       nodes.push({
@@ -131,8 +131,8 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
     // ── EDGES ── заявлено: фича ЗАЯВЛЯЕТ (ADDRESSES/PROMISES/HELPS_WITH) ──
     profileIds.forEach(entityId => {
       edges.push({
-        id:     `claim:${feature.feature_id}:${entityId}`,
-        source: `f:${feature.feature_id}`,
+        id:     `claim:${feature.uc_id}:${entityId}`,
+        source: `f:${feature.uc_id}`,
         target: `p:${entityId}`,
         type:   'smoothstep',
         style:  { strokeDasharray: '5 4', stroke: 'var(--t3)' },
@@ -183,8 +183,8 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
           }}
         >
           {features.map(f => (
-            <option key={f.feature_id} value={f.feature_id}>
-              {f.feature_id} · {f.title ?? ''}
+            <option key={f.uc_id} value={f.uc_id}>
+              {f.uc_id} · {f.title ?? ''}
             </option>
           ))}
         </select>

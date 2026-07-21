@@ -17,10 +17,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ADR-LORE-022 (ACCEPTED): продуктовый слой — KnowFeature ⊃ KnowUseCase.
- * Vertex-only (без Hist, как KnowDecision/KnowQuestion). Статус Feature
- * «фича целиком» — ВЫЧИСЛЯЕМЫЙ факт (D4: shipped ⇔ все UC shipped), поэтому
- * запись не принимает status='shipped' на фиче — его выводит слайс.
+ * ADR-LORE-022 (ACCEPTED) + PL-28 (решение №141): продуктовый слой — ОДИН тип
+ * KnowUseCase с само-иерархией. «Фича» = корневой сценарий (goal_level
+ * ☁ cloud / 🪁 kite), «UC» = сценарий внутри (🌊 sea-level / 🐟 subfunction).
+ * /lore/feature и /lore/uc пишут в ОДИН тип: первый — вход «заведи корень» с
+ * проверкой уровня, второй — общий; родитель задаётся parent_uc_id.
+ * Vertex-only (без Hist, как KnowDecision/KnowQuestion). Статус корня
+ * «фича целиком» — ВЫЧИСЛЯЕМЫЙ факт (D4: shipped ⇔ все дочерние shipped),
+ * поэтому запись не принимает status='shipped' на корне — его выводит слайс.
  * Все link-пути с linked-валидацией: CREATE EDGE в пустой FROM/TO — тихий
  * no-op (правило корпуса), мост честно отдаёт linked:false + hint.
  */
@@ -60,7 +64,12 @@ public class LoreProductResource extends LoreResourceBase {
     @Inject
     LoreIngestService ingest;
 
-    // ── Feature ──────────────────────────────────────────────────────────────
+    // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
+    //
+    // PL-28 (решение №141): отдельного типа больше нет. Эндпоинт сохранён и
+    // пишет в KnowUseCase — это удобный вход «заведи корень», а не вторая
+    // сущность. Так остаётся в силе и ограничение ADR-032 §1: корень живёт
+    // только на верхних ступенях шкалы Коберна.
 
     public record FeatureRequest(String feature_id, String title, String body_md,
                                  String context_md, String status, String component_id,
@@ -88,7 +97,7 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("feature goal_level must be cloud|kite (☁ стратегия / 🪁 обзор); "
                 + "sea-level и subfunction — уровни UC, не фичи (ADR-LORE-032 §1)");
         try {
-            StringBuilder sql = new StringBuilder("UPDATE KnowFeature SET feature_id=:id");
+            StringBuilder sql = new StringBuilder("UPDATE KnowUseCase SET uc_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("id", req.feature_id());
             if (req.title() != null)        { sql.append(", title=:t");        p.put("t", req.title()); }
@@ -96,10 +105,14 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.context_md() != null)   { sql.append(", context_md=:cx");  p.put("cx", req.context_md()); } // D13
             if (req.status() != null)       { sql.append(", status=:s");       p.put("s", req.status()); }
             if (req.component_id() != null) { sql.append(", component_id=:c"); p.put("c", req.component_id()); }
-            if (req.goal_level() != null)   { sql.append(", goal_level=:gl");  p.put("gl", req.goal_level()); }
+            // Уровень обязателен по существу: слайс «Фичи» отбирает корни именно
+            // по goal_level, и корень без него был бы невидим в своём же разделе.
+            // Умолчание ☁ cloud — самый верхний уровень шкалы.
+            sql.append(", goal_level=:gl");
+            p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now().toString());
-            sql.append(" UPSERT WHERE feature_id=:id");
+            sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id())));
@@ -112,8 +125,9 @@ public class LoreProductResource extends LoreResourceBase {
     // ── UseCase ──────────────────────────────────────────────────────────────
 
     // actor-строки нет (D12): акторы — вершины KnowActor, связь HAS_ACTOR через uc/link.
+    // parent_uc_id (PL-28) заменил feature_id: родитель теперь того же типа.
     public record UcRequest(String uc_id, String title, String scenario_md,
-                            String acceptance_md, String status, String feature_id,
+                            String acceptance_md, String status, String parent_uc_id,
                             String goal_level, String rigor, String priority) {}
 
     @POST
@@ -163,7 +177,7 @@ public class LoreProductResource extends LoreResourceBase {
             }
             if (req.acceptance_md() != null) { sql.append(", acceptance_md=:ac"); p.put("ac", req.acceptance_md()); }
             if (req.status() != null)        { sql.append(", status=:s");         p.put("s", req.status()); }
-            if (req.feature_id() != null)    { sql.append(", feature_id=:f");     p.put("f", req.feature_id()); }
+            if (req.parent_uc_id() != null)  { sql.append(", parent_uc_id=:f");   p.put("f", req.parent_uc_id()); }
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
@@ -173,7 +187,7 @@ public class LoreProductResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
 
-            // feature_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
+            // parent_uc_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
             // (класс багов «поле есть — ребра нет», relinkParentEdge/SpecComponentEdge).
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
@@ -182,7 +196,16 @@ public class LoreProductResource extends LoreResourceBase {
             // чинит оформление в той же сессии, не дожидаясь ревью.
             out.put("quality", qualityOf(req.uc_id()));
             out.put("uc_id", req.uc_id());
-            if (req.feature_id() != null && !req.feature_id().isBlank()) {
+            if (req.parent_uc_id() != null && !req.parent_uc_id().isBlank()) {
+                // Само-иерархия допускает цикл, которого раньше не было по
+                // построению (два разных типа). Проверяем явно: сценарий,
+                // ставший собственным предком, зациклил бы и обход слайса, и
+                // вычислитель готовности.
+                if (req.parent_uc_id().equals(req.uc_id()))
+                    return badParams("parent_uc_id совпадает с uc_id: сценарий не может быть своим родителем");
+                if (isDescendant(req.uc_id(), req.parent_uc_id()))
+                    return badParams("parent_uc_id «" + req.parent_uc_id() + "» — потомок «" + req.uc_id()
+                        + "»: связь замкнула бы иерархию в цикл");
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(inE('DECOMPOSES_INTO')) FROM KnowUseCase WHERE uc_id=:id)",
                     Map.of("id", req.uc_id()))).await().indefinitely();
@@ -190,18 +213,46 @@ public class LoreProductResource extends LoreResourceBase {
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE DECOMPOSES_INTO " +
-                        "FROM (SELECT FROM KnowFeature WHERE feature_id=:f) " +
+                        "FROM (SELECT FROM KnowUseCase WHERE uc_id=:f) " +
                         "TO   (SELECT FROM KnowUseCase WHERE uc_id=:id) IF NOT EXISTS",
-                        Map.of("f", req.feature_id(), "id", req.uc_id())))
+                        Map.of("f", req.parent_uc_id(), "id", req.uc_id())))
                     .await().indefinitely().result();
                 boolean linked = created != null && !created.isEmpty();
-                out.put("feature_linked", linked);
-                if (!linked) out.put("hint", "фича «" + req.feature_id() + "» не найдена — создайте её через /lore/feature");
+                out.put("parent_linked", linked);
+                if (!linked) out.put("hint", "родительский сценарий «" + req.parent_uc_id()
+                    + "» не найден — заведите его через /lore/uc или /lore/feature");
             }
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE UC] %s: %s", req.uc_id(), e.getMessage());
             return upstream(e);
+        }
+    }
+
+    /**
+     * PL-28: цикл в само-иерархии. Пока типов было два, «фича внутри своего же
+     * сценария» была невозможна по построению — один тип это разрешает, и
+     * защита обязана появиться вместе с ним. Зацикленная иерархия повесила бы
+     * и обход слайса, и вычислитель готовности (D17), причём молча.
+     *
+     * Возвращает true, если candidate достижим из root по DECOMPOSES_INTO,
+     * то есть назначение его родителем замкнёт кольцо. MAXDEPTH — страховка на
+     * случай, если кольцо уже как-то попало в данные: без неё обход по битому
+     * графу не закончится никогда.
+     */
+    private boolean isDescendant(String rootUcId, String candidateUcId) {
+        try {
+            List<Map<String, Object>> hit = ingest.queryPublic(
+                "SELECT uc_id FROM (TRAVERSE out('DECOMPOSES_INTO') FROM "
+                + "(SELECT FROM KnowUseCase WHERE uc_id=:root) MAXDEPTH 20) WHERE uc_id=:cand",
+                Map.of("root", rootUcId, "cand", candidateUcId));
+            return !hit.isEmpty();
+        } catch (Exception e) {
+            // Проверка не удалась — не пропускаем запись «на всякий случай»:
+            // молча созданный цикл дороже отказа, который видно сразу.
+            LOG.warnf("[LORE UC] проверка цикла %s → %s не выполнена: %s",
+                rootUcId, candidateUcId, e.getMessage());
+            throw new IllegalStateException("проверка иерархии не выполнена: " + e.getMessage(), e);
         }
     }
 
@@ -477,7 +528,7 @@ public class LoreProductResource extends LoreResourceBase {
             }
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowFeature WHERE feature_id=:fid) " +
+                    "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
                     "OR @in.milestone_id=:tid OR @in.component_id=:tid", p))
                     .await().indefinitely();
@@ -487,7 +538,7 @@ public class LoreProductResource extends LoreResourceBase {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowFeature WHERE feature_id=:fid) " +
+                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowUseCase WHERE uc_id=:fid) " +
                     "TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();

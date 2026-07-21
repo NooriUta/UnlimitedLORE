@@ -46,7 +46,7 @@ class LoreVpLayerLiveDbTest {
         post("/lore/pain", "{\"pain_id\":\"PAIN-VP-TOKEN\",\"title\":\"Сырые токены у агента\",\"severity\":\"high\"}");
         post("/lore/gain", "{\"gain_id\":\"GAIN-VP-LINKED\",\"title\":\"Связный граф релизов\","
             + "\"metric_md\":\"prs_linked > 0 у каждого релиза\"}");
-        post("/lore/uc", "{\"uc_id\":\"UC-VP-MERGE\",\"title\":\"Merge по зелёному\",\"feature_id\":\"FEAT-VP\","
+        post("/lore/uc", "{\"uc_id\":\"UC-VP-MERGE\",\"title\":\"Merge по зелёному\",\"parent_uc_id\":\"FEAT-VP\","
             + "\"goal_level\":\"sea-level\"}");
 
         // Левая половина канвы: чья боль/выгода.
@@ -61,8 +61,8 @@ class LoreVpLayerLiveDbTest {
         // Фича отдаёт свой VP-профиль (заявленное).
         given().when().get("/lore/slice/features")
         .then().statusCode(200)
-            .body("rows.find { it.feature_id == 'FEAT-VP' }.pain_ids", hasItem("PAIN-VP-TOKEN"))
-            .body("rows.find { it.feature_id == 'FEAT-VP' }.gain_ids", hasItem("GAIN-VP-LINKED"));
+            .body("rows.find { it.uc_id == 'FEAT-VP' }.pain_ids", hasItem("PAIN-VP-TOKEN"))
+            .body("rows.find { it.uc_id == 'FEAT-VP' }.gain_ids", hasItem("GAIN-VP-LINKED"));
 
         // UC отдаёт сделанное — это и есть замыкание fit.
         given().when().get("/lore/slice/use_cases_of_feature?id=FEAT-VP")
@@ -82,7 +82,7 @@ class LoreVpLayerLiveDbTest {
         given().when().get("/lore/slice/pains")
         .then().statusCode(200)
             .body("rows.find { it.pain_id == 'PAIN-VP-TOKEN' }.addressed_by", equalTo(2))
-            .body("rows.find { it.pain_id == 'PAIN-VP-TOKEN' }.feature_ids", hasItem("FEAT-VP-2"))
+            .body("rows.find { it.pain_id == 'PAIN-VP-TOKEN' }.claimed_by_ucs", hasItem("FEAT-VP-2"))
             // Заявили двое, снимает — один: расхождение видно цифрой.
             .body("rows.find { it.pain_id == 'PAIN-VP-TOKEN' }.relieved_by", equalTo(1))
             .body("rows.find { it.pain_id == 'PAIN-VP-TOKEN' }.relieved_by_ucs", hasItem("UC-VP-MERGE"));
@@ -116,11 +116,11 @@ class LoreVpLayerLiveDbTest {
         .then().statusCode(400).body("detail", containsString("goal_level"));
 
         // 🐟 subfunction → ⚡ casual (лёгкий вес по умолчанию, D1).
-        post("/lore/uc", "{\"uc_id\":\"UC-VP-SUB\",\"title\":\"Подфункция\",\"feature_id\":\"FEAT-VP\","
+        post("/lore/uc", "{\"uc_id\":\"UC-VP-SUB\",\"title\":\"Подфункция\",\"parent_uc_id\":\"FEAT-VP\","
             + "\"goal_level\":\"subfunction\"}");
         // 🌊 sea-level → 📋 fully dressed; но явный rigor автора сильнее дефолта.
         post("/lore/uc", "{\"uc_id\":\"UC-VP-CASUAL\",\"title\":\"Лёгкий по решению автора\","
-            + "\"feature_id\":\"FEAT-VP\",\"goal_level\":\"sea-level\",\"rigor\":\"casual\"}");
+            + "\"parent_uc_id\":\"FEAT-VP\",\"goal_level\":\"sea-level\",\"rigor\":\"casual\"}");
 
         given().when().get("/lore/slice/use_cases_of_feature?id=FEAT-VP")
         .then().statusCode(200)
@@ -144,7 +144,7 @@ class LoreVpLayerLiveDbTest {
         post("/lore/feature", "{\"feature_id\":\"FEAT-VP\",\"goal_level\":\"cloud\"}");
         given().when().get("/lore/slice/features")
         .then().statusCode(200)
-            .body("rows.find { it.feature_id == 'FEAT-VP' }.goal_level", equalTo("cloud"));
+            .body("rows.find { it.uc_id == 'FEAT-VP' }.goal_level", equalTo("cloud"));
 
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body("{\"feature_id\":\"FEAT-VP\",\"goal_level\":\"sea-level\"}")
@@ -160,7 +160,7 @@ class LoreVpLayerLiveDbTest {
         post("/lore/feature/link", "{\"feature_id\":\"FEAT-VP\",\"rel\":\"milestone\",\"target_id\":\"M-VP\"}");
         given().when().get("/lore/slice/features")
         .then().statusCode(200)
-            .body("rows.find { it.feature_id == 'FEAT-VP' }.milestone_id", equalTo("M-VP"));
+            .body("rows.find { it.uc_id == 'FEAT-VP' }.milestone_id", equalTo("M-VP"));
 
         // Правило корпуса: CREATE EDGE в пустой TO — тихий no-op. Мост обязан
         // сказать linked:false, а не отрапортовать успех (урок prs_linked:0).
@@ -178,7 +178,7 @@ class LoreVpLayerLiveDbTest {
     void emptyScenarioGetsTemplateAndQualityInResponse() {
         // ADR-027 §5: пустой scenario_md → каркас ВЫБРАННОГО веса; D3: quality в ответе.
         given().header("X-Seer-Role", "admin").contentType("application/json")
-            .body("{\"uc_id\":\"UC-VP-TPL\",\"title\":\"Свежий UC\",\"feature_id\":\"FEAT-VP\",\"goal_level\":\"sea-level\"}")
+            .body("{\"uc_id\":\"UC-VP-TPL\",\"title\":\"Свежий UC\",\"parent_uc_id\":\"FEAT-VP\",\"goal_level\":\"sea-level\"}")
         .when().post("/lore/uc")
         .then().statusCode(200)
             .body("template_inserted", equalTo("fully-dressed"))
@@ -244,7 +244,7 @@ class LoreVpLayerLiveDbTest {
             .body("rows.find { it.pain_id == 'PAIN-VP-TOKEN' }.blocks_job_ids", hasItem("JOB-RELEASE"));
         given().when().get("/lore/slice/features")
         .then().statusCode(200)
-            .body("rows.find { it.feature_id == 'FEAT-VP' }.job_ids", hasItem("JOB-RELEASE"));
+            .body("rows.find { it.uc_id == 'FEAT-VP' }.job_ids", hasItem("JOB-RELEASE"));
     }
 
     @Test

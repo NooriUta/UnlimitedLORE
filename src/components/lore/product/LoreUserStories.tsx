@@ -44,7 +44,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
   const [ucs, setUcs] = useState<LoreUcRow[]>([]);
   const [ucsLoading, setUcsLoading] = useState(true);
-  const featKey = features.map(f => f.feature_id).join('|');
+  const featKey = features.map(f => f.uc_id).join('|');
 
   useEffect(() => {
     if (features.length === 0) {
@@ -55,7 +55,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
     const ctrl = new AbortController();
     setUcsLoading(true);
     Promise.all(
-      features.map(f => fetchLoreSlice<LoreUcRow>('use_cases_of_feature', { id: f.feature_id }, ctrl.signal)),
+      features.map(f => fetchLoreSlice<LoreUcRow>('use_cases_of_feature', { id: f.uc_id }, ctrl.signal)),
     )
       .then(chunks => {
         if (ctrl.signal.aborted) return;
@@ -152,8 +152,8 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
           <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.us.feature', 'Фича')}</span>
-            <span>{uc.feature_id
-              ? <LinkChip color="var(--g-value)" onClick={() => onNavigate('features', uc.feature_id ?? undefined)}>{uc.feature_id}</LinkChip>
+            <span>{uc.parent_uc_id
+              ? <LinkChip color="var(--g-value)" onClick={() => onNavigate('features', uc.parent_uc_id ?? undefined)}>{uc.parent_uc_id}</LinkChip>
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.us.primaryActor', 'Primary-актор')}</span>
             <span>{actorNames.length > 0

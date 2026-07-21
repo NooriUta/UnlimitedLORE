@@ -190,7 +190,150 @@ public class LoreSchemaMigrationRunner {
     private void javaStep(int version) {
         if (version == 4 || version == 5) backfillContentHash(version);
         if (version == 11 || version == 12) createFullTextIndexes();
+        // V13 меняет набор полей ftKnowUseCase (в него влились body_md/context_md
+        // бывшей фичи). Пересоздание живёт в createFullTextIndexes, но зовётся
+        // оно только из javaStep — а шаги 11/12 на проде давно применены и
+        // повторно не пойдут. Без этого вызова прод остался бы со СТАРЫМ
+        // охватом индекса: поиск по контексту корня молча перестал бы находить.
+        // Ровно тот сценарий, на котором уже обожглись с ретайром легаси-индексов.
+        if (version == 13) { mergeFeaturesIntoUseCases(); createFullTextIndexes(); }
     }
+
+    /**
+     * PL-28 (решение владельца №141): KnowFeature растворяется в KnowUseCase.
+     * Фича становится КОРНЕВЫМ сценарием — той же вершиной на верхнем уровне
+     * шкалы Коберна, а не отдельным типом.
+     *
+     * Почему Java, а не SQL-стейтменты шага. У ребра в ArcadeDB неизменяемые
+     * концы: «перецепить» ADDRESSES с фичи на сценарий одним UPDATE нельзя,
+     * нужно создать новое и удалить старое поимённо по @rid. Плюс DELETE EDGE
+     * в этой сборке не работает вовсе — только `SELECT outE(...).@rid` и затем
+     * `DELETE FROM <ТипРебра> WHERE @rid = #x:y` (проверено ранее на этой же БД).
+     *
+     * Идемпотентность. Шаг обязан переживать повтор: ledger пишется ПОСЛЕ
+     * javaStep, и падение между ними оставит шаг pending. Поэтому каждое
+     * действие проверяет своё «уже сделано»: тип может отсутствовать, сценарий
+     * с таким uc_id уже существовать, рёбра — быть перевешены на прошлом заходе.
+     *
+     * Пары рёбер НЕ схлопываются (решение ADR-LORE-022-D20): ADDRESSES/RELIEVES,
+     * PROMISES/DELIVERS, HELPS_WITH/PERFORMS кодируют «заявлено vs доставлено»,
+     * а не «фича vs сценарий». Меняется только тип вершины-источника — сами
+     * рёбра переезжают как есть.
+     */
+    private void mergeFeaturesIntoUseCases() {
+        if (!typeExists("KnowFeature")) {
+            LOG.info("[LORE MIGRATE] V13: типа KnowFeature нет — свежая БД, переносить нечего");
+            return;
+        }
+
+        // Рёбра, исходящие ИЗ фичи. Каждое переезжает на новый корневой сценарий
+        // с тем же дальним концом. DECOMPOSES_INTO из Feature→UC становится
+        // UC→UC — это и есть само-иерархия.
+        final List<String> outEdges = List.of(
+            "DECOMPOSES_INTO", "ADDRESSES", "PROMISES", "HELPS_WITH",
+            "BELONGS_TO", "BELONGS_TO_PROJECT", "TARGETS_MILESTONE",
+            "TAGGED_WITH", "ATTACHED_TO", "TRACED_TO"
+        );
+
+        List<Map<String, Object>> features = ingest.queryPublic(
+            "SELECT @rid AS rid, feature_id, title, body_md, context_md, status,"
+            + " goal_level, shipped_at, date_created FROM KnowFeature", Map.of());
+
+        int created = 0;
+        int movedEdges = 0;
+        for (Map<String, Object> f : features) {
+            String featureId = str(f.get("feature_id"));
+            if (featureId == null || featureId.isBlank()) {
+                // Вершина без идентификатора — переносить некуда и не за что
+                // зацепиться при повторе. Валим громко: молчаливый пропуск
+                // потерял бы данные, а это ровно то, чего миграция не вправе.
+                throw new IllegalStateException("[LORE MIGRATE] V13: KnowFeature "
+                    + f.get("rid") + " без feature_id — перенос невозможен, "
+                    + "проставьте идентификатор вручную и повторите старт.");
+            }
+
+            // uc_id совпадает с feature_id: ссылки в телах ([[FEAT-…]]),
+            // денормализованный feature_id у детей и уже выданные URL остаются
+            // рабочими. Переименование сделало бы миграцию невосстановимой.
+            boolean already = !ingest.queryPublic(
+                "SELECT @rid FROM KnowUseCase WHERE uc_id = :id", Map.of("id", featureId)).isEmpty();
+
+            if (!already) {
+                Map<String, Object> p = new HashMap<>();
+                p.put("id", featureId);
+                p.put("t",  str(f.get("title")));
+                p.put("b",  str(f.get("body_md")));
+                p.put("c",  str(f.get("context_md")));
+                // Уровень цели у фич уже заполнен (cloud|kite). Если пусто —
+                // cloud: корень без уровня иначе провалился бы в фильтры UC.
+                String lvl = str(f.get("goal_level"));
+                p.put("g",  lvl == null || lvl.isBlank() ? "cloud" : lvl);
+                p.put("d",  str(f.get("date_created")));
+                // Статус: у фичи хранились только намерения (proposed|dropped),
+                // остальное вычисляется (D17) — переносим как есть.
+                p.put("s",  str(f.get("status")));
+                p.put("sa", str(f.get("shipped_at")));
+                command("INSERT INTO KnowUseCase SET uc_id=:id, title=:t, body_md=:b,"
+                    + " context_md=:c, goal_level=:g, date_created=:d, status=:s, shipped_at=:sa", p);
+                created++;
+            }
+
+            String ucRid = firstRid("SELECT @rid AS rid FROM KnowUseCase WHERE uc_id = :id",
+                Map.of("id", featureId));
+            if (ucRid == null) {
+                throw new IllegalStateException("[LORE MIGRATE] V13: сценарий " + featureId
+                    + " не найден сразу после создания — перенос прерван.");
+            }
+
+            for (String edge : outEdges) {
+                if (!typeExists(edge)) continue;
+                List<Map<String, Object>> rows = ingest.queryPublic(
+                    "SELECT @rid AS rid, @in AS target FROM " + edge + " WHERE @out = " + f.get("rid"),
+                    Map.of());
+                for (Map<String, Object> e : rows) {
+                    String target = str(e.get("target"));
+                    // String.format, а не именованные параметры: на CREATE EDGE
+                    // они в этой сборке ненадёжны (зафиксировано в LORE_DB_SPEC).
+                    exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS",
+                        edge, ucRid, target));
+                    exec("DELETE FROM " + edge + " WHERE @rid = " + e.get("rid"));
+                    movedEdges++;
+                }
+            }
+
+            // Денормализованный указатель на родителя: тот же идентификатор,
+            // но теперь он ведёт в свой же тип.
+            command("UPDATE KnowUseCase SET parent_uc_id = :id WHERE feature_id = :id",
+                Map.of("id", featureId));
+
+            exec("DELETE VERTEX FROM KnowFeature WHERE @rid = " + f.get("rid"));
+        }
+
+        // Тип сносится только когда он пуст. Непустой — значит выше что-то не
+        // доехало, и молча потерять это нельзя.
+        boolean empty = ingest.queryPublic("SELECT @rid FROM KnowFeature LIMIT 1", Map.of()).isEmpty();
+        if (empty) {
+            exec("DROP TYPE KnowFeature IF EXISTS UNSAFE");
+        } else {
+            throw new IllegalStateException("[LORE MIGRATE] V13: в KnowFeature остались вершины "
+                + "после переноса — тип не снесён, разберитесь вручную (бэкап снят).");
+        }
+
+        LOG.infof("[LORE MIGRATE] V13: фич перенесено %d, рёбер перевешено %d, тип KnowFeature снят",
+            created, movedEdges);
+    }
+
+    private boolean typeExists(String name) {
+        return !ingest.queryPublic("SELECT name FROM schema:types WHERE name = :n",
+            Map.of("n", name)).isEmpty();
+    }
+
+    private String firstRid(String sql, Map<String, Object> params) {
+        List<Map<String, Object>> rows = ingest.queryPublic(sql, params);
+        return rows.isEmpty() ? null : str(rows.get(0).get("rid"));
+    }
+
+    private static String str(Object v) { return v == null ? null : String.valueOf(v); }
 
     /**
      * SRCH-03: именованные мультиполевые FULL_TEXT-индексы.
