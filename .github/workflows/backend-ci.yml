@@ -1,10 +1,14 @@
 name: Backend CI
 
+# Промоушн-ветки включены НАМЕРЕННО. Правило «мержить только по зелёному CI»
+# (CLAUDE.md) без этого превращалось бы в пустой звук на самых ответственных
+# переходах: PR develop→preprod и preprod→main не получали бы ни одного чека,
+# и «зелёный» было бы просто нечему показать.
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "develop", "preprod" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop", "preprod", "main" ]
 
 jobs:
   build:
