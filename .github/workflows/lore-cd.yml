@@ -18,9 +18,19 @@ name: LORE CD (ci-server stand)
 # see the job's runs-on comment) — a github-hosted runner has no access to this
 # machine's Docker Desktop / compose stack at all, so this only makes sense here.
 
+# ── Место в цепочке: develop → preprod → main ────────────────────────────────
+# Деплоит ТОЛЬКО ветка `preprod`, а не `develop`. Раньше стенд обновлялся с
+# каждого пуша в develop — то есть с каждой смерженной фичи, поштучно и сразу.
+# Теперь develop остаётся местом сборки фич, а выкатка на стенд — отдельное
+# осознанное действие: набрали несколько фич → влили develop в preprod →
+# стенд обновился → тестируем связку целиком → только потом релиз в main с тегом.
+#
+# Зачем разделение: до него «оттестировать несколько фич вместе» было негде —
+# стенд всегда показывал последний коммит develop, и проверка одной фичи могла
+# уехать под другую прямо во время проверки.
 on:
   push:
-    branches: ["develop"]
+    branches: ["preprod"]
   workflow_dispatch:
     inputs:
       service:
@@ -270,7 +280,7 @@ jobs:
       # fail for anyone who hasn't configured them on THIS repo — Forgejo
       # secrets are per-repo, aida-root's config does not carry over here).
       # Only success/failure, no "start" ping: this fires on every push to
-      # develop, and a start-notification for every local dev push would be
+      # preprod, and a start-notification for every promotion would be
       # noisy where aida-root's tag-triggered prod releases are not.
       # continue-on-error + trailing `exit 0`: Telegram is best-effort only.
       # 2026-07-13: api.telegram.org:443 was unreachable from this host entirely

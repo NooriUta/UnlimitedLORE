@@ -1,10 +1,13 @@
 name: Frontend + MCP CI
 
+# Промоушн-ветки включены НАМЕРЕННО — см. тот же комментарий в backend-ci.yml:
+# без них PR develop→preprod и preprod→main шли бы без единого чека, а правило
+# «мержить только по зелёному» опиралось бы на пустоту.
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "develop", "preprod" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop", "preprod", "main" ]
 
 jobs:
   build:
