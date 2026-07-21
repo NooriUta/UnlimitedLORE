@@ -32,6 +32,9 @@ public class LoreStatusResource extends LoreResourceBase {
     @jakarta.inject.Inject
     LoreHashStamper hashStamper; // SV-10: content_hash на открытой Hist-строке после записи тел
 
+    @jakarta.inject.Inject
+    UcReadinessCalculator readiness; // PL-15 (D17): готовность сценария — из задач
+
     public record StatusUpdateRequest(String entity_type, String id, String status) {}
     record StatusRevision(String valid_from, String plan_version) {}
     public record StatusUpdateResponse(
@@ -129,9 +132,26 @@ public class LoreStatusResource extends LoreResourceBase {
         };
         // SV-10: у задач carry-forward несёт note_md, но не content_hash — доштамповать
         // на свежеоткрытой строке (спринт несёт хэш через SPRINT_PLAN_FIELDS).
-        return flip.invoke(r -> {
-            if (r != null && r.getStatus() < 300 && "task".equals(req.entity_type()))
-                hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.id());
+        // PL-15 (D17): готовность сценария выводится ИЗ ЗАДАЧ, поэтому пересчёт
+        // живёт ровно здесь — в единственной точке, где статус задачи меняется.
+        // Вешать его на чтение нельзя: shipped_at всё равно требует записи, а
+        // два источника правды разъезжаются.
+        //
+        // runSubscriptionOn(worker) обязателен. Вычислитель ходит в БД
+        // блокирующими вызовами, и на IO-потоке они падают — а падение здесь
+        // проглатывается (пересчёт вторичен по отношению к самой смене
+        // статуса), то есть без переезда на worker-пул он молча не работал бы
+        // вовсе. Ровно так первая редакция и вела себя: тесты показали статус
+        // «proposed» там, где ждали «shipped», без единой ошибки в ответе.
+        return flip.chain(r -> {
+            if (r == null || r.getStatus() >= 300 || !"task".equals(req.entity_type()))
+                return Uni.createFrom().item(r);
+            return Uni.createFrom().item(() -> {
+                    hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.id());
+                    readiness.recomputeForTask(req.id());
+                    return r;
+                })
+                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
         });
     }
 
