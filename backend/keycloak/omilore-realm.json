@@ -18,6 +18,30 @@
       { "name": "viewer",      "description": "LORE read-only." }
     ]
   },
+  "_comment_lore_audience": "AL-72. Аудитория вынесена в ОДИН client scope, а не продублирована мапперами по клиентам, и это не вкусовщина: в живом realm клиентов не два, а десять (lore-app, lore-admin, lore-mcp-full и семь агентских профилей lore-mcp-*). Дублировать маппер десять раз означало бы, что когда-нибудь его забудут добавить одиннадцатому — и этот клиент молча получит токен без нужной аудитории. Scope помечен Default, поэтому НОВЫЕ клиенты подхватывают его сами. Существующим он проставлен вручную 2026-07-21.",
+  "clientScopes": [
+    {
+      "name": "lore-audience",
+      "description": "AL-72: audience lore-api for the LORE backend. Without it KC issues the default aud=account.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "lore-audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "lore-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
   "clients": [
     {
       "clientId": "lore-app",
@@ -58,18 +82,9 @@
             "id.token.claim": "true",
             "userinfo.token.claim": "true"
           }
-        },
-        {
-          "name": "lore-audience-mapper",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "config": {
-            "included.custom.audience": "lore-api",
-            "access.token.claim": "true",
-            "id.token.claim": "false"
-          }
         }
-      ]
+      ],
+      "defaultClientScopes": ["lore-audience"]
     },
     {
       "clientId": "lore-mcp",
@@ -94,18 +109,9 @@
             "id.token.claim": "true",
             "userinfo.token.claim": "true"
           }
-        },
-        {
-          "name": "lore-audience-mapper",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "config": {
-            "included.custom.audience": "lore-api",
-            "access.token.claim": "true",
-            "id.token.claim": "false"
-          }
         }
-      ]
+      ],
+      "defaultClientScopes": ["lore-audience"]
     }
   ]
 }
