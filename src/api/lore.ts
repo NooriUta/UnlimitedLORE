@@ -483,6 +483,8 @@ export interface LoreFeatureRow {
   context_md?: string | null;
   status?: string | null;
   component_id?: string | null;
+  component_ids?: string[] | null;  // PL-10: рёбра BELONGS_TO, а не плоское поле
+  projects?: string[] | null;
   goal_level?: string | null;      // ☁ cloud | 🪁 kite (Коберн, D1)
   shipped_at?: string | null;
   uc_ids?: string[] | null;
@@ -501,6 +503,9 @@ export interface LoreUcRow {
   acceptance_md?: string | null;
   status?: string | null;
   parent_uc_id?: string | null;     // родитель того же типа (DECOMPOSES_INTO)
+  component_ids?: string[] | null;           // PL-10 (D14): СВОЙ компонент сценария
+  inherited_component_ids?: string[] | null; // …и отдельно унаследованный от родителя
+  projects?: string[] | null;
   goal_level?: string | null;       // 🌊 sea-level | 🐟 subfunction
   rigor?: string | null;            // casual | fully-dressed
   relieves_pain_ids?: string[] | null;   // RELIEVES — сделано (замыкает fit)

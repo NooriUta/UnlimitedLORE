@@ -447,7 +447,7 @@ export function registerLoreWrite(server: McpServer): void {
       'the response = edge NOT created (target missing) — never a silent no-op. Mutates system_aida_lore.',
     {
       uc_id:     z.string().describe('e.g. "UC-GIT-MERGE"'),
-      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
+      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'component', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
       target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers) | job_id (performs)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
       actor_role: z.enum(['primary', 'supporting']).optional()
@@ -491,10 +491,13 @@ export function registerLoreWrite(server: McpServer): void {
       name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Администратор LORE"'),
       kind:     z.enum(['human-role', 'system', 'agent']).optional(),
       body_md:  z.string().optional().describe('кто это, права, ожидания'),
+      project:  z.string().optional()
+        .describe('D18: git-project slug the role belongs to. Without it "Администратор" of one product and the same-named role of another collapse into one row of the derived RBAC matrix. project_linked:false in the response = the project is not registered (project_new), not a silent no-op.'),
     },
     path: '/lore/actor',
-    body: ({ actor_id, name, kind, body_md }) => ({
+    body: ({ actor_id, name, kind, body_md, project }) => ({
       actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+      project: project ?? null,
     }),
   });
 
