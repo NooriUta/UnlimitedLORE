@@ -474,8 +474,10 @@ export interface LoreSpecPassport extends LoreSpecRow {
 // ── Продуктовый слой: Value Proposition как граф (ADR-LORE-022/032, Остервальдер + Коберн).
 // Поля-массивы (*_ids/*_ucs) — рёбра графа; счётчики (*_by) — их размер. Слайсы:
 // features · use_cases_of_feature(id) · pains · gains · jobs · actors.
+// PL-28 (решение №141): «фича» — это КОРНЕВОЙ сценарий, а не отдельный тип.
+// Отсюда uc_id вместо feature_id: слайс `features` отбирает корни по goal_level.
 export interface LoreFeatureRow {
-  feature_id: string;
+  uc_id: string;
   title: string | null;
   body_md?: string | null;
   context_md?: string | null;
@@ -498,7 +500,7 @@ export interface LoreUcRow {
   scenario_md?: string | null;
   acceptance_md?: string | null;
   status?: string | null;
-  feature_id?: string | null;
+  parent_uc_id?: string | null;     // родитель того же типа (DECOMPOSES_INTO)
   goal_level?: string | null;       // 🌊 sea-level | 🐟 subfunction
   rigor?: string | null;            // casual | fully-dressed
   relieves_pain_ids?: string[] | null;   // RELIEVES — сделано (замыкает fit)
@@ -522,7 +524,7 @@ export interface LorePainRow {
   severity?: string | null;
   actor_ids?: string[] | null;       // FELT_BY — чья боль
   blocks_job_ids?: string[] | null;  // BLOCKS — какой работе мешает
-  feature_ids?: string[] | null;     // кто ЗАЯВИЛ, что адресует
+  claimed_by_ucs?: string[] | null;  // ADDRESSES — кто ЗАЯВИЛ, что адресует
   addressed_by?: number | null;
   relieved_by_ucs?: string[] | null; // кто РЕАЛЬНО снимает
   relieved_by?: number | null;
@@ -536,7 +538,7 @@ export interface LoreGainRow {
   rank?: string | null;              // essential | expected | desired | unexpected
   actor_ids?: string[] | null;       // DESIRED_BY
   success_of_job_ids?: string[] | null; // SUCCESS_OF — успех в какой работе
-  feature_ids?: string[] | null;
+  claimed_by_ucs?: string[] | null;  // PROMISES — кто ЗАЯВИЛ
   promised_by?: number | null;
   delivered_by_ucs?: string[] | null;
   delivered_by?: number | null;
@@ -552,7 +554,7 @@ export interface LoreJobRow {
   blocking_pain_ids?: string[] | null;
   blocked_by?: number | null;
   gain_ids?: string[] | null;        // SUCCESS_OF
-  feature_ids?: string[] | null;     // HELPS_WITH — кто ЗАЯВИЛ помощь
+  claimed_by_ucs?: string[] | null;  // HELPS_WITH — кто ЗАЯВИЛ помощь
   helped_by?: number | null;
   performed_by_ucs?: string[] | null; // PERFORMS — кто РЕАЛЬНО выполняет
   performed_by?: number | null;

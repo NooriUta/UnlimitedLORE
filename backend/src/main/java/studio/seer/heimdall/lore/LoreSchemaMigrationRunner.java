@@ -190,7 +190,13 @@ public class LoreSchemaMigrationRunner {
     private void javaStep(int version) {
         if (version == 4 || version == 5) backfillContentHash(version);
         if (version == 11 || version == 12) createFullTextIndexes();
-        if (version == 13) mergeFeaturesIntoUseCases();
+        // V13 меняет набор полей ftKnowUseCase (в него влились body_md/context_md
+        // бывшей фичи). Пересоздание живёт в createFullTextIndexes, но зовётся
+        // оно только из javaStep — а шаги 11/12 на проде давно применены и
+        // повторно не пойдут. Без этого вызова прод остался бы со СТАРЫМ
+        // охватом индекса: поиск по контексту корня молча перестал бы находить.
+        // Ровно тот сценарий, на котором уже обожглись с ретайром легаси-индексов.
+        if (version == 13) { mergeFeaturesIntoUseCases(); createFullTextIndexes(); }
     }
 
     /**

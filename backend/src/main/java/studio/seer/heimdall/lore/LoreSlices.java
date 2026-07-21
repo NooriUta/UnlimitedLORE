@@ -333,28 +333,45 @@ public final class LoreSlices {
             List.of("sprint_id"), Map.of(), "");
 
         // ── ADR-LORE-022: продуктовый слой ───────────────────────────────────
-        // «Фича целиком» — вычисляемый факт (D4): shipped ⇔ все UC shipped.
+        // PL-28 (решение №141): тип ОДИН — KnowUseCase с само-иерархией.
+        // «Фича» больше не отдельная сущность, а КОРНЕВОЙ сценарий: тот же
+        // вопрос «какую пользовательскую цель закрываем», только на верхнем
+        // уровне шкалы Коберна. Разделяет их goal_level: ☁ cloud / 🪁 kite —
+        // корни, 🌊 sea-level / 🐟 subfunction — сценарии внутри.
+        //
+        // Имя слайса оставлено прежним намеренно: раздел UI называется «Фичи»,
+        // и переименование слайса сломало бы потребителей ради косметики.
+        // Отдаётся, однако, честный uc_id — алиас feature_id не вводим, иначе
+        // слияние типов существовало бы только в схеме.
+        //
+        // «Фича целиком» — вычисляемый факт (D4): shipped ⇔ все дочерние shipped.
         // Слайс отдаёт счётчики, вывод статуса — на клиенте/потребителе.
         slice("features",
-            "SELECT feature_id, title, body_md, context_md, status, component_id, date_created, " +
-            "goal_level, shipped_at, " +
+            "SELECT uc_id, title, body_md, context_md, status, component_id, date_created, " +
+            "goal_level, shipped_at, parent_uc_id, " +
             "out('DECOMPOSES_INTO').uc_id AS uc_ids, " +
             "out('DECOMPOSES_INTO').size() AS uc_total, " +
             "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS uc_shipped, " +
-            // VP-профиль фичи (ADR-032 D5): что она ЗАЯВЛЯЕТ (ADDRESSES/PROMISES) —
-            // замкнутость на UC (RELIEVES/DELIVERS) считает слайс feature_vp (AN-01).
+            // VP-профиль корня (ADR-032 D5): что он ЗАЯВЛЯЕТ (ADDRESSES/PROMISES/
+            // HELPS_WITH). Пары рёбер сохранены при слиянии типов
+            // (ADR-LORE-022-D20): «заявлено vs доставлено» — характер утверждения,
+            // а не уровень узла, поэтому корень вправе нести и то, и другое.
             "out('ADDRESSES').pain_id AS pain_ids, " +
             "out('PROMISES').gain_id  AS gain_ids, " +
             "out('HELPS_WITH').job_id AS job_ids, " + // Остервальдер: третья ось профиля
             "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id " +
-            "FROM KnowFeature",
+            // Корень = верхние уровни шкалы. Узлы без goal_level сюда не попадают
+            // и не теряются: их видно линтером качества (goal_level обязателен).
+            "FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite']",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " WHERE component_id = :component")),
-            " ORDER BY feature_id");
+                "component", " AND component_id = :component")),
+            " ORDER BY uc_id");
 
+        // Дочерние сценарии корня. Источник истины — ребро DECOMPOSES_INTO;
+        // parent_uc_id рядом с ним денормализация для индекса, а не вторая правда.
         slice("use_cases_of_feature",
-            "SELECT uc_id, title, scenario_md, acceptance_md, status, feature_id, date_created, " +
+            "SELECT uc_id, title, scenario_md, acceptance_md, status, parent_uc_id, date_created, " +
             // ADR-027 (D1/§2): классификация Коберна — уровень цели, вес оформления,
             // приоритет; shipped_at ставит система (ADR-029 §2).
             "goal_level, rigor, priority, shipped_at, " +
@@ -372,7 +389,7 @@ public final class LoreSlices {
             "out('UC_EXTENDS').uc_id   AS extends_uc, " +
             "in('UC_INCLUDES').uc_id   AS included_by, " +
             "in('UC_EXTENDS').uc_id    AS extended_by " +
-            "FROM KnowUseCase WHERE feature_id = :id ORDER BY uc_id",
+            "FROM KnowUseCase WHERE in('DECOMPOSES_INTO').uc_id CONTAINS :id ORDER BY uc_id",
             List.of("id"), Map.of(), "");
 
         // ADR-LORE-032 §2 (D5): реестры болей и выгод. Боль/выгода переиспользуются
@@ -382,7 +399,7 @@ public final class LoreSlices {
             "SELECT pain_id, title, body_md, severity, date_created, " +
             "out('FELT_BY').actor_id       AS actor_ids, " +   // чья боль
             "out('BLOCKS').job_id          AS blocks_job_ids, " + // Остервальдер: какой работе мешает
-            "in('ADDRESSES').feature_id    AS feature_ids, " + // кто заявил, что адресует
+            "in('ADDRESSES').uc_id          AS claimed_by_ucs, " + // кто заявил, что адресует
             "in('ADDRESSES').size()        AS addressed_by, " +
             "in('RELIEVES').uc_id          AS relieved_by_ucs, " + // кто РЕАЛЬНО снимает
             "in('RELIEVES').size()         AS relieved_by " +
@@ -394,7 +411,7 @@ public final class LoreSlices {
             "SELECT gain_id, title, body_md, metric_md, rank, date_created, " +
             "out('DESIRED_BY').actor_id    AS actor_ids, " +
             "out('SUCCESS_OF').job_id      AS success_of_job_ids, " + // успех в какой работе
-            "in('PROMISES').feature_id     AS feature_ids, " +
+            "in('PROMISES').uc_id           AS claimed_by_ucs, " +
             "in('PROMISES').size()         AS promised_by, " +
             "in('DELIVERS').uc_id          AS delivered_by_ucs, " +
             "in('DELIVERS').size()         AS delivered_by " +
@@ -410,7 +427,7 @@ public final class LoreSlices {
             "in('BLOCKS').pain_id         AS blocking_pain_ids, " + // что мешает
             "in('BLOCKS').size()          AS blocked_by, " +
             "in('SUCCESS_OF').gain_id     AS gain_ids, " +        // что значит успех
-            "in('HELPS_WITH').feature_id  AS feature_ids, " +     // кто ЗАЯВИЛ помощь
+            "in('HELPS_WITH').uc_id         AS claimed_by_ucs, " +     // кто ЗАЯВИЛ помощь
             "in('HELPS_WITH').size()      AS helped_by, " +
             "in('PERFORMS').uc_id         AS performed_by_ucs, " + // кто РЕАЛЬНО выполняет
             "in('PERFORMS').size()        AS performed_by " +
@@ -504,7 +521,7 @@ public final class LoreSlices {
         // списком для палитры/автокомплита до перевода потребителей.
         slice("search",
             "SELECT DISTINCT type, ref_id, title FROM " +
-            "(SELECT expand(unionall($a, $ah, $s, $sh, $p, $ph, $t, $th, $q, $r, $rh, $d, $c, $qn, $f, $u, $pn, $gn, $jb, $ac)) LET " +
+            "(SELECT expand(unionall($a, $ah, $s, $sh, $p, $ph, $t, $th, $q, $r, $rh, $d, $c, $qn, $u, $pn, $gn, $jb, $ac)) LET " +
             "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
             "      WHERE adr_id ILIKE ('%' + :pattern + '%') " +
             "      OR SEARCH_INDEX('ftKnowADR', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
@@ -550,9 +567,7 @@ public final class LoreSlices {
             "      WHERE question_id ILIKE ('%' + :pattern + '%') " +
             "      OR SEARCH_INDEX('ftKnowQuestion', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             // ── продуктовый слой (ADR-LORE-022/032) ──
-            "$f = (SELECT 'feature' AS type, feature_id AS ref_id, title FROM KnowFeature " +
-            "      WHERE feature_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowFeature', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            // PL-28: ветка одна — фича стала корневым сценарием того же типа.
             "$u = (SELECT 'use_case' AS type, uc_id AS ref_id, title FROM KnowUseCase " +
             "      WHERE uc_id ILIKE ('%' + :pattern + '%') " +
             "      OR SEARCH_INDEX('ftKnowUseCase', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +

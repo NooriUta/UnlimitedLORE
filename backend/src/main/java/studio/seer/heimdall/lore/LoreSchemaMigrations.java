@@ -506,8 +506,11 @@ final class LoreSchemaMigrations {
         new FtIndex("ftKnowDocHist",     "KnowDocHist",     List.of("content_md")),
         new FtIndex("ftKnowDecision",    "KnowDecision",    List.of("title", "body_md")),
         new FtIndex("ftKnowQuestion",    "KnowQuestion",    List.of("title", "body_md")),
-        new FtIndex("ftKnowFeature",     "KnowFeature",     List.of("title", "body_md", "context_md")),
-        new FtIndex("ftKnowUseCase",     "KnowUseCase",     List.of("title", "scenario_md", "acceptance_md")),
+        // PL-28: ftKnowFeature снят вместе с типом. Поля обеих прежних веток
+        // собраны здесь — иначе после слияния перестал бы искаться либо
+        // контекст корня, либо сценарий, и пропажу заметили бы не сразу.
+        new FtIndex("ftKnowUseCase",     "KnowUseCase",
+            List.of("title", "body_md", "context_md", "scenario_md", "acceptance_md")),
         new FtIndex("ftKnowPain",        "KnowPain",        List.of("title", "body_md")),
         new FtIndex("ftKnowGain",        "KnowGain",        List.of("title", "body_md", "metric_md")),
         new FtIndex("ftKnowJob",         "KnowJob",         List.of("title", "body_md")),
