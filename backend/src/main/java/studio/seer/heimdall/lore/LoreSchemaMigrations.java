@@ -387,6 +387,39 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowSpecHist.summary  IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowDoc.content_md_en IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowDoc.content_md_ru IF NOT EXISTS STRING"
+        )),
+
+        // ── V13 (13.0) PL-28: ОДИН тип с само-иерархией ──────────────────────
+        // Решение владельца №141: KnowFeature и KnowUseCase сливаются в ОДИН
+        // тип. Фича — это корневой сценарий, а не отдельная сущность: она
+        // отвечает на тот же вопрос «какую пользовательскую цель закрываем»,
+        // только на верхнем уровне шкалы Коберна. Дискриминатором уровня
+        // становится уже существующий и заполненный goal_level:
+        // ☁ cloud / 🪁 kite — бывшие фичи, 🌊 sea-level / 🐟 subfunction — бывшие UC.
+        //
+        // Почему это ЛОМАЮЩИЙ шаг (compatMajor=13, а не аддитивный 10.x):
+        // тип KnowFeature исчезает. Старый бинарь читает его в слайсах, REST и
+        // поиске — против новой схемы он отдавал бы пустоту, молча и с ok:true.
+        // Скачок major заставляет такой бинарь ОТКАЗАТЬСЯ стартовать
+        // (StartupDecision.INCOMPATIBLE), а не работать неправильно.
+        //
+        // Здесь только АДДИТИВНАЯ часть — поля, которые были у фичи и которых
+        // нет у сценария. Перенос данных, перевод рёбер и снос типа делает
+        // javaStep(13): рёбра нельзя перецепить SQL-запросом, у них
+        // неизменяемые концы, а @rid-адресация нужна поимённо (см.
+        // LoreSchemaMigrationRunner#mergeFeaturesIntoUseCases).
+        new Step(13, "product_layer_merge_feature_into_usecase", List.of(
+            // Ценность/критерий фичи. У сценария были только scenario_md и
+            // acceptance_md — короткому «зачем это вообще» места не было.
+            "CREATE PROPERTY KnowUseCase.body_md    IF NOT EXISTS STRING",
+            // Большой контекст (D13) — как у спринта; у UC его не было.
+            "CREATE PROPERTY KnowUseCase.context_md IF NOT EXISTS STRING",
+            // Родитель в само-иерархии. Заменяет денормализованный feature_id:
+            // тот указывал в другой тип, этот — в свой же.
+            "CREATE PROPERTY KnowUseCase.parent_uc_id IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (parent_uc_id) NOTUNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (body_md)    FULL_TEXT",
+            "CREATE INDEX IF NOT EXISTS ON KnowUseCase (context_md) FULL_TEXT"
         ))
     );
 
@@ -473,8 +506,11 @@ final class LoreSchemaMigrations {
         new FtIndex("ftKnowDocHist",     "KnowDocHist",     List.of("content_md")),
         new FtIndex("ftKnowDecision",    "KnowDecision",    List.of("title", "body_md")),
         new FtIndex("ftKnowQuestion",    "KnowQuestion",    List.of("title", "body_md")),
-        new FtIndex("ftKnowFeature",     "KnowFeature",     List.of("title", "body_md", "context_md")),
-        new FtIndex("ftKnowUseCase",     "KnowUseCase",     List.of("title", "scenario_md", "acceptance_md")),
+        // PL-28: ftKnowFeature снят вместе с типом. Поля обеих прежних веток
+        // собраны здесь — иначе после слияния перестал бы искаться либо
+        // контекст корня, либо сценарий, и пропажу заметили бы не сразу.
+        new FtIndex("ftKnowUseCase",     "KnowUseCase",
+            List.of("title", "body_md", "context_md", "scenario_md", "acceptance_md")),
         new FtIndex("ftKnowPain",        "KnowPain",        List.of("title", "body_md")),
         new FtIndex("ftKnowGain",        "KnowGain",        List.of("title", "body_md", "metric_md")),
         new FtIndex("ftKnowJob",         "KnowJob",         List.of("title", "body_md")),

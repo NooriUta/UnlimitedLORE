@@ -174,7 +174,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
         <PSection title={t('lore.product.vp.performers', '🌊 Кто ВЫПОЛНЯЕТ — US фичи (PERFORMS)')}>
           <div style={{ fontSize: 10.5, color: 'var(--t3)', marginBottom: 5 }}>
-            заявили фичи: {asArray(j.feature_ids).join(', ') || '—'}
+            заявили фичи: {asArray(j.claimed_by_ucs).join(', ') || '—'}
           </div>
           {asArray(j.performed_by_ucs).length === 0
             ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
@@ -216,7 +216,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
         <PSection title={t('lore.product.vp.claimedVsRelieved', 'Заявлено vs снято')}>
           <LabeledChips label={`${t('lore.product.vp.claimed', 'заявили')} ${p.addressed_by ?? 0}`}>
-            <ChipRow ids={asArray(p.feature_ids)} color="var(--g-value)" onGo={id => onNavigate('features', id)} />
+            <ChipRow ids={asArray(p.claimed_by_ucs)} color="var(--g-value)" onGo={id => onNavigate('features', id)} />
           </LabeledChips>
           <LabeledChips label={`${t('lore.product.vp.relieved', 'снимают')} ${p.relieved_by ?? 0}`}>
             <ChipRow ids={asArray(p.relieved_by_ucs)} color="var(--g-do)" onGo={id => onNavigate('userStories', id)} />

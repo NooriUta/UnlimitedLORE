@@ -35,8 +35,8 @@ class LoreProductLayerLiveDbTest {
     void featureUcActorGraphRoundTrip() {
         post("/lore/feature", "{\"feature_id\":\"FEAT-T\",\"title\":\"Тестовая фича\","
             + "\"body_md\":\"ценность\",\"context_md\":\"большой контекст (D13)\",\"status\":\"active\"}");
-        post("/lore/uc", "{\"uc_id\":\"UC-T-1\",\"title\":\"Базовый сценарий\",\"feature_id\":\"FEAT-T\",\"status\":\"shipped\"}");
-        post("/lore/uc", "{\"uc_id\":\"UC-T-2\",\"title\":\"Второй сценарий\",\"feature_id\":\"FEAT-T\",\"status\":\"active\"}");
+        post("/lore/uc", "{\"uc_id\":\"UC-T-1\",\"title\":\"Базовый сценарий\",\"parent_uc_id\":\"FEAT-T\",\"status\":\"shipped\"}");
+        post("/lore/uc", "{\"uc_id\":\"UC-T-2\",\"title\":\"Второй сценарий\",\"parent_uc_id\":\"FEAT-T\",\"status\":\"active\"}");
         post("/lore/actor", "{\"actor_id\":\"ACT-T-ADMIN\",\"name\":\"Администратор\",\"kind\":\"human-role\"}");
         post("/lore/actor", "{\"actor_id\":\"ACT-T-AGENT\",\"name\":\"Агент сессии\",\"kind\":\"agent\"}");
         // D12: у сценария НЕСКОЛЬКО акторов.
@@ -61,9 +61,9 @@ class LoreProductLayerLiveDbTest {
         given().header("X-Seer-Role", "admin")
         .when().get("/lore/slice/features")
         .then().statusCode(200)
-            .body("rows.find { it.feature_id == 'FEAT-T' }.uc_total", equalTo(2))
-            .body("rows.find { it.feature_id == 'FEAT-T' }.uc_shipped", equalTo(1))
-            .body("rows.find { it.feature_id == 'FEAT-T' }.context_md", equalTo("большой контекст (D13)"));
+            .body("rows.find { it.uc_id == 'FEAT-T' }.uc_total", equalTo(2))
+            .body("rows.find { it.uc_id == 'FEAT-T' }.uc_shipped", equalTo(1))
+            .body("rows.find { it.uc_id == 'FEAT-T' }.context_md", equalTo("большой контекст (D13)"));
 
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body("{\"feature_id\":\"FEAT-T\",\"status\":\"shipped\"}")
@@ -81,9 +81,9 @@ class LoreProductLayerLiveDbTest {
         .then().statusCode(200).body("linked", equalTo(false));
 
         given().header("X-Seer-Role", "admin").contentType("application/json")
-            .body("{\"uc_id\":\"UC-T-9\",\"title\":\"сирота\",\"feature_id\":\"FEAT-NO-SUCH\"}")
+            .body("{\"uc_id\":\"UC-T-9\",\"title\":\"сирота\",\"parent_uc_id\":\"FEAT-NO-SUCH\"}")
         .when().post("/lore/uc")
-        .then().statusCode(200).body("feature_linked", equalTo(false));
+        .then().statusCode(200).body("parent_linked", equalTo(false));
     }
 
     @Test

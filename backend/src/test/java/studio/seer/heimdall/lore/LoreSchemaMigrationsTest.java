@@ -104,15 +104,51 @@ class LoreSchemaMigrationsTest {
      */
     @Test
     void additiveStepRaisesOrdinalButNotCompatMajor() {
-        var last = LoreSchemaMigrations.STEPS.get(LoreSchemaMigrations.STEPS.size() - 1);
-        assertEquals(12, last.version(), "V12 — последний шаг реестра");
-        assertEquals(10, last.compatMajor(), "аддитивный: делит major с V10/V11");
-        assertEquals("10.2", LoreSchemaMigrations.codeHuman(), "человеку это 10.2");
-        assertEquals(10, LoreSchemaMigrations.codeCompatMajor(),
-            "ось совместимости не сдвинулась — старый бинарь переживёт новые индексы");
+        var v12 = step(12);
+        assertEquals(10, v12.compatMajor(), "аддитивный: делит major с V10/V11");
         assertEquals(LoreSchemaMigrations.StartupDecision.FORWARD_COMPAT,
             LoreSchemaMigrations.decide(12, 10, 10, 10),
             "бинарь без V12 на мигрированной БД обязан работать, а не падать");
+    }
+
+    /**
+     * PL-28 (V13): слияние KnowFeature в KnowUseCase — ЛОМАЮЩИЙ шаг, и это
+     * единственная причина поднимать ось совместимости.
+     *
+     * Почему проверяем именно отказ. Тип KnowFeature исчезает, а старый бинарь
+     * читает его в слайсах, REST и поиске. Против новой схемы он не упал бы —
+     * он отдавал бы ПУСТО с ok:true, и «фичи пропали» выяснилось бы глазами.
+     * Скачок major превращает эту тихую полуправду в честный отказ старта.
+     */
+    @Test
+    void breakingStepRaisesCompatMajorAndBlocksOldBinary() {
+        var v13 = step(13);
+        assertEquals(13, v13.compatMajor(),
+            "слияние типов ломает совместимость — major обязан скакнуть");
+        assertEquals(13, LoreSchemaMigrations.codeCompatMajor());
+        assertEquals("13.0", LoreSchemaMigrations.codeHuman());
+        assertEquals(LoreSchemaMigrations.StartupDecision.INCOMPATIBLE,
+            LoreSchemaMigrations.decide(13, 13, 12, 10),
+            "бинарь до PL-28 обязан ОТКАЗАТЬСЯ стартовать против схемы без KnowFeature");
+    }
+
+    /**
+     * Перенос данных, снятие типа и перевешивание рёбер живут в javaStep(13):
+     * у ребра в ArcadeDB неизменяемые концы, SQL-стейтментом его не перецепить.
+     * Тест держит границу — если кто-то добавит сюда DDL-снос типа, шаг
+     * перестанет быть идемпотентным (повтор упадёт на отсутствующем типе).
+     */
+    @Test
+    void mergeStepCarriesOnlyAdditiveDdl() {
+        for (String sql : step(13).sql()) {
+            assertTrue(sql.startsWith("CREATE PROPERTY") || sql.startsWith("CREATE INDEX"),
+                "V13 SQL обязан быть аддитивным, перенос данных — в javaStep: " + sql);
+        }
+    }
+
+    private static LoreSchemaMigrations.Step step(int version) {
+        return LoreSchemaMigrations.STEPS.stream().filter(s -> s.version() == version)
+            .findFirst().orElseThrow(() -> new AssertionError("нет шага V" + version));
     }
 
     /**

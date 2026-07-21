@@ -58,7 +58,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
   // ── список ──
   const q = (listSearch ?? '').trim().toLowerCase();
   const filtered = q
-    ? rows.filter(f => f.feature_id.toLowerCase().includes(q) || (f.title ?? '').toLowerCase().includes(q))
+    ? rows.filter(f => f.uc_id.toLowerCase().includes(q) || (f.title ?? '').toLowerCase().includes(q))
     : rows;
 
   let list;
@@ -73,11 +73,11 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
           const g = goalOf(f.goal_level).glyph;
           return (
             <ListRow
-              key={f.feature_id}
-              id={f.feature_id}
+              key={f.uc_id}
+              id={f.uc_id}
               title={f.title}
-              selected={f.feature_id === selectedId}
-              onClick={() => onSelect(f.feature_id)}
+              selected={f.uc_id === selectedId}
+              onClick={() => onSelect(f.uc_id)}
               meta={<Pill>{g} · {f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</Pill>}
             />
           );
@@ -91,7 +91,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
   if (!selectedId) {
     detail = <EmptyDetail text={t('lore.product.feat.pick', 'Выберите фичу слева')} />;
   } else {
-    const f = rows.find(x => x.feature_id === selectedId);
+    const f = rows.find(x => x.uc_id === selectedId);
     if (!f) {
       detail = <EmptyDetail text={t('lore.product.feat.pick', 'Выберите фичу слева')} />;
     } else {
@@ -147,13 +147,13 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
 
       detail = (
         <div>
-          <PassportHeader title={f.title ?? f.feature_id}>
+          <PassportHeader title={f.title ?? f.uc_id}>
             <Pill tone={status === 'active' ? 'act' : status === 'shipped' ? 'ok' : 'muted'}>{f.status ?? '—'}</Pill>
             {goal.glyph && <Pill>{goal.glyph} {goal.labelKey ? t(goal.labelKey, goal.raw) : goal.raw}</Pill>}
             <Pill tone={relievedCount >= claimedCount && claimedCount > 0 ? 'ok' : 'warn'}>fit {relievedCount}/{claimedCount}</Pill>
           </PassportHeader>
 
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-value)', marginBottom: 8 }}>{f.feature_id}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-value)', marginBottom: 8 }}>{f.uc_id}</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.readiness', 'Готовность')}</span>

@@ -53,7 +53,7 @@ public class LoreAssetResource extends LoreResourceBase {
         Map.entry("adr",       new String[]{"KnowADR", "adr_id"}),
         Map.entry("sprint",    new String[]{"KnowSprint", "sprint_id"}),
         Map.entry("task",      new String[]{"KnowTask", "task_uid"}),
-        Map.entry("feature",   new String[]{"KnowFeature", "feature_id"}),
+        Map.entry("feature",   new String[]{"KnowUseCase", "uc_id"}),
         Map.entry("uc",        new String[]{"KnowUseCase", "uc_id"}),
         Map.entry("actor",     new String[]{"KnowActor", "actor_id"}),
         Map.entry("component", new String[]{"LoreComponent", "component_id"}),

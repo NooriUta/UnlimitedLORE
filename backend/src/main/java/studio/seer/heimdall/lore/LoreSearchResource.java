@@ -122,14 +122,19 @@ public class LoreSearchResource extends LoreResourceBase {
             null, null, null,
             "component_id", null, null, DIRECT_PROJ, 0.80),
         // ── продуктовый слой ──
-        new Branch("feature", "KnowFeature", "feature_id", "title", "ftKnowFeature",
-            List.of("title", "body_md", "context_md"),
+        // PL-28: ветка ОДНА. Фича перестала быть отдельным типом (решение №141),
+        // и две ветки над одним KnowUseCase дали бы дубли в выдаче: один и тот
+        // же документ пришёл бы дважды с разным приоритетом.
+        //
+        // Приоритет взят верхний из прежней пары (1.30, был у фичи), а не
+        // средний: слияние типов не повод понижать продуктовый слой, а «фича»
+        // и «сценарий» теперь одинаково релевантны запросу о продукте.
+        // Тела обоих прежних веток объединены — body_md/context_md пришли от
+        // корня, scenario_md/acceptance_md от сценария, и оба живут на одном типе.
+        new Branch("use_case", "KnowUseCase", "uc_id", "title", "ftKnowUseCase",
+            List.of("title", "body_md", "context_md", "scenario_md", "acceptance_md"),
             null, null, null,
             DIRECT_COMP, null, null, DIRECT_PROJ, 1.30),
-        new Branch("use_case", "KnowUseCase", "uc_id", "title", "ftKnowUseCase",
-            List.of("title", "scenario_md", "acceptance_md"),
-            null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 1.00),
         new Branch("pain", "KnowPain", "pain_id", "title", "ftKnowPain",
             List.of("title", "body_md"),
             null, null, null,
