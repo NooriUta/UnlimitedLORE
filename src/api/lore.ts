@@ -1087,3 +1087,133 @@ export interface LoreQGRoutineRun {
   started_at: string | null;
   finished_at: string | null;
 }
+
+// ── Продуктовый слой: WRITE (PL-31) ────────────────────────────────────────
+//
+// До этой задачи слой был read-only ПО ПОСТРОЕНИЮ: во фронтенде не было ни
+// одного вызова записи, и экран честно писал «Заводятся через MCP feature_new».
+// Любая форма создания упиралась в то, что ей нечего звать.
+//
+// Обёртки тонкие и намеренно повторяют контракт REST один-в-один: слой уже
+// проверяет инварианты на сервере (высота корня, цикл в иерархии, вычисляемые
+// статусы, существование цели ребра), и дублировать эти проверки здесь значило
+// бы завести вторую правду, которая разойдётся с первой.
+//
+// Ответы link-путей несут linked/…_linked — НЕ игнорировать: CREATE EDGE в
+// пустой FROM/TO молча ничего не делает, и «ok:true» без ребра выглядит успехом.
+
+/** Ответ write-пути слоя. `ok` есть всегда; остальное зависит от эндпоинта. */
+export interface LoreProductWriteResult {
+  ok: boolean;
+  /** link-пути: ребро реально создано. false = цель не найдена, см. hint. */
+  linked?: boolean;
+  /** uc_new: родитель подхвачен (или его нет — тогда hint). */
+  parent_linked?: boolean;
+  /** actor_new: проект зарегистрирован и привязан. */
+  project_linked?: boolean;
+  /** Человекочитаемая причина, когда что-то не привязалось. */
+  hint?: string;
+  /** uc_new/uc_set: линтер оформления возвращается сразу (ADR-027-D3). */
+  quality?: unknown;
+  [k: string]: unknown;
+}
+
+/** Корневой сценарий («фича»). Высота — только cloud|kite (ADR-032 §1). */
+export function saveLoreFeature(body: {
+  feature_id: string;
+  title?: string; body_md?: string; context_md?: string;
+  /** Только намерения: active/shipped вычисляются из задач (D17) и отбиваются 400. */
+  status?: 'proposed' | 'dropped';
+  component_id?: string;
+  goal_level?: 'cloud' | 'kite';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/feature', body, signal);
+}
+
+/** Сценарий любой высоты. parent_uc_id держит DECOMPOSES_INTO в синхроне. */
+export function saveLoreUc(body: {
+  uc_id: string;
+  title?: string; scenario_md?: string; acceptance_md?: string;
+  status?: 'proposed' | 'dropped';
+  parent_uc_id?: string;
+  goal_level?: 'cloud' | 'kite' | 'sea-level' | 'subfunction';
+  rigor?: 'casual' | 'fully-dressed';
+  priority?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/uc', body, signal);
+}
+
+/** Проектируемая роль. project обязателен по смыслу (D18), но не по схеме. */
+export function saveLoreActor(body: {
+  actor_id: string;
+  name?: string;
+  kind?: 'human-role' | 'system' | 'agent';
+  body_md?: string;
+  project?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/actor', body, signal);
+}
+
+export function saveLorePain(body: {
+  pain_id: string; title?: string; body_md?: string; severity?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/pain', body, signal);
+}
+
+/** metric_md — без метрики выгода не попадает в fit (ADR-032). */
+export function saveLoreGain(body: {
+  gain_id: string; title?: string; body_md?: string; metric_md?: string; rank?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/gain', body, signal);
+}
+
+export function saveLoreJob(body: {
+  job_id: string; title?: string; body_md?: string; kind?: string; importance?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/job', body, signal);
+}
+
+/**
+ * Связки корня — половина «ЗАЯВЛЕНО» парных рёбер (ADR-022-D20).
+ * Вторая половина, «ДОСТАВЛЕНО», вешается через linkLoreUc.
+ */
+export function linkLoreFeature(body: {
+  feature_id: string;
+  rel: 'pain' | 'gain' | 'job' | 'milestone' | 'component';
+  target_id: string;
+  action?: 'add' | 'remove';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/feature/link', body, signal);
+}
+
+/** Связки сценария. relieves/delivers/performs — половина «ДОСТАВЛЕНО». */
+export function linkLoreUc(body: {
+  uc_id: string;
+  rel: 'task' | 'adr' | 'decision' | 'actor' | 'component'
+     | 'includes' | 'extends' | 'relieves' | 'delivers' | 'performs';
+  target_id: string;
+  action?: 'add' | 'remove';
+  /** rel="actor": первый актор сценария становится primary по умолчанию (D19). */
+  actor_role?: 'primary' | 'supporting';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/uc/link', body, signal);
+}
+
+/** Профиль клиента: чья боль/выгода/работа (левая половина VP-канвы). */
+export function linkLoreVp(body: {
+  source_id: string;
+  rel: 'felt_by' | 'desired_by' | 'performed_by' | 'blocks' | 'success_of';
+  target_id: string;
+  action?: 'add' | 'remove';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/vp/link', body, signal);
+}
+
+/**
+ * Линтер оформления по Коберну (ADR-027-D3). Это ЧТЕНИЕ по запросу, но живёт
+ * на POST — форма зовёт его по ходу набора, чтобы чек-лист загорался ДО
+ * сохранения, а не пост-фактум при ревью.
+ */
+export function checkLoreUcQuality(body: { uc_id: string }, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/lore/uc/quality', body, signal);
+}
