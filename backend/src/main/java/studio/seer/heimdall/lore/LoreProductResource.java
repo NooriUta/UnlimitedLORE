@@ -34,12 +34,48 @@ public class LoreProductResource extends LoreResourceBase {
     private static final Logger LOG = Logger.getLogger(LoreProductResource.class);
 
 
-    /** Шкала целей Коберна — одна на весь слой (ADR-LORE-032 §1): фичи живут на
-     *  cloud/kite, UC — на sea-level/subfunction. Канон, словарь uc_goal_level. */
-    static final List<String> UC_GOAL_LEVELS = List.of("cloud", "kite", "sea-level", "subfunction");
+    /**
+     * Шкала целей Коберна — одна на весь слой (ADR-LORE-032 §1): корни живут на
+     * cloud/kite, сценарии — на sea-level/subfunction.
+     *
+     * <p>PL-29: это <b>фолбэк</b>, а не источник истины. Канон — словарь
+     * {@code uc_goal_level} (ADR-012, сид в схеме, {@code is_extensible=false}),
+     * и валидация читает его. Прежняя редакция сверялась только с этой
+     * константой, а словарь на write-path не читался вовсе — комментарий рядом
+     * при этом утверждал «канон, словарь uc_goal_level». Правка словаря не
+     * меняла поведения, правка константы не меняла словаря, и синхронизация
+     * держалась на внимательности.
+     *
+     * <p>Список остаётся на случай пустого словаря: свежая БД без сидов не
+     * должна отбивать любую запись — это превратило бы отсутствие справочника
+     * в отказ обслуживания.
+     */
+    static final List<String> UC_GOAL_LEVELS_FALLBACK = List.of("cloud", "kite", "sea-level", "subfunction");
 
-    /** Два веса оформления по Коберну (ADR-LORE-027-D1), словарь uc_rigor. */
-    static final List<String> UC_RIGORS = List.of("casual", "fully-dressed");
+    /** Два веса оформления по Коберну (ADR-LORE-027-D1). Канон — словарь uc_rigor. */
+    static final List<String> UC_RIGORS_FALLBACK = List.of("casual", "fully-dressed");
+
+    /**
+     * Допустимые коды словаря-канона. Пустой словарь → фолбэк (см. выше).
+     * Неактивные записи ({@code is_active=false}) не принимаются: справочник
+     * тем и полезен, что выведенное из обращения значение перестаёт проходить.
+     */
+    private List<String> dictCodes(String dictType, List<String> fallback) {
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT code FROM KnowDictEntry WHERE dict_type=:dt AND is_active=true",
+                Map.of("dt", dictType));
+            List<String> codes = rows.stream()
+                .map(r -> r.get("code")).filter(java.util.Objects::nonNull)
+                .map(String::valueOf).toList();
+            return codes.isEmpty() ? fallback : codes;
+        } catch (Exception e) {
+            // Справочник недоступен — валидируем по фолбэку, но говорим об этом
+            // в логе. Пропустить любое значение было бы хуже: канон закрытый.
+            LOG.warnf("[LORE DICT] словарь %s не прочитан (%s) — валидация по фолбэку", dictType, e.getMessage());
+            return fallback;
+        }
+    }
 
     /** Типы работ клиента (Остервальдер VPC), словарь job_kind. */
     static final List<String> JOB_KINDS = List.of("functional", "social", "emotional", "supporting");
@@ -152,11 +188,11 @@ public class LoreProductResource extends LoreResourceBase {
                 + " — " + UcReadinessCalculator.COMPUTED_STATUSES + " вычисляются из задач (D17) "
                 + "и рукой не назначаются");
         // ADR-027 §2: классификация Коберна — канон словарей, свободных значений нет.
-        if (req.goal_level() != null && !UC_GOAL_LEVELS.contains(req.goal_level()))
-            return badParams("goal_level must be one of: " + UC_GOAL_LEVELS
+        if (req.goal_level() != null && !dictCodes("uc_goal_level", UC_GOAL_LEVELS_FALLBACK).contains(req.goal_level()))
+            return badParams("goal_level must be one of: " + dictCodes("uc_goal_level", UC_GOAL_LEVELS_FALLBACK)
                 + " (☁ cloud/🪁 kite — уровень фичи, 🌊 sea-level/🐟 subfunction — уровень UC)");
-        if (req.rigor() != null && !UC_RIGORS.contains(req.rigor()))
-            return badParams("rigor must be one of: " + UC_RIGORS);
+        if (req.rigor() != null && !dictCodes("uc_rigor", UC_RIGORS_FALLBACK).contains(req.rigor()))
+            return badParams("rigor must be one of: " + dictCodes("uc_rigor", UC_RIGORS_FALLBACK));
         try {
             // Уровень цели задан — вес по умолчанию выводится из него (ADR-027-D1),
             // но явный rigor автора сильнее вычисленного дефолта.
