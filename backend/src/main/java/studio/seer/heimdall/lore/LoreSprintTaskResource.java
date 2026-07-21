@@ -57,12 +57,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // (КАК-ось); vertex-only — как task_type, carry-forward не касается.
     public record TaskCreateRequest(String sprint_id, String task_id, String title, String note_md,
         String phase_uid, String author_agent, String executor_agent, String reviewer_agent,
-        String task_type, String work_class) {}
+        String task_type, String work_class, String uc_id) {}
     // effort_days: fractional, granular to the hour (1 day = 8 working hours,
     // so the smallest meaningful increment is 0.125). Was Integer — too coarse
     // to estimate sub-day tasks.
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
-        String work_class,
+        String work_class, String uc_id,
         String author_agent, String executor_agent, String reviewer_agent, String task_type) {}
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index) {}
     // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
@@ -204,12 +204,38 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                           .append("TO (SELECT FROM KnowPhase WHERE phase_uid = :puid);");
                     p.put("puid", phase);
                 }
-                return writeClient.command(db, basicAuth(),
+                // PL-14 (D16): uc-задача обязана нести REALIZES. Ребро создаётся В ТОМ
+                // ЖЕ sqlscript, что и сама задача, — атомарно с ней. Раньше связка была
+                // ВТОРЫМ вызовом со стороны сценария (uc_link rel="task"), и между
+                // двумя вызовами задача успевала пожить без ребра: дисциплина держалась
+                // на внимательности и advisory-слайсе unlinked_uc_tasks. Теперь либо
+                // создаётся и задача, и связка, либо не создаётся ничего.
+                if (req.uc_id() != null && !req.uc_id().isBlank()) {
+                    script.append("CREATE EDGE REALIZES FROM (SELECT FROM KnowTask WHERE task_uid = :uid) ")
+                          .append("TO (SELECT FROM KnowUseCase WHERE uc_id = :ucid);");
+                    p.put("ucid", req.uc_id());
+                }
+                Uni<Response> write = writeClient.command(db, basicAuth(),
                         new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
                     .map(__ -> {
                         hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
                         return noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order)));
                     });
+
+                // Сценарий проверяем ДО записи, а не после. CREATE EDGE в пустой TO —
+                // тихий no-op: задача создалась бы, ребра не было бы, ответ пришёл бы
+                // ok:true. Здесь несуществующий uc_id — отказ 400, и задача не
+                // создаётся вовсе: «атомарно» обязано означать и это тоже.
+                final String ucId = req.uc_id();
+                if (ucId != null && !ucId.isBlank()) {
+                    return client.query(db, basicAuth(), new MartQuery("sql",
+                            "SELECT uc_id FROM KnowUseCase WHERE uc_id = :ucid", Map.of("ucid", ucId), 1))
+                        .chain(ucRes -> (ucRes.result() == null || ucRes.result().isEmpty())
+                            ? Uni.createFrom().item(badParams("uc_id «" + ucId + "» не найден — "
+                                + "REALIZES создать не из чего; заведите сценарий через /lore/uc"))
+                            : write);
+                }
+                return write;
             })
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK CREATE] %s: %s", uid, ex.getMessage());
@@ -511,6 +537,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 mirrorTaskHist(req.task_uid(), req.note_md(), req.effort_days()).await().indefinitely();
                 if (req.note_md() != null)
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", req.task_uid());
+                relinkRealizes(req.task_uid(), req.uc_id());
                 updated++;
             } catch (Exception e) {
                 errors.add(req.task_uid() + ": " + e.getMessage());
@@ -520,6 +547,39 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         out.put("ok", errors.isEmpty()); out.put("updated", updated);
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
+    }
+
+    /**
+     * PL-14 (D16): переподвесить REALIZES задачи на указанный сценарий.
+     *
+     * Ребро одно: задача реализует один сценарий. Поэтому сначала снимаются все
+     * существующие исходящие REALIZES, потом создаётся новое — иначе правка
+     * «перепривязать к другому UC» оставила бы задачу висеть на обоих сразу, и
+     * вычислитель готовности посчитал бы её дважды.
+     *
+     * `uc_id == null` — «не трогать» (частичная правка), а не «отвязать»:
+     * task_set вызывается с одним-двумя полями, и null там означает отсутствие
+     * намерения. Явная отвязка — пустая строка.
+     */
+    private Uni<Object> relinkRealizesUni(String uid, String ucId) {
+        if (ucId == null) return Uni.createFrom().item(new Object());
+        // DELETE EDGE в ArcadeDB 26.7.2 отсутствует в грамматике целиком
+        // (перепроверено 2026-07-21) — снимаем через expand(outE) + DELETE FROM.
+        Uni<?> drop = writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+            "DELETE FROM (SELECT expand(outE('REALIZES')) FROM KnowTask WHERE task_uid=:u)",
+            Map.of("u", uid)));
+        if (ucId.isBlank()) return drop.map(__ -> new Object());
+        return drop.chain(__ -> writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE REALIZES FROM (SELECT FROM KnowTask WHERE task_uid=:u) " +
+                "TO (SELECT FROM KnowUseCase WHERE uc_id=:c) IF NOT EXISTS",
+                Map.of("u", uid, "c", ucId))))
+            .map(__ -> new Object());
+    }
+
+    /** Блокирующий вариант для batch-пути: там метод и так не реактивный. */
+    private void relinkRealizes(String uid, String ucId) {
+        if (ucId == null) return;
+        relinkRealizesUni(uid, ucId).await().indefinitely();
     }
 
     /**
@@ -592,6 +652,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // (out('HAS_STATE')[…][0]); mirror the write there too — only for fields that
             // were actually supplied, so a title-only edit never wipes note/effort.
             .chain(__ -> mirrorTaskHist(uid, req.note_md(), req.effort_days()))
+            // Переподвес REALIZES идёт ЦЕПОЧКОЙ, а не блокирующим вызовом внутри
+            // map: этот путь реактивный, и await на IO-потоке даёт 502.
+            .chain(__ -> relinkRealizesUni(uid, req.uc_id()))
             .map(__ -> {
                 if (req.note_md() != null)
                     hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
@@ -916,6 +979,76 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE TASK COMPONENT] %s / %s: %s", req.task_uid(), req.component_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── Write-path: link task ↔ ADR (JUSTIFIED_BY, ADR-LORE-022 D16) ─────────
+    //
+    // PL-14 оживляет мёртвый тип ребра. `JUSTIFIED_BY` был объявлен в схеме
+    // (шаг V8) с комментарием «обоснование enb-задачи», и это оставалось
+    // ЕДИНСТВЕННЫМ его упоминанием во всём репозитории: ни писателей, ни
+    // читателей, ни слайса. То есть правило D16 «энейблер обосновывается
+    // архитектурным решением» существовало только на бумаге.
+    //
+    // Направление ребра — задача → ADR: обоснование принадлежит задаче, а один
+    // ADR обосновывает много задач.
+
+    public record TaskAdrRequest(String task_uid, String adr_id, String action) {}
+
+    @POST
+    @Path("task/adr")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkTaskAdr(TaskAdrRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.task_uid() == null || req.adr_id() == null)
+            return badParams("task_uid and adr_id required");
+        if (!SAFE_ID.matcher(req.task_uid()).matches() || !SAFE_ID.matcher(req.adr_id()).matches())
+            return badParams("ids contain illegal characters");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            // Обе стороны проверяем ДО записи: CREATE EDGE в пустой FROM/TO —
+            // тихий no-op, и без проверки ответ был бы ok:true при отсутствии ребра.
+            if (ingestService.queryPublic(
+                    "SELECT task_uid FROM KnowTask WHERE task_uid=:t LIMIT 1",
+                    Map.of("t", req.task_uid())).isEmpty())
+                return badParams("task not found: " + req.task_uid());
+            if (ingestService.queryPublic(
+                    "SELECT adr_id FROM KnowADR WHERE adr_id=:a LIMIT 1",
+                    Map.of("a", req.adr_id())).isEmpty())
+                return badParams("ADR not found: " + req.adr_id());
+
+            List<Map<String, Object>> existing = ingestService.queryPublic(
+                "SELECT @rid FROM JUSTIFIED_BY WHERE @out.task_uid=:t AND @in.adr_id=:a",
+                Map.of("t", req.task_uid(), "a", req.adr_id()));
+            if (remove) {
+                for (Map<String, Object> e : existing) {
+                    // DELETE EDGE отсутствует в грамматике 26.7.2 — только по @rid.
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM JUSTIFIED_BY WHERE @rid=" + e.get("@rid"), null))
+                        .await().indefinitely();
+                }
+            } else if (existing.isEmpty()) {
+                // String.format, а не именованные параметры: на CREATE EDGE они в
+                // этой сборке ненадёжны (правило корпуса, LORE_DB_SPEC).
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                        "CREATE EDGE JUSTIFIED_BY FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
+                        "TO (SELECT FROM KnowADR WHERE adr_id='%s')",
+                        req.task_uid(), req.adr_id()),
+                    null)).await().indefinitely();
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("task_uid", req.task_uid());
+            out.put("adr_id", req.adr_id());
+            out.put("action", remove ? "removed" : "added");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE TASK ADR] %s / %s: %s", req.task_uid(), req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
