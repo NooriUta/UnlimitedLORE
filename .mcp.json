@@ -6,7 +6,7 @@
         "mcp-server/dist/index.js"
       ],
       "env": {
-        "LORE_BACKEND_URL": "http://192.168.3.131:4400",
+        "LORE_BACKEND_URL": "https://lore.odal.seidrstudio.pro",
         "LORE_SEER_ROLE": "admin",
         "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
         "LORE_MCP_CLIENT_ID": "lore-mcp-full",

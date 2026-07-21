@@ -50,7 +50,9 @@
     <div class="seer-wordmark">
       <span class="dot"></span>
       <span class="name">LORE</span>
-      <span class="sub">Knowledge</span>
+      <#-- НЕ «Knowledge»: строкой ниже уже идёт AIDA · PLATFORM · KNOWLEDGE,
+           и слово повторялось дважды в одном блоке из четырёх строк. -->
+      <span class="sub">Graph</span>
     </div>
     <div class="seer-slogan" id="seer-slogan"></div>
     <div class="seer-platform">AIDA · PLATFORM · KNOWLEDGE</div>
