@@ -8,6 +8,18 @@ export default defineConfig({
   // its own package.json/test script and should stay isolated from this one.
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Флаг auth ПРИБИТ для тестов, а не унаследован из окружения.
+    //
+    // Vitest читает те же .env-файлы, что и Vite. Забытый .env.local с
+    // VITE_LORE_AUTH_ENABLED=true переворачивал ветку в тестах вида
+    // `AUTH_ENABLED ? … : …` — три теста краснели, и выглядело это как поломка
+    // от только что внесённой правки (поймано 2026-07-21). Хуже другое: у
+    // одного разработчика прогон шёл бы по одной ветке, у остальных и в CI —
+    // по другой, то есть «зелёно у меня» перестало бы что-то значить.
+    //
+    // Путь с ВКЛЮЧЁННЫМ auth от этого не страдает: auth-enabled.test.ts
+    // взводит флаг явно через vi.stubEnv, что здесь и перекрывается.
+    env: { VITE_LORE_AUTH_ENABLED: 'false' },
   },
   build: {
     rollupOptions: {
