@@ -127,8 +127,29 @@ export function login(returnTo?: string): Promise<void> {
   return getUserManager().signinRedirect({ state: returnTo ?? location.pathname + location.search });
 }
 
+/**
+ * Выход по кнопке — в отличие от «сессия отвалилась сама».
+ *
+ * Разница существенна для экрана входа: `sessionLost` сбрасывается, иначе
+ * после осознанного выхода человеку показали бы «Сессия истекла» и напугали
+ * несуществующей потерей несохранённого. Уйти самому и быть выброшенным —
+ * разные события, и путать их нельзя.
+ */
 export async function logout(): Promise<void> {
-  await getUserManager().signoutRedirect();
+  const mgr = getUserManager();
+  sessionLost = false;
+  try {
+    await mgr.signoutRedirect();
+  } catch {
+    // Keycloak недоступен либо end_session не отработал. Молча выйти из
+    // функции нельзя: кнопка «Выйти» выглядела бы сломанной — нажали, ничего
+    // не произошло, — и человек остался бы с правами, от которых как раз
+    // пытался избавиться. Гасим сессию хотя бы локально: токен перестаёт
+    // отправляться, приложение возвращается на экран входа.
+    await mgr.removeUser();
+    currentUser = null;
+    notify();
+  }
 }
 
 export async function handleLoginCallback(): Promise<string | undefined> {
