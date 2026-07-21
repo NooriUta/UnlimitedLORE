@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AL-76 · кнопка выхода — прототип</title>
+<style>
+/* Токены скопированы из src/styles/tokens.css, стили меню — из AppShell.tsx
+   (dd / ddItem / ddSep / ddBadge / btnStyle). Прототип намеренно повторяет
+   реальные значения, чтобы решение принималось по тому, что будет в коде. */
+:root {
+  --bg0:#141108; --bg1:#1C1810; --bg2:#252019; --bg3:#302A20;
+  --bd:#42382A; --bdh:#584C38; --t1:#EDE5D0; --t2:#9A8C6E; --t3:#665C48;
+  --acc:#A8B860; --dng:#C85848;
+  --font:'Manrope',system-ui,sans-serif; --mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font-family:var(--font);font-size:14px;padding:28px}
+h1{font-size:17px;margin:0 0 4px}
+.lead{color:var(--t2);font-size:13px;line-height:1.55;max-width:760px;margin:0 0 26px}
+.case{border:1px solid var(--bd);border-radius:10px;margin-bottom:22px;overflow:visible;background:var(--bg1)}
+.case>h2{font-size:13px;margin:0;padding:11px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:9px}
+.tag{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.07em;border:1px solid var(--bd);border-radius:999px;padding:2px 7px;color:var(--t3)}
+.tag.rec{color:var(--acc);border-color:var(--acc)}
+.tag.now{color:var(--dng);border-color:var(--dng)}
+.why{padding:11px 16px;color:var(--t2);font-size:12.5px;line-height:1.55;border-top:1px solid var(--bd)}
+.why b{color:var(--t1);font-weight:600}
+/* ── шапка как в приложении ─────────────────────────────────────────── */
+.header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--bg0);min-height:52px}
+.spacer{flex:1}
+.btn{background:transparent;border:1px solid var(--bd);border-radius:4px;cursor:pointer;color:var(--t2);
+     font-family:var(--mono);font-size:11px;padding:3px 8px;text-transform:uppercase;letter-spacing:.05em}
+.btn:hover{color:var(--t1);border-color:var(--bdh)}
+.chip{display:inline-flex;align-items:center;gap:7px;text-transform:none;font-family:var(--font);font-size:12px;padding:4px 9px}
+.ava{width:20px;height:20px;border-radius:6px;background:var(--acc);color:var(--bg0);display:grid;place-items:center;font-size:9px;font-weight:800}
+.wrap{position:relative}
+.dd{position:absolute;top:calc(100% + 6px);right:0;z-index:200;min-width:246px;background:var(--bg2);
+    border:1px solid var(--bdh);border-radius:10px;padding:5px;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.ddhead{font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);padding:6px 9px 3px}
+.dditem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:none;background:transparent;
+        color:var(--t1);font-size:12.5px;padding:7px 9px;border-radius:6px;cursor:pointer;font-family:var(--font)}
+.dditem:hover{background:var(--bg3)}
+.dditem.danger{color:var(--dng)}
+.ddsep{height:1px;background:var(--bd);margin:5px 3px}
+.ddnote{font-size:9.5px;color:var(--t3);padding:4px 9px 2px;line-height:1.35}
+.ico{width:15px;text-align:center}
+/* ── подтверждение ──────────────────────────────────────────────────── */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;border-radius:0 0 10px 10px}
+.confirm{background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:20px;width:320px}
+.confirm h3{margin:0 0 6px;font-size:14px}
+.confirm p{margin:0 0 16px;font-size:12.5px;color:var(--t2);line-height:1.5}
+.row{display:flex;gap:8px;justify-content:flex-end}
+.b2{padding:6px 13px;border-radius:6px;font-size:12px;cursor:pointer;font-family:var(--font)}
+.b2.ghost{background:transparent;border:1px solid var(--bd);color:var(--t2)}
+.b2.dng{background:var(--dng);border:1px solid var(--dng);color:#fff;font-weight:600}
+.stage{position:relative;min-height:150px}
+</style>
+</head>
+<body>
+
+<h1>AL-76 · кнопка выхода</h1>
+<p class="lead">
+  Сейчас элемент выглядит как чип профиля, а ведёт себя как «выйти»: один клик обрывает сессию без
+  подтверждения. Соседние кнопки шапки при клике <b>открывают меню</b> — эта одна обрывает работу.
+  Всплыло при разборе жалобы «выход как-то странно работает»: основную причину закрыл AL-74, но
+  расхождение обещания и действия осталось.
+</p>
+
+<div class="case">
+  <h2>Как сейчас <span class="tag now">так не оставляем</span></h2>
+  <div class="header">
+    <button class="btn">LORE ▾</button>
+    <button class="btn">Рабочее пространство ▾</button>
+    <span class="spacer"></span>
+    <button class="btn">⌕</button>
+    <button class="btn">ЕЩЁ ▾</button>
+    <button class="btn chip" onclick="alert('Сессия завершена. Без вопросов.')">
+      <span class="ava">ОА</span>omiloreadmin ⏻
+    </button>
+  </div>
+  <div class="why">
+    Нажмите — сессия закончится сразу. Ничего не спросит, отменить нельзя.
+    Значок <b>⏻</b> единственный намёк, и он теряется в строке.
+  </div>
+</div>
+
+<div class="case">
+  <h2>Вариант A · выпадающее меню <span class="tag rec">рекомендую</span></h2>
+  <div class="header stage">
+    <button class="btn">LORE ▾</button>
+    <button class="btn">Рабочее пространство ▾</button>
+    <span class="spacer"></span>
+    <button class="btn">⌕</button>
+    <button class="btn">ЕЩЁ ▾</button>
+    <span class="wrap">
+      <button class="btn chip" onclick="document.getElementById('m').style.display=document.getElementById('m').style.display==='none'?'block':'none'">
+        <span class="ava">ОА</span>omiloreadmin ▾
+      </button>
+      <div class="dd" id="m" style="display:none">
+        <div class="ddhead">omiloreadmin</div>
+        <div class="ddnote">роль admin · сессия до 18:42</div>
+        <div class="ddsep"></div>
+        <button class="dditem"><span class="ico">⧉</span>Скопировать токен</button>
+        <div class="ddsep"></div>
+        <button class="dditem danger"><span class="ico">⏻</span>Выйти</button>
+      </div>
+    </span>
+  </div>
+  <div class="why">
+    Ведёт себя как соседи: клик открывает меню, выход — <b>отдельный осознанный пункт</b>.
+    Заодно появляется место для того, чего сейчас негде показать: чья сессия, какая роль
+    и <b>сколько ей осталось</b> — последнее прямо отвечает на «почему меня вдруг выкинуло».
+    Стоимость: один лишний клик на выход, который делают редко.
+  </div>
+</div>
+
+<div class="case">
+  <h2>Вариант B · подтверждение <span class="tag">запасной</span></h2>
+  <div class="header stage">
+    <button class="btn">LORE ▾</button>
+    <span class="spacer"></span>
+    <button class="btn chip" onclick="document.getElementById('c').style.display='grid'">
+      <span class="ava">ОА</span>omiloreadmin ⏻
+    </button>
+    <div class="overlay" id="c" style="display:none">
+      <div class="confirm">
+        <h3>Выйти из LORE?</h3>
+        <p>Несохранённые изменения на открытых экранах не отправятся.</p>
+        <div class="row">
+          <button class="b2 ghost" onclick="document.getElementById('c').style.display='none'">Отмена</button>
+          <button class="b2 dng" onclick="document.getElementById('c').style.display='none'">Выйти</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="why">
+    Дешевле в реализации, но лечит только случайность нажатия. Элемент по-прежнему
+    <b>обещает профиль, а делает выход</b> — расхождение остаётся, просто с переспросом.
+    И модалка на каждый выход раздражает того, кто нажал намеренно.
+  </div>
+</div>
+
+</body>
+</html>

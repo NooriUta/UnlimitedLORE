@@ -5,7 +5,7 @@ import { GameIcon } from '../lore/GameIcon';
 import { SHELL_TABS, type ShellTab } from './shellNav';
 import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
-import { AUTH_ENABLED, displayName, logout } from '../../auth/session';
+import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '../../auth/session';
 import { fetchLoreSlice } from '../../api/lore';
 import { useIsAdmin } from '../../auth/useRole';
 
@@ -59,10 +59,19 @@ export default function AppShell() {
   const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
 
   // ── Seiðr-шапка: бренд/тенант/«ещё» как dropdown'ы + палитра поиска ──────────
-  const [openDD, setOpenDD] = useState<null | 'brand' | 'tenant' | 'more'>(null);
+  const [openDD, setOpenDD] = useState<null | 'brand' | 'tenant' | 'more' | 'user'>(null);
   const [tenant, setTenant] = useState('DEFAULT');
   const [palOpen, setPalOpen] = useState(false);
   const [palQ, setPalQ] = useState('');
+  // Время окончания сессии для меню профиля (AL-76). Считается на каждый рендер,
+  // а не по таймеру: меню открывают редко, а лишний интервал пришлось бы гасить
+  // при размонтировании — цена выше пользы. Пустая строка, когда auth выключен
+  // или токена нет.
+  const expiresAt = AUTH_ENABLED ? sessionExpiresAt() : null;
+  const sessionLeft = expiresAt
+    ? new Date(expiresAt * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    : '';
+
   const activeTab = SHELL_TABS.find(x => x.id === active);
   // Модули активного пространства = главы Storyline (пока определены у Forseti).
   // Активная глава выводится из URL (?section=…), а не хранится в сторе.
@@ -376,10 +385,40 @@ export default function AppShell() {
 
         {/* A2: only rendered once VITE_LORE_AUTH_ENABLED is actually on. */}
         {AUTH_ENABLED ? (
-          <button type="button" onClick={() => { void logout(); }} title={t('shell.logout', 'Выйти')}
-            style={{ ...btnStyle, textTransform: 'none' as const }}>
-            {displayName() ?? '…'} ⏻
-          </button>
+          // AL-76. Меню, а не кнопка-выход.
+          //
+          // Раньше элемент выглядел чипом профиля, а один клик по нему обрывал
+          // сессию без подтверждения: соседние кнопки шапки открывают меню, эта
+          // одна прекращала работу. Обещание расходилось с действием.
+          //
+          // Выигрыш не только в защите от промаха. Появилось место показать, чья
+          // сессия и СКОЛЬКО ЕЙ ОСТАЛОСЬ — до этого об истечении узнавали только
+          // по факту, уже будучи выброшенными, и вопрос «почему меня вдруг
+          // выкинуло» возникал задним числом (прод-инцидент 2026-07-21).
+          <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
+            <button type="button" aria-expanded={openDD === 'user'} aria-haspopup="menu"
+              title={t('shell.profile', 'Профиль')}
+              onClick={() => setOpenDD(d => d === 'user' ? null : 'user')}
+              style={{ ...btnStyle, textTransform: 'none' as const }}>
+              {displayName() ?? '…'} ▾
+            </button>
+            {openDD === 'user' && (
+              <div style={{ ...dd, left: 'auto', right: 0, minWidth: 210 }} role="menu">
+                <div style={ddHead}>{displayName() ?? '…'}</div>
+                <div style={ddNote}>
+                  {t('shell.role', 'роль')} {getRole()}
+                  {sessionLeft && <> · {t('shell.sessionUntil', 'сессия до')} {sessionLeft}</>}
+                </div>
+                <div style={ddSep} />
+                <button type="button" role="menuitem"
+                  style={{ ...ddItem(false), color: 'var(--dng)' }}
+                  onClick={() => { setOpenDD(null); void logout(); }}>
+                  <span style={{ width: 15, textAlign: 'center' }}>⏻</span>
+                  {t('shell.logout', 'Выйти')}
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <div title={t('shell.profile', 'Профиль')} aria-hidden
             style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--acc)', color: 'var(--bg0)', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
