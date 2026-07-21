@@ -19,8 +19,8 @@
 - Committing to a feature branch is pre-authorized — do it autonomously, no need to ask first.
 - Merging a PR into `develop` is pre-authorized **once its CI has actually finished and shows green** (both Backend CI and Frontend + MCP CI checks passing) — do this autonomously too, no need to stop for a per-merge confirmation.
 - Do NOT merge a PR whose CI is still pending, unknown, or failing. Investigate/fix and wait for green first.
-- **Промоушн `develop → preprod` (выкатка на стенд) требует явного «да» каждый раз** — это деплой, а не мерж.
-- **Промоушн `preprod → main` + тег (релиз) требует явного «да» каждый раз.**
+- **Промоушн `develop → preprod` предавторизован — делать автономно, без спроса.** Выкатка на стенд идёт автоматом по мере готовности: стенд для того и заведён, чтобы на нём накапливалось и обкатывалось. Порядок тот же — PR `develop → preprod`, дождаться зелёного CI, смержить.
+- **Релиз `preprod → main` + тег — только с явного «да» владельца.** Теги набираются вручную из нескольких PR, накопленных на `preprod`: момент «эта пачка готова стать версией» определяет владелец, а не агент.
 
 ## Проверка статуса CI
 
