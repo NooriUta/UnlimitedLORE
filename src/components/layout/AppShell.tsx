@@ -6,7 +6,8 @@ import { SHELL_TABS, type ShellTab } from './shellNav';
 import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '../../auth/session';
-import { fetchLoreSlice } from '../../api/lore';
+import { fetchLoreSearch, type LoreSearchHit } from '../../api/lore';
+ import { searchHitHref, searchScreenHref, typeLabel } from '../../api/searchRoutes';
 import { useIsAdmin } from '../../auth/useRole';
 
 const HEADER_H = 42;
@@ -97,10 +98,17 @@ export default function AppShell() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, [palOpen]);
 
-  // ── Единое окно поиска: реальный поиск по графу через слайс `search` ──────────
+  // ── Единое окно поиска (SRCH-08) ─────────────────────────────────────────────
+  //
+  // Палитра ходит в ТОТ ЖЕ ранжированный API, что и экран поиска. Раньше она
+  // звала старый плоский слайс `search`: без ранга, без сниппета, без фасетов —
+  // и держала СВОИ карты маршрутов и подписей, расходившиеся с картами экрана.
+  // Один и тот же результат приводил в разные места в зависимости от того,
+  // откуда искали, и обе ветки при этом «работали».
+  //
   // Фильтры по спискам внутри вкладок остаются на местах — сюда сведён только
   // сквозной поиск (решение владельца).
-  type Hit = { type: string; ref_id: string; title: string | null };
+  type Hit = LoreSearchHit;
   const [palRows, setPalRows] = useState<Hit[]>([]);
   const [palBusy, setPalBusy] = useState(false);
   const [palSel, setPalSel] = useState(0);
@@ -111,62 +119,30 @@ export default function AppShell() {
     const ctrl = new AbortController();
     setPalBusy(true);
     const timer = setTimeout(() => {
-      fetchLoreSlice<Hit>('search', { pattern: q }, ctrl.signal)
-        .then(rows => { setPalRows(rows); setPalSel(0); setPalBusy(false); })
+      // limit меньше, чем на экране: палитра — быстрый переход, а не разбор
+      // выдачи. Ранжирование то же, поэтому первые строки те же самые.
+      fetchLoreSearch({ q, limit: 12 }, ctrl.signal)
+        .then(res => { setPalRows(res.hits); setPalSel(0); setPalBusy(false); })
         .catch(() => { if (!ctrl.signal.aborted) { setPalRows([]); setPalBusy(false); } });
     }, 250);
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [palQ, palOpen]);
 
-  // Куда ведёт результат: раздел + паспорт (тот же URL-контракт, что у остальной навигации).
-  const hitHref = (h: Hit): string => {
-    const id = encodeURIComponent(h.ref_id);
-    switch (h.type) {
-      case 'adr':          return `/lore?section=adrs&passport=${id}`;
-      case 'sprint':       return `/lore?section=sprints&passport=${id}`;
-      case 'quality_gate': return `/lore?section=qg&passport=${id}`;
-      case 'decision':     return `/lore?section=decisions`;
-      case 'doc':          return `/lore?section=knowledge&passport=${encodeURIComponent('doc:' + h.ref_id)}`;
-      case 'runbook':      return `/lore?section=knowledge&passport=${encodeURIComponent('runbook:' + h.ref_id)}`;
-      case 'spec':         return `/lore?section=knowledge&spec=${id}`;
-      case 'task':         return `/lore?section=sprints`;
-      // Продуктовый слой: SRCH-01 добавил эти типы в выдачу поиска, но без веток
-      // здесь они падали в default и уводили на план-борд вместо самой сущности.
-      case 'feature':      return `/lore?section=features&passport=${id}`;
-      case 'use_case':     return `/lore?section=userStories&passport=${id}`;
-      case 'actor':        return `/lore?section=actors&passport=${id}`;
-      // Работы/боли/ожидания живут одним реестром — профилем ценности.
-      case 'job':
-      case 'pain':
-      case 'gain':         return `/lore?section=vpProfile&passport=${id}`;
-      default:             return `/lore?section=plan`;
-    }
+  // Маршруты и подписи — из ОБЩЕГО модуля (SRCH-08). Свои карты здесь больше не
+  // живут: они расходились с картами экрана поиска по существу, а не по стилю.
+  const openHit = (h: Hit) => {
+    setPalOpen(false); setPalQ('');
+    navigate(searchHitHref(h.type, h.ref_id));
   };
-  // Подписи типов в выдаче поиска. Продуктовые типы (feature…gain) поиск отдаёт
-  // с SRCH-01 — без них в этой карте они показывались сырым кодом типа.
-  const HIT_LABEL: Record<string, string> = {
-    adr:          'ADR',
-    runbook:      'Runbook',
-    quality_gate: 'QG',
-    sprint:       t('shell.hit.sprint',    'Спринт'),
-    decision:     t('shell.hit.decision',  'Решение'),
-    doc:          t('shell.hit.doc',       'Документ'),
-    spec:         t('shell.hit.spec',      'Спека'),
-    task:         t('shell.hit.task',      'Задача'),
-    feature:      t('shell.hit.feature',   'Фича'),
-    use_case:     t('shell.hit.useCase',   'US'),
-    actor:        t('shell.hit.actor',     'Клиент'),
-    job:          t('shell.hit.job',       'Работа'),
-    pain:         t('shell.hit.pain',      'Боль'),
-    gain:         t('shell.hit.gain',      'Ожидание'),
-  };
-
-  const openHit = (h: Hit) => { setPalOpen(false); setPalQ(''); navigate(hitHref(h)); };
   const submitSearch = () => {
     if (palRows.length) { openHit(palRows[Math.min(palSel, palRows.length - 1)]); return; }
     const q = palQ.trim();
     setPalOpen(false); setPalQ('');
-    navigate(q ? `/lore?section=plan&q=${encodeURIComponent(q)}` : '/lore?section=plan');
+    // Enter без выбранного результата ведёт на ЭКРАН ПОИСКА с этим запросом.
+    // Раньше уводил на план-борд с ?q=, а план-борд не входит в разделы с
+    // фильтром — параметр там никем не читался, и переход выглядел как
+    // «поиск ничего не сделал».
+    navigate(searchScreenHref(q));
   };
 
   const liveDot = { width: 7, height: 7, borderRadius: '50%', background: 'var(--suc)', flexShrink: 0, display: 'inline-block' as const };
@@ -474,7 +450,7 @@ export default function AppShell() {
                       fontSize: 13, padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
                     }}>
                     <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 6px', flexShrink: 0 }}>
-                      {HIT_LABEL[h.type] ?? h.type}
+                      {typeLabel(h.type)}
                     </span>
                     <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)', flexShrink: 0 }}>{h.ref_id}</span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title ?? ''}</span>
