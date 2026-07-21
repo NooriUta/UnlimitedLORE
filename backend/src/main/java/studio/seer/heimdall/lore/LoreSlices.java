@@ -349,6 +349,10 @@ public final class LoreSlices {
         slice("features",
             "SELECT uc_id, title, body_md, context_md, status, component_id, date_created, " +
             "goal_level, shipped_at, parent_uc_id, " +
+            // PL-10: компоненты и проекты — рёбрами, а не плоским component_id.
+            // Плоское поле не давало ни множественности, ни проектной оси.
+            "out('BELONGS_TO').component_id      AS component_ids, " +
+            "out('BELONGS_TO_PROJECT').slug     AS projects, " +
             "out('DECOMPOSES_INTO').uc_id AS uc_ids, " +
             "out('DECOMPOSES_INTO').size() AS uc_total, " +
             "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS uc_shipped, " +
@@ -375,6 +379,12 @@ public final class LoreSlices {
             // ADR-027 (D1/§2): классификация Коберна — уровень цели, вес оформления,
             // приоритет; shipped_at ставит система (ADR-029 §2).
             "goal_level, rigor, priority, shipped_at, " +
+            // PL-10 (D14): компонент у сценария ПРЯМОЙ; наследование от родителя
+            // отдаётся отдельным полем, чтобы «свой» и «унаследованный» не
+            // склеивались в один список и тройка RBAC не врала.
+            "out('BELONGS_TO').component_id                      AS component_ids, " +
+            "in('DECOMPOSES_INTO').out('BELONGS_TO').component_id AS inherited_component_ids, " +
+            "out('BELONGS_TO_PROJECT').slug                     AS projects, " +
             // ADR-032 D5: что этот UC реально снимает/создаёт — правая половина VP-канвы.
             "out('RELIEVES').pain_id AS relieves_pain_ids, " +
             "out('DELIVERS').gain_id AS delivers_gain_ids, " +
@@ -437,6 +447,9 @@ public final class LoreSlices {
         // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
         slice("actors",
             "SELECT actor_id, name, kind, body_md, " +
+            // D18: актор проектный — иначе одноимённые роли разных продуктов
+            // склеиваются в одну строку RBAC-матрицы.
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('HAS_ACTOR').uc_id AS uc_ids, " +
             "in('HAS_ACTOR').size() AS uc_count " +
             "FROM KnowActor",

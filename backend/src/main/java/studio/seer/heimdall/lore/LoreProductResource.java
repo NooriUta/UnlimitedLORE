@@ -266,7 +266,12 @@ public class LoreProductResource extends LoreResourceBase {
 
     // ── Actor (D12): проектируемая роль приложения ───────────────────────────
 
-    public record ActorRequest(String actor_id, String name, String kind, String body_md) {}
+    // PL-10 (D18): актор ПРОЕКТНЫЙ. «Администратор» одного продукта — не та же
+    // роль, что одноимённая роль другого, и без разделения RBAC-матрица,
+    // выводимая из тройки «роль × компонент × сценарий», склеивает чужие
+    // продукты в одну строку.
+    public record ActorRequest(String actor_id, String name, String kind, String body_md,
+                               String project) {}
 
     @POST
     @Path("actor")
@@ -291,7 +296,29 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE actor_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "actor_id", req.actor_id())));
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            // D18: принадлежность проекту — РЕБРО, а не поле. Поле было бы второй
+            // правдой рядом с BELONGS_TO_PROJECT, который уже несут спринты.
+            if (req.project() != null && !req.project().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowActor WHERE actor_id=:id)",
+                    Map.of("id", req.actor_id()))).await().indefinitely();
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> created = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                        "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                        Map.of("id", req.actor_id(), "p", req.project())))
+                    .await().indefinitely().result();
+                boolean linked = created != null && !created.isEmpty();
+                out.put("project_linked", linked);
+                if (!linked) out.put("hint", "проект «" + req.project() + "» не зарегистрирован — "
+                    + "заведите его через project_new, иначе привязка молча не создаётся");
+            }
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
@@ -572,7 +599,7 @@ public class LoreProductResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.uc_id() == null || req.uc_id().isBlank()
                 || req.rel() == null || req.target_id() == null || req.target_id().isBlank())
-            return badParams("uc_id, rel (task|adr|decision|actor|includes|extends|relieves|delivers|performs), target_id required");
+            return badParams("uc_id, rel (task|adr|decision|actor|component|includes|extends|relieves|delivers|performs), target_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
@@ -597,6 +624,16 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "HAS_ACTOR";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                }
+                // PL-10 (D14): компонент у сценария — ПРЯМОЙ, а не только через
+                // родителя. Ядро ценности слоя — тройка «роль × компонент ×
+                // сценарий», из которой выводится RBAC-матрица; пока компонент
+                // брался только у корня, все его дочерние сценарии считались
+                // принадлежащими одному и тому же модулю, и тройка вырождалась.
+                case "component" -> {
+                    edge = "BELONGS_TO";
+                    fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    toSql   = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
                 }
                 case "includes" -> { // D13: UC_INCLUDES — обязательный под-сценарий
                     edge = "UC_INCLUDES";
@@ -624,14 +661,14 @@ public class LoreProductResource extends LoreResourceBase {
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
                 }
-                default -> { return badParams("rel must be task|adr|decision|actor|includes|extends|relieves|delivers|performs"); }
+                default -> { return badParams("rel must be task|adr|decision|actor|component|includes|extends|relieves|delivers|performs"); }
             }
             if (remove) {
                 boolean fromUc = !"task".equals(req.rel());
                 String delSql = fromUc
                     ? "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) " +
                       "WHERE @in.adr_id=:tid OR @in.decision_id=:tid OR @in.actor_id=:tid OR @in.uc_id=:tid " +
-                      "OR @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid"
+                      "OR @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid OR @in.component_id=:tid"
                     : "DELETE FROM (SELECT expand(inE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) WHERE @out.task_uid=:tid";
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", delSql, p))
                     .await().indefinitely();
