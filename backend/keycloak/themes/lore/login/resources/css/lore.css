@@ -1,0 +1,276 @@
+/*
+ * LORE — KC login theme
+ * Olive-lichen variant of the seer brand — matches the LORE frontend accent
+ * (src/styles/tokens.css: --acc #A8B860 dark / #6b7a2a light). Same Amber Forest
+ * base and the same structural layout as the seer/heimdall themes — only the
+ * accent and the brand block differ, so layout fixes are worth porting across
+ * the three rather than letting them drift apart.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Unbounded:wght@800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root,
+[data-theme="dark"] {
+  /* Backgrounds (Amber Forest dark, same base) */
+  --bg0: #141108;
+  --bg1: #1c1810;
+  --bg2: #252019;
+  --bg3: #302a20;
+  --bd:  #42382a;
+  --bdh: #584c38;
+  --t1:  #ede5d0;
+  --t2:  #9a8c6e;
+  --t3:  #665c48;
+  /* LORE olive-lichen accent */
+  --acc:    #A8B860;
+  --wrn:    #D4922A;
+  --danger: #C85848;
+  --font:         'Manrope', system-ui, sans-serif;
+  --mono:         'IBM Plex Mono', monospace;
+  --font-display: 'Unbounded', sans-serif;
+  --r-sm:  4px;
+  --r-md:  6px;
+  --r-lg:  8px;
+}
+
+[data-theme="light"] {
+  --bg0: #f5f3ee;
+  --bg1: #faf8f3;
+  --bg2: #ffffff;
+  --bg3: #eee9df;
+  --bd:  #d4ccb8;
+  --bdh: #b8ab94;
+  --t1:  #1e1a12;
+  --t2:  #5c5240;
+  --t3:  #9a8a6e;
+  /* Darker olive for light backgrounds */
+  --acc:    #6b7a2a;
+  --wrn:    #a06010;
+  --danger: #c03030;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg0);
+  color: var(--t1);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.login-pf, .login-pf body, .login-pf-page, html.login-pf {
+  background: var(--bg0) !important;
+  color: var(--t1);
+}
+
+.login-pf-page-header, .login-pf-page-header h1, #kc-header, #kc-header-wrapper {
+  display: none !important;
+}
+
+.login-pf-page {
+  background: var(--bg0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  margin: 0;
+}
+
+/* ── LORE brand block ──────────────────────────────────────────────── */
+
+.seer-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+.seer-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm);
+  background: var(--acc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.seer-mark span {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--bg0);
+  line-height: 1;
+}
+
+.seer-wordmark {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.seer-wordmark .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acc);
+  align-self: center;
+}
+.seer-wordmark .name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--t1);
+  letter-spacing: 0.04em;
+}
+.seer-wordmark .sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t2);
+  letter-spacing: 0.06em;
+}
+
+.seer-slogan {
+  font-size: 11px;
+  color: var(--t3);
+  letter-spacing: 0.04em;
+  text-align: center;
+  max-width: 320px;
+  font-style: italic;
+  min-height: 1.5em;
+}
+
+.seer-platform {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--t3);
+  letter-spacing: 0.07em;
+  opacity: 0.7;
+}
+
+/* ── Login card ─────────────────────────────────────────────────────────── */
+
+.card-pf, .login-pf-page .card-pf {
+  background: var(--bg1);
+  border: 1px solid var(--bd);
+  border-top: 2px solid var(--acc);
+  border-radius: var(--r-lg);
+  padding: 28px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.form-group, .pf-c-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+label, .pf-c-form__label, .pf-c-form__label-text, .control-label {
+  font-size: 12px;
+  color: var(--t2);
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+input.form-control, .pf-c-form-control,
+input[type="text"], input[type="password"], input[type="email"] {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-sm);
+  color: var(--t1);
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.12s, outline 0.12s;
+  box-sizing: border-box;
+}
+input.form-control:focus, .pf-c-form-control:focus,
+input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus {
+  outline: 1px solid var(--acc);
+  outline-offset: 1px;
+  border-color: var(--acc);
+}
+
+.btn, .btn-primary, input[type="submit"], .pf-c-button, .pf-c-button.pf-m-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 16px;
+  background: var(--acc);
+  color: var(--bg0);
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+.btn:hover, .btn-primary:hover, input[type="submit"]:hover,
+.pf-c-button:hover, .pf-c-button.pf-m-primary:hover {
+  background: color-mix(in srgb, var(--acc) 80%, white);
+  color: var(--bg0);
+}
+.btn:disabled, .btn-primary:disabled {
+  background: var(--bg3);
+  color: var(--t3);
+  cursor: not-allowed;
+}
+
+a, a:visited { color: var(--acc); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.kc-form-options, #kc-form-options {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--t2);
+}
+
+.alert, .pf-c-alert, .alert-error, .pf-m-danger, #input-error, .kc-feedback-text {
+  font-size: 12px;
+  color: var(--wrn);
+  background: color-mix(in srgb, var(--wrn) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--wrn) 25%, transparent);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.pf-c-alert__icon, .alert .pficon, .fa-exclamation-circle {
+  display: none;
+}
+
+#kc-locale {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 11px;
+  color: var(--t3);
+}
+#kc-locale a {
+  color: var(--t2);
+  margin: 0 4px;
+}
+
+.seer-footer {
+  margin-top: 24px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--t3);
+  letter-spacing: 0.04em;
+  text-align: center;
+  opacity: 0.6;
+}
