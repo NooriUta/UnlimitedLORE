@@ -452,12 +452,28 @@ public final class LoreSlices {
             "FROM KnowAsset WHERE inE('ATTACHED_TO').size() = 0",
             List.of(), new LinkedHashMap<>(), " ORDER BY created_at");
 
+        // D16: в сценарии виден список задач СО СПРИНТОМ И ЕГО СТАТУСОМ — чтобы
+        // «доехало ли» читалось прямо здесь, без перехода в спринт. Раньше слайс
+        // отдавал статус ЗАДАЧИ и голый sprint_id: увидеть, что задача закрыта, а
+        // спринт ещё нет (или наоборот — отменён), было нельзя.
         slice("tasks_of_uc",
             "SELECT task_uid, task_id, title, task_type, work_class, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS sprint_status_raw, " +
+            // Обоснование enb-задачи (JUSTIFIED_BY) — ребро было мёртвым до PL-14.
+            "out('JUSTIFIED_BY').adr_id AS justified_by_adr_ids " +
             "FROM KnowTask WHERE out('REALIZES').uc_id CONTAINS :id ORDER BY task_uid",
             List.of("id"), Map.of(), "");
+
+        // Зеркало дисциплины D16 для второго класса: enb-задача обязана нести
+        // JUSTIFIED_BY. Advisory, как и unlinked_uc_tasks — список нарушений,
+        // а не гейт записи (гейт задушил бы ввод, TOC-раздел ADR-022).
+        slice("unlinked_enb_tasks",
+            "SELECT task_uid, task_id, title, work_class, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE work_class = 'enb' AND out('JUSTIFIED_BY').size() = 0 " +
+            "ORDER BY task_uid",
+            List.of(), Map.of(), "");
 
         // Обзор дисциплины (D3): uc-задачи без REALIZES — advisory, не ошибка.
         slice("unlinked_uc_tasks",
