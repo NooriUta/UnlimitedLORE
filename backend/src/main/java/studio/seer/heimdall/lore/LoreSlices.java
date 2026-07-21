@@ -480,66 +480,94 @@ public final class LoreSlices {
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
 
-        // ── §4 Search — cross-entity, case-insensitive substring ─────────────
-        // pattern is wrapped in %…% server-side (callers pass a bare term, e.g. "geoid").
-        // Matches id + title/name; for ADRs also the body sections on the OPEN hist row.
-        // Сквозной поиск единого окна (SRCH-01). Продуктовый слой ищется по
-        // FULL_TEXT-индексам через SEARCH_FIELDS + '*' (префикс: иначе поиск-как-
-        // набираешь не работает — токенный поиск не ловит незавершённое слово).
-        // ВАЖНО: SEARCH_FIELDS требует индекс РОВНО на перечисленные поля, а у нас
-        // индексы по одному полю → OR однополевых вызовов. Схлопывание в
-        // мультиполевые + русская морфология — SRCH-03 (миграция V11).
-        // Замеры и ловушки: SPEC-TECH-LORE-ARCADEDB §Полнотекстовый поиск.
+        // ── §4 Search — сквозной, по FULL_TEXT-индексам (SRCH-01, ADR-LORE-033) ─
+        // Каждая ветка — ОДИН вызов SEARCH_INDEX('ftИмя', …) по именованному
+        // мультиполевому индексу из реестра FT_INDEXES (V11/V12): FETCH FROM INDEX
+        // вместо прежнего SCAN на ILIKE. Плюс id ILIKE — точечный поиск по
+        // идентификатору («ADR-LORE-033») токенным поиском не заменяется.
+        //
+        // Форма запроса `q q*` (OR по умолчанию) — ОБА слагаемых нужны:
+        //   q   идёт через анализатор → морфология («релиза» находит «релиз»);
+        //   q*  префикс для поиска-как-набираешь, но wildcard-термы Lucene
+        //       НЕ анализирует, поэтому один только `q*` теряет морфологию.
+        //
+        // Тела живут в *Hist-типах — отдельные ветки по ОТКРЫТОЙ строке
+        // (valid_to IS NULL) со схлопыванием к родителю через in('HAS_STATE');
+        // без них «Остервальдер» в note_md задачи не находился вовсе.
+        // DISTINCT схлопывает дубль «нашлось и в заголовке, и в теле».
+        //
+        // QualityGate — единственная ветка на ILIKE: FT-индекса на него нет
+        // (в FT_INDEXES из QUALITY-скоупа только прогоны/рекомендации);
+        // добавление индекса = новый шаг миграции, не в этой задаче.
+        // Ранжирования здесь нет по построению ($score теряется в unionall) —
+        // релевантность отдаёт /lore/search (SRCH-05), слайс остаётся плоским
+        // списком для палитры/автокомплита до перевода потребителей.
         slice("search",
-            "SELECT expand(unionall($a, $s, $p, $t, $q, $r, $d, $c, $f, $u, $pn, $gn, $jb, $ac)) LET " +
+            "SELECT DISTINCT type, ref_id, title FROM " +
+            "(SELECT expand(unionall($a, $ah, $s, $sh, $p, $ph, $t, $th, $q, $r, $rh, $d, $c, $qn, $f, $u, $pn, $gn, $jb, $ac)) LET " +
             "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
-            "      WHERE adr_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
-            "      OR out('HAS_STATE')[valid_to IS NULL].context_md[0] ILIKE ('%' + :pattern + '%') " +
-            "      OR out('HAS_STATE')[valid_to IS NULL].decision_md[0] ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE adr_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowADR', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "$ah = (SELECT 'adr' AS type, in('HAS_STATE').adr_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
+            "      FROM KnowADRHist WHERE valid_to IS NULL " +
+            "      AND SEARCH_INDEX('ftKnowADRHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
             "$s = (SELECT 'spec' AS type, spec_id AS ref_id, title FROM KnowSpec " +
-            "      WHERE spec_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
-            "      OR COALESCE(out('HAS_STATE').content_md[0], content_md) ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE spec_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowSpec', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "$sh = (SELECT 'spec' AS type, in('HAS_STATE').spec_id[0] AS ref_id, in('HAS_STATE').title[0] AS title " +
+            "      FROM KnowSpecHist WHERE valid_to IS NULL " +
+            "      AND SEARCH_INDEX('ftKnowSpecHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
             "$p = (SELECT 'sprint' AS type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
-            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowSprint', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "$ph = (SELECT 'sprint' AS type, in('HAS_STATE').sprint_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
+            "      FROM KnowSprintHist WHERE valid_to IS NULL " +
+            "      AND SEARCH_INDEX('ftKnowSprintHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
             "$t = (SELECT 'task' AS type, task_uid AS ref_id, title FROM KnowTask " +
-            "      WHERE task_uid ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE task_uid ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowTask', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "$th = (SELECT 'task' AS type, in('HAS_STATE').task_uid[0] AS ref_id, in('HAS_STATE').title[0] AS title " +
+            "      FROM KnowTaskHist WHERE valid_to IS NULL " +
+            "      AND SEARCH_INDEX('ftKnowTaskHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
             "$q = (SELECT 'quality_gate' AS type, qg_id AS ref_id, name AS title FROM QualityGate " +
             "      WHERE qg_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR content_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$r = (SELECT 'runbook' AS type, runbook_id AS ref_id, name AS title FROM KnowRunbook " +
-            "      WHERE runbook_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE runbook_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowRunbook', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "$rh = (SELECT 'runbook' AS type, in('HAS_STATE').runbook_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
+            "      FROM KnowRunbookHist WHERE valid_to IS NULL " +
+            "      AND SEARCH_INDEX('ftKnowRunbookHist', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             "$d = (SELECT 'doc' AS type, doc_id AS ref_id, title FROM KnowDoc " +
-            "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE doc_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowDoc', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
-            "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
-            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
-            // ── продуктовый слой (ADR-LORE-022/032) — по FULL_TEXT-индексам ──
+            "      WHERE decision_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowDecision', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            // Вопросы раньше не искались ВООБЩЕ, хотя ftKnowQuestion существует —
+            // реестр ОВ был невидим для единого окна.
+            "$qn = (SELECT 'question' AS type, question_id AS ref_id, title FROM KnowQuestion " +
+            "      WHERE question_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowQuestion', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            // ── продуктовый слой (ADR-LORE-022/032) ──
             "$f = (SELECT 'feature' AS type, feature_id AS ref_id, title FROM KnowFeature " +
             "      WHERE feature_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['context_md'], :pattern + '*') = true LIMIT 10), " +
+            "      OR SEARCH_INDEX('ftKnowFeature', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             "$u = (SELECT 'use_case' AS type, uc_id AS ref_id, title FROM KnowUseCase " +
             "      WHERE uc_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['scenario_md'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['acceptance_md'], :pattern + '*') = true LIMIT 10), " +
+            "      OR SEARCH_INDEX('ftKnowUseCase', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             "$pn = (SELECT 'pain' AS type, pain_id AS ref_id, title FROM KnowPain " +
             "      WHERE pain_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "      OR SEARCH_INDEX('ftKnowPain', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             "$gn = (SELECT 'gain' AS type, gain_id AS ref_id, title FROM KnowGain " +
             "      WHERE gain_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['metric_md'], :pattern + '*') = true LIMIT 10), " +
+            "      OR SEARCH_INDEX('ftKnowGain', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
             "      WHERE job_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_FIELDS(['title'], :pattern + '*') = true " +
-            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10), " +
+            "      OR SEARCH_INDEX('ftKnowJob', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
             "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
-            "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_FIELDS(['body_md'], :pattern + '*') = true LIMIT 10)",
+            "      WHERE actor_id ILIKE ('%' + :pattern + '%') " +
+            "      OR SEARCH_INDEX('ftKnowActor', :pattern + ' ' + :pattern + '*') = true LIMIT 10))",
             List.of("pattern"), Map.of(), "");
 
         // ── §5 Plan ──────────────────────────────────────────────────────────

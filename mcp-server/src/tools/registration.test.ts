@@ -18,10 +18,11 @@ function fakeServer() {
 }
 
 describe('registerLoreRead', () => {
-  it('registers exactly the two Meta read tools under their new names', () => {
+  it('registers exactly the three read tools under their canonical names', () => {
     const { server, names } = fakeServer();
     registerLoreRead(server);
-    expect(names).toEqual(['list_slices', 'query_slice']);
+    // search — SRCH-07 (ADR-LORE-033): агент ищет тем же /lore/search, что UI.
+    expect(names).toEqual(['list_slices', 'query_slice', 'search']);
   });
 });
 

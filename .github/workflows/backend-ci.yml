@@ -1,10 +1,14 @@
 name: Backend CI
 
+# Промоушн-ветки включены НАМЕРЕННО. Правило «мержить только по зелёному CI»
+# (CLAUDE.md) без этого превращалось бы в пустой звук на самых ответственных
+# переходах: PR develop→preprod и preprod→main не получали бы ни одного чека,
+# и «зелёный» было бы просто нечему показать.
 on:
   push:
-    branches: [ "develop" ]
+    branches: [ "develop", "preprod" ]
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop", "preprod", "main" ]
 
 jobs:
   build:
@@ -151,13 +155,28 @@ jobs:
             eval "val=\${$v:-}"
             [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
           done
+          # MIG-25: ретрай оставлен ТОЛЬКО для транзиентов. Раньше любой отказ
+          # помечался «transient network?» и повторялся трижды — детерминированная
+          # конфиг-ошибка (SRCFG00040 от пустого ARG, PR #164) съедала три попытки
+          # по ~2 минуты, а сводка уводила диагностику в сеть, где ничего не было.
+          # Тот же класс: «транзиенты» BuildKit оказались DNS-фейлом (MIG-20).
+          # Теперь вывод грепается на маркеры детерминированных отказов — при
+          # совпадении падаем С ПЕРВОЙ попытки и поднимаем НАСТОЯЩУЮ строку
+          # ошибки в ::error::, а не утверждение о причине.
+          DETERMINISTIC='SRCFG[0-9]+|Configuration validation failed|FAILURE: Build failed with an exception|Compilation failed|error: cannot find symbol|CommandSQLParsingException'
           for attempt in 1 2 3; do
             echo "::group::docker build (attempt $attempt)"
             # shellcheck disable=SC2086
-            docker build $ARGS -f backend/Dockerfile.local -t lore-backend:ci backend/ && exit 0
+            docker build $ARGS -f backend/Dockerfile.local -t lore-backend:ci backend/ 2>&1 | tee /tmp/build.log
+            rc=${PIPESTATUS[0]}
             echo "::endgroup::"
-            echo "::warning::image build attempt $attempt failed (transient network?) — retrying"
+            [ "$rc" -eq 0 ] && exit 0
+            if grep -qE "$DETERMINISTIC" /tmp/build.log; then
+              echo "::error::сборка упала ДЕТЕРМИНИРОВАННО — повтор не поможет. Причина: $(grep -m1 -E "$DETERMINISTIC" /tmp/build.log | head -c 300)"
+              exit 1
+            fi
+            echo "::warning::попытка $attempt не удалась, маркеров детерминированного отказа в логе нет — похоже на сеть, повторяю"
             sleep 10
           done
-          echo "::error::docker image build failed after 3 attempts"
+          echo "::error::docker image build failed after 3 attempts; последняя ошибка: $(tail -c 300 /tmp/build.log)"
           exit 1

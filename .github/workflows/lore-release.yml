@@ -84,3 +84,50 @@ jobs:
             exit 1
           fi
           echo "релиз $TAG опубликован: $TITLE"
+
+      # ── Зеркало GitHub ────────────────────────────────────────────────────
+      # Последнее звено цепочки develop → preprod → main (tag) → mirror.
+      #
+      # Forgejo — источник истины и место CI/CD; GitHub остаётся ЗЕРКАЛОМ
+      # РЕЛИЗОВ (Actions там отключены — аккаунт в billing-локе, прогоны не
+      # запускаются вовсе). Поэтому льём только релизное: ветку main и сам тег,
+      # а не ветки разработки — иначе зеркало копило бы dev-шум, ради которого
+      # оно не заводилось.
+      #
+      # Раньше этого шага не было совсем: теги и main уезжали в GitHub руками,
+      # и зеркало регулярно отставало (проверено 2026-07-16 — объекты Release
+      # обрывались на v1.0.45 при существующих тегах до v1.0.49).
+      #
+      # Токен НЕ обязателен: без него шаг честно предупреждает и выходит, а не
+      # роняет уже опубликованный релиз. Красный релиз из-за недоступного
+      # зеркала — худший обмен, чем отставшее зеркало, о котором сказано вслух.
+      - name: Mirror main + tag to GitHub
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+          GH_REPO: ${{ secrets.GH_MIRROR_REPO }}   # напр. NooriUta/UnlimitedLORE
+        run: |
+          set -u
+          TAG="${GITHUB_REF#refs/tags/}"
+
+          if [ -z "${GH_TOKEN:-}" ] || [ -z "${GH_REPO:-}" ]; then
+            echo "::warning::зеркало GitHub пропущено — не заданы GH_MIRROR_TOKEN/GH_MIRROR_REPO (Forgejo: Settings -> Actions -> Secrets). Тег $TAG останется только в Forgejo."
+            exit 0
+          fi
+
+          # Полная история нужна для push ветки: checkout по умолчанию мелкий,
+          # и GitHub отверг бы неполный набор объектов.
+          git fetch --unshallow origin 2>/dev/null || git fetch --prune origin
+          git fetch origin main:refs/remotes/origin/main --force
+
+          # Тег обязан быть В main: зеркало отражает релизы, а не произвольные
+          # точки. Тег мимо main означает, что релиз срезан не оттуда — это
+          # ошибка процесса, и молча зеркалить её нельзя.
+          if ! git merge-base --is-ancestor "refs/tags/$TAG" origin/main; then
+            echo "::warning::тег $TAG не содержится в main — зеркалирование пропущено. Сначала влейте preprod в main, потом ставьте тег."
+            exit 0
+          fi
+
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
+            "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"
+          echo "зеркало обновлено: main + $TAG -> github.com/${GH_REPO}"

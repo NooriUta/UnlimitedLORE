@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { sessionExpired, subscribe, getCurrentUser, AUTH_ENABLED } from './session';
+import { sessionExpired, subscribe, getCurrentUser, hasValidSession, AUTH_ENABLED } from './session';
 
 // Протухшая сессия показывалась как «данных нет».
 //
@@ -43,5 +43,59 @@ describe('sessionExpired', () => {
     sessionExpired();
     off();
     expect(seen).not.toHaveBeenCalled();
+  });
+});
+
+// Белый экран, из которого нельзя выйти (прод-инцидент 2026-07-21, AL-69).
+//
+// `getUser()` отдаёт сохранённого пользователя ДАЖЕ с истёкшим сроком, а
+// `AuthGate` спрашивал «вошли ли» как `getCurrentUser() != null`. Протухшая
+// запись проходила эту проверку: приложение считало себя вошедшим, рендерилось,
+// но каждый запрос уходил без токена и получал 401. Пользователь видел пустую
+// страницу и не мог выйти из неё даже перезагрузкой — помогало только ручное
+// удаление ключа `oidc.user:…` из localStorage.
+//
+// Тест закрепляет РАЗЛИЧИЕ между «есть запись» и «есть действительная сессия».
+// Сотрётся различие — вернётся белый экран.
+describe('hasValidSession', () => {
+  it('без сессии — false, и это должно совпадать с getCurrentUser()', () => {
+    sessionExpired(); // приводим состояние к «сессии нет»
+    expect(getCurrentUser()).toBeNull();
+    expect(hasValidSession()).toBe(false);
+  });
+
+  it('не эквивалентна проверке "пользователь != null" — именно подмена дала AL-69', () => {
+    // Контракт: наличие записи о пользователе НЕ является признаком входа.
+    // Здесь мы фиксируем сам инвариант — действительная сессия невозможна без
+    // пользователя, поэтому true при отсутствующем пользователе недопустим.
+    sessionExpired();
+    const userPresent = getCurrentUser() !== null;
+    expect(hasValidSession()).toBe(userPresent && hasValidSession());
+    expect(hasValidSession()).toBe(false);
+  });
+});
+
+// Экран входа объясняет ПРИЧИНУ разными словами: «сессия истекла» и «требуется
+// вход» — это разные ситуации для человека. Первая означает, что его выбросило
+// посреди работы и несохранённое могло не уйти; вторая ничего не означает,
+// кроме «нажми кнопку». Признак различает их, и если он потеряется, экран
+// начнёт молча врать одной из двух групп — а неверная причина отправляет
+// искать поломку не там (инцидент 2026-07-21 сначала увели в HTTPS и сборку).
+describe('wasSessionLost', () => {
+  it('до потери сессии — false: свежий заход не должен пугать словом «истекла»', async () => {
+    // Модуль читается заново, чтобы флаг был в исходном состоянии: он живёт на
+    // уровне модуля и предыдущие тесты в этом файле его уже взводят.
+    vi.resetModules();
+    const fresh = await import('./session');
+    expect(fresh.wasSessionLost()).toBe(false);
+  });
+
+  it('после sessionExpired() — true, когда auth включён', async () => {
+    vi.resetModules();
+    const fresh = await import('./session');
+    fresh.sessionExpired();
+    // При выключенном auth sessionExpired() выходит сразу: сессии нет вовсе,
+    // терять нечего — и флаг обязан остаться нетронутым.
+    expect(fresh.wasSessionLost()).toBe(fresh.AUTH_ENABLED);
   });
 });

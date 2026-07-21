@@ -155,6 +155,7 @@ public class LoreSchemaMigrationRunner {
             .filter(s -> !applied.containsKey(s.version())).toList();
         if (pending.isEmpty()) {
             LOG.info("[LORE MIGRATE] схема актуальна, шагов нет");
+            retireLegacyFullTextIndexes();
             return;
         }
 
@@ -182,6 +183,7 @@ public class LoreSchemaMigrationRunner {
             command("INSERT INTO LoreSchemaVersion SET version=:v, compat_major=:cm, name=:n, checksum=:c, applied_at=:t", p);
         }
         LOG.infof("[LORE MIGRATE] готово: схема на версии %s (ordinal v%d)", LoreSchemaMigrations.codeHuman(), codeVersion);
+        retireLegacyFullTextIndexes();
     }
 
     /** Java-шаги (то, что SQL не умеет). Нумерация совпадает с реестром. */
@@ -284,6 +286,51 @@ public class LoreSchemaMigrationRunner {
         if (created + skipped < expected) {
             throw new IllegalStateException("[LORE MIGRATE] полнотекст: создано " + created + " + уже было " + skipped
                 + ", ожидалось " + expected + " — часть индексов отсутствует, поиск пошёл бы сканом при «успешной» миграции.");
+        }
+    }
+
+    /**
+     * Ретайр легаси-FT (SRCH-01, ADR-LORE-033 D10): реестр — единственный
+     * источник FULL_TEXT-индексов, всё вне его снимается. Легаси-однополевые
+     * не читаются никем после перевода слайса на SEARCH_INDEX('ftИмя', …), а
+     * каждое поле в них оплачивается на каждой записи дважды.
+     *
+     * ВЫЗЫВАЕТСЯ НА КАЖДОМ СТАРТЕ, а не из javaStep миграции. Первый вариант
+     * жил внутри createFullTextIndexes → javaStep(11|12), и на УЖЕ
+     * мигрированной базе не выполнялся никогда: шаги в ledger, javaStep не
+     * зовётся — прод после деплоя сохранил 25 bracket-легаси при «работающей»
+     * чистке. Тест-БД маскировала это: она свежая, шаги там всегда pending.
+     *
+     * Новым шагом миграции тоже нельзя: шаги 2/3, создавшие эти индексы,
+     * трогать запрещено (checksum в ledger, дрейф-гард), а чистка идемпотентна
+     * и должна догонять любые будущие легаси.
+     *
+     * Критерий — только логическая bracket-форма `Тип[поле]` вне реестра.
+     * Бакетные строки (`Тип_0_<ts>`) не трогаются ВООБЩЕ: они принадлежат в
+     * т.ч. именованным индексам, и снятие бакета каскадно уничтожает весь
+     * индекс — ровно так первый вариант чистки оставил тест-БД без единого
+     * FT-индекса (поймано тестом). «Index not found» при DROP — не ошибка:
+     * соседняя bracket-форма могла унести эту каскадом. Любая другая ошибка
+     * валит старт (урок V11: молчаливая полуправда хуже падения).
+     */
+    private void retireLegacyFullTextIndexes() {
+        Set<String> declared = new HashSet<>();
+        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) declared.add(ix.name());
+        int retired = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT name FROM schema:indexes WHERE indexType = 'FULL_TEXT'", Map.of())) {
+            String n = String.valueOf(r.get("name"));
+            if (declared.contains(n) || !n.contains("[")) continue;
+            try {
+                exec("DROP INDEX `" + n + "`");
+                retired++;
+            } catch (RuntimeException e) {
+                String msg = String.valueOf(e.getMessage());
+                if (!msg.contains("Index not found")) throw e;
+            }
+        }
+        if (retired > 0) {
+            LOG.infof("[LORE MIGRATE] полнотекст: снято %d легаси-индексов вне реестра", retired);
         }
     }
 

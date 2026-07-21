@@ -36,18 +36,62 @@ export function getUserManager(): UserManager {
   });
   manager.events.addUserLoaded(u => { currentUser = u; notify(); });
   manager.events.addUserUnloaded(() => { currentUser = null; notify(); });
-  manager.events.addSilentRenewError(() => { currentUser = null; notify(); });
+  manager.events.addSilentRenewError(() => { currentUser = null; sessionLost = true; notify(); });
   return manager;
 }
 
-/** Loads any persisted session on startup — call once before first render. */
+/**
+ * Поднимает сохранённую сессию на старте — вызывать один раз до первого рендера.
+ *
+ * ВАЖНО: `getUser()` отдаёт сохранённого пользователя ДАЖЕ с истёкшим сроком —
+ * сама по себе запись в localStorage не означает «вошли». Раньше протухший
+ * пользователь попадал в `currentUser`, `AuthGate` видел `!= null` и считал вход
+ * состоявшимся: приложение рендерилось, но каждый запрос уходил без токена и
+ * получал 401. Получался белый экран, из которого пользователь не мог выйти даже
+ * перезагрузкой — состояние самовоспроизводилось (прод-инцидент 2026-07-21,
+ * AL-69: помогало только ручное удаление ключа `oidc.user:…` из localStorage).
+ *
+ * Поэтому истёкшего пользователя сначала пробуем продлить по refresh-токену и
+ * только при неудаче считаем, что сессии нет — тогда `AuthGate` уведёт на вход.
+ */
 export async function initSession(): Promise<void> {
   if (!AUTH_ENABLED) return;
-  currentUser = await getUserManager().getUser();
+  const mgr = getUserManager();
+  let user = await mgr.getUser();
+  if (user?.expired) {
+    try {
+      user = await mgr.signinSilent();
+    } catch {
+      user = null; // продлить не вышло — уходим на полноценный вход
+      sessionLost = true;
+    }
+  }
+  currentUser = user && !user.expired ? user : null;
   notify();
 }
 
 export function getCurrentUser(): User | null { return currentUser; }
+
+// Была ли сессия и отвалилась — или входа ещё не было.
+//
+// Экран входа говорит об этом разными словами не ради вежливости: «сессия
+// истекла» и «вы не вошли» требуют от человека РАЗНОГО. В первом случае работа
+// могла остаться несохранённой и объяснить надо, почему его выбросило; во
+// втором объяснять нечего, нужна кнопка. Один общий текст обязательно врал бы
+// в одну из сторон — а неверная причина отправляет искать поломку не там
+// (ровно так инцидент 2026-07-21 сначала увели в HTTPS и сборку).
+let sessionLost = false;
+
+export function wasSessionLost(): boolean { return sessionLost; }
+
+/**
+ * Есть ли ДЕЙСТВИТЕЛЬНАЯ сессия — единственный корректный ответ на вопрос
+ * «вошли ли мы». Проверять `getCurrentUser() != null` нельзя: протухший
+ * пользователь тоже не `null`, и именно эта подмена дала белый экран (AL-69).
+ */
+export function hasValidSession(): boolean {
+  return currentUser !== null && !currentUser.expired;
+}
 
 export function subscribe(fn: () => void): () => void {
   listeners.add(fn);
@@ -75,6 +119,7 @@ export function subscribe(fn: () => void): () => void {
 export function sessionExpired(): void {
   if (!AUTH_ENABLED || currentUser === null) return;
   currentUser = null;
+  sessionLost = true;
   notify();
 }
 
@@ -82,8 +127,29 @@ export function login(returnTo?: string): Promise<void> {
   return getUserManager().signinRedirect({ state: returnTo ?? location.pathname + location.search });
 }
 
+/**
+ * Выход по кнопке — в отличие от «сессия отвалилась сама».
+ *
+ * Разница существенна для экрана входа: `sessionLost` сбрасывается, иначе
+ * после осознанного выхода человеку показали бы «Сессия истекла» и напугали
+ * несуществующей потерей несохранённого. Уйти самому и быть выброшенным —
+ * разные события, и путать их нельзя.
+ */
 export async function logout(): Promise<void> {
-  await getUserManager().signoutRedirect();
+  const mgr = getUserManager();
+  sessionLost = false;
+  try {
+    await mgr.signoutRedirect();
+  } catch {
+    // Keycloak недоступен либо end_session не отработал. Молча выйти из
+    // функции нельзя: кнопка «Выйти» выглядела бы сломанной — нажали, ничего
+    // не произошло, — и человек остался бы с правами, от которых как раз
+    // пытался избавиться. Гасим сессию хотя бы локально: токен перестаёт
+    // отправляться, приложение возвращается на экран входа.
+    await mgr.removeUser();
+    currentUser = null;
+    notify();
+  }
 }
 
 export async function handleLoginCallback(): Promise<string | undefined> {
