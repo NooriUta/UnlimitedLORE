@@ -33,7 +33,6 @@ public class LoreProductResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreProductResource.class);
 
-    private static final List<String> PRODUCT_STATUSES = List.of("proposed", "active", "shipped", "dropped");
 
     /** Шкала целей Коберна — одна на весь слой (ADR-LORE-032 §1): фичи живут на
      *  cloud/kite, UC — на sea-level/subfunction. Канон, словарь uc_goal_level. */
@@ -86,11 +85,13 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("feature_id required");
         if (!SAFE_ID.matcher(req.feature_id()).matches())
             return badParams("feature_id contains illegal characters");
-        if (req.status() != null && !PRODUCT_STATUSES.contains(req.status()))
-            return badParams("status must be one of: " + PRODUCT_STATUSES);
-        // D4: shipped у фичи не назначается рукой — он выводится из UC.
-        if ("shipped".equals(req.status()))
-            return badParams("feature 'shipped' is computed from its UCs (D4), not set directly");
+        // D4/D17: у корня рукой ставятся только намерения — как и у любого другого
+        // сценария (тип-то один). Прежняя редакция запрещала лишь shipped, и
+        // «active» проезжал: корень можно было объявить работающим при нулевой работе.
+        if (req.status() != null && !UcReadinessCalculator.INTENT_STATUSES.contains(req.status()))
+            return badParams("status must be one of: " + UcReadinessCalculator.INTENT_STATUSES
+                + " — " + UcReadinessCalculator.COMPUTED_STATUSES + " вычисляются из дочерних "
+                + "сценариев и их задач (D4/D17), рукой не назначаются");
         // ADR-032 §1: фича — UC уровня стратегии, поэтому живёт на ВЕРХНИХ ступенях
         // той же шкалы Коберна; sea-level/subfunction — высота сценария, не фичи.
         if (req.goal_level() != null && !List.of("cloud", "kite").contains(req.goal_level()))
@@ -141,8 +142,15 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("uc_id required");
         if (!SAFE_ID.matcher(req.uc_id()).matches())
             return badParams("uc_id contains illegal characters");
-        if (req.status() != null && !PRODUCT_STATUSES.contains(req.status()))
-            return badParams("status must be one of: " + PRODUCT_STATUSES);
+        // PL-15 (D17): руками ставятся только НАМЕРЕНИЯ. active/shipped/in_rework
+        // выводит вычислитель из REALIZES-задач — иначе появляется расхождение
+        // «сценарий shipped, задачи открыты», а именно его этот ADR и запрещает.
+        // У корня такой запрет стоял с самого начала (§D4); здесь он был забыт,
+        // и через /lore/uc можно было объявить готовность в обход работы.
+        if (req.status() != null && !UcReadinessCalculator.INTENT_STATUSES.contains(req.status()))
+            return badParams("status must be one of: " + UcReadinessCalculator.INTENT_STATUSES
+                + " — " + UcReadinessCalculator.COMPUTED_STATUSES + " вычисляются из задач (D17) "
+                + "и рукой не назначаются");
         // ADR-027 §2: классификация Коберна — канон словарей, свободных значений нет.
         if (req.goal_level() != null && !UC_GOAL_LEVELS.contains(req.goal_level()))
             return badParams("goal_level must be one of: " + UC_GOAL_LEVELS

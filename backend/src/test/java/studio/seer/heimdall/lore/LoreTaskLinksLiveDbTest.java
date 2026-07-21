@@ -38,7 +38,7 @@ class LoreTaskLinksLiveDbTest {
     @Order(1)
     void setUp() {
         post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_TL\",\"name\":\"task-links\"}");
-        post("/lore/feature", "{\"feature_id\":\"FEAT-TL\",\"title\":\"Корень\",\"status\":\"active\"}");
+        post("/lore/feature", "{\"feature_id\":\"FEAT-TL\",\"title\":\"Корень\"}");
         post("/lore/uc", "{\"uc_id\":\"UC-TL-1\",\"title\":\"Сценарий\",\"parent_uc_id\":\"FEAT-TL\","
             + "\"goal_level\":\"sea-level\"}");
         post("/lore/adr", "{\"adr_id\":\"ADR-TL-1\",\"name\":\"Обоснование энейблера\",\"status\":\"ACCEPTED\"}");

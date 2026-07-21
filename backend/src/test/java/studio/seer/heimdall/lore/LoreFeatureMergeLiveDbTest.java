@@ -47,7 +47,7 @@ class LoreFeatureMergeLiveDbTest {
         .then().statusCode(200); // сам слайс жив и читает уже KnowUseCase
 
         post("/lore/feature", "{\"feature_id\":\"FEAT-M\",\"title\":\"Корень\","
-            + "\"body_md\":\"ценность\",\"context_md\":\"большой контекст\",\"status\":\"active\"}");
+            + "\"body_md\":\"ценность\",\"context_md\":\"большой контекст\"}");
 
         // Запись через /lore/feature легла в KnowUseCase — её видно слайсом
         // сценариев, а не только «фич». Если бы тип остался, тут был бы пусто.
@@ -87,7 +87,7 @@ class LoreFeatureMergeLiveDbTest {
     @Order(3)
     void childrenHangOnTheRootAndStayOutOfRoots() {
         post("/lore/uc", "{\"uc_id\":\"UC-M-1\",\"title\":\"Сценарий\",\"parent_uc_id\":\"FEAT-M\","
-            + "\"goal_level\":\"sea-level\",\"status\":\"shipped\"}");
+            + "\"goal_level\":\"sea-level\"}");
 
         given().header("X-Seer-Role", "admin")
         .when().get("/lore/slice/use_cases_of_feature?id=FEAT-M")
@@ -100,7 +100,7 @@ class LoreFeatureMergeLiveDbTest {
         .then().statusCode(200)
             .body("rows.uc_id", not(hasItem("UC-M-1")))
             .body("rows.find { it.uc_id == 'FEAT-M' }.uc_total", equalTo(1))
-            .body("rows.find { it.uc_id == 'FEAT-M' }.uc_shipped", equalTo(1));
+            .body("rows.find { it.uc_id == 'FEAT-M' }.uc_shipped", equalTo(0));
     }
 
     /**
