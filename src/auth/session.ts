@@ -40,14 +40,45 @@ export function getUserManager(): UserManager {
   return manager;
 }
 
-/** Loads any persisted session on startup — call once before first render. */
+/**
+ * Поднимает сохранённую сессию на старте — вызывать один раз до первого рендера.
+ *
+ * ВАЖНО: `getUser()` отдаёт сохранённого пользователя ДАЖЕ с истёкшим сроком —
+ * сама по себе запись в localStorage не означает «вошли». Раньше протухший
+ * пользователь попадал в `currentUser`, `AuthGate` видел `!= null` и считал вход
+ * состоявшимся: приложение рендерилось, но каждый запрос уходил без токена и
+ * получал 401. Получался белый экран, из которого пользователь не мог выйти даже
+ * перезагрузкой — состояние самовоспроизводилось (прод-инцидент 2026-07-21,
+ * AL-69: помогало только ручное удаление ключа `oidc.user:…` из localStorage).
+ *
+ * Поэтому истёкшего пользователя сначала пробуем продлить по refresh-токену и
+ * только при неудаче считаем, что сессии нет — тогда `AuthGate` уведёт на вход.
+ */
 export async function initSession(): Promise<void> {
   if (!AUTH_ENABLED) return;
-  currentUser = await getUserManager().getUser();
+  const mgr = getUserManager();
+  let user = await mgr.getUser();
+  if (user?.expired) {
+    try {
+      user = await mgr.signinSilent();
+    } catch {
+      user = null; // продлить не вышло — уходим на полноценный вход
+    }
+  }
+  currentUser = user && !user.expired ? user : null;
   notify();
 }
 
 export function getCurrentUser(): User | null { return currentUser; }
+
+/**
+ * Есть ли ДЕЙСТВИТЕЛЬНАЯ сессия — единственный корректный ответ на вопрос
+ * «вошли ли мы». Проверять `getCurrentUser() != null` нельзя: протухший
+ * пользователь тоже не `null`, и именно эта подмена дала белый экран (AL-69).
+ */
+export function hasValidSession(): boolean {
+  return currentUser !== null && !currentUser.expired;
+}
 
 export function subscribe(fn: () => void): () => void {
   listeners.add(fn);

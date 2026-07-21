@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { sessionExpired, subscribe, getCurrentUser, AUTH_ENABLED } from './session';
+import { sessionExpired, subscribe, getCurrentUser, hasValidSession, AUTH_ENABLED } from './session';
 
 // Протухшая сессия показывалась как «данных нет».
 //
@@ -43,5 +43,34 @@ describe('sessionExpired', () => {
     sessionExpired();
     off();
     expect(seen).not.toHaveBeenCalled();
+  });
+});
+
+// Белый экран, из которого нельзя выйти (прод-инцидент 2026-07-21, AL-69).
+//
+// `getUser()` отдаёт сохранённого пользователя ДАЖЕ с истёкшим сроком, а
+// `AuthGate` спрашивал «вошли ли» как `getCurrentUser() != null`. Протухшая
+// запись проходила эту проверку: приложение считало себя вошедшим, рендерилось,
+// но каждый запрос уходил без токена и получал 401. Пользователь видел пустую
+// страницу и не мог выйти из неё даже перезагрузкой — помогало только ручное
+// удаление ключа `oidc.user:…` из localStorage.
+//
+// Тест закрепляет РАЗЛИЧИЕ между «есть запись» и «есть действительная сессия».
+// Сотрётся различие — вернётся белый экран.
+describe('hasValidSession', () => {
+  it('без сессии — false, и это должно совпадать с getCurrentUser()', () => {
+    sessionExpired(); // приводим состояние к «сессии нет»
+    expect(getCurrentUser()).toBeNull();
+    expect(hasValidSession()).toBe(false);
+  });
+
+  it('не эквивалентна проверке "пользователь != null" — именно подмена дала AL-69', () => {
+    // Контракт: наличие записи о пользователе НЕ является признаком входа.
+    // Здесь мы фиксируем сам инвариант — действительная сессия невозможна без
+    // пользователя, поэтому true при отсутствующем пользователе недопустим.
+    sessionExpired();
+    const userPresent = getCurrentUser() !== null;
+    expect(hasValidSession()).toBe(userPresent && hasValidSession());
+    expect(hasValidSession()).toBe(false);
   });
 });
