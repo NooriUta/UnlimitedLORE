@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LoreDisabledError, LoreUpstreamError } from '../api/lore';
 import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
+import { LoreSearchScreen } from '../components/lore/LoreSearchScreen';
 import { DictionaryProvider } from '../components/lore/DictionaryProvider';
 import LoreTimeline        from '../components/lore/LoreTimeline';
 import LoreAdrList         from '../components/lore/LoreAdrList';
@@ -74,6 +75,7 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
+  { id: 'search',     icon: 'magnifying-glass', labelKey: 'lore.page.nav.search',   fallback: 'Поиск'      },
   { id: 'components', icon: 'cog',            labelKey: 'lore.page.nav.components', fallback: 'Компоненты' },
   { id: 'tech',       icon: 'gears',          labelKey: 'lore.page.nav.tech',       fallback: 'Технологии' },
   { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
@@ -107,6 +109,7 @@ const SECTION_COLORS: Record<Section, string> = {
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
   analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', admin: 'var(--wrn)',
   actors: 'var(--section-actors)', vpProfile: 'var(--section-rbjg)', vpCanvas: 'var(--section-vp)', features: 'var(--section-features)', userStories: 'var(--section-us)',
+  search: 'var(--acc)',
 };
 
 // Sections that use the SHARED list panel + detail. Продуктовые разделы —
@@ -1121,6 +1124,9 @@ export default function LorePage() {
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{t('lore.page.adrs.emptyCreateHint', 'или нажмите «+ новый ADR» чтобы создать')}</span>
             </div>
           )}
+
+          {/* Сквозной поиск (SRCH-05, ADR-LORE-033) */}
+          {section === 'search' && <LoreSearchScreen />}
 
           {/* Open Questions register (ADR-020/021) */}
           {section === 'openQuestions' && (

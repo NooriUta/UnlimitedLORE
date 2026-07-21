@@ -176,6 +176,55 @@ export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnal
   return (await res.json()) as LoreAnalytics;
 }
 
+// ── Search v2 (SRCH-05, ADR-LORE-033) ──────────────────────────────────────
+// Отдельный helper, а не fetchLoreSlice: ответ несёт агрегаты by_type /
+// by_component, а не {rows} — та же причина, по которой analytics и
+// bragi-метрики живут своими функциями.
+
+export interface LoreSearchHit {
+  type: string;
+  ref_id: string;
+  title: string | null;
+  score: number;
+  matched_field: string;
+  snippet: string | null;
+  components: string[];
+  /** Непустое = компонент ВЫВЕДЕН от родителя (sprint | adr), не прямое ребро. */
+  inherited_from: string | null;
+  projects: string[];
+}
+export interface LoreSearchResult {
+  hits: LoreSearchHit[];
+  by_type: Record<string, number>;
+  by_component: Record<string, number>;
+  total_collected: number;
+  capped_at: number;
+  took_ms: number;
+}
+export interface LoreSearchParams {
+  q: string;
+  types?: string[];
+  components?: string[];
+  project?: string;
+  limit?: number;
+  offset?: number;
+  mode?: 'smart' | 'exact' | 'fuzzy';
+}
+
+export async function fetchLoreSearch(p: LoreSearchParams, signal?: AbortSignal): Promise<LoreSearchResult> {
+  const qs = new URLSearchParams({ q: p.q });
+  if (p.types?.length) qs.set('types', p.types.join(','));
+  if (p.components?.length) qs.set('components', p.components.join(','));
+  if (p.project) qs.set('project', p.project);
+  if (p.limit) qs.set('limit', String(p.limit));
+  if (p.offset) qs.set('offset', String(p.offset));
+  if (p.mode) qs.set('mode', p.mode);
+  const res = await fetch(`${LORE_BASE}/search?${qs}`, { signal, headers: { ...authHeaders() } });
+  assertJson(res);
+  if (!res.ok) return parseError(res);
+  return (await res.json()) as LoreSearchResult;
+}
+
 // ── Typed slice helpers ────────────────────────────────────────────────────
 
 export interface LoreTimelineItem {
