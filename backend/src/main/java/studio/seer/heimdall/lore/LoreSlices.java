@@ -227,14 +227,12 @@ public final class LoreSlices {
             "FROM KnowSprint",
             List.of(),
             // ADR-LORE-017 (T16): optional `project` filter — Tier 1 (Sprint has a direct
-            // BELONGS_TO_PROJECT edge) read-scoping. KNOWN LIMITATION: compose() appends
-            // every supplied optional filter's raw SQL fragment in registration order with
-            // no AND-joining (see LoreSlices.compose()) — every slice in this file has
-            // exactly one active optional filter by convention, so this has never mattered
-            // before. Passing BOTH status AND project on this slice in the same call would
-            // concatenate two "WHERE" clauses into invalid SQL. Not fixed here (would touch
-            // all 10 existing optionalFilters registrations); flagged for whoever adds a
-            // second simultaneously-usable filter to any slice.
+            // BELONGS_TO_PROJECT edge) read-scoping.
+            //
+            // Прежнее ограничение СНЯТО (2026-07-21): compose() больше не
+            // склеивает фрагменты встык, а нормализует связку (WHERE для
+            // первого условия, AND для последующих). status и project можно
+            // передавать вместе — до этого такая пара давала 500.
             new LinkedHashMap<>(Map.of(
                 "status", " WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE :status",
                 "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
@@ -1171,10 +1169,47 @@ public final class LoreSlices {
         }
 
         StringBuilder sql = new StringBuilder(def.baseSql());
+        // Склейка нескольких одновременных фильтров.
+        //
+        // Раньше фрагменты просто дописывались подряд, а каждый нёс СВОЁ
+        // « WHERE » — два фильтра сразу давали «… WHERE a WHERE b», то есть
+        // невалидный SQL и 500 у вызывающего. Ограничение было известно и
+        // задокументировано у слайса `sprints`, но обходилось соглашением
+        // «по одному активному фильтру на слайс» — до первого, кто передаст
+        // status и project вместе (поймано 2026-07-21 на шлюзе).
+        //
+        // Здесь связка нормализуется в одном месте: у фрагмента отрезается
+        // ведущее WHERE/AND, а соединитель выбирается по факту — WHERE, если
+        // условий ещё не было, иначе AND. Так десять существующих регистраций
+        // остаются нетронутыми в обеих формах написания.
+        boolean hasWhere = containsWhere(def.baseSql());
         for (Map.Entry<String, String> opt : def.optionalFilters().entrySet()) {
-            if (given.containsKey(opt.getKey())) sql.append(opt.getValue());
+            if (!given.containsKey(opt.getKey())) continue;
+            String frag = stripLeadingConnector(opt.getValue());
+            if (frag.isEmpty()) continue;
+            sql.append(hasWhere ? " AND " : " WHERE ").append(frag);
+            hasWhere = true;
         }
         sql.append(def.suffix());
         return new Composed(sql.toString(), params);
+    }
+
+    /**
+     * Есть ли в базовом запросе собственное условие. Скобки и строковые
+     * литералы не разбираем: слайсы — наш код, а не пользовательский ввод, и
+     * ни один из них не содержит слова WHERE внутри литерала. Если такой
+     * появится, честнее будет завести ему явный флаг, чем городить парсер.
+     */
+    private static boolean containsWhere(String sql) {
+        return sql.toUpperCase(java.util.Locale.ROOT).contains(" WHERE ");
+    }
+
+    /** Отрезает ведущее WHERE/AND у фрагмента фильтра, оставляя само условие. */
+    private static String stripLeadingConnector(String fragment) {
+        String s = fragment == null ? "" : fragment.trim();
+        String upper = s.toUpperCase(java.util.Locale.ROOT);
+        if (upper.startsWith("WHERE ")) return s.substring(6).trim();
+        if (upper.startsWith("AND "))   return s.substring(4).trim();
+        return s;
     }
 }
