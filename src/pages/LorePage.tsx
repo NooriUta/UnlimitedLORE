@@ -481,24 +481,37 @@ export default function LorePage() {
   return (
     <DictionaryProvider>
     <div style={S.root}>
-      {/* ── Фильтр списка текущего раздела (не сквозной поиск — тот в палитре) ── */}
-      {showGlobalSearch && (
-        <div style={S.topBar}>
-          <span style={S.searchIcon}>🔍</span>
-          <input
-            style={S.searchInput}
-            placeholder={t(filterKey, 'фильтр по списку…')}
-            aria-label={t(filterKey, 'фильтр по списку…')}
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-          />
-        </div>
-      )}
-
       {/* ── Horizontal section nav ───────────────────────────────────────────
           Не показываем в Admin LORE: админка — уровень приложения (вход в шапке,
           ADR-LORE-025), разделы Forseti к её содержимому отношения не имеют. */}
       {section !== 'admin' && sectionNav}
+
+      {/* ── Фильтр списка текущего раздела (не сквозной поиск — тот в палитре) ──
+          SRCH-12: стоит ПОД навигацией, а не над ней.
+
+          Раньше блок рендерился выше нава и условно — есть у раздела фильтр или
+          нет. Разделы делятся на восемь с фильтром и остальные без, и при
+          переходе между ними строка появлялась/исчезала НАД навигацией: весь
+          верх съезжал по вертикали. Целишься в пункт нава — он уезжает.
+
+          Порядок был неверен и по смыслу: фильтр относится к СОДЕРЖИМОМУ
+          раздела, значит стоит ниже переключателя разделов, а не выше.
+
+          Высота РЕЗЕРВИРУЕТСЯ: контейнер рендерится всегда, скрывается только
+          содержимое. Одной перестановки мало — сам фильтр то есть, то нет, и
+          контент под ним продолжал бы дёргаться на строку. */}
+      <div style={{ ...S.topBar, visibility: showGlobalSearch ? 'visible' : 'hidden' }}
+           aria-hidden={!showGlobalSearch}>
+        <span style={S.searchIcon}>🔍</span>
+        <input
+          style={S.searchInput}
+          placeholder={t(filterKey, 'фильтр по списку…')}
+          aria-label={t(filterKey, 'фильтр по списку…')}
+          value={search}
+          onChange={e => onSearchChange(e.target.value)}
+          tabIndex={showGlobalSearch ? 0 : -1}
+        />
+      </div>
 
       {/* ── Knowledge filter bar: Тип/Модуль chips portal in here from
           LoreArtifactList's own header (see knowledgeFilterBar above) ─── */}
