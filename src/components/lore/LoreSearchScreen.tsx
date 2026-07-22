@@ -54,9 +54,21 @@ export function coverageOf(hits: { inherited_from: string | null; components?: s
   };
 }
 
-export function LoreSearchScreen() {
+export interface LoreSearchProps {
+  /**
+   * Вызывается после перехода к записи. Нужен оверлею: без него палитра
+   * осталась бы открытой поверх страницы, на которую сама же и увела.
+   */
+  onNavigated?: () => void;
+  /** Начальный запрос — палитра открывается уже с набранным текстом. */
+  initialQuery?: string;
+  /** Фокус в поле при монтировании: в оверлее печатать начинают сразу. */
+  autoFocus?: boolean;
+}
+
+export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: LoreSearchProps = {}) {
   const { t } = useTranslation();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [types, setTypes] = useState<Set<string>>(new Set());
   const [comps, setComps] = useState<Set<string>>(new Set());
   const [projs, setProjs] = useState<Set<string>>(new Set());
@@ -168,7 +180,7 @@ export function LoreSearchScreen() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <SearchInput
-          value={query} onChange={setQuery} maxWidth={480}
+          value={query} onChange={setQuery} maxWidth={480} autoFocus={autoFocus}
           placeholder={t('lore.search.placeholder', 'Поиск по всему LORE — морфология, тела, префикс…')}
           ariaLabel={t('lore.search.aria', 'Сквозной поиск')} />
 
@@ -296,7 +308,11 @@ export function LoreSearchScreen() {
                 {' '}= {h.bm25?.toFixed(3)} × {h.type_priority?.toFixed(2)}
               </span>
             </div>
-            <a href={searchHitHref(h.type, h.ref_id)} style={{ display: 'block', marginTop: 2, color: 'var(--t1)',
+            {/* Ссылка остаётся ссылкой (Ctrl+клик, «открыть в новой вкладке»),
+                но в оверлее переход обязан ещё и закрыть его: иначе палитра
+                висит поверх страницы, на которую сама же увела. */}
+            <a href={searchHitHref(h.type, h.ref_id)} onClick={() => onNavigated?.()}
+               style={{ display: 'block', marginTop: 2, color: 'var(--t1)',
                                           textDecoration: 'none', fontWeight: 600 }}>
               {/* Отсутствующий заголовок называется отсутствующим. Подстановка
                   ref_id вместо него выглядела как «заголовок такой», и пропажу

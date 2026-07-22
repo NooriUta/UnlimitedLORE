@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Unified filter/search primitives (SPRINT_LORE_UX_OPTIMIZATION T31/T32).
@@ -57,10 +58,24 @@ export interface SearchInputProps {
   placeholder?: string;
   ariaLabel?: string;
   maxWidth?: number;
+  /** Фокус при монтировании — нужен в оверлее: там печатать начинают сразу. */
+  autoFocus?: boolean;
 }
 
-export function SearchInput({ value, onChange, placeholder, ariaLabel, maxWidth = 320 }: SearchInputProps) {
+export function SearchInput({ value, onChange, placeholder, ariaLabel, maxWidth = 320, autoFocus }: SearchInputProps) {
   const { t } = useTranslation();
+  const ref = useRef<HTMLInputElement>(null);
+
+  // Фокус ставится ЯВНО, а не атрибутом autoFocus. Внутри модалки Mantine
+  // забирает фокус себе (focus trap отрабатывает после монтирования), и
+  // нативный autoFocus проигрывает эту гонку молча: поле выглядит готовым к
+  // вводу, но первые нажатия уходят в никуда. Задержка перекрывает анимацию
+  // открытия — раньше неё фокус снова перехватят.
+  useEffect(() => {
+    if (!autoFocus) return;
+    const id = setTimeout(() => ref.current?.focus(), 120);
+    return () => clearTimeout(id);
+  }, [autoFocus]);
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8, height: 34, padding: '0 10px',
@@ -68,6 +83,7 @@ export function SearchInput({ value, onChange, placeholder, ariaLabel, maxWidth 
     }}>
       <span style={{ color: 'var(--t3)' }}>🔍</span>
       <input
+        ref={ref}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}

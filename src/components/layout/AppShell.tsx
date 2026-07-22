@@ -6,8 +6,8 @@ import { SHELL_TABS, type ShellTab } from './shellNav';
 import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '../../auth/session';
-import { fetchLoreSearch, type LoreSearchHit } from '../../api/lore';
- import { searchHitHref, searchScreenHref, typeLabel } from '../../api/searchRoutes';
+import { Modal } from '@mantine/core';
+import { LoreSearchScreen } from '../lore/LoreSearchScreen';
 import { useIsAdmin } from '../../auth/useRole';
 
 const HEADER_H = 42;
@@ -98,58 +98,16 @@ export default function AppShell() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, [palOpen]);
 
-  // ── Единое окно поиска (SRCH-08) ─────────────────────────────────────────────
+  // ── Поиск сведён в ОДНУ поверхность (ADR-LORE-033 D16/D17) ──────────────────
   //
-  // Палитра ходит в ТОТ ЖЕ ранжированный API, что и экран поиска. Раньше она
-  // звала старый плоский слайс `search`: без ранга, без сниппета, без фасетов —
-  // и держала СВОИ карты маршрутов и подписей, расходившиеся с картами экрана.
-  // Один и тот же результат приводил в разные места в зависимости от того,
-  // откуда искали, и обе ветки при этом «работали».
+  // Здесь больше нет ни запроса к API, ни списка результатов, ни выбора
+  // стрелками: всё это делает LoreSearchScreen внутри модалки. Шапка только
+  // ОТКРЫВАЕТ поиск и помнит, с каким запросом он открыт.
   //
-  // Фильтры по спискам внутри вкладок остаются на местах — сюда сведён только
-  // сквозной поиск (решение владельца).
-  type Hit = LoreSearchHit;
-  const [palRows, setPalRows] = useState<Hit[]>([]);
-  const [palBusy, setPalBusy] = useState(false);
-  const [palSel, setPalSel] = useState(0);
-  // Сколько нашлось ВСЕГО, а не сколько поместилось. Раньше в подвале стояло
-  // `найдено: palRows.length` — то есть при трёхстах попаданиях палитра
-  // сообщала «найдено: 12». Число выглядело результатом поиска, а было
-  // размером окна выдачи.
-  const [palTotal, setPalTotal] = useState(0);
-
-  useEffect(() => {
-    const q = palQ.trim();
-    if (!palOpen || q.length < 2) { setPalRows([]); setPalTotal(0); setPalBusy(false); return; }
-    const ctrl = new AbortController();
-    setPalBusy(true);
-    const timer = setTimeout(() => {
-      // limit меньше, чем на экране: палитра — быстрый переход, а не разбор
-      // выдачи. Ранжирование то же, поэтому первые строки те же самые.
-      fetchLoreSearch({ q, limit: 12 }, ctrl.signal)
-        .then(res => { setPalRows(res.hits); setPalTotal(res.total_collected); setPalSel(0); setPalBusy(false); })
-        .catch(() => { if (!ctrl.signal.aborted) { setPalRows([]); setPalTotal(0); setPalBusy(false); } });
-    }, 250);
-    return () => { clearTimeout(timer); ctrl.abort(); };
-  }, [palQ, palOpen]);
-
-  // Маршруты и подписи — из ОБЩЕГО модуля (SRCH-08). Свои карты здесь больше не
-  // живут: они расходились с картами экрана поиска по существу, а не по стилю.
-  const openHit = (h: Hit) => {
-    setPalOpen(false); setPalQ('');
-    navigate(searchHitHref(h.type, h.ref_id));
-  };
-  // Enter ведёт К ЗАПИСИ — и только к ней. Результат поиска обязан приводить к
-  // тому, что нашлось, а не к другому списку результатов.
-  //
-  // Раньше при пустой выдаче Enter уводил на экран поиска: из «ничего не
-  // нашлось» — туда, где не найдётся тем более. Переход ради перехода, который
-  // ещё и закрывал палитру, так что уточнить запрос приходилось заново.
-  // Теперь палитра остаётся открытой и просто говорит, что пусто.
-  const submitSearch = () => {
-    if (!palRows.length) return;
-    openHit(palRows[Math.min(palSel, palRows.length - 1)]);
-  };
+  // Раньше палитра держала собственную выдачу (limit 12, без фасетов и ранга)
+  // рядом с полноценным экраном. Две реализации одного поиска расходились бы
+  // при первой же правке — и уже расходились: счётчик в палитре показывал
+  // размер окна выдачи вместо числа найденного.
 
   const liveDot = { width: 7, height: 7, borderRadius: '50%', background: 'var(--suc)', flexShrink: 0, display: 'inline-block' as const };
   const caret   = { color: 'var(--t3)', fontSize: 10 };
@@ -416,87 +374,36 @@ export default function AppShell() {
         )}
       </header>
 
-      {/* ── Палитра поиска: модалка по «/» или кнопке (доменный поиск по данным) ── */}
-      {palOpen && (
-        <div
-          onMouseDown={e => { if (e.target === e.currentTarget) setPalOpen(false); }}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.48)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '11vh' }}
-        >
-          <div style={{ width: 'min(560px, 92vw)', background: 'var(--bg2)', border: '1px solid var(--bdh)', borderRadius: 12, boxShadow: '0 22px 64px rgba(0,0,0,.55)', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', borderBottom: '1px solid var(--bd)' }}>
-              <span style={{ fontSize: 15 }}>⌕</span>
-              <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--acc)', border: '1px solid var(--acc)', borderRadius: 999, padding: '1px 8px' }}>{t('shell.searchData', 'поиск по данным')}</span>
-              <input
-                autoFocus
-                value={palQ}
-                onChange={e => setPalQ(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); submitSearch(); }
-                  else if (e.key === 'ArrowDown') { e.preventDefault(); setPalSel(i => Math.min(i + 1, palRows.length - 1)); }
-                  else if (e.key === 'ArrowUp')   { e.preventDefault(); setPalSel(i => Math.max(i - 1, 0)); }
-                }}
-                placeholder={t('shell.searchPlaceholder', 'id, название, текст…')}
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 15, color: 'var(--t1)' }}
-              />
-              {palBusy && <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>…</span>}
-            </div>
+      {/* ── Поиск: ЕДИНСТВЕННАЯ поверхность (ADR-LORE-033 D16/D17) ──────────
+          Открывается лупой или «/». Внутри — тот же компонент, что раньше жил
+          отдельным экраном: фасеты, разложенный ранг, разобранное выражение,
+          баннер покрытия, пагинация. Держать рядом бедную палитру и богатый
+          экран значило иметь две двери в одно место, неразличимые на вид.
 
-            {/* Результаты */}
-            <div style={{ maxHeight: '52vh', overflow: 'auto', padding: 5 }}>
-              {palQ.trim().length < 2 && (
-                <div style={{ padding: '14px 10px', fontSize: 12, color: 'var(--t3)' }}>
-                  Введите минимум 2 символа — ищу по ADR, решениям, спринтам, задачам, спекам, ранбукам, документам и QG.
-                </div>
-              )}
-              {palQ.trim().length >= 2 && !palBusy && palRows.length === 0 && (
-                <div style={{ padding: '14px 10px', fontSize: 12, color: 'var(--t3)' }}>Ничего не найдено</div>
-              )}
-              {palRows.map((h, i) => {
-                const on = i === palSel;
-                return (
-                  <button key={`${h.type}:${h.ref_id}:${i}`} type="button"
-                    onMouseEnter={() => setPalSel(i)}
-                    onClick={() => openHit(h)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left',
-                      border: 'none', background: on ? 'var(--bg3)' : 'transparent', color: 'var(--t1)',
-                      fontSize: 13, padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
-                    }}>
-                    <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 6px', flexShrink: 0 }}>
-                      {typeLabel(h.type)}
-                    </span>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)', flexShrink: 0 }}>{h.ref_id}</span>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title ?? ''}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '7px 13px', fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', borderTop: '1px solid var(--bd)' }}>
-              <span>↑↓ выбор</span><span>↵ открыть</span><span>esc закрыть</span>
-              {palTotal > 0 && (
-                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {/* Счётчик говорит, сколько НАШЛОСЬ, и отдельно — сколько показано,
-                      если поместилось не всё. Прежнее «найдено: 12» при трёхстах
-                      попаданиях выдавало размер окна за размер выдачи. */}
-                  <span>найдено: {palTotal}{palTotal > palRows.length && ` · показаны ${palRows.length}`}</span>
-                  {/* Ссылка на полную выдачу появляется, ТОЛЬКО когда есть что
-                      показывать сверх поместившегося. Постоянная кнопка «все
-                      результаты» была бы второй дверью в поиск — тем самым, от
-                      чего ушли в D16. */}
-                  {palTotal > palRows.length && (
-                    <button type="button"
-                      onClick={() => { const q = palQ.trim(); setPalOpen(false); setPalQ(''); navigate(searchScreenHref(q)); }}
-                      style={{ font: 'inherit', color: 'var(--acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      все с фасетами →
-                    </button>
-                  )}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+          Mantine Modal, а не свой оверлей (ADR-LORE-034): focus trap, возврат
+          фокуса на кнопку при закрытии, Escape, блокировка прокрутки фона и
+          role="dialog" приходят готовыми. Прежний самодельный оверлей ничего
+          из этого не делал — в проекте не было НИ ОДНОГО role="dialog". */}
+      <Modal
+        opened={palOpen}
+        onClose={() => { setPalOpen(false); setPalQ(''); }}
+        size="900px"
+        title={t('shell.searchData', 'поиск по данным')}
+        overlayProps={{ backgroundOpacity: 0.6, blur: 2 }}
+        styles={{ body: { maxHeight: '78vh', overflowY: 'auto' } }}
+      >
+        {/* key монтирует поиск заново на каждое открытие: иначе он показывал бы
+            выдачу прошлого запроса до первого ввода — то есть отвечал бы на
+            вопрос, которого сейчас не задавали. */}
+        {palOpen && (
+          <LoreSearchScreen
+            key={palQ ? 'seeded' : 'fresh'}
+            autoFocus
+            initialQuery={palQ}
+            onNavigated={() => { setPalOpen(false); setPalQ(''); }}
+          />
+        )}
+      </Modal>
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Outlet />

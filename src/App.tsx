@@ -11,10 +11,22 @@ import ReferencesPage from './pages/ReferencesPage';
 import BragiPage from './pages/BragiPage';
 import HuginnPage from './pages/HuginnPage';
 import TyrPage from './pages/TyrPage';
+import { MantineProvider } from '@mantine/core';
+import { mantineTheme } from './ui/mantineTheme';
+// Порядок импортов значим: стили Mantine идут ПЕРЕД tokens.css, чтобы наши
+// токены оставались последним словом. Обратный порядок отдал бы победу
+// библиотеке — той самой лотереей «кто позже в бандле», из-за которой TYR уже
+// не получает своих шрифтов (STYLE-01, п. 1).
+import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 import './styles/tokens.css';
 
 export default function App() {
   return (
+    // forceColorScheme="dark": светлой темы у LORE нет, а Mantine по умолчанию
+    // слушает системную. Без этого модалка у пользователя со светлой ОС
+    // приезжала бы белой поверх тёмного интерфейса.
+    <MantineProvider theme={mantineTheme} forceColorScheme="dark">
     <BrowserRouter>
       <AuthGate>
         <Routes>
@@ -34,5 +46,6 @@ export default function App() {
         </Routes>
       </AuthGate>
     </BrowserRouter>
+    </MantineProvider>
   );
 }
