@@ -146,7 +146,11 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
     const all = [...new Set([...seen, ...types])];
     return all
       .sort((a, b) => (counts?.by_type?.[b] ?? 0) - (counts?.by_type?.[a] ?? 0))
-      .map(v => ({ value: v, label: typeLabel(v) }));
+      // Цвет тот же, что у чипа этого типа в выдаче (`typeHue`). Фасет и
+      // результат — про одно и то же, и разный цвет у одинаковой сущности
+      // заставляет сверять их текстом: глаз ищет «ADR» глазами вместо того,
+      // чтобы поймать синий. Источник цвета один — searchRoutes.
+      .map(v => ({ value: v, label: typeLabel(v), color: typeHue(v) }));
   }, [counts, types]);
 
   const compOptions: FilterOption[] = useMemo(() => {

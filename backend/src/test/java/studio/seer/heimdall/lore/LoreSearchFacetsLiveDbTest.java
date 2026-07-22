@@ -9,6 +9,8 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
 import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
@@ -51,6 +53,42 @@ class LoreSearchFacetsLiveDbTest {
         post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_FB\",\"name\":\"фасеты бета контекст\"}");
         post("/lore/sprint/project", "{\"sprint_id\":\"SPRINT_FA\",\"git_project\":\"acme/alpha\"}");
         post("/lore/sprint/project", "{\"sprint_id\":\"SPRINT_FB\",\"git_project\":\"acme/beta\"}");
+        // Компонент нужен для оси «компонент» — без привязки её нечем проверять.
+        post("/lore/sprint/link", "{\"sprint_id\":\"SPRINT_FA\",\"rel\":\"component\",\"target_id\":\"OMILORE\"}");
+    }
+
+    /**
+     * Ось КОМПОНЕНТА считается — и это не дубль соседнего теста, а страховка от
+     * того, КАК поломка пряталась.
+     *
+     * `by_component` был пуст всегда: агрегация читала `comp_direct`, тогда как
+     * `queryBranch` уже переименовал поле в `components` (через shapeHit). Ось
+     * не показывала ни одного чипа — фильтровать по компоненту было нечем.
+     *
+     * Не замечали потому, что СОСЕДНЯЯ ось работала: `by_project` добавился
+     * позже и сразу читал новое имя. Проекты на экране были, и пустой
+     * «компонент» читался как «у этих записей нет компонента», а не как отказ.
+     *
+     * Поэтому проверяется СВЯЗКА: если у хитов компоненты есть, агрегат обязан
+     * быть непустым. Проверка «by_component != null» такую поломку пропустила
+     * бы — пустая карта не null.
+     */
+    @Test
+    @Order(2)
+    void byComponentIsCountedWhenHitsHaveComponents() {
+        var res = given().header("X-Seer-Role", "admin").queryParam("q", "фасеты")
+            .when().get("/lore/search").then().statusCode(200).extract();
+
+        java.util.List<java.util.List<String>> hitComps = res.path("hits.components");
+        boolean anyHitHasComponent = hitComps != null
+            && hitComps.stream().anyMatch(c -> c != null && !c.isEmpty());
+        java.util.Map<String, Object> byComponent = res.path("by_component");
+
+        assertNotNull(byComponent, "by_component обязан присутствовать всегда");
+        if (anyHitHasComponent) {
+            assertFalse(byComponent.isEmpty(),
+                "у хитов есть компоненты, а агрегат пуст — ось не заполняется");
+        }
     }
 
     /** Ось проекта приходит С СЕРВЕРА и считается по всей выборке ветки. */
