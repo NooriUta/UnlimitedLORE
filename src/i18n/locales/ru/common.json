@@ -1292,7 +1292,8 @@
       },
       "typeCounts": {
         "ariaLabel": "Задачи по типам (мультивыбор)"
-      }
+      },
+      "metaToggle": "Контекст и привязки"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID обязателен",

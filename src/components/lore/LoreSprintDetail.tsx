@@ -949,6 +949,23 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const metaDragRef = useRef<{ x: number; w: number } | null>(null);
   const [topBlockH, setTopBlockH] = useState(220);
   const topDragRef = useRef<{ y: number; h: number } | null>(null);
+
+  /**
+   * MOB-13: на узком экране блок метаданных СВЁРНУТ по умолчанию.
+   *
+   * Причина отказа: `topBlockH` (220px) стоит на ОБЕИХ половинах верхнего
+   * блока, а на narrow они стакаются вертикально — то есть до ~440px занято
+   * контекстом и привязками ещё до первой задачи. Ручка, которой этот блок
+   * сжимают, отрисована только на широком, поэтому уменьшить его на телефоне
+   * было нечем: список задач просто уходил за нижнюю кромку. В ландшафте
+   * высоты ещё меньше — отсюда «не видны ни в каком положении».
+   *
+   * Свернуть, а не уменьшить: на 375px даже 220px — это весь первый экран.
+   * Паспорт спринта открывают ради задач; контекст и привязки нужны реже и
+   * доступны одним нажатием.
+   */
+  const [metaOpen, setMetaOpen] = useState(!narrow);
+  useEffect(() => { setMetaOpen(!narrow); }, [narrow]);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
 
   // Drag-resize the right meta column (projects/milestones/modules/ADR) — same
@@ -1321,7 +1338,24 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       {/* ── Top meta block: context (left) + projects/milestones/modules (right) ──
           Narrow: stack context above meta (side-by-side squishes context to
           one-word-per-line at 375px). */}
-      <div style={{ display: 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+      {/* MOB-13: на узком — переключатель, открывающий метаданные. Без него
+          блок занимал первый экран целиком, и задачи были не видны вовсе. */}
+      {narrow && (
+        <button type="button" onClick={() => setMetaOpen(o => !o)}
+          aria-expanded={metaOpen}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '7px 14px', border: 'none', borderBottom: '1px solid var(--bd)',
+            background: 'var(--bg1)', color: 'var(--t2)', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' as const,
+            letterSpacing: '0.05em', fontWeight: 700,
+          }}>
+          <span style={{ color: 'var(--t3)' }}>{metaOpen ? '▾' : '▸'}</span>
+          {t('lore.sprintDetail.metaToggle', 'Контекст и привязки')}
+        </button>
+      )}
+
+      <div style={{ display: narrow && !metaOpen ? 'none' : 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
 
       {/* CONTEXT — left, flexible. maxHeight+overflow caps its growth so a long
           context_md can never crowd out the task list below (both this block and

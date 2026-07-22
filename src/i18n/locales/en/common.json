@@ -1292,7 +1292,8 @@
       },
       "typeCounts": {
         "ariaLabel": "Tasks by type (multi-select)"
-      }
+      },
+      "metaToggle": "Context and links"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID is required",
