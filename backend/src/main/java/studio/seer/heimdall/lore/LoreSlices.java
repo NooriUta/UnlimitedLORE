@@ -109,7 +109,13 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " +
             "out('SUPERSEDES').adr_id             AS supersedes_ids, " +
             "out('TAGGED_WITH').tag_id            AS tags, " +
-            "out('BELONGS_TO_PROJECT').slug       AS git_projects " + // ADRPROJ-01
+            "out('BELONGS_TO_PROJECT').slug       AS git_projects, " + // ADRPROJ-01
+            // PL-19: обратные рёбра. Паспорт ADR показывал только исходящие
+            // связи, и «на что этот ADR влияет» читалось лишь с другой стороны —
+            // открыв каждый сценарий и каждую задачу. Прослеживаемость обязана
+            // читаться в обе стороны от точки, где стоишь.
+            "in('TRACED_TO').uc_id                AS traced_by_ucs, " +    // сценарии, ссылающиеся на ADR (D9)
+            "in('JUSTIFIED_BY').task_uid          AS justified_task_uids " + // enb-задачи, обоснованные им (PL-14)
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -227,14 +233,12 @@ public final class LoreSlices {
             "FROM KnowSprint",
             List.of(),
             // ADR-LORE-017 (T16): optional `project` filter — Tier 1 (Sprint has a direct
-            // BELONGS_TO_PROJECT edge) read-scoping. KNOWN LIMITATION: compose() appends
-            // every supplied optional filter's raw SQL fragment in registration order with
-            // no AND-joining (see LoreSlices.compose()) — every slice in this file has
-            // exactly one active optional filter by convention, so this has never mattered
-            // before. Passing BOTH status AND project on this slice in the same call would
-            // concatenate two "WHERE" clauses into invalid SQL. Not fixed here (would touch
-            // all 10 existing optionalFilters registrations); flagged for whoever adds a
-            // second simultaneously-usable filter to any slice.
+            // BELONGS_TO_PROJECT edge) read-scoping.
+            //
+            // Прежнее ограничение СНЯТО (2026-07-21): compose() больше не
+            // склеивает фрагменты встык, а нормализует связку (WHERE для
+            // первого условия, AND для последующих). status и project можно
+            // передавать вместе — до этого такая пара давала 500.
             new LinkedHashMap<>(Map.of(
                 "status", " WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] LIKE :status",
                 "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
@@ -349,6 +353,10 @@ public final class LoreSlices {
         slice("features",
             "SELECT uc_id, title, body_md, context_md, status, component_id, date_created, " +
             "goal_level, shipped_at, parent_uc_id, " +
+            // PL-10: компоненты и проекты — рёбрами, а не плоским component_id.
+            // Плоское поле не давало ни множественности, ни проектной оси.
+            "out('BELONGS_TO').component_id      AS component_ids, " +
+            "out('BELONGS_TO_PROJECT').slug     AS projects, " +
             "out('DECOMPOSES_INTO').uc_id AS uc_ids, " +
             "out('DECOMPOSES_INTO').size() AS uc_total, " +
             "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS uc_shipped, " +
@@ -365,8 +373,28 @@ public final class LoreSlices {
             "FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite']",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " AND component_id = :component")),
+                // PL-19: фильтр по РЕБРУ, а не по плоскому component_id. С PL-10
+                // привязка живёт на BELONGS_TO, и сравнение с полем прятало
+                // записи, привязанные ребром: фильтр отдавал пусто, и это
+                // читалось как «у компонента нет корней».
+                // CONTAINS, а не [0]: привязок может быть несколько, а порядок
+                // рёбер — это порядок вставки, не приоритет (AKI).
+                "component", " AND out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY uc_id");
+
+        // PL-19: «Сценарии компонента» — ВСЕ уровни, а не только корни.
+        //
+        // Отдельный слайс, а не параметр у `features`: тот по построению режет
+        // выдачу до cloud|kite, и вкладка компонента показывала бы корни без
+        // сценариев, которыми они сделаны — половину ответа на вопрос «что этот
+        // компонент закрывает».
+        slice("use_cases_of_component",
+            "SELECT uc_id, title, status, goal_level, rigor, parent_uc_id, " +
+            "out('BELONGS_TO').component_id AS component_ids, " +
+            "in('REALIZES').task_uid        AS task_uids " +
+            "FROM KnowUseCase WHERE out('BELONGS_TO').component_id CONTAINS :component " +
+            "ORDER BY goal_level, uc_id",
+            List.of("component"), Map.of(), "");
 
         // Дочерние сценарии корня. Источник истины — ребро DECOMPOSES_INTO;
         // parent_uc_id рядом с ним денормализация для индекса, а не вторая правда.
@@ -375,6 +403,12 @@ public final class LoreSlices {
             // ADR-027 (D1/§2): классификация Коберна — уровень цели, вес оформления,
             // приоритет; shipped_at ставит система (ADR-029 §2).
             "goal_level, rigor, priority, shipped_at, " +
+            // PL-10 (D14): компонент у сценария ПРЯМОЙ; наследование от родителя
+            // отдаётся отдельным полем, чтобы «свой» и «унаследованный» не
+            // склеивались в один список и тройка RBAC не врала.
+            "out('BELONGS_TO').component_id                      AS component_ids, " +
+            "in('DECOMPOSES_INTO').out('BELONGS_TO').component_id AS inherited_component_ids, " +
+            "out('BELONGS_TO_PROJECT').slug                     AS projects, " +
             // ADR-032 D5: что этот UC реально снимает/создаёт — правая половина VP-канвы.
             "out('RELIEVES').pain_id AS relieves_pain_ids, " +
             "out('DELIVERS').gain_id AS delivers_gain_ids, " +
@@ -437,6 +471,9 @@ public final class LoreSlices {
         // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
         slice("actors",
             "SELECT actor_id, name, kind, body_md, " +
+            // D18: актор проектный — иначе одноимённые роли разных продуктов
+            // склеиваются в одну строку RBAC-матрицы.
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('HAS_ACTOR').uc_id AS uc_ids, " +
             "in('HAS_ACTOR').size() AS uc_count " +
             "FROM KnowActor",
@@ -452,12 +489,28 @@ public final class LoreSlices {
             "FROM KnowAsset WHERE inE('ATTACHED_TO').size() = 0",
             List.of(), new LinkedHashMap<>(), " ORDER BY created_at");
 
+        // D16: в сценарии виден список задач СО СПРИНТОМ И ЕГО СТАТУСОМ — чтобы
+        // «доехало ли» читалось прямо здесь, без перехода в спринт. Раньше слайс
+        // отдавал статус ЗАДАЧИ и голый sprint_id: увидеть, что задача закрыта, а
+        // спринт ещё нет (или наоборот — отменён), было нельзя.
         slice("tasks_of_uc",
             "SELECT task_uid, task_id, title, task_type, work_class, " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
-            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS sprint_status_raw, " +
+            // Обоснование enb-задачи (JUSTIFIED_BY) — ребро было мёртвым до PL-14.
+            "out('JUSTIFIED_BY').adr_id AS justified_by_adr_ids " +
             "FROM KnowTask WHERE out('REALIZES').uc_id CONTAINS :id ORDER BY task_uid",
             List.of("id"), Map.of(), "");
+
+        // Зеркало дисциплины D16 для второго класса: enb-задача обязана нести
+        // JUSTIFIED_BY. Advisory, как и unlinked_uc_tasks — список нарушений,
+        // а не гейт записи (гейт задушил бы ввод, TOC-раздел ADR-022).
+        slice("unlinked_enb_tasks",
+            "SELECT task_uid, task_id, title, work_class, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask WHERE work_class = 'enb' AND out('JUSTIFIED_BY').size() = 0 " +
+            "ORDER BY task_uid",
+            List.of(), Map.of(), "");
 
         // Обзор дисциплины (D3): uc-задачи без REALIZES — advisory, не ошибка.
         slice("unlinked_uc_tasks",
@@ -517,8 +570,17 @@ public final class LoreSlices {
         // (в FT_INDEXES из QUALITY-скоупа только прогоны/рекомендации);
         // добавление индекса = новый шаг миграции, не в этой задаче.
         // Ранжирования здесь нет по построению ($score теряется в unionall) —
-        // релевантность отдаёт /lore/search (SRCH-05), слайс остаётся плоским
-        // списком для палитры/автокомплита до перевода потребителей.
+        // релевантность отдаёт /lore/search (SRCH-05).
+        //
+        // ДЕПРЕЦИРОВАН (SRCH-08, 2026-07-21). Последний потребитель внутри
+        // приложения — палитра шапки — переведён на GET /lore/search; в `src/`
+        // вызовов этого слайса не осталось ни одного.
+        //
+        // Оставлен, а не удалён, СОЗНАТЕЛЬНО. ADR-LORE-033 обещал снять его
+        // «после перевода потребителей», но потребители бывают и снаружи —
+        // шлюз, скрипты, чужие сессии. Тихо отобранный эндпоинт — худший способ
+        // узнать о зависимости: она проявится 404-ом у того, кто про эту правку
+        // не знал. Удаление — отдельным шагом, после проверки логов обращений.
         slice("search",
             "SELECT DISTINCT type, ref_id, title FROM " +
             "(SELECT expand(unionall($a, $ah, $s, $sh, $p, $ph, $t, $th, $q, $r, $rh, $d, $c, $qn, $u, $pn, $gn, $jb, $ac)) LET " +
@@ -1142,10 +1204,47 @@ public final class LoreSlices {
         }
 
         StringBuilder sql = new StringBuilder(def.baseSql());
+        // Склейка нескольких одновременных фильтров.
+        //
+        // Раньше фрагменты просто дописывались подряд, а каждый нёс СВОЁ
+        // « WHERE » — два фильтра сразу давали «… WHERE a WHERE b», то есть
+        // невалидный SQL и 500 у вызывающего. Ограничение было известно и
+        // задокументировано у слайса `sprints`, но обходилось соглашением
+        // «по одному активному фильтру на слайс» — до первого, кто передаст
+        // status и project вместе (поймано 2026-07-21 на шлюзе).
+        //
+        // Здесь связка нормализуется в одном месте: у фрагмента отрезается
+        // ведущее WHERE/AND, а соединитель выбирается по факту — WHERE, если
+        // условий ещё не было, иначе AND. Так десять существующих регистраций
+        // остаются нетронутыми в обеих формах написания.
+        boolean hasWhere = containsWhere(def.baseSql());
         for (Map.Entry<String, String> opt : def.optionalFilters().entrySet()) {
-            if (given.containsKey(opt.getKey())) sql.append(opt.getValue());
+            if (!given.containsKey(opt.getKey())) continue;
+            String frag = stripLeadingConnector(opt.getValue());
+            if (frag.isEmpty()) continue;
+            sql.append(hasWhere ? " AND " : " WHERE ").append(frag);
+            hasWhere = true;
         }
         sql.append(def.suffix());
         return new Composed(sql.toString(), params);
+    }
+
+    /**
+     * Есть ли в базовом запросе собственное условие. Скобки и строковые
+     * литералы не разбираем: слайсы — наш код, а не пользовательский ввод, и
+     * ни один из них не содержит слова WHERE внутри литерала. Если такой
+     * появится, честнее будет завести ему явный флаг, чем городить парсер.
+     */
+    private static boolean containsWhere(String sql) {
+        return sql.toUpperCase(java.util.Locale.ROOT).contains(" WHERE ");
+    }
+
+    /** Отрезает ведущее WHERE/AND у фрагмента фильтра, оставляя само условие. */
+    private static String stripLeadingConnector(String fragment) {
+        String s = fragment == null ? "" : fragment.trim();
+        String upper = s.toUpperCase(java.util.Locale.ROOT);
+        if (upper.startsWith("WHERE ")) return s.substring(6).trim();
+        if (upper.startsWith("AND "))   return s.substring(4).trim();
+        return s;
     }
 }

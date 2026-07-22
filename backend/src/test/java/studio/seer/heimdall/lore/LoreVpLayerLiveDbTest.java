@@ -41,7 +41,7 @@ class LoreVpLayerLiveDbTest {
     @Test
     @Order(1)
     void vpCanvasIsAssembledFromEdges() {
-        post("/lore/feature", "{\"feature_id\":\"FEAT-VP\",\"title\":\"Фича с ценностью\",\"status\":\"active\"}");
+        post("/lore/feature", "{\"feature_id\":\"FEAT-VP\",\"title\":\"Фича с ценностью\"}");
         post("/lore/actor", "{\"actor_id\":\"ACT-VP-AGENT\",\"name\":\"Агент\",\"kind\":\"agent\"}");
         post("/lore/pain", "{\"pain_id\":\"PAIN-VP-TOKEN\",\"title\":\"Сырые токены у агента\",\"severity\":\"high\"}");
         post("/lore/gain", "{\"gain_id\":\"GAIN-VP-LINKED\",\"title\":\"Связный граф релизов\","

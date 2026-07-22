@@ -1,0 +1,757 @@
+<!doctype html><html><head><!-- frame-runtime --><script>window.__FRAME_PREAMBLE={"capabilities":{"downloads":"downloads.BABDwU1K.js","mcp":"mcp.hoz5jxDa.js","permissions":"permissions.ByA9Fd8x.js","self":"self.D3u1zjZe.js","user":"user.Cp1-RnjB.js"},"transforms":"_transforms.DYk1Ltlh.js","comments":"_comments.Dp6RDy7J.js","translate":"_translate.B0Uk6lS7.js"}</script><script>(function(){"use strict";const we="modulepreload",Oe=function(e){return"/"+e},Se={},ee=function(t,n,c){let i=Promise.resolve();function s(f){const a=new Event("vite:preloadError",{cancelable:!0});if(a.payload=f,window.dispatchEvent(a),!a.defaultPrevented)throw f}return i.then(f=>{for(const a of f||[])a.status==="rejected"&&s(a.reason);return t().catch(s)})},te=["light","dark","system"];function ne(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_init;return t!==null&&typeof t=="object"}function Y(e){return e!==null&&typeof e=="object"&&e.__frame_size_poke===!0}function re(e){if(e===null||typeof e!="object")return!1;const t=e.__frame_theme;if(t===null||typeof t!="object")return!1;const n=t.theme;return typeof n=="string"&&te.includes(n)}function se(e){try{typeof reportError=="function"?reportError(e):setTimeout(()=>{throw e},0)}catch{}}const oe=Object.freeze(Object.assign(Object.create(null),{user:Object.freeze(Object.assign(Object.create(null),{id:null,isOwner:!1,canEdit:!1,name:null,avatarUrl:null,email:null}))})),ie={};function K(e){if(window===top||e.type==="auxclick"&&e.button!==1)return;const t=e.composedPath?e.composedPath():[e.target];let n=null;for(let f=0;f<t.length;f++){const a=t[f];if(a&&a.matches&&a.matches("a[href],area[href]")){n=a;break}}if(!n&&e.target&&e.target.closest&&(n=e.target.closest("a[href],area[href]")),!n)return;const c=n.getAttribute("href");if(!c)return;let i,s;try{i=new URL(c,document.baseURI),s=new URL(document.baseURI).origin}catch{return}(i.protocol==="http:"||i.protocol==="https:")&&i.origin!==s&&(e.preventDefault(),parent.postMessage({__frame_nav:!0,url:i.href},"*"))}const x={};function I(e){if(window===top)return;const t=Date.now();t-(x[e]||0)<500||(x[e]=t,parent.postMessage({__frame_engaged:!0,kind:e},"*"))}const ae=2e3,J=["wheel","touchstart","touchmove","keydown","pointerdown"];let G=0;function ce(e){e.isTrusted&&(G=Date.now())}function le(){addEventListener("click",K,!0),addEventListener("auxclick",K,!0)}function ue(){for(let e=0;e<J.length;e++)addEventListener(J[e],ce,{capture:!0,passive:!0});addEventListener("scroll",e=>{e.isTrusted&&Date.now()-G<ae&&I("scroll")},{capture:!0,passive:!0}),addEventListener("pointermove",e=>{e.isTrusted&&I("pointer")},{capture:!0,passive:!0}),addEventListener("click",e=>{e.isTrusted&&I("click")},{capture:!0,passive:!0})}const U="__frame_scroll",fe=150,de=310,pe=160,me=3e4;function he(){let e=0,t=!1,n=!1,c=!1,i=0;const s=p=>{try{sessionStorage.setItem(U,JSON.stringify({y:p}))}catch{}},f=()=>{if(t){t=!1;return}n=!0,clearTimeout(e),e=setTimeout(()=>s(scrollY),fe)};try{addEventListener("scroll",f,{passive:!0}),addEventListener("pagehide",()=>{clearTimeout(e),s(scrollY)})}catch{}const a=()=>{let p;try{p=sessionStorage.getItem(U)}catch{return null}if(p===null)return null;let b;try{b=JSON.parse(p)}catch{b=null}const l=b?.y;if(!(typeof l=="number"&&Number.isFinite(l)&&l>=0)){try{sessionStorage.removeItem(U)}catch{}return null}return l};let _=!1;const h=p=>{try{const b=scrollY;scrollTo({top:p,left:0,behavior:"instant"}),i=p,c=!0,s(p);const l=scrollY;l!==b&&(t=!0),l!==p&&!_&&(_=!0,addEventListener("load",()=>{try{if(scrollY===l){const g=a();h(g!==null?g:i)}}catch{}},{once:!0}))}catch{}},o=()=>{try{return!!location.hash}catch{return!0}};let u=!1;const d=()=>{try{if(u||innerWidth>de||innerHeight>pe)return;u=!0;const p=Date.now(),b=()=>{try{removeEventListener("resize",b)}catch{}if(Date.now()-p>me||n||o())return;const l=a();h(l!==null?l:i)};addEventListener("resize",b)}catch{}};let m=!1,y=!1;return{restore(){if(m||(m=!0,o()))return;const p=a();p!==null&&(h(p),d())},promoted(){if(y||(y=!0,o()))return;const p=a();p!==null?(h(p),d()):c&&h(i)}}}function ge(e,t,n){const c=[...t.values()].filter(i=>i.targets.some(s=>s.startsWith(e+".")));return{wrap(i,s){const f=`${e}.${i}`,a=c.filter(_=>_.targets.includes(f));return a.length===0?(..._)=>{try{return s(..._)}catch(h){return Promise.reject(h)}}:(..._)=>{let h=_;for(const u of a){const d=u.module.parameters;if(d)try{h=d(h)}catch{return Promise.reject({code:"transform_error",id:u.id,scope:e,message:"parameters transform failed"})}}let o;try{o=s(...h)}catch(u){o=Promise.reject(u)}return o.then(u=>{for(let d=a.length-1;d>=0;d--){const m=a[d],y=m.module.returns;if(y)try{u=y(u)}catch{return n({id:m.id,scope:e,leg:"returns"}),u}}return u},u=>{for(let d=a.length-1;d>=0;d--){const m=a[d],y=m.module.throws;if(y)try{u=y(u)}catch{return n({id:m.id,scope:e,leg:"throws"}),Promise.reject(u)}}return Promise.reject(u)})}}}}function _e(e,t,n,c=()=>{}){const i=new Set(e.changes??[]),s=new Map;for(const f of i){const a=t[f];a&&s.set(f,a)}return{contract:e.contract,changes:i,flags:new Set(e.flags??[]),capabilities:e.capabilities??{},capBudgets:e.capBudgets??{},transforms:s,shellOrigin:n.shellOrigin,mount:n.mount,pipe:f=>ge(f,s,c)}}(function(){const e=Object.defineProperty,t=globalThis,n=["RTCPeerConnection","webkitRTCPeerConnection","RTCDataChannel","RTCIceCandidate","RTCSessionDescription","RTCRtpSender","RTCRtpReceiver"];let c=0;for(let i=0;i<n.length;i++){const s=n[i];try{e(t,s,{value:void 0,writable:!1,configurable:!1})}catch{try{delete t[s]}catch{}try{e(t,s,{value:void 0,writable:!1,configurable:!0})}catch{}}typeof t[s]=="function"&&c++}if(c&&window!==top)try{parent.postMessage({__frame_rtc_lockdown_failed:c},"*")}catch{}})();const ye=1e4,be=Object.freeze([...window.__FRAME_PREAMBLE?.origins??["https://claude.ai","https://preview.claude.ai"]]);function V(e){for(const t of be)if(t.endsWith(":*"))try{const n=new URL(e);if(`${n.protocol}//${n.hostname}:*`===t)return!0}catch{}else if(e===t)return!0;return!1}const T=Object.freeze({...window.__FRAME_PREAMBLE?.capabilities}),z=window.__FRAME_PREAMBLE?.transforms,q=window.__FRAME_PREAMBLE?.comments,$=window.__FRAME_PREAMBLE?.translate,C=/^[\w.-]+\.js$/,ve=/^[a-z][a-z0-9_-]{0,63}$/;let X=null,P=null;function B(e,t,n){try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!1,enumerable:!0})}catch{try{Object.defineProperty(e,t,{value:n,writable:!1,configurable:!0,enumerable:!0})}catch{}}}let F=!1;function Q(e){const t=document.documentElement;e==="light"||e==="dark"?(t.dataset.theme=e,t.style.colorScheme=e,F=!0):F&&(delete t.dataset.theme,t.style.colorScheme="",F=!1)}const M=Object.assign(Object.create(null),{mcp:Object.assign(Object.create(null),{watchTool:{handlerArg:3}})}),R=new Map;function Z(e,t){const n=R.get(e);if(!n)return;const c=Object.assign(Object.create(null),t);Object.assign(n.impl,c),n.impl.__settled=()=>Promise.reject({code:"capability_removed",message:`${e}: method not in this runtime`});const i=n.queue;n.queue=[];for(const s of i){const f=c[s.method];if(f)if(M[e]?.[s.method])try{s.resolve(f(...s.args))}catch{k(s,M[e][s.method].handlerArg,{code:"transform_error",message:`${e}.${s.method} rejected its arguments`})}else f(...s.args).then(s.resolve,s.reject);else{const a={code:"capability_removed",message:`${e}.${s.method} is not in this runtime`},_=M[e]?.[s.method];if(_){k(s,_.handlerArg,a);continue}s.reject(a)}}}function Ee(e,t){const n=R.get(e);if(!n)return;n.impl.__settled=()=>Promise.reject(t);const c=n.queue;n.queue=[];for(const i of c){const s=M[e]?.[i.method];if(s){k(i,s.handlerArg,t);continue}i.reject(t)}}function N(e,t){const n=oe[e];if(!n){Ee(e,t);return}Z(e,Object.fromEntries(Object.entries(n).map(([c,i])=>[c,()=>Promise.resolve(i)])))}function k(e,t,n){if(e.syncState?.dead)return;const c=e.args[t];typeof c=="function"&&queueMicrotask(()=>{if(!e.syncState?.dead)try{c({type:"error",error:n})}catch(i){se(i)}})}const H=Object.getOwnPropertyDescriptor(window,"claude");if(window!==top&&!(H&&H.writable===!1)){le(),ue();let e=null;try{e=he()}catch{}const t=H?.value??{};B(window,"claude",t);const n=o=>{const u={impl:Object.create(null),queue:[]};R.set(o,u);const d=u.impl,m=ie[o],y=m===void 0?d:()=>{},p=new Proxy(y,{apply:(b,l,g)=>{const v=m,O=d[v]??d.__settled;return O?O(...g):new Promise((E,w)=>{u.queue.push({method:v,args:g,resolve:E,reject:w})})},get:(b,l)=>{if(typeof l!="string"||l==="then"||l==="toJSON"||l==="valueOf")return;if(l==="toString")return Object.prototype.toString;if(m!==void 0&&(l==="call"||l==="apply"||l==="bind"))return Function.prototype[l];const g=M[o]?.[l];return g?(...v)=>{if(typeof v[g.handlerArg]!="function")throw new TypeError(`${o}.${l} requires a handler function`);const O=d[l];if(O)return O(...v);if(d.__settled){const S={dead:!1},A={args:[...v],syncState:S};return d.__settled().catch(D=>k(A,g.handlerArg,D)),()=>{S.dead=!0}}let E=null;const w={dead:!1};return u.queue.push({method:l,args:v,resolve:S=>{E=typeof S=="function"?S:null,w.dead&&E?.()},reject:()=>{},syncState:w}),()=>{w.dead=!0,E?.()}}:(...v)=>{const O=d[l]??d.__settled;return O?O(...v):new Promise((E,w)=>{u.queue.push({method:l,args:v,resolve:E,reject:w})})}},set:()=>!1});B(t,o,p)};for(const o of Object.keys(T)){if(t[o]!==void 0){B(t,o,t[o]);continue}n(o)}let c=null,i=null,s=0;const f=o=>{o.source!==parent||!V(o.origin)||ne(o.data)&&(c=o.data.__frame_init,P=o.origin,removeEventListener("message",f),clearTimeout(s),i?.())};addEventListener("message",f),parent.postMessage({__frame_connect:!0},"*");const a=new Promise(o=>{i=o,s=setTimeout(()=>{removeEventListener("message",f),o()},ye)}),_=document.readyState==="loading"?new Promise(o=>document.addEventListener("DOMContentLoaded",()=>o(),{once:!0})):Promise.resolve();_.then(()=>{try{e?.restore()}catch{}});const h=o=>{if(!(o.source!==parent||!V(o.origin))&&Y(o.data)){removeEventListener("message",h);try{e?.promoted()}catch{}}};addEventListener("message",h),a.then(async()=>{if(!c||!P){for(const r of R.keys())N(r,{code:"not_granted",message:"frame initialization did not arrive - capability unavailable"});return}Q(c.theme);const o=P;let u=!1,d=!1;addEventListener("message",r=>{if(r.source!==parent||r.origin!==o)return;re(r.data)&&Q(r.data.__frame_theme.theme);const j=r.data?.__fc_mode;j&&typeof j=="object"&&!u&&q&&C.test(q)&&(u=!0,m(q).then(W=>W.install?.(o,j.on===!0)).catch(()=>{}));const L=r.data?.__ft_cmd;L&&typeof L=="object"&&!d&&$&&C.test($)&&(d=!0,m($).then(W=>W.install?.(o,L)).catch(()=>{}))});const m=r=>ee(()=>import("/_runtime/"+r),void 0),y=Object.keys(c.capabilities??{});for(const r of y)Object.hasOwn(T,r)||ve.test(r)&&t[r]===void 0&&(n(r),N(r,{code:"capability_disabled",message:"capability not in this runtime generation"}));const p=y.filter(r=>Object.hasOwn(T,r)).map(r=>[r,T[r]]).filter(r=>typeof r[1]=="string"&&C.test(r[1])),[b,...l]=await Promise.allSettled([z&&C.test(z)?m(z):Promise.resolve({}),...p.map(([,r])=>m(r))]),g=P;X=_e(c,b.status==="fulfilled"&&b.value?.TRANSFORMS||{},{shellOrigin:g,mount:Z},r=>parent.postMessage({__frame_cap_telemetry:r},g));const v=r=>parent.postMessage({__frame_cap_telemetry:{kind:"cap-load-error",cap:r}},g),O=X;l.forEach((r,j)=>{const L=p[j][0];if(r.status!=="fulfilled"){v(L);return}try{r.value?.install?.(O)}catch{v(L)}});for(const[r,j]of R)if(!(j.queue.length===0&&Object.keys(j.impl).length>0)){if(y.includes(r)){N(r,{code:"capability_disabled",message:"capability not available in this session"});continue}N(r,{code:"not_granted",message:"capability not available in this session"})}await _,parent.postMessage({__frame_ready:!0},P);let E=-1,w=0;const S=()=>{w=0;const r=Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0);r!==E&&(E=r,parent.postMessage({__frame_size:!0,h:r},g))},A=()=>{w||(w=setTimeout(S,200))},D=new ResizeObserver(A);D.observe(document.documentElement),document.body&&D.observe(document.body),document.addEventListener("load",A,!0),document.fonts?.ready.then(A,()=>{}),addEventListener("beforeprint",()=>{E=-1,S()}),A(),addEventListener("message",r=>{if(!(r.source!==parent||r.origin!==g)&&Y(r.data)){try{e?.promoted()}catch{}E=-1,A()}})})}})();</script><!-- /frame-runtime --><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>Admin LORE — прототип</title>
+<style>
+  :root {
+    --bg0:#141108; --bg1:#1C1810; --bg2:#252019; --bg3:#302A20;
+    --bd:#42382A; --bdh:#584C38;
+    --t1:#EDE5D0; --t2:#9A8C6E; --t3:#665C48;
+    --acc:#A8B860; --suc:#7DBF78; --wrn:#D4922A; --inf:#88B8A8; --dng:#C85848;
+    --on-accent:#fff;
+    --font: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', monospace;
+    --r:6px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg0:#F3EFE4; --bg1:#EAE4D5; --bg2:#E1DAC7; --bg3:#D6CDB6;
+      --bd:#C6BB9F; --bdh:#A99C7C;
+      --t1:#2A2418; --t2:#6B6046; --t3:#8C8164;
+      --acc:#6E7D2A; --suc:#3E7C3A; --wrn:#9A6410; --inf:#3E7263; --dng:#A33526;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg0:#F3EFE4; --bg1:#EAE4D5; --bg2:#E1DAC7; --bg3:#D6CDB6;
+    --bd:#C6BB9F; --bdh:#A99C7C;
+    --t1:#2A2418; --t2:#6B6046; --t3:#8C8164;
+    --acc:#6E7D2A; --suc:#3E7C3A; --wrn:#9A6410; --inf:#3E7263; --dng:#A33526;
+  }
+  :root[data-theme="dark"] {
+    --bg0:#141108; --bg1:#1C1810; --bg2:#252019; --bg3:#302A20;
+    --bd:#42382A; --bdh:#584C38;
+    --t1:#EDE5D0; --t2:#9A8C6E; --t3:#665C48;
+    --acc:#A8B860; --suc:#7DBF78; --wrn:#D4922A; --inf:#88B8A8; --dng:#C85848;
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg0); color:var(--t1); font-family:var(--font); font-size:14px; line-height:1.5; }
+  code, .mono { font-family:var(--mono); }
+  h1,h2,h3 { text-wrap:balance; margin:0; font-weight:700; }
+  button { font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; }
+  :focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+
+  /* ── dev banner: небезопасное состояние во всю ширину, не в углу (AL-37) ── */
+  .devbar {
+    display:flex; align-items:center; gap:10px; padding:9px 16px;
+    background:color-mix(in srgb, var(--wrn) 18%, var(--bg0));
+    border-bottom:1px solid color-mix(in srgb, var(--wrn) 45%, var(--bd));
+    color:var(--t1); font-size:12.5px;
+  }
+  .devbar b { color:var(--wrn); }
+  .devbar .spacer { flex:1; }
+  .devbar .fix { border:1px solid color-mix(in srgb,var(--wrn) 50%,var(--bd)); background:transparent;
+    color:var(--wrn); border-radius:var(--r); padding:3px 9px; font-size:12px; }
+
+  .top { display:flex; align-items:center; gap:14px; padding:10px 16px; border-bottom:1px solid var(--bd); background:var(--bg1); }
+  .brand { font-weight:800; letter-spacing:.14em; font-size:15px; }
+  .crumb { color:var(--t2); font-size:12.5px; }
+  .crumb b { color:var(--t1); font-weight:600; }
+  .who { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--t2); }
+  .avatar { width:24px; height:24px; border-radius:50%; background:var(--bg3); border:1px solid var(--bd);
+    display:grid; place-items:center; font-size:11px; color:var(--t2); }
+
+  .shell { display:grid; grid-template-columns:216px 1fr; min-height:560px; }
+  @media (max-width:760px) { .shell { grid-template-columns:1fr; } .side { border-right:none; border-bottom:1px solid var(--bd); } }
+
+  /* ── навигация сгруппирована по РИСКУ, а не по таблицам БД ── */
+  .side { background:var(--bg1); border-right:1px solid var(--bd); padding:14px 10px; display:flex; flex-direction:column; gap:16px; }
+  .grp-label { font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--t3); padding:0 8px 6px; display:flex; align-items:center; gap:6px; }
+  .grp-label .dot { width:6px; height:6px; border-radius:50%; }
+  .grp { display:flex; flex-direction:column; gap:2px; }
+  .nav { display:flex; align-items:center; gap:9px; width:100%; text-align:left; background:transparent;
+    border:1px solid transparent; border-radius:var(--r); padding:7px 9px; color:var(--t2); font-size:13.5px; }
+  .nav:hover { background:var(--bg2); color:var(--t1); }
+  .nav[aria-current="true"] { background:var(--bg2); border-color:var(--bdh); color:var(--t1); font-weight:600; }
+  .nav .n { margin-left:auto; font-size:11px; color:var(--t3); font-family:var(--mono); }
+  .nav .rail { width:3px; height:15px; border-radius:2px; background:transparent; }
+  .grp[data-risk="high"] .nav[aria-current="true"] .rail { background:var(--dng); }
+  .grp[data-risk="low"] .nav[aria-current="true"] .rail { background:var(--acc); }
+  .grp[data-risk="sys"] .nav[aria-current="true"] .rail { background:var(--inf); }
+
+  .main { padding:18px 20px; min-width:0; }
+  .head { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+  .head h2 { font-size:19px; }
+  .head p { margin:4px 0 0; color:var(--t2); font-size:12.5px; max-width:66ch; }
+  .head .act { margin-left:auto; display:flex; gap:8px; }
+
+  .btn { border:1px solid var(--bd); background:var(--bg2); border-radius:var(--r); padding:6px 12px; font-size:13px; }
+  .btn:hover { border-color:var(--bdh); }
+  .btn.primary { background:var(--acc); border-color:var(--acc); color:var(--on-accent); font-weight:600; }
+  .btn.danger { border-color:color-mix(in srgb,var(--dng) 55%,var(--bd)); color:var(--dng); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+
+  .toolbar { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .search { flex:1; min-width:180px; max-width:300px; background:var(--bg1); border:1px solid var(--bd);
+    border-radius:var(--r); padding:6px 10px; color:var(--t1); font-family:var(--font); font-size:13px; }
+  .count { font-size:12px; color:var(--t2); font-family:var(--mono); }
+  .seg { display:inline-flex; border:1px solid var(--bd); border-radius:var(--r); overflow:hidden; }
+  .seg button { background:var(--bg1); border:none; padding:5px 11px; font-size:12.5px; color:var(--t2); }
+  .seg button[aria-pressed="true"] { background:var(--bg3); color:var(--t1); font-weight:600; }
+
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .chip { border:1px solid var(--bd); background:var(--bg1); border-radius:99px; padding:3px 11px; font-size:12px; font-family:var(--mono); color:var(--t2); }
+  .chip[aria-pressed="true"] { border-color:var(--acc); color:var(--t1); background:color-mix(in srgb,var(--acc) 15%,var(--bg1)); }
+
+  .tw { overflow-x:auto; border:1px solid var(--bd); border-radius:var(--r); background:var(--bg1); }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th { text-align:left; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--t3);
+    font-weight:600; padding:9px 12px; border-bottom:1px solid var(--bd); white-space:nowrap; }
+  td { padding:9px 12px; border-bottom:1px solid color-mix(in srgb,var(--bd) 55%,transparent); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tbody tr:hover { background:var(--bg2); }
+  .num { text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); }
+
+  .swatch { width:13px; height:13px; border-radius:3px; border:1px solid var(--bd); display:inline-block; vertical-align:-2px; margin-right:7px; }
+  .use { font-family:var(--mono); font-size:11.5px; color:var(--t2); }
+  .use.zero { color:var(--t3); }
+
+  .pill { display:inline-flex; align-items:center; gap:5px; border-radius:99px; padding:2px 9px; font-size:11.5px;
+    font-family:var(--mono); border:1px solid; }
+  .pill.admin { color:var(--dng); border-color:color-mix(in srgb,var(--dng) 45%,var(--bd)); background:color-mix(in srgb,var(--dng) 12%,transparent); }
+  .pill.viewer { color:var(--t2); border-color:var(--bd); background:var(--bg2); }
+  .pill.agent { color:var(--inf); border-color:color-mix(in srgb,var(--inf) 40%,var(--bd)); background:color-mix(in srgb,var(--inf) 10%,transparent); }
+  .pill.ok { color:var(--suc); border-color:color-mix(in srgb,var(--suc) 40%,var(--bd)); background:color-mix(in srgb,var(--suc) 10%,transparent); }
+
+  .note { border:1px solid var(--bd); border-left:3px solid var(--inf); background:var(--bg1);
+    border-radius:var(--r); padding:10px 13px; font-size:12.5px; color:var(--t2); margin-bottom:12px; }
+  .note b { color:var(--t1); }
+  .note.warn { border-left-color:var(--wrn); }
+  .note.dng { border-left-color:var(--dng); }
+
+  /* ── три РАЗНЫХ пустых состояния вместо одного (AL-31) ── */
+  .state { border:1px dashed var(--bd); border-radius:var(--r); padding:26px 20px; text-align:center; background:var(--bg1); }
+  .state h3 { font-size:15px; margin-bottom:6px; }
+  .state p { margin:0 auto 12px; color:var(--t2); font-size:12.5px; max-width:50ch; }
+  .state.err { border-color:color-mix(in srgb,var(--dng) 50%,var(--bd)); border-style:solid; }
+  .state.err h3 { color:var(--dng); }
+  .state .mono { font-size:11.5px; color:var(--t3); }
+
+  .demo { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:11.5px; color:var(--t3); }
+  .demo .seg button { font-size:11.5px; padding:3px 9px; }
+
+  /* ── карточка пользователя (AL-36) ── */
+  .card { border:1px solid var(--bd); border-radius:var(--r); background:var(--bg1); overflow:hidden; }
+  .card-h { display:flex; align-items:center; gap:12px; padding:14px; border-bottom:1px solid var(--bd); background:var(--bg2); }
+  .card-h .big { width:38px; height:38px; border-radius:50%; background:var(--bg3); border:1px solid var(--bdh);
+    display:grid; place-items:center; font-weight:700; color:var(--t2); }
+  .card-h .id { font-family:var(--mono); font-size:14px; font-weight:600; }
+  .card-h .sub { font-size:12px; color:var(--t2); }
+  .card-b { padding:14px; display:grid; gap:14px; }
+  .kv { display:grid; grid-template-columns:132px 1fr; gap:7px 12px; font-size:12.5px; }
+  .kv dt { color:var(--t3); }
+  .kv dd { margin:0; }
+  .hist { border-top:1px solid var(--bd); padding-top:12px; }
+  .hist h4 { margin:0 0 8px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--t3); }
+  .ev { display:flex; gap:9px; font-size:12.5px; padding:5px 0; color:var(--t2); }
+  .ev time { font-family:var(--mono); font-size:11.5px; color:var(--t3); white-space:nowrap; }
+  .ev b { color:var(--t1); font-weight:600; }
+
+  /* ── редактор словаря с живым превью (AL-42) ── */
+  .edit { border:1px solid var(--bdh); border-radius:var(--r); background:var(--bg2); padding:14px; margin-top:10px; }
+  .frow { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
+  .f { display:flex; flex-direction:column; gap:5px; }
+  .f label { font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--t3); }
+  .f input, .f select { background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r);
+    padding:6px 9px; color:var(--t1); font-family:var(--mono); font-size:12.5px; }
+  .f input[readonly] { color:var(--t2); background:var(--bg3); cursor:not-allowed; }
+  .f .hint { font-size:11px; color:var(--t3); }
+  .preview { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px;
+    border:1px solid var(--bd); border-radius:var(--r); background:var(--bg1); }
+  .preview .lbl { font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--t3); }
+  .live { display:inline-flex; align-items:center; gap:6px; border-radius:99px; padding:3px 11px; font-size:12.5px; border:1px solid; }
+  .icoBox { width:15px; height:15px; }
+  .bad { color:var(--dng); font-size:11.5px; }
+
+  .matrix td:first-child, .matrix th:first-child { position:sticky; left:0; background:var(--bg1); }
+  .matrix tbody tr:hover td:first-child { background:var(--bg2); }
+  .yes { color:var(--suc); }
+  .no  { color:var(--t3); }
+  .human-row td { background:color-mix(in srgb,var(--dng) 7%,transparent); }
+
+  .check { display:flex; align-items:flex-start; gap:9px; padding:9px 0; border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent); font-size:13px; }
+  .check:last-child { border-bottom:none; }
+  .check .mark { width:17px; height:17px; border-radius:50%; display:grid; place-items:center; font-size:11px; flex:none; margin-top:1px; }
+  .check .mark.ok { background:color-mix(in srgb,var(--suc) 22%,transparent); color:var(--suc); border:1px solid var(--suc); }
+  .check .mark.no { background:color-mix(in srgb,var(--dng) 18%,transparent); color:var(--dng); border:1px solid var(--dng); }
+  .check .txt { flex:1; }
+  .check .txt small { display:block; color:var(--t2); font-size:11.5px; margin-top:2px; }
+
+  .setting { display:grid; grid-template-columns:1fr auto; gap:8px 16px; align-items:center;
+    padding:11px 0; border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent); }
+  .setting:last-child { border-bottom:none; }
+  .setting .k { font-family:var(--mono); font-size:12.5px; }
+  .setting .d { font-size:11.5px; color:var(--t2); margin-top:2px; }
+  .setting .def { font-size:11px; color:var(--t3); font-family:var(--mono); }
+  .unknown { border:1px solid color-mix(in srgb,var(--wrn) 40%,var(--bd)); border-radius:var(--r);
+    padding:11px 13px; margin-top:14px; background:color-mix(in srgb,var(--wrn) 7%,var(--bg1)); }
+  .unknown h4 { font-size:12px; margin:0 0 4px; color:var(--wrn); }
+  .unknown p { margin:0 0 9px; font-size:12px; color:var(--t2); }
+
+  .legend { margin-top:16px; padding:12px 14px; border:1px solid var(--bd); border-radius:var(--r);
+    background:var(--bg1); font-size:12px; color:var(--t2); }
+  .legend b { color:var(--t1); }
+  .legend ul { margin:6px 0 0; padding-left:18px; }
+  .legend li { margin:3px 0; }
+  .hidden { display:none; }
+</style>
+
+<div class="devbar">
+  <span>⚠</span>
+  <span><b>Аутентификация выключена.</b> Администрировать LORE может любой, кто открыл этот адрес. Режим разработки.</span>
+  <span class="spacer"></span>
+  <button class="fix" data-goto="settings">Как включить →</button>
+</div>
+
+<div class="top">
+  <span class="brand">LORE</span>
+  <span class="crumb">Администрирование · <b id="crumb">Люди</b></span>
+  <span class="who">
+    <span class="avatar">—</span>
+    <span>роль <b style="color:var(--t1)">admin</b> · из конфига</span>
+  </span>
+</div>
+
+<div class="shell">
+  <nav class="side">
+    <div>
+      <div class="grp-label"><span class="dot" style="background:var(--dng)"></span>Доступ</div>
+      <div class="grp" data-risk="high">
+        <button class="nav" data-tab="users" aria-current="true"><span class="rail"></span>Люди<span class="n">0</span></button>
+        <button class="nav" data-tab="agents"><span class="rail"></span>Агенты<span class="n">8</span></button>
+        <button class="nav" data-tab="roles"><span class="rail"></span>Роли и права</button>
+      </div>
+    </div>
+    <div>
+      <div class="grp-label"><span class="dot" style="background:var(--acc)"></span>Справочники</div>
+      <div class="grp" data-risk="low">
+        <button class="nav" data-tab="dict"><span class="rail"></span>Словари<span class="n">8</span></button>
+        <button class="nav" data-tab="projects"><span class="rail"></span>Проекты<span class="n">6</span></button>
+        <button class="nav" data-tab="tags"><span class="rail"></span>Теги<span class="n">93</span></button>
+      </div>
+    </div>
+    <div>
+      <div class="grp-label"><span class="dot" style="background:var(--inf)"></span>Система</div>
+      <div class="grp" data-risk="sys">
+        <button class="nav" data-tab="settings"><span class="rail"></span>Настройки</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ── ЛЮДИ ─────────────────────────────────────────────── -->
+    <section id="tab-users">
+      <div class="head">
+        <div>
+          <h2>Люди</h2>
+          <p>Учётные записи Keycloak и их realm-роли. Пароли задаются в Keycloak — LORE их не принимает и не хранит.</p>
+        </div>
+        <div class="act"><button class="btn primary">+ Человек</button></div>
+      </div>
+
+      <div class="demo">
+        <span>Прототип · показать состояние:</span>
+        <span class="seg" id="userState">
+          <button aria-pressed="true" data-s="empty">Пусто (200 [])</button>
+          <button data-s="forbidden">Отказ (403)</button>
+          <button data-s="down">KC не настроен (503)</button>
+          <button data-s="list">Со списком</button>
+        </span>
+      </div>
+
+      <div id="us-empty">
+        <div class="state">
+          <h3>Ни одного человека ещё не заведено</h3>
+          <p>Keycloak отвечает нормально, в realm <code>omilore</code> просто нет учётных записей. Заведите себя первой — до включения аутентификации, иначе войти будет некому.</p>
+          <button class="btn primary">+ Завести себя</button>
+          <p class="mono" style="margin-top:12px">GET /lore/kc/users → 200 · []</p>
+        </div>
+      </div>
+
+      <div id="us-forbidden" class="hidden">
+        <div class="state err">
+          <h3>Нет прав смотреть список людей</h3>
+          <p>Ваша роль — <code>viewer</code>. Управление учётными записями доступно только роли <code>admin</code>. Это не пустой список: люди могут существовать, но они вам не видны.</p>
+          <button class="btn" data-goto="roles">Что даёт admin →</button>
+          <p class="mono" style="margin-top:12px">GET /lore/kc/users → 403 · admin role required</p>
+        </div>
+      </div>
+
+      <div id="us-down" class="hidden">
+        <div class="state err">
+          <h3>Keycloak не подключён</h3>
+          <p>Мост в Keycloak не настроен, поэтому список людей получить неоткуда. Это не значит, что учётных записей нет — их статус сейчас неизвестен.</p>
+          <button class="btn">Открыть RUNBOOK-ADMIN-LORE</button>
+          <p class="mono" style="margin-top:12px">GET /lore/kc/users → 503 · KC_NOT_CONFIGURED</p>
+        </div>
+      </div>
+
+      <div id="us-list" class="hidden">
+        <div class="toolbar">
+          <input class="search" placeholder="Поиск по логину или email">
+          <span class="count">показано 2 из 2</span>
+          <span class="seg"><button aria-pressed="true">Все</button><button>Только админы</button><button>Отключённые</button></span>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Логин</th><th>Email</th><th>Роли</th><th>Статус</th><th>Последний вход</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="mono">alexa</td><td class="mono" style="color:var(--t2)">letopisets.alexa@…</td>
+                <td><span class="pill admin">admin</span></td>
+                <td><span class="pill ok">включён</span></td>
+                <td class="mono" style="color:var(--t2)">2026-07-16 09:14</td>
+                <td><button class="btn" data-goto="card">Открыть</button></td>
+              </tr>
+              <tr>
+                <td class="mono">reader</td><td class="mono" style="color:var(--t2)">—</td>
+                <td><span class="pill viewer">viewer</span></td>
+                <td><span class="pill ok">включён</span></td>
+                <td class="mono" style="color:var(--t3)">никогда</td>
+                <td><button class="btn">Открыть</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── КАРТОЧКА ЧЕЛОВЕКА ────────────────────────────────── -->
+    <section id="tab-card" class="hidden">
+      <div class="head">
+        <div>
+          <h2>alexa</h2>
+          <p>Карточка человека: чем владеет, что менялось в его доступе и когда. Сюда же ложится аудит.</p>
+        </div>
+        <div class="act">
+          <button class="btn" data-goto="users">← К списку</button>
+          <button class="btn danger">Отключить доступ</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <span class="big">A</span>
+          <span>
+            <span class="id">alexa</span> <span class="pill admin">admin</span> <span class="pill ok">включён</span>
+            <div class="sub">letopisets.alexa@gmail.com · владелец</div>
+          </span>
+        </div>
+        <div class="card-b">
+          <dl class="kv">
+            <dt>Заведён</dt><dd>2026-07-16 · <span class="mono">через Admin LORE</span></dd>
+            <dt>Последний вход</dt><dd>2026-07-16 09:14</dd>
+            <dt>Роли (люди)</dt><dd><span class="pill admin">admin</span> <button class="btn" style="padding:2px 8px;font-size:11.5px">Изменить</button></dd>
+            <dt>Владеет</dt><dd>4 спринта · 23 ADR (как автор) · 11 задач (исполнитель)</dd>
+          </dl>
+
+          <div class="note warn" style="margin:0">
+            <b>Единственный админ в системе.</b> Снятие роли или отключение этой записи оставит LORE без администратора — операция будет отклонена, пока не появится второй.
+          </div>
+
+          <div class="hist">
+            <h4>История доступа</h4>
+            <div class="ev"><time>2026-07-16 09:12</time><span>роль <b>admin</b> назначена · <span class="mono">system (bootstrap)</span></span></div>
+            <div class="ev"><time>2026-07-16 09:12</time><span>учётная запись <b>создана</b> · <span class="mono">Admin LORE</span></span></div>
+          </div>
+
+          <div class="hist">
+            <h4>Действия в администрировании</h4>
+            <div class="ev"><time>2026-07-16 10:41</time><span>словарь <b>area</b> · <code>platform</code>: цвет <span class="mono">var(--t2) → var(--acc)</span></span></div>
+            <div class="ev"><time>2026-07-16 10:38</time><span>настройка <b>ффф</b> создана <span class="mono">= ыввв</span></span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── АГЕНТЫ ───────────────────────────────────────────── -->
+    <section id="tab-agents" class="hidden">
+      <div class="head">
+        <div>
+          <h2>Агенты</h2>
+          <p>Сервис-аккаунты AI-агентов и их <code>agent_scope</code>. Провижинятся скриптом. Секрет показывается один раз при ротации — LORE его не хранит.</p>
+        </div>
+      </div>
+      <div class="note dng">
+        <b>Права из этой таблицы пока не проверяются.</b> Клейм <code>agent_scope</code> бэкенд ещё не читает: сейчас это фильтр видимости инструментов, не защита. Включится в R2 — задача AL-17.
+      </div>
+      <div class="toolbar">
+        <input class="search" placeholder="Поиск по клиенту или scope">
+        <span class="count">показано 8 из 8</span>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Клиент</th><th>Scope</th><th>Вкл</th><th>Секрет выдан</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">lore-mcp</td><td><span class="pill viewer">оси не несёт · легаси</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t3)">неизвестно</td><td><button class="btn">Ротировать</button></td></tr>
+            <tr><td class="mono">lore-mcp-full</td><td><span class="pill agent">agent-full</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t2)">2026-07-16</td><td><button class="btn">Ротировать</button></td></tr>
+            <tr><td class="mono">lore-mcp-architect</td><td><span class="pill agent">agent-architect</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t2)">2026-07-16</td><td><button class="btn">Ротировать</button></td></tr>
+            <tr><td class="mono">lore-mcp-developer</td><td><span class="pill agent">agent-developer</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t2)">2026-07-16</td><td><button class="btn">Ротировать</button></td></tr>
+            <tr><td class="mono">lore-mcp-pm</td><td><span class="pill agent">agent-pm</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t2)">2026-07-16</td><td><button class="btn">Ротировать</button></td></tr>
+            <tr><td class="mono">lore-mcp-tester</td><td><span class="pill agent">agent-tester</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t2)">2026-07-16</td><td><button class="btn">Ротировать</button></td></tr>
+            <tr><td class="mono">lore-mcp-analyst</td><td><span class="pill agent">agent-analyst</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t2)">2026-07-16</td><td><button class="btn">Ротировать</button></td></tr>
+            <tr><td class="mono">lore-mcp-marketer</td><td><span class="pill agent">agent-marketer</span></td><td class="yes">✓</td><td class="mono" style="color:var(--t2)">2026-07-16</td><td><button class="btn">Ротировать</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── РОЛИ: обе оси + обратный вопрос ──────────────────── -->
+    <section id="tab-roles" class="hidden">
+      <div class="head">
+        <div>
+          <h2>Роли и права</h2>
+          <p>Две оси, которые не смешиваются: люди входят паролем и несут realm-роли, агенты — секретом и несут <code>agent_scope</code>.</p>
+        </div>
+        <div class="act">
+          <span class="seg" id="mx">
+            <button aria-pressed="true" data-m="by-subject">Кто что может</button>
+            <button data-m="by-object">Кто имеет доступ к…</button>
+          </span>
+        </div>
+      </div>
+
+      <div id="mx-by-subject">
+        <div class="tw" style="margin-bottom:14px">
+          <table>
+            <thead><tr><th>Люди · realm-роль</th><th>Что даёт</th><th>Где назначается</th><th>Кому выдана</th></tr></thead>
+            <tbody>
+              <tr class="human-row"><td><span class="pill admin">super-admin</span></td><td>Всё, включая выдачу admin</td><td>Только консоль Keycloak</td><td class="use zero">никому</td></tr>
+              <tr class="human-row"><td><span class="pill admin">admin</span></td><td>Администрирование: люди, словари, настройки, включение auth</td><td>Здесь → Люди</td><td class="use">1 · alexa</td></tr>
+              <tr class="human-row"><td><span class="pill viewer">viewer</span></td><td>Только чтение LORE. В администрирование не пускает</td><td>Здесь → Люди</td><td class="use">1 · reader</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Агенты · scope</th><th>Что может писать</th><th>Клиент</th></tr></thead>
+            <tbody>
+              <tr><td><span class="pill agent">agent-full</span></td><td>всё доменное, кроме человеческих операций</td><td class="mono" style="color:var(--t2)">lore-mcp-full</td></tr>
+              <tr><td><span class="pill agent">agent-architect</span></td><td class="mono" style="font-size:11.5px">adr · decision · component · tech · spec · runbook · doc · question</td><td class="mono" style="color:var(--t2)">lore-mcp-architect</td></tr>
+              <tr><td><span class="pill agent">agent-developer</span></td><td class="mono" style="font-size:11.5px">task · release · tech · spec · runbook · doc · adr_new</td><td class="mono" style="color:var(--t2)">lore-mcp-developer</td></tr>
+              <tr><td><span class="pill agent">agent-pm</span></td><td class="mono" style="font-size:11.5px">sprint · task · milestone · question · project</td><td class="mono" style="color:var(--t2)">lore-mcp-pm</td></tr>
+              <tr><td><span class="pill agent">agent-tester</span></td><td class="mono" style="font-size:11.5px">qg · task · status</td><td class="mono" style="color:var(--t2)">lore-mcp-tester</td></tr>
+              <tr><td><span class="pill agent">agent-analyst</span></td><td class="mono" style="font-size:11.5px">metric · insight · rec · question · task_set</td><td class="mono" style="color:var(--t2)">lore-mcp-analyst</td></tr>
+              <tr><td><span class="pill agent">agent-marketer</span></td><td class="mono" style="font-size:11.5px">bragi · task · insight · rec · doc</td><td class="mono" style="color:var(--t2)">lore-mcp-marketer</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="mx-by-object" class="hidden">
+        <div class="note">Обратный вопрос — тот, который задают на ревью доступа: <b>кто может трогать вот это?</b> Красным выделены операции, доступные только людям.</div>
+        <div class="tw">
+          <table class="matrix">
+            <thead><tr><th>Что</th><th>Люди</th><th>Агенты</th><th>Сейчас может</th></tr></thead>
+            <tbody>
+              <tr class="human-row"><td><b>Словари</b> <span class="mono" style="color:var(--t3);font-size:11px">/lore/dict/entry</span></td><td><span class="pill admin">admin</span></td><td class="no">никто — запрещено всем агентам</td><td class="use">1 человек</td></tr>
+              <tr class="human-row"><td><b>Учётные записи</b> <span class="mono" style="color:var(--t3);font-size:11px">/lore/kc/*</span></td><td><span class="pill admin">admin</span></td><td class="no">никто</td><td class="use">1 человек</td></tr>
+              <tr class="human-row"><td><b>Включение auth</b></td><td><span class="pill admin">admin</span></td><td class="no">никто</td><td class="use">1 человек</td></tr>
+              <tr><td><b>ADR и решения</b></td><td><span class="pill admin">admin</span></td><td><span class="pill agent">full</span> <span class="pill agent">architect</span></td><td class="use">1 человек · 2 агента</td></tr>
+              <tr><td><b>Спринты и вехи</b></td><td><span class="pill admin">admin</span></td><td><span class="pill agent">full</span> <span class="pill agent">pm</span></td><td class="use">1 человек · 2 агента</td></tr>
+              <tr><td><b>Задачи</b></td><td><span class="pill admin">admin</span></td><td><span class="pill agent">full</span> <span class="pill agent">pm</span> <span class="pill agent">developer</span> <span class="pill agent">tester</span> <span class="pill agent">marketer</span></td><td class="use">1 человек · 5 агентов</td></tr>
+              <tr><td><b>Релизы</b></td><td><span class="pill admin">admin</span></td><td><span class="pill agent">full</span> <span class="pill agent">developer</span></td><td class="use">1 человек · 2 агента</td></tr>
+              <tr><td><b>Чтение (слайсы)</b></td><td><span class="pill admin">admin</span> <span class="pill viewer">viewer</span></td><td class="yes">все агенты</td><td class="use">2 человека · 8 агентов</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── СЛОВАРИ ──────────────────────────────────────────── -->
+    <section id="tab-dict" class="hidden">
+      <div class="head">
+        <div>
+          <h2>Словари</h2>
+          <p>Значения справочников. Цвет и иконка отсюда рисуются во всём интерфейсе LORE.</p>
+        </div>
+        <div class="act"><button class="btn primary">+ Значение</button></div>
+      </div>
+
+      <div class="chips">
+        <button class="chip" aria-pressed="true">area</button><button class="chip">task_status</button>
+        <button class="chip">sprint_status</button><button class="chip">adr_status</button>
+        <button class="chip">priority</button><button class="chip">task_type</button>
+        <button class="chip">artifact_kind</button><button class="chip">agent_role</button>
+      </div>
+
+      <div class="toolbar">
+        <input class="search" placeholder="Поиск по коду или подписи" id="dsearch">
+        <span class="count" id="dcount">показано 6 из 6</span>
+        <span class="seg"><button aria-pressed="true">Активные</button><button>Все</button></span>
+      </div>
+
+      <div class="tw">
+        <table id="dtable">
+          <thead><tr><th>Код</th><th>Подпись</th><th>Вид</th><th class="num">Использований</th><th class="num">Порядок</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">platform</td><td>Платформа</td>
+              <td><span class="live" style="color:#A8B860;border-color:#A8B860;background:color-mix(in srgb,#A8B860 12%,transparent)"><svg class="icoBox" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7l10 5 10-5-10-5Zm0 20 10-5-2.5-1.2L12 19.5 4.5 15.8 2 17l10 5Z"/></svg>Платформа</span></td>
+              <td class="num use">42</td><td class="num" style="color:var(--t2)">10</td><td><button class="btn" id="editBtn">Править</button></td></tr>
+            <tr><td class="mono">api</td><td>API</td>
+              <td><span class="live" style="color:#7f9c7a;border-color:#7f9c7a;background:color-mix(in srgb,#7f9c7a 12%,transparent)"><svg class="icoBox" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v3H4V6Zm0 5h16v3H4v-3Zm0 5h10v3H4v-3Z"/></svg>API</span></td>
+              <td class="num use">28</td><td class="num" style="color:var(--t2)">20</td><td><button class="btn">Править</button></td></tr>
+            <tr><td class="mono">frontend</td><td>Фронтенд</td>
+              <td><span class="live" style="color:#7DBF78;border-color:#7DBF78;background:color-mix(in srgb,#7DBF78 12%,transparent)"><svg class="icoBox" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18v12H3V4Zm2 2v8h14V6H5ZM8 19h8v2H8v-2Z"/></svg>Фронтенд</span></td>
+              <td class="num use">31</td><td class="num" style="color:var(--t2)">30</td><td><button class="btn">Править</button></td></tr>
+            <tr><td class="mono">security</td><td>Безопасность</td>
+              <td><span class="live" style="color:#C85848;border-color:#C85848;background:color-mix(in srgb,#C85848 12%,transparent)"><svg class="icoBox" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Z"/></svg>Безопасность</span></td>
+              <td class="num use">9</td><td class="num" style="color:var(--t2)">90</td><td><button class="btn">Править</button></td></tr>
+            <tr><td class="mono">parsing</td><td>Парсинг</td>
+              <td><span class="live" style="color:#88B8A8;border-color:#88B8A8;background:color-mix(in srgb,#88B8A8 12%,transparent)"><svg class="icoBox" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3 4 12l5 9 2-1-4.5-8L11 4 9 3Zm6 0-2 1 4.5 8L13 20l2 1 5-9-5-9Z"/></svg>Парсинг</span></td>
+              <td class="num use">4</td><td class="num" style="color:var(--t2)">55</td><td><button class="btn">Править</button></td></tr>
+            <tr><td class="mono">finance</td><td>Финансы</td>
+              <td><span class="live" style="color:#D4922A;border-color:#D4922A;background:color-mix(in srgb,#D4922A 12%,transparent)"><svg class="icoBox" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-1.2c-1.4-.2-2.5-1-2.7-2.4h1.8c.1.6.7 1 1.6 1 .9 0 1.5-.4 1.5-1 0-.6-.4-.9-1.8-1.2-1.8-.4-2.9-1-2.9-2.5 0-1.2 1-2.1 2.5-2.3V6h2v1.4c1.3.2 2.2 1 2.4 2.2h-1.8c-.1-.5-.6-.9-1.4-.9-.8 0-1.3.4-1.3.9 0 .6.5.8 1.8 1.1 1.9.4 2.9 1.1 2.9 2.6 0 1.3-1 2.2-2.6 2.4V17Z"/></svg>Финансы</span></td>
+              <td class="num use zero">0</td><td class="num" style="color:var(--t2)">140</td><td><button class="btn">Править</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="edit" id="editor">
+        <div class="frow">
+          <div class="f" style="width:150px">
+            <label for="e-code">Код</label>
+            <input id="e-code" value="platform" readonly>
+            <span class="hint">Ключ — правке не подлежит</span>
+          </div>
+          <div class="f" style="width:170px">
+            <label for="e-label">Подпись</label>
+            <input id="e-label" value="Платформа" style="font-family:var(--font)">
+          </div>
+          <div class="f" style="width:150px">
+            <label for="e-color">Цвет</label>
+            <select id="e-color">
+              <option value="#A8B860" selected>акцент · --acc</option>
+              <option value="#7DBF78">успех · --suc</option>
+              <option value="#88B8A8">инфо · --inf</option>
+              <option value="#D4922A">внимание · --wrn</option>
+              <option value="#C85848">опасность · --dng</option>
+              <option value="#9A8C6E">приглушённый · --t2</option>
+            </select>
+            <span class="hint">Токены темы · смесь — в «Расширенном»</span>
+          </div>
+          <div class="f" style="width:190px">
+            <label for="e-icon">Иконка</label>
+            <select id="e-icon">
+              <option value="cube" selected>cube — куб</option>
+              <option value="lines">lines — строки</option>
+              <option value="screen">screen — экран</option>
+              <option value="shield">shield — щит</option>
+              <option value="none">— без иконки</option>
+              <option value="typo">wrong-slug (опечатка)</option>
+            </select>
+            <span class="hint">Поиск по набору · не ввод вслепую</span>
+          </div>
+          <div class="f" style="width:78px">
+            <label for="e-ord">Порядок</label>
+            <input id="e-ord" type="number" value="10">
+          </div>
+        </div>
+
+        <div class="preview">
+          <span class="lbl">Так это будет выглядеть</span>
+          <span class="live" id="live"><svg class="icoBox" id="liveIco" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7l10 5 10-5-10-5Zm0 20 10-5-2.5-1.2L12 19.5 4.5 15.8 2 17l10 5Z"/></svg><span id="liveTxt">Платформа</span></span>
+          <span class="bad hidden" id="liveBad">✕ иконки с таким именем нет — будет пусто</span>
+        </div>
+
+        <div class="note warn" style="margin:12px 0 0">
+          <b>42 сущности несут этот код.</b> Изменение цвета или иконки поменяет их вид во всём LORE. Деактивация потребует подтверждения.
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px">
+          <button class="btn primary">Сохранить</button>
+          <button class="btn" id="cancelEdit">Отмена</button>
+          <button class="btn danger" style="margin-left:auto">Деактивировать…</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── ПРОЕКТЫ / ТЕГИ (кратко) ──────────────────────────── -->
+    <section id="tab-projects" class="hidden">
+      <div class="head"><div><h2>Проекты</h2><p>Git-репозитории, к которым привязываются спринты и файлы.</p></div>
+      <div class="act"><button class="btn primary">+ Проект</button></div></div>
+      <div class="toolbar"><input class="search" placeholder="Поиск по slug или имени"><span class="count">показано 6 из 6</span></div>
+      <div class="tw"><table>
+        <thead><tr><th>Slug</th><th>Имя</th><th>Хосты</th><th class="num">Спринтов</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="mono">NooriUta/UnlimitedLORE</td><td>UnlimitedLORE</td><td class="mono" style="color:var(--t2);font-size:11.5px">forgejo · github</td><td class="num use">14</td><td><button class="btn">Править</button></td></tr>
+          <tr><td class="mono">NooriUta/AIDA</td><td>AIDA (монорепо)</td><td class="mono" style="color:var(--t2);font-size:11.5px">forgejo</td><td class="num use">31</td><td><button class="btn">Править</button></td></tr>
+          <tr><td class="mono">NooriUta/BRAGI</td><td>BRAGI</td><td class="mono" style="color:var(--t2);font-size:11.5px">forgejo</td><td class="num use">3</td><td><button class="btn">Править</button></td></tr>
+          <tr><td class="mono">NooriUta/ODIN</td><td>ODIN</td><td class="mono" style="color:var(--t2);font-size:11.5px">forgejo</td><td class="num use">2</td><td><button class="btn">Править</button></td></tr>
+          <tr><td class="mono">NooriUta/AIDA-TestPlayGround</td><td>AIDA-TestPlayGround</td><td class="mono" style="color:var(--t2);font-size:11.5px">forgejo</td><td class="num use">5</td><td><button class="btn">Править</button></td></tr>
+          <tr><td class="mono">NooriUta/aida-documentation</td><td>aida-documentation</td><td class="mono" style="color:var(--t2);font-size:11.5px">forgejo</td><td class="num use zero">0</td><td><button class="btn">Править</button></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="tab-tags" class="hidden">
+      <div class="head"><div><h2>Теги</h2><p>93 тега на ADR, решениях и задачах. Слияние и переименование — вторая итерация.</p></div></div>
+      <div class="toolbar">
+        <input class="search" placeholder="Поиск по тегу" value="rbac">
+        <span class="count">показано 3 из 93</span>
+        <span class="seg"><button aria-pressed="true">По использованию</button><button>По алфавиту</button></span>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th>Тег</th><th class="num">Использований</th><th>Где</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">rbac</td><td class="num use">17</td><td style="color:var(--t2);font-size:12px">ADR · решения · задачи</td></tr>
+          <tr><td class="mono">rbac-agents</td><td class="num use">6</td><td style="color:var(--t2);font-size:12px">ADR · решения</td></tr>
+          <tr><td class="mono">rbac-legacy</td><td class="num use zero">0</td><td style="color:var(--t3);font-size:12px">не используется — кандидат на удаление</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note" style="margin-top:12px">Поиск по 93 строкам — не роскошь: сейчас тег ищется только через Ctrl+F по странице.</div>
+    </section>
+
+    <!-- ── НАСТРОЙКИ: реестр + предполётный чеклист ─────────── -->
+    <section id="tab-settings" class="hidden">
+      <div class="head">
+        <div>
+          <h2>Настройки</h2>
+          <p>Известные приложению параметры. Каждый — с типом, значением по умолчанию и описанием того, на что он влияет.</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:13px; margin-bottom:8px">Включение аутентификации</h3>
+      <div class="note dng">
+        <b>Включить сейчас нельзя: в системе нет ни одного человека с ролью admin.</b>
+        Аутентификация отключит доступ по конфигу — войти станет некому, и вернуться можно будет только через консоль Keycloak.
+      </div>
+      <div class="tw" style="padding:4px 14px; margin-bottom:8px">
+        <div class="check"><span class="mark no">✕</span><span class="txt"><b>Есть хотя бы один человек с ролью admin</b><small>Сейчас: 0. Заведите себя на вкладке «Люди» и назначьте admin.</small></span></div>
+        <div class="check"><span class="mark ok">✓</span><span class="txt"><b>Keycloak доступен</b><small>Мост отвечает, realm omilore, 8 клиентов агентов на месте.</small></span></div>
+        <div class="check"><span class="mark ok">✓</span><span class="txt"><b>Клиент lore-app настроен на PKCE</b><small>Вход людей — Authorization Code + PKCE.</small></span></div>
+        <div class="check"><span class="mark no">✕</span><span class="txt"><b>Права агентов проверяются на бэкенде</b><small>AgentScopeFilter ещё не включён (AL-17): после включения auth агенты пройдут в любое семейство.</small></span></div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:22px">
+        <button class="btn primary" disabled>Включить аутентификацию</button>
+        <span style="font-size:12px; color:var(--t2)">Разблокируется, когда первые два пункта станут зелёными</span>
+      </div>
+
+      <h3 style="font-size:13px; margin-bottom:8px">Параметры приложения</h3>
+      <div class="tw" style="padding:4px 14px">
+        <div class="setting">
+          <div><div class="k">LORE_ACTIVE_PROJECT</div><div class="d">Проект по умолчанию для сессий MCP, когда он не передан явно</div></div>
+          <div style="text-align:right"><select class="f" style="background:var(--bg1);border:1px solid var(--bd);border-radius:6px;padding:5px 8px;color:var(--t1);font-family:var(--mono);font-size:12px"><option>NooriUta/UnlimitedLORE</option><option>NooriUta/AIDA</option></select><div class="def">по умолчанию: не задан</div></div>
+        </div>
+        <div class="setting">
+          <div><div class="k">LORE_AUTH_ENABLED</div><div class="d">Проверять токены. Выключено — роль берётся из конфига, доступ открыт всем</div></div>
+          <div style="text-align:right"><span class="pill viewer">выключено</span><div class="def">по умолчанию: false</div></div>
+        </div>
+        <div class="setting">
+          <div><div class="k">LORE_SECRETS_PROVIDER</div><div class="d">Откуда брать секреты: переменные окружения или сервис</div></div>
+          <div style="text-align:right"><span class="pill ok">env</span><div class="def">по умолчанию: env</div></div>
+        </div>
+      </div>
+
+      <div class="unknown">
+        <h4>Неопознанные значения · 1</h4>
+        <p>Эти ключи лежат в базе, но приложение их не читает — скорее всего, остались от ручной правки. Удаление ни на что не повлияет.</p>
+        <div class="tw" style="background:transparent"><table>
+          <thead><tr><th>Ключ</th><th>Значение</th><th>Кем создан</th><th></th></tr></thead>
+          <tbody><tr><td class="mono">ффф</td><td class="mono">ыввв</td><td class="mono" style="color:var(--t3)">неизвестно — правки не пишут автора</td><td><button class="btn danger">Удалить</button></td></tr></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <div class="legend">
+      <b>Что здесь изменено против текущей панели</b>
+      <ul>
+        <li><b>Навигация — по риску, не по таблицам.</b> «Доступ» (люди, агенты, права) отделён от «Справочников»: выдача admin и правка подписи больше не равны по весу.</li>
+        <li><b>Небезопасное состояние кричит,</b> а не шепчет в углу серым.</li>
+        <li><b>Три разных пустых состояния</b> вместо одного «заведите первого»: пусто, отказ, мост недоступен — переключатель на вкладке «Люди».</li>
+        <li><b>Обратная матрица</b> «кто имеет доступ к X» — вопрос, который задают на ревью доступа.</li>
+        <li><b>Карточка человека</b> с историей ролей и действий — место, куда ляжет аудит.</li>
+        <li><b>Код read-only, «использований: N» у каждого значения,</b> цвет и иконка — выбором с живым превью, а не вводом вслепую.</li>
+        <li><b>Настройки — реестр известных ключей</b> с типом и описанием; чужое собрано отдельно и удаляется.</li>
+        <li><b>Включение auth — предполётный чеклист</b> с блокировкой, пока нет ни одного админа.</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<script>
+  const ICONS = {
+    cube:   'M12 2 2 7l10 5 10-5-10-5Zm0 20 10-5-2.5-1.2L12 19.5 4.5 15.8 2 17l10 5Z',
+    lines:  'M4 6h16v3H4V6Zm0 5h16v3H4v-3Zm0 5h10v3H4v-3Z',
+    screen: 'M3 4h18v12H3V4Zm2 2v8h14V6H5ZM8 19h8v2H8v-2Z',
+    shield: 'M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Z',
+  };
+  const TITLES = { users:'Люди', agents:'Агенты', roles:'Роли и права', dict:'Словари',
+                   projects:'Проекты', tags:'Теги', settings:'Настройки', card:'Люди · alexa' };
+
+  const show = (tab) => {
+    document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+    document.getElementById('tab-' + tab)?.classList.remove('hidden');
+    document.querySelectorAll('.nav').forEach(n =>
+      n.setAttribute('aria-current', String(n.dataset.tab === tab || (tab === 'card' && n.dataset.tab === 'users'))));
+    document.getElementById('crumb').textContent = TITLES[tab] ?? tab;
+    // deep-link: состояние живёт в URL (AL-39)
+    if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
+  };
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => show(b.dataset.tab));
+  document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => show(b.dataset.goto));
+
+  // Люди: демонстрация трёх состояний
+  document.querySelectorAll('#userState button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#userState button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    ['empty','forbidden','down','list'].forEach(s =>
+      document.getElementById('us-' + s).classList.toggle('hidden', s !== b.dataset.s));
+  });
+
+  // Роли: прямая ↔ обратная матрица
+  document.querySelectorAll('#mx button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#mx button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    document.getElementById('mx-by-subject').classList.toggle('hidden', b.dataset.m !== 'by-subject');
+    document.getElementById('mx-by-object').classList.toggle('hidden', b.dataset.m !== 'by-object');
+  });
+
+  // Словари: живое превью цвета+иконки — правка перестаёт быть слепой (AL-42)
+  const live = document.getElementById('live'), ico = document.getElementById('liveIco'),
+        txt = document.getElementById('liveTxt'), bad = document.getElementById('liveBad');
+  const paint = () => {
+    const c = document.getElementById('e-color').value;
+    const slug = document.getElementById('e-icon').value;
+    live.style.color = c; live.style.borderColor = c;
+    live.style.background = `color-mix(in srgb, ${c} 12%, transparent)`;
+    txt.textContent = document.getElementById('e-label').value || '—';
+    const known = ICONS[slug];
+    ico.classList.toggle('hidden', !known);
+    if (known) ico.firstElementChild.setAttribute('d', known);
+    bad.classList.toggle('hidden', slug !== 'typo');
+  };
+  ['e-color','e-icon','e-label'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', paint); el.addEventListener('change', paint);
+  });
+  const editor = document.getElementById('editor');
+  editor.classList.add('hidden');
+  document.getElementById('editBtn').onclick = () => { editor.classList.remove('hidden'); paint(); };
+  document.getElementById('cancelEdit').onclick = () => editor.classList.add('hidden');
+
+  // Словари: живой поиск + счётчик (AL-40)
+  const ds = document.getElementById('dsearch');
+  ds.addEventListener('input', () => {
+    const q = ds.value.trim().toLowerCase();
+    const rows = [...document.querySelectorAll('#dtable tbody tr')];
+    let n = 0;
+    rows.forEach(r => {
+      const hit = !q || r.textContent.toLowerCase().includes(q);
+      r.classList.toggle('hidden', !hit); if (hit) n++;
+    });
+    document.getElementById('dcount').textContent = `показано ${n} из ${rows.length}`;
+  });
+
+  show(location.hash.replace('#','') || 'users');
+</script>
+
+</body></html>

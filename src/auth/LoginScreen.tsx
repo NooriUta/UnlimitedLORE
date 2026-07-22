@@ -58,11 +58,11 @@ export default function LoginScreen() {
         <div style={{
           width: 44, height: 44, borderRadius: 10, background: 'var(--acc)',
           color: 'var(--bg0)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800,
+          fontFamily: 'var(--display)', fontSize: 24, fontWeight: 800,
         }}>L</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{
-            fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, letterSpacing: '0.02em',
+            fontFamily: 'var(--display)', fontSize: 20, fontWeight: 800, letterSpacing: '0.02em',
           }}>LORE</span>
           <span style={{
             fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)',

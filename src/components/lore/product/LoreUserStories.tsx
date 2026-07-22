@@ -20,6 +20,7 @@ import {
   PassportHeader,
   EmptyDetail,
 } from './shared';
+import { ucStatusLabel, rigorLabel, goalLevelLabel } from './vocab';
 
 // Уровень цели (Коберн, D2): море / рыба.
 function goalGlyphOf(level: string | null | undefined): string {
@@ -29,13 +30,6 @@ function goalGlyphOf(level: string | null | undefined): string {
   return '';
 }
 
-// Строгость изложения (Коберн): полное тело / набросок.
-function rigorGlyphOf(rigor: string | null | undefined): string {
-  const v = (rigor ?? '').toLowerCase();
-  if (v.includes('full')) return '📋 fully-dressed';
-  if (v.includes('casual')) return '⚡ casual';
-  return rigor ?? '';
-}
 
 export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
   const { t } = useTranslation();
@@ -91,7 +85,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       <>
         {filtered.map(uc => {
           const glyph = goalGlyphOf(uc.goal_level);
-          const statusShort = uc.status ?? '—';
+          const statusShort = ucStatusLabel(t, uc.status);
           return (
             <ListRow
               key={uc.uc_id}
@@ -117,8 +111,6 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       detail = <EmptyDetail text={t('lore.product.us.pick', 'Выберите историю слева')} />;
     } else {
       const status = (uc.status ?? '').toLowerCase();
-      const glyph = goalGlyphOf(uc.goal_level);
-      const rigor = rigorGlyphOf(uc.rigor);
 
       const painIds = asArray(uc.relieves_pain_ids);
       const gainIds = asArray(uc.delivers_gain_ids);
@@ -143,9 +135,9 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
           </div>
 
           <PassportHeader title={uc.title ?? uc.uc_id}>
-            <Pill tone={status === 'shipped' ? 'ok' : status === 'active' ? 'act' : 'muted'}>{uc.status ?? '—'}</Pill>
-            {glyph && <Pill>{glyph} {uc.goal_level}</Pill>}
-            {rigor && <Pill>{rigor}</Pill>}
+            <Pill tone={status === 'shipped' ? 'ok' : status === 'active' ? 'act' : 'muted'}>{ucStatusLabel(t, uc.status)}</Pill>
+            {uc.goal_level && <Pill>{goalLevelLabel(t, uc.goal_level)}</Pill>}
+            {uc.rigor && <Pill>{rigorLabel(t, uc.rigor)}</Pill>}
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-do)', marginBottom: 8 }}>{uc.uc_id}</div>

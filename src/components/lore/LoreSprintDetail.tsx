@@ -17,6 +17,8 @@ import { statusMeta, taskTick } from './lore-status';
 import { areaColor } from './LoreComponentList';
 import { useDictionary } from './DictionaryProvider';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { Select } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import TipTapField from './TipTapField';
 
 interface SprintMeta {
@@ -637,6 +639,32 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             </span>
           );
         })()}
+        {/* work_class (ADR-LORE-022, PL-19) — ось ЗАЧЕМ, ортогональная task_type:
+            «дев-задача» отвечает КАК, а uc/jtd/enb — ради чего. Чип буквенный, а
+            не иконка: рядом уже стоит иконка типа, и вторая читалась бы как её
+            вариант, а не как другая ось. Для uc в подсказке — сам сценарий:
+            «реализует, но что?» — вопрос, ради которого сюда и смотрят. */}
+        {task.work_class && (() => {
+          const wc = task.work_class;
+          const tone = wc === 'uc' ? 'var(--g-do)' : wc === 'jtd' ? 'var(--job)' : 'var(--t3)';
+          const ucs = Array.isArray(task.realizes_uc) ? task.realizes_uc : [];
+          const hint = wc === 'uc'
+            ? `${t('lore.sprintDetail.wcUc', 'реализует сценарий')}${ucs.length ? ': ' + ucs.join(', ') : ''}`
+            : wc === 'jtd'
+              ? t('lore.sprintDetail.wcJtd', 'вспомогательная работа')
+              : t('lore.sprintDetail.wcEnb', 'enabler — обоснование в ADR');
+          return (
+            <span title={hint}
+              style={{
+                fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', textTransform: 'uppercase',
+                padding: '1px 4px', borderRadius: 3, flexShrink: 0, color: tone,
+                background: `color-mix(in srgb, ${tone} 12%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${tone} 32%, transparent)`,
+              }}>
+              {wc}
+            </span>
+          );
+        })()}
         <span style={S.taskId}>{task.task_id}</span>
         {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (
@@ -949,6 +977,23 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const metaDragRef = useRef<{ x: number; w: number } | null>(null);
   const [topBlockH, setTopBlockH] = useState(220);
   const topDragRef = useRef<{ y: number; h: number } | null>(null);
+
+  /**
+   * MOB-13: на узком экране блок метаданных СВЁРНУТ по умолчанию.
+   *
+   * Причина отказа: `topBlockH` (220px) стоит на ОБЕИХ половинах верхнего
+   * блока, а на narrow они стакаются вертикально — то есть до ~440px занято
+   * контекстом и привязками ещё до первой задачи. Ручка, которой этот блок
+   * сжимают, отрисована только на широком, поэтому уменьшить его на телефоне
+   * было нечем: список задач просто уходил за нижнюю кромку. В ландшафте
+   * высоты ещё меньше — отсюда «не видны ни в каком положении».
+   *
+   * Свернуть, а не уменьшить: на 375px даже 220px — это весь первый экран.
+   * Паспорт спринта открывают ради задач; контекст и привязки нужны реже и
+   * доступны одним нажатием.
+   */
+  const [metaOpen, setMetaOpen] = useState(!narrow);
+  useEffect(() => { setMetaOpen(!narrow); }, [narrow]);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
 
   // Drag-resize the right meta column (projects/milestones/modules/ADR) — same
@@ -1321,7 +1366,24 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       {/* ── Top meta block: context (left) + projects/milestones/modules (right) ──
           Narrow: stack context above meta (side-by-side squishes context to
           one-word-per-line at 375px). */}
-      <div style={{ display: 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+      {/* MOB-13: на узком — переключатель, открывающий метаданные. Без него
+          блок занимал первый экран целиком, и задачи были не видны вовсе. */}
+      {narrow && (
+        <button type="button" onClick={() => setMetaOpen(o => !o)}
+          aria-expanded={metaOpen}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '7px 14px', border: 'none', borderBottom: '1px solid var(--bd)',
+            background: 'var(--bg1)', color: 'var(--t2)', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' as const,
+            letterSpacing: '0.05em', fontWeight: 700,
+          }}>
+          <span style={{ color: 'var(--t3)' }}>{metaOpen ? '▾' : '▸'}</span>
+          {t('lore.sprintDetail.metaToggle', 'Контекст и привязки')}
+        </button>
+      )}
+
+      <div style={{ display: narrow && !metaOpen ? 'none' : 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
 
       {/* CONTEXT — left, flexible. maxHeight+overflow caps its growth so a long
           context_md can never crowd out the task list below (both this block and
@@ -1394,11 +1456,21 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               to have a separate planned_milestone_id plain-field write alongside
               the TARGETS_MILESTONE edge — that field drifted out of sync on 62+
               sprints and was retired; the edge is the sole source of truth now. */}
-          <select disabled={planBusy || msLinking} style={{ ...lookupSelectStyle, width: '100%' }}
-            value={(sprint.milestone_ids ?? [])[0] ?? ''}
-            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
-            onChange={async e => {
-              const v = e.target.value || null;
+          {/* ADR-LORE-034: контролы планирования на Mantine. Нативные <select> и
+              <input type="date"> рисуются средствами ОС — на Windows это белый
+              выпадающий список и системный календарь поверх тёмной темы; вид
+              менялся от машины к машине, и стилизовать их нечем. Здесь как раз
+              «сложные инпуты» из одобренной области. */}
+          <Select
+            disabled={planBusy || msLinking}
+            placeholder={t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}
+            aria-label={t('lore.sprintDetail.plan.milestone', 'Веха')}
+            value={(sprint.milestone_ids ?? [])[0] ?? null}
+            data={allMilestones.map(m => ({ value: m.id, label: milestoneOptionLabel(m) }))}
+            clearable
+            searchable
+            size="xs"
+            onChange={async (v: string | null) => {
               setPlanBusy(true); setMsLinking(true);
               try {
                 const prevLinked = sprint.milestone_ids ?? [];
@@ -1408,16 +1480,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
                 setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
               } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
-            }}>
-            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
-            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
-          </select>
+            }}
+          />
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input type="date" disabled={planBusy} style={lookupSelectStyle}
-              value={sprint.planned_start_date ?? ''}
-              title={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
-              onChange={async e => {
-                const v = e.target.value || null;
+            <DateInput
+              disabled={planBusy} size="xs" clearable valueFormat="DD.MM.YYYY"
+              style={{ flex: 1 }}
+              placeholder={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
+              aria-label={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
+              value={sprint.planned_start_date ?? null}
+              onChange={async (v: string | null) => {
                 setPlanBusy(true);
                 try {
                   await updateSprintPlan(sprint.sprint_id, { planned_start_date: v });
@@ -1425,11 +1497,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 } catch (err) { onError(err); } finally { setPlanBusy(false); }
               }} />
             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>→</span>
-            <input type="date" disabled={planBusy} style={lookupSelectStyle}
-              value={sprint.planned_end_date ?? ''}
-              title={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
-              onChange={async e => {
-                const v = e.target.value || null;
+            <DateInput
+              disabled={planBusy} size="xs" clearable valueFormat="DD.MM.YYYY"
+              style={{ flex: 1 }}
+              placeholder={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
+              aria-label={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
+              value={sprint.planned_end_date ?? null}
+              onChange={async (v: string | null) => {
                 setPlanBusy(true);
                 try {
                   await updateSprintPlan(sprint.sprint_id, { planned_end_date: v });

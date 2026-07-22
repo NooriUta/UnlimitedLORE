@@ -86,15 +86,16 @@ export function registerLoreWrite(server: McpServer): void {
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
       task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
-      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case (link it via uc_link rel="task"), jtd=helper job, enb=enabler; omit when unclassified — legal'),
+      work_class: z.enum(['uc', 'jtd', 'enb']).optional().describe('ADR-LORE-022 WHY-axis (orthogonal to task_type): uc=realizes a use case, jtd=helper job, enb=enabler; omit when unclassified — legal'),
+      uc_id: z.string().optional().describe('D16: the use case this task realizes. Creates the REALIZES edge ATOMICALLY with the task — no second call, no window where the task exists unlinked. A non-existent uc_id is a 400, not a silent no-op.'),
     },
     path: '/lore/task',
-    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class }) => ({
+    body: ({ sprint_id, task_id, title, note_md, phase_uid, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id }) => ({
           sprint_id, task_id, title,
           note_md: note_md ?? null, phase_uid: phase_uid ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null,
           reviewer_agent: reviewer_agent ?? null, task_type: task_type ?? null,
-          work_class: work_class ?? null,
+          work_class: work_class ?? null, uc_id: uc_id ?? null,
         }),
   });
 
@@ -143,10 +144,12 @@ export function registerLoreWrite(server: McpServer): void {
       '(task and phase must belong to the same sprint; action="remove" without target_id detaches ' +
       'from ALL phases). rel="component": TAGGED_WITH edge to a LoreComponent, many-to-many. ' +
       'rel="file": EDITED_IN edge to a KnowFile (ADR-018) — a repo file REFERENCE (relative path ' +
-      'only), lazily created on first link; requires project. Idempotent on add. Mutates system_aida_lore.',
+      'only), lazily created on first link; requires project. rel="adr": JUSTIFIED_BY edge to a KnowADR ' +
+      '(D16) — an enb task is justified by an architectural decision; both ends are checked, a missing ' +
+      'one is a 400 rather than a silent no-op. Idempotent on add. Mutates system_aida_lore.',
     {
       task_uid:  z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
-      rel:       z.enum(['phase', 'component', 'file']),
+      rel:       z.enum(['phase', 'component', 'file', 'adr']),
       target_id: z.string().optional().describe('phase_uid (rel="phase") | component_id (rel="component") | relative file path (rel="file", e.g. "backend/src/.../LoreSlices.java"); omit with rel="phase"+action="remove" to detach from all phases'),
       project:   z.string().optional().describe('rel="file" only: KnowGitProject slug the file belongs to, e.g. "NooriUta/UnlimitedLORE"'),
       summary_md: z.string().optional().describe('rel="file" only: optional short note on what the file does'),
@@ -162,6 +165,10 @@ export function registerLoreWrite(server: McpServer): void {
           if (!target_id) return err(new Error('target_id (file path) required for rel="file"'));
           if (!project) return err(new Error('project required for rel="file"'));
           return json(await lorePost('/lore/task/file', { task_uid, project, file_path: target_id, summary_md: summary_md ?? null, action: act }));
+        }
+        if (rel === 'adr') {
+          if (!target_id) return err(new Error('target_id (adr_id) required for rel="adr"'));
+          return json(await lorePost('/lore/task/adr', { task_uid, adr_id: target_id, action: act }));
         }
         if (!target_id) return err(new Error('target_id required for rel="component"'));
         return json(await lorePost('/lore/task/component', { task_uid, component_id: target_id, action: act }));
@@ -440,7 +447,7 @@ export function registerLoreWrite(server: McpServer): void {
       'the response = edge NOT created (target missing) — never a silent no-op. Mutates system_aida_lore.',
     {
       uc_id:     z.string().describe('e.g. "UC-GIT-MERGE"'),
-      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
+      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'component', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
       target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers) | job_id (performs)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
       actor_role: z.enum(['primary', 'supporting']).optional()
@@ -484,10 +491,13 @@ export function registerLoreWrite(server: McpServer): void {
       name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Администратор LORE"'),
       kind:     z.enum(['human-role', 'system', 'agent']).optional(),
       body_md:  z.string().optional().describe('кто это, права, ожидания'),
+      project:  z.string().optional()
+        .describe('D18: git-project slug the role belongs to. Without it "Администратор" of one product and the same-named role of another collapse into one row of the derived RBAC matrix. project_linked:false in the response = the project is not registered (project_new), not a silent no-op.'),
     },
     path: '/lore/actor',
-    body: ({ actor_id, name, kind, body_md }) => ({
+    body: ({ actor_id, name, kind, body_md, project }) => ({
       actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+      project: project ?? null,
     }),
   });
 
@@ -1069,6 +1079,27 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   definePostTool(server, {
+    name: 'spec_link',
+    description: 'PL-34: rebind a KnowSpec to another component or git project — BY EDGE. ' +
+      'Needed because spec_new/spec_set write component_id as a VERTEX FIELD while the `specs` ' +
+      'slice reads the BELONGS_TO edge: passing a new component_id returned ok:true and the spec ' +
+      'stayed listed under the old component. Default mode="replace" — "rebind" means one owner, ' +
+      'and silently accumulating a second link would list the spec under two components at once. ' +
+      'A non-existent target is an ERROR, not a no-op: the backend counts the edges it just wrote ' +
+      '(CREATE EDGE … TO (SELECT …) over an empty selection creates nothing and does not fail). ' +
+      'Mutates system_aida_lore.',
+    schema: {
+      spec_id:   z.string().describe('e.g. "LORE_DB_SPEC"'),
+      target_id: z.string().describe('component_id (e.g. "OMILORE") or project slug, per `rel`'),
+      rel:       z.enum(['component', 'project']).optional().describe('default "component"'),
+      mode:      z.enum(['add', 'remove', 'replace']).optional()
+        .describe('default "replace" — drops existing links of this kind first'),
+    },
+    path: '/lore/spec/link',
+    body: ({ spec_id, target_id, rel, mode }) => ({ spec_id, target_id, rel, mode }),
+  });
+
+  definePostTool(server, {
     name: 'spec_del',
     description: 'Permanently delete a KnowSpec vertex by spec_id. Mutates system_aida_lore.',
     schema: { spec_id: z.string() },
@@ -1244,6 +1275,7 @@ export function registerLoreWrite(server: McpServer): void {
       reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
       task_type:      z.string().optional().describe('single-mode: ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content)'),
       work_class:     z.enum(['uc', 'jtd', 'enb']).optional().describe('single-mode: ADR-LORE-022 WHY-axis, orthogonal to task_type'),
+      uc_id:          z.string().optional().describe('single-mode: re-point the REALIZES edge at this use case. Omit = leave the link alone; empty string = detach.'),
       tasks: z.array(z.object({
         task_uid:       z.string(),
         title:          z.string(),
@@ -1254,23 +1286,24 @@ export function registerLoreWrite(server: McpServer): void {
         reviewer_agent: z.string().optional(),
         task_type:      z.string().optional(),
         work_class:     z.enum(['uc', 'jtd', 'enb']).optional(),
+        uc_id:          z.string().optional(),
       })).optional().describe('batch-mode: array of {task_uid, title, note_md?, effort_days?, author_agent?, executor_agent?, reviewer_agent?, task_type?}'),
     },
-    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, work_class, tasks }) => {
+    async ({ task_uid, title, note_md, effort_days, author_agent, executor_agent, reviewer_agent, task_type, work_class, uc_id, tasks }) => {
       try {
         if (tasks && tasks.length > 0) {
           return json(await lorePost('/lore/task/edit/batch',
             tasks.map(t => ({
               task_uid: t.task_uid, title: t.title, note_md: t.note_md ?? null, effort_days: t.effort_days ?? null,
               author_agent: t.author_agent ?? null, executor_agent: t.executor_agent ?? null, reviewer_agent: t.reviewer_agent ?? null,
-              task_type: t.task_type ?? null, work_class: t.work_class ?? null,
+              task_type: t.task_type ?? null, work_class: t.work_class ?? null, uc_id: t.uc_id ?? null,
             }))));
         }
         if (!task_uid || !title) return err(new Error('provide either tasks[] (batch) or task_uid+title (single)'));
         return json(await lorePost('/lore/task/edit', {
           task_uid, title, note_md: note_md ?? null, effort_days: effort_days ?? null,
           author_agent: author_agent ?? null, executor_agent: executor_agent ?? null, reviewer_agent: reviewer_agent ?? null,
-          task_type: task_type ?? null, work_class: work_class ?? null,
+          task_type: task_type ?? null, work_class: work_class ?? null, uc_id: uc_id ?? null,
         }));
       } catch (e) { return err(e); }
     },

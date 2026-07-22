@@ -2,6 +2,7 @@
 // Акторы как сегменты клиентов: master-detail (список слева + профиль сегмента справа).
 // Дизайн зеркалит утверждённый прототип actorP. Данные — через useSlice/fetchLoreSlice.
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import type {
   LoreActorRow,
   LorePainRow,
@@ -22,7 +23,30 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  FilterChips,
 } from './shared';
+
+export type ActorKind = 'all' | 'human-role' | 'agent' | 'system';
+
+/**
+ * Отбор строк реестра акторов: вид + текст (PL-18).
+ *
+ * Вынесено из компонента отдельной функцией, потому что тестировать здесь
+ * нужно именно СОЧЕТАНИЕ двух условий, а react-рендер в проекте не поднимается
+ * (testing-library не подключена). Условия связаны конъюнкцией: «агенты» плюс
+ * набранный текст обязаны сужать выборку вместе, иначе фильтр вида молча
+ * перебивал бы поиск — самая правдоподобная ошибка при склейке этих двух.
+ */
+export function filterActors<T extends { actor_id: string; name?: string | null; kind?: string | null }>(
+  rows: T[], kind: ActorKind, search: string,
+): T[] {
+  const q = search.trim().toLowerCase();
+  return rows.filter(a => {
+    if (kind !== 'all' && a.kind !== kind) return false;
+    if (!q) return true;
+    return a.actor_id.toLowerCase().includes(q) || (a.name ?? '').toLowerCase().includes(q);
+  });
+}
 
 // Строка профиля Остервальдера: жирный uppercase-лейбл + чипы (или «— нет»).
 function ProfileLine({
@@ -58,16 +82,28 @@ function ProfileLine({
 
 export default function LoreActors({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
   const { t } = useTranslation();
+  const [kindFilter, setKindFilter] = useState<ActorKind>('all');
   const { rows: actors, loading } = useSlice<LoreActorRow>('actors', undefined, onError, []);
   const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
   const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
   const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, []);
 
+  // ── фильтр по виду актора (PL-18) ──
+  //
+  // Набор видов ЖЁСТКИЙ, а не собранный из данных: словарь задаёт бэкенд
+  // (`kind must be human-role|system|agent`, LoreProductResource). Собери мы
+  // чипы из встреченных значений — вид, которого сейчас нет ни у кого, пропал
+  // бы из фильтра ровно тогда, когда его ищут: «агентов нет» — это ответ, а
+  // отсутствие чипа выглядит так, будто вопрос и не задавали.
+  const kindDefs: { key: ActorKind; label: string }[] = [
+    { key: 'all', label: t('lore.product.actor.kindAll', 'все') },
+    { key: 'human-role', label: `🧑 ${t('lore.product.actor.kindHuman', 'люди')}` },
+    { key: 'agent', label: `🤖 ${t('lore.product.actor.kindAgent', 'агенты')}` },
+    { key: 'system', label: `⚙ ${t('lore.product.actor.kindSystem', 'системы')}` },
+  ];
+
   // ── список ──
-  const q = (listSearch ?? '').trim().toLowerCase();
-  const filtered = q
-    ? actors.filter(a => a.actor_id.toLowerCase().includes(q) || (a.name ?? '').toLowerCase().includes(q))
-    : actors;
+  const filtered = filterActors(actors, kindFilter, listSearch ?? '');
 
   let list;
   if (loading) {
@@ -151,5 +187,10 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
     }
   }
 
-  return <MasterDetail list={list} detail={detail} />;
+  return (
+    <MasterDetail
+      list={<><FilterChips options={kindDefs} value={kindFilter} onChange={setKindFilter} />{list}</>}
+      detail={detail}
+    />
+  );
 }

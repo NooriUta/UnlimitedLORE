@@ -6,7 +6,8 @@ import { SHELL_TABS, type ShellTab } from './shellNav';
 import { CHAPTERS, chapterOf, type Section } from './forsetiChapters';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '../../auth/session';
-import { fetchLoreSlice } from '../../api/lore';
+import { Modal } from '@mantine/core';
+import { LoreSearchScreen } from '../lore/LoreSearchScreen';
 import { useIsAdmin } from '../../auth/useRole';
 
 const HEADER_H = 42;
@@ -59,7 +60,7 @@ export default function AppShell() {
   const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
 
   // ── Seiðr-шапка: бренд/тенант/«ещё» как dropdown'ы + палитра поиска ──────────
-  const [openDD, setOpenDD] = useState<null | 'brand' | 'tenant' | 'more' | 'user'>(null);
+  const [openDD, setOpenDD] = useState<null | 'brand' | 'tenant' | 'chapters' | 'more' | 'user'>(null);
   const [tenant, setTenant] = useState('DEFAULT');
   const [palOpen, setPalOpen] = useState(false);
   const [palQ, setPalQ] = useState('');
@@ -78,6 +79,10 @@ export default function AppShell() {
   const curSection = ((new URLSearchParams(search).get('section')) as Section | null) ?? 'plan';
   const curChapter = chapterOf(curSection);
   const showModules = active === 'projects' && !narrow;
+  // Главы уходят в меню ровно тогда, когда не помещаются строкой. Условие
+  // ОДНО на оба варианта: разойдись они — на какой-то ширине главы пропали бы
+  // и из строки, и из меню, и разделы стали бы недостижимы (так и было).
+  const chaptersInMenu = active === 'projects' && narrow;
 
   // Закрытие dropdown — outside-click (mousedown) + Esc, НЕ onBlur: blur
   // срабатывает раньше клика в Firefox/Safari и съедает выбор.
@@ -97,77 +102,16 @@ export default function AppShell() {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
   }, [palOpen]);
 
-  // ── Единое окно поиска: реальный поиск по графу через слайс `search` ──────────
-  // Фильтры по спискам внутри вкладок остаются на местах — сюда сведён только
-  // сквозной поиск (решение владельца).
-  type Hit = { type: string; ref_id: string; title: string | null };
-  const [palRows, setPalRows] = useState<Hit[]>([]);
-  const [palBusy, setPalBusy] = useState(false);
-  const [palSel, setPalSel] = useState(0);
-
-  useEffect(() => {
-    const q = palQ.trim();
-    if (!palOpen || q.length < 2) { setPalRows([]); setPalBusy(false); return; }
-    const ctrl = new AbortController();
-    setPalBusy(true);
-    const timer = setTimeout(() => {
-      fetchLoreSlice<Hit>('search', { pattern: q }, ctrl.signal)
-        .then(rows => { setPalRows(rows); setPalSel(0); setPalBusy(false); })
-        .catch(() => { if (!ctrl.signal.aborted) { setPalRows([]); setPalBusy(false); } });
-    }, 250);
-    return () => { clearTimeout(timer); ctrl.abort(); };
-  }, [palQ, palOpen]);
-
-  // Куда ведёт результат: раздел + паспорт (тот же URL-контракт, что у остальной навигации).
-  const hitHref = (h: Hit): string => {
-    const id = encodeURIComponent(h.ref_id);
-    switch (h.type) {
-      case 'adr':          return `/lore?section=adrs&passport=${id}`;
-      case 'sprint':       return `/lore?section=sprints&passport=${id}`;
-      case 'quality_gate': return `/lore?section=qg&passport=${id}`;
-      case 'decision':     return `/lore?section=decisions`;
-      case 'doc':          return `/lore?section=knowledge&passport=${encodeURIComponent('doc:' + h.ref_id)}`;
-      case 'runbook':      return `/lore?section=knowledge&passport=${encodeURIComponent('runbook:' + h.ref_id)}`;
-      case 'spec':         return `/lore?section=knowledge&spec=${id}`;
-      case 'task':         return `/lore?section=sprints`;
-      // Продуктовый слой: SRCH-01 добавил эти типы в выдачу поиска, но без веток
-      // здесь они падали в default и уводили на план-борд вместо самой сущности.
-      case 'feature':      return `/lore?section=features&passport=${id}`;
-      case 'use_case':     return `/lore?section=userStories&passport=${id}`;
-      case 'actor':        return `/lore?section=actors&passport=${id}`;
-      // Работы/боли/ожидания живут одним реестром — профилем ценности.
-      case 'job':
-      case 'pain':
-      case 'gain':         return `/lore?section=vpProfile&passport=${id}`;
-      default:             return `/lore?section=plan`;
-    }
-  };
-  // Подписи типов в выдаче поиска. Продуктовые типы (feature…gain) поиск отдаёт
-  // с SRCH-01 — без них в этой карте они показывались сырым кодом типа.
-  const HIT_LABEL: Record<string, string> = {
-    adr:          'ADR',
-    runbook:      'Runbook',
-    quality_gate: 'QG',
-    sprint:       t('shell.hit.sprint',    'Спринт'),
-    decision:     t('shell.hit.decision',  'Решение'),
-    doc:          t('shell.hit.doc',       'Документ'),
-    spec:         t('shell.hit.spec',      'Спека'),
-    task:         t('shell.hit.task',      'Задача'),
-    feature:      t('shell.hit.feature',   'Фича'),
-    use_case:     t('shell.hit.useCase',   'US'),
-    actor:        t('shell.hit.actor',     'Клиент'),
-    job:          t('shell.hit.job',       'Работа'),
-    pain:         t('shell.hit.pain',      'Боль'),
-    gain:         t('shell.hit.gain',      'Ожидание'),
-  };
-
-  const openHit = (h: Hit) => { setPalOpen(false); setPalQ(''); navigate(hitHref(h)); };
-  const submitSearch = () => {
-    if (palRows.length) { openHit(palRows[Math.min(palSel, palRows.length - 1)]); return; }
-    const q = palQ.trim();
-    setPalOpen(false); setPalQ('');
-    navigate(q ? `/lore?section=plan&q=${encodeURIComponent(q)}` : '/lore?section=plan');
-  };
+  // ── Поиск сведён в ОДНУ поверхность (ADR-LORE-033 D16/D17) ──────────────────
+  //
+  // Здесь больше нет ни запроса к API, ни списка результатов, ни выбора
+  // стрелками: всё это делает LoreSearchScreen внутри модалки. Шапка только
+  // ОТКРЫВАЕТ поиск и помнит, с каким запросом он открыт.
+  //
+  // Раньше палитра держала собственную выдачу (limit 12, без фасетов и ранга)
+  // рядом с полноценным экраном. Две реализации одного поиска расходились бы
+  // при первой же правке — и уже расходились: счётчик в палитре показывал
+  // размер окна выдачи вместо числа найденного.
 
   const liveDot = { width: 7, height: 7, borderRadius: '50%', background: 'var(--suc)', flexShrink: 0, display: 'inline-block' as const };
   const caret   = { color: 'var(--t3)', fontSize: 10 };
@@ -307,11 +251,50 @@ export default function AppShell() {
 
         <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px' }} />
 
-        {/* Активное пространство КАПСОМ + его модули (главы) инлайн — эталон Seiðr */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
-          {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
-          {!narrow && activeTab && <span>{t(activeTab.labelKey, activeTab.fallback)}</span>}
-        </div>
+        {/* Активное пространство КАПСОМ + его модули (главы) инлайн — эталон Seiðr.
+            На узком экране главы инлайн не помещаются (showModules=false), и
+            раньше попасть в них было НЕЧЕМ: этот блок был просто подписью, а
+            строка глав не рисовалась вовсе. Разделы «Зачем · Как делаем · Что
+            решили · Основа · Контроль» становились недостижимы с телефона.
+            Теперь на узком он — кнопка с тем же списком глав в выпадающем меню. */}
+        {chaptersInMenu ? (
+          <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
+            <button type="button"
+              aria-haspopup="menu" aria-expanded={openDD === 'chapters'}
+              aria-label={t('shell.chapters', 'Главы Forseti')}
+              onClick={() => setOpenDD(d => d === 'chapters' ? null : 'chapters')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                background: 'none', border: 'none', padding: '2px 4px',
+                fontFamily: 'inherit', fontWeight: 800, fontSize: 13,
+                letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)',
+              }}>
+              {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
+              <span style={caret}>⌄</span>
+            </button>
+            {openDD === 'chapters' && (
+              <div role="menu" style={dd}>
+                <div style={ddHead}>{t('shell.chapters', 'Главы Forseti')}</div>
+                {CHAPTERS.map(c => {
+                  const on = c.id === curChapter.id;
+                  return (
+                    <button key={c.id} type="button" role="menuitem" style={ddItem(on)}
+                      onClick={() => { setOpenDD(null); navigate(`/lore?section=${c.sections[0]}`); }}>
+                      <GameIcon slug={c.icon} size={15} style={{ color: on ? 'var(--acc)' : 'var(--t3)' }} />
+                      <span style={{ fontWeight: on ? 700 : 500 }}>{t(c.nameKey, c.name)}</span>
+                      {on && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
+            {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
+            <span>{t(activeTab!.labelKey, activeTab!.fallback)}</span>
+          </div>
+        )}
 
         {showModules && <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 8px', flexShrink: 0 }} />}
 
@@ -345,11 +328,18 @@ export default function AppShell() {
 
         <div style={{ flex: 1, minWidth: 0 }} />
 
-        {/* ── Правый тулбар: только первичное (поиск · ещё · профиль) ── */}
+        {/* ── Правый тулбар: только первичное (поиск · ещё · профиль) ──
+            Иконка — GameIcon, как у всех соседей по шапке. Здесь стоял глиф
+            «⌕» (U+2315), которого НЕТ ни в Manrope, ни в IBM Plex Mono:
+            браузер подставлял его из системного шрифта, поэтому вид зависел
+            от ОС и не подчинялся нашей типографике вовсе. Замерено — ширина
+            глифа одинакова во всех трёх наших шрифтах (23.1px), тогда как
+            буква «M» даёт 33.6 / 24 / 22: верный признак чужого фолбэка. */}
         <button type="button" onClick={() => setPalOpen(true)}
           title={t('shell.searchTitle', 'Поиск по данным (/)')} aria-label={t('shell.searchAria', 'Поиск')}
-          style={{ ...btnStyle, textTransform: 'none' as const }}>
-          ⌕{!narrow && <span style={{ ...kbd, marginLeft: 6 }}>/</span>}
+          style={{ ...btnStyle, textTransform: 'none' as const, display: 'inline-flex', alignItems: 'center' }}>
+          <GameIcon slug="magnifying-glass" size={15} style={{ color: 'inherit' }} />
+          {!narrow && <span style={{ ...kbd, marginLeft: 6 }}>/</span>}
         </button>
 
         <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
@@ -427,69 +417,36 @@ export default function AppShell() {
         )}
       </header>
 
-      {/* ── Палитра поиска: модалка по «/» или кнопке (доменный поиск по данным) ── */}
-      {palOpen && (
-        <div
-          onMouseDown={e => { if (e.target === e.currentTarget) setPalOpen(false); }}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.48)', zIndex: 300, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '11vh' }}
-        >
-          <div style={{ width: 'min(560px, 92vw)', background: 'var(--bg2)', border: '1px solid var(--bdh)', borderRadius: 12, boxShadow: '0 22px 64px rgba(0,0,0,.55)', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 14px', borderBottom: '1px solid var(--bd)' }}>
-              <span style={{ fontSize: 15 }}>⌕</span>
-              <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--acc)', border: '1px solid var(--acc)', borderRadius: 999, padding: '1px 8px' }}>{t('shell.searchData', 'поиск по данным')}</span>
-              <input
-                autoFocus
-                value={palQ}
-                onChange={e => setPalQ(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); submitSearch(); }
-                  else if (e.key === 'ArrowDown') { e.preventDefault(); setPalSel(i => Math.min(i + 1, palRows.length - 1)); }
-                  else if (e.key === 'ArrowUp')   { e.preventDefault(); setPalSel(i => Math.max(i - 1, 0)); }
-                }}
-                placeholder={t('shell.searchPlaceholder', 'id, название, текст…')}
-                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 15, color: 'var(--t1)' }}
-              />
-              {palBusy && <span style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>…</span>}
-            </div>
+      {/* ── Поиск: ЕДИНСТВЕННАЯ поверхность (ADR-LORE-033 D16/D17) ──────────
+          Открывается лупой или «/». Внутри — тот же компонент, что раньше жил
+          отдельным экраном: фасеты, разложенный ранг, разобранное выражение,
+          баннер покрытия, пагинация. Держать рядом бедную палитру и богатый
+          экран значило иметь две двери в одно место, неразличимые на вид.
 
-            {/* Результаты */}
-            <div style={{ maxHeight: '52vh', overflow: 'auto', padding: 5 }}>
-              {palQ.trim().length < 2 && (
-                <div style={{ padding: '14px 10px', fontSize: 12, color: 'var(--t3)' }}>
-                  Введите минимум 2 символа — ищу по ADR, решениям, спринтам, задачам, спекам, ранбукам, документам и QG.
-                </div>
-              )}
-              {palQ.trim().length >= 2 && !palBusy && palRows.length === 0 && (
-                <div style={{ padding: '14px 10px', fontSize: 12, color: 'var(--t3)' }}>Ничего не найдено</div>
-              )}
-              {palRows.map((h, i) => {
-                const on = i === palSel;
-                return (
-                  <button key={`${h.type}:${h.ref_id}:${i}`} type="button"
-                    onMouseEnter={() => setPalSel(i)}
-                    onClick={() => openHit(h)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left',
-                      border: 'none', background: on ? 'var(--bg3)' : 'transparent', color: 'var(--t1)',
-                      fontSize: 13, padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
-                    }}>
-                    <span style={{ fontSize: 9, fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 6px', flexShrink: 0 }}>
-                      {HIT_LABEL[h.type] ?? h.type}
-                    </span>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--acc)', flexShrink: 0 }}>{h.ref_id}</span>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.title ?? ''}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ display: 'flex', gap: 14, padding: '7px 13px', fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', borderTop: '1px solid var(--bd)' }}>
-              <span>↑↓ выбор</span><span>↵ открыть</span><span>esc закрыть</span>
-              {palRows.length > 0 && <span style={{ marginLeft: 'auto' }}>найдено: {palRows.length}</span>}
-            </div>
-          </div>
-        </div>
-      )}
+          Mantine Modal, а не свой оверлей (ADR-LORE-034): focus trap, возврат
+          фокуса на кнопку при закрытии, Escape, блокировка прокрутки фона и
+          role="dialog" приходят готовыми. Прежний самодельный оверлей ничего
+          из этого не делал — в проекте не было НИ ОДНОГО role="dialog". */}
+      <Modal
+        opened={palOpen}
+        onClose={() => { setPalOpen(false); setPalQ(''); }}
+        size="900px"
+        title={t('shell.searchData', 'поиск по данным')}
+        overlayProps={{ backgroundOpacity: 0.6, blur: 2 }}
+        styles={{ body: { maxHeight: '78vh', overflowY: 'auto' } }}
+      >
+        {/* key монтирует поиск заново на каждое открытие: иначе он показывал бы
+            выдачу прошлого запроса до первого ввода — то есть отвечал бы на
+            вопрос, которого сейчас не задавали. */}
+        {palOpen && (
+          <LoreSearchScreen
+            key={palQ ? 'seeded' : 'fresh'}
+            autoFocus
+            initialQuery={palQ}
+            onNavigated={() => { setPalOpen(false); setPalQ(''); }}
+          />
+        )}
+      </Modal>
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Outlet />

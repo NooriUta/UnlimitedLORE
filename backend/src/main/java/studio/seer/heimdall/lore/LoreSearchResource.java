@@ -110,11 +110,11 @@ public class LoreSearchResource extends LoreResourceBase {
         new Branch("runbook", "KnowRunbook", "runbook_id", "name", "ftKnowRunbook",
             List.of("name"),
             "KnowRunbookHist", "ftKnowRunbookHist", List.of("content_md"),
-            DIRECT_COMP, null, null, DIRECT_PROJ, 1.00),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.05),
         new Branch("doc", "KnowDoc", "doc_id", "title", "ftKnowDoc",
             List.of("title", "content_md", "content_md_en", "content_md_ru"),
             "KnowDocHist", "ftKnowDocHist", List.of("content_md"),
-            DIRECT_COMP, null, null, DIRECT_PROJ, 1.00),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.10),
         // FT-индекса на QualityGate нет (реестр V11/V12) — единственная ветка
         // на ILIKE; score у неё симулируется константой ниже.
         new Branch("quality_gate", "QualityGate", "qg_id", "name", null,
@@ -138,19 +138,19 @@ public class LoreSearchResource extends LoreResourceBase {
         new Branch("pain", "KnowPain", "pain_id", "title", "ftKnowPain",
             List.of("title", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.25),
         new Branch("gain", "KnowGain", "gain_id", "title", "ftKnowGain",
             List.of("title", "body_md", "metric_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.25),
         new Branch("job", "KnowJob", "job_id", "title", "ftKnowJob",
             List.of("title", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.25),
         new Branch("actor", "KnowActor", "actor_id", "name", "ftKnowActor",
             List.of("name", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90));
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.20));
 
     /** Переопределение приоритетов без пересборки: "adr:1.4,task:0.5". */
     @ConfigProperty(name = "lore.search.type-priority")
@@ -161,13 +161,107 @@ public class LoreSearchResource extends LoreResourceBase {
     // полем capped_at, чтобы «ровно 50» читалось как «не меньше 50»).
     private static final int BRANCH_CAP = 50;
 
+    /**
+     * SRCH-06 (ADR-LORE-033 D6): «похожие записи» на {@code SEARCH_INDEX_MORE}.
+     *
+     * <p><b>На вход идентификатор, а не строка.</b> Отдельный эндпоинт, а не
+     * режим основного поиска: иначе {@code q} стал бы полиморфным — то запрос,
+     * то ссылка, — и вызывающему пришлось бы догадываться, как его поймут.
+     *
+     * <p><b>Два ЗАМЕРЕННЫХ ограничения движка (26.7.2), оба вынесены в ответ,
+     * а не спрятаны.</b>
+     * <ul>
+     *   <li><b>Похожесть работает ТОЛЬКО внутри своего типа.</b> Rid ADR против
+     *       индекса спринтов возвращает пусто: функция ищет документ в том же
+     *       индексе, где он лежит. Межтиповых «похожих» не существует, и
+     *       обещать их в UI нельзя.</li>
+     *   <li><b>{@code $similarity} возвращает 1.0 у всех строк</b> — ровно как
+     *       CLASSIC-ловушка у обычного поиска. Ранжировать по нему нельзя,
+     *       поэтому мы его и не отдаём: константа, выданная за меру близости,
+     *       хуже её отсутствия. Порядок — тот, что вернул движок.</li>
+     * </ul>
+     *
+     * <p>Исходная запись из выдачи исключается: «похоже на само себя» — не ответ.
+     */
+    @GET
+    @Path("search/similar")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response similar(@QueryParam("ref") String ref,
+                            @QueryParam("limit") Integer limitParam,
+                            @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        long t0 = System.nanoTime();
+        if (ref == null || ref.isBlank()) return badParams("ref required");
+        if (ref.length() > 160) return badParams("ref is longer than 160 characters");
+
+        int limit = limitParam == null || limitParam < 1 ? 10 : Math.min(limitParam, 50);
+
+        // Ищем, какому типу принадлежит идентификатор. Ветки без FT-индекса
+        // (quality_gate) пропускаем сразу: «похожих» им взять неоткуда.
+        for (Branch b : BRANCHES) {
+            if (b.indexName() == null) continue;
+            List<Map<String, Object>> src;
+            try {
+                src = ingestService.queryPublic(
+                    "SELECT @rid AS rid FROM " + b.vertexClass() + " WHERE " + b.idField() + " = :ref LIMIT 1",
+                    Map.of("ref", ref));
+            } catch (Exception e) {
+                LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), e.getMessage());
+                continue;
+            }
+            if (src.isEmpty()) continue;
+
+            String rid = String.valueOf(src.get(0).get("rid"));
+            List<Map<String, Object>> rows;
+            try {
+                // rid подставляется в текст запроса, а не параметром: ArcadeDB
+                // ждёт здесь литерал-коллекцию RID. Значение получено из БД
+                // предыдущим запросом и снаружи не приходит — подстановка
+                // безопасна по происхождению, а не по вере в неё.
+                rows = ingestService.queryPublic(
+                    "SELECT " + b.idField() + " AS ref_id, " + b.titleField() + " AS title FROM "
+                    + b.vertexClass() + " WHERE SEARCH_INDEX_MORE('" + b.indexName() + "', [" + rid + "]) = true "
+                    + "LIMIT " + (limit + 1), Map.of());
+            } catch (Exception e) {
+                LOG.warnf("[LORE SIMILAR] %s: %s", ref, e.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("LORE_UPSTREAM", String.valueOf(e.getMessage()))));
+            }
+
+            List<Map<String, Object>> hits = new ArrayList<>();
+            for (Map<String, Object> r : rows) {
+                if (ref.equals(String.valueOf(r.get("ref_id")))) continue; // сам себе не похожий
+                Map<String, Object> hit = new LinkedHashMap<>();
+                hit.put("type", b.type());
+                hit.put("ref_id", r.get("ref_id"));
+                hit.put("title", r.get("title"));
+                hits.add(hit);
+                if (hits.size() >= limit) break;
+            }
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ref", ref);
+            out.put("type", b.type());
+            out.put("hits", hits);
+            // Явно в ответе, а не примечанием в документации: потребитель должен
+            // знать, что «похожие» ограничены типом и что порядок не ранжирован.
+            out.put("same_type_only", true);
+            out.put("ranked", false);
+            out.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
+            return noStore(Response.ok(out));
+        }
+
+        return noStore(Response.status(Response.Status.NOT_FOUND)
+            .entity(new LoreError("NOT_FOUND", "ref «" + ref + "» не найден ни в одном индексируемом типе")));
+    }
+
     @GET
     @Path("search")
     @Produces(MediaType.APPLICATION_JSON)
     public Response search(@QueryParam("q") String q,
                            @QueryParam("types") String typesCsv,
                            @QueryParam("components") String componentsCsv,
-                           @QueryParam("project") String project,
+                           @QueryParam("projects") String projectsCsv,
                            @QueryParam("limit") Integer limitParam,
                            @QueryParam("offset") Integer offsetParam,
                            @QueryParam("mode") String mode,
@@ -180,6 +274,10 @@ public class LoreSearchResource extends LoreResourceBase {
 
         Set<String> types = csv(typesCsv);
         List<String> comps = new ArrayList<>(csv(componentsCsv));
+        // SRCH-10: ось проекта стала множественной — как тип и компонент. Скаляр
+        // не давал выбрать «два продукта из пяти», и UI поэтому фильтровал
+        // проекты на клиенте, по одной странице выдачи.
+        List<String> projs = new ArrayList<>(csv(projectsCsv));
         int limit = limitParam == null || limitParam < 1 ? 20 : Math.min(limitParam, 100);
         int offset = offsetParam == null || offsetParam < 0 ? 0 : offsetParam;
         String m = mode == null || mode.isBlank() ? "smart" : mode.toLowerCase(Locale.ROOT);
@@ -201,10 +299,22 @@ public class LoreSearchResource extends LoreResourceBase {
         List<Map<String, Object>> hits = new ArrayList<>();
         Map<String, Integer> byType = new LinkedHashMap<>();
         Map<String, Integer> byComponent = new LinkedHashMap<>();
+        // SRCH-10: третья ось фасета. Раньше её не было в ответе вовсе, и UI
+        // считал проекты ПО ТЕКУЩЕЙ СТРАНИЦЕ — то есть счётчики врали за
+        // пределами первых 50 хитов, а серверный фильтр по проекту не
+        // задействовался. Считается так же, как by_component: по всей выборке
+        // ветки, а не по квоте выдачи.
+        Map<String, Integer> byProject = new LinkedHashMap<>();
+        // ADR-033 обещал поле warnings при падении ветки. Фактически ставилось
+        // byType=-1 — и это уходило в фасет КАК СЧЁТЧИК: UI рисовал чип
+        // «−1» вместо того, чтобы сказать «поиск по этому типу не отработал».
+        // Минус-единица как сигнал ошибки хуже отсутствия сигнала: она
+        // выглядит данными.
+        List<Map<String, Object>> warnings = new ArrayList<>();
 
         for (Branch b : active) {
             try {
-                List<Map<String, Object>> rows = queryBranch(b, lucene, q, comps, project);
+                List<Map<String, Object>> rows = queryBranch(b, lucene, q, comps, projs);
                 byType.put(b.type(), rows.size());
                 // Нормировка внутри ветки: BM25 разных бакетов несравним, а
                 // после деления на максимум ветки хотя бы порядок внутри типа
@@ -216,20 +326,49 @@ public class LoreSearchResource extends LoreResourceBase {
                 double p = prio.getOrDefault(b.type(), b.priority());
                 int taken = 0;
                 for (Map<String, Object> r : rows) {
-                    for (Object c : effectiveComponents(r)) {
+                    // Читаем ГОТОВЫЕ поля хита: `queryBranch` уже прогнал строки
+                    // через shapeHit, и тот переименовал comp_direct/comp_inherited
+                    // в `components`, а `proj` в `projects`.
+                    //
+                    // Здесь стоял вызов effectiveComponents(r), который ищет
+                    // comp_direct — в этих строках его больше НЕТ. Агрегат выходил
+                    // пустым всегда: ось «компонент» не показывала ни одного чипа,
+                    // и фильтровать по компоненту было нечем, хотя у самих хитов
+                    // компоненты есть и видны.
+                    //
+                    // Соседняя ось это маскировала: by_project добавлялся позже
+                    // (SRCH-10) и сразу читал новое имя, поэтому работал. Проекты
+                    // на экране были — и пустой «компонент» выглядел как «у этих
+                    // записей просто нет компонента», а не как отказ.
+                    for (Object c : asList(r.get("components"))) {
                         byComponent.merge(String.valueOf(c), 1, Integer::sum);
+                    }
+                    for (Object pr : asList(r.get("projects"))) {
+                        byProject.merge(String.valueOf(pr), 1, Integer::sum);
                     }
                     if (taken++ >= perType) continue; // фасет считаем по всем, в выдачу — квоту
                     double raw = ((Number) r.getOrDefault("score", 1.0)).doubleValue();
-                    r.put("score", round3(max <= 0 ? p : raw / max * p));
+                    double bm25 = max <= 0 ? 1.0 : raw / max;
+                    // SRCH-09: ранг отдаётся РАЗЛОЖЕННЫМ. Итоговое число само по
+                    // себе необъяснимо: «6.44» не отвечает, почему задача выше
+                    // ADR. Слагаемые показывают, что это не мнение движка, а
+                    // ДВЕ величины — совпадение текста и приоритет типа, — и
+                    // вторую задаём мы. Спорить с приоритетом можно, только
+                    // если он виден.
+                    r.put("bm25", round3(bm25));
+                    r.put("type_priority", round3(p));
+                    r.put("score", round3(bm25 * p));
                     r.put("type", b.type());
                     hits.add(r);
                 }
             } catch (Exception e) {
-                // Ветка НЕ глотается молча: одна упавшая ветка — это дырка в
-                // охвате, и о ней сообщается полем warnings, а не тишиной.
+                // Ветка НЕ глотается молча: одна упавшая ветка — дырка в охвате.
+                // Тип в by_type НЕ кладём вообще: счётчик означает «сколько
+                // нашлось», а про упавшую ветку мы этого не знаем. Отдельное
+                // поле warnings говорит «здесь не искали», и это принципиально
+                // иное утверждение, чем «здесь ничего нет».
                 LOG.warnf("[LORE SEARCH] ветка %s упала: %s", b.type(), e.getMessage());
-                byType.put(b.type(), -1);
+                warnings.add(Map.of("type", b.type(), "error", String.valueOf(e.getMessage())));
             }
         }
 
@@ -241,19 +380,34 @@ public class LoreSearchResource extends LoreResourceBase {
         out.put("hits", page);
         out.put("by_type", byType);
         out.put("by_component", byComponent);
+        out.put("by_project", byProject);
+        // Пустой список, а не отсутствие ключа: потребителю не приходится
+        // различать «поле не пришло» и «предупреждений нет».
+        out.put("warnings", warnings);
         out.put("total_collected", hits.size());
         out.put("capped_at", BRANCH_CAP);
+        // SRCH-09: во что превратился запрос. Пользователь ввёл слово, а в
+        // индекс ушло `(слово OR слово*)` — и именно это объясняет, почему
+        // нашлось не то, что ожидалось. Без показа выражения расхождение между
+        // «что я искал» и «что искали за меня» проверить нечем: строку строит
+        // сервер (D2), и она нигде больше не видна.
+        out.put("lucene", lucene);
+        out.put("mode", m);
+        // Границы страницы — рядом с самой страницей: без offset потребитель
+        // не может отличить «конец выдачи» от «страница пролистана мимо».
+        out.put("offset", offset);
+        out.put("limit", limit);
         out.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
         return noStore(Response.ok(out));
     }
 
     /** Одна ветка: вершина + (если есть) открытая hist-строка со схлопыванием. */
     private List<Map<String, Object>> queryBranch(Branch b, String lucene, String rawQ,
-                                                  List<String> comps, String project) {
+                                                  List<String> comps, List<String> projs) {
         Map<String, Object> params = new HashMap<>();
         params.put("q", lucene);
         String compFilter = componentFilter(b, comps, params, false);
-        String projFilter = projectFilter(b, project, params, false);
+        String projFilter = projectFilter(b, projs, params, false);
 
         String textCols = String.join(", ", b.vertexTextFields());
         String matcher = b.indexName() != null
@@ -283,7 +437,7 @@ public class LoreSearchResource extends LoreResourceBase {
             // Фильтры фасета на hist-ветке идут через родителя (in('HAS_STATE')):
             // сама hist-строка рёбер компонентов не несёт.
             String hCompFilter = componentFilter(b, comps, hp, true);
-            String hProjFilter = projectFilter(b, project, hp, true);
+            String hProjFilter = projectFilter(b, projs, hp, true);
             // [0] только у скалярных проекций (ref_id/title — родитель один);
             // компоненты/проекты — СПИСКИ, [0] оставил бы один случайный.
             String hsql = "SELECT in('HAS_STATE')." + b.idField() + "[0] AS ref_id, "
@@ -350,12 +504,20 @@ public class LoreSearchResource extends LoreResourceBase {
         return " AND (" + String.join(" OR ", parts) + ")";
     }
 
-    private String projectFilter(Branch b, String project, Map<String, Object> params, boolean viaParent) {
-        if (project == null || project.isBlank()) return "";
-        params.put("proj", project);
-        // Без [0] — тот же список-капкан, что у компонентов выше.
+    private String projectFilter(Branch b, List<String> projs, Map<String, Object> params, boolean viaParent) {
+        if (projs == null || projs.isEmpty()) return "";
+        // Без [0] — тот же список-капкан, что у компонентов выше: у сущности
+        // проектов может быть несколько, и сравнение с первым случайным
+        // показало бы её только под одним из них.
         String expr = viaParent ? "in('HAS_STATE')." + b.projExpr() : b.projExpr();
-        return " AND (" + expr + " CONTAINS :proj)";
+        StringBuilder or = new StringBuilder();
+        for (int i = 0; i < projs.size(); i++) {
+            String key = "proj" + i;
+            params.put(key, projs.get(i));
+            if (i > 0) or.append(" OR ");
+            or.append(expr).append(" CONTAINS :").append(key);
+        }
+        return " AND (" + or + ")";
     }
 
     /** Сниппет + matched_field + эффективные компоненты одной строки. */
@@ -446,12 +608,30 @@ public class LoreSearchResource extends LoreResourceBase {
         priorityOverride.ifPresent(s -> {
             for (String pair : s.split(",")) {
                 String[] kv = pair.split(":");
-                if (kv.length == 2) {
-                    try { out.put(kv[0].trim(), Double.parseDouble(kv[1].trim())); }
-                    catch (NumberFormatException ignored) {
-                        LOG.warnf("[LORE SEARCH] неразборчивый приоритет '%s' — пропущен", pair);
-                    }
+                if (kv.length != 2) continue;
+                String type = kv[0].trim();
+                // Неизвестный тип — почти наверняка опечатка: значение молча
+                // осело бы в карте и ни на что не влияло, а автор конфига был
+                // бы уверен, что настроил.
+                if (!out.containsKey(type)) {
+                    LOG.warnf("[LORE SEARCH] приоритет для неизвестного типа '%s' — пропущен", type);
+                    continue;
                 }
+                double v;
+                try { v = Double.parseDouble(kv[1].trim()); }
+                catch (NumberFormatException ignored) {
+                    LOG.warnf("[LORE SEARCH] неразборчивый приоритет '%s' — пропущен", pair);
+                    continue;
+                }
+                // Диапазона раньше не было вовсе: 0 выкидывал тип из выдачи
+                // целиком (score обнулялся), отрицательное отправляло его в
+                // конец за всё остальное. И то и другое выглядело как «поиск
+                // сломался», а не как «в конфиге опечатка».
+                if (!(v > 0) || v > 10) {
+                    LOG.warnf("[LORE SEARCH] приоритет %s=%s вне (0; 10] — пропущен", type, kv[1].trim());
+                    continue;
+                }
+                out.put(type, v);
             }
         });
         return out;

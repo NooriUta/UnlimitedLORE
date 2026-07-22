@@ -75,7 +75,6 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
-  { id: 'search',     icon: 'magnifying-glass', labelKey: 'lore.page.nav.search',   fallback: 'Поиск'      },
   { id: 'components', icon: 'cog',            labelKey: 'lore.page.nav.components', fallback: 'Компоненты' },
   { id: 'tech',       icon: 'gears',          labelKey: 'lore.page.nav.tech',       fallback: 'Технологии' },
   { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
@@ -85,6 +84,13 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   // NB: 'admin' сознательно НЕ здесь — админка administers весь LORE, а не раздел
   // Forseti, поэтому вход живёт в шапке приложения (AppShell, ADR-LORE-025).
   // Секция остаётся валидным роутом ?section=admin и рендерится ниже под гейтом.
+  //
+  // NB: 'search' — по той же причине, вход через лупу в шапке (ADR-LORE-033 D15).
+  // В этом ряду перечислены ТИПЫ ЗАПИСЕЙ — ADR, решения, вопросы, знания. Поиск
+  // не тип, а действие над всеми сразу, и соседство читалось как «ещё один
+  // раздел с чем-то»: две точки входа в один и тот же поиск, отличить которые
+  // по виду было нельзя. Поверхность одна — палитра; экран остаётся тем, КУДА
+  // она приводит (Enter → ?section=search&q=…), а не самостоятельным пунктом.
 ];
 
 // Стили строки подвкладок (главы теперь в шапке — AppShell).
@@ -205,6 +211,7 @@ export default function LorePage() {
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
   const spec      = params.get('spec')      || '';
+  const ucParam   = params.get('uc')        || '';   // PL-16: раскрытый узел дерева US→задачи
   // T19: Knowledge doc/runbook deep-links are unified onto `passport` as
   // "<kind>:<id>" (like every other section's passport). Legacy ?kind=&art=
   // is still read so old bookmarks keep working. `spec` keeps its own param —
@@ -387,10 +394,17 @@ export default function LorePage() {
   const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   // Кросс-переходы продуктового слоя (feature↔uc↔pain/gain/job↔actor): section + passport.
+  // `uc` снимается вместе с ними: раскрытый сценарий принадлежит ПРЕДЫДУЩЕЙ
+  // фиче, и переживи он переход — новая открылась бы с раскрытым чужим узлом.
   const navigateProduct = (sec: string, id?: string) => setParams(p => {
     p.set('section', sec);
     if (id) p.set('passport', id); else p.delete('passport');
-    p.delete('spec'); p.delete('kind'); p.delete('art');
+    p.delete('spec'); p.delete('kind'); p.delete('art'); p.delete('uc');
+    return p;
+  });
+  // PL-16: раскрытый до задач сценарий в паспорте фичи.
+  const setExpandedUc = (id: string | null) => setParams(p => {
+    if (id) p.set('uc', id); else p.delete('uc');
     return p;
   });
   // T19: encode Knowledge doc/runbook selection into the unified `passport`.
@@ -441,7 +455,14 @@ export default function LorePage() {
     // Уровень 2: подвкладки активной главы (контекст). Сами главы — в шапке.
     <nav style={STORY_S.subBar} className="lore-nav-scroll" role="tablist" aria-label={activeChapter.name}>
       {activeChapter.sections.map(sid => {
-        const s = SECTIONS.find(x => x.id === sid)!;
+        // Раздел главы, которого нет в SECTIONS, ПРОПУСКАЕТСЯ, а не роняет
+        // страницу. Прежний `!` утверждал, что оба списка всегда согласованы;
+        // они разъехались с первой же правкой — 'search' убрали из SECTIONS
+        // (D16), а в главе «Что решили» он остался, и обращение к `.icon`
+        // отсутствующей записи обрушило весь LorePage. Пустая подвкладка —
+        // мелкий изъян, белый экран вместо раздела — отказ.
+        const s = SECTIONS.find(x => x.id === sid);
+        if (!s) return null;
         const on = section === sid;
         const label = t(s.labelKey, s.fallback);
         return (
@@ -481,7 +502,33 @@ export default function LorePage() {
   return (
     <DictionaryProvider>
     <div style={S.root}>
-      {/* ── Фильтр списка текущего раздела (не сквозной поиск — тот в палитре) ── */}
+      {/* ── Horizontal section nav ───────────────────────────────────────────
+          Не показываем в Admin LORE: админка — уровень приложения (вход в шапке,
+          ADR-LORE-025), разделы Forseti к её содержимому отношения не имеют. */}
+      {section !== 'admin' && sectionNav}
+
+      {/* ── Фильтр списка текущего раздела (не сквозной поиск — тот в палитре) ──
+          SRCH-12: стоит ПОД навигацией, а не над ней.
+
+          Раньше блок рендерился выше нава и условно — есть у раздела фильтр или
+          нет. Разделы делятся на восемь с фильтром и остальные без, и при
+          переходе между ними строка появлялась/исчезала НАД навигацией: весь
+          верх съезжал по вертикали. Целишься в пункт нава — он уезжает.
+
+          Порядок был неверен и по смыслу: фильтр относится к СОДЕРЖИМОМУ
+          раздела, значит стоит ниже переключателя разделов, а не выше.
+
+          РЕЗЕРВ ВЫСОТЫ СНЯТ. Он появился вместе с перестановкой — «контент под
+          фильтром дёргался бы на строку». Но обоснование осталось от прежней
+          позиции: пока блок стоял ВЫШЕ нава, его появление двигало саму
+          навигацию, и это было бы неприятно. Стоя ниже, он навигацию не
+          трогает вовсе, а контент под ним и так меняется целиком при переходе
+          между разделами — дёргаться там нечему.
+
+          Ценой резерва была пустая полоса 36px на всех разделах БЕЗ фильтра, а
+          их большинство: фильтр есть у восьми из двадцати. Владелец заметила её
+          как «пустое место между навигацией и фильтрами» — то есть плата
+          оказалась заметнее того, что покупалось. */}
       {showGlobalSearch && (
         <div style={S.topBar}>
           <span style={S.searchIcon}>🔍</span>
@@ -494,11 +541,6 @@ export default function LorePage() {
           />
         </div>
       )}
-
-      {/* ── Horizontal section nav ───────────────────────────────────────────
-          Не показываем в Admin LORE: админка — уровень приложения (вход в шапке,
-          ADR-LORE-025), разделы Forseti к её содержимому отношения не имеют. */}
-      {section !== 'admin' && sectionNav}
 
       {/* ── Knowledge filter bar: Тип/Модуль chips portal in here from
           LoreArtifactList's own header (see knowledgeFilterBar above) ─── */}
@@ -1098,7 +1140,7 @@ export default function LorePage() {
           {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
           {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
           {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={null} onSelect={() => {}} onNavigate={navigateProduct} onError={handleFetchError} />}
-          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} expandedUc={ucParam || null} onExpandUc={setExpandedUc} />}
           {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
 
           {/* ADR — new */}
@@ -1125,7 +1167,11 @@ export default function LorePage() {
             </div>
           )}
 
-          {/* Сквозной поиск (SRCH-05, ADR-LORE-033) */}
+          {/* Сквозной поиск (SRCH-05, ADR-LORE-033). Основной вход — оверлей по
+              лупе (D16/D17); этот маршрут оставлен РАБОЧИМ намеренно: на него
+              ведут старые закладки и ссылки из переписки, ломать их ради
+              чистоты нечестно. Новых путей сюда нет — ни пункта меню, ни
+              кнопки, — и компонент тот же самый, так что расходиться нечему. */}
           {section === 'search' && <LoreSearchScreen />}
 
           {/* Open Questions register (ADR-020/021) */}

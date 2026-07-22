@@ -34,7 +34,9 @@
     "themeLight": "Светлая тема",
     "logout": "Выйти",
     "profile": "Профиль",
-    "searchPlaceholder": "id, название, текст…"
+    "searchPlaceholder": "id, название, текст…",
+    "role": "роль",
+    "sessionUntil": "сессия до"
   },
   "nav": {
     "lore": "LORE",
@@ -183,7 +185,14 @@
       "whatTests": "Что проверяет",
       "definition": "Определение",
       "walk": "Walk-функция",
-      "metricRec": "Рекоменд. метрика"
+      "metricRec": "Рекоменд. метрика",
+      "aspectOrigins": "Происхождение аспектов",
+      "aspects": "Аспекты — оси голд-классификации",
+      "categories": "Категории кейсов",
+      "goldShape": "Форма голда",
+      "goldShapes": "Формы голда",
+      "label": "Метка",
+      "origin": "Происхождение"
     },
     "reg": {
       "casesTitle": "Кейсы и голд — банк вопросов с ревизиями ответов",
@@ -372,8 +381,17 @@
       "zerosTitle": "структурные нули (by design)",
       "failures": "Профиль провалов",
       "failuresHint": "пустая таксономия = оценён нормально",
-      "allRuns": "все раны"
-    }
+      "allRuns": "все раны",
+      "arch": "Архитектура",
+      "archHint": "проза текущей ревизии"
+    },
+    "decisions": {
+      "rationale": "обоснование",
+      "search": "Поиск по теме, тексту, ратионалу…",
+      "title": "Методологические решения"
+    },
+    "noMatch": "Нет совпадений",
+    "unresolvedRevExcluded": "неразрешимо (ран без started_ts, Д-1)"
   },
   "lore": {
     "adrEditor": {
@@ -414,7 +432,8 @@
         "3m": "3м",
         "6m": "6м",
         "1y": "Год"
-      }
+      },
+      "decisionCount": "решений: {{n}}"
     },
     "adrPassportView": {
       "loading": "Загрузка {{adrId}}…",
@@ -428,7 +447,21 @@
       "supersedes": "Заменяет",
       "implementedInSprint": "Реализовано в спринте",
       "releasedIn": "Выпущено в релизе",
-      "tags": "Теги"
+      "tags": "Теги",
+      "cancel": "Отмена",
+      "componentsMulti": "Компоненты",
+      "decComponent": "Компонент — выбор из списка (опц.)",
+      "decisions": "Решения этого ADR",
+      "decNew": "+ решение",
+      "downloadMd": "⬇ MD",
+      "downloadMdTitle": "Скачать ADR целиком в Markdown",
+      "noDecisions": "Решений пока нет — добавьте «+ решение».",
+      "openInRegister": "Открыть в реестре вопросов (с правкой)",
+      "projectsMulti": "Проекты",
+      "questions": "Открытые вопросы этого ADR",
+      "save": "Сохранить",
+      "tracedBy": "Прослеживают сценарии (TRACED_TO)",
+      "justifies": "Обосновывает задачи (JUSTIFIED_BY)"
     },
     "analytics": {
       "flow": {
@@ -438,7 +471,15 @@
           "bucket8to14": "8–14д",
           "bucket15to30": "15–30д",
           "bucket30plus": "30д+"
-        }
+        },
+        "accuracyHint": "Точность оценок по закрытым задачам: план = effort_days, факт = календарная длительность (создано→закрыто). ⚠ «потраченное» = календарь (wall-clock), а не чистые трудозатраты. Только реальные закрытия (с 12 июн, states>1).",
+        "blockedHint": "Спринтов, прошедших через статус BLOCKED (по истории состояний): {{ever}} из {{total}} ({{pct}}%). Сейчас заблокировано: {{nowBlocked}}.",
+        "deployLagHint": "Дней от закрытия спринта (done_date) до первого релиза, в который он вошёл (release_dates). Медиана/p75 по таким спринтам. Справа — сколько done-спринтов ещё без релиза.",
+        "leadTimeHint": "Дней от реального старта спринта (самый ранний valid_from из истории состояний, слайс sprint_starts) до закрытия (done_date). Медиана/p25/p75/макс + гистограмма по закрытым спринтам.",
+        "releaseCadenceHint": "Темп релизов по каждому проекту: частота = релизы за последние 30 дней ÷ (30/7) = релизов в неделю. Медиана = медианный разрыв в днях между соседними релизами проекта.",
+        "releasePerWeekHint": "Релизов в неделю за последние 30 дней",
+        "throughputBarHint": "{{label}}: {{count}} задач",
+        "throughputHint": "Закрытых задач за ISO-неделю (KnowTaskHist → DONE). Считаем с 12 июн (раньше — массовый импорт) и только задачи с реальной прогрессией статусов (states>1), исключая архивные «рождённые done»."
       },
       "overview": {
         "noProject": "— без проекта",
@@ -527,7 +568,27 @@
         "cumulativeHint": "Нарастающий итог закрытых спринтов по дням (по done_date). Крутизна = темп. Учитывает фильтр проекта.",
         "cumulativeDone": "Накопленное выполнение",
         "apr19": "19 апр",
-        "today": "сегодня"
+        "today": "сегодня",
+        "paretoCumHint": "Накопленная доля (Парето)",
+        "paretoHint": "Доля задач каждого компонента от всех задач (Парето). Σ — накопленная доля сверху вниз. Покрытие = компоненты со спринтами / все компоненты.",
+        "paretoShareHint": "{{pct}}% всех задач"
+      },
+      "qg": {
+        "attentionHint": "FAIL/WARN инварианты по всему флоту (content_md × latest ClRoutineMetric, статус пересчитан через compute_status — ADR-QG-002/004). Полная детализация — по клику на гейт.",
+        "qgCellHint": "{{qgId}}\\nРутина: {{routine}}\\nСтатус: {{status}}",
+        "qgDistributionHint": "Распределение Quality Gates по статусу (closed/active/deprecated). Большой % = closed / (closed + active). Внизу — сколько компонентов имеют хотя бы один QG.",
+        "recommendationsHint": "QGRecommendation WHERE status=pending, отсортированы P0→P1→P2.",
+        "runHistoryHint": "Прогоны сгруппированы по run_id (или routine+дата). Время берётся из started_at/finished_at.",
+        "statusGridHint": "Цвет = худший статус среди инвариантов гейта (content_md × latest metric, ADR-QG-002 compute_status). Серый = нет прогонов/метрик.",
+        "violationsHint": "QGJobTask WHERE status=open, по severity."
+      },
+      "tech": {
+        "col": {
+          "tech": "Технология"
+        },
+        "empty": "Технологии не зарегистрированы ни для одного компонента.",
+        "subtitle": "{{techs}} технологий · {{comps}} компонентов",
+        "title": "Матрица технологии × компоненты"
       }
     },
     "artifactDoc": {
@@ -546,7 +607,13 @@
         "runbook": "Runbook",
         "doc": "Документ",
         "qg": "Quality Gate"
-      }
+      },
+      "cancel": "Отмена",
+      "chars": "{{n}} зн.",
+      "edit": "✎ Редактировать",
+      "htmlLegacyWarning": "⚠ Этот документ сейчас хранится как HTML. Если вы сохраните текст здесь (даже в одном из полей), отображение переключится на Markdown и текущий HTML-контент перестанет показываться (он не удаляется, просто больше не используется).",
+      "save": "Сохранить",
+      "saving": "Сохранение…"
     },
     "artifactList": {
       "kindSpec": "Спеки",
@@ -558,7 +625,9 @@
       "typeLabel": "Тип",
       "moduleLabel": "Модуль",
       "searchPlaceholder": "Поиск по названию…",
-      "notFound": "Ничего не найдено."
+      "notFound": "Ничего не найдено.",
+      "exportRunbooksTitle": "Экспорт чеклиста runbooks в Markdown",
+      "filtersLabel": "Фильтры"
     },
     "componentList": {
       "sprintCountTitle": "Привязанных спринтов",
@@ -572,7 +641,9 @@
         "adr": "ADR",
         "spec": "Спека",
         "qg": "QG",
-        "sprints": "Спринты"
+        "sprints": "Спринты",
+        "doc": "Знания",
+        "uc": "Сценарии"
       },
       "editButtonTitle": "Редактировать",
       "edit": {
@@ -603,7 +674,8 @@
         "content": "Содержимое",
         "tasks": "Задачи",
         "notesEmpty": "Заметки не заполнены",
-        "sprintContentEmpty": "Содержимое спринта не заполнено."
+        "sprintContentEmpty": "Содержимое спринта не заполнено.",
+        "docHtmlOnly": "Документ хранится как HTML — откройте его во вкладке «Знания» для просмотра."
       },
       "qgStatus": {
         "active": "активен",
@@ -627,7 +699,15 @@
       "ungroupTitle": "Убрать группировку",
       "groupTitle": "Группировать по статусу",
       "groupButton": "группировать",
-      "noneFound": "Решений не найдено."
+      "noneFound": "Решений не найдено.",
+      "componentLabel": "Компонент",
+      "filtersLabel": "Фильтры",
+      "onlyIndependent": "Независимые",
+      "onlyIndependentTitle": "Только независимые решения (без ADR)",
+      "parentHas": "Под ADR",
+      "parentLabel": "Привязка к ADR",
+      "parentOrphan": "Независимые",
+      "statusLabel": "Статус"
     },
     "docView": {
       "filterPlaceholder": "Фильтр документов…",
@@ -736,7 +816,47 @@
       "healthChecking": "проверка…",
       "healthUpWithCount": "backend :9100 жив · {{count}} слайсов",
       "healthUp": "backend :9100 жив",
-      "healthDown": "backend :9100 не отвечает"
+      "healthDown": "backend :9100 не отвечает",
+      "clientClaude": "Claude Code",
+      "clientOpenCode": "OpenCode",
+      "clientOpenCodeNote": "тот же MCP-сервер, но у каждого агента свой",
+      "clientOpenCodeNote2": "блок — это и есть lazy-механизм на этом клиенте (server-side диспетчера нет). Ниже — пример для",
+      "clientOpenCodeNote3": "остальные 6 профилей — так же, только со своим allow-листом (готовые блоки лежат в",
+      "clientOpenCodeNote4": " — каждый файл уже валидный фрагмент agent-конфига, его можно подключить по ссылке, не копируя).",
+      "gateLabel": "Единственный жёсткий гейт SDLC.",
+      "gateText": "Профили — это фильтр видимости, а не безопасность: сервер по-прежнему исполнит любой вызов с",
+      "gateText2": "Настоящее ограничение ровно одно и живёт на бэкенде —",
+      "gateText3": "на",
+      "gateText4": "отклоняется с 409 NO_SELF_ACCEPTANCE, если",
+      "gateText5": "совпадает с",
+      "gateText6": "(ADR-LORE-014 §4). Никто не принимает собственную работу.",
+      "lazyClaude": "ToolSearch — схемы инструментов подгружаются по запросу, а не все сразу. В контексте висят только имена.",
+      "lazyColClient": "Клиент",
+      "lazyColHow": "Чем сужает",
+      "lazyIntro": "60 инструментов — слишком много, чтобы вываливать их все каждому агенту: контекст раздувается, а роль размывается («писать может кто угодно»). ADR-LORE-014 решает это",
+      "lazyIntro2": "— сервер всегда отдаёт полный список, а сужение происходит на стороне клиента, по имени инструмента.",
+      "lazyNoDispatcher": "без server-side диспетчера",
+      "lazyOpenCode": "permission-wildcard в профиле:",
+      "lazyTitle": "Lazy-доступ к инструментам и ролевые профили",
+      "lazyWhyNames": "Ради этого и делалось переименование.",
+      "lazyWhyNames2": "Схема",
+      "lazyWhyNames3": "— не косметика: она даёт стабильный префикс, по которому клиент фильтрует. Со старыми именами (",
+      "lazyWhyNames4": ") общий префикс был у всех, и фильтровать было не по чему.",
+      "metaToolsNote": "Meta-tools (инструмент, который отдаёт другие инструменты) сознательно НЕ делались — это была бы Phase 2, и она не понадобилась: клиентская фильтрация закрыла задачу без новой машинерии на сервере.",
+      "profColAllowed": "Разрешено на запись (сверх чтения)",
+      "profColOwns": "Владеет типами задач (ADR-LORE-015)",
+      "profColRole": "Роль",
+      "profilesFull": "— primary, всё разрешено (Claude / бэкфилл). Остальные 6 — subagent:",
+      "profilesIntro": "7 профилей лежат в",
+      "profilesRead": "Чтение (",
+      "profilesRead2": ") разрешено ВСЕМ",
+      "profilesRead3": "— граф читать не запрещаем никому, ограничиваем только запись.",
+      "profilesRest": "плюс allow-лист своих категорий.",
+      "projectNewRbac": "— намеренно только у",
+      "projectNewRbac2": "регистрация git-проекта — решение управленческое/архитектурное, не операционное.",
+      "toolsNoteRoles": "Задачи несут author/executor/reviewer_agent (ADR-LORE-014 §4) — единственный жёсткий SDLC-гейт: reviewer_agent должен отличаться от executor_agent, иначе",
+      "toolsNoteRoles2": "task→done отклоняется (409 NO_SELF_ACCEPTANCE). Значения ролей — расширяемый справочник",
+      "toolsNoteRoles3": "(см. Dictionary ниже) — UI сам регистрирует новую роль в словаре при первом вводе."
     },
     "milestoneManager": {
       "loading": "Загрузка вех…",
@@ -854,7 +974,9 @@
         "currentWeekTooltip": "Текущая неделя плана (W0 = {{w0}})",
         "parityTooltip": "Паритет: доля баров с позицией (SAGA↔план)",
         "parity": "{{pct}}% паритет",
-        "hint": "Ctrl+колесо = зум · тащить = листать"
+        "hint": "Ctrl+колесо = зум · тащить = листать",
+        "newSprint": "＋ Спринт",
+        "newSprintTooltip": "Создать новый KnowSprint (переход на форму создания)"
       },
       "legend": {
         "caption": "заливка = статус:",
@@ -932,7 +1054,8 @@
         "provSmartTitle": "Стандарт SMART-метрик (compute_status)",
         "provSmartChip": "ADR-QG-002 SMART",
         "provFormatTitle": "Формат этого отчёта",
-        "provFormatChip": "ADR-QG-004 формат"
+        "provFormatChip": "ADR-QG-004 формат",
+        "sprintLink": "↗ {{sprintId}}"
       },
       "runHistory": {
         "title": "История прогонов",
@@ -1005,7 +1128,11 @@
       "run": {
         "active": "✓ pass",
         "blocked": "✗ fail"
-      }
+      },
+      "filtersLabel": "Фильтры",
+      "searchAriaLabel": "поиск по quality gates",
+      "searchClear": "очистить поиск",
+      "searchPlaceholder": "quality gate…"
     },
     "releasesBoard": {
       "releaseCount": "{{count}} релизов",
@@ -1061,7 +1188,9 @@
         "p0": "P0 — критично",
         "p1": "P1 — высокий",
         "p2": "P2 — обычный",
-        "ariaLabel": "Приоритет"
+        "ariaLabel": "Приоритет",
+        "p3": "P3 — низкий",
+        "writeForbidden": "Не удалось сохранить (нет доступа / CORS)"
       },
       "statusCounts": {
         "ariaLabel": "Задачи по статусам (мультивыбор)",
@@ -1074,12 +1203,24 @@
         "titlePlaceholder": "Заголовок",
         "descriptionPlaceholder": "Описание (Markdown)",
         "save": "Сохранить",
-        "cancel": "Отмена"
+        "cancel": "Отмена",
+        "authorPlaceholder": "автор",
+        "effortLabel": "Стоимость, дн",
+        "effortPlaceholder": "напр. 1.5",
+        "executorPlaceholder": "исполнитель",
+        "openInMirror": "Открыть в зеркале",
+        "reviewerHint": "Должен отличаться от исполнителя, иначе задача не сможет перейти в done",
+        "reviewerPlaceholder": "ревьювер",
+        "roleConflict": "совпадает с исполнителем, задача не сможет перейти в done",
+        "typeLabel": "Тип",
+        "typeUnset": "—"
       },
       "addTask": {
         "trigger": "+ задача",
         "idPlaceholder": "ID (SH-10)",
-        "submit": "Добавить"
+        "submit": "Добавить",
+        "cancel": "Отменить добавление задачи",
+        "typeDefault": "тип: dev (по умолчанию)"
       },
       "loading": "Загрузка {{sprintId}}…",
       "notFound": "Спринт {{sprintId}} не найден.",
@@ -1096,7 +1237,8 @@
         "linkPlaceholder": "+ привязать релиз…"
       },
       "prBar": {
-        "label": "PR"
+        "label": "PR",
+        "openInMirror": "Открыть в зеркале"
       },
       "context": {
         "label": "Контекст",
@@ -1144,12 +1286,20 @@
       "effortFooter": {
         "label": "Итого effort:",
         "days": "{{sum}} д",
-        "ofTotal": "/ {{total}} д всего"
+        "ofTotal": "/ {{total}} д всего",
+        "ofTotalFmt": "/ {{total}} всего"
       },
       "deps": {
         "dependsOn": "Зависит от",
         "blocks": "Блокирует"
-      }
+      },
+      "typeCounts": {
+        "ariaLabel": "Задачи по типам (мультивыбор)"
+      },
+      "metaToggle": "Контекст и привязки",
+      "wcUc": "реализует сценарий",
+      "wcJtd": "вспомогательная работа",
+      "wcEnb": "enabler — обоснование в ADR"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID обязателен",
@@ -1240,7 +1390,8 @@
         "searchPlaceholder": "спринт…",
         "searchAriaLabel": "поиск по имени спринта",
         "newSprintTitle": "Новый спринт",
-        "emptySelectHint": "Выберите спринт из списка слева"
+        "emptySelectHint": "Выберите спринт из списка слева",
+        "filtersLabel": "Фильтры"
       },
       "filters": {
         "resetTitle": "Сбросить фильтры",
@@ -1252,14 +1403,26 @@
         "searchPlaceholder": "ADR-...",
         "clearSelectionTitle": "Сбросить выбор",
         "emptySelectHint": "Выберите ADR из списка слева",
-        "emptyCreateHint": "или нажмите «+ новый ADR» чтобы создать"
+        "emptyCreateHint": "или нажмите «+ новый ADR» чтобы создать",
+        "componentDim": "Компонент",
+        "filtersLabel": "Фильтры",
+        "noComponent": "без компонента",
+        "noTag": "без тега",
+        "periodDim": "Период",
+        "sortComp": "Компонент",
+        "sortDate": "Дата",
+        "sortDim": "Сортировка",
+        "sortId": "ID",
+        "sortStatus": "Статус",
+        "tagDim": "Тег"
       },
       "components": {
         "resetAreaFilterTitle": "Сбросить фильтр по area",
         "totalCount": "{{count}} компонентов",
         "searchPlaceholder": "компонент…",
         "searchAriaLabel": "поиск по компонентам",
-        "emptySelectHint": "Выберите компонент из списка слева"
+        "emptySelectHint": "Выберите компонент из списка слева",
+        "filtersLabel": "Фильтры"
       },
       "sectionError": "Ошибка секции «{{section}}»",
       "qg": {
@@ -1299,7 +1462,8 @@
         "vpProfile": "фильтр по профилю ценности…",
         "features": "фильтр по фичам…",
         "userStories": "фильтр по пользовательским историям…"
-      }
+      },
+      "backToList": "к списку"
     },
     "techRegistry": {
       "noArea": "без области",
@@ -1325,7 +1489,9 @@
         "usage": "Использование (где/как используется)",
         "source": "Источник",
         "save": "Сохранить"
-      }
+      },
+      "filtersLabel": "Фильтры",
+      "techLabel": "Технология"
     },
     "chapters": {
       "value": {
@@ -1358,7 +1524,11 @@
         "pains": "Боли",
         "gains": "Ожидания",
         "ucRbac": "US роли · отсюда строится RBAC",
-        "about": "О роли"
+        "about": "О роли",
+        "kindAll": "все",
+        "kindHuman": "люди",
+        "kindAgent": "агенты",
+        "kindSystem": "системы"
       },
       "feat": {
         "empty": "Фичей пока нет",
@@ -1373,7 +1543,9 @@
         "jobs": "РАБОТЫ",
         "pains": "БОЛИ",
         "gains": "ОЖИДАНИЯ",
-        "impl": "🌊 Реализация — US (что СДЕЛАНО)"
+        "impl": "🌊 Реализация — US (что СДЕЛАНО)",
+        "tasksToggle": "Задачи сценария",
+        "noTasks": "Задач, реализующих этот сценарий, нет"
       },
       "us": {
         "empty": "Пользовательских историй пока нет",
@@ -1415,9 +1587,311 @@
         "rank": "Ранг",
         "deliveredBy": "Создаётся US (DELIVERS)",
         "jobSuccess": "Успех в работе",
-        "desiredBy": "Желает"
+        "desiredBy": "Желает",
+        "newPain": "+ Боль",
+        "newGain": "+ Выгода",
+        "fieldTitle": "Заголовок",
+        "fieldSeverity": "Острота",
+        "fieldMetric": "Метрика — чем измерим, что выгода получена",
+        "fieldBody": "Описание",
+        "noMetricWarn": "без метрики выгода не попадёт в fit VP-канвы",
+        "create": "Создать",
+        "cancel": "Отмена",
+        "promisedVsDelivered": "Обещано vs создано",
+        "promised": "обещали",
+        "delivered": "создают",
+        "sevNone": "— не указана —",
+        "sevHigh": "высокая",
+        "sevNormal": "обычная",
+        "sevLow": "низкая",
+        "metricPlaceholder": "prs_linked > 0 у каждого нового релиза без ручных вызовов release_link",
+        "metricHint": "Проверяемое утверждение: что считаем, порог и условие. Не «скорость», а «0 merge-ов из статусов RED/PENDING».",
+        "idRulePain": "PAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: PAIN-LORE-MANUAL-HANDOFF",
+        "idRuleGain": "GAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: GAIN-LORE-LINKED-RELEASES",
+        "idCyrillic": "в корпусе id латиницей — кириллический встанет особняком",
+        "newJob": "+ Работа",
+        "fieldJobKind": "Тип работы (Остервальдер)",
+        "jobKindNone": "— не указан —",
+        "jobFunctional": "функциональная — что нужно сделать",
+        "jobSocial": "социальная — как хочет выглядеть",
+        "jobEmotional": "эмоциональная — что хочет чувствовать",
+        "jobSupporting": "вспомогательная — вокруг основной",
+        "fieldImportance": "Важность",
+        "edit": "Правка",
+        "save": "Сохранить",
+        "idRuleJob": "JOB-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: JOB-LORE-SHIP-RELEASE",
+        "jobOne": "работа"
       },
-      "pickItem": "Выберите элемент слева"
+      "pickItem": "Выберите элемент слева",
+      "vocab": {
+        "ucStatus": {
+          "proposed": "предложен",
+          "active": "в работе",
+          "shipped": "выпущен",
+          "dropped": "снят"
+        },
+        "rigor": {
+          "casual": "облегчённый",
+          "fully-dressed": "полный"
+        },
+        "goalLevel": {
+          "cloud": "облако",
+          "kite": "воздушный змей",
+          "sea-level": "уровень моря",
+          "subfunction": "подфункция"
+        },
+        "jobKind": {
+          "functional": "функциональная",
+          "social": "социальная",
+          "emotional": "эмоциональная",
+          "supporting": "вспомогательная"
+        },
+        "level": {
+          "high": "высокая",
+          "normal": "обычная",
+          "low": "низкая"
+        },
+        "gainRank": {
+          "essential": "обязательная",
+          "expected": "ожидаемая",
+          "desired": "желаемая",
+          "unexpected": "неожиданная"
+        },
+        "actorKind": {
+          "human-role": "человек",
+          "system": "система",
+          "agent": "агент"
+        }
+      }
+    },
+    "search": {
+      "placeholder": "Поиск по всему LORE — морфология, тела, префикс…",
+      "aria": "Сквозной поиск",
+      "types": "тип",
+      "components": "компонент",
+      "projects": "проект",
+      "partial": "Выдача неполная — поиск не отработал по типам",
+      "found": "найдено",
+      "coverage": "привязка к компонентам",
+      "inferred": "выведено от родителя",
+      "bare": "без компонента",
+      "bareWarn": "их скроет любой фильтр по компоненту",
+      "error": "Поиск не ответил",
+      "empty": "Под эти фильтры ничего не попало",
+      "emptyHint": "Снимите фасеты или упростите запрос",
+      "inTitle": "заголовок",
+      "inferredFrom": "выведено из",
+      "modeAria": "Режим поиска",
+      "modeSmart": "умный",
+      "modeExact": "точный",
+      "modeFuzzy": "нечёткий",
+      "modeSmartHint": "Каждое слово идёт как (слово OR слово*) — морфология плюс префикс",
+      "modeExactHint": "Только точные формы слов, без префикса",
+      "modeFuzzyHint": "Допускает опечатки — шире, но шумнее",
+      "goesToIndex": "уходит в индекс как",
+      "noValues": "— нет значений —",
+      "shown": "показаны",
+      "capped": "упёрлось в потолок ветки — сузьте запрос",
+      "componentLabel": "компонент",
+      "projectLabel": "проект",
+      "noTitle": "— без заголовка —",
+      "mathHint": "BM25 (доля от лучшего в своём типе) × приоритет типа",
+      "prev": "назад",
+      "next": "дальше",
+      "of": "из",
+      "legendRank": "ранг",
+      "legendRankText": "BM25 × приоритет типа. Приоритет задан нами, а не движком.",
+      "legendBar": "полоса",
+      "legendBarText": "ранг относительно первого места в этом же запросе.",
+      "legendWhere": "где совпало",
+      "legendWhereText": "считаем сами: ArcadeDB не сообщает, какое поле дало попадание.",
+      "caveatTitleBoost": "Заголовок не обгоняет тело: title_boost в ArcadeDB эффекта не дал.",
+      "caveatScores": "Скоры сравнимы только внутри одного запроса, между запросами — нет.",
+      "caveatProjects": "Проект проставлен не везде: есть у спринтов и PR, у спек и задач — нет. Фильтр по проекту скроет всё остальное.",
+      "legendAria": "Как читать выдачу"
+    },
+    "admin": {
+      "addHost": "+ хостинг",
+      "addUser": "+ Человек",
+      "addValue": "+ значение",
+      "adminGives": "Администрирование: люди, словари, настройки, включение auth",
+      "agentsNote": "AI-агенты — client-роли сервис-аккаунтов (ось «агенты», клейм agent_scope). Провижинятся скриптом, не заводятся руками. Ротация показывает секрет ОДИН раз — LORE его не хранит.",
+      "authBlockH": "Включение аутентификации",
+      "backToList": "К списку",
+      "byAlpha": "По алфавиту",
+      "byObject": "Кто имеет доступ к…",
+      "byObjectNote": "Обратный вопрос — тот, который задают на ревью доступа: кто может трогать вот это? Красным подсвечены операции, доступные только людям (§4 спеки RBAC).",
+      "byRole": "Кто что может",
+      "byUses": "По использованию",
+      "cancel": "Отмена",
+      "canonConfirm": "Понимаю: это канон-словарь, изменение затрагивает весь корпус",
+      "canonWarn": "⚠ Канон-словарь (ADR-LORE-010): значения зашиты в статусы всего корпуса. Правка label/color/icon безопасна; коды здесь не правятся вовсе.",
+      "cantEnableH": "Включать auth сейчас нельзя.",
+      "cardHistory": "История доступа и действий",
+      "cardHistoryNone": "Истории пока нет: аудит админ-операций появится с AL-20/AL-43 и ляжет сюда. Экран не показывает то, чего система ещё не пишет.",
+      "cardId": "KC id",
+      "cardRoles": "Роли (люди)",
+      "chkAdmins": "Есть хотя бы один человек с ролью admin",
+      "chkAdminsN": "Сейчас: {{n}}. Заведите себя на вкладке «Люди» и назначьте admin.",
+      "chkAdminsUnknown": "Число админов неизвестно: KC-мост не настроен или не ответил.",
+      "chkKc": "Keycloak доступен",
+      "chkKcOff": "KC_ADMIN_CLIENT_SECRET не задан.",
+      "chkKcOk": "Мост отвечает.",
+      "chkScope": "Права агентов проверяются на бэкенде",
+      "chkScopeSub": "AgentScopeFilter ещё не включён (AL-17): после включения auth агенты пройдут в любое семейство.",
+      "codeLocked": "Ключ — правке не подлежит (OQ-ADMIN-DICT-CODE)",
+      "codeLockedHint": "ключ — правке не подлежит",
+      "colorCustom": "расширенный (CSS)…",
+      "confirmAdmin": "точно admin?",
+      "confirmRotate": "точно ротировать?",
+      "create": "Создать",
+      "crumb": "Администрирование",
+      "deact": "Деактивировать…",
+      "deactConfirm": "Точно деактивировать{{u}}?",
+      "denialsEmpty": "С последнего рестарта отказов не было.",
+      "denialsH": "Последние отказы доступа",
+      "denialsNA": "Недоступно (нужна роль admin или бэкенд старой версии).",
+      "denialsSrc": "Источник: память процесса с последнего рестарта (кольцевой буфер, AL-45). Долговременный аудит по осям — AL-20.",
+      "devBannerB": "Администрировать LORE может любой, кто открыл этот адрес: роль берётся из конфига, а не из токена. Режим разработки.",
+      "devBannerH": "Аутентификация выключена.",
+      "disabled": "отключён",
+      "edit": "Править",
+      "enableAuth": "Включить аутентификацию",
+      "enableAuthNote": "Сам флип — env (LORE_AUTH_ENABLED=true) + рестарт по RUNBOOK-AUTH-OMILORE, все флаги вместе (AL-12 — владелец лично). Кнопка станет активной формой, когда появится рантайм-ручка.",
+      "enabled": "включён",
+      "fCode": "Код",
+      "fColor": "Цвет",
+      "fIcon": "Иконка (game-icons)",
+      "fLabel": "Подпись",
+      "fltActive": "Активные",
+      "fltAll": "Все",
+      "fOrder": "Порядок",
+      "herePeople": "Здесь → Люди",
+      "hide": "скрыть",
+      "hosts": "Хостинги (origin + зеркала, ADR-018)",
+      "iconBad": "иконки с таким именем нет — будет пусто.",
+      "iconMaybe": "Похожие:",
+      "kcConsoleOnly": "Только консоль Keycloak (D11)",
+      "kcErrB": "Запрос не дошёл или сорвался. Состояние записей неизвестно — это не пустой список.",
+      "kcErrH": "Keycloak не ответил",
+      "kcForbiddenB": "Управление доступом открыто только роли admin. Это НЕ пустой список: записи могут существовать, но они вам не видны.",
+      "kcForbiddenH": "Нет прав смотреть этот список",
+      "kcLoading": "Спрашиваем Keycloak…",
+      "kcOffB": "Мост в KC не настроен, получить список неоткуда. Это не значит, что записей нет — их состояние сейчас неизвестно. Настройка: KC_ADMIN_CLIENT_SECRET в .env, см. RUNBOOK-ADMIN-LORE. Остальной LORE работает как обычно.",
+      "kcOffH": "Keycloak не подключён",
+      "lastAdminB": "Снятие роли оставит LORE без администратора — бэкенд отклонит операцию (AL-35), пока не появится второй admin.",
+      "lastAdminH": "Последняя администрирующая учётка.",
+      "newSecret": "Новый секрет {{c}} — скопируйте сейчас, больше не покажем:",
+      "noAgents": "никто — запрещено всем агентам, включая agent-full",
+      "noKnownSettings": "Приложение пока не читает ни одного ключа app_setting — реестр известных параметров пуст (AL-38). Появится реальный параметр → он получит здесь строку с типом, дефолтом и описанием; свободного ввода ключей больше нет: выдуманный ключ не прочитает никто.",
+      "noPassNote": "Пароль задаётся в Keycloak (reset-link/консоль) — LORE его не принимает и не хранит.",
+      "noScope": "— (оси не несёт, легаси)",
+      "notEnforcedB": "Клейм agent_scope бэкенд не читает: сейчас это фильтр видимости инструментов, не защита. Включается флагом LORE_AUTH_ENABLED — состояние видно в «Настройках».",
+      "notEnforcedH": "Права из этой таблицы не проверяются.",
+      "notEnforcedUnkB": "Бэкенд не ответил на auth-preflight, поэтому состояние защиты не подтверждено. Считайте таблицу описанием намерения, пока не восстановится связь.",
+      "notEnforcedUnkH": "Проверяются ли эти права — сейчас неизвестно.",
+      "noUsersB": "Keycloak отвечает нормально, в realm просто нет учётных записей. Заведите себя первой — ДО включения аутентификации: она отключит доступ по конфигу, и войти станет некому.",
+      "noUsersH": "Ни одного человека ещё не заведено",
+      "open": "Открыть",
+      "paramsH": "Параметры приложения",
+      "pfLoading": "Проверки грузятся (или KC-мост недоступен — тогда чеклист покажет это явно после ответа).",
+      "phEmail": "email (опц.)",
+      "phLogin": "логин",
+      "preview": "Так это будет выглядеть",
+      "remove": "Удалить",
+      "removeRole": "снять роль",
+      "roleBadge": "роль: {{role}} · auth: {{auth}}",
+      "roleNow": "текущая роль",
+      "rolesNote2": "Две оси, которые не смешиваются: люди входят паролем и несут realm-роли (seer_roles), агенты — секретом и несут agent_scope. Скоуп агентов правится в mcp-server/agent-profiles/*.json (D6, read-only здесь).",
+      "rotate": "ротировать секрет",
+      "save": "Сохранить",
+      "search": "Поиск…",
+      "setProj": "сессионный дефолт проекта MCP-процесса (env, ADR-LORE-017) — задаётся в .mcp.json/OpenCode-конфиге, из UI не читается",
+      "shownOf": "показано {{n}} из {{m}}",
+      "superAdminGives": "Всё, включая выдачу admin",
+      "tagOrphan": "кандидат на удаление",
+      "tagsNote": "Read-only (D6): слияние/переименование — 2-я итерация (миграция рёбер TAGGED_WITH, AL-29 ждёт решения владельца).",
+      "unknownB": "Эти ключи лежат в базе (dict_type=app_setting), но приложение их не читает — скорее всего, остались от ручной правки. Удаление ни на что не повлияет (soft-delete: is_active=false).",
+      "unknownH": "Неопознанные значения · {{n}}",
+      "usageNA": "подсчёт для этого словаря появится с AL-30/SV-10",
+      "usageWarn": "{{n}} сущностей несут этот код.",
+      "usageWarn2": "Изменение цвета/иконки поменяет их вид во всём LORE; деактивация потребует подтверждения.",
+      "usersNote": "Люди — realm-роли Keycloak (ось «люди»). Паролей LORE не хранит: пользователь задаёт его в KC. Роль super-admin назначается только в KC-консоли (вне моста, D11).",
+      "viewerGives": "Только чтение LORE. В администрирование не пускает"
+    },
+    "oqBoard": {
+      "ansLoading": "Загрузка ответа…",
+      "answer": "Ответ (решение)",
+      "answerAuto": "код ответа: {{id}} (авто) · унаследует компонент вопроса{{adr}}",
+      "answerBody": "Обоснование / детали (опц.)",
+      "answeredToggle": "закрыт решением — клик раскроет ответ",
+      "answerExisting": "решение, которое уже отвечает на этот вопрос",
+      "answerHead": "Ответить решением — закроет вопрос",
+      "answerLinkBtn": "закрыть этим решением ✓",
+      "answerNewBtn": "ответить и закрыть ✓",
+      "answerTitle": "Ответ — правило одной строкой (это и есть решение)",
+      "cancel": "Отмена",
+      "componentLabel": "Компонент",
+      "componentPick": "Компонент — выбор из списка",
+      "componentsMulti": "Компоненты",
+      "count": "{{count}} вопросов",
+      "dueTitle": "срок ответа",
+      "edit": "Править",
+      "filterNote": "фильтр: «{{q}}»",
+      "filtersLabel": "Фильтры",
+      "flagsLabel": "Признак",
+      "formEdit": "Правка {{id}}",
+      "formNew": "Новый вопрос",
+      "gatesTitle": "блокирует задач: {{n}}",
+      "gatingTag": "блокирует",
+      "modePick": "или взять уже принятое решение →",
+      "modeWrite": "← написать новый ответ",
+      "newButton": "+ вопрос",
+      "noDue": "без срока",
+      "noDueTitle": "срок ответа не задан — поставьте через ✎",
+      "none": "Вопросов не найдено.",
+      "openAdr": "открыть ADR",
+      "openDecisions": "независимое решение — открыть в «Решениях»",
+      "overdue": "{{n}} просрочено",
+      "overdueTag": "просрочен",
+      "priorityLabel": "Приоритет",
+      "projectLabel": "Проект",
+      "projectsMulti": "Проекты",
+      "save": "Сохранить",
+      "statusLabel": "Статус"
+    },
+    "tiptap": {
+      "addColumn": "+ столбец",
+      "addRow": "+ строка",
+      "blockquote": "цитата",
+      "bold": "жирный (Ctrl+B)",
+      "bulletList": "маркированный список",
+      "code": "код",
+      "deleteTable": "удалить таблицу",
+      "h1": "заголовок 1 уровня",
+      "h2": "заголовок 2 уровня",
+      "h3": "заголовок 3 уровня",
+      "hr": "разделитель",
+      "insertImage": "вставить изображение",
+      "insertTable": "вставить таблицу",
+      "italic": "курсив (Ctrl+I)",
+      "link": "ссылка",
+      "modeHtml": "режим HTML-источника",
+      "modeMd": "режим markdown-источника",
+      "orderedList": "нумерованный список",
+      "redo": "повторить (Ctrl+Y)",
+      "resize": "изменить размер",
+      "strike": "зачёркнутый",
+      "taskList": "чек-лист",
+      "undo": "отменить (Ctrl+Z)"
+    },
+    "filters": {
+      "clear": "✕ сброс",
+      "clearSearch": "Очистить поиск",
+      "collapse": "▴ свернуть",
+      "expand": "▾ развернуть",
+      "notSet": "не заданы",
+      "search": "Поиск"
     }
   },
   "bragi": {
@@ -1455,7 +1929,9 @@
         "colIntent": "интент",
         "colPage": "страница",
         "editBtn": "✎ редактировать",
-        "empty": "ключей пока нет"
+        "empty": "ключей пока нет",
+        "emptyFiltered": "ничего не найдено под этим фильтром",
+        "filtersLabel": "Фильтры"
       },
       "archive": {
         "loading": "загрузка…",
@@ -1467,7 +1943,9 @@
         "colClicks": "переходы",
         "colDemo": "демо",
         "colTakeaway": "вывод",
-        "emptyState": "опубликованных вариаций пока нет"
+        "emptyState": "опубликованных вариаций пока нет",
+        "emptyFiltered": "ничего не найдено под этим фильтром",
+        "filtersLabel": "Фильтры"
       },
       "insights": {
         "loading": "загрузка…",
@@ -1604,7 +2082,32 @@
         "ready": "готово",
         "published": "опубликовано",
         "planned": "запланировано"
-      }
+      },
+      "annotationPlaceholder": "постоянная мета: мастер-источник, правило замены, контекст релиза…",
+      "copyForPlatform": "скопировать для площадки",
+      "createSatellite": "+ создать сателлит",
+      "draftDismiss": "отклонить",
+      "draftFound": "Найден несохранённый черновик от {{ts}}",
+      "draftRestore": "восстановить",
+      "forsetiRelease": "релиз (SHIPPED_IN)",
+      "forsetiSprint": "спринт (PRODUCED_BY)",
+      "forsetiTask": "задача (PRODUCED_BY)",
+      "inheritsMain": "наследует main",
+      "paneTabEdit": "Редактирование",
+      "paneTabPreview": "Просмотр",
+      "previewMaster": "мастер",
+      "previewSkinLabel": "скин",
+      "sectionAnnotation": "Указание",
+      "sectionForseti": "Связи с работой (Forseti)",
+      "sectionTodo": "TODO",
+      "todoAddPlaceholder": "новый пункт…",
+      "utmGenerate": "сгенерировать ссылку",
+      "variantAnnotationPlaceholder": "указание для этой вариации…",
+      "variantImgNeedsSave": "сначала сохраните",
+      "variantImgUpload": "изображение вариации",
+      "variantUrlPlaceholder": "URL опубликованного материала…",
+      "viewModeSide": "рядом",
+      "viewModeTabs": "вкладками"
     },
     "publications": {
       "noImage": "нет изображения",
@@ -1624,7 +2127,12 @@
       "loadingMetrics": "загрузка метрик…",
       "noMetricsYet": "замеров пока нет",
       "addChannelSlot": "+ площадка",
-      "emptyFiltered": "ничего не найдено под этим фильтром"
+      "emptyFiltered": "ничего не найдено под этим фильтром",
+      "channelLabel": "Канал",
+      "filtersLabel": "Фильтры",
+      "rubricLabel": "Рубрика",
+      "statusLabel": "Статус",
+      "todoBadge": "{{n}} todo"
     },
     "rubricManager": {
       "errId": "ID рубрики обязателен",

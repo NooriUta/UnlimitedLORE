@@ -4,55 +4,108 @@
     {
       "name": "lore-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5190", "--strictPort", "--host", "127.0.0.1"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5190",
+        "--strictPort",
+        "--host",
+        "127.0.0.1"
+      ],
       "port": 5190,
       "autoPort": false
     },
     {
       "name": "lore-dev-2",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5191", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5191",
+        "--strictPort"
+      ],
       "port": 5191,
       "autoPort": false
     },
     {
       "name": "lore-dev-preview",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "set \"VITE_LORE_API_URL=http://localhost:4400\" && set \"VITE_BENCH_API_URL=http://localhost:4400\" && npm run dev -- --port 5192 --strictPort"],
+      "runtimeArgs": [
+        "/c",
+        "set \"VITE_LORE_API_URL=http://localhost:4400\" && set \"VITE_BENCH_API_URL=http://localhost:4400\" && npm run dev -- --port 5192 --strictPort"
+      ],
       "port": 5192,
       "autoPort": false
     },
     {
       "name": "lore-preview",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "set \"VITE_LORE_API_URL=http://localhost:4400\" && set \"VITE_BENCH_API_URL=http://localhost:4400\" && npx vite preview --port 4401 --strictPort"],
+      "runtimeArgs": [
+        "/c",
+        "set \"VITE_LORE_API_URL=http://localhost:4400\" && set \"VITE_BENCH_API_URL=http://localhost:4400\" && npx vite preview --port 4401 --strictPort"
+      ],
       "port": 4401,
       "autoPort": false
     },
     {
       "name": "lore-app",
       "runtimeExecutable": "cmd",
-      "runtimeArgs": ["/c", "echo", "already running on 4400"],
+      "runtimeArgs": [
+        "/c",
+        "echo",
+        "already running on 4400"
+      ],
       "port": 4400,
       "autoPort": false
     },
     {
       "name": "icon-picker",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "5601", "C:\\Users\\LEGION\\AppData\\Local\\Temp\\claude\\C--AIDA-UnlimitedLORE\\34a4d2b2-cab6-49fb-97bb-6fc52c79c844\\scratchpad"],
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "5601",
+        "C:\\Users\\LEGION\\AppData\\Local\\Temp\\claude\\C--AIDA-UnlimitedLORE\\34a4d2b2-cab6-49fb-97bb-6fc52c79c844\\scratchpad"
+      ],
       "port": 5601
     },
     {
       "name": "icon-assignment",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "5602", "C:\\AIDA\\OMILORE"],
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "5602",
+        "C:\\AIDA\\OMILORE"
+      ],
       "port": 5602
     },
     {
       "name": "lore-prototypes",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "5603", "C:\\AIDA\\UnlimitedLORE\\docs\\prototypes"],
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "5603",
+        "C:\\AIDA\\UnlimitedLORE\\docs\\prototypes"
+      ],
       "port": 5603
+    },
+    {
+      "name": "pl01-prototype",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "5610",
+        "C:AIDAUnlimitedLORE-product-layerdocsprototypes"
+      ],
+      "port": 5610,
+      "autoPort": false
     }
   ]
 }

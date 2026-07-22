@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Единый поиск + фильтры · прототип (unified-search-filter)</title>
+<!--
+  Сохранено локально 2026-07-22 (задача PROTO-01) с claude.ai/code/artifact/8b5600b4-6bd6-44bb-b5c4-59046cf55e24.
+  Опубликован 2026-07-07. Обвязка claude.ai (frame-runtime) снята — она к прототипу
+  отношения не имеет и вне artefact-хостинга не работает.
+
+  Прототип относится к правилу ADR-LORE-033-D15 «локальное поле-фильтр допустимо
+  только на списке» и к спринту UX_OPTIMIZATION (T31/T33): здесь показан ЕДИНЫЙ
+  компонент фильтра со счётчиками faceted — то есть та самая механика, которую
+  реализует src/components/lore/useFacetFilters.ts.
+-->
+<style>
+  :root{
+    --bg0:#141108;--bg1:#1c1810;--bg2:#241e14;--b2:#2b2417;--b3:#37301f;--bd:#42382a;--bdh:#5b4e39;
+    --t1:#ede5d0;--t2:#9a8c6e;--t3:#665c48;--acc:#a8b860;--acc-d:#8a9a48;
+    --suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#c85848;
+    --mono:ui-monospace,'SF Mono','JetBrains Mono',Menlo,monospace;
+    --font:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}body{margin:0}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  .app{background:var(--bg0);color:var(--t1);font-family:var(--font);min-height:100vh;font-size:13px;padding:0 0 60px}
+  .wrap{max-width:960px;margin:0 auto;padding:0 18px}
+  .top{border-bottom:1px solid var(--bd);padding:14px 0 12px;margin-bottom:2px}
+  .top h1{font-size:16px;margin:0 0 6px;font-family:var(--mono);letter-spacing:.02em}
+  .top p{color:var(--t2);font-size:12.5px;line-height:1.5;margin:0;border-left:2px solid var(--acc);padding-left:11px}
+  .top p b{color:var(--t1)}
+  /* surface switcher */
+  .surf{display:flex;gap:6px;margin:14px 0 4px}
+  .surf button{font:inherit;font-size:12px;color:var(--t2);background:var(--bg1);border:1px solid var(--bd);border-radius:7px;padding:6px 13px;cursor:pointer}
+  .surf button[aria-selected="true"]{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));background:color-mix(in srgb,var(--acc) 12%,transparent)}
+  :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+  /* ── the ONE unified component ─────────────────────────── */
+  .usf{border:1px solid var(--bd);border-radius:12px;background:var(--bg1);overflow:hidden;margin-top:8px}
+  /* 1 · search — always same place, same look */
+  .usf-search{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-bottom:1px solid var(--bd)}
+  .usf-search .ic{color:var(--t3);font-size:13px;flex:none}
+  .usf-search input{flex:1;background:transparent;border:none;outline:none;color:var(--t1);font-size:13px;font-family:var(--font)}
+  .usf-search input::placeholder{color:var(--t3)}
+  .usf-search .clr{background:none;border:none;color:var(--t3);cursor:pointer;font-size:12px;padding:2px 4px;visibility:hidden}
+  .usf-search.has .clr{visibility:visible}
+  /* 2 · filter bar — grouped chips, one look */
+  .usf-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--bd)}
+  .grp{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+  .grp .glab{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin-right:1px}
+  .sep{width:1px;height:15px;background:var(--b3);flex:none;margin:0 1px}
+  .chip{font:inherit;font-size:11.5px;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--b3);background:transparent;color:var(--t3);transition:.1s;white-space:nowrap}
+  .chip:hover{border-color:var(--bdh);color:var(--t1)}
+  .chip[aria-pressed="true"]{color:var(--t1);border-color:color-mix(in srgb,var(--c,var(--acc)) 60%,var(--bd));background:color-mix(in srgb,var(--c,var(--acc)) 16%,transparent)}
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--c,var(--t3));flex:none}
+  .chip .cnt{font-size:9.5px;opacity:.7;font-family:var(--mono)}
+  .chip[disabled]{opacity:.35;cursor:default}
+  .reset{margin-left:auto;font:inherit;font-size:11px;color:var(--t3);background:none;border:none;cursor:pointer;padding:3px 6px;white-space:nowrap}
+  .reset:hover{color:var(--dng)}
+  /* 3 · active-filters summary — ALWAYS visible (desktop+mobile), same everywhere */
+  .usf-active{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--bd);background:color-mix(in srgb,var(--acc) 5%,transparent)}
+  .usf-active .lab{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)}
+  .atag{font:inherit;font-size:11px;display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;cursor:pointer;
+    background:var(--bg2);border:1px solid color-mix(in srgb,var(--c,var(--acc)) 40%,var(--bd));color:var(--t1)}
+  .atag .x{color:var(--t3)}
+  .atag:hover .x{color:var(--dng)}
+  /* count + list */
+  .usf-count{padding:7px 12px;font-family:var(--mono);font-size:11px;color:var(--t3);border-bottom:1px solid var(--bd)}
+  .usf-count b{color:var(--t1)}
+  .list{max-height:340px;overflow:auto}
+  .row{display:flex;align-items:center;gap:9px;padding:8px 12px;border-bottom:1px solid var(--b2);cursor:default}
+  .row:last-child{border-bottom:none}
+  .row .rid{font-family:var(--mono);font-size:10px;color:var(--t3);min-width:118px;flex:none}
+  .row .rttl{color:var(--t1);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .rb{font-family:var(--mono);font-size:9.5px;padding:1px 6px;border-radius:4px;flex:none;
+    background:color-mix(in srgb,var(--c,var(--t3)) 14%,transparent);color:var(--c,var(--t3));border:1px solid color-mix(in srgb,var(--c,var(--t3)) 30%,transparent)}
+  .empty{padding:22px 12px;color:var(--t3);text-align:center;font-size:12px}
+  .note{margin:16px 2px 0;color:var(--t3);font-size:11.5px;line-height:1.7}
+  .note b{color:var(--t2)}
+  .k{font-family:var(--mono);color:var(--acc)}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Единый паттерн поиска и фильтров для LORE — прототип</h2>
+<div class="app"><div class="wrap">
+  <div class="top">
+    <h1>Единый поиск + фильтры · прототип</h1>
+    <p>Один алгоритм на всех вкладках: <b>поиск в одном месте и виде</b> → <b>фильтр-бар из групп-чипов</b> (счётчики faceted, единый стиль, доступны с клавиатуры) → <b>всегда видимая строка активных фильтров</b> (снять по ✕) → <b>Сбросить всё</b>. Меняется только НАБОР групп под вкладку — механика и вид идентичны.</p>
+  </div>
+
+  <div class="surf" role="tablist" aria-label="Вкладка">
+    <button role="tab" aria-selected="true" data-s="sprints">Спринты</button>
+    <button role="tab" aria-selected="false" data-s="adrs">ADR</button>
+    <button role="tab" aria-selected="false" data-s="components">Компоненты</button>
+  </div>
+
+  <div class="usf" id="usf"></div>
+
+  <div class="note">
+    Один и тот же компонент <span class="k">&lt;SearchFilter&gt;</span> на трёх вкладках — разный только конфиг групп.
+    Поиск фильтрует по id/названию; чипы — по фасетам; счётчики пересчитываются под текущий выбор; активные фильтры видны строкой и снимаются по ✕.
+    Клик по чипу = toggle. Так пользователь привыкает к <b>одному поведению</b> везде.<br>
+    Прототип демонстрационный (mock-данные). Внедрение — после approve, общими примитивами <span class="k">&lt;SearchInput&gt;</span> · <span class="k">&lt;FilterBar&gt;</span> · <span class="k">&lt;Chip&gt;</span> · <span class="k">&lt;ActiveFilters&gt;</span>.
+  </div>
+</div></div>
+
+<script>
+  const C={done:'var(--suc)',active:'var(--acc)',blocked:'var(--dng)',partial:'var(--wrn)',todo:'var(--t3)',
+    p0:'var(--dng)',p1:'var(--wrn)',p2:'var(--t3)',
+    proposed:'var(--inf)',accepted:'var(--suc)',superseded:'var(--t3)',
+    fe:'var(--inf)',be:'var(--acc)',db:'var(--wrn)',sec:'var(--dng)'};
+  // mock datasets + per-surface filter-group config (same shape → same UI)
+  const DATA={
+    sprints:{
+      ph:'спринт…',
+      items:[
+        {id:'SPRINT_DM_02_RATE_LIMIT',t:'DM-02 rate-limit + depth cap',status:'done',prio:'p0',proj:'AIDA'},
+        {id:'SPRINT_LORE_UX_OPTIMIZATION',t:'LORE UX-оптимизация',status:'active',prio:'p1',proj:'UnlimitedLORE'},
+        {id:'SPRINT_HOUND_DALI_HYGIENE',t:'HOUND/DALI Hygiene & Cleanup',status:'active',prio:'p2',proj:'AIDA'},
+        {id:'SPRINT_BRAGI_ARCHIVE_V2',t:'Bragi archive v2',status:'partial',prio:'p1',proj:'UnlimitedLORE'},
+        {id:'SPRINT_KC_OIDC',t:'Keycloak OIDC scaffold',status:'blocked',prio:'p0',proj:'AIDA'},
+        {id:'SPRINT_VERDANDI_MOBILE',t:'Verdandi mobile pass',status:'todo',prio:'p2',proj:'AIDA'},
+      ],
+      groups:[
+        {key:'status',label:'Статус',field:'status',opts:[['done','готово'],['active','в работе'],['partial','частично'],['blocked','блок'],['todo','todo']]},
+        {key:'prio',label:'Приоритет',field:'prio',opts:[['p0','P0'],['p1','P1'],['p2','P2']]},
+        {key:'proj',label:'Проект',field:'proj',opts:[['AIDA','AIDA'],['UnlimitedLORE','UnlimitedLORE']]},
+      ],
+      badge:i=>({txt:i.prio.toUpperCase(),c:C[i.prio]}),
+    },
+    adrs:{
+      ph:'ADR-…',
+      items:[
+        {id:'ADR-HND-001',t:'PL/SQL TYPE System',status:'accepted',comp:'be'},
+        {id:'ADR-FE-003',t:'Muted-text contrast scale (WCAG AA)',status:'accepted',comp:'fe'},
+        {id:'ADR-CHUR-MULTITORG-001',t:'Multi-org active tenant switching',status:'proposed',comp:'sec'},
+        {id:'ADR-DALI-CRON-001',t:'JobRunr scheduler-only mode',status:'accepted',comp:'be'},
+        {id:'ADR-FE-001',t:'Asset delivery — CDN vs bundled',status:'superseded',comp:'fe'},
+      ],
+      groups:[
+        {key:'status',label:'Статус',field:'status',opts:[['proposed','предложено'],['accepted','принято'],['superseded','заменено']]},
+        {key:'comp',label:'Область',field:'comp',opts:[['fe','frontend'],['be','backend'],['sec','security'],['db','db']]},
+      ],
+      badge:i=>({txt:i.status,c:C[i.status]}),
+    },
+    components:{
+      ph:'компонент…',
+      items:[
+        {id:'FORSETI',t:'Forseti Plan Board',area:'fe'},
+        {id:'HND',t:'HOUND',area:'be'},
+        {id:'YGG',t:'Yggdrasil DB',area:'db'},
+        {id:'SECURITY',t:'Security',area:'sec'},
+        {id:'VERDANDI',t:'Verdandi',area:'fe'},
+        {id:'MIMIR',t:'MIMIR',area:'be'},
+      ],
+      groups:[
+        {key:'area',label:'Area',field:'area',opts:[['fe','frontend'],['be','backend'],['db','db'],['sec','security']]},
+      ],
+      badge:i=>({txt:i.area,c:C[i.area]}),
+    },
+  };
+
+  let surface='sprints';
+  const state={q:'',sel:{}}; // sel: {groupKey: Set(values)}
+  function resetState(){ state.q=''; state.sel={}; DATA[surface].groups.forEach(g=>state.sel[g.key]=new Set()); }
+
+  function filtered(){
+    const d=DATA[surface]; const q=state.q.trim().toLowerCase();
+    return d.items.filter(it=>{
+      if(q && !(it.id.toLowerCase().includes(q) || it.t.toLowerCase().includes(q))) return false;
+      for(const g of d.groups){ const s=state.sel[g.key]; if(s.size && !s.has(it[g.field])) return false; }
+      return true;
+    });
+  }
+  // faceted count: how many items match if THIS chip were the only change (respect search + OTHER groups)
+  function facetCount(g,val){
+    const d=DATA[surface]; const q=state.q.trim().toLowerCase();
+    return d.items.filter(it=>{
+      if(q && !(it.id.toLowerCase().includes(q)||it.t.toLowerCase().includes(q))) return false;
+      for(const og of d.groups){ if(og.key===g.key) continue; const s=state.sel[og.key]; if(s.size&&!s.has(it[og.field])) return false; }
+      return it[g.field]===val;
+    }).length;
+  }
+  const anyActive=()=>state.q!=='' || Object.values(state.sel).some(s=>s.size>0);
+
+  function render(){
+    const d=DATA[surface];
+    const chips=g=>g.opts.map(([val,label])=>{
+      const on=state.sel[g.key].has(val); const cnt=facetCount(g,val); const reach=cnt>0||on;
+      return `<button class="chip" role="button" aria-pressed="${on}" ${reach?'':'disabled'} data-g="${g.key}" data-v="${val}" style="--c:${C[val]||'var(--acc)'}">
+        <span class="dot"></span>${label}<span class="cnt">${cnt}</span></button>`;
+    }).join('');
+    const groupsHtml=d.groups.map((g,i)=>`${i?'<span class="sep"></span>':''}<div class="grp"><span class="glab">${g.label}</span>${chips(g)}</div>`).join('');
+    // active tags
+    const tags=[];
+    if(state.q) tags.push(`<button class="atag" data-clr="q">🔍 «${state.q}» <span class="x">✕</span></button>`);
+    d.groups.forEach(g=>[...state.sel[g.key]].forEach(v=>{
+      const label=(g.opts.find(o=>o[0]===v)||[v,v])[1];
+      tags.push(`<button class="atag" data-g="${g.key}" data-v="${v}" style="--c:${C[v]||'var(--acc)'}">${g.label}: ${label} <span class="x">✕</span></button>`);
+    }));
+    const res=filtered();
+    document.getElementById('usf').innerHTML=`
+      <div class="usf-search${state.q?' has':''}">
+        <span class="ic">🔍</span>
+        <input value="${state.q.replace(/"/g,'&quot;')}" placeholder="${d.ph}" aria-label="поиск">
+        <button class="clr" aria-label="очистить поиск">✕</button>
+      </div>
+      <div class="usf-filters">${groupsHtml}${anyActive()?'<button class="reset">✕ Сбросить всё</button>':''}</div>
+      ${anyActive()?`<div class="usf-active"><span class="lab">активно</span>${tags.join('')}</div>`:''}
+      <div class="usf-count"><b>${res.length}</b> из ${d.items.length}</div>
+      <div class="list">${res.length?res.map(it=>{const b=d.badge(it);return `<div class="row"><span class="rid">${it.id}</span><span class="rttl">${it.t}</span><span class="rb" style="--c:${b.c}">${b.txt}</span></div>`;}).join(''):'<div class="empty">ничего не найдено под этим фильтром</div>'}</div>`;
+    wire();
+  }
+  function wire(){
+    const inp=document.querySelector('.usf-search input');
+    inp.oninput=e=>{ state.q=e.target.value; const c=inp.selectionStart; render(); const ni=document.querySelector('.usf-search input'); ni.focus(); ni.setSelectionRange(c,c); };
+    document.querySelector('.usf-search .clr').onclick=()=>{ state.q=''; render(); };
+    document.querySelectorAll('.usf-filters .chip').forEach(ch=>ch.onclick=()=>{ if(ch.disabled)return; const s=state.sel[ch.dataset.g]; s.has(ch.dataset.v)?s.delete(ch.dataset.v):s.add(ch.dataset.v); render(); });
+    const r=document.querySelector('.reset'); if(r) r.onclick=()=>{ resetState(); render(); };
+    document.querySelectorAll('.usf-active .atag').forEach(tg=>tg.onclick=()=>{ if(tg.dataset.clr==='q'){state.q='';} else {state.sel[tg.dataset.g].delete(tg.dataset.v);} render(); });
+  }
+  document.querySelectorAll('.surf button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.surf button').forEach(x=>x.setAttribute('aria-selected',x===b));
+    surface=b.dataset.s; resetState(); render();
+  });
+  resetState(); render();
+</script>
+</body>
+</html>
