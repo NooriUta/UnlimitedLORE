@@ -53,8 +53,12 @@ class LoreSearchFacetsLiveDbTest {
         post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_FB\",\"name\":\"фасеты бета контекст\"}");
         post("/lore/sprint/project", "{\"sprint_id\":\"SPRINT_FA\",\"git_project\":\"acme/alpha\"}");
         post("/lore/sprint/project", "{\"sprint_id\":\"SPRINT_FB\",\"git_project\":\"acme/beta\"}");
-        // Компонент нужен для оси «компонент» — без привязки её нечем проверять.
-        post("/lore/sprint/link", "{\"sprint_id\":\"SPRINT_FA\",\"rel\":\"component\",\"target_id\":\"OMILORE\"}");
+        // Запись С КОМПОНЕНТОМ — иначе ось «компонент» нечем проверять.
+        // Берём ADR: компонент задаётся прямо при создании. Отдельного эндпоинта
+        // привязки компонента к спринту в API нет — первая редакция теста звала
+        // `/lore/sprint/link`, которого не существует, и CI упал на 404.
+        post("/lore/adr", "{\"adr_id\":\"ADR-FACET-1\",\"name\":\"фасеты и компонентная ось\","
+            + "\"status\":\"ACCEPTED\",\"component_ids\":[\"OMILORE\"]}");
     }
 
     /**
