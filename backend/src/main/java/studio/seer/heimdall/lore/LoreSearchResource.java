@@ -110,11 +110,11 @@ public class LoreSearchResource extends LoreResourceBase {
         new Branch("runbook", "KnowRunbook", "runbook_id", "name", "ftKnowRunbook",
             List.of("name"),
             "KnowRunbookHist", "ftKnowRunbookHist", List.of("content_md"),
-            DIRECT_COMP, null, null, DIRECT_PROJ, 1.00),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.05),
         new Branch("doc", "KnowDoc", "doc_id", "title", "ftKnowDoc",
             List.of("title", "content_md", "content_md_en", "content_md_ru"),
             "KnowDocHist", "ftKnowDocHist", List.of("content_md"),
-            DIRECT_COMP, null, null, DIRECT_PROJ, 1.00),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.10),
         // FT-индекса на QualityGate нет (реестр V11/V12) — единственная ветка
         // на ILIKE; score у неё симулируется константой ниже.
         new Branch("quality_gate", "QualityGate", "qg_id", "name", null,
@@ -138,19 +138,19 @@ public class LoreSearchResource extends LoreResourceBase {
         new Branch("pain", "KnowPain", "pain_id", "title", "ftKnowPain",
             List.of("title", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.25),
         new Branch("gain", "KnowGain", "gain_id", "title", "ftKnowGain",
             List.of("title", "body_md", "metric_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.25),
         new Branch("job", "KnowJob", "job_id", "title", "ftKnowJob",
             List.of("title", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90),
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.25),
         new Branch("actor", "KnowActor", "actor_id", "name", "ftKnowActor",
             List.of("name", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 0.90));
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.20));
 
     /** Переопределение приоритетов без пересборки: "adr:1.4,task:0.5". */
     @ConfigProperty(name = "lore.search.type-priority")
@@ -167,7 +167,7 @@ public class LoreSearchResource extends LoreResourceBase {
     public Response search(@QueryParam("q") String q,
                            @QueryParam("types") String typesCsv,
                            @QueryParam("components") String componentsCsv,
-                           @QueryParam("project") String project,
+                           @QueryParam("projects") String projectsCsv,
                            @QueryParam("limit") Integer limitParam,
                            @QueryParam("offset") Integer offsetParam,
                            @QueryParam("mode") String mode,
@@ -180,6 +180,10 @@ public class LoreSearchResource extends LoreResourceBase {
 
         Set<String> types = csv(typesCsv);
         List<String> comps = new ArrayList<>(csv(componentsCsv));
+        // SRCH-10: ось проекта стала множественной — как тип и компонент. Скаляр
+        // не давал выбрать «два продукта из пяти», и UI поэтому фильтровал
+        // проекты на клиенте, по одной странице выдачи.
+        List<String> projs = new ArrayList<>(csv(projectsCsv));
         int limit = limitParam == null || limitParam < 1 ? 20 : Math.min(limitParam, 100);
         int offset = offsetParam == null || offsetParam < 0 ? 0 : offsetParam;
         String m = mode == null || mode.isBlank() ? "smart" : mode.toLowerCase(Locale.ROOT);
@@ -201,10 +205,22 @@ public class LoreSearchResource extends LoreResourceBase {
         List<Map<String, Object>> hits = new ArrayList<>();
         Map<String, Integer> byType = new LinkedHashMap<>();
         Map<String, Integer> byComponent = new LinkedHashMap<>();
+        // SRCH-10: третья ось фасета. Раньше её не было в ответе вовсе, и UI
+        // считал проекты ПО ТЕКУЩЕЙ СТРАНИЦЕ — то есть счётчики врали за
+        // пределами первых 50 хитов, а серверный фильтр по проекту не
+        // задействовался. Считается так же, как by_component: по всей выборке
+        // ветки, а не по квоте выдачи.
+        Map<String, Integer> byProject = new LinkedHashMap<>();
+        // ADR-033 обещал поле warnings при падении ветки. Фактически ставилось
+        // byType=-1 — и это уходило в фасет КАК СЧЁТЧИК: UI рисовал чип
+        // «−1» вместо того, чтобы сказать «поиск по этому типу не отработал».
+        // Минус-единица как сигнал ошибки хуже отсутствия сигнала: она
+        // выглядит данными.
+        List<Map<String, Object>> warnings = new ArrayList<>();
 
         for (Branch b : active) {
             try {
-                List<Map<String, Object>> rows = queryBranch(b, lucene, q, comps, project);
+                List<Map<String, Object>> rows = queryBranch(b, lucene, q, comps, projs);
                 byType.put(b.type(), rows.size());
                 // Нормировка внутри ветки: BM25 разных бакетов несравним, а
                 // после деления на максимум ветки хотя бы порядок внутри типа
@@ -219,6 +235,9 @@ public class LoreSearchResource extends LoreResourceBase {
                     for (Object c : effectiveComponents(r)) {
                         byComponent.merge(String.valueOf(c), 1, Integer::sum);
                     }
+                    for (Object pr : asList(r.get("projects"))) {
+                        byProject.merge(String.valueOf(pr), 1, Integer::sum);
+                    }
                     if (taken++ >= perType) continue; // фасет считаем по всем, в выдачу — квоту
                     double raw = ((Number) r.getOrDefault("score", 1.0)).doubleValue();
                     r.put("score", round3(max <= 0 ? p : raw / max * p));
@@ -226,10 +245,13 @@ public class LoreSearchResource extends LoreResourceBase {
                     hits.add(r);
                 }
             } catch (Exception e) {
-                // Ветка НЕ глотается молча: одна упавшая ветка — это дырка в
-                // охвате, и о ней сообщается полем warnings, а не тишиной.
+                // Ветка НЕ глотается молча: одна упавшая ветка — дырка в охвате.
+                // Тип в by_type НЕ кладём вообще: счётчик означает «сколько
+                // нашлось», а про упавшую ветку мы этого не знаем. Отдельное
+                // поле warnings говорит «здесь не искали», и это принципиально
+                // иное утверждение, чем «здесь ничего нет».
                 LOG.warnf("[LORE SEARCH] ветка %s упала: %s", b.type(), e.getMessage());
-                byType.put(b.type(), -1);
+                warnings.add(Map.of("type", b.type(), "error", String.valueOf(e.getMessage())));
             }
         }
 
@@ -241,6 +263,10 @@ public class LoreSearchResource extends LoreResourceBase {
         out.put("hits", page);
         out.put("by_type", byType);
         out.put("by_component", byComponent);
+        out.put("by_project", byProject);
+        // Пустой список, а не отсутствие ключа: потребителю не приходится
+        // различать «поле не пришло» и «предупреждений нет».
+        out.put("warnings", warnings);
         out.put("total_collected", hits.size());
         out.put("capped_at", BRANCH_CAP);
         out.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
@@ -249,11 +275,11 @@ public class LoreSearchResource extends LoreResourceBase {
 
     /** Одна ветка: вершина + (если есть) открытая hist-строка со схлопыванием. */
     private List<Map<String, Object>> queryBranch(Branch b, String lucene, String rawQ,
-                                                  List<String> comps, String project) {
+                                                  List<String> comps, List<String> projs) {
         Map<String, Object> params = new HashMap<>();
         params.put("q", lucene);
         String compFilter = componentFilter(b, comps, params, false);
-        String projFilter = projectFilter(b, project, params, false);
+        String projFilter = projectFilter(b, projs, params, false);
 
         String textCols = String.join(", ", b.vertexTextFields());
         String matcher = b.indexName() != null
@@ -283,7 +309,7 @@ public class LoreSearchResource extends LoreResourceBase {
             // Фильтры фасета на hist-ветке идут через родителя (in('HAS_STATE')):
             // сама hist-строка рёбер компонентов не несёт.
             String hCompFilter = componentFilter(b, comps, hp, true);
-            String hProjFilter = projectFilter(b, project, hp, true);
+            String hProjFilter = projectFilter(b, projs, hp, true);
             // [0] только у скалярных проекций (ref_id/title — родитель один);
             // компоненты/проекты — СПИСКИ, [0] оставил бы один случайный.
             String hsql = "SELECT in('HAS_STATE')." + b.idField() + "[0] AS ref_id, "
@@ -350,12 +376,20 @@ public class LoreSearchResource extends LoreResourceBase {
         return " AND (" + String.join(" OR ", parts) + ")";
     }
 
-    private String projectFilter(Branch b, String project, Map<String, Object> params, boolean viaParent) {
-        if (project == null || project.isBlank()) return "";
-        params.put("proj", project);
-        // Без [0] — тот же список-капкан, что у компонентов выше.
+    private String projectFilter(Branch b, List<String> projs, Map<String, Object> params, boolean viaParent) {
+        if (projs == null || projs.isEmpty()) return "";
+        // Без [0] — тот же список-капкан, что у компонентов выше: у сущности
+        // проектов может быть несколько, и сравнение с первым случайным
+        // показало бы её только под одним из них.
         String expr = viaParent ? "in('HAS_STATE')." + b.projExpr() : b.projExpr();
-        return " AND (" + expr + " CONTAINS :proj)";
+        StringBuilder or = new StringBuilder();
+        for (int i = 0; i < projs.size(); i++) {
+            String key = "proj" + i;
+            params.put(key, projs.get(i));
+            if (i > 0) or.append(" OR ");
+            or.append(expr).append(" CONTAINS :").append(key);
+        }
+        return " AND (" + or + ")";
     }
 
     /** Сниппет + matched_field + эффективные компоненты одной строки. */
@@ -446,12 +480,30 @@ public class LoreSearchResource extends LoreResourceBase {
         priorityOverride.ifPresent(s -> {
             for (String pair : s.split(",")) {
                 String[] kv = pair.split(":");
-                if (kv.length == 2) {
-                    try { out.put(kv[0].trim(), Double.parseDouble(kv[1].trim())); }
-                    catch (NumberFormatException ignored) {
-                        LOG.warnf("[LORE SEARCH] неразборчивый приоритет '%s' — пропущен", pair);
-                    }
+                if (kv.length != 2) continue;
+                String type = kv[0].trim();
+                // Неизвестный тип — почти наверняка опечатка: значение молча
+                // осело бы в карте и ни на что не влияло, а автор конфига был
+                // бы уверен, что настроил.
+                if (!out.containsKey(type)) {
+                    LOG.warnf("[LORE SEARCH] приоритет для неизвестного типа '%s' — пропущен", type);
+                    continue;
                 }
+                double v;
+                try { v = Double.parseDouble(kv[1].trim()); }
+                catch (NumberFormatException ignored) {
+                    LOG.warnf("[LORE SEARCH] неразборчивый приоритет '%s' — пропущен", pair);
+                    continue;
+                }
+                // Диапазона раньше не было вовсе: 0 выкидывал тип из выдачи
+                // целиком (score обнулялся), отрицательное отправляло его в
+                // конец за всё остальное. И то и другое выглядело как «поиск
+                // сломался», а не как «в конфиге опечатка».
+                if (!(v > 0) || v > 10) {
+                    LOG.warnf("[LORE SEARCH] приоритет %s=%s вне (0; 10] — пропущен", type, kv[1].trim());
+                    continue;
+                }
+                out.put(type, v);
             }
         });
         return out;

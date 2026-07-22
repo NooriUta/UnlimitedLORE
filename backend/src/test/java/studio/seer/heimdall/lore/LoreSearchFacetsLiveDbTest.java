@@ -1,0 +1,126 @@
+package studio.seer.heimdall.lore;
+
+import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.junit.QuarkusTest;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+
+/**
+ * SRCH-10 (ADR-LORE-033): третья ось фасета и честные предупреждения.
+ *
+ * Два обещания ADR не выполнялись, и оба «работали» на вид:
+ * <ul>
+ *   <li>агрегата {@code by_project} не было — UI считал проекты по текущей
+ *       странице, то есть счётчики врали за пределами первых 50 хитов, а
+ *       серверный фильтр по проекту не задействовался вовсе;</li>
+ *   <li>при падении ветки в {@code by_type} клался {@code -1} — и уходил в
+ *       фасет КАК СЧЁТЧИК. Выдача выглядела полной, хотя часть корпуса не
+ *       просматривалась.</li>
+ * </ul>
+ */
+@QuarkusTest
+@QuarkusTestResource(value = LoreArcadeDbTestResource.class, restrictToAnnotatedClass = true)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
+class LoreSearchFacetsLiveDbTest {
+
+    private static void post(String path, String body) {
+        given().header("X-Seer-Role", "admin").contentType("application/json").body(body)
+            .when().post(path).then().statusCode(200);
+    }
+
+    @Test
+    @Order(1)
+    void setUp() {
+        post("/lore/project", "{\"slug\":\"acme/alpha\",\"name\":\"Альфа\"}");
+        post("/lore/project", "{\"slug\":\"acme/beta\",\"name\":\"Бета\"}");
+
+        post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_FA\",\"name\":\"фасеты альфа контекст\"}");
+        post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_FB\",\"name\":\"фасеты бета контекст\"}");
+        post("/lore/sprint/project", "{\"sprint_id\":\"SPRINT_FA\",\"git_project\":\"acme/alpha\"}");
+        post("/lore/sprint/project", "{\"sprint_id\":\"SPRINT_FB\",\"git_project\":\"acme/beta\"}");
+    }
+
+    /** Ось проекта приходит С СЕРВЕРА и считается по всей выборке ветки. */
+    @Test
+    @Order(2)
+    void byProjectIsReturnedAndCounted() {
+        given().header("X-Seer-Role", "admin").queryParam("q", "фасеты")
+        .when().get("/lore/search")
+        .then().statusCode(200)
+            .body("by_project", notNullValue())
+            .body("by_project.'acme/alpha'", greaterThan(0))
+            .body("by_project.'acme/beta'", greaterThan(0));
+    }
+
+    /**
+     * Фильтр по проекту отсекает НА СЕРВЕРЕ. Раньше он не отправлялся вовсе, и
+     * UI выбрасывал уже загруженную страницу — то есть «фильтр» умел только
+     * уменьшать видимое, но не расширять охват.
+     */
+    @Test
+    @Order(3)
+    void projectFilterCutsOnTheServer() {
+        given().header("X-Seer-Role", "admin")
+            .queryParam("q", "фасеты").queryParam("projects", "acme/alpha")
+        .when().get("/lore/search")
+        .then().statusCode(200)
+            .body("hits.ref_id", hasItem("SPRINT_FA"))
+            .body("hits.ref_id", not(hasItem("SPRINT_FB")));
+    }
+
+    /** Ось множественная — «два продукта из пяти» скаляром было не выбрать. */
+    @Test
+    @Order(4)
+    void projectFilterAcceptsSeveralValues() {
+        given().header("X-Seer-Role", "admin")
+            .queryParam("q", "фасеты").queryParam("projects", "acme/alpha,acme/beta")
+        .when().get("/lore/search")
+        .then().statusCode(200)
+            .body("hits.ref_id", hasItem("SPRINT_FA"))
+            .body("hits.ref_id", hasItem("SPRINT_FB"));
+    }
+
+    /**
+     * Ключ `warnings` присутствует ВСЕГДА — пустым списком. Потребителю не
+     * приходится различать «поле не пришло» и «предупреждений нет».
+     *
+     * И главное: в `by_type` не должно быть отрицательных значений ни при
+     * каких обстоятельствах. Счётчик отвечает на вопрос «сколько нашлось»;
+     * «−1» — не ответ, а поломка, замаскированная под данные.
+     */
+    @Test
+    @Order(5)
+    void warningsAlwaysPresentAndCountsNeverNegative() {
+        given().header("X-Seer-Role", "admin").queryParam("q", "фасеты")
+        .when().get("/lore/search")
+        .then().statusCode(200)
+            .body("warnings", notNullValue())
+            .body("warnings", empty())
+            .body("by_type.values()", everyItem(greaterThan(-1)));
+    }
+
+    /** Неизвестный проект — пустая выдача, а не 500 и не игнор фильтра. */
+    @Test
+    @Order(6)
+    void unknownProjectYieldsNothingRatherThanIgnoringTheFilter() {
+        given().header("X-Seer-Role", "admin")
+            .queryParam("q", "фасеты").queryParam("projects", "acme/no-such")
+        .when().get("/lore/search")
+        .then().statusCode(200)
+            .body("hits", empty())
+            .body("total_collected", equalTo(0));
+    }
+}
