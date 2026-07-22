@@ -326,7 +326,21 @@ public class LoreSearchResource extends LoreResourceBase {
                 double p = prio.getOrDefault(b.type(), b.priority());
                 int taken = 0;
                 for (Map<String, Object> r : rows) {
-                    for (Object c : effectiveComponents(r)) {
+                    // Читаем ГОТОВЫЕ поля хита: `queryBranch` уже прогнал строки
+                    // через shapeHit, и тот переименовал comp_direct/comp_inherited
+                    // в `components`, а `proj` в `projects`.
+                    //
+                    // Здесь стоял вызов effectiveComponents(r), который ищет
+                    // comp_direct — в этих строках его больше НЕТ. Агрегат выходил
+                    // пустым всегда: ось «компонент» не показывала ни одного чипа,
+                    // и фильтровать по компоненту было нечем, хотя у самих хитов
+                    // компоненты есть и видны.
+                    //
+                    // Соседняя ось это маскировала: by_project добавлялся позже
+                    // (SRCH-10) и сразу читал новое имя, поэтому работал. Проекты
+                    // на экране были — и пустой «компонент» выглядел как «у этих
+                    // записей просто нет компонента», а не как отказ.
+                    for (Object c : asList(r.get("components"))) {
                         byComponent.merge(String.valueOf(c), 1, Integer::sum);
                     }
                     for (Object pr : asList(r.get("projects"))) {
