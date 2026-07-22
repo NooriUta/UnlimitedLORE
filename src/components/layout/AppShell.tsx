@@ -60,7 +60,7 @@ export default function AppShell() {
   const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
 
   // ── Seiðr-шапка: бренд/тенант/«ещё» как dropdown'ы + палитра поиска ──────────
-  const [openDD, setOpenDD] = useState<null | 'brand' | 'tenant' | 'more' | 'user'>(null);
+  const [openDD, setOpenDD] = useState<null | 'brand' | 'tenant' | 'chapters' | 'more' | 'user'>(null);
   const [tenant, setTenant] = useState('DEFAULT');
   const [palOpen, setPalOpen] = useState(false);
   const [palQ, setPalQ] = useState('');
@@ -79,6 +79,10 @@ export default function AppShell() {
   const curSection = ((new URLSearchParams(search).get('section')) as Section | null) ?? 'plan';
   const curChapter = chapterOf(curSection);
   const showModules = active === 'projects' && !narrow;
+  // Главы уходят в меню ровно тогда, когда не помещаются строкой. Условие
+  // ОДНО на оба варианта: разойдись они — на какой-то ширине главы пропали бы
+  // и из строки, и из меню, и разделы стали бы недостижимы (так и было).
+  const chaptersInMenu = active === 'projects' && narrow;
 
   // Закрытие dropdown — outside-click (mousedown) + Esc, НЕ onBlur: blur
   // срабатывает раньше клика в Firefox/Safari и съедает выбор.
@@ -247,11 +251,50 @@ export default function AppShell() {
 
         <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px' }} />
 
-        {/* Активное пространство КАПСОМ + его модули (главы) инлайн — эталон Seiðr */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
-          {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
-          {!narrow && activeTab && <span>{t(activeTab.labelKey, activeTab.fallback)}</span>}
-        </div>
+        {/* Активное пространство КАПСОМ + его модули (главы) инлайн — эталон Seiðr.
+            На узком экране главы инлайн не помещаются (showModules=false), и
+            раньше попасть в них было НЕЧЕМ: этот блок был просто подписью, а
+            строка глав не рисовалась вовсе. Разделы «Зачем · Как делаем · Что
+            решили · Основа · Контроль» становились недостижимы с телефона.
+            Теперь на узком он — кнопка с тем же списком глав в выпадающем меню. */}
+        {chaptersInMenu ? (
+          <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
+            <button type="button"
+              aria-haspopup="menu" aria-expanded={openDD === 'chapters'}
+              aria-label={t('shell.chapters', 'Главы Forseti')}
+              onClick={() => setOpenDD(d => d === 'chapters' ? null : 'chapters')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                background: 'none', border: 'none', padding: '2px 4px',
+                fontFamily: 'inherit', fontWeight: 800, fontSize: 13,
+                letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)',
+              }}>
+              {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
+              <span style={caret}>⌄</span>
+            </button>
+            {openDD === 'chapters' && (
+              <div role="menu" style={dd}>
+                <div style={ddHead}>{t('shell.chapters', 'Главы Forseti')}</div>
+                {CHAPTERS.map(c => {
+                  const on = c.id === curChapter.id;
+                  return (
+                    <button key={c.id} type="button" role="menuitem" style={ddItem(on)}
+                      onClick={() => { setOpenDD(null); navigate(`/lore?section=${c.sections[0]}`); }}>
+                      <GameIcon slug={c.icon} size={15} style={{ color: on ? 'var(--acc)' : 'var(--t3)' }} />
+                      <span style={{ fontWeight: on ? 700 : 500 }}>{t(c.nameKey, c.name)}</span>
+                      {on && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
+            {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
+            <span>{t(activeTab!.labelKey, activeTab!.fallback)}</span>
+          </div>
+        )}
 
         {showModules && <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 8px', flexShrink: 0 }} />}
 
