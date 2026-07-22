@@ -287,8 +287,8 @@ export default function LoreComponentPassport({
       fetchLoreSlice<LoreAdrRow>          ('adrs',           { component: componentId }, ctrl.signal),
       fetchLoreSlice<LoreSpecRow>         ('specs',          { component: componentId }, ctrl.signal),
       fetchLoreSlice<QGRow>               ('quality_gates',  { component: componentId }, ctrl.signal),
-      // 'docs' has no server-side component filter (LoreArtifactList/LoreDocView
-      // fetch it unfiltered too) — filter client-side below.
+      // 'docs' has no server-side component filter (LoreArtifactList fetches it
+      // unfiltered too) — filter client-side below.
       fetchLoreSlice<LoreKnowDocRow>      ('docs',           undefined,                 ctrl.signal),
     ])
       .then(([compRows, adrRows, specRows, qgRows, docRows]) => {
