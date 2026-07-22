@@ -17,6 +17,8 @@ import { statusMeta, taskTick } from './lore-status';
 import { areaColor } from './LoreComponentList';
 import { useDictionary } from './DictionaryProvider';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { Select } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import TipTapField from './TipTapField';
 
 interface SprintMeta {
@@ -1428,11 +1430,21 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               to have a separate planned_milestone_id plain-field write alongside
               the TARGETS_MILESTONE edge — that field drifted out of sync on 62+
               sprints and was retired; the edge is the sole source of truth now. */}
-          <select disabled={planBusy || msLinking} style={{ ...lookupSelectStyle, width: '100%' }}
-            value={(sprint.milestone_ids ?? [])[0] ?? ''}
-            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
-            onChange={async e => {
-              const v = e.target.value || null;
+          {/* ADR-LORE-034: контролы планирования на Mantine. Нативные <select> и
+              <input type="date"> рисуются средствами ОС — на Windows это белый
+              выпадающий список и системный календарь поверх тёмной темы; вид
+              менялся от машины к машине, и стилизовать их нечем. Здесь как раз
+              «сложные инпуты» из одобренной области. */}
+          <Select
+            disabled={planBusy || msLinking}
+            placeholder={t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}
+            aria-label={t('lore.sprintDetail.plan.milestone', 'Веха')}
+            value={(sprint.milestone_ids ?? [])[0] ?? null}
+            data={allMilestones.map(m => ({ value: m.id, label: milestoneOptionLabel(m) }))}
+            clearable
+            searchable
+            size="xs"
+            onChange={async (v: string | null) => {
               setPlanBusy(true); setMsLinking(true);
               try {
                 const prevLinked = sprint.milestone_ids ?? [];
@@ -1442,16 +1454,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
                 setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
               } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
-            }}>
-            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
-            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
-          </select>
+            }}
+          />
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input type="date" disabled={planBusy} style={lookupSelectStyle}
-              value={sprint.planned_start_date ?? ''}
-              title={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
-              onChange={async e => {
-                const v = e.target.value || null;
+            <DateInput
+              disabled={planBusy} size="xs" clearable valueFormat="DD.MM.YYYY"
+              style={{ flex: 1 }}
+              placeholder={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
+              aria-label={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
+              value={sprint.planned_start_date ?? null}
+              onChange={async (v: string | null) => {
                 setPlanBusy(true);
                 try {
                   await updateSprintPlan(sprint.sprint_id, { planned_start_date: v });
@@ -1459,11 +1471,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 } catch (err) { onError(err); } finally { setPlanBusy(false); }
               }} />
             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>→</span>
-            <input type="date" disabled={planBusy} style={lookupSelectStyle}
-              value={sprint.planned_end_date ?? ''}
-              title={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
-              onChange={async e => {
-                const v = e.target.value || null;
+            <DateInput
+              disabled={planBusy} size="xs" clearable valueFormat="DD.MM.YYYY"
+              style={{ flex: 1 }}
+              placeholder={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
+              aria-label={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
+              value={sprint.planned_end_date ?? null}
+              onChange={async (v: string | null) => {
                 setPlanBusy(true);
                 try {
                   await updateSprintPlan(sprint.sprint_id, { planned_end_date: v });

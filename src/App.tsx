@@ -12,7 +12,7 @@ import BragiPage from './pages/BragiPage';
 import HuginnPage from './pages/HuginnPage';
 import TyrPage from './pages/TyrPage';
 import { MantineProvider } from '@mantine/core';
-import { mantineTheme } from './ui/mantineTheme';
+import { mantineTheme, mantineCssVariablesResolver } from './ui/mantineTheme';
 // Порядок импортов значим: стили Mantine идут ПЕРЕД tokens.css, чтобы наши
 // токены оставались последним словом. Обратный порядок отдал бы победу
 // библиотеке — той самой лотереей «кто позже в бандле», из-за которой TYR уже
@@ -23,10 +23,16 @@ import './styles/tokens.css';
 
 export default function App() {
   return (
-    // forceColorScheme="dark": светлой темы у LORE нет, а Mantine по умолчанию
-    // слушает системную. Без этого модалка у пользователя со светлой ОС
-    // приезжала бы белой поверх тёмного интерфейса.
-    <MantineProvider theme={mantineTheme} forceColorScheme="dark">
+    // Схема жёстко тёмная НЕ ставится: светлая тема у LORE есть — переключатель
+    // режима живёт в шапке (data-mode на корне). Первая редакция ставила
+    // forceColorScheme="dark" по ошибочному допущению «светлой темы нет»; при
+    // включённой светлой это давало тёмные переменные Mantine поверх светлого
+    // интерфейса.
+    //
+    // Цвета всё равно приходят из НАШИХ токенов через cssVariablesResolver,
+    // поэтому схема Mantine на вид почти не влияет — но пусть она хотя бы не
+    // противоречит действительности.
+    <MantineProvider theme={mantineTheme} cssVariablesResolver={mantineCssVariablesResolver}>
     <BrowserRouter>
       <AuthGate>
         <Routes>

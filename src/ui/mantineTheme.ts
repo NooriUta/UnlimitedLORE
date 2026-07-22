@@ -1,4 +1,4 @@
-import { createTheme, type MantineColorsTuple } from '@mantine/core';
+import { createTheme, type CSSVariablesResolver, type MantineColorsTuple } from '@mantine/core';
 
 /**
  * Тема Mantine, ПРИВЯЗАННАЯ к нашим токенам (ADR: узкий пилот Mantine).
@@ -53,19 +53,6 @@ export const mantineTheme = createTheme({
   radius: { xs: '3px', sm: '4px', md: '6px', lg: '8px', xl: '12px' },
   defaultRadius: 'md',
 
-  /**
-   * Поверхности и текст. Mantine рисует оверлеи на своих `--mantine-color-body`
-   * и `--mantine-color-text`; без этой привязки модалка приезжала бы белой на
-   * тёмной теме — и это заметили бы сразу. Хуже другое: границы и приглушённый
-   * текст разошлись бы с нашими незаметно.
-   */
-  other: {
-    bodyBg: 'var(--bg0)',
-    surfaceBg: 'var(--bg1)',
-    borderColor: 'var(--bd)',
-    textColor: 'var(--t1)',
-    dimmedColor: 'var(--t3)',
-  },
 
   components: {
     Modal: {
@@ -100,4 +87,42 @@ export const mantineTheme = createTheme({
       },
     },
   },
+});
+
+/**
+ * ПРИВЯЗКА СОБСТВЕННЫХ ПЕРЕМЕННЫХ MANTINE к нашим токенам.
+ *
+ * Без этого библиотека рисует на своих значениях: замерено в браузере —
+ * `--mantine-color-body` был `#242424` при `--bg2: #ffffff`, то есть выпадающий
+ * календарь приезжал белым поверх интерфейса и жил своей жизнью. Настройка
+ * `theme.other` на это не влияет вовсе — она лишь хранилище произвольных
+ * значений для собственного кода, а не источник переменных.
+ *
+ * Значения указывают на наши `var(--…)`, поэтому переключение темы приложения
+ * (тёмная/светлая, палитра amber/slate в шапке) утягивает за собой и Mantine
+ * автоматически: отдельной синхронизации нет и не нужно.
+ *
+ * `light` и `dark` заполнены ОДИНАКОВО намеренно: наши токены сами меняются по
+ * `data-mode`/`data-theme` на корне. Развести их значило бы завести вторую
+ * точку переключения темы — и однажды они разойдутся.
+ */
+const surfaces = {
+  '--mantine-color-body': 'var(--bg0)',
+  '--mantine-color-text': 'var(--t1)',
+  '--mantine-color-dimmed': 'var(--t3)',
+  '--mantine-color-default': 'var(--bg2)',
+  '--mantine-color-default-hover': 'var(--bg3)',
+  '--mantine-color-default-color': 'var(--t1)',
+  '--mantine-color-default-border': 'var(--bd)',
+  '--mantine-color-placeholder': 'var(--t3)',
+  '--mantine-color-anchor': 'var(--acc)',
+  '--mantine-color-error': 'var(--dng)',
+  '--mantine-color-disabled': 'var(--bg1)',
+  '--mantine-color-disabled-color': 'var(--t3)',
+};
+
+export const mantineCssVariablesResolver: CSSVariablesResolver = () => ({
+  variables: {},
+  light: surfaces,
+  dark: surfaces,
 });
