@@ -75,8 +75,26 @@ export const mantineTheme = createTheme({
       styles: {
         input: {
           background: 'var(--bg2)', borderColor: 'var(--bd)', color: 'var(--t1)',
-          fontFamily: 'var(--font)', fontSize: 'var(--fs-base)',
+          fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
+          /**
+           * Плотность приведена к нативным полям приложения. Собственные
+           * размеры Mantine (даже `size="xs"`) дают высоту 30px, тогда как
+           * соседние select/input в тех же строках — 22px. Разница в рост
+           * читается как «контролы разного размера», хотя шрифт совпадает:
+           * глаз ловит высоту и отступы раньше, чем кегль.
+           *
+           * Значения не выдуманы, а сняты с существующих полей: высота 22,
+           * горизонтальный отступ 8. Здесь, в теме, они действуют на ВСЕ поля
+           * Mantine — иначе выравнивать пришлось бы на каждой площадке
+           * отдельно, и однажды где-то забыли бы.
+           */
+          minHeight: 22,
+          height: 22,
+          paddingLeft: 8,
+          paddingRight: 8,
+          lineHeight: 1.2,
         },
+        section: { width: 22 },
       },
     },
     InputWrapper: {
