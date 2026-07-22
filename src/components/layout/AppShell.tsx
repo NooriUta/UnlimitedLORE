@@ -112,18 +112,23 @@ export default function AppShell() {
   const [palRows, setPalRows] = useState<Hit[]>([]);
   const [palBusy, setPalBusy] = useState(false);
   const [palSel, setPalSel] = useState(0);
+  // Сколько нашлось ВСЕГО, а не сколько поместилось. Раньше в подвале стояло
+  // `найдено: palRows.length` — то есть при трёхстах попаданиях палитра
+  // сообщала «найдено: 12». Число выглядело результатом поиска, а было
+  // размером окна выдачи.
+  const [palTotal, setPalTotal] = useState(0);
 
   useEffect(() => {
     const q = palQ.trim();
-    if (!palOpen || q.length < 2) { setPalRows([]); setPalBusy(false); return; }
+    if (!palOpen || q.length < 2) { setPalRows([]); setPalTotal(0); setPalBusy(false); return; }
     const ctrl = new AbortController();
     setPalBusy(true);
     const timer = setTimeout(() => {
       // limit меньше, чем на экране: палитра — быстрый переход, а не разбор
       // выдачи. Ранжирование то же, поэтому первые строки те же самые.
       fetchLoreSearch({ q, limit: 12 }, ctrl.signal)
-        .then(res => { setPalRows(res.hits); setPalSel(0); setPalBusy(false); })
-        .catch(() => { if (!ctrl.signal.aborted) { setPalRows([]); setPalBusy(false); } });
+        .then(res => { setPalRows(res.hits); setPalTotal(res.total_collected); setPalSel(0); setPalBusy(false); })
+        .catch(() => { if (!ctrl.signal.aborted) { setPalRows([]); setPalTotal(0); setPalBusy(false); } });
     }, 250);
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [palQ, palOpen]);
@@ -134,15 +139,16 @@ export default function AppShell() {
     setPalOpen(false); setPalQ('');
     navigate(searchHitHref(h.type, h.ref_id));
   };
+  // Enter ведёт К ЗАПИСИ — и только к ней. Результат поиска обязан приводить к
+  // тому, что нашлось, а не к другому списку результатов.
+  //
+  // Раньше при пустой выдаче Enter уводил на экран поиска: из «ничего не
+  // нашлось» — туда, где не найдётся тем более. Переход ради перехода, который
+  // ещё и закрывал палитру, так что уточнить запрос приходилось заново.
+  // Теперь палитра остаётся открытой и просто говорит, что пусто.
   const submitSearch = () => {
-    if (palRows.length) { openHit(palRows[Math.min(palSel, palRows.length - 1)]); return; }
-    const q = palQ.trim();
-    setPalOpen(false); setPalQ('');
-    // Enter без выбранного результата ведёт на ЭКРАН ПОИСКА с этим запросом.
-    // Раньше уводил на план-борд с ?q=, а план-борд не входит в разделы с
-    // фильтром — параметр там никем не читался, и переход выглядел как
-    // «поиск ничего не сделал».
-    navigate(searchScreenHref(q));
+    if (!palRows.length) return;
+    openHit(palRows[Math.min(palSel, palRows.length - 1)]);
   };
 
   const liveDot = { width: 7, height: 7, borderRadius: '50%', background: 'var(--suc)', flexShrink: 0, display: 'inline-block' as const };
@@ -466,9 +472,27 @@ export default function AppShell() {
               })}
             </div>
 
-            <div style={{ display: 'flex', gap: 14, padding: '7px 13px', fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', borderTop: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '7px 13px', fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', borderTop: '1px solid var(--bd)' }}>
               <span>↑↓ выбор</span><span>↵ открыть</span><span>esc закрыть</span>
-              {palRows.length > 0 && <span style={{ marginLeft: 'auto' }}>найдено: {palRows.length}</span>}
+              {palTotal > 0 && (
+                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {/* Счётчик говорит, сколько НАШЛОСЬ, и отдельно — сколько показано,
+                      если поместилось не всё. Прежнее «найдено: 12» при трёхстах
+                      попаданиях выдавало размер окна за размер выдачи. */}
+                  <span>найдено: {palTotal}{palTotal > palRows.length && ` · показаны ${palRows.length}`}</span>
+                  {/* Ссылка на полную выдачу появляется, ТОЛЬКО когда есть что
+                      показывать сверх поместившегося. Постоянная кнопка «все
+                      результаты» была бы второй дверью в поиск — тем самым, от
+                      чего ушли в D16. */}
+                  {palTotal > palRows.length && (
+                    <button type="button"
+                      onClick={() => { const q = palQ.trim(); setPalOpen(false); setPalQ(''); navigate(searchScreenHref(q)); }}
+                      style={{ font: 'inherit', color: 'var(--acc)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      все с фасетами →
+                    </button>
+                  )}
+                </span>
+              )}
             </div>
           </div>
         </div>
