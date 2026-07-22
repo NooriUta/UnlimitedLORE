@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchLoreSearch, type LoreSearchResult } from '../../api/lore';
 import { SearchInput, FilterDimensionMulti, type FilterOption } from './FilterPrimitives';
 import { EmptyState } from './EmptyState';
+import { Popover } from '@mantine/core';
 import { searchHitHref, typeLabel, typeHue } from '../../api/searchRoutes';
 
 // ── SRCH-05/09 UI: сквозной поиск с плашками типов и фасетами (ADR-LORE-033) ─
@@ -184,6 +185,57 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
           placeholder={t('lore.search.placeholder', 'Поиск по всему LORE — морфология, тела, префикс…')}
           ariaLabel={t('lore.search.aria', 'Сквозной поиск')} />
 
+        {/* Легенда и оговорки — ПОДСКАЗКОЙ ВВЕРХУ, у самой строки запроса
+            (указание владельца). Раньше они лежали в подвале, за всей выдачей:
+            доскроллил бы только упрямый, а знать о них надо ДО чтения
+            результатов — не зная, что скоры несравнимы между запросами и что
+            проект проставлен не везде, выдачу читают неверно.
+
+            Popover, а не постоянный блок: три оговорки на каждом экране
+            превращаются в шум, который перестают замечать, и тогда они не
+            работают вовсе. */}
+        <Popover width={380} position="bottom-start" withArrow shadow="md">
+          <Popover.Target>
+            <button type="button"
+              aria-label={t('lore.search.legendAria', 'Как читать выдачу')}
+              title={t('lore.search.legendAria', 'Как читать выдачу')}
+              style={{
+                width: 22, height: 22, borderRadius: '50%', cursor: 'pointer',
+                border: '1px solid var(--bd)', background: 'var(--bg2)',
+                color: 'var(--t3)', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>?</button>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.5 }}>
+              <div>
+                <b style={{ color: 'var(--t1)' }}>{t('lore.search.legendRank', 'ранг')}</b> — {t('lore.search.legendRankText',
+                  'BM25 × приоритет типа. Приоритет задан нами, а не движком.')}
+              </div>
+              <div>
+                <b style={{ color: 'var(--t1)' }}>{t('lore.search.legendBar', 'полоса')}</b> — {t('lore.search.legendBarText',
+                  'ранг относительно первого места в этом же запросе.')}
+              </div>
+              <div>
+                <b style={{ color: 'var(--t1)' }}>{t('lore.search.legendWhere', 'где совпало')}</b> — {t('lore.search.legendWhereText',
+                  'считаем сами: ArcadeDB не сообщает, какое поле дало попадание.')}
+              </div>
+              <div style={{ marginTop: 3, paddingTop: 5, borderTop: '1px solid var(--bd)', color: 'var(--t3)' }}>
+                ⚠ {t('lore.search.caveatTitleBoost',
+                  'Заголовок не обгоняет тело: title_boost в ArcadeDB эффекта не дал.')}
+              </div>
+              <div style={{ color: 'var(--t3)' }}>
+                ⚠ {t('lore.search.caveatScores',
+                  'Скоры сравнимы только внутри одного запроса, между запросами — нет.')}
+              </div>
+              <div style={{ color: 'var(--t3)' }}>
+                ⚠ {t('lore.search.caveatProjects',
+                  'Проект проставлен не везде: есть у спринтов и PR, у спек и задач — нет. Фильтр по проекту скроет всё остальное.')}
+              </div>
+            </div>
+          </Popover.Dropdown>
+        </Popover>
+
         {/* Режим разбора. API умел его с самого начала, а UI не предлагал —
             то есть точный поиск по фразе был недоступен, хотя работал. */}
         <div role="group" aria-label={t('lore.search.modeAria', 'Режим поиска')}
@@ -364,39 +416,6 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
         </div>
       )}
 
-      {/* Легенда и оговорки. Прототип зафиксировал три ограничения, и они не
-          «баги на потом»: пользователь, не знающий о них, читает выдачу
-          неверно — молчание здесь дороже места на экране. */}
-      {result && hits.length > 0 && (
-        <div style={{ marginTop: 4, padding: '8px 10px', borderTop: '1px solid var(--b1)',
-                      fontSize: 11.5, color: 'var(--t3)', display: 'flex',
-                      flexDirection: 'column', gap: 4 }}>
-          <div>
-            <b>{t('lore.search.legendRank', 'ранг')}</b> — {t('lore.search.legendRankText',
-              'BM25 × приоритет типа. Приоритет задан нами, а не движком.')}
-          </div>
-          <div>
-            <b>{t('lore.search.legendBar', 'полоса')}</b> — {t('lore.search.legendBarText',
-              'ранг относительно первого места в этом же запросе.')}
-          </div>
-          <div>
-            <b>{t('lore.search.legendWhere', 'где совпало')}</b> — {t('lore.search.legendWhereText',
-              'считаем сами: ArcadeDB не сообщает, какое поле дало попадание.')}
-          </div>
-          <div style={{ marginTop: 2 }}>
-            ⚠ {t('lore.search.caveatTitleBoost',
-              'Заголовок не обгоняет тело: title_boost в ArcadeDB эффекта не дал.')}
-          </div>
-          <div>
-            ⚠ {t('lore.search.caveatScores',
-              'Скоры сравнимы только внутри одного запроса, между запросами — нет.')}
-          </div>
-          <div>
-            ⚠ {t('lore.search.caveatProjects',
-              'Проект проставлен не везде: есть у спринтов и PR, у спек и задач — нет. Фильтр по проекту скроет всё остальное.')}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

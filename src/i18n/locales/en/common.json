@@ -1622,7 +1622,8 @@
       "legendWhereText": "worked out on our side: ArcadeDB does not report which field matched.",
       "caveatTitleBoost": "A title match does not outweigh a body match: title_boost had no effect in ArcadeDB.",
       "caveatScores": "Scores are comparable within one query only, never across queries.",
-      "caveatProjects": "Project is not filled in everywhere: sprints and PRs have it, specs and tasks do not. Filtering by project will hide everything else."
+      "caveatProjects": "Project is not filled in everywhere: sprints and PRs have it, specs and tasks do not. Filtering by project will hide everything else.",
+      "legendAria": "How to read the results"
     },
     "admin": {
       "addHost": "+ hosting",
