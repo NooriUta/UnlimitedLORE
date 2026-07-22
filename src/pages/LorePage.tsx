@@ -447,7 +447,14 @@ export default function LorePage() {
     // Уровень 2: подвкладки активной главы (контекст). Сами главы — в шапке.
     <nav style={STORY_S.subBar} className="lore-nav-scroll" role="tablist" aria-label={activeChapter.name}>
       {activeChapter.sections.map(sid => {
-        const s = SECTIONS.find(x => x.id === sid)!;
+        // Раздел главы, которого нет в SECTIONS, ПРОПУСКАЕТСЯ, а не роняет
+        // страницу. Прежний `!` утверждал, что оба списка всегда согласованы;
+        // они разъехались с первой же правкой — 'search' убрали из SECTIONS
+        // (D16), а в главе «Что решили» он остался, и обращение к `.icon`
+        // отсутствующей записи обрушило весь LorePage. Пустая подвкладка —
+        // мелкий изъян, белый экран вместо раздела — отказ.
+        const s = SECTIONS.find(x => x.id === sid);
+        if (!s) return null;
         const on = section === sid;
         const label = t(s.labelKey, s.fallback);
         return (
