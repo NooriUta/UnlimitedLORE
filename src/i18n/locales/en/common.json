@@ -1537,7 +1537,9 @@
         "jobs": "JOBS",
         "pains": "PAINS",
         "gains": "GAINS",
-        "impl": "🌊 Implementation — US (what is DONE)"
+        "impl": "🌊 Implementation — US (what is DONE)",
+        "tasksToggle": "Scenario tasks",
+        "noTasks": "No tasks realize this scenario"
       },
       "us": {
         "empty": "No user stories yet",

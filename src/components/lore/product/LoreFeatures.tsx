@@ -3,7 +3,7 @@
 // Дизайн зеркалит утверждённый прототип featureP. Данные — через useSlice/fetchLoreSlice.
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import type { LoreFeatureRow, LoreUcRow } from '../../../api/lore';
+import type { LoreFeatureRow, LoreUcRow, LoreUcTaskRow } from '../../../api/lore';
 import { fetchLoreSlice } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
@@ -40,9 +40,40 @@ function ucGlyph(status: string | null | undefined): string {
   return '⚡';
 }
 
-export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+/**
+ * Тон спринт-чипа задачи (PL-16).
+ *
+ * Красит статус СПРИНТА, а не задачи: «сделано» в отменённом спринте и
+ * «сделано» в живом — разные новости, а по статусу самой задачи неразличимы.
+ * Строки статусов приходят с эмодзи-префиксом (`✅ DONE`), поэтому сверяем
+ * вхождением, а не равенством.
+ */
+export function sprintTone(sprintStatus: string | null | undefined): 'ok' | 'act' | 'warn' | 'muted' {
+  const v = (sprintStatus ?? '').toLowerCase();
+  if (v.includes('cancel')) return 'warn';
+  if (v.includes('done')) return 'ok';
+  if (v.includes('progress') || v.includes('active')) return 'act';
+  return 'muted';
+}
+
+export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError, listSearch, expandedUc, onExpandUc }: ProductScreenProps) {
   const { t } = useTranslation();
   const { rows, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
+
+  // Задачи раскрытого сценария (PL-16). Грузим ТОЛЬКО раскрытый узел, а не все
+  // разом: фича с двумя десятками US дала бы столько же запросов на открытие
+  // паспорта, из которых посмотрят один.
+  const [ucTasks, setUcTasks] = useState<LoreUcTaskRow[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  useEffect(() => {
+    if (!expandedUc) { setUcTasks([]); return; }
+    const ctrl = new AbortController();
+    setTasksLoading(true);
+    fetchLoreSlice<LoreUcTaskRow>('tasks_of_uc', { id: expandedUc }, ctrl.signal)
+      .then(r => { setUcTasks(r); setTasksLoading(false); })
+      .catch(e => { if (!ctrl.signal.aborted) { onError(e); setTasksLoading(false); } });
+    return () => ctrl.abort();
+  }, [expandedUc, onError]);
 
   // Use cases выбранной фичи (замыкают fit-мост).
   const [ucs, setUcs] = useState<LoreUcRow[]>([]);
@@ -175,14 +206,57 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
           <PSection title={t('lore.product.feat.impl', '🌊 Реализация — US (что СДЕЛАНО)')}>
             {ucs.length === 0
               ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
-              : ucs.map((uc, i) => (
-                <TRow key={uc.uc_id} first={i === 0}>
-                  <span style={{ width: 16, textAlign: 'center' }}>{ucGlyph(uc.status)}</span>
-                  <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc.uc_id)}>{uc.uc_id}</LinkChip>
-                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{uc.title ?? ''}</span>
-                  <Pill tone={(uc.status ?? '').toLowerCase() === 'shipped' ? 'ok' : (uc.status ?? '').toLowerCase() === 'active' ? 'act' : 'muted'} style={{ marginLeft: 'auto' }}>{uc.status ?? '—'}</Pill>
-                </TRow>
-              ))}
+              : ucs.map((uc, i) => {
+                const open = expandedUc === uc.uc_id;
+                return (
+                  <div key={uc.uc_id}>
+                    <TRow first={i === 0}>
+                      {/* Треугольник раскрытия — отдельная кнопка от чипа id:
+                          чип уводит на паспорт US, и совмести мы их, «посмотреть
+                          задачи» уносило бы с экрана фичи, ради которого сюда и
+                          пришли. */}
+                      <button
+                        type="button"
+                        onClick={() => onExpandUc?.(open ? null : uc.uc_id)}
+                        aria-expanded={open}
+                        aria-label={t('lore.product.feat.tasksToggle', 'Задачи сценария')}
+                        style={{ width: 16, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 9, padding: 0 }}
+                      >
+                        {open ? '▼' : '▶'}
+                      </button>
+                      <span style={{ width: 16, textAlign: 'center' }}>{ucGlyph(uc.status)}</span>
+                      <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc.uc_id)}>{uc.uc_id}</LinkChip>
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{uc.title ?? ''}</span>
+                      <Pill tone={(uc.status ?? '').toLowerCase() === 'shipped' ? 'ok' : (uc.status ?? '').toLowerCase() === 'active' ? 'act' : 'muted'} style={{ marginLeft: 'auto' }}>{uc.status ?? '—'}</Pill>
+                    </TRow>
+
+                    {open && (
+                      <div style={{ marginLeft: 20, borderLeft: '1px solid var(--bd)', paddingLeft: 8 }}>
+                        {tasksLoading && <div style={{ fontSize: 11, color: 'var(--t3)', padding: '3px 0' }}>…</div>}
+                        {!tasksLoading && ucTasks.length === 0 && (
+                          // Отличаем «нет задач» от «не раскрывали»: пустой узел
+                          // без подписи читается как сбой загрузки.
+                          <div style={{ fontSize: 11, color: 'var(--t3)', padding: '3px 0' }}>
+                            {t('lore.product.feat.noTasks', 'Задач, реализующих этот сценарий, нет')}
+                          </div>
+                        )}
+                        {!tasksLoading && ucTasks.map(task => (
+                          <div key={task.task_uid} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 11.5, color: 'var(--t2)' }}>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--t3)' }}>{task.task_id}</span>
+                            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title ?? ''}</span>
+                            <Pill tone="muted">{task.status_raw ?? '—'}</Pill>
+                            {task.sprint_id && (
+                              <LinkChip color="var(--acc)" onClick={() => onNavigate('sprints', task.sprint_id ?? undefined)} title={task.sprint_status_raw ?? undefined}>
+                                <Pill tone={sprintTone(task.sprint_status_raw)}>{task.sprint_id}</Pill>
+                              </LinkChip>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </PSection>
         </div>
       );

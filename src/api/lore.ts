@@ -544,6 +544,21 @@ export interface LoreUcRow {
   extended_by?: string[] | null;
 }
 
+/** Строка слайса `tasks_of_uc` — задача, реализующая сценарий (PL-16). */
+export interface LoreUcTaskRow {
+  task_uid: string;
+  task_id: string;
+  title: string | null;
+  task_type?: string | null;
+  work_class?: string | null;
+  status_raw?: string | null;
+  sprint_id?: string | null;
+  // Статус СПРИНТА, а не задачи: закрытая задача в живом спринте и та же
+  // задача в отменённом — разные новости, а по статусу задачи не различимы.
+  sprint_status_raw?: string | null;
+  justified_by_adr_ids?: string[] | null;
+}
+
 export interface LorePainRow {
   pain_id: string;
   title: string | null;
