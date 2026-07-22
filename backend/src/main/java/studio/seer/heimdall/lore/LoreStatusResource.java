@@ -104,7 +104,7 @@ public class LoreStatusResource extends LoreResourceBase {
             // unset or equal to executor_agent) BEFORE the SCD2 flip. Every other task
             // transition is ungated (RBAC-only, per the ADR's "one hard-gate" decision).
             case "task"      -> ("done".equals(req.status())
-                                    ? checkTaskDoneGate(req.id())
+                                    ? checkTaskDoneGate(req.id(), role)
                                     : Uni.createFrom().<Response>item((Response) null))
                                   .chain(gate -> gate != null
                                     ? Uni.createFrom().item(gate)
@@ -411,7 +411,16 @@ public class LoreStatusResource extends LoreResourceBase {
      * with otherwise. author/executor/reviewer_agent are plain KnowTask vertex fields
      * (not Hist — see LoreSchemaInitializer), so this is a single non-traversal read.
      */
-    private Uni<Response> checkTaskDoneGate(String taskUid) {
+    private Uni<Response> checkTaskDoneGate(String taskUid, String role) {
+        // ADR-LORE-014-D4: полный носитель (admin/superadmin, agent-full) работает
+        // соло. Гейт рассчитан на ДВОИХ, а второго участника у него взять
+        // неоткуда — требование ревьюера превращалось бы в требование выдумать
+        // имя, то есть в фикцию, а не в проверку.
+        //
+        // Гейт остаётся для узких профилей: у architect/developer/pm/tester
+        // разделение исполнителя и ревьюера осмысленно, там есть кому принимать.
+        if (isFullScopeCaller(role)) return Uni.createFrom().nullItem();
+
         MartQuery q = new MartQuery("sql",
             "SELECT executor_agent, reviewer_agent FROM KnowTask WHERE task_uid = :uid LIMIT 1",
             Map.of("uid", taskUid), -1);
@@ -423,7 +432,8 @@ public class LoreStatusResource extends LoreResourceBase {
             if (reviewer == null || reviewer.isBlank() || reviewer.equals(executor)) {
                 return noStore(Response.status(Response.Status.CONFLICT)
                     .entity(new LoreError("NO_SELF_ACCEPTANCE",
-                        "task cannot move to done: reviewer_agent must be set and differ from executor_agent")));
+                        "task cannot move to done: reviewer_agent must be set and differ from executor_agent "
+                        + "(снимается только для полного носителя — admin/superadmin/agent-full, ADR-LORE-014-D4)")));
             }
             return null;
         });

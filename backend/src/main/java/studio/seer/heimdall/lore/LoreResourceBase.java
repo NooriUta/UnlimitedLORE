@@ -93,6 +93,55 @@ public abstract class LoreResourceBase {
         }
     }
 
+    @Inject
+    io.quarkus.security.identity.SecurityIdentity identity;
+
+    /**
+     * Скоуп агента без префикса {@code agent-}, либо {@code null} у человека.
+     * Читается так же, как в {@code AgentScopeFilter}: клейм приходит
+     * client-ролью Keycloak и бывает закавычен.
+     */
+    String callerAgentScope() {
+        if (identity == null
+                || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) {
+            return null;
+        }
+        Object raw = jwt.getClaim("agent_scope");
+        if (raw == null) return null;
+        String scope = null;
+        if (raw instanceof java.util.Collection<?> c) {
+            for (Object o : c) { scope = String.valueOf(o); break; }
+        } else {
+            scope = String.valueOf(raw);
+        }
+        if (scope == null || scope.isBlank()) return null;
+        scope = scope.replace("\"", "").trim();
+        return scope.startsWith("agent-") ? scope.substring("agent-".length()) : scope;
+    }
+
+    /**
+     * Полный носитель: агент профиля {@code agent-full} либо человек-администратор
+     * (ADR-LORE-014-D4). Используется там, где правило рассчитано на ДВОИХ, а
+     * полный носитель работает один. <b>Новых прав на запись не даёт</b> —
+     * только снимает требование разделения ролей.
+     *
+     * <p><b>Порядок проверок существенный.</b> Роль из заголовка НЕ годится как
+     * разделитель: write-эндпоинты и так требуют {@code admin}, поэтому с этой
+     * ролью приходят и узкие профили агентов — проверка «роль = admin» сделала
+     * бы исключение всеобщим, то есть отменила бы правило вместо того, чтобы
+     * сделать из него исключение.
+     *
+     * <p>Поэтому: если у носителя ЕСТЬ {@code agent_scope} — он агент, и соло
+     * разрешено только профилю {@code full}. Скоупа нет — носитель человек, и
+     * решает его realm-роль. При выключенной аутентификации токена нет вовсе,
+     * значит работает второй путь (роль из конфига).
+     */
+    boolean isFullScopeCaller(String role) {
+        String scope = callerAgentScope();
+        if (scope != null) return "full".equals(scope);
+        return "admin".equals(role) || "superadmin".equals(role);
+    }
+
     Response badParams(String msg) {
         return noStore(Response.status(Response.Status.BAD_REQUEST)
             .entity(new LoreError("BAD_PARAMS", msg)));
