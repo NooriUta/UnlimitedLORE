@@ -161,6 +161,100 @@ public class LoreSearchResource extends LoreResourceBase {
     // полем capped_at, чтобы «ровно 50» читалось как «не меньше 50»).
     private static final int BRANCH_CAP = 50;
 
+    /**
+     * SRCH-06 (ADR-LORE-033 D6): «похожие записи» на {@code SEARCH_INDEX_MORE}.
+     *
+     * <p><b>На вход идентификатор, а не строка.</b> Отдельный эндпоинт, а не
+     * режим основного поиска: иначе {@code q} стал бы полиморфным — то запрос,
+     * то ссылка, — и вызывающему пришлось бы догадываться, как его поймут.
+     *
+     * <p><b>Два ЗАМЕРЕННЫХ ограничения движка (26.7.2), оба вынесены в ответ,
+     * а не спрятаны.</b>
+     * <ul>
+     *   <li><b>Похожесть работает ТОЛЬКО внутри своего типа.</b> Rid ADR против
+     *       индекса спринтов возвращает пусто: функция ищет документ в том же
+     *       индексе, где он лежит. Межтиповых «похожих» не существует, и
+     *       обещать их в UI нельзя.</li>
+     *   <li><b>{@code $similarity} возвращает 1.0 у всех строк</b> — ровно как
+     *       CLASSIC-ловушка у обычного поиска. Ранжировать по нему нельзя,
+     *       поэтому мы его и не отдаём: константа, выданная за меру близости,
+     *       хуже её отсутствия. Порядок — тот, что вернул движок.</li>
+     * </ul>
+     *
+     * <p>Исходная запись из выдачи исключается: «похоже на само себя» — не ответ.
+     */
+    @GET
+    @Path("search/similar")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response similar(@QueryParam("ref") String ref,
+                            @QueryParam("limit") Integer limitParam,
+                            @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        long t0 = System.nanoTime();
+        if (ref == null || ref.isBlank()) return badParams("ref required");
+        if (ref.length() > 160) return badParams("ref is longer than 160 characters");
+
+        int limit = limitParam == null || limitParam < 1 ? 10 : Math.min(limitParam, 50);
+
+        // Ищем, какому типу принадлежит идентификатор. Ветки без FT-индекса
+        // (quality_gate) пропускаем сразу: «похожих» им взять неоткуда.
+        for (Branch b : BRANCHES) {
+            if (b.indexName() == null) continue;
+            List<Map<String, Object>> src;
+            try {
+                src = ingestService.queryPublic(
+                    "SELECT @rid AS rid FROM " + b.vertexClass() + " WHERE " + b.idField() + " = :ref LIMIT 1",
+                    Map.of("ref", ref));
+            } catch (Exception e) {
+                LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), e.getMessage());
+                continue;
+            }
+            if (src.isEmpty()) continue;
+
+            String rid = String.valueOf(src.get(0).get("rid"));
+            List<Map<String, Object>> rows;
+            try {
+                // rid подставляется в текст запроса, а не параметром: ArcadeDB
+                // ждёт здесь литерал-коллекцию RID. Значение получено из БД
+                // предыдущим запросом и снаружи не приходит — подстановка
+                // безопасна по происхождению, а не по вере в неё.
+                rows = ingestService.queryPublic(
+                    "SELECT " + b.idField() + " AS ref_id, " + b.titleField() + " AS title FROM "
+                    + b.vertexClass() + " WHERE SEARCH_INDEX_MORE('" + b.indexName() + "', [" + rid + "]) = true "
+                    + "LIMIT " + (limit + 1), Map.of());
+            } catch (Exception e) {
+                LOG.warnf("[LORE SIMILAR] %s: %s", ref, e.getMessage());
+                return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("LORE_UPSTREAM", String.valueOf(e.getMessage()))));
+            }
+
+            List<Map<String, Object>> hits = new ArrayList<>();
+            for (Map<String, Object> r : rows) {
+                if (ref.equals(String.valueOf(r.get("ref_id")))) continue; // сам себе не похожий
+                Map<String, Object> hit = new LinkedHashMap<>();
+                hit.put("type", b.type());
+                hit.put("ref_id", r.get("ref_id"));
+                hit.put("title", r.get("title"));
+                hits.add(hit);
+                if (hits.size() >= limit) break;
+            }
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ref", ref);
+            out.put("type", b.type());
+            out.put("hits", hits);
+            // Явно в ответе, а не примечанием в документации: потребитель должен
+            // знать, что «похожие» ограничены типом и что порядок не ранжирован.
+            out.put("same_type_only", true);
+            out.put("ranked", false);
+            out.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
+            return noStore(Response.ok(out));
+        }
+
+        return noStore(Response.status(Response.Status.NOT_FOUND)
+            .entity(new LoreError("NOT_FOUND", "ref «" + ref + "» не найден ни в одном индексируемом типе")));
+    }
+
     @GET
     @Path("search")
     @Produces(MediaType.APPLICATION_JSON)
