@@ -213,6 +213,19 @@ a:hover { text-decoration: underline; }
 button { font-family: var(--font); cursor: pointer; }
 code, pre { font-family: var(--mono, 'IBM Plex Mono', monospace); }
 
+/* Поля ввода не наследуют шрифт от родителя — у них собственный стиль
+   user-agent. Правило было только для `button`, поэтому ВСЕ input/select/
+   textarea рисовались браузерным умолчанием: 16px системным шрифтом при
+   нашей базе 12px. Замерено — 16px и у нативных полей, и у Mantine, то есть
+   поля были заметно крупнее окружающего интерфейса везде и всегда.
+
+   Инлайновые размеры в компонентах это правило перебивают, так что места с
+   осознанно другим размером не затронуты — чинится только умолчание. */
+input, select, textarea {
+  font-family: var(--font);
+  font-size: var(--fs-base);
+}
+
 /* ── Focus-visible ──────────────────────────────────────────────────────── */
 input:focus-visible,
 select:focus-visible,
@@ -432,12 +445,22 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
 
   /* MOB-09: iOS Safari force-zooms the page when a focused input's font-size
      is <16px — every input in the app is 11-13px via INLINE styles, hence the
-     !important. Applies only below 768px, desktop density untouched. */
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-  .ProseMirror, [contenteditable='true'] {
-    font-size: 16px !important;
+     !important.
+
+     Условие сужено до СЕНСОРНОГО ввода (`pointer: coarse`). Автозум при
+     фокусе бывает только на тач-экране; ширина окна к нему отношения не
+     имеет. Прежняя привязка «всё уже 768px» раздувала поля до 16px и на
+     десктопе с узким окном — а там при базе 12px они выглядели заметно
+     крупнее окружающего интерфейса. Именно это и было замечено как
+     «странный размер шрифтов»: 516px ширины хватало, чтобы правило
+     сработало, хотя ни зума, ни тача нет. */
+  @media (pointer: coarse) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+    .ProseMirror, [contenteditable='true'] {
+      font-size: 16px !important;
+    }
   }
 
   /* MOB-11: horizontal-scroll affordance. Classic background-attachment
