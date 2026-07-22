@@ -40,8 +40,10 @@ describe('registerLoreWrite', () => {
     registerLoreWrite(server);
     // 67 (ADR-022 продуктовый слой) + asset_up (ADR-031, PL-22)
     // + pain_new/gain_new/feature_link (ADR-032 §2, PL-27) + uc_quality (ADR-027-D3, PL-12)
-    // + job_new/vp_link (ADR-032 §2 Остервальдер, V10 — третий столп профиля).
-    expect(names).toHaveLength(74);
+    // + job_new/vp_link (ADR-032 §2 Остервальдер, V10 — третий столп профиля)
+    // + spec_link (PL-34 — перепривязка спеки ребром: component_id полем вершины
+    //   слайсы не читают, и смена компонента через spec_set была тихим no-op).
+    expect(names).toHaveLength(75);
   });
 
   it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
@@ -76,7 +78,7 @@ describe('registerLoreWrite', () => {
     for (const expected of [
       'status_set', 'status_set_batch', 'task_new', 'task_mv', 'sprint_new',
       'sprint_phase_new', 'adr_new', 'adr_set', 'adr_rename', 'adr_del',
-      'decision_new', 'release_new', 'release_set', 'spec_new', 'spec_set', 'spec_del',
+      'decision_new', 'release_new', 'release_set', 'spec_new', 'spec_set', 'spec_del', 'spec_link',
       'tech_set', 'qg_new', 'qg_job_new', 'qg_run_log', 'rec_new', 'rec_promote',
       'runbook_new', 'doc_new', 'doc_del', 'component_new', 'component_set',
       'dict_set', 'metric_log', 'metric_get', 'insight_new',

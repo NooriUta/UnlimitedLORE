@@ -1079,6 +1079,27 @@ export function registerLoreWrite(server: McpServer): void {
   );
 
   definePostTool(server, {
+    name: 'spec_link',
+    description: 'PL-34: rebind a KnowSpec to another component or git project — BY EDGE. ' +
+      'Needed because spec_new/spec_set write component_id as a VERTEX FIELD while the `specs` ' +
+      'slice reads the BELONGS_TO edge: passing a new component_id returned ok:true and the spec ' +
+      'stayed listed under the old component. Default mode="replace" — "rebind" means one owner, ' +
+      'and silently accumulating a second link would list the spec under two components at once. ' +
+      'A non-existent target is an ERROR, not a no-op: the backend counts the edges it just wrote ' +
+      '(CREATE EDGE … TO (SELECT …) over an empty selection creates nothing and does not fail). ' +
+      'Mutates system_aida_lore.',
+    schema: {
+      spec_id:   z.string().describe('e.g. "LORE_DB_SPEC"'),
+      target_id: z.string().describe('component_id (e.g. "OMILORE") or project slug, per `rel`'),
+      rel:       z.enum(['component', 'project']).optional().describe('default "component"'),
+      mode:      z.enum(['add', 'remove', 'replace']).optional()
+        .describe('default "replace" — drops existing links of this kind first'),
+    },
+    path: '/lore/spec/link',
+    body: ({ spec_id, target_id, rel, mode }) => ({ spec_id, target_id, rel, mode }),
+  });
+
+  definePostTool(server, {
     name: 'spec_del',
     description: 'Permanently delete a KnowSpec vertex by spec_id. Mutates system_aida_lore.',
     schema: { spec_id: z.string() },
