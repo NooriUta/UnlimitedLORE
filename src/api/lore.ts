@@ -186,6 +186,11 @@ export interface LoreSearchHit {
   ref_id: string;
   title: string | null;
   score: number;
+  /** SRCH-09: слагаемые ранга — `score = bm25 × type_priority`. Итог сам по себе
+   *  не отвечает, почему задача встала выше ADR; спорить с приоритетом можно,
+   *  только если он виден. BM25 нормирован внутри ветки (доля от лучшего в типе). */
+  bm25: number;
+  type_priority: number;
   matched_field: string;
   snippet: string | null;
   components: string[];
@@ -207,6 +212,15 @@ export interface LoreSearchResult {
   warnings: LoreSearchWarning[];
   total_collected: number;
   capped_at: number;
+  /** SRCH-09: во что превратился запрос перед уходом в индекс — строку строит
+   *  сервер (D2), и больше она нигде не видна. Без неё расхождение «что я искал»
+   *  и «что искали за меня» проверить нечем. */
+  lucene: string;
+  mode: 'smart' | 'exact' | 'fuzzy';
+  /** Границы страницы рядом с самой страницей: иначе «конец выдачи» не отличить
+   *  от «страницу пролистали мимо». */
+  offset: number;
+  limit: number;
   took_ms: number;
 }
 export interface LoreSearchParams {

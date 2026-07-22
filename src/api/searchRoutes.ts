@@ -80,3 +80,38 @@ export function searchScreenHref(q: string): string {
 export function typeLabel(type: string): string {
   return TYPE_LABEL_RU[type] ?? type;
 }
+
+/**
+ * SRCH-09: цвет чипа типа (прототип `search-facets-srch05.html`, `.tag--*`).
+ *
+ * Когда все чипы одного цвета, тип читается только текстом — то есть в списке
+ * из полусотни хитов не читается вовсе. Цвет здесь несёт смысл, а не украшает:
+ * он группирует выдачу по роду записи быстрее, чем чтение подписи.
+ *
+ * Семейства окрашены совместно, потому что и в корпусе они одно: решения идут
+ * за ADR, всё знание (спека/док/ранбук) — одним цветом, задача за спринтом,
+ * продуктовый слой — своей парой. Неизвестный тип получает нейтральный
+ * акцент, а не случайный цвет: выдумывать различие там, где его нет, хуже,
+ * чем его не показать.
+ */
+const TYPE_HUE: Record<string, string> = {
+  adr: 'var(--acc)',
+  decision: 'var(--acc)',
+  question: 'var(--wrn)',
+  spec: 'var(--inf, #4f9cf0)',
+  doc: 'var(--inf, #4f9cf0)',
+  runbook: 'var(--inf, #4f9cf0)',
+  sprint: 'var(--ok, #4caf72)',
+  task: 'var(--ok, #4caf72)',
+  quality_gate: 'var(--danger, #e05252)',
+  feature: 'var(--vp, #a071d6)',
+  use_case: 'var(--vp, #a071d6)',
+  actor: 'var(--vp, #a071d6)',
+  pain: 'var(--vp, #a071d6)',
+  gain: 'var(--vp, #a071d6)',
+  job: 'var(--vp, #a071d6)',
+};
+
+export function typeHue(type: string): string {
+  return TYPE_HUE[type] ?? 'var(--acc)';
+}
