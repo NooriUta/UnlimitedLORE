@@ -459,7 +459,9 @@
       "openInRegister": "Open in the question register (editable)",
       "projectsMulti": "Projects",
       "questions": "Open questions of this ADR",
-      "save": "Save"
+      "save": "Save",
+      "tracedBy": "Traced by scenarios (TRACED_TO)",
+      "justifies": "Justifies tasks (JUSTIFIED_BY)"
     },
     "analytics": {
       "flow": {
@@ -640,7 +642,8 @@
         "spec": "Spec",
         "qg": "QG",
         "sprints": "Sprints",
-        "doc": "Knowledge"
+        "doc": "Knowledge",
+        "uc": "Scenarios"
       },
       "editButtonTitle": "Edit",
       "edit": {
@@ -1293,7 +1296,10 @@
       "typeCounts": {
         "ariaLabel": "Tasks by type (multi-select)"
       },
-      "metaToggle": "Context and links"
+      "metaToggle": "Context and links",
+      "wcUc": "realizes a scenario",
+      "wcJtd": "supporting job",
+      "wcEnb": "enabler — justified by an ADR"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID is required",

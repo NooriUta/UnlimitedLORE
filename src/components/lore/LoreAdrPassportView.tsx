@@ -208,6 +208,8 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   const implementedIn = data.implemented_in_ids ?? [];
   const releasedIn    = data.release_ids        ?? [];
   const tags          = data.tags              ?? [];
+  const tracedByUcs   = data.traced_by_ucs      ?? [];   // PL-19: обратное TRACED_TO
+  const justifiedTasks = data.justified_task_uids ?? []; // PL-19: обратное JUSTIFIED_BY
 
   // Full-ADR Markdown export — assembles the complete record (header + all
   // body sections + relations) into one .md file, downloaded client-side.
@@ -330,6 +332,31 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
           <div style={S.chips}>
             {supersedes.map(id => (
               <span key={id} style={S.chip(true)} onClick={() => onNavigate(id)}>{id}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* PL-19: обратные связи — «на что этот ADR влияет». Раньше читалось
+          только с другой стороны (открыв каждый сценарий и задачу). Навигация
+          на userStories/sprints уже есть у onNavigate? Нет — onNavigate ведёт
+          в раздел ADR; поэтому сценарии/задачи показаны БЕЗ клика, как факт
+          прослеживаемости, а переход к ним — из их собственных разделов. */}
+      {tracedByUcs.length > 0 && (
+        <div style={S.section}>
+          <div style={S.sLabel}>{t('lore.adrPassportView.tracedBy', 'Прослеживают сценарии (TRACED_TO)')}</div>
+          <div style={S.chips}>
+            {tracedByUcs.map(id => (
+              <span key={id} style={S.chip(false)}>{id}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {justifiedTasks.length > 0 && (
+        <div style={S.section}>
+          <div style={S.sLabel}>{t('lore.adrPassportView.justifies', 'Обосновывает задачи (JUSTIFIED_BY)')}</div>
+          <div style={S.chips}>
+            {justifiedTasks.map(id => (
+              <span key={id} style={S.chip(false)}>{id}</span>
             ))}
           </div>
         </div>

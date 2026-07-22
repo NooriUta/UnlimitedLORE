@@ -316,6 +316,10 @@ export interface LoreAdrPassport {
   tags: string[] | null;
   /** ADRPROJ-01: git-проекты ADR (BELONGS_TO_PROJECT, multi). */
   git_projects?: string[] | null;
+  /** PL-19: сценарии, ссылающиеся на этот ADR (обратное TRACED_TO). */
+  traced_by_ucs?: string[] | null;
+  /** PL-19: enb-задачи, обоснованные этим ADR (обратное JUSTIFIED_BY). */
+  justified_task_uids?: string[] | null;
 }
 
 export interface LoreSprintDep {
@@ -418,6 +422,11 @@ export interface LoreSprintTask {
   reviewer_agent?: string | null;
   // ADR-LORE-015 (T14) — classification, plain vertex field like the roles above.
   task_type?: string | null;
+  // ADR-LORE-022 (PL-19) — ось ЗАЧЕМ, ортогональная task_type: uc | jtd | enb.
+  // Слайс отдаёт её с PL-14, но фронт не типизировал и не показывал.
+  work_class?: string | null;
+  /** Сценарии, которые задача реализует (REALIZES) — их может быть несколько. */
+  realizes_uc?: string[] | null;
 }
 
 export interface LoreMilestone {

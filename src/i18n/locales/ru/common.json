@@ -459,7 +459,9 @@
       "openInRegister": "Открыть в реестре вопросов (с правкой)",
       "projectsMulti": "Проекты",
       "questions": "Открытые вопросы этого ADR",
-      "save": "Сохранить"
+      "save": "Сохранить",
+      "tracedBy": "Прослеживают сценарии (TRACED_TO)",
+      "justifies": "Обосновывает задачи (JUSTIFIED_BY)"
     },
     "analytics": {
       "flow": {
@@ -640,7 +642,8 @@
         "spec": "Спека",
         "qg": "QG",
         "sprints": "Спринты",
-        "doc": "Знания"
+        "doc": "Знания",
+        "uc": "Сценарии"
       },
       "editButtonTitle": "Редактировать",
       "edit": {
@@ -1293,7 +1296,10 @@
       "typeCounts": {
         "ariaLabel": "Задачи по типам (мультивыбор)"
       },
-      "metaToggle": "Контекст и привязки"
+      "metaToggle": "Контекст и привязки",
+      "wcUc": "реализует сценарий",
+      "wcJtd": "вспомогательная работа",
+      "wcEnb": "enabler — обоснование в ADR"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID обязателен",
