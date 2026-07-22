@@ -1164,7 +1164,7 @@ export function saveLoreFeature(body: {
   component_id?: string;
   goal_level?: 'cloud' | 'kite';
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/feature', body, signal);
+  return loreMutate<LoreProductWriteResult>('/feature', body, signal);
 }
 
 /** Сценарий любой высоты. parent_uc_id держит DECOMPOSES_INTO в синхроне. */
@@ -1177,7 +1177,7 @@ export function saveLoreUc(body: {
   rigor?: 'casual' | 'fully-dressed';
   priority?: string;
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/uc', body, signal);
+  return loreMutate<LoreProductWriteResult>('/uc', body, signal);
 }
 
 /** Проектируемая роль. project обязателен по смыслу (D18), но не по схеме. */
@@ -1188,26 +1188,26 @@ export function saveLoreActor(body: {
   body_md?: string;
   project?: string;
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/actor', body, signal);
+  return loreMutate<LoreProductWriteResult>('/actor', body, signal);
 }
 
 export function saveLorePain(body: {
   pain_id: string; title?: string; body_md?: string; severity?: string;
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/pain', body, signal);
+  return loreMutate<LoreProductWriteResult>('/pain', body, signal);
 }
 
 /** metric_md — без метрики выгода не попадает в fit (ADR-032). */
 export function saveLoreGain(body: {
   gain_id: string; title?: string; body_md?: string; metric_md?: string; rank?: string;
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/gain', body, signal);
+  return loreMutate<LoreProductWriteResult>('/gain', body, signal);
 }
 
 export function saveLoreJob(body: {
   job_id: string; title?: string; body_md?: string; kind?: string; importance?: string;
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/job', body, signal);
+  return loreMutate<LoreProductWriteResult>('/job', body, signal);
 }
 
 /**
@@ -1220,7 +1220,7 @@ export function linkLoreFeature(body: {
   target_id: string;
   action?: 'add' | 'remove';
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/feature/link', body, signal);
+  return loreMutate<LoreProductWriteResult>('/feature/link', body, signal);
 }
 
 /** Связки сценария. relieves/delivers/performs — половина «ДОСТАВЛЕНО». */
@@ -1233,7 +1233,7 @@ export function linkLoreUc(body: {
   /** rel="actor": первый актор сценария становится primary по умолчанию (D19). */
   actor_role?: 'primary' | 'supporting';
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/uc/link', body, signal);
+  return loreMutate<LoreProductWriteResult>('/uc/link', body, signal);
 }
 
 /** Профиль клиента: чья боль/выгода/работа (левая половина VP-канвы). */
@@ -1243,7 +1243,7 @@ export function linkLoreVp(body: {
   target_id: string;
   action?: 'add' | 'remove';
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/vp/link', body, signal);
+  return loreMutate<LoreProductWriteResult>('/vp/link', body, signal);
 }
 
 /**
@@ -1252,5 +1252,5 @@ export function linkLoreVp(body: {
  * сохранения, а не пост-фактум при ревью.
  */
 export function checkLoreUcQuality(body: { uc_id: string }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/lore/uc/quality', body, signal);
+  return loreMutate<LoreProductWriteResult>('/uc/quality', body, signal);
 }

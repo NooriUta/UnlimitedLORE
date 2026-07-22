@@ -20,6 +20,7 @@ import {
   PassportHeader,
   EmptyDetail,
 } from './shared';
+import { ucStatusLabel, goalLevelLabel } from './vocab';
 
 // Уровень цели (Коберн, D1): облако / воздушный змей.
 // Хелпер модульного уровня — `t` здесь недоступен, поэтому отдаём КЛЮЧ, а
@@ -126,7 +127,6 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     if (!f) {
       detail = <EmptyDetail text={t('lore.product.feat.pick', 'Выберите фичу слева')} />;
     } else {
-      const goal = goalOf(f.goal_level);
       const status = (f.status ?? '').toLowerCase();
 
       // Заявлено фичей.
@@ -179,8 +179,8 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
       detail = (
         <div>
           <PassportHeader title={f.title ?? f.uc_id}>
-            <Pill tone={status === 'active' ? 'act' : status === 'shipped' ? 'ok' : 'muted'}>{f.status ?? '—'}</Pill>
-            {goal.glyph && <Pill>{goal.glyph} {goal.labelKey ? t(goal.labelKey, goal.raw) : goal.raw}</Pill>}
+            <Pill tone={status === 'active' ? 'act' : status === 'shipped' ? 'ok' : 'muted'}>{ucStatusLabel(t, f.status)}</Pill>
+            {f.goal_level && <Pill>{goalLevelLabel(t, f.goal_level)}</Pill>}
             <Pill tone={relievedCount >= claimedCount && claimedCount > 0 ? 'ok' : 'warn'}>fit {relievedCount}/{claimedCount}</Pill>
           </PassportHeader>
 
@@ -227,7 +227,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                       <span style={{ width: 16, textAlign: 'center' }}>{ucGlyph(uc.status)}</span>
                       <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc.uc_id)}>{uc.uc_id}</LinkChip>
                       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{uc.title ?? ''}</span>
-                      <Pill tone={(uc.status ?? '').toLowerCase() === 'shipped' ? 'ok' : (uc.status ?? '').toLowerCase() === 'active' ? 'act' : 'muted'} style={{ marginLeft: 'auto' }}>{uc.status ?? '—'}</Pill>
+                      <Pill tone={(uc.status ?? '').toLowerCase() === 'shipped' ? 'ok' : (uc.status ?? '').toLowerCase() === 'active' ? 'act' : 'muted'} style={{ marginLeft: 'auto' }}>{ucStatusLabel(t, uc.status)}</Pill>
                     </TRow>
 
                     {open && (
