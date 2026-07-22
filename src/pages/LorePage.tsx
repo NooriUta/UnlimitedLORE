@@ -75,7 +75,6 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'releases',   icon: 'open-book',      labelKey: 'lore.page.nav.releases',   fallback: 'Релизы'     },
   { id: 'qg',         icon: 'checkered-flag', labelKey: 'lore.page.nav.qg',         fallback: 'QG'         },
   { id: 'knowledge',  icon: 'spell-book',     labelKey: 'lore.page.nav.knowledge',  fallback: 'Знания'     },
-  { id: 'search',     icon: 'magnifying-glass', labelKey: 'lore.page.nav.search',   fallback: 'Поиск'      },
   { id: 'components', icon: 'cog',            labelKey: 'lore.page.nav.components', fallback: 'Компоненты' },
   { id: 'tech',       icon: 'gears',          labelKey: 'lore.page.nav.tech',       fallback: 'Технологии' },
   { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
@@ -85,6 +84,13 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   // NB: 'admin' сознательно НЕ здесь — админка administers весь LORE, а не раздел
   // Forseti, поэтому вход живёт в шапке приложения (AppShell, ADR-LORE-025).
   // Секция остаётся валидным роутом ?section=admin и рендерится ниже под гейтом.
+  //
+  // NB: 'search' — по той же причине, вход через лупу в шапке (ADR-LORE-033 D15).
+  // В этом ряду перечислены ТИПЫ ЗАПИСЕЙ — ADR, решения, вопросы, знания. Поиск
+  // не тип, а действие над всеми сразу, и соседство читалось как «ещё один
+  // раздел с чем-то»: две точки входа в один и тот же поиск, отличить которые
+  // по виду было нельзя. Поверхность одна — палитра; экран остаётся тем, КУДА
+  // она приводит (Enter → ?section=search&q=…), а не самостоятельным пунктом.
 ];
 
 // Стили строки подвкладок (главы теперь в шапке — AppShell).

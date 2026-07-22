@@ -321,11 +321,18 @@ export default function AppShell() {
 
         <div style={{ flex: 1, minWidth: 0 }} />
 
-        {/* ── Правый тулбар: только первичное (поиск · ещё · профиль) ── */}
+        {/* ── Правый тулбар: только первичное (поиск · ещё · профиль) ──
+            Иконка — GameIcon, как у всех соседей по шапке. Здесь стоял глиф
+            «⌕» (U+2315), которого НЕТ ни в Manrope, ни в IBM Plex Mono:
+            браузер подставлял его из системного шрифта, поэтому вид зависел
+            от ОС и не подчинялся нашей типографике вовсе. Замерено — ширина
+            глифа одинакова во всех трёх наших шрифтах (23.1px), тогда как
+            буква «M» даёт 33.6 / 24 / 22: верный признак чужого фолбэка. */}
         <button type="button" onClick={() => setPalOpen(true)}
           title={t('shell.searchTitle', 'Поиск по данным (/)')} aria-label={t('shell.searchAria', 'Поиск')}
-          style={{ ...btnStyle, textTransform: 'none' as const }}>
-          ⌕{!narrow && <span style={{ ...kbd, marginLeft: 6 }}>/</span>}
+          style={{ ...btnStyle, textTransform: 'none' as const, display: 'inline-flex', alignItems: 'center' }}>
+          <GameIcon slug="magnifying-glass" size={15} style={{ color: 'inherit' }} />
+          {!narrow && <span style={{ ...kbd, marginLeft: 6 }}>/</span>}
         </button>
 
         <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
