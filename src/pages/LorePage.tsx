@@ -510,21 +510,29 @@ export default function LorePage() {
           Порядок был неверен и по смыслу: фильтр относится к СОДЕРЖИМОМУ
           раздела, значит стоит ниже переключателя разделов, а не выше.
 
-          Высота РЕЗЕРВИРУЕТСЯ: контейнер рендерится всегда, скрывается только
-          содержимое. Одной перестановки мало — сам фильтр то есть, то нет, и
-          контент под ним продолжал бы дёргаться на строку. */}
-      <div style={{ ...S.topBar, visibility: showGlobalSearch ? 'visible' : 'hidden' }}
-           aria-hidden={!showGlobalSearch}>
-        <span style={S.searchIcon}>🔍</span>
-        <input
-          style={S.searchInput}
-          placeholder={t(filterKey, 'фильтр по списку…')}
-          aria-label={t(filterKey, 'фильтр по списку…')}
-          value={search}
-          onChange={e => onSearchChange(e.target.value)}
-          tabIndex={showGlobalSearch ? 0 : -1}
-        />
-      </div>
+          РЕЗЕРВ ВЫСОТЫ СНЯТ. Он появился вместе с перестановкой — «контент под
+          фильтром дёргался бы на строку». Но обоснование осталось от прежней
+          позиции: пока блок стоял ВЫШЕ нава, его появление двигало саму
+          навигацию, и это было бы неприятно. Стоя ниже, он навигацию не
+          трогает вовсе, а контент под ним и так меняется целиком при переходе
+          между разделами — дёргаться там нечему.
+
+          Ценой резерва была пустая полоса 36px на всех разделах БЕЗ фильтра, а
+          их большинство: фильтр есть у восьми из двадцати. Владелец заметила её
+          как «пустое место между навигацией и фильтрами» — то есть плата
+          оказалась заметнее того, что покупалось. */}
+      {showGlobalSearch && (
+        <div style={S.topBar}>
+          <span style={S.searchIcon}>🔍</span>
+          <input
+            style={S.searchInput}
+            placeholder={t(filterKey, 'фильтр по списку…')}
+            aria-label={t(filterKey, 'фильтр по списку…')}
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+          />
+        </div>
+      )}
 
       {/* ── Knowledge filter bar: Тип/Модуль chips portal in here from
           LoreArtifactList's own header (see knowledgeFilterBar above) ─── */}
