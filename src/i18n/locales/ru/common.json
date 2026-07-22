@@ -459,7 +459,9 @@
       "openInRegister": "Открыть в реестре вопросов (с правкой)",
       "projectsMulti": "Проекты",
       "questions": "Открытые вопросы этого ADR",
-      "save": "Сохранить"
+      "save": "Сохранить",
+      "tracedBy": "Прослеживают сценарии (TRACED_TO)",
+      "justifies": "Обосновывает задачи (JUSTIFIED_BY)"
     },
     "analytics": {
       "flow": {
@@ -640,7 +642,8 @@
         "spec": "Спека",
         "qg": "QG",
         "sprints": "Спринты",
-        "doc": "Знания"
+        "doc": "Знания",
+        "uc": "Сценарии"
       },
       "editButtonTitle": "Редактировать",
       "edit": {
@@ -1293,7 +1296,10 @@
       "typeCounts": {
         "ariaLabel": "Задачи по типам (мультивыбор)"
       },
-      "metaToggle": "Контекст и привязки"
+      "metaToggle": "Контекст и привязки",
+      "wcUc": "реализует сценарий",
+      "wcJtd": "вспомогательная работа",
+      "wcEnb": "enabler — обоснование в ADR"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID обязателен",
@@ -1518,7 +1524,11 @@
         "pains": "Боли",
         "gains": "Ожидания",
         "ucRbac": "US роли · отсюда строится RBAC",
-        "about": "О роли"
+        "about": "О роли",
+        "kindAll": "все",
+        "kindHuman": "люди",
+        "kindAgent": "агенты",
+        "kindSystem": "системы"
       },
       "feat": {
         "empty": "Фичей пока нет",
@@ -1533,7 +1543,9 @@
         "jobs": "РАБОТЫ",
         "pains": "БОЛИ",
         "gains": "ОЖИДАНИЯ",
-        "impl": "🌊 Реализация — US (что СДЕЛАНО)"
+        "impl": "🌊 Реализация — US (что СДЕЛАНО)",
+        "tasksToggle": "Задачи сценария",
+        "noTasks": "Задач, реализующих этот сценарий, нет"
       },
       "us": {
         "empty": "Пользовательских историй пока нет",
@@ -1575,9 +1587,82 @@
         "rank": "Ранг",
         "deliveredBy": "Создаётся US (DELIVERS)",
         "jobSuccess": "Успех в работе",
-        "desiredBy": "Желает"
+        "desiredBy": "Желает",
+        "newPain": "+ Боль",
+        "newGain": "+ Выгода",
+        "fieldTitle": "Заголовок",
+        "fieldSeverity": "Острота",
+        "fieldMetric": "Метрика — чем измерим, что выгода получена",
+        "fieldBody": "Описание",
+        "noMetricWarn": "без метрики выгода не попадёт в fit VP-канвы",
+        "create": "Создать",
+        "cancel": "Отмена",
+        "promisedVsDelivered": "Обещано vs создано",
+        "promised": "обещали",
+        "delivered": "создают",
+        "sevNone": "— не указана —",
+        "sevHigh": "высокая",
+        "sevNormal": "обычная",
+        "sevLow": "низкая",
+        "metricPlaceholder": "prs_linked > 0 у каждого нового релиза без ручных вызовов release_link",
+        "metricHint": "Проверяемое утверждение: что считаем, порог и условие. Не «скорость», а «0 merge-ов из статусов RED/PENDING».",
+        "idRulePain": "PAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: PAIN-LORE-MANUAL-HANDOFF",
+        "idRuleGain": "GAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: GAIN-LORE-LINKED-RELEASES",
+        "idCyrillic": "в корпусе id латиницей — кириллический встанет особняком",
+        "newJob": "+ Работа",
+        "fieldJobKind": "Тип работы (Остервальдер)",
+        "jobKindNone": "— не указан —",
+        "jobFunctional": "функциональная — что нужно сделать",
+        "jobSocial": "социальная — как хочет выглядеть",
+        "jobEmotional": "эмоциональная — что хочет чувствовать",
+        "jobSupporting": "вспомогательная — вокруг основной",
+        "fieldImportance": "Важность",
+        "edit": "Правка",
+        "save": "Сохранить",
+        "idRuleJob": "JOB-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: JOB-LORE-SHIP-RELEASE",
+        "jobOne": "работа"
       },
-      "pickItem": "Выберите элемент слева"
+      "pickItem": "Выберите элемент слева",
+      "vocab": {
+        "ucStatus": {
+          "proposed": "предложен",
+          "active": "в работе",
+          "shipped": "выпущен",
+          "dropped": "снят"
+        },
+        "rigor": {
+          "casual": "облегчённый",
+          "fully-dressed": "полный"
+        },
+        "goalLevel": {
+          "cloud": "облако",
+          "kite": "воздушный змей",
+          "sea-level": "уровень моря",
+          "subfunction": "подфункция"
+        },
+        "jobKind": {
+          "functional": "функциональная",
+          "social": "социальная",
+          "emotional": "эмоциональная",
+          "supporting": "вспомогательная"
+        },
+        "level": {
+          "high": "высокая",
+          "normal": "обычная",
+          "low": "низкая"
+        },
+        "gainRank": {
+          "essential": "обязательная",
+          "expected": "ожидаемая",
+          "desired": "желаемая",
+          "unexpected": "неожиданная"
+        },
+        "actorKind": {
+          "human-role": "человек",
+          "system": "система",
+          "agent": "агент"
+        }
+      }
     },
     "search": {
       "placeholder": "Поиск по всему LORE — морфология, тела, префикс…",

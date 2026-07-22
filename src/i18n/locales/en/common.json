@@ -459,7 +459,9 @@
       "openInRegister": "Open in the question register (editable)",
       "projectsMulti": "Projects",
       "questions": "Open questions of this ADR",
-      "save": "Save"
+      "save": "Save",
+      "tracedBy": "Traced by scenarios (TRACED_TO)",
+      "justifies": "Justifies tasks (JUSTIFIED_BY)"
     },
     "analytics": {
       "flow": {
@@ -640,7 +642,8 @@
         "spec": "Spec",
         "qg": "QG",
         "sprints": "Sprints",
-        "doc": "Knowledge"
+        "doc": "Knowledge",
+        "uc": "Scenarios"
       },
       "editButtonTitle": "Edit",
       "edit": {
@@ -1293,7 +1296,10 @@
       "typeCounts": {
         "ariaLabel": "Tasks by type (multi-select)"
       },
-      "metaToggle": "Context and links"
+      "metaToggle": "Context and links",
+      "wcUc": "realizes a scenario",
+      "wcJtd": "supporting job",
+      "wcEnb": "enabler — justified by an ADR"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID is required",
@@ -1518,7 +1524,11 @@
         "pains": "Pains",
         "gains": "Gains",
         "ucRbac": "Role user stories · RBAC is built from these",
-        "about": "About the role"
+        "about": "About the role",
+        "kindAll": "all",
+        "kindHuman": "people",
+        "kindAgent": "agents",
+        "kindSystem": "systems"
       },
       "feat": {
         "empty": "No features yet",
@@ -1533,7 +1543,9 @@
         "jobs": "JOBS",
         "pains": "PAINS",
         "gains": "GAINS",
-        "impl": "🌊 Implementation — US (what is DONE)"
+        "impl": "🌊 Implementation — US (what is DONE)",
+        "tasksToggle": "Scenario tasks",
+        "noTasks": "No tasks realize this scenario"
       },
       "us": {
         "empty": "No user stories yet",
@@ -1575,9 +1587,82 @@
         "rank": "Rank",
         "deliveredBy": "Delivered by US (DELIVERS)",
         "jobSuccess": "Job success",
-        "desiredBy": "Desired by"
+        "desiredBy": "Desired by",
+        "newPain": "+ Pain",
+        "newGain": "+ Gain",
+        "fieldTitle": "Title",
+        "fieldSeverity": "Severity",
+        "fieldMetric": "Metric — how we measure the gain landed",
+        "fieldBody": "Description",
+        "noMetricWarn": "without a metric the gain stays out of the VP canvas fit",
+        "create": "Create",
+        "cancel": "Cancel",
+        "promisedVsDelivered": "Promised vs delivered",
+        "promised": "promised",
+        "delivered": "delivered",
+        "sevNone": "— unset —",
+        "sevHigh": "high",
+        "sevNormal": "normal",
+        "sevLow": "low",
+        "metricPlaceholder": "prs_linked > 0 for every new release with no manual release_link calls",
+        "metricHint": "A checkable statement: what is counted, the threshold and the condition. Not \"speed\", but \"0 merges from RED/PENDING\".",
+        "idRulePain": "PAIN-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: PAIN-LORE-MANUAL-HANDOFF",
+        "idRuleGain": "GAIN-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: GAIN-LORE-LINKED-RELEASES",
+        "idCyrillic": "ids in the corpus are latin — a cyrillic one stands apart",
+        "newJob": "+ Job",
+        "fieldJobKind": "Job type (Osterwalder)",
+        "jobKindNone": "— unset —",
+        "jobFunctional": "functional — what needs doing",
+        "jobSocial": "social — how they want to be seen",
+        "jobEmotional": "emotional — how they want to feel",
+        "jobSupporting": "supporting — around the main one",
+        "fieldImportance": "Importance",
+        "edit": "Edit",
+        "save": "Save",
+        "idRuleJob": "JOB-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: JOB-LORE-SHIP-RELEASE",
+        "jobOne": "job"
       },
-      "pickItem": "Pick an item on the left"
+      "pickItem": "Pick an item on the left",
+      "vocab": {
+        "ucStatus": {
+          "proposed": "proposed",
+          "active": "in progress",
+          "shipped": "shipped",
+          "dropped": "dropped"
+        },
+        "rigor": {
+          "casual": "casual",
+          "fully-dressed": "fully dressed"
+        },
+        "goalLevel": {
+          "cloud": "cloud",
+          "kite": "kite",
+          "sea-level": "sea level",
+          "subfunction": "subfunction"
+        },
+        "jobKind": {
+          "functional": "functional",
+          "social": "social",
+          "emotional": "emotional",
+          "supporting": "supporting"
+        },
+        "level": {
+          "high": "high",
+          "normal": "normal",
+          "low": "low"
+        },
+        "gainRank": {
+          "essential": "essential",
+          "expected": "expected",
+          "desired": "desired",
+          "unexpected": "unexpected"
+        },
+        "actorKind": {
+          "human-role": "person",
+          "system": "system",
+          "agent": "agent"
+        }
+      }
     },
     "search": {
       "placeholder": "Search all of LORE — morphology, bodies, prefix…",

@@ -19,7 +19,10 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  FilterChips,
 } from './shared';
+import VpCreateModal, { vpKindOf, type VpKind, type VpDraft } from './VpCreateModal';
+import { jobKindLabel, levelLabel, gainRankLabel } from './vocab';
 
 type VpType = 'all' | 'job' | 'pain' | 'gain';
 type Unified = { id: string; title: string | null; ty: 'job' | 'pain' | 'gain' };
@@ -54,10 +57,16 @@ function LabeledChips({ label, children }: { label: string; children: ReactNode 
 export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
   const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useState<VpType>('all');
+  const [creating, setCreating] = useState<VpKind | null>(null);
+  const [editing, setEditing] = useState<VpDraft | null>(null);
+  // Счётчик перезагрузки: после создания реестр обязан показать новую запись.
+  // Без него форма закрывалась бы «успешно» на неизменившемся списке — самый
+  // убедительный вид потери данных, какой бывает.
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const jobsQ = useSlice<LoreJobRow>('jobs', undefined, onError, []);
-  const painsQ = useSlice<LorePainRow>('pains', undefined, onError, []);
-  const gainsQ = useSlice<LoreGainRow>('gains', undefined, onError, []);
+  const jobsQ = useSlice<LoreJobRow>('jobs', undefined, onError, [reloadKey]);
+  const painsQ = useSlice<LorePainRow>('pains', undefined, onError, [reloadKey]);
+  const gainsQ = useSlice<LoreGainRow>('gains', undefined, onError, [reloadKey]);
   const jobs = jobsQ.rows;
   const pains = painsQ.rows;
   const gains = gainsQ.rows;
@@ -85,32 +94,26 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     { key: 'gain', label: `🟢 ${t('lore.product.vp.gains', 'ожидания')}` },
   ];
   const filterChips = (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '8px 9px', borderBottom: '1px solid var(--bd)', background: 'var(--bg1)' }}>
-      {chipDefs.map(c => {
-        const active = typeFilter === c.key;
-        return (
+    <>
+      <FilterChips options={chipDefs} value={typeFilter} onChange={setTypeFilter} />
+      <div style={{ display: 'flex', gap: 6, padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
+        {(['job', 'pain', 'gain'] as VpKind[]).map(k => (
           <button
-            key={c.key}
+            key={k}
             type="button"
-            onClick={() => setTypeFilter(c.key)}
-            aria-pressed={active}
+            onClick={() => { setEditing(null); setCreating(k); }}
             style={{
-              fontSize: 10.5,
-              fontFamily: 'var(--mono)',
-              borderRadius: 999,
-              padding: '2px 9px',
-              cursor: 'pointer',
-              background: active ? 'var(--bg3)' : 'transparent',
-              border: `1px solid ${active ? 'var(--bdh)' : 'var(--bd)'}`,
-              color: active ? 'var(--t1)' : 'var(--t2)',
-              fontWeight: active ? 600 : 400,
+              flex: 1, fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer',
+              background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)',
             }}
           >
-            {c.label}
+            {k === 'job' && t('lore.product.vp.newJob', '+ Работа')}
+            {k === 'pain' && t('lore.product.vp.newPain', '+ Боль')}
+            {k === 'gain' && t('lore.product.vp.newGain', '+ Выгода')}
           </button>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+    </>
   );
 
   // ── список ──
@@ -126,13 +129,13 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
           let meta: ReactNode = null;
           if (u.ty === 'job') {
             const j = jobs.find(x => x.job_id === u.id);
-            meta = <Pill>🎯 {j?.importance ?? '—'}</Pill>;
+            meta = <Pill>{levelLabel(t, j?.importance)}</Pill>;
           } else if (u.ty === 'pain') {
             const p = pains.find(x => x.pain_id === u.id);
-            meta = <Pill tone="warn">🔴 {p?.severity ?? '—'}</Pill>;
+            meta = <Pill tone="warn">{levelLabel(t, p?.severity)}</Pill>;
           } else {
             const g = gains.find(x => x.gain_id === u.id);
-            meta = <Pill tone="ok">🟢 {g?.rank ?? '—'}</Pill>;
+            meta = <Pill tone="ok">{gainRankLabel(t, g?.rank)}</Pill>;
           }
           return (
             <ListRow
@@ -149,6 +152,20 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     );
   }
 
+  // Карандаш правки — один на все три паспорта. Форма та же, что у создания:
+  // поля совпадают дословно, и вторая её копия разъехалась бы с первой.
+  const editBtn = (draft: VpDraft) => (
+    <button
+      type="button"
+      title={t('lore.product.vp.edit', 'Правка')}
+      aria-label={t('lore.product.vp.edit', 'Правка')}
+      onClick={() => { setCreating(null); setEditing(draft); }}
+      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+    >
+      ✎
+    </button>
+  );
+
   // ── паспорт по префиксу выбранного id ──
   let detail: ReactNode;
   if (!selectedId) {
@@ -158,8 +175,9 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     detail = !j ? <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} /> : (
       <div>
         <PassportHeader title={j.title ?? j.job_id}>
-          <Pill>🎯 работа · глобальная</Pill>
-          <Pill>{j.kind ?? '—'}</Pill>
+          <Pill>{t('lore.product.vp.jobOne', 'работа')}</Pill>
+          <Pill>{jobKindLabel(t, j.kind)}</Pill>
+          {editBtn({ id: j.job_id, title: j.title, body_md: j.body_md, extra: j.importance, jobKind: j.kind })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(j.job_id), marginBottom: 8 }}>{j.job_id}</div>
 
@@ -200,7 +218,8 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
       <div>
         <PassportHeader title={p.title ?? p.pain_id}>
           <Pill tone="warn">🔴 {t('lore.product.vp.pain', 'боль')}</Pill>
-          <Pill>{p.severity ?? '—'}</Pill>
+          <Pill>{levelLabel(t, p.severity)}</Pill>
+          {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(p.pain_id), marginBottom: 8 }}>{p.pain_id}</div>
 
@@ -234,7 +253,8 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
       <div>
         <PassportHeader title={g.title ?? g.gain_id}>
           <Pill tone="ok">🟢 {t('lore.product.vp.gain', 'выгода')}</Pill>
-          <Pill>{g.rank ?? '—'}</Pill>
+          <Pill>{gainRankLabel(t, g.rank)}</Pill>
+          {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(g.gain_id), marginBottom: 8 }}>{g.gain_id}</div>
 
@@ -246,6 +266,19 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
           <span style={{ color: 'var(--t3)' }}>{t('lore.product.vp.rank', 'Ранг')}</span>
           <span>{g.rank ?? '—'}</span>
         </div>
+
+        {/* Пара «заявлено vs сделано» — та же, что у боли (PL-18B).
+            Была только у боли: у выгоды показывался лишь DELIVERS, то есть
+            обещание фичи и его исполнение стояли в разных местах экрана и
+            расхождение между ними приходилось замечать самому. */}
+        <PSection title={t('lore.product.vp.promisedVsDelivered', 'Обещано vs создано')}>
+          <LabeledChips label={`${t('lore.product.vp.promised', 'обещали')} ${g.promised_by ?? 0}`}>
+            <ChipRow ids={asArray(g.claimed_by_ucs)} color="var(--g-value)" onGo={id => onNavigate('features', id)} />
+          </LabeledChips>
+          <LabeledChips label={`${t('lore.product.vp.delivered', 'создают')} ${g.delivered_by ?? 0}`}>
+            <ChipRow ids={asArray(g.delivered_by_ucs)} color="var(--g-do)" onGo={id => onNavigate('userStories', id)} />
+          </LabeledChips>
+        </PSection>
 
         <PSection title={t('lore.product.vp.deliveredBy', 'Создаётся US (DELIVERS)')}>
           {asArray(g.delivered_by_ucs).length === 0
@@ -274,5 +307,28 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     detail = <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} />;
   }
 
-  return <MasterDetail list={<>{filterChips}{rows}</>} detail={detail} />;
+  return (
+    <>
+      <MasterDetail list={<>{filterChips}{rows}</>} detail={detail} />
+      {creating && (
+        <VpCreateModal
+          kind={creating}
+          opened
+          onClose={() => setCreating(null)}
+          onCreated={id => { setReloadKey(k => k + 1); onSelect(id); }}
+          onError={onError}
+        />
+      )}
+      {editing && vpKindOf(editing.id) && (
+        <VpCreateModal
+          kind={vpKindOf(editing.id) as VpKind}
+          opened
+          initial={editing}
+          onClose={() => setEditing(null)}
+          onCreated={() => setReloadKey(k => k + 1)}
+          onError={onError}
+        />
+      )}
+    </>
+  );
 }

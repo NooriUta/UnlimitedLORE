@@ -13,6 +13,16 @@ export interface ProductScreenProps {
   onNavigate: ProductNavigate;
   onError: (e: unknown) => void;
   listSearch?: string;
+  /**
+   * PL-16: какой сценарий раскрыт до задач (`?uc=`).
+   *
+   * Живёт в URL, а не в состоянии компонента, потому что раскрытый узел — это
+   * то, чем делятся: «смотри, эта US не двигается». Держи мы его локально,
+   * ссылка приводила бы на свёрнутое дерево, и получатель искал бы строку
+   * заново — то есть ссылка молча теряла бы ровно то, ради чего её послали.
+   */
+  expandedUc?: string | null;
+  onExpandUc?: (id: string | null) => void;
 }
 
 // Цвет по префиксу id — как typeColor() прототипа, на семантических токенах.
@@ -97,6 +107,51 @@ export function ListRow({ id, title, meta, selected, onClick }: { id: string; ti
       {title}
       {meta && <span style={{ marginLeft: 6 }}>{meta}</span>}
     </button>
+  );
+}
+
+/**
+ * Полоса фильтр-чипов над списком продуктового экрана (PL-18).
+ *
+ * Вынесена из `LoreVpRegistry`, где жила инлайном: реестр акторов просит ровно
+ * такую же полосу, и копия стала бы вторым набором размеров и цветов, которые
+ * разъезжаются при первой же правке одного из них. Список значений задаёт
+ * вызывающий — общего у экранов оформление, а не словарь.
+ */
+export function FilterChips<K extends string>({
+  options, value, onChange,
+}: {
+  options: { key: K; label: string }[];
+  value: K;
+  onChange: (key: K) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '8px 9px', borderBottom: '1px solid var(--bd)', background: 'var(--bg1)' }}>
+      {options.map(o => {
+        const active = value === o.key;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => onChange(o.key)}
+            aria-pressed={active}
+            style={{
+              fontSize: 10.5,
+              fontFamily: 'var(--mono)',
+              borderRadius: 999,
+              padding: '2px 9px',
+              cursor: 'pointer',
+              background: active ? 'var(--bg3)' : 'transparent',
+              border: `1px solid ${active ? 'var(--bdh)' : 'var(--bd)'}`,
+              color: active ? 'var(--t1)' : 'var(--t2)',
+              fontWeight: active ? 600 : 400,
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

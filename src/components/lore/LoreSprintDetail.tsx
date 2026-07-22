@@ -639,6 +639,32 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             </span>
           );
         })()}
+        {/* work_class (ADR-LORE-022, PL-19) — ось ЗАЧЕМ, ортогональная task_type:
+            «дев-задача» отвечает КАК, а uc/jtd/enb — ради чего. Чип буквенный, а
+            не иконка: рядом уже стоит иконка типа, и вторая читалась бы как её
+            вариант, а не как другая ось. Для uc в подсказке — сам сценарий:
+            «реализует, но что?» — вопрос, ради которого сюда и смотрят. */}
+        {task.work_class && (() => {
+          const wc = task.work_class;
+          const tone = wc === 'uc' ? 'var(--g-do)' : wc === 'jtd' ? 'var(--job)' : 'var(--t3)';
+          const ucs = Array.isArray(task.realizes_uc) ? task.realizes_uc : [];
+          const hint = wc === 'uc'
+            ? `${t('lore.sprintDetail.wcUc', 'реализует сценарий')}${ucs.length ? ': ' + ucs.join(', ') : ''}`
+            : wc === 'jtd'
+              ? t('lore.sprintDetail.wcJtd', 'вспомогательная работа')
+              : t('lore.sprintDetail.wcEnb', 'enabler — обоснование в ADR');
+          return (
+            <span title={hint}
+              style={{
+                fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', textTransform: 'uppercase',
+                padding: '1px 4px', borderRadius: 3, flexShrink: 0, color: tone,
+                background: `color-mix(in srgb, ${tone} 12%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${tone} 32%, transparent)`,
+              }}>
+              {wc}
+            </span>
+          );
+        })()}
         <span style={S.taskId}>{task.task_id}</span>
         {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (

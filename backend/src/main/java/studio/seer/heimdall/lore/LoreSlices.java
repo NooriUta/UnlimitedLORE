@@ -109,7 +109,13 @@ public final class LoreSlices {
             "out('IMPLEMENTED_IN_RELEASE').release_id AS release_ids, " +
             "out('SUPERSEDES').adr_id             AS supersedes_ids, " +
             "out('TAGGED_WITH').tag_id            AS tags, " +
-            "out('BELONGS_TO_PROJECT').slug       AS git_projects " + // ADRPROJ-01
+            "out('BELONGS_TO_PROJECT').slug       AS git_projects, " + // ADRPROJ-01
+            // PL-19: обратные рёбра. Паспорт ADR показывал только исходящие
+            // связи, и «на что этот ADR влияет» читалось лишь с другой стороны —
+            // открыв каждый сценарий и каждую задачу. Прослеживаемость обязана
+            // читаться в обе стороны от точки, где стоишь.
+            "in('TRACED_TO').uc_id                AS traced_by_ucs, " +    // сценарии, ссылающиеся на ADR (D9)
+            "in('JUSTIFIED_BY').task_uid          AS justified_task_uids " + // enb-задачи, обоснованные им (PL-14)
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -367,8 +373,28 @@ public final class LoreSlices {
             "FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite']",
             List.of(),
             new LinkedHashMap<>(Map.of(
-                "component", " AND component_id = :component")),
+                // PL-19: фильтр по РЕБРУ, а не по плоскому component_id. С PL-10
+                // привязка живёт на BELONGS_TO, и сравнение с полем прятало
+                // записи, привязанные ребром: фильтр отдавал пусто, и это
+                // читалось как «у компонента нет корней».
+                // CONTAINS, а не [0]: привязок может быть несколько, а порядок
+                // рёбер — это порядок вставки, не приоритет (AKI).
+                "component", " AND out('BELONGS_TO').component_id CONTAINS :component")),
             " ORDER BY uc_id");
+
+        // PL-19: «Сценарии компонента» — ВСЕ уровни, а не только корни.
+        //
+        // Отдельный слайс, а не параметр у `features`: тот по построению режет
+        // выдачу до cloud|kite, и вкладка компонента показывала бы корни без
+        // сценариев, которыми они сделаны — половину ответа на вопрос «что этот
+        // компонент закрывает».
+        slice("use_cases_of_component",
+            "SELECT uc_id, title, status, goal_level, rigor, parent_uc_id, " +
+            "out('BELONGS_TO').component_id AS component_ids, " +
+            "in('REALIZES').task_uid        AS task_uids " +
+            "FROM KnowUseCase WHERE out('BELONGS_TO').component_id CONTAINS :component " +
+            "ORDER BY goal_level, uc_id",
+            List.of("component"), Map.of(), "");
 
         // Дочерние сценарии корня. Источник истины — ребро DECOMPOSES_INTO;
         // parent_uc_id рядом с ним денормализация для индекса, а не вторая правда.

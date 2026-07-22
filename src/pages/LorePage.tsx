@@ -211,6 +211,7 @@ export default function LorePage() {
   const q         = params.get('q')         || '';
   const passport  = params.get('passport')  || '';
   const spec      = params.get('spec')      || '';
+  const ucParam   = params.get('uc')        || '';   // PL-16: раскрытый узел дерева US→задачи
   // T19: Knowledge doc/runbook deep-links are unified onto `passport` as
   // "<kind>:<id>" (like every other section's passport). Legacy ?kind=&art=
   // is still read so old bookmarks keep working. `spec` keeps its own param —
@@ -393,10 +394,17 @@ export default function LorePage() {
   const navigateToComponent = (id: string) => setParams(p => { p.set('section', 'components'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   const navigateToQG = (id: string) => setParams(p => { p.set('section', 'qg'); p.set('passport', id); p.delete('spec'); p.delete('kind'); p.delete('art'); return p; });
   // Кросс-переходы продуктового слоя (feature↔uc↔pain/gain/job↔actor): section + passport.
+  // `uc` снимается вместе с ними: раскрытый сценарий принадлежит ПРЕДЫДУЩЕЙ
+  // фиче, и переживи он переход — новая открылась бы с раскрытым чужим узлом.
   const navigateProduct = (sec: string, id?: string) => setParams(p => {
     p.set('section', sec);
     if (id) p.set('passport', id); else p.delete('passport');
-    p.delete('spec'); p.delete('kind'); p.delete('art');
+    p.delete('spec'); p.delete('kind'); p.delete('art'); p.delete('uc');
+    return p;
+  });
+  // PL-16: раскрытый до задач сценарий в паспорте фичи.
+  const setExpandedUc = (id: string | null) => setParams(p => {
+    if (id) p.set('uc', id); else p.delete('uc');
     return p;
   });
   // T19: encode Knowledge doc/runbook selection into the unified `passport`.
@@ -1132,7 +1140,7 @@ export default function LorePage() {
           {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
           {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
           {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={null} onSelect={() => {}} onNavigate={navigateProduct} onError={handleFetchError} />}
-          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} expandedUc={ucParam || null} onExpandUc={setExpandedUc} />}
           {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
 
           {/* ADR — new */}
