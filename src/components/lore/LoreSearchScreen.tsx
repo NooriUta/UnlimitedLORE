@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSearch, type LoreSearchHit, type LoreSearchResult } from '../../api/lore';
+import { fetchLoreSearch, type LoreSearchResult } from '../../api/lore';
 import { SearchInput, FilterDimensionMulti, type FilterOption } from './FilterPrimitives';
 import { EmptyState } from './EmptyState';
+import { searchHitHref, typeLabel } from '../../api/searchRoutes';
 
 // ── SRCH-05 UI: сквозной поиск с плашками типов и фасетами (ADR-LORE-033) ───
 // Эталон — одобренный прототип docs/prototypes/search-facets-srch05.html:
@@ -16,27 +17,8 @@ import { EmptyState } from './EmptyState';
 // фильтрует уже загруженный массив, что противоречит серверной модели фасетов
 // («фильтр туда, куда ходим», отсечение на уровне ветки unionall).
 
-const TYPE_RU: Record<string, string> = {
-  adr: 'ADR', decision: 'решение', spec: 'спека', task: 'задача',
-  sprint: 'спринт', question: 'вопрос', feature: 'фича', use_case: 'US',
-  pain: 'боль', gain: 'ожидание', job: 'работа', actor: 'клиент',
-  runbook: 'ранбук', doc: 'док', quality_gate: 'QG',
-};
 
-// Куда ведёт хит: type → section. Задача глубокой ссылки не имеет —
-// ведём в паспорт её спринта (первый сегмент task_uid).
-const TYPE_SECTION: Record<string, string> = {
-  adr: 'adrs', decision: 'decisions', spec: 'knowledge', task: 'sprints',
-  sprint: 'sprints', question: 'openQuestions', feature: 'features',
-  use_case: 'userStories', pain: 'vpProfile', gain: 'vpProfile', job: 'vpProfile',
-  actor: 'actors', runbook: 'knowledge', doc: 'knowledge', quality_gate: 'qg',
-};
 
-function hitHref(h: LoreSearchHit): string {
-  const section = TYPE_SECTION[h.type] ?? 'sprints';
-  const passport = h.type === 'task' ? h.ref_id.split('/')[0] : h.ref_id;
-  return `/lore?section=${encodeURIComponent(section)}&passport=${encodeURIComponent(passport)}`;
-}
 
 export function LoreSearchScreen() {
   const { t } = useTranslation();
@@ -67,6 +49,9 @@ export function LoreSearchScreen() {
         q,
         types: [...types],
         components: [...comps],
+        // SRCH-10: проекты уходят НА СЕРВЕР — фильтр отсекает на уровне ветки,
+        // а не выбрасывает уже загруженную страницу.
+        projects: [...projs],
         limit: 50,
       }, ac.signal)
         .then(r => {
@@ -92,7 +77,7 @@ export function LoreSearchScreen() {
     const all = [...new Set([...seen, ...types])];
     return all
       .sort((a, b) => (counts?.by_type?.[b] ?? 0) - (counts?.by_type?.[a] ?? 0))
-      .map(v => ({ value: v, label: TYPE_RU[v] ?? v }));
+      .map(v => ({ value: v, label: typeLabel(v) }));
   }, [counts, types]);
 
   const compOptions: FilterOption[] = useMemo(() => {
@@ -104,21 +89,18 @@ export function LoreSearchScreen() {
       .map(v => ({ value: v, label: v }));
   }, [counts, comps]);
 
-  const projCounts = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const h of result?.hits ?? []) for (const p of h.projects ?? []) m[p] = (m[p] ?? 0) + 1;
-    return m;
-  }, [result]);
-  const projOptions: FilterOption[] = useMemo(
-    () => Object.keys(projCounts).sort((a, b) => projCounts[b] - projCounts[a])
-      .map(v => ({ value: v, label: v })),
-    [projCounts]);
+  // SRCH-10: ось проекта теперь СЕРВЕРНАЯ, как тип и компонент. Раньше она
+  // считалась по текущей странице выдачи — счётчики врали за пределами первых
+  // 50 хитов, а серверный фильтр по проекту не задействовался вовсе.
+  const projOptions: FilterOption[] = useMemo(() => {
+    const seen = Object.keys(counts?.by_project ?? {});
+    const all = [...new Set([...seen, ...projs])];
+    return all
+      .sort((a, b) => (counts?.by_project?.[b] ?? 0) - (counts?.by_project?.[a] ?? 0))
+      .map(v => ({ value: v, label: v }));
+  }, [counts, projs]);
 
-  const hits = useMemo(() => {
-    let hs = result?.hits ?? [];
-    if (projs.size > 0) hs = hs.filter(h => (h.projects ?? []).some(p => projs.has(p)));
-    return hs;
-  }, [result, projs]);
+  const hits = result?.hits ?? [];
 
   const maxScore = hits.length ? hits[0].score : 1;
   const inherited = hits.filter(h => h.inherited_from).length;
@@ -142,16 +124,32 @@ export function LoreSearchScreen() {
           {projOptions.length > 0 && (
             <FilterDimensionMulti label={t('lore.search.projects', 'проект')}
               options={projOptions} selected={projs}
-              onToggle={toggle(projs, setProjs)} counts={projCounts} />
+              onToggle={toggle(projs, setProjs)} counts={counts.by_project} />
           )}
+        </div>
+      )}
+
+      {/* SRCH-10: упавшая ветка — это «здесь НЕ ИСКАЛИ», а не «здесь ничего нет».
+          Раньше сервер клал в фасет −1, и UI рисовал его как счётчик: выдача
+          выглядела полной, хотя часть корпуса не просматривалась вовсе. */}
+      {result && result.warnings?.length > 0 && (
+        <div style={{
+          fontSize: 12, color: 'var(--wrn)', border: '1px solid var(--wrn)',
+          borderRadius: 6, padding: '6px 10px',
+          background: 'color-mix(in srgb, var(--wrn) 10%, transparent)',
+        }}>
+          {t('lore.search.partial', 'Выдача неполная — поиск не отработал по типам')}:
+          {' '}{result.warnings.map(w => typeLabel(w.type)).join(', ')}
         </div>
       )}
 
       {result && hits.length > 0 && (
         <div style={{ fontSize: 12, color: 'var(--t3)' }}>
-          {t('lore.search.coverage', 'привязка к компонентам')}: {inherited > 0 &&
+          {t('lore.search.found', 'найдено')}: {result.total_collected} ·
+          {' '}{t('lore.search.coverage', 'привязка к компонентам')}: {inherited > 0 &&
             <>{inherited} {t('lore.search.inferred', 'выведено от родителя')} · </>}
-          {bare} {t('lore.search.bare', 'без компонента')} ·
+          {bare} {t('lore.search.bare', 'без компонента')}
+          {bare > 0 && <> — {t('lore.search.bareWarn', 'их скроет любой фильтр по компоненту')}</>} ·
           {' '}{result.took_ms} ms
         </div>
       )}
@@ -177,7 +175,7 @@ export function LoreSearchScreen() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 999,
                              background: 'color-mix(in srgb, var(--acc) 14%, transparent)',
-                             color: 'var(--t2)' }}>{TYPE_RU[h.type] ?? h.type}</span>
+                             color: 'var(--t2)' }}>{typeLabel(h.type)}</span>
               <span style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, color: 'var(--t3)' }}>{h.ref_id}</span>
               <span style={{ fontSize: 11, color: h.matched_field === 'title' || h.matched_field === 'name'
                   ? 'var(--ok, #4caf72)' : 'var(--t3)' }}>
@@ -187,7 +185,7 @@ export function LoreSearchScreen() {
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)',
                              fontVariantNumeric: 'tabular-nums' }}>{h.score.toFixed(3)}</span>
             </div>
-            <a href={hitHref(h)} style={{ display: 'block', marginTop: 2, color: 'var(--t1)',
+            <a href={searchHitHref(h.type, h.ref_id)} style={{ display: 'block', marginTop: 2, color: 'var(--t1)',
                                           textDecoration: 'none', fontWeight: 600 }}>
               {h.title ?? h.ref_id}
             </a>

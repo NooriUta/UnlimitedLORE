@@ -193,10 +193,18 @@ export interface LoreSearchHit {
   inherited_from: string | null;
   projects: string[];
 }
+/** SRCH-10: ветка, по которой поиск НЕ отработал. Не то же, что «ничего не нашлось». */
+export interface LoreSearchWarning { type: string; error: string; }
+
 export interface LoreSearchResult {
   hits: LoreSearchHit[];
   by_type: Record<string, number>;
   by_component: Record<string, number>;
+  /** SRCH-10: третья ось СЕРВЕРНАЯ. Раньше UI считал её по текущей странице —
+   *  счётчики врали за пределами первых 50 хитов. */
+  by_project: Record<string, number>;
+  /** Пустой массив, а не отсутствие поля: «предупреждений нет» ≠ «поле не пришло». */
+  warnings: LoreSearchWarning[];
   total_collected: number;
   capped_at: number;
   took_ms: number;
@@ -205,7 +213,7 @@ export interface LoreSearchParams {
   q: string;
   types?: string[];
   components?: string[];
-  project?: string;
+  projects?: string[];
   limit?: number;
   offset?: number;
   mode?: 'smart' | 'exact' | 'fuzzy';
@@ -215,7 +223,7 @@ export async function fetchLoreSearch(p: LoreSearchParams, signal?: AbortSignal)
   const qs = new URLSearchParams({ q: p.q });
   if (p.types?.length) qs.set('types', p.types.join(','));
   if (p.components?.length) qs.set('components', p.components.join(','));
-  if (p.project) qs.set('project', p.project);
+  if (p.projects?.length) qs.set('projects', p.projects.join(','));
   if (p.limit) qs.set('limit', String(p.limit));
   if (p.offset) qs.set('offset', String(p.offset));
   if (p.mode) qs.set('mode', p.mode);

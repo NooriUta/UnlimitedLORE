@@ -1418,6 +1418,24 @@
         "desiredBy": "Desired by"
       },
       "pickItem": "Pick an item on the left"
+    },
+    "search": {
+      "placeholder": "Search all of LORE — morphology, bodies, prefix…",
+      "aria": "Cross-corpus search",
+      "types": "type",
+      "components": "component",
+      "projects": "project",
+      "partial": "Results are incomplete — search failed for types",
+      "found": "found",
+      "coverage": "component links",
+      "inferred": "inferred from parent",
+      "bare": "without a component",
+      "bareWarn": "any component filter will hide them",
+      "error": "Search did not respond",
+      "empty": "Nothing matched these filters",
+      "emptyHint": "Clear facets or simplify the query",
+      "inTitle": "title",
+      "inferredFrom": "inferred from"
     }
   },
   "bragi": {
