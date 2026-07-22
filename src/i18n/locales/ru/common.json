@@ -1518,7 +1518,11 @@
         "pains": "Боли",
         "gains": "Ожидания",
         "ucRbac": "US роли · отсюда строится RBAC",
-        "about": "О роли"
+        "about": "О роли",
+        "kindAll": "все",
+        "kindHuman": "люди",
+        "kindAgent": "агенты",
+        "kindSystem": "системы"
       },
       "feat": {
         "empty": "Фичей пока нет",

@@ -1518,7 +1518,11 @@
         "pains": "Pains",
         "gains": "Gains",
         "ucRbac": "Role user stories · RBAC is built from these",
-        "about": "About the role"
+        "about": "About the role",
+        "kindAll": "all",
+        "kindHuman": "people",
+        "kindAgent": "agents",
+        "kindSystem": "systems"
       },
       "feat": {
         "empty": "No features yet",

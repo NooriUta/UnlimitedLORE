@@ -19,6 +19,7 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  FilterChips,
 } from './shared';
 
 type VpType = 'all' | 'job' | 'pain' | 'gain';
@@ -84,34 +85,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     { key: 'pain', label: `🔴 ${t('lore.product.vp.pains', 'боли')}` },
     { key: 'gain', label: `🟢 ${t('lore.product.vp.gains', 'ожидания')}` },
   ];
-  const filterChips = (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', padding: '8px 9px', borderBottom: '1px solid var(--bd)', background: 'var(--bg1)' }}>
-      {chipDefs.map(c => {
-        const active = typeFilter === c.key;
-        return (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setTypeFilter(c.key)}
-            aria-pressed={active}
-            style={{
-              fontSize: 10.5,
-              fontFamily: 'var(--mono)',
-              borderRadius: 999,
-              padding: '2px 9px',
-              cursor: 'pointer',
-              background: active ? 'var(--bg3)' : 'transparent',
-              border: `1px solid ${active ? 'var(--bdh)' : 'var(--bd)'}`,
-              color: active ? 'var(--t1)' : 'var(--t2)',
-              fontWeight: active ? 600 : 400,
-            }}
-          >
-            {c.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+  const filterChips = <FilterChips options={chipDefs} value={typeFilter} onChange={setTypeFilter} />;
 
   // ── список ──
   let rows: ReactNode;
