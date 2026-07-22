@@ -334,7 +334,16 @@ public class LoreSearchResource extends LoreResourceBase {
                     }
                     if (taken++ >= perType) continue; // фасет считаем по всем, в выдачу — квоту
                     double raw = ((Number) r.getOrDefault("score", 1.0)).doubleValue();
-                    r.put("score", round3(max <= 0 ? p : raw / max * p));
+                    double bm25 = max <= 0 ? 1.0 : raw / max;
+                    // SRCH-09: ранг отдаётся РАЗЛОЖЕННЫМ. Итоговое число само по
+                    // себе необъяснимо: «6.44» не отвечает, почему задача выше
+                    // ADR. Слагаемые показывают, что это не мнение движка, а
+                    // ДВЕ величины — совпадение текста и приоритет типа, — и
+                    // вторую задаём мы. Спорить с приоритетом можно, только
+                    // если он виден.
+                    r.put("bm25", round3(bm25));
+                    r.put("type_priority", round3(p));
+                    r.put("score", round3(bm25 * p));
                     r.put("type", b.type());
                     hits.add(r);
                 }
@@ -363,6 +372,17 @@ public class LoreSearchResource extends LoreResourceBase {
         out.put("warnings", warnings);
         out.put("total_collected", hits.size());
         out.put("capped_at", BRANCH_CAP);
+        // SRCH-09: во что превратился запрос. Пользователь ввёл слово, а в
+        // индекс ушло `(слово OR слово*)` — и именно это объясняет, почему
+        // нашлось не то, что ожидалось. Без показа выражения расхождение между
+        // «что я искал» и «что искали за меня» проверить нечем: строку строит
+        // сервер (D2), и она нигде больше не видна.
+        out.put("lucene", lucene);
+        out.put("mode", m);
+        // Границы страницы — рядом с самой страницей: без offset потребитель
+        // не может отличить «конец выдачи» от «страница пролистана мимо».
+        out.put("offset", offset);
+        out.put("limit", limit);
         out.put("took_ms", (System.nanoTime() - t0) / 1_000_000);
         return noStore(Response.ok(out));
     }
