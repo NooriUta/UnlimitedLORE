@@ -1589,13 +1589,15 @@
         "goalLevel": "Goal level (Cockburn)",
         "rigor": "Rigor",
         "rigorHint": "Rigor sets which checks are required: casual has fewer",
-        "insertTemplate": "insert Cockburn template",
+        "insertTemplate": "insert template",
         "quality": "Cockburn form check",
         "advisory": "advisory — you can save either way",
         "title": "Title",
         "searchPh": "story…",
         "newRoot": "+ Feature",
-        "idRuleRoot": "FEAT-‹AREA›-‹GOAL›, latin, dash-separated: FEAT-GITCYCLE"
+        "idRuleRoot": "FEAT-‹AREA›-‹GOAL›, latin, dash-separated: FEAT-GITCYCLE",
+        "insertExample": "filled example",
+        "check": "Check form"
       },
       "canvas": {
         "claimed": "claimed",

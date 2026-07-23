@@ -25,9 +25,30 @@ final class UcQuality {
     /** Результат: score/max по ОБЯЗАТЕЛЬНЫМ выбранного веса + все находки. */
     record Result(String rigor, int score, int max, List<Finding> findings) {}
 
+    /**
+     * Строка-заполнитель шаблона: подсказка курсивом (`_Что запускает сценарий._`),
+     * многоточие или голая пунктуация.
+     *
+     * <p>Понадобилось потому, что проверки были СТРУКТУРНЫМИ: наличие заголовка
+     * засчитывалось как заполненная секция. Свежевставленный шаблон Кокберна —
+     * одни заголовки и прочерки — набирал 7 из 10 и показывал «✓» напротив
+     * секций, где не написано ни слова. Это хуже нулевой оценки: линтер
+     * подтверждал качество текста, которого нет.
+     */
+    private static boolean isPlaceholder(String line) {
+        String s = line.strip();
+        if (s.isEmpty()) return true;
+        if (s.matches("^[_*].*[_*]$")) return true;          // курсивная подсказка шаблона
+        // Номер шага без содержания: «1. …», «2) ...»
+        s = s.replaceFirst("^\\d+[.)]\\s*", "");
+        return s.replaceAll("[…\\.\\-–—\\s]", "").isEmpty();
+    }
+
+    /** Есть ли в секции хоть одна СОДЕРЖАТЕЛЬНАЯ строка (не заполнитель). */
     private static boolean hasSection(String md, String name) {
         if (md == null) return false;
-        return Pattern.compile("(?im)^\\s*#{2,3}\\s*" + Pattern.quote(name)).matcher(md).find();
+        if (!Pattern.compile("(?im)^\\s*#{2,3}\\s*" + Pattern.quote(name)).matcher(md).find()) return false;
+        return sectionBody(md, name).lines().anyMatch(l -> !isPlaceholder(l));
     }
 
     private static String sectionBody(String md, String name) {
@@ -40,8 +61,13 @@ final class UcQuality {
     /** Номера шагов основного сценария: строки вида «1.», «2)». */
     static List<Integer> mainSteps(String scenarioMd) {
         List<Integer> steps = new ArrayList<>();
-        Matcher m = Pattern.compile("(?m)^\\s*(\\d+)[.)]\\s+\\S").matcher(sectionBody(scenarioMd, "Основной сценарий"));
-        while (m.find()) steps.add(Integer.parseInt(m.group(1)));
+        // Считаем только шаги С СОДЕРЖАНИЕМ: «1. …» из шаблона — это разметка
+        // места под шаг, а не шаг. Иначе пустой шаблон «сейчас 2 шага» проходил
+        // проверку, для которой ничего не написано.
+        Matcher m = Pattern.compile("(?m)^\\s*(\\d+)[.)]\\s+(\\S.*)$").matcher(sectionBody(scenarioMd, "Основной сценарий"));
+        while (m.find()) {
+            if (!isPlaceholder(m.group(2))) steps.add(Integer.parseInt(m.group(1)));
+        }
         return steps;
     }
 

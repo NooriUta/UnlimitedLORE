@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeUsId, templateFor, COCKBURN_CASUAL, COCKBURN_FULL } from './UsFormModal';
+import {
+  normalizeUsId, templateFor,
+  COCKBURN_CASUAL, COCKBURN_FULL, COCKBURN_EXAMPLE, ACCEPTANCE_EXAMPLE,
+} from './UsFormModal';
 
 describe('PL-17 · форма US', () => {
   it('id получает префикс US-, если его не набрали', () => {
@@ -34,6 +37,34 @@ describe('PL-17 · форма US', () => {
       expect(COCKBURN_FULL).toContain(h);
       expect(COCKBURN_CASUAL).not.toContain(h);
     }
+  });
+
+  it('пример СОДЕРЖАТЕЛЕН, а не тот же скелет с прочерками', () => {
+    // Смысл примера ровно в этом: показать, чем заполняют. Окажись в нём
+    // курсивные подсказки и «1. …», он был бы вторым шаблоном под другим
+    // именем — и линтер справедливо оценил бы его в ноль.
+    expect(COCKBURN_EXAMPLE).not.toContain('…');
+    expect(COCKBURN_EXAMPLE).not.toMatch(/^_.*_$/m);
+    const steps = COCKBURN_EXAMPLE.split('\n').filter(l => /^\s*\d+[.)]\s+\S/.test(l));
+    expect(steps.length).toBeGreaterThanOrEqual(2);
+    for (const s of steps) expect(s.replace(/^\s*\d+[.)]\s*/, '').length).toBeGreaterThan(5);
+  });
+
+  it('пример приёмки несёт обе секции полного веса', () => {
+    // Приёмка — половина оформления по Кокберну: образец сценария без образца
+    // приёмки оставил бы вторую половину там же, ради чего пример и заводился.
+    expect(ACCEPTANCE_EXAMPLE).toContain('### Проверки');
+    expect(ACCEPTANCE_EXAMPLE).toContain('### Покрытие расширений');
+  });
+
+  it('расширения примера ссылаются на существующие шаги', () => {
+    // Правило линтера extensions_ref_steps. Сошлись пример на несуществующий
+    // шаг — он бы сам не проходил проверку, которую призван иллюстрировать.
+    const body = COCKBURN_EXAMPLE.split('### Расширения')[1] ?? '';
+    const refs = [...body.matchAll(/^\s*(\d+)[a-z]\b/gm)].map(m => Number(m[1]));
+    const steps = [...COCKBURN_EXAMPLE.matchAll(/^\s*(\d+)[.)]\s+\S/gm)].map(m => Number(m[1]));
+    expect(refs.length).toBeGreaterThan(0);
+    for (const r of refs) expect(steps).toContain(r);
   });
 
   it('основной сценарий шаблона — нумерованный список ≥2 шагов', () => {

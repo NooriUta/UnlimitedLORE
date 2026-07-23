@@ -65,6 +65,53 @@ export const COCKBURN_FULL = [
 export const templateFor = (rigor: string) => (rigor === 'casual' ? COCKBURN_CASUAL : COCKBURN_FULL);
 
 /**
+ * Заполненный ПРИМЕР (PL-40).
+ *
+ * Скелет показывает структуру, но не показывает, как её заполняют: по строке
+ * «_Что запускает сценарий._» не видно ни тона, ни уровня детализации, и первый
+ * же автор пишет туда либо роман, либо два слова. Пример снимает этот вопрос
+ * образцом, а не инструкцией.
+ *
+ * Берём реальный сценарий корпуса (`UC-GIT-MERGE`), а не выдуманный: узнаваемый
+ * пример показывает и принятую здесь степень подробности.
+ */
+export const COCKBURN_EXAMPLE = [
+  '### Триггер',
+  'Агент завершил задачу и открыл PR в `develop`.',
+  '',
+  '### Предусловия',
+  'Ветка запушена, CI запущен, у агента есть доступ к Forgejo.',
+  '',
+  '### Основной сценарий',
+  '1. Агент запрашивает статус CI по head-коммиту PR',
+  '2. Все обязательные проверки зелёные',
+  '3. Агент вызывает merge и получает подтверждение',
+  '4. PR привязывается к релизу ребром SHIPPED_IN',
+  '',
+  '### Расширения',
+  '2a. Хотя бы одна проверка красная или ещё бежит — merge отклоняется с 409, ветка остаётся открытой.',
+  '2b. Проверок нет вовсе — считается не-зелёным: «нет прогонов» это не «всё хорошо».',
+  '',
+  '### Минимальные гарантии',
+  '`develop` не получает кода с красным CI ни при каком исходе.',
+  '',
+  '### Гарантии успеха',
+  'PR влит, связь с релизом создана, спринт привязан к тому же релизу.',
+  '',
+].join('\n');
+
+export const ACCEPTANCE_EXAMPLE = [
+  '### Проверки',
+  '1. Merge при зелёном CI проходит и возвращает sha коммита слияния',
+  '2. Merge при красном CI отклоняется с 409 и понятной причиной',
+  '3. После merge у PR есть ребро SHIPPED_IN на текущий релиз',
+  '',
+  '### Покрытие расширений',
+  '2a — проверка 2; 2b — отдельный случай «нет прогонов» в проверке 2',
+  '',
+].join('\n');
+
+/**
  * Нормализация id: префикс определяет цвет строки и разбор паспорта.
  *
  * Корень получает `FEAT-`, сценарий — `US-`. Тип у них ОДИН (PL-28), но id
@@ -196,11 +243,36 @@ export default function UsFormModal({
   };
   const hint: React.CSSProperties = { fontSize: 10.5, color: 'var(--t3)', marginTop: 3 };
 
-  const insertTemplate = () => {
-    const tpl = templateFor(rigor);
-    // Не затираем набранное: шаблон дописывается, иначе одна кнопка стирала бы
-    // текст, который писали десять минут.
-    setScenario(prev => (prev.trim() ? prev.replace(/\s*$/, '\n\n') + tpl : tpl));
+  // Не затираем набранное: заготовка дописывается, иначе одна кнопка стирала бы
+  // текст, который писали десять минут.
+  const appendTo = (prev: string, add: string) =>
+    (prev.trim() ? prev.replace(/\s*$/, '\n\n') + add : add);
+
+  const insertTemplate = () => setScenario(prev => appendTo(prev, templateFor(rigor)));
+
+  /**
+   * Пример заполняет ОБА поля: приёмка — половина оформления по Кокберну, и
+   * образец сценария без образца приёмки оставлял бы вторую половину в том же
+   * положении, ради которого пример и понадобился.
+   */
+  const insertExample = () => {
+    setScenario(prev => appendTo(prev, COCKBURN_EXAMPLE));
+    setAcceptance(prev => appendTo(prev, ACCEPTANCE_EXAMPLE));
+  };
+
+  /** Явная проверка — линтер по требованию, помимо живого пересчёта. */
+  const runCheck = () => {
+    ctrlRef.current?.abort();
+    const ctrl = new AbortController();
+    ctrlRef.current = ctrl;
+    checkLoreUcQuality(
+      {
+        rigor, goal_level: goalLevel,
+        scenario_md: scenario, acceptance_md: acceptance,
+        has_primary_actor: false, has_traced_to: false,
+      },
+      ctrl.signal,
+    ).then(setQuality).catch(() => { /* advisory */ });
   };
 
   return (
@@ -270,12 +342,21 @@ export default function UsFormModal({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
         <span style={{ ...label, marginTop: 0, marginBottom: 0 }}>{t('lore.product.us.scenario', 'Сценарий')}</span>
+        {/* Две разные вещи — две кнопки: «дай заготовку» и «покажи, как
+            заполняют». Скелет отвечает на первый вопрос, пример на второй. */}
         <button
           type="button"
           onClick={insertTemplate}
-          style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+          style={{ fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
         >
-          {t('lore.product.us.insertTemplate', 'вставить шаблон Кокберна')}
+          {t('lore.product.us.insertTemplate', 'вставить шаблон')}
+        </button>
+        <button
+          type="button"
+          onClick={insertExample}
+          style={{ fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+        >
+          {t('lore.product.us.insertExample', 'пример заполнения')}
         </button>
       </div>
       <TipTapField
@@ -296,6 +377,20 @@ export default function UsFormModal({
         enableHtmlMode={false}
         ariaLabel={t('lore.product.us.acceptance', 'Приёмка')}
       />
+
+      {/* Проверка относится к НАБРАННОМУ тексту, поэтому стоит под ним, а не
+          над: сверху она читалась бы как настройка формы. Живой пересчёт
+          остаётся, но у действия появляется явная точка — без неё сказать
+          «оцени сейчас» было нечем. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 10 }}>
+        <button
+          type="button"
+          onClick={runCheck}
+          style={{ ...field, width: 'auto', cursor: 'pointer' }}
+        >
+          {t('lore.product.us.check', 'Проверить оформление')}
+        </button>
+      </div>
 
       {/* ── панель линтера ── */}
       {quality && (
