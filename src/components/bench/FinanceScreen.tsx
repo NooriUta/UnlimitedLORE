@@ -11,7 +11,7 @@ const EMPTY_PARAMS: Record<string, string> = {};
 
 function Bar({ label, value, max, suffix }: { label: string; value: number; max: number; suffix?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, padding: '2px 0' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-base)', padding: '2px 0' }}>
       <span style={{ width: 170, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis',
                      whiteSpace: 'nowrap' }} title={label}>{label}</span>
       <div style={{ flex: 1, height: 10, background: 'var(--bg3)', borderRadius: 5 }}>
@@ -31,7 +31,7 @@ function PriceStrip({ epochs }: { epochs: PriceEpochRow[] }) {
     <span>
       {epochs.map((e, i) => (
         <span key={e.price_id}>
-          {i > 0 && <span style={{ color: 'var(--t3)', fontSize: 10 }}> → </span>}
+          {i > 0 && <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}> → </span>}
           <span className="scope-tag"
                 title={`$${e.in_per_1m}/$${e.out_per_1m} per 1M · ${e.valid_from ?? ''} → ${e.valid_to || 'now'} · as_of ${e.as_of ?? '?'}${e.source ? `\n${e.source}` : ''}`}
                 style={{ textDecoration: e.superseded ? 'line-through' : undefined,
@@ -119,13 +119,13 @@ export function FinanceScreen({ runs }: { runs: RunRow[] }) {
           <div>
             <div style={{ fontSize: 30, fontFamily: 'var(--mono)', color: 'var(--t1)' }}
                  data-testid="fin-total">{formatUsd(total)}</div>
-            <div style={{ fontSize: 11, color: 'var(--t3)' }}>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
               {recomputed
                 ? t('bench.fin.recomputed', 'recomputed from run tokens × chosen epoch rates')
                 : t('bench.fin.stamped', 'as stamped in the mart (ExpRun.cost_usd rollup)')}
             </div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--t2)' }}>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)' }}>
             <div>{t('bench.fin.tokens', 'Tokens')}: <span style={{ fontFamily: 'var(--mono)' }}>
               {formatTokens(tokensIn)} in / {formatTokens(tokensOut)} out</span></div>
             <StatusBadge tone="warn" text={t('bench.fin.cacheMiss', 'cache-MISS = upper bound')} />
@@ -152,19 +152,19 @@ export function FinanceScreen({ runs }: { runs: RunRow[] }) {
               return (
                 <tr key={m.model_id}>
                   <td>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>{m.model_id}</span>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)' }}>{m.model_id}</span>
                     {m.tier && <span className="scope-tag" style={{ marginLeft: 4 }}>{m.tier}</span>}
-                    <div style={{ fontSize: 10, color: 'var(--t3)' }}>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
                       {m.provider} · {m.endpoint} · ctx {formatTokens(num(m.context_len))}
                     </div>
-                    {m.note && <div style={{ fontSize: 10, color: 'var(--t3)', maxWidth: 280 }}>{m.note}</div>}
+                    {m.note && <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', maxWidth: 280 }}>{m.note}</div>}
                   </td>
                   <td><PriceStrip epochs={chain} /></td>
                   <td>
                     <select value={picked[m.model_id] ?? ''}
                             data-testid={`fin-epoch-${m.model_id}`}
                             onChange={e => setPicked(p => ({ ...p, [m.model_id]: e.target.value }))}
-                            style={{ padding: '3px 6px', fontSize: 11, background: 'var(--bg2)',
+                            style={{ padding: '3px 6px', fontSize: 'var(--fs-sm)', background: 'var(--bg2)',
                                      color: 'var(--t1)', border: '1px solid var(--bd)', borderRadius: 6 }}>
                       <option value="">{t('bench.fin.asStamped', 'as stamped')}</option>
                       {chain.map(e => (
@@ -174,7 +174,7 @@ export function FinanceScreen({ runs }: { runs: RunRow[] }) {
                       ))}
                     </select>
                   </td>
-                  <td style={{ fontSize: 11 }}>
+                  <td style={{ fontSize: 'var(--fs-sm)' }}>
                     {/* Fin-2: a total without epoch+date+source is unusable */}
                     {active ? (
                       <>
@@ -188,12 +188,12 @@ export function FinanceScreen({ runs }: { runs: RunRow[] }) {
                         )}
                         {active.source && (active.source.startsWith('http')
                           ? <div><a href={active.source} target="_blank" rel="noopener noreferrer"
-                                    style={{ color: 'var(--acc)', fontSize: 10 }}>{active.source}</a></div>
-                          : <div style={{ fontSize: 10, color: 'var(--t3)' }}>{active.source}</div>)}
+                                    style={{ color: 'var(--acc)', fontSize: 'var(--fs-xs)' }}>{active.source}</a></div>
+                          : <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{active.source}</div>)}
                       </>
                     ) : '—'}
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 12, textAlign: 'right' }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', textAlign: 'right' }}>
                     {formatUsd(byModel.get(m.model_id) ?? 0)}
                   </td>
                 </tr>
@@ -218,7 +218,7 @@ export function FinanceScreen({ runs }: { runs: RunRow[] }) {
       </div>
 
       {/* F3 pointer: quality per dollar lives in Pareto (the $-axis) */}
-      <div style={{ fontSize: 11, color: 'var(--t3)' }}>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
         {t('bench.fin.f3Hint', 'Quality per dollar (F1 × $) — the Pareto tab, $ axis; tierA = 0 LLM cost (deterministic), I5 pinned there')}
       </div>
     </div>

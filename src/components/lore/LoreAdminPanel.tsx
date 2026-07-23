@@ -173,7 +173,7 @@ const S = {
   check: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', borderBottom: '1px solid color-mix(in srgb, var(--bd) 50%, transparent)', fontSize: 'var(--fs-sm)' },
   mark: (ok: boolean) => ({
     width: 16, height: 16, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0,
-    fontSize: 10, marginTop: 1, color: ok ? 'var(--suc)' : 'var(--dng)',
+    fontSize: 'var(--fs-xs)', marginTop: 1, color: ok ? 'var(--suc)' : 'var(--dng)',
     border: `1px solid ${ok ? 'var(--suc)' : 'var(--dng)'}`,
     background: `color-mix(in srgb, ${ok ? 'var(--suc)' : 'var(--dng)'} 18%, transparent)`,
   }),

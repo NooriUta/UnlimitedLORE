@@ -43,7 +43,7 @@ const STATUS_META: Record<TestStatus, { label: string; color: string; icon: stri
 
 const SETUP_PROJECTS = new Set(['setup', 'teardown']);
 const Info = ({ tip }: { tip: string }): React.ReactNode => (
-  <span title={tip} style={{ fontSize: 10, cursor: 'help', opacity: 0.6 }}>ⓘ</span>
+  <span title={tip} style={{ fontSize: 'var(--fs-xs)', cursor: 'help', opacity: 0.6 }}>ⓘ</span>
 );
 
 export function CatalogFilters({ nodes, filtered, state, onChange }: Props) {

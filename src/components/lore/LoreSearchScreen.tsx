@@ -249,7 +249,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
               aria-pressed={mode === m}
               title={modeHint[m]}
               style={{
-                fontSize: 11, padding: '3px 9px', cursor: 'pointer',
+                fontSize: 'var(--fs-sm)', padding: '3px 9px', cursor: 'pointer',
                 border: '1px solid var(--b1)',
                 borderRadius: m === 'smart' ? '6px 0 0 6px' : m === 'fuzzy' ? '0 6px 6px 0' : 0,
                 background: mode === m ? 'color-mix(in srgb, var(--acc) 18%, transparent)' : 'var(--s1)',
@@ -286,7 +286,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
               options={projOptions} selected={projs}
               onToggle={toggle(projs, setProjs)} counts={counts.by_project} />
           ) : (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 'var(--fs-base)' }}>
               <span style={{ color: 'var(--t3)', minWidth: 74 }}>{t('lore.search.projects', 'проект')}</span>
               <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>
                 {t('lore.search.noValues', '— нет значений —')}
@@ -301,7 +301,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
           выглядела полной, хотя часть корпуса не просматривалась вовсе. */}
       {result && result.warnings?.length > 0 && (
         <div style={{
-          fontSize: 12, color: 'var(--wrn)', border: '1px solid var(--wrn)',
+          fontSize: 'var(--fs-base)', color: 'var(--wrn)', border: '1px solid var(--wrn)',
           borderRadius: 6, padding: '6px 10px',
           background: 'color-mix(in srgb, var(--wrn) 10%, transparent)',
         }}>
@@ -311,7 +311,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
       )}
 
       {result && hits.length > 0 && (
-        <div style={{ fontSize: 12, color: 'var(--t3)' }}>
+        <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t3)' }}>
           <b style={{ color: 'var(--t2)' }}>{t('lore.search.found', 'найдено')}: {total}</b>
           {total > PAGE && <> · {t('lore.search.shown', 'показаны')} {pageFrom}–{pageTo}</>}
           {inherited > 0 && <> · {inherited} {t('lore.search.inferred', 'выведено от родителя')}</>}
@@ -336,7 +336,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
           <li key={h.type + h.ref_id}
               style={{ position: 'relative', padding: '8px 10px 10px 34px',
                        background: 'var(--s1)', border: '1px solid var(--b1)', borderRadius: 8 }}>
-            <span style={{ position: 'absolute', left: 10, top: 10, fontSize: 12,
+            <span style={{ position: 'absolute', left: 10, top: 10, fontSize: 'var(--fs-base)',
                            color: 'var(--t3)', fontVariantNumeric: 'tabular-nums' }}>
               {offset + i + 1}
             </span>
@@ -345,11 +345,11 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
               height: 2, width: `${Math.max(4, (h.score / maxScore) * 100)}%`,
               background: typeHue(h.type), opacity: .5, borderRadius: 2 }} />
             <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 999,
+              <span style={{ fontSize: 'var(--fs-sm)', padding: '1px 7px', borderRadius: 999,
                              background: `color-mix(in srgb, ${typeHue(h.type)} 16%, transparent)`,
                              color: typeHue(h.type) }}>{typeLabel(h.type)}</span>
-              <span style={{ fontFamily: 'var(--mono, monospace)', fontSize: 12, color: 'var(--t3)' }}>{h.ref_id}</span>
-              <span style={{ fontSize: 11, color: h.matched_field === 'title' || h.matched_field === 'name'
+              <span style={{ fontFamily: 'var(--mono, monospace)', fontSize: 'var(--fs-base)', color: 'var(--t3)' }}>{h.ref_id}</span>
+              <span style={{ fontSize: 'var(--fs-sm)', color: h.matched_field === 'title' || h.matched_field === 'name'
                   ? 'var(--ok, #4caf72)' : 'var(--t3)' }}>
                 {h.matched_field === 'title' || h.matched_field === 'name'
                   ? t('lore.search.inTitle', 'заголовок') : h.matched_field}
@@ -357,7 +357,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
               {/* Ранг РАЗЛОЖЕН. Итоговое число само по себе необъяснимо: оно не
                   отвечает, почему задача выше ADR. Видно, что это две величины —
                   совпадение текста и приоритет типа, — и вторую задаём мы. */}
-              <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)',
+              <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-sm)', color: 'var(--t3)',
                              fontVariantNumeric: 'tabular-nums' }}
                     title={t('lore.search.mathHint', 'BM25 (доля от лучшего в своём типе) × приоритет типа')}>
                 <b style={{ color: 'var(--t2)' }}>{h.score.toFixed(3)}</b>
@@ -409,7 +409,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
             style={pagerStyle(!hasPrev || loading)}>
             ← {t('lore.search.prev', 'назад')}
           </button>
-          <span style={{ fontSize: 12, color: 'var(--t3)', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--t3)', fontVariantNumeric: 'tabular-nums' }}>
             {pageFrom}–{pageTo} {t('lore.search.of', 'из')} {total}
           </span>
           <button type="button" disabled={!hasNext || loading}
@@ -425,7 +425,7 @@ export function LoreSearchScreen({ onNavigated, initialQuery = '', autoFocus }: 
 }
 
 const pagerStyle = (disabled: boolean) => ({
-  fontSize: 12, padding: '4px 12px',
+  fontSize: 'var(--fs-base)', padding: '4px 12px',
   cursor: disabled ? 'default' : 'pointer',
   border: '1px solid var(--b1)', borderRadius: 6,
   background: 'var(--s1)', color: disabled ? 'var(--t3)' : 'var(--t2)',

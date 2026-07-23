@@ -551,6 +551,9 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
   const [reviewer, setReviewer] = useState(task.reviewer_agent ?? '');
   // ADR-LORE-015 (T14): task_type classification — closed dictionary, no free text.
   const [taskType, setTaskType] = useState(task.task_type ?? '');
+  // PL-19 п.2: ось ЗАЧЕМ и сценарий, который задача реализует.
+  const [workClass, setWorkClass] = useState(task.work_class ?? '');
+  const [ucId, setUcId] = useState((task.realizes_uc ?? [])[0] ?? '');
   const [busy, setBusy]       = useState(false);
   const [compPicker, setCompPicker] = useState(false);
   const [compBusy, setCompBusy]     = useState<string | null>(null);
@@ -595,6 +598,11 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         executorAgent: executor.trim() || null,
         reviewerAgent: reviewer.trim() || null,
         taskType: taskType || null,
+        workClass: workClass || null,
+        // Ребро REALIZES создаётся тем же вызовом (PL-14): отдельным шагом
+        // привязку забывали, и uc-задача оставалась без сценария — ровно то,
+        // что ловит слайс `unlinked_uc_tasks`.
+        ucId: workClass === 'uc' ? (ucId.trim() || null) : null,
       });
       registerNewRoles([author, executor, reviewer]);
       setEditing(false); onChanged();
@@ -775,6 +783,44 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
                 <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>
               ))}
             </select>
+
+            {/* PL-19 п.2: ось ЗАЧЕМ рядом с осью КАК — они ортогональны
+                (ADR-022), и «дев-задача» ничего не говорит о том, ради чего
+                она делается. */}
+            <label htmlFor={`wc-${task.task_uid}`} style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
+              {t('lore.sprintDetail.task.workClassLabel', 'Зачем')}
+            </label>
+            <select id={`wc-${task.task_uid}`} value={workClass} onChange={e => setWorkClass(e.target.value)}
+              style={{ ...inputStyle, width: 150 }}>
+              <option value="">{t('lore.sprintDetail.task.wcUnset', '— не задан —')}</option>
+              <option value="uc">{t('lore.sprintDetail.task.wcUcOpt', 'uc — реализует сценарий')}</option>
+              <option value="jtd">{t('lore.sprintDetail.task.wcJtdOpt', 'jtd — вспомогательная')}</option>
+              <option value="enb">{t('lore.sprintDetail.task.wcEnbOpt', 'enb — enabler')}</option>
+            </select>
+
+            {/* Поле сценария появляется ТОЛЬКО у класса uc: у jtd/enb сценария
+                нет по определению, и постоянно висящее пустое поле читалось бы
+                как незаполненное обязательное. */}
+            {workClass === 'uc' && (
+              <>
+                <input
+                  id={`uc-${task.task_uid}`}
+                  value={ucId}
+                  onChange={e => setUcId(e.target.value)}
+                  aria-label={t('lore.sprintDetail.task.ucLabel', 'Сценарий (REALIZES)')}
+                  placeholder={t('lore.sprintDetail.task.ucPlaceholder', 'US-GIT-MERGE')}
+                  style={{ ...inputStyle, width: 170, fontFamily: 'var(--mono)' }}
+                />
+                {!ucId.trim() && (
+                  // Предупреждение, а не блокировка сохранения: дисциплина D16
+                  // advisory (гейт задушил бы ввод — TOC-раздел ADR-022), а
+                  // нарушения собирает слайс `unlinked_uc_tasks`.
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)' }}>
+                    ⚠ {t('lore.sprintDetail.task.ucMissing', 'uc-задача без сценария')}
+                  </span>
+                )}
+              </>
+            )}
           </div>
           {/* ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer — dropdown
               lookup from the extensible `agent_role` dictionary (still accepts

@@ -17,7 +17,7 @@ export function ReportScreen() {
     <div data-testid="bench-report">
       <ScreenTitle text={t('bench.secReport', 'Static experiment report (v0.9)')} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
           {t('bench.reportHint', 'Static page docs/RAG_VS_PARSE_EXPERIMENT.html embedded read-only')}
         </span>
         <a href={url} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost"

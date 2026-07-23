@@ -1,9 +1,13 @@
 // Общие примитивы продуктового слоя (ADR-LORE-022/032, Остервальдер + Коберн).
 // Единый стиль паспортов/списков как в прототипе forseti-storyline-vp.html,
 // на реальных токенах темы. Данные — через fetchLoreSlice (идиома LoreReleasesBoard).
-import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../../api/lore';
+import { marked } from '../markdown';
+import { sanitizeMd } from '../sanitizeHtml';
+import { GameIcon } from '../GameIcon';
+import { useIsNarrow } from '../../../hooks/useMediaQuery';
 
 // Навигация между продуктовыми разделами (section = ?section=, id = ?passport=).
 export type ProductNavigate = (section: string, id?: string) => void;
@@ -13,6 +17,8 @@ export interface ProductScreenProps {
   onNavigate: ProductNavigate;
   onError: (e: unknown) => void;
   listSearch?: string;
+  /** Записать значение локального поиска (то же `?q=`, поле переехало в панель). */
+  onListSearch?: (v: string) => void;
   /**
    * PL-16: какой сценарий раскрыт до задач (`?uc=`).
    *
@@ -61,39 +67,187 @@ export function useSlice<T>(
 const arr = (x: string[] | null | undefined): string[] => Array.isArray(x) ? x : [];
 export { arr as asArray };
 
+/**
+ * Пилюля с иконкой из набора (PL-39).
+ *
+ * Уровни цели, типы ценностей и виды акторов рисовались эмодзи прямо в коде.
+ * Эмодзи рисует шрифт системы: вид зависит от машины и темы, цветовым токенам
+ * он не подчиняется и не масштабируется вместе с текстом. `GameIcon` — вектор,
+ * красится `currentColor` и живёт по общим правилам.
+ *
+ * Пустой слаг допустим: у незнакомого значения словаря иконки нет, и подпись
+ * остаётся единственным носителем смысла — это честнее, чем выдать чужой
+ * значок за известный.
+ */
+export function IconPill({ icon, children, tone, style }: {
+  icon: string;
+  children: ReactNode;
+  tone?: 'ok' | 'act' | 'warn' | 'muted';
+  style?: CSSProperties;
+}) {
+  const c = tone === 'ok' ? 'var(--suc)' : tone === 'act' ? 'var(--inf)' : tone === 'warn' ? 'var(--wrn)' : 'var(--t2)';
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)',
+      border: `1px solid ${c}`, borderRadius: 999, padding: '1px 7px',
+      color: c, whiteSpace: 'nowrap', ...style,
+    }}>
+      {icon && <GameIcon slug={icon} size={11} style={{ color: c }} />}
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Кнопка правки — иконкой набора, а не символом «✎».
+ *
+ * Один компонент на все паспорта слоя: пять копий кнопки уже начали расходиться
+ * размером и цветом, а любая правка вида требовала обойти их все.
+ */
+export function EditButton({ onClick, title }: { onClick: () => void; title: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', padding: 0, marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}
+    >
+      <GameIcon slug="pencil" size={12} />
+    </button>
+  );
+}
+
 // ── презентационные примитивы (совпадают с прототипом: pill/psec/trow/lnk) ──
 export function Pill({ children, tone, style }: { children: ReactNode; tone?: 'ok' | 'act' | 'warn' | 'muted'; style?: CSSProperties }) {
   const c = tone === 'ok' ? 'var(--suc)' : tone === 'act' ? 'var(--inf)' : tone === 'warn' ? 'var(--wrn)' : 'var(--t2)';
-  return <span style={{ fontSize: 10, fontFamily: 'var(--mono)', border: `1px solid ${c}`, borderRadius: 999, padding: '1px 7px', color: c, whiteSpace: 'nowrap', ...style }}>{children}</span>;
+  return <span style={{ fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', border: `1px solid ${c}`, borderRadius: 999, padding: '1px 7px', color: c, whiteSpace: 'nowrap', ...style }}>{children}</span>;
 }
 
 export function PSection({ title, children, style }: { title: string; children: ReactNode; style?: CSSProperties }) {
   return (
     <div style={{ border: '1px solid var(--bd)', borderRadius: 6, background: 'var(--bg1)', padding: '8px 11px', marginTop: 8, ...style }}>
-      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)', marginBottom: 5 }}>{title}</div>
+      <div style={{ fontSize: 'var(--fs-xs)', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)', marginBottom: 5 }}>{title}</div>
       {children}
     </div>
   );
 }
 
 export function TRow({ children, first }: { children: ReactNode; first?: boolean }) {
-  return <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 0', fontSize: 12, color: 'var(--t2)', borderTop: first ? 'none' : '1px solid color-mix(in srgb,var(--bd) 40%,transparent)' }}>{children}</div>;
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 0', fontSize: 'var(--fs-base)', color: 'var(--t2)', borderTop: first ? 'none' : '1px solid color-mix(in srgb,var(--bd) 40%,transparent)' }}>{children}</div>;
 }
 
 export function LinkChip({ children, color, onClick, dim, title }: { children: ReactNode; color?: string; onClick?: () => void; dim?: boolean; title?: string }) {
   return (
     <button type="button" onClick={onClick} title={title} disabled={!onClick}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'var(--mono)', border: '1px solid var(--bd)', borderRadius: 5, padding: '1px 6px', margin: '2px 3px 2px 0', background: 'var(--bg2)', color: color ?? 'var(--t2)', cursor: onClick ? 'pointer' : 'default', textDecoration: onClick ? 'underline dotted' : 'none', opacity: dim ? 0.6 : 1 }}>
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)', border: '1px solid var(--bd)', borderRadius: 5, padding: '1px 6px', margin: '2px 3px 2px 0', background: 'var(--bg2)', color: color ?? 'var(--t2)', cursor: onClick ? 'pointer' : 'default', textDecoration: onClick ? 'underline dotted' : 'none', opacity: dim ? 0.6 : 1 }}>
       {children}
     </button>
   );
 }
 
+/** Ключ ширины списка в localStorage — общий на все экраны слоя. */
+const LIST_WIDTH_KEY = 'lore.product.listWidth';
+
 // ── master-detail на весь контент-пейн (список слева + карточка справа) ──
-export function MasterDetail({ list, detail }: { list: ReactNode; detail: ReactNode }) {
+export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
+  list: ReactNode;
+  detail: ReactNode;
+  /** узкий экран: показывать деталь вместо списка (по наличию выбора) */
+  hasDetail?: boolean;
+  /** узкий экран: вернуться к списку — снимает выбор */
+  onBack?: () => void;
+  backLabel?: string;
+}) {
+  /**
+   * Ширина списка тянется мышью и ПЕРЕЖИВАЕТ перезагрузку.
+   *
+   * Фиксированные 288px — компромисс, не подходящий никому: длинные заголовки
+   * сценариев обрезаются, а короткие id оставляют половину колонки пустой.
+   * Значение общее на все экраны слоя: устроены они одинаково, и подстраивать
+   * каждый заново — та же работа пять раз.
+   */
+  const [width, setWidth] = useState(() => {
+    const saved = Number(localStorage.getItem(LIST_WIDTH_KEY));
+    return Number.isFinite(saved) && saved >= 180 ? saved : 288;
+  });
+  const dragRef = useRef<{ startX: number; startW: number } | null>(null);
+
+  useEffect(() => { localStorage.setItem(LIST_WIDTH_KEY, String(width)); }, [width]);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startW: width };
+    const onMove = (ev: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      // Границы: уже 180px список нечитаем, шире 560 паспорт вырождается в
+      // узкую колонку. Оба края лучше состояния, из которого не выбраться.
+      setWidth(Math.max(180, Math.min(560, d.startW + (ev.clientX - d.startX))));
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  /**
+   * На узком экране показываем ОДНУ панель, а не две (PL-42).
+   *
+   * Две колонки в 375px не помещаются по построению: список шириной 288–560
+   * вытесняет паспорт целиком, и запомненная ширина делает только хуже — при
+   * 378px паспорта не видно вовсе. Поэтому на мобильном это «список → деталь →
+   * назад», как в спринтах (MOB-04), а ручка ресайза прячется: тянуть нечего.
+   *
+   * Признак «деталь открыта» — наличие выбора, и его знает вызывающий: он же
+   * кладёт `?passport=` в URL. Отдельного состояния не заводим, иначе кнопка
+   * «назад» браузера расходилась бы с кнопкой «назад» экрана.
+   */
+  const narrow = useIsNarrow(720);
+  const detailOpen = hasDetail ?? true;
+
+  if (narrow) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
+        {detailOpen ? (
+          <>
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                style={{
+                  alignSelf: 'flex-start', margin: '6px 9px', padding: '3px 10px',
+                  fontSize: 'var(--fs-sm)', borderRadius: 4, cursor: 'pointer',
+                  background: 'transparent', border: '1px solid var(--bd)', color: 'var(--t2)',
+                }}
+              >
+                ← {backLabel ?? 'к списку'}
+              </button>
+            )}
+            <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto' }}>{detail}</div>
+          </>
+        ) : (
+          <div style={{ flex: 1, background: 'var(--bg1)', overflow: 'auto' }}>{list}</div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
-      <div style={{ width: 288, flexShrink: 0, borderRight: '1px solid var(--bd)', background: 'var(--bg1)', overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{list}</div>
+      <div style={{ width, flexShrink: 0, background: 'var(--bg1)', overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{list}</div>
+      {/* Ручка стоит НА границе: отдельная полоса съела бы место, а в границу
+          между колонками мышью целятся и так. */}
+      <div
+        onMouseDown={onMouseDown}
+        role="separator"
+        aria-orientation="vertical"
+        style={{ width: 5, flexShrink: 0, cursor: 'col-resize', borderLeft: '1px solid var(--bd)' }}
+      />
       <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{detail}</div>
     </div>
   );
@@ -107,6 +261,75 @@ export function ListRow({ id, title, meta, selected, onClick }: { id: string; ti
       {title}
       {meta && <span style={{ marginLeft: 6 }}>{meta}</span>}
     </button>
+  );
+}
+
+/**
+ * Тело в markdown — РЕНДЕРОМ, а не сырым текстом.
+ *
+ * Паспорта US и корня показывали `scenario_md`/`acceptance_md` в `<pre>`: на
+ * экране висели «### Триггер» и «1.» вместо заголовков и списка. Тело пишется
+ * в markdown-редакторе и по всему корпусу читается отрендеренным — здесь оно
+ * оставалось единственным местом, где разметка видна как разметка.
+ *
+ * `marked` берём из общего модуля (там же его конфиг), санитайзер обязателен:
+ * тело приходит из корпуса и может содержать HTML.
+ */
+export function Markdown({ md, style }: { md: string | null | undefined; style?: CSSProperties }) {
+  const text = (md ?? '').trim();
+  if (!text) return null;
+  const html = sanitizeMd(marked.parse(text) as string);
+  return (
+    <div
+      className="lore-md"
+      style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', ...style }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+/**
+ * Локальный поиск по списку — ТОТ ЖЕ вид, что у списка спринтов (лупа слева,
+ * крестик очистки справа), и то же место: ВНУТРИ панели списка.
+ *
+ * Раньше продуктовые экраны искали через общий бар над навигацией. Разница не
+ * косметическая: поле в общем баре выглядит фильтром ЭКРАНА, поле в панели —
+ * фильтром СПИСКА, а фильтруется именно список. Владелец на приёмке: «локальный
+ * поиск сделай как в спринтах».
+ *
+ * Значение по-прежнему живёт в `?q=` — это одно поле, переехавшее на своё
+ * место, а не второй поиск рядом с первым.
+ */
+export function ListSearch({ value, onChange, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px',
+      borderBottom: '1px solid var(--bd)', background: 'var(--bg1)',
+    }}>
+      <GameIcon slug="magnifying-glass" size={12} style={{ color: 'var(--t3)', flexShrink: 0 }} />
+      <input
+        style={{
+          flex: 1, background: 'transparent', border: 'none', outline: 'none',
+          color: 'var(--t1)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)',
+        }}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      />
+      {value && (
+        <span
+          onClick={() => onChange('')}
+          style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}
+        >
+          ✕
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -169,7 +392,7 @@ export function EmptyDetail({ text }: { text?: string }) {
   // в параметрах вычисляется до вызова хука и локализовать его там нечем.
   const { t } = useTranslation();
   return (
-    <div style={{ padding: 24, textAlign: 'center', color: 'var(--t3)', fontSize: 12 }}>
+    <div style={{ padding: 24, textAlign: 'center', color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>
       {text ?? t('lore.product.pickItem', 'Выберите элемент слева')}
     </div>
   );

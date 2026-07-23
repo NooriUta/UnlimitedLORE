@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import type { LoreFeatureRow, LoreUcRow } from '../../../api/lore';
 import { fetchLoreSlice } from '../../../api/lore';
+import type { LoreUcTaskRow } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import {
@@ -19,24 +20,41 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  TRow,
+  ListSearch,
+  Markdown,
+  IconPill,
+  EditButton,
 } from './shared';
-import { ucStatusLabel, rigorLabel, goalLevelLabel } from './vocab';
-
-// Уровень цели (Коберн, D2): море / рыба.
-function goalGlyphOf(level: string | null | undefined): string {
-  const v = (level ?? '').toLowerCase();
-  if (v.includes('sea') || v.includes('🌊')) return '🌊';
-  if (v.includes('sub') || v.includes('🐟')) return '🐟';
-  return '';
-}
+import { ucStatusLabel, ucStatusTone, rigorLabel, goalLevelLabel } from './vocab';
+import { resolveStatusMeta, taskTick } from '../lore-status';
+import { GOAL_LEVEL_ICON, RIGOR_ICON, iconOf } from './icons';
+import { GameIcon } from '../GameIcon';
+import UsFormModal, { type UsDraft } from './UsFormModal';
 
 
-export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
   const { t } = useTranslation();
   // Нет слайса «все UC» → тянем фичи, затем UC каждой фичи и склеиваем (дедуп по uc_id).
   const { rows: features, loading: featLoading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
 
   const [ucs, setUcs] = useState<LoreUcRow[]>([]);
+  // PL-17: форма создания/правки US.
+  const [creating, setCreating] = useState(false);
+  const [editingUs, setEditingUs] = useState<UsDraft | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Задачи выбранного сценария (PL-43). В паспорте фичи дерево US→задачи было,
+  // а в паспорте самой US — нет: чтобы увидеть, чем она делается, приходилось
+  // возвращаться к корню и раскрывать её там.
+  const [ucTasks, setUcTasks] = useState<LoreUcTaskRow[]>([]);
+  useEffect(() => {
+    if (!selectedId) { setUcTasks([]); return; }
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreUcTaskRow>('tasks_of_uc', { id: selectedId }, ctrl.signal)
+      .then(setUcTasks)
+      .catch(() => { /* задачи справочны — паспорт остаётся рабочим */ });
+    return () => ctrl.abort();
+  }, [selectedId]);
   const [ucsLoading, setUcsLoading] = useState(true);
   const featKey = features.map(f => f.uc_id).join('|');
 
@@ -65,7 +83,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setUcsLoading(false); } });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [featKey, featLoading]);
+  }, [featKey, featLoading, reloadKey]);
 
   const loading = featLoading || ucsLoading;
 
@@ -84,7 +102,6 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
     list = (
       <>
         {filtered.map(uc => {
-          const glyph = goalGlyphOf(uc.goal_level);
           const statusShort = ucStatusLabel(t, uc.status);
           return (
             <ListRow
@@ -93,7 +110,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               title={uc.title}
               selected={uc.uc_id === selectedId}
               onClick={() => onSelect(uc.uc_id)}
-              meta={<Pill>{glyph} {statusShort}</Pill>}
+              meta={<IconPill icon={iconOf(GOAL_LEVEL_ICON, uc.goal_level)} tone={ucStatusTone(uc.status)}>{statusShort}</IconPill>}
             />
           );
         })}
@@ -110,8 +127,6 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
     if (!uc) {
       detail = <EmptyDetail text={t('lore.product.us.pick', 'Выберите историю слева')} />;
     } else {
-      const status = (uc.status ?? '').toLowerCase();
-
       const painIds = asArray(uc.relieves_pain_ids);
       const gainIds = asArray(uc.delivers_gain_ids);
       const jobIds = asArray(uc.performs_job_ids);
@@ -120,29 +135,29 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       const actorIds = asArray(uc.actor_ids);
       const actorNames = asArray(uc.actor_names);
 
-      const preStyle = {
-        margin: 0,
-        fontFamily: 'var(--mono)',
-        fontSize: 11,
-        whiteSpace: 'pre-wrap' as const,
-        color: 'var(--t2)',
-      };
 
       detail = (
         <div>
-          <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
             US · Пользовательская история (User Story) — тело по Коберну
           </div>
 
           <PassportHeader title={uc.title ?? uc.uc_id}>
-            <Pill tone={status === 'shipped' ? 'ok' : status === 'active' ? 'act' : 'muted'}>{ucStatusLabel(t, uc.status)}</Pill>
-            {uc.goal_level && <Pill>{goalLevelLabel(t, uc.goal_level)}</Pill>}
-            {uc.rigor && <Pill>{rigorLabel(t, uc.rigor)}</Pill>}
+            <Pill tone={ucStatusTone(uc.status)}>{ucStatusLabel(t, uc.status)}</Pill>
+            {uc.goal_level && <IconPill icon={iconOf(GOAL_LEVEL_ICON, uc.goal_level)}>{goalLevelLabel(t, uc.goal_level)}</IconPill>}
+            {uc.rigor && <IconPill icon={iconOf(RIGOR_ICON, uc.rigor)}>{rigorLabel(t, uc.rigor)}</IconPill>}
+            {/* Правка той же формой, что и создание: линтер обязан работать и
+                при доводке тела — именно там он полезнее всего. */}
+            <EditButton onClick={() => { setCreating(false); setEditingUs({
+                uc_id: uc.uc_id, title: uc.title, scenario_md: uc.scenario_md,
+                acceptance_md: uc.acceptance_md, goal_level: uc.goal_level, rigor: uc.rigor,
+                status: uc.status, parent_uc_id: uc.parent_uc_id,
+              }); }} title={t('lore.product.us.edit', 'Правка')} />
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-do)', marginBottom: 8 }}>{uc.uc_id}</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 4 }}>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.us.feature', 'Фича')}</span>
             <span>{uc.parent_uc_id
               ? <LinkChip color="var(--g-value)" onClick={() => onNavigate('features', uc.parent_uc_id ?? undefined)}>{uc.parent_uc_id}</LinkChip>
@@ -153,19 +168,19 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
           </div>
 
-          <PSection title={t('lore.product.us.doesWhat', 'Что реально делает (ноги в профиль)')}>
+          <PSection title={t('lore.product.us.doesWhat', 'Что закрывает на деле')}>
             {painIds.length + gainIds.length + jobIds.length === 0
-              ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
+              ? <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>
               : (
                 <>
                   {painIds.map(id => (
-                    <LinkChip key={`p-${id}`} color="var(--pain)" onClick={() => onNavigate('vpProfile', id)}>RELIEVES → {id}</LinkChip>
+                    <LinkChip key={`p-${id}`} color="var(--pain)" onClick={() => onNavigate('vpProfile', id)}>{t('lore.product.us.relieves', 'снимает')} · {id}</LinkChip>
                   ))}
                   {gainIds.map(id => (
-                    <LinkChip key={`g-${id}`} color="var(--gain)" onClick={() => onNavigate('vpProfile', id)}>DELIVERS → {id}</LinkChip>
+                    <LinkChip key={`g-${id}`} color="var(--gain)" onClick={() => onNavigate('vpProfile', id)}>{t('lore.product.us.delivers', 'даёт')} · {id}</LinkChip>
                   ))}
                   {jobIds.map(id => (
-                    <LinkChip key={`j-${id}`} color="var(--job)" onClick={() => onNavigate('vpProfile', id)}>PERFORMS → {id}</LinkChip>
+                    <LinkChip key={`j-${id}`} color="var(--job)" onClick={() => onNavigate('vpProfile', id)}>{t('lore.product.us.performs', 'выполняет')} · {id}</LinkChip>
                   ))}
                 </>
               )}
@@ -173,30 +188,94 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
           <PSection title={t('lore.product.us.scenario', 'Сценарий (Коберн)')}>
             {(uc.scenario_md ?? '').trim()
-              ? <pre style={preStyle}>{uc.scenario_md ?? ''}</pre>
-              : <span style={{ fontSize: 11, color: 'var(--t3)' }}>— {t('lore.product.us.noScenario', 'сценарий не заполнен')}</span>}
+              ? <Markdown md={uc.scenario_md} />
+              : <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>— {t('lore.product.us.noScenario', 'сценарий не заполнен')}</span>}
           </PSection>
 
           {(uc.acceptance_md ?? '').trim() && (
             <PSection title={t('lore.product.us.acceptance', 'Приёмка')}>
-              <pre style={preStyle}>{uc.acceptance_md ?? ''}</pre>
+              <Markdown md={uc.acceptance_md} />
             </PSection>
           )}
 
           {includes.length + extendsUc.length > 0 && (
-            <PSection title={t('lore.product.us.graph', 'Граф UC')}>
+            <PSection title={t('lore.product.us.graph', 'Связанные сценарии')}>
               {includes.map(id => (
-                <LinkChip key={`inc-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>includes → {id}</LinkChip>
+                <LinkChip key={`inc-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>{t('lore.product.us.includes', 'включает')} · {id}</LinkChip>
               ))}
               {extendsUc.map(id => (
-                <LinkChip key={`ext-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>extends → {id}</LinkChip>
+                <LinkChip key={`ext-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>{t('lore.product.us.extends', 'расширяет')} · {id}</LinkChip>
               ))}
             </PSection>
           )}
+
+          {/* Задачи со спринтами — как в паспорте фичи. Раньше, чтобы увидеть,
+              чем сценарий делается, приходилось возвращаться к корню и
+              раскрывать его там. Статус задачи и статус СПРИНТА показываются
+              оба: «сделано» в отменённом спринте и «сделано» в живом — разные
+              новости, по статусу задачи неразличимые. */}
+          <PSection title={t('lore.product.us.tasks', 'Чем делается')}>
+            {ucTasks.length === 0 ? (
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>
+                {t('lore.product.us.noTasks', 'задач пока нет')}
+              </div>
+            ) : ucTasks.map((task, i) => (
+              <TRow key={task.task_uid} first={i === 0}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{task.task_id}</span>
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title ?? ''}</span>
+                {/* Статус — иконкой и цветом ИЗ СПРАВОЧНИКА (KnowDictEntry),
+                    как в спринтах: свой набор значков разошёлся бы с общим при
+                    первом же пополнении словаря. */}
+                {(() => { const m = resolveStatusMeta(task.status_raw); return (
+                  <span title={task.status_raw ?? undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    <GameIcon slug={m.icon} size={12} style={{ color: m.color }} />
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: m.color }}>{taskTick(task.status_raw).status}</span>
+                  </span>
+                ); })()}
+                {task.sprint_id && (() => { const sm = resolveStatusMeta(task.sprint_status_raw); return (
+                  <LinkChip
+                    color="var(--acc)"
+                    onClick={() => onNavigate('sprints', task.sprint_id ?? undefined)}
+                    title={task.sprint_status_raw ?? undefined}
+                  >
+                    <GameIcon slug={sm.icon} size={11} style={{ color: sm.color }} />
+                    {task.sprint_id}
+                  </LinkChip>
+                ); })()}
+              </TRow>
+            ))}
+          </PSection>
         </div>
       );
     }
   }
 
-  return <MasterDetail list={list} detail={detail} />;
+  const createBar = (
+    <div style={{ padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
+      <button
+        type="button"
+        onClick={() => { setEditingUs(null); setCreating(true); }}
+        style={{ width: '100%', fontSize: 'var(--fs-sm)', borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+      >
+        {t('lore.product.us.new', '+ История')}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <MasterDetail
+      hasDetail={!!selectedId}
+      onBack={() => onSelect(null)} list={<><ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.us.searchPh', 'история…')} />{createBar}{list}</>} detail={detail} />
+      {(creating || editingUs) && (
+        <UsFormModal
+          opened
+          initial={editingUs ?? undefined}
+          onClose={() => { setCreating(false); setEditingUs(null); }}
+          onSaved={id => { setReloadKey(k => k + 1); onSelect(id); }}
+          onError={onError}
+        />
+      )}
+    </>
+  );
 }

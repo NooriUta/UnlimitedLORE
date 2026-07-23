@@ -215,7 +215,7 @@ function CardsView({
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>{visible.length}/{refs.length}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', flexShrink: 0 }}>{visible.length}/{refs.length}</span>
         </div>
         <div style={S.filterRow}>
           <span style={S.filterLabel}>роль</span>
@@ -287,23 +287,23 @@ function CardsView({
                   })}
                   {r.link && (
                     <a href={resolveRefUrl(r.link)} target="_blank" rel="noopener noreferrer"
-                      style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--acc)' }}
+                      style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}
                       onClick={e => e.stopPropagation()}>↗</a>
                   )}
-                  <span style={{ color: 'var(--t3)', fontSize: 11, flexShrink: 0, marginLeft: r.link ? 6 : 'auto' }}>
+                  <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-sm)', flexShrink: 0, marginLeft: r.link ? 6 : 'auto' }}>
                     {isOpen ? '▲' : '▼'}
                   </span>
                 </div>
                 <span style={S.citation}>{r.citation}</span>
-                {description && <MartProse text={description} style={{ fontSize: 11, color: 'var(--t2)', margin: '2px 0 0', lineHeight: 1.5 }} />}
-                {takeaway && <MartProse text={takeaway} style={{ fontSize: 11, color: 'var(--t3)', margin: '2px 0 0', fontStyle: 'italic' }} />}
+                {description && <MartProse text={description} style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', margin: '2px 0 0', lineHeight: 1.5 }} />}
+                {takeaway && <MartProse text={takeaway} style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', margin: '2px 0 0', fontStyle: 'italic' }} />}
                 {refSrcs.length > 0 && (
                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 4 }}>
                     {refSrcs.map(s => {
                       const SRC_LABELS: Record<string, string> = { arxiv: 'arXiv', github: 'GitHub', huggingface: 'HF', doi: 'DOI', project: 'project', other: 'link', status: 'нет репо' };
                       const label = SRC_LABELS[s.kind ?? ''] ?? s.kind ?? 'src';
                       const muted = s.kind === 'status' || !s.url;
-                      const chip = { fontSize: 10, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' as const,
+                      const chip = { fontSize: 'var(--fs-xs)', padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' as const,
                         border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
                         background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 12%, transparent)`,
                         color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none' as const };
@@ -338,25 +338,25 @@ function CardsView({
                         display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                         borderBottom: '1px solid color-mix(in srgb, var(--acc) 15%, transparent)',
                       }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{mc.name ?? mc.card_id}</span>
-                        {mc.group_name && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{mc.group_name}</span>}
-                        {mc.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>· {mc.date}</span>}
+                        <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>{mc.name ?? mc.card_id}</span>
+                        {mc.group_name && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{mc.group_name}</span>}
+                        {mc.date && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>· {mc.date}</span>}
                         <span style={{ flex: 1 }} />
                         {(mc.bird || mc.spider) && (
-                          <span style={{ fontSize: 10, color: 'var(--acc)' }}>
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}>
                             {[mc.bird ? `BIRD ${mc.bird}` : null, mc.spider ? `Spider ${mc.spider}` : null].filter(Boolean).join(' · ')}
                           </span>
                         )}
-                        {mc.link && <a href={mc.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>}
+                        {mc.link && <a href={mc.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)', textDecoration: 'none' }}>↗</a>}
                       </div>
                       {mc.tldr && (
                         <p style={{
-                          margin: '0 0 6px', fontSize: 12, color: 'var(--t2)', lineHeight: 1.55, fontStyle: 'italic',
+                          margin: '0 0 6px', fontSize: 'var(--fs-base)', color: 'var(--t2)', lineHeight: 1.55, fontStyle: 'italic',
                           borderLeft: '2px solid color-mix(in srgb, var(--acc) 40%, transparent)', paddingLeft: 8,
                         }}>{mc.tldr}</p>
                       )}
                       {mc.hound && (
-                        <div style={{ fontSize: 11, color: 'var(--wrn)', lineHeight: 1.5, marginBottom: 6 }}>
+                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--wrn)', lineHeight: 1.5, marginBottom: 6 }}>
                           <span style={{ fontWeight: 700 }}>↳ HOUND: </span>{mc.hound}
                         </div>
                       )}
@@ -365,7 +365,7 @@ function CardsView({
                       )}
                       {(mc.architecture || mc.prep || mc.method || mc.results || mc.findings) && (
                         <details style={{ marginTop: 6 }}>
-                          <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)', userSelect: 'none' }}>детали методики</summary>
+                          <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-xs)', color: 'var(--t3)', userSelect: 'none' }}>детали методики</summary>
                           <div style={{ paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>
                             {([
                               { label: 'Архитектура', val: mc.architecture },
@@ -374,7 +374,7 @@ function CardsView({
                               { label: 'Результаты',  val: mc.results },
                               { label: 'Выводы',      val: mc.findings },
                             ] as { label: string; val: string | null }[]).filter(s => s.val).map(s => (
-                              <div key={s.label} style={{ fontSize: 11, lineHeight: 1.5 }}>
+                              <div key={s.label} style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.5 }}>
                                 <span style={{ color: 'var(--t3)', fontWeight: 600 }}>{s.label}: </span>
                                 <span style={{ color: 'var(--t2)' }}>{s.val}</span>
                               </div>
@@ -475,7 +475,7 @@ function SliceView({
               return (
                 <div key={d.node_id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <div style={{
-                    fontSize: 9, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const,
+                    fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase' as const,
                     letterSpacing: '0.07em', padding: '1px 6px', borderBottom: '1px solid var(--bd)', whiteSpace: 'nowrap',
                   }}>▤ {dLabel}</div>
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const, paddingLeft: 8 }}>
@@ -485,7 +485,7 @@ function SliceView({
                         onClick={() => setNodeId(n.node_id)}
                         title={pick(lang, n.label_ru, null, n.label_en) || n.title || ''}
                       >
-                        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700 }}>{n.node_id}</span>
+                        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', fontWeight: 700 }}>{n.node_id}</span>
                         {n.kind === 'mirror' && <span style={S.mirrorDot} />}
                       </button>
                     ))}
@@ -499,7 +499,7 @@ function SliceView({
                 onClick={() => setNodeId(n.node_id)}
                 title={pick(lang, n.label_ru, null, n.label_en) || n.title || ''}
               >
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700 }}>{n.node_id}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', fontWeight: 700 }}>{n.node_id}</span>
                 {n.kind === 'mirror' && <span style={S.mirrorDot} />}
               </button>
             ))}
@@ -511,7 +511,7 @@ function SliceView({
               onClick={() => setNodeId(n.node_id)}
               title={pick(lang, n.label_ru, null, n.label_en) || n.title || ''}
             >
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700 }}>{n.node_id}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', fontWeight: 700 }}>{n.node_id}</span>
               {n.kind === 'mirror' && <span style={S.mirrorDot} />}
             </button>
           ))
@@ -522,7 +522,7 @@ function SliceView({
       {currentNode && (
         <div style={S.nodeSummaryBox}>
           <span style={S.nodeLabel}>{nodeLabel}</span>
-          {nodeSummary && <span style={{ fontSize: 11, color: 'var(--t2)', lineHeight: 1.5, display: 'block', marginTop: 2 }}>
+          {nodeSummary && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', lineHeight: 1.5, display: 'block', marginTop: 2 }}>
             {nodeSummary.slice(0, 260)}{nodeSummary.length > 260 ? '…' : ''}
           </span>}
           {challenged.length > 0 && (
@@ -539,13 +539,13 @@ function SliceView({
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
                   {currentNode.description_ru_sci && (
                     <button
-                      style={{ ...S.switchBtn, ...(descLang === 'ru_sci' ? S.switchBtnActive : {}), padding: '1px 6px', fontSize: 10 }}
+                      style={{ ...S.switchBtn, ...(descLang === 'ru_sci' ? S.switchBtnActive : {}), padding: '1px 6px', fontSize: 'var(--fs-xs)' }}
                       onClick={() => setDescLang('ru_sci')}
                     >RU науч</button>
                   )}
                   {currentNode.description_en && (
                     <button
-                      style={{ ...S.switchBtn, ...(descLang === 'en' ? S.switchBtnActive : {}), padding: '1px 6px', fontSize: 10 }}
+                      style={{ ...S.switchBtn, ...(descLang === 'en' ? S.switchBtnActive : {}), padding: '1px 6px', fontSize: 'var(--fs-xs)' }}
                       onClick={() => setDescLang('en')}
                     >EN</button>
                   )}
@@ -554,7 +554,7 @@ function SliceView({
               {(descLang === 'ru_sci' ? currentNode.description_ru_sci : currentNode.description_en) && (
                 <MartProse
                   text={(descLang === 'ru_sci' ? currentNode.description_ru_sci : currentNode.description_en)!}
-                  style={{ fontSize: 11 }}
+                  style={{ fontSize: 'var(--fs-sm)' }}
                 />
               )}
             </div>
@@ -571,10 +571,10 @@ function SliceView({
           return (
             <div key={etype} style={{ marginBottom: 4 }}>
               <div style={{ ...S.edgeSection, borderLeft: `3px solid ${es.color}` }}>
-                <span style={{ color: es.color, fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+                <span style={{ color: es.color, fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
                   {etype}
                 </span>
-                <span style={{ color: 'var(--t3)', fontSize: 10 }}>· {es.label} · {links.length}</span>
+                <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>· {es.label} · {links.length}</span>
               </div>
               {links.map(e => {
                 const ref      = refMap.get(e.to_ref);
@@ -582,10 +582,10 @@ function SliceView({
                 return (
                   <div key={e.to_ref} style={S.sliceRef}>
                     <div style={S.sliceRefHead}>
-                      <span style={{ ...S.mono, color: 'var(--acc)', fontWeight: 600, fontSize: 11 }}>
+                      <span style={{ ...S.mono, color: 'var(--acc)', fontWeight: 600, fontSize: 'var(--fs-sm)' }}>
                         {ref?.ref_id ?? e.to_ref}
                       </span>
-                      {ref?.year && <span style={{ ...S.mono, fontSize: 10, color: 'var(--t3)' }}>{ref.year}</span>}
+                      {ref?.year && <span style={{ ...S.mono, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{ref.year}</span>}
                       {ref?.source_role && (
                         <span style={{ ...S.roleBadge, color: ROLE_COLOR[ref.source_role] ?? 'var(--t2)' }}>
                           {ref.source_role}
@@ -593,7 +593,7 @@ function SliceView({
                       )}
                     </div>
                     {ref?.citation && <span style={S.citation}>{ref.citation}</span>}
-                    {takeaway && <MartProse text={takeaway} style={{ fontSize: 11, color: 'var(--t3)', margin: '2px 0 0' }} />}
+                    {takeaway && <MartProse text={takeaway} style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', margin: '2px 0 0' }} />}
                   </div>
                 );
               })}
@@ -613,10 +613,10 @@ function SliceView({
           return (
             <div style={{ marginBottom: 4 }}>
               <div style={{ ...S.edgeSection, borderLeft: '3px solid var(--t3)' }}>
-                <span style={{ color: 'var(--t3)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+                <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
                   Связи между конструктами
                 </span>
-                <span style={{ color: 'var(--t3)', fontSize: 10 }}>· {items.length}</span>
+                <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}>· {items.length}</span>
               </div>
               {items.map((ie, i) => {
                 const es      = EDGE_STYLE[ie.edge_type];
@@ -626,11 +626,11 @@ function SliceView({
                 return (
                   <div key={i} style={{ ...S.sliceRef, borderLeft: `3px solid ${es?.stroke ?? '#888'}` }}>
                     <div style={S.sliceRefHead}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: es?.stroke ?? 'var(--t2)' }}>{ie.edge_type}</span>
-                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>{es?.label}</span>
-                      <span style={{ fontSize: 10, color: 'var(--t2)' }}>{ie.dir === 'out' ? '→' : '←'}</span>
-                      <span style={{ ...S.mono, color: 'var(--acc)', fontWeight: 600, fontSize: 11 }}>{peerId}</span>
-                      {peerLbl !== peerId && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{peerLbl}</span>}
+                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: es?.stroke ?? 'var(--t2)' }}>{ie.edge_type}</span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{es?.label}</span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{ie.dir === 'out' ? '→' : '←'}</span>
+                      <span style={{ ...S.mono, color: 'var(--acc)', fontWeight: 600, fontSize: 'var(--fs-sm)' }}>{peerId}</span>
+                      {peerLbl !== peerId && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{peerLbl}</span>}
                     </div>
                   </div>
                 );
@@ -692,17 +692,17 @@ function ConstructNodeComp({ data }: NodeProps) {
       <Handle type="target" position={Position.Left}   isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
       <Handle type="source" id="bot" position={Position.Bottom} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
       <Handle type="target" id="top" position={Position.Top}    isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
-      <div style={{ fontWeight: 700, fontSize: 12, color: isDomain ? 'var(--t2)' : isSel ? '#fff' : 'var(--acc)' }}>
-        {isDomain && <span style={{ fontSize: 9, marginRight: 4, opacity: 0.7 }}>▤</span>}
+      <div style={{ fontWeight: 700, fontSize: 'var(--fs-base)', color: isDomain ? 'var(--t2)' : isSel ? '#fff' : 'var(--acc)' }}>
+        {isDomain && <span style={{ fontSize: 'var(--fs-2xs)', marginRight: 4, opacity: 0.7 }}>▤</span>}
         {d.node_id}
       </div>
       {d.label && (
-        <div style={{ fontSize: 10, marginTop: 2, color: isSel ? 'rgba(255,255,255,0.75)' : 'var(--t3)',
+        <div style={{ fontSize: 'var(--fs-xs)', marginTop: 2, color: isSel ? 'rgba(255,255,255,0.75)' : 'var(--t3)',
                       lineHeight: 1.35, wordBreak: 'break-word' }}>
           {d.label}
         </div>
       )}
-      <div style={{ fontSize: 9, marginTop: 3, color: isSel ? 'rgba(255,255,255,0.55)' : 'var(--t3)' }}>
+      <div style={{ fontSize: 'var(--fs-2xs)', marginTop: 3, color: isSel ? 'rgba(255,255,255,0.55)' : 'var(--t3)' }}>
         {d.edgeCount} связей
       </div>
     </div>
@@ -732,12 +732,12 @@ function SourceNodeComp({ data }: NodeProps) {
     }}>
       <Handle type="target" position={Position.Left} isConnectable={false}
         style={{ opacity: 0, pointerEvents: 'none' }} />
-      <span style={{ fontWeight: 600, fontSize: 10, color: 'var(--acc)' }}>{d.ref_id}</span>
-      {d.year     && <span style={{ fontSize: 9, color: 'var(--t3)' }}>{d.year}</span>}
-      {d.ref_group && <span style={{ fontSize: 9, color: 'var(--t3)', opacity: 0.7 }}>{d.ref_group}</span>}
+      <span style={{ fontWeight: 600, fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}>{d.ref_id}</span>
+      {d.year     && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{d.year}</span>}
+      {d.ref_group && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.7 }}>{d.ref_group}</span>}
       <span title="влияние" style={{
         marginLeft: 'auto', paddingLeft: 6,
-        fontSize: 9, fontWeight: 700, color: 'var(--suc)',
+        fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--suc)',
       }}>▲{d.influence.toFixed(1)}</span>
     </div>
   );
@@ -1049,7 +1049,7 @@ function GraphView({
                   stroke={es.stroke} strokeWidth={es.dashed ? 1 : 2}
                   strokeDasharray={es.dashed ? '4,3' : undefined} />
               </svg>
-              <span style={{ fontSize: 10, color: 'var(--t2)' }}>{et}</span>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{et}</span>
             </span>
           );
         })}
@@ -1066,7 +1066,7 @@ function GraphView({
                       stroke={es.stroke} strokeWidth={1}
                       strokeDasharray={et === 'HAS_CHILD' ? '4,3' : undefined} />
                   </svg>
-                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{et}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{et}</span>
                 </span>
               );
             })}
@@ -1087,7 +1087,7 @@ function GraphView({
           <button style={{ ...S.clearBtn, marginLeft: 4 }}
             onClick={() => { setSel(null); setPanelRef(null); }}>✕ сброс</button>
         )}
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--t3)' }}>
+        <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
           {challengeLayer
             ? `Слой CHALLENGED_BY`
             : panelNode
@@ -1132,12 +1132,12 @@ function GraphView({
         {panelRef && (
           <div style={S.graphPanel} className="lore-panel-scroll">
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 8 }}>
-              <span style={{ ...S.mono, color: 'var(--acc)', fontWeight: 700, fontSize: 12, flex: 1 }}>
+              <span style={{ ...S.mono, color: 'var(--acc)', fontWeight: 700, fontSize: 'var(--fs-base)', flex: 1 }}>
                 {panelRef.ref_id}
               </span>
               <button style={S.panelClose} onClick={() => setPanelRef(null)}>✕</button>
             </div>
-            {panelRef.year && <span style={{ ...S.mono, fontSize: 10, color: 'var(--t3)' }}>{panelRef.year}</span>}
+            {panelRef.year && <span style={{ ...S.mono, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{panelRef.year}</span>}
             {panelRef.source_role && (
               <span style={{
                 ...S.roleBadge, display: 'inline-block', marginTop: 4,
@@ -1146,10 +1146,10 @@ function GraphView({
                 {panelRef.source_role}
               </span>
             )}
-            <p style={{ fontSize: 11, color: 'var(--t1)', margin: '8px 0' }}>{panelRef.citation}</p>
+            <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--t1)', margin: '8px 0' }}>{panelRef.citation}</p>
             {panelRef.link && (
               <a href={resolveRefUrl(panelRef.link)} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: 10, color: 'var(--acc)', wordBreak: 'break-all', display: 'block', marginBottom: 6 }}>
+                style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)', wordBreak: 'break-all', display: 'block', marginBottom: 6 }}>
                 ↗ {resolveRefUrl(panelRef.link)}
               </a>
             )}
@@ -1159,7 +1159,7 @@ function GraphView({
                   const label = SRC_KIND_LABEL[s.kind ?? ''] ?? s.kind ?? 'src';
                   const muted = s.kind === 'status' || !s.url;
                   const chip: React.CSSProperties = {
-                    fontSize: 10, padding: '2px 7px', borderRadius: 3, whiteSpace: 'nowrap',
+                    fontSize: 'var(--fs-xs)', padding: '2px 7px', borderRadius: 3, whiteSpace: 'nowrap',
                     border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
                     background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 10%, transparent)`,
                     color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none',
@@ -1193,18 +1193,18 @@ function GraphView({
           <div style={S.graphPanel} className="lore-panel-scroll">
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 8 }}>
               <div style={{ flex: 1 }}>
-                <span style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)', display: 'block', marginBottom: 2 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)', display: 'block', marginBottom: 2 }}>
                   {panelNode.node_id}
                 </span>
                 {panelNode.kind && (
-                  <span style={{ fontSize: 10, color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', borderRadius: 3, padding: '1px 5px' }}>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', borderRadius: 3, padding: '1px 5px' }}>
                     {panelNode.kind}
                   </span>
                 )}
               </div>
               <button style={S.panelClose} onClick={() => { setPanelNode(null); setSel(null); }}>✕</button>
             </div>
-            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', margin: '6px 0 8px', lineHeight: 1.4 }}>
+            <p style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)', margin: '6px 0 8px', lineHeight: 1.4 }}>
               {nodeLabel}
             </p>
             {nodeSummary && (
@@ -1329,7 +1329,7 @@ export function BiblioScreen({ onError }: Props) {
           ))}
         </div>
         <div style={S.spacer} />
-        <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
           {refs.length} ист. · {nodes.length} конструктов · {edges.length} связей{interEdges.length > 0 ? ` · ${interEdges.length} структурных` : ''}
         </span>
       </div>
@@ -1347,10 +1347,10 @@ export function BiblioScreen({ onError }: Props) {
 /* ── Shared styles ──────────────────────────────────────────────────── */
 const S = {
   root:    { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden', minHeight: 0 },
-  loadMsg: { padding: 32, color: 'var(--t3)', fontSize: 12 },
-  errMsg:  { padding: 32, color: 'var(--err)', fontSize: 12 },
-  empty:   { padding: '24px 16px', color: 'var(--t3)', fontSize: 12 },
-  mono:    { fontFamily: 'var(--mono)', fontSize: 11 },
+  loadMsg: { padding: 32, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  errMsg:  { padding: 32, color: 'var(--err)', fontSize: 'var(--fs-base)' },
+  empty:   { padding: '24px 16px', color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  mono:    { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' },
 
   toolbar: {
     display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
@@ -1359,7 +1359,7 @@ const S = {
   switchGroup: { display: 'flex', gap: 2 },
   switchBtn: {
     padding: '3px 10px', border: '1px solid var(--bd)', borderRadius: 4,
-    fontSize: 11, cursor: 'pointer', background: 'transparent', color: 'var(--t2)',
+    fontSize: 'var(--fs-sm)', cursor: 'pointer', background: 'transparent', color: 'var(--t2)',
     transition: 'all 0.1s', fontFamily: 'inherit',
   },
   switchBtnActive: {
@@ -1375,14 +1375,14 @@ const S = {
     padding: '6px 12px', borderBottom: '1px solid var(--bd)', flexShrink: 0,
   },
   filterRow: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const, minHeight: 24 },
-  filterLabel: { fontSize: 10, color: 'var(--t3)', fontWeight: 600, minWidth: 36, textTransform: 'uppercase' as const, letterSpacing: '0.06em', flexShrink: 0 },
+  filterLabel: { fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontWeight: 600, minWidth: 36, textTransform: 'uppercase' as const, letterSpacing: '0.06em', flexShrink: 0 },
   searchIn: {
     flex: 1, minWidth: 160, background: 'transparent', border: '1px solid var(--bd)',
     borderRadius: 4, padding: '3px 8px', outline: 'none',
-    color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit',
+    color: 'var(--t1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit',
   },
   chip: {
-    padding: '1px 7px', borderRadius: 10, fontSize: 10, cursor: 'pointer',
+    padding: '1px 7px', borderRadius: 10, fontSize: 'var(--fs-xs)', cursor: 'pointer',
     border: '1px solid var(--bd)', color: 'var(--t2)', userSelect: 'none' as const, flexShrink: 0,
     transition: 'all 0.1s',
   },
@@ -1397,24 +1397,24 @@ const S = {
   cardHead: { display: 'flex', flexDirection: 'column' as const, gap: 3, padding: '8px 14px', cursor: 'pointer' },
   cardMeta: { display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' as const },
   cardBody: { padding: '6px 14px 12px', borderTop: '1px solid var(--bd)' },
-  citation:    { fontSize: 12, color: 'var(--t1)', lineHeight: 1.4 },
+  citation:    { fontSize: 'var(--fs-base)', color: 'var(--t1)', lineHeight: 1.4 },
   roleBadge: {
-    fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
     background: 'color-mix(in srgb, currentColor 10%, transparent)',
     border: '1px solid color-mix(in srgb, currentColor 30%, transparent)',
     fontWeight: 700, letterSpacing: '0.04em',
   },
   groupBadge: {
-    fontSize: 9, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
     background: 'var(--bg2)', color: 'var(--t3)', border: '1px solid var(--bd)',
   },
   topicChip: {
-    fontSize: 9, padding: '1px 5px', borderRadius: 10, flexShrink: 0,
+    fontSize: 'var(--fs-2xs)', padding: '1px 5px', borderRadius: 10, flexShrink: 0,
     background: 'color-mix(in srgb, var(--acc) 8%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 25%, transparent)',
   },
   sectionLabel: {
-    fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+    fontSize: 'var(--fs-2xs)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em',
     color: 'var(--t3)', display: 'block', marginBottom: 4,
   },
   groupOvSection: {
@@ -1432,7 +1432,7 @@ const S = {
     display: 'flex', alignItems: 'center', gap: 5,
     padding: '4px 10px', border: '1px solid var(--bd)', borderRadius: 4,
     cursor: 'pointer', background: 'transparent', color: 'var(--t2)',
-    fontSize: 11, fontFamily: 'inherit', transition: 'all 0.1s',
+    fontSize: 'var(--fs-sm)', fontFamily: 'inherit', transition: 'all 0.1s',
   },
   nodeBtnActive: {
     background: 'color-mix(in srgb, var(--acc) 16%, transparent)',
@@ -1445,9 +1445,9 @@ const S = {
     background: 'var(--bg2)',
     maxHeight: '40%', overflowY: 'auto' as const,
   },
-  nodeLabel: { fontSize: 12, fontWeight: 600, color: 'var(--t1)' },
+  nodeLabel: { fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--t1)' },
   challengedBanner: {
-    marginTop: 6, padding: '4px 8px', borderRadius: 4, fontSize: 11,
+    marginTop: 6, padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-sm)',
     background: 'color-mix(in srgb, var(--err) 8%, transparent)',
     border: '1px solid color-mix(in srgb, var(--err) 25%, transparent)',
     color: 'var(--t2)',
@@ -1469,7 +1469,7 @@ const S = {
   },
   clearBtn: {
     padding: '2px 8px', border: '1px solid var(--bd)', borderRadius: 4,
-    background: 'transparent', color: 'var(--t3)', cursor: 'pointer', fontSize: 10,
+    background: 'transparent', color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-xs)',
     fontFamily: 'inherit', transition: 'all 0.1s',
   },
   graphPanel: {
@@ -1482,6 +1482,6 @@ const S = {
   },
   panelClose: {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--t3)', fontSize: 12, padding: '0 2px', flexShrink: 0,
+    color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: '0 2px', flexShrink: 0,
   },
 };

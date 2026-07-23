@@ -409,6 +409,11 @@ public final class LoreSlices {
             "out('BELONGS_TO').component_id                      AS component_ids, " +
             "in('DECOMPOSES_INTO').out('BELONGS_TO').component_id AS inherited_component_ids, " +
             "out('BELONGS_TO_PROJECT').slug                     AS projects, " +
+            // Проект НАСЛЕДУЕТСЯ от корня — как и компонент. Сценарий живёт под
+            // фичей, у фичи проект уже задан, и спрашивать его второй раз у
+            // каждого сценария значит заводить второй источник правды: стоит
+            // им разойтись — и непонятно, какой считать верным.
+            "in('DECOMPOSES_INTO').out('BELONGS_TO_PROJECT').slug AS inherited_projects, " +
             // ADR-032 D5: что этот UC реально снимает/создаёт — правая половина VP-канвы.
             "out('RELIEVES').pain_id AS relieves_pain_ids, " +
             "out('DELIVERS').gain_id AS delivers_gain_ids, " +

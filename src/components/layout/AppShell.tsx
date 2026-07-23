@@ -114,7 +114,7 @@ export default function AppShell() {
   // размер окна выдачи вместо числа найденного.
 
   const liveDot = { width: 7, height: 7, borderRadius: '50%', background: 'var(--suc)', flexShrink: 0, display: 'inline-block' as const };
-  const caret   = { color: 'var(--t3)', fontSize: 10 };
+  const caret   = { color: 'var(--t3)', fontSize: 'var(--fs-xs)' };
   // Пилюля тенанта — как «● DEFAULT ⌄» в эталоне: моноширинный капс с трекингом.
   const pill = (brand: boolean) => ({
     display: 'inline-flex' as const, alignItems: 'center', gap: 7, cursor: 'pointer',
@@ -129,7 +129,7 @@ export default function AppShell() {
     background: 'var(--bg2)', border: '1px solid var(--bdh)', borderRadius: 10, padding: 5,
     boxShadow: '0 14px 34px rgba(0,0,0,.45)',
   };
-  const ddHead  = { fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '.07em', color: 'var(--t3)', padding: '6px 9px 3px' };
+  const ddHead  = { fontSize: 'var(--fs-2xs)', textTransform: 'uppercase' as const, letterSpacing: '.07em', color: 'var(--t3)', padding: '6px 9px 3px' };
   const ddItem  = (on: boolean) => ({
     display: 'flex' as const, alignItems: 'center', gap: 9, width: '100%', textAlign: 'left' as const,
     border: 'none', background: on ? 'var(--bg3)' : 'transparent', color: 'var(--t1)',
@@ -138,7 +138,7 @@ export default function AppShell() {
   const ddSep   = { height: 1, background: 'var(--bd)', margin: '5px 3px' };
   const ddBadge = { marginLeft: 'auto', fontFamily: 'var(--mono)', fontSize: 8, border: '1px solid var(--bd)', borderRadius: 999, padding: '1px 5px', color: 'var(--t3)' };
   const ddNote  = { fontSize: 9.5, color: 'var(--t3)', padding: '4px 9px 2px', lineHeight: 1.35 };
-  const kbd     = { fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '0 4px' };
+  const kbd     = { fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '0 4px' };
 
   const btnStyle = {
     background: 'transparent',
@@ -147,7 +147,7 @@ export default function AppShell() {
     cursor: 'pointer',
     color: 'var(--t2)',
     fontFamily: 'var(--mono)',
-    fontSize: 11,
+    fontSize: 'var(--fs-sm)',
     padding: '3px 8px',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
@@ -266,7 +266,7 @@ export default function AppShell() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
                 background: 'none', border: 'none', padding: '2px 4px',
-                fontFamily: 'inherit', fontWeight: 800, fontSize: 13,
+                fontFamily: 'inherit', fontWeight: 800, fontSize: 'var(--fs-md)',
                 letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)',
               }}>
               {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
@@ -290,7 +290,7 @@ export default function AppShell() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 13, letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0, fontWeight: 800, fontSize: 'var(--fs-md)', letterSpacing: '0.05em', textTransform: 'uppercase' as const, color: 'var(--t1)' }}>
             {activeTab && <GameIcon slug={activeTab.icon} size={15} style={{ color: 'var(--acc)', transform: activeTab.flipX ? 'scaleX(-1)' : undefined }} />}
             <span>{t(activeTab!.labelKey, activeTab!.fallback)}</span>
           </div>
@@ -411,7 +411,7 @@ export default function AppShell() {
           </div>
         ) : (
           <div title={t('shell.profile', 'Профиль')} aria-hidden
-            style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--acc)', color: 'var(--bg0)', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
+            style={{ width: 26, height: 26, borderRadius: 7, background: 'var(--acc)', color: 'var(--bg0)', display: 'grid', placeItems: 'center', fontSize: 'var(--fs-xs)', fontWeight: 800, flexShrink: 0 }}>
             {(displayName() ?? 'АЛ').slice(0, 2).toUpperCase()}
           </div>
         )}
@@ -493,7 +493,7 @@ export default function AppShell() {
                 }}
               >
                 <GameIcon slug={tab.icon} size={20} style={{ color: 'inherit', transform: tab.flipX ? 'scaleX(-1)' : undefined }} />
-                <span style={{ fontSize: 9, letterSpacing: '0.02em', lineHeight: 1 }}>{t(tab.labelKey, tab.fallback)}</span>
+                <span style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '0.02em', lineHeight: 1 }}>{t(tab.labelKey, tab.fallback)}</span>
               </button>
             );
           })}

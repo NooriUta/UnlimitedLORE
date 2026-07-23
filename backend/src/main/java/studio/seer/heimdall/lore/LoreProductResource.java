@@ -635,7 +635,7 @@ public class LoreProductResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.uc_id() == null || req.uc_id().isBlank()
                 || req.rel() == null || req.target_id() == null || req.target_id().isBlank())
-            return badParams("uc_id, rel (task|adr|decision|actor|component|includes|extends|relieves|delivers|performs), target_id required");
+            return badParams("uc_id, rel (task|adr|decision|actor|component|project|includes|extends|relieves|delivers|performs), target_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
@@ -670,6 +670,21 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "BELONGS_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                }
+                /**
+                 * Проект сценария/корня (BELONGS_TO_PROJECT).
+                 *
+                 * Слайсы слоя отдают `projects` с PL-10, но записать проект
+                 * было НЕЧЕМ: у `uc_link` этого отношения не существовало, и
+                 * поле в выдаче всегда приходило пустым. При нескольких
+                 * продуктах в одном корпусе это не косметика — без проекта
+                 * сценарии разных продуктов сливаются в один список, ровно как
+                 * одноимённые роли акторов без проекта (D18/D22).
+                 */
+                case "project" -> {
+                    edge = "BELONGS_TO_PROJECT";
+                    fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    toSql   = "(SELECT FROM KnowGitProject WHERE slug=:tid)";
                 }
                 case "includes" -> { // D13: UC_INCLUDES — обязательный под-сценарий
                     edge = "UC_INCLUDES";
@@ -798,9 +813,24 @@ public class LoreProductResource extends LoreResourceBase {
         }
     }
 
-    public record UcQualityRequest(String uc_id) {}
+    /**
+     * Две формы запроса (ADR-027-D3):
+     * <ul>
+     *   <li>{@code uc_id} — оценить СОХРАНЁННЫЙ UC (ревью, MCP);</li>
+     *   <li>тело напрямую ({@code scenario_md}/{@code acceptance_md}/…) — живой
+     *       линтер формы (PL-17): панель обязана пересчитываться ПО ХОДУ набора,
+     *       до создания записи. Оценивать нечего было бы, требуй эндпоинт
+     *       обязательный uc_id — форма создания US не смогла бы показать линтер
+     *       ни разу, ровно поэтому его из фронта и не звали.</li>
+     * </ul>
+     * Флаги {@code has_primary_actor}/{@code has_traced_to} — рёбра, которых у
+     * ещё не созданного UC нет; в форме они false и попадают в подсказки, не в
+     * штраф (D9/D14 — advisory).
+     */
+    public record UcQualityRequest(String uc_id, String rigor, String goal_level,
+                                   String scenario_md, String acceptance_md,
+                                   Boolean has_primary_actor, Boolean has_traced_to) {}
 
-    /** ADR-027-D3 режим (б): re-lint без записи — для ревью чужих UC и панели UI. */
     @POST
     @Path("uc/quality")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -808,8 +838,29 @@ public class LoreProductResource extends LoreResourceBase {
     public Response ucQuality(UcQualityRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         requireAdmin(role);
-        if (req == null || req.uc_id() == null || req.uc_id().isBlank())
-            return badParams("uc_id required");
+        if (req == null) return badParams("body required");
+
+        // Тело важнее id: если пришли поля сценария — судим их (живой линтер),
+        // не подменяя оценку сохранённой версией под тем же id.
+        if (req.scenario_md() != null || req.acceptance_md() != null) {
+            UcQuality.Result res = UcQuality.evaluate(
+                req.rigor(), req.goal_level(), req.scenario_md(), req.acceptance_md(),
+                Boolean.TRUE.equals(req.has_primary_actor()),
+                Boolean.TRUE.equals(req.has_traced_to()));
+            List<Map<String, Object>> findings = new java.util.ArrayList<>();
+            for (UcQuality.Finding fnd : res.findings())
+                findings.add(Map.of("code", fnd.code(), "ok", fnd.ok(),
+                    "required", fnd.required(), "message", fnd.message()));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("rigor", res.rigor());
+            out.put("score", res.score());
+            out.put("max", res.max());
+            out.put("findings", findings);
+            return noStore(Response.ok(out));
+        }
+
+        if (req.uc_id() == null || req.uc_id().isBlank())
+            return badParams("uc_id or scenario_md/acceptance_md required");
         Map<String, Object> q = qualityOf(req.uc_id());
         if (q.containsKey("error") && "uc not found".equals(q.get("error")))
             return noStore(Response.status(Response.Status.NOT_FOUND)

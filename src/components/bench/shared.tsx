@@ -19,7 +19,7 @@ export class MuninnErrorBoundary extends Component<{ children: ReactNode }, { er
     if (this.state.error !== null) {
       return (
         <div className="page-error" style={{ padding: 24 }}>
-          <span style={{ fontSize: 12, color: 'var(--danger)' }}>render failed</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--danger)' }}>render failed</span>
           <span className="error-detail">{this.state.error}</span>
           <button type="button" className="btn btn-sm btn-secondary"
                   onClick={() => this.setState({ error: null })}>
@@ -66,7 +66,7 @@ export function ScreenTitle({ text, hint }: { text: string; hint?: string }) {
   return (
     <div style={{ marginBottom: 8 }}>
       <span className="analytics-card-title" style={{ margin: 0 }}>{text}</span>
-      {hint && <span style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 8 }}>{hint}</span>}
+      {hint && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginLeft: 8 }}>{hint}</span>}
     </div>
   );
 }
@@ -95,7 +95,7 @@ export function PanelMsg({ kind, text, onRetry }: {
   if (kind === 'loading') return <div className="page-loading">{text}</div>;
   return (
     <div className="page-error" style={{ padding: 24 }}>
-      <span style={{ fontSize: 12, color: kind === 'error' ? 'var(--danger)' : 'var(--t2)' }}>{text}</span>
+      <span style={{ fontSize: 'var(--fs-base)', color: kind === 'error' ? 'var(--danger)' : 'var(--t2)' }}>{text}</span>
       {onRetry && (
         <button type="button" className="btn btn-sm btn-secondary" onClick={onRetry}>
           {t('bench.reload', 'Reload')}
@@ -124,7 +124,7 @@ export function RegistryFooter({ groups }: {
          style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid var(--bd)' }}>
       {visible.map(g => (
         <div key={g.label} style={{ display: 'flex', alignItems: 'baseline', gap: 8,
-                                    flexWrap: 'wrap', padding: '3px 0', fontSize: 11 }}>
+                                    flexWrap: 'wrap', padding: '3px 0', fontSize: 'var(--fs-sm)' }}>
           <span style={{ color: 'var(--t3)', minWidth: 130 }}>{g.label}</span>
           {g.chips.map((c, i) => (
             <span key={i} className={`badge badge-${c.tone ?? 'neutral'}`} title={c.title}>{c.text}</span>
@@ -152,7 +152,7 @@ export function SqlChip({ sql, passport }: { sql: string; passport?: string }) {
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
-            style={{ fontFamily: 'var(--mono)', fontSize: 10, padding: '1px 6px',
+            style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', padding: '1px 6px',
                      borderRadius: 5, border: '1px solid var(--bd)', cursor: 'pointer',
                      background: 'transparent', color: copied ? 'var(--suc)' : 'var(--t3)' }}>
       {copied ? '✓' : t('bench.sqlChip', 'SQL')}
@@ -247,7 +247,7 @@ export function useRegistryTable<T>(rows: T[], cols: RegCol<T>[]) {
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--t3)' }}>
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
       {label}
       {children}
     </label>
@@ -256,7 +256,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 const SELECT_STYLE: React.CSSProperties = {
   background: 'var(--bg2)', color: 'var(--t1)', border: '1px solid var(--bd)',
-  borderRadius: 6, padding: '5px 8px', fontSize: 12, fontFamily: 'var(--mono)', maxWidth: 280,
+  borderRadius: 6, padding: '5px 8px', fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)', maxWidth: 280,
 };
 
 export function MuninnSelect({ value, onChange, options, allLabel }: {
@@ -295,7 +295,7 @@ export function ZerosBlock({ zeros, subLabel, capabilities }: {
 
   return (
     <details style={{ marginTop: 8 }}>
-      <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--t3)' }}>
+      <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
         {t('bench.zerosTitle', 'Structural zeros (capability = none)')} · {zeros.length} —{' '}
         {t('bench.zerosHint', 'Design property, not a failure — never blended into averages')}
       </summary>

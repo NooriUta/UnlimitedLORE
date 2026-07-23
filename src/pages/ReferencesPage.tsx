@@ -14,7 +14,7 @@ export default function ReferencesPage() {
   return (
     <div className="page-content bench-scroll" style={{ padding: '16px 20px', height: '100%', boxSizing: 'border-box' }}
          data-testid="references-page">
-      <Link to="/benchmark?tab=references" style={{ fontSize: 12, color: 'var(--acc)', textDecoration: 'none' }}>
+      <Link to="/benchmark?tab=references" style={{ fontSize: 'var(--fs-base)', color: 'var(--acc)', textDecoration: 'none' }}>
         {t('bench.sub.back', '← Benchmark panel')}
       </Link>
       <div style={{ marginTop: 10 }}>

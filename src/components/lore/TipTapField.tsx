@@ -18,6 +18,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { sanitizeMd } from './sanitizeHtml';
 import { Markdown } from 'tiptap-markdown';
+import Mention from '@tiptap/extension-mention';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { useEffect, useRef, useState } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
@@ -32,8 +33,120 @@ import { uploadBragiAsset } from '../../api/lore';
 // CommonMark/GFM has no underline syntax, tiptap-markdown has no serializer
 // for it either, so it would silently vanish on save instead of just not
 // being offered.
+/** PL-41: элемент списка упоминаний — то, что показывает выпадашка по «@». */
+export interface MentionItem {
+  /** id сущности (`ACT-ARCHITECT`) — им создаётся ребро */
+  id: string;
+  /** что видит человек */
+  label: string;
+}
+
 const TABLE_EXTENSIONS = [TableKit.configure({ table: { resizable: false } })];
 const TASKLIST_EXTENSIONS = [TaskList, TaskItem.configure({ nested: true })];
+
+/** Состояние выпадашки упоминаний: где рисовать, что показывать, как выбрать. */
+interface MentionState {
+  items: MentionItem[];
+  index: number;
+  rect: { left: number; top: number } | null;
+  command: ((item: { id: string; label: string }) => void) | null;
+}
+
+/**
+ * PL-41: расширение упоминаний.
+ *
+ * Источник берём через геттер, а не значением: список акторов приезжает
+ * асинхронно, а расширения фиксируются при СОЗДАНИИ редактора — замкни мы
+ * массив, выпадашка навсегда осталась бы пустой (той же природы баг, что и с
+ * обработчиками drop/paste).
+ *
+ * Рендер выпадашки — свой, без tippy: нужен один absolute-блок по координатам
+ * каретки, а не позиционирующая библиотека с своей темой.
+ */
+function buildMention(
+  getItems: () => MentionItem[],
+  setState: (s: MentionState | null) => void,
+  getState: () => MentionState | null,
+) {
+  // Сериализация в markdown — СВОЯ: tiptap-markdown знает только свои узлы и
+  // для незнакомого пишет заглушку `[mention]`. То есть выбранный актор
+  // исчезал бы при сохранении, а в теле оставалось слово «mention» — потеря,
+  // замаскированная под текст.
+  const MentionMd = Mention.extend({
+    addStorage() {
+      return {
+        markdown: {
+          serialize(state: { write: (s: string) => void }, node: { attrs: Record<string, unknown> }) {
+            // Ссылка, а не голый текст: `@Имя` читается человеком, а `lore:` —
+            // машиной. Голый текст сохранял бы подпись и терял id, и связь с
+            // актором пришлось бы угадывать по строке. Обычная markdown-ссылка
+            // при этом остаётся читаемой в любом просмотрщике, включая тот,
+            // который про LORE ничего не знает.
+            state.write(`[@${node.attrs.label ?? node.attrs.id}](lore:actor/${node.attrs.id})`);
+          },
+          // Обратный разбор не заводим: при повторном открытии это остаётся
+          // обычной ссылкой — читаемой и несущей id. Оживлять её в узел значило
+          // бы держать вторую правду о составе участников: он живёт РЕБРОМ
+          // `HAS_ACTOR`, а текст только на него ссылается.
+          parse: {},
+        },
+      };
+    },
+  });
+
+  return MentionMd.configure({
+    // renderText/renderHTML держат ТЕКСТОВУЮ форму «@Имя»: поле сохраняется как
+    // markdown, и узел без текстового представления превратился бы при
+    // повторном открытии в пустоту или мусор.
+    renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
+    suggestion: {
+      char: '@',
+      items: ({ query }) => {
+        const q = query.trim().toLowerCase();
+        const all = getItems();
+        return (q ? all.filter(i => i.label.toLowerCase().includes(q) || i.id.toLowerCase().includes(q)) : all)
+          .slice(0, 8);
+      },
+      render: () => ({
+        onStart: props => setState({
+          items: props.items as MentionItem[],
+          index: 0,
+          rect: props.clientRect?.() ? { left: props.clientRect()!.left, top: props.clientRect()!.bottom } : null,
+          command: props.command,
+        }),
+        onUpdate: props => setState({
+          items: props.items as MentionItem[],
+          index: 0,
+          rect: props.clientRect?.() ? { left: props.clientRect()!.left, top: props.clientRect()!.bottom } : null,
+          command: props.command,
+        }),
+        // Клавиатура ОБЯЗАТЕЛЬНА: выпадашка появляется по ходу набора, и рука
+        // на клавишах. Оставь мы только мышь, за упоминанием пришлось бы
+        // тянуться к ней посреди фразы — быстрее дописать имя руками, и
+        // подсказка осталась бы неиспользуемой.
+        onKeyDown: props => {
+          const st = getState();
+          if (props.event.key === 'Escape') { setState(null); return true; }
+          if (!st || st.items.length === 0) return false;
+          if (props.event.key === 'ArrowDown') {
+            setState({ ...st, index: (st.index + 1) % st.items.length });
+            return true;
+          }
+          if (props.event.key === 'ArrowUp') {
+            setState({ ...st, index: (st.index - 1 + st.items.length) % st.items.length });
+            return true;
+          }
+          if (props.event.key === 'Enter' || props.event.key === 'Tab') {
+            const item = st.items[st.index];
+            if (item) { st.command?.({ id: item.id, label: item.label }); return true; }
+          }
+          return false;
+        },
+        onExit: () => setState(null),
+      }),
+    },
+  });
+}
 
 // Resizable image: the stock Image node has no size handle at all — once
 // inserted, a picture is stuck at whatever pixel size it came in at, full
@@ -130,6 +243,18 @@ function injectTiptapCssOnce(): void {
     .bragi-tiptap .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 6px; }
     .bragi-tiptap .ProseMirror ul[data-type="taskList"] li > label { flex: none; margin-top: 3px; }
     .bragi-tiptap .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+    /* Маркеры и номера списков рисуются СНАРУЖИ строки, поэтому без отступа
+       слева они срезаются краем редактора — на приёмке «1.» и «2.» были видны
+       наполовину. Отступ ставим спискам, а не всему полю: сдвинь мы контейнер,
+       уехал бы и обычный текст. */
+    .bragi-tiptap .ProseMirror ul, .bragi-tiptap .ProseMirror ol { padding-left: 22px; margin: 6px 0; }
+    .bragi-tiptap .ProseMirror li { margin: 2px 0; }
+    .bragi-tiptap .ProseMirror li > p { margin: 0; }
+    /* Заголовкам нужен воздух сверху, иначе секции Кокберна слипаются в
+       сплошное полотно и структура, ради которой шаблон и нужен, не читается. */
+    .bragi-tiptap .ProseMirror h1, .bragi-tiptap .ProseMirror h2, .bragi-tiptap .ProseMirror h3 { margin: 12px 0 4px; line-height: 1.25; }
+    .bragi-tiptap .ProseMirror > :first-child { margin-top: 0; }
+    .bragi-tiptap .ProseMirror p { margin: 4px 0; }
     .bragi-tiptap .ProseMirror blockquote { border-left: 3px solid var(--acc); margin: 8px 0; padding: 2px 12px; color: var(--t2); }
     .bragi-tiptap .ProseMirror hr { border: none; border-top: 1px solid var(--b3); margin: 12px 0; }
     .bragi-tiptap .ProseMirror a { color: var(--acc); }
@@ -148,6 +273,36 @@ function injectTiptapCssOnce(): void {
 function getMarkdown(editor: Editor): string {
   const storage = editor.storage as unknown as { markdown?: { getMarkdown: () => string } };
   return storage.markdown?.getMarkdown() ?? editor.getText();
+}
+
+/**
+ * PL-24: файлы-изображения из drop/paste-события.
+ *
+ * Читаем `items`, а не только `files`: при вставке скриншота из буфера Windows
+ * и браузерных снимков картинка приходит именно элементом типа `file`, а
+ * `files` бывает пуст — обход по одному лишь `files` не ловил бы самый частый
+ * случай, ради которого вставка и нужна.
+ *
+ * Не-картинки отсеиваются: перетаскивание .pdf или текста обязано остаться
+ * обычным поведением редактора, а не молча уходить в загрузку.
+ */
+export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
+  if (!data) return [];
+  const out: File[] = [];
+  const seen = new Set<string>();
+  const push = (f: File | null | undefined) => {
+    if (!f || !f.type.startsWith('image/')) return;
+    // Один и тот же файл может прийти и в items, и в files — вставился бы дважды.
+    const key = `${f.name}:${f.size}:${f.type}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(f);
+  };
+  for (const item of Array.from(data.items ?? [])) {
+    if (item.kind === 'file') push(item.getAsFile());
+  }
+  for (const f of Array.from(data.files ?? [])) push(f);
+  return out;
 }
 
 export interface TipTapFieldProps {
@@ -169,17 +324,30 @@ export interface TipTapFieldProps {
    * field has no visually-linked <label> (a <Sec> heading nearby doesn't
    * count for a11y purposes). */
   ariaLabel?: string;
+  /** PL-41: источник упоминаний по «@» (акторы и пр.). Не задан — «@» обычный символ. */
+  mentionItems?: MentionItem[];
 }
 
 export default function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
-  enableImages = true, enableHtmlMode = true, ariaLabel,
+  enableImages = true, enableHtmlMode = true, ariaLabel, mentionItems,
 }: TipTapFieldProps) {
   const { t } = useTranslation();
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  // PL-24: обработчики drop/paste уходят в editorProps ОДИН раз, при создании
+  // редактора, и замкнули бы первую версию функции загрузки. Ref держит
+  // актуальную — та же причина, по которой здесь уже живёт onChangeRef.
+  const uploadAndInsertRef = useRef<(files: File[]) => Promise<void>>(async () => {});
+  const [mentionState, setMentionState] = useState<MentionState | null>(null);
+  // Ref рядом с состоянием: обработчик клавиш живёт в расширении, созданном
+  // один раз, и читал бы состояние из первого рендера.
+  const mentionStateRef = useRef<MentionState | null>(null);
+  mentionStateRef.current = mentionState;
+  const mentionItemsRef = useRef<MentionItem[]>([]);
+  mentionItemsRef.current = mentionItems ?? [];
   const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');   // TT-01: raw-source view toggle
   const [draft, setDraft] = useState(value);
 
@@ -189,14 +357,46 @@ export default function TipTapField({
       ...(enableImages ? [ResizableImage] : []),
       ...TABLE_EXTENSIONS,
       ...TASKLIST_EXTENSIONS,
+      // PL-41: упоминание по «@». Подключаем ТОЛЬКО когда источник задан —
+      // иначе «@» в обычном тексте (адреса, ники) открывал бы пустой список.
+      ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : []),
       Markdown.configure({ html: false, tightLists: true }),
     ],
     content: value,
     editable,
     editorProps: {
       attributes: {
-        style: `min-height:${minHeight}px; outline: none;`,
+        // maxHeight + скролл: без него длинное тело (полный шаблон Кокберна —
+        // восемь секций) распирало поле, модалка уезжала за экран, и кнопки
+        // сохранения оказывались недостижимы. Скроллится САМО поле, а не
+        // диалог: так остальные поля и кнопки остаются на виду.
+        style: `min-height:${minHeight}px; max-height:${Math.max(minHeight, 260)}px; overflow-y:auto; outline: none;`,
         ...(ariaLabel ? { 'aria-label': ariaLabel, role: 'textbox' } : {}),
+      },
+      // PL-24: перетаскивание и вставка картинок.
+      //
+      // Возвращаем true ТОЛЬКО когда картинки действительно есть: вернув true
+      // всегда, мы отняли бы у редактора обычную вставку текста и перетаскивание
+      // фрагментов внутри документа — то есть чинили бы картинки ценой текста.
+      //
+      // При выключенных картинках (enableImages=false, короткие прозаические
+      // поля) не вмешиваемся вовсе: иначе поле молча съедало бы файл, который
+      // всё равно некуда деть.
+      handleDrop: (_view, event) => {
+        if (!enableImages) return false;
+        const files = imageFilesFrom((event as DragEvent).dataTransfer);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        void uploadAndInsertRef.current(files);
+        return true;
+      },
+      handlePaste: (_view, event) => {
+        if (!enableImages) return false;
+        const files = imageFilesFrom((event as ClipboardEvent).clipboardData);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        void uploadAndInsertRef.current(files);
+        return true;
       },
     },
     onUpdate: ({ editor }) => {
@@ -210,11 +410,25 @@ export default function TipTapField({
 
   useEffect(() => { injectTiptapCssOnce(); }, []);
 
-  // Sync external resets (e.g. form clear) without fighting the editor mid-typing.
+  // Внешнее значение применяется, когда оно разошлось с содержимым редактора.
+  //
+  // Раньше условие было `value === ''` — то есть принималась ТОЛЬКО очистка.
+  // Любая программная подстановка непустого текста (вставка шаблона, загрузка
+  // черновика в форму правки) меняла состояние формы и не доходила до
+  // редактора: кнопка «вставить шаблон» выглядела мёртвой, хотя значение уже
+  // было записано.
+  //
+  // В фокусе не вмешиваемся: пока человек печатает, родитель получает обновления
+  // через onChange, и подстановка «сверху» дралась бы с кареткой.
   useEffect(() => {
     if (!editor) return;
     const current = getMarkdown(editor);
-    if (value !== current && value === '') editor.commands.setContent('');
+    if (value === current) return;
+    if (value === '' || !editor.isFocused) {
+      // emitUpdate:false — контент пришёл СНАРУЖИ, и обратный onChange был бы
+      // эхом: родитель получил бы то, что сам же только что прислал.
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
   }, [value, editor]);
 
   const toggleLink = () => {
@@ -226,19 +440,37 @@ export default function TipTapField({
 
   const pickImage = () => fileInputRef.current?.click();
 
-  const onImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !editor) return;
+  /**
+   * PL-24: единственный путь загрузки — им пользуются и кнопка 🖼, и перетаскивание,
+   * и вставка из буфера.
+   *
+   * Три копии этого кода разъехались бы на первой же правке (например, при
+   * добавлении лимита размера), и «через кнопку работает, перетаскиванием нет»
+   * стало бы штатным багом.
+   */
+  const uploadAndInsert = async (files: File[]) => {
+    if (!editor || files.length === 0) return;
     setUploading(true);
     try {
-      const { file_url } = await uploadBragiAsset(file);
-      editor.chain().focus().setImage({ src: file_url, alt: file.name }).run();
+      // Последовательно, а не Promise.all: параллельная вставка перемешивает
+      // порядок картинок относительно того, в каком их бросили.
+      for (const file of files) {
+        const { file_url } = await uploadBragiAsset(file);
+        editor.chain().focus().setImage({ src: file_url, alt: file.name }).run();
+      }
     } catch {
       // upload failure — nothing inserted, toolbar just stops spinning
     } finally {
       setUploading(false);
     }
+  };
+
+  uploadAndInsertRef.current = uploadAndInsert;
+
+  const onImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) await uploadAndInsert([file]);
   };
 
   // Applies whatever is currently in `draft` back into the editor doc, leaving
@@ -331,6 +563,51 @@ export default function TipTapField({
         <div style={S.editorBox}>
           <EditorContent editor={editor} />
           {editor?.isEmpty && placeholder && <div style={S.placeholder}>{placeholder}</div>}
+
+          {/* PL-41: выпадашка упоминаний. position: fixed — координаты приходят
+              от каретки в координатах ОКНА; сделай мы absolute, список уезжал бы
+              при любой прокрутке родителя, а он внутри модалки со скроллом. */}
+          {mentionState && mentionState.rect && (
+            <div
+              role="listbox"
+              style={{
+                position: 'fixed', left: mentionState.rect.left, top: mentionState.rect.top + 4,
+                zIndex: 400, minWidth: 220, maxHeight: 220, overflowY: 'auto',
+                background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 6,
+                boxShadow: '0 6px 20px rgba(0,0,0,.18)', padding: 3,
+              }}
+            >
+              {mentionState.items.length === 0 ? (
+                // Пустой список объясняет СЕБЯ: «ничего не найдено» без причины
+                // читается как поломка, хотя обычно акторов просто ещё нет.
+                <div style={{ padding: '6px 9px', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+                  {t('lore.tiptap.mentionEmpty', 'ничего не найдено — акторы заводятся в разделе «Клиент»')}
+                </div>
+              ) : mentionState.items.map((item, i) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onMouseDown={e => {
+                    // mousedown, а не click: click срабатывает после blur, к
+                    // этому моменту suggestion уже закрыт и вставлять некуда.
+                    e.preventDefault();
+                    mentionState.command?.({ id: item.id, label: item.label });
+                  }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left', border: 'none',
+                    background: i === mentionState.index ? 'var(--bg3)' : 'transparent',
+                    color: 'var(--t1)', fontSize: 'var(--fs-sm)', padding: '4px 8px',
+                    borderRadius: 4, cursor: 'pointer',
+                  }}
+                >
+                  {item.label}
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginLeft: 6 }}>
+                    {item.id}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

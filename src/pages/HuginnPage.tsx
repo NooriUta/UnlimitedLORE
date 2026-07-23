@@ -17,7 +17,7 @@ export default function HuginnPage() {
       <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--t2)', fontFamily: 'var(--display)', letterSpacing: '0.06em' }}>
         HUGINN
       </span>
-      <span style={{ fontSize: 13 }}>Скоро</span>
+      <span style={{ fontSize: 'var(--fs-md)' }}>Скоро</span>
     </div>
   );
 }
