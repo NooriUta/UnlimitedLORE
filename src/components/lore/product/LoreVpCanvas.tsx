@@ -22,7 +22,7 @@ import {
   type NodeProps, type Node, type Edge, type NodeChange, type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { LoreFeatureRow, LoreUcRow, LorePainRow, LoreGainRow, LoreJobRow } from '../../../api/lore';
+import type { LoreFeatureRow, LoreUcRow, LorePainRow, LoreGainRow, LoreJobRow, LoreActorRow } from '../../../api/lore';
 import { fetchLoreSlice } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
@@ -43,16 +43,28 @@ const GAP = 130;          // просвет между фигурами — та
 const SCEN = { w: 128, h: 82 };
 const VAL = { w: 114, h: 74 };
 
-/** Секции: ключ → прямоугольник ВНУТРИ своей фигуры. */
-const SECTORS: Record<string, { fig: 'vm' | 'cp'; label: string; x: number; y: number; w: number; h: number }> = {
+/**
+ * Секции: ключ → прямоугольник ВНУТРИ своей фигуры.
+ *
+ * Подписи здесь не лежат: они переводимые и берутся через `t()`. Канонические
+ * английские названия остаются значением по умолчанию — термины Остервальдера
+ * узнаваемы именно в этом виде, и в англоязычной локали они и нужны.
+ */
+const SECTORS: Record<string, { fig: 'vm' | 'cp'; x: number; y: number; w: number; h: number }> = {
   // Value Map: продукт слева на всю высоту, справа сверху вниз — что даёт и что снимает.
-  ps: { fig: 'vm', label: 'Products & Services', x: 8, y: 8, w: 262, h: 544 },
-  gc: { fig: 'vm', label: 'Gain Creators', x: 278, y: 8, w: 274, h: 270 },
-  pr: { fig: 'vm', label: 'Pain Relievers', x: 278, y: 282, w: 274, h: 270 },
+  ps: { fig: 'vm', x: 8, y: 8, w: 262, h: 544 },
+  gc: { fig: 'vm', x: 278, y: 8, w: 274, h: 270 },
+  pr: { fig: 'vm', x: 278, y: 282, w: 274, h: 270 },
   // Customer Profile: работы клиента — по центру справа, выгоды и боли делят левую половину.
-  gains: { fig: 'cp', label: 'Gains', x: 26, y: 14, w: 250, h: 266 },
-  pains: { fig: 'cp', label: 'Pains', x: 26, y: 282, w: 250, h: 266 },
-  jobs: { fig: 'cp', label: 'Customer Jobs', x: 292, y: 148, w: 246, h: 264 },
+  gains: { fig: 'cp', x: 26, y: 14, w: 250, h: 266 },
+  pains: { fig: 'cp', x: 26, y: 282, w: 250, h: 266 },
+  jobs: { fig: 'cp', x: 292, y: 148, w: 246, h: 264 },
+};
+
+/** Канонические названия секций — значения по умолчанию для англоязычной локали. */
+const SEC_FALLBACK: Record<string, string> = {
+  ps: 'Products & Services', gc: 'Gain Creators', pr: 'Pain Relievers',
+  gains: 'Gains', pains: 'Pains', jobs: 'Customer Jobs',
 };
 
 /* ── узлы (объявлены вне рендера: ReactFlow требует стабильных ссылок) ── */
@@ -91,26 +103,26 @@ function SectorNode({ data }: NodeProps) {
         fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.06em',
         color: 'var(--t3)', padding: '2px 4px',
       }}>{d.label}</div>
-      {/* Точка выхода для заявленного без исполнителя: карточки в Value Map для
-          него нет, и линия начинается от сектора — «обещали здесь, делать
-          некому». Прятать такую связь значило бы прятать сам разрыв. */}
-      <Handle type="source" position={Position.Right} isConnectable={false}
-        style={{ opacity: 0, pointerEvents: 'none', top: '50%' }} />
     </div>
   );
 }
 
 function StickerNode({ data }: NodeProps) {
-  const d = data as unknown as { title: string; code: string; color: string; w: number; h: number; dim: boolean };
+  const d = data as unknown as { title: string; code: string; color: string; w: number; h: number; dim: boolean; ghost?: boolean };
   return (
     <div
-      title={`${d.title} · ${d.code}`}
+      title={d.ghost ? d.title : `${d.title} · ${d.code}`}
       style={{
         position: 'relative', width: d.w, height: d.h, boxSizing: 'border-box',
-        padding: '5px 7px 13px', border: `1px solid ${d.color}`, borderRadius: 3,
-        background: 'var(--bg2)', color: 'var(--t1)', textAlign: 'left',
+        padding: '5px 7px 13px',
+        // Пустая карточка «делать некому» — пунктиром и без заливки: это не
+        // сущность корпуса, а обозначенная дыра, и выглядеть как сделанная
+        // работа она не должна.
+        border: d.ghost ? `1px dashed ${d.color}` : `1px solid ${d.color}`, borderRadius: 3,
+        background: d.ghost ? 'transparent' : 'var(--bg2)',
+        color: d.ghost ? 'var(--wrn)' : 'var(--t1)', textAlign: 'left',
         fontSize: 'var(--fs-2xs)', lineHeight: 1.25,
-        boxShadow: '1px 1px 0 rgba(0,0,0,.18)', cursor: 'grab',
+        boxShadow: d.ghost ? 'none' : '1px 1px 0 rgba(0,0,0,.18)', cursor: d.ghost ? 'default' : 'grab',
         opacity: d.dim ? 0.3 : 1, transition: 'opacity .12s',
       }}
     >
@@ -123,7 +135,7 @@ function StickerNode({ data }: NodeProps) {
         position: 'absolute', right: 5, bottom: 2, fontFamily: 'var(--mono)', fontSize: 8,
         color: 'var(--t3)', maxWidth: 'calc(100% - 10px)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>{d.code}</span>
+      }}>{d.ghost ? '' : d.code}</span>
       <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
       <Handle type="source" position={Position.Right} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
     </div>
@@ -144,6 +156,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
   const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
   const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, []);
+  const { rows: actors } = useSlice<LoreActorRow>('actors', undefined, onError, []);
 
   // Выбранная канва живёт в `?passport=` — ссылкой делятся, и локальное
   // состояние привело бы получателя на чужую канву.
@@ -196,11 +209,54 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     return m;
   }, [ucs]);
 
+  /**
+   * ЧЕЙ это профиль (PL-36).
+   *
+   * Канва Остервальдера всегда про ОДИН сегмент: боли водителя и боли механика
+   * рядом в одном круге складываются в несуществующего клиента, и подгонка
+   * квадрата к такому кругу ничего не значит. Раньше круг показывал всё
+   * вперемешку и не называл, кому это принадлежит.
+   *
+   * Принадлежность берём с рёбер самой ценности: FELT_BY у боли, DESIRED_BY у
+   * выгоды, PERFORMED_BY у работы.
+   */
+  const actorOf = useMemo(() => {
+    const m = new Map<string, string[]>();
+    pains.forEach(p => m.set(p.pain_id, asArray(p.actor_ids)));
+    gains.forEach(g => m.set(g.gain_id, asArray(g.actor_ids)));
+    jobs.forEach(j => m.set(j.job_id, asArray(j.actor_ids)));
+    return m;
+  }, [pains, gains, jobs]);
+  const actorName = useMemo(() => {
+    const m = new Map<string, string>();
+    actors.forEach(a => m.set(a.actor_id, a.name ?? a.actor_id));
+    return m;
+  }, [actors]);
+
+  const [actorId, setActorId] = useState<string>('');   // '' — весь круг, без разбора
+
+  /** Акторы, которые вообще встречаются на ЭТОЙ канве: чужих в выбор не берём. */
+  const canvasActors = useMemo(() => {
+    const s = new Set<string>();
+    [...asArray(feature?.pain_ids), ...asArray(feature?.gain_ids), ...asArray(feature?.job_ids)]
+      .forEach(id => (actorOf.get(id) ?? []).forEach(a => s.add(a)));
+    return [...s];
+  }, [feature, actorOf]);
+  // Выбор снимается при переходе на канву, где такого актора нет: иначе круг
+  // молча пустеет и выглядит как «ценностей не завели».
+  useEffect(() => {
+    if (actorId && !canvasActors.includes(actorId)) setActorId('');
+  }, [actorId, canvasActors]);
+
   // Мемоизация обязательна: asArray отдаёт НОВЫЙ массив на каждый рендер, и без
   // неё узлы пересобирались бы бесконечно.
-  const painIds = useMemo(() => asArray(feature?.pain_ids), [feature]);
-  const gainIds = useMemo(() => asArray(feature?.gain_ids), [feature]);
-  const jobIds = useMemo(() => asArray(feature?.job_ids), [feature]);
+  const byActor = useCallback(
+    (ids: string[]) => (actorId ? ids.filter(id => (actorOf.get(id) ?? []).includes(actorId)) : ids),
+    [actorId, actorOf],
+  );
+  const painIds = useMemo(() => byActor(asArray(feature?.pain_ids)), [feature, byActor]);
+  const gainIds = useMemo(() => byActor(asArray(feature?.gain_ids)), [feature, byActor]);
+  const jobIds = useMemo(() => byActor(asArray(feature?.job_ids)), [feature, byActor]);
 
   /** Сценарии-исполнители по видам: кто снимает боли, кто создаёт выгоды. */
   const relievers = useMemo(
@@ -237,19 +293,30 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     out.push({
       id: 'fig-vm', type: 'frame', position: { x: 0, y: 0 }, width: FIG, height: FIG,
       draggable: false, selectable: false,
-      data: { title: 'Value Map', sub: t('lore.product.canvas.vmapSub', 'что мы делаем · квадрат') },
+      data: {
+        title: t('lore.product.canvas.vmap', 'Карта ценности'),
+        sub: t('lore.product.canvas.vmapSub', 'что мы делаем · квадрат'),
+      },
     });
     out.push({
       id: 'fig-cp', type: 'frame', position: { x: FIG + GAP, y: 0 }, width: FIG, height: FIG,
       draggable: false, selectable: false,
-      data: { circle: true, right: true, title: 'Customer Profile', sub: t('lore.product.canvas.cprofSub', 'что есть у клиента · круг') },
+      data: {
+        circle: true, right: true,
+        title: t('lore.product.canvas.cprof', 'Профиль клиента'),
+        // Круг называет, ЧЕЙ он: без имени сегмента подгонка квадрата ни к
+        // чему не относится.
+        sub: actorId
+          ? (actorName.get(actorId) ?? actorId)
+          : t('lore.product.canvas.allActors', 'все акторы вместе'),
+      },
     });
     for (const [key, s] of Object.entries(SECTORS)) {
       out.push({
         id: key, type: 'sector', parentId: s.fig === 'vm' ? 'fig-vm' : 'fig-cp',
         position: { x: s.x, y: s.y }, width: s.w, height: s.h,
         draggable: false, selectable: false,
-        data: { label: s.label, w: s.w, h: s.h },
+        data: { label: t(`lore.product.canvas.sec.${key}`, SEC_FALLBACK[key]), w: s.w, h: s.h },
       });
     }
     const fill = (key: string, ids: string[], prefix: string, color: string, size: { w: number; h: number }) => {
@@ -280,13 +347,45 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     fill('gains', gainIds, '', 'var(--gain)', VAL);
     fill('jobs', jobIds, '', 'var(--job)', VAL);
     fill('pains', painIds, '', 'var(--pain)', VAL);
+
+    /**
+     * Пустая карточка «делать некому» — начало пунктирных связей.
+     *
+     * Раньше такая связь выходила из края сектора и читалась как ребро в
+     * никуда: не видно ни откуда она, ни почему пунктирная. Теперь у неё есть
+     * источник, который прямо называет разрыв: ценность заявлена (ADDRESSES /
+     * PROMISES / HELPS_WITH), а сценария, который её закрывает, нет.
+     */
+    const holes: Record<string, number> = { pr: 0, gc: 0, ps: 0 };
+    painIds.forEach(id => { if (!doneBy.has(id)) holes.pr++; });
+    gainIds.forEach(id => { if (!doneBy.has(id)) holes.gc++; });
+    jobIds.forEach(id => { if (!doneBy.has(id)) holes.ps++; });
+    for (const [key, n] of Object.entries(holes)) {
+      if (!n) continue;
+      const s = SECTORS[key];
+      const taken = key === 'pr' ? relievers.length : key === 'gc' ? creators.length : ucs.length;
+      const cols = Math.max(1, Math.floor((s.w - 8) / (SCEN.w + 8)));
+      out.push({
+        id: `hole-${key}`, type: 'sticker', parentId: key, width: SCEN.w, height: SCEN.h,
+        extent: 'parent', draggable: false, selectable: false,
+        position: {
+          x: 6 + (taken % cols) * (SCEN.w + 8),
+          y: 24 + Math.floor(taken / cols) * (SCEN.h + 8),
+        },
+        data: {
+          ghost: true, code: '', color: 'var(--wrn)', w: SCEN.w, h: SCEN.h, dim: false,
+          title: `${t('lore.product.canvas.hole', 'делать некому')} · ${n}`,
+        },
+      });
+    }
     return out;
-  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links]);
+  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName]);
 
   const edges: Edge[] = useMemo(() => links.map(l => {
-    // Некому делать — линия идёт от сектора-обещания: Pain Relievers для боли и
-    // выгоды, Products & Services для работы клиента.
-    const source = l.from ?? (l.to.startsWith('JOB-') ? 'ps' : 'pr');
+    // Некому делать — линия идёт от карточки-дыры своего сектора: боль ждут в
+    // Pain Relievers, выгоду в Gain Creators, работу в Products & Services.
+    const hole = gainIds.includes(l.to) ? 'hole-gc' : jobIds.includes(l.to) ? 'hole-ps' : 'hole-pr';
+    const source = l.from ?? hole;
     return {
       id: `e-${source}-${l.to}`, source, target: l.to, type: 'bezier',
       style: {
@@ -298,7 +397,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
       // перечёркивали бы карточки. Опускаем под них.
       zIndex: 0,
     };
-  }), [links, hover]);
+  }), [links, hover, gainIds, jobIds]);
 
   /** Перетаскивание: позиции применяем сразу, на диск пишем по отпусканию. */
   const onNodesChange = useCallback((changes: NodeChange[]) => {
@@ -390,9 +489,35 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     </div>
   );
 
+  // ── чей профиль: выбор сегмента (PL-36) ──
+  const actorPicker = canvasActors.length > 0 && (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10, fontSize: 'var(--fs-sm)' }}>
+      <span style={{ color: 'var(--t3)' }}>{t('lore.product.canvas.forActor', 'Профиль клиента:')}</span>
+      {['', ...canvasActors].map(a => {
+        const on = a === actorId;
+        return (
+          <button
+            key={a || '*'}
+            type="button"
+            onClick={() => setActorId(a)}
+            aria-pressed={on}
+            style={{
+              padding: '2px 10px', borderRadius: 999, cursor: 'pointer',
+              border: `1px solid ${on ? 'var(--acc)' : 'var(--bd)'}`,
+              background: on ? 'var(--bg2)' : 'transparent', color: 'var(--t1)',
+              fontSize: 'var(--fs-sm)',
+            }}
+          >
+            {a ? (actorName.get(a) ?? a) : t('lore.product.canvas.allActors', 'все акторы вместе')}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div style={S.wrap}>
-      {nav}
+      {actorPicker}
       {/* Высота задана в пикселях: ReactFlow меряет контейнер, и у схлопнутого
           в ноль холст остаётся пустым при полностью живых данных. */}
       {/* Пропорция подогнана под сцену (две фигуры в ряд ≈ 2.2:1): в более
@@ -434,6 +559,10 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
         <span><i style={{ display: 'inline-block', width: 22, borderTop: '2px dashed var(--wrn)', verticalAlign: 'middle', marginRight: 5 }} />
           {t('lore.product.canvas.legendClaimed', 'только заявлено')}</span>
       </div>
+
+      {/* Навигатор по канвам — ПОД канвой: сверху он отжимал саму канву вниз, а
+          нужен он на выходе, когда с этой канвой разобрались. */}
+      {nav}
     </div>
   );
 }

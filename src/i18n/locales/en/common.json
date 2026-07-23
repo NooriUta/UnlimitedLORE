@@ -1640,7 +1640,20 @@
         "vmapSub": "what we build · square",
         "cprofSub": "what the customer has · circle",
         "legendDone": "delivered — relieves, delivers, performs",
-        "legendClaimed": "claimed only"
+        "legendClaimed": "claimed only",
+        "vmap": "Value Map",
+        "cprof": "Customer Profile",
+        "forActor": "Customer segment:",
+        "allActors": "all actors together",
+        "hole": "nobody delivers",
+        "sec": {
+          "ps": "Products & Services",
+          "gc": "Gain Creators",
+          "pr": "Pain Relievers",
+          "gains": "Gains",
+          "pains": "Pains",
+          "jobs": "Customer Jobs"
+        }
       },
       "vp": {
         "all": "all",
@@ -1674,6 +1687,11 @@
         "fieldMetric": "Metric — how we measure the gain landed",
         "fieldBody": "Description",
         "noMetricWarn": "without a metric the gain stays out of the VP canvas fit",
+        "fieldFeltBy": "Whose pain (actors)",
+        "fieldDesiredBy": "Who wants the gain (actors)",
+        "fieldPerformedBy": "Who performs the job (actors)",
+        "noActors": "no actors yet — create them on the Customer screen",
+        "noActorWarn": "without an actor the entry stays out of any single customer profile",
         "create": "Create",
         "cancel": "Cancel",
         "promisedVsDelivered": "Promised vs delivered",

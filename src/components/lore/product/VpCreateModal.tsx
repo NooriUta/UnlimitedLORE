@@ -11,7 +11,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
-import { saveLorePain, saveLoreGain, saveLoreJob } from '../../../api/lore';
+import { saveLorePain, saveLoreGain, saveLoreJob, linkLoreVp, fetchLoreSlice } from '../../../api/lore';
+import type { LoreActorRow } from '../../../api/lore';
 import TipTapField from '../TipTapField';
 
 export type VpKind = 'job' | 'pain' | 'gain';
@@ -50,6 +51,8 @@ export interface VpDraft {
   extra?: string | null;
   /** только у работы — тип по Остервальдеру */
   jobKind?: string | null;
+  /** FELT_BY / DESIRED_BY / PERFORMED_BY — чья это боль, выгода, работа */
+  actorIds?: string[] | null;
 }
 
 export default function VpCreateModal({
@@ -73,6 +76,25 @@ export default function VpCreateModal({
   const [jobKind, setJobKind] = useState(initial?.jobKind ?? '');
   const [saving, setSaving] = useState(false);
 
+  /**
+   * Чей это профиль (PL-36).
+   *
+   * Поля не было вовсе, и рёбра FELT_BY/DESIRED_BY/PERFORMED_BY оставались
+   * пустыми у всего корпуса: VP-канва не могла ответить, чьи боли показывает,
+   * а фильтр по сегменту не с чем было строить. Пути записи на бэкенде и в MCP
+   * существовали — не хватало ровно этого поля.
+   */
+  const [actorIds, setActorIds] = useState<string[]>(initial?.actorIds ?? []);
+  const [actors, setActors] = useState<LoreActorRow[]>([]);
+  useEffect(() => {
+    if (!opened) return;
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreActorRow>('actors', undefined, ctrl.signal)
+      .then(setActors)
+      .catch(() => { /* список акторов не критичен: форма сохранится и без него */ });
+    return () => ctrl.abort();
+  }, [opened]);
+
   // Предзаполнение приходит асинхронно (слайс мог ещё грузиться), поэтому
   // синхронизируем состояние с ним, а не только начальным значением: иначе
   // форма правки открывалась бы пустой и «сохранение» стирало бы поля.
@@ -82,11 +104,12 @@ export default function VpCreateModal({
     setBody(initial?.body_md ?? '');
     setExtra(initial?.extra ?? '');
     setJobKind(initial?.jobKind ?? '');
+    setActorIds(initial?.actorIds ?? []);
   }, [initial]);
 
   const finalId = editing ? (initial?.id ?? '') : normalizeVpId(kind, id);
 
-  const reset = () => { setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); };
+  const reset = () => { setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); setActorIds([]); };
   const close = () => { if (!editing) reset(); onClose(); };
 
   const submit = async () => {
@@ -100,6 +123,16 @@ export default function VpCreateModal({
         await saveLoreGain({ gain_id: finalId, ...common, metric_md: extra || undefined });
       } else {
         await saveLoreJob({ job_id: finalId, ...common, kind: jobKind || undefined, importance: extra || undefined });
+      }
+      // Рёбра к акторам — отдельными вызовами после самой записи: вершина
+      // должна существовать, иначе связывать не с чем.
+      const rel = kind === 'pain' ? 'felt_by' : kind === 'gain' ? 'desired_by' : 'performed_by';
+      const was = initial?.actorIds ?? [];
+      for (const a of actorIds.filter(x => !was.includes(x))) {
+        await linkLoreVp({ source_id: finalId, rel, target_id: a });
+      }
+      for (const a of was.filter(x => !actorIds.includes(x))) {
+        await linkLoreVp({ source_id: finalId, rel, target_id: a, action: 'remove' });
       }
       onCreated(finalId);
       if (!editing) reset();
@@ -225,6 +258,47 @@ export default function VpCreateModal({
           )}
         </>
       ) : levelSelect}
+
+      {/* Чей это профиль. Без ответа VP-канва показывает боли всех сегментов в
+          одном круге — а канон Остервальдера строится на ОДНОМ сегменте: боли
+          водителя и боли механика рядом складываются в несуществующего
+          клиента, и подгонка карты ценности к нему ничего не доказывает. */}
+      <label style={label}>
+        {kind === 'pain' && t('lore.product.vp.fieldFeltBy', 'Чья боль (акторы)')}
+        {kind === 'gain' && t('lore.product.vp.fieldDesiredBy', 'Кто ждёт выгоду (акторы)')}
+        {kind === 'job' && t('lore.product.vp.fieldPerformedBy', 'Кто выполняет работу (акторы)')}
+      </label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+        {actors.map(a => {
+          const on = actorIds.includes(a.actor_id);
+          return (
+            <button
+              key={a.actor_id}
+              type="button"
+              onClick={() => setActorIds(v => on ? v.filter(x => x !== a.actor_id) : [...v, a.actor_id])}
+              aria-pressed={on}
+              style={{
+                padding: '2px 9px', borderRadius: 999, cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                border: `1px solid ${on ? 'var(--wrn)' : 'var(--bd)'}`,
+                background: on ? 'var(--bg2)' : 'transparent',
+                color: on ? 'var(--t1)' : 'var(--t2)',
+              }}
+            >
+              {a.name ?? a.actor_id}
+            </button>
+          );
+        })}
+        {actors.length === 0 && (
+          <span style={hint}>{t('lore.product.vp.noActors', 'акторов пока нет — заведите на экране «Клиент»')}</span>
+        )}
+      </div>
+      {actorIds.length === 0 && actors.length > 0 && (
+        // Предупреждение, а не запрет: запись заведётся, но в фильтр канвы по
+        // сегменту не попадёт и будет видна только в режиме «все акторы».
+        <div style={{ ...hint, color: 'var(--wrn)' }}>
+          ⚠ {t('lore.product.vp.noActorWarn', 'без актора запись не попадёт в профиль конкретного клиента')}
+        </div>
+      )}
 
       {/* body_md — НАШ редактор, а не голая textarea: поле markdown-ное, и во
           всех прочих редакторах корпуса стоит TipTapField (MD + Mermaid).

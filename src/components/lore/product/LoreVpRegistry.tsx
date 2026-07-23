@@ -177,7 +177,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         <PassportHeader title={j.title ?? j.job_id}>
           <Pill>{t('lore.product.vp.jobOne', 'работа')}</Pill>
           <Pill>{jobKindLabel(t, j.kind)}</Pill>
-          {editBtn({ id: j.job_id, title: j.title, body_md: j.body_md, extra: j.importance, jobKind: j.kind })}
+          {editBtn({ id: j.job_id, title: j.title, body_md: j.body_md, extra: j.importance, jobKind: j.kind, actorIds: j.actor_ids ?? [] })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(j.job_id), marginBottom: 8 }}>{j.job_id}</div>
 
@@ -219,7 +219,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         <PassportHeader title={p.title ?? p.pain_id}>
           <Pill tone="warn">{t('lore.product.vp.pain', 'боль')}</Pill>
           <Pill>{levelLabel(t, p.severity)}</Pill>
-          {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity })}
+          {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity, actorIds: p.actor_ids ?? [] })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(p.pain_id), marginBottom: 8 }}>{p.pain_id}</div>
 
@@ -254,7 +254,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         <PassportHeader title={g.title ?? g.gain_id}>
           <Pill tone="ok">{t('lore.product.vp.gain', 'выгода')}</Pill>
           <Pill>{gainRankLabel(t, g.rank)}</Pill>
-          {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md })}
+          {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md, actorIds: g.actor_ids ?? [] })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(g.gain_id), marginBottom: 8 }}>{g.gain_id}</div>
 
