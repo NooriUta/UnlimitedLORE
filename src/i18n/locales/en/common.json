@@ -1605,7 +1605,17 @@
         "noActors": "no actors yet — create them in the Customer section",
         "project": "Project",
         "projectNone": "— none —",
-        "projectHint": "which product it belongs to — otherwise scenarios of different products mix"
+        "projectHint": "which product it belongs to — otherwise scenarios of different products mix",
+        "parent": "Parent (feature or scenario)",
+        "parentNone": "— no parent —",
+        "parentScenarios": "scenarios of the selected feature",
+        "noParentWarn": "without a parent the scenario is visible nowhere: Features lists only ☁/🪁, the tree only children of a root",
+        "projectInherited": "inherited from the parent",
+        "links": "Links — edited in the passport",
+        "linkPains": "pains",
+        "linkGains": "gains",
+        "linkJobs": "jobs",
+        "linkChildren": "realized by scenarios"
       },
       "canvas": {
         "claimed": "claimed",

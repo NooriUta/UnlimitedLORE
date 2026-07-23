@@ -212,6 +212,18 @@ export default function UsFormModal({
   // нечем — поле в выдаче всегда приходило пустым.
   const [project, setProject] = useState(initial?.project ?? '');
   const [projects, setProjects] = useState<{ slug: string; name?: string | null }[]>([]);
+  // Родитель по само-иерархии (DECOMPOSES_INTO). Приходит либо пропом (завели
+  // из паспорта корня — «+ US сюда»), либо выбирается здесь: при создании из
+  // раздела US выбрать его было НЕЧЕМ, и сценарий оставался сиротой — он не
+  // попадал ни в одно дерево и находился только поиском.
+  const [parent, setParent] = useState(initial?.parent_uc_id ?? parentUcId ?? '');
+  const [roots, setRoots] = useState<{ uc_id: string; title?: string | null }[]>([]);
+  const [siblings, setSiblings] = useState<{ uc_id: string; title?: string | null }[]>([]);
+  const [parentProjects, setParentProjects] = useState<Record<string, string>>({});
+  // Связи редактируемого узла: что он ЗАЯВЛЯЕТ (боли/выгоды/работы) и чем
+  // реализуется (дочерние сценарии). Правка вслепую — правка не того: видя
+  // только тело, легко переписать фичу, забыв, что она уже кому-то обещана.
+  const [links, setLinks] = useState<{ pains: string[]; gains: string[]; jobs: string[]; children: { uc_id: string; title?: string | null; status?: string | null }[] } | null>(null);
   useEffect(() => {
     if (!opened) return;
     const ctrl = new AbortController();
@@ -221,8 +233,34 @@ export default function UsFormModal({
     fetchLoreSlice<{ slug: string; name?: string | null }>('git_projects', undefined, ctrl.signal)
       .then(setProjects)
       .catch(() => { /* без проектов форма рабочая: привязка не обязательна */ });
+    fetchLoreSlice<{ uc_id: string; title?: string | null; projects?: string[] | null }>('features', undefined, ctrl.signal)
+      .then(rows => {
+        setRoots(rows);
+        setParentProjects(Object.fromEntries(rows.map(r => [r.uc_id, (r.projects ?? [])[0] ?? ''])));
+      })
+      .catch(() => { /* без корней остаётся ручной ввод id родителя */ });
     return () => ctrl.abort();
   }, [opened]);
+
+  // Грузим только при ПРАВКЕ: у новой записи связей нет по определению.
+  useEffect(() => {
+    if (!opened || !editing || !initial?.uc_id) { setLinks(null); return; }
+    const ctrl = new AbortController();
+    const ucId = initial.uc_id;
+    Promise.all([
+      fetchLoreSlice<{ uc_id: string; pain_ids?: string[] | null; gain_ids?: string[] | null; job_ids?: string[] | null }>('features', undefined, ctrl.signal),
+      fetchLoreSlice<{ uc_id: string; title?: string | null; status?: string | null }>('use_cases_of_feature', { id: ucId }, ctrl.signal),
+    ])
+      .then(([feats, kids]) => {
+        const me = feats.find(x => x.uc_id === ucId);
+        setLinks({
+          pains: me?.pain_ids ?? [], gains: me?.gain_ids ?? [], jobs: me?.job_ids ?? [],
+          children: kids,
+        });
+      })
+      .catch(() => { /* связи справочны — форма остаётся рабочей */ });
+    return () => ctrl.abort();
+  }, [opened, editing, initial?.uc_id]);
 
   useEffect(() => {
     setId(initial?.uc_id ?? '');
@@ -269,6 +307,23 @@ export default function UsFormModal({
   // текст и рёбра говорили об одних и тех же сущностях.
   const mentionItems = actors.map(a => ({ id: a.actor_id, label: a.name ?? a.actor_id }));
 
+  // Сценарии выбранного корня — чтобы под-сценарий (🐟) можно было подвесить
+  // к сценарию, а не только к корню. Тянем ТОЛЬКО для выбранного корня: список
+  // всех сценариев корпуса здесь и не нужен, и не помещается в выпадашку.
+  const rootOfParent = roots.some(r => r.uc_id === parent) ? parent : '';
+  useEffect(() => {
+    if (!rootOfParent) { setSiblings([]); return; }
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ uc_id: string; title?: string | null }>('use_cases_of_feature', { id: rootOfParent }, ctrl.signal)
+      .then(setSiblings)
+      .catch(() => { /* без списка остаётся выбор самого корня */ });
+    return () => ctrl.abort();
+  }, [rootOfParent]);
+
+  // Показываем ИМЕННО тот проект, который унаследуется: подпись «наследуется»
+  // без значения не отвечает на вопрос «от кого и какой».
+  const inheritedProject = parentProjects[parent] ?? '';
+
   const finalId = editing ? (initial?.uc_id ?? '') : normalizeUsId(id, root);
 
   const submit = async () => {
@@ -285,7 +340,10 @@ export default function UsFormModal({
         // Родитель только при СОЗДАНИИ: смена родителя у существующего — это
         // перенос в другой корень, отдельное действие, а не побочный эффект
         // сохранения тела.
-        ...(editing || !parentUcId ? {} : { parent_uc_id: parentUcId }),
+        // Родитель пишется и при ПРАВКЕ тоже: перенос сценария под другой
+        // корень — законное действие, а не побочный эффект. Пустая строка
+        // означает «без родителя» и не отправляется, чтобы не отвязать молча.
+        ...(parent ? { parent_uc_id: parent } : {}),
       });
 
       // Акторы — РЁБРА, поэтому отдельными вызовами и ПОСЛЕ создания вершины.
@@ -294,7 +352,9 @@ export default function UsFormModal({
       if (primaryActor) {
         await linkLoreUc({ uc_id: finalId, rel: 'actor', target_id: primaryActor, actor_role: 'primary' });
       }
-      if (project) {
+      // Ребро проекта пишем только когда его тут и выбирали: под фичей проект
+      // наследуется, и запись копии сделала бы наследование фиктивным.
+      if (project && (root || !parent)) {
         await linkLoreUc({ uc_id: finalId, rel: 'project', target_id: project });
       }
       for (const a of supportActors) {
@@ -389,11 +449,6 @@ export default function UsFormModal({
           {id.trim() && finalId !== id.trim().toUpperCase() && (
             <div style={{ ...hint, fontFamily: 'var(--mono)' }}>→ {finalId}</div>
           )}
-          {parentUcId && (
-            <div style={hint}>
-              {t('lore.product.us.underRoot', 'Заводится под корнем')}: <span style={{ fontFamily: 'var(--mono)' }}>{parentUcId}</span>
-            </div>
-          )}
         </>
       )}
 
@@ -430,16 +485,58 @@ export default function UsFormModal({
           пользователя гадать, почему счёт скакнул при переключении. */}
       <div style={hint}>{t('lore.product.us.rigorHint', 'Вес задаёт, какие проверки обязательны: у облегчённого их меньше')}</div>
 
-      <label style={label}>{t('lore.product.us.project', 'Проект')}</label>
-      <select style={field} value={project} onChange={e => setProject(e.target.value)}>
-        <option value="">{t('lore.product.us.projectNone', '— не выбран —')}</option>
-        {projects.map(p => (
-          <option key={p.slug} value={p.slug}>{p.name ?? p.slug}</option>
-        ))}
-      </select>
-      {/* При нескольких продуктах в корпусе сценарии без проекта сливаются в
-          один список — та же беда, что у одноимённых ролей акторов (D18/D22). */}
-      <div style={hint}>{t('lore.product.us.projectHint', 'к какому продукту относится — иначе сценарии разных продуктов смешаются')}</div>
+      {/* Родитель — у сценария, но не у корня: корень на то и корень. */}
+      {!root && (
+        <>
+          <label style={label}>{t('lore.product.us.parent', 'Родитель (фича или сценарий)')}</label>
+          <select style={field} value={parent} onChange={e => setParent(e.target.value)}>
+            <option value="">{t('lore.product.us.parentNone', '— без родителя —')}</option>
+            {roots.map(r => (
+              <option key={r.uc_id} value={r.uc_id}>{r.title ?? r.uc_id}</option>
+            ))}
+            {siblings.length > 0 && (
+              <optgroup label={t('lore.product.us.parentScenarios', 'сценарии выбранной фичи')}>
+                {siblings.filter(x => x.uc_id !== finalId).map(x => (
+                  <option key={x.uc_id} value={x.uc_id}>{x.title ?? x.uc_id}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+          {/* Точная формулировка важна: узел без родителя не «становится
+              фичей» — фичи отбираются по высоте ☁/🪁, а у сценария она 🌊/🐟.
+              То есть он не виден НИГДЕ: ни в разделе «Фичи», ни в дереве. */}
+          {!parent && (
+            <div style={{ ...hint, color: 'var(--wrn)' }}>
+              ⚠ {t('lore.product.us.noParentWarn', 'без родителя сценарий не виден нигде: в «Фичи» попадают только ☁/🪁, в дерево — только дети корня')}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Проект спрашиваем ТОЛЬКО там, где его неоткуда взять: у корня и у
+          сценария без родителя. Под фичей он наследуется — второй выбор был бы
+          вторым источником правды, и стоит им разойтись, непонятно, какой
+          считать верным. Ровно так же устроен компонент (D22). */}
+      {(root || !parent) ? (
+        <>
+          <label style={label}>{t('lore.product.us.project', 'Проект')}</label>
+          <select style={field} value={project} onChange={e => setProject(e.target.value)}>
+            <option value="">{t('lore.product.us.projectNone', '— не выбран —')}</option>
+            {projects.map(p => (
+              <option key={p.slug} value={p.slug}>{p.name ?? p.slug}</option>
+            ))}
+          </select>
+          <div style={hint}>{t('lore.product.us.projectHint', 'к какому продукту относится — иначе сценарии разных продуктов смешаются')}</div>
+        </>
+      ) : (
+        <>
+          <label style={label}>{t('lore.product.us.project', 'Проект')}</label>
+          <div style={{ ...hint, marginTop: 0 }}>
+            {t('lore.product.us.projectInherited', 'наследуется от родителя')}
+            {inheritedProject && <span style={{ fontFamily: 'var(--mono)', marginLeft: 6, color: 'var(--t2)' }}>{inheritedProject}</span>}
+          </div>
+        </>
+      )}
 
       {/* ── акторы (D19) ── */}
       <label style={label}>{t('lore.product.us.primaryActor', 'Primary-актор')}</label>
@@ -542,6 +639,37 @@ export default function UsFormModal({
           </button>
         </div>
       </div>
+
+      {/* ── связи узла (только при правке) ── */}
+      {links && (links.pains.length + links.gains.length + links.jobs.length + links.children.length > 0) && (
+        <div style={{ marginTop: 12, border: '1px solid var(--bd)', borderRadius: 4, padding: '8px 10px', background: 'var(--bg1)' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)', marginBottom: 5 }}>
+            {t('lore.product.us.links', 'Связи — правятся в паспорте')}
+          </div>
+          {([['pains', t('lore.product.us.linkPains', 'боли')], ['gains', t('lore.product.us.linkGains', 'выгоды')], ['jobs', t('lore.product.us.linkJobs', 'работы')]] as const).map(([k, lbl]) => (
+            links[k].length > 0 && (
+              <div key={k} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'baseline', marginTop: 2 }}>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', minWidth: 54 }}>{lbl}</span>
+                {links[k].map(x => (
+                  <span key={x} style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t2)' }}>{x}</span>
+                ))}
+              </div>
+            )
+          ))}
+          {links.children.length > 0 && (
+            <div style={{ marginTop: 5 }}>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                {t('lore.product.us.linkChildren', 'реализуют сценарии')}: {links.children.length}
+              </span>
+              {links.children.map(c => (
+                <div key={c.uc_id} style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', paddingLeft: 8 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{c.uc_id}</span> {c.title ?? ''}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── панель линтера ── */}
       {quality && (
