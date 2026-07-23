@@ -237,7 +237,7 @@
     {
       id: 'FEAT-GITCYCLE', title: 'Полный git-цикл сессии без токена у агента',
       ps: [{ id: 'UC-GIT-MERGE', t: 'Merge по зелёному CI' }, { id: 'UC-GIT-PR', t: 'PR с телом из релиза' }, { id: 'UC-GIT-WATCH', t: 'Слежение за CI' }],
-      jobs: [{ id: 'JOB-LORE-SHIP', t: 'Довести работу до релиза' }],
+      jobs: [{ id: 'JOB-LORE-SHIP', t: 'Довести работу до релиза', perf: 'UC-GIT-MERGE' }],
       pains: [
         { id: 'PAIN-LORE-MANUAL-HANDOFF', t: 'Ручной хендофф на PR/merge', done: true },
         { id: 'PAIN-LORE-RAW-TOKEN', t: 'Сырой токен у агента', done: true },
@@ -252,7 +252,7 @@
     {
       id: 'FEAT-KNOW-SEARCH', title: 'Поиск по корпусу знаний',
       ps: [{ id: 'UC-SEARCH-RANK', t: 'Ранжированная выдача' }],
-      jobs: [{ id: 'JOB-LORE-FIND', t: 'Найти решение, принятое раньше' }],
+      jobs: [{ id: 'JOB-LORE-FIND', t: 'Найти решение, принятое раньше', perf: null }],
       pains: [{ id: 'PAIN-LORE-LOST-DECISION', t: 'Решение теряется в корпусе', done: false }],
       gains: [{ id: 'GAIN-LORE-FAST-ANSWER', t: 'Ответ за один запрос', done: false, metric: false }],
     },
@@ -303,7 +303,9 @@
     renderNav();
     const c = CANVASES[current];
 
-    document.getElementById('ps').innerHTML = c.ps.map(x => cardHtml(x.id, x.t, 'var(--g-do)')).join('');
+    // id с префиксом ps-: тот же сценарий может стоять и в Products & Services,
+    // и в Pain Relievers — одинаковые id сделали бы связи неразличимыми.
+    document.getElementById('ps').innerHTML = c.ps.map(x => cardHtml('ps-' + x.id, x.t, 'var(--g-do)')).join('');
     // Pain relievers и gain creators — ТЕ ЖЕ сценарии, но в роли «чем снимаем».
     // Отдельных сущностей у них нет: роль задаётся ребром, а не типом.
     document.getElementById('pr').innerHTML = c.pains.filter(p => p.done).map(p => cardHtml('rel-' + p.id, 'снимает: ' + p.t, 'var(--pain)')).join('') || '<span style="font-size:11px;color:var(--t3)">— пусто —</span>';
@@ -325,15 +327,17 @@
     const pairs = [
       ...c.pains.map(p => ({ from: 'rel-' + p.id, to: p.id, done: p.done })),
       ...c.gains.map(g => ({ from: 'crt-' + g.id, to: g.id, done: g.done })),
+      ...c.jobs.map(j => ({ from: j.perf ? 'ps-' + j.perf : null, to: j.id, done: !!j.perf })),
     ];
 
     for (const p of pairs) {
-      const a = document.querySelector('[data-id="' + p.from + '"]');
+      const a = p.from ? document.querySelector('[data-id="' + p.from + '"]') : null;
       const b = document.querySelector('[data-id="' + p.to + '"]');
       if (!b) continue;
       // Заявленное без исполнения тянем ОТ СЕКТОРА: карточки в Value Map для
       // него нет — в этом и смысл «заявили, но не сделали».
-      const src = a ? a.getBoundingClientRect() : document.getElementById('pr').getBoundingClientRect();
+      const fallback = p.to.startsWith('JOB-') ? 'ps' : 'pr';
+      const src = a ? a.getBoundingClientRect() : document.getElementById(fallback).getBoundingClientRect();
       const dst = b.getBoundingClientRect();
       const x1 = src.right - box.left, y1 = src.top + src.height / 2 - box.top;
       const x2 = dst.left - box.left,  y2 = dst.top + dst.height / 2 - box.top;
