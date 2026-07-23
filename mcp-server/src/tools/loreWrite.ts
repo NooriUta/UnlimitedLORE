@@ -447,7 +447,7 @@ export function registerLoreWrite(server: McpServer): void {
       'the response = edge NOT created (target missing) — never a silent no-op. Mutates system_aida_lore.',
     {
       uc_id:     z.string().describe('e.g. "UC-GIT-MERGE"'),
-      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'component', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
+      rel:       z.enum(['task', 'adr', 'decision', 'actor', 'component', 'project', 'includes', 'extends', 'relieves', 'delivers', 'performs']),
       target_id: z.string().describe('task_uid (rel=task) | adr_id | decision_id | actor_id | uc_id (includes/extends) | pain_id (relieves) | gain_id (delivers) | job_id (performs)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
       actor_role: z.enum(['primary', 'supporting']).optional()

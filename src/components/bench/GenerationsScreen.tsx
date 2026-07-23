@@ -103,7 +103,7 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
                data-testid={`bench-generation-${i}`}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
               <span className="badge badge-info" style={{ fontFamily: 'var(--mono)' }}>G{gen}</span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' }}>
                 {s.snapshot_id}
               </span>
               <span className="scope-tag">{s.parse_date ?? '—'}</span>
@@ -116,25 +116,25 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
               </span>
             </div>
             {(corpCond || snapshotSummary) && (
-              <div style={{ fontSize: 12, color: 'var(--t2)', marginBottom: 8 }}>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 8 }}>
                 {corpCond}{corpCond && snapshotSummary ? ' · ' : ''}{snapshotSummary}
               </div>
             )}
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18 }}>
               <div style={{ minWidth: 280, flex: 1 }}>
-                <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
                   {t('bench.gen.deltas', 'Top F1 movements vs previous generation')}
                 </div>
-                {i === 0 && <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.gen.baseline', 'baseline generation')}</span>}
-                {i > 0 && pinned && drift.loading && <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>}
+                {i === 0 && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.gen.baseline', 'baseline generation')}</span>}
+                {i > 0 && pinned && drift.loading && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>}
                 {i > 0 && !drift.loading && genDeltas.length === 0 && (
-                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.gen.noPairs', 'no (substrate, task) pairs measured in both generations under these pins')}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.gen.noPairs', 'no (substrate, task) pairs measured in both generations under these pins')}</span>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {genDeltas.map(d => (
                     <div key={`${d.substrate_id}|${d.task_id}`}
-                         style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontFamily: 'var(--mono)' }}>
+                         style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)' }}>
                       <span style={{ width: 16, textAlign: 'center',
                                      color: d.delta > 0 ? 'var(--suc)' : d.delta < 0 ? 'var(--danger)' : 'var(--t3)' }}>
                         {d.delta > 0 ? '▲' : d.delta < 0 ? '▼' : '·'}
@@ -154,7 +154,7 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
               <div style={{ minWidth: 320, flex: 1 }}>
                 {genCampaigns.length > 0 && (
                   <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
                       {t('bench.gen.campaigns', 'Campaigns on this generation')}
                     </div>
                     {genCampaigns.map(c => {
@@ -162,10 +162,10 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
                       return (
                         <div key={c.campaign_id} style={{ marginBottom: 6 }}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t1)' }}>{c.campaign_id}</span>
+                            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--t1)' }}>{c.campaign_id}</span>
                             <StatusBadge tone={campaignTone(c.status)} text={c.status ?? '?'} />
                           </div>
-                          {concl && <MartProse text={concl} style={{ fontSize: 12 }} />}
+                          {concl && <MartProse text={concl} style={{ fontSize: 'var(--fs-base)' }} />}
                         </div>
                       );
                     })}
@@ -173,14 +173,14 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
                 )}
                 {genHyps.length > 0 && (
                   <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
                       {t('bench.gen.hypotheses', 'Hypotheses tested / decided here')}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {genHyps.map(h => (
                         <span key={h.hyp_id} style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
                           <Link to={`/benchmark/hypothesis/${encodeURIComponent(h.hyp_id)}`}
-                                style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--acc)', textDecoration: 'none' }}>
+                                style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--acc)', textDecoration: 'none' }}>
                             {h.hyp_id}
                           </Link>
                           <StatusBadge tone={hypothesisTone(h.status)} text={h.status ?? '?'} />
@@ -191,7 +191,7 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
                 )}
                 {genFindings.length > 0 && (
                   <div>
-                    <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
                       {t('bench.gen.findings', 'Findings localized on this generation')}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -206,7 +206,7 @@ export function GenerationsScreen({ runs, snapshots, subLabel }: {
                   </div>
                 )}
                 {genCampaigns.length === 0 && genHyps.length === 0 && genFindings.length === 0 && (
-                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.gen.noScience', 'no campaigns / hypotheses / findings attached')}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.gen.noScience', 'no campaigns / hypotheses / findings attached')}</span>
                 )}
               </div>
             </div>

@@ -4,7 +4,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import type { LoreFeatureRow, LoreUcRow, LoreUcTaskRow } from '../../../api/lore';
-import { fetchLoreSlice } from '../../../api/lore';
+import { fetchLoreSlice, checkLoreUcQuality, type LoreUcQualityResult } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import {
@@ -19,27 +19,15 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  ListSearch,
+  IconPill,
+  EditButton,
 } from './shared';
-import { ucStatusLabel, goalLevelLabel } from './vocab';
-
-// Уровень цели (Коберн, D1): облако / воздушный змей.
-// Хелпер модульного уровня — `t` здесь недоступен, поэтому отдаём КЛЮЧ, а
-// разрешает его вызывающий компонент. Для неизвестного уровня ключа нет:
-// показываем сырое значение из данных как есть.
-function goalOf(level: string | null | undefined): { glyph: string; labelKey: string | null; raw: string } {
-  const v = (level ?? '').toLowerCase();
-  if (v.includes('cloud') || v.includes('☁')) return { glyph: '☁', labelKey: 'lore.product.goal.cloud', raw: 'облако' };
-  if (v.includes('kite') || v.includes('🪁')) return { glyph: '🪁', labelKey: 'lore.product.goal.kite', raw: 'змей' };
-  return { glyph: '', labelKey: null, raw: level ?? '' };
-}
-
-// Глиф статуса US.
-function ucGlyph(status: string | null | undefined): string {
-  const v = (status ?? '').toLowerCase();
-  if (v === 'shipped') return '✅';
-  if (v === 'active') return '🔄';
-  return '⚡';
-}
+import { ucStatusLabel, ucStatusTone, goalLevelLabel } from './vocab';
+import { resolveStatusMeta, taskTick } from '../lore-status';
+import { GOAL_LEVEL_ICON, iconOf } from './icons';
+import { GameIcon } from '../GameIcon';
+import UsFormModal, { type UsDraft } from './UsFormModal';
 
 /**
  * Тон спринт-чипа задачи (PL-16).
@@ -57,9 +45,13 @@ export function sprintTone(sprintStatus: string | null | undefined): 'ok' | 'act
   return 'muted';
 }
 
-export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError, listSearch, expandedUc, onExpandUc }: ProductScreenProps) {
+export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch, expandedUc, onExpandUc }: ProductScreenProps) {
   const { t } = useTranslation();
-  const { rows, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
+  const [creatingRoot, setCreatingRoot] = useState(false);
+  const [creatingChild, setCreatingChild] = useState<string | null>(null);
+  const [editingRoot, setEditingRoot] = useState<UsDraft | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { rows, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, [reloadKey]);
 
   // Задачи раскрытого сценария (PL-16). Грузим ТОЛЬКО раскрытый узел, а не все
   // разом: фича с двумя десятками US дала бы столько же запросов на открытие
@@ -75,6 +67,25 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setTasksLoading(false); } });
     return () => ctrl.abort();
   }, [expandedUc, onError]);
+
+  /**
+   * PL-20: мини-скор оформления раскрытого сценария.
+   *
+   * Считает СЕРВЕР тем же линтером, что и форма: счёт, разошедшийся с тем, что
+   * человек видел при наборе, был бы хуже отсутствующего. Тянем только для
+   * раскрытого узла — скор на всё дерево стоил бы по запросу на каждую US, из
+   * которых посмотрят одну.
+   */
+  const [ucScore, setUcScore] = useState<LoreUcQualityResult | null>(null);
+  useEffect(() => {
+    if (!expandedUc) { setUcScore(null); return; }
+    const ctrl = new AbortController();
+    setUcScore(null);
+    checkLoreUcQuality({ uc_id: expandedUc }, ctrl.signal)
+      .then(setUcScore)
+      .catch(() => { /* линтер advisory — дерево остаётся рабочим */ });
+    return () => ctrl.abort();
+  }, [expandedUc]);
 
   // Use cases выбранной фичи (замыкают fit-мост).
   const [ucs, setUcs] = useState<LoreUcRow[]>([]);
@@ -102,7 +113,6 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     list = (
       <>
         {filtered.map(f => {
-          const g = goalOf(f.goal_level).glyph;
           return (
             <ListRow
               key={f.uc_id}
@@ -110,7 +120,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
               title={f.title}
               selected={f.uc_id === selectedId}
               onClick={() => onSelect(f.uc_id)}
-              meta={<Pill>{g} · {f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</Pill>}
+              meta={<IconPill icon={iconOf(GOAL_LEVEL_ICON, f.goal_level)}>{f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</IconPill>}
             />
           );
         })}
@@ -127,8 +137,6 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     if (!f) {
       detail = <EmptyDetail text={t('lore.product.feat.pick', 'Выберите фичу слева')} />;
     } else {
-      const status = (f.status ?? '').toLowerCase();
-
       // Заявлено фичей.
       const jobIds = asArray(f.job_ids);
       const painIds = asArray(f.pain_ids);
@@ -156,9 +164,9 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
         covered: Set<string>,
       ) => (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', minWidth: 78 }}>{label}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', minWidth: 78 }}>{label}</span>
           {ids.length === 0
-            ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
+            ? <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>
             : ids.map(id => {
               const ok = covered.has(id);
               return (
@@ -179,14 +187,15 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
       detail = (
         <div>
           <PassportHeader title={f.title ?? f.uc_id}>
-            <Pill tone={status === 'active' ? 'act' : status === 'shipped' ? 'ok' : 'muted'}>{ucStatusLabel(t, f.status)}</Pill>
-            {f.goal_level && <Pill>{goalLevelLabel(t, f.goal_level)}</Pill>}
+            <Pill tone={ucStatusTone(f.status)}>{ucStatusLabel(t, f.status)}</Pill>
+            {f.goal_level && <IconPill icon={iconOf(GOAL_LEVEL_ICON, f.goal_level)}>{goalLevelLabel(t, f.goal_level)}</IconPill>}
             <Pill tone={relievedCount >= claimedCount && claimedCount > 0 ? 'ok' : 'warn'}>fit {relievedCount}/{claimedCount}</Pill>
+            <EditButton onClick={() => { setCreatingRoot(false); setEditingRoot({ uc_id: f.uc_id, title: f.title, goal_level: f.goal_level, status: f.status }); }} title={t('lore.product.us.edit', 'Правка')} />
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-value)', marginBottom: 8 }}>{f.uc_id}</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 4 }}>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.readiness', 'Готовность')}</span>
             <span style={{ fontFamily: 'var(--mono)' }}>{f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</span>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.milestone', 'Веха')}</span>
@@ -194,18 +203,28 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
               ? <LinkChip color="var(--acc)" onClick={() => onNavigate('milestones', f.milestone_id ?? undefined)}>{f.milestone_id}</LinkChip>
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.component', 'Компонент')}</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{f.component_id ?? '—'}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{f.component_id ?? '—'}</span>
           </div>
 
-          <PSection title={t('lore.product.feat.bridge', '🌉 Мост в профиль (что ЗАЯВЛЯЕТ фича)')}>
+          <PSection title={t('lore.product.feat.bridge', 'Что заявляет: чьи боли, выгоды и работы закрывает')}>
             {bridgeRow(t('lore.product.feat.jobs', 'РАБОТЫ'), jobIds, 'var(--job)', coveredJobs)}
             {bridgeRow(t('lore.product.feat.pains', 'БОЛИ'), painIds, 'var(--pain)', coveredPains)}
             {bridgeRow(t('lore.product.feat.gains', 'ОЖИДАНИЯ'), gainIds, 'var(--gain)', coveredGains)}
           </PSection>
 
-          <PSection title={t('lore.product.feat.impl', '🌊 Реализация — US (что СДЕЛАНО)')}>
+          <PSection title={t('lore.product.feat.impl', 'Реализация — US (что СДЕЛАНО)')}>
+            {/* Завести сценарий ПРЯМО под этим корнем: иначе после создания на
+                соседнем экране пришлось бы отдельным действием привязывать
+                родителя, и про этот шаг забывали бы — сценарий висел бы сиротой. */}
+            <button
+              type="button"
+              onClick={() => setCreatingChild(f.uc_id)}
+              style={{ fontSize: 10.5, padding: '2px 8px', marginBottom: 4, borderRadius: 4, cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+            >
+              {t('lore.product.feat.addUs', '+ US сюда')}
+            </button>
             {ucs.length === 0
-              ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
+              ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
               : ucs.map((uc, i) => {
                 const open = expandedUc === uc.uc_id;
                 return (
@@ -220,23 +239,33 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                         onClick={() => onExpandUc?.(open ? null : uc.uc_id)}
                         aria-expanded={open}
                         aria-label={t('lore.product.feat.tasksToggle', 'Задачи сценария')}
-                        style={{ width: 16, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 9, padding: 0 }}
+                        style={{ width: 16, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-2xs)', padding: 0 }}
                       >
                         {open ? '▼' : '▶'}
                       </button>
-                      <span style={{ width: 16, textAlign: 'center' }}>{ucGlyph(uc.status)}</span>
                       <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc.uc_id)}>{uc.uc_id}</LinkChip>
                       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{uc.title ?? ''}</span>
-                      <Pill tone={(uc.status ?? '').toLowerCase() === 'shipped' ? 'ok' : (uc.status ?? '').toLowerCase() === 'active' ? 'act' : 'muted'} style={{ marginLeft: 'auto' }}>{ucStatusLabel(t, uc.status)}</Pill>
+                      {/* Мини-скор — только у раскрытого узла: он и посчитан
+                          только для него. Показать его у всех строк значило бы
+                          либо врать, либо запросить дерево целиком. */}
+                      {open && ucScore && (
+                        <span
+                          title={t('lore.product.feat.qualityHint', 'оформление по Кокберну')}
+                          style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: ucScore.score === ucScore.max ? 'var(--suc)' : 'var(--wrn)' }}
+                        >
+                          {ucScore.score}/{ucScore.max}
+                        </span>
+                      )}
+                      <Pill tone={ucStatusTone(uc.status)} style={{ marginLeft: 'auto' }}>{ucStatusLabel(t, uc.status)}</Pill>
                     </TRow>
 
                     {open && (
                       <div style={{ marginLeft: 20, borderLeft: '1px solid var(--bd)', paddingLeft: 8 }}>
-                        {tasksLoading && <div style={{ fontSize: 11, color: 'var(--t3)', padding: '3px 0' }}>…</div>}
+                        {tasksLoading && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '3px 0' }}>…</div>}
                         {!tasksLoading && ucTasks.length === 0 && (
                           // Отличаем «нет задач» от «не раскрывали»: пустой узел
                           // без подписи читается как сбой загрузки.
-                          <div style={{ fontSize: 11, color: 'var(--t3)', padding: '3px 0' }}>
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '3px 0' }}>
                             {t('lore.product.feat.noTasks', 'Задач, реализующих этот сценарий, нет')}
                           </div>
                         )}
@@ -244,12 +273,22 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                           <div key={task.task_uid} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 11.5, color: 'var(--t2)' }}>
                             <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--t3)' }}>{task.task_id}</span>
                             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title ?? ''}</span>
-                            <Pill tone="muted">{task.status_raw ?? '—'}</Pill>
-                            {task.sprint_id && (
+                            {/* Статус — иконкой и цветом ИЗ СПРАВОЧНИКА
+                                (KnowDictEntry), тем же, что рисует спринты:
+                                свой набор значков разошёлся бы с общим при
+                                первом пополнении словаря. */}
+                            {(() => { const m = resolveStatusMeta(task.status_raw); return (
+                              <span title={task.status_raw ?? undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                <GameIcon slug={m.icon} size={12} style={{ color: m.color }} />
+                                <span style={{ fontSize: 'var(--fs-2xs)', color: m.color }}>{taskTick(task.status_raw).status}</span>
+                              </span>
+                            ); })()}
+                            {task.sprint_id && (() => { const sm = resolveStatusMeta(task.sprint_status_raw); return (
                               <LinkChip color="var(--acc)" onClick={() => onNavigate('sprints', task.sprint_id ?? undefined)} title={task.sprint_status_raw ?? undefined}>
-                                <Pill tone={sprintTone(task.sprint_status_raw)}>{task.sprint_id}</Pill>
+                                <GameIcon slug={sm.icon} size={11} style={{ color: sm.color }} />
+                                {task.sprint_id}
                               </LinkChip>
-                            )}
+                            ); })()}
                           </div>
                         ))}
                       </div>
@@ -263,5 +302,45 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     }
   }
 
-  return <MasterDetail list={list} detail={detail} />;
+  const bar = (
+    <>
+      <ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.feat.searchPh', 'фича…')} />
+      <div style={{ padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
+        <button
+          type="button"
+          onClick={() => { setEditingRoot(null); setCreatingRoot(true); }}
+          style={{ width: '100%', fontSize: 'var(--fs-sm)', borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+        >
+          {t('lore.product.us.newRoot', '+ Фича')}
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      <MasterDetail
+      hasDetail={!!selectedId}
+      onBack={() => onSelect(null)} list={<>{bar}{list}</>} detail={detail} />
+      {(creatingRoot || editingRoot) && (
+        <UsFormModal
+          opened
+          root
+          initial={editingRoot ?? undefined}
+          onClose={() => { setCreatingRoot(false); setEditingRoot(null); }}
+          onSaved={id => { setReloadKey(k => k + 1); onSelect(id); }}
+          onError={onError}
+        />
+      )}
+      {creatingChild && (
+        <UsFormModal
+          opened
+          parentUcId={creatingChild}
+          onClose={() => setCreatingChild(null)}
+          onSaved={() => setReloadKey(k => k + 1)}
+          onError={onError}
+        />
+      )}
+    </>
+  );
 }

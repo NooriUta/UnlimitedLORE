@@ -480,3 +480,44 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
       radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--acc) 28%, transparent), transparent) 100% 0 / 11px 100% no-repeat scroll;
   }
 }
+
+/* Отрендеренный markdown в паспортах продуктового слоя (PL-17).
+   Тела сценариев показывались сырым текстом в <pre> — на экране висели
+   «### Триггер» и «1.» вместо заголовков и списков. Теперь это разметка, и ей
+   нужны те же отступы, что в редакторе: без них секции Кокберна слипаются в
+   полотно, а нумерация списка срезается краем. */
+.lore-md > :first-child { margin-top: 0; }
+.lore-md h1, .lore-md h2, .lore-md h3 {
+  margin: 12px 0 4px;
+  font-size: var(--fs-md);
+  line-height: 1.25;
+  color: var(--t1);
+}
+.lore-md p { margin: 4px 0; }
+.lore-md ul, .lore-md ol { padding-left: 22px; margin: 6px 0; }
+.lore-md li { margin: 2px 0; }
+.lore-md li > p { margin: 0; }
+.lore-md code {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.lore-md pre {
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-radius: 4px;
+  padding: 7px 9px;
+  overflow-x: auto;
+}
+.lore-md pre code { border: none; background: none; padding: 0; }
+.lore-md blockquote {
+  border-left: 3px solid var(--acc);
+  margin: 8px 0;
+  padding: 2px 12px;
+  color: var(--t2);
+}
+.lore-md table { border-collapse: collapse; margin: 8px 0; }
+.lore-md th, .lore-md td { border: 1px solid var(--bd); padding: 4px 7px; text-align: left; }

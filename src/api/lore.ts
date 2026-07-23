@@ -796,6 +796,10 @@ export interface LoreTaskAgentFields {
   executorAgent?: string | null;
   reviewerAgent?: string | null;
   taskType?: string | null;
+  /** PL-19: ось ЗАЧЕМ (uc|jtd|enb). */
+  workClass?: string | null;
+  /** PL-19: сценарий, который задача реализует — ребро REALIZES создаётся атомарно. */
+  ucId?: string | null;
 }
 
 export async function editLoreTask(
@@ -817,6 +821,8 @@ export async function editLoreTask(
       executor_agent: agents?.executorAgent ?? null,
       reviewer_agent: agents?.reviewerAgent ?? null,
       task_type: agents?.taskType ?? null,
+      work_class: agents?.workClass ?? null,
+      uc_id: agents?.ucId ?? null,
     }),
   });
   assertJson(res);
@@ -1235,7 +1241,7 @@ export function linkLoreFeature(body: {
 /** Связки сценария. relieves/delivers/performs — половина «ДОСТАВЛЕНО». */
 export function linkLoreUc(body: {
   uc_id: string;
-  rel: 'task' | 'adr' | 'decision' | 'actor' | 'component'
+  rel: 'task' | 'adr' | 'decision' | 'actor' | 'component' | 'project'
      | 'includes' | 'extends' | 'relieves' | 'delivers' | 'performs';
   target_id: string;
   action?: 'add' | 'remove';
@@ -1260,6 +1266,37 @@ export function linkLoreVp(body: {
  * на POST — форма зовёт его по ходу набора, чтобы чек-лист загорался ДО
  * сохранения, а не пост-фактум при ревью.
  */
-export function checkLoreUcQuality(body: { uc_id: string }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/uc/quality', body, signal);
+export interface LoreUcQualityFinding {
+  code: string;
+  ok: boolean;
+  /** false — подсказка вне счёта (advisory, ADR-027 D9/D14): сохранить можно всегда. */
+  required: boolean;
+  message: string;
+}
+export interface LoreUcQualityResult {
+  rigor: string;
+  score: number;
+  max: number;
+  findings: LoreUcQualityFinding[];
+}
+
+/**
+ * PL-17: две формы вызова — по `uc_id` (оценить сохранённый UC) или по ТЕЛУ
+ * (живой линтер формы). Форма создания обязана показывать чек-лист до того,
+ * как запись появилась: требуй эндпоинт обязательный uc_id, оценивать в ней
+ * было бы нечего — ровно поэтому линтер из фронта не звали ни разу.
+ */
+export function checkLoreUcQuality(
+  body: {
+    uc_id?: string;
+    rigor?: string;
+    goal_level?: string;
+    scenario_md?: string;
+    acceptance_md?: string;
+    has_primary_actor?: boolean;
+    has_traced_to?: boolean;
+  },
+  signal?: AbortSignal,
+) {
+  return loreMutate<LoreUcQualityResult>('/uc/quality', body, signal);
 }

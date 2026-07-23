@@ -190,7 +190,7 @@ function HealthPill({ health, count }: { health: 'checking' | 'up' | 'down'; cou
   }[health];
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11,
+      display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)',
       padding: '3px 10px', borderRadius: 20,
       background: `color-mix(in srgb, ${map.c} 14%, transparent)`, color: map.c,
       border: `1px solid color-mix(in srgb, ${map.c} 35%, transparent)`, whiteSpace: 'nowrap',
@@ -206,7 +206,7 @@ function StateTag({ state }: { state: 'live' | 'planned' }) {
   const label = state === 'live' ? 'live' : 'план';
   return (
     <span style={{
-      fontSize: 10, padding: '1px 6px', borderRadius: 3, whiteSpace: 'nowrap',
+      fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3, whiteSpace: 'nowrap',
       background: `color-mix(in srgb, ${c} 16%, transparent)`, color: c,
       border: `1px solid color-mix(in srgb, ${c} 35%, transparent)`,
     }}>{label}</span>
@@ -216,8 +216,8 @@ function StateTag({ state }: { state: 'live' | 'planned' }) {
 function Stat({ k, v }: { k: string; v: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-      <span style={{ fontSize: 10, color: 'var(--t3)' }}>{k}</span>
-      <span style={{ fontSize: 12, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
+      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{k}</span>
+      <span style={{ fontSize: 'var(--fs-base)', color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
     </div>
   );
 }
@@ -225,7 +225,7 @@ function Stat({ k, v }: { k: string; v: string }) {
 function Node({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
   return (
     <span style={{
-      padding: '4px 10px', borderRadius: 5, fontSize: 11, whiteSpace: 'nowrap', fontFamily: 'var(--mono)',
+      padding: '4px 10px', borderRadius: 5, fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)',
       background: accent ? 'color-mix(in srgb, var(--acc) 16%, transparent)' : 'var(--b2)',
       color: accent ? 'var(--acc)' : 'var(--t2)',
       border: `1px solid ${accent ? 'color-mix(in srgb, var(--acc) 35%, transparent)' : 'var(--b3)'}`,
@@ -237,7 +237,7 @@ function Arrow({ label }: { label: string }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', color: 'var(--t3)' }}>
       <span style={{ fontSize: 8, lineHeight: 1 }}>{label}</span>
-      <span style={{ fontSize: 13, lineHeight: 1 }}>→</span>
+      <span style={{ fontSize: 'var(--fs-md)', lineHeight: 1 }}>→</span>
     </span>
   );
 }
@@ -261,34 +261,34 @@ const S: Record<string, React.CSSProperties> = {
   wrap:    { maxWidth: 920, margin: '0 auto', padding: '22px 26px 60px' },
   head:    { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' },
   h1:      { fontSize: 22, fontWeight: 700, fontFamily: 'var(--display)', color: 'var(--t1)' },
-  h2:      { fontSize: 14, fontWeight: 600, color: 'var(--t1)', marginBottom: 10, paddingBottom: 5, borderBottom: '1px solid var(--b2)' },
-  lead:    { marginTop: 12, fontSize: 13, lineHeight: 1.65, color: 'var(--t2)' },
+  h2:      { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)', marginBottom: 10, paddingBottom: 5, borderBottom: '1px solid var(--b2)' },
+  lead:    { marginTop: 12, fontSize: 'var(--fs-md)', lineHeight: 1.65, color: 'var(--t2)' },
   pipe:    { marginTop: 18, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  banner:  { padding: '8px 12px', borderRadius: 6, fontSize: 12, lineHeight: 1.55, marginBottom: 10,
+  banner:  { padding: '8px 12px', borderRadius: 6, fontSize: 'var(--fs-base)', lineHeight: 1.55, marginBottom: 10,
              background: 'color-mix(in srgb, var(--wrn) 10%, transparent)',
              border: '1px solid color-mix(in srgb, var(--wrn) 30%, transparent)', color: 'var(--t2)' },
   tableWrap: { overflowX: 'auto', border: '1px solid var(--b2)', borderRadius: 6 },
-  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 12 },
-  th:      { textAlign: 'left', padding: '7px 10px', color: 'var(--t3)', fontWeight: 600, fontSize: 11,
+  table:   { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-base)' },
+  th:      { textAlign: 'left', padding: '7px 10px', color: 'var(--t3)', fontWeight: 600, fontSize: 'var(--fs-sm)',
              borderBottom: '1px solid var(--b2)', background: 'var(--b1)', whiteSpace: 'nowrap' },
   tr:      { borderBottom: '1px solid var(--b2)' },
   td:      { padding: '7px 10px', verticalAlign: 'top', color: 'var(--t1)' },
-  note:    { marginTop: 10, fontSize: 12, lineHeight: 1.6, color: 'var(--t3)' },
-  code:    { fontFamily: 'var(--mono)', fontSize: 11, padding: '1px 5px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t2)' },
-  codeAcc: { fontFamily: 'var(--mono)', fontSize: 11, padding: '1px 5px', borderRadius: 3,
+  note:    { marginTop: 10, fontSize: 'var(--fs-base)', lineHeight: 1.6, color: 'var(--t3)' },
+  code:    { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', padding: '1px 5px', borderRadius: 3, background: 'var(--b2)', color: 'var(--t2)' },
+  codeAcc: { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', padding: '1px 5px', borderRadius: 3,
              background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)' },
   pre:     { marginTop: 8, padding: '10px 12px', borderRadius: 6, overflowX: 'auto', background: 'var(--b1)',
-             border: '1px solid var(--b2)', fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1.6, color: 'var(--t2)', whiteSpace: 'pre' },
+             border: '1px solid var(--b2)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', lineHeight: 1.6, color: 'var(--t2)', whiteSpace: 'pre' },
   filter:  { marginTop: 10, width: '100%', maxWidth: 320, height: 28, padding: '0 10px', background: 'var(--b1)',
-             border: '1px solid var(--b3)', borderRadius: 5, color: 'var(--t1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' },
+             border: '1px solid var(--b3)', borderRadius: 5, color: 'var(--t1)', fontSize: 'var(--fs-base)', fontFamily: 'inherit', outline: 'none' },
   chips:   { marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 6 },
   chip:    { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 4px', borderRadius: 4, background: 'var(--b1)', border: '1px solid var(--b2)' },
-  req:     { fontSize: 10, color: 'var(--wrn)' },
-  opt:     { fontSize: 10, color: 'var(--t3)' },
+  req:     { fontSize: 'var(--fs-xs)', color: 'var(--wrn)' },
+  opt:     { fontSize: 'var(--fs-xs)', color: 'var(--t3)' },
   statusGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12,
                 padding: '12px', border: '1px solid var(--b2)', borderRadius: 6, background: 'var(--b1)' },
-  down:    { marginTop: 10, padding: '10px 12px', borderRadius: 6, fontSize: 12,
+  down:    { marginTop: 10, padding: '10px 12px', borderRadius: 6, fontSize: 'var(--fs-base)',
              background: 'color-mix(in srgb, var(--dng) 10%, transparent)',
              border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)', color: 'var(--t2)' },
-  foot:    { marginTop: 30, fontSize: 11, color: 'var(--t3)', lineHeight: 1.7, paddingTop: 12, borderTop: '1px solid var(--b2)' },
+  foot:    { marginTop: 30, fontSize: 'var(--fs-sm)', color: 'var(--t3)', lineHeight: 1.7, paddingTop: 12, borderTop: '1px solid var(--b2)' },
 };

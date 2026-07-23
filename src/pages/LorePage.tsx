@@ -99,7 +99,7 @@ const STORY_S = {
   // Выделение подвкладки — как у глав в шапке: скруглённый прямоугольник с
   // рамкой и лёгкой подсветкой цвета главы, без залитого эллипса.
   subItem: (on: boolean, gc: string) => ({
-    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 'var(--fs-base)', cursor: 'pointer',
     color: on ? 'var(--t1)' : 'var(--t2)',
     border: `1px solid ${on ? `color-mix(in srgb, ${gc} 55%, var(--bd))` : 'transparent'}`,
     background: on ? `color-mix(in srgb, ${gc} 12%, transparent)` : 'transparent',
@@ -320,10 +320,11 @@ export default function LorePage() {
     openQuestions: 'lore.page.filter.openQuestions',
     releases:      'lore.page.filter.releases',
     timeline:      'lore.page.filter.timeline',
-    actors:        'lore.page.filter.actors',
-    vpProfile:     'lore.page.filter.vpProfile',
-    features:      'lore.page.filter.features',
-    userStories:   'lore.page.filter.userStories',
+    // Продуктовые разделы (actors/vpProfile/features/userStories) СНЯТЫ из
+    // верхнего бара: их поле поиска переехало ВНУТРЬ панели списка — туда же,
+    // где оно у спринтов. Поле в общем баре читается как фильтр ЭКРАНА, тогда
+    // как фильтруется список; оставь мы оба — вышел бы второй поиск рядом с
+    // первым, ровно то, чего в корпусе избегают.
   };
   const filterKey = FILTER_SECTIONS[section];
   const showGlobalSearch = !!filterKey;
@@ -1137,11 +1138,15 @@ export default function LorePage() {
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
           {/* ── Продуктовый слой (глава «Зачем», ADR-LORE-022/032) — самодостаточные экраны ── */}
-          {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
-          {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
-          {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={null} onSelect={() => {}} onNavigate={navigateProduct} onError={handleFetchError} />}
-          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} expandedUc={ucParam || null} onExpandUc={setExpandedUc} />}
-          {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
+          {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
+          {/* Канва выбирается как всё остальное — через `?passport=`. Раньше сюда
+              шли `selectedId={null}` и пустой onSelect: экран не мог ни узнать
+              выбранную канву, ни сменить её, и ссылки на конкретную канву не
+              существовало. */}
+          {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} />}
+          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} expandedUc={ucParam || null} onExpandUc={setExpandedUc} />}
+          {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
 
           {/* ADR — new */}
           {section === 'adrs' && passport === '__new' && (

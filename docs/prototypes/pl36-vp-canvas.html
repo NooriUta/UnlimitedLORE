@@ -1,0 +1,383 @@
+<title>PL-36/37 — VP-канва по канону Остервальдера + навигатор</title>
+<style>
+  :root {
+    --bg0:#141108; --bg1:#1C1810; --bg2:#252019; --bg3:#302A20; --bd:#42382A; --bdh:#584C38;
+    --t1:#EDE5D0; --t2:#9A8C6E; --t3:#665C48;
+    --acc:#A8B860; --suc:#7DBF78; --wrn:#D4922A; --inf:#88B8A8; --dng:#C85848;
+    --job:#88B8A8; --pain:#C85848; --gain:#7DBF78;
+    --g-value:#A8B860; --g-do:#5AB4E8;
+    --font:'Manrope', ui-sans-serif, system-ui, sans-serif; --mono:'IBM Plex Mono', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: light){ :root{ --bg0:#F3EFE4; --bg1:#EAE4D5; --bg2:#E1DAC7; --bg3:#D6CDB6; --bd:#C6BB9F; --bdh:#A99C7C;
+    --t1:#2A2418; --t2:#6B6046; --t3:#8C8164; --acc:#6E7D2A; --suc:#3E7C3A; --wrn:#9A6410; --inf:#3E7263; --dng:#A33526;
+    --job:#3E7263; --pain:#A33526; --gain:#3E7C3A; --g-value:#6E7D2A; --g-do:#2478B8; } }
+  :root[data-theme="light"]{ --bg0:#F3EFE4; --bg1:#EAE4D5; --bg2:#E1DAC7; --bg3:#D6CDB6; --bd:#C6BB9F; --bdh:#A99C7C;
+    --t1:#2A2418; --t2:#6B6046; --t3:#8C8164; --acc:#6E7D2A; --suc:#3E7C3A; --wrn:#9A6410; --inf:#3E7263; --dng:#A33526;
+    --job:#3E7263; --pain:#A33526; --gain:#3E7C3A; --g-value:#6E7D2A; --g-do:#2478B8; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg0); color:var(--t1); font-family:var(--font); font-size:14px; line-height:1.5; padding:16px; }
+  .mono { font-family:var(--mono); }
+  h2 { font-size:15px; margin:22px 0 8px; }
+  .note { border-left:3px solid var(--acc); background:var(--bg1); padding:8px 12px; margin:8px 0 14px; font-size:12.5px; color:var(--t2); max-width:92ch; }
+  .note b { color:var(--t1); }
+  .sec-label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--t3); margin:18px 0 6px; }
+
+  /* ── навигатор (PL-37) ── */
+  .nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .navcard { border:1px solid var(--bd); border-radius:8px; background:var(--bg1); padding:8px 11px; min-width:210px; cursor:pointer; }
+  .navcard[aria-pressed="true"] { border-color:var(--acc); background:var(--bg2); }
+  .navcard .ttl { font-size:12.5px; color:var(--t1); }
+  .navcard .id { font-family:var(--mono); font-size:9.5px; color:var(--g-value); }
+  .navcard .row { display:flex; gap:6px; align-items:center; margin-top:5px; font-size:10.5px; }
+  .bar { flex:1; height:4px; border-radius:2px; background:var(--bg3); overflow:hidden; }
+  .bar > i { display:block; height:100%; background:var(--suc); }
+  .warnchip { color:var(--wrn); border:1px solid var(--wrn); border-radius:999px; padding:0 6px; font-size:10px; }
+
+  /* ── канва ── */
+  /* Шире прежнего: фигуры квадратные, поэтому ширина колонки задаёт и высоту.
+     При 1180px круг выходил ~420px, и стикеры в нём не помещались. */
+  .canvas { display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:center; max-width:1560px; }
+
+  /* ФОРМЫ НАСТОЯЩИЕ, а не блоки со скруглением.
+     Канон Остервальдера: слева КВАДРАТ (Value Map), справа КРУГ (Customer
+     Profile). Это не украшение — по форме мгновенно видно, где «что есть у
+     клиента», а где «что делаем мы», и канва читается как «квадрат
+     подгоняется к кругу». Блок с закруглённым краем такой подсказки не даёт.
+
+     Квадрат в каноне разделён диагональю: Products & Services — прямоугольная
+     часть, Pain Relievers и Gain Creators — треугольные половины. Круг делится
+     на три сектора: Customer Jobs в центре, Pains и Gains по бокам. */
+  /* Фигура = ПОДЛОЖКА + контент поверх неё. Обрезать содержимое формой нельзя:
+     круг с overflow:hidden срезал заголовок и карточки, и канон превратился в
+     дефект. Поэтому форму рисует подложка, а карточки вписываются в неё
+     отступами — то есть фигуру видно, а текст цел. */
+  .figwrap { display:flex; flex-direction:column; gap:6px; }
+  .halfhead { display:flex; align-items:baseline; gap:8px; }
+  .halfhead .h { font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--t2); }
+  .halfhead .sub { font-size:10.5px; color:var(--t3); }
+  .fig { position:relative; aspect-ratio:1; }
+  .fig > .inner { position:absolute; inset:0; display:grid; grid-template-rows:1fr 1fr 1fr; }
+
+  /* Квадрат Value Map: подложка со скруглением только слева — правая сторона
+     «смотрит» на круг. Диагональ отделяет «снимаем боли» от «создаём выгоды». */
+  .vmap::before {
+    content:''; position:absolute; inset:0; border:1px solid var(--bd); background:var(--bg1);
+    border-radius:12px 0 0 12px;
+  }
+  .vmap::after {
+    content:''; position:absolute; inset:0; pointer-events:none; border-radius:12px 0 0 12px;
+    background:
+      /* вертикаль — правая граница Products & Services */
+      linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
+      /* горизонталь ПРАВОЙ половины — делит Gain Creators и Pain Relievers */
+      linear-gradient(to bottom, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px));
+    background-size:100% 100%, 50% 100%;
+    background-position:0 0, 100% 0;
+    background-repeat:no-repeat;
+    opacity:.45;
+  }
+  /* Канон: слева колонка Products & Services на всю высоту, правая половина
+     делится по горизонтали — Gain Creators сверху, Pain Relievers снизу.
+     Ровно так работает оригинальная канва: слева «что мы даём», справа — чем
+     это создаёт выгоду и снимает боль. */
+  .vmap > .inner {
+    padding:10px 12px;
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6px;
+  }
+  .vmap .s-ps { grid-row:1 / span 2; }
+  .vmap .s-gc { grid-column:2; grid-row:1; }
+  .vmap .s-pr { grid-column:2; grid-row:2; }
+
+  /* Круг Customer Profile: подложка — настоящая окружность. Ряды сужаются к
+     краям, повторяя её форму: центральный сектор (Customer Jobs) самый широкий,
+     как в каноне. */
+  .cprofile::before {
+    content:''; position:absolute; inset:0; border:1px solid var(--bd); background:var(--bg1);
+    border-radius:50%;
+  }
+  .cprofile::after {
+    content:''; position:absolute; inset:0; pointer-events:none; border-radius:50%;
+    background:
+      /* вертикаль — левая граница сектора Customer Jobs */
+      linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
+      /* горизонталь ЛЕВОЙ половины — делит Gains (верх) и Pains (низ) */
+      linear-gradient(to bottom, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px));
+    background-size:100% 100%, 50% 100%;
+    background-position:0 0, 0 0;
+    background-repeat:no-repeat;
+    opacity:.4;
+  }
+  .cprofile > .inner {
+    display:block; padding:0;
+  }
+  /* Секторы позиционируются по кругу: правый — Jobs, левый верх — Gains,
+     левый низ — Pains. Проценты подобраны так, чтобы содержимое лежало внутри
+     окружности, а не наезжало на её край. */
+  .cprofile .sector { position:absolute; }
+  /* Customer Jobs — центральный сектор справа: в каноне это то, вокруг чего
+     строится профиль, поэтому он ближе к центру и шире. Gains и Pains делят
+     левую половину пополам — верх и низ. */
+  /* У каждого сектора СВОЯ зона по высоте, иначе Gains и Pains наезжают друг
+     на друга: у абсолютных блоков нет общего потока, и «сколько влезет» они не
+     согласуют. Половины делят левую сторону ровно пополам. */
+  .cprofile .s-jobs  { right:5%;  top:50%; transform:translateY(-50%); width:40%; max-height:56%; text-align:center; }
+  .cprofile .s-gains { left:6%;   top:9%;   width:40%; height:38%; text-align:center; }
+  .cprofile .s-pains { left:6%;   bottom:9%; width:40%; height:38%; text-align:center; }
+  /* В круге стикеры мельче квадратных: секторы тут ограничены формой. */
+  .cprofile .card { width:92px; min-height:48px; font-size:10px; padding:5px 6px 12px; }
+  .cprofile .sector > div { justify-content:center; }
+  .cprofile .card { justify-content:center; }
+  /* Карточка — СТИКЕР: почти квадратная, с мелким кодом в правом нижнем углу.
+     На настоящей канве это бумажки, и форма тут работает: стикеры кладут
+     рядами, они слегка находят друг на друга, и их видно как штуки, а не как
+     строки списка. Строчный вид, который был раньше, читался как таблица —
+     то есть ровно то, чем канва не является. */
+  .card {
+    position:relative; display:inline-flex; align-items:flex-start;
+    width:118px; min-height:64px; padding:6px 7px 14px;
+    border:1px solid var(--bd); border-radius:3px; background:var(--bg2);
+    font-size:11px; line-height:1.25; cursor:pointer; vertical-align:top;
+    box-shadow:1px 1px 0 rgba(0,0,0,.18);
+    /* Небольшое перекрытие — стикеры не выкладывают по линейке. Отрицательный
+       отступ съедает край соседа, поэтому z-index поднимается при наведении. */
+    margin:0 -6px 4px 0;
+  }
+  .card:hover { z-index:5; }
+  /* Код мелко и в углу: на бумажке он подпись, а не заголовок. */
+  .card .cid {
+    position:absolute; right:5px; bottom:3px;
+    font-family:var(--mono); font-size:8px; color:var(--t3);
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .sector > div { display:flex; flex-wrap:wrap; }
+  .card.hi { box-shadow:0 0 0 2px var(--acc); }
+  .card.dim { opacity:.35; }
+
+  .canvas { position:relative; }
+  .gap { width:120px; }
+  /* Слой связей поверх ВСЕЙ канвы: концы линий берутся от самих карточек. */
+  svg.links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:2; }
+
+  .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:var(--t2); margin-top:10px; }
+  .legend i { display:inline-block; width:22px; height:0; border-top-width:2px; vertical-align:middle; margin-right:5px; }
+</style>
+
+<h2>PL-36 · VP-канва по канону Остервальдера</h2>
+
+<div class="note">
+  <b>Что не так сейчас.</b> Канва выведена произвольной раскладкой: секторы стоят не на своих местах,
+  формы не различены, а <b>рёбер не видно вовсе</b> — видны наборы карточек, но не то,
+  какой pain reliever снимает какую боль. Владелец: «не близко по классическому расположению»,
+  «рёбра не явные и не понятно кто от чего».
+  <br><br>
+  <b>Почему форма важна.</b> Канон — квадрат <b>Value Map</b> слева и круг <b>Customer Profile</b> справа.
+  Читается как «квадрат подгоняется к кругу»: достигнутый fit виден как совпадение половин.
+  Произвольная раскладка превращает канву в обычную таблицу связей — тогда она не нужна, то же есть в реестре.
+</div>
+
+<div class="sec-label">Навигатор (PL-37) — список канв отвечает «зачем переключаться»</div>
+<div class="nav" id="nav"></div>
+
+<div class="note">
+  Выпадашка не переживёт роста числа канв: в ней нет ни охвата, ни fit, ни того, где дыра.
+  Карточка показывает <b>покрытие</b> (сколько заявленного реально снято) и <b>сигналы</b> —
+  выгоды без метрики, боли, которые никто не снимает. Список канв = экран приоритетов, а не алфавитный перечень.
+</div>
+
+<div class="sec-label">Канва выбранного корня — наведите на карточку, чтобы увидеть её связи</div>
+<div class="canvas"><svg class="links" id="links"></svg>
+  <div class="figwrap">
+    <div class="halfhead"><span class="h">Value Map</span><span class="sub">что мы делаем · квадрат</span></div>
+    <div class="fig vmap">
+      <div class="inner">
+        <div class="sector s-ps"><div class="st">Products &amp; Services</div><div id="ps"></div></div>
+        <div class="sector s-gc"><div class="st">Gain Creators</div><div id="gc"></div></div>
+        <div class="sector s-pr"><div class="st">Pain Relievers</div><div id="pr"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gap"></div>
+
+  <div class="figwrap">
+    <div class="halfhead" style="justify-content:flex-end"><span class="h">Customer Profile</span><span class="sub">что есть у клиента · круг</span></div>
+    <div class="fig cprofile">
+      <div class="inner">
+        <div class="sector s-gains"><div class="st">Gains</div><div id="gains"></div></div>
+        <div class="sector s-jobs"><div class="st">Customer Jobs</div><div id="jobs"></div></div>
+        <div class="sector s-pains"><div class="st">Pains</div><div id="pains"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span><i style="border-top:2px solid var(--suc)"></i>сделано — RELIEVES / DELIVERS / PERFORMS</span>
+  <span><i style="border-top:2px dashed var(--wrn)"></i>только заявлено — ADDRESSES / PROMISES / HELPS_WITH</span>
+</div>
+
+<div class="note" style="margin-top:14px">
+  <b>Рёбра — главное, что здесь появилось.</b> Сплошная линия = доставлено, пунктир = заявлено и не сделано.
+  Именно расхождение этих двух — то, ради чего канву открывают, и сейчас его на канве не видно вовсе:
+  <span class="mono">ADDRESSES</span> и <span class="mono">RELIEVES</span> ведут к одной боли и выглядят одинаково.
+  <br><br>
+  <b>Наведение подсвечивает пару</b> и гасит остальное: при десятке карточек с каждой стороны
+  клубок линий читается хуже, чем его отсутствие.
+  <br><br>
+  <b>Узкий экран (PL-42):</b> две половины рядом не встанут. Предлагается стопка «профиль клиента сверху,
+  наши ответы снизу» с сохранением цвета и пунктира — связь показывается подсветкой пары по нажатию,
+  а не линиями: рисовать их между далеко разнесёнными блоками бессмысленно.
+</div>
+
+<script>
+  // Данные — реальные из корпуса (FEAT-GITCYCLE и соседи), чтобы прототип
+  // проверялся на том же, что увидят на экране.
+  const CANVASES = [
+    {
+      id: 'FEAT-GITCYCLE', title: 'Полный git-цикл сессии без токена у агента',
+      ps: [{ id: 'UC-GIT-MERGE', t: 'Merge по зелёному CI' }, { id: 'UC-GIT-PR', t: 'PR с телом из релиза' }, { id: 'UC-GIT-WATCH', t: 'Слежение за CI' }],
+      jobs: [{ id: 'JOB-LORE-SHIP', t: 'Довести работу до релиза', perf: 'UC-GIT-MERGE' }],
+      pains: [
+        { id: 'PAIN-LORE-MANUAL-HANDOFF', t: 'Ручной хендофф на PR/merge', done: true },
+        { id: 'PAIN-LORE-RAW-TOKEN', t: 'Сырой токен у агента', done: true },
+        { id: 'PAIN-LORE-BROKEN-LINKS', t: 'Релизы с пустыми связями', done: false },
+      ],
+      gains: [
+        { id: 'GAIN-LORE-LINKED-RELEASES', t: 'Связный граф релизов', done: true, metric: true },
+        { id: 'GAIN-LORE-SAFE-MERGE', t: 'Merge мимо красного CI невозможен', done: true, metric: true },
+        { id: 'GAIN-LORE-LESS-CHORES', t: 'Меньше рутины у владельца', done: false, metric: false },
+      ],
+    },
+    {
+      id: 'FEAT-KNOW-SEARCH', title: 'Поиск по корпусу знаний',
+      ps: [{ id: 'UC-SEARCH-RANK', t: 'Ранжированная выдача' }],
+      jobs: [{ id: 'JOB-LORE-FIND', t: 'Найти решение, принятое раньше', perf: null }],
+      pains: [{ id: 'PAIN-LORE-LOST-DECISION', t: 'Решение теряется в корпусе', done: false }],
+      gains: [{ id: 'GAIN-LORE-FAST-ANSWER', t: 'Ответ за один запрос', done: false, metric: false }],
+    },
+  ];
+
+  let current = 0;
+
+  const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstChild; };
+
+  function coverage(c) {
+    const items = [...c.pains, ...c.gains];
+    const done = items.filter(x => x.done).length;
+    return { done, total: items.length };
+  }
+
+  function renderNav() {
+    const nav = document.getElementById('nav');
+    nav.innerHTML = '';
+    CANVASES.forEach((c, i) => {
+      const { done, total } = coverage(c);
+      const noMetric = c.gains.filter(g => !g.metric).length;
+      const unrelieved = c.pains.filter(p => !p.done).length;
+      const card = el(`
+        <div class="navcard" role="button" aria-pressed="${i === current}">
+          <div class="id">${c.id}</div>
+          <div class="ttl">${c.title}</div>
+          <div class="row">
+            <span class="mono">${done}/${total}</span>
+            <span class="bar"><i style="width:${total ? (100 * done / total) : 0}%"></i></span>
+          </div>
+          <div class="row">
+            ${unrelieved ? `<span class="warnchip">${unrelieved} боль без решения</span>` : ''}
+            ${noMetric ? `<span class="warnchip">${noMetric} без метрики</span>` : ''}
+            ${!unrelieved && !noMetric ? '<span style="color:var(--suc)">сигналов нет</span>' : ''}
+          </div>
+        </div>`);
+      card.onclick = () => { current = i; render(); };
+      nav.appendChild(card);
+    });
+  }
+
+  function cardHtml(id, title, color, cls = '') {
+    return `<div class="card ${cls}" data-id="${id}" style="border-color:${color}">
+      ${title}<span class="cid">${id}</span></div>`;
+  }
+
+  function render() {
+    renderNav();
+    const c = CANVASES[current];
+
+    // id с префиксом ps-: тот же сценарий может стоять и в Products & Services,
+    // и в Pain Relievers — одинаковые id сделали бы связи неразличимыми.
+    document.getElementById('ps').innerHTML = c.ps.map(x => cardHtml('ps-' + x.id, x.t, 'var(--g-do)')).join('');
+    // Pain relievers и gain creators — ТЕ ЖЕ сценарии, но в роли «чем снимаем».
+    // Отдельных сущностей у них нет: роль задаётся ребром, а не типом.
+    document.getElementById('pr').innerHTML = c.pains.filter(p => p.done).map(p => cardHtml('rel-' + p.id, 'снимает: ' + p.t, 'var(--pain)')).join('') || '<span style="font-size:11px;color:var(--t3)">— пусто —</span>';
+    document.getElementById('gc').innerHTML = c.gains.filter(g => g.done).map(g => cardHtml('crt-' + g.id, 'создаёт: ' + g.t, 'var(--gain)')).join('') || '<span style="font-size:11px;color:var(--t3)">— пусто —</span>';
+
+    document.getElementById('jobs').innerHTML = c.jobs.map(x => cardHtml(x.id, x.t, 'var(--job)')).join('');
+    document.getElementById('pains').innerHTML = c.pains.map(x => cardHtml(x.id, x.t, 'var(--pain)')).join('');
+    document.getElementById('gains').innerHTML = c.gains.map(x => cardHtml(x.id, x.t + (x.metric ? '' : ' ⚠ без метрики'), 'var(--gain)')).join('');
+
+    requestAnimationFrame(drawLinks);
+  }
+
+  function drawLinks() {
+    const svg = document.getElementById('links');
+    const c = CANVASES[current];
+    const box = svg.getBoundingClientRect();
+    svg.innerHTML = '';
+
+    const pairs = [
+      ...c.pains.map(p => ({ from: 'rel-' + p.id, to: p.id, done: p.done })),
+      ...c.gains.map(g => ({ from: 'crt-' + g.id, to: g.id, done: g.done })),
+      ...c.jobs.map(j => ({ from: j.perf ? 'ps-' + j.perf : null, to: j.id, done: !!j.perf })),
+    ];
+
+    for (const p of pairs) {
+      const a = p.from ? document.querySelector('[data-id="' + p.from + '"]') : null;
+      const b = document.querySelector('[data-id="' + p.to + '"]');
+      if (!b) continue;
+      // Заявленное без исполнения тянем ОТ СЕКТОРА: карточки в Value Map для
+      // него нет — в этом и смысл «заявили, но не сделали».
+      const fallback = p.to.startsWith('JOB-') ? 'ps' : 'pr';
+      const src = a ? a.getBoundingClientRect() : document.getElementById(fallback).getBoundingClientRect();
+      const dst = b.getBoundingClientRect();
+      const x1 = src.right - box.left, y1 = src.top + src.height / 2 - box.top;
+      const x2 = dst.left - box.left,  y2 = dst.top + dst.height / 2 - box.top;
+      const dx = Math.max(30, (x2 - x1) * 0.45);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + dx) + ' ' + y1 + ', ' + (x2 - dx) + ' ' + y2 + ', ' + x2 + ' ' + y2);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', p.done ? 'var(--suc)' : 'var(--wrn)');
+      path.setAttribute('stroke-width', '2');
+      if (!p.done) path.setAttribute('stroke-dasharray', '5 4');
+      path.dataset.pair = p.from + '|' + p.to;
+      svg.appendChild(path);
+    }
+  }
+
+  // Подсветка пары: клубок линий при десятке карточек читается хуже, чем его
+  // отсутствие, поэтому наведение гасит всё, кроме выбранной связи.
+  document.addEventListener('mouseover', e => {
+    const card = e.target.closest?.('.card');
+    if (!card) return;
+    const id = card.dataset.id;
+    document.querySelectorAll('.card').forEach(x => x.classList.add('dim'));
+    document.querySelectorAll('#links path').forEach(p => {
+      const [from, to] = p.dataset.pair.split('|');
+      const on = from === id || to === id;
+      p.style.opacity = on ? '1' : '.12';
+      if (on) {
+        document.querySelector(`[data-id="${from}"]`)?.classList.remove('dim');
+        document.querySelector(`[data-id="${to}"]`)?.classList.remove('dim');
+        document.querySelector(`[data-id="${from}"]`)?.classList.add('hi');
+        document.querySelector(`[data-id="${to}"]`)?.classList.add('hi');
+      }
+    });
+  });
+  document.addEventListener('mouseout', e => {
+    if (!e.target.closest?.('.card')) return;
+    document.querySelectorAll('.card').forEach(x => x.classList.remove('dim', 'hi'));
+    document.querySelectorAll('#links path').forEach(p => { p.style.opacity = '1'; });
+  });
+
+  window.addEventListener('resize', drawLinks);
+  render();
+</script>
