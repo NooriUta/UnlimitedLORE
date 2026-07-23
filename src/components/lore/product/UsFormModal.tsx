@@ -164,6 +164,7 @@ export interface UsDraft {
   parent_uc_id?: string | null;
   primary_actor_id?: string | null;
   supporting_actor_ids?: string[];
+  project?: string | null;
 }
 
 export default function UsFormModal({
@@ -207,12 +208,19 @@ export default function UsFormModal({
   // Supporting — множественные: у сценария есть и второстепенные участники, и
   // сделай мы всех primary, «главный участник» перестал бы что-либо значить.
   const [supportActors, setSupportActors] = useState<string[]>(initial?.supporting_actor_ids ?? []);
+  // D18/D22: проект. Слайсы слоя отдают projects с PL-10, но записать его было
+  // нечем — поле в выдаче всегда приходило пустым.
+  const [project, setProject] = useState(initial?.project ?? '');
+  const [projects, setProjects] = useState<{ slug: string; name?: string | null }[]>([]);
   useEffect(() => {
     if (!opened) return;
     const ctrl = new AbortController();
     fetchLoreSlice<LoreActorRow>('actors', undefined, ctrl.signal)
       .then(setActors)
       .catch(() => { /* без списка форма остаётся рабочей — актора можно задать позже */ });
+    fetchLoreSlice<{ slug: string; name?: string | null }>('git_projects', undefined, ctrl.signal)
+      .then(setProjects)
+      .catch(() => { /* без проектов форма рабочая: привязка не обязательна */ });
     return () => ctrl.abort();
   }, [opened]);
 
@@ -285,6 +293,9 @@ export default function UsFormModal({
       // терять его из-за недоступного актора было бы худшим обменом.
       if (primaryActor) {
         await linkLoreUc({ uc_id: finalId, rel: 'actor', target_id: primaryActor, actor_role: 'primary' });
+      }
+      if (project) {
+        await linkLoreUc({ uc_id: finalId, rel: 'project', target_id: project });
       }
       for (const a of supportActors) {
         if (a === primaryActor) continue;  // один актор не может быть в двух ролях
@@ -418,6 +429,17 @@ export default function UsFormModal({
           проверок становится подсказкой. Сказать это явно дешевле, чем оставить
           пользователя гадать, почему счёт скакнул при переключении. */}
       <div style={hint}>{t('lore.product.us.rigorHint', 'Вес задаёт, какие проверки обязательны: у облегчённого их меньше')}</div>
+
+      <label style={label}>{t('lore.product.us.project', 'Проект')}</label>
+      <select style={field} value={project} onChange={e => setProject(e.target.value)}>
+        <option value="">{t('lore.product.us.projectNone', '— не выбран —')}</option>
+        {projects.map(p => (
+          <option key={p.slug} value={p.slug}>{p.name ?? p.slug}</option>
+        ))}
+      </select>
+      {/* При нескольких продуктах в корпусе сценарии без проекта сливаются в
+          один список — та же беда, что у одноимённых ролей акторов (D18/D22). */}
+      <div style={hint}>{t('lore.product.us.projectHint', 'к какому продукту относится — иначе сценарии разных продуктов смешаются')}</div>
 
       {/* ── акторы (D19) ── */}
       <label style={label}>{t('lore.product.us.primaryActor', 'Primary-актор')}</label>

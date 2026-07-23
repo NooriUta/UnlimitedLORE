@@ -1602,7 +1602,10 @@
         "actorNone": "— none —",
         "primaryHint": "who drives the scenario — required by the form check",
         "supportActors": "Other participants",
-        "noActors": "no actors yet — create them in the Customer section"
+        "noActors": "no actors yet — create them in the Customer section",
+        "project": "Project",
+        "projectNone": "— none —",
+        "projectHint": "which product it belongs to — otherwise scenarios of different products mix"
       },
       "canvas": {
         "claimed": "claimed",

@@ -1241,7 +1241,7 @@ export function linkLoreFeature(body: {
 /** Связки сценария. relieves/delivers/performs — половина «ДОСТАВЛЕНО». */
 export function linkLoreUc(body: {
   uc_id: string;
-  rel: 'task' | 'adr' | 'decision' | 'actor' | 'component'
+  rel: 'task' | 'adr' | 'decision' | 'actor' | 'component' | 'project'
      | 'includes' | 'extends' | 'relieves' | 'delivers' | 'performs';
   target_id: string;
   action?: 'add' | 'remove';

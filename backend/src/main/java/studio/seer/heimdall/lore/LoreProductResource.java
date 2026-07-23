@@ -635,7 +635,7 @@ public class LoreProductResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.uc_id() == null || req.uc_id().isBlank()
                 || req.rel() == null || req.target_id() == null || req.target_id().isBlank())
-            return badParams("uc_id, rel (task|adr|decision|actor|component|includes|extends|relieves|delivers|performs), target_id required");
+            return badParams("uc_id, rel (task|adr|decision|actor|component|project|includes|extends|relieves|delivers|performs), target_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
@@ -670,6 +670,21 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "BELONGS_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                }
+                /**
+                 * Проект сценария/корня (BELONGS_TO_PROJECT).
+                 *
+                 * Слайсы слоя отдают `projects` с PL-10, но записать проект
+                 * было НЕЧЕМ: у `uc_link` этого отношения не существовало, и
+                 * поле в выдаче всегда приходило пустым. При нескольких
+                 * продуктах в одном корпусе это не косметика — без проекта
+                 * сценарии разных продуктов сливаются в один список, ровно как
+                 * одноимённые роли акторов без проекта (D18/D22).
+                 */
+                case "project" -> {
+                    edge = "BELONGS_TO_PROJECT";
+                    fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    toSql   = "(SELECT FROM KnowGitProject WHERE slug=:tid)";
                 }
                 case "includes" -> { // D13: UC_INCLUDES — обязательный под-сценарий
                     edge = "UC_INCLUDES";

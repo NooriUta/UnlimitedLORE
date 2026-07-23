@@ -66,8 +66,35 @@ interface MentionState {
 function buildMention(
   getItems: () => MentionItem[],
   setState: (s: MentionState | null) => void,
+  getState: () => MentionState | null,
 ) {
-  return Mention.configure({
+  // Сериализация в markdown — СВОЯ: tiptap-markdown знает только свои узлы и
+  // для незнакомого пишет заглушку `[mention]`. То есть выбранный актор
+  // исчезал бы при сохранении, а в теле оставалось слово «mention» — потеря,
+  // замаскированная под текст.
+  const MentionMd = Mention.extend({
+    addStorage() {
+      return {
+        markdown: {
+          serialize(state: { write: (s: string) => void }, node: { attrs: Record<string, unknown> }) {
+            // Ссылка, а не голый текст: `@Имя` читается человеком, а `lore:` —
+            // машиной. Голый текст сохранял бы подпись и терял id, и связь с
+            // актором пришлось бы угадывать по строке. Обычная markdown-ссылка
+            // при этом остаётся читаемой в любом просмотрщике, включая тот,
+            // который про LORE ничего не знает.
+            state.write(`[@${node.attrs.label ?? node.attrs.id}](lore:actor/${node.attrs.id})`);
+          },
+          // Обратный разбор не заводим: при повторном открытии это остаётся
+          // обычной ссылкой — читаемой и несущей id. Оживлять её в узел значило
+          // бы держать вторую правду о составе участников: он живёт РЕБРОМ
+          // `HAS_ACTOR`, а текст только на него ссылается.
+          parse: {},
+        },
+      };
+    },
+  });
+
+  return MentionMd.configure({
     // renderText/renderHTML держат ТЕКСТОВУЮ форму «@Имя»: поле сохраняется как
     // markdown, и узел без текстового представления превратился бы при
     // повторном открытии в пустоту или мусор.
@@ -93,10 +120,26 @@ function buildMention(
           rect: props.clientRect?.() ? { left: props.clientRect()!.left, top: props.clientRect()!.bottom } : null,
           command: props.command,
         }),
-        // Esc закрывает список, но НЕ съедает остальные клавиши: стрелки и
-        // Enter внутри списка обрабатывает наш обработчик на самом блоке.
+        // Клавиатура ОБЯЗАТЕЛЬНА: выпадашка появляется по ходу набора, и рука
+        // на клавишах. Оставь мы только мышь, за упоминанием пришлось бы
+        // тянуться к ней посреди фразы — быстрее дописать имя руками, и
+        // подсказка осталась бы неиспользуемой.
         onKeyDown: props => {
+          const st = getState();
           if (props.event.key === 'Escape') { setState(null); return true; }
+          if (!st || st.items.length === 0) return false;
+          if (props.event.key === 'ArrowDown') {
+            setState({ ...st, index: (st.index + 1) % st.items.length });
+            return true;
+          }
+          if (props.event.key === 'ArrowUp') {
+            setState({ ...st, index: (st.index - 1 + st.items.length) % st.items.length });
+            return true;
+          }
+          if (props.event.key === 'Enter' || props.event.key === 'Tab') {
+            const item = st.items[st.index];
+            if (item) { st.command?.({ id: item.id, label: item.label }); return true; }
+          }
           return false;
         },
         onExit: () => setState(null),
@@ -299,6 +342,10 @@ export default function TipTapField({
   // актуальную — та же причина, по которой здесь уже живёт onChangeRef.
   const uploadAndInsertRef = useRef<(files: File[]) => Promise<void>>(async () => {});
   const [mentionState, setMentionState] = useState<MentionState | null>(null);
+  // Ref рядом с состоянием: обработчик клавиш живёт в расширении, созданном
+  // один раз, и читал бы состояние из первого рендера.
+  const mentionStateRef = useRef<MentionState | null>(null);
+  mentionStateRef.current = mentionState;
   const mentionItemsRef = useRef<MentionItem[]>([]);
   mentionItemsRef.current = mentionItems ?? [];
   const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');   // TT-01: raw-source view toggle
@@ -312,7 +359,7 @@ export default function TipTapField({
       ...TASKLIST_EXTENSIONS,
       // PL-41: упоминание по «@». Подключаем ТОЛЬКО когда источник задан —
       // иначе «@» в обычном тексте (адреса, ники) открывал бы пустой список.
-      ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState)] : []),
+      ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState, () => mentionStateRef.current)] : []),
       Markdown.configure({ html: false, tightLists: true }),
     ],
     content: value,
