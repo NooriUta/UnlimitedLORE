@@ -343,7 +343,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
           прослеживаемости, а переход к ним — из их собственных разделов. */}
       {tracedByUcs.length > 0 && (
         <div style={S.section}>
-          <div style={S.sLabel}>{t('lore.adrPassportView.tracedBy', 'Прослеживают сценарии (TRACED_TO)')}</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.tracedBy', 'На него ссылаются сценарии')}</div>
           <div style={S.chips}>
             {tracedByUcs.map(id => (
               <span key={id} style={S.chip(false)}>{id}</span>
@@ -353,7 +353,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
       )}
       {justifiedTasks.length > 0 && (
         <div style={S.section}>
-          <div style={S.sLabel}>{t('lore.adrPassportView.justifies', 'Обосновывает задачи (JUSTIFIED_BY)')}</div>
+          <div style={S.sLabel}>{t('lore.adrPassportView.justifies', 'Им обоснованы задачи')}</div>
           <div style={S.chips}>
             {justifiedTasks.map(id => (
               <span key={id} style={S.chip(false)}>{id}</span>

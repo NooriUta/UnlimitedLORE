@@ -20,6 +20,7 @@ import {
   PassportHeader,
   EmptyDetail,
   ListSearch,
+  Markdown,
 } from './shared';
 import { ucStatusLabel, ucStatusTone, rigorLabel, goalLevelLabel } from './vocab';
 import UsFormModal, { type UsDraft } from './UsFormModal';
@@ -124,13 +125,6 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       const actorIds = asArray(uc.actor_ids);
       const actorNames = asArray(uc.actor_names);
 
-      const preStyle = {
-        margin: 0,
-        fontFamily: 'var(--mono)',
-        fontSize: 'var(--fs-sm)',
-        whiteSpace: 'pre-wrap' as const,
-        color: 'var(--t2)',
-      };
 
       detail = (
         <div>
@@ -177,13 +171,13 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               : (
                 <>
                   {painIds.map(id => (
-                    <LinkChip key={`p-${id}`} color="var(--pain)" onClick={() => onNavigate('vpProfile', id)}>RELIEVES → {id}</LinkChip>
+                    <LinkChip key={`p-${id}`} color="var(--pain)" onClick={() => onNavigate('vpProfile', id)}>{t('lore.product.us.relieves', 'снимает')} · {id}</LinkChip>
                   ))}
                   {gainIds.map(id => (
-                    <LinkChip key={`g-${id}`} color="var(--gain)" onClick={() => onNavigate('vpProfile', id)}>DELIVERS → {id}</LinkChip>
+                    <LinkChip key={`g-${id}`} color="var(--gain)" onClick={() => onNavigate('vpProfile', id)}>{t('lore.product.us.delivers', 'даёт')} · {id}</LinkChip>
                   ))}
                   {jobIds.map(id => (
-                    <LinkChip key={`j-${id}`} color="var(--job)" onClick={() => onNavigate('vpProfile', id)}>PERFORMS → {id}</LinkChip>
+                    <LinkChip key={`j-${id}`} color="var(--job)" onClick={() => onNavigate('vpProfile', id)}>{t('lore.product.us.performs', 'выполняет')} · {id}</LinkChip>
                   ))}
                 </>
               )}
@@ -191,23 +185,23 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
           <PSection title={t('lore.product.us.scenario', 'Сценарий (Коберн)')}>
             {(uc.scenario_md ?? '').trim()
-              ? <pre style={preStyle}>{uc.scenario_md ?? ''}</pre>
+              ? <Markdown md={uc.scenario_md} />
               : <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>— {t('lore.product.us.noScenario', 'сценарий не заполнен')}</span>}
           </PSection>
 
           {(uc.acceptance_md ?? '').trim() && (
             <PSection title={t('lore.product.us.acceptance', 'Приёмка')}>
-              <pre style={preStyle}>{uc.acceptance_md ?? ''}</pre>
+              <Markdown md={uc.acceptance_md} />
             </PSection>
           )}
 
           {includes.length + extendsUc.length > 0 && (
-            <PSection title={t('lore.product.us.graph', 'Граф UC')}>
+            <PSection title={t('lore.product.us.graph', 'Связанные сценарии')}>
               {includes.map(id => (
-                <LinkChip key={`inc-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>includes → {id}</LinkChip>
+                <LinkChip key={`inc-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>{t('lore.product.us.includes', 'включает')} · {id}</LinkChip>
               ))}
               {extendsUc.map(id => (
-                <LinkChip key={`ext-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>extends → {id}</LinkChip>
+                <LinkChip key={`ext-${id}`} color="var(--g-do)" onClick={() => onNavigate('userStories', id)}>{t('lore.product.us.extends', 'расширяет')} · {id}</LinkChip>
               ))}
             </PSection>
           )}

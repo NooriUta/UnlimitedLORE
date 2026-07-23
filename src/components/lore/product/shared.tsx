@@ -4,6 +4,8 @@
 import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../../api/lore';
+import { marked } from '../markdown';
+import { sanitizeMd } from '../sanitizeHtml';
 
 // Навигация между продуктовыми разделами (section = ?section=, id = ?passport=).
 export type ProductNavigate = (section: string, id?: string) => void;
@@ -109,6 +111,30 @@ export function ListRow({ id, title, meta, selected, onClick }: { id: string; ti
       {title}
       {meta && <span style={{ marginLeft: 6 }}>{meta}</span>}
     </button>
+  );
+}
+
+/**
+ * Тело в markdown — РЕНДЕРОМ, а не сырым текстом.
+ *
+ * Паспорта US и корня показывали `scenario_md`/`acceptance_md` в `<pre>`: на
+ * экране висели «### Триггер» и «1.» вместо заголовков и списка. Тело пишется
+ * в markdown-редакторе и по всему корпусу читается отрендеренным — здесь оно
+ * оставалось единственным местом, где разметка видна как разметка.
+ *
+ * `marked` берём из общего модуля (там же его конфиг), санитайзер обязателен:
+ * тело приходит из корпуса и может содержать HTML.
+ */
+export function Markdown({ md, style }: { md: string | null | undefined; style?: CSSProperties }) {
+  const text = (md ?? '').trim();
+  if (!text) return null;
+  const html = sanitizeMd(marked.parse(text) as string);
+  return (
+    <div
+      className="lore-md"
+      style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', ...style }}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 

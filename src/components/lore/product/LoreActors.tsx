@@ -25,6 +25,7 @@ import {
   EmptyDetail,
   FilterChips,
   ListSearch,
+  Markdown,
 } from './shared';
 import ActorFormModal, { type ActorDraft } from './ActorFormModal';
 
@@ -193,7 +194,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
 
           {a.body_md && (
             <PSection title={t('lore.product.actor.about', 'О роли')}>
-              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', whiteSpace: 'pre-wrap' }}>{a.body_md}</div>
+              <Markdown md={a.body_md} />
             </PSection>
           )}
         </div>

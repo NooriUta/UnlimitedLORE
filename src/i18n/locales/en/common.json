@@ -460,8 +460,8 @@
       "projectsMulti": "Projects",
       "questions": "Open questions of this ADR",
       "save": "Save",
-      "tracedBy": "Traced by scenarios (TRACED_TO)",
-      "justifies": "Justifies tasks (JUSTIFIED_BY)"
+      "tracedBy": "Scenarios referring to it",
+      "justifies": "Tasks justified by it"
     },
     "analytics": {
       "flow": {
@@ -1579,7 +1579,7 @@
         "scenario": "Scenario",
         "noScenario": "scenario not filled in",
         "acceptance": "Acceptance",
-        "graph": "UC graph",
+        "graph": "Related scenarios",
         "new": "+ Story",
         "edit": "Edit",
         "save": "Save",
@@ -1621,7 +1621,12 @@
         "linkAdd": "+ link…",
         "unlink": "unlink",
         "vpNoneForActor": "this segment has no such records",
-        "vpAllLinked": "everything is already linked"
+        "vpAllLinked": "everything is already linked",
+        "relieves": "relieves",
+        "delivers": "delivers",
+        "performs": "performs",
+        "includes": "includes",
+        "extends": "extends"
       },
       "canvas": {
         "claimed": "claimed",
@@ -1641,7 +1646,7 @@
         "performers": "🌊 Who PERFORMS it — feature user stories (PERFORMS)",
         "whose": "Whose job",
         "pain": "pain",
-        "scoring": "Scoring by segment (FELT_BY)",
+        "scoring": "Who it affects",
         "claimedVsRelieved": "Claimed vs relieved",
         "claimed": "claimed by",
         "relieved": "relieved by",

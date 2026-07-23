@@ -225,7 +225,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(p.pain_id), marginBottom: 8 }}>{p.pain_id}</div>
 
-        <PSection title={t('lore.product.vp.scoring', 'Скоринг по сегментам (FELT_BY)')}>
+        <PSection title={t('lore.product.vp.scoring', 'Кого касается')}>
           {asArray(p.actor_ids).length === 0
             ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>—</div>
             : asArray(p.actor_ids).map((id, i) => (

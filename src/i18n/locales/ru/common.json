@@ -460,8 +460,8 @@
       "projectsMulti": "Проекты",
       "questions": "Открытые вопросы этого ADR",
       "save": "Сохранить",
-      "tracedBy": "Прослеживают сценарии (TRACED_TO)",
-      "justifies": "Обосновывает задачи (JUSTIFIED_BY)"
+      "tracedBy": "На него ссылаются сценарии",
+      "justifies": "Им обоснованы задачи"
     },
     "analytics": {
       "flow": {
@@ -1579,7 +1579,7 @@
         "scenario": "Сценарий",
         "noScenario": "сценарий не заполнен",
         "acceptance": "Приёмка",
-        "graph": "Граф UC",
+        "graph": "Связанные сценарии",
         "new": "+ История",
         "edit": "Правка",
         "save": "Сохранить",
@@ -1621,7 +1621,12 @@
         "linkAdd": "+ привязать…",
         "unlink": "снять привязку",
         "vpNoneForActor": "у этого сегмента таких записей нет",
-        "vpAllLinked": "всё уже привязано"
+        "vpAllLinked": "всё уже привязано",
+        "relieves": "снимает",
+        "delivers": "даёт",
+        "performs": "выполняет",
+        "includes": "включает",
+        "extends": "расширяет"
       },
       "canvas": {
         "claimed": "заявлено",
@@ -1641,7 +1646,7 @@
         "performers": "🌊 Кто ВЫПОЛНЯЕТ — US фичи (PERFORMS)",
         "whose": "Чья работа",
         "pain": "боль",
-        "scoring": "Скоринг по сегментам (FELT_BY)",
+        "scoring": "Кого касается",
         "claimedVsRelieved": "Заявлено vs снято",
         "claimed": "заявили",
         "relieved": "снимают",
