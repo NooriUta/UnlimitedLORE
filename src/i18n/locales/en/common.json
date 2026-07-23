@@ -1626,7 +1626,10 @@
         "delivers": "delivers",
         "performs": "performs",
         "includes": "includes",
-        "extends": "extends"
+        "extends": "extends",
+        "primaryHintSub": "a subfunction is performed by a system or agent — a person has no goal at this level",
+        "tasks": "How it gets done",
+        "noTasks": "no tasks yet"
       },
       "canvas": {
         "claimed": "claimed",

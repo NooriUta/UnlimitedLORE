@@ -368,6 +368,21 @@ export default function UsFormModal({
     }
   };
 
+  /**
+   * Акторы, допустимые на выбранной высоте (Кокберн).
+   *
+   * 🐟 subfunction — внутренний шаг, обслуживающий сценарий: его исполняет
+   * система или агент, у человека на этой высоте цели нет. Показывать здесь
+   * людей значит предлагать заведомо неверный выбор, а потом ловить его
+   * ревью — дешевле не предлагать.
+   *
+   * Уже выбранный актор остаётся в списке, даже если не подходит: скрыть его
+   * означало бы показать пустое поле там, где значение есть, и человек не
+   * понял бы, что именно надо поменять.
+   */
+  const actorsForLevel = actors.filter(a =>
+    goalLevel !== 'subfunction' || a.kind !== 'human-role' || a.actor_id === primaryActor);
+
   const finalId = editing ? (initial?.uc_id ?? '') : normalizeUsId(id, root);
 
   const submit = async () => {
@@ -586,18 +601,22 @@ export default function UsFormModal({
       <label style={label}>{t('lore.product.us.primaryActor', 'Primary-актор')}</label>
       <select style={field} value={primaryActor} onChange={e => setPrimaryActor(e.target.value)}>
         <option value="">{t('lore.product.us.actorNone', '— не выбран —')}</option>
-        {actors.map(a => (
+        {actorsForLevel.map(a => (
           <option key={a.actor_id} value={a.actor_id}>{a.name ?? a.actor_id}</option>
         ))}
       </select>
       {/* Проверка линтера «Primary-актор задан» ссылается ровно на это поле:
           раньше она горела красным, а исправить её из формы было нечем. */}
-      <div style={hint}>{t('lore.product.us.primaryHint', 'кто ведёт сценарий — этого требует проверка оформления')}</div>
+      <div style={hint}>
+        {goalLevel === 'subfunction'
+          ? t('lore.product.us.primaryHintSub', 'подфункцию исполняет система или агент — у человека на этой высоте цели нет')
+          : t('lore.product.us.primaryHint', 'кто ведёт сценарий — этого требует проверка оформления')}
+      </div>
 
       <label style={label}>{t('lore.product.us.supportActors', 'Остальные участники')}</label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {actors.length === 0 && <span style={hint}>{t('lore.product.us.noActors', 'акторов пока нет — заведите их в разделе «Клиент»')}</span>}
-        {actors.filter(a => a.actor_id !== primaryActor).map(a => {
+        {actorsForLevel.filter(a => a.actor_id !== primaryActor).map(a => {
           const on = supportActors.includes(a.actor_id);
           return (
             <button

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import type { LoreFeatureRow, LoreUcRow } from '../../../api/lore';
 import { fetchLoreSlice } from '../../../api/lore';
+import type { LoreUcTaskRow } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import {
@@ -19,10 +20,12 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  TRow,
   ListSearch,
   Markdown,
 } from './shared';
 import { ucStatusLabel, ucStatusTone, rigorLabel, goalLevelLabel } from './vocab';
+import { sprintTone } from './LoreFeatures';
 import UsFormModal, { type UsDraft } from './UsFormModal';
 
 // Уровень цели (Коберн, D2): море / рыба.
@@ -44,6 +47,18 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
   const [creating, setCreating] = useState(false);
   const [editingUs, setEditingUs] = useState<UsDraft | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // Задачи выбранного сценария (PL-43). В паспорте фичи дерево US→задачи было,
+  // а в паспорте самой US — нет: чтобы увидеть, чем она делается, приходилось
+  // возвращаться к корню и раскрывать её там.
+  const [ucTasks, setUcTasks] = useState<LoreUcTaskRow[]>([]);
+  useEffect(() => {
+    if (!selectedId) { setUcTasks([]); return; }
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreUcTaskRow>('tasks_of_uc', { id: selectedId }, ctrl.signal)
+      .then(setUcTasks)
+      .catch(() => { /* задачи справочны — паспорт остаётся рабочим */ });
+    return () => ctrl.abort();
+  }, [selectedId]);
   const [ucsLoading, setUcsLoading] = useState(true);
   const featKey = features.map(f => f.uc_id).join('|');
 
@@ -205,6 +220,34 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               ))}
             </PSection>
           )}
+
+          {/* Задачи со спринтами — как в паспорте фичи. Раньше, чтобы увидеть,
+              чем сценарий делается, приходилось возвращаться к корню и
+              раскрывать его там. Статус задачи и статус СПРИНТА показываются
+              оба: «сделано» в отменённом спринте и «сделано» в живом — разные
+              новости, по статусу задачи неразличимые. */}
+          <PSection title={t('lore.product.us.tasks', 'Чем делается')}>
+            {ucTasks.length === 0 ? (
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>
+                {t('lore.product.us.noTasks', 'задач пока нет')}
+              </div>
+            ) : ucTasks.map((task, i) => (
+              <TRow key={task.task_uid} first={i === 0}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{task.task_id}</span>
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title ?? ''}</span>
+                <Pill tone="muted">{task.status_raw ?? '—'}</Pill>
+                {task.sprint_id && (
+                  <LinkChip
+                    color="var(--acc)"
+                    onClick={() => onNavigate('sprints', task.sprint_id ?? undefined)}
+                    title={task.sprint_status_raw ?? undefined}
+                  >
+                    <Pill tone={sprintTone(task.sprint_status_raw)}>{task.sprint_id}</Pill>
+                  </LinkChip>
+                )}
+              </TRow>
+            ))}
+          </PSection>
         </div>
       );
     }
