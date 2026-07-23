@@ -57,8 +57,14 @@ function Sticker({ id, title, color, small, onHover, onDragStart, onDrop }: {
     <div
       data-vp={id}
       draggable={!!onDragStart}
-      onDragStart={onDragStart}
-      onDragOver={e => { if (onDrop) e.preventDefault(); }}
+      onDragStart={e => {
+        // setData обязателен: без него drop не выстрелит ни в Chrome, ни в Firefox —
+        // перетаскивание выглядит рабочим, а результата нет.
+        e.dataTransfer.setData('text/plain', id);
+        e.dataTransfer.effectAllowed = 'move';
+        onDragStart?.();
+      }}
+      onDragOver={e => { if (onDrop) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; } }}
       onDrop={e => { e.preventDefault(); onDrop?.(); }}
       onMouseEnter={() => onHover(id)}
       onMouseLeave={() => onHover(null)}
@@ -153,10 +159,23 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   const gainIds = useMemo(() => asArray(feature?.gain_ids), [feature]);
   const jobIds = useMemo(() => asArray(feature?.job_ids), [feature]);
 
+  /** Сценарии-исполнители по видам: кто снимает боли, кто создаёт выгоды. */
+  const relievers = useMemo(
+    () => ucs.filter(u => asArray(u.relieves_pain_ids).some(id => painIds.includes(id))),
+    [ucs, painIds],
+  );
+  const creators = useMemo(
+    () => ucs.filter(u => asArray(u.delivers_gain_ids).some(id => gainIds.includes(id))),
+    [ucs, gainIds],
+  );
+
+  // Связь идёт ОТ СЦЕНАРИЯ к ценности. Один сценарий может снимать несколько
+  // болей — он стоит в секторе один раз, а линий от него столько, сколько
+  // закрывает: иначе пришлось бы дублировать стикер и врать о составе.
   const links: Link[] = useMemo(() => [
-    ...painIds.map(id => ({ from: doneBy.has(id) ? `rel-${id}` : null, to: id, done: doneBy.has(id) })),
-    ...gainIds.map(id => ({ from: doneBy.has(id) ? `crt-${id}` : null, to: id, done: doneBy.has(id) })),
-    ...jobIds.map(id => ({ from: doneBy.has(id) ? `ps-${doneBy.get(id)}` : null, to: id, done: doneBy.has(id) })),
+    ...painIds.map(id => ({ from: doneBy.has(id) ? 'rel-' + doneBy.get(id) : null, to: id, done: doneBy.has(id) })),
+    ...gainIds.map(id => ({ from: doneBy.has(id) ? 'crt-' + doneBy.get(id) : null, to: id, done: doneBy.has(id) })),
+    ...jobIds.map(id => ({ from: doneBy.has(id) ? 'ps-' + doneBy.get(id) : null, to: id, done: doneBy.has(id) })),
   ], [painIds, gainIds, jobIds, doneBy]);
 
   // ── линии ──
@@ -217,7 +236,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     const id = requestAnimationFrame(draw);
     window.addEventListener('resize', draw);
     return () => { cancelAnimationFrame(id); window.removeEventListener('resize', draw); };
-  }, [links, ucs, narrow, featureId]);
+  }, [links, ucs, narrow, featureId, order]);
 
   if (loading) return <div style={S.wrap}><LoreSkeleton rows={6} /></div>;
   if (features.length === 0) {
@@ -335,8 +354,8 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           gap: 6,
         }}>
           {sec('ps', 'Products & Services', stickers('ps', ucs.map(u => u.uc_id), 'ps-', 'var(--g-do)'), narrow ? undefined : { gridRow: '1 / span 2' })}
-          {sec('gc', 'Gain Creators', stickers('gc', gainIds.filter(id => doneBy.has(id)), 'crt-', 'var(--gain)'), narrow ? undefined : { gridColumn: 2, gridRow: 1 })}
-          {sec('pr', 'Pain Relievers', stickers('pr', painIds.filter(id => doneBy.has(id)), 'rel-', 'var(--pain)'), narrow ? undefined : { gridColumn: 2, gridRow: 2 })}
+          {sec('gc', 'Gain Creators', stickers('gc', creators.map(u => u.uc_id), 'crt-', 'var(--gain)'), narrow ? undefined : { gridColumn: 2, gridRow: 1 })}
+          {sec('pr', 'Pain Relievers', stickers('pr', relievers.map(u => u.uc_id), 'rel-', 'var(--pain)'), narrow ? undefined : { gridColumn: 2, gridRow: 2 })}
         </div>
       </div>
     </div>
