@@ -171,7 +171,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
           </div>
 
-          <PSection title={t('lore.product.us.doesWhat', 'Что реально делает (ноги в профиль)')}>
+          <PSection title={t('lore.product.us.doesWhat', 'Что закрывает на деле')}>
             {painIds.length + gainIds.length + jobIds.length === 0
               ? <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>
               : (

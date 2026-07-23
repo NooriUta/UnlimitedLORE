@@ -154,6 +154,9 @@ export function normalizeUsId(raw: string, root = false): string {
   return (root ? 'FEAT-' : 'US-') + v;
 }
 
+/** Запись реестра ценности: id, подпись и сегменты, которым она принадлежит. */
+interface VpItem { id: string; title: string; actors: string[] }
+
 export interface UsDraft {
   uc_id: string;
   title?: string | null;
@@ -226,7 +229,9 @@ export default function UsFormModal({
   // Каталог ценностей для пикеров — тот же реестр, что в разделе «Работы ·
   // Боли · Ожидания»: привязывать можно только заведённое, иначе в графе
   // появлялись бы ссылки на несуществующее.
-  const [vpCatalog, setVpCatalog] = useState<{ pains: {id:string;title:string}[]; gains: {id:string;title:string}[]; jobs: {id:string;title:string}[] }>({ pains: [], gains: [], jobs: [] });
+  const [vpCatalog, setVpCatalog] = useState<{ pains: VpItem[]; gains: VpItem[]; jobs: VpItem[] }>({ pains: [], gains: [], jobs: [] });
+  const [vpQuery, setVpQuery] = useState<Record<string, string>>({});
+  const [vpOpen, setVpOpen] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
   const [links, setLinks] = useState<{ pains: string[]; gains: string[]; jobs: string[]; children: { uc_id: string; title?: string | null; status?: string | null }[] } | null>(null);
   useEffect(() => {
@@ -265,13 +270,13 @@ export default function UsFormModal({
       })
       .catch(() => { /* связи справочны — форма остаётся рабочей */ });
     Promise.all([
-      fetchLoreSlice<{ pain_id: string; title?: string | null }>('pains', undefined, ctrl.signal),
-      fetchLoreSlice<{ gain_id: string; title?: string | null }>('gains', undefined, ctrl.signal),
-      fetchLoreSlice<{ job_id: string; title?: string | null }>('jobs', undefined, ctrl.signal),
+      fetchLoreSlice<{ pain_id: string; title?: string | null; actor_ids?: string[] | null }>('pains', undefined, ctrl.signal),
+      fetchLoreSlice<{ gain_id: string; title?: string | null; actor_ids?: string[] | null }>('gains', undefined, ctrl.signal),
+      fetchLoreSlice<{ job_id: string; title?: string | null; actor_ids?: string[] | null }>('jobs', undefined, ctrl.signal),
     ]).then(([p, g, j]) => setVpCatalog({
-      pains: p.map(x => ({ id: x.pain_id, title: x.title ?? x.pain_id })),
-      gains: g.map(x => ({ id: x.gain_id, title: x.title ?? x.gain_id })),
-      jobs:  j.map(x => ({ id: x.job_id,  title: x.title ?? x.job_id })),
+      pains: p.map(x => ({ id: x.pain_id, title: x.title ?? x.pain_id, actors: x.actor_ids ?? [] })),
+      gains: g.map(x => ({ id: x.gain_id, title: x.title ?? x.gain_id, actors: x.actor_ids ?? [] })),
+      jobs:  j.map(x => ({ id: x.job_id,  title: x.title ?? x.job_id,  actors: x.actor_ids ?? [] })),
     })).catch(() => { /* без каталога остаётся просмотр уже привязанного */ });
     return () => ctrl.abort();
   }, [opened, editing, initial?.uc_id]);
@@ -689,44 +694,104 @@ export default function UsFormModal({
       {editing && links && (
         <div style={{ marginTop: 12, border: '1px solid var(--bd)', borderRadius: 4, padding: '8px 10px', background: 'var(--bg1)' }}>
           <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)', marginBottom: 5 }}>
-            {t('lore.product.us.links', 'Что заявляет — нажмите, чтобы привязать или снять')}
+            {t('lore.product.us.links', 'Что заявляет — боли, выгоды и работы выбранного сегмента')}
           </div>
-          {([
+          {/* Профиль принадлежит СЕГМЕНТУ: боли, выгоды и работы висят на
+              акторе (FELT_BY / DESIRED_BY / PERFORMED_BY). Показывать весь
+              реестр значило бы предлагать привязать к сценарию чужую боль —
+              формально возможную, содержательно бессмысленную. */}
+          {!primaryActor && (
+            <div style={{ ...hint, color: 'var(--wrn)' }}>
+              ⚠ {t('lore.product.us.pickActorFirst', 'выберите primary-актора — боли, выгоды и работы показываются его')}
+            </div>
+          )}
+          {primaryActor && ([
             ['pains', 'pain', t('lore.product.us.linkPains', 'боли'), vpCatalog.pains, 'var(--pain)'],
             ['gains', 'gain', t('lore.product.us.linkGains', 'выгоды'), vpCatalog.gains, 'var(--gain)'],
             ['jobs', 'job', t('lore.product.us.linkJobs', 'работы'), vpCatalog.jobs, 'var(--job)'],
-          ] as const).map(([key, rel, lbl, catalog, color]) => (
-            <div key={key} style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'baseline', marginTop: 4 }}>
-              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', minWidth: 54 }}>{lbl}</span>
-              {catalog.length === 0 && (
-                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
-                  {t('lore.product.us.vpEmpty', 'реестр пуст')}
-                </span>
-              )}
-              {catalog.map(item => {
-                const on = links[key].includes(item.id);
-                return (
-                  <button
+          ] as const).map(([key, rel, lbl, catalog, color]) => {
+            // Каталог сегмента + уже привязанное. Привязанное остаётся видимым,
+            // даже если оно другого сегмента: скрыть существующее ребро значит
+            // сделать вид, что его нет, — и снять его было бы нечем.
+            const ofActor = catalog.filter(i => i.actors.includes(primaryActor));
+            const linked = catalog.filter(i => links[key].includes(i.id));
+            const q = (vpQuery[key] ?? '').trim().toLowerCase();
+            const addable = ofActor
+              .filter(i => !links[key].includes(i.id))
+              .filter(i => !q || i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
+            return (
+              <div key={key} style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', marginTop: 5 }}>
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', minWidth: 54 }}>{lbl}</span>
+
+                {/* Привязанное — чипами с крестиком: снять надо там же, где видно. */}
+                {linked.map(item => (
+                  <span
                     key={item.id}
-                    type="button"
-                    disabled={linkBusy === item.id}
-                    onClick={() => void toggleVp(rel, item.id, on)}
                     title={item.id}
-                    aria-pressed={on}
                     style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
                       fontSize: 'var(--fs-2xs)', borderRadius: 999, padding: '2px 8px',
-                      cursor: linkBusy === item.id ? 'wait' : 'pointer',
-                      background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
-                      border: `1px solid ${on ? color : 'var(--bd)'}`,
-                      color: on ? 'var(--t1)' : 'var(--t3)',
+                      background: `color-mix(in srgb, ${color} 16%, transparent)`,
+                      border: `1px solid ${color}`, color: 'var(--t1)',
                     }}
                   >
                     {item.title}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                    <button
+                      type="button"
+                      disabled={linkBusy === item.id}
+                      onClick={() => void toggleVp(rel, item.id, true)}
+                      aria-label={t('lore.product.us.unlink', 'снять привязку')}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', padding: 0, fontSize: 'var(--fs-2xs)' }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+
+                {/* Непривязанное — через поле с поиском, как пикер компонента в
+                    спринте: рядами чипов десятки записей не выбрать. */}
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={vpQuery[key] ?? ''}
+                    placeholder={t('lore.product.us.linkAdd', '+ привязать…')}
+                    onFocus={() => setVpOpen(key)}
+                    onChange={e => { setVpQuery(p => ({ ...p, [key]: e.target.value })); setVpOpen(key); }}
+                    onBlur={() => setTimeout(() => setVpOpen(o => (o === key ? null : o)), 150)}
+                    style={{ ...field, width: 150, fontSize: 'var(--fs-2xs)', padding: '2px 8px' }}
+                  />
+                  {vpOpen === key && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, zIndex: 500,
+                      minWidth: 240, maxHeight: 200, overflowY: 'auto', marginTop: 2,
+                      background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 4,
+                      boxShadow: '0 4px 12px rgba(0,0,0,.2)',
+                    }}>
+                      {addable.length === 0 ? (
+                        <div style={{ padding: '5px 8px', fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                          {ofActor.length === 0
+                            ? t('lore.product.us.vpNoneForActor', 'у этого сегмента таких записей нет')
+                            : t('lore.product.us.vpAllLinked', 'всё уже привязано')}
+                        </div>
+                      ) : addable.map(item => (
+                        <div
+                          key={item.id}
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => void toggleVp(rel, item.id, false)}
+                          style={{ padding: '4px 8px', fontSize: 'var(--fs-sm)', color: 'var(--t1)', cursor: 'pointer' }}
+                        >
+                          {item.title}
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginLeft: 6 }}>
+                            {item.id}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
 
           {/* Дочерние сценарии — просмотр: их привязка это выбор родителя, и он
               делается в форме самого сценария. Два места для одного ребра

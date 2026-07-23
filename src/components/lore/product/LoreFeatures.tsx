@@ -229,7 +229,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
             <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{f.component_id ?? '—'}</span>
           </div>
 
-          <PSection title={t('lore.product.feat.bridge', '🌉 Мост в профиль (что ЗАЯВЛЯЕТ фича)')}>
+          <PSection title={t('lore.product.feat.bridge', 'Что заявляет: чьи боли, выгоды и работы закрывает')}>
             {bridgeRow(t('lore.product.feat.jobs', 'РАБОТЫ'), jobIds, 'var(--job)', coveredJobs)}
             {bridgeRow(t('lore.product.feat.pains', 'БОЛИ'), painIds, 'var(--pain)', coveredPains)}
             {bridgeRow(t('lore.product.feat.gains', 'ОЖИДАНИЯ'), gainIds, 'var(--gain)', coveredGains)}
