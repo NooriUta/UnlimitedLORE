@@ -17,6 +17,20 @@ import { mantineTheme, mantineCssVariablesResolver } from './ui/mantineTheme';
 // токены оставались последним словом. Обратный порядок отдал бы победу
 // библиотеке — той самой лотереей «кто позже в бандле», из-за которой TYR уже
 // не получает своих шрифтов (STYLE-01, п. 1).
+// Шрифты — СВОИ файлы, а не расчёт на систему. Токены объявляли `Manrope` и
+// `IBM Plex Mono` с самого начала, но ни одного `@font-face` и ни одной ссылки
+// на CDN в приложении не было: `document.fonts` на стенде пуст. То есть весь
+// интерфейс всегда рисовался системным запасным шрифтом, и «поехало» ровно
+// столько раз, сколько разных машин его открывало. Пакеты кладут файлы в
+// бандл — вид перестаёт зависеть от того, что стоит у смотрящего, и от
+// доступности внешней сети со стенда.
+import '@fontsource/manrope/400.css';
+import '@fontsource/manrope/500.css';
+import '@fontsource/manrope/600.css';
+import '@fontsource/manrope/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './styles/tokens.css';

@@ -35,6 +35,8 @@ interface Link {
   /** id узла-цели в Customer Profile */
   to: string;
   done: boolean;
+  /** claimed — только заявлено; done — закрыто сценарием; proven — ещё и подтверждено метрикой */
+  level: 'claimed' | 'done' | 'proven';
 }
 
 // ── геометрия сцены (в координатах холста, не в пикселях экрана) ──
@@ -58,7 +60,11 @@ const SECTORS: Record<string, { fig: 'vm' | 'cp'; x: number; y: number; w: numbe
   // Customer Profile: работы клиента — по центру справа, выгоды и боли делят левую половину.
   gains: { fig: 'cp', x: 26, y: 14, w: 250, h: 266 },
   pains: { fig: 'cp', x: 26, y: 282, w: 250, h: 266 },
-  jobs: { fig: 'cp', x: 292, y: 148, w: 246, h: 264 },
+  // Работы занимают ВСЮ правую половину — прямоугольник, ОПИСАННЫЙ вокруг
+  // полукруга, а не вписанный в него. Прежние 246×264 держали их в узкой полосе
+  // по центру, хотя рядом простаивала половина фигуры: работ у клиента обычно
+  // не меньше, чем болей, и полоса заставляла прокручивать список впустую.
+  jobs: { fig: 'cp', x: 282, y: 8, w: 274, h: 544 },
 };
 
 /** Канонические названия секций — значения по умолчанию для англоязычной локали. */
@@ -108,7 +114,32 @@ function SectorNode({ data }: NodeProps) {
 }
 
 function StickerNode({ data }: NodeProps) {
-  const d = data as unknown as { title: string; code: string; color: string; w: number; h: number; dim: boolean; ghost?: boolean };
+  const d = data as unknown as {
+    title: string; code: string; color: string; w: number; h: number;
+    dim: boolean; ghost?: boolean; rank?: string | null;
+    add?: boolean; count?: number; onAdd?: () => void;
+  };
+  if (d.add) {
+    return (
+      <button
+        type="button"
+        onClick={d.onAdd}
+        title={d.title}
+        style={{
+          width: d.w, height: d.h, boxSizing: 'border-box', cursor: 'pointer',
+          border: '1px dashed var(--wrn)', borderRadius: 3, background: 'transparent',
+          color: 'var(--wrn)', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 2,
+          fontSize: 'var(--fs-2xs)', lineHeight: 1.2, padding: 4,
+        }}
+      >
+        <span style={{ fontSize: 'var(--fs-lg)', lineHeight: 1 }}>+</span>
+        <span>{d.title}</span>
+        {!!d.count && <span style={{ fontFamily: 'var(--mono)', opacity: .8 }}>{d.count}</span>}
+        <Handle type="source" position={Position.Right} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
+      </button>
+    );
+  }
   return (
     <div
       title={d.ghost ? d.title : `${d.title} · ${d.code}`}
@@ -131,9 +162,18 @@ function StickerNode({ data }: NodeProps) {
       <div style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {d.title}
       </div>
+      {/* Ранг — на самой карточке (PL-45). В реестре он был, на канве нет, и
+          «сняли 4 из 5» не отличало главное от мелочей. Пропуск ранга тоже
+          виден: «—» честнее пустоты, которую читают как «неважно». */}
+      {!d.ghost && (
+        <span style={{
+          position: 'absolute', left: 5, bottom: 2, fontSize: 8, letterSpacing: '.04em',
+          color: d.rank ? d.color : 'var(--t3)', textTransform: 'uppercase',
+        }}>{d.rank ?? '—'}</span>
+      )}
       <span style={{
         position: 'absolute', right: 5, bottom: 2, fontFamily: 'var(--mono)', fontSize: 8,
-        color: 'var(--t3)', maxWidth: 'calc(100% - 10px)',
+        color: 'var(--t3)', maxWidth: 'calc(100% - 44px)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{d.ghost ? '' : d.code}</span>
       <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
@@ -149,7 +189,7 @@ const S = {
   navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
 };
 
-export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductScreenProps) {
+export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate }: ProductScreenProps) {
   const { t } = useTranslation();
 
   const { rows: features, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
@@ -189,6 +229,36 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     () => new Set(gains.filter(g => (g.metric_md ?? '').trim()).map(g => g.gain_id)),
     [gains],
   );
+
+  /**
+   * Ранг ценности (PL-45): чем меньше число, тем существеннее.
+   *
+   * Ядро метода Остервальдера — extreme pains снимают раньше moderate, essential
+   * gains важнее nice-to-have. Без ранга канва показывает НАБОР, и «4 из 5»
+   * не отличает «сняли главное» от «сняли четыре мелочи».
+   *
+   * Ранг без значения идёт ПОСЛЕДНИМ, а не средним: пропуск должен быть виден,
+   * а не растворяться в середине списка.
+   */
+  const RANK_ORDER: Record<string, number> = {
+    high: 0, essential: 0, normal: 1, expected: 1, desired: 2, low: 3, unexpected: 3,
+  };
+  const rankOf = useMemo(() => {
+    const m = new Map<string, { key: number; label: string | null }>();
+    pains.forEach(p => m.set(p.pain_id, { key: RANK_ORDER[p.severity ?? ''] ?? 9, label: p.severity ?? null }));
+    gains.forEach(g => m.set(g.gain_id, { key: RANK_ORDER[g.rank ?? ''] ?? 9, label: g.rank ?? null }));
+    jobs.forEach(j => m.set(j.job_id, { key: RANK_ORDER[j.importance ?? ''] ?? 9, label: j.importance ?? null }));
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pains, gains, jobs]);
+
+  /** Связи ВНУТРИ профиля (PL-47): боль мешает работе, выгода — успех в работе. */
+  const profileLinks = useMemo(() => {
+    const out: { from: string; to: string }[] = [];
+    pains.forEach(p => asArray(p.blocks_job_ids).forEach(j => out.push({ from: p.pain_id, to: j })));
+    gains.forEach(g => asArray(g.success_of_job_ids).forEach(j => out.push({ from: g.gain_id, to: j })));
+    return out;
+  }, [pains, gains]);
 
   const feature = useMemo(() => features.find(f => f.uc_id === featureId) ?? null, [features, featureId]);
 
@@ -254,9 +324,28 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     (ids: string[]) => (actorId ? ids.filter(id => (actorOf.get(id) ?? []).includes(actorId)) : ids),
     [actorId, actorOf],
   );
-  const painIds = useMemo(() => byActor(asArray(feature?.pain_ids)), [feature, byActor]);
-  const gainIds = useMemo(() => byActor(asArray(feature?.gain_ids)), [feature, byActor]);
-  const jobIds = useMemo(() => byActor(asArray(feature?.job_ids)), [feature, byActor]);
+  // Сортировка по рангу — стабильная: при равном ранге порядок остаётся тем,
+  // в каком ценности пришли, иначе карточки перепрыгивали бы между отрисовками.
+  const byRank = useCallback(
+    (ids: string[]) => [...ids].sort((a, b) => (rankOf.get(a)?.key ?? 9) - (rankOf.get(b)?.key ?? 9)),
+    [rankOf],
+  );
+  const painIds = useMemo(() => byRank(byActor(asArray(feature?.pain_ids))), [feature, byActor, byRank]);
+  const gainIds = useMemo(() => byRank(byActor(asArray(feature?.gain_ids))), [feature, byActor, byRank]);
+  const jobIds = useMemo(() => byRank(byActor(asArray(feature?.job_ids))), [feature, byActor, byRank]);
+
+  /**
+   * Уровни соответствия (PL-46).
+   *
+   * `claimed` — заявлено, исполнителя нет; `done` — сценарий закрывает;
+   * `proven` — закрывает И подтверждено метрикой. Третий уровень существует
+   * только у выгод: у боли и работы порога нет, их закрытие проверяется самим
+   * фактом сценария (ADR-LORE-032 §2).
+   */
+  const levelOf = useCallback((id: string): 'claimed' | 'done' | 'proven' => {
+    if (!doneBy.has(id)) return 'claimed';
+    return hasMetric.has(id) ? 'proven' : 'done';
+  }, [doneBy, hasMetric]);
 
   /** Сценарии-исполнители по видам: кто снимает боли, кто создаёт выгоды. */
   const relievers = useMemo(
@@ -272,10 +361,34 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   // болей — он стоит в секторе один раз, а линий от него столько, сколько
   // закрывает: иначе пришлось бы дублировать стикер и врать о составе.
   const links: Link[] = useMemo(() => [
-    ...painIds.map(id => ({ from: doneBy.has(id) ? 'rel-' + doneBy.get(id) : null, to: id, done: doneBy.has(id) })),
-    ...gainIds.map(id => ({ from: doneBy.has(id) ? 'crt-' + doneBy.get(id) : null, to: id, done: doneBy.has(id) })),
-    ...jobIds.map(id => ({ from: doneBy.has(id) ? 'ps-' + doneBy.get(id) : null, to: id, done: doneBy.has(id) })),
-  ], [painIds, gainIds, jobIds, doneBy]);
+    ...painIds.map(id => ({ from: doneBy.has(id) ? 'rel-' + doneBy.get(id) : null, to: id, done: doneBy.has(id), level: levelOf(id) })),
+    ...gainIds.map(id => ({ from: doneBy.has(id) ? 'crt-' + doneBy.get(id) : null, to: id, done: doneBy.has(id), level: levelOf(id) })),
+    ...jobIds.map(id => ({ from: doneBy.has(id) ? 'ps-' + doneBy.get(id) : null, to: id, done: doneBy.has(id), level: levelOf(id) })),
+  ], [painIds, gainIds, jobIds, doneBy, levelOf]);
+
+  /**
+   * Сводка по канве (PL-46/PL-48/PL-49) — то, ради чего в неё смотрят.
+   *
+   * Считается по УЖЕ отфильтрованному сегменту: переключил актора — цифры
+   * относятся к нему, иначе шапка отвечала бы про другого клиента, чем круг.
+   */
+  const summary = useMemo(() => {
+    const all = [...painIds, ...gainIds, ...jobIds];
+    const done = all.filter(id => doneBy.has(id)).length;
+    const proven = gainIds.filter(id => levelOf(id) === 'proven').length;
+    const sharp = painIds.filter(id => (rankOf.get(id)?.key ?? 9) === 0);
+    return {
+      total: all.length,
+      done,
+      proven,
+      gainsTotal: gainIds.length,
+      sharpTotal: sharp.length,
+      sharpDone: sharp.filter(id => doneBy.has(id)).length,
+      relievers: relievers.length,
+      creators: creators.length,
+      segments: canvasActors.length,
+    };
+  }, [painIds, gainIds, jobIds, doneBy, levelOf, rankOf, relievers, creators, canvasActors]);
 
   // ── раскладка: сохранённые позиции поверх сетки по умолчанию ──
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>(() => {
@@ -336,6 +449,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           extent: 'parent', position: pos[id] ?? grid,
           data: {
             title: titleOf.get(bare) ?? bare, code: bare, color, w: size.w, h: size.h,
+            rank: rankOf.get(bare)?.label ?? null,
             dim: !!hover && hover !== id && !links.some(l => (l.from === hover || l.to === hover) && (l.from === id || l.to === id)),
           },
         });
@@ -373,31 +487,60 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           y: 24 + Math.floor(taken / cols) * (SCEN.h + 8),
         },
         data: {
+          // Пустое место — это приглашение завести сценарий, а не надпись о
+          // беде. Кнопка «+» и число незакрытых: разрыв назван и тут же
+          // предложено, чем его закрыть.
           ghost: true, code: '', color: 'var(--wrn)', w: SCEN.w, h: SCEN.h, dim: false,
-          title: `${t('lore.product.canvas.hole', 'делать некому')} · ${n}`,
+          add: true, count: n,
+          title: t('lore.product.canvas.addScenario', 'Завести сценарий'),
+          // Форма создания US живёт на своём экране и знает про родителя —
+          // дублировать её в канве значило бы держать две формы одной сущности.
+          onAdd: () => onNavigate('userStories', featureId),
         },
       });
     }
     return out;
   }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName]);
 
-  const edges: Edge[] = useMemo(() => links.map(l => {
-    // Некому делать — линия идёт от карточки-дыры своего сектора: боль ждут в
-    // Pain Relievers, выгоду в Gain Creators, работу в Products & Services.
-    const hole = gainIds.includes(l.to) ? 'hole-gc' : jobIds.includes(l.to) ? 'hole-ps' : 'hole-pr';
-    const source = l.from ?? hole;
-    return {
-      id: `e-${source}-${l.to}`, source, target: l.to, type: 'bezier',
-      style: {
-        stroke: l.done ? 'var(--suc)' : 'var(--wrn)', strokeWidth: 2,
-        strokeDasharray: l.done ? undefined : '5 4',
-        opacity: hover && l.from !== hover && l.to !== hover ? 0.12 : 1,
-      },
-      // Рёбра ребёнка ReactFlow по умолчанию кладёт ПОВЕРХ узлов — линии
-      // перечёркивали бы карточки. Опускаем под них.
-      zIndex: 0,
-    };
-  }), [links, hover, gainIds, jobIds]);
+  const edges: Edge[] = useMemo(() => {
+    const dim = (a: string | null, b: string) => hover && a !== hover && b !== hover;
+    const value = links.map(l => {
+      // Некому делать — линия идёт от карточки-дыры своего сектора: боль ждут в
+      // Pain Relievers, выгоду в Gain Creators, работу в Products & Services.
+      const hole = gainIds.includes(l.to) ? 'hole-gc' : jobIds.includes(l.to) ? 'hole-ps' : 'hole-pr';
+      const source = l.from ?? hole;
+      // Три состояния — три начертания (PL-46). Подтверждённое отличается от
+      // просто сделанного толщиной и цветом, а не подсказкой: подсказку не
+      // видно ни на телефоне, ни при беглом взгляде, ради которого канву и
+      // открывают.
+      const stroke = l.level === 'claimed' ? 'var(--wrn)' : l.level === 'proven' ? 'var(--suc)' : 'var(--t2)';
+      return {
+        id: `e-${source}-${l.to}`, source, target: l.to, type: 'default',
+        style: {
+          stroke, strokeWidth: l.level === 'proven' ? 2.6 : 2,
+          strokeDasharray: l.level === 'claimed' ? '5 4' : undefined,
+          opacity: dim(l.from, l.to) ? 0.12 : 1,
+        },
+
+
+
+      } as Edge;
+    });
+    // Связи ВНУТРИ круга (PL-47): боль → работа, выгода → работа. Тоньше и
+    // серым: они описывают клиента, а не нашу работу, и не должны читаться
+    // как ещё одно наше обещание.
+    const inner = profileLinks
+      .filter(l => (painIds.includes(l.from) || gainIds.includes(l.from)) && jobIds.includes(l.to))
+      .map(l => ({
+        id: `p-${l.from}-${l.to}`, source: l.from, target: l.to, type: 'default',
+        style: {
+          stroke: 'var(--t3)', strokeWidth: 1, strokeDasharray: '2 3',
+          opacity: dim(l.from, l.to) ? 0.1 : 0.75,
+        },
+
+      } as Edge));
+    return [...value, ...inner];
+  }, [links, hover, gainIds, jobIds, painIds, profileLinks]);
 
   /** Перетаскивание: позиции применяем сразу, на диск пишем по отпусканию. */
   const onNodesChange = useCallback((changes: NodeChange[]) => {
@@ -431,7 +574,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     const ro = new ResizeObserver(() => rf.current?.fitView({ padding: 0.1 }));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+    // Зависимость от `loading` обязательна: пока данные грузятся, компонент
+    // возвращает скелет, холста в DOM ещё нет и ref пуст. С пустым списком
+    // зависимостей наблюдатель не вешался вовсе, и на узком экране сцена
+    // оставалась в масштабе широкого — половина канвы за кромкой.
+  }, [loading]);
   useEffect(() => {
     const id = requestAnimationFrame(() => rf.current?.fitView({ padding: 0.1 }));
     return () => cancelAnimationFrame(id);
@@ -489,10 +636,96 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     </div>
   );
 
+  /**
+   * Чей это продукт.
+   *
+   * Канва показывала ценности, не называя, к какому продукту они относятся: в
+   * корпусе несколько проектов, и одинаковые по звучанию боли разных продуктов
+   * читались как одна картина. Проект берётся с самой фичи (BELONGS_TO_PROJECT);
+   * «не задан» показывается явно — это пропуск, который надо закрыть, а не
+   * повод молчать.
+   */
+  const featureProjects = asArray(feature?.projects).filter(Boolean);
+  const productLine = feature && (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 'var(--fs-sm)' }}>
+      <span style={{ color: 'var(--t3)' }}>{t('lore.product.canvas.product', 'Продукт:')}</span>
+      {featureProjects.length > 0 ? featureProjects.map(p => (
+        <span key={p} style={{
+          fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', padding: '1px 8px', borderRadius: 999,
+          border: '1px solid var(--bd)', color: 'var(--t1)',
+        }}>{p}</span>
+      )) : (
+        <span style={{ color: 'var(--wrn)' }}>
+          ⚠ {t('lore.product.canvas.noProject', 'проект не задан — ценности разных продуктов сольются в одну картину')}
+        </span>
+      )}
+      <span style={{ color: 'var(--t3)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{feature.uc_id}</span>
+    </div>
+  );
+
+  /**
+   * Сводка: пять ответов, ради которых канву открывают (PL-45/46/48/49).
+   *
+   * Раньше шапка показывала одну долю закрытого. Она не отличала «сняли
+   * главное» от «сняли четыре мелочи», «подтверждено» от «объявлено» и не
+   * говорила, скольким клиентам фича служит. Одна доля вместо пяти ответов —
+   * это не краткость, а потеря предмета разговора.
+   */
+  const chip = (text: string, tone: string, title: string) => (
+    <span key={text} title={title} style={{
+      fontSize: 'var(--fs-xs)', padding: '2px 9px', borderRadius: 999,
+      border: `1px solid color-mix(in srgb, ${tone} 40%, transparent)`,
+      background: `color-mix(in srgb, ${tone} 10%, transparent)`, color: tone, whiteSpace: 'nowrap',
+    }}>{text}</span>
+  );
+  const summaryRow = feature && (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+      {chip(
+        `${t('lore.product.canvas.fitClosed', 'закрыто')} ${summary.done}/${summary.total}`,
+        summary.done === summary.total && summary.total > 0 ? 'var(--suc)' : 'var(--t2)',
+        t('lore.product.canvas.fitClosedHint', 'problem–solution fit: у ценности есть сценарий, который её закрывает'),
+      )}
+      {summary.gainsTotal > 0 && chip(
+        `${t('lore.product.canvas.fitProven', 'подтверждено метрикой')} ${summary.proven}/${summary.gainsTotal}`,
+        summary.proven > 0 ? 'var(--suc)' : 'var(--wrn)',
+        t('lore.product.canvas.fitProvenHint', 'product–market fit: выгода не только заявлена, но и измерена'),
+      )}
+      {summary.sharpTotal > 0 && chip(
+        `${t('lore.product.canvas.sharp', 'острых снято')} ${summary.sharpDone}/${summary.sharpTotal}`,
+        summary.sharpDone === summary.sharpTotal ? 'var(--suc)' : 'var(--pain)',
+        t('lore.product.canvas.sharpHint', 'Существенное снимают раньше незначительного — общая доля этого не показывает'),
+      )}
+      {chip(
+        `${t('lore.product.canvas.balance', 'снимаем / радуем')} ${summary.relievers} : ${summary.creators}`,
+        summary.creators === 0 ? 'var(--wrn)' : 'var(--t2)',
+        t('lore.product.canvas.balanceHint', 'Перекос в обезболивающие означает: продукт устраняет страдание, но не даёт желаемого'),
+      )}
+      {summary.creators === 0 && summary.relievers > 0 && (
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--wrn)' }}>
+          ⚠ {t('lore.product.canvas.noCreators', 'создателей выгод нет вовсе')}
+        </span>
+      )}
+      {summary.segments > 1 && chip(
+        `${t('lore.product.canvas.segments', 'сегментов')} ${summary.segments}`,
+        'var(--wrn)',
+        t('lore.product.canvas.segmentsHint', 'Фича обслуживает несколько сегментов — повод разделить её, а не признак широты'),
+      )}
+    </div>
+  );
+
   // ── чей профиль: выбор сегмента (PL-36) ──
-  const actorPicker = canvasActors.length > 0 && (
+  // Ряд показывается ВСЕГДА, даже когда акторов нет: прятать его значило бы
+  // скрывать вопрос «чей это профиль» ровно тогда, когда на него не ответили —
+  // пустая принадлежность выглядит как «клиент один», хотя это пропуск.
+  const noActors = canvasActors.length === 0;
+  const actorPicker = !!feature && (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10, fontSize: 'var(--fs-sm)' }}>
       <span style={{ color: 'var(--t3)' }}>{t('lore.product.canvas.forActor', 'Профиль клиента:')}</span>
+      {noActors && (
+        <span style={{ color: 'var(--wrn)' }}>
+          ⚠ {t('lore.product.canvas.noActorsOnCanvas', 'сегмент не задан — у ценностей нет акторов')}
+        </span>
+      )}
       {['', ...canvasActors].map(a => {
         const on = a === actorId;
         return (
@@ -517,6 +750,8 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
 
   return (
     <div style={S.wrap}>
+      {productLine}
+      {summaryRow}
       {actorPicker}
       {/* Высота задана в пикселях: ReactFlow меряет контейнер, и у схлопнутого
           в ноль холст остаётся пустым при полностью живых данных. */}
@@ -526,7 +761,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
       <div
         ref={boxRef}
         style={{
-          position: 'relative', aspectRatio: '2.2', maxHeight: '74vh', minHeight: 380,
+          // Высота задана напрямую, БЕЗ aspect-ratio. С `aspect-ratio` минимум
+          // высоты раздувает ШИРИНУ: на 375px контейнер вырастал до 836px и
+          // уезжал за экран (найдено на проверке PL-42). Здесь ширина всегда
+          // равна доступной, а высота подстраивается сама.
+          position: 'relative', width: '100%', height: 'clamp(320px, 42vw, 620px)',
           border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden',
         }}
       >
@@ -544,7 +783,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           edgesFocusable={false}
           fitView
           fitViewOptions={{ padding: 0.1 }}
-          minZoom={0.3}
+          minZoom={0.12}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
         >
@@ -555,9 +794,13 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginTop: 10 }}>
         <span><i style={{ display: 'inline-block', width: 22, borderTop: '2px solid var(--suc)', verticalAlign: 'middle', marginRight: 5 }} />
-          {t('lore.product.canvas.legendDone', 'сделано — снимает, даёт, выполняет')}</span>
+          {t('lore.product.canvas.legendDone', 'сделано — сценарий закрывает')}</span>
         <span><i style={{ display: 'inline-block', width: 22, borderTop: '2px dashed var(--wrn)', verticalAlign: 'middle', marginRight: 5 }} />
           {t('lore.product.canvas.legendClaimed', 'только заявлено')}</span>
+        <span><i style={{ display: 'inline-block', width: 22, borderTop: '3px solid var(--suc)', verticalAlign: 'middle', marginRight: 5 }} />
+          {t('lore.product.canvas.legendProven', 'подтверждено метрикой')}</span>
+        <span><i style={{ display: 'inline-block', width: 22, borderTop: '1px dashed var(--t3)', verticalAlign: 'middle', marginRight: 5 }} />
+          {t('lore.product.canvas.legendProfile', 'внутри клиента: боль мешает работе, выгода — её успех')}</span>
       </div>
 
       {/* Навигатор по канвам — ПОД канвой: сверху он отжимал саму канву вниз, а
