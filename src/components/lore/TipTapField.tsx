@@ -130,6 +130,18 @@ function injectTiptapCssOnce(): void {
     .bragi-tiptap .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 6px; }
     .bragi-tiptap .ProseMirror ul[data-type="taskList"] li > label { flex: none; margin-top: 3px; }
     .bragi-tiptap .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+    /* Маркеры и номера списков рисуются СНАРУЖИ строки, поэтому без отступа
+       слева они срезаются краем редактора — на приёмке «1.» и «2.» были видны
+       наполовину. Отступ ставим спискам, а не всему полю: сдвинь мы контейнер,
+       уехал бы и обычный текст. */
+    .bragi-tiptap .ProseMirror ul, .bragi-tiptap .ProseMirror ol { padding-left: 22px; margin: 6px 0; }
+    .bragi-tiptap .ProseMirror li { margin: 2px 0; }
+    .bragi-tiptap .ProseMirror li > p { margin: 0; }
+    /* Заголовкам нужен воздух сверху, иначе секции Кокберна слипаются в
+       сплошное полотно и структура, ради которой шаблон и нужен, не читается. */
+    .bragi-tiptap .ProseMirror h1, .bragi-tiptap .ProseMirror h2, .bragi-tiptap .ProseMirror h3 { margin: 12px 0 4px; line-height: 1.25; }
+    .bragi-tiptap .ProseMirror > :first-child { margin-top: 0; }
+    .bragi-tiptap .ProseMirror p { margin: 4px 0; }
     .bragi-tiptap .ProseMirror blockquote { border-left: 3px solid var(--acc); margin: 8px 0; padding: 2px 12px; color: var(--t2); }
     .bragi-tiptap .ProseMirror hr { border: none; border-top: 1px solid var(--b3); margin: 12px 0; }
     .bragi-tiptap .ProseMirror a { color: var(--acc); }
@@ -229,7 +241,11 @@ export default function TipTapField({
     editable,
     editorProps: {
       attributes: {
-        style: `min-height:${minHeight}px; outline: none;`,
+        // maxHeight + скролл: без него длинное тело (полный шаблон Кокберна —
+        // восемь секций) распирало поле, модалка уезжала за экран, и кнопки
+        // сохранения оказывались недостижимы. Скроллится САМО поле, а не
+        // диалог: так остальные поля и кнопки остаются на виду.
+        style: `min-height:${minHeight}px; max-height:${Math.max(minHeight, 260)}px; overflow-y:auto; outline: none;`,
         ...(ariaLabel ? { 'aria-label': ariaLabel, role: 'textbox' } : {}),
       },
       // PL-24: перетаскивание и вставка картинок.
@@ -269,11 +285,25 @@ export default function TipTapField({
 
   useEffect(() => { injectTiptapCssOnce(); }, []);
 
-  // Sync external resets (e.g. form clear) without fighting the editor mid-typing.
+  // Внешнее значение применяется, когда оно разошлось с содержимым редактора.
+  //
+  // Раньше условие было `value === ''` — то есть принималась ТОЛЬКО очистка.
+  // Любая программная подстановка непустого текста (вставка шаблона, загрузка
+  // черновика в форму правки) меняла состояние формы и не доходила до
+  // редактора: кнопка «вставить шаблон» выглядела мёртвой, хотя значение уже
+  // было записано.
+  //
+  // В фокусе не вмешиваемся: пока человек печатает, родитель получает обновления
+  // через onChange, и подстановка «сверху» дралась бы с кареткой.
   useEffect(() => {
     if (!editor) return;
     const current = getMarkdown(editor);
-    if (value !== current && value === '') editor.commands.setContent('');
+    if (value === current) return;
+    if (value === '' || !editor.isFocused) {
+      // emitUpdate:false — контент пришёл СНАРУЖИ, и обратный onChange был бы
+      // эхом: родитель получил бы то, что сам же только что прислал.
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
   }, [value, editor]);
 
   const toggleLink = () => {

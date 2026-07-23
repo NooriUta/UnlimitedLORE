@@ -1597,7 +1597,11 @@
         "newRoot": "+ Feature",
         "idRuleRoot": "FEAT-‹AREA›-‹GOAL›, latin, dash-separated: FEAT-GITCYCLE",
         "insertExample": "filled example",
-        "check": "Check form"
+        "check": "Check form",
+        "actorNone": "— none —",
+        "primaryHint": "who drives the scenario — required by the form check",
+        "supportActors": "Other participants",
+        "noActors": "no actors yet — create them in the Customer section"
       },
       "canvas": {
         "claimed": "claimed",
@@ -1670,7 +1674,8 @@
           "proposed": "proposed",
           "active": "in progress",
           "shipped": "shipped",
-          "dropped": "dropped"
+          "dropped": "dropped",
+          "in_rework": "rework"
         },
         "rigor": {
           "casual": "casual",

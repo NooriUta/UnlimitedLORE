@@ -12,8 +12,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import {
-  saveLoreUc, checkLoreUcQuality,
-  type LoreUcQualityResult,
+  saveLoreUc, checkLoreUcQuality, linkLoreUc, fetchLoreSlice,
+  type LoreUcQualityResult, type LoreActorRow,
 } from '../../../api/lore';
 import TipTapField from '../TipTapField';
 
@@ -24,41 +24,55 @@ import TipTapField from '../TipTapField';
  * оформление: переименуй здесь «Триггер» — проверка перестанет находить секцию,
  * и форма начнёт подсовывать шаблон, который сама же считает неполным.
  */
+// Шаблон и есть ПРИМЕР: секции заполнены настоящим текстом, который автор
+// заменяет своим.
+//
+// Первая редакция ставила примеры курсивом, чтобы они не засчитывались как
+// содержание. Вышло хуже некуда: свежевставленный шаблон получал 1 из 6 и
+// «0 шагов» — читалось как «шаблон не соответствует линтеру». Курсив в этом
+// редакторе — заполнитель по определению (см. UcQuality.isPlaceholder), так
+// что шаблон-подсказка и шаблон-заготовка взаимоисключающи.
+//
+// Выбран пример: он отвечает и на «дай структуру», и на «покажи, как
+// заполняют», и при этом честно проходит проверку — текст в секциях
+// действительно есть. Заменить его своим — обычная работа с заготовкой.
 export const COCKBURN_CASUAL = [
   '### Триггер',
-  '_Что запускает сценарий._',
+  'Агент завершил задачу и открыл PR в `develop`.',
   '',
   '### Основной сценарий',
-  '1. …',
-  '2. …',
+  '1. Агент запрашивает статус CI по head-коммиту PR',
+  '2. Все обязательные проверки зелёные — агент вызывает merge',
   '',
   '### Минимальные гарантии',
-  '_Что истинно даже при неудаче._',
+  '`develop` не получает кода с красным CI ни при каком исходе.',
   '',
 ].join('\n');
 
 export const COCKBURN_FULL = [
   '### Триггер',
-  '_Что запускает сценарий._',
+  'Агент завершил задачу и открыл PR в `develop`.',
   '',
   '### Предусловия',
-  '_Что должно быть истинно до старта._',
+  'Ветка запушена, CI запущен, у агента есть доступ к Forgejo.',
   '',
   '### Основной сценарий',
-  '1. …',
-  '2. …',
+  '1. Агент запрашивает статус CI по head-коммиту PR',
+  '2. Все обязательные проверки зелёные',
+  '3. Агент вызывает merge и получает подтверждение',
   '',
   '### Расширения',
-  '_Ветвления вида «2a. …» — номер ссылается на шаг основного сценария._',
+  '2a. Проверка красная или ещё бежит — merge отклоняется с 409, ветка остаётся открытой.',
+  '2b. Прогонов нет вовсе — считается не-зелёным: «нет прогонов» это не «всё хорошо».',
   '',
   '### Вариации',
-  '_Технологические/данные-вариации (опционально)._',
+  'squash-merge вместо merge-commit — по настройке репозитория.',
   '',
   '### Минимальные гарантии',
-  '_Что истинно даже при неудаче._',
+  '`develop` не получает кода с красным CI ни при каком исходе.',
   '',
   '### Гарантии успеха',
-  '_Измеримый результат при успехе._',
+  'PR влит, создана связь с релизом, спринт привязан к тому же релизу.',
   '',
 ].join('\n');
 
@@ -75,6 +89,20 @@ export const templateFor = (rigor: string) => (rigor === 'casual' ? COCKBURN_CAS
  * Берём реальный сценарий корпуса (`UC-GIT-MERGE`), а не выдуманный: узнаваемый
  * пример показывает и принятую здесь степень подробности.
  */
+/** Оба шаблона одним списком — им проверяется «автор ещё не трогал заготовку». */
+export const TEMPLATES = [COCKBURN_CASUAL, COCKBURN_FULL];
+
+/** Заготовка приёмки под полный вес (секции «Проверки» и «Покрытие расширений»). */
+export const ACCEPTANCE_TEMPLATE = [
+  '### Проверки',
+  '1. Merge при зелёном CI проходит и возвращает sha коммита слияния',
+  '2. Merge при красном CI отклоняется с 409 и понятной причиной',
+  '',
+  '### Покрытие расширений',
+  '2a — проверка 2; 2b — случай «нет прогонов» в проверке 2',
+  '',
+].join('\n');
+
 export const COCKBURN_EXAMPLE = [
   '### Триггер',
   'Агент завершил задачу и открыл PR в `develop`.',
@@ -134,6 +162,8 @@ export interface UsDraft {
   goal_level?: string | null;
   rigor?: string | null;
   parent_uc_id?: string | null;
+  primary_actor_id?: string | null;
+  supporting_actor_ids?: string[];
 }
 
 export default function UsFormModal({
@@ -166,6 +196,25 @@ export default function UsFormModal({
   const [acceptance, setAcceptance] = useState(initial?.acceptance_md ?? '');
   const [saving, setSaving] = useState(false);
   const [quality, setQuality] = useState<LoreUcQualityResult | null>(null);
+
+  // ── акторы сценария (D19) ──
+  //
+  // Линтер требует primary-актора, а задать его в форме было НЕЧЕМ: проверка
+  // горела красным, и исправить её можно было только через MCP — то есть
+  // форма ставила задачу, которую сама же не давала решить.
+  const [actors, setActors] = useState<LoreActorRow[]>([]);
+  const [primaryActor, setPrimaryActor] = useState(initial?.primary_actor_id ?? '');
+  // Supporting — множественные: у сценария есть и второстепенные участники, и
+  // сделай мы всех primary, «главный участник» перестал бы что-либо значить.
+  const [supportActors, setSupportActors] = useState<string[]>(initial?.supporting_actor_ids ?? []);
+  useEffect(() => {
+    if (!opened) return;
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreActorRow>('actors', undefined, ctrl.signal)
+      .then(setActors)
+      .catch(() => { /* без списка форма остаётся рабочей — актора можно задать позже */ });
+    return () => ctrl.abort();
+  }, [opened]);
 
   useEffect(() => {
     setId(initial?.uc_id ?? '');
@@ -224,6 +273,18 @@ export default function UsFormModal({
         // сохранения тела.
         ...(editing || !parentUcId ? {} : { parent_uc_id: parentUcId }),
       });
+
+      // Акторы — РЁБРА, поэтому отдельными вызовами и ПОСЛЕ создания вершины.
+      // Ошибка привязки не откатывает сохранённое тело: текст уже принят, и
+      // терять его из-за недоступного актора было бы худшим обменом.
+      if (primaryActor) {
+        await linkLoreUc({ uc_id: finalId, rel: 'actor', target_id: primaryActor, actor_role: 'primary' });
+      }
+      for (const a of supportActors) {
+        if (a === primaryActor) continue;  // один актор не может быть в двух ролях
+        await linkLoreUc({ uc_id: finalId, rel: 'actor', target_id: a, actor_role: 'supporting' });
+      }
+
       onSaved(finalId);
       onClose();
     } catch (e) {
@@ -248,16 +309,28 @@ export default function UsFormModal({
   const appendTo = (prev: string, add: string) =>
     (prev.trim() ? prev.replace(/\s*$/, '\n\n') + add : add);
 
-  const insertTemplate = () => setScenario(prev => appendTo(prev, templateFor(rigor)));
-
   /**
-   * Пример заполняет ОБА поля: приёмка — половина оформления по Кокберну, и
-   * образец сценария без образца приёмки оставлял бы вторую половину в том же
-   * положении, ради которого пример и понадобился.
+   * Вставка шаблона: ЗАМЕНЯЕТ нетронутую заготовку и дописывает к своему тексту.
+   *
+   * Простое дописывание давало дубль: нажал дважды (или сменил вес после
+   * вставки) — и в поле два шаблона подряд, как на приёмке. Простая замена
+   * тоже не годится: она стёрла бы текст, который писали десять минут.
+   * Различаем по содержимому — если там ровно один из наших шаблонов, автор
+   * его ещё не трогал, и подменить его шаблоном другого веса безопасно.
    */
-  const insertExample = () => {
-    setScenario(prev => appendTo(prev, COCKBURN_EXAMPLE));
-    setAcceptance(prev => appendTo(prev, ACCEPTANCE_EXAMPLE));
+  const insertTemplate = () => {
+    const tpl = templateFor(rigor);
+    setScenario(prev => {
+      const untouched = prev.trim() === '' || TEMPLATES.some(x => x.trim() === prev.trim());
+      return untouched ? tpl : appendTo(prev, tpl);
+    });
+    // Приёмка — половина оформления по Кокберну: заготовка сценария без
+    // заготовки приёмки оставила бы вторую половину пустой, и линтер честно
+    // ругался бы на неё сразу после вставки шаблона.
+    setAcceptance(prev => {
+      const untouched = prev.trim() === '' || prev.trim() === ACCEPTANCE_TEMPLATE.trim();
+      return untouched ? ACCEPTANCE_TEMPLATE : prev;
+    });
   };
 
   /** Явная проверка — линтер по требованию, помимо живого пересчёта. */
@@ -340,23 +413,52 @@ export default function UsFormModal({
           пользователя гадать, почему счёт скакнул при переключении. */}
       <div style={hint}>{t('lore.product.us.rigorHint', 'Вес задаёт, какие проверки обязательны: у облегчённого их меньше')}</div>
 
+      {/* ── акторы (D19) ── */}
+      <label style={label}>{t('lore.product.us.primaryActor', 'Primary-актор')}</label>
+      <select style={field} value={primaryActor} onChange={e => setPrimaryActor(e.target.value)}>
+        <option value="">{t('lore.product.us.actorNone', '— не выбран —')}</option>
+        {actors.map(a => (
+          <option key={a.actor_id} value={a.actor_id}>{a.name ?? a.actor_id}</option>
+        ))}
+      </select>
+      {/* Проверка линтера «Primary-актор задан» ссылается ровно на это поле:
+          раньше она горела красным, а исправить её из формы было нечем. */}
+      <div style={hint}>{t('lore.product.us.primaryHint', 'кто ведёт сценарий — этого требует проверка оформления')}</div>
+
+      <label style={label}>{t('lore.product.us.supportActors', 'Остальные участники')}</label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {actors.length === 0 && <span style={hint}>{t('lore.product.us.noActors', 'акторов пока нет — заведите их в разделе «Клиент»')}</span>}
+        {actors.filter(a => a.actor_id !== primaryActor).map(a => {
+          const on = supportActors.includes(a.actor_id);
+          return (
+            <button
+              key={a.actor_id}
+              type="button"
+              onClick={() => setSupportActors(prev => on ? prev.filter(x => x !== a.actor_id) : [...prev, a.actor_id])}
+              aria-pressed={on}
+              style={{
+                fontSize: 'var(--fs-xs)', borderRadius: 999, padding: '2px 9px', cursor: 'pointer',
+                background: on ? 'var(--bg3)' : 'transparent',
+                border: `1px solid ${on ? 'var(--bdh)' : 'var(--bd)'}`,
+                color: on ? 'var(--t1)' : 'var(--t2)',
+              }}
+            >
+              {a.name ?? a.actor_id}
+            </button>
+          );
+        })}
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
         <span style={{ ...label, marginTop: 0, marginBottom: 0 }}>{t('lore.product.us.scenario', 'Сценарий')}</span>
-        {/* Две разные вещи — две кнопки: «дай заготовку» и «покажи, как
-            заполняют». Скелет отвечает на первый вопрос, пример на второй. */}
+        {/* Одна кнопка, а не две: шаблон САМ несёт примеры в подсказках, и
+            отдельная «вставить пример» дублировала бы то же действие. */}
         <button
           type="button"
           onClick={insertTemplate}
           style={{ fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
         >
-          {t('lore.product.us.insertTemplate', 'вставить шаблон')}
-        </button>
-        <button
-          type="button"
-          onClick={insertExample}
-          style={{ fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
-        >
-          {t('lore.product.us.insertExample', 'пример заполнения')}
+          {t('lore.product.us.insertTemplate', 'вставить шаблон с примерами')}
         </button>
       </div>
       <TipTapField
@@ -378,11 +480,12 @@ export default function UsFormModal({
         ariaLabel={t('lore.product.us.acceptance', 'Приёмка')}
       />
 
-      {/* Проверка относится к НАБРАННОМУ тексту, поэтому стоит под ним, а не
-          над: сверху она читалась бы как настройка формы. Живой пересчёт
-          остаётся, но у действия появляется явная точка — без неё сказать
-          «оцени сейчас» было нечем. */}
-      <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 10 }}>
+      {/* Все действия формы — ОДНОЙ строкой: «Проверить» слева, «Отмена» и
+          «Создать» справа. Разнесённые по разным уровням, они читались как
+          разные слои формы, хотя это один ряд равноправных кнопок.
+          Результат проверки — ПОД строкой: он появляется по нажатию и обязан
+          возникать там, куда смотрят после клика, а не выше него. */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
         <button
           type="button"
           onClick={runCheck}
@@ -390,6 +493,24 @@ export default function UsFormModal({
         >
           {t('lore.product.us.check', 'Проверить оформление')}
         </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button type="button" onClick={onClose} style={{ ...field, width: 'auto', cursor: 'pointer' }}>
+            {t('lore.product.us.cancel', 'Отмена')}
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!finalId || saving}
+            style={{
+              ...field, width: 'auto', cursor: finalId && !saving ? 'pointer' : 'not-allowed',
+              background: finalId && !saving ? 'var(--acc)' : 'var(--bg3)',
+              color: finalId && !saving ? 'var(--bg0)' : 'var(--t3)',
+              borderColor: 'transparent', fontWeight: 600,
+            }}
+          >
+            {saving ? '…' : editing ? t('lore.product.us.save', 'Сохранить') : t('lore.product.us.create', 'Создать')}
+          </button>
+        </div>
       </div>
 
       {/* ── панель линтера ── */}
@@ -424,24 +545,6 @@ export default function UsFormModal({
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
-        <button type="button" onClick={onClose} style={{ ...field, width: 'auto', cursor: 'pointer' }}>
-          {t('lore.product.us.cancel', 'Отмена')}
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!finalId || saving}
-          style={{
-            ...field, width: 'auto', cursor: finalId && !saving ? 'pointer' : 'not-allowed',
-            background: finalId && !saving ? 'var(--acc)' : 'var(--bg3)',
-            color: finalId && !saving ? 'var(--bg0)' : 'var(--t3)',
-            borderColor: 'transparent', fontWeight: 600,
-          }}
-        >
-          {saving ? '…' : editing ? t('lore.product.us.save', 'Сохранить') : t('lore.product.us.create', 'Создать')}
-        </button>
-      </div>
     </Modal>
   );
 }
