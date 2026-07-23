@@ -35,25 +35,109 @@
   .warnchip { color:var(--wrn); border:1px solid var(--wrn); border-radius:999px; padding:0 6px; font-size:10px; }
 
   /* ── канва ── */
-  .canvas { display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:stretch; max-width:1180px; }
-  .half { border:1px solid var(--bd); background:var(--bg1); padding:12px; }
-  /* Квадрат СЛЕВА — Value Map. Форма несёт смысл: канва читается «квадрат
-     подгоняется к кругу», и совпадение половин = достигнутый fit. */
-  .vmap { border-radius:10px 0 0 10px; }
-  /* Круг СПРАВА — Customer Profile. Скруглением правого края отделяем «то, что
-     есть у клиента» от «того, что делаем мы». */
-  .cprofile { border-radius:0 60% 60% 0 / 0 50% 50% 0; padding-right:34px; }
-  .halfhead { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
+  /* Шире прежнего: фигуры квадратные, поэтому ширина колонки задаёт и высоту.
+     При 1180px круг выходил ~420px, и стикеры в нём не помещались. */
+  .canvas { display:grid; grid-template-columns:1fr auto 1fr; gap:0; align-items:center; max-width:1560px; }
+
+  /* ФОРМЫ НАСТОЯЩИЕ, а не блоки со скруглением.
+     Канон Остервальдера: слева КВАДРАТ (Value Map), справа КРУГ (Customer
+     Profile). Это не украшение — по форме мгновенно видно, где «что есть у
+     клиента», а где «что делаем мы», и канва читается как «квадрат
+     подгоняется к кругу». Блок с закруглённым краем такой подсказки не даёт.
+
+     Квадрат в каноне разделён диагональю: Products & Services — прямоугольная
+     часть, Pain Relievers и Gain Creators — треугольные половины. Круг делится
+     на три сектора: Customer Jobs в центре, Pains и Gains по бокам. */
+  /* Фигура = ПОДЛОЖКА + контент поверх неё. Обрезать содержимое формой нельзя:
+     круг с overflow:hidden срезал заголовок и карточки, и канон превратился в
+     дефект. Поэтому форму рисует подложка, а карточки вписываются в неё
+     отступами — то есть фигуру видно, а текст цел. */
+  .figwrap { display:flex; flex-direction:column; gap:6px; }
+  .halfhead { display:flex; align-items:baseline; gap:8px; }
   .halfhead .h { font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--t2); }
   .halfhead .sub { font-size:10.5px; color:var(--t3); }
-  .sector { border:1px dashed var(--bd); border-radius:6px; padding:7px 9px; margin-bottom:7px; }
-  .sector .st { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--t3); margin-bottom:4px; }
-  .card { display:flex; align-items:center; gap:6px; border:1px solid var(--bd); border-radius:5px; background:var(--bg2); padding:3px 7px; margin:3px 0; font-size:11.5px; cursor:pointer; }
-  .card .cid { font-family:var(--mono); font-size:9px; color:var(--t3); margin-left:auto; }
+  .fig { position:relative; aspect-ratio:1; }
+  .fig > .inner { position:absolute; inset:0; display:grid; grid-template-rows:1fr 1fr 1fr; }
+
+  /* Квадрат Value Map: подложка со скруглением только слева — правая сторона
+     «смотрит» на круг. Диагональ отделяет «снимаем боли» от «создаём выгоды». */
+  .vmap::before {
+    content:''; position:absolute; inset:0; border:1px solid var(--bd); background:var(--bg1);
+    border-radius:12px 0 0 12px;
+  }
+  .vmap::after {
+    content:''; position:absolute; inset:0; pointer-events:none; border-radius:12px 0 0 12px;
+    background:
+      /* вертикаль — граница Products & Services */
+      linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
+      /* диагональ правой половины — Gain Creators сверху, Pain Relievers снизу */
+      linear-gradient(to bottom right, transparent 49.6%, var(--bd) 49.6%, var(--bd) 50.4%, transparent 50.4%);
+    background-size:100% 100%, 50% 100%; background-position:0 0, 100% 0; background-repeat:no-repeat;
+    opacity:.45;
+  }
+  .vmap > .inner {
+    padding:10px 12px;
+    /* Канон: слева вертикальная полоса Products & Services, правая половина
+       делится диагональю — сверху Gain Creators, снизу Pain Relievers.
+       Прежние три ряда были нашей выдумкой и ставили секторы не на свои места. */
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px;
+  }
+  .vmap .s-ps { grid-row:1 / span 2; }
+  .vmap .s-gc { grid-column:2; grid-row:1; }
+  .vmap .s-pr { grid-column:2; grid-row:2; }
+
+  /* Круг Customer Profile: подложка — настоящая окружность. Ряды сужаются к
+     краям, повторяя её форму: центральный сектор (Customer Jobs) самый широкий,
+     как в каноне. */
+  .cprofile::before {
+    content:''; position:absolute; inset:0; border:1px solid var(--bd); background:var(--bg1);
+    border-radius:50%;
+  }
+  .cprofile::after {
+    content:''; position:absolute; inset:0; pointer-events:none; border-radius:50%;
+    background:
+      linear-gradient(to bottom, transparent calc(33% - 1px), var(--bd) calc(33% - 1px), var(--bd) calc(33% + 1px), transparent calc(33% + 1px)),
+      linear-gradient(to bottom, transparent calc(66% - 1px), var(--bd) calc(66% - 1px), var(--bd) calc(66% + 1px), transparent calc(66% + 1px));
+    opacity:.4;
+  }
+  .cprofile > .inner { padding:14px 0; }
+  .cprofile .sector { text-align:center; }
+  /* Ширина ряда = хорда круга на его высоте: верх и низ уже, середина шире. */
+  .cprofile .sector:nth-child(1) { width:62%; margin:0 auto; }
+  .cprofile .sector:nth-child(2) { width:84%; margin:0 auto; }
+  .cprofile .sector:nth-child(3) { width:62%; margin:0 auto; }
+  /* В круге стикеры мельче: та же ширина, что в квадрате, выпирала за форму —
+     а стикер, вылезший за канву, перестаёт быть частью сектора. */
+  .cprofile .card { width:104px; min-height:56px; font-size:10.5px; }
+  .cprofile .sector > div { justify-content:center; }
+  .cprofile .card { justify-content:center; }
+  /* Карточка — СТИКЕР: почти квадратная, с мелким кодом в правом нижнем углу.
+     На настоящей канве это бумажки, и форма тут работает: стикеры кладут
+     рядами, они слегка находят друг на друга, и их видно как штуки, а не как
+     строки списка. Строчный вид, который был раньше, читался как таблица —
+     то есть ровно то, чем канва не является. */
+  .card {
+    position:relative; display:inline-flex; align-items:flex-start;
+    width:118px; min-height:64px; padding:6px 7px 14px;
+    border:1px solid var(--bd); border-radius:3px; background:var(--bg2);
+    font-size:11px; line-height:1.25; cursor:pointer; vertical-align:top;
+    box-shadow:1px 1px 0 rgba(0,0,0,.18);
+    /* Небольшое перекрытие — стикеры не выкладывают по линейке. Отрицательный
+       отступ съедает край соседа, поэтому z-index поднимается при наведении. */
+    margin:0 -6px 4px 0;
+  }
+  .card:hover { z-index:5; }
+  /* Код мелко и в углу: на бумажке он подпись, а не заголовок. */
+  .card .cid {
+    position:absolute; right:5px; bottom:3px;
+    font-family:var(--mono); font-size:8px; color:var(--t3);
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .sector > div { display:flex; flex-wrap:wrap; }
   .card.hi { box-shadow:0 0 0 2px var(--acc); }
   .card.dim { opacity:.35; }
 
-  .gap { width:96px; position:relative; }
+  .gap { width:120px; position:relative; align-self:stretch; }
   svg.links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
 
   .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:var(--t2); margin-top:10px; }
@@ -84,20 +168,28 @@
 
 <div class="sec-label">Канва выбранного корня — наведите на карточку, чтобы увидеть её связи</div>
 <div class="canvas">
-  <div class="half vmap">
+  <div class="figwrap">
     <div class="halfhead"><span class="h">Value Map</span><span class="sub">что мы делаем · квадрат</span></div>
-    <div class="sector"><div class="st">Products &amp; Services</div><div id="ps"></div></div>
-    <div class="sector"><div class="st">Pain Relievers</div><div id="pr"></div></div>
-    <div class="sector"><div class="st">Gain Creators</div><div id="gc"></div></div>
+    <div class="fig vmap">
+      <div class="inner">
+        <div class="sector s-ps"><div class="st">Products &amp; Services</div><div id="ps"></div></div>
+        <div class="sector s-gc"><div class="st">Gain Creators</div><div id="gc"></div></div>
+        <div class="sector s-pr"><div class="st">Pain Relievers</div><div id="pr"></div></div>
+      </div>
+    </div>
   </div>
 
   <div class="gap"><svg class="links" id="links"></svg></div>
 
-  <div class="half cprofile">
-    <div class="halfhead"><span class="h">Customer Profile</span><span class="sub">что есть у клиента · круг</span></div>
-    <div class="sector"><div class="st">Customer Jobs</div><div id="jobs"></div></div>
-    <div class="sector"><div class="st">Pains</div><div id="pains"></div></div>
-    <div class="sector"><div class="st">Gains</div><div id="gains"></div></div>
+  <div class="figwrap">
+    <div class="halfhead" style="justify-content:flex-end"><span class="h">Customer Profile</span><span class="sub">что есть у клиента · круг</span></div>
+    <div class="fig cprofile">
+      <div class="inner">
+        <div class="sector"><div class="st">Gains</div><div id="gains"></div></div>
+        <div class="sector"><div class="st">Customer Jobs</div><div id="jobs"></div></div>
+        <div class="sector"><div class="st">Pains</div><div id="pains"></div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -185,7 +277,7 @@
 
   function cardHtml(id, title, color, cls = '') {
     return `<div class="card ${cls}" data-id="${id}" style="border-color:${color}">
-      <span style="color:${color}">●</span>${title}<span class="cid">${id}</span></div>`;
+      ${title}<span class="cid">${id}</span></div>`;
   }
 
   function render() {
