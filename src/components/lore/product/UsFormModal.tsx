@@ -12,7 +12,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import {
-  saveLoreUc, checkLoreUcQuality, linkLoreUc, fetchLoreSlice,
+  saveLoreUc, checkLoreUcQuality, linkLoreUc, linkLoreFeature, fetchLoreSlice,
   type LoreUcQualityResult, type LoreActorRow,
 } from '../../../api/lore';
 import TipTapField from '../TipTapField';
@@ -223,6 +223,11 @@ export default function UsFormModal({
   // Связи редактируемого узла: что он ЗАЯВЛЯЕТ (боли/выгоды/работы) и чем
   // реализуется (дочерние сценарии). Правка вслепую — правка не того: видя
   // только тело, легко переписать фичу, забыв, что она уже кому-то обещана.
+  // Каталог ценностей для пикеров — тот же реестр, что в разделе «Работы ·
+  // Боли · Ожидания»: привязывать можно только заведённое, иначе в графе
+  // появлялись бы ссылки на несуществующее.
+  const [vpCatalog, setVpCatalog] = useState<{ pains: {id:string;title:string}[]; gains: {id:string;title:string}[]; jobs: {id:string;title:string}[] }>({ pains: [], gains: [], jobs: [] });
+  const [linkBusy, setLinkBusy] = useState<string | null>(null);
   const [links, setLinks] = useState<{ pains: string[]; gains: string[]; jobs: string[]; children: { uc_id: string; title?: string | null; status?: string | null }[] } | null>(null);
   useEffect(() => {
     if (!opened) return;
@@ -259,6 +264,15 @@ export default function UsFormModal({
         });
       })
       .catch(() => { /* связи справочны — форма остаётся рабочей */ });
+    Promise.all([
+      fetchLoreSlice<{ pain_id: string; title?: string | null }>('pains', undefined, ctrl.signal),
+      fetchLoreSlice<{ gain_id: string; title?: string | null }>('gains', undefined, ctrl.signal),
+      fetchLoreSlice<{ job_id: string; title?: string | null }>('jobs', undefined, ctrl.signal),
+    ]).then(([p, g, j]) => setVpCatalog({
+      pains: p.map(x => ({ id: x.pain_id, title: x.title ?? x.pain_id })),
+      gains: g.map(x => ({ id: x.gain_id, title: x.title ?? x.gain_id })),
+      jobs:  j.map(x => ({ id: x.job_id,  title: x.title ?? x.job_id })),
+    })).catch(() => { /* без каталога остаётся просмотр уже привязанного */ });
     return () => ctrl.abort();
   }, [opened, editing, initial?.uc_id]);
 
@@ -323,6 +337,31 @@ export default function UsFormModal({
   // Показываем ИМЕННО тот проект, который унаследуется: подпись «наследуется»
   // без значения не отвечает на вопрос «от кого и какой».
   const inheritedProject = parentProjects[parent] ?? '';
+
+  /**
+   * Привязать/отвязать ценность (ADDRESSES/PROMISES/HELPS_WITH).
+   *
+   * Половина «ЗАЯВЛЕНО» — именно то, что редактируется у корня; половина
+   * «ДОСТАВЛЕНО» (RELIEVES/DELIVERS/PERFORMS) принадлежит сценариям и правится
+   * у них, иначе fit считался бы по обещаниям, а не по сделанному.
+   */
+  const toggleVp = async (rel: 'pain' | 'gain' | 'job', targetId: string, on: boolean) => {
+    if (!editing || linkBusy) return;
+    setLinkBusy(targetId);
+    try {
+      await linkLoreFeature({ feature_id: initial!.uc_id, rel, target_id: targetId, action: on ? 'remove' : 'add' });
+      setLinks(prev => {
+        if (!prev) return prev;
+        const key = rel === 'pain' ? 'pains' : rel === 'gain' ? 'gains' : 'jobs';
+        const cur = prev[key];
+        return { ...prev, [key]: on ? cur.filter(x => x !== targetId) : [...cur, targetId] };
+      });
+    } catch (e) {
+      onError(e);
+    } finally {
+      setLinkBusy(null);
+    }
+  };
 
   const finalId = editing ? (initial?.uc_id ?? '') : normalizeUsId(id, root);
 
@@ -641,23 +680,59 @@ export default function UsFormModal({
       </div>
 
       {/* ── связи узла (только при правке) ── */}
-      {links && (links.pains.length + links.gains.length + links.jobs.length + links.children.length > 0) && (
+      {/* ── что узел ЗАЯВЛЯЕТ: боли, выгоды, работы ──
+          Редактируемо прямо здесь. Read-only список был бесполезен: смотреть
+          можно и в паспорте, а привязать боль к фиче из UI было нельзя вообще —
+          только через MCP. Правится половина «ЗАЯВЛЕНО» (ADDRESSES/PROMISES/
+          HELPS_WITH); половина «ДОСТАВЛЕНО» принадлежит сценариям, иначе fit
+          считался бы по обещаниям, а не по сделанному. */}
+      {editing && links && (
         <div style={{ marginTop: 12, border: '1px solid var(--bd)', borderRadius: 4, padding: '8px 10px', background: 'var(--bg1)' }}>
           <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)', marginBottom: 5 }}>
-            {t('lore.product.us.links', 'Связи — правятся в паспорте')}
+            {t('lore.product.us.links', 'Что заявляет — нажмите, чтобы привязать или снять')}
           </div>
-          {([['pains', t('lore.product.us.linkPains', 'боли')], ['gains', t('lore.product.us.linkGains', 'выгоды')], ['jobs', t('lore.product.us.linkJobs', 'работы')]] as const).map(([k, lbl]) => (
-            links[k].length > 0 && (
-              <div key={k} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'baseline', marginTop: 2 }}>
-                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', minWidth: 54 }}>{lbl}</span>
-                {links[k].map(x => (
-                  <span key={x} style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t2)' }}>{x}</span>
-                ))}
-              </div>
-            )
+          {([
+            ['pains', 'pain', t('lore.product.us.linkPains', 'боли'), vpCatalog.pains, 'var(--pain)'],
+            ['gains', 'gain', t('lore.product.us.linkGains', 'выгоды'), vpCatalog.gains, 'var(--gain)'],
+            ['jobs', 'job', t('lore.product.us.linkJobs', 'работы'), vpCatalog.jobs, 'var(--job)'],
+          ] as const).map(([key, rel, lbl, catalog, color]) => (
+            <div key={key} style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'baseline', marginTop: 4 }}>
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', minWidth: 54 }}>{lbl}</span>
+              {catalog.length === 0 && (
+                <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                  {t('lore.product.us.vpEmpty', 'реестр пуст')}
+                </span>
+              )}
+              {catalog.map(item => {
+                const on = links[key].includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    disabled={linkBusy === item.id}
+                    onClick={() => void toggleVp(rel, item.id, on)}
+                    title={item.id}
+                    aria-pressed={on}
+                    style={{
+                      fontSize: 'var(--fs-2xs)', borderRadius: 999, padding: '2px 8px',
+                      cursor: linkBusy === item.id ? 'wait' : 'pointer',
+                      background: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
+                      border: `1px solid ${on ? color : 'var(--bd)'}`,
+                      color: on ? 'var(--t1)' : 'var(--t3)',
+                    }}
+                  >
+                    {item.title}
+                  </button>
+                );
+              })}
+            </div>
           ))}
+
+          {/* Дочерние сценарии — просмотр: их привязка это выбор родителя, и он
+              делается в форме самого сценария. Два места для одного ребра
+              разошлись бы. */}
           {links.children.length > 0 && (
-            <div style={{ marginTop: 5 }}>
+            <div style={{ marginTop: 7, borderTop: '1px solid var(--bd)', paddingTop: 5 }}>
               <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
                 {t('lore.product.us.linkChildren', 'реализуют сценарии')}: {links.children.length}
               </span>

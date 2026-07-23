@@ -1611,11 +1611,12 @@
         "parentScenarios": "scenarios of the selected feature",
         "noParentWarn": "without a parent the scenario is visible nowhere: Features lists only ☁/🪁, the tree only children of a root",
         "projectInherited": "inherited from the parent",
-        "links": "Links — edited in the passport",
+        "links": "What it claims — click to link or unlink",
         "linkPains": "pains",
         "linkGains": "gains",
         "linkJobs": "jobs",
-        "linkChildren": "realized by scenarios"
+        "linkChildren": "realized by scenarios",
+        "vpEmpty": "registry is empty"
       },
       "canvas": {
         "claimed": "claimed",
