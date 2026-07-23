@@ -165,6 +165,7 @@ export interface UsDraft {
   goal_level?: string | null;
   rigor?: string | null;
   parent_uc_id?: string | null;
+  status?: string | null;
   primary_actor_id?: string | null;
   supporting_actor_ids?: string[];
   project?: string | null;
@@ -196,6 +197,10 @@ export default function UsFormModal({
   const [title, setTitle] = useState(initial?.title ?? '');
   const [goalLevel, setGoalLevel] = useState(initial?.goal_level ?? (root ? 'cloud' : 'sea-level'));
   const [rigor, setRigor] = useState(initial?.rigor ?? 'casual');
+  // Статус: руками ставятся ТОЛЬКО намерения (D17). active/shipped/in_rework
+  // вычисляются из задач и отбиваются бэкендом с 400 — предлагать их в форме
+  // значило бы звать в отказ.
+  const [status, setStatus] = useState(initial?.status ?? '');
   const [scenario, setScenario] = useState(initial?.scenario_md ?? '');
   const [acceptance, setAcceptance] = useState(initial?.acceptance_md ?? '');
   const [saving, setSaving] = useState(false);
@@ -286,6 +291,7 @@ export default function UsFormModal({
     setTitle(initial?.title ?? '');
     setGoalLevel(initial?.goal_level ?? 'sea-level');
     setRigor(initial?.rigor ?? 'casual');
+    setStatus(initial?.status ?? '');
     setScenario(initial?.scenario_md ?? '');
     setAcceptance(initial?.acceptance_md ?? '');
   }, [initial]);
@@ -371,7 +377,7 @@ export default function UsFormModal({
   /**
    * Акторы, допустимые на выбранной высоте (Кокберн).
    *
-   * 🐟 subfunction — внутренний шаг, обслуживающий сценарий: его исполняет
+   * subfunction — внутренний шаг, обслуживающий сценарий: его исполняет
    * система или агент, у человека на этой высоте цели нет. Показывать здесь
    * людей значит предлагать заведомо неверный выбор, а потом ловить его
    * ревью — дешевле не предлагать.
@@ -396,6 +402,7 @@ export default function UsFormModal({
         acceptance_md: acceptance || undefined,
         goal_level: (goalLevel || undefined) as 'sea-level' | 'subfunction' | undefined,
         rigor: (rigor || undefined) as 'casual' | 'fully-dressed' | undefined,
+        status: (status || undefined) as 'proposed' | 'dropped' | undefined,
         // Родитель только при СОЗДАНИИ: смена родителя у существующего — это
         // перенос в другой корень, отдельное действие, а не побочный эффект
         // сохранения тела.
@@ -520,13 +527,13 @@ export default function UsFormModal({
           <select style={field} value={goalLevel} onChange={e => setGoalLevel(e.target.value)}>
             {root ? (
               <>
-                <option value="cloud">☁ {t('lore.product.vocab.goalLevel.cloud', 'облако')}</option>
-                <option value="kite">🪁 {t('lore.product.vocab.goalLevel.kite', 'воздушный змей')}</option>
+                <option value="cloud">{t('lore.product.vocab.goalLevel.cloud', 'облако')}</option>
+                <option value="kite">{t('lore.product.vocab.goalLevel.kite', 'воздушный змей')}</option>
               </>
             ) : (
               <>
-                <option value="sea-level">🌊 {t('lore.product.vocab.goalLevel.sea-level', 'уровень моря')}</option>
-                <option value="subfunction">🐟 {t('lore.product.vocab.goalLevel.subfunction', 'подфункция')}</option>
+                <option value="sea-level">{t('lore.product.vocab.goalLevel.sea-level', 'уровень моря')}</option>
+                <option value="subfunction">{t('lore.product.vocab.goalLevel.subfunction', 'подфункция')}</option>
               </>
             )}
           </select>
@@ -534,11 +541,23 @@ export default function UsFormModal({
         <div style={{ flex: 1 }}>
           <label style={label}>{t('lore.product.us.rigor', 'Вес изложения')}</label>
           <select style={field} value={rigor} onChange={e => setRigor(e.target.value)}>
-            <option value="casual">⚡ {t('lore.product.vocab.rigor.casual', 'облегчённый')}</option>
-            <option value="fully-dressed">📋 {t('lore.product.vocab.rigor.fully-dressed', 'полный')}</option>
+            <option value="casual">{t('lore.product.vocab.rigor.casual', 'облегчённый')}</option>
+            <option value="fully-dressed">{t('lore.product.vocab.rigor.fully-dressed', 'полный')}</option>
           </select>
         </div>
       </div>
+      <label style={label}>{t('lore.product.us.status', 'Статус')}</label>
+      <select style={field} value={status} onChange={e => setStatus(e.target.value)}>
+        <option value="">{t('lore.product.us.statusNone', '— не задан —')}</option>
+        <option value="proposed">{t('lore.product.vocab.ucStatus.proposed', 'предложен')}</option>
+        <option value="dropped">{t('lore.product.vocab.ucStatus.dropped', 'снят')}</option>
+      </select>
+      {/* Готовность НЕ выбирается: «в работе», «выпущен» и «переделка»
+          вычисляются из задач (D17) и отбиваются при ручной записи. Сказать это
+          рядом дешевле, чем оставить человека гадать, почему в списке нет
+          нужного значения. */}
+      <div style={hint}>{t('lore.product.us.statusHint', 'готовность выводится из задач: «в работе», «выпущен», «переделка» рукой не ставятся')}</div>
+
       {/* Вес меняет ЗНАМЕНАТЕЛЬ линтера, а не только шаблон: у casual часть
           проверок становится подсказкой. Сказать это явно дешевле, чем оставить
           пользователя гадать, почему счёт скакнул при переключении. */}

@@ -1,11 +1,12 @@
 // Общие примитивы продуктового слоя (ADR-LORE-022/032, Остервальдер + Коберн).
 // Единый стиль паспортов/списков как в прототипе forseti-storyline-vp.html,
 // на реальных токенах темы. Данные — через fetchLoreSlice (идиома LoreReleasesBoard).
-import { useEffect, useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../../api/lore';
 import { marked } from '../markdown';
 import { sanitizeMd } from '../sanitizeHtml';
+import { GameIcon } from '../GameIcon';
 
 // Навигация между продуктовыми разделами (section = ?section=, id = ?passport=).
 export type ProductNavigate = (section: string, id?: string) => void;
@@ -65,6 +66,58 @@ export function useSlice<T>(
 const arr = (x: string[] | null | undefined): string[] => Array.isArray(x) ? x : [];
 export { arr as asArray };
 
+/**
+ * Пилюля с иконкой из набора (PL-39).
+ *
+ * Уровни цели, типы ценностей и виды акторов рисовались эмодзи прямо в коде.
+ * Эмодзи рисует шрифт системы: вид зависит от машины и темы, цветовым токенам
+ * он не подчиняется и не масштабируется вместе с текстом. `GameIcon` — вектор,
+ * красится `currentColor` и живёт по общим правилам.
+ *
+ * Пустой слаг допустим: у незнакомого значения словаря иконки нет, и подпись
+ * остаётся единственным носителем смысла — это честнее, чем выдать чужой
+ * значок за известный.
+ */
+export function IconPill({ icon, children, tone, style }: {
+  icon: string;
+  children: ReactNode;
+  tone?: 'ok' | 'act' | 'warn' | 'muted';
+  style?: CSSProperties;
+}) {
+  const c = tone === 'ok' ? 'var(--suc)' : tone === 'act' ? 'var(--inf)' : tone === 'warn' ? 'var(--wrn)' : 'var(--t2)';
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)',
+      border: `1px solid ${c}`, borderRadius: 999, padding: '1px 7px',
+      color: c, whiteSpace: 'nowrap', ...style,
+    }}>
+      {icon && <GameIcon slug={icon} size={11} style={{ color: c }} />}
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Кнопка правки — иконкой набора, а не символом «✎».
+ *
+ * Один компонент на все паспорта слоя: пять копий кнопки уже начали расходиться
+ * размером и цветом, а любая правка вида требовала обойти их все.
+ */
+export function EditButton({ onClick, title }: { onClick: () => void; title: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', padding: 0, marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}
+    >
+      <GameIcon slug="pencil" size={12} />
+    </button>
+  );
+}
+
 // ── презентационные примитивы (совпадают с прототипом: pill/psec/trow/lnk) ──
 export function Pill({ children, tone, style }: { children: ReactNode; tone?: 'ok' | 'act' | 'warn' | 'muted'; style?: CSSProperties }) {
   const c = tone === 'ok' ? 'var(--suc)' : tone === 'act' ? 'var(--inf)' : tone === 'warn' ? 'var(--wrn)' : 'var(--t2)';
@@ -93,11 +146,57 @@ export function LinkChip({ children, color, onClick, dim, title }: { children: R
   );
 }
 
+/** Ключ ширины списка в localStorage — общий на все экраны слоя. */
+const LIST_WIDTH_KEY = 'lore.product.listWidth';
+
 // ── master-detail на весь контент-пейн (список слева + карточка справа) ──
 export function MasterDetail({ list, detail }: { list: ReactNode; detail: ReactNode }) {
+  /**
+   * Ширина списка тянется мышью и ПЕРЕЖИВАЕТ перезагрузку.
+   *
+   * Фиксированные 288px — компромисс, не подходящий никому: длинные заголовки
+   * сценариев обрезаются, а короткие id оставляют половину колонки пустой.
+   * Значение общее на все экраны слоя: устроены они одинаково, и подстраивать
+   * каждый заново — та же работа пять раз.
+   */
+  const [width, setWidth] = useState(() => {
+    const saved = Number(localStorage.getItem(LIST_WIDTH_KEY));
+    return Number.isFinite(saved) && saved >= 180 ? saved : 288;
+  });
+  const dragRef = useRef<{ startX: number; startW: number } | null>(null);
+
+  useEffect(() => { localStorage.setItem(LIST_WIDTH_KEY, String(width)); }, [width]);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startW: width };
+    const onMove = (ev: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      // Границы: уже 180px список нечитаем, шире 560 паспорт вырождается в
+      // узкую колонку. Оба края лучше состояния, из которого не выбраться.
+      setWidth(Math.max(180, Math.min(560, d.startW + (ev.clientX - d.startX))));
+    };
+    const onUp = () => {
+      dragRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
   return (
     <div style={{ display: 'flex', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
-      <div style={{ width: 288, flexShrink: 0, borderRight: '1px solid var(--bd)', background: 'var(--bg1)', overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{list}</div>
+      <div style={{ width, flexShrink: 0, background: 'var(--bg1)', overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{list}</div>
+      {/* Ручка стоит НА границе: отдельная полоса съела бы место, а в границу
+          между колонками мышью целятся и так. */}
+      <div
+        onMouseDown={onMouseDown}
+        role="separator"
+        aria-orientation="vertical"
+        style={{ width: 5, flexShrink: 0, cursor: 'col-resize', borderLeft: '1px solid var(--bd)' }}
+      />
       <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{detail}</div>
     </div>
   );
@@ -160,7 +259,7 @@ export function ListSearch({ value, onChange, placeholder }: {
       display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px',
       borderBottom: '1px solid var(--bd)', background: 'var(--bg1)',
     }}>
-      <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
+      <GameIcon slug="magnifying-glass" size={12} style={{ color: 'var(--t3)', flexShrink: 0 }} />
       <input
         style={{
           flex: 1, background: 'transparent', border: 'none', outline: 'none',

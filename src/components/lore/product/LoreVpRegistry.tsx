@@ -21,9 +21,12 @@ import {
   EmptyDetail,
   FilterChips,
   ListSearch,
+  EditButton,
+  IconPill,
 } from './shared';
 import VpCreateModal, { vpKindOf, type VpKind, type VpDraft } from './VpCreateModal';
 import { jobKindLabel, levelLabel, gainRankLabel } from './vocab';
+import { VP_ICON, iconOf } from './icons';
 
 type VpType = 'all' | 'job' | 'pain' | 'gain';
 type Unified = { id: string; title: string | null; ty: 'job' | 'pain' | 'gain' };
@@ -90,9 +93,9 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
   // ── фильтр по типу (над списком) ──
   const chipDefs: { key: VpType; label: string }[] = [
     { key: 'all', label: t('lore.product.vp.all', 'все') },
-    { key: 'job', label: `🎯 ${t('lore.product.vp.jobs', 'работы')}` },
-    { key: 'pain', label: `🔴 ${t('lore.product.vp.pains', 'боли')}` },
-    { key: 'gain', label: `🟢 ${t('lore.product.vp.gains', 'ожидания')}` },
+    { key: 'job', label: t('lore.product.vp.jobs', 'работы') },
+    { key: 'pain', label: t('lore.product.vp.pains', 'боли') },
+    { key: 'gain', label: t('lore.product.vp.gains', 'ожидания') },
   ];
   const filterChips = (
     <>
@@ -131,13 +134,13 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
           let meta: ReactNode = null;
           if (u.ty === 'job') {
             const j = jobs.find(x => x.job_id === u.id);
-            meta = <Pill>{levelLabel(t, j?.importance)}</Pill>;
+            meta = <IconPill icon={iconOf(VP_ICON, 'job')}>{levelLabel(t, j?.importance)}</IconPill>;
           } else if (u.ty === 'pain') {
             const p = pains.find(x => x.pain_id === u.id);
-            meta = <Pill tone="warn">{levelLabel(t, p?.severity)}</Pill>;
+            meta = <IconPill icon={iconOf(VP_ICON, 'pain')} tone="warn">{levelLabel(t, p?.severity)}</IconPill>;
           } else {
             const g = gains.find(x => x.gain_id === u.id);
-            meta = <Pill tone="ok">{gainRankLabel(t, g?.rank)}</Pill>;
+            meta = <IconPill icon={iconOf(VP_ICON, 'gain')} tone="ok">{gainRankLabel(t, g?.rank)}</IconPill>;
           }
           return (
             <ListRow
@@ -157,15 +160,10 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
   // Карандаш правки — один на все три паспорта. Форма та же, что у создания:
   // поля совпадают дословно, и вторая её копия разъехалась бы с первой.
   const editBtn = (draft: VpDraft) => (
-    <button
-      type="button"
-      title={t('lore.product.vp.edit', 'Правка')}
-      aria-label={t('lore.product.vp.edit', 'Правка')}
+    <EditButton
       onClick={() => { setCreating(null); setEditing(draft); }}
-      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
-    >
-      ✎
-    </button>
+      title={t('lore.product.vp.edit', 'Правка')}
+    />
   );
 
   // ── паспорт по префиксу выбранного id ──
@@ -192,7 +190,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
           </LabeledChips>
         </PSection>
 
-        <PSection title={t('lore.product.vp.performers', '🌊 Кто ВЫПОЛНЯЕТ — US фичи (PERFORMS)')}>
+        <PSection title={t('lore.product.vp.performers', 'Кто ВЫПОЛНЯЕТ — US фичи (PERFORMS)')}>
           <div style={{ fontSize: 10.5, color: 'var(--t3)', marginBottom: 5 }}>
             заявили фичи: {asArray(j.claimed_by_ucs).join(', ') || '—'}
           </div>
@@ -219,7 +217,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     detail = !p ? <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} /> : (
       <div>
         <PassportHeader title={p.title ?? p.pain_id}>
-          <Pill tone="warn">🔴 {t('lore.product.vp.pain', 'боль')}</Pill>
+          <Pill tone="warn">{t('lore.product.vp.pain', 'боль')}</Pill>
           <Pill>{levelLabel(t, p.severity)}</Pill>
           {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity })}
         </PassportHeader>
@@ -254,7 +252,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
     detail = !g ? <EmptyDetail text={t('lore.product.vp.pick', 'Выберите работу / боль / ожидание слева')} /> : (
       <div>
         <PassportHeader title={g.title ?? g.gain_id}>
-          <Pill tone="ok">🟢 {t('lore.product.vp.gain', 'выгода')}</Pill>
+          <Pill tone="ok">{t('lore.product.vp.gain', 'выгода')}</Pill>
           <Pill>{gainRankLabel(t, g.rank)}</Pill>
           {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md })}
         </PassportHeader>

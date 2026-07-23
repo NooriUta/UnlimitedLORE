@@ -23,19 +23,14 @@ import {
   TRow,
   ListSearch,
   Markdown,
+  IconPill,
+  EditButton,
 } from './shared';
 import { ucStatusLabel, ucStatusTone, rigorLabel, goalLevelLabel } from './vocab';
 import { resolveStatusMeta, taskTick } from '../lore-status';
+import { GOAL_LEVEL_ICON, RIGOR_ICON, iconOf } from './icons';
 import { GameIcon } from '../GameIcon';
 import UsFormModal, { type UsDraft } from './UsFormModal';
-
-// Уровень цели (Коберн, D2): море / рыба.
-function goalGlyphOf(level: string | null | undefined): string {
-  const v = (level ?? '').toLowerCase();
-  if (v.includes('sea') || v.includes('🌊')) return '🌊';
-  if (v.includes('sub') || v.includes('🐟')) return '🐟';
-  return '';
-}
 
 
 export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
@@ -107,7 +102,6 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
     list = (
       <>
         {filtered.map(uc => {
-          const glyph = goalGlyphOf(uc.goal_level);
           const statusShort = ucStatusLabel(t, uc.status);
           return (
             <ListRow
@@ -116,7 +110,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               title={uc.title}
               selected={uc.uc_id === selectedId}
               onClick={() => onSelect(uc.uc_id)}
-              meta={<Pill tone={ucStatusTone(uc.status)}>{glyph} {statusShort}</Pill>}
+              meta={<IconPill icon={iconOf(GOAL_LEVEL_ICON, uc.goal_level)} tone={ucStatusTone(uc.status)}>{statusShort}</IconPill>}
             />
           );
         })}
@@ -150,22 +144,15 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
           <PassportHeader title={uc.title ?? uc.uc_id}>
             <Pill tone={ucStatusTone(uc.status)}>{ucStatusLabel(t, uc.status)}</Pill>
-            {uc.goal_level && <Pill>{goalLevelLabel(t, uc.goal_level)}</Pill>}
-            {uc.rigor && <Pill>{rigorLabel(t, uc.rigor)}</Pill>}
+            {uc.goal_level && <IconPill icon={iconOf(GOAL_LEVEL_ICON, uc.goal_level)}>{goalLevelLabel(t, uc.goal_level)}</IconPill>}
+            {uc.rigor && <IconPill icon={iconOf(RIGOR_ICON, uc.rigor)}>{rigorLabel(t, uc.rigor)}</IconPill>}
             {/* Правка той же формой, что и создание: линтер обязан работать и
                 при доводке тела — именно там он полезнее всего. */}
-            <button
-              type="button"
-              title={t('lore.product.us.edit', 'Правка')}
-              aria-label={t('lore.product.us.edit', 'Правка')}
-              onClick={() => { setCreating(false); setEditingUs({
+            <EditButton onClick={() => { setCreating(false); setEditingUs({
                 uc_id: uc.uc_id, title: uc.title, scenario_md: uc.scenario_md,
                 acceptance_md: uc.acceptance_md, goal_level: uc.goal_level, rigor: uc.rigor,
-              }); }}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
-            >
-              ✎
-            </button>
+                status: uc.status, parent_uc_id: uc.parent_uc_id,
+              }); }} title={t('lore.product.us.edit', 'Правка')} />
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-do)', marginBottom: 8 }}>{uc.uc_id}</div>

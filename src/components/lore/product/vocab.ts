@@ -50,11 +50,11 @@ export function ucStatusTone(v: string | null | undefined): 'ok' | 'act' | 'warn
 
 /** Строгость изложения по Кокберну: casual | fully-dressed. */
 export const rigorLabel = (t: TFunction, v: string | null | undefined) =>
-  label(t, 'rigor', v, { casual: '⚡', 'fully-dressed': '📋' });
+  label(t, 'rigor', v);
 
 /** Уровень цели по Кокберну: cloud | kite | sea-level | subfunction. */
 export const goalLevelLabel = (t: TFunction, v: string | null | undefined) =>
-  label(t, 'goalLevel', v, { cloud: '☁', kite: '🪁', 'sea-level': '🌊', subfunction: '🐟' });
+  label(t, 'goalLevel', v);
 
 /** Тип работы по Остервальдеру: functional | social | emotional | supporting. */
 export const jobKindLabel = (t: TFunction, v: string | null | undefined) =>

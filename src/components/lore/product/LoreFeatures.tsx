@@ -20,30 +20,14 @@ import {
   PassportHeader,
   EmptyDetail,
   ListSearch,
+  IconPill,
+  EditButton,
 } from './shared';
 import { ucStatusLabel, ucStatusTone, goalLevelLabel } from './vocab';
 import { resolveStatusMeta, taskTick } from '../lore-status';
+import { GOAL_LEVEL_ICON, iconOf } from './icons';
 import { GameIcon } from '../GameIcon';
 import UsFormModal, { type UsDraft } from './UsFormModal';
-
-// Уровень цели (Коберн, D1): облако / воздушный змей.
-// Хелпер модульного уровня — `t` здесь недоступен, поэтому отдаём КЛЮЧ, а
-// разрешает его вызывающий компонент. Для неизвестного уровня ключа нет:
-// показываем сырое значение из данных как есть.
-function goalOf(level: string | null | undefined): { glyph: string; labelKey: string | null; raw: string } {
-  const v = (level ?? '').toLowerCase();
-  if (v.includes('cloud') || v.includes('☁')) return { glyph: '☁', labelKey: 'lore.product.goal.cloud', raw: 'облако' };
-  if (v.includes('kite') || v.includes('🪁')) return { glyph: '🪁', labelKey: 'lore.product.goal.kite', raw: 'змей' };
-  return { glyph: '', labelKey: null, raw: level ?? '' };
-}
-
-// Глиф статуса US.
-function ucGlyph(status: string | null | undefined): string {
-  const v = (status ?? '').toLowerCase();
-  if (v === 'shipped') return '✅';
-  if (v === 'active') return '🔄';
-  return '⚡';
-}
 
 /**
  * Тон спринт-чипа задачи (PL-16).
@@ -129,7 +113,6 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     list = (
       <>
         {filtered.map(f => {
-          const g = goalOf(f.goal_level).glyph;
           return (
             <ListRow
               key={f.uc_id}
@@ -137,7 +120,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
               title={f.title}
               selected={f.uc_id === selectedId}
               onClick={() => onSelect(f.uc_id)}
-              meta={<Pill>{g} · {f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</Pill>}
+              meta={<IconPill icon={iconOf(GOAL_LEVEL_ICON, f.goal_level)}>{f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</IconPill>}
             />
           );
         })}
@@ -205,17 +188,9 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
         <div>
           <PassportHeader title={f.title ?? f.uc_id}>
             <Pill tone={ucStatusTone(f.status)}>{ucStatusLabel(t, f.status)}</Pill>
-            {f.goal_level && <Pill>{goalLevelLabel(t, f.goal_level)}</Pill>}
+            {f.goal_level && <IconPill icon={iconOf(GOAL_LEVEL_ICON, f.goal_level)}>{goalLevelLabel(t, f.goal_level)}</IconPill>}
             <Pill tone={relievedCount >= claimedCount && claimedCount > 0 ? 'ok' : 'warn'}>fit {relievedCount}/{claimedCount}</Pill>
-            <button
-              type="button"
-              title={t('lore.product.us.edit', 'Правка')}
-              aria-label={t('lore.product.us.edit', 'Правка')}
-              onClick={() => { setCreatingRoot(false); setEditingRoot({ uc_id: f.uc_id, title: f.title, goal_level: f.goal_level }); }}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
-            >
-              ✎
-            </button>
+            <EditButton onClick={() => { setCreatingRoot(false); setEditingRoot({ uc_id: f.uc_id, title: f.title, goal_level: f.goal_level, status: f.status }); }} title={t('lore.product.us.edit', 'Правка')} />
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-value)', marginBottom: 8 }}>{f.uc_id}</div>
@@ -237,7 +212,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
             {bridgeRow(t('lore.product.feat.gains', 'ОЖИДАНИЯ'), gainIds, 'var(--gain)', coveredGains)}
           </PSection>
 
-          <PSection title={t('lore.product.feat.impl', '🌊 Реализация — US (что СДЕЛАНО)')}>
+          <PSection title={t('lore.product.feat.impl', 'Реализация — US (что СДЕЛАНО)')}>
             {/* Завести сценарий ПРЯМО под этим корнем: иначе после создания на
                 соседнем экране пришлось бы отдельным действием привязывать
                 родителя, и про этот шаг забывали бы — сценарий висел бы сиротой. */}
@@ -268,7 +243,6 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                       >
                         {open ? '▼' : '▶'}
                       </button>
-                      <span style={{ width: 16, textAlign: 'center' }}>{ucGlyph(uc.status)}</span>
                       <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc.uc_id)}>{uc.uc_id}</LinkChip>
                       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{uc.title ?? ''}</span>
                       {/* Мини-скор — только у раскрытого узла: он и посчитан

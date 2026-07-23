@@ -26,8 +26,13 @@ import {
   FilterChips,
   ListSearch,
   Markdown,
+  IconPill,
+  EditButton,
 } from './shared';
 import ActorFormModal, { type ActorDraft } from './ActorFormModal';
+import { ACTOR_KIND_ICON, VP_ICON, iconOf } from './icons';
+import { GameIcon } from '../GameIcon';
+import { actorKindLabel } from './vocab';
 
 export type ActorKind = 'all' | 'human-role' | 'agent' | 'system';
 
@@ -53,13 +58,13 @@ export function filterActors<T extends { actor_id: string; name?: string | null;
 
 // Строка профиля Остервальдера: жирный uppercase-лейбл + чипы (или «— нет»).
 function ProfileLine({
-  glyph,
+  icon,
   label,
   items,
   color,
   onNavigate,
 }: {
-  glyph: string;
+  icon: string;
   label: string;
   items: { id: string; text: string }[];
   color: string;
@@ -68,7 +73,7 @@ function ProfileLine({
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
       <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)', minWidth: 96 }}>
-        {glyph} {label}
+        {icon && <GameIcon slug={icon} size={11} style={{ color }} />} {label}
       </span>
       {items.length === 0 ? (
         <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>— нет</span>
@@ -103,9 +108,9 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
   // отсутствие чипа выглядит так, будто вопрос и не задавали.
   const kindDefs: { key: ActorKind; label: string }[] = [
     { key: 'all', label: t('lore.product.actor.kindAll', 'все') },
-    { key: 'human-role', label: `🧑 ${t('lore.product.actor.kindHuman', 'люди')}` },
-    { key: 'agent', label: `🤖 ${t('lore.product.actor.kindAgent', 'агенты')}` },
-    { key: 'system', label: `⚙ ${t('lore.product.actor.kindSystem', 'системы')}` },
+    { key: 'human-role', label: `${t('lore.product.actor.kindHuman', 'люди')}` },
+    { key: 'agent', label: `${t('lore.product.actor.kindAgent', 'агенты')}` },
+    { key: 'system', label: `${t('lore.product.actor.kindSystem', 'системы')}` },
   ];
 
   // ── список ──
@@ -126,7 +131,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
             title={a.name ?? a.actor_id}
             selected={a.actor_id === selectedId}
             onClick={() => onSelect(a.actor_id)}
-            meta={<Pill tone={a.kind === 'agent' ? 'act' : 'muted'}>{a.kind ?? '—'} · {a.uc_count ?? 0} US</Pill>}
+            meta={<IconPill icon={iconOf(ACTOR_KIND_ICON, a.kind)} tone={a.kind === 'agent' ? 'act' : 'muted'}>{a.uc_count ?? 0} US</IconPill>}
           />
         ))}
       </>
@@ -159,25 +164,17 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
       detail = (
         <div>
           <PassportHeader title={a.name ?? a.actor_id}>
-            <Pill tone={a.kind === 'agent' ? 'act' : 'muted'}>{a.kind ?? '—'}</Pill>
+            <IconPill icon={iconOf(ACTOR_KIND_ICON, a.kind)} tone={a.kind === 'agent' ? 'act' : 'muted'}>{actorKindLabel(t, a.kind)}</IconPill>
             <Pill>{t('lore.product.actor.segment', 'сегмент клиента')}</Pill>
-            <button
-              type="button"
-              title={t('lore.product.actor.edit', 'Правка')}
-              aria-label={t('lore.product.actor.edit', 'Правка')}
-              onClick={() => { setCreating(false); setEditingActor({ actor_id: a.actor_id, name: a.name, kind: a.kind, body_md: a.body_md }); }}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
-            >
-              ✎
-            </button>
+            <EditButton onClick={() => { setCreating(false); setEditingActor({ actor_id: a.actor_id, name: a.name, kind: a.kind, body_md: a.body_md }); }} title={t('lore.product.actor.edit', 'Правка')} />
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--wrn)', marginBottom: 8 }}>{a.actor_id}</div>
 
           <PSection title={t('lore.product.actor.profile', 'Профиль сегмента (Остервальдер)')}>
-            <ProfileLine glyph="🎯" label={t('lore.product.actor.jobs', 'Работы')} items={jobItems} color="var(--job)" onNavigate={onNavigate} />
-            <ProfileLine glyph="🔴" label={t('lore.product.actor.pains', 'Боли')} items={painItems} color="var(--pain)" onNavigate={onNavigate} />
-            <ProfileLine glyph="🟢" label={t('lore.product.actor.gains', 'Ожидания')} items={gainItems} color="var(--gain)" onNavigate={onNavigate} />
+            <ProfileLine icon={iconOf(VP_ICON, 'job')} label={t('lore.product.actor.jobs', 'Работы')} items={jobItems} color="var(--job)" onNavigate={onNavigate} />
+            <ProfileLine icon={iconOf(VP_ICON, 'pain')} label={t('lore.product.actor.pains', 'Боли')} items={painItems} color="var(--pain)" onNavigate={onNavigate} />
+            <ProfileLine icon={iconOf(VP_ICON, 'gain')} label={t('lore.product.actor.gains', 'Ожидания')} items={gainItems} color="var(--gain)" onNavigate={onNavigate} />
           </PSection>
 
           <PSection title={t('lore.product.actor.ucRbac', 'US роли · отсюда строится RBAC')}>
