@@ -1,110 +1,144 @@
 // VP-канва по канону Остервальдера (PL-36) + навигатор по канвам (PL-37).
 //
-// Прежняя редакция строилась на ReactFlow произвольной раскладкой: профиль
-// клиента слева, карта ценности справа, обе — прямоугольниками. Канон ровно
-// обратный, и форма в нём несёт смысл: КВАДРАТ Value Map слева, КРУГ Customer
-// Profile справа, канва читается «квадрат подгоняется к кругу», и достигнутый
-// fit виден как совпадение половин. Произвольная раскладка превращала её в
-// таблицу связей — тогда канва не нужна, то же есть в реестре.
+// Форма несёт смысл: КВАДРАТ Value Map слева, КРУГ Customer Profile справа,
+// канва читается «квадрат подгоняется к кругу», и достигнутый fit виден как
+// совпадение половин. Произвольная раскладка превращала бы её в таблицу
+// связей — тогда канва не нужна, то же есть в реестре.
 //
-// Второе, чего не было вовсе: РЁБРА. Показывались наборы карточек, но не то,
-// какой pain reliever снимает какую боль. При этом `ADDRESSES` (заявили) и
-// `RELIEVES` (сняли) ведут к одной боли и выглядели одинаково — а расхождение
-// между ними и есть то, ради чего канву открывают.
+// Второе, ради чего её открывают: РЁБРА. `ADDRESSES` (заявили) и `RELIEVES`
+// (сняли) ведут к одной боли и без разделения выглядели одинаково — а
+// расхождение между ними и есть предмет разговора.
 //
-// ReactFlow снят намеренно: он давал перетаскивание узлов, которое здесь не
-// нужно (раскладка канона фиксирована), а взамен требовал держать координаты.
-// Прототип показал, что CSS-сетка и один SVG-слой делают то же самое.
+// Раскладка держится на ReactFlow (по решению владельца), а не на CSS-сетке с
+// самодельным SVG-слоем. Самодельная версия дважды ломалась ровно там, где у
+// ReactFlow это встроено: перетаскивание карточек и пересчёт линий за ними.
+// Здесь секции — родительские узлы (`parentId` + `extent: 'parent'`), поэтому
+// стикер физически не может уехать в чужую секцию, а рёбра пересчитывает сам
+// движок при любом сдвиге, прокрутке и зуме.
 import { useTranslation } from 'react-i18next';
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {
+  ReactFlow, Controls, Background, BackgroundVariant, Handle, Position,
+  type NodeProps, type Node, type Edge, type NodeChange, type ReactFlowInstance,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import type { LoreFeatureRow, LoreUcRow, LorePainRow, LoreGainRow, LoreJobRow } from '../../../api/lore';
 import { fetchLoreSlice } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import { type ProductScreenProps, useSlice, asArray } from './shared';
-import { useIsNarrow } from '../../../hooks/useMediaQuery';
 
 /** Пара «заявлено vs сделано» — одна на все три вида ценности. */
 interface Link {
-  /** id стикера-источника в Value Map; null — заявлено, но исполнителя нет */
+  /** id узла-источника в Value Map; null — заявлено, но исполнителя нет */
   from: string | null;
-  /** id стикера-цели в Customer Profile */
+  /** id узла-цели в Customer Profile */
   to: string;
   done: boolean;
 }
 
-const S = {
-  wrap: { padding: 14, overflow: 'auto', width: '100%' } as CSSProperties,
-  navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
-  canvas: { position: 'relative' as const, display: 'grid', gridTemplateColumns: '1fr 72px 1fr', alignItems: 'center', width: '100%' },
-  links: { position: 'absolute' as const, inset: 0, width: '100%', height: '100%', pointerEvents: 'none' as const, zIndex: 2 },
-  figwrap: { display: 'flex', flexDirection: 'column' as const, gap: 6 },
-  head: { display: 'flex', alignItems: 'baseline', gap: 8 },
-  headH: { fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' as const, color: 'var(--t2)' },
-  headSub: { fontSize: 'var(--fs-2xs)', color: 'var(--t3)' },
-  fig: { position: 'relative' as const, aspectRatio: '1' },
-  st: { fontSize: 'var(--fs-2xs)', textTransform: 'uppercase' as const, letterSpacing: '.06em', color: 'var(--t3)', marginBottom: 3 },
+// ── геометрия сцены (в координатах холста, не в пикселях экрана) ──
+const FIG = 560;          // сторона квадрата = диаметр круга: канон их равняет
+const GAP = 130;          // просвет между фигурами — там живут рёбра
+const SCEN = { w: 128, h: 82 };
+const VAL = { w: 114, h: 74 };
+
+/** Секции: ключ → прямоугольник ВНУТРИ своей фигуры. */
+const SECTORS: Record<string, { fig: 'vm' | 'cp'; label: string; x: number; y: number; w: number; h: number }> = {
+  // Value Map: продукт слева на всю высоту, справа сверху вниз — что даёт и что снимает.
+  ps: { fig: 'vm', label: 'Products & Services', x: 8, y: 8, w: 262, h: 544 },
+  gc: { fig: 'vm', label: 'Gain Creators', x: 278, y: 8, w: 274, h: 270 },
+  pr: { fig: 'vm', label: 'Pain Relievers', x: 278, y: 282, w: 274, h: 270 },
+  // Customer Profile: работы клиента — по центру справа, выгоды и боли делят левую половину.
+  gains: { fig: 'cp', label: 'Gains', x: 26, y: 14, w: 250, h: 266 },
+  pains: { fig: 'cp', label: 'Pains', x: 26, y: 282, w: 250, h: 266 },
+  jobs: { fig: 'cp', label: 'Customer Jobs', x: 292, y: 148, w: 246, h: 264 },
 };
 
-/**
- * Стикер: почти квадратный, код мелко в правом нижнем углу, лёгкое перекрытие.
- *
- * Перетаскивание — на pointer-событиях, а НЕ на HTML5 drag&drop. Нативный drag
- * стикеры не переставлял: внутри карточки лежит текст, браузер начинал его
- * собственное перетаскивание, drop до нас не доходил. Pointer заодно даёт
- * перетаскивание пальцем — у HTML5-drag на тач-экранах его нет вовсе.
- */
-function Sticker({ id, bare, sec, title, color, small, dragging, onHover, onGrab }: {
-  id: string; bare: string; sec?: string; title: string; color: string; small?: boolean;
-  dragging?: boolean;
-  onHover: (id: string | null) => void;
-  onGrab?: (e: React.PointerEvent) => void;
-}) {
+/* ── узлы (объявлены вне рендера: ReactFlow требует стабильных ссылок) ── */
+
+function FrameNode({ data }: NodeProps) {
+  const d = data as unknown as { circle?: boolean; title: string; sub: string; right?: boolean };
   return (
-    <div
-      data-vp={id}
-      data-vpid={bare}
-      data-vpsec={sec}
-      onPointerDown={onGrab}
-      onMouseEnter={() => onHover(id)}
-      onMouseLeave={() => onHover(null)}
-      title={`${title} · ${bare}`}
-      style={{
-        position: 'relative', display: 'inline-flex', alignItems: 'flex-start',
-        width: small ? 92 : 118, minHeight: small ? 42 : 64,
-        padding: small ? '5px 6px 12px' : '6px 7px 14px',
-        border: `1px solid ${color}`, borderRadius: 3, background: 'var(--bg2)',
-        fontSize: small ? 'var(--fs-2xs)' : 'var(--fs-sm)', lineHeight: 1.25,
-        boxShadow: dragging ? '3px 3px 0 rgba(0,0,0,.28)' : '1px 1px 0 rgba(0,0,0,.18)',
-        // Отрицательный отступ — стикеры не выкладывают по линейке; при
-        // наведении карточка поднимается, иначе сосед перекрывал бы подпись.
-        margin: '0 -6px 4px 0', verticalAlign: 'top',
-        cursor: onGrab ? (dragging ? 'grabbing' : 'grab') : 'default',
-        // Без этого палец скроллит секцию вместо переноса, а мышь выделяет текст.
-        touchAction: onGrab ? 'none' : undefined,
-        userSelect: onGrab ? 'none' : undefined,
-        opacity: dragging ? 0.65 : 1,
-      }}
-    >
-      {/* Три строки максимум: длинная формулировка растягивала карточку втрое,
-          сектор уходил в прокрутку, и соседи выглядели «мельче» без причины.
-          Полный текст — в подсказке. */}
-      <span style={{
-        display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-      }}>{title}</span>
-      <span style={{
-        position: 'absolute', right: 5, bottom: 3, fontFamily: 'var(--mono)',
-        fontSize: 8, color: 'var(--t3)', maxWidth: '100%',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>{id.replace(/^(ps|rel|crt)-/, '')}</span>
+    <div style={{
+      width: FIG, height: FIG, border: '1px solid var(--bd)', background: 'var(--bg1)',
+      borderRadius: d.circle ? '50%' : '12px 0 0 12px',
+      // Крестовина рисует деление на секции: без неё канва читается как четыре
+      // не связанных списка, а не как одна фигура.
+      backgroundImage: `
+        linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
+        linear-gradient(to bottom, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px))`,
+      backgroundSize: '100% 100%, 50% 100%',
+      backgroundPosition: d.circle ? '0 0, 0 0' : '0 0, 100% 0',
+      backgroundRepeat: 'no-repeat',
+    }}>
+      <div style={{
+        position: 'absolute', top: -26, [d.right ? 'right' : 'left']: 2,
+        display: 'flex', alignItems: 'baseline', gap: 8, whiteSpace: 'nowrap',
+      }}>
+        <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--t2)' }}>{d.title}</span>
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{d.sub}</span>
+      </div>
     </div>
   );
 }
 
+function SectorNode({ data }: NodeProps) {
+  const d = data as unknown as { label: string; w: number; h: number };
+  return (
+    <div style={{ width: d.w, height: d.h, position: 'relative' }}>
+      <div style={{
+        fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.06em',
+        color: 'var(--t3)', padding: '2px 4px',
+      }}>{d.label}</div>
+      {/* Точка выхода для заявленного без исполнителя: карточки в Value Map для
+          него нет, и линия начинается от сектора — «обещали здесь, делать
+          некому». Прятать такую связь значило бы прятать сам разрыв. */}
+      <Handle type="source" position={Position.Right} isConnectable={false}
+        style={{ opacity: 0, pointerEvents: 'none', top: '50%' }} />
+    </div>
+  );
+}
+
+function StickerNode({ data }: NodeProps) {
+  const d = data as unknown as { title: string; code: string; color: string; w: number; h: number; dim: boolean };
+  return (
+    <div
+      title={`${d.title} · ${d.code}`}
+      style={{
+        position: 'relative', width: d.w, height: d.h, boxSizing: 'border-box',
+        padding: '5px 7px 13px', border: `1px solid ${d.color}`, borderRadius: 3,
+        background: 'var(--bg2)', color: 'var(--t1)', textAlign: 'left',
+        fontSize: 'var(--fs-2xs)', lineHeight: 1.25,
+        boxShadow: '1px 1px 0 rgba(0,0,0,.18)', cursor: 'grab',
+        opacity: d.dim ? 0.3 : 1, transition: 'opacity .12s',
+      }}
+    >
+      {/* Текст обрезается по высоте карточки: длинная формулировка иначе
+          вылезала бы за рамку. Полный — в подсказке. */}
+      <div style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {d.title}
+      </div>
+      <span style={{
+        position: 'absolute', right: 5, bottom: 2, fontFamily: 'var(--mono)', fontSize: 8,
+        color: 'var(--t3)', maxWidth: 'calc(100% - 10px)',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>{d.code}</span>
+      <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
+      <Handle type="source" position={Position.Right} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
+    </div>
+  );
+}
+
+const RF_NODE_TYPES = { frame: FrameNode, sector: SectorNode, sticker: StickerNode };
+
+const S = {
+  wrap: { padding: 14, width: '100%' } as CSSProperties,
+  navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
+};
+
 export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductScreenProps) {
   const { t } = useTranslation();
-  const narrow = useIsNarrow(900);
 
   const { rows: features, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
   const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
@@ -162,21 +196,19 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     return m;
   }, [ucs]);
 
-  // Мемоизация обязательна: asArray отдаёт НОВЫЙ массив на каждый рендер, и
-  // без неё useMemo ниже пересчитывался бы всегда, эффект рисования звал
-  // setPaths, тот вызывал рендер — и цикл замыкался (React честно ругался
-  // «Maximum update depth exceeded»).
+  // Мемоизация обязательна: asArray отдаёт НОВЫЙ массив на каждый рендер, и без
+  // неё узлы пересобирались бы бесконечно.
   const painIds = useMemo(() => asArray(feature?.pain_ids), [feature]);
   const gainIds = useMemo(() => asArray(feature?.gain_ids), [feature]);
   const jobIds = useMemo(() => asArray(feature?.job_ids), [feature]);
 
   /** Сценарии-исполнители по видам: кто снимает боли, кто создаёт выгоды. */
   const relievers = useMemo(
-    () => ucs.filter(u => asArray(u.relieves_pain_ids).some(id => painIds.includes(id))),
+    () => ucs.filter(u => asArray(u.relieves_pain_ids).some(id => painIds.includes(id))).map(u => u.uc_id),
     [ucs, painIds],
   );
   const creators = useMemo(
-    () => ucs.filter(u => asArray(u.delivers_gain_ids).some(id => gainIds.includes(id))),
+    () => ucs.filter(u => asArray(u.delivers_gain_ids).some(id => gainIds.includes(id))).map(u => u.uc_id),
     [ucs, gainIds],
   );
 
@@ -189,124 +221,122 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     ...jobIds.map(id => ({ from: doneBy.has(id) ? 'ps-' + doneBy.get(id) : null, to: id, done: doneBy.has(id) })),
   ], [painIds, gainIds, jobIds, doneBy]);
 
-  // ── линии ──
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const canvasRef = useRef<HTMLDivElement | null>(null);
-  const [hover, setHover] = useState<string | null>(null);
-  const [order, setOrder] = useState<Record<string, string[]>>(() => {
-    try { return JSON.parse(localStorage.getItem('lore.vp.order') ?? '{}'); } catch { return {}; }
+  // ── раскладка: сохранённые позиции поверх сетки по умолчанию ──
+  const [pos, setPos] = useState<Record<string, { x: number; y: number }>>(() => {
+    try { return JSON.parse(localStorage.getItem('lore.vp.pos') ?? '{}'); } catch { return {}; }
   });
-  const dragRef = useRef<{ sec: string; id: string } | null>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
-  // Состав секторов на момент рендера: обработчик перетаскивания живёт в окне и
-  // до пропсов стикера не дотянется — а переставлять надо среди актуальных.
-  const secIds = useRef<Record<string, string[]>>({});
+  const [hover, setHover] = useState<string | null>(null);
 
-  useEffect(() => { localStorage.setItem('lore.vp.order', JSON.stringify(order)); }, [order]);
+  const nodes: Node[] = useMemo(() => {
+    const out: Node[] = [];
+    // Порядок обязателен: родитель должен идти В МАССИВЕ раньше ребёнка, иначе
+    // ReactFlow не свяжет их и дети встанут в координатах холста.
+    // Размеры заданы ЯВНО, а не выведены из вёрстки: `extent: 'parent'` считает
+    // границу по размеру родителя, и до первого замера её просто нет — стикер
+    // спокойно улетал за пределы своей секции и записывался туда навсегда.
+    out.push({
+      id: 'fig-vm', type: 'frame', position: { x: 0, y: 0 }, width: FIG, height: FIG,
+      draggable: false, selectable: false,
+      data: { title: 'Value Map', sub: t('lore.product.canvas.vmapSub', 'что мы делаем · квадрат') },
+    });
+    out.push({
+      id: 'fig-cp', type: 'frame', position: { x: FIG + GAP, y: 0 }, width: FIG, height: FIG,
+      draggable: false, selectable: false,
+      data: { circle: true, right: true, title: 'Customer Profile', sub: t('lore.product.canvas.cprofSub', 'что есть у клиента · круг') },
+    });
+    for (const [key, s] of Object.entries(SECTORS)) {
+      out.push({
+        id: key, type: 'sector', parentId: s.fig === 'vm' ? 'fig-vm' : 'fig-cp',
+        position: { x: s.x, y: s.y }, width: s.w, height: s.h,
+        draggable: false, selectable: false,
+        data: { label: s.label, w: s.w, h: s.h },
+      });
+    }
+    const fill = (key: string, ids: string[], prefix: string, color: string, size: { w: number; h: number }) => {
+      const s = SECTORS[key];
+      const cols = Math.max(1, Math.floor((s.w - 8) / (size.w + 8)));
+      ids.forEach((bare, i) => {
+        const id = prefix + bare;
+        const grid = {
+          x: 6 + (i % cols) * (size.w + 8),
+          y: 24 + Math.floor(i / cols) * (size.h + 8),
+        };
+        out.push({
+          id, type: 'sticker', parentId: key, width: size.w, height: size.h,
+          // Секция — родитель, а `extent: 'parent'` физически не выпускает
+          // стикер наружу: перетащить боль в чужой сектор нельзя, потому что
+          // это была бы не правка раскладки, а порча смысла.
+          extent: 'parent', position: pos[id] ?? grid,
+          data: {
+            title: titleOf.get(bare) ?? bare, code: bare, color, w: size.w, h: size.h,
+            dim: !!hover && hover !== id && !links.some(l => (l.from === hover || l.to === hover) && (l.from === id || l.to === id)),
+          },
+        });
+      });
+    };
+    fill('ps', ucs.map(u => u.uc_id), 'ps-', 'var(--g-do)', SCEN);
+    fill('gc', creators, 'crt-', 'var(--gain)', SCEN);
+    fill('pr', relievers, 'rel-', 'var(--pain)', SCEN);
+    fill('gains', gainIds, '', 'var(--gain)', VAL);
+    fill('jobs', jobIds, '', 'var(--job)', VAL);
+    fill('pains', painIds, '', 'var(--pain)', VAL);
+    return out;
+  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links]);
 
-  /** Порядок сектора: сохранённый, дополненный новыми и очищенный от исчезнувших. */
-  const ordered = (sec: string, ids: string[]) => {
-    const saved = order[sec] ?? [];
-    const known = saved.filter(x => ids.includes(x));
-    return [...known, ...ids.filter(x => !known.includes(x))];
-  };
+  const edges: Edge[] = useMemo(() => links.map(l => {
+    // Некому делать — линия идёт от сектора-обещания: Pain Relievers для боли и
+    // выгоды, Products & Services для работы клиента.
+    const source = l.from ?? (l.to.startsWith('JOB-') ? 'ps' : 'pr');
+    return {
+      id: `e-${source}-${l.to}`, source, target: l.to, type: 'bezier',
+      style: {
+        stroke: l.done ? 'var(--suc)' : 'var(--wrn)', strokeWidth: 2,
+        strokeDasharray: l.done ? undefined : '5 4',
+        opacity: hover && l.from !== hover && l.to !== hover ? 0.12 : 1,
+      },
+      // Рёбра ребёнка ReactFlow по умолчанию кладёт ПОВЕРХ узлов — линии
+      // перечёркивали бы карточки. Опускаем под них.
+      zIndex: 0,
+    };
+  }), [links, hover]);
 
-  /** Перестановка внутри СВОЕГО сектора: между секторами смысл разный. */
-  const dropOn = (sec: string, targetId: string) => {
-    const d = dragRef.current;
-    if (!d || d.sec !== sec || d.id === targetId) return;
-    const cur = ordered(sec, secIds.current[sec] ?? []);
-    const from = cur.indexOf(d.id), to = cur.indexOf(targetId);
-    if (from < 0 || to < 0) return;
-    const next = [...cur];
-    next.splice(to, 0, ...next.splice(from, 1));
-    setOrder(o => ({ ...o, [sec]: next }));
-  };
+  /** Перетаскивание: позиции применяем сразу, на диск пишем по отпусканию. */
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setPos(prev => {
+      let next = prev;
+      for (const c of changes) {
+        if (c.type === 'position' && c.position) {
+          if (next === prev) next = { ...prev };
+          next[c.id] = { x: c.position.x, y: c.position.y };
+        }
+      }
+      return next;
+    });
+  }, []);
+  const persist = useCallback(() => {
+    setPos(p => { localStorage.setItem('lore.vp.pos', JSON.stringify(p)); return p; });
+  }, []);
 
   /**
-   * Перенос идёт ЖИВЬЁМ: карточки меняются местами прямо под курсором, а не по
-   * отпусканию. Так видно результат до того, как отпустил, и промах мимо цели
-   * не откатывает всё в исходное.
+   * Перевписать сцену при изменении размера окна и при смене канвы.
+   *
+   * `fitView` срабатывает один раз на монтировании: у сузившегося контейнера
+   * холст оставался в прежнем масштабе, и нижняя фигура уезжала за кромку —
+   * канва выглядела обрезанной при полностью живых данных.
    */
-  const grab = (sec: string, id: string) => (e: React.PointerEvent) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-    e.preventDefault();
-    dragRef.current = { sec, id };
-    setDragId(sec + '/' + id);
-    const move = (ev: PointerEvent) => {
-      const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-vp]') as HTMLElement | null;
-      const d = dragRef.current;
-      if (!el || !d) return;
-      if (el.dataset.vpsec !== d.sec) return;   // чужой сектор — не наш смысл
-      const target = el.dataset.vpid;
-      if (target && target !== d.id) dropOn(d.sec, target);
-    };
-    const up = () => {
-      dragRef.current = null;
-      setDragId(null);
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
-  };
-  const [paths, setPaths] = useState<{ d: string; done: boolean; a: string | null; b: string }[]>([]);
-
+  const rf = useRef<ReactFlowInstance | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (narrow) { setPaths([]); return; }
-    const draw = () => {
-      const box = canvasRef.current?.getBoundingClientRect();
-      if (!box) return;
-      const next: { d: string; done: boolean; a: string | null; b: string }[] = [];
-      /**
-       * Точка привязки, прижатая к рамке своей секции.
-       *
-       * Секции прокручиваются, и у уехавшего стикера прямоугольник лежит ВНЕ
-       * секции — линия уходила в пустоту мимо всей фигуры (её и было видно на
-       * канве). Прижатая точка остаётся на границе секции: связь видна и
-       * показывает, в какой части списка искать, вместо обрыва в воздухе.
-       */
-      const anchor = (el: Element, side: 'left' | 'right') => {
-        const r = el.getBoundingClientRect();
-        const sc = el.closest('[data-sec]')?.getBoundingClientRect();
-        let x = side === 'right' ? r.right : r.left;
-        let y = r.top + r.height / 2;
-        if (sc) {
-          x = Math.min(Math.max(x, sc.left + 2), sc.right - 2);
-          y = Math.min(Math.max(y, sc.top + 6), sc.bottom - 6);
-        }
-        return { x: x - box.left, y: y - box.top };
-      };
-      for (const l of links) {
-        const bEl = canvasRef.current?.querySelector(`[data-vp="${l.to}"]`);
-        if (!bEl) continue;
-        const aEl = l.from ? canvasRef.current?.querySelector(`[data-vp="${l.from}"]`) : null;
-        const fallback = canvasRef.current?.querySelector(l.to.startsWith('JOB-') ? '[data-sec="ps"]' : '[data-sec="pr"]');
-        const srcEl = aEl ?? fallback;
-        if (!srcEl) continue;
-        const { x: x1, y: y1 } = anchor(srcEl, 'right');
-        const { x: x2, y: y2 } = anchor(bEl, 'left');
-        const dx = Math.max(30, (x2 - x1) * 0.45);
-        next.push({ d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`, done: l.done, a: l.from, b: l.to });
-      }
-      setPaths(next);
-    };
-    // Считаем ПОСЛЕ отрисовки стикеров: до неё координат ещё нет, и все линии
-    // сошлись бы в одну точку.
-    const id = requestAnimationFrame(draw);
-    window.addEventListener('resize', draw);
-    // Прокрутка секции сдвигает стикеры, а событие scroll не всплывает — ловим
-    // на фазе перехвата, иначе линии остаются на местах уехавших карточек.
-    const root = canvasRef.current;
-    root?.addEventListener('scroll', draw, true);
-    return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener('resize', draw);
-      root?.removeEventListener('scroll', draw, true);
-    };
-  }, [links, ucs, narrow, featureId, order, dragId]);
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => rf.current?.fitView({ padding: 0.1 }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => rf.current?.fitView({ padding: 0.1 }));
+    return () => cancelAnimationFrame(id);
+  }, [featureId]);
 
   if (loading) return <div style={S.wrap}><LoreSkeleton rows={6} /></div>;
   if (features.length === 0) {
@@ -360,158 +390,42 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     </div>
   );
 
-  const sec = (key: string, label: string, children: React.ReactNode, style?: CSSProperties) => (
-    <div data-sec={key} style={{ padding: '4px 6px', minHeight: 0, overflow: 'auto', ...style }}>
-      <div style={S.st}>{label}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap' }}>{children}</div>
-    </div>
-  );
-
-  const dim = (id: string) => hover && hover !== id && !paths.some(p => (p.a === hover || p.b === hover) && (p.a === id || p.b === id));
-
-  /**
-   * Стикеры сектора в СОХРАНЁННОМ порядке, с перетаскиванием внутри него.
-   *
-   * `sec` — ключ сектора: перекладывать между секторами нельзя, там разный
-   * смысл (боль не станет выгодой от переноса), и такая «правка раскладки»
-   * была бы порчей смысла.
-   */
-  const stickers = (sec: string, ids: string[], prefix: string, color: string, small?: boolean) => {
-    secIds.current[sec] = ids;
-    return ordered(sec, ids).map(id => (
-      <span key={id} style={{ opacity: dim(prefix + id) ? 0.35 : 1 }}>
-        <Sticker
-          id={prefix + id}
-          bare={id}
-          sec={sec}
-          title={titleOf.get(id) ?? id}
-          color={color}
-          small={small}
-          dragging={dragId === sec + '/' + id}
-          onHover={setHover}
-          onGrab={grab(sec, id)}
-        />
-      </span>
-    ));
-  };
-
-  const valueMap = (
-    <div style={S.figwrap}>
-      <div style={S.head}>
-        <span style={S.headH}>Value Map</span>
-        <span style={S.headSub}>{t('lore.product.canvas.vmapSub', 'что мы делаем · квадрат')}</span>
-      </div>
-      <div style={{ ...S.fig, aspectRatio: narrow ? 'auto' : '1' }}>
-        {/* Подложка рисует ФОРМУ, содержимое лежит поверх: обрежь мы его
-            формой, срезало бы заголовки и стикеры — канон превратился бы в
-            дефект. */}
-        <div style={{
-          position: 'absolute', inset: 0, border: '1px solid var(--bd)',
-          background: 'var(--bg1)', borderRadius: narrow ? 10 : '12px 0 0 12px',
-        }} />
-        {!narrow && (
-          <div style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: '12px 0 0 12px', opacity: .45,
-            background: `
-              linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
-              linear-gradient(to bottom, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px))`,
-            backgroundSize: '100% 100%, 50% 100%',
-            backgroundPosition: '0 0, 100% 0',
-            backgroundRepeat: 'no-repeat',
-          }} />
-        )}
-        <div style={{
-          position: narrow ? 'relative' : 'absolute', inset: 0, padding: '10px 12px',
-          display: 'grid',
-          gridTemplateColumns: narrow ? '1fr' : '1fr 1fr',
-          gridTemplateRows: narrow ? 'auto auto auto' : '1fr 1fr',
-          gap: 6,
-        }}>
-          {sec('ps', 'Products & Services', stickers('ps', ucs.map(u => u.uc_id), 'ps-', 'var(--g-do)'), narrow ? undefined : { gridRow: '1 / span 2' })}
-          {sec('gc', 'Gain Creators', stickers('gc', creators.map(u => u.uc_id), 'crt-', 'var(--gain)'), narrow ? undefined : { gridColumn: 2, gridRow: 1 })}
-          {sec('pr', 'Pain Relievers', stickers('pr', relievers.map(u => u.uc_id), 'rel-', 'var(--pain)'), narrow ? undefined : { gridColumn: 2, gridRow: 2 })}
-        </div>
-      </div>
-    </div>
-  );
-
-  const profile = (
-    <div style={S.figwrap}>
-      <div style={{ ...S.head, justifyContent: narrow ? 'flex-start' : 'flex-end' }}>
-        <span style={S.headH}>Customer Profile</span>
-        <span style={S.headSub}>{t('lore.product.canvas.cprofSub', 'что есть у клиента · круг')}</span>
-      </div>
-      <div style={{ ...S.fig, aspectRatio: narrow ? 'auto' : '1' }}>
-        <div style={{
-          position: 'absolute', inset: 0, border: '1px solid var(--bd)',
-          background: 'var(--bg1)', borderRadius: narrow ? 10 : '50%',
-        }} />
-        {!narrow && (
-          <div style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: '50%', opacity: .4,
-            background: `
-              linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
-              linear-gradient(to bottom, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px))`,
-            backgroundSize: '100% 100%, 50% 100%',
-            backgroundPosition: '0 0, 0 0',
-            backgroundRepeat: 'no-repeat',
-          }} />
-        )}
-        {/* На узком — обычная стопка: две фигуры рядом в 375px не встанут, а
-            круг с секторами там превратился бы в кашу. */}
-        {narrow ? (
-          <div style={{ position: 'relative', padding: '10px 12px', display: 'grid', gap: 6 }}>
-            {sec('gains', 'Gains', stickers('gains', gainIds, '', 'var(--gain)', true))}
-            {sec('jobs', 'Customer Jobs', stickers('jobs', jobIds, '', 'var(--job)', true))}
-            {sec('pains', 'Pains', stickers('pains', painIds, '', 'var(--pain)', true))}
-          </div>
-        ) : (
-          <>
-            {/* Каждому сектору СВОЯ зона: у абсолютных блоков нет общего потока,
-                и Gains с Pains наезжали бы друг на друга. */}
-            {/* Секторам отдано столько, сколько круг позволяет: карточки не
-                влезали, сектор начинал прокручиваться, и связь уезжала к
-                невидимой карточке. Прокрутка тут — не «много данных», а
-                недодали места. */}
-            {sec('gains', 'Gains', stickers('gains', gainIds, '', 'var(--gain)', true),
-              { position: 'absolute', left: '5%', top: '2%', width: '44%', height: '48%', textAlign: 'center' })}
-            {sec('jobs', 'Customer Jobs', stickers('jobs', jobIds, '', 'var(--job)', true),
-              { position: 'absolute', right: '5%', top: '50%', transform: 'translateY(-50%)', width: '40%', maxHeight: '56%', textAlign: 'center' })}
-            {sec('pains', 'Pains', stickers('pains', painIds, '', 'var(--pain)', true),
-              { position: 'absolute', left: '5%', bottom: '2%', width: '44%', height: '48%', textAlign: 'center' })}
-          </>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div style={S.wrap}>
       {nav}
+      {/* Высота задана в пикселях: ReactFlow меряет контейнер, и у схлопнутого
+          в ноль холст остаётся пустым при полностью живых данных. */}
+      {/* Пропорция подогнана под сцену (две фигуры в ряд ≈ 2.2:1): в более
+          высоком контейнере fitView упирается в ширину, и половина холста
+          остаётся пустой — канва при этом выглядит мельче, чем могла бы. */}
       <div
-        ref={canvasRef}
-        style={narrow
-          ? { position: 'relative', display: 'grid', gap: 12 }
-          : S.canvas}
+        ref={boxRef}
+        style={{
+          position: 'relative', aspectRatio: '2.2', maxHeight: '74vh', minHeight: 380,
+          border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden',
+        }}
       >
-        {!narrow && (
-          <svg ref={svgRef} style={S.links}>
-            {paths.map((p, i) => (
-              <path
-                key={i}
-                d={p.d}
-                fill="none"
-                stroke={p.done ? 'var(--suc)' : 'var(--wrn)'}
-                strokeWidth={2}
-                strokeDasharray={p.done ? undefined : '5 4'}
-                opacity={hover && p.a !== hover && p.b !== hover ? 0.12 : 1}
-              />
-            ))}
-          </svg>
-        )}
-        {valueMap}
-        {!narrow && <div />}
-        {profile}
+        <ReactFlow
+          onInit={i => { rf.current = i; }}
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={RF_NODE_TYPES}
+          onNodesChange={onNodesChange}
+          onNodeDragStop={persist}
+          onNodeMouseEnter={(_, n) => setHover(n.id)}
+          onNodeMouseLeave={() => setHover(null)}
+          nodesConnectable={false}
+          nodesFocusable={false}
+          edgesFocusable={false}
+          fitView
+          fitViewOptions={{ padding: 0.1 }}
+          minZoom={0.3}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Controls showInteractive={false} />
+          <Background variant={BackgroundVariant.Dots} color="var(--bd)" gap={22} size={1} />
+        </ReactFlow>
       </div>
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginTop: 10 }}>
