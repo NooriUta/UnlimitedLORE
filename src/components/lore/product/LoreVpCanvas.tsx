@@ -34,9 +34,9 @@ interface Link {
 }
 
 const S = {
-  wrap: { padding: 14, overflow: 'auto' } as CSSProperties,
+  wrap: { padding: 14, overflow: 'auto', width: '100%' } as CSSProperties,
   navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
-  canvas: { position: 'relative' as const, display: 'grid', gridTemplateColumns: '1fr 120px 1fr', alignItems: 'center', maxWidth: 1560 },
+  canvas: { position: 'relative' as const, display: 'grid', gridTemplateColumns: '1fr 110px 1fr', alignItems: 'center', width: '100%' },
   links: { position: 'absolute' as const, inset: 0, width: '100%', height: '100%', pointerEvents: 'none' as const, zIndex: 2 },
   figwrap: { display: 'flex', flexDirection: 'column' as const, gap: 6 },
   head: { display: 'flex', alignItems: 'baseline', gap: 8 },
@@ -47,12 +47,19 @@ const S = {
 };
 
 /** Стикер: почти квадратный, код мелко в правом нижнем углу, лёгкое перекрытие. */
-function Sticker({ id, title, color, small, onHover }: {
-  id: string; title: string; color: string; small?: boolean; onHover: (id: string | null) => void;
+function Sticker({ id, title, color, small, onHover, onDragStart, onDrop }: {
+  id: string; title: string; color: string; small?: boolean;
+  onHover: (id: string | null) => void;
+  onDragStart?: () => void;
+  onDrop?: () => void;
 }) {
   return (
     <div
       data-vp={id}
+      draggable={!!onDragStart}
+      onDragStart={onDragStart}
+      onDragOver={e => { if (onDrop) e.preventDefault(); }}
+      onDrop={e => { e.preventDefault(); onDrop?.(); }}
       onMouseEnter={() => onHover(id)}
       onMouseLeave={() => onHover(null)}
       title={id}
@@ -65,7 +72,7 @@ function Sticker({ id, title, color, small, onHover }: {
         boxShadow: '1px 1px 0 rgba(0,0,0,.18)',
         // Отрицательный отступ — стикеры не выкладывают по линейке; при
         // наведении карточка поднимается, иначе сосед перекрывал бы подпись.
-        margin: '0 -6px 4px 0', verticalAlign: 'top', cursor: 'default',
+        margin: '0 -6px 4px 0', verticalAlign: 'top', cursor: onDragStart ? 'grab' : 'default',
       }}
     >
       {title}
@@ -156,6 +163,32 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   const svgRef = useRef<SVGSVGElement | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const [hover, setHover] = useState<string | null>(null);
+  const [order, setOrder] = useState<Record<string, string[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('lore.vp.order') ?? '{}'); } catch { return {}; }
+  });
+  const dragRef = useRef<{ sec: string; id: string } | null>(null);
+
+  useEffect(() => { localStorage.setItem('lore.vp.order', JSON.stringify(order)); }, [order]);
+
+  /** Порядок сектора: сохранённый, дополненный новыми и очищенный от исчезнувших. */
+  const ordered = (sec: string, ids: string[]) => {
+    const saved = order[sec] ?? [];
+    const known = saved.filter(x => ids.includes(x));
+    return [...known, ...ids.filter(x => !known.includes(x))];
+  };
+
+  /** Перестановка внутри СВОЕГО сектора: между секторами смысл разный. */
+  const dropOn = (sec: string, targetId: string, ids: string[]) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (!d || d.sec !== sec || d.id === targetId) return;
+    const cur = ordered(sec, ids);
+    const from = cur.indexOf(d.id), to = cur.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...cur];
+    next.splice(to, 0, ...next.splice(from, 1));
+    setOrder(o => ({ ...o, [sec]: next }));
+  };
   const [paths, setPaths] = useState<{ d: string; done: boolean; a: string | null; b: string }[]>([]);
 
   useEffect(() => {
@@ -239,7 +272,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   );
 
   const sec = (key: string, label: string, children: React.ReactNode, style?: CSSProperties) => (
-    <div data-sec={key} style={{ padding: '4px 6px', minHeight: 0, ...style }}>
+    <div data-sec={key} style={{ padding: '4px 6px', minHeight: 0, overflow: 'auto', ...style }}>
       <div style={S.st}>{label}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap' }}>{children}</div>
     </div>
@@ -247,10 +280,25 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
 
   const dim = (id: string) => hover && hover !== id && !paths.some(p => (p.a === hover || p.b === hover) && (p.a === id || p.b === id));
 
-  const stickers = (ids: string[], prefix: string, color: string, small?: boolean) =>
-    ids.map(id => (
+  /**
+   * Стикеры сектора в СОХРАНЁННОМ порядке, с перетаскиванием внутри него.
+   *
+   * `sec` — ключ сектора: перекладывать между секторами нельзя, там разный
+   * смысл (боль не станет выгодой от переноса), и такая «правка раскладки»
+   * была бы порчей смысла.
+   */
+  const stickers = (sec: string, ids: string[], prefix: string, color: string, small?: boolean) =>
+    ordered(sec, ids).map(id => (
       <span key={id} style={{ opacity: dim(prefix + id) ? 0.35 : 1 }}>
-        <Sticker id={prefix + id} title={titleOf.get(id) ?? id} color={color} small={small} onHover={setHover} />
+        <Sticker
+          id={prefix + id}
+          title={titleOf.get(id) ?? id}
+          color={color}
+          small={small}
+          onHover={setHover}
+          onDragStart={() => { dragRef.current = { sec, id }; }}
+          onDrop={() => dropOn(sec, id, ids)}
+        />
       </span>
     ));
 
@@ -286,9 +334,9 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           gridTemplateRows: narrow ? 'auto auto auto' : '1fr 1fr',
           gap: 6,
         }}>
-          {sec('ps', 'Products & Services', stickers(ucs.map(u => u.uc_id), 'ps-', 'var(--g-do)'), narrow ? undefined : { gridRow: '1 / span 2' })}
-          {sec('gc', 'Gain Creators', stickers(gainIds.filter(id => doneBy.has(id)), 'crt-', 'var(--gain)'), narrow ? undefined : { gridColumn: 2, gridRow: 1 })}
-          {sec('pr', 'Pain Relievers', stickers(painIds.filter(id => doneBy.has(id)), 'rel-', 'var(--pain)'), narrow ? undefined : { gridColumn: 2, gridRow: 2 })}
+          {sec('ps', 'Products & Services', stickers('ps', ucs.map(u => u.uc_id), 'ps-', 'var(--g-do)'), narrow ? undefined : { gridRow: '1 / span 2' })}
+          {sec('gc', 'Gain Creators', stickers('gc', gainIds.filter(id => doneBy.has(id)), 'crt-', 'var(--gain)'), narrow ? undefined : { gridColumn: 2, gridRow: 1 })}
+          {sec('pr', 'Pain Relievers', stickers('pr', painIds.filter(id => doneBy.has(id)), 'rel-', 'var(--pain)'), narrow ? undefined : { gridColumn: 2, gridRow: 2 })}
         </div>
       </div>
     </div>
@@ -320,19 +368,19 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
             круг с секторами там превратился бы в кашу. */}
         {narrow ? (
           <div style={{ position: 'relative', padding: '10px 12px', display: 'grid', gap: 6 }}>
-            {sec('gains', 'Gains', stickers(gainIds, '', 'var(--gain)', true))}
-            {sec('jobs', 'Customer Jobs', stickers(jobIds, '', 'var(--job)', true))}
-            {sec('pains', 'Pains', stickers(painIds, '', 'var(--pain)', true))}
+            {sec('gains', 'Gains', stickers('gains', gainIds, '', 'var(--gain)', true))}
+            {sec('jobs', 'Customer Jobs', stickers('jobs', jobIds, '', 'var(--job)', true))}
+            {sec('pains', 'Pains', stickers('pains', painIds, '', 'var(--pain)', true))}
           </div>
         ) : (
           <>
             {/* Каждому сектору СВОЯ зона: у абсолютных блоков нет общего потока,
                 и Gains с Pains наезжали бы друг на друга. */}
-            {sec('gains', 'Gains', stickers(gainIds, '', 'var(--gain)', true),
+            {sec('gains', 'Gains', stickers('gains', gainIds, '', 'var(--gain)', true),
               { position: 'absolute', left: '6%', top: '9%', width: '40%', height: '38%', textAlign: 'center' })}
-            {sec('jobs', 'Customer Jobs', stickers(jobIds, '', 'var(--job)', true),
+            {sec('jobs', 'Customer Jobs', stickers('jobs', jobIds, '', 'var(--job)', true),
               { position: 'absolute', right: '5%', top: '50%', transform: 'translateY(-50%)', width: '40%', maxHeight: '56%', textAlign: 'center' })}
-            {sec('pains', 'Pains', stickers(painIds, '', 'var(--pain)', true),
+            {sec('pains', 'Pains', stickers('pains', painIds, '', 'var(--pain)', true),
               { position: 'absolute', left: '6%', bottom: '9%', width: '40%', height: '38%', textAlign: 'center' })}
           </>
         )}
