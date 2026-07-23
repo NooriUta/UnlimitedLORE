@@ -22,6 +22,8 @@ import {
   ListSearch,
 } from './shared';
 import { ucStatusLabel, ucStatusTone, goalLevelLabel } from './vocab';
+import { resolveStatusMeta, taskTick } from '../lore-status';
+import { GameIcon } from '../GameIcon';
 import UsFormModal, { type UsDraft } from './UsFormModal';
 
 // Уровень цели (Коберн, D1): облако / воздушный змей.
@@ -297,12 +299,22 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                           <div key={task.task_uid} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 11.5, color: 'var(--t2)' }}>
                             <span style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--t3)' }}>{task.task_id}</span>
                             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title ?? ''}</span>
-                            <Pill tone="muted">{task.status_raw ?? '—'}</Pill>
-                            {task.sprint_id && (
+                            {/* Статус — иконкой и цветом ИЗ СПРАВОЧНИКА
+                                (KnowDictEntry), тем же, что рисует спринты:
+                                свой набор значков разошёлся бы с общим при
+                                первом пополнении словаря. */}
+                            {(() => { const m = resolveStatusMeta(task.status_raw); return (
+                              <span title={task.status_raw ?? undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                <GameIcon slug={m.icon} size={12} style={{ color: m.color }} />
+                                <span style={{ fontSize: 'var(--fs-2xs)', color: m.color }}>{taskTick(task.status_raw).status}</span>
+                              </span>
+                            ); })()}
+                            {task.sprint_id && (() => { const sm = resolveStatusMeta(task.sprint_status_raw); return (
                               <LinkChip color="var(--acc)" onClick={() => onNavigate('sprints', task.sprint_id ?? undefined)} title={task.sprint_status_raw ?? undefined}>
-                                <Pill tone={sprintTone(task.sprint_status_raw)}>{task.sprint_id}</Pill>
+                                <GameIcon slug={sm.icon} size={11} style={{ color: sm.color }} />
+                                {task.sprint_id}
                               </LinkChip>
-                            )}
+                            ); })()}
                           </div>
                         ))}
                       </div>
