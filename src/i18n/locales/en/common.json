@@ -1931,7 +1931,8 @@
       "resize": "Resize",
       "strike": "Strikethrough",
       "taskList": "Task list",
-      "undo": "Undo (Ctrl+Z)"
+      "undo": "Undo (Ctrl+Z)",
+      "mentionEmpty": "nothing found — actors are created in the Customer section"
     },
     "filters": {
       "clear": "✕ clear",

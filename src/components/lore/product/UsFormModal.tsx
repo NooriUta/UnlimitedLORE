@@ -243,9 +243,11 @@ export default function UsFormModal({
         {
           rigor, goal_level: goalLevel,
           scenario_md: scenario, acceptance_md: acceptance,
-          // Рёбер у несозданного UC нет; у сохранённого их считает сервер по
-          // uc_id — здесь честно false, и обе проверки идут подсказками.
-          has_primary_actor: false, has_traced_to: false,
+          // Актор берётся из ПОЛЯ ФОРМЫ, а не жёсткого false: иначе проверка
+          // «Primary-актор задан» горела красным даже после выбора актора —
+          // линтер отвечал не про то, что человек видит перед собой.
+          // TRACED_TO в форме не задаётся, и он опционален (D9) — подсказка.
+          has_primary_actor: !!primaryActor, has_traced_to: false,
         },
         ctrl.signal,
       )
@@ -254,6 +256,10 @@ export default function UsFormModal({
     }, 400);
     return () => clearTimeout(timer);
   }, [opened, scenario, acceptance, rigor, goalLevel]);
+
+  // PL-41: список для упоминаний по «@» — те же акторы, что в пикере, чтобы
+  // текст и рёбра говорили об одних и тех же сущностях.
+  const mentionItems = actors.map(a => ({ id: a.actor_id, label: a.name ?? a.actor_id }));
 
   const finalId = editing ? (initial?.uc_id ?? '') : normalizeUsId(id, root);
 
@@ -342,7 +348,7 @@ export default function UsFormModal({
       {
         rigor, goal_level: goalLevel,
         scenario_md: scenario, acceptance_md: acceptance,
-        has_primary_actor: false, has_traced_to: false,
+        has_primary_actor: !!primaryActor, has_traced_to: false,
       },
       ctrl.signal,
     ).then(setQuality).catch(() => { /* advisory */ });
@@ -467,6 +473,7 @@ export default function UsFormModal({
         minHeight={180}
         enableImages={false}
         enableHtmlMode={false}
+        mentionItems={mentionItems}
         ariaLabel={t('lore.product.us.scenario', 'Сценарий')}
       />
 
@@ -477,6 +484,7 @@ export default function UsFormModal({
         minHeight={110}
         enableImages={false}
         enableHtmlMode={false}
+        mentionItems={mentionItems}
         ariaLabel={t('lore.product.us.acceptance', 'Приёмка')}
       />
 

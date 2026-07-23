@@ -18,6 +18,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { sanitizeMd } from './sanitizeHtml';
 import { Markdown } from 'tiptap-markdown';
+import Mention from '@tiptap/extension-mention';
 import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import { useEffect, useRef, useState } from 'react';
 import type { Editor, NodeViewProps } from '@tiptap/react';
@@ -32,8 +33,77 @@ import { uploadBragiAsset } from '../../api/lore';
 // CommonMark/GFM has no underline syntax, tiptap-markdown has no serializer
 // for it either, so it would silently vanish on save instead of just not
 // being offered.
+/** PL-41: элемент списка упоминаний — то, что показывает выпадашка по «@». */
+export interface MentionItem {
+  /** id сущности (`ACT-ARCHITECT`) — им создаётся ребро */
+  id: string;
+  /** что видит человек */
+  label: string;
+}
+
 const TABLE_EXTENSIONS = [TableKit.configure({ table: { resizable: false } })];
 const TASKLIST_EXTENSIONS = [TaskList, TaskItem.configure({ nested: true })];
+
+/** Состояние выпадашки упоминаний: где рисовать, что показывать, как выбрать. */
+interface MentionState {
+  items: MentionItem[];
+  index: number;
+  rect: { left: number; top: number } | null;
+  command: ((item: { id: string; label: string }) => void) | null;
+}
+
+/**
+ * PL-41: расширение упоминаний.
+ *
+ * Источник берём через геттер, а не значением: список акторов приезжает
+ * асинхронно, а расширения фиксируются при СОЗДАНИИ редактора — замкни мы
+ * массив, выпадашка навсегда осталась бы пустой (той же природы баг, что и с
+ * обработчиками drop/paste).
+ *
+ * Рендер выпадашки — свой, без tippy: нужен один absolute-блок по координатам
+ * каретки, а не позиционирующая библиотека с своей темой.
+ */
+function buildMention(
+  getItems: () => MentionItem[],
+  setState: (s: MentionState | null) => void,
+) {
+  return Mention.configure({
+    // renderText/renderHTML держат ТЕКСТОВУЮ форму «@Имя»: поле сохраняется как
+    // markdown, и узел без текстового представления превратился бы при
+    // повторном открытии в пустоту или мусор.
+    renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
+    suggestion: {
+      char: '@',
+      items: ({ query }) => {
+        const q = query.trim().toLowerCase();
+        const all = getItems();
+        return (q ? all.filter(i => i.label.toLowerCase().includes(q) || i.id.toLowerCase().includes(q)) : all)
+          .slice(0, 8);
+      },
+      render: () => ({
+        onStart: props => setState({
+          items: props.items as MentionItem[],
+          index: 0,
+          rect: props.clientRect?.() ? { left: props.clientRect()!.left, top: props.clientRect()!.bottom } : null,
+          command: props.command,
+        }),
+        onUpdate: props => setState({
+          items: props.items as MentionItem[],
+          index: 0,
+          rect: props.clientRect?.() ? { left: props.clientRect()!.left, top: props.clientRect()!.bottom } : null,
+          command: props.command,
+        }),
+        // Esc закрывает список, но НЕ съедает остальные клавиши: стрелки и
+        // Enter внутри списка обрабатывает наш обработчик на самом блоке.
+        onKeyDown: props => {
+          if (props.event.key === 'Escape') { setState(null); return true; }
+          return false;
+        },
+        onExit: () => setState(null),
+      }),
+    },
+  });
+}
 
 // Resizable image: the stock Image node has no size handle at all — once
 // inserted, a picture is stuck at whatever pixel size it came in at, full
@@ -211,11 +281,13 @@ export interface TipTapFieldProps {
    * field has no visually-linked <label> (a <Sec> heading nearby doesn't
    * count for a11y purposes). */
   ariaLabel?: string;
+  /** PL-41: источник упоминаний по «@» (акторы и пр.). Не задан — «@» обычный символ. */
+  mentionItems?: MentionItem[];
 }
 
 export default function TipTapField({
   value, onChange, placeholder, minHeight = 100, editable = true,
-  enableImages = true, enableHtmlMode = true, ariaLabel,
+  enableImages = true, enableHtmlMode = true, ariaLabel, mentionItems,
 }: TipTapFieldProps) {
   const { t } = useTranslation();
   const onChangeRef = useRef(onChange);
@@ -226,6 +298,9 @@ export default function TipTapField({
   // редактора, и замкнули бы первую версию функции загрузки. Ref держит
   // актуальную — та же причина, по которой здесь уже живёт onChangeRef.
   const uploadAndInsertRef = useRef<(files: File[]) => Promise<void>>(async () => {});
+  const [mentionState, setMentionState] = useState<MentionState | null>(null);
+  const mentionItemsRef = useRef<MentionItem[]>([]);
+  mentionItemsRef.current = mentionItems ?? [];
   const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');   // TT-01: raw-source view toggle
   const [draft, setDraft] = useState(value);
 
@@ -235,6 +310,9 @@ export default function TipTapField({
       ...(enableImages ? [ResizableImage] : []),
       ...TABLE_EXTENSIONS,
       ...TASKLIST_EXTENSIONS,
+      // PL-41: упоминание по «@». Подключаем ТОЛЬКО когда источник задан —
+      // иначе «@» в обычном тексте (адреса, ники) открывал бы пустой список.
+      ...(mentionItems ? [buildMention(() => mentionItemsRef.current, setMentionState)] : []),
       Markdown.configure({ html: false, tightLists: true }),
     ],
     content: value,
@@ -438,6 +516,51 @@ export default function TipTapField({
         <div style={S.editorBox}>
           <EditorContent editor={editor} />
           {editor?.isEmpty && placeholder && <div style={S.placeholder}>{placeholder}</div>}
+
+          {/* PL-41: выпадашка упоминаний. position: fixed — координаты приходят
+              от каретки в координатах ОКНА; сделай мы absolute, список уезжал бы
+              при любой прокрутке родителя, а он внутри модалки со скроллом. */}
+          {mentionState && mentionState.rect && (
+            <div
+              role="listbox"
+              style={{
+                position: 'fixed', left: mentionState.rect.left, top: mentionState.rect.top + 4,
+                zIndex: 400, minWidth: 220, maxHeight: 220, overflowY: 'auto',
+                background: 'var(--bg2)', border: '1px solid var(--bd)', borderRadius: 6,
+                boxShadow: '0 6px 20px rgba(0,0,0,.18)', padding: 3,
+              }}
+            >
+              {mentionState.items.length === 0 ? (
+                // Пустой список объясняет СЕБЯ: «ничего не найдено» без причины
+                // читается как поломка, хотя обычно акторов просто ещё нет.
+                <div style={{ padding: '6px 9px', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+                  {t('lore.tiptap.mentionEmpty', 'ничего не найдено — акторы заводятся в разделе «Клиент»')}
+                </div>
+              ) : mentionState.items.map((item, i) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onMouseDown={e => {
+                    // mousedown, а не click: click срабатывает после blur, к
+                    // этому моменту suggestion уже закрыт и вставлять некуда.
+                    e.preventDefault();
+                    mentionState.command?.({ id: item.id, label: item.label });
+                  }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left', border: 'none',
+                    background: i === mentionState.index ? 'var(--bg3)' : 'transparent',
+                    color: 'var(--t1)', fontSize: 'var(--fs-sm)', padding: '4px 8px',
+                    borderRadius: 4, cursor: 'pointer',
+                  }}
+                >
+                  {item.label}
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: 'var(--t3)', marginLeft: 6 }}>
+                    {item.id}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
