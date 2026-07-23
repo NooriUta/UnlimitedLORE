@@ -1140,7 +1140,11 @@ export default function LorePage() {
           {/* ── Продуктовый слой (глава «Зачем», ADR-LORE-022/032) — самодостаточные экраны ── */}
           {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
           {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
-          {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={null} onSelect={() => {}} onNavigate={navigateProduct} onError={handleFetchError} />}
+          {/* Канва выбирается как всё остальное — через `?passport=`. Раньше сюда
+              шли `selectedId={null}` и пустой onSelect: экран не мог ни узнать
+              выбранную канву, ни сменить её, и ссылки на конкретную канву не
+              существовало. */}
+          {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} />}
           {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} expandedUc={ucParam || null} onExpandUc={setExpandedUc} />}
           {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
 

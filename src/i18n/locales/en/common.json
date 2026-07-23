@@ -1635,9 +1635,12 @@
         "statusHint": "readiness is derived from tasks: active, shipped and rework are not set by hand"
       },
       "canvas": {
-        "claimed": "claimed",
-        "done": "done",
-        "empty": "No features for the canvas"
+        "empty": "No canvases yet — create a root scenario",
+        "noMetric": "without a metric",
+        "vmapSub": "what we build · square",
+        "cprofSub": "what the customer has · circle",
+        "legendDone": "delivered — relieves, delivers, performs",
+        "legendClaimed": "claimed only"
       },
       "vp": {
         "all": "all",
