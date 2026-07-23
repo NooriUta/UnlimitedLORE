@@ -131,3 +131,54 @@ jobs:
           git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
             "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"
           echo "зеркало обновлено: main + $TAG -> github.com/${GH_REPO}"
+
+          # ── Release-объект в GitHub ────────────────────────────────────────
+          # git push переносит ТОЛЬКО теги и ветки. Release — отдельная сущность
+          # API поверх тега, пушем она не создаётся никогда.
+          #
+          # Из-за этого зеркало годами держало актуальные теги при пустой
+          # странице релизов: код был на месте, а описания — нет. Обнаружилось
+          # 2026-07-22, когда владелец открыла /releases и увидела обрыв на
+          # v1.0.49 при тегах до v1.0.57. Пятнадцать пропущенных залиты разово,
+          # этот шаг закрывает дыру на будущее.
+          #
+          # Существующий релиз НЕ трогаем по той же причине, что и в Forgejo:
+          # тело могли отредактировать руками.
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${GH_REPO}/releases/tags/$TAG")
+          if [ "$code" = "200" ]; then
+            echo "релиз $TAG в зеркале уже есть — не трогаю"
+            exit 0
+          fi
+
+          # Тело берём из того же RELEASE-<tag>.md, что ушёл в Forgejo:
+          # два источника разошлись бы при первой же правке одного из них.
+          #
+          # FILE и TITLE вычисляются ЗАНОВО: каждый шаг `run:` — отдельный
+          # процесс, переменные предыдущего сюда не переходят. Понадеявшись на
+          # них, шаг получил бы пустое имя и путь — и упал бы не на том месте,
+          # где ошибка.
+          FILE="RELEASE-${TAG}.md"
+          TITLE=$(head -1 "$FILE" | sed 's/^#\+[[:space:]]*//')
+          [ -z "$TITLE" ] && TITLE="$TAG"
+
+          jq -n --arg tag "$TAG" --arg name "$TITLE" --rawfile body "$FILE" \
+            '{tag_name:$tag, name:$name, body:$body, draft:false, prerelease:false}' \
+            > /tmp/gh-release.json
+
+          code=$(curl -s -o /tmp/gh-created.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            --data-binary @/tmp/gh-release.json \
+            "https://api.github.com/repos/${GH_REPO}/releases")
+
+          if [ "$code" = "201" ]; then
+            echo "релиз $TAG опубликован в зеркале"
+          else
+            # Предупреждение, а не отказ: релиз в Forgejo уже опубликован, и
+            # ронять его из-за зеркала — худший обмен. Но молчать нельзя, иначе
+            # витрина снова отстанет незаметно.
+            echo "::warning::публикация релиза $TAG в зеркале вернула HTTP $code — тег и main доехали, описание нет"
+            head -c 300 /tmp/gh-created.json
+          fi

@@ -58,14 +58,14 @@ export default function LoginScreen() {
         <div style={{
           width: 44, height: 44, borderRadius: 10, background: 'var(--acc)',
           color: 'var(--bg0)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800,
+          fontFamily: 'var(--display)', fontSize: 'var(--fs-2xl)', fontWeight: 800,
         }}>L</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{
-            fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, letterSpacing: '0.02em',
+            fontFamily: 'var(--display)', fontSize: 'var(--fs-xl)', fontWeight: 800, letterSpacing: '0.02em',
           }}>LORE</span>
           <span style={{
-            fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)',
+            fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)',
             textTransform: 'uppercase', letterSpacing: '0.12em',
           }}>AIDA · Knowledge</span>
         </div>
@@ -80,7 +80,7 @@ export default function LoginScreen() {
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
             {lost ? 'Сессия истекла' : 'Требуется вход'}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--t2)', lineHeight: 1.55 }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--t2)', lineHeight: 1.55 }}>
             {lost
               ? 'Срок действия сессии закончился, продлить её автоматически не удалось. Несохранённые изменения на странице могли не отправиться — после входа проверьте их.'
               : 'Чтение и запись в LORE доступны только после входа.'}
@@ -95,7 +95,7 @@ export default function LoginScreen() {
             width: '100%', padding: '10px 16px', borderRadius: 6, border: '1px solid var(--acc)',
             background: going ? 'transparent' : 'var(--acc)',
             color: going ? 'var(--t2)' : 'var(--bg0)',
-            fontFamily: 'var(--font)', fontSize: 13, fontWeight: 600,
+            fontFamily: 'var(--font)', fontSize: 'var(--fs-md)', fontWeight: 600,
             cursor: going ? 'default' : 'pointer',
           }}
         >
@@ -104,7 +104,7 @@ export default function LoginScreen() {
 
         {host && (
           <div style={{
-            fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)', textAlign: 'center',
+            fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)', textAlign: 'center',
           }}>
             {host}
           </div>
@@ -112,7 +112,7 @@ export default function LoginScreen() {
 
         {error && (
           <div style={{
-            fontFamily: 'var(--mono)', fontSize: 11, lineHeight: 1.5, color: 'var(--danger)',
+            fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', lineHeight: 1.5, color: 'var(--danger)',
             background: 'color-mix(in srgb, var(--danger) 8%, transparent)',
             border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)',
             borderRadius: 6, padding: '8px 10px', wordBreak: 'break-word',

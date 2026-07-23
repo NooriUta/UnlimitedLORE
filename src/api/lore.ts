@@ -186,6 +186,11 @@ export interface LoreSearchHit {
   ref_id: string;
   title: string | null;
   score: number;
+  /** SRCH-09: слагаемые ранга — `score = bm25 × type_priority`. Итог сам по себе
+   *  не отвечает, почему задача встала выше ADR; спорить с приоритетом можно,
+   *  только если он виден. BM25 нормирован внутри ветки (доля от лучшего в типе). */
+  bm25: number;
+  type_priority: number;
   matched_field: string;
   snippet: string | null;
   components: string[];
@@ -193,19 +198,36 @@ export interface LoreSearchHit {
   inherited_from: string | null;
   projects: string[];
 }
+/** SRCH-10: ветка, по которой поиск НЕ отработал. Не то же, что «ничего не нашлось». */
+export interface LoreSearchWarning { type: string; error: string; }
+
 export interface LoreSearchResult {
   hits: LoreSearchHit[];
   by_type: Record<string, number>;
   by_component: Record<string, number>;
+  /** SRCH-10: третья ось СЕРВЕРНАЯ. Раньше UI считал её по текущей странице —
+   *  счётчики врали за пределами первых 50 хитов. */
+  by_project: Record<string, number>;
+  /** Пустой массив, а не отсутствие поля: «предупреждений нет» ≠ «поле не пришло». */
+  warnings: LoreSearchWarning[];
   total_collected: number;
   capped_at: number;
+  /** SRCH-09: во что превратился запрос перед уходом в индекс — строку строит
+   *  сервер (D2), и больше она нигде не видна. Без неё расхождение «что я искал»
+   *  и «что искали за меня» проверить нечем. */
+  lucene: string;
+  mode: 'smart' | 'exact' | 'fuzzy';
+  /** Границы страницы рядом с самой страницей: иначе «конец выдачи» не отличить
+   *  от «страницу пролистали мимо». */
+  offset: number;
+  limit: number;
   took_ms: number;
 }
 export interface LoreSearchParams {
   q: string;
   types?: string[];
   components?: string[];
-  project?: string;
+  projects?: string[];
   limit?: number;
   offset?: number;
   mode?: 'smart' | 'exact' | 'fuzzy';
@@ -215,7 +237,7 @@ export async function fetchLoreSearch(p: LoreSearchParams, signal?: AbortSignal)
   const qs = new URLSearchParams({ q: p.q });
   if (p.types?.length) qs.set('types', p.types.join(','));
   if (p.components?.length) qs.set('components', p.components.join(','));
-  if (p.project) qs.set('project', p.project);
+  if (p.projects?.length) qs.set('projects', p.projects.join(','));
   if (p.limit) qs.set('limit', String(p.limit));
   if (p.offset) qs.set('offset', String(p.offset));
   if (p.mode) qs.set('mode', p.mode);
@@ -294,6 +316,10 @@ export interface LoreAdrPassport {
   tags: string[] | null;
   /** ADRPROJ-01: git-проекты ADR (BELONGS_TO_PROJECT, multi). */
   git_projects?: string[] | null;
+  /** PL-19: сценарии, ссылающиеся на этот ADR (обратное TRACED_TO). */
+  traced_by_ucs?: string[] | null;
+  /** PL-19: enb-задачи, обоснованные этим ADR (обратное JUSTIFIED_BY). */
+  justified_task_uids?: string[] | null;
 }
 
 export interface LoreSprintDep {
@@ -396,6 +422,11 @@ export interface LoreSprintTask {
   reviewer_agent?: string | null;
   // ADR-LORE-015 (T14) — classification, plain vertex field like the roles above.
   task_type?: string | null;
+  // ADR-LORE-022 (PL-19) — ось ЗАЧЕМ, ортогональная task_type: uc | jtd | enb.
+  // Слайс отдаёт её с PL-14, но фронт не типизировал и не показывал.
+  work_class?: string | null;
+  /** Сценарии, которые задача реализует (REALIZES) — их может быть несколько. */
+  realizes_uc?: string[] | null;
 }
 
 export interface LoreMilestone {
@@ -474,13 +505,17 @@ export interface LoreSpecPassport extends LoreSpecRow {
 // ── Продуктовый слой: Value Proposition как граф (ADR-LORE-022/032, Остервальдер + Коберн).
 // Поля-массивы (*_ids/*_ucs) — рёбра графа; счётчики (*_by) — их размер. Слайсы:
 // features · use_cases_of_feature(id) · pains · gains · jobs · actors.
+// PL-28 (решение №141): «фича» — это КОРНЕВОЙ сценарий, а не отдельный тип.
+// Отсюда uc_id вместо feature_id: слайс `features` отбирает корни по goal_level.
 export interface LoreFeatureRow {
-  feature_id: string;
+  uc_id: string;
   title: string | null;
   body_md?: string | null;
   context_md?: string | null;
   status?: string | null;
   component_id?: string | null;
+  component_ids?: string[] | null;  // PL-10: рёбра BELONGS_TO, а не плоское поле
+  projects?: string[] | null;
   goal_level?: string | null;      // ☁ cloud | 🪁 kite (Коберн, D1)
   shipped_at?: string | null;
   uc_ids?: string[] | null;
@@ -498,7 +533,10 @@ export interface LoreUcRow {
   scenario_md?: string | null;
   acceptance_md?: string | null;
   status?: string | null;
-  feature_id?: string | null;
+  parent_uc_id?: string | null;     // родитель того же типа (DECOMPOSES_INTO)
+  component_ids?: string[] | null;           // PL-10 (D14): СВОЙ компонент сценария
+  inherited_component_ids?: string[] | null; // …и отдельно унаследованный от родителя
+  projects?: string[] | null;
   goal_level?: string | null;       // 🌊 sea-level | 🐟 subfunction
   rigor?: string | null;            // casual | fully-dressed
   relieves_pain_ids?: string[] | null;   // RELIEVES — сделано (замыкает fit)
@@ -515,6 +553,21 @@ export interface LoreUcRow {
   extended_by?: string[] | null;
 }
 
+/** Строка слайса `tasks_of_uc` — задача, реализующая сценарий (PL-16). */
+export interface LoreUcTaskRow {
+  task_uid: string;
+  task_id: string;
+  title: string | null;
+  task_type?: string | null;
+  work_class?: string | null;
+  status_raw?: string | null;
+  sprint_id?: string | null;
+  // Статус СПРИНТА, а не задачи: закрытая задача в живом спринте и та же
+  // задача в отменённом — разные новости, а по статусу задачи не различимы.
+  sprint_status_raw?: string | null;
+  justified_by_adr_ids?: string[] | null;
+}
+
 export interface LorePainRow {
   pain_id: string;
   title: string | null;
@@ -522,7 +575,7 @@ export interface LorePainRow {
   severity?: string | null;
   actor_ids?: string[] | null;       // FELT_BY — чья боль
   blocks_job_ids?: string[] | null;  // BLOCKS — какой работе мешает
-  feature_ids?: string[] | null;     // кто ЗАЯВИЛ, что адресует
+  claimed_by_ucs?: string[] | null;  // ADDRESSES — кто ЗАЯВИЛ, что адресует
   addressed_by?: number | null;
   relieved_by_ucs?: string[] | null; // кто РЕАЛЬНО снимает
   relieved_by?: number | null;
@@ -536,7 +589,7 @@ export interface LoreGainRow {
   rank?: string | null;              // essential | expected | desired | unexpected
   actor_ids?: string[] | null;       // DESIRED_BY
   success_of_job_ids?: string[] | null; // SUCCESS_OF — успех в какой работе
-  feature_ids?: string[] | null;
+  claimed_by_ucs?: string[] | null;  // PROMISES — кто ЗАЯВИЛ
   promised_by?: number | null;
   delivered_by_ucs?: string[] | null;
   delivered_by?: number | null;
@@ -552,7 +605,7 @@ export interface LoreJobRow {
   blocking_pain_ids?: string[] | null;
   blocked_by?: number | null;
   gain_ids?: string[] | null;        // SUCCESS_OF
-  feature_ids?: string[] | null;     // HELPS_WITH — кто ЗАЯВИЛ помощь
+  claimed_by_ucs?: string[] | null;  // HELPS_WITH — кто ЗАЯВИЛ помощь
   helped_by?: number | null;
   performed_by_ucs?: string[] | null; // PERFORMS — кто РЕАЛЬНО выполняет
   performed_by?: number | null;
@@ -743,6 +796,10 @@ export interface LoreTaskAgentFields {
   executorAgent?: string | null;
   reviewerAgent?: string | null;
   taskType?: string | null;
+  /** PL-19: ось ЗАЧЕМ (uc|jtd|enb). */
+  workClass?: string | null;
+  /** PL-19: сценарий, который задача реализует — ребро REALIZES создаётся атомарно. */
+  ucId?: string | null;
 }
 
 export async function editLoreTask(
@@ -764,6 +821,8 @@ export async function editLoreTask(
       executor_agent: agents?.executorAgent ?? null,
       reviewer_agent: agents?.reviewerAgent ?? null,
       task_type: agents?.taskType ?? null,
+      work_class: agents?.workClass ?? null,
+      uc_id: agents?.ucId ?? null,
     }),
   });
   assertJson(res);
@@ -1079,4 +1138,165 @@ export interface LoreQGRoutineRun {
   flags: string | null;
   started_at: string | null;
   finished_at: string | null;
+}
+
+// ── Продуктовый слой: WRITE (PL-31) ────────────────────────────────────────
+//
+// До этой задачи слой был read-only ПО ПОСТРОЕНИЮ: во фронтенде не было ни
+// одного вызова записи, и экран честно писал «Заводятся через MCP feature_new».
+// Любая форма создания упиралась в то, что ей нечего звать.
+//
+// Обёртки тонкие и намеренно повторяют контракт REST один-в-один: слой уже
+// проверяет инварианты на сервере (высота корня, цикл в иерархии, вычисляемые
+// статусы, существование цели ребра), и дублировать эти проверки здесь значило
+// бы завести вторую правду, которая разойдётся с первой.
+//
+// Ответы link-путей несут linked/…_linked — НЕ игнорировать: CREATE EDGE в
+// пустой FROM/TO молча ничего не делает, и «ok:true» без ребра выглядит успехом.
+
+/** Ответ write-пути слоя. `ok` есть всегда; остальное зависит от эндпоинта. */
+export interface LoreProductWriteResult {
+  ok: boolean;
+  /** link-пути: ребро реально создано. false = цель не найдена, см. hint. */
+  linked?: boolean;
+  /** uc_new: родитель подхвачен (или его нет — тогда hint). */
+  parent_linked?: boolean;
+  /** actor_new: проект зарегистрирован и привязан. */
+  project_linked?: boolean;
+  /** Человекочитаемая причина, когда что-то не привязалось. */
+  hint?: string;
+  /** uc_new/uc_set: линтер оформления возвращается сразу (ADR-027-D3). */
+  quality?: unknown;
+  [k: string]: unknown;
+}
+
+/** Корневой сценарий («фича»). Высота — только cloud|kite (ADR-032 §1). */
+export function saveLoreFeature(body: {
+  feature_id: string;
+  title?: string; body_md?: string; context_md?: string;
+  /** Только намерения: active/shipped вычисляются из задач (D17) и отбиваются 400. */
+  status?: 'proposed' | 'dropped';
+  component_id?: string;
+  goal_level?: 'cloud' | 'kite';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/feature', body, signal);
+}
+
+/** Сценарий любой высоты. parent_uc_id держит DECOMPOSES_INTO в синхроне. */
+export function saveLoreUc(body: {
+  uc_id: string;
+  title?: string; scenario_md?: string; acceptance_md?: string;
+  status?: 'proposed' | 'dropped';
+  parent_uc_id?: string;
+  goal_level?: 'cloud' | 'kite' | 'sea-level' | 'subfunction';
+  rigor?: 'casual' | 'fully-dressed';
+  priority?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/uc', body, signal);
+}
+
+/** Проектируемая роль. project обязателен по смыслу (D18), но не по схеме. */
+export function saveLoreActor(body: {
+  actor_id: string;
+  name?: string;
+  kind?: 'human-role' | 'system' | 'agent';
+  body_md?: string;
+  project?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/actor', body, signal);
+}
+
+export function saveLorePain(body: {
+  pain_id: string; title?: string; body_md?: string; severity?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/pain', body, signal);
+}
+
+/** metric_md — без метрики выгода не попадает в fit (ADR-032). */
+export function saveLoreGain(body: {
+  gain_id: string; title?: string; body_md?: string; metric_md?: string; rank?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/gain', body, signal);
+}
+
+export function saveLoreJob(body: {
+  job_id: string; title?: string; body_md?: string; kind?: string; importance?: string;
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/job', body, signal);
+}
+
+/**
+ * Связки корня — половина «ЗАЯВЛЕНО» парных рёбер (ADR-022-D20).
+ * Вторая половина, «ДОСТАВЛЕНО», вешается через linkLoreUc.
+ */
+export function linkLoreFeature(body: {
+  feature_id: string;
+  rel: 'pain' | 'gain' | 'job' | 'milestone' | 'component';
+  target_id: string;
+  action?: 'add' | 'remove';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/feature/link', body, signal);
+}
+
+/** Связки сценария. relieves/delivers/performs — половина «ДОСТАВЛЕНО». */
+export function linkLoreUc(body: {
+  uc_id: string;
+  rel: 'task' | 'adr' | 'decision' | 'actor' | 'component' | 'project'
+     | 'includes' | 'extends' | 'relieves' | 'delivers' | 'performs';
+  target_id: string;
+  action?: 'add' | 'remove';
+  /** rel="actor": первый актор сценария становится primary по умолчанию (D19). */
+  actor_role?: 'primary' | 'supporting';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/uc/link', body, signal);
+}
+
+/** Профиль клиента: чья боль/выгода/работа (левая половина VP-канвы). */
+export function linkLoreVp(body: {
+  source_id: string;
+  rel: 'felt_by' | 'desired_by' | 'performed_by' | 'blocks' | 'success_of';
+  target_id: string;
+  action?: 'add' | 'remove';
+}, signal?: AbortSignal) {
+  return loreMutate<LoreProductWriteResult>('/vp/link', body, signal);
+}
+
+/**
+ * Линтер оформления по Коберну (ADR-027-D3). Это ЧТЕНИЕ по запросу, но живёт
+ * на POST — форма зовёт его по ходу набора, чтобы чек-лист загорался ДО
+ * сохранения, а не пост-фактум при ревью.
+ */
+export interface LoreUcQualityFinding {
+  code: string;
+  ok: boolean;
+  /** false — подсказка вне счёта (advisory, ADR-027 D9/D14): сохранить можно всегда. */
+  required: boolean;
+  message: string;
+}
+export interface LoreUcQualityResult {
+  rigor: string;
+  score: number;
+  max: number;
+  findings: LoreUcQualityFinding[];
+}
+
+/**
+ * PL-17: две формы вызова — по `uc_id` (оценить сохранённый UC) или по ТЕЛУ
+ * (живой линтер формы). Форма создания обязана показывать чек-лист до того,
+ * как запись появилась: требуй эндпоинт обязательный uc_id, оценивать в ней
+ * было бы нечего — ровно поэтому линтер из фронта не звали ни разу.
+ */
+export function checkLoreUcQuality(
+  body: {
+    uc_id?: string;
+    rigor?: string;
+    goal_level?: string;
+    scenario_md?: string;
+    acceptance_md?: string;
+    has_primary_actor?: boolean;
+    has_traced_to?: boolean;
+  },
+  signal?: AbortSignal,
+) {
+  return loreMutate<LoreUcQualityResult>('/uc/quality', body, signal);
 }

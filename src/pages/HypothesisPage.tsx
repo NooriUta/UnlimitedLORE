@@ -42,7 +42,7 @@ export default function HypothesisPage() {
   return (
     <div className="page-content bench-scroll" style={{ padding: '16px 20px', height: '100%', boxSizing: 'border-box' }}
          data-testid="hypothesis-page">
-      <Link to="/benchmark?tab=campaigns" style={{ fontSize: 12, color: 'var(--acc)', textDecoration: 'none' }}>
+      <Link to="/benchmark?tab=campaigns" style={{ fontSize: 'var(--fs-base)', color: 'var(--acc)', textDecoration: 'none' }}>
         {t('bench.sub.back', '← Benchmark panel')}
       </Link>
 
@@ -63,14 +63,14 @@ export default function HypothesisPage() {
             {h.threshold && <span className="scope-tag">{t('bench.hyp.threshold', 'threshold')}: {h.threshold}</span>}
           </div>
           {stmt && (
-            <p style={{ fontSize: 13, color: 'var(--t1)', lineHeight: 1.55, maxWidth: 980, margin: '6px 0 14px' }}>
+            <p style={{ fontSize: 'var(--fs-md)', color: 'var(--t1)', lineHeight: 1.55, maxWidth: 980, margin: '6px 0 14px' }}>
               {stmt}
             </p>
           )}
 
           <div className="analytics-card" style={{ marginBottom: 12 }}>
             <div className="analytics-card-title">{t('bench.hyp.timeline', 'Pre-registration → verdict')}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: 12 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: 'var(--fs-base)' }}>
               <span className="scope-tag">{t('bench.registered', 'registered')}: {h.registered_ts ?? '—'}</span>
               <span style={{ color: 'var(--t3)' }}>→</span>
               {(h.campaigns ?? []).map(c => <span key={c} className="scope-tag">{t('bench.hypothesisTests', 'tests')}: {c}</span>)}
@@ -80,7 +80,7 @@ export default function HypothesisPage() {
                 : <span className="scope-tag">{t('bench.hyp.open', 'no verdict yet')}</span>}
             </div>
             {evid && (
-              <p style={{ fontSize: 12, color: 'var(--t2)', margin: '8px 0 0', fontFamily: 'var(--mono)' }}>{evid}</p>
+              <p style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', margin: '8px 0 0', fontFamily: 'var(--mono)' }}>{evid}</p>
             )}
           </div>
 

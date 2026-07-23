@@ -159,6 +159,19 @@ export async function handleLoginCallback(): Promise<string | undefined> {
   return typeof user.state === 'string' ? user.state : undefined;
 }
 
+/**
+ * Когда истекает текущая сессия (unix-секунды) — или null, если её нет.
+ *
+ * Нужно меню профиля (AL-76). До него узнать об истечении можно было только по
+ * факту: человека выбрасывало, и вопрос «почему меня вдруг выкинуло» возникал
+ * уже задним числом. Показанный остаток превращает это в предсказуемое событие.
+ */
+export function sessionExpiresAt(): number | null {
+  const u = currentUser;
+  if (!u || u.expired || typeof u.expires_at !== 'number') return null;
+  return u.expires_at;
+}
+
 /** Display name for the header badge — prefers preferred_username, falls back to sub. */
 export function displayName(): string | null {
   const u = currentUser;

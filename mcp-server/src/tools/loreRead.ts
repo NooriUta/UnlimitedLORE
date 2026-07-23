@@ -75,6 +75,7 @@ export function registerLoreRead(server: McpServer): void {
   // сниппеты и фасеты одинаковы для человека и машины. До этого агенты ходили
   // через query_slice('search') и получали плоский список без релевантности —
   // худший поиск, чем в интерфейсе.
+
   server.tool(
     'search',
     'Cross-entity ranked search over the whole LORE corpus (GET /lore/search, ADR-LORE-033). ' +
@@ -89,18 +90,18 @@ export function registerLoreRead(server: McpServer): void {
       q: z.string().min(2).max(160).describe('plain words; Lucene syntax is built server-side, metacharacters are stripped'),
       types: z.string().optional().describe('CSV type filter, e.g. "adr,task,question"'),
       components: z.string().optional().describe('CSV component filter, e.g. "FORSETI,OMILORE" — matches direct AND parent-inherited links'),
-      project: z.string().optional().describe('git_project slug filter'),
+      projects: z.string().optional().describe('CSV of git-project slugs; multi-valued since SRCH-10 — a scalar could not express «two products out of five»'),
       limit: z.number().int().min(1).max(100).optional(),
       offset: z.number().int().min(0).optional(),
       mode: z.enum(['smart', 'exact', 'fuzzy']).optional()
         .describe('smart (default): AND tokens + prefix on last; exact: whole phrase; fuzzy: ~ on words ≥5 chars'),
     },
-    async ({ q, types, components, project, limit, offset, mode }) => {
+    async ({ q, types, components, projects, limit, offset, mode }) => {
       try {
         const params: Record<string, string> = { q };
         if (types) params.types = types;
         if (components) params.components = components;
-        if (project) params.project = project;
+        if (projects) params.projects = projects;
         if (limit !== undefined) params.limit = String(limit);
         if (offset !== undefined) params.offset = String(offset);
         if (mode) params.mode = mode;
@@ -110,4 +111,29 @@ export function registerLoreRead(server: McpServer): void {
       }
     },
   );
+
+  // SRCH-06: «похожие записи» — вход ИДЕНТИФИКАТОР, не строка запроса.
+  server.tool(
+    'search_similar',
+    'Find records textually similar to a given one (SEARCH_INDEX_MORE). Input is an ID, not a query string. ' +
+      'TWO MEASURED ENGINE LIMITS, both reported in the response rather than hidden: (1) same_type_only — ' +
+      'similarity never crosses types, a rid of one type against another type index returns nothing; ' +
+      '(2) ranked:false — the engine returns $similarity = 1.0 for every row, so the order is NOT a relevance ' +
+      'ranking and must not be presented as one. An EMPTY result is valid, not an error: Lucene MoreLikeThis ' +
+      'has term/document frequency thresholds and filters everything out on small corpora.',
+    {
+      ref: z.string().describe('entity id, e.g. "ADR-LORE-022" or "UC-GIT-MERGE"'),
+      limit: z.number().int().min(1).max(50).optional().describe('upper bound, not a promise (default 10)'),
+    },
+    async ({ ref, limit }) => {
+      try {
+        const params: Record<string, string> = { ref };
+        if (limit !== undefined) params.limit = String(limit);
+        return json(await loreGet('/lore/search/similar', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
 }

@@ -88,7 +88,7 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
         </Field>
         <Field label="A"><MuninnSelect value={effA} onChange={setSubA} options={subOptions} /></Field>
         <Field label="B"><MuninnSelect value={effB} onChange={setSubB} options={subOptions} /></Field>
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
           {t('bench.wl.measuredOnly', 'only actors measured in this run are offered (facts in brackets)')}
         </span>
       </div>
@@ -104,7 +104,7 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
 
       {aSlice.rows && bSlice.rows && result.totals.joined > 0 && (
         <>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10, fontSize: 12 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10, fontSize: 'var(--fs-base)' }}>
             <span style={{ color: A_COLOR, fontWeight: 600 }}>{subLabel(effA)}: {result.totals.aWins}</span>
             <CountBar {...result.totals} />
             <span style={{ color: B_COLOR, fontWeight: 600 }}>{subLabel(effB)}: {result.totals.bWins}</span>
@@ -127,7 +127,7 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
               <tbody>
                 {result.cells.map(c => (
                   <tr key={c.key}>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>{c.key.split('·').map(short).join('·')}</td>
+                    <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)' }}>{c.key.split('·').map(short).join('·')}</td>
                     <td style={{ fontFamily: 'var(--mono)', color: A_COLOR }}>{c.aWins}</td>
                     <td style={{ fontFamily: 'var(--mono)', color: 'var(--t3)' }}>{c.ties}</td>
                     <td style={{ fontFamily: 'var(--mono)', color: B_COLOR }}>{c.bWins}</td>
@@ -145,7 +145,7 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
             {result.diffs.slice(0, 50).map(d => (
               <div key={d.case_id} style={{ borderBottom: '1px solid var(--bd)' }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '4px 0',
-                              cursor: 'pointer', fontSize: 12 }}
+                              cursor: 'pointer', fontSize: 'var(--fs-base)' }}
                      data-testid={`wl-diff-${d.case_id}`}
                      onClick={() => setOpen(open === d.case_id ? null : d.case_id)}>
                   <span style={{ fontFamily: 'var(--mono)' }}>{d.case_id}</span>
@@ -153,18 +153,18 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
                   <span style={{ fontFamily: 'var(--mono)', color: d.delta > 0 ? A_COLOR : B_COLOR }}>
                     {fmtF1(d.a.f1 as number)} vs {fmtF1(d.b.f1 as number)} (Δ {d.delta > 0 ? '+' : ''}{d.delta.toFixed(3)})
                   </span>
-                  <span style={{ color: 'var(--t3)', fontSize: 11 }}>
+                  <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-sm)' }}>
                     {open === d.case_id ? '▾' : '▸'} {t('bench.wl.sideBySide', 'side by side')}
                   </span>
                 </div>
                 {open === d.case_id && (
                   <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '6px 0 10px' }}>
                     <div style={{ flex: '1 1 380px', borderLeft: `2px solid ${A_COLOR}`, paddingLeft: 10 }}>
-                      <div style={{ fontSize: 11, color: A_COLOR, fontWeight: 600 }}>{subLabel(effA)}</div>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: A_COLOR, fontWeight: 600 }}>{subLabel(effA)}</div>
                       <CaseDetails c={d.a} run={run} runSnapshot={runRow?.snapshot_id} />
                     </div>
                     <div style={{ flex: '1 1 380px', borderLeft: `2px solid ${B_COLOR}`, paddingLeft: 10 }}>
-                      <div style={{ fontSize: 11, color: B_COLOR, fontWeight: 600 }}>{subLabel(effB)}</div>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: B_COLOR, fontWeight: 600 }}>{subLabel(effB)}</div>
                       <CaseDetails c={d.b} run={run} runSnapshot={runRow?.snapshot_id} />
                     </div>
                   </div>
@@ -172,7 +172,7 @@ export function WinLossScreen({ runs, substrates, subLabel }: {
               </div>
             ))}
             {result.diffs.length > 50 && (
-              <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 4 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginTop: 4 }}>
                 {t('bench.wl.truncated', 'showing top-50 by |Δ| — narrow the pair or the run for the rest')}
               </div>
             )}

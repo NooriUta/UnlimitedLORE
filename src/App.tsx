@@ -11,10 +11,42 @@ import ReferencesPage from './pages/ReferencesPage';
 import BragiPage from './pages/BragiPage';
 import HuginnPage from './pages/HuginnPage';
 import TyrPage from './pages/TyrPage';
+import { MantineProvider } from '@mantine/core';
+import { mantineTheme, mantineCssVariablesResolver } from './ui/mantineTheme';
+// Порядок импортов значим: стили Mantine идут ПЕРЕД tokens.css, чтобы наши
+// токены оставались последним словом. Обратный порядок отдал бы победу
+// библиотеке — той самой лотереей «кто позже в бандле», из-за которой TYR уже
+// не получает своих шрифтов (STYLE-01, п. 1).
+// Шрифты — СВОИ файлы, а не расчёт на систему. Токены объявляли `Manrope` и
+// `IBM Plex Mono` с самого начала, но ни одного `@font-face` и ни одной ссылки
+// на CDN в приложении не было: `document.fonts` на стенде пуст. То есть весь
+// интерфейс всегда рисовался системным запасным шрифтом, и «поехало» ровно
+// столько раз, сколько разных машин его открывало. Пакеты кладут файлы в
+// бандл — вид перестаёт зависеть от того, что стоит у смотрящего, и от
+// доступности внешней сети со стенда.
+import '@fontsource/manrope/400.css';
+import '@fontsource/manrope/500.css';
+import '@fontsource/manrope/600.css';
+import '@fontsource/manrope/700.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 import './styles/tokens.css';
 
 export default function App() {
   return (
+    // Схема жёстко тёмная НЕ ставится: светлая тема у LORE есть — переключатель
+    // режима живёт в шапке (data-mode на корне). Первая редакция ставила
+    // forceColorScheme="dark" по ошибочному допущению «светлой темы нет»; при
+    // включённой светлой это давало тёмные переменные Mantine поверх светлого
+    // интерфейса.
+    //
+    // Цвета всё равно приходят из НАШИХ токенов через cssVariablesResolver,
+    // поэтому схема Mantine на вид почти не влияет — но пусть она хотя бы не
+    // противоречит действительности.
+    <MantineProvider theme={mantineTheme} cssVariablesResolver={mantineCssVariablesResolver}>
     <BrowserRouter>
       <AuthGate>
         <Routes>
@@ -34,5 +66,6 @@ export default function App() {
         </Routes>
       </AuthGate>
     </BrowserRouter>
+    </MantineProvider>
   );
 }

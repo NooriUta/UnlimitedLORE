@@ -10,7 +10,7 @@ import { MartProse } from './MartProse';
 import { PanelMsg, ScreenTitle, StatusBadge } from './shared';
 
 const EMPTY_PARAMS: Record<string, string> = {};
-const entityLink: React.CSSProperties = { color: 'var(--acc)', fontFamily: 'var(--mono)', fontSize: 12 };
+const entityLink: React.CSSProperties = { color: 'var(--acc)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)' };
 
 /**
  * Narrative pages (HBR-11, HEIMDALL_NARRATIVE_PAGES.md): the four blocks that
@@ -73,7 +73,7 @@ export function ProjectScreen() {
 
       {repro && (
         <details className="analytics-card" style={{ marginBottom: 12 }}>
-          <summary style={{ cursor: 'pointer', color: 'var(--t2)', fontSize: 12 }}>
+          <summary style={{ cursor: 'pointer', color: 'var(--t2)', fontSize: 'var(--fs-base)' }}>
             {t('bench.nar.reproducibility', 'How a run works (reproducibility, as-run)')}
           </summary>
           <MartProse text={repro} />
@@ -136,22 +136,22 @@ export function MetricsScreen({ hopKinds, focus }: { hopKinds: HopKindRow[]; foc
                style={{ marginBottom: 12, borderLeft: focused ? '3px solid var(--acc)' : undefined }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
               <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{m.metric_id}</span>
-              <span style={{ color: 'var(--t2)', fontSize: 12 }}>{m.name}</span>
+              <span style={{ color: 'var(--t2)', fontSize: 'var(--fs-base)' }}>{m.name}</span>
               {orderSensitive && <StatusBadge tone="warn" text={t('bench.nar.orderSensitive', 'order matters')} />}
             </div>
             {m.formula && (
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t1)',
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--t1)',
                             background: 'var(--bg3)', borderRadius: 6, padding: '6px 10px', margin: '8px 0' }}>
                 {m.formula}
               </div>
             )}
-            <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
               {m.aggregation && <span>{t('bench.nar.aggregation', 'aggregation')}: {m.aggregation}</span>}
               {m.vs_slice && <span> · {t('bench.nar.vsSlice', 'vs literature')}: {m.vs_slice}</span>}
             </div>
             {(recsByMetric.get(m.metric_id) ?? []).length > 0 && (
               <div style={{ marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.nar.recommendedFor', 'recommended for hop kinds')}: </span>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.nar.recommendedFor', 'recommended for hop kinds')}: </span>
                 {(recsByMetric.get(m.metric_id) ?? []).map(hk => (
                   <span key={hk} className="scope-tag" style={{ marginRight: 4 }}>{hk}</span>
                 ))}
@@ -204,7 +204,7 @@ export function RisksScreen() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
               {severityDot(r.severity)}
               <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{r.risk_id}</span>
-              <span style={{ color: 'var(--t2)', fontSize: 12 }}>{r.title}</span>
+              <span style={{ color: 'var(--t2)', fontSize: 'var(--fs-base)' }}>{r.title}</span>
               {r.category && <span className="scope-tag">{r.category}</span>}
               {r.status && <StatusBadge tone={riskStatusTone(r.status)} text={r.status} />}
             </div>
@@ -219,7 +219,7 @@ export function RisksScreen() {
               </div>
             </div>
             {(strArr(r.affects_hyps).length > 0 || strArr(r.from_findings).length > 0) && (
-              <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 6 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginTop: 6 }}>
                 {strArr(r.affects_hyps).length > 0 && (
                   <span>{t('bench.nar.affectsHyps', 'conditional hypotheses')}: {strArr(r.affects_hyps).map(h => (
                     <Link key={h} to={`/benchmark/hypothesis/${encodeURIComponent(h)}`}
@@ -297,14 +297,14 @@ export function DesignScreen({ tasks }: { tasks: TaskRow[] }) {
                 )}
                 {task.gold_source_type && <span className="scope-tag">gold: {task.gold_source_type}</span>}
                 {num(task.n_cases) !== undefined && (
-                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>n={task.n_cases}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>n={task.n_cases}</span>
                 )}
               </div>
               <MartProse text={designRationale} />
               {expanded && subs.length > 0 && (
                 <div style={{ paddingLeft: 20 }}>
                   {subs.map(s => (
-                    <div key={s.subtype_id} style={{ fontSize: 12, padding: '2px 0' }}>
+                    <div key={s.subtype_id} style={{ fontSize: 'var(--fs-base)', padding: '2px 0' }}>
                       <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{s.subtype_id}</span>
                       <span className="scope-tag" style={{ marginLeft: 6 }}>{s.level_id} · {s.hop_kind_id}</span>
                     </div>
@@ -330,7 +330,7 @@ export function DesignScreen({ tasks }: { tasks: TaskRow[] }) {
               <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{c.corpus_id}</span>
                 {c.corpus_role && <span className="scope-tag">{c.corpus_role}</span>}
-                <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
                   files={c.files ?? '?'} · dup={c.duplicates ?? '?'} · sql_lines={c.sql_lines ?? '?'}
                 </span>
               </div>

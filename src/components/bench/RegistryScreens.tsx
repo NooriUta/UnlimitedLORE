@@ -28,19 +28,19 @@ function hist(values: Array<string | undefined>): Array<{ text: string }> {
   return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ text: `${k} × ${n}` }));
 }
 
-const entityLink = { color: 'var(--acc)', textDecoration: 'none', fontFamily: 'var(--mono)', fontSize: 12 } as const;
+const entityLink = { color: 'var(--acc)', textDecoration: 'none', fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)' } as const;
 
 function RevChain({ revs, fallback }: { revs: SubstrateRevAllRow[] | undefined; fallback?: string }) {
   if (!revs?.length) {
-    return <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{fallback ?? '—'}</span>;
+    return <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{fallback ?? '—'}</span>;
   }
   return (
     <span style={{ whiteSpace: 'nowrap' }}>
       {revs.map((r, i) => (
         <span key={r.rev_id}>
-          {i > 0 && <span style={{ color: 'var(--t3)', fontSize: 10 }}> → </span>}
+          {i > 0 && <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-xs)' }}> → </span>}
           <span title={[r.change_why, `${r.valid_from ?? ''} → ${r.valid_to || 'now'}`].filter(Boolean).join('\n')}
-                style={{ fontFamily: 'var(--mono)', fontSize: 11,
+                style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)',
                          color: r.is_current ? 'var(--t1)' : 'var(--t3)',
                          textDecoration: r.is_current ? undefined : 'line-through' }}>
             {r.config_rev ?? r.rev_id}
@@ -73,7 +73,7 @@ export function SubstratesScreen({ substrates }: { substrates: SubstrateRow[] })
     <div>
       <ScreenTitle text={t('bench.reg.substratesTitle', 'Substrates — all actors of the experiment')}
                    hint={t('bench.reg.substratesHint', 'click a name to open the passport')} />
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 12 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 'var(--fs-base)' }}>
         {table.controls}
         <span style={{ color: 'var(--t3)' }}>{table.count} / {substrates.length}</span>
       </div>
@@ -93,7 +93,7 @@ export function SubstratesScreen({ substrates }: { substrates: SubstrateRow[] })
             {table.groups.flatMap(g => [
               ...(g.group ? [(
                 <tr key={`g-${g.group}`}>
-                  <td colSpan={6} style={{ background: 'var(--bg2)', fontSize: 11, fontWeight: 600, color: 'var(--t2)' }}>
+                  <td colSpan={6} style={{ background: 'var(--bg2)', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t2)' }}>
                     {g.group} · {g.rows.length}
                   </td>
                 </tr>
@@ -104,19 +104,19 @@ export function SubstratesScreen({ substrates }: { substrates: SubstrateRow[] })
               <tr key={s.substrate_id}>
                 <td><SubstrateLink id={s.substrate_id} label={name} />
                   {s.short_name && s.short_name !== name && (
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' }}>{s.short_name}</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{s.short_name}</div>
                   )}
                 </td>
                 <td><span className="scope-tag">{s.family ?? '—'}</span></td>
                 <td>{s.status ? <span className="badge badge-neutral">{s.status}</span> : '—'}</td>
                 <td><RevChain revs={chains.get(s.substrate_id)} fallback={s.config_rev} /></td>
-                <td style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', whiteSpace: 'nowrap' }}>
+                <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)', whiteSpace: 'nowrap' }}>
                   {[s.data_layer_id, s.retrieval_id, s.text_gran_id, s.reasoner_id].filter(Boolean).join(' · ') || '—'}
                 </td>
-                <td style={{ color: 'var(--t2)', fontSize: 12, maxWidth: 420 }}>
+                <td style={{ color: 'var(--t2)', fontSize: 'var(--fs-base)', maxWidth: 420 }}>
                   {s.description ?? ''}
                   {s.builder && (
-                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', marginTop: 2 }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginTop: 2 }}>
                       {s.builder}{s.code_file ? ` · ${s.code_file}` : ''}
                     </div>
                   )}
@@ -154,7 +154,7 @@ export function HypothesesScreen() {
     <div>
       <ScreenTitle text={t('bench.reg.hypothesesTitle', 'Hypotheses — all registered bets')}
                    hint={t('bench.reg.hypothesesHint', 'pre-registered before the runs; refuted is a result, not a failure')} />
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 12 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 'var(--fs-base)' }}>
         {table.controls}
         <span style={{ color: 'var(--t3)' }}>{table.count} / {hyps.rows.length}</span>
       </div>
@@ -173,7 +173,7 @@ export function HypothesesScreen() {
             {table.groups.flatMap(g => [
               ...(g.group ? [(
                 <tr key={`g-${g.group}`}>
-                  <td colSpan={5} style={{ background: 'var(--bg2)', fontSize: 11, fontWeight: 600, color: 'var(--t2)' }}>
+                  <td colSpan={5} style={{ background: 'var(--bg2)', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t2)' }}>
                     {g.group} · {g.rows.length}
                   </td>
                 </tr>
@@ -182,8 +182,8 @@ export function HypothesesScreen() {
               <tr key={h.hyp_id}>
                 <td><Link to={`/benchmark/hypothesis/${encodeURIComponent(h.hyp_id)}`} style={entityLink}>{h.hyp_id}</Link></td>
                 <td>{h.status ? <StatusBadge tone={hypothesisTone(h.status)} text={h.status} /> : '—'}</td>
-                <td style={{ fontSize: 12, maxWidth: 460 }}>{h.statement ?? ''}</td>
-                <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
+                <td style={{ fontSize: 'var(--fs-base)', maxWidth: 460 }}>{h.statement ?? ''}</td>
+                <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>
                   {h.metric ?? '—'}{h.threshold ? ` ${h.threshold}` : ''}
                 </td>
                 <td>{(h.campaigns ?? []).map(c => <span key={c} className="scope-tag" style={{ marginRight: 4 }}>{c}</span>)}</td>
@@ -226,7 +226,7 @@ export function FindingsScreen() {
     <div>
       <ScreenTitle text={t('bench.reg.findingsTitle', 'Findings — everything the experiment surfaced')}
                    hint={t('bench.reg.findingsHint', 'side = where the cause lives; click for the narrative and demo cases')} />
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 12 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 'var(--fs-base)' }}>
         {table.controls}
         <span style={{ color: 'var(--t3)' }}>{table.count} / {finds.rows.length}</span>
       </div>
@@ -246,7 +246,7 @@ export function FindingsScreen() {
             {table.groups.flatMap(g => [
               ...(g.group ? [(
                 <tr key={`g-${g.group}`}>
-                  <td colSpan={6} style={{ background: 'var(--bg2)', fontSize: 11, fontWeight: 600, color: 'var(--t2)' }}>
+                  <td colSpan={6} style={{ background: 'var(--bg2)', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t2)' }}>
                     {g.group} · {g.rows.length}
                   </td>
                 </tr>
@@ -254,11 +254,11 @@ export function FindingsScreen() {
               ...g.rows.map(f => (
               <tr key={f.finding_id}>
                 <td><Link to={`/benchmark/finding/${encodeURIComponent(f.finding_id)}`} style={entityLink}>{f.finding_id}</Link></td>
-                <td style={{ fontSize: 12, maxWidth: 380 }}>{f.title ?? ''}</td>
+                <td style={{ fontSize: 'var(--fs-base)', maxWidth: 380 }}>{f.title ?? ''}</td>
                 <td>{f.finding_class_id ? <span className="scope-tag">{f.finding_class_id}</span> : '—'}</td>
                 <td>{f.finding_status_id ? <span className="badge badge-neutral">{f.finding_status_id}</span> : '—'}</td>
-                <td style={{ fontSize: 12 }}>{f.side ?? '—'}</td>
-                <td style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)' }}>{f.snapshot_id ?? '—'}</td>
+                <td style={{ fontSize: 'var(--fs-base)' }}>{f.side ?? '—'}</td>
+                <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{f.snapshot_id ?? '—'}</td>
               </tr>
               )),
             ])}
@@ -293,7 +293,7 @@ function MethodCardsOverview({ cards }: { cards: MethodCardRow[] }) {
   }), [cards]);
 
   const TH: CSSProperties = {
-    fontSize: 10, fontWeight: 600, color: 'var(--t3)', padding: '3px 8px',
+    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--t3)', padding: '3px 8px',
     borderBottom: '1px solid var(--bd)', textAlign: 'left', whiteSpace: 'nowrap',
   };
   const TR_BASE: CSSProperties = {
@@ -325,22 +325,22 @@ function MethodCardsOverview({ cards }: { cards: MethodCardRow[] }) {
                 <tr key={card.card_id}
                     onClick={() => setExpandedId(isOpen ? null : card.card_id)}
                     style={{ ...TR_BASE, background: rowBg }}>
-                  <td style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
+                  <td style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--t1)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
                     {isOpen ? '▾ ' : '▸ '}{card.name ?? card.card_id}
                   </td>
-                  <td style={{ fontSize: 11, color: 'var(--t3)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
+                  <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
                     {card.group_name ?? '—'}
                   </td>
-                  <td style={{ fontSize: 11, color: 'var(--t3)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
+                  <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '5px 8px', whiteSpace: 'nowrap' }}>
                     {card.date ?? '—'}
                   </td>
-                  <td style={{ fontSize: 11, color: card.bird ? 'var(--acc)' : 'var(--t3)', padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td style={{ fontSize: 'var(--fs-sm)', color: card.bird ? 'var(--acc)' : 'var(--t3)', padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {card.bird || '—'}
                   </td>
-                  <td style={{ fontSize: 11, color: card.spider ? 'var(--acc)' : 'var(--t3)', padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td style={{ fontSize: 'var(--fs-sm)', color: card.spider ? 'var(--acc)' : 'var(--t3)', padding: '5px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {card.spider || '—'}
                   </td>
-                  <td style={{ fontSize: 11, color: 'var(--t2)', padding: '5px 8px', lineHeight: 1.4 }}>
+                  <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', padding: '5px 8px', lineHeight: 1.4 }}>
                     {(card.tldr ?? '').slice(0, 100)}{(card.tldr?.length ?? 0) > 100 ? '…' : ''}
                   </td>
                 </tr>,
@@ -381,35 +381,35 @@ function MethodCardBlock({ card }: { card: MethodCardRow }) {
         padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
         borderBottom: '1px solid color-mix(in srgb, var(--acc) 15%, transparent)',
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>{card.name ?? card.card_id}</span>
-        {card.group_name && <span style={{ fontSize: 10, color: 'var(--t3)' }}>{card.group_name}</span>}
-        {card.date && <span style={{ fontSize: 10, color: 'var(--t3)' }}>· {card.date}</span>}
+        <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>{card.name ?? card.card_id}</span>
+        {card.group_name && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{card.group_name}</span>}
+        {card.date && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>· {card.date}</span>}
         <span style={{ flex: 1 }} />
-        {scores && <span style={{ fontSize: 10, color: 'var(--acc)' }}>{scores}</span>}
+        {scores && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)' }}>{scores}</span>}
         {card.link && (
           <a href={card.link} target="_blank" rel="noopener noreferrer"
-             style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>
+             style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)', textDecoration: 'none' }}>↗</a>
         )}
       </div>
       {/* body */}
       <div style={{ padding: '6px 10px 8px' }}>
         {card.tldr && (
           <p style={{
-            margin: '0 0 6px', fontSize: 12, color: 'var(--t2)', lineHeight: 1.55, fontStyle: 'italic',
+            margin: '0 0 6px', fontSize: 'var(--fs-base)', color: 'var(--t2)', lineHeight: 1.55, fontStyle: 'italic',
             borderLeft: '2px solid color-mix(in srgb, var(--acc) 40%, transparent)', paddingLeft: 8,
           }}>
             {card.tldr}
           </p>
         )}
         {card.hound && (
-          <div style={{ fontSize: 11, color: 'var(--wrn)', lineHeight: 1.5, marginBottom: 6 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--wrn)', lineHeight: 1.5, marginBottom: 6 }}>
             <span style={{ fontWeight: 700 }}>↳ HOUND: </span>{card.hound}
           </div>
         )}
         {mermaidSrc && <MartProse text={mermaidSrc} style={{ marginTop: 4 }} />}
         {hasSections && (
           <details style={{ marginTop: 6 }}>
-            <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--t3)', userSelect: 'none' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-xs)', color: 'var(--t3)', userSelect: 'none' }}>
               детали методики
             </summary>
             <div style={{ paddingTop: 5, display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -420,7 +420,7 @@ function MethodCardBlock({ card }: { card: MethodCardRow }) {
                 { label: 'Результаты',  val: card.results },
                 { label: 'Выводы',      val: card.findings },
               ].filter(s => s.val).map(s => (
-                <div key={s.label} style={{ fontSize: 11, lineHeight: 1.5 }}>
+                <div key={s.label} style={{ fontSize: 'var(--fs-sm)', lineHeight: 1.5 }}>
                   <span style={{ color: 'var(--t3)', fontWeight: 600 }}>{s.label}: </span>
                   <span style={{ color: 'var(--t2)' }}>{s.val}</span>
                 </div>
@@ -486,23 +486,23 @@ export function ReferencesScreen() {
                 <div key={r.ref_id} style={{ padding: '8px 0 10px', borderBottom: '1px solid var(--bd)' }}>
                   {/* ── citation header ── */}
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)', lineHeight: 1.4 }}>
+                    <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--t1)', lineHeight: 1.4 }}>
                       {r.citation ?? r.ref_id}
                     </span>
                     {(r.venue || r.year) && (
-                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
                         {r.venue ?? ''}{r.year ? ` ${r.year}` : ''}
                       </span>
                     )}
                     {r.link && (
                       <a href={r.link} target="_blank" rel="noopener noreferrer"
-                         style={{ fontSize: 10, color: 'var(--acc)', textDecoration: 'none' }}>↗</a>
+                         style={{ fontSize: 'var(--fs-xs)', color: 'var(--acc)', textDecoration: 'none' }}>↗</a>
                     )}
                     {srcs.length > 0 && srcs.map(s => {
                       const label = SRC_KIND_LABEL[s.kind ?? ''] ?? s.kind ?? 'src';
                       const muted = s.kind === 'status' || !s.url;
                       const chip: CSSProperties = {
-                        fontSize: 10, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap',
+                        fontSize: 'var(--fs-xs)', padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap',
                         border: `1px solid color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 35%, transparent)`,
                         background: `color-mix(in srgb, ${muted ? 'var(--t3)' : 'var(--acc)'} 10%, transparent)`,
                         color: muted ? 'var(--t3)' : 'var(--acc)', textDecoration: 'none',
@@ -517,7 +517,7 @@ export function ReferencesScreen() {
                   </div>
                   {/* ── description ── */}
                   {description && (
-                    <MartProse text={description} style={{ fontSize: 12, color: 'var(--t2)', marginTop: 4, lineHeight: 1.6 }} />
+                    <MartProse text={description} style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', marginTop: 4, lineHeight: 1.6 }} />
                   )}
                   {/* ── takeaway: left-border callout ── */}
                   {takeaway && (
@@ -525,16 +525,16 @@ export function ReferencesScreen() {
                       marginTop: 5, paddingLeft: 8,
                       borderLeft: '2px solid color-mix(in srgb, var(--acc) 50%, transparent)',
                     }}>
-                      <MartProse text={takeaway} style={{ fontSize: 11, color: 'var(--t2)', fontStyle: 'italic' }} />
+                      <MartProse text={takeaway} style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', fontStyle: 'italic' }} />
                     </div>
                   )}
                   {/* ── relevance: inline, labeled ── */}
                   {relevance && (
                     <div style={{ marginTop: 6, paddingLeft: 10, borderLeft: '1px solid var(--bd)' }}>
-                      <div style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600, marginBottom: 2, letterSpacing: 0.3 }}>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontWeight: 600, marginBottom: 2, letterSpacing: 0.3 }}>
                         ↳ {t('bench.refs.relevance', 'how it shaped our method')}
                       </div>
-                      <MartProse text={relevance} style={{ fontSize: 11, color: 'var(--t2)' }} />
+                      <MartProse text={relevance} style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }} />
                     </div>
                   )}
                   {(cardsByRef.get(r.ref_id) ?? []).map(mc => (
@@ -614,10 +614,10 @@ export function CasesDimScreen() {
       <ScreenTitle text={t('bench.reg.casesTitle', 'Cases & gold — the question bank with its answer revisions')}
                    hint={t('bench.reg.casesHint', 'campaigns assemble runs from these cases')} />
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
-                    marginBottom: 8, fontSize: 12 }}>
+                    marginBottom: 8, fontSize: 'var(--fs-base)' }}>
         <input value={q} onChange={e => setQ(e.target.value)}
                placeholder={t('bench.reg.searchCaseText', 'search case_id / target / question…')}
-               style={{ padding: '4px 8px', fontSize: 12, background: 'var(--bg2)', color: 'var(--t1)',
+               style={{ padding: '4px 8px', fontSize: 'var(--fs-base)', background: 'var(--bg2)', color: 'var(--t1)',
                         border: '1px solid var(--bd)', borderRadius: 6, width: 280 }} />
         {table.controls}
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: 'var(--t2)' }}>
@@ -643,7 +643,7 @@ export function CasesDimScreen() {
             {table.groups.flatMap(g => [
               ...(g.group ? [(
                 <tr key={`g-${g.group}`}>
-                  <td colSpan={7} style={{ background: 'var(--bg2)', fontSize: 11, fontWeight: 600,
+                  <td colSpan={7} style={{ background: 'var(--bg2)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                                            color: 'var(--t2)' }}>
                     {g.group} · {g.rows.length}
                   </td>
@@ -651,13 +651,13 @@ export function CasesDimScreen() {
               )] : []),
               ...g.rows.map(c => (
               <tr key={c.case_id}>
-                <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{c.case_id}</td>
+                <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{c.case_id}</td>
                 <td>{c.task_id ? <span className="scope-tag">{c.task_id}</span> : '—'}</td>
-                <td style={{ fontSize: 11, color: 'var(--t2)' }}>{c.level_id ?? '—'}</td>
-                <td style={{ fontSize: 11, color: 'var(--t2)' }}>{c.hop_kind_id ?? '—'}</td>
-                <td style={{ fontFamily: 'var(--mono)', fontSize: 10, maxWidth: 200, overflow: 'hidden',
+                <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>{c.level_id ?? '—'}</td>
+                <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>{c.hop_kind_id ?? '—'}</td>
+                <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', maxWidth: 200, overflow: 'hidden',
                              textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.target ?? '—'}</td>
-                <td style={{ fontSize: 11, color: 'var(--t2)', maxWidth: 320 }}>{c.question ?? ''}</td>
+                <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', maxWidth: 320 }}>{c.question ?? ''}</td>
                 <td>
                   {(goldsByCase.get(c.case_id) ?? []).map(g => (
                     <span key={g.gold_id} style={{ display: 'inline-flex', alignItems: 'center', gap: 3,
@@ -679,7 +679,7 @@ export function CasesDimScreen() {
                     </span>
                   ))}
                   {!(goldsByCase.get(c.case_id) ?? []).length && (
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
                       {c.gold_size ?? '—'}
                     </span>
                   )}
@@ -770,7 +770,7 @@ export function DecisionsScreen() {
         <input
           placeholder={t('bench.decisions.search', 'Поиск по теме, тексту, ратионалу…')}
           value={q} onChange={e => setQ(e.target.value)}
-          style={{ padding: '3px 8px', fontSize: 12, borderRadius: 4,
+          style={{ padding: '3px 8px', fontSize: 'var(--fs-base)', borderRadius: 4,
             border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--t1)',
             minWidth: 260 }}
         />
@@ -778,7 +778,7 @@ export function DecisionsScreen() {
           <button key={s}
             onClick={() => setStatusFilter(s)}
             style={{
-              padding: '2px 10px', fontSize: 11, borderRadius: 10, cursor: 'pointer',
+              padding: '2px 10px', fontSize: 'var(--fs-sm)', borderRadius: 10, cursor: 'pointer',
               border: `1px solid ${s === statusFilter ? DEC_STATUS_TONE[s] ?? 'var(--acc)' : 'var(--bd)'}`,
               background: s === statusFilter
                 ? `color-mix(in srgb, ${DEC_STATUS_TONE[s] ?? 'var(--acc)'} 18%, transparent)`
@@ -807,31 +807,31 @@ export function DecisionsScreen() {
                  }}>
               {/* header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
                   {d.decision_id}
                 </span>
                 {d.topic && (
                   <span style={{
-                    fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                    fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3,
                     background: 'color-mix(in srgb, var(--acc) 12%, transparent)',
                     border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
                     color: 'var(--acc)',
                   }}>{d.topic}</span>
                 )}
                 {d.phase_id && (
-                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{d.phase_id}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{d.phase_id}</span>
                 )}
-                <span style={{ marginLeft: 'auto', fontSize: 10, color: statusColor }}>
+                <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: statusColor }}>
                   {statusLabel}
                 </span>
                 {d.created_ts && (
-                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{d.created_ts}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{d.created_ts}</span>
                 )}
               </div>
 
               {/* decision text */}
               {decText && (
-                <div style={{ marginTop: 6, fontSize: 13, color: 'var(--t1)', lineHeight: 1.5 }}>
+                <div style={{ marginTop: 6, fontSize: 'var(--fs-md)', color: 'var(--t1)', lineHeight: 1.5 }}>
                   {decText}
                 </div>
               )}
@@ -839,7 +839,7 @@ export function DecisionsScreen() {
               {/* rationale */}
               {ratText && (
                 <details style={{ marginTop: 6 }}>
-                  <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--acc)' }}>
+                  <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-sm)', color: 'var(--acc)' }}>
                     {t('bench.decisions.rationale', 'обоснование')}
                   </summary>
                   <MartProse text={ratText} style={{ padding: '4px 0 0 14px', maxWidth: 900 }} />
@@ -849,7 +849,7 @@ export function DecisionsScreen() {
           );
         })}
         {filtered.length === 0 && (
-          <div style={{ color: 'var(--t3)', fontSize: 12, padding: '12px 0' }}>
+          <div style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: '12px 0' }}>
             {t('bench.noMatch', 'Нет совпадений')}
           </div>
         )}

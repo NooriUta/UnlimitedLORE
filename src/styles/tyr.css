@@ -1,20 +1,32 @@
 /* =============================================================
    TYR tab — SEER design system component styles.
    Imported by TyrApp.tsx.
-   Theme tokens (--bg*, --t*, --acc, etc.) are already defined
-   globally by tokens.css. Only layout/component CSS lives here.
+   Theme tokens (--bg*, --t*, --acc, шрифты) are defined globally by
+   tokens.css and НЕ переопределяются здесь. Only layout/component CSS
+   lives here — теперь это утверждение верно (см. ниже).
    ============================================================= */
 
-/* Radius / motion / font — not in UnlimitedLORE tokens */
+/* Radius / motion — not in UnlimitedLORE tokens.
+   Шрифты здесь НЕ объявляются (STYLE-01, решение владельца 2026-07-22:
+   единый вид, отдельного скина у TYR нет).
+
+   Раньше файл переопределял --font ('DM Sans') и --mono ('Fira Code') в
+   ГЛОБАЛЬНОМ :root — вопреки собственной шапке, которая утверждает, что
+   тема задаётся в tokens.css. Тот объявляет те же переменные, специфичность
+   одинаковая, и победитель определялся порядком файлов в бандле.
+
+   Фактически побеждал tokens.css: TYR всё равно рисовался Manrope, то есть
+   своих шрифтов НЕ получал. Опаснее было другое — исход держался на порядке
+   импортов, и любая перестановка (или смена разбиения бандла) сменила бы
+   шрифт ВО ВСЁМ приложении разом, молча и мимо любого теста.
+
+   Поэтому удаление не меняет вид: оно убирает лотерею. */
 :root {
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
   --radius-xl: 14px;
   --transition: 0.15s ease;
-
-  --font: 'DM Sans', system-ui, -apple-system, sans-serif;
-  --mono: 'Fira Code', 'JetBrains Mono', monospace;
 }
 
 .muted { color: var(--t3); }

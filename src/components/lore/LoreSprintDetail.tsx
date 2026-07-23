@@ -17,6 +17,8 @@ import { statusMeta, taskTick } from './lore-status';
 import { areaColor } from './LoreComponentList';
 import { useDictionary } from './DictionaryProvider';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { Select } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import TipTapField from './TipTapField';
 
 interface SprintMeta {
@@ -513,19 +515,47 @@ const mdBox: React.CSSProperties = {
 // of known roles while still accepting free text — a role typed here that isn't
 // in the dictionary yet gets upserted into it on save (see TaskLine.save below),
 // so the next picker offers it too.
-function AgentRoleInput({ id, value, onChange, placeholder, title }: {
-  id: string; value: string; onChange: (v: string) => void; placeholder: string; title?: string;
+//
+// Было `<input list=…>`: поле шириной 120px с одним плейсхолдером и без единого
+// признака, что у него вообще есть список. Подпись обрезалась («исполните»),
+// список открывался только по случайному клику, а показывал технические коды.
+// Выбор из словаря обязан ВЫГЛЯДЕТЬ как выбор: подпись сверху, русские
+// названия, отдельный пункт для значения, которого в словаре ещё нет.
+function AgentRolePicker({ id, label, value, onChange, hint, warn }: {
+  id: string; label: string; value: string; onChange: (v: string) => void;
+  hint?: string; warn?: string | null;
 }) {
   const { entries } = useDictionary('agent_role');
-  const listId = `agent-role-opts-${id}`;
+  const known = entries.some(e => e.code === value);
+  // Значение вне словаря — законно (по сохранении оно в словарь и попадёт),
+  // поэтому поле само переключается в ручной ввод, а не молча его теряет.
+  const [custom, setCustom] = useState(!!value && !known);
   return (
-    <>
-      <input list={listId} value={value} onChange={e => onChange(e.target.value)}
-        placeholder={placeholder} title={title} style={{ ...inputStyle, width: 120 }} />
-      <datalist id={listId}>
-        {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
-      </datalist>
-    </>
+    <label htmlFor={id} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 134 }} title={hint}>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: warn ? 'var(--wrn)' : 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+        {label}
+      </span>
+      {custom ? (
+        <input
+          id={id} value={value} onChange={e => onChange(e.target.value)}
+          onBlur={() => { if (!value.trim()) setCustom(false); }}
+          placeholder={label} style={{ ...inputStyle, width: 134 }}
+        />
+      ) : (
+        <select
+          id={id} value={known ? value : ''} style={{ ...inputStyle, width: 134 }}
+          onChange={e => {
+            if (e.target.value === ' custom') { onChange(''); setCustom(true); return; }
+            onChange(e.target.value);
+          }}
+        >
+          <option value="">—</option>
+          {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
+          <option value={' custom'}>+ своё значение…</option>
+        </select>
+      )}
+      {warn && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)' }}>{warn}</span>}
+    </label>
   );
 }
 
@@ -549,6 +579,9 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
   const [reviewer, setReviewer] = useState(task.reviewer_agent ?? '');
   // ADR-LORE-015 (T14): task_type classification — closed dictionary, no free text.
   const [taskType, setTaskType] = useState(task.task_type ?? '');
+  // PL-19 п.2: ось ЗАЧЕМ и сценарий, который задача реализует.
+  const [workClass, setWorkClass] = useState(task.work_class ?? '');
+  const [ucId, setUcId] = useState((task.realizes_uc ?? [])[0] ?? '');
   const [busy, setBusy]       = useState(false);
   const [compPicker, setCompPicker] = useState(false);
   const [compBusy, setCompBusy]     = useState<string | null>(null);
@@ -593,6 +626,11 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         executorAgent: executor.trim() || null,
         reviewerAgent: reviewer.trim() || null,
         taskType: taskType || null,
+        workClass: workClass || null,
+        // Ребро REALIZES создаётся тем же вызовом (PL-14): отдельным шагом
+        // привязку забывали, и uc-задача оставалась без сценария — ровно то,
+        // что ловит слайс `unlinked_uc_tasks`.
+        ucId: workClass === 'uc' ? (ucId.trim() || null) : null,
       });
       registerNewRoles([author, executor, reviewer]);
       setEditing(false); onChanged();
@@ -637,6 +675,52 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             </span>
           );
         })()}
+        {/* work_class (ADR-LORE-022, PL-19) — ось ЗАЧЕМ, ортогональная task_type:
+            «дев-задача» отвечает КАК, а uc/jtd/enb — ради чего. Чип буквенный, а
+            не иконка: рядом уже стоит иконка типа, и вторая читалась бы как её
+            вариант, а не как другая ось. Для uc в подсказке — сам сценарий:
+            «реализует, но что?» — вопрос, ради которого сюда и смотрят. */}
+        {task.work_class && (() => {
+          const wc = task.work_class;
+          const tone = wc === 'uc' ? 'var(--g-do)' : wc === 'jtd' ? 'var(--job)' : 'var(--t3)';
+          const ucs = Array.isArray(task.realizes_uc) ? task.realizes_uc : [];
+          const hint = wc === 'uc'
+            ? `${t('lore.sprintDetail.wcUc', 'реализует сценарий')}${ucs.length ? ': ' + ucs.join(', ') : ''}`
+            : wc === 'jtd'
+              ? t('lore.sprintDetail.wcJtd', 'вспомогательная работа')
+              : t('lore.sprintDetail.wcEnb', 'enabler — обоснование в ADR');
+          return (
+            <span title={hint}
+              style={{
+                fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', textTransform: 'uppercase',
+                padding: '1px 4px', borderRadius: 3, flexShrink: 0, color: tone,
+                background: `color-mix(in srgb, ${tone} 12%, transparent)`,
+                border: `1px solid color-mix(in srgb, ${tone} 32%, transparent)`,
+              }}>
+              {wc}
+            </span>
+          );
+        })()}
+        {/* Сценарий — ССЫЛКОЙ, а не подсказкой у чипа. Задача класса `uc`
+            существует ради сценария; спрятанный в title он читался только
+            наведением мыши, то есть на телефоне не читался вовсе. Ведёт на
+            карточку US — оттуда видно и саму историю, и её фичу. */}
+        {(Array.isArray(task.realizes_uc) ? task.realizes_uc : []).filter(Boolean).map(uc => (
+          <a
+            key={uc}
+            href={`/lore?section=userStories&passport=${encodeURIComponent(uc)}`}
+            onClick={e => e.stopPropagation()}
+            title={t('lore.sprintDetail.wcUc', 'реализует сценарий')}
+            style={{
+              fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', flexShrink: 0,
+              padding: '1px 5px', borderRadius: 3, textDecoration: 'none',
+              color: 'var(--g-do)', border: '1px solid color-mix(in srgb, var(--g-do) 32%, transparent)',
+              background: 'color-mix(in srgb, var(--g-do) 10%, transparent)',
+            }}
+          >
+            {uc}
+          </a>
+        ))}
         <span style={S.taskId}>{task.task_id}</span>
         {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (
@@ -747,19 +831,62 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
                 <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>
               ))}
             </select>
+
+            {/* PL-19 п.2: ось ЗАЧЕМ рядом с осью КАК — они ортогональны
+                (ADR-022), и «дев-задача» ничего не говорит о том, ради чего
+                она делается. */}
+            <label htmlFor={`wc-${task.task_uid}`} style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'var(--mono)' }}>
+              {t('lore.sprintDetail.task.workClassLabel', 'Зачем')}
+            </label>
+            <select id={`wc-${task.task_uid}`} value={workClass} onChange={e => setWorkClass(e.target.value)}
+              style={{ ...inputStyle, width: 150 }}>
+              <option value="">{t('lore.sprintDetail.task.wcUnset', '— не задан —')}</option>
+              <option value="uc">{t('lore.sprintDetail.task.wcUcOpt', 'uc — реализует сценарий')}</option>
+              <option value="jtd">{t('lore.sprintDetail.task.wcJtdOpt', 'jtd — вспомогательная')}</option>
+              <option value="enb">{t('lore.sprintDetail.task.wcEnbOpt', 'enb — enabler')}</option>
+            </select>
+
+            {/* Поле сценария появляется ТОЛЬКО у класса uc: у jtd/enb сценария
+                нет по определению, и постоянно висящее пустое поле читалось бы
+                как незаполненное обязательное. */}
+            {workClass === 'uc' && (
+              <>
+                <input
+                  id={`uc-${task.task_uid}`}
+                  value={ucId}
+                  onChange={e => setUcId(e.target.value)}
+                  aria-label={t('lore.sprintDetail.task.ucLabel', 'Сценарий (REALIZES)')}
+                  placeholder={t('lore.sprintDetail.task.ucPlaceholder', 'US-GIT-MERGE')}
+                  style={{ ...inputStyle, width: 170, fontFamily: 'var(--mono)' }}
+                />
+                {!ucId.trim() && (
+                  // Предупреждение, а не блокировка сохранения: дисциплина D16
+                  // advisory (гейт задушил бы ввод — TOC-раздел ADR-022), а
+                  // нарушения собирает слайс `unlinked_uc_tasks`.
+                  <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)' }}>
+                    ⚠ {t('lore.sprintDetail.task.ucMissing', 'uc-задача без сценария')}
+                  </span>
+                )}
+              </>
+            )}
           </div>
           {/* ADR-LORE-014 §4 + ADR-LORE-012: author/executor/reviewer — dropdown
               lookup from the extensible `agent_role` dictionary (still accepts
               free text; new values are registered on save). reviewer must
               differ from executor before the task can reach done (backend gate). */}
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-            <AgentRoleInput id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
-              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
-            <AgentRoleInput id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
-              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
-            <AgentRoleInput id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
-              placeholder={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
-              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')} />
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+            <AgentRolePicker id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
+              label={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
+            <AgentRolePicker id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
+              label={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
+            <AgentRolePicker id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
+              label={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
+              hint={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')}
+              // Совпадение с исполнителем — жёсткий гейт бэкенда: задача не
+              // уйдёт в done. Узнавать об этом при сохранении поздно.
+              warn={reviewer && reviewer === executor
+                ? t('lore.sprintDetail.task.roleConflict', 'совпадает с исполнителем, задача не сможет перейти в done')
+                : null} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>
@@ -949,6 +1076,23 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const metaDragRef = useRef<{ x: number; w: number } | null>(null);
   const [topBlockH, setTopBlockH] = useState(220);
   const topDragRef = useRef<{ y: number; h: number } | null>(null);
+
+  /**
+   * MOB-13: на узком экране блок метаданных СВЁРНУТ по умолчанию.
+   *
+   * Причина отказа: `topBlockH` (220px) стоит на ОБЕИХ половинах верхнего
+   * блока, а на narrow они стакаются вертикально — то есть до ~440px занято
+   * контекстом и привязками ещё до первой задачи. Ручка, которой этот блок
+   * сжимают, отрисована только на широком, поэтому уменьшить его на телефоне
+   * было нечем: список задач просто уходил за нижнюю кромку. В ландшафте
+   * высоты ещё меньше — отсюда «не видны ни в каком положении».
+   *
+   * Свернуть, а не уменьшить: на 375px даже 220px — это весь первый экран.
+   * Паспорт спринта открывают ради задач; контекст и привязки нужны реже и
+   * доступны одним нажатием.
+   */
+  const [metaOpen, setMetaOpen] = useState(!narrow);
+  useEffect(() => { setMetaOpen(!narrow); }, [narrow]);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
 
   // Drag-resize the right meta column (projects/milestones/modules/ADR) — same
@@ -1321,7 +1465,24 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       {/* ── Top meta block: context (left) + projects/milestones/modules (right) ──
           Narrow: stack context above meta (side-by-side squishes context to
           one-word-per-line at 375px). */}
-      <div style={{ display: 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
+      {/* MOB-13: на узком — переключатель, открывающий метаданные. Без него
+          блок занимал первый экран целиком, и задачи были не видны вовсе. */}
+      {narrow && (
+        <button type="button" onClick={() => setMetaOpen(o => !o)}
+          aria-expanded={metaOpen}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '7px 14px', border: 'none', borderBottom: '1px solid var(--bd)',
+            background: 'var(--bg1)', color: 'var(--t2)', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' as const,
+            letterSpacing: '0.05em', fontWeight: 700,
+          }}>
+          <span style={{ color: 'var(--t3)' }}>{metaOpen ? '▾' : '▸'}</span>
+          {t('lore.sprintDetail.metaToggle', 'Контекст и привязки')}
+        </button>
+      )}
+
+      <div style={{ display: narrow && !metaOpen ? 'none' : 'flex', flexDirection: narrow ? 'column' as const : 'row' as const, borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
 
       {/* CONTEXT — left, flexible. maxHeight+overflow caps its growth so a long
           context_md can never crowd out the task list below (both this block and
@@ -1394,11 +1555,21 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
               to have a separate planned_milestone_id plain-field write alongside
               the TARGETS_MILESTONE edge — that field drifted out of sync on 62+
               sprints and was retired; the edge is the sole source of truth now. */}
-          <select disabled={planBusy || msLinking} style={{ ...lookupSelectStyle, width: '100%' }}
-            value={(sprint.milestone_ids ?? [])[0] ?? ''}
-            title={t('lore.sprintDetail.plan.milestone', 'Веха')}
-            onChange={async e => {
-              const v = e.target.value || null;
+          {/* ADR-LORE-034: контролы планирования на Mantine. Нативные <select> и
+              <input type="date"> рисуются средствами ОС — на Windows это белый
+              выпадающий список и системный календарь поверх тёмной темы; вид
+              менялся от машины к машине, и стилизовать их нечем. Здесь как раз
+              «сложные инпуты» из одобренной области. */}
+          <Select
+            disabled={planBusy || msLinking}
+            placeholder={t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}
+            aria-label={t('lore.sprintDetail.plan.milestone', 'Веха')}
+            value={(sprint.milestone_ids ?? [])[0] ?? null}
+            data={allMilestones.map(m => ({ value: m.id, label: milestoneOptionLabel(m) }))}
+            clearable
+            searchable
+            size="xs"
+            onChange={async (v: string | null) => {
               setPlanBusy(true); setMsLinking(true);
               try {
                 const prevLinked = sprint.milestone_ids ?? [];
@@ -1408,16 +1579,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 if (v) await linkSprintMilestone(sprint.sprint_id, v, 'add');
                 setSprint(s => s ? { ...s, milestone_ids: v ? [v] : [] } : s);
               } catch (err) { onError(err); } finally { setPlanBusy(false); setMsLinking(false); }
-            }}>
-            <option value="">{t('lore.sprintDetail.plan.milestonePlaceholder', '— веха —')}</option>
-            {allMilestones.map(m => <option key={m.id} value={m.id}>{milestoneOptionLabel(m)}</option>)}
-          </select>
+            }}
+          />
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input type="date" disabled={planBusy} style={lookupSelectStyle}
-              value={sprint.planned_start_date ?? ''}
-              title={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
-              onChange={async e => {
-                const v = e.target.value || null;
+            <DateInput
+              disabled={planBusy} size="xs" clearable valueFormat="DD.MM.YYYY"
+              style={{ flex: 1 }}
+              placeholder={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
+              aria-label={t('lore.sprintDetail.plan.start', 'Плановая дата старта')}
+              value={sprint.planned_start_date ?? null}
+              onChange={async (v: string | null) => {
                 setPlanBusy(true);
                 try {
                   await updateSprintPlan(sprint.sprint_id, { planned_start_date: v });
@@ -1425,11 +1596,13 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                 } catch (err) { onError(err); } finally { setPlanBusy(false); }
               }} />
             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>→</span>
-            <input type="date" disabled={planBusy} style={lookupSelectStyle}
-              value={sprint.planned_end_date ?? ''}
-              title={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
-              onChange={async e => {
-                const v = e.target.value || null;
+            <DateInput
+              disabled={planBusy} size="xs" clearable valueFormat="DD.MM.YYYY"
+              style={{ flex: 1 }}
+              placeholder={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
+              aria-label={t('lore.sprintDetail.plan.end', 'Плановая дата завершения')}
+              value={sprint.planned_end_date ?? null}
+              onChange={async (v: string | null) => {
                 setPlanBusy(true);
                 try {
                   await updateSprintPlan(sprint.sprint_id, { planned_end_date: v });

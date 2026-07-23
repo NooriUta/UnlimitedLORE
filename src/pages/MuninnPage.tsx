@@ -196,7 +196,7 @@ export default function MuninnPage() {
       {isMobile && (
         <select value={tab} onChange={e => setTab(e.target.value as TabId)}
                 data-testid="bench-nav-select"
-                style={{ width: '100%', marginBottom: 12, padding: '6px 8px', fontSize: 13,
+                style={{ width: '100%', marginBottom: 12, padding: '6px 8px', fontSize: 'var(--fs-md)',
                          background: 'var(--bg2)', color: 'var(--t1)', border: '1px solid var(--bd)', borderRadius: 6 }}>
           {NAV_SECTIONS.map(sec => (
             <optgroup key={sec.titleKey} label={t(sec.titleKey, sec.titleFallback) as string}>
@@ -215,7 +215,7 @@ export default function MuninnPage() {
                         borderRight: '1px solid var(--bd)', paddingRight: 10 }}>
             {NAV_SECTIONS.map(sec => (
               <div key={sec.titleKey} style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase',
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase',
                               letterSpacing: '.07em', margin: '0 0 6px 8px' }}>
                   {t(sec.titleKey, sec.titleFallback)}
                 </div>

@@ -56,18 +56,18 @@ export function DictionariesScreen() {
               const whatTests = pickLocale(lang, x.what_tests_ru_sci, x.what_tests_en, x.what_tests, x.what_tests_ru);
               return (
                 <tr key={x.task_id}>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>
                     {x.task_id}
                     {label && label !== x.task_id && (
-                      <div style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'inherit' }}>{label}</div>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'inherit' }}>{label}</div>
                     )}
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{x.n_cases ?? '—'}</td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{x.metric_default ?? '—'}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.n_cases ?? '—'}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.metric_default ?? '—'}</td>
                   <td>{x.status ? <span className="badge badge-neutral">{x.status}</span> : '—'}
-                    {x.gated_on && <span style={{ fontSize: 10, color: 'var(--t3)' }}> gated: {x.gated_on}</span>}
+                    {x.gated_on && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}> gated: {x.gated_on}</span>}
                   </td>
-                  <td style={{ fontSize: 12, color: 'var(--t2)', maxWidth: 460 }}>{whatTests ?? ''}</td>
+                  <td style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', maxWidth: 460 }}>{whatTests ?? ''}</td>
                 </tr>
               );
             })}
@@ -78,10 +78,10 @@ export function DictionariesScreen() {
       <div className="analytics-card" style={{ marginBottom: 12 }}>
         <div className="analytics-card-title">{t('bench.dict.levels', 'Levels')}</div>
         {(levels.rows ?? []).map(x => (
-          <div key={x.level_id} style={{ padding: '5px 0', fontSize: 12, borderBottom: '1px solid var(--bd)' }}>
+          <div key={x.level_id} style={{ padding: '5px 0', fontSize: 'var(--fs-base)', borderBottom: '1px solid var(--bd)' }}>
             <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{x.level_id}</span>
             {x.gold_graph && <span className="scope-tag" style={{ marginLeft: 6 }}>{x.gold_graph}</span>}
-            {x.description && <div style={{ color: 'var(--t2)', fontSize: 11, marginTop: 2 }}>{x.description}</div>}
+            {x.description && <div style={{ color: 'var(--t2)', fontSize: 'var(--fs-sm)', marginTop: 2 }}>{x.description}</div>}
           </div>
         ))}
       </div>
@@ -102,15 +102,15 @@ export function DictionariesScreen() {
               const hkLabel = pickLocale(lang, undefined, x.label_en, x.hop_kind_id, x.label_ru);
               return (
                 <tr key={x.hop_kind_id}>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>
                     {x.hop_kind_id}
                     {hkLabel && hkLabel !== x.hop_kind_id && (
-                      <div style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'inherit' }}>{hkLabel}</div>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', fontFamily: 'inherit' }}>{hkLabel}</div>
                     )}
                   </td>
-                  <td style={{ fontSize: 12, color: 'var(--t2)', maxWidth: 380 }}>{x.definition ?? ''}</td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>{x.walk_function ?? '—'}</td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{x.metric_recommended ?? '—'}</td>
+                  <td style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', maxWidth: 380 }}>{x.definition ?? ''}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{x.walk_function ?? '—'}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.metric_recommended ?? '—'}</td>
                 </tr>
               );
             })}
@@ -125,11 +125,11 @@ export function DictionariesScreen() {
           const decisionText = pickLocale(lang, d.decision_ru_sci, d.decision_en, d.decision, d.decision_ru);
           return (
             <details key={d.decision_id} style={{ marginBottom: 6 }}>
-              <summary style={{ cursor: 'pointer', fontSize: 12 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-base)' }}>
                 <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{d.decision_id}</span>
                 {d.topic && <span className="scope-tag" style={{ marginLeft: 6 }}>{d.topic}</span>}
                 {d.status && <span className="badge badge-neutral" style={{ marginLeft: 4 }}>{d.status}</span>}
-                {decisionText && <span style={{ color: 'var(--t2)', fontSize: 12 }}> · {decisionText}</span>}
+                {decisionText && <span style={{ color: 'var(--t2)', fontSize: 'var(--fs-base)' }}> · {decisionText}</span>}
               </summary>
               {rationale && <MartProse text={rationale} style={{ maxWidth: 940, padding: '4px 0 0 16px' }} />}
             </details>
@@ -157,12 +157,12 @@ export function DictionariesScreen() {
                 const label = pickLocale(lang, undefined, x.label_en, short(x.aspect_id), x.label_ru);
                 return (
                   <tr key={x.aspect_id}>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{x.aspect_id}</td>
+                    <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.aspect_id}</td>
                     <td>{x.status && <span className="badge badge-neutral">{x.status}</span>}</td>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{x.metric_default ?? '—'}</td>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{x.gold_shape ?? '—'}</td>
-                    <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{x.origin ? short(x.origin) : '—'}</td>
-                    <td style={{ fontSize: 12, color: 'var(--t2)' }}>{label}</td>
+                    <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.metric_default ?? '—'}</td>
+                    <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.gold_shape ?? '—'}</td>
+                    <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.origin ? short(x.origin) : '—'}</td>
+                    <td style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)' }}>{label}</td>
                   </tr>
                 );
               })}
@@ -194,11 +194,11 @@ export function DictionariesScreen() {
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {(categories.rows ?? []).length > 0 && (
               <div>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>cat:*</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 4 }}>cat:*</div>
                 {(categories.rows ?? []).map(x => {
                   const label = pickLocale(lang, undefined, x.label_en, short(x.category_id), x.label_ru);
                   return (
-                    <div key={x.category_id} style={{ fontSize: 12, padding: '2px 0' }}>
+                    <div key={x.category_id} style={{ fontSize: 'var(--fs-base)', padding: '2px 0' }}>
                       <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{x.category_id}</span>
                       {label && label !== x.category_id && <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{label}</span>}
                     </div>
@@ -208,11 +208,11 @@ export function DictionariesScreen() {
             )}
             {(dCats.rows ?? []).length > 0 && (
               <div>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>dcat:*</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 4 }}>dcat:*</div>
                 {(dCats.rows ?? []).map(x => {
                   const label = pickLocale(lang, undefined, x.label_en, short(x.dcat_id), x.label_ru);
                   return (
-                    <div key={x.dcat_id} style={{ fontSize: 12, padding: '2px 0' }}>
+                    <div key={x.dcat_id} style={{ fontSize: 'var(--fs-base)', padding: '2px 0' }}>
                       <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{x.dcat_id}</span>
                       {label && label !== x.dcat_id && <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{label}</span>}
                     </div>

@@ -13,6 +13,7 @@ import {
   type LoreSprintRow,
   type LoreSprintTask,
   type LoreKnowDocRow,
+  type LoreUcRow,
   type LoreKnowDoc,
 } from '../../api/lore';
 import { GameIcon } from './GameIcon';
@@ -41,7 +42,7 @@ interface ComponentSprintRow {
   release_ids: string[] | null;
 }
 
-type DocTab = 'adr' | 'spec' | 'qg' | 'doc' | 'sprint';
+type DocTab = 'adr' | 'spec' | 'qg' | 'doc' | 'sprint' | 'uc';
 
 type DocContent =
   | { type: 'spec';   data: LoreSpecPassport }
@@ -252,6 +253,8 @@ export default function LoreComponentPassport({
   const [allComponents, setAllComponents] = useState<LoreComponent[]>([]);
 
   const [docTab, setDocTab]           = useState<DocTab>('adr');
+  // PL-19: сценарии компонента — все уровни, не только корни.
+  const [ucs, setUcs] = useState<LoreUcRow[]>([]);
   const [selDocId, setSelDocId]       = useState<string | null>(null);
   const [docContent, setDocContent]   = useState<DocContent | null>(null);
   const [docLoading, setDocLoading]   = useState(false);
@@ -278,7 +281,7 @@ export default function LoreComponentPassport({
   // ── Data load ──────────────────────────────────────────────────────────────
   useEffect(() => {
     setLoading(true); setComp(null); setAdrs([]); setSpecs([]); setQgs([]); setDocs([]);
-    setSprints([]); setEditing(false); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
+    setSprints([]); setUcs([]); setEditing(false); setSelDocId(null); setDocContent(null); setSelTaskUid(null);
     setSprintStatusFilter(new Set()); setTaskStatusFilter(new Set());
     const ctrl = new AbortController();
 
@@ -287,14 +290,16 @@ export default function LoreComponentPassport({
       fetchLoreSlice<LoreAdrRow>          ('adrs',           { component: componentId }, ctrl.signal),
       fetchLoreSlice<LoreSpecRow>         ('specs',          { component: componentId }, ctrl.signal),
       fetchLoreSlice<QGRow>               ('quality_gates',  { component: componentId }, ctrl.signal),
-      // 'docs' has no server-side component filter (LoreArtifactList/LoreDocView
-      // fetch it unfiltered too) — filter client-side below.
+      // 'docs' has no server-side component filter (LoreArtifactList fetches it
+      // unfiltered too) — filter client-side below.
       fetchLoreSlice<LoreKnowDocRow>      ('docs',           undefined,                 ctrl.signal),
+      fetchLoreSlice<LoreUcRow>           ('use_cases_of_component', { component: componentId }, ctrl.signal),
     ])
-      .then(([compRows, adrRows, specRows, qgRows, docRows]) => {
+      .then(([compRows, adrRows, specRows, qgRows, docRows, ucRows]) => {
         const c = compRows[0] ?? null;
         setComp(c); setAdrs(adrRows); setSpecs(specRows); setQgs(qgRows);
         setDocs(docRows.filter(d => d.component_id === componentId));
+        setUcs(ucRows);
         setEditOwner(c?.owner ?? '');
         setEditTeam(c?.team ?? '');
         setEditIcon(c?.game_icon ?? '');
@@ -385,6 +390,7 @@ export default function LoreComponentPassport({
     { key: 'qg',     label: t('lore.componentPassport.tabs.qg', 'QG'),      count: qgs.length     },
     { key: 'doc',    label: t('lore.componentPassport.tabs.doc', 'Знания'),  count: docs.length    },
     { key: 'sprint', label: t('lore.componentPassport.tabs.sprints', 'Спринты'), count: sprints.length },
+    { key: 'uc',     label: t('lore.componentPassport.tabs.uc', 'Сценарии'), count: ucs.length },
   ];
 
   const docRows: { id: string; title: string; status: string | null; hint?: string | null; releases?: string[] | null }[] =
@@ -392,6 +398,15 @@ export default function LoreComponentPassport({
     : docTab === 'spec' ? specs.map(s => ({ id: s.spec_id, title: s.title ?? s.spec_id, status: null, hint: s.file_path?.split('/').pop() ?? null }))
     : docTab === 'qg'   ? qgs.map(q => ({ id: q.qg_id, title: q.name, status: q.status, hint: q.date_created?.slice(0, 10) ?? null }))
     : docTab === 'doc'  ? docs.map(d => ({ id: d.doc_id, title: d.title ?? d.doc_id, status: null, hint: d.kind }))
+    // PL-19: подсказкой — уровень цели и число реализующих задач. Уровень
+    // разделяет корни и сценарии в одном списке (иначе плоский перечень не
+    // отличает «зачем» от «как»), счётчик задач сразу показывает нетронутые.
+    : docTab === 'uc'   ? ucs.map(u => ({
+      id: u.uc_id,
+      title: u.title ?? u.uc_id,
+      status: u.status ?? null,
+      hint: [u.goal_level, `${(Array.isArray(u.task_uids) ? u.task_uids : []).length} задач`].filter(Boolean).join(' · '),
+    }))
     : sprints
         .map(s => { const { status } = taskTick(s.status_raw); return { id: s.sprint_id, title: s.name ?? s.sprint_id, status, releases: s.release_ids }; })
         .filter(r => sprintStatusFilter.size === 0 || sprintStatusFilter.has(r.status ?? ''));

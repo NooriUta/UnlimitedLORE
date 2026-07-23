@@ -17,10 +17,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ADR-LORE-022 (ACCEPTED): продуктовый слой — KnowFeature ⊃ KnowUseCase.
- * Vertex-only (без Hist, как KnowDecision/KnowQuestion). Статус Feature
- * «фича целиком» — ВЫЧИСЛЯЕМЫЙ факт (D4: shipped ⇔ все UC shipped), поэтому
- * запись не принимает status='shipped' на фиче — его выводит слайс.
+ * ADR-LORE-022 (ACCEPTED) + PL-28 (решение №141): продуктовый слой — ОДИН тип
+ * KnowUseCase с само-иерархией. «Фича» = корневой сценарий (goal_level
+ * ☁ cloud / 🪁 kite), «UC» = сценарий внутри (🌊 sea-level / 🐟 subfunction).
+ * /lore/feature и /lore/uc пишут в ОДИН тип: первый — вход «заведи корень» с
+ * проверкой уровня, второй — общий; родитель задаётся parent_uc_id.
+ * Vertex-only (без Hist, как KnowDecision/KnowQuestion). Статус корня
+ * «фича целиком» — ВЫЧИСЛЯЕМЫЙ факт (D4: shipped ⇔ все дочерние shipped),
+ * поэтому запись не принимает status='shipped' на корне — его выводит слайс.
  * Все link-пути с linked-валидацией: CREATE EDGE в пустой FROM/TO — тихий
  * no-op (правило корпуса), мост честно отдаёт linked:false + hint.
  */
@@ -29,14 +33,49 @@ public class LoreProductResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreProductResource.class);
 
-    private static final List<String> PRODUCT_STATUSES = List.of("proposed", "active", "shipped", "dropped");
 
-    /** Шкала целей Коберна — одна на весь слой (ADR-LORE-032 §1): фичи живут на
-     *  cloud/kite, UC — на sea-level/subfunction. Канон, словарь uc_goal_level. */
-    static final List<String> UC_GOAL_LEVELS = List.of("cloud", "kite", "sea-level", "subfunction");
+    /**
+     * Шкала целей Коберна — одна на весь слой (ADR-LORE-032 §1): корни живут на
+     * cloud/kite, сценарии — на sea-level/subfunction.
+     *
+     * <p>PL-29: это <b>фолбэк</b>, а не источник истины. Канон — словарь
+     * {@code uc_goal_level} (ADR-012, сид в схеме, {@code is_extensible=false}),
+     * и валидация читает его. Прежняя редакция сверялась только с этой
+     * константой, а словарь на write-path не читался вовсе — комментарий рядом
+     * при этом утверждал «канон, словарь uc_goal_level». Правка словаря не
+     * меняла поведения, правка константы не меняла словаря, и синхронизация
+     * держалась на внимательности.
+     *
+     * <p>Список остаётся на случай пустого словаря: свежая БД без сидов не
+     * должна отбивать любую запись — это превратило бы отсутствие справочника
+     * в отказ обслуживания.
+     */
+    static final List<String> UC_GOAL_LEVELS_FALLBACK = List.of("cloud", "kite", "sea-level", "subfunction");
 
-    /** Два веса оформления по Коберну (ADR-LORE-027-D1), словарь uc_rigor. */
-    static final List<String> UC_RIGORS = List.of("casual", "fully-dressed");
+    /** Два веса оформления по Коберну (ADR-LORE-027-D1). Канон — словарь uc_rigor. */
+    static final List<String> UC_RIGORS_FALLBACK = List.of("casual", "fully-dressed");
+
+    /**
+     * Допустимые коды словаря-канона. Пустой словарь → фолбэк (см. выше).
+     * Неактивные записи ({@code is_active=false}) не принимаются: справочник
+     * тем и полезен, что выведенное из обращения значение перестаёт проходить.
+     */
+    private List<String> dictCodes(String dictType, List<String> fallback) {
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT code FROM KnowDictEntry WHERE dict_type=:dt AND is_active=true",
+                Map.of("dt", dictType));
+            List<String> codes = rows.stream()
+                .map(r -> r.get("code")).filter(java.util.Objects::nonNull)
+                .map(String::valueOf).toList();
+            return codes.isEmpty() ? fallback : codes;
+        } catch (Exception e) {
+            // Справочник недоступен — валидируем по фолбэку, но говорим об этом
+            // в логе. Пропустить любое значение было бы хуже: канон закрытый.
+            LOG.warnf("[LORE DICT] словарь %s не прочитан (%s) — валидация по фолбэку", dictType, e.getMessage());
+            return fallback;
+        }
+    }
 
     /** Типы работ клиента (Остервальдер VPC), словарь job_kind. */
     static final List<String> JOB_KINDS = List.of("functional", "social", "emotional", "supporting");
@@ -60,7 +99,12 @@ public class LoreProductResource extends LoreResourceBase {
     @Inject
     LoreIngestService ingest;
 
-    // ── Feature ──────────────────────────────────────────────────────────────
+    // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
+    //
+    // PL-28 (решение №141): отдельного типа больше нет. Эндпоинт сохранён и
+    // пишет в KnowUseCase — это удобный вход «заведи корень», а не вторая
+    // сущность. Так остаётся в силе и ограничение ADR-032 §1: корень живёт
+    // только на верхних ступенях шкалы Коберна.
 
     public record FeatureRequest(String feature_id, String title, String body_md,
                                  String context_md, String status, String component_id,
@@ -77,18 +121,20 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("feature_id required");
         if (!SAFE_ID.matcher(req.feature_id()).matches())
             return badParams("feature_id contains illegal characters");
-        if (req.status() != null && !PRODUCT_STATUSES.contains(req.status()))
-            return badParams("status must be one of: " + PRODUCT_STATUSES);
-        // D4: shipped у фичи не назначается рукой — он выводится из UC.
-        if ("shipped".equals(req.status()))
-            return badParams("feature 'shipped' is computed from its UCs (D4), not set directly");
+        // D4/D17: у корня рукой ставятся только намерения — как и у любого другого
+        // сценария (тип-то один). Прежняя редакция запрещала лишь shipped, и
+        // «active» проезжал: корень можно было объявить работающим при нулевой работе.
+        if (req.status() != null && !UcReadinessCalculator.INTENT_STATUSES.contains(req.status()))
+            return badParams("status must be one of: " + UcReadinessCalculator.INTENT_STATUSES
+                + " — " + UcReadinessCalculator.COMPUTED_STATUSES + " вычисляются из дочерних "
+                + "сценариев и их задач (D4/D17), рукой не назначаются");
         // ADR-032 §1: фича — UC уровня стратегии, поэтому живёт на ВЕРХНИХ ступенях
         // той же шкалы Коберна; sea-level/subfunction — высота сценария, не фичи.
         if (req.goal_level() != null && !List.of("cloud", "kite").contains(req.goal_level()))
             return badParams("feature goal_level must be cloud|kite (☁ стратегия / 🪁 обзор); "
                 + "sea-level и subfunction — уровни UC, не фичи (ADR-LORE-032 §1)");
         try {
-            StringBuilder sql = new StringBuilder("UPDATE KnowFeature SET feature_id=:id");
+            StringBuilder sql = new StringBuilder("UPDATE KnowUseCase SET uc_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
             p.put("id", req.feature_id());
             if (req.title() != null)        { sql.append(", title=:t");        p.put("t", req.title()); }
@@ -96,10 +142,14 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.context_md() != null)   { sql.append(", context_md=:cx");  p.put("cx", req.context_md()); } // D13
             if (req.status() != null)       { sql.append(", status=:s");       p.put("s", req.status()); }
             if (req.component_id() != null) { sql.append(", component_id=:c"); p.put("c", req.component_id()); }
-            if (req.goal_level() != null)   { sql.append(", goal_level=:gl");  p.put("gl", req.goal_level()); }
+            // Уровень обязателен по существу: слайс «Фичи» отбирает корни именно
+            // по goal_level, и корень без него был бы невидим в своём же разделе.
+            // Умолчание ☁ cloud — самый верхний уровень шкалы.
+            sql.append(", goal_level=:gl");
+            p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
             sql.append(", date_created = ifnull(date_created, :d)");
             p.put("d", LocalDate.now().toString());
-            sql.append(" UPSERT WHERE feature_id=:id");
+            sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
             return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id())));
@@ -112,8 +162,9 @@ public class LoreProductResource extends LoreResourceBase {
     // ── UseCase ──────────────────────────────────────────────────────────────
 
     // actor-строки нет (D12): акторы — вершины KnowActor, связь HAS_ACTOR через uc/link.
+    // parent_uc_id (PL-28) заменил feature_id: родитель теперь того же типа.
     public record UcRequest(String uc_id, String title, String scenario_md,
-                            String acceptance_md, String status, String feature_id,
+                            String acceptance_md, String status, String parent_uc_id,
                             String goal_level, String rigor, String priority) {}
 
     @POST
@@ -127,14 +178,21 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("uc_id required");
         if (!SAFE_ID.matcher(req.uc_id()).matches())
             return badParams("uc_id contains illegal characters");
-        if (req.status() != null && !PRODUCT_STATUSES.contains(req.status()))
-            return badParams("status must be one of: " + PRODUCT_STATUSES);
+        // PL-15 (D17): руками ставятся только НАМЕРЕНИЯ. active/shipped/in_rework
+        // выводит вычислитель из REALIZES-задач — иначе появляется расхождение
+        // «сценарий shipped, задачи открыты», а именно его этот ADR и запрещает.
+        // У корня такой запрет стоял с самого начала (§D4); здесь он был забыт,
+        // и через /lore/uc можно было объявить готовность в обход работы.
+        if (req.status() != null && !UcReadinessCalculator.INTENT_STATUSES.contains(req.status()))
+            return badParams("status must be one of: " + UcReadinessCalculator.INTENT_STATUSES
+                + " — " + UcReadinessCalculator.COMPUTED_STATUSES + " вычисляются из задач (D17) "
+                + "и рукой не назначаются");
         // ADR-027 §2: классификация Коберна — канон словарей, свободных значений нет.
-        if (req.goal_level() != null && !UC_GOAL_LEVELS.contains(req.goal_level()))
-            return badParams("goal_level must be one of: " + UC_GOAL_LEVELS
+        if (req.goal_level() != null && !dictCodes("uc_goal_level", UC_GOAL_LEVELS_FALLBACK).contains(req.goal_level()))
+            return badParams("goal_level must be one of: " + dictCodes("uc_goal_level", UC_GOAL_LEVELS_FALLBACK)
                 + " (☁ cloud/🪁 kite — уровень фичи, 🌊 sea-level/🐟 subfunction — уровень UC)");
-        if (req.rigor() != null && !UC_RIGORS.contains(req.rigor()))
-            return badParams("rigor must be one of: " + UC_RIGORS);
+        if (req.rigor() != null && !dictCodes("uc_rigor", UC_RIGORS_FALLBACK).contains(req.rigor()))
+            return badParams("rigor must be one of: " + dictCodes("uc_rigor", UC_RIGORS_FALLBACK));
         try {
             // Уровень цели задан — вес по умолчанию выводится из него (ADR-027-D1),
             // но явный rigor автора сильнее вычисленного дефолта.
@@ -163,7 +221,7 @@ public class LoreProductResource extends LoreResourceBase {
             }
             if (req.acceptance_md() != null) { sql.append(", acceptance_md=:ac"); p.put("ac", req.acceptance_md()); }
             if (req.status() != null)        { sql.append(", status=:s");         p.put("s", req.status()); }
-            if (req.feature_id() != null)    { sql.append(", feature_id=:f");     p.put("f", req.feature_id()); }
+            if (req.parent_uc_id() != null)  { sql.append(", parent_uc_id=:f");   p.put("f", req.parent_uc_id()); }
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
@@ -173,7 +231,7 @@ public class LoreProductResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
 
-            // feature_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
+            // parent_uc_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
             // (класс багов «поле есть — ребра нет», relinkParentEdge/SpecComponentEdge).
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
@@ -182,7 +240,16 @@ public class LoreProductResource extends LoreResourceBase {
             // чинит оформление в той же сессии, не дожидаясь ревью.
             out.put("quality", qualityOf(req.uc_id()));
             out.put("uc_id", req.uc_id());
-            if (req.feature_id() != null && !req.feature_id().isBlank()) {
+            if (req.parent_uc_id() != null && !req.parent_uc_id().isBlank()) {
+                // Само-иерархия допускает цикл, которого раньше не было по
+                // построению (два разных типа). Проверяем явно: сценарий,
+                // ставший собственным предком, зациклил бы и обход слайса, и
+                // вычислитель готовности.
+                if (req.parent_uc_id().equals(req.uc_id()))
+                    return badParams("parent_uc_id совпадает с uc_id: сценарий не может быть своим родителем");
+                if (isDescendant(req.uc_id(), req.parent_uc_id()))
+                    return badParams("parent_uc_id «" + req.parent_uc_id() + "» — потомок «" + req.uc_id()
+                        + "»: связь замкнула бы иерархию в цикл");
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(inE('DECOMPOSES_INTO')) FROM KnowUseCase WHERE uc_id=:id)",
                     Map.of("id", req.uc_id()))).await().indefinitely();
@@ -190,13 +257,14 @@ public class LoreProductResource extends LoreResourceBase {
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE DECOMPOSES_INTO " +
-                        "FROM (SELECT FROM KnowFeature WHERE feature_id=:f) " +
+                        "FROM (SELECT FROM KnowUseCase WHERE uc_id=:f) " +
                         "TO   (SELECT FROM KnowUseCase WHERE uc_id=:id) IF NOT EXISTS",
-                        Map.of("f", req.feature_id(), "id", req.uc_id())))
+                        Map.of("f", req.parent_uc_id(), "id", req.uc_id())))
                     .await().indefinitely().result();
                 boolean linked = created != null && !created.isEmpty();
-                out.put("feature_linked", linked);
-                if (!linked) out.put("hint", "фича «" + req.feature_id() + "» не найдена — создайте её через /lore/feature");
+                out.put("parent_linked", linked);
+                if (!linked) out.put("hint", "родительский сценарий «" + req.parent_uc_id()
+                    + "» не найден — заведите его через /lore/uc или /lore/feature");
             }
             return noStore(Response.ok(out));
         } catch (Exception e) {
@@ -205,9 +273,41 @@ public class LoreProductResource extends LoreResourceBase {
         }
     }
 
+    /**
+     * PL-28: цикл в само-иерархии. Пока типов было два, «фича внутри своего же
+     * сценария» была невозможна по построению — один тип это разрешает, и
+     * защита обязана появиться вместе с ним. Зацикленная иерархия повесила бы
+     * и обход слайса, и вычислитель готовности (D17), причём молча.
+     *
+     * Возвращает true, если candidate достижим из root по DECOMPOSES_INTO,
+     * то есть назначение его родителем замкнёт кольцо. MAXDEPTH — страховка на
+     * случай, если кольцо уже как-то попало в данные: без неё обход по битому
+     * графу не закончится никогда.
+     */
+    private boolean isDescendant(String rootUcId, String candidateUcId) {
+        try {
+            List<Map<String, Object>> hit = ingest.queryPublic(
+                "SELECT uc_id FROM (TRAVERSE out('DECOMPOSES_INTO') FROM "
+                + "(SELECT FROM KnowUseCase WHERE uc_id=:root) MAXDEPTH 20) WHERE uc_id=:cand",
+                Map.of("root", rootUcId, "cand", candidateUcId));
+            return !hit.isEmpty();
+        } catch (Exception e) {
+            // Проверка не удалась — не пропускаем запись «на всякий случай»:
+            // молча созданный цикл дороже отказа, который видно сразу.
+            LOG.warnf("[LORE UC] проверка цикла %s → %s не выполнена: %s",
+                rootUcId, candidateUcId, e.getMessage());
+            throw new IllegalStateException("проверка иерархии не выполнена: " + e.getMessage(), e);
+        }
+    }
+
     // ── Actor (D12): проектируемая роль приложения ───────────────────────────
 
-    public record ActorRequest(String actor_id, String name, String kind, String body_md) {}
+    // PL-10 (D18): актор ПРОЕКТНЫЙ. «Администратор» одного продукта — не та же
+    // роль, что одноимённая роль другого, и без разделения RBAC-матрица,
+    // выводимая из тройки «роль × компонент × сценарий», склеивает чужие
+    // продукты в одну строку.
+    public record ActorRequest(String actor_id, String name, String kind, String body_md,
+                               String project) {}
 
     @POST
     @Path("actor")
@@ -232,7 +332,29 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE actor_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "actor_id", req.actor_id())));
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            // D18: принадлежность проекту — РЕБРО, а не поле. Поле было бы второй
+            // правдой рядом с BELONGS_TO_PROJECT, который уже несут спринты.
+            if (req.project() != null && !req.project().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowActor WHERE actor_id=:id)",
+                    Map.of("id", req.actor_id()))).await().indefinitely();
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> created = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                        "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                        Map.of("id", req.actor_id(), "p", req.project())))
+                    .await().indefinitely().result();
+                boolean linked = created != null && !created.isEmpty();
+                out.put("project_linked", linked);
+                if (!linked) out.put("hint", "проект «" + req.project() + "» не зарегистрирован — "
+                    + "заведите его через project_new, иначе привязка молча не создаётся");
+            }
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
@@ -477,7 +599,7 @@ public class LoreProductResource extends LoreResourceBase {
             }
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowFeature WHERE feature_id=:fid) " +
+                    "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
                     "OR @in.milestone_id=:tid OR @in.component_id=:tid", p))
                     .await().indefinitely();
@@ -487,7 +609,7 @@ public class LoreProductResource extends LoreResourceBase {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowFeature WHERE feature_id=:fid) " +
+                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowUseCase WHERE uc_id=:fid) " +
                     "TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
@@ -513,7 +635,7 @@ public class LoreProductResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.uc_id() == null || req.uc_id().isBlank()
                 || req.rel() == null || req.target_id() == null || req.target_id().isBlank())
-            return badParams("uc_id, rel (task|adr|decision|actor|includes|extends|relieves|delivers|performs), target_id required");
+            return badParams("uc_id, rel (task|adr|decision|actor|component|project|includes|extends|relieves|delivers|performs), target_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
@@ -538,6 +660,31 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "HAS_ACTOR";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                }
+                // PL-10 (D14): компонент у сценария — ПРЯМОЙ, а не только через
+                // родителя. Ядро ценности слоя — тройка «роль × компонент ×
+                // сценарий», из которой выводится RBAC-матрица; пока компонент
+                // брался только у корня, все его дочерние сценарии считались
+                // принадлежащими одному и тому же модулю, и тройка вырождалась.
+                case "component" -> {
+                    edge = "BELONGS_TO";
+                    fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    toSql   = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                }
+                /**
+                 * Проект сценария/корня (BELONGS_TO_PROJECT).
+                 *
+                 * Слайсы слоя отдают `projects` с PL-10, но записать проект
+                 * было НЕЧЕМ: у `uc_link` этого отношения не существовало, и
+                 * поле в выдаче всегда приходило пустым. При нескольких
+                 * продуктах в одном корпусе это не косметика — без проекта
+                 * сценарии разных продуктов сливаются в один список, ровно как
+                 * одноимённые роли акторов без проекта (D18/D22).
+                 */
+                case "project" -> {
+                    edge = "BELONGS_TO_PROJECT";
+                    fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    toSql   = "(SELECT FROM KnowGitProject WHERE slug=:tid)";
                 }
                 case "includes" -> { // D13: UC_INCLUDES — обязательный под-сценарий
                     edge = "UC_INCLUDES";
@@ -565,14 +712,14 @@ public class LoreProductResource extends LoreResourceBase {
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
                 }
-                default -> { return badParams("rel must be task|adr|decision|actor|includes|extends|relieves|delivers|performs"); }
+                default -> { return badParams("rel must be task|adr|decision|actor|component|includes|extends|relieves|delivers|performs"); }
             }
             if (remove) {
                 boolean fromUc = !"task".equals(req.rel());
                 String delSql = fromUc
                     ? "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) " +
                       "WHERE @in.adr_id=:tid OR @in.decision_id=:tid OR @in.actor_id=:tid OR @in.uc_id=:tid " +
-                      "OR @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid"
+                      "OR @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid OR @in.component_id=:tid"
                     : "DELETE FROM (SELECT expand(inE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) WHERE @out.task_uid=:tid";
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", delSql, p))
                     .await().indefinitely();
@@ -666,9 +813,24 @@ public class LoreProductResource extends LoreResourceBase {
         }
     }
 
-    public record UcQualityRequest(String uc_id) {}
+    /**
+     * Две формы запроса (ADR-027-D3):
+     * <ul>
+     *   <li>{@code uc_id} — оценить СОХРАНЁННЫЙ UC (ревью, MCP);</li>
+     *   <li>тело напрямую ({@code scenario_md}/{@code acceptance_md}/…) — живой
+     *       линтер формы (PL-17): панель обязана пересчитываться ПО ХОДУ набора,
+     *       до создания записи. Оценивать нечего было бы, требуй эндпоинт
+     *       обязательный uc_id — форма создания US не смогла бы показать линтер
+     *       ни разу, ровно поэтому его из фронта и не звали.</li>
+     * </ul>
+     * Флаги {@code has_primary_actor}/{@code has_traced_to} — рёбра, которых у
+     * ещё не созданного UC нет; в форме они false и попадают в подсказки, не в
+     * штраф (D9/D14 — advisory).
+     */
+    public record UcQualityRequest(String uc_id, String rigor, String goal_level,
+                                   String scenario_md, String acceptance_md,
+                                   Boolean has_primary_actor, Boolean has_traced_to) {}
 
-    /** ADR-027-D3 режим (б): re-lint без записи — для ревью чужих UC и панели UI. */
     @POST
     @Path("uc/quality")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -676,8 +838,29 @@ public class LoreProductResource extends LoreResourceBase {
     public Response ucQuality(UcQualityRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         requireAdmin(role);
-        if (req == null || req.uc_id() == null || req.uc_id().isBlank())
-            return badParams("uc_id required");
+        if (req == null) return badParams("body required");
+
+        // Тело важнее id: если пришли поля сценария — судим их (живой линтер),
+        // не подменяя оценку сохранённой версией под тем же id.
+        if (req.scenario_md() != null || req.acceptance_md() != null) {
+            UcQuality.Result res = UcQuality.evaluate(
+                req.rigor(), req.goal_level(), req.scenario_md(), req.acceptance_md(),
+                Boolean.TRUE.equals(req.has_primary_actor()),
+                Boolean.TRUE.equals(req.has_traced_to()));
+            List<Map<String, Object>> findings = new java.util.ArrayList<>();
+            for (UcQuality.Finding fnd : res.findings())
+                findings.add(Map.of("code", fnd.code(), "ok", fnd.ok(),
+                    "required", fnd.required(), "message", fnd.message()));
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("rigor", res.rigor());
+            out.put("score", res.score());
+            out.put("max", res.max());
+            out.put("findings", findings);
+            return noStore(Response.ok(out));
+        }
+
+        if (req.uc_id() == null || req.uc_id().isBlank())
+            return badParams("uc_id or scenario_md/acceptance_md required");
         Map<String, Object> q = qualityOf(req.uc_id());
         if (q.containsKey("error") && "uc not found".equals(q.get("error")))
             return noStore(Response.status(Response.Status.NOT_FOUND)

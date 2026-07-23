@@ -94,7 +94,7 @@ export function NewTestModal({ onClose, onCreated }: Props) {
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="muted" style={{ fontSize: 11 }}>
+          <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>
             Будет создан файл: <code>tests/{fullFile()}</code>
           </div>
           {err && <div className="error" style={{ marginTop: 4 }}>{err}</div>}

@@ -34,7 +34,7 @@ export function RevisionTimeline({ revs, facts }: { revs: SubstrateRevRow[]; fac
           const active = selected?.rev_id === r.rev_id;
           return (
             <span key={r.rev_id} style={{ display: 'inline-flex', alignItems: 'center' }}>
-              {i > 0 && <span style={{ color: 'var(--t3)', margin: '0 6px', fontSize: 14 }}>→</span>}
+              {i > 0 && <span style={{ color: 'var(--t3)', margin: '0 6px', fontSize: 'var(--fs-lg)' }}>→</span>}
               <button type="button" onClick={() => setPicked(r.rev_id)}
                       data-testid={`rev-chip-${r.rev_id}`}
                       aria-pressed={active}
@@ -42,17 +42,17 @@ export function RevisionTimeline({ revs, facts }: { revs: SubstrateRevRow[]; fac
                                background: 'var(--bg2)', maxWidth: 250,
                                border: `1px solid ${active ? 'var(--acc)' : 'var(--bd)'}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 12,
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)',
                                  color: r.is_current ? 'var(--t1)' : 'var(--t3)',
                                  textDecoration: r.is_current ? undefined : 'line-through' }}>
                     {r.config_rev ?? r.rev_id}
                   </span>
                   {r.is_current && <span className="badge badge-suc">current</span>}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2 }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginTop: 2 }}>
                   {(r.valid_from ?? '—').slice(0, 16)} → {r.valid_to ? r.valid_to.slice(0, 16) : 'now'}
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, marginTop: 2,
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', marginTop: 2,
                               color: u ? 'var(--t2)' : 'var(--t3)' }}>
                   {u
                     ? `${u.nFacts} ${t('bench.sub.revFacts', 'facts')} · ${u.runs.length} ${t('bench.sub.revRuns', 'runs')} · F1 ${fmtF1(u.meanF1)}`
@@ -66,7 +66,7 @@ export function RevisionTimeline({ revs, facts }: { revs: SubstrateRevRow[]; fac
 
       {selected && (
         <div data-testid="rev-detail" style={{ borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
-          <div style={{ fontSize: 12, marginBottom: 6 }}>
+          <div style={{ fontSize: 'var(--fs-base)', marginBottom: 6 }}>
             <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{selected.config_rev ?? selected.rev_id}</span>
             <span style={{ color: 'var(--t3)' }}>
               {' '}· {selected.valid_from ?? '—'} → {selected.valid_to || 'now'}
@@ -77,7 +77,7 @@ export function RevisionTimeline({ revs, facts }: { revs: SubstrateRevRow[]; fac
           </div>
           {arch
             ? <MartProse text={arch} style={{ maxWidth: 980 }} />
-            : <span style={{ fontSize: 12, color: 'var(--t3)' }}>
+            : <span style={{ fontSize: 'var(--fs-base)', color: 'var(--t3)' }}>
                 {t('bench.sub.revNoArch', 'no architecture prose recorded for this revision')}
               </span>}
         </div>

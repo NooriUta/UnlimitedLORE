@@ -34,7 +34,9 @@
     "themeLight": "Light theme",
     "logout": "Sign out",
     "profile": "Profile",
-    "searchPlaceholder": "id, title, text…"
+    "searchPlaceholder": "id, title, text…",
+    "role": "role",
+    "sessionUntil": "session until"
   },
   "nav": {
     "lore": "LORE",
@@ -183,7 +185,14 @@
       "whatTests": "What it tests",
       "definition": "Definition",
       "walk": "Walk function",
-      "metricRec": "Recommended metric"
+      "metricRec": "Recommended metric",
+      "aspectOrigins": "Aspect origins",
+      "aspects": "Aspects — gold classification axes",
+      "categories": "Case categories",
+      "goldShape": "Gold shape",
+      "goldShapes": "Gold shapes",
+      "label": "Label",
+      "origin": "Origin"
     },
     "reg": {
       "casesTitle": "Cases & gold — the question bank with its answer revisions",
@@ -372,8 +381,17 @@
       "zerosTitle": "structural zeros (by design)",
       "failures": "Failure profile (rule-based v0)",
       "failuresHint": "empty taxonomy = scored normally",
-      "allRuns": "all runs"
-    }
+      "allRuns": "all runs",
+      "arch": "Architecture",
+      "archHint": "current revision prose"
+    },
+    "decisions": {
+      "rationale": "rationale",
+      "search": "Search by topic, text, rationale…",
+      "title": "Methodological decisions"
+    },
+    "noMatch": "No matches",
+    "unresolvedRevExcluded": "unresolvable (run w/o started_ts, D-1)"
   },
   "lore": {
     "adrEditor": {
@@ -414,7 +432,8 @@
         "3m": "3m",
         "6m": "6m",
         "1y": "Year"
-      }
+      },
+      "decisionCount": "decisions: {{n}}"
     },
     "adrPassportView": {
       "loading": "Loading {{adrId}}…",
@@ -428,7 +447,21 @@
       "supersedes": "Supersedes",
       "implementedInSprint": "Implemented in sprint",
       "releasedIn": "Released in",
-      "tags": "Tags"
+      "tags": "Tags",
+      "cancel": "Cancel",
+      "componentsMulti": "Components",
+      "decComponent": "Component — pick from list (optional)",
+      "decisions": "Decisions under this ADR",
+      "decNew": "+ decision",
+      "downloadMd": "⬇ MD",
+      "downloadMdTitle": "Download the full ADR as Markdown",
+      "noDecisions": "No decisions yet — add one with \"+ decision\".",
+      "openInRegister": "Open in the question register (editable)",
+      "projectsMulti": "Projects",
+      "questions": "Open questions of this ADR",
+      "save": "Save",
+      "tracedBy": "Scenarios referring to it",
+      "justifies": "Tasks justified by it"
     },
     "analytics": {
       "flow": {
@@ -438,7 +471,15 @@
           "bucket8to14": "8–14d",
           "bucket15to30": "15–30d",
           "bucket30plus": "30d+"
-        }
+        },
+        "accuracyHint": "Estimate accuracy for closed tasks: plan = effort_days, actual = calendar duration (created→closed). ⚠ \"spent\" is wall-clock, not net effort. Real closures only (since Jun 12, states>1).",
+        "blockedHint": "Sprints that ever passed through BLOCKED status (by state history): {{ever}} of {{total}} ({{pct}}%). Currently blocked: {{nowBlocked}}.",
+        "deployLagHint": "Days from sprint closure (done_date) to the first release it shipped in (release_dates). Median/p75 across such sprints. On the right — how many done sprints still have no release.",
+        "leadTimeHint": "Days from the sprint's actual start (earliest valid_from in state history, sprint_starts slice) to closure (done_date). Median/p25/p75/max + histogram across closed sprints.",
+        "releaseCadenceHint": "Release pace per project: frequency = releases in the last 30 days ÷ (30/7) = releases per week. Median = median gap in days between the project's consecutive releases.",
+        "releasePerWeekHint": "Releases per week over the last 30 days",
+        "throughputBarHint": "{{label}}: {{count}} tasks",
+        "throughputHint": "Tasks closed per ISO week (KnowTaskHist → DONE). Counted since Jun 12 (earlier is bulk import) and only tasks with real status progression (states>1), excluding archival tasks \"born done\"."
       },
       "overview": {
         "noProject": "— no project",
@@ -527,7 +568,27 @@
         "cumulativeHint": "Running total of closed sprints by day (by done_date). Steepness = pace. Respects the project filter.",
         "cumulativeDone": "Cumulative done",
         "apr19": "Apr 19",
-        "today": "today"
+        "today": "today",
+        "paretoCumHint": "Cumulative share (Pareto)",
+        "paretoHint": "Each component's share of all tasks (Pareto). Σ — cumulative share top to bottom. Coverage = components with sprints / all components.",
+        "paretoShareHint": "{{pct}}% of all tasks"
+      },
+      "qg": {
+        "attentionHint": "FAIL/WARN invariants across the whole fleet (content_md × latest ClRoutineMetric, status recomputed via compute_status — ADR-QG-002/004). Full detail — click a gate.",
+        "qgCellHint": "{{qgId}}\\nRoutine: {{routine}}\\nStatus: {{status}}",
+        "qgDistributionHint": "Distribution of Quality Gates by status (closed/active/deprecated). Large % = closed / (closed + active). Below — how many components have at least one QG.",
+        "recommendationsHint": "QGRecommendation WHERE status=pending, sorted P0→P1→P2.",
+        "runHistoryHint": "Runs are grouped by run_id (or routine+date). Time is taken from started_at/finished_at.",
+        "statusGridHint": "Color = worst status among the gate's invariants (content_md × latest metric, ADR-QG-002 compute_status). Gray = no runs/metrics.",
+        "violationsHint": "QGJobTask WHERE status=open, by severity."
+      },
+      "tech": {
+        "col": {
+          "tech": "Technology"
+        },
+        "empty": "No technologies registered for any component.",
+        "subtitle": "{{techs}} technologies · {{comps}} components",
+        "title": "Technology × component matrix"
       }
     },
     "artifactDoc": {
@@ -546,7 +607,13 @@
         "runbook": "Runbook",
         "doc": "Document",
         "qg": "Quality Gate"
-      }
+      },
+      "cancel": "Cancel",
+      "chars": "{{n}} chars",
+      "edit": "✎ Edit",
+      "htmlLegacyWarning": "⚠ This document is currently stored as HTML. If you save text here (even in a single field), the display will switch to Markdown and the current HTML content will stop showing (it is not deleted, just no longer used).",
+      "save": "Save",
+      "saving": "Saving…"
     },
     "artifactList": {
       "kindSpec": "Specs",
@@ -558,7 +625,9 @@
       "typeLabel": "Type",
       "moduleLabel": "Module",
       "searchPlaceholder": "Search by name…",
-      "notFound": "Nothing found."
+      "notFound": "Nothing found.",
+      "exportRunbooksTitle": "Export runbooks checklist to Markdown",
+      "filtersLabel": "Filters"
     },
     "componentList": {
       "sprintCountTitle": "Linked sprints",
@@ -572,7 +641,9 @@
         "adr": "ADR",
         "spec": "Spec",
         "qg": "QG",
-        "sprints": "Sprints"
+        "sprints": "Sprints",
+        "doc": "Knowledge",
+        "uc": "Scenarios"
       },
       "editButtonTitle": "Edit",
       "edit": {
@@ -603,7 +674,8 @@
         "content": "Content",
         "tasks": "Tasks",
         "notesEmpty": "No notes",
-        "sprintContentEmpty": "Sprint content is empty."
+        "sprintContentEmpty": "Sprint content is empty.",
+        "docHtmlOnly": "The document is stored as HTML — open it in the \"Knowledge\" tab to view it."
       },
       "qgStatus": {
         "active": "active",
@@ -627,7 +699,15 @@
       "ungroupTitle": "Remove grouping",
       "groupTitle": "Group by status",
       "groupButton": "group",
-      "noneFound": "No decisions found."
+      "noneFound": "No decisions found.",
+      "componentLabel": "Component",
+      "filtersLabel": "Filters",
+      "onlyIndependent": "Independent",
+      "onlyIndependentTitle": "Only independent decisions (without an ADR)",
+      "parentHas": "Under an ADR",
+      "parentLabel": "ADR link",
+      "parentOrphan": "Independent",
+      "statusLabel": "Status"
     },
     "docView": {
       "filterPlaceholder": "Filter documents…",
@@ -736,7 +816,47 @@
       "healthChecking": "checking…",
       "healthUpWithCount": "backend :9100 up · {{count}} slices",
       "healthUp": "backend :9100 up",
-      "healthDown": "backend :9100 not responding"
+      "healthDown": "backend :9100 not responding",
+      "clientClaude": "Claude Code",
+      "clientOpenCode": "OpenCode",
+      "clientOpenCodeNote": "same MCP server, but each agent gets its own",
+      "clientOpenCodeNote2": "this block IS the lazy mechanism on this client (there's no server-side dispatcher). Below is an example for",
+      "clientOpenCodeNote3": "the other 6 profiles work the same way, just with their own allow-list (ready-made blocks live in",
+      "clientOpenCodeNote4": " — each file is already a valid agent-config fragment, so it can be included by reference instead of copying).",
+      "gateLabel": "The one hard SDLC gate.",
+      "gateText": "Profiles are a visibility filter, not security: the server will still execute any call with",
+      "gateText2": "The one real restriction lives on the backend —",
+      "gateText3": "on",
+      "gateText4": "is rejected with 409 NO_SELF_ACCEPTANCE if",
+      "gateText5": "matches",
+      "gateText6": "(ADR-LORE-014 §4). No one accepts their own work.",
+      "lazyClaude": "ToolSearch — tool schemas load on demand, not all at once. Only names sit in context.",
+      "lazyColClient": "Client",
+      "lazyColHow": "How it narrows",
+      "lazyIntro": "60 tools is too many to dump on every agent: context bloats and the role blurs (\"anyone can write\"). ADR-LORE-014 solves this",
+      "lazyIntro2": "— the server always returns the full list, and narrowing happens client-side, by tool name.",
+      "lazyNoDispatcher": "without a server-side dispatcher",
+      "lazyOpenCode": "permission wildcard in the profile:",
+      "lazyTitle": "Lazy tool access and role profiles",
+      "lazyWhyNames": "This is exactly why the renaming was done.",
+      "lazyWhyNames2": "The",
+      "lazyWhyNames3": "naming scheme isn't cosmetic — it gives a stable prefix the client filters on. With the old names (",
+      "lazyWhyNames4": ") everything shared the same prefix, so there was nothing to filter on.",
+      "metaToolsNote": "Meta-tools (a tool that hands out other tools) were deliberately NOT built — that would have been Phase 2, and it wasn't needed: client-side filtering solved the problem without new server machinery.",
+      "profColAllowed": "Allowed to write (beyond read)",
+      "profColOwns": "Owns task types (ADR-LORE-015)",
+      "profColRole": "Role",
+      "profilesFull": "— primary, everything allowed (Claude / backfill). The other 6 are subagent:",
+      "profilesIntro": "7 profiles live in",
+      "profilesRead": "Reading (",
+      "profilesRead2": ") is allowed for EVERYONE",
+      "profilesRead3": "— no one is denied reading the graph, only writing is restricted.",
+      "profilesRest": "plus an allow-list of their own categories.",
+      "projectNewRbac": "— deliberately only for",
+      "projectNewRbac2": "registering a git project is a management/architecture decision, not an operational one.",
+      "toolsNoteRoles": "Tasks carry author/executor/reviewer_agent (ADR-LORE-014 §4) — the one hard SDLC gate: reviewer_agent must differ from executor_agent, otherwise",
+      "toolsNoteRoles2": "task→done is rejected (409 NO_SELF_ACCEPTANCE). Role values are an extensible dictionary",
+      "toolsNoteRoles3": "(see Dictionary below) — the UI registers a new role in the dictionary on first entry."
     },
     "milestoneManager": {
       "loading": "Loading milestones…",
@@ -854,7 +974,9 @@
         "currentWeekTooltip": "Current plan week (W0 = {{w0}})",
         "parityTooltip": "Parity: share of bars with a position (SAGA↔plan)",
         "parity": "{{pct}}% parity",
-        "hint": "Ctrl+wheel = zoom · drag = pan"
+        "hint": "Ctrl+wheel = zoom · drag = pan",
+        "newSprint": "＋ Sprint",
+        "newSprintTooltip": "Create a new KnowSprint (opens the creation form)"
       },
       "legend": {
         "caption": "fill = status:",
@@ -932,7 +1054,8 @@
         "provSmartTitle": "SMART metrics standard (compute_status)",
         "provSmartChip": "ADR-QG-002 SMART",
         "provFormatTitle": "Format of this report",
-        "provFormatChip": "ADR-QG-004 format"
+        "provFormatChip": "ADR-QG-004 format",
+        "sprintLink": "↗ {{sprintId}}"
       },
       "runHistory": {
         "title": "Run history",
@@ -1005,7 +1128,11 @@
       "run": {
         "active": "✓ pass",
         "blocked": "✗ fail"
-      }
+      },
+      "filtersLabel": "Filters",
+      "searchAriaLabel": "search quality gates",
+      "searchClear": "clear search",
+      "searchPlaceholder": "quality gate…"
     },
     "releasesBoard": {
       "releaseCount": "{{count}} releases",
@@ -1061,7 +1188,9 @@
         "p0": "P0 — critical",
         "p1": "P1 — high",
         "p2": "P2 — normal",
-        "ariaLabel": "Priority"
+        "ariaLabel": "Priority",
+        "p3": "P3 — low",
+        "writeForbidden": "Failed to save (no access / CORS)"
       },
       "statusCounts": {
         "ariaLabel": "Tasks by status (multi-select)",
@@ -1074,12 +1203,32 @@
         "titlePlaceholder": "Title",
         "descriptionPlaceholder": "Description (Markdown)",
         "save": "Save",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "authorPlaceholder": "author",
+        "effortLabel": "Effort, days",
+        "effortPlaceholder": "e.g. 1.5",
+        "executorPlaceholder": "assignee",
+        "openInMirror": "Open in mirror",
+        "reviewerHint": "Must differ from the assignee, otherwise the task cannot move to done",
+        "reviewerPlaceholder": "reviewer",
+        "roleConflict": "matches the assignee, the task cannot move to done",
+        "typeLabel": "Type",
+        "typeUnset": "—",
+        "workClassLabel": "Why",
+        "wcUnset": "— unset —",
+        "wcUcOpt": "uc — realizes a scenario",
+        "wcJtdOpt": "jtd — supporting",
+        "wcEnbOpt": "enb — enabler",
+        "ucLabel": "Scenario (REALIZES)",
+        "ucPlaceholder": "US-GIT-MERGE",
+        "ucMissing": "uc task without a scenario"
       },
       "addTask": {
         "trigger": "+ task",
         "idPlaceholder": "ID (SH-10)",
-        "submit": "Add"
+        "submit": "Add",
+        "cancel": "Cancel adding a task",
+        "typeDefault": "type: dev (default)"
       },
       "loading": "Loading {{sprintId}}…",
       "notFound": "Sprint {{sprintId}} not found.",
@@ -1096,7 +1245,8 @@
         "linkPlaceholder": "+ link release…"
       },
       "prBar": {
-        "label": "PR"
+        "label": "PR",
+        "openInMirror": "Open in mirror"
       },
       "context": {
         "label": "Context",
@@ -1144,12 +1294,20 @@
       "effortFooter": {
         "label": "Total effort:",
         "days": "{{sum}} d",
-        "ofTotal": "/ {{total}} d total"
+        "ofTotal": "/ {{total}} d total",
+        "ofTotalFmt": "/ {{total}} total"
       },
       "deps": {
         "dependsOn": "Depends on",
         "blocks": "Blocks"
-      }
+      },
+      "typeCounts": {
+        "ariaLabel": "Tasks by type (multi-select)"
+      },
+      "metaToggle": "Context and links",
+      "wcUc": "realizes a scenario",
+      "wcJtd": "supporting job",
+      "wcEnb": "enabler — justified by an ADR"
     },
     "sprintEditor": {
       "errSprintIdRequired": "Sprint ID is required",
@@ -1240,7 +1398,8 @@
         "searchPlaceholder": "sprint…",
         "searchAriaLabel": "search by sprint name",
         "newSprintTitle": "New sprint",
-        "emptySelectHint": "Select a sprint from the list on the left"
+        "emptySelectHint": "Select a sprint from the list on the left",
+        "filtersLabel": "Filters"
       },
       "filters": {
         "resetTitle": "Reset filters",
@@ -1252,14 +1411,26 @@
         "searchPlaceholder": "ADR-...",
         "clearSelectionTitle": "Clear selection",
         "emptySelectHint": "Select an ADR from the list on the left",
-        "emptyCreateHint": "or click \"+ new ADR\" to create one"
+        "emptyCreateHint": "or click \"+ new ADR\" to create one",
+        "componentDim": "Component",
+        "filtersLabel": "Filters",
+        "noComponent": "no component",
+        "noTag": "no tag",
+        "periodDim": "Period",
+        "sortComp": "Component",
+        "sortDate": "Date",
+        "sortDim": "Sort by",
+        "sortId": "ID",
+        "sortStatus": "Status",
+        "tagDim": "Tag"
       },
       "components": {
         "resetAreaFilterTitle": "Reset area filter",
         "totalCount": "{{count}} components",
         "searchPlaceholder": "component…",
         "searchAriaLabel": "search components",
-        "emptySelectHint": "Select a component from the list on the left"
+        "emptySelectHint": "Select a component from the list on the left",
+        "filtersLabel": "Filters"
       },
       "sectionError": "Section error «{{section}}»",
       "qg": {
@@ -1299,7 +1470,8 @@
         "vpProfile": "filter value profile…",
         "features": "filter features…",
         "userStories": "filter user stories…"
-      }
+      },
+      "backToList": "to list"
     },
     "techRegistry": {
       "noArea": "no area",
@@ -1325,7 +1497,9 @@
         "usage": "Usage (where/how it's used)",
         "source": "Source",
         "save": "Save"
-      }
+      },
+      "filtersLabel": "Filters",
+      "techLabel": "Technology"
     },
     "chapters": {
       "value": {
@@ -1358,7 +1532,23 @@
         "pains": "Pains",
         "gains": "Gains",
         "ucRbac": "Role user stories · RBAC is built from these",
-        "about": "About the role"
+        "about": "About the role",
+        "kindAll": "all",
+        "kindHuman": "people",
+        "kindAgent": "agents",
+        "kindSystem": "systems",
+        "searchPh": "segment…",
+        "new": "+ Customer",
+        "edit": "Edit",
+        "save": "Save",
+        "create": "Create",
+        "cancel": "Cancel",
+        "name": "Name",
+        "kind": "Kind",
+        "project": "Project",
+        "projectHint": "without a project, same-named roles of different products merge into one",
+        "idRule": "ACT-‹ROLE›, latin, dash-separated: ACT-ARCHITECT",
+        "segment": "customer segment"
       },
       "feat": {
         "empty": "No features yet",
@@ -1369,27 +1559,118 @@
         "readiness": "Readiness",
         "milestone": "Milestone",
         "component": "Component",
-        "bridge": "🌉 Bridge into the profile (what the feature CLAIMS)",
+        "bridge": "What it claims: whose pains, gains and jobs it covers",
         "jobs": "JOBS",
         "pains": "PAINS",
         "gains": "GAINS",
-        "impl": "🌊 Implementation — US (what is DONE)"
+        "impl": "Implementation — US (what is DONE)",
+        "tasksToggle": "Scenario tasks",
+        "noTasks": "No tasks realize this scenario",
+        "searchPh": "feature…",
+        "addUs": "+ US here",
+        "qualityHint": "Cockburn form check"
       },
       "us": {
         "empty": "No user stories yet",
         "pick": "Pick a story on the left",
         "feature": "Feature",
         "primaryActor": "Primary actor",
-        "doesWhat": "What it actually does (legs into the profile)",
-        "scenario": "Scenario (Cockburn)",
+        "doesWhat": "What it actually covers",
+        "scenario": "Scenario",
         "noScenario": "scenario not filled in",
         "acceptance": "Acceptance",
-        "graph": "UC graph"
+        "graph": "Related scenarios",
+        "new": "+ Story",
+        "edit": "Edit",
+        "save": "Save",
+        "create": "Create",
+        "cancel": "Cancel",
+        "idRule": "US-‹AREA›-‹ACTION›, latin, dash-separated: US-GIT-MERGE",
+        "underRoot": "Created under root",
+        "goalLevel": "Goal level (Cockburn)",
+        "rigor": "Rigor",
+        "rigorHint": "Rigor sets which checks are required: casual has fewer",
+        "insertTemplate": "insert template",
+        "quality": "Cockburn form check",
+        "advisory": "advisory — you can save either way",
+        "title": "Title",
+        "searchPh": "story…",
+        "newRoot": "+ Feature",
+        "idRuleRoot": "FEAT-‹AREA›-‹GOAL›, latin, dash-separated: FEAT-GITCYCLE",
+        "insertExample": "filled example",
+        "check": "Check form",
+        "actorNone": "— none —",
+        "primaryHint": "who drives the scenario — required by the form check",
+        "supportActors": "Other participants",
+        "noActors": "no actors yet — create them in the Customer section",
+        "project": "Project",
+        "projectNone": "— none —",
+        "projectHint": "which product it belongs to — otherwise scenarios of different products mix",
+        "parent": "Parent (feature or scenario)",
+        "parentNone": "— no parent —",
+        "parentScenarios": "scenarios of the selected feature",
+        "noParentWarn": "without a parent the scenario is visible nowhere: Features lists only ☁/🪁, the tree only children of a root",
+        "projectInherited": "inherited from the parent",
+        "links": "What it claims — pains, gains and jobs of the selected segment",
+        "linkPains": "pains",
+        "linkGains": "gains",
+        "linkJobs": "jobs",
+        "linkChildren": "realized by scenarios",
+        "vpEmpty": "registry is empty",
+        "pickActorFirst": "pick a primary actor — pains, gains and jobs are shown for them",
+        "linkAdd": "+ link…",
+        "unlink": "unlink",
+        "vpNoneForActor": "this segment has no such records",
+        "vpAllLinked": "everything is already linked",
+        "relieves": "relieves",
+        "delivers": "delivers",
+        "performs": "performs",
+        "includes": "includes",
+        "extends": "extends",
+        "primaryHintSub": "a subfunction is performed by a system or agent — a person has no goal at this level",
+        "tasks": "How it gets done",
+        "noTasks": "no tasks yet",
+        "status": "Status",
+        "statusNone": "— unset —",
+        "statusHint": "readiness is derived from tasks: active, shipped and rework are not set by hand"
       },
       "canvas": {
-        "claimed": "claimed",
-        "done": "done",
-        "empty": "No features for the canvas"
+        "empty": "No canvases yet — create a root scenario",
+        "noMetric": "without a metric",
+        "product": "Product:",
+        "noProject": "no project set — values of different products blend into one picture",
+        "vmapSub": "what we build · square",
+        "cprofSub": "what the customer has · circle",
+        "legendDone": "done — a scenario closes it",
+        "legendClaimed": "claimed only",
+        "vmap": "Value Map",
+        "cprof": "Customer Profile",
+        "forActor": "Customer segment:",
+        "allActors": "all actors together",
+        "hole": "nobody delivers",
+        "sec": {
+          "ps": "Products & Services",
+          "gc": "Gain Creators",
+          "pr": "Pain Relievers",
+          "gains": "Gains",
+          "pains": "Pains",
+          "jobs": "Customer Jobs"
+        },
+        "addScenario": "Add a scenario",
+        "fitClosed": "closed",
+        "fitClosedHint": "problem–solution fit: the value has a scenario closing it",
+        "fitProven": "proven by metric",
+        "fitProvenHint": "product–market fit: the gain is measured, not just claimed",
+        "sharp": "severe relieved",
+        "sharpHint": "Severe pains come before minor ones — the overall share hides that",
+        "balance": "relieve / delight",
+        "balanceHint": "A skew towards relievers means the product removes suffering but gives nothing desired",
+        "noCreators": "no gain creators at all",
+        "segments": "segments",
+        "segmentsHint": "The feature serves several segments — a reason to split it, not a sign of breadth",
+        "legendProven": "proven by metric",
+        "legendProfile": "inside the customer: a pain blocks a job, a gain is its success",
+        "noActorsOnCanvas": "segment not set — values carry no actors"
       },
       "vp": {
         "all": "all",
@@ -1401,10 +1682,10 @@
         "around": "Around this job",
         "blockers": "BLOCKERS",
         "success": "SUCCESS",
-        "performers": "🌊 Who PERFORMS it — feature user stories (PERFORMS)",
+        "performers": "Who PERFORMS it — feature user stories (PERFORMS)",
         "whose": "Whose job",
         "pain": "pain",
-        "scoring": "Scoring by segment (FELT_BY)",
+        "scoring": "Who it affects",
         "claimedVsRelieved": "Claimed vs relieved",
         "claimed": "claimed by",
         "relieved": "relieved by",
@@ -1415,9 +1696,319 @@
         "rank": "Rank",
         "deliveredBy": "Delivered by US (DELIVERS)",
         "jobSuccess": "Job success",
-        "desiredBy": "Desired by"
+        "desiredBy": "Desired by",
+        "newPain": "+ Pain",
+        "newGain": "+ Gain",
+        "fieldTitle": "Title",
+        "fieldSeverity": "Severity",
+        "fieldMetric": "Metric — how we measure the gain landed",
+        "fieldBody": "Description",
+        "noMetricWarn": "without a metric the gain stays out of the VP canvas fit",
+        "fieldFeltBy": "Whose pain (actors)",
+        "fieldDesiredBy": "Who wants the gain (actors)",
+        "fieldPerformedBy": "Who performs the job (actors)",
+        "noActors": "no actors yet — create them on the Customer screen",
+        "noActorWarn": "without an actor the entry stays out of any single customer profile",
+        "create": "Create",
+        "cancel": "Cancel",
+        "promisedVsDelivered": "Promised vs delivered",
+        "promised": "promised",
+        "delivered": "delivered",
+        "sevNone": "— unset —",
+        "sevHigh": "high",
+        "sevNormal": "normal",
+        "sevLow": "low",
+        "metricPlaceholder": "prs_linked > 0 for every new release with no manual release_link calls",
+        "metricHint": "A checkable statement: what is counted, the threshold and the condition. Not \"speed\", but \"0 merges from RED/PENDING\".",
+        "idRulePain": "PAIN-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: PAIN-LORE-MANUAL-HANDOFF",
+        "idRuleGain": "GAIN-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: GAIN-LORE-LINKED-RELEASES",
+        "idCyrillic": "ids in the corpus are latin — a cyrillic one stands apart",
+        "newJob": "+ Job",
+        "fieldJobKind": "Job type (Osterwalder)",
+        "jobKindNone": "— unset —",
+        "jobFunctional": "functional — what needs doing",
+        "jobSocial": "social — how they want to be seen",
+        "jobEmotional": "emotional — how they want to feel",
+        "jobSupporting": "supporting — around the main one",
+        "fieldImportance": "Importance",
+        "edit": "Edit",
+        "save": "Save",
+        "idRuleJob": "JOB-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: JOB-LORE-SHIP-RELEASE",
+        "jobOne": "job",
+        "searchPh": "job / pain / gain…"
       },
-      "pickItem": "Pick an item on the left"
+      "pickItem": "Pick an item on the left",
+      "vocab": {
+        "ucStatus": {
+          "proposed": "proposed",
+          "active": "in progress",
+          "shipped": "shipped",
+          "dropped": "dropped",
+          "in_rework": "rework"
+        },
+        "rigor": {
+          "casual": "casual",
+          "fully-dressed": "fully dressed"
+        },
+        "goalLevel": {
+          "cloud": "cloud",
+          "kite": "kite",
+          "sea-level": "sea level",
+          "subfunction": "subfunction"
+        },
+        "jobKind": {
+          "functional": "functional",
+          "social": "social",
+          "emotional": "emotional",
+          "supporting": "supporting"
+        },
+        "level": {
+          "high": "high",
+          "normal": "normal",
+          "low": "low"
+        },
+        "gainRank": {
+          "essential": "essential",
+          "expected": "expected",
+          "desired": "desired",
+          "unexpected": "unexpected"
+        },
+        "actorKind": {
+          "human-role": "person",
+          "system": "system",
+          "agent": "agent"
+        }
+      }
+    },
+    "search": {
+      "placeholder": "Search all of LORE — morphology, bodies, prefix…",
+      "aria": "Cross-corpus search",
+      "types": "type",
+      "components": "component",
+      "projects": "project",
+      "partial": "Results are incomplete — search failed for types",
+      "found": "found",
+      "coverage": "component links",
+      "inferred": "inferred from parent",
+      "bare": "without a component",
+      "bareWarn": "any component filter will hide them",
+      "error": "Search did not respond",
+      "empty": "Nothing matched these filters",
+      "emptyHint": "Clear facets or simplify the query",
+      "inTitle": "title",
+      "inferredFrom": "inferred from",
+      "modeAria": "Search mode",
+      "modeSmart": "smart",
+      "modeExact": "exact",
+      "modeFuzzy": "fuzzy",
+      "modeSmartHint": "Each word goes in as (word OR word*) — morphology plus prefix",
+      "modeExactHint": "Exact word forms only, no prefix",
+      "modeFuzzyHint": "Tolerates typos — broader, but noisier",
+      "goesToIndex": "goes into the index as",
+      "noValues": "— no values —",
+      "shown": "showing",
+      "capped": "hit the per-type cap — narrow the query",
+      "componentLabel": "component",
+      "projectLabel": "project",
+      "noTitle": "— no title —",
+      "mathHint": "BM25 (share of the best in its own type) × type priority",
+      "prev": "back",
+      "next": "next",
+      "of": "of",
+      "legendRank": "rank",
+      "legendRankText": "BM25 × type priority. The priority is ours, not the engine's.",
+      "legendBar": "bar",
+      "legendBarText": "rank relative to the top hit of this same query.",
+      "legendWhere": "matched in",
+      "legendWhereText": "worked out on our side: ArcadeDB does not report which field matched.",
+      "caveatTitleBoost": "A title match does not outweigh a body match: title_boost had no effect in ArcadeDB.",
+      "caveatScores": "Scores are comparable within one query only, never across queries.",
+      "caveatProjects": "Project is not filled in everywhere: sprints and PRs have it, specs and tasks do not. Filtering by project will hide everything else.",
+      "legendAria": "How to read the results"
+    },
+    "admin": {
+      "addHost": "+ hosting",
+      "addUser": "+ Person",
+      "addValue": "+ value",
+      "adminGives": "Administration: people, dictionaries, settings, enabling auth",
+      "agentsNote": "AI agents are client roles of service accounts (the \"agents\" axis, agent_scope claim). Provisioned by script, not created by hand. Rotation shows the secret ONCE — LORE does not store it.",
+      "authBlockH": "Enabling authentication",
+      "backToList": "Back to list",
+      "byAlpha": "Alphabetical",
+      "byObject": "Who has access to…",
+      "byObjectNote": "The reverse question — the one asked on an access review: who can touch this? Operations available only to people are highlighted in red (RBAC spec §4).",
+      "byRole": "Who can do what",
+      "byUses": "By usage",
+      "cancel": "Cancel",
+      "canonConfirm": "I understand: this is a canon dictionary, the change affects the whole corpus",
+      "canonWarn": "⚠ Canon dictionary (ADR-LORE-010): these values are baked into statuses across the whole corpus. Editing label/color/icon is safe; codes cannot be edited here at all.",
+      "cantEnableH": "Auth cannot be enabled right now.",
+      "cardHistory": "Access and action history",
+      "cardHistoryNone": "No history yet: an audit of admin operations will arrive with AL-20/AL-43 and land here. The screen does not show what the system does not yet record.",
+      "cardId": "KC id",
+      "cardRoles": "Roles (people)",
+      "chkAdmins": "At least one person has the admin role",
+      "chkAdminsN": "Currently: {{n}}. Add yourself on the \"People\" tab and assign admin.",
+      "chkAdminsUnknown": "Number of admins unknown: the KC bridge isn't configured or didn't respond.",
+      "chkKc": "Keycloak is reachable",
+      "chkKcOff": "KC_ADMIN_CLIENT_SECRET is not set.",
+      "chkKcOk": "The bridge is responding.",
+      "chkScope": "Agent permissions are checked on the backend",
+      "chkScopeSub": "AgentScopeFilter is not yet enabled (AL-17): once auth is on, agents will pass into any family.",
+      "codeLocked": "Key is not editable (OQ-ADMIN-DICT-CODE)",
+      "codeLockedHint": "key is not editable",
+      "colorCustom": "custom (CSS)…",
+      "confirmAdmin": "sure — admin?",
+      "confirmRotate": "sure — rotate?",
+      "create": "Create",
+      "crumb": "Administration",
+      "deact": "Deactivate…",
+      "deactConfirm": "Deactivate{{u}} — are you sure?",
+      "denialsEmpty": "No denials since the last restart.",
+      "denialsH": "Recent access denials",
+      "denialsNA": "Unavailable (admin role required, or backend is an old version).",
+      "denialsSrc": "Source: process memory since the last restart (ring buffer, AL-45). Long-term audit by axis is AL-20.",
+      "devBannerB": "Anyone who opens this address can administer LORE: the role comes from config, not a token. Development mode.",
+      "devBannerH": "Authentication is disabled.",
+      "disabled": "disabled",
+      "edit": "Edit",
+      "enableAuth": "Enable authentication",
+      "enableAuthNote": "The actual flip is an env var (LORE_AUTH_ENABLED=true) + restart per RUNBOOK-AUTH-OMILORE, all flags together (AL-12 — owner in person). This button becomes a working form once a runtime toggle exists.",
+      "enabled": "enabled",
+      "fCode": "Code",
+      "fColor": "Color",
+      "fIcon": "Icon (game-icons)",
+      "fLabel": "Label",
+      "fltActive": "Active",
+      "fltAll": "All",
+      "fOrder": "Order",
+      "herePeople": "Here → People",
+      "hide": "hide",
+      "hosts": "Hostings (origin + mirrors, ADR-018)",
+      "iconBad": "no icon with this name — it will render empty.",
+      "iconMaybe": "Similar:",
+      "kcConsoleOnly": "Keycloak console only (D11)",
+      "kcErrB": "The request failed or didn't get through. The state of the records is unknown — this is not an empty list.",
+      "kcErrH": "Keycloak did not respond",
+      "kcForbiddenB": "Access management is open only to the admin role. This is NOT an empty list: records may exist, they just aren't visible to you.",
+      "kcForbiddenH": "No permission to view this list",
+      "kcLoading": "Asking Keycloak…",
+      "kcOffB": "The bridge to KC isn't configured, so there's nowhere to get the list from. This doesn't mean there are no records — their state is currently unknown. Setup: KC_ADMIN_CLIENT_SECRET in .env, see RUNBOOK-ADMIN-LORE. The rest of LORE works as usual.",
+      "kcOffH": "Keycloak is not connected",
+      "lastAdminB": "Removing this role would leave LORE without an administrator — the backend will reject the operation (AL-35) until a second admin exists.",
+      "lastAdminH": "Last remaining admin account.",
+      "newSecret": "New secret for {{c}} — copy it now, it won't be shown again:",
+      "noAgents": "no one — forbidden to all agents, including agent-full",
+      "noKnownSettings": "The app doesn't read any app_setting key yet — the registry of known parameters is empty (AL-38). Once a real parameter exists, it gets a row here with type, default and description; free-form key entry is gone: no one will ever read a made-up key.",
+      "noPassNote": "The password is set in Keycloak (reset link/console) — LORE neither accepts nor stores it.",
+      "noScope": "— (carries no axis, legacy)",
+      "notEnforcedB": "The backend does not read the agent_scope claim: right now it's a tool-visibility filter, not enforcement. Turned on by the LORE_AUTH_ENABLED flag — its state is visible in \"Settings\".",
+      "notEnforcedH": "The permissions in this table are not enforced.",
+      "notEnforcedUnkB": "The backend did not respond to the auth preflight, so the enforcement state is unconfirmed. Treat this table as a statement of intent until the connection is restored.",
+      "notEnforcedUnkH": "Whether these permissions are enforced is currently unknown.",
+      "noUsersB": "Keycloak is responding fine, the realm just has no accounts. Add yourself first — BEFORE enabling authentication: it turns off config-based access, and there will be no one left to log in.",
+      "noUsersH": "No one has been added yet",
+      "open": "Open",
+      "paramsH": "Application parameters",
+      "pfLoading": "Checks are loading (or the KC bridge is unavailable — the checklist will show that explicitly once it responds).",
+      "phEmail": "email (optional)",
+      "phLogin": "login",
+      "preview": "This is how it will look",
+      "remove": "Remove",
+      "removeRole": "remove role",
+      "roleBadge": "role: {{role}} · auth: {{auth}}",
+      "roleNow": "current role",
+      "rolesNote2": "Two axes that never mix: people sign in with a password and carry realm roles (seer_roles), agents sign in with a secret and carry agent_scope. Agent scope is edited in mcp-server/agent-profiles/*.json (D6, read-only here).",
+      "rotate": "rotate secret",
+      "save": "Save",
+      "search": "Search…",
+      "setProj": "session default project of the MCP process (env, ADR-LORE-017) — set in .mcp.json/OpenCode config, not read from the UI",
+      "shownOf": "showing {{n}} of {{m}}",
+      "superAdminGives": "Everything, including granting admin",
+      "tagOrphan": "candidate for removal",
+      "tagsNote": "Read-only (D6): merge/rename is iteration 2 (TAGGED_WITH edge migration, AL-29 awaits an owner decision).",
+      "unknownB": "These keys live in the database (dict_type=app_setting), but the app doesn't read them — most likely leftovers from a manual edit. Deleting them changes nothing (soft delete: is_active=false).",
+      "unknownH": "Unrecognized values · {{n}}",
+      "usageNA": "usage count for this dictionary arrives with AL-30/SV-10",
+      "usageWarn": "{{n}} entities carry this code.",
+      "usageWarn2": "Changing the color/icon will change how they look across all of LORE; deactivating requires confirmation.",
+      "usersNote": "People are Keycloak realm roles (the \"people\" axis). LORE stores no passwords: the user sets it in KC. The super-admin role is assigned only in the KC console (outside the bridge, D11).",
+      "viewerGives": "Read-only access to LORE. Does not allow into administration"
+    },
+    "oqBoard": {
+      "ansLoading": "Loading answer…",
+      "answer": "Answer (decision)",
+      "answerAuto": "answer code: {{id}} (auto) · inherits the question's component{{adr}}",
+      "answerBody": "Rationale / details (opt.)",
+      "answeredToggle": "closed by a decision — click to expand the answer",
+      "answerExisting": "a decision that already answers this question",
+      "answerHead": "Answer with a decision — will close the question",
+      "answerLinkBtn": "close with this decision ✓",
+      "answerNewBtn": "answer and close ✓",
+      "answerTitle": "Answer — a one-line rule (this is the decision)",
+      "cancel": "Cancel",
+      "componentLabel": "Component",
+      "componentPick": "Component — pick from list",
+      "componentsMulti": "Components",
+      "count": "{{count}} questions",
+      "dueTitle": "answer due",
+      "edit": "Edit",
+      "filterNote": "filter: \"{{q}}\"",
+      "filtersLabel": "Filters",
+      "flagsLabel": "Flag",
+      "formEdit": "Editing {{id}}",
+      "formNew": "New question",
+      "gatesTitle": "blocks tasks: {{n}}",
+      "gatingTag": "blocking",
+      "modePick": "or pick an already accepted decision →",
+      "modeWrite": "← write a new answer",
+      "newButton": "+ question",
+      "noDue": "no due date",
+      "noDueTitle": "no answer due date set — set one via ✎",
+      "none": "No questions found.",
+      "openAdr": "open ADR",
+      "openDecisions": "standalone decision — open in \"Decisions\"",
+      "overdue": "{{n}} overdue",
+      "overdueTag": "overdue",
+      "priorityLabel": "Priority",
+      "projectLabel": "Project",
+      "projectsMulti": "Projects",
+      "save": "Save",
+      "statusLabel": "Status"
+    },
+    "tiptap": {
+      "addColumn": "+ column",
+      "addRow": "+ row",
+      "blockquote": "Blockquote",
+      "bold": "Bold (Ctrl+B)",
+      "bulletList": "Bullet list",
+      "code": "Code",
+      "deleteTable": "Delete table",
+      "h1": "Heading 1",
+      "h2": "Heading 2",
+      "h3": "Heading 3",
+      "hr": "Horizontal rule",
+      "insertImage": "Insert image",
+      "insertTable": "Insert table",
+      "italic": "Italic (Ctrl+I)",
+      "link": "Link",
+      "modeHtml": "HTML source mode",
+      "modeMd": "Markdown source mode",
+      "orderedList": "Ordered list",
+      "redo": "Redo (Ctrl+Y)",
+      "resize": "Resize",
+      "strike": "Strikethrough",
+      "taskList": "Task list",
+      "undo": "Undo (Ctrl+Z)",
+      "mentionEmpty": "nothing found — actors are created in the Customer section"
+    },
+    "filters": {
+      "clear": "✕ clear",
+      "clearSearch": "Clear search",
+      "collapse": "▴ collapse",
+      "expand": "▾ expand",
+      "notSet": "not set",
+      "search": "Search"
     }
   },
   "bragi": {
@@ -1455,7 +2046,9 @@
         "colIntent": "intent",
         "colPage": "page",
         "editBtn": "✎ edit",
-        "empty": "no keywords yet"
+        "empty": "no keywords yet",
+        "emptyFiltered": "nothing found under this filter",
+        "filtersLabel": "Filters"
       },
       "archive": {
         "loading": "loading…",
@@ -1467,7 +2060,9 @@
         "colClicks": "clicks",
         "colDemo": "demos",
         "colTakeaway": "takeaway",
-        "emptyState": "no published variants yet"
+        "emptyState": "no published variants yet",
+        "emptyFiltered": "nothing found under this filter",
+        "filtersLabel": "Filters"
       },
       "insights": {
         "loading": "loading…",
@@ -1604,7 +2199,32 @@
         "ready": "ready",
         "published": "published",
         "planned": "planned"
-      }
+      },
+      "annotationPlaceholder": "persistent meta: master source, override rule, release context…",
+      "copyForPlatform": "copy for platform",
+      "createSatellite": "+ create satellite",
+      "draftDismiss": "dismiss",
+      "draftFound": "Found an unsaved draft from {{ts}}",
+      "draftRestore": "restore",
+      "forsetiRelease": "release (SHIPPED_IN)",
+      "forsetiSprint": "sprint (PRODUCED_BY)",
+      "forsetiTask": "task (PRODUCED_BY)",
+      "inheritsMain": "inherits main",
+      "paneTabEdit": "Edit",
+      "paneTabPreview": "Preview",
+      "previewMaster": "master",
+      "previewSkinLabel": "skin",
+      "sectionAnnotation": "Annotation",
+      "sectionForseti": "Links to work (Forseti)",
+      "sectionTodo": "TODO",
+      "todoAddPlaceholder": "new item…",
+      "utmGenerate": "generate link",
+      "variantAnnotationPlaceholder": "annotation for this variant…",
+      "variantImgNeedsSave": "save first",
+      "variantImgUpload": "variant image",
+      "variantUrlPlaceholder": "URL of the published material…",
+      "viewModeSide": "side by side",
+      "viewModeTabs": "tabs"
     },
     "publications": {
       "noImage": "no image",
@@ -1624,7 +2244,12 @@
       "loadingMetrics": "loading metrics…",
       "noMetricsYet": "no measurements yet",
       "addChannelSlot": "+ channel",
-      "emptyFiltered": "nothing found for this filter"
+      "emptyFiltered": "nothing found for this filter",
+      "channelLabel": "Channel",
+      "filtersLabel": "Filters",
+      "rubricLabel": "Rubric",
+      "statusLabel": "Status",
+      "todoBadge": "{{n}} todo"
     },
     "rubricManager": {
       "errId": "Category ID is required",

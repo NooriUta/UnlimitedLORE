@@ -80,6 +80,8 @@ export function TestEditor({ file, onClose, onSaved }: Props) {
               value={content}
               onChange={(v) => setContent(v ?? '')}
               options={{
+                // Monaco принимает ЧИСЛО, а не CSS-значение: это опция редактора,
+                // а не стиль DOM-узла, и токен шкалы сюда не подставляется.
                 fontSize: 13,
                 fontFamily: '"Fira Code", monospace',
                 fontLigatures: true,
