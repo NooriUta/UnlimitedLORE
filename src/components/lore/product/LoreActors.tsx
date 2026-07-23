@@ -214,6 +214,8 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
   return (
     <>
     <MasterDetail
+      hasDetail={!!selectedId}
+      onBack={() => onSelect(null)}
       list={<><ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.actor.searchPh', 'сегмент…')} /><FilterChips options={kindDefs} value={kindFilter} onChange={setKindFilter} />{createBar}{list}</>}
       detail={detail}
     />

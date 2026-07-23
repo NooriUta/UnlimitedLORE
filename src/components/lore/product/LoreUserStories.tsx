@@ -264,7 +264,9 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
   return (
     <>
-      <MasterDetail list={<><ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.us.searchPh', 'история…')} />{createBar}{list}</>} detail={detail} />
+      <MasterDetail
+      hasDetail={!!selectedId}
+      onBack={() => onSelect(null)} list={<><ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.us.searchPh', 'история…')} />{createBar}{list}</>} detail={detail} />
       {(creating || editingUs) && (
         <UsFormModal
           opened

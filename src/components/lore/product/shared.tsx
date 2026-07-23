@@ -7,6 +7,7 @@ import { fetchLoreSlice } from '../../../api/lore';
 import { marked } from '../markdown';
 import { sanitizeMd } from '../sanitizeHtml';
 import { GameIcon } from '../GameIcon';
+import { useIsNarrow } from '../../../hooks/useMediaQuery';
 
 // Навигация между продуктовыми разделами (section = ?section=, id = ?passport=).
 export type ProductNavigate = (section: string, id?: string) => void;
@@ -150,7 +151,15 @@ export function LinkChip({ children, color, onClick, dim, title }: { children: R
 const LIST_WIDTH_KEY = 'lore.product.listWidth';
 
 // ── master-detail на весь контент-пейн (список слева + карточка справа) ──
-export function MasterDetail({ list, detail }: { list: ReactNode; detail: ReactNode }) {
+export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
+  list: ReactNode;
+  detail: ReactNode;
+  /** узкий экран: показывать деталь вместо списка (по наличию выбора) */
+  hasDetail?: boolean;
+  /** узкий экран: вернуться к списку — снимает выбор */
+  onBack?: () => void;
+  backLabel?: string;
+}) {
   /**
    * Ширина списка тянется мышью и ПЕРЕЖИВАЕТ перезагрузку.
    *
@@ -185,6 +194,48 @@ export function MasterDetail({ list, detail }: { list: ReactNode; detail: ReactN
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
+
+  /**
+   * На узком экране показываем ОДНУ панель, а не две (PL-42).
+   *
+   * Две колонки в 375px не помещаются по построению: список шириной 288–560
+   * вытесняет паспорт целиком, и запомненная ширина делает только хуже — при
+   * 378px паспорта не видно вовсе. Поэтому на мобильном это «список → деталь →
+   * назад», как в спринтах (MOB-04), а ручка ресайза прячется: тянуть нечего.
+   *
+   * Признак «деталь открыта» — наличие выбора, и его знает вызывающий: он же
+   * кладёт `?passport=` в URL. Отдельного состояния не заводим, иначе кнопка
+   * «назад» браузера расходилась бы с кнопкой «назад» экрана.
+   */
+  const narrow = useIsNarrow(720);
+  const detailOpen = hasDetail ?? true;
+
+  if (narrow) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
+        {detailOpen ? (
+          <>
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                style={{
+                  alignSelf: 'flex-start', margin: '6px 9px', padding: '3px 10px',
+                  fontSize: 'var(--fs-sm)', borderRadius: 4, cursor: 'pointer',
+                  background: 'transparent', border: '1px solid var(--bd)', color: 'var(--t2)',
+                }}
+              >
+                ← {backLabel ?? 'к списку'}
+              </button>
+            )}
+            <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto' }}>{detail}</div>
+          </>
+        ) : (
+          <div style={{ flex: 1, background: 'var(--bg1)', overflow: 'auto' }}>{list}</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>

@@ -309,7 +309,9 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
   return (
     <>
-      <MasterDetail list={<>{filterChips}{rows}</>} detail={detail} />
+      <MasterDetail
+      hasDetail={!!selectedId}
+      onBack={() => onSelect(null)} list={<>{filterChips}{rows}</>} detail={detail} />
       {creating && (
         <VpCreateModal
           kind={creating}

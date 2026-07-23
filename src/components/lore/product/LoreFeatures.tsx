@@ -319,7 +319,9 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
 
   return (
     <>
-      <MasterDetail list={<>{bar}{list}</>} detail={detail} />
+      <MasterDetail
+      hasDetail={!!selectedId}
+      onBack={() => onSelect(null)} list={<>{bar}{list}</>} detail={detail} />
       {(creatingRoot || editingRoot) && (
         <UsFormModal
           opened
