@@ -1567,7 +1567,8 @@
         "tasksToggle": "Scenario tasks",
         "noTasks": "No tasks realize this scenario",
         "searchPh": "feature…",
-        "addUs": "+ US here"
+        "addUs": "+ US here",
+        "qualityHint": "Cockburn form check"
       },
       "us": {
         "empty": "No user stories yet",

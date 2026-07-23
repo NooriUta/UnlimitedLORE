@@ -4,7 +4,7 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import type { LoreFeatureRow, LoreUcRow, LoreUcTaskRow } from '../../../api/lore';
-import { fetchLoreSlice } from '../../../api/lore';
+import { fetchLoreSlice, checkLoreUcQuality, type LoreUcQualityResult } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import {
@@ -21,7 +21,7 @@ import {
   EmptyDetail,
   ListSearch,
 } from './shared';
-import { ucStatusLabel, goalLevelLabel } from './vocab';
+import { ucStatusLabel, ucStatusTone, goalLevelLabel } from './vocab';
 import UsFormModal, { type UsDraft } from './UsFormModal';
 
 // Уровень цели (Коберн, D1): облако / воздушный змей.
@@ -82,6 +82,25 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     return () => ctrl.abort();
   }, [expandedUc, onError]);
 
+  /**
+   * PL-20: мини-скор оформления раскрытого сценария.
+   *
+   * Считает СЕРВЕР тем же линтером, что и форма: счёт, разошедшийся с тем, что
+   * человек видел при наборе, был бы хуже отсутствующего. Тянем только для
+   * раскрытого узла — скор на всё дерево стоил бы по запросу на каждую US, из
+   * которых посмотрят одну.
+   */
+  const [ucScore, setUcScore] = useState<LoreUcQualityResult | null>(null);
+  useEffect(() => {
+    if (!expandedUc) { setUcScore(null); return; }
+    const ctrl = new AbortController();
+    setUcScore(null);
+    checkLoreUcQuality({ uc_id: expandedUc }, ctrl.signal)
+      .then(setUcScore)
+      .catch(() => { /* линтер advisory — дерево остаётся рабочим */ });
+    return () => ctrl.abort();
+  }, [expandedUc]);
+
   // Use cases выбранной фичи (замыкают fit-мост).
   const [ucs, setUcs] = useState<LoreUcRow[]>([]);
   useEffect(() => {
@@ -133,8 +152,6 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     if (!f) {
       detail = <EmptyDetail text={t('lore.product.feat.pick', 'Выберите фичу слева')} />;
     } else {
-      const status = (f.status ?? '').toLowerCase();
-
       // Заявлено фичей.
       const jobIds = asArray(f.job_ids);
       const painIds = asArray(f.pain_ids);
@@ -185,7 +202,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
       detail = (
         <div>
           <PassportHeader title={f.title ?? f.uc_id}>
-            <Pill tone={status === 'active' ? 'act' : status === 'shipped' ? 'ok' : 'muted'}>{ucStatusLabel(t, f.status)}</Pill>
+            <Pill tone={ucStatusTone(f.status)}>{ucStatusLabel(t, f.status)}</Pill>
             {f.goal_level && <Pill>{goalLevelLabel(t, f.goal_level)}</Pill>}
             <Pill tone={relievedCount >= claimedCount && claimedCount > 0 ? 'ok' : 'warn'}>fit {relievedCount}/{claimedCount}</Pill>
             <button
@@ -252,7 +269,18 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                       <span style={{ width: 16, textAlign: 'center' }}>{ucGlyph(uc.status)}</span>
                       <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc.uc_id)}>{uc.uc_id}</LinkChip>
                       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{uc.title ?? ''}</span>
-                      <Pill tone={(uc.status ?? '').toLowerCase() === 'shipped' ? 'ok' : (uc.status ?? '').toLowerCase() === 'active' ? 'act' : 'muted'} style={{ marginLeft: 'auto' }}>{ucStatusLabel(t, uc.status)}</Pill>
+                      {/* Мини-скор — только у раскрытого узла: он и посчитан
+                          только для него. Показать его у всех строк значило бы
+                          либо врать, либо запросить дерево целиком. */}
+                      {open && ucScore && (
+                        <span
+                          title={t('lore.product.feat.qualityHint', 'оформление по Кокберну')}
+                          style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)', color: ucScore.score === ucScore.max ? 'var(--suc)' : 'var(--wrn)' }}
+                        >
+                          {ucScore.score}/{ucScore.max}
+                        </span>
+                      )}
+                      <Pill tone={ucStatusTone(uc.status)} style={{ marginLeft: 'auto' }}>{ucStatusLabel(t, uc.status)}</Pill>
                     </TRow>
 
                     {open && (

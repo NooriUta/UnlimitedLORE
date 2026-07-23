@@ -27,9 +27,26 @@ function label(t: TFunction, ns: string, value: string | null | undefined, glyph
   return g ? `${g} ${translated}` : translated;
 }
 
-/** Статус сценария/корня: proposed | active | shipped | dropped. */
+/** Статус сценария/корня: proposed | active | shipped | in_rework | dropped. */
 export const ucStatusLabel = (t: TFunction, v: string | null | undefined) =>
   label(t, 'ucStatus', v);
+
+/**
+ * Тон пилюли статуса (PL-20).
+ *
+ * `in_rework` — ПРЕДУПРЕЖДАЮЩИЙ, а не нейтральный: это выпущенный сценарий, у
+ * которого снова открылись задачи (D17). Покрась его как «proposed» — строка
+ * читалась бы «ещё не начали», хотя всё наоборот: сделали и переделываем.
+ * Именно это различие и есть смысл статуса.
+ */
+export function ucStatusTone(v: string | null | undefined): 'ok' | 'act' | 'warn' | 'muted' {
+  switch ((v ?? '').toLowerCase()) {
+    case 'shipped':   return 'ok';
+    case 'active':    return 'act';
+    case 'in_rework': return 'warn';
+    default:          return 'muted';
+  }
+}
 
 /** Строгость изложения по Кокберну: casual | fully-dressed. */
 export const rigorLabel = (t: TFunction, v: string | null | undefined) =>

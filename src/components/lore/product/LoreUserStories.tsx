@@ -21,7 +21,7 @@ import {
   EmptyDetail,
   ListSearch,
 } from './shared';
-import { ucStatusLabel, rigorLabel, goalLevelLabel } from './vocab';
+import { ucStatusLabel, ucStatusTone, rigorLabel, goalLevelLabel } from './vocab';
 import UsFormModal, { type UsDraft } from './UsFormModal';
 
 // Уровень цели (Коберн, D2): море / рыба.
@@ -99,7 +99,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
               title={uc.title}
               selected={uc.uc_id === selectedId}
               onClick={() => onSelect(uc.uc_id)}
-              meta={<Pill>{glyph} {statusShort}</Pill>}
+              meta={<Pill tone={ucStatusTone(uc.status)}>{glyph} {statusShort}</Pill>}
             />
           );
         })}
@@ -116,8 +116,6 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
     if (!uc) {
       detail = <EmptyDetail text={t('lore.product.us.pick', 'Выберите историю слева')} />;
     } else {
-      const status = (uc.status ?? '').toLowerCase();
-
       const painIds = asArray(uc.relieves_pain_ids);
       const gainIds = asArray(uc.delivers_gain_ids);
       const jobIds = asArray(uc.performs_job_ids);
@@ -141,7 +139,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
           </div>
 
           <PassportHeader title={uc.title ?? uc.uc_id}>
-            <Pill tone={status === 'shipped' ? 'ok' : status === 'active' ? 'act' : 'muted'}>{ucStatusLabel(t, uc.status)}</Pill>
+            <Pill tone={ucStatusTone(uc.status)}>{ucStatusLabel(t, uc.status)}</Pill>
             {uc.goal_level && <Pill>{goalLevelLabel(t, uc.goal_level)}</Pill>}
             {uc.rigor && <Pill>{rigorLabel(t, uc.rigor)}</Pill>}
             {/* Правка той же формой, что и создание: линтер обязан работать и
