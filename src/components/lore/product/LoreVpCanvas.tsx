@@ -431,7 +431,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     const ro = new ResizeObserver(() => rf.current?.fitView({ padding: 0.1 }));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+    // Зависимость от `loading` обязательна: пока данные грузятся, компонент
+    // возвращает скелет, холста в DOM ещё нет и ref пуст. С пустым списком
+    // зависимостей наблюдатель не вешался вовсе, и на узком экране сцена
+    // оставалась в масштабе широкого — половина канвы за кромкой.
+  }, [loading]);
   useEffect(() => {
     const id = requestAnimationFrame(() => rf.current?.fitView({ padding: 0.1 }));
     return () => cancelAnimationFrame(id);
@@ -489,6 +493,33 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     </div>
   );
 
+  /**
+   * Чей это продукт.
+   *
+   * Канва показывала ценности, не называя, к какому продукту они относятся: в
+   * корпусе несколько проектов, и одинаковые по звучанию боли разных продуктов
+   * читались как одна картина. Проект берётся с самой фичи (BELONGS_TO_PROJECT);
+   * «не задан» показывается явно — это пропуск, который надо закрыть, а не
+   * повод молчать.
+   */
+  const featureProjects = asArray(feature?.projects).filter(Boolean);
+  const productLine = feature && (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8, fontSize: 'var(--fs-sm)' }}>
+      <span style={{ color: 'var(--t3)' }}>{t('lore.product.canvas.product', 'Продукт:')}</span>
+      {featureProjects.length > 0 ? featureProjects.map(p => (
+        <span key={p} style={{
+          fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', padding: '1px 8px', borderRadius: 999,
+          border: '1px solid var(--bd)', color: 'var(--t1)',
+        }}>{p}</span>
+      )) : (
+        <span style={{ color: 'var(--wrn)' }}>
+          ⚠ {t('lore.product.canvas.noProject', 'проект не задан — ценности разных продуктов сольются в одну картину')}
+        </span>
+      )}
+      <span style={{ color: 'var(--t3)', fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{feature.uc_id}</span>
+    </div>
+  );
+
   // ── чей профиль: выбор сегмента (PL-36) ──
   const actorPicker = canvasActors.length > 0 && (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10, fontSize: 'var(--fs-sm)' }}>
@@ -517,6 +548,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
 
   return (
     <div style={S.wrap}>
+      {productLine}
       {actorPicker}
       {/* Высота задана в пикселях: ReactFlow меряет контейнер, и у схлопнутого
           в ноль холст остаётся пустым при полностью живых данных. */}
@@ -526,7 +558,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
       <div
         ref={boxRef}
         style={{
-          position: 'relative', aspectRatio: '2.2', maxHeight: '74vh', minHeight: 380,
+          // Высота задана напрямую, БЕЗ aspect-ratio. С `aspect-ratio` минимум
+          // высоты раздувает ШИРИНУ: на 375px контейнер вырастал до 836px и
+          // уезжал за экран (найдено на проверке PL-42). Здесь ширина всегда
+          // равна доступной, а высота подстраивается сама.
+          position: 'relative', width: '100%', height: 'clamp(320px, 42vw, 620px)',
           border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden',
         }}
       >
@@ -544,7 +580,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           edgesFocusable={false}
           fitView
           fitViewOptions={{ padding: 0.1 }}
-          minZoom={0.3}
+          minZoom={0.12}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
         >

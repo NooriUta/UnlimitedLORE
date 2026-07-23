@@ -1637,6 +1637,8 @@
       "canvas": {
         "empty": "No canvases yet — create a root scenario",
         "noMetric": "without a metric",
+        "product": "Product:",
+        "noProject": "no project set — values of different products blend into one picture",
         "vmapSub": "what we build · square",
         "cprofSub": "what the customer has · circle",
         "legendDone": "delivered — relieves, delivers, performs",

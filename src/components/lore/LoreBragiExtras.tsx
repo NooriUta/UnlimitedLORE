@@ -5,6 +5,7 @@
 // dedicated backend slice — see note below).
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Modal } from '@mantine/core';
 import { fetchLoreSlice, fetchBragiMetrics } from '../../api/lore';
 import LoreBragiIntegrationEditor, { type LoreBragiIntegrationEditData } from './LoreBragiIntegrationEditor';
 import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBragiKeywordEditor';
@@ -78,30 +79,37 @@ export function LoreBragiKeys() {
   const activeCount = intentSel.size + clusterSel.size + rubricSel.size;
   const clearAll = () => { setIntentSel(new Set()); setClusterSel(new Set()); setRubricSel(new Set()); };
 
-  if (creating) {
-    return (
-      <LoreBragiKeywordEditor
-        rubrics={rubrics}
-        onSaved={() => { setCreating(false); load(); }}
-        onCancel={() => setCreating(false)}
-      />
-    );
-  }
-  if (editingRow) {
-    const editData: LoreBragiKeywordEditData = { ...editingRow };
-    return (
-      <LoreBragiKeywordEditor
-        editing={editData}
-        rubrics={rubrics}
-        onSaved={() => { setEditingRow(null); load(); }}
-        onCancel={() => setEditingRow(null)}
-      />
-    );
-  }
   if (loading) return <div style={S.hint}>{t('bragi.extras.keys.loading', 'загрузка…')}</div>;
+
+  /**
+   * Форма — модалкой ПОВЕРХ таблицы, а не вместо неё (PL-38).
+   *
+   * Раньше редактор подменял собой всю панель: список ключевых слов исчезал
+   * целиком, и правя фразу, нельзя было свериться с соседними — а именно
+   * соседство и держит семантическое ядро (кластеры, дубли, интенты). Форма
+   * при этом короткая: ей место в диалоге, а не в режиме экрана.
+   */
+  const editorModal = (
+    <Modal
+      opened={creating || !!editingRow}
+      onClose={() => { setCreating(false); setEditingRow(null); }}
+      title={editingRow
+        ? `${t('bragi.extras.keys.editBtn', '✎ редактировать')} · ${editingRow.phrase}`
+        : t('bragi.extras.keys.newBtn', '+ новое ключевое слово')}
+      size={640}
+    >
+      <LoreBragiKeywordEditor
+        editing={editingRow ? ({ ...editingRow } as LoreBragiKeywordEditData) : undefined}
+        rubrics={rubrics}
+        onSaved={() => { setCreating(false); setEditingRow(null); load(); }}
+        onCancel={() => { setCreating(false); setEditingRow(null); }}
+      />
+    </Modal>
+  );
 
   return (
     <div>
+      {editorModal}
       <div style={S.descRow}>
         <div style={S.desc}>{t('bragi.extras.keys.desc', 'семантическое ядро: кластеры, точная частота [!], интент, целевая страница.')}</div>
         <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.extras.keys.newBtn', '+ новое ключевое слово')}</button>
@@ -319,28 +327,25 @@ export function LoreBragiIntegrations() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (creating) {
-    return (
-      <LoreBragiIntegrationEditor
-        onSaved={() => { setCreating(false); load(); }}
-        onCancel={() => setCreating(false)}
-      />
-    );
-  }
-  if (editingRow) {
-    const editData: LoreBragiIntegrationEditData = { ...editingRow };
-    return (
-      <LoreBragiIntegrationEditor
-        editing={editData}
-        onSaved={() => { setEditingRow(null); load(); }}
-        onCancel={() => setEditingRow(null)}
-      />
-    );
-  }
-
   if (loading) return <div style={S.hint}>{t('bragi.extras.integrations.loading', 'загрузка…')}</div>;
   return (
     <div>
+      {/* Та же причина, что у ключевых слов: правя коннектор, надо видеть
+          соседние — статусы и ссылки на секреты сверяют между собой. */}
+      <Modal
+        opened={creating || !!editingRow}
+        onClose={() => { setCreating(false); setEditingRow(null); }}
+        title={editingRow
+          ? `${t('bragi.extras.integrations.editBtn', '✎ редактировать')} · ${editingRow.service ?? editingRow.integration_id}`
+          : t('bragi.extras.integrations.newBtn', '+ новая интеграция')}
+        size={640}
+      >
+        <LoreBragiIntegrationEditor
+          editing={editingRow ? ({ ...editingRow } as LoreBragiIntegrationEditData) : undefined}
+          onSaved={() => { setCreating(false); setEditingRow(null); load(); }}
+          onCancel={() => { setCreating(false); setEditingRow(null); }}
+        />
+      </Modal>
       <div style={S.descRow}>
         <div style={S.desc}>{t('bragi.extras.integrations.title', 'коннекторы для сбора метрик и публикации. Токены — по ссылке на секрет, не значением.')}</div>
         <button style={S.newBtn} onClick={() => setCreating(true)}>{t('bragi.extras.integrations.newBtn', '+ новая интеграция')}</button>

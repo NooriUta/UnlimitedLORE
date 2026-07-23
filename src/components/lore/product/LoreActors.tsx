@@ -2,13 +2,16 @@
 // Акторы как сегменты клиентов: master-detail (список слева + профиль сегмента справа).
 // Дизайн зеркалит утверждённый прототип actorP. Данные — через useSlice/fetchLoreSlice.
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type {
   LoreActorRow,
   LorePainRow,
   LoreGainRow,
   LoreJobRow,
+  LoreFeatureRow,
+  LoreUcRow,
 } from '../../../api/lore';
+import { fetchLoreSlice } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import {
@@ -98,6 +101,29 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
   const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
   const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
   const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, []);
+  /**
+   * Заголовки сценариев по id.
+   *
+   * У актора лежат только коды US, а код без названия не отвечает, что за роль
+   * перед тобой: список приходилось открывать поштучно. Слайс `features` даёт
+   * только КОРНИ (cloud/kite), поэтому дочерние сценарии добираем по каждой
+   * фиче — иначе половина кодов осталась бы без подписи.
+   */
+  const { rows: featureRoots } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
+  const [ucTitle, setUcTitle] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    if (featureRoots.length === 0) return;
+    const ctrl = new AbortController();
+    Promise.all(featureRoots.map(f => fetchLoreSlice<LoreUcRow>('use_cases_of_feature', { id: f.uc_id }, ctrl.signal)))
+      .then(lists => {
+        const m = new Map<string, string>();
+        featureRoots.forEach(f => m.set(f.uc_id, f.title ?? ''));
+        lists.flat().forEach(u => m.set(u.uc_id, u.title ?? ''));
+        setUcTitle(m);
+      })
+      .catch(() => { /* подписи не критичны: без них останутся коды */ });
+    return () => ctrl.abort();
+  }, [featureRoots]);
 
   // ── фильтр по виду актора (PL-18) ──
   //
@@ -184,6 +210,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
               ucIds.map((ucId, i) => (
                 <TRow key={ucId} first={i === 0}>
                   <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', ucId)}>{ucId}</LinkChip>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>{ucTitle.get(ucId) ?? ''}</span>
                 </TRow>
               ))
             )}
