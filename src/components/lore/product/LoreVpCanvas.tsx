@@ -36,7 +36,7 @@ interface Link {
 const S = {
   wrap: { padding: 14, overflow: 'auto', width: '100%' } as CSSProperties,
   navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
-  canvas: { position: 'relative' as const, display: 'grid', gridTemplateColumns: '1fr 110px 1fr', alignItems: 'center', width: '100%' },
+  canvas: { position: 'relative' as const, display: 'grid', gridTemplateColumns: '1fr 72px 1fr', alignItems: 'center', width: '100%' },
   links: { position: 'absolute' as const, inset: 0, width: '100%', height: '100%', pointerEvents: 'none' as const, zIndex: 2 },
   figwrap: { display: 'flex', flexDirection: 'column' as const, gap: 6 },
   head: { display: 'flex', alignItems: 'baseline', gap: 8 },
@@ -46,42 +46,53 @@ const S = {
   st: { fontSize: 'var(--fs-2xs)', textTransform: 'uppercase' as const, letterSpacing: '.06em', color: 'var(--t3)', marginBottom: 3 },
 };
 
-/** Стикер: почти квадратный, код мелко в правом нижнем углу, лёгкое перекрытие. */
-function Sticker({ id, title, color, small, onHover, onDragStart, onDrop }: {
-  id: string; title: string; color: string; small?: boolean;
+/**
+ * Стикер: почти квадратный, код мелко в правом нижнем углу, лёгкое перекрытие.
+ *
+ * Перетаскивание — на pointer-событиях, а НЕ на HTML5 drag&drop. Нативный drag
+ * стикеры не переставлял: внутри карточки лежит текст, браузер начинал его
+ * собственное перетаскивание, drop до нас не доходил. Pointer заодно даёт
+ * перетаскивание пальцем — у HTML5-drag на тач-экранах его нет вовсе.
+ */
+function Sticker({ id, bare, sec, title, color, small, dragging, onHover, onGrab }: {
+  id: string; bare: string; sec?: string; title: string; color: string; small?: boolean;
+  dragging?: boolean;
   onHover: (id: string | null) => void;
-  onDragStart?: () => void;
-  onDrop?: () => void;
+  onGrab?: (e: React.PointerEvent) => void;
 }) {
   return (
     <div
       data-vp={id}
-      draggable={!!onDragStart}
-      onDragStart={e => {
-        // setData обязателен: без него drop не выстрелит ни в Chrome, ни в Firefox —
-        // перетаскивание выглядит рабочим, а результата нет.
-        e.dataTransfer.setData('text/plain', id);
-        e.dataTransfer.effectAllowed = 'move';
-        onDragStart?.();
-      }}
-      onDragOver={e => { if (onDrop) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; } }}
-      onDrop={e => { e.preventDefault(); onDrop?.(); }}
+      data-vpid={bare}
+      data-vpsec={sec}
+      onPointerDown={onGrab}
       onMouseEnter={() => onHover(id)}
       onMouseLeave={() => onHover(null)}
-      title={id}
+      title={`${title} · ${bare}`}
       style={{
         position: 'relative', display: 'inline-flex', alignItems: 'flex-start',
-        width: small ? 92 : 118, minHeight: small ? 48 : 64,
+        width: small ? 92 : 118, minHeight: small ? 42 : 64,
         padding: small ? '5px 6px 12px' : '6px 7px 14px',
         border: `1px solid ${color}`, borderRadius: 3, background: 'var(--bg2)',
         fontSize: small ? 'var(--fs-2xs)' : 'var(--fs-sm)', lineHeight: 1.25,
-        boxShadow: '1px 1px 0 rgba(0,0,0,.18)',
+        boxShadow: dragging ? '3px 3px 0 rgba(0,0,0,.28)' : '1px 1px 0 rgba(0,0,0,.18)',
         // Отрицательный отступ — стикеры не выкладывают по линейке; при
         // наведении карточка поднимается, иначе сосед перекрывал бы подпись.
-        margin: '0 -6px 4px 0', verticalAlign: 'top', cursor: onDragStart ? 'grab' : 'default',
+        margin: '0 -6px 4px 0', verticalAlign: 'top',
+        cursor: onGrab ? (dragging ? 'grabbing' : 'grab') : 'default',
+        // Без этого палец скроллит секцию вместо переноса, а мышь выделяет текст.
+        touchAction: onGrab ? 'none' : undefined,
+        userSelect: onGrab ? 'none' : undefined,
+        opacity: dragging ? 0.65 : 1,
       }}
     >
-      {title}
+      {/* Три строки максимум: длинная формулировка растягивала карточку втрое,
+          сектор уходил в прокрутку, и соседи выглядели «мельче» без причины.
+          Полный текст — в подсказке. */}
+      <span style={{
+        display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+      }}>{title}</span>
       <span style={{
         position: 'absolute', right: 5, bottom: 3, fontFamily: 'var(--mono)',
         fontSize: 8, color: 'var(--t3)', maxWidth: '100%',
@@ -186,6 +197,10 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     try { return JSON.parse(localStorage.getItem('lore.vp.order') ?? '{}'); } catch { return {}; }
   });
   const dragRef = useRef<{ sec: string; id: string } | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  // Состав секторов на момент рендера: обработчик перетаскивания живёт в окне и
+  // до пропсов стикера не дотянется — а переставлять надо среди актуальных.
+  const secIds = useRef<Record<string, string[]>>({});
 
   useEffect(() => { localStorage.setItem('lore.vp.order', JSON.stringify(order)); }, [order]);
 
@@ -197,16 +212,45 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   };
 
   /** Перестановка внутри СВОЕГО сектора: между секторами смысл разный. */
-  const dropOn = (sec: string, targetId: string, ids: string[]) => {
+  const dropOn = (sec: string, targetId: string) => {
     const d = dragRef.current;
-    dragRef.current = null;
     if (!d || d.sec !== sec || d.id === targetId) return;
-    const cur = ordered(sec, ids);
+    const cur = ordered(sec, secIds.current[sec] ?? []);
     const from = cur.indexOf(d.id), to = cur.indexOf(targetId);
     if (from < 0 || to < 0) return;
     const next = [...cur];
     next.splice(to, 0, ...next.splice(from, 1));
     setOrder(o => ({ ...o, [sec]: next }));
+  };
+
+  /**
+   * Перенос идёт ЖИВЬЁМ: карточки меняются местами прямо под курсором, а не по
+   * отпусканию. Так видно результат до того, как отпустил, и промах мимо цели
+   * не откатывает всё в исходное.
+   */
+  const grab = (sec: string, id: string) => (e: React.PointerEvent) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    e.preventDefault();
+    dragRef.current = { sec, id };
+    setDragId(sec + '/' + id);
+    const move = (ev: PointerEvent) => {
+      const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-vp]') as HTMLElement | null;
+      const d = dragRef.current;
+      if (!el || !d) return;
+      if (el.dataset.vpsec !== d.sec) return;   // чужой сектор — не наш смысл
+      const target = el.dataset.vpid;
+      if (target && target !== d.id) dropOn(d.sec, target);
+    };
+    const up = () => {
+      dragRef.current = null;
+      setDragId(null);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   };
   const [paths, setPaths] = useState<{ d: string; done: boolean; a: string | null; b: string }[]>([]);
 
@@ -216,16 +260,34 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
       const box = canvasRef.current?.getBoundingClientRect();
       if (!box) return;
       const next: { d: string; done: boolean; a: string | null; b: string }[] = [];
+      /**
+       * Точка привязки, прижатая к рамке своей секции.
+       *
+       * Секции прокручиваются, и у уехавшего стикера прямоугольник лежит ВНЕ
+       * секции — линия уходила в пустоту мимо всей фигуры (её и было видно на
+       * канве). Прижатая точка остаётся на границе секции: связь видна и
+       * показывает, в какой части списка искать, вместо обрыва в воздухе.
+       */
+      const anchor = (el: Element, side: 'left' | 'right') => {
+        const r = el.getBoundingClientRect();
+        const sc = el.closest('[data-sec]')?.getBoundingClientRect();
+        let x = side === 'right' ? r.right : r.left;
+        let y = r.top + r.height / 2;
+        if (sc) {
+          x = Math.min(Math.max(x, sc.left + 2), sc.right - 2);
+          y = Math.min(Math.max(y, sc.top + 6), sc.bottom - 6);
+        }
+        return { x: x - box.left, y: y - box.top };
+      };
       for (const l of links) {
         const bEl = canvasRef.current?.querySelector(`[data-vp="${l.to}"]`);
         if (!bEl) continue;
         const aEl = l.from ? canvasRef.current?.querySelector(`[data-vp="${l.from}"]`) : null;
         const fallback = canvasRef.current?.querySelector(l.to.startsWith('JOB-') ? '[data-sec="ps"]' : '[data-sec="pr"]');
-        const src = (aEl ?? fallback)?.getBoundingClientRect();
-        const dst = bEl.getBoundingClientRect();
-        if (!src) continue;
-        const x1 = src.right - box.left, y1 = src.top + src.height / 2 - box.top;
-        const x2 = dst.left - box.left, y2 = dst.top + dst.height / 2 - box.top;
+        const srcEl = aEl ?? fallback;
+        if (!srcEl) continue;
+        const { x: x1, y: y1 } = anchor(srcEl, 'right');
+        const { x: x2, y: y2 } = anchor(bEl, 'left');
         const dx = Math.max(30, (x2 - x1) * 0.45);
         next.push({ d: `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`, done: l.done, a: l.from, b: l.to });
       }
@@ -235,8 +297,16 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     // сошлись бы в одну точку.
     const id = requestAnimationFrame(draw);
     window.addEventListener('resize', draw);
-    return () => { cancelAnimationFrame(id); window.removeEventListener('resize', draw); };
-  }, [links, ucs, narrow, featureId, order]);
+    // Прокрутка секции сдвигает стикеры, а событие scroll не всплывает — ловим
+    // на фазе перехвата, иначе линии остаются на местах уехавших карточек.
+    const root = canvasRef.current;
+    root?.addEventListener('scroll', draw, true);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener('resize', draw);
+      root?.removeEventListener('scroll', draw, true);
+    };
+  }, [links, ucs, narrow, featureId, order, dragId]);
 
   if (loading) return <div style={S.wrap}><LoreSkeleton rows={6} /></div>;
   if (features.length === 0) {
@@ -306,20 +376,24 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
    * смысл (боль не станет выгодой от переноса), и такая «правка раскладки»
    * была бы порчей смысла.
    */
-  const stickers = (sec: string, ids: string[], prefix: string, color: string, small?: boolean) =>
-    ordered(sec, ids).map(id => (
+  const stickers = (sec: string, ids: string[], prefix: string, color: string, small?: boolean) => {
+    secIds.current[sec] = ids;
+    return ordered(sec, ids).map(id => (
       <span key={id} style={{ opacity: dim(prefix + id) ? 0.35 : 1 }}>
         <Sticker
           id={prefix + id}
+          bare={id}
+          sec={sec}
           title={titleOf.get(id) ?? id}
           color={color}
           small={small}
+          dragging={dragId === sec + '/' + id}
           onHover={setHover}
-          onDragStart={() => { dragRef.current = { sec, id }; }}
-          onDrop={() => dropOn(sec, id, ids)}
+          onGrab={grab(sec, id)}
         />
       </span>
     ));
+  };
 
   const valueMap = (
     <div style={S.figwrap}>
@@ -395,12 +469,16 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           <>
             {/* Каждому сектору СВОЯ зона: у абсолютных блоков нет общего потока,
                 и Gains с Pains наезжали бы друг на друга. */}
+            {/* Секторам отдано столько, сколько круг позволяет: карточки не
+                влезали, сектор начинал прокручиваться, и связь уезжала к
+                невидимой карточке. Прокрутка тут — не «много данных», а
+                недодали места. */}
             {sec('gains', 'Gains', stickers('gains', gainIds, '', 'var(--gain)', true),
-              { position: 'absolute', left: '6%', top: '9%', width: '40%', height: '38%', textAlign: 'center' })}
+              { position: 'absolute', left: '5%', top: '2%', width: '44%', height: '48%', textAlign: 'center' })}
             {sec('jobs', 'Customer Jobs', stickers('jobs', jobIds, '', 'var(--job)', true),
               { position: 'absolute', right: '5%', top: '50%', transform: 'translateY(-50%)', width: '40%', maxHeight: '56%', textAlign: 'center' })}
             {sec('pains', 'Pains', stickers('pains', painIds, '', 'var(--pain)', true),
-              { position: 'absolute', left: '6%', bottom: '9%', width: '40%', height: '38%', textAlign: 'center' })}
+              { position: 'absolute', left: '5%', bottom: '2%', width: '44%', height: '48%', textAlign: 'center' })}
           </>
         )}
       </div>
