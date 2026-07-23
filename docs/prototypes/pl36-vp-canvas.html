@@ -68,19 +68,22 @@
   .vmap::after {
     content:''; position:absolute; inset:0; pointer-events:none; border-radius:12px 0 0 12px;
     background:
-      /* вертикаль — граница Products & Services */
+      /* вертикаль — правая граница Products & Services */
       linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
-      /* диагональ правой половины — Gain Creators сверху, Pain Relievers снизу */
-      linear-gradient(to bottom right, transparent 49.6%, var(--bd) 49.6%, var(--bd) 50.4%, transparent 50.4%);
-    background-size:100% 100%, 50% 100%; background-position:0 0, 100% 0; background-repeat:no-repeat;
+      /* горизонталь ПРАВОЙ половины — делит Gain Creators и Pain Relievers */
+      linear-gradient(to bottom, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px));
+    background-size:100% 100%, 50% 100%;
+    background-position:0 0, 100% 0;
+    background-repeat:no-repeat;
     opacity:.45;
   }
+  /* Канон: слева колонка Products & Services на всю высоту, правая половина
+     делится по горизонтали — Gain Creators сверху, Pain Relievers снизу.
+     Ровно так работает оригинальная канва: слева «что мы даём», справа — чем
+     это создаёт выгоду и снимает боль. */
   .vmap > .inner {
     padding:10px 12px;
-    /* Канон: слева вертикальная полоса Products & Services, правая половина
-       делится диагональю — сверху Gain Creators, снизу Pain Relievers.
-       Прежние три ряда были нашей выдумкой и ставили секторы не на свои места. */
-    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:4px;
+    display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6px;
   }
   .vmap .s-ps { grid-row:1 / span 2; }
   .vmap .s-gc { grid-column:2; grid-row:1; }
@@ -96,19 +99,33 @@
   .cprofile::after {
     content:''; position:absolute; inset:0; pointer-events:none; border-radius:50%;
     background:
-      linear-gradient(to bottom, transparent calc(33% - 1px), var(--bd) calc(33% - 1px), var(--bd) calc(33% + 1px), transparent calc(33% + 1px)),
-      linear-gradient(to bottom, transparent calc(66% - 1px), var(--bd) calc(66% - 1px), var(--bd) calc(66% + 1px), transparent calc(66% + 1px));
+      /* вертикаль — левая граница сектора Customer Jobs */
+      linear-gradient(to right, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px)),
+      /* горизонталь ЛЕВОЙ половины — делит Gains (верх) и Pains (низ) */
+      linear-gradient(to bottom, transparent calc(50% - 1px), var(--bd) calc(50% - 1px), var(--bd) calc(50% + 1px), transparent calc(50% + 1px));
+    background-size:100% 100%, 50% 100%;
+    background-position:0 0, 0 0;
+    background-repeat:no-repeat;
     opacity:.4;
   }
-  .cprofile > .inner { padding:14px 0; }
-  .cprofile .sector { text-align:center; }
-  /* Ширина ряда = хорда круга на его высоте: верх и низ уже, середина шире. */
-  .cprofile .sector:nth-child(1) { width:62%; margin:0 auto; }
-  .cprofile .sector:nth-child(2) { width:84%; margin:0 auto; }
-  .cprofile .sector:nth-child(3) { width:62%; margin:0 auto; }
-  /* В круге стикеры мельче: та же ширина, что в квадрате, выпирала за форму —
-     а стикер, вылезший за канву, перестаёт быть частью сектора. */
-  .cprofile .card { width:104px; min-height:56px; font-size:10.5px; }
+  .cprofile > .inner {
+    display:block; padding:0;
+  }
+  /* Секторы позиционируются по кругу: правый — Jobs, левый верх — Gains,
+     левый низ — Pains. Проценты подобраны так, чтобы содержимое лежало внутри
+     окружности, а не наезжало на её край. */
+  .cprofile .sector { position:absolute; }
+  /* Customer Jobs — центральный сектор справа: в каноне это то, вокруг чего
+     строится профиль, поэтому он ближе к центру и шире. Gains и Pains делят
+     левую половину пополам — верх и низ. */
+  /* У каждого сектора СВОЯ зона по высоте, иначе Gains и Pains наезжают друг
+     на друга: у абсолютных блоков нет общего потока, и «сколько влезет» они не
+     согласуют. Половины делят левую сторону ровно пополам. */
+  .cprofile .s-jobs  { right:5%;  top:50%; transform:translateY(-50%); width:40%; max-height:56%; text-align:center; }
+  .cprofile .s-gains { left:6%;   top:9%;   width:40%; height:38%; text-align:center; }
+  .cprofile .s-pains { left:6%;   bottom:9%; width:40%; height:38%; text-align:center; }
+  /* В круге стикеры мельче квадратных: секторы тут ограничены формой. */
+  .cprofile .card { width:92px; min-height:48px; font-size:10px; padding:5px 6px 12px; }
   .cprofile .sector > div { justify-content:center; }
   .cprofile .card { justify-content:center; }
   /* Карточка — СТИКЕР: почти квадратная, с мелким кодом в правом нижнем углу.
@@ -137,8 +154,10 @@
   .card.hi { box-shadow:0 0 0 2px var(--acc); }
   .card.dim { opacity:.35; }
 
-  .gap { width:120px; position:relative; align-self:stretch; }
-  svg.links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+  .canvas { position:relative; }
+  .gap { width:120px; }
+  /* Слой связей поверх ВСЕЙ канвы: концы линий берутся от самих карточек. */
+  svg.links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:2; }
 
   .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:var(--t2); margin-top:10px; }
   .legend i { display:inline-block; width:22px; height:0; border-top-width:2px; vertical-align:middle; margin-right:5px; }
@@ -167,7 +186,7 @@
 </div>
 
 <div class="sec-label">Канва выбранного корня — наведите на карточку, чтобы увидеть её связи</div>
-<div class="canvas">
+<div class="canvas"><svg class="links" id="links"></svg>
   <div class="figwrap">
     <div class="halfhead"><span class="h">Value Map</span><span class="sub">что мы делаем · квадрат</span></div>
     <div class="fig vmap">
@@ -179,15 +198,15 @@
     </div>
   </div>
 
-  <div class="gap"><svg class="links" id="links"></svg></div>
+  <div class="gap"></div>
 
   <div class="figwrap">
     <div class="halfhead" style="justify-content:flex-end"><span class="h">Customer Profile</span><span class="sub">что есть у клиента · круг</span></div>
     <div class="fig cprofile">
       <div class="inner">
-        <div class="sector"><div class="st">Gains</div><div id="gains"></div></div>
-        <div class="sector"><div class="st">Customer Jobs</div><div id="jobs"></div></div>
-        <div class="sector"><div class="st">Pains</div><div id="pains"></div></div>
+        <div class="sector s-gains"><div class="st">Gains</div><div id="gains"></div></div>
+        <div class="sector s-jobs"><div class="st">Customer Jobs</div><div id="jobs"></div></div>
+        <div class="sector s-pains"><div class="st">Pains</div><div id="pains"></div></div>
       </div>
     </div>
   </div>
@@ -304,22 +323,23 @@
     svg.innerHTML = '';
 
     const pairs = [
-      ...c.pains.map(p => ({ from: 'rel-' + p.id, to: p.id, done: p.done, color: 'var(--pain)' })),
-      ...c.gains.map(g => ({ from: 'crt-' + g.id, to: g.id, done: g.done, color: 'var(--gain)' })),
+      ...c.pains.map(p => ({ from: 'rel-' + p.id, to: p.id, done: p.done })),
+      ...c.gains.map(g => ({ from: 'crt-' + g.id, to: g.id, done: g.done })),
     ];
 
     for (const p of pairs) {
-      const a = document.querySelector(`[data-id="${p.from}"]`);
-      const b = document.querySelector(`[data-id="${p.to}"]`);
+      const a = document.querySelector('[data-id="' + p.from + '"]');
+      const b = document.querySelector('[data-id="' + p.to + '"]');
       if (!b) continue;
-      // Заявленное без исполнения рисуем ОТ СЕКТОРА, а не от карточки: карточки
-      // в Value Map для него нет — это и есть смысл «заявили, но не сделали».
-      const srcRect = a ? a.getBoundingClientRect() : document.getElementById('pr').getBoundingClientRect();
-      const dstRect = b.getBoundingClientRect();
-      const y1 = srcRect.top + srcRect.height / 2 - box.top;
-      const y2 = dstRect.top + dstRect.height / 2 - box.top;
+      // Заявленное без исполнения тянем ОТ СЕКТОРА: карточки в Value Map для
+      // него нет — в этом и смысл «заявили, но не сделали».
+      const src = a ? a.getBoundingClientRect() : document.getElementById('pr').getBoundingClientRect();
+      const dst = b.getBoundingClientRect();
+      const x1 = src.right - box.left, y1 = src.top + src.height / 2 - box.top;
+      const x2 = dst.left - box.left,  y2 = dst.top + dst.height / 2 - box.top;
+      const dx = Math.max(30, (x2 - x1) * 0.45);
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M 0 ${y1} C 40 ${y1}, 56 ${y2}, 96 ${y2}`);
+      path.setAttribute('d', 'M ' + x1 + ' ' + y1 + ' C ' + (x1 + dx) + ' ' + y1 + ', ' + (x2 - dx) + ' ' + y2 + ', ' + x2 + ' ' + y2);
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', p.done ? 'var(--suc)' : 'var(--wrn)');
       path.setAttribute('stroke-width', '2');
