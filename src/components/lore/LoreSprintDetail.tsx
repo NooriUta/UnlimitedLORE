@@ -515,19 +515,47 @@ const mdBox: React.CSSProperties = {
 // of known roles while still accepting free text — a role typed here that isn't
 // in the dictionary yet gets upserted into it on save (see TaskLine.save below),
 // so the next picker offers it too.
-function AgentRoleInput({ id, value, onChange, placeholder, title }: {
-  id: string; value: string; onChange: (v: string) => void; placeholder: string; title?: string;
+//
+// Было `<input list=…>`: поле шириной 120px с одним плейсхолдером и без единого
+// признака, что у него вообще есть список. Подпись обрезалась («исполните»),
+// список открывался только по случайному клику, а показывал технические коды.
+// Выбор из словаря обязан ВЫГЛЯДЕТЬ как выбор: подпись сверху, русские
+// названия, отдельный пункт для значения, которого в словаре ещё нет.
+function AgentRolePicker({ id, label, value, onChange, hint, warn }: {
+  id: string; label: string; value: string; onChange: (v: string) => void;
+  hint?: string; warn?: string | null;
 }) {
   const { entries } = useDictionary('agent_role');
-  const listId = `agent-role-opts-${id}`;
+  const known = entries.some(e => e.code === value);
+  // Значение вне словаря — законно (по сохранении оно в словарь и попадёт),
+  // поэтому поле само переключается в ручной ввод, а не молча его теряет.
+  const [custom, setCustom] = useState(!!value && !known);
   return (
-    <>
-      <input list={listId} value={value} onChange={e => onChange(e.target.value)}
-        placeholder={placeholder} title={title} style={{ ...inputStyle, width: 120 }} />
-      <datalist id={listId}>
-        {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
-      </datalist>
-    </>
+    <label htmlFor={id} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 134 }} title={hint}>
+      <span style={{ fontSize: 'var(--fs-2xs)', color: warn ? 'var(--wrn)' : 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+        {label}
+      </span>
+      {custom ? (
+        <input
+          id={id} value={value} onChange={e => onChange(e.target.value)}
+          onBlur={() => { if (!value.trim()) setCustom(false); }}
+          placeholder={label} style={{ ...inputStyle, width: 134 }}
+        />
+      ) : (
+        <select
+          id={id} value={known ? value : ''} style={{ ...inputStyle, width: 134 }}
+          onChange={e => {
+            if (e.target.value === ' custom') { onChange(''); setCustom(true); return; }
+            onChange(e.target.value);
+          }}
+        >
+          <option value="">—</option>
+          {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
+          <option value={' custom'}>+ своё значение…</option>
+        </select>
+      )}
+      {warn && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)' }}>{warn}</span>}
+    </label>
   );
 }
 
@@ -673,6 +701,26 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             </span>
           );
         })()}
+        {/* Сценарий — ССЫЛКОЙ, а не подсказкой у чипа. Задача класса `uc`
+            существует ради сценария; спрятанный в title он читался только
+            наведением мыши, то есть на телефоне не читался вовсе. Ведёт на
+            карточку US — оттуда видно и саму историю, и её фичу. */}
+        {(Array.isArray(task.realizes_uc) ? task.realizes_uc : []).filter(Boolean).map(uc => (
+          <a
+            key={uc}
+            href={`/lore?section=userStories&passport=${encodeURIComponent(uc)}`}
+            onClick={e => e.stopPropagation()}
+            title={t('lore.sprintDetail.wcUc', 'реализует сценарий')}
+            style={{
+              fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', flexShrink: 0,
+              padding: '1px 5px', borderRadius: 3, textDecoration: 'none',
+              color: 'var(--g-do)', border: '1px solid color-mix(in srgb, var(--g-do) 32%, transparent)',
+              background: 'color-mix(in srgb, var(--g-do) 10%, transparent)',
+            }}
+          >
+            {uc}
+          </a>
+        ))}
         <span style={S.taskId}>{task.task_id}</span>
         {task.title && <span style={{ color: 'var(--t1)' }}>{task.title}</span>}
         {hasDetail && !editing && (
@@ -826,14 +874,19 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
               lookup from the extensible `agent_role` dictionary (still accepts
               free text; new values are registered on save). reviewer must
               differ from executor before the task can reach done (backend gate). */}
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-            <AgentRoleInput id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
-              placeholder={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
-            <AgentRoleInput id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
-              placeholder={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
-            <AgentRoleInput id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
-              placeholder={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
-              title={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')} />
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+            <AgentRolePicker id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
+              label={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
+            <AgentRolePicker id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
+              label={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
+            <AgentRolePicker id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
+              label={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
+              hint={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')}
+              // Совпадение с исполнителем — жёсткий гейт бэкенда: задача не
+              // уйдёт в done. Узнавать об этом при сохранении поздно.
+              warn={reviewer && reviewer === executor
+                ? t('lore.sprintDetail.task.roleConflict', 'совпадает с исполнителем, задача не сможет перейти в done')
+                : null} />
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button type="button" style={primaryBtn} disabled={busy} onClick={save}>{t('lore.sprintDetail.task.save', 'Сохранить')}</button>

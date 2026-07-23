@@ -431,7 +431,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
     const ro = new ResizeObserver(() => rf.current?.fitView({ padding: 0.1 }));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+    // Зависимость от `loading` обязательна: пока данные грузятся, компонент
+    // возвращает скелет, холста в DOM ещё нет и ref пуст. С пустым списком
+    // зависимостей наблюдатель не вешался вовсе, и на узком экране сцена
+    // оставалась в масштабе широкого — половина канвы за кромкой.
+  }, [loading]);
   useEffect(() => {
     const id = requestAnimationFrame(() => rf.current?.fitView({ padding: 0.1 }));
     return () => cancelAnimationFrame(id);
@@ -526,7 +530,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
       <div
         ref={boxRef}
         style={{
-          position: 'relative', aspectRatio: '2.2', maxHeight: '74vh', minHeight: 380,
+          // Высота задана напрямую, БЕЗ aspect-ratio. С `aspect-ratio` минимум
+          // высоты раздувает ШИРИНУ: на 375px контейнер вырастал до 836px и
+          // уезжал за экран (найдено на проверке PL-42). Здесь ширина всегда
+          // равна доступной, а высота подстраивается сама.
+          position: 'relative', width: '100%', height: 'clamp(320px, 42vw, 620px)',
           border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden',
         }}
       >
@@ -544,7 +552,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           edgesFocusable={false}
           fitView
           fitViewOptions={{ padding: 0.1 }}
-          minZoom={0.3}
+          minZoom={0.12}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
         >

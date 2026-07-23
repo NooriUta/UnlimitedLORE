@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Modal } from '@mantine/core';
 import {
   fetchLoreSlice, linkSprintMilestone, upsertMilestone, createLoreTask,
   type LoreMilestone, type LoreSprintRow, type LoreSprintDoneDate, type LoreSprintTask,
@@ -171,11 +172,19 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
         <GameIcon slug="crossed-axes" size={18} style={{ color: 'var(--acc)' }} />
         <span style={S.h1}>{t('lore.milestonesView.title', 'Вехи проекта')}</span>
         <span style={S.dim}>· {t('lore.milestonesView.countSummary', '{{count}} вех · avg velocity {{velocity}} Sp/нед', { count: milestones.length, velocity: avgVelocity.toFixed(1) })}</span>
-        <button style={{ ...S.btnPrimary, marginLeft: 'auto' }} onClick={() => setAddOpen(o => !o)}>{addOpen ? t('lore.milestonesView.cancel', '× Отмена') : t('lore.milestonesView.addMilestone', '+ Веха')}</button>
+        <button style={{ ...S.btnPrimary, marginLeft: 'auto' }} onClick={() => setAddOpen(true)}>{t('lore.milestonesView.addMilestone', '+ Веха')}</button>
       </div>
       {err && <div style={S.err}>{err}</div>}
 
-      {addOpen && (
+      {/* Создание — модалкой (PL-38). Блоком над списком форма отжимала
+          карточки вех вниз: заводя веху, переставало быть видно, какие уже
+          есть, а именно с ними её и сверяют (номер, неделя, дата). */}
+      <Modal
+        opened={addOpen}
+        onClose={() => setAddOpen(false)}
+        title={t('lore.milestonesView.addMilestone', '+ Веха')}
+        size={560}
+      >
         <div style={S.editBox}>
           <div style={S.row}>
             <Field caption={t('lore.milestonesView.field.milestoneId', 'ID вехи')} w={110}><input style={{ ...S.in, width: '100%' }} placeholder="M8" value={draft.milestone_id} onChange={e => setDraft({ ...draft, milestone_id: e.target.value })} /></Field>
@@ -189,7 +198,8 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
             </Field>
             <Field caption={t('lore.milestonesView.field.priority', 'Приоритет')} w={80}><select style={{ ...S.in, width: '100%' }} value={draft.priority} onChange={e => setDraft({ ...draft, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p} value={p}>{p || '—'}</option>)}</select></Field>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+            <button style={S.btn} onClick={() => setAddOpen(false)}>{t('lore.milestonesView.cancel', '× Отмена')}</button>
             <button style={S.btnPrimary} disabled={!draft.milestone_id.trim() || busy === 'create'}
               onClick={() => run('create', async () => {
                 await upsertMilestone({ milestone_id: draft.milestone_id.trim(), label: draft.label || draft.milestone_id, week: draft.week ? parseInt(draft.week) : null, date_display: draft.date_display || null, priority: draft.priority || null });
@@ -197,7 +207,7 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
               })}>{busy === 'create' ? '…' : t('lore.milestonesView.createMilestone', 'Создать веху')}</button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Master: simple cards — name, deadline, bar, projects */}
       <div style={S.cards}>
