@@ -1641,7 +1641,7 @@
         "noProject": "no project set — values of different products blend into one picture",
         "vmapSub": "what we build · square",
         "cprofSub": "what the customer has · circle",
-        "legendDone": "delivered — relieves, delivers, performs",
+        "legendDone": "done — a scenario closes it",
         "legendClaimed": "claimed only",
         "vmap": "Value Map",
         "cprof": "Customer Profile",
@@ -1655,7 +1655,22 @@
           "gains": "Gains",
           "pains": "Pains",
           "jobs": "Customer Jobs"
-        }
+        },
+        "addScenario": "Add a scenario",
+        "fitClosed": "closed",
+        "fitClosedHint": "problem–solution fit: the value has a scenario closing it",
+        "fitProven": "proven by metric",
+        "fitProvenHint": "product–market fit: the gain is measured, not just claimed",
+        "sharp": "severe relieved",
+        "sharpHint": "Severe pains come before minor ones — the overall share hides that",
+        "balance": "relieve / delight",
+        "balanceHint": "A skew towards relievers means the product removes suffering but gives nothing desired",
+        "noCreators": "no gain creators at all",
+        "segments": "segments",
+        "segmentsHint": "The feature serves several segments — a reason to split it, not a sign of breadth",
+        "legendProven": "proven by metric",
+        "legendProfile": "inside the customer: a pain blocks a job, a gain is its success",
+        "noActorsOnCanvas": "segment not set — values carry no actors"
       },
       "vp": {
         "all": "all",
