@@ -20,6 +20,7 @@ import {
   PassportHeader,
   EmptyDetail,
   FilterChips,
+  ListSearch,
 } from './shared';
 import VpCreateModal, { vpKindOf, type VpKind, type VpDraft } from './VpCreateModal';
 import { jobKindLabel, levelLabel, gainRankLabel } from './vocab';
@@ -54,7 +55,7 @@ function LabeledChips({ label, children }: { label: string; children: ReactNode 
   );
 }
 
-export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
   const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useState<VpType>('all');
   const [creating, setCreating] = useState<VpKind | null>(null);
@@ -95,6 +96,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
   ];
   const filterChips = (
     <>
+      <ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.vp.searchPh', 'работа / боль / выгода…')} />
       <FilterChips options={chipDefs} value={typeFilter} onChange={setTypeFilter} />
       <div style={{ display: 'flex', gap: 6, padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
         {(['job', 'pain', 'gain'] as VpKind[]).map(k => (

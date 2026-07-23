@@ -13,6 +13,8 @@ export interface ProductScreenProps {
   onNavigate: ProductNavigate;
   onError: (e: unknown) => void;
   listSearch?: string;
+  /** Записать значение локального поиска (то же `?q=`, поле переехало в панель). */
+  onListSearch?: (v: string) => void;
   /**
    * PL-16: какой сценарий раскрыт до задач (`?uc=`).
    *
@@ -107,6 +109,51 @@ export function ListRow({ id, title, meta, selected, onClick }: { id: string; ti
       {title}
       {meta && <span style={{ marginLeft: 6 }}>{meta}</span>}
     </button>
+  );
+}
+
+/**
+ * Локальный поиск по списку — ТОТ ЖЕ вид, что у списка спринтов (лупа слева,
+ * крестик очистки справа), и то же место: ВНУТРИ панели списка.
+ *
+ * Раньше продуктовые экраны искали через общий бар над навигацией. Разница не
+ * косметическая: поле в общем баре выглядит фильтром ЭКРАНА, поле в панели —
+ * фильтром СПИСКА, а фильтруется именно список. Владелец на приёмке: «локальный
+ * поиск сделай как в спринтах».
+ *
+ * Значение по-прежнему живёт в `?q=` — это одно поле, переехавшее на своё
+ * место, а не второй поиск рядом с первым.
+ */
+export function ListSearch({ value, onChange, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6, padding: '6px 9px',
+      borderBottom: '1px solid var(--bd)', background: 'var(--bg1)',
+    }}>
+      <span style={{ color: 'var(--t3)', fontSize: 'var(--fs-base)', flexShrink: 0 }}>🔍</span>
+      <input
+        style={{
+          flex: 1, background: 'transparent', border: 'none', outline: 'none',
+          color: 'var(--t1)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)',
+        }}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      />
+      {value && (
+        <span
+          onClick={() => onChange('')}
+          style={{ color: 'var(--t3)', cursor: 'pointer', fontSize: 'var(--fs-sm)', flexShrink: 0 }}
+        >
+          ✕
+        </span>
+      )}
+    </div>
   );
 }
 

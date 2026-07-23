@@ -1528,7 +1528,19 @@
         "kindAll": "all",
         "kindHuman": "people",
         "kindAgent": "agents",
-        "kindSystem": "systems"
+        "kindSystem": "systems",
+        "searchPh": "segment…",
+        "new": "+ Customer",
+        "edit": "Edit",
+        "save": "Save",
+        "create": "Create",
+        "cancel": "Cancel",
+        "name": "Name",
+        "kind": "Kind",
+        "project": "Project",
+        "projectHint": "without a project, same-named roles of different products merge into one",
+        "idRule": "ACT-‹ROLE›, latin, dash-separated: ACT-ARCHITECT",
+        "segment": "customer segment"
       },
       "feat": {
         "empty": "No features yet",
@@ -1545,7 +1557,9 @@
         "gains": "GAINS",
         "impl": "🌊 Implementation — US (what is DONE)",
         "tasksToggle": "Scenario tasks",
-        "noTasks": "No tasks realize this scenario"
+        "noTasks": "No tasks realize this scenario",
+        "searchPh": "feature…",
+        "addUs": "+ US here"
       },
       "us": {
         "empty": "No user stories yet",
@@ -1553,10 +1567,27 @@
         "feature": "Feature",
         "primaryActor": "Primary actor",
         "doesWhat": "What it actually does (legs into the profile)",
-        "scenario": "Scenario (Cockburn)",
+        "scenario": "Scenario",
         "noScenario": "scenario not filled in",
         "acceptance": "Acceptance",
-        "graph": "UC graph"
+        "graph": "UC graph",
+        "new": "+ Story",
+        "edit": "Edit",
+        "save": "Save",
+        "create": "Create",
+        "cancel": "Cancel",
+        "idRule": "US-‹AREA›-‹ACTION›, latin, dash-separated: US-GIT-MERGE",
+        "underRoot": "Created under root",
+        "goalLevel": "Goal level (Cockburn)",
+        "rigor": "Rigor",
+        "rigorHint": "Rigor sets which checks are required: casual has fewer",
+        "insertTemplate": "insert Cockburn template",
+        "quality": "Cockburn form check",
+        "advisory": "advisory — you can save either way",
+        "title": "Title",
+        "searchPh": "story…",
+        "newRoot": "+ Feature",
+        "idRuleRoot": "FEAT-‹AREA›-‹GOAL›, latin, dash-separated: FEAT-GITCYCLE"
       },
       "canvas": {
         "claimed": "claimed",
@@ -1620,7 +1651,8 @@
         "edit": "Edit",
         "save": "Save",
         "idRuleJob": "JOB-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: JOB-LORE-SHIP-RELEASE",
-        "jobOne": "job"
+        "jobOne": "job",
+        "searchPh": "job / pain / gain…"
       },
       "pickItem": "Pick an item on the left",
       "vocab": {

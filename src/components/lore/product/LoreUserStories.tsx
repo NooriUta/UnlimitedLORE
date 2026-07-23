@@ -19,8 +19,10 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  ListSearch,
 } from './shared';
 import { ucStatusLabel, rigorLabel, goalLevelLabel } from './vocab';
+import UsFormModal, { type UsDraft } from './UsFormModal';
 
 // Уровень цели (Коберн, D2): море / рыба.
 function goalGlyphOf(level: string | null | undefined): string {
@@ -31,12 +33,16 @@ function goalGlyphOf(level: string | null | undefined): string {
 }
 
 
-export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+export default function LoreUserStories({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
   const { t } = useTranslation();
   // Нет слайса «все UC» → тянем фичи, затем UC каждой фичи и склеиваем (дедуп по uc_id).
   const { rows: features, loading: featLoading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
 
   const [ucs, setUcs] = useState<LoreUcRow[]>([]);
+  // PL-17: форма создания/правки US.
+  const [creating, setCreating] = useState(false);
+  const [editingUs, setEditingUs] = useState<UsDraft | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [ucsLoading, setUcsLoading] = useState(true);
   const featKey = features.map(f => f.uc_id).join('|');
 
@@ -65,7 +71,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setUcsLoading(false); } });
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [featKey, featLoading]);
+  }, [featKey, featLoading, reloadKey]);
 
   const loading = featLoading || ucsLoading;
 
@@ -138,6 +144,20 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
             <Pill tone={status === 'shipped' ? 'ok' : status === 'active' ? 'act' : 'muted'}>{ucStatusLabel(t, uc.status)}</Pill>
             {uc.goal_level && <Pill>{goalLevelLabel(t, uc.goal_level)}</Pill>}
             {uc.rigor && <Pill>{rigorLabel(t, uc.rigor)}</Pill>}
+            {/* Правка той же формой, что и создание: линтер обязан работать и
+                при доводке тела — именно там он полезнее всего. */}
+            <button
+              type="button"
+              title={t('lore.product.us.edit', 'Правка')}
+              aria-label={t('lore.product.us.edit', 'Правка')}
+              onClick={() => { setCreating(false); setEditingUs({
+                uc_id: uc.uc_id, title: uc.title, scenario_md: uc.scenario_md,
+                acceptance_md: uc.acceptance_md, goal_level: uc.goal_level, rigor: uc.rigor,
+              }); }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+            >
+              ✎
+            </button>
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-do)', marginBottom: 8 }}>{uc.uc_id}</div>
@@ -198,5 +218,30 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
     }
   }
 
-  return <MasterDetail list={list} detail={detail} />;
+  const createBar = (
+    <div style={{ padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
+      <button
+        type="button"
+        onClick={() => { setEditingUs(null); setCreating(true); }}
+        style={{ width: '100%', fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+      >
+        {t('lore.product.us.new', '+ История')}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <MasterDetail list={<><ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.us.searchPh', 'история…')} />{createBar}{list}</>} detail={detail} />
+      {(creating || editingUs) && (
+        <UsFormModal
+          opened
+          initial={editingUs ?? undefined}
+          onClose={() => { setCreating(false); setEditingUs(null); }}
+          onSaved={id => { setReloadKey(k => k + 1); onSelect(id); }}
+          onError={onError}
+        />
+      )}
+    </>
+  );
 }

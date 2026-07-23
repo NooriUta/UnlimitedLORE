@@ -19,8 +19,10 @@ import {
   ListRow,
   PassportHeader,
   EmptyDetail,
+  ListSearch,
 } from './shared';
 import { ucStatusLabel, goalLevelLabel } from './vocab';
+import UsFormModal, { type UsDraft } from './UsFormModal';
 
 // Уровень цели (Коберн, D1): облако / воздушный змей.
 // Хелпер модульного уровня — `t` здесь недоступен, поэтому отдаём КЛЮЧ, а
@@ -57,9 +59,13 @@ export function sprintTone(sprintStatus: string | null | undefined): 'ok' | 'act
   return 'muted';
 }
 
-export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError, listSearch, expandedUc, onExpandUc }: ProductScreenProps) {
+export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch, expandedUc, onExpandUc }: ProductScreenProps) {
   const { t } = useTranslation();
-  const { rows, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
+  const [creatingRoot, setCreatingRoot] = useState(false);
+  const [creatingChild, setCreatingChild] = useState<string | null>(null);
+  const [editingRoot, setEditingRoot] = useState<UsDraft | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { rows, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, [reloadKey]);
 
   // Задачи раскрытого сценария (PL-16). Грузим ТОЛЬКО раскрытый узел, а не все
   // разом: фича с двумя десятками US дала бы столько же запросов на открытие
@@ -182,6 +188,15 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
             <Pill tone={status === 'active' ? 'act' : status === 'shipped' ? 'ok' : 'muted'}>{ucStatusLabel(t, f.status)}</Pill>
             {f.goal_level && <Pill>{goalLevelLabel(t, f.goal_level)}</Pill>}
             <Pill tone={relievedCount >= claimedCount && claimedCount > 0 ? 'ok' : 'warn'}>fit {relievedCount}/{claimedCount}</Pill>
+            <button
+              type="button"
+              title={t('lore.product.us.edit', 'Правка')}
+              aria-label={t('lore.product.us.edit', 'Правка')}
+              onClick={() => { setCreatingRoot(false); setEditingRoot({ uc_id: f.uc_id, title: f.title, goal_level: f.goal_level }); }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+            >
+              ✎
+            </button>
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-value)', marginBottom: 8 }}>{f.uc_id}</div>
@@ -204,6 +219,16 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
           </PSection>
 
           <PSection title={t('lore.product.feat.impl', '🌊 Реализация — US (что СДЕЛАНО)')}>
+            {/* Завести сценарий ПРЯМО под этим корнем: иначе после создания на
+                соседнем экране пришлось бы отдельным действием привязывать
+                родителя, и про этот шаг забывали бы — сценарий висел бы сиротой. */}
+            <button
+              type="button"
+              onClick={() => setCreatingChild(f.uc_id)}
+              style={{ fontSize: 10.5, padding: '2px 8px', marginBottom: 4, borderRadius: 4, cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+            >
+              {t('lore.product.feat.addUs', '+ US сюда')}
+            </button>
             {ucs.length === 0
               ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
               : ucs.map((uc, i) => {
@@ -263,5 +288,43 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
     }
   }
 
-  return <MasterDetail list={list} detail={detail} />;
+  const bar = (
+    <>
+      <ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.feat.searchPh', 'фича…')} />
+      <div style={{ padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
+        <button
+          type="button"
+          onClick={() => { setEditingRoot(null); setCreatingRoot(true); }}
+          style={{ width: '100%', fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+        >
+          {t('lore.product.us.newRoot', '+ Фича')}
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      <MasterDetail list={<>{bar}{list}</>} detail={detail} />
+      {(creatingRoot || editingRoot) && (
+        <UsFormModal
+          opened
+          root
+          initial={editingRoot ?? undefined}
+          onClose={() => { setCreatingRoot(false); setEditingRoot(null); }}
+          onSaved={id => { setReloadKey(k => k + 1); onSelect(id); }}
+          onError={onError}
+        />
+      )}
+      {creatingChild && (
+        <UsFormModal
+          opened
+          parentUcId={creatingChild}
+          onClose={() => setCreatingChild(null)}
+          onSaved={() => setReloadKey(k => k + 1)}
+          onError={onError}
+        />
+      )}
+    </>
+  );
 }

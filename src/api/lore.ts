@@ -1260,6 +1260,37 @@ export function linkLoreVp(body: {
  * на POST — форма зовёт его по ходу набора, чтобы чек-лист загорался ДО
  * сохранения, а не пост-фактум при ревью.
  */
-export function checkLoreUcQuality(body: { uc_id: string }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/uc/quality', body, signal);
+export interface LoreUcQualityFinding {
+  code: string;
+  ok: boolean;
+  /** false — подсказка вне счёта (advisory, ADR-027 D9/D14): сохранить можно всегда. */
+  required: boolean;
+  message: string;
+}
+export interface LoreUcQualityResult {
+  rigor: string;
+  score: number;
+  max: number;
+  findings: LoreUcQualityFinding[];
+}
+
+/**
+ * PL-17: две формы вызова — по `uc_id` (оценить сохранённый UC) или по ТЕЛУ
+ * (живой линтер формы). Форма создания обязана показывать чек-лист до того,
+ * как запись появилась: требуй эндпоинт обязательный uc_id, оценивать в ней
+ * было бы нечего — ровно поэтому линтер из фронта не звали ни разу.
+ */
+export function checkLoreUcQuality(
+  body: {
+    uc_id?: string;
+    rigor?: string;
+    goal_level?: string;
+    scenario_md?: string;
+    acceptance_md?: string;
+    has_primary_actor?: boolean;
+    has_traced_to?: boolean;
+  },
+  signal?: AbortSignal,
+) {
+  return loreMutate<LoreUcQualityResult>('/uc/quality', body, signal);
 }

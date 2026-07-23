@@ -320,10 +320,11 @@ export default function LorePage() {
     openQuestions: 'lore.page.filter.openQuestions',
     releases:      'lore.page.filter.releases',
     timeline:      'lore.page.filter.timeline',
-    actors:        'lore.page.filter.actors',
-    vpProfile:     'lore.page.filter.vpProfile',
-    features:      'lore.page.filter.features',
-    userStories:   'lore.page.filter.userStories',
+    // Продуктовые разделы (actors/vpProfile/features/userStories) СНЯТЫ из
+    // верхнего бара: их поле поиска переехало ВНУТРЬ панели списка — туда же,
+    // где оно у спринтов. Поле в общем баре читается как фильтр ЭКРАНА, тогда
+    // как фильтруется список; оставь мы оба — вышел бы второй поиск рядом с
+    // первым, ровно то, чего в корпусе избегают.
   };
   const filterKey = FILTER_SECTIONS[section];
   const showGlobalSearch = !!filterKey;
@@ -1137,11 +1138,11 @@ export default function LorePage() {
           {/* Plan */}
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
           {/* ── Продуктовый слой (глава «Зачем», ADR-LORE-022/032) — самодостаточные экраны ── */}
-          {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
-          {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
+          {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
           {section === 'vpCanvas'    && <LoreVpCanvas    selectedId={null} onSelect={() => {}} onNavigate={navigateProduct} onError={handleFetchError} />}
-          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} expandedUc={ucParam || null} onExpandUc={setExpandedUc} />}
-          {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} />}
+          {section === 'features'    && <LoreFeatures    selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} expandedUc={ucParam || null} onExpandUc={setExpandedUc} />}
+          {section === 'userStories' && <LoreUserStories selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
 
           {/* ADR — new */}
           {section === 'adrs' && passport === '__new' && (

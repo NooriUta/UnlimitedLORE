@@ -24,7 +24,9 @@ import {
   PassportHeader,
   EmptyDetail,
   FilterChips,
+  ListSearch,
 } from './shared';
+import ActorFormModal, { type ActorDraft } from './ActorFormModal';
 
 export type ActorKind = 'all' | 'human-role' | 'agent' | 'system';
 
@@ -80,10 +82,13 @@ function ProfileLine({
   );
 }
 
-export default function LoreActors({ selectedId, onSelect, onNavigate, onError, listSearch }: ProductScreenProps) {
+export default function LoreActors({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
   const { t } = useTranslation();
   const [kindFilter, setKindFilter] = useState<ActorKind>('all');
-  const { rows: actors, loading } = useSlice<LoreActorRow>('actors', undefined, onError, []);
+  const [creating, setCreating] = useState(false);
+  const [editingActor, setEditingActor] = useState<ActorDraft | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { rows: actors, loading } = useSlice<LoreActorRow>('actors', undefined, onError, [reloadKey]);
   const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
   const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
   const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, []);
@@ -154,7 +159,16 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
         <div>
           <PassportHeader title={a.name ?? a.actor_id}>
             <Pill tone={a.kind === 'agent' ? 'act' : 'muted'}>{a.kind ?? '—'}</Pill>
-            <Pill>сегмент клиента</Pill>
+            <Pill>{t('lore.product.actor.segment', 'сегмент клиента')}</Pill>
+            <button
+              type="button"
+              title={t('lore.product.actor.edit', 'Правка')}
+              aria-label={t('lore.product.actor.edit', 'Правка')}
+              onClick={() => { setCreating(false); setEditingActor({ actor_id: a.actor_id, name: a.name, kind: a.kind, body_md: a.body_md }); }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+            >
+              ✎
+            </button>
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--wrn)', marginBottom: 8 }}>{a.actor_id}</div>
@@ -187,10 +201,33 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
     }
   }
 
+  const createBar = (
+    <div style={{ padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
+      <button
+        type="button"
+        onClick={() => { setEditingActor(null); setCreating(true); }}
+        style={{ width: '100%', fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+      >
+        {t('lore.product.actor.new', '+ Клиент')}
+      </button>
+    </div>
+  );
+
   return (
+    <>
     <MasterDetail
-      list={<><FilterChips options={kindDefs} value={kindFilter} onChange={setKindFilter} />{list}</>}
+      list={<><ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.actor.searchPh', 'сегмент…')} /><FilterChips options={kindDefs} value={kindFilter} onChange={setKindFilter} />{createBar}{list}</>}
       detail={detail}
     />
+    {(creating || editingActor) && (
+      <ActorFormModal
+        opened
+        initial={editingActor ?? undefined}
+        onClose={() => { setCreating(false); setEditingActor(null); }}
+        onSaved={id => { setReloadKey(k => k + 1); onSelect(id); }}
+        onError={onError}
+      />
+    )}
+    </>
   );
 }
