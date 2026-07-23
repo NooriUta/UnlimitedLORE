@@ -35,7 +35,7 @@ function ChipRow({ ids, color, onGo, empty = '—' }: {
   onGo?: (id: string) => void;
   empty?: string;
 }) {
-  if (ids.length === 0) return <span style={{ fontSize: 11, color: 'var(--t3)' }}>{empty}</span>;
+  if (ids.length === 0) return <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{empty}</span>;
   return (
     <>
       {ids.map(id => (
@@ -49,7 +49,7 @@ function ChipRow({ ids, color, onGo, empty = '—' }: {
 function LabeledChips({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', minWidth: 78 }}>{label}</span>
+      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', minWidth: 78 }}>{label}</span>
       {children}
     </div>
   );
@@ -105,7 +105,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
             type="button"
             onClick={() => { setEditing(null); setCreating(k); }}
             style={{
-              flex: 1, fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer',
+              flex: 1, fontSize: 'var(--fs-sm)', borderRadius: 4, padding: '3px 0', cursor: 'pointer',
               background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)',
             }}
           >
@@ -162,7 +162,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
       title={t('lore.product.vp.edit', 'Правка')}
       aria-label={t('lore.product.vp.edit', 'Правка')}
       onClick={() => { setCreating(null); setEditing(draft); }}
-      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+      style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
     >
       ✎
     </button>
@@ -197,7 +197,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
             заявили фичи: {asArray(j.claimed_by_ucs).join(', ') || '—'}
           </div>
           {asArray(j.performed_by_ucs).length === 0
-            ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
+            ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
             : asArray(j.performed_by_ucs).map((uc, i) => (
               <TRow key={uc} first={i === 0}>
                 <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc)}>{uc}</LinkChip>
@@ -207,7 +207,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
         <PSection title={t('lore.product.vp.whose', 'Чья работа')}>
           {asArray(j.actor_ids).length === 0
-            ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
+            ? <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>
             : asArray(j.actor_ids).map(id => (
               <LinkChip key={id} color="var(--wrn)" onClick={() => onNavigate('actors', id)}>{id}</LinkChip>
             ))}
@@ -227,7 +227,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
         <PSection title={t('lore.product.vp.scoring', 'Скоринг по сегментам (FELT_BY)')}>
           {asArray(p.actor_ids).length === 0
-            ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>—</div>
+            ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>—</div>
             : asArray(p.actor_ids).map((id, i) => (
               <TRow key={id} first={i === 0}>
                 <LinkChip color="var(--wrn)" onClick={() => onNavigate('actors', id)}>{id}</LinkChip>
@@ -260,10 +260,10 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(g.gain_id), marginBottom: 8 }}>{g.gain_id}</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 4 }}>
           <span style={{ color: 'var(--t3)' }}>{t('lore.product.vp.metric', 'Метрика')}</span>
           {g.metric_md
-            ? <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{g.metric_md}</span>
+            ? <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{g.metric_md}</span>
             : <span style={{ color: 'var(--t3)', opacity: 0.7 }}>⚠ {t('lore.product.vp.noMetric', 'без метрики — не в fit')}</span>}
           <span style={{ color: 'var(--t3)' }}>{t('lore.product.vp.rank', 'Ранг')}</span>
           <span>{g.rank ?? '—'}</span>
@@ -284,7 +284,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
         <PSection title={t('lore.product.vp.deliveredBy', 'Создаётся US (DELIVERS)')}>
           {asArray(g.delivered_by_ucs).length === 0
-            ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
+            ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
             : asArray(g.delivered_by_ucs).map((uc, i) => (
               <TRow key={uc} first={i === 0}>
                 <LinkChip color="var(--g-do)" onClick={() => onNavigate('userStories', uc)}>{uc}</LinkChip>
@@ -298,7 +298,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
         <PSection title={t('lore.product.vp.desiredBy', 'Желает')}>
           {asArray(g.actor_ids).length === 0
-            ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
+            ? <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>
             : asArray(g.actor_ids).map(id => (
               <LinkChip key={id} color="var(--wrn)" onClick={() => onNavigate('actors', id)}>{id}</LinkChip>
             ))}

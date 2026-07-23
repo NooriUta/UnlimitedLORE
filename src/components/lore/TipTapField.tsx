@@ -150,6 +150,36 @@ function getMarkdown(editor: Editor): string {
   return storage.markdown?.getMarkdown() ?? editor.getText();
 }
 
+/**
+ * PL-24: файлы-изображения из drop/paste-события.
+ *
+ * Читаем `items`, а не только `files`: при вставке скриншота из буфера Windows
+ * и браузерных снимков картинка приходит именно элементом типа `file`, а
+ * `files` бывает пуст — обход по одному лишь `files` не ловил бы самый частый
+ * случай, ради которого вставка и нужна.
+ *
+ * Не-картинки отсеиваются: перетаскивание .pdf или текста обязано остаться
+ * обычным поведением редактора, а не молча уходить в загрузку.
+ */
+export function imageFilesFrom(data: DataTransfer | null | undefined): File[] {
+  if (!data) return [];
+  const out: File[] = [];
+  const seen = new Set<string>();
+  const push = (f: File | null | undefined) => {
+    if (!f || !f.type.startsWith('image/')) return;
+    // Один и тот же файл может прийти и в items, и в files — вставился бы дважды.
+    const key = `${f.name}:${f.size}:${f.type}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(f);
+  };
+  for (const item of Array.from(data.items ?? [])) {
+    if (item.kind === 'file') push(item.getAsFile());
+  }
+  for (const f of Array.from(data.files ?? [])) push(f);
+  return out;
+}
+
 export interface TipTapFieldProps {
   value: string;
   onChange: (markdown: string) => void;
@@ -180,6 +210,10 @@ export default function TipTapField({
   onChangeRef.current = onChange;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  // PL-24: обработчики drop/paste уходят в editorProps ОДИН раз, при создании
+  // редактора, и замкнули бы первую версию функции загрузки. Ref держит
+  // актуальную — та же причина, по которой здесь уже живёт onChangeRef.
+  const uploadAndInsertRef = useRef<(files: File[]) => Promise<void>>(async () => {});
   const [mode, setMode] = useState<'wysiwyg' | 'md' | 'html'>('wysiwyg');   // TT-01: raw-source view toggle
   const [draft, setDraft] = useState(value);
 
@@ -197,6 +231,31 @@ export default function TipTapField({
       attributes: {
         style: `min-height:${minHeight}px; outline: none;`,
         ...(ariaLabel ? { 'aria-label': ariaLabel, role: 'textbox' } : {}),
+      },
+      // PL-24: перетаскивание и вставка картинок.
+      //
+      // Возвращаем true ТОЛЬКО когда картинки действительно есть: вернув true
+      // всегда, мы отняли бы у редактора обычную вставку текста и перетаскивание
+      // фрагментов внутри документа — то есть чинили бы картинки ценой текста.
+      //
+      // При выключенных картинках (enableImages=false, короткие прозаические
+      // поля) не вмешиваемся вовсе: иначе поле молча съедало бы файл, который
+      // всё равно некуда деть.
+      handleDrop: (_view, event) => {
+        if (!enableImages) return false;
+        const files = imageFilesFrom((event as DragEvent).dataTransfer);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        void uploadAndInsertRef.current(files);
+        return true;
+      },
+      handlePaste: (_view, event) => {
+        if (!enableImages) return false;
+        const files = imageFilesFrom((event as ClipboardEvent).clipboardData);
+        if (files.length === 0) return false;
+        event.preventDefault();
+        void uploadAndInsertRef.current(files);
+        return true;
       },
     },
     onUpdate: ({ editor }) => {
@@ -226,19 +285,37 @@ export default function TipTapField({
 
   const pickImage = () => fileInputRef.current?.click();
 
-  const onImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !editor) return;
+  /**
+   * PL-24: единственный путь загрузки — им пользуются и кнопка 🖼, и перетаскивание,
+   * и вставка из буфера.
+   *
+   * Три копии этого кода разъехались бы на первой же правке (например, при
+   * добавлении лимита размера), и «через кнопку работает, перетаскиванием нет»
+   * стало бы штатным багом.
+   */
+  const uploadAndInsert = async (files: File[]) => {
+    if (!editor || files.length === 0) return;
     setUploading(true);
     try {
-      const { file_url } = await uploadBragiAsset(file);
-      editor.chain().focus().setImage({ src: file_url, alt: file.name }).run();
+      // Последовательно, а не Promise.all: параллельная вставка перемешивает
+      // порядок картинок относительно того, в каком их бросили.
+      for (const file of files) {
+        const { file_url } = await uploadBragiAsset(file);
+        editor.chain().focus().setImage({ src: file_url, alt: file.name }).run();
+      }
     } catch {
       // upload failure — nothing inserted, toolbar just stops spinning
     } finally {
       setUploading(false);
     }
+  };
+
+  uploadAndInsertRef.current = uploadAndInsert;
+
+  const onImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) await uploadAndInsert([file]);
   };
 
   // Applies whatever is currently in `draft` back into the editor doc, leaving

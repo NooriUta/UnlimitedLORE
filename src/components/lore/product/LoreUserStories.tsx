@@ -129,14 +129,14 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       const preStyle = {
         margin: 0,
         fontFamily: 'var(--mono)',
-        fontSize: 11,
+        fontSize: 'var(--fs-sm)',
         whiteSpace: 'pre-wrap' as const,
         color: 'var(--t2)',
       };
 
       detail = (
         <div>
-          <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
             US · Пользовательская история (User Story) — тело по Коберну
           </div>
 
@@ -154,7 +154,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
                 uc_id: uc.uc_id, title: uc.title, scenario_md: uc.scenario_md,
                 acceptance_md: uc.acceptance_md, goal_level: uc.goal_level, rigor: uc.rigor,
               }); }}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
             >
               ✎
             </button>
@@ -162,7 +162,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-do)', marginBottom: 8 }}>{uc.uc_id}</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 4 }}>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.us.feature', 'Фича')}</span>
             <span>{uc.parent_uc_id
               ? <LinkChip color="var(--g-value)" onClick={() => onNavigate('features', uc.parent_uc_id ?? undefined)}>{uc.parent_uc_id}</LinkChip>
@@ -175,7 +175,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
 
           <PSection title={t('lore.product.us.doesWhat', 'Что реально делает (ноги в профиль)')}>
             {painIds.length + gainIds.length + jobIds.length === 0
-              ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
+              ? <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>
               : (
                 <>
                   {painIds.map(id => (
@@ -194,7 +194,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
           <PSection title={t('lore.product.us.scenario', 'Сценарий (Коберн)')}>
             {(uc.scenario_md ?? '').trim()
               ? <pre style={preStyle}>{uc.scenario_md ?? ''}</pre>
-              : <span style={{ fontSize: 11, color: 'var(--t3)' }}>— {t('lore.product.us.noScenario', 'сценарий не заполнен')}</span>}
+              : <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>— {t('lore.product.us.noScenario', 'сценарий не заполнен')}</span>}
           </PSection>
 
           {(uc.acceptance_md ?? '').trim() && (
@@ -223,7 +223,7 @@ export default function LoreUserStories({ selectedId, onSelect, onNavigate, onEr
       <button
         type="button"
         onClick={() => { setEditingUs(null); setCreating(true); }}
-        style={{ width: '100%', fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+        style={{ width: '100%', fontSize: 'var(--fs-sm)', borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
       >
         {t('lore.product.us.new', '+ История')}
       </button>

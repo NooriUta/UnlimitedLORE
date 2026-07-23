@@ -109,7 +109,7 @@ export function SelectionPanel({
                 title={`${selCount} / ${ids.length} выбрано${suite.isChain ? ' · цепочка' : ''}`}
               >
                 {allSel ? '✓' : selCount > 0 ? '—' : '○'} {suite.label}
-                {suite.isChain && <span style={{ fontSize: 10 }}> ⛓</span>}
+                {suite.isChain && <span style={{ fontSize: 'var(--fs-xs)' }}> ⛓</span>}
                 <span className="muted"> {selCount}/{ids.length}</span>
               </button>
             );

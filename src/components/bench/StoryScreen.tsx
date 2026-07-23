@@ -19,7 +19,7 @@ function phaseTone(status: string | undefined): 'suc' | 'warn' | 'info' | 'neutr
 
 function SectionLabel({ text }: { text: string }) {
   return (
-    <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase',
+    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase',
                   letterSpacing: '.07em', margin: '10px 0 4px' }}>
       {text}
     </div>
@@ -47,16 +47,16 @@ function HypothesisBet({ h, decidedHere }: { h: HypothesisRow; decidedHere: bool
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <Link to={`/benchmark/hypothesis/${encodeURIComponent(h.hyp_id)}`}
-              style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--acc)', textDecoration: 'none' }}>
+              style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--acc)', textDecoration: 'none' }}>
           {h.hyp_id}
         </Link>
         <StatusBadge tone={hypothesisTone(h.status)} text={h.status ?? '?'} />
-        <span style={{ fontSize: 12, color: 'var(--t1)' }}>{pickLocale(lang, h.statement_ru_sci, h.statement_en, h.statement, h.statement_ru) ?? ''}</span>
+        <span style={{ fontSize: 'var(--fs-base)', color: 'var(--t1)' }}>{pickLocale(lang, h.statement_ru_sci, h.statement_en, h.statement, h.statement_ru) ?? ''}</span>
       </div>
-      {rationale && <MartProse text={rationale} style={{ fontSize: 12, paddingLeft: 12 }} />}
+      {rationale && <MartProse text={rationale} style={{ fontSize: 'var(--fs-base)', paddingLeft: 12 }} />}
       {decidedHere && interpretation && (
         <div style={{ borderLeft: '3px solid var(--acc)', paddingLeft: 10, marginTop: 4 }}>
-          <MartProse text={interpretation} style={{ fontSize: 12 }} />
+          <MartProse text={interpretation} style={{ fontSize: 'var(--fs-base)' }} />
         </div>
       )}
     </div>
@@ -115,12 +115,12 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
               <span className="badge badge-info" style={{ fontFamily: 'var(--mono)' }}>
                 {t('bench.story.chapter', 'Chapter')} {i + 1}
               </span>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' }}>
                 {p.phase_id}{phaseLabel ? ` · ${phaseLabel}` : ''}
               </span>
               <StatusBadge tone={phaseTone(p.status)} text={p.status ?? '?'} />
             </div>
-            {phaseGoal && <div style={{ fontSize: 12, color: 'var(--t2)', margin: '4px 0' }}>{phaseGoal}</div>}
+            {phaseGoal && <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', margin: '4px 0' }}>{phaseGoal}</div>}
             {phaseSummary && <MartProse text={phaseSummary} style={{ margin: '6px 0' }} />}
 
             {phaseCampaigns.map(c => {
@@ -135,13 +135,13 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
                 <div key={c.campaign_id}
                      style={{ borderLeft: '2px solid var(--bd)', paddingLeft: 14, margin: '12px 0' }}>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--t1)' }}>
                       {c.campaign_id}
                     </span>
                     <StatusBadge tone={campaignTone(c.status)} text={c.status ?? '?'} />
                     {cAxis && <span className="scope-tag">{cAxis}</span>}
                   </div>
-                  {cGoal && <div style={{ fontSize: 12, color: 'var(--t2)', margin: '2px 0 4px' }}>{cGoal}</div>}
+                  {cGoal && <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', margin: '2px 0 4px' }}>{cGoal}</div>}
 
                   {cHyps.length > 0 && (
                     <>
@@ -176,7 +176,7 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
                   const narrative = pickLocale(lang, f.narrative_ru_sci, f.narrative_en, f.narrative, f.narrative_ru);
                   return (
                     <details key={f.finding_id} style={{ marginBottom: 4 }}>
-                      <summary style={{ cursor: 'pointer', fontSize: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-base)' }}>
                         <Link to={`/benchmark/finding/${encodeURIComponent(f.finding_id)}`}
                               style={{ fontFamily: 'var(--mono)', color: 'var(--acc)', textDecoration: 'none' }}>
                           {f.finding_id}
@@ -184,7 +184,7 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
                         <span style={{ color: 'var(--t3)' }}> [{f.finding_status_id ?? '?'}] </span>
                         <span style={{ color: 'var(--t2)' }}>{f.title ?? ''}</span>
                       </summary>
-                      {narrative && <MartProse text={narrative} style={{ fontSize: 12, padding: '4px 0 0 16px' }} />}
+                      {narrative && <MartProse text={narrative} style={{ fontSize: 'var(--fs-base)', padding: '4px 0 0 16px' }} />}
                     </details>
                   );
                 })}
@@ -199,12 +199,12 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
                   const decisionText = pickLocale(lang, d.decision_ru_sci, d.decision_en, d.decision, d.decision_ru);
                   return (
                     <details key={d.decision_id} style={{ marginBottom: 4 }}>
-                      <summary style={{ cursor: 'pointer', fontSize: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-base)' }}>
                         <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{d.decision_id}</span>
                         {d.topic && <span className="scope-tag" style={{ marginLeft: 6 }}>{d.topic}</span>}
                         <span style={{ color: 'var(--t2)' }}> {decisionText ?? ''}</span>
                       </summary>
-                      {rationale && <MartProse text={rationale} style={{ fontSize: 12, padding: '4px 0 0 16px' }} />}
+                      {rationale && <MartProse text={rationale} style={{ fontSize: 'var(--fs-base)', padding: '4px 0 0 16px' }} />}
                     </details>
                   );
                 })}
@@ -217,7 +217,7 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
       <div className="analytics-card" style={{ marginBottom: 14 }} data-testid="story-epilogue">
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
           <div className="analytics-card-title">{t('bench.story.epilogue', 'What\'s next')}</div>
-          <Link to="/benchmark/references" style={{ fontSize: 11, color: 'var(--acc)', textDecoration: 'none' }}>
+          <Link to="/benchmark/references" style={{ fontSize: 'var(--fs-sm)', color: 'var(--acc)', textDecoration: 'none' }}>
             {t('bench.refs.title', 'Bibliography')} →
           </Link>
         </div>
@@ -237,11 +237,11 @@ export function StoryScreen({ runs }: { runs: RunRow[] }) {
             {openBets.map(h => (
               <div key={h.hyp_id} style={{ display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap', marginBottom: 3 }}>
                 <Link to={`/benchmark/hypothesis/${encodeURIComponent(h.hyp_id)}`}
-                      style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--acc)', textDecoration: 'none' }}>
+                      style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--acc)', textDecoration: 'none' }}>
                   {h.hyp_id}
                 </Link>
                 <StatusBadge tone={hypothesisTone(h.status)} text={h.status ?? '?'} />
-                <span style={{ fontSize: 12, color: 'var(--t2)' }}>{pickLocale(lang, h.statement_ru_sci, h.statement_en, h.statement, h.statement_ru) ?? ''}</span>
+                <span style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)' }}>{pickLocale(lang, h.statement_ru_sci, h.statement_en, h.statement, h.statement_ru) ?? ''}</span>
               </div>
             ))}
           </>

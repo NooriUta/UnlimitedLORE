@@ -27,7 +27,7 @@ function Block({ title, hint, children }: { title: string; hint?: string; childr
     <div className="analytics-card" style={{ marginBottom: 12 }}>
       <div style={{ marginBottom: 8 }}>
         <span className="analytics-card-title" style={{ margin: 0 }}>{title}</span>
-        {hint && <span style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 8 }}>{hint}</span>}
+        {hint && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginLeft: 8 }}>{hint}</span>}
       </div>
       {children}
     </div>
@@ -81,7 +81,7 @@ export default function SubstratePage() {
   return (
     <div className="page-content bench-scroll" style={{ padding: '16px 20px', height: '100%', boxSizing: 'border-box' }}
          data-testid="substrate-page">
-      <Link to="/benchmark?tab=campaigns" style={{ fontSize: 12, color: 'var(--acc)', textDecoration: 'none' }}>
+      <Link to="/benchmark?tab=campaigns" style={{ fontSize: 'var(--fs-base)', color: 'var(--acc)', textDecoration: 'none' }}>
         {t('bench.sub.back', '← Benchmark panel')}
       </Link>
 
@@ -99,10 +99,10 @@ export default function SubstratePage() {
             <div>
               <h1 className="page-title" style={{ margin: 0 }}>{displayName}</h1>
               {sub.short_name && sub.short_name !== displayName && (
-                <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 2 }}>{sub.short_name}</div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', marginTop: 2 }}>{sub.short_name}</div>
               )}
             </div>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t3)' }}>{sub.substrate_id}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--t3)' }}>{sub.substrate_id}</span>
             {sub.family && <span className="scope-tag">{sub.family}</span>}
             {sub.status && <StatusBadge tone={sub.status === 'current' ? 'suc' : sub.status === 'pruned' ? 'neutral' : 'info'} text={sub.status} />}
             {sub.config_rev && <span className="scope-tag">config_rev: {sub.config_rev}</span>}
@@ -114,7 +114,7 @@ export default function SubstratePage() {
           {/* Д-5 (RFC-3): numbers in the prose must be groundable — evidence
               deep-links with this actor pinned + the reproducing SQL */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap',
-                        margin: '0 0 14px', fontSize: 11 }}
+                        margin: '0 0 14px', fontSize: 'var(--fs-sm)' }}
                data-testid="passport-evidence">
             <span style={{ color: 'var(--t3)' }}>{t('bench.sub.evidence', 'verify with slices:')}</span>
             <Link to="/benchmark?tab=semantic" className="scope-tag"
@@ -128,7 +128,7 @@ export default function SubstratePage() {
           </div>
 
           <Block title={t('bench.sub.code', 'Code')}>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12 }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 'var(--fs-base)' }}>
               <span>
                 <span style={{ color: 'var(--t3)' }}>{t('bench.sub.builder', 'builder')}: </span>
                 <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)' }}>{sub.builder ?? '—'}</span>
@@ -165,7 +165,7 @@ export default function SubstratePage() {
                 <span className="analytics-card-title" style={{ margin: 0 }}>
                   {t('bench.sub.arch', 'Architecture')}
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
                   {t('bench.sub.archHint', 'current revision prose')}
                 </span>
               </summary>
@@ -176,11 +176,11 @@ export default function SubstratePage() {
           <Block title={t('bench.sub.caps', 'Capabilities by hop kind')}
                  hint={t('bench.sub.capsHint', 'native / degraded / none')}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {caps.length === 0 && <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>}
+              {caps.length === 0 && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>}
               {caps.map(c => (
                 <span key={c.hop_kind_id} title={c.rationale ?? ''}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t2)' }}>{c.hop_kind_id}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>{c.hop_kind_id}</span>
                   <StatusBadge tone={capTone(c.capability)} text={c.capability ?? '?'} />
                 </span>
               ))}
@@ -192,13 +192,13 @@ export default function SubstratePage() {
               {(refs.rows ?? []).map(r => {
                 const takeaway = pickLocale(lang, r.takeaway_ru_sci, r.takeaway_en, r.takeaway, r.takeaway_ru);
                 return (
-                  <div key={r.ref_id} style={{ padding: '4px 0', fontSize: 12 }}>
+                  <div key={r.ref_id} style={{ padding: '4px 0', fontSize: 'var(--fs-base)' }}>
                     <span style={{ color: 'var(--t1)' }}>{r.citation ?? r.ref_id}</span>
                     {r.venue && <span style={{ color: 'var(--t3)' }}> · {r.venue}{r.year ? ` ${r.year}` : ''}</span>}
-                    {takeaway && <div style={{ color: 'var(--t2)', fontSize: 11 }}>{takeaway}</div>}
+                    {takeaway && <div style={{ color: 'var(--t2)', fontSize: 'var(--fs-sm)' }}>{takeaway}</div>}
                     {r.link && (
                       <a href={r.link} target="_blank" rel="noopener noreferrer"
-                         style={{ color: 'var(--acc)', fontSize: 11 }}>{r.link}</a>
+                         style={{ color: 'var(--acc)', fontSize: 'var(--fs-sm)' }}>{r.link}</a>
                     )}
                   </div>
                 );
@@ -255,13 +255,13 @@ export default function SubstratePage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: 640 }}>
               {taxonomy.map(x => (
                 <div key={x.taxonomy} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, width: 150, color: 'var(--t2)' }}>{x.taxonomy}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', width: 150, color: 'var(--t2)' }}>{x.taxonomy}</span>
                   <div style={{ flex: 1, height: 10, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ width: `${(x.n / taxMax) * 100}%`, height: '100%',
                                   background: x.taxonomy === 'ok' ? 'var(--suc)'
                                     : x.taxonomy === 'structural_zero' ? 'var(--t3)' : 'var(--wrn)' }} />
                   </div>
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, width: 50, textAlign: 'right' }}>{x.n}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', width: 50, textAlign: 'right' }}>{x.n}</span>
                 </div>
               ))}
             </div>

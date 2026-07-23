@@ -99,7 +99,7 @@ const STORY_S = {
   // Выделение подвкладки — как у глав в шапке: скруглённый прямоугольник с
   // рамкой и лёгкой подсветкой цвета главы, без залитого эллипса.
   subItem: (on: boolean, gc: string) => ({
-    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 'var(--fs-base)', cursor: 'pointer',
     color: on ? 'var(--t1)' : 'var(--t2)',
     border: `1px solid ${on ? `color-mix(in srgb, ${gc} 55%, var(--bd))` : 'transparent'}`,
     background: on ? `color-mix(in srgb, ${gc} 12%, transparent)` : 'transparent',

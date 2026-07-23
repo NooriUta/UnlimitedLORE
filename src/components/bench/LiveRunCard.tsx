@@ -10,8 +10,8 @@ const POLL_COMPLETE_MS = 30000;
 function FieldValue({ label, value, mono = true }: { label: string; value: string; mono?: boolean }) {
   return (
     <div style={{ minWidth: 90 }}>
-      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{label}</div>
-      <div style={{ fontSize: 12, color: 'var(--t1)', fontFamily: mono ? 'var(--mono)' : undefined }}>{value}</div>
+      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{label}</div>
+      <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t1)', fontFamily: mono ? 'var(--mono)' : undefined }}>{value}</div>
     </div>
   );
 }
@@ -34,7 +34,7 @@ export function LiveRunCard() {
   if (unavailable) {
     return (
       <div className="analytics-card" data-testid="bench-live-card" style={{ marginBottom: 12 }}>
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
           {t('bench.statusUnavailable', 'Live status unavailable — benchmark repo is not mounted')}
         </span>
       </div>
@@ -43,7 +43,7 @@ export function LiveRunCard() {
   if (!status) {
     return (
       <div className="analytics-card" data-testid="bench-live-card" style={{ marginBottom: 12 }}>
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>
       </div>
     );
   }
@@ -63,16 +63,16 @@ export function LiveRunCard() {
            onClick={() => setExpanded(true)}
            style={{ marginBottom: 12, padding: '8px 14px', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
           {t('bench.liveRun', 'Live run')}
         </span>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t1)' }}>{status.manifest ?? '—'}</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--t1)' }}>{status.manifest ?? '—'}</span>
         <StatusBadge tone="suc" text={t('bench.complete', 'complete')} />
         {stale && <StatusBadge tone="warn" text={t('bench.stale', 'stale')} />}
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t3)' }}>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
           {ageSec !== null ? `${humanizeSeconds(ageSec)} ${t('bench.agoSuffix', 'ago')}` : status.updated ?? ''}
         </span>
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)' }}>▸</span>
+        <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>▸</span>
       </div>
     );
   }
@@ -96,7 +96,7 @@ export function LiveRunCard() {
             height: '100%', background: 'var(--acc)', transition: 'width .4s ease',
           }} />
         </div>
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t1)' }}>{done}/{total}</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--t1)' }}>{done}/{total}</span>
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
@@ -105,10 +105,10 @@ export function LiveRunCard() {
         <FieldValue label={t('bench.elapsed', 'Elapsed')}
                     value={status.elapsed_min !== undefined ? `${status.elapsed_min} min` : '—'} />
         <div style={{ minWidth: 150 }}>
-          <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
             {t('bench.updated', 'Updated')}
           </div>
-          <div style={{ fontSize: 12, fontFamily: 'var(--mono)',
+          <div style={{ fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)',
                         color: ageSec !== null && ageSec > 60 ? 'var(--wrn)' : 'var(--t1)' }}>
             {status.updated ?? '—'}
             {ageSec !== null && ` · ${humanizeSeconds(ageSec)} ${t('bench.agoSuffix', 'ago')}`}
@@ -119,7 +119,7 @@ export function LiveRunCard() {
       {errors.length > 0 && (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
           {errors.slice(0, 5).map((e, i) => (
-            <span key={i} style={{ fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--danger)' }}>
+            <span key={i} style={{ fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)', color: 'var(--danger)' }}>
               {typeof e === 'string' ? e : JSON.stringify(e)}
             </span>
           ))}

@@ -78,7 +78,7 @@ export default function ActorFormModal({
     borderRadius: 4, color: 'var(--t1)', padding: '4px 8px', fontSize: 'var(--fs-sm)',
   };
   const label: React.CSSProperties = {
-    fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+    fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase',
     letterSpacing: '.04em', color: 'var(--t3)', display: 'block', marginBottom: 3, marginTop: 9,
   };
   const hint: React.CSSProperties = { fontSize: 10.5, color: 'var(--t3)', marginTop: 3 };

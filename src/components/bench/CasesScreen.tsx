@@ -18,7 +18,7 @@ function DiffChips({ gold, predicted }: { gold: string[]; predicted: string[] })
       {diff.fp.map(p => <span key={`fp-${p}`} className="badge badge-err" style={{ fontFamily: 'var(--mono)' }}>{p}</span>)}
       {diff.fn.map(g => <span key={`fn-${g}`} className="badge badge-warn" style={{ fontFamily: 'var(--mono)' }}>{g}</span>)}
       {diff.tp.length + diff.fp.length + diff.fn.length === 0 && (
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>∅</span>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>∅</span>
       )}
     </div>
   );
@@ -41,9 +41,9 @@ function TraceBlock({ run, c }: { run: string; c: CaseWithDim }) {
       </button>
       {open && (
         <div style={{ marginTop: 6 }}>
-          {trace.loading && <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>}
+          {trace.loading && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.loading', 'Loading…')}</span>}
           {!trace.loading && trace.rows && !row && (
-            <span style={{ fontSize: 11, color: 'var(--t3)' }}>{t('bench.traceEmpty', 'No trace (deterministic or not loaded into the mart)')}</span>
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('bench.traceEmpty', 'No trace (deterministic or not loaded into the mart)')}</span>
           )}
           {row && (
             <>
@@ -60,13 +60,13 @@ function TraceBlock({ run, c }: { run: string; c: CaseWithDim }) {
                 </button>
               </div>
               {row.question && (
-                <pre style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t2)', whiteSpace: 'pre-wrap',
+                <pre style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t2)', whiteSpace: 'pre-wrap',
                               background: 'var(--bg0)', border: '1px solid var(--bd)', borderRadius: 6,
                               padding: 10, maxHeight: 200, overflow: 'auto', margin: '0 0 6px' }}>
                   {row.question}
                 </pre>
               )}
-              <pre style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--t1)', whiteSpace: 'pre-wrap',
+              <pre style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--t1)', whiteSpace: 'pre-wrap',
                             background: 'var(--bg0)', border: '1px solid var(--bd)', borderRadius: 6,
                             padding: 10, maxHeight: 280, overflow: 'auto', margin: 0 }}>
                 {row.raw_output ?? '∅'}
@@ -97,10 +97,10 @@ export function CaseDetails({ c, run, runSnapshot, gold }: {
     <div style={{ padding: '8px 12px 12px 28px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)' }}>
       {c.dim?.question && (
         <div style={{ marginBottom: 6 }}>
-          <span style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
             {t('bench.question', 'Question')}
           </span>
-          <div style={{ fontSize: 12, color: 'var(--t1)' }}>{c.dim.question}</div>
+          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t1)' }}>{c.dim.question}</div>
         </div>
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
@@ -134,7 +134,7 @@ export function CaseDetails({ c, run, runSnapshot, gold }: {
           </span>
         )}
       </div>
-      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
+      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>
         {t('bench.goldVsPredicted', 'gold_at_run vs predicted')} — {t('bench.diffLegend', 'TP — in both · FP — predicted only · FN — gold only')}
       </div>
       <DiffChips gold={strArr(c.gold_at_run)} predicted={strArr(c.predicted)} />
@@ -249,14 +249,14 @@ export function CasesScreen({ runs, substrates, tasks, hopKinds, subLabel, prese
           onChange={e => setSearch(e.target.value)}
           placeholder={t('bench.searchCases', 'case_id / target / geoid…')}
           style={{ background: 'var(--bg2)', color: 'var(--t1)', border: '1px solid var(--bd)',
-                   borderRadius: 6, padding: '5px 8px', fontSize: 12, fontFamily: 'var(--mono)', width: 190 }}
+                   borderRadius: 6, padding: '5px 8px', fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)', width: 190 }}
         />
         {caseId && <span className="scope-tag">case: {caseId}</span>}
         <button type="button" className="btn btn-sm btn-secondary" onClick={() => setSortAsc(v => !v)}>
           {t('bench.f1', 'F1')} {sortAsc ? '↑' : '↓'}
         </button>
         {rows && (
-          <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
             {t('bench.casesShown', 'shown')}: {rows.length}
           </span>
         )}
@@ -285,7 +285,7 @@ export function CasesScreen({ runs, substrates, tasks, hopKinds, subLabel, prese
                       <div
                         onClick={() => setExpanded(open ? null : key)}
                         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px',
-                                 borderBottom: '1px solid var(--bd)', cursor: 'pointer', fontSize: 12 }}>
+                                 borderBottom: '1px solid var(--bd)', cursor: 'pointer', fontSize: 'var(--fs-base)' }}>
                         <span style={{ color: 'var(--t3)', width: 12 }}>{open ? '▾' : '▸'}</span>
                         <span style={{ fontFamily: 'var(--mono)', color: 'var(--t1)', width: 110 }}>{c.case_id}</span>
                         <span className={`badge badge-${f1Band(c.f1)}`} style={{ fontFamily: 'var(--mono)' }}>

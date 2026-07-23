@@ -1213,7 +1213,15 @@
         "reviewerPlaceholder": "ревьювер",
         "roleConflict": "совпадает с исполнителем, задача не сможет перейти в done",
         "typeLabel": "Тип",
-        "typeUnset": "—"
+        "typeUnset": "—",
+        "workClassLabel": "Зачем",
+        "wcUnset": "— не задан —",
+        "wcUcOpt": "uc — реализует сценарий",
+        "wcJtdOpt": "jtd — вспомогательная",
+        "wcEnbOpt": "enb — enabler",
+        "ucLabel": "Сценарий (REALIZES)",
+        "ucPlaceholder": "US-GIT-MERGE",
+        "ucMissing": "uc-задача без сценария"
       },
       "addTask": {
         "trigger": "+ задача",

@@ -639,7 +639,7 @@ const S = {
     fontFamily: 'var(--mono)',
   },
   sprintLink: {
-    fontSize: 10, padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)',
+    fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 3, fontFamily: 'var(--mono)',
     background: 'color-mix(in srgb, var(--acc) 10%, transparent)',
     color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 26%, transparent)',
     cursor: 'pointer',

@@ -191,7 +191,7 @@ export default function UsFormModal({
     borderRadius: 4, color: 'var(--t1)', padding: '4px 8px', fontSize: 'var(--fs-sm)',
   };
   const label: React.CSSProperties = {
-    fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+    fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase',
     letterSpacing: '.04em', color: 'var(--t3)', display: 'block', marginBottom: 3, marginTop: 9,
   };
   const hint: React.CSSProperties = { fontSize: 10.5, color: 'var(--t3)', marginTop: 3 };
@@ -301,11 +301,11 @@ export default function UsFormModal({
       {quality && (
         <div style={{ marginTop: 12, border: '1px solid var(--bd)', borderRadius: 4, padding: '8px 10px', background: 'var(--bg1)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)' }}>
+            <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--t2)' }}>
               {t('lore.product.us.quality', 'Оформление по Кокберну')}
             </span>
             <span style={{
-              fontFamily: 'var(--mono)', fontSize: 12,
+              fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)',
               color: quality.score === quality.max ? 'var(--suc)' : 'var(--wrn)',
             }}>
               {quality.score}/{quality.max}
@@ -318,7 +318,7 @@ export default function UsFormModal({
           </div>
           {quality.findings.map(f => (
             <div key={f.code} style={{
-              display: 'flex', gap: 6, fontSize: 11, padding: '1px 0',
+              display: 'flex', gap: 6, fontSize: 'var(--fs-sm)', padding: '1px 0',
               color: f.ok ? 'var(--t3)' : f.required ? 'var(--wrn)' : 'var(--t3)',
               opacity: f.ok ? 0.65 : 1,
             }}>

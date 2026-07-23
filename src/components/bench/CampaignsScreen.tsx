@@ -9,7 +9,7 @@ import { MartProse } from './MartProse';
 
 /** Column headers inside data grid (Scope / Runs / Cost). */
 const SEC_LABEL = {
-  fontSize: 10,
+  fontSize: 'var(--fs-xs)',
   color: 'var(--t2)',
   textTransform: 'uppercase' as const,
   letterSpacing: '.07em',
@@ -18,7 +18,7 @@ const SEC_LABEL = {
 
 /** Structural section dividers inside a campaign card (Hypotheses / Findings). */
 const SEC_DIV = {
-  fontSize: 10,
+  fontSize: 'var(--fs-xs)',
   fontWeight: 500,
   color: 'var(--t1)',
   textTransform: 'uppercase' as const,
@@ -27,7 +27,7 @@ const SEC_DIV = {
 };
 
 /** Compact badge style for row-level hypothesis/finding status — smaller than campaign badge. */
-const SMALL_BADGE: React.CSSProperties = { fontSize: 9, padding: '1px 5px' };
+const SMALL_BADGE: React.CSSProperties = { fontSize: 'var(--fs-2xs)', padding: '1px 5px' };
 
 function GoalBox({ text }: { text: string }) {
   return (
@@ -38,7 +38,7 @@ function GoalBox({ text }: { text: string }) {
       borderRadius: '0 4px 4px 0',
       paddingLeft: 8, paddingTop: 4, paddingBottom: 4,
     }}>
-      <MartProse text={text} style={{ fontSize: 11 }} />
+      <MartProse text={text} style={{ fontSize: 'var(--fs-sm)' }} />
     </div>
   );
 }
@@ -56,10 +56,10 @@ function EconomyStrip({ runs }: { runs: RunRow[] }) {
       display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 14,
       padding: '4px 10px', borderRadius: 6, background: 'var(--bg2)',
     }} title={`${t('bench.economy', 'Economics')} · in ${formatTokens(totalTokensIn)} / out ${formatTokens(totalTokensOut)}`}>
-      <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
+      <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
         {t('bench.economy', 'Economics')}
       </span>
-      <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--t1)' }}>
         {formatUsd(total)}
       </span>
     </div>
@@ -91,16 +91,16 @@ function HypothesisLine({ h }: { h: HypothesisRow }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, padding: '3px 0', flexWrap: 'wrap' }}>
       <Link to={`/benchmark/hypothesis/${encodeURIComponent(h.hyp_id)}`}
-            style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)', minWidth: 100, textDecoration: 'none' }}>
+            style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--acc)', minWidth: 100, textDecoration: 'none' }}>
         {h.hyp_id}
       </Link>
       <StatusBadge tone={hypothesisTone(h.status)} text={h.status ?? '?'} style={SMALL_BADGE} />
-      <span style={{ fontSize: 11, color: 'var(--t2)', flex: 1, minWidth: 220 }} title={evid ?? ''}>
+      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', flex: 1, minWidth: 220 }} title={evid ?? ''}>
         {stmt ?? ''}
         {h.threshold ? <span style={{ color: 'var(--t3)' }}> · {h.threshold}</span> : null}
       </span>
       {h.decided_on && (
-        <span style={{ fontSize: 10, color: 'var(--t3)', whiteSpace: 'nowrap' }}
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', whiteSpace: 'nowrap' }}
               title={`${t('bench.decidedOn', 'decided on')} ${h.decided_ts ?? ''}`}>
           {h.decided_on}
         </span>
@@ -116,16 +116,16 @@ function FindingLine({ f }: { f: FindingRow }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, padding: '2px 0', flexWrap: 'wrap' }}>
       <Link to={`/benchmark/finding/${encodeURIComponent(f.finding_id)}`}
-            style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--acc)', minWidth: 150, textDecoration: 'none' }}>
+            style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', color: 'var(--acc)', minWidth: 150, textDecoration: 'none' }}>
         {f.finding_id}
       </Link>
       <StatusBadge tone={findingTone(f.finding_status_id)} text={f.finding_status_id ?? '?'} style={SMALL_BADGE} />
       {(f.finding_class_id || f.side) && (
-        <span className="scope-tag" style={{ fontSize: 9 }}>
+        <span className="scope-tag" style={{ fontSize: 'var(--fs-2xs)' }}>
           {[f.finding_class_id, f.side].filter(Boolean).join(' · ')}
         </span>
       )}
-      <span style={{ fontSize: 11, color: 'var(--t2)', flex: 1, minWidth: 190 }} title={evid ?? ''}>
+      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)', flex: 1, minWidth: 190 }} title={evid ?? ''}>
         {f.title ?? ''}
       </span>
     </div>
@@ -183,11 +183,11 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
               borderColor: active ? 'var(--acc)' : 'var(--bd)',
               background: active ? 'var(--acc)' : 'transparent',
               color: active ? '#fff' : 'var(--t2)',
-              fontSize: 11, fontWeight: active ? 600 : 400, cursor: 'pointer',
+              fontSize: 'var(--fs-sm)', fontWeight: active ? 600 : 400, cursor: 'pointer',
               transition: 'all .15s',
             }}>
               {s === 'all' ? t('bench.filterAll', 'All') : s}
-              <span style={{ marginLeft: 5, opacity: .7, fontSize: 10 }}>{count}</span>
+              <span style={{ marginLeft: 5, opacity: .7, fontSize: 'var(--fs-xs)' }}>{count}</span>
             </button>
           );
         })}
@@ -212,12 +212,12 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
 
             {/* 1 ── id · status · date ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 600, color: 'var(--t1)' }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' }}>
                 {c.campaign_id}
               </span>
               <StatusBadge tone={campaignTone(c.status)} text={c.status ?? '?'} />
               {fmtDate(c.closed_ts ?? c.started_ts) && (
-                <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginLeft: 'auto' }}
                       title={c.closed_ts ? `closed ${c.closed_ts}` : `started ${c.started_ts}`}>
                   {fmtDate(c.closed_ts ?? c.started_ts)}
                 </span>
@@ -226,7 +226,7 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
 
             {/* 2 ── title ── */}
             {c.title && (
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)', lineHeight: 1.4, marginBottom: cGoal ? 6 : (cAxis ? 4 : 10) }}>
+              <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--t1)', lineHeight: 1.4, marginBottom: cGoal ? 6 : (cAxis ? 4 : 10) }}>
                 {c.title}
               </div>
             )}
@@ -236,8 +236,8 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
 
             {/* 3 ── contrast axis ── */}
             {cAxis && (
-              <div style={{ fontSize: 11, marginBottom: 10 }}>
-                <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginRight: 5 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', marginBottom: 10 }}>
+                <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginRight: 5 }}>
                   {t('bench.campaignAxis', 'axis')}
                 </span>
                 <span style={{ color: 'var(--t2)' }}>{cAxis}</span>
@@ -263,7 +263,7 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
                   {t('bench.campaignTasks', 'Tasks')}
                 </span>
                 {taskScope.map(task => (
-                  <span key={task} className="scope-tag" style={{ fontFamily: 'var(--mono)', fontSize: 10 }}>
+                  <span key={task} className="scope-tag" style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>
                     {task}
                   </span>
                 ))}
@@ -284,7 +284,7 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
             {concl && (
               <div style={{ marginTop: 8, padding: '6px 10px',
                             borderLeft: '3px solid var(--suc)', background: 'var(--bg2)', borderRadius: '0 4px 4px 0' }}>
-                <MartProse text={concl} style={{ fontSize: 11 }} />
+                <MartProse text={concl} style={{ fontSize: 'var(--fs-sm)' }} />
               </div>
             )}
 
@@ -309,13 +309,13 @@ export function CampaignsScreen({ runs }: { runs: RunRow[] }) {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {runIds.length > 0
                       ? runIds.map(id => <RunChip key={id} runId={id} runs={runs} />)
-                      : <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>}
+                      : <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>}
                   </div>
                 </div>
                 {hasCampaignCost && (
                   <div>
                     <div style={SEC_LABEL}>{t('bench.campaignCost', 'Cost')}</div>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t1)' }}>
+                    <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', color: 'var(--t1)' }}>
                       {formatUsd(campaignCost)}
                     </span>
                   </div>

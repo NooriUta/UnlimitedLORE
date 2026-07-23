@@ -169,7 +169,7 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         padding: '9px 14px', borderBottom: '1px solid var(--bd)', background: 'var(--bg1)',
       }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>
+        <span style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--t1)' }}>
           VP-канва · зеркальная (Остервальдер)
         </span>
         <select
@@ -177,7 +177,7 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
           onChange={e => setFeatureId(e.target.value)}
           disabled={!features.length}
           style={{
-            fontSize: 12, padding: '3px 8px', borderRadius: 5,
+            fontSize: 'var(--fs-base)', padding: '3px 8px', borderRadius: 5,
             border: '1px solid var(--bd)', background: 'var(--bg2)', color: 'var(--t1)',
             fontFamily: 'var(--mono)', maxWidth: 320,
           }}
@@ -192,13 +192,13 @@ export default function LoreVpCanvas({ onError }: ProductScreenProps) {
           <svg width={26} height={8} style={{ overflow: 'visible' }}>
             <line x1={0} y1={4} x2={26} y2={4} stroke="var(--t3)" strokeWidth={1.5} strokeDasharray="5 4" />
           </svg>
-          <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.product.canvas.claimed', 'заявлено')}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{t('lore.product.canvas.claimed', 'заявлено')}</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <svg width={26} height={8} style={{ overflow: 'visible' }}>
             <line x1={0} y1={4} x2={26} y2={4} stroke="var(--acc)" strokeWidth={2} />
           </svg>
-          <span style={{ fontSize: 10, color: 'var(--t2)' }}>{t('lore.product.canvas.done', 'сделано')}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>{t('lore.product.canvas.done', 'сделано')}</span>
         </span>
         <Pill tone="muted" style={{ marginLeft: 'auto' }}>в проде — ReactFlow (как LOOM)</Pill>
       </div>

@@ -66,11 +66,11 @@ function ProfileLine({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)', minWidth: 96 }}>
+      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--t3)', minWidth: 96 }}>
         {glyph} {label}
       </span>
       {items.length === 0 ? (
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>— нет</span>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>— нет</span>
       ) : (
         items.map(it => (
           <LinkChip key={it.id} color={color} onClick={() => onNavigate('vpProfile', it.id)} title={it.id}>
@@ -165,7 +165,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
               title={t('lore.product.actor.edit', 'Правка')}
               aria-label={t('lore.product.actor.edit', 'Правка')}
               onClick={() => { setCreating(false); setEditingActor({ actor_id: a.actor_id, name: a.name, kind: a.kind, body_md: a.body_md }); }}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
             >
               ✎
             </button>
@@ -181,7 +181,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
 
           <PSection title={t('lore.product.actor.ucRbac', 'US роли · отсюда строится RBAC')}>
             {ucIds.length === 0 ? (
-              <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
             ) : (
               ucIds.map((ucId, i) => (
                 <TRow key={ucId} first={i === 0}>
@@ -193,7 +193,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
 
           {a.body_md && (
             <PSection title={t('lore.product.actor.about', 'О роли')}>
-              <div style={{ fontSize: 12, color: 'var(--t2)', whiteSpace: 'pre-wrap' }}>{a.body_md}</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', whiteSpace: 'pre-wrap' }}>{a.body_md}</div>
             </PSection>
           )}
         </div>
@@ -206,7 +206,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
       <button
         type="button"
         onClick={() => { setEditingActor(null); setCreating(true); }}
-        style={{ width: '100%', fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+        style={{ width: '100%', fontSize: 'var(--fs-sm)', borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
       >
         {t('lore.product.actor.new', '+ Клиент')}
       </button>

@@ -796,6 +796,10 @@ export interface LoreTaskAgentFields {
   executorAgent?: string | null;
   reviewerAgent?: string | null;
   taskType?: string | null;
+  /** PL-19: ось ЗАЧЕМ (uc|jtd|enb). */
+  workClass?: string | null;
+  /** PL-19: сценарий, который задача реализует — ребро REALIZES создаётся атомарно. */
+  ucId?: string | null;
 }
 
 export async function editLoreTask(
@@ -817,6 +821,8 @@ export async function editLoreTask(
       executor_agent: agents?.executorAgent ?? null,
       reviewer_agent: agents?.reviewerAgent ?? null,
       task_type: agents?.taskType ?? null,
+      work_class: agents?.workClass ?? null,
+      uc_id: agents?.ucId ?? null,
     }),
   });
   assertJson(res);

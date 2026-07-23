@@ -244,7 +244,7 @@ export default function TyrApp() {
             border: '1px solid var(--bd)',
             padding: '3px 10px',
             borderRadius: 'var(--radius-md)',
-            fontSize: 13,
+            fontSize: 'var(--fs-md)',
             cursor: 'pointer',
           }}
         >

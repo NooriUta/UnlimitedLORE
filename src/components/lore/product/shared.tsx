@@ -66,26 +66,26 @@ export { arr as asArray };
 // ── презентационные примитивы (совпадают с прототипом: pill/psec/trow/lnk) ──
 export function Pill({ children, tone, style }: { children: ReactNode; tone?: 'ok' | 'act' | 'warn' | 'muted'; style?: CSSProperties }) {
   const c = tone === 'ok' ? 'var(--suc)' : tone === 'act' ? 'var(--inf)' : tone === 'warn' ? 'var(--wrn)' : 'var(--t2)';
-  return <span style={{ fontSize: 10, fontFamily: 'var(--mono)', border: `1px solid ${c}`, borderRadius: 999, padding: '1px 7px', color: c, whiteSpace: 'nowrap', ...style }}>{children}</span>;
+  return <span style={{ fontSize: 'var(--fs-xs)', fontFamily: 'var(--mono)', border: `1px solid ${c}`, borderRadius: 999, padding: '1px 7px', color: c, whiteSpace: 'nowrap', ...style }}>{children}</span>;
 }
 
 export function PSection({ title, children, style }: { title: string; children: ReactNode; style?: CSSProperties }) {
   return (
     <div style={{ border: '1px solid var(--bd)', borderRadius: 6, background: 'var(--bg1)', padding: '8px 11px', marginTop: 8, ...style }}>
-      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)', marginBottom: 5 }}>{title}</div>
+      <div style={{ fontSize: 'var(--fs-xs)', textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--t3)', marginBottom: 5 }}>{title}</div>
       {children}
     </div>
   );
 }
 
 export function TRow({ children, first }: { children: ReactNode; first?: boolean }) {
-  return <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 0', fontSize: 12, color: 'var(--t2)', borderTop: first ? 'none' : '1px solid color-mix(in srgb,var(--bd) 40%,transparent)' }}>{children}</div>;
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 0', fontSize: 'var(--fs-base)', color: 'var(--t2)', borderTop: first ? 'none' : '1px solid color-mix(in srgb,var(--bd) 40%,transparent)' }}>{children}</div>;
 }
 
 export function LinkChip({ children, color, onClick, dim, title }: { children: ReactNode; color?: string; onClick?: () => void; dim?: boolean; title?: string }) {
   return (
     <button type="button" onClick={onClick} title={title} disabled={!onClick}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'var(--mono)', border: '1px solid var(--bd)', borderRadius: 5, padding: '1px 6px', margin: '2px 3px 2px 0', background: 'var(--bg2)', color: color ?? 'var(--t2)', cursor: onClick ? 'pointer' : 'default', textDecoration: onClick ? 'underline dotted' : 'none', opacity: dim ? 0.6 : 1 }}>
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)', border: '1px solid var(--bd)', borderRadius: 5, padding: '1px 6px', margin: '2px 3px 2px 0', background: 'var(--bg2)', color: color ?? 'var(--t2)', cursor: onClick ? 'pointer' : 'default', textDecoration: onClick ? 'underline dotted' : 'none', opacity: dim ? 0.6 : 1 }}>
       {children}
     </button>
   );
@@ -216,7 +216,7 @@ export function EmptyDetail({ text }: { text?: string }) {
   // в параметрах вычисляется до вызова хука и локализовать его там нечем.
   const { t } = useTranslation();
   return (
-    <div style={{ padding: 24, textAlign: 'center', color: 'var(--t3)', fontSize: 12 }}>
+    <div style={{ padding: 24, textAlign: 'center', color: 'var(--t3)', fontSize: 'var(--fs-base)' }}>
       {text ?? t('lore.product.pickItem', 'Выберите элемент слева')}
     </div>
   );

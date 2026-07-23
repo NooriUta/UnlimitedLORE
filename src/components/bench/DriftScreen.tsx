@@ -81,7 +81,7 @@ export function DriftScreen({ runs, snapshots, subLabel }: {
           <MuninnSelect value={prompt} onChange={setPrompt}
                        options={prompts.map(p => ({ value: p, label: p }))} />
         </Field>
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
           {t('bench.pickPins', 'Pick model and prompt — the drift slice must pin both')}
         </span>
       </div>
@@ -106,7 +106,7 @@ export function DriftScreen({ runs, snapshots, subLabel }: {
         return (
           <>
           {(filtered.staleExcluded > 0 || filtered.unresolvedExcluded > 0) && (
-            <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}
                  title={filtered.detail.join('\n')}>
               {t('bench.staleRevExcluded', 'excluded (I3): fact label ≠ revision valid at the run')}: {filtered.staleExcluded}
               {filtered.unresolvedExcluded > 0 && (
@@ -171,7 +171,7 @@ export function DriftScreen({ runs, snapshots, subLabel }: {
                                 title={cell ? passport : t('bench.driftNoCell', 'not measured on this snapshot under these pins')}>
                               {fmtF1(cell?.f1)}
                               {delta !== undefined && Math.abs(delta) >= 0.0005 && (
-                                <span style={{ fontSize: 10, marginLeft: 4,
+                                <span style={{ fontSize: 'var(--fs-xs)', marginLeft: 4,
                                                color: delta > 0 ? 'var(--suc)' : 'var(--danger)' }}
                                       title={`Δ ${delta > 0 ? '+' : ''}${delta.toFixed(3)}`}>
                                   {delta > 0 ? '▲' : '▼'}

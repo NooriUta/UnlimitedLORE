@@ -1213,7 +1213,15 @@
         "reviewerPlaceholder": "reviewer",
         "roleConflict": "matches the assignee, the task cannot move to done",
         "typeLabel": "Type",
-        "typeUnset": "—"
+        "typeUnset": "—",
+        "workClassLabel": "Why",
+        "wcUnset": "— unset —",
+        "wcUcOpt": "uc — realizes a scenario",
+        "wcJtdOpt": "jtd — supporting",
+        "wcEnbOpt": "enb — enabler",
+        "ucLabel": "Scenario (REALIZES)",
+        "ucPlaceholder": "US-GIT-MERGE",
+        "ucMissing": "uc task without a scenario"
       },
       "addTask": {
         "trigger": "+ task",

@@ -162,9 +162,9 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
         covered: Set<string>,
       ) => (
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', minWidth: 78 }}>{label}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--t3)', minWidth: 78 }}>{label}</span>
           {ids.length === 0
-            ? <span style={{ fontSize: 11, color: 'var(--t3)' }}>—</span>
+            ? <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>—</span>
             : ids.map(id => {
               const ok = covered.has(id);
               return (
@@ -193,7 +193,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
               title={t('lore.product.us.edit', 'Правка')}
               aria-label={t('lore.product.us.edit', 'Правка')}
               onClick={() => { setCreatingRoot(false); setEditingRoot({ uc_id: f.uc_id, title: f.title, goal_level: f.goal_level }); }}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: 0, marginLeft: 4 }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-base)', padding: 0, marginLeft: 4 }}
             >
               ✎
             </button>
@@ -201,7 +201,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--g-value)', marginBottom: 8 }}>{f.uc_id}</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 12, color: 'var(--t2)', marginBottom: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', fontSize: 'var(--fs-base)', color: 'var(--t2)', marginBottom: 4 }}>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.readiness', 'Готовность')}</span>
             <span style={{ fontFamily: 'var(--mono)' }}>{f.uc_shipped ?? 0}/{f.uc_total ?? 0} US</span>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.milestone', 'Веха')}</span>
@@ -209,7 +209,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
               ? <LinkChip color="var(--acc)" onClick={() => onNavigate('milestones', f.milestone_id ?? undefined)}>{f.milestone_id}</LinkChip>
               : <span style={{ color: 'var(--t3)' }}>—</span>}</span>
             <span style={{ color: 'var(--t3)' }}>{t('lore.product.feat.component', 'Компонент')}</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{f.component_id ?? '—'}</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{f.component_id ?? '—'}</span>
           </div>
 
           <PSection title={t('lore.product.feat.bridge', '🌉 Мост в профиль (что ЗАЯВЛЯЕТ фича)')}>
@@ -230,7 +230,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
               {t('lore.product.feat.addUs', '+ US сюда')}
             </button>
             {ucs.length === 0
-              ? <div style={{ fontSize: 11, color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
+              ? <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
               : ucs.map((uc, i) => {
                 const open = expandedUc === uc.uc_id;
                 return (
@@ -245,7 +245,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
                         onClick={() => onExpandUc?.(open ? null : uc.uc_id)}
                         aria-expanded={open}
                         aria-label={t('lore.product.feat.tasksToggle', 'Задачи сценария')}
-                        style={{ width: 16, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 9, padding: 0 }}
+                        style={{ width: 16, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 'var(--fs-2xs)', padding: 0 }}
                       >
                         {open ? '▼' : '▶'}
                       </button>
@@ -257,11 +257,11 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
 
                     {open && (
                       <div style={{ marginLeft: 20, borderLeft: '1px solid var(--bd)', paddingLeft: 8 }}>
-                        {tasksLoading && <div style={{ fontSize: 11, color: 'var(--t3)', padding: '3px 0' }}>…</div>}
+                        {tasksLoading && <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '3px 0' }}>…</div>}
                         {!tasksLoading && ucTasks.length === 0 && (
                           // Отличаем «нет задач» от «не раскрывали»: пустой узел
                           // без подписи читается как сбой загрузки.
-                          <div style={{ fontSize: 11, color: 'var(--t3)', padding: '3px 0' }}>
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '3px 0' }}>
                             {t('lore.product.feat.noTasks', 'Задач, реализующих этот сценарий, нет')}
                           </div>
                         )}
@@ -295,7 +295,7 @@ export default function LoreFeatures({ selectedId, onSelect, onNavigate, onError
         <button
           type="button"
           onClick={() => { setEditingRoot(null); setCreatingRoot(true); }}
-          style={{ width: '100%', fontSize: 11, borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
+          style={{ width: '100%', fontSize: 'var(--fs-sm)', borderRadius: 4, padding: '3px 0', cursor: 'pointer', background: 'transparent', border: '1px dashed var(--bd)', color: 'var(--t2)' }}
         >
           {t('lore.product.us.newRoot', '+ Фича')}
         </button>

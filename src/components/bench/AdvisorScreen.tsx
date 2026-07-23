@@ -13,7 +13,7 @@ import { MuninnSelect, Field, PanelMsg, ScreenTitle, SqlChip, SubstrateLink } fr
 
 const EMPTY_PARAMS: Record<string, string> = {};
 
-const chipLink = { fontSize: 10, color: 'var(--acc)', textDecoration: 'none',
+const chipLink = { fontSize: 'var(--fs-xs)', color: 'var(--acc)', textDecoration: 'none',
                    border: '1px solid var(--bd)', borderRadius: 5, padding: '1px 6px' } as const;
 
 /**
@@ -71,7 +71,7 @@ export function AdvisorScreen({ runs, subLabel }: {
           <MuninnSelect value={run} onChange={setRun}
                        options={runs.map(r => ({ value: r.run_id, label: r.run_id }))} />
         </Field>
-        <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>
           {t('bench.adv.spreadNote', 'spread (I1) over runs with the same pins')}: {1 + siblings.length}
         </span>
       </div>
@@ -99,8 +99,8 @@ export function AdvisorScreen({ runs, subLabel }: {
               const d = disclaimers.get(c.key);
               return (
                 <tr key={c.key}>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap' }}>{c.key}</td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{c.n}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-base)', whiteSpace: 'nowrap' }}>{c.key}</td>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{c.n}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {leader ? (
                       <>
@@ -109,12 +109,12 @@ export function AdvisorScreen({ runs, subLabel }: {
                       </>
                     ) : '—'}
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11, whiteSpace: 'nowrap' }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap' }}>
                     {leader && second
                       ? `+${(leader.f1 - second.f1).toFixed(3)} (${subLabel(second.substrate_id)} ${fmtF1(second.f1)})`
                       : '—'}
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>
                     {sp === undefined ? '—' : (
                       <span style={{ color: sp > 0.1 ? 'var(--danger)' : undefined }}
                             title={sp > 0.1 ? t('bench.adv.lottery', 'unstable across runs — a lottery') : undefined}>
@@ -122,7 +122,7 @@ export function AdvisorScreen({ runs, subLabel }: {
                       </span>
                     )}
                   </td>
-                  <td style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
+                  <td style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>
                     {leader?.costPerCase !== undefined && num(leader.costPerCase) !== undefined
                       ? (leader.costPerCase === 0 ? '$0' : formatUsd(leader.costPerCase)) : '—'}
                   </td>
@@ -166,7 +166,7 @@ export function AdvisorScreen({ runs, subLabel }: {
           <div className="analytics-card-title">
             {t('bench.adv.gapsTitle', 'Engine gaps')} — {gaps.instantiated}/{gaps.total}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--t2)' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t2)' }}>
             {(Object.entries(gaps.facets) as Array<[string, string[]]>).map(([k, vs]) => (
               <div key={k} style={{ padding: '2px 0' }}>
                 <span style={{ color: 'var(--t3)' }}>{k}</span>: {vs.join(', ')}
@@ -174,10 +174,10 @@ export function AdvisorScreen({ runs, subLabel }: {
             ))}
           </div>
           <details style={{ marginTop: 6 }}>
-            <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--acc)' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 'var(--fs-sm)', color: 'var(--acc)' }}>
               {t('bench.adv.gapsList', 'empty combinations')} ({gaps.missing.length})
             </summary>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)',
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)',
                           maxHeight: 220, overflowY: 'auto', marginTop: 4 }}>
               {gaps.missing.map(m => <div key={m}>{m}</div>)}
             </div>
@@ -186,9 +186,9 @@ export function AdvisorScreen({ runs, subLabel }: {
 
         <div className="analytics-card" style={{ flex: '1 1 300px', marginBottom: 12 }}>
           <div className="analytics-card-title">{t('bench.adv.unsolved', 'Cells without a solution (max F1 < 0.8)')}</div>
-          {unsolved.length === 0 && <span style={{ fontSize: 12, color: 'var(--t3)' }}>—</span>}
+          {unsolved.length === 0 && <span style={{ fontSize: 'var(--fs-base)', color: 'var(--t3)' }}>—</span>}
           {unsolved.map(c => (
-            <div key={c.key} style={{ fontSize: 12, padding: '3px 0' }}>
+            <div key={c.key} style={{ fontSize: 'var(--fs-base)', padding: '3px 0' }}>
               <span style={{ fontFamily: 'var(--mono)' }}>{c.key}</span>
               <span style={{ color: 'var(--t3)' }}> · max {fmtF1(c.ranking[0]?.f1)} · n={c.n}</span>
               <Link to={`/benchmark?tab=cases&run=${encodeURIComponent(run)}&hop_kind=${encodeURIComponent(c.hop)}`}
@@ -199,9 +199,9 @@ export function AdvisorScreen({ runs, subLabel }: {
           <div className="analytics-card-title" style={{ marginTop: 12 }}>
             {t('bench.adv.bets', 'Open registered bets')}
           </div>
-          {bets.length === 0 && <span style={{ fontSize: 12, color: 'var(--t3)' }}>—</span>}
+          {bets.length === 0 && <span style={{ fontSize: 'var(--fs-base)', color: 'var(--t3)' }}>—</span>}
           {bets.map(h => (
-            <div key={h.hyp_id} style={{ fontSize: 12, padding: '3px 0' }}>
+            <div key={h.hyp_id} style={{ fontSize: 'var(--fs-base)', padding: '3px 0' }}>
               <Link to={`/benchmark/hypothesis/${encodeURIComponent(h.hyp_id)}`}
                     style={{ color: 'var(--acc)', textDecoration: 'none', fontFamily: 'var(--mono)' }}>
                 {h.hyp_id}
