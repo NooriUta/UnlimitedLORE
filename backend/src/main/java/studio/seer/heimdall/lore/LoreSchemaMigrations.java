@@ -420,6 +420,26 @@ final class LoreSchemaMigrations {
             "CREATE INDEX IF NOT EXISTS ON KnowUseCase (parent_uc_id) NOTUNIQUE",
             "CREATE INDEX IF NOT EXISTS ON KnowUseCase (body_md)    FULL_TEXT",
             "CREATE INDEX IF NOT EXISTS ON KnowUseCase (context_md) FULL_TEXT"
+        )),
+
+        // AL-79 (указание владельца 2026-07-23): статус решения — ЗНАЧЕНИЕ СЛОВАРЯ,
+        // а не свободный текст. До этого статусы жили только у решений, залитых
+        // прямой записью при сидировании (fixed 79 / accepted 58 / done 20), а
+        // инструмента простановки не существовало вовсе — decision_new статуса не
+        // имел, status_set решения не принимал. Сид повторяет фактический зоопарк
+        // прода: fixed/done — легаси-значения, оставлены активными (79+20 живых
+        // решений не должны стать «вне канона» задним числом); их судьба — ревизия
+        // при вердикте владельца, выключаются флагом is_active в админке, не кодом.
+        // Поле вершины — status_raw (так лежат статусы сида и так читают слайсы
+        // decisions/decisions_of_adr), НЕ status: второе имя стало бы второй правдой.
+        new Step(14, "decision_status_dictionary", List.of(
+            "CREATE PROPERTY KnowDecision.status_raw IF NOT EXISTS STRING",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='proposed',   label_ru='📋 Предложено — правило сформулировано, вердикта нет', color='#5AB4E8', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='proposed'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='accepted',   label_ru='✅ Принято — действующее правило', color='#A8B860', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='accepted'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='deferred',   label_ru='⏸ Отложено — намеренно не сейчас', color='#B8A860', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='deferred'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='superseded', label_ru='♻ Вытеснено — заменено более поздним решением', color='#665C48', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='superseded'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='fixed',      label_ru='📌 Fixed (легаси сида) — к ревизии', color='#88B8A8', sort_order=50, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='fixed'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='done',       label_ru='☑ Done (легаси сида) — к ревизии', color='#7A8890', sort_order=60, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='done'"
         ))
     );
 
