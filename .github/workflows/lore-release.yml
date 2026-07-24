@@ -17,6 +17,18 @@ name: LORE Release (publish on tag)
 on:
   push:
     tags: ["v*"]
+  # Ручной перезапуск (MIR-01): rerun-эндпоинта у Forgejo 15 в API нет, а
+  # «перезапустить прогон» — штатный ответ и на пропавший RELEASE-файл, и на
+  # замену GH_MIRROR_TOKEN. Оба шага идемпотентны (существующий релиз не
+  # трогается, push тегов up-to-date безвреден), поэтому повторный прогон по
+  # ЛЮБОМУ уже выпущенному тегу безопасен. Заодно dispatch-прогон ПРОВЕРЯЕТ
+  # токен зеркала громко — см. шаг Verify mirror token ниже.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег для (пере)публикации, напр. v1.0.58'
+        required: true
+        type: string
 
 permissions:
   contents: write        # нужно для создания Release
@@ -32,13 +44,47 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # ── Проверка токена зеркала — ТОЛЬКО на ручном прогоне ─────────────────
+      # Замена GH_MIRROR_TOKEN иначе непроверяема до следующего релиза: mirror-шаг
+      # под continue-on-error, и битый токен там виден только в логе, который
+      # снаружи не читается (нет API). Здесь отказ КРАСИТ прогон: скоупы classic
+      # PAT читаются read-only из заголовка X-OAuth-Scopes; без workflow push
+      # релиза, задевшего .github/workflows/*, будет отклонён целиком (MIR-01).
+      - name: Verify mirror token (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+        run: |
+          set -u
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::GH_MIRROR_TOKEN не задан (Forgejo: Settings -> Actions -> Secrets)"; exit 1
+          fi
+          code=$(curl -s -o /tmp/user.json -w '%{http_code}' -D /tmp/hdr.txt \
+            -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user)
+          if [ "$code" != "200" ]; then
+            echo "::error::токен зеркала не аутентифицируется (HTTP $code)"; head -c 300 /tmp/user.json; exit 1
+          fi
+          SCOPES=$(grep -i '^x-oauth-scopes:' /tmp/hdr.txt | cut -d: -f2- | tr -d ' \r')
+          echo "скоупы токена: ${SCOPES:-<пусто — fine-grained PAT, заголовка нет>}"
+          case ",$SCOPES," in
+            *,repo,*) : ;;
+            *) echo "::error::у токена нет scope repo — зеркалирование не сможет пушить"; exit 1 ;;
+          esac
+          case ",$SCOPES," in
+            *,workflow,*) echo "scope workflow есть — релизы с правками .github/workflows/* пройдут" ;;
+            *) echo "::error::у токена НЕТ scope workflow — релиз, задевший .github/workflows/*, будет отклонён GitHub целиком (ровно MIR-01)"; exit 1 ;;
+          esac
+
       - name: Publish
         shell: bash
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_TAG: ${{ inputs.tag || '' }}
         run: |
           set -u
-          TAG="${GITHUB_REF#refs/tags/}"
+          # dispatch-прогон приходит с веткой в GITHUB_REF — тег берём из input.
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
           FILE="RELEASE-${TAG}.md"
 
           # Адрес API — тот же, по которому в этом же job'е ходит actions/checkout
@@ -106,9 +152,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
           GH_REPO: ${{ secrets.GH_MIRROR_REPO }}   # напр. NooriUta/UnlimitedLORE
+          INPUT_TAG: ${{ inputs.tag || '' }}
         run: |
           set -u
-          TAG="${GITHUB_REF#refs/tags/}"
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
 
           if [ -z "${GH_TOKEN:-}" ] || [ -z "${GH_REPO:-}" ]; then
             echo "::warning::зеркало GitHub пропущено — не заданы GH_MIRROR_TOKEN/GH_MIRROR_REPO (Forgejo: Settings -> Actions -> Secrets). Тег $TAG останется только в Forgejo."
@@ -119,6 +166,9 @@ jobs:
           # и GitHub отверг бы неполный набор объектов.
           git fetch --unshallow origin 2>/dev/null || git fetch --prune origin
           git fetch origin main:refs/remotes/origin/main --force
+          # dispatch-прогон стартует с ветки: тега в мелком checkout нет — добираем
+          # явно, иначе is-ancestor ниже молча пропустил бы зеркалирование.
+          git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force 2>/dev/null || true
 
           # Тег обязан быть В main: зеркало отражает релизы, а не произвольные
           # точки. Тег мимо main означает, что релиз срезан не оттуда — это
