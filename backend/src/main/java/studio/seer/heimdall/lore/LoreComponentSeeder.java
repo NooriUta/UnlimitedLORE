@@ -25,7 +25,8 @@ public class LoreComponentSeeder {
 
     record Component(String id, String fullName, String area, String parentId, String gameIcon) {}
 
-    private static final List<Component> COMPONENTS = List.of(
+    // package-private: LoreComponentSeederLiveDbTest сверяет фактический счёт в БД с каноном
+    static final List<Component> COMPONENTS = List.of(
         // ── Data ─────────────────────────────────────────────────────────
         new Component("YGG",      "Yggdrasil",           "data",          null,        "oak"),
         new Component("FRIGG",    "Frigg",               "data",          null,        "keyring"),
@@ -79,9 +80,25 @@ public class LoreComponentSeeder {
     @RestClient
     LoreCommandClient client;
 
+    /**
+     * MIG-31: цепочка готовности. Порядок @Startup-бинов CDI не гарантирует,
+     * и на свежей БД сидер гонялся с DDL-штормом раннера миграций — все UPSERT'ы
+     * молча падали 500 в warn-catch, корпус оставался без компонентов
+     * («работает у всех, кроме чистой БД»). Вызовы на ленивых прокси ниже
+     * гарантируют: bootstrap-DDL инициализатора и ВСЕ шаги миграций завершены
+     * до первого UPSERT'а.
+     */
+    @Inject
+    LoreSchemaInitializer bootstrapFirst;
+
+    @Inject
+    LoreSchemaMigrationRunner migrationsFirst;
+
     @PostConstruct
     void seed() {
         if (!enabled || !bootstrap) return;
+        bootstrapFirst.ensureReady();
+        migrationsFirst.ensureReady();
         LOG.infof("[LORE] Seeding %d LoreComponent entries", COMPONENTS.size());
         int upserted = 0;
         for (Component c : COMPONENTS) {
