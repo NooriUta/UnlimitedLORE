@@ -88,6 +88,15 @@ public class LoreSchemaMigrationRunner {
         throw new IllegalStateException("[LORE MIGRATE] " + what + " не удалось после 5 попыток", last);
     }
 
+    /**
+     * Явная точка синхронизации для LoreComponentSeeder (MIG-31): тот же приём,
+     * что LoreSchemaInitializer.ensureReady() — вызов на ленивом CDI-прокси
+     * гарантирует, что @PostConstruct раннера (весь DDL-шторм миграций) завершён
+     * ДО первого UPSERT'а сидера. Без этого на свежей БД конкурентные UPSERT'ы
+     * ловили 500 «Error on transaction commit», и корпус жил без компонентов.
+     */
+    public void ensureReady() { /* всё делает @PostConstruct при создании бина */ }
+
     @PostConstruct
     void run() {
         if (!enabled || !migrate) {
