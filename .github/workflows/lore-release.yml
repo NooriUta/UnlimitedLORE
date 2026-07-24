@@ -63,6 +63,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+          GH_REPO:  ${{ secrets.GH_MIRROR_REPO }}
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
@@ -72,26 +73,37 @@ jobs:
               -d "{\"chat_id\":\"${TG_CHAT}\",\"text\":\"probe: verify-шаг стартовал, длина GH_MIRROR_TOKEN=${#GH_TOKEN}\"}" || true
           fi
           FAIL=""
-          SCOPES=""
+          NOTE=""
           if [ -z "${GH_TOKEN:-}" ]; then
             FAIL="GH_MIRROR_TOKEN не задан (Forgejo: Settings -> Actions -> Secrets, репо AIDA/UnlimitedLORE)"
           else
             code=$(curl -s -m 20 -o /tmp/user.json -w '%{http_code}' -D /tmp/hdr.txt \
-              -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user || echo "curl-fail")
+              -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user) || code="000"
             if [ "$code" != "200" ]; then
               FAIL="токен зеркала не аутентифицируется (HTTP $code): $(head -c 200 /tmp/user.json 2>/dev/null)"
             else
               SCOPES=$(grep -i '^x-oauth-scopes:' /tmp/hdr.txt | cut -d: -f2- | tr -d ' \r')
-              case ",$SCOPES," in *,repo,*) : ;; *)
-                FAIL="у токена нет scope repo (скоупы: ${SCOPES:-нет заголовка — fine-grained PAT?}) — пуш зеркала не пройдёт" ;;
-              esac
-              if [ -z "$FAIL" ]; then case ",$SCOPES," in *,workflow,*) : ;; *)
-                FAIL="у токена НЕТ scope workflow (скоупы: $SCOPES) — релиз, задевший .github/workflows/*, GitHub отклонит целиком (MIR-01)" ;;
-              esac; fi
+              if [ -n "$SCOPES" ]; then
+                # classic PAT: скоупы читаются из заголовка — проверяем оба.
+                case ",$SCOPES," in *,repo,*) : ;; *)
+                  FAIL="classic PAT без scope repo (скоупы: $SCOPES) — пуш зеркала не пройдёт" ;;
+                esac
+                if [ -z "$FAIL" ]; then case ",$SCOPES," in *,workflow,*) NOTE="classic PAT, скоупы [$SCOPES]" ;; *)
+                  FAIL="classic PAT БЕЗ scope workflow (скоупы: $SCOPES) — релиз, задевший .github/workflows/*, GitHub отклонит целиком (MIR-01)" ;;
+                esac; fi
+              else
+                # fine-grained PAT: заголовка скоупов НЕТ by design — скоупы не
+                # проверить read-only. Функциональная проба: доступ к самому репо.
+                if git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO:-NooriUta/UnlimitedLORE}.git" HEAD >/dev/null 2>&1; then
+                  NOTE="fine-grained PAT: аутентификация и чтение репо ок. Права Contents/Workflows (Read and write) read-only НЕ проверяются — их докажет первый реальный пуш релиза"
+                else
+                  FAIL="fine-grained PAT аутентифицируется, но НЕ имеет доступа к ${GH_REPO:-NooriUta/UnlimitedLORE} — проверьте Repository access в настройках токена"
+                fi
+              fi
             fi
           fi
           if [ -z "$FAIL" ]; then
-            VERDICT="✅ GH_MIRROR_TOKEN исправен: аутентификация ок, скоупы [$SCOPES]"
+            VERDICT="✅ GH_MIRROR_TOKEN исправен: $NOTE"
           else
             VERDICT="❌ GH_MIRROR_TOKEN: $FAIL"
           fi
