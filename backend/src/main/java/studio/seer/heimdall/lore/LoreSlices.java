@@ -592,6 +592,35 @@ public final class LoreSlices {
             "FROM KnowTask ORDER BY task_uid",
             List.of(), Map.of(), "");
 
+        // AN-01 (ADR-LORE-030 §1) — ядро VP-аналитики: строка на корень линейки
+        // (cloud/kite) со ВСЕМИ множествами для fit по трём осям. Замыкание считает
+        // потребитель разностью множеств (тот же принцип raw-фактов, что invest_profile):
+        //  - jobs:  claimed (HELPS_WITH корня) vs performed (PERFORMS его сценариев);
+        //  - pains: claimed (ADDRESSES) vs relieved (RELIEVES сценариев);
+        //  - gains: claimed (PROMISES) vs delivered (DELIVERS), причём замыкает только
+        //    выгода С МЕТРИКОЙ — delivered_measured_gain_ids отдельным множеством
+        //    (metric_md пуст → доставка не измерима, fit не засчитывается, ADR-032 §2);
+        //  - «ценность доехала» (D17): jobs, выполняемые shipped-сценариями;
+        //  - actors: ФАКТИЧЕСКИЕ исполнители через HAS_ACTOR сценариев — расхождение
+        //    с заявленным «для кого» видно сразу.
+        // «Заявлено vs доставлено» — характер утверждения, не уровень узла (D20):
+        // клеймы читаются с корня, доставка — со сценариев через DECOMPOSES_INTO.
+        slice("feature_vp_analytics",
+            "SELECT uc_id, title, status, shipped_at, goal_level, " +
+            "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id, " +
+            "out('HELPS_WITH').job_id  AS claimed_job_ids, " +
+            "out('ADDRESSES').pain_id  AS claimed_pain_ids, " +
+            "out('PROMISES').gain_id   AS claimed_gain_ids, " +
+            "out('DECOMPOSES_INTO').out('PERFORMS').job_id  AS performed_job_ids, " +
+            "out('DECOMPOSES_INTO').out('RELIEVES').pain_id AS relieved_pain_ids, " +
+            "out('DECOMPOSES_INTO').out('DELIVERS').gain_id AS delivered_gain_ids, " +
+            "out('DECOMPOSES_INTO').out('DELIVERS')[metric_md IS NOT NULL].gain_id " +
+            "    AS delivered_measured_gain_ids, " +
+            "out('DECOMPOSES_INTO')[status = 'shipped'].out('PERFORMS').job_id AS shipped_job_ids, " +
+            "out('DECOMPOSES_INTO').out('HAS_ACTOR').actor_id AS actor_ids " +
+            "FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite'] ORDER BY uc_id",
+            List.of(), Map.of(), "");
+
         // Batch variant: fetch tasks for multiple sprints in one query.
         // sprint_ids is a comma-separated string that the slice layer splits into a list.
         slice("tasks_of_sprints_batch",
