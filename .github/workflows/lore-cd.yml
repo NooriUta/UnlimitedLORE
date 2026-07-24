@@ -311,9 +311,15 @@ jobs:
         run: |
           [ -z "${TG_TOKEN}" ] && exit 0
           RUN_URL="${PUBLIC_REPO}/actions/runs/${{ github.run_number }}"
-          PR_NUM=$(git log -1 --pretty=%s | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          SUBJ=$(git log -1 --pretty=%s)
+          PR_NUM=$(printf '%s' "$SUBJ" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          # Заголовок PR из merge-коммита — «что именно выехало» читается из
+          # уведомления, без похода по ссылке (замечание владельца 2026-07-24).
+          PR_TITLE=$(printf '%s' "$SUBJ" | sed -E "s/^Merge pull request '(.*)' \(#[0-9]+\).*$/\1/")
+          [ "$PR_TITLE" = "$SUBJ" ] && PR_TITLE=""
           PR_LINE=""
-          [ -n "$PR_NUM" ] && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          [ -n "$PR_NUM" ]   && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          [ -n "$PR_TITLE" ] && PR_LINE=$(printf "\nЧто: %s%s" "$PR_TITLE" "$PR_LINE")
           MSG=$(printf "✅ LORE CD: стенд обновлён\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nСтенд: %s\nРелизы: %s/releases\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
             "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" \
@@ -343,9 +349,13 @@ jobs:
         run: |
           [ -z "${TG_TOKEN}" ] && exit 0
           RUN_URL="${PUBLIC_REPO}/actions/runs/${{ github.run_number }}"
-          PR_NUM=$(git log -1 --pretty=%s | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          SUBJ=$(git log -1 --pretty=%s)
+          PR_NUM=$(printf '%s' "$SUBJ" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          PR_TITLE=$(printf '%s' "$SUBJ" | sed -E "s/^Merge pull request '(.*)' \(#[0-9]+\).*$/\1/")
+          [ "$PR_TITLE" = "$SUBJ" ] && PR_TITLE=""
           PR_LINE=""
-          [ -n "$PR_NUM" ] && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          [ -n "$PR_NUM" ]   && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          [ -n "$PR_TITLE" ] && PR_LINE=$(printf "\nЧто: %s%s" "$PR_TITLE" "$PR_LINE")
           MSG=$(printf "❌ LORE CD: деплой УПАЛ\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
             "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" "$RUN_URL")
