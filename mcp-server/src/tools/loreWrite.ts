@@ -472,10 +472,13 @@ export function registerLoreWrite(server: McpServer): void {
       'penalties). Section headings are matched by convention; extension refs ("2a.") are checked against ' +
       'existing main-scenario steps; primary-actor and TRACED_TO are read from edges, not prose. Advisory — ' +
       'the same numbers come back inside uc_new/uc_set responses, so you rarely need this except to review ' +
-      'someone else\'s UC.',
-    { uc_id: z.string().describe('e.g. "UC-GIT-MERGE"') },
+      'someone else\'s UC. OMIT uc_id to get the layer-wide quality distribution (AN-08, ADR-LORE-030 slice F): ' +
+      'every UC scored by the SAME linter with a NORMALIZED score/max (raw scores are incomparable across ' +
+      'weights — casual has a smaller denominator), below_threshold flags and the threshold echoed back.',
+    { uc_id: z.string().optional().describe('e.g. "UC-GIT-MERGE"; omit for the layer-wide distribution') },
     async ({ uc_id }) => {
       try {
+        if (!uc_id) return json(await loreGet('/lore/uc/quality/all'));
         return json(await lorePost('/lore/uc/quality', { uc_id }));
       } catch (e) { return err(e); }
     },
@@ -792,7 +795,8 @@ export function registerLoreWrite(server: McpServer): void {
     description: 'Create or update a KnowDecision (logged decision/verdict). Idempotent — upserts by decision_id. ' +
       'Use for recording key decisions made during a sprint or design session. ADR-019: a decision is a CHILD of ' +
       'an ADR — pass adr_id to link it (DECIDED_IN), component_id/tags for the "rule" filters. Stays vertex-only ' +
-      '(no history) — consistent with the flat KnowDecision model.',
+      '(no history) — consistent with the flat KnowDecision model. AL-79: status is a DICTIONARY value ' +
+      '(decision_status, editable in the admin panel) — free-text statuses are rejected with the allowed list.',
     schema: {
       decision_id:  z.string().describe('unique id, e.g. "D-2026-047"'),
       title:        z.string(),
@@ -802,14 +806,34 @@ export function registerLoreWrite(server: McpServer): void {
       component_id: z.string().optional().describe('ADR-019: component this decision belongs to (filter axis)'),
       adr_id:       z.string().optional().describe('ADR-019: parent ADR — creates a DECIDED_IN edge to it'),
       tags:         z.array(z.string()).optional().describe('ADR-019: free tags (KnowTag), e.g. ["stale-versions"]'),
+      status:       z.string().optional().describe('AL-79: decision_status dictionary code — proposed|accepted|deferred|superseded (+legacy fixed|done); omit to leave unset/unchanged'),
     },
     path: '/lore/decision',
-    body: ({ decision_id, title, body_md, date_created, refs_raw, component_id, adr_id, tags }) => ({
+    body: ({ decision_id, title, body_md, date_created, refs_raw, component_id, adr_id, tags, status }) => ({
           decision_id, title,
           body_md: body_md ?? null, date_created: date_created ?? null,
           refs_raw: refs_raw ?? null,
           component_id: component_id ?? null, adr_id: adr_id ?? null, tags: tags ?? null,
+          status: status ?? null,
         }),
+  });
+
+  // AL-79: простановка статуса на СУЩЕСТВУЮЩЕМ решении. Отдельный инструмент,
+  // не расширение status_set: тот — SCD2 close-open по Hist-цепочке, а у
+  // KnowDecision истории нет by design (плоское поле вершины).
+  definePostTool(server, {
+    name: 'decision_set',
+    description: 'Set the status of an EXISTING KnowDecision (AL-79). The value must be a decision_status ' +
+      'dictionary code (proposed|accepted|deferred|superseded, plus legacy fixed|done pending the owner\'s ' +
+      'revision) — anything else is rejected with the allowed list. NOT status_set: decisions are vertex-only ' +
+      '(no SCD2 history), this writes the flat status field and returns {old_status, new_status}; a missing ' +
+      'decision is a hard 404, never ok:true.',
+    schema: {
+      decision_id: z.string().describe('e.g. "ADR-LORE-014-D3" or "ADR-HND-011-R01"'),
+      status:      z.string().describe('decision_status dictionary code, e.g. "accepted"'),
+    },
+    path: '/lore/decision/status',
+    body: ({ decision_id, status }) => ({ decision_id, status }),
   });
 
   server.tool(
