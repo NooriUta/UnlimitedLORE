@@ -554,6 +554,44 @@ public final class LoreSlices {
             ") ORDER BY finding, ref_id",
             List.of(), Map.of(), "");
 
+        // AN-03 (ADR-LORE-030 §2 срез B): две стороны одного ребра TARGETS_MILESTONE.
+        // KAOS-чтение (ADR-032 §1): веха = goal, фича = refinement — срез показывает
+        // дыры в ОБОИХ направлениях декомпозиции: ценность вне стратегии (корень без
+        // вехи) и цель без реализации (веха без корней).
+        // Фильтр по классу источника обязателен: в веху целятся И спринты, И корни
+        // слоя — веха со спринтами, но без единой фичи, всё равно «цель без
+        // ценности». Класс вершины из траверса — ТОЛЬКО `.@type` (`.@class` в
+        // грамматике 26.7.2 не парсится: «no viable alternative at input '@'»).
+        slice("strategic_coverage",
+            "SELECT finding, entity_type, ref_id, title " +
+            "FROM (SELECT expand(unionall($f, $m)) LET " +
+            "$f = (SELECT 'feature_without_milestone' AS finding, 'uc' AS entity_type, " +
+            "       uc_id AS ref_id, title " +
+            "       FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite'] " +
+            "       AND out('TARGETS_MILESTONE').size() = 0), " +
+            "$m = (SELECT 'milestone_without_features' AS finding, 'milestone' AS entity_type, " +
+            "       milestone_id AS ref_id, label AS title " +
+            "       FROM KnowMilestone " +
+            "       WHERE NOT (in('TARGETS_MILESTONE').@type CONTAINS 'KnowUseCase'))" +
+            ") ORDER BY finding, ref_id",
+            List.of(), Map.of(), "");
+
+        // AN-04 (ADR-LORE-030 §2 срез D): инвестиционный профиль — сырые слим-факты
+        // задача × work_class × effort × спринт × релизы. БЕЗ GROUP BY намеренно:
+        // на этой версии ArcadeDB GROUP BY молча группирует неверно (см. MartSlices —
+        // аналитика возит raw fact rows, агрегирует клиент). Клиент считает долю
+        // uc/jtd/enb по effort_days с фолбэком на счёт по штукам и обязан честно
+        // помечать, какая доля считана по штукам (строки с effort_days = null).
+        // work_class = null — легальная строка (неклассифицированное — тоже сигнал).
+        slice("invest_profile",
+            "SELECT task_uid, work_class, task_type, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "out('PART_OF').out('IMPLEMENTED_IN_RELEASE').release_id  AS release_ids " +
+            "FROM KnowTask ORDER BY task_uid",
+            List.of(), Map.of(), "");
+
         // Batch variant: fetch tasks for multiple sprints in one query.
         // sprint_ids is a comma-separated string that the slice layer splits into a list.
         slice("tasks_of_sprints_batch",
