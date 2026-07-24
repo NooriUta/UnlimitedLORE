@@ -621,6 +621,39 @@ public final class LoreSlices {
             "FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite'] ORDER BY uc_id",
             List.of(), Map.of(), "");
 
+        // AN-07 (ADR-LORE-030 §2 срез A): карта нагрузки ролей. Два сигнала:
+        // перегруз (роль тянет несоразмерно много сценариев — кандидат на
+        // расщепление) и мёртвая роль (0 UC — заявлена, но не используется).
+        // Разбивка primary/supporting — по свойству role ребра HAS_ACTOR (D19).
+        // Фильтр по проекту ОБЯЗАТЕЛЕН (D18: акторы проектные — одноимённые роли
+        // разных продуктов не должны склеиваться в одну строку нагрузки).
+        slice("actor_load",
+            "SELECT actor_id, name, kind, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('HAS_ACTOR').uc_id AS uc_ids, " +
+            "in('HAS_ACTOR').size() AS uc_count, " +
+            "inE('HAS_ACTOR')[role = 'primary'].size()    AS primary_count, " +
+            "inE('HAS_ACTOR')[role = 'supporting'].size() AS supporting_count " +
+            "FROM KnowActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
+            "ORDER BY actor_id",
+            List.of("project"), Map.of(), "");
+
+        // AN-05 (ADR-LORE-030 §2 срез C, зависимость PL-15): shipped-динамика.
+        // Сырые строки по выехавшим сценариям; периоды/релизы группирует клиент
+        // по shipped_at (GROUP BY-ловушка). Lead time = shipped_at −
+        // min(active_since_dates): даты берутся из ИСТОРИИ задач (первая
+        // IN PROGRESS-ревизия каждой REALIZES-задачи), НЕ из valid_from вершин —
+        // sprints.valid_from = дата текущего состояния SCD2, и lead time по нему
+        // выходил бы ~0 (ловушка корпуса).
+        slice("shipped_dynamics",
+            "SELECT uc_id, title, goal_level, shipped_at, status, " +
+            "in('DECOMPOSES_INTO').uc_id[0] AS root_uc_id, " +
+            "in('REALIZES').task_uid AS task_uids, " +
+            "in('REALIZES').out('HAS_STATE')[status_raw LIKE '%IN PROGRESS%'].valid_from " +
+            "    AS active_since_dates " +
+            "FROM KnowUseCase WHERE shipped_at IS NOT NULL ORDER BY shipped_at",
+            List.of(), Map.of(), "");
+
         // Batch variant: fetch tasks for multiple sprints in one query.
         // sprint_ids is a comma-separated string that the slice layer splits into a list.
         slice("tasks_of_sprints_batch",
