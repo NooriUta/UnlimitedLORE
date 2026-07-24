@@ -432,7 +432,10 @@ final class LoreSchemaMigrations {
         // при вердикте владельца, выключаются флагом is_active в админке, не кодом.
         // Поле вершины — status_raw (так лежат статусы сида и так читают слайсы
         // decisions/decisions_of_adr), НЕ status: второе имя стало бы второй правдой.
-        new Step(14, "decision_status_dictionary", List.of(
+        // АДДИТИВНЫЙ шаг (ordinal 14, major 13 → «13.1»): свойство IF NOT EXISTS +
+        // строки словаря. Старый бинарь против этой схемы работает — плоский
+        // конструктор объявил бы шаг ломающим и зря отказал в старте всем без V14.
+        new Step(14, 13, "decision_status_dictionary", List.of(
             "CREATE PROPERTY KnowDecision.status_raw IF NOT EXISTS STRING",
             "UPDATE KnowDictEntry SET dict_type='decision_status', code='proposed',   label_ru='📋 Предложено — правило сформулировано, вердикта нет', color='#5AB4E8', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='proposed'",
             "UPDATE KnowDictEntry SET dict_type='decision_status', code='accepted',   label_ru='✅ Принято — действующее правило', color='#A8B860', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='accepted'",
