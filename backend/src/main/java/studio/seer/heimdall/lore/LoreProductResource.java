@@ -868,6 +868,66 @@ public class LoreProductResource extends LoreResourceBase {
         return noStore(Response.ok(q));
     }
 
+    /**
+     * Порог «UC ниже плинтуса» для среза F. Настройка, не догма: 0.6 = «больше
+     * половины ОБЯЗАТЕЛЬНЫХ для своего веса проверок закрыто, с запасом» —
+     * стартовое значение до накопления статистики по живому корпусу.
+     */
+    @org.eclipse.microprofile.config.inject.ConfigProperty(
+        name = "lore.uc.quality.threshold", defaultValue = "0.6")
+    double qualityThreshold;
+
+    /**
+     * AN-08 (ADR-LORE-030 §2 срез F): распределение линтер-оценок по всему слою.
+     * Зовёт ТОТ ЖЕ {@link UcQuality#evaluate} — правила не дублируются (027-D3).
+     * Не слайс намеренно: линтер — Java-алгоритм, SQL его не повторит без второго
+     * источника правды. Сравнение только НОРМИРОВАННОЕ (score/max своего веса):
+     * знаменатель у casual меньше, чем у fully-dressed (027-D1), и по сырому score
+     * casual-UC выглядели бы ложно «лучше». Гистограммы/динамику строит клиент
+     * (date_created — ось когорт); оценки не хранятся — принцип ADR-030.
+     */
+    @jakarta.ws.rs.GET
+    @Path("uc/quality/all")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response ucQualityAll() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
+                "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
+                "out('TRACED_TO').size() AS traced " +
+                "FROM KnowUseCase ORDER BY uc_id", Map.of());
+            List<Map<String, Object>> out = new java.util.ArrayList<>();
+            for (Map<String, Object> r : rows) {
+                UcQuality.Result res = UcQuality.evaluate(
+                    str(r.get("rigor")), str(r.get("goal_level")),
+                    str(r.get("scenario_md")), str(r.get("acceptance_md")),
+                    num(r.get("primary_actors")) > 0, num(r.get("traced")) > 0);
+                double normalized = res.max() == 0 ? 1.0 : (double) res.score() / res.max();
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("uc_id", r.get("uc_id"));
+                row.put("title", r.get("title"));
+                row.put("goal_level", r.get("goal_level"));
+                row.put("rigor", res.rigor());
+                row.put("score", res.score());
+                row.put("max", res.max());
+                row.put("normalized", Math.round(normalized * 1000.0) / 1000.0);
+                row.put("below_threshold", normalized < qualityThreshold);
+                row.put("date_created", r.get("date_created"));
+                out.add(row);
+            }
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("threshold", qualityThreshold);
+            body.put("note", "normalized = score/max ОБЯЗАТЕЛЬНЫХ проверок своего веса — "
+                + "сырые score между casual и fully-dressed несравнимы (ADR-LORE-027 D1)");
+            body.put("rows", out);
+            return noStore(Response.ok(body));
+        } catch (Exception e) {
+            LOG.warnf("[LORE UC QUALITY ALL] %s", e.getMessage());
+            return upstream(e);
+        }
+    }
+
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
             .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));

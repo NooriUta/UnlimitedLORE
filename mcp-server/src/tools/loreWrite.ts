@@ -472,10 +472,13 @@ export function registerLoreWrite(server: McpServer): void {
       'penalties). Section headings are matched by convention; extension refs ("2a.") are checked against ' +
       'existing main-scenario steps; primary-actor and TRACED_TO are read from edges, not prose. Advisory — ' +
       'the same numbers come back inside uc_new/uc_set responses, so you rarely need this except to review ' +
-      'someone else\'s UC.',
-    { uc_id: z.string().describe('e.g. "UC-GIT-MERGE"') },
+      'someone else\'s UC. OMIT uc_id to get the layer-wide quality distribution (AN-08, ADR-LORE-030 slice F): ' +
+      'every UC scored by the SAME linter with a NORMALIZED score/max (raw scores are incomparable across ' +
+      'weights — casual has a smaller denominator), below_threshold flags and the threshold echoed back.',
+    { uc_id: z.string().optional().describe('e.g. "UC-GIT-MERGE"; omit for the layer-wide distribution') },
     async ({ uc_id }) => {
       try {
+        if (!uc_id) return json(await loreGet('/lore/uc/quality/all'));
         return json(await lorePost('/lore/uc/quality', { uc_id }));
       } catch (e) { return err(e); }
     },
