@@ -53,15 +53,24 @@ jobs:
       # Вердикт уходит в Telegram ВСЕГДА (best-effort): лог прогона снаружи не
       # читается (нет API у Forgejo 15, веб — только под логином), и без этого
       # «проверка токена» вырождалась в «прогон красный, а почему — идите в UI».
+      # Без `shell: bash` и `set -u` НАМЕРЕННО: два ручных прогона умирали с
+      # exitcode 1 до единой строки вывода и до Telegram, при том что секреты в
+      # dispatch-прогоны доезжают (проверено ручным CD-прогоном — уведомление
+      # пришло). Работающий notify-шаг lore-cd отличался ровно этими двумя
+      # строками — повторяем его форму. Пинг первой строкой — детектор «скрипт
+      # вообще стартовал»: длина токена, не сам токен.
       - name: Verify mirror token (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch'
-        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          set -u
+          if [ -n "${TG_TOKEN:-}" ]; then
+            curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+              -H 'Content-Type: application/json' \
+              -d "{\"chat_id\":\"${TG_CHAT}\",\"text\":\"probe: verify-шаг стартовал, длина GH_MIRROR_TOKEN=${#GH_TOKEN}\"}" || true
+          fi
           FAIL=""
           SCOPES=""
           if [ -z "${GH_TOKEN:-}" ]; then
