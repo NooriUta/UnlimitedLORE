@@ -88,7 +88,15 @@ jobs:
           fi
           echo "тест-БД: $FOUND"
           echo "LORE_TEST_DB_URL=$FOUND" >> "$GITHUB_ENV"
-          echo "LORE_TEST_DB_NAME=lore_ci_test" >> "$GITHUB_ENV"
+          # CI-01: имя БД РАЗНОЕ для push и pull_request. Один SHA всегда запускает
+          # оба прогона ОДНОВРЕМЕННО, и оба пересоздавали lore_ci_test — кто пришёл
+          # вторым, получал базу в момент drop/create («Database is not available»,
+          # найдено на 94157290: push зелёный, pull_request красный). Ретраи не
+          # спасают — это не сеть, а конфликт двух живых прогонов. Разведение по
+          # event_name убирает ровно эту гонку по построению; одновременные прогоны
+          # ОДНОГО типа (два разных PR разом) всё ещё делят базу — редкий случай,
+          # осознанно не усложняем именами из run_id (те копились бы без сноса).
+          echo "LORE_TEST_DB_NAME=lore_ci_${{ github.event_name }}" >> "$GITHUB_ENV"
           echo "LORE_TEST_DB_PASSWORD=$PW" >> "$GITHUB_ENV"
 
       # GitHub-hosted: fetch the JDK the normal way.
