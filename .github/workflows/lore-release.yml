@@ -50,31 +50,50 @@ jobs:
       # снаружи не читается (нет API). Здесь отказ КРАСИТ прогон: скоупы classic
       # PAT читаются read-only из заголовка X-OAuth-Scopes; без workflow push
       # релиза, задевшего .github/workflows/*, будет отклонён целиком (MIR-01).
+      # Вердикт уходит в Telegram ВСЕГДА (best-effort): лог прогона снаружи не
+      # читается (нет API у Forgejo 15, веб — только под логином), и без этого
+      # «проверка токена» вырождалась в «прогон красный, а почему — идите в UI».
       - name: Verify mirror token (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -u
+          FAIL=""
+          SCOPES=""
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::GH_MIRROR_TOKEN не задан (Forgejo: Settings -> Actions -> Secrets)"; exit 1
+            FAIL="GH_MIRROR_TOKEN не задан (Forgejo: Settings -> Actions -> Secrets, репо AIDA/UnlimitedLORE)"
+          else
+            code=$(curl -s -m 20 -o /tmp/user.json -w '%{http_code}' -D /tmp/hdr.txt \
+              -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user || echo "curl-fail")
+            if [ "$code" != "200" ]; then
+              FAIL="токен зеркала не аутентифицируется (HTTP $code): $(head -c 200 /tmp/user.json 2>/dev/null)"
+            else
+              SCOPES=$(grep -i '^x-oauth-scopes:' /tmp/hdr.txt | cut -d: -f2- | tr -d ' \r')
+              case ",$SCOPES," in *,repo,*) : ;; *)
+                FAIL="у токена нет scope repo (скоупы: ${SCOPES:-нет заголовка — fine-grained PAT?}) — пуш зеркала не пройдёт" ;;
+              esac
+              if [ -z "$FAIL" ]; then case ",$SCOPES," in *,workflow,*) : ;; *)
+                FAIL="у токена НЕТ scope workflow (скоупы: $SCOPES) — релиз, задевший .github/workflows/*, GitHub отклонит целиком (MIR-01)" ;;
+              esac; fi
+            fi
           fi
-          code=$(curl -s -o /tmp/user.json -w '%{http_code}' -D /tmp/hdr.txt \
-            -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user)
-          if [ "$code" != "200" ]; then
-            echo "::error::токен зеркала не аутентифицируется (HTTP $code)"; head -c 300 /tmp/user.json; exit 1
+          if [ -z "$FAIL" ]; then
+            VERDICT="✅ GH_MIRROR_TOKEN исправен: аутентификация ок, скоупы [$SCOPES]"
+          else
+            VERDICT="❌ GH_MIRROR_TOKEN: $FAIL"
           fi
-          SCOPES=$(grep -i '^x-oauth-scopes:' /tmp/hdr.txt | cut -d: -f2- | tr -d ' \r')
-          echo "скоупы токена: ${SCOPES:-<пусто — fine-grained PAT, заголовка нет>}"
-          case ",$SCOPES," in
-            *,repo,*) : ;;
-            *) echo "::error::у токена нет scope repo — зеркалирование не сможет пушить"; exit 1 ;;
-          esac
-          case ",$SCOPES," in
-            *,workflow,*) echo "scope workflow есть — релизы с правками .github/workflows/* пройдут" ;;
-            *) echo "::error::у токена НЕТ scope workflow — релиз, задевший .github/workflows/*, будет отклонён GitHub целиком (ровно MIR-01)"; exit 1 ;;
-          esac
+          echo "$VERDICT"
+          if [ -n "${TG_TOKEN:-}" ]; then
+            jq -n --arg chat "$TG_CHAT" --arg text "Проверка токена зеркала (ручной прогон):
+          $VERDICT" '{"chat_id":$chat,"text":$text}' > /tmp/tg.json
+            curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" -d @/tmp/tg.json || echo "::warning::telegram недоступен"
+          fi
+          if [ -n "$FAIL" ]; then echo "::error::$FAIL"; exit 1; fi
 
       - name: Publish
         shell: bash
