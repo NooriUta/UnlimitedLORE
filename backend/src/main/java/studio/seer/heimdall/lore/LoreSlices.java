@@ -152,7 +152,9 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         slice("decision",
-            "SELECT decision_id, title, date_created, " +
+            // AL-79: status_raw в паспорте — раньше статус был виден в списках,
+            // но не в карточке одного решения.
+            "SELECT decision_id, title, date_created, status_raw, " +
             "body_md, rationale_md, refs_raw, " +
             "adr_refs, sprint_refs, pr_refs, release_refs, " +
             "out('SUPERSEDES').decision_id AS supersedes_ids " +

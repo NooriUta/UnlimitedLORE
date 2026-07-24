@@ -126,7 +126,11 @@ class LoreSchemaMigrationsTest {
         assertEquals(13, v13.compatMajor(),
             "слияние типов ломает совместимость — major обязан скакнуть");
         assertEquals(13, LoreSchemaMigrations.codeCompatMajor());
-        assertEquals("13.0", LoreSchemaMigrations.codeHuman());
+        // НЕ пин на «13.0»: точный minor — то самое временное совпадение, о
+        // котором javadoc выше (V11-эра теста) уже предупреждал; аддитивные шаги
+        // (V14 словарь decision_status — первый) двигают minor, не major.
+        assertTrue(LoreSchemaMigrations.codeHuman().startsWith("13."),
+            "ось совместимости остаётся 13.x, пока не появится следующий ЛОМАЮЩИЙ шаг");
         assertEquals(LoreSchemaMigrations.StartupDecision.INCOMPATIBLE,
             LoreSchemaMigrations.decide(13, 13, 12, 10),
             "бинарь до PL-28 обязан ОТКАЗАТЬСЯ стартовать против схемы без KnowFeature");
