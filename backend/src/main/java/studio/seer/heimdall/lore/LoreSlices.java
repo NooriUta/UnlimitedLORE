@@ -524,6 +524,36 @@ public final class LoreSlices {
             "ORDER BY task_uid",
             List.of(), Map.of(), "");
 
+        // AN-02 (ADR-LORE-030 §2 срез E): гигиена связок ОДНИМ срезом — четыре
+        // обязательные связки D16/D5 с типом находки и ссылкой на сущность.
+        // Пока здесь не ноль, остальная аналитика (fit/покрытие/динамика) ВРЁТ:
+        // незамкнутая связка неотличима от несделанной работы. Advisory, не гейт
+        // записи — гейт задушил бы ввод (TOC-раздел ADR-022).
+        // «UC без приёмки» — только сценарные уровни (sea-level/subfunction):
+        // acceptance_md — свойство сценария; у корней cloud/kite приёмка агрегатная,
+        // её отсутствие — не нарушение (ADR-032 §1).
+        slice("product_hygiene",
+            "SELECT finding, entity_type, ref_id, title, sprint_id " +
+            "FROM (SELECT expand(unionall($ut, $et, $ua, $pr)) LET " +
+            "$ut = (SELECT 'uc_task_without_realizes' AS finding, 'task' AS entity_type, " +
+            "       task_uid AS ref_id, title, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "       FROM KnowTask WHERE work_class = 'uc' AND out('REALIZES').size() = 0), " +
+            "$et = (SELECT 'enb_task_without_justification' AS finding, 'task' AS entity_type, " +
+            "       task_uid AS ref_id, title, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "       FROM KnowTask WHERE work_class = 'enb' AND out('JUSTIFIED_BY').size() = 0), " +
+            // sprint_id у uc/pain-веток отсутствует НАМЕРЕННО: unionall терпит
+            // разнородные документы, внешний SELECT отдаст поле как null —
+            // литерал `null AS ...` в грамматике прецедента в корпусе не имеет.
+            "$ua = (SELECT 'uc_without_acceptance' AS finding, 'uc' AS entity_type, " +
+            "       uc_id AS ref_id, title " +
+            "       FROM KnowUseCase WHERE goal_level IN ['sea-level', 'subfunction'] " +
+            "       AND (acceptance_md IS NULL OR acceptance_md = '')), " +
+            "$pr = (SELECT 'pain_without_relief' AS finding, 'pain' AS entity_type, " +
+            "       pain_id AS ref_id, title " +
+            "       FROM KnowPain WHERE in('RELIEVES').size() = 0)" +
+            ") ORDER BY finding, ref_id",
+            List.of(), Map.of(), "");
+
         // Batch variant: fetch tasks for multiple sprints in one query.
         // sprint_ids is a comma-separated string that the slice layer splits into a list.
         slice("tasks_of_sprints_batch",
