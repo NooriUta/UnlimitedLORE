@@ -293,18 +293,31 @@ jobs:
       # anyway: the proxy is a detail of THIS dev machine, not guaranteed to
       # exist on whatever CI host eventually replaces it, so an unreachable
       # Telegram still must not turn a healthy deploy red.
+      # Ссылки в сообщении — ТОЛЬКО публичные (2026-07-24, замечание владельца).
+      # github.server_url внутри act_runner = внутренний ROOT_URL Forgejo
+      # (http://forgejo:3000) — такая ссылка с телефона мертва. Публичная база
+      # захардкожена сознательно: это свойство ЭТОГО стенда, как и сам runner.
+      # PR промоушна вытаскивается из merge-коммита (push в preprod — всегда
+      # результат мержа PR develop→preprod); нет номера — строка опускается,
+      # а не рисуется битой.
       - name: Notify success
         if: success()
         continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUBLIC_REPO: https://git.seidrstudio.pro/AIDA/UnlimitedLORE
+          STAND_URL: https://lore.odal.seidrstudio.pro
         run: |
           [ -z "${TG_TOKEN}" ] && exit 0
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG=$(printf "✅ LORE local CD deployed\nRef: %s\nSHA: %s\nBy: %s\nService: %s\n\nRun: %s" \
+          RUN_URL="${PUBLIC_REPO}/actions/runs/${{ github.run_number }}"
+          PR_NUM=$(git log -1 --pretty=%s | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          PR_LINE=""
+          [ -n "$PR_NUM" ] && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          MSG=$(printf "✅ LORE CD: стенд обновлён\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nСтенд: %s\nРелизы: %s/releases\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
-            "${{ github.event.inputs.service || 'both' }}" "$RUN_URL")
+            "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" \
+            "$STAND_URL" "$PUBLIC_REPO" "$RUN_URL")
           jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
             '{"chat_id":$chat,"text":$text}' > /tmp/tg-payload.json
           for attempt in 1 2 3; do
@@ -326,12 +339,16 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUBLIC_REPO: https://git.seidrstudio.pro/AIDA/UnlimitedLORE
         run: |
           [ -z "${TG_TOKEN}" ] && exit 0
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG=$(printf "❌ LORE local CD FAILED\nRef: %s\nSHA: %s\nBy: %s\nService: %s\n\nRun: %s" \
+          RUN_URL="${PUBLIC_REPO}/actions/runs/${{ github.run_number }}"
+          PR_NUM=$(git log -1 --pretty=%s | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          PR_LINE=""
+          [ -n "$PR_NUM" ] && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          MSG=$(printf "❌ LORE CD: деплой УПАЛ\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
-            "${{ github.event.inputs.service || 'both' }}" "$RUN_URL")
+            "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" "$RUN_URL")
           jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
             '{"chat_id":$chat,"text":$text}' > /tmp/tg-payload.json
           for attempt in 1 2 3; do
