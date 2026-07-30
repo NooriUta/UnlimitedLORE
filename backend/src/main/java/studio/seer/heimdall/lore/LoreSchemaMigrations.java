@@ -443,6 +443,33 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='decision_status', code='superseded', label_ru='♻ Вытеснено — заменено более поздним решением', color='#665C48', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='superseded'",
             "UPDATE KnowDictEntry SET dict_type='decision_status', code='fixed',      label_ru='📌 Fixed (легаси сида) — к ревизии', color='#88B8A8', sort_order=50, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='fixed'",
             "UPDATE KnowDictEntry SET dict_type='decision_status', code='done',       label_ru='☑ Done (легаси сида) — к ревизии', color='#7A8890', sort_order=60, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='done'"
+        )),
+
+        // AL-86 (найдено вопросом владельца 2026-07-30 «один статус — несколько
+        // иконок?»): V14 завела decision_status с двумя расхождениями от канона
+        // task_status/adr_status — эмодзи вписан ПРЯМО В ТЕКСТ label_ru вместо
+        // структурного icon-слага (game-icons), и цвет — сырой hex вместо
+        // семантического CSS-токена (var(--suc) и т.п.), который один адаптируется
+        // под тему и палитру (lore-status.ts). Плюс словарь не читался фронтом
+        // вовсе — STATUS_DICTS не включал decision_status, так что dictColor/
+        // dictIcon для него всегда возвращали пусто, каким бы ни был контент строки.
+        //
+        // Иконография — та же, что у adr_status для общих кодов (proposed/
+        // accepted/superseded): статус решения и статус ADR — близкие понятия,
+        // разная иконография для одного смысла путала бы глаз сильнее, чем
+        // помогала различать. legacy fixed/done намеренно НЕ зелёные: это не
+        // «всё хорошо», а «требует ревизии» (OQ-DECSTATUS-LEGACY) — amber,
+        // battery-50, тот же маркер, что у partial.
+        // major=13, не 14: чисто содержательная правка словаря (цвет/иконка),
+        // старый бинарь рендерит decision-чипы устаревшими, но работает — не
+        // повод поднимать ось несовместимости выше того, что уже задал V13.
+        new Step(15, 13, "decision_status_icons_and_semantic_colors", List.of(
+            "UPDATE KnowDictEntry SET label_ru='Предложено — правило сформулировано, вердикта нет', icon='calendar',      color='var(--inf)' UPSERT WHERE dict_type='decision_status' AND code='proposed'",
+            "UPDATE KnowDictEntry SET label_ru='Принято — действующее правило',                      icon='laurel-crown', color='var(--suc)' UPSERT WHERE dict_type='decision_status' AND code='accepted'",
+            "UPDATE KnowDictEntry SET label_ru='Отложено — намеренно не сейчас',                      icon='pause-button', color='var(--t3)'  UPSERT WHERE dict_type='decision_status' AND code='deferred'",
+            "UPDATE KnowDictEntry SET label_ru='Вытеснено — заменено более поздним решением',         icon='pause-button', color='var(--t3)'  UPSERT WHERE dict_type='decision_status' AND code='superseded'",
+            "UPDATE KnowDictEntry SET label_ru='Fixed (легаси сида) — к ревизии',                     icon='battery-50',   color='var(--wrn)' UPSERT WHERE dict_type='decision_status' AND code='fixed'",
+            "UPDATE KnowDictEntry SET label_ru='Done (легаси сида) — к ревизии',                      icon='battery-50',   color='var(--wrn)' UPSERT WHERE dict_type='decision_status' AND code='done'"
         ))
     );
 
