@@ -728,6 +728,7 @@
       "kindSprint": "Спринт",
       "kindPlanItem": "PlanItem",
       "kindAdr": "ADR",
+      "kindTask": "Задача",
       "loadingHint": "загрузка…",
       "listErrorHint": "ошибка списка",
       "entityCountHint": "{{count}} сущностей",
