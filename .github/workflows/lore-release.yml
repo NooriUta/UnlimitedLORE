@@ -40,6 +40,8 @@ concurrency:
 jobs:
   publish:
     name: Publish Forgejo release from RELEASE-<tag>.md
+    # AL-88 (2026-07-30): пробовали выделенный раннер lore-only — см. тот же
+    # комментарий в backend-ci.yml про необъяснённый сбой. Откачено к общему пулу.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
