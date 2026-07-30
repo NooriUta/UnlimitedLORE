@@ -911,6 +911,16 @@ public final class LoreSlices {
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
+        // AL-30: тот же паттерн для задач — раньше был только status_raw через
+        // task_done_dates/task_starts (агрегатные min/max, не полная цепочка).
+        // effort_days и note_md версионируются (task_set пишет их в открытую
+        // HAS_STATE), но ни один слайс не отдавал цепочку ревизий целиком.
+        slice("history_task",
+            "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
+            "effort_days, note_md " +
+            "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid[0] = :id ORDER BY valid_from",
+            List.of("id"), Map.of(), "");
+
         // Bulk: every sprint state row (scalar valid_from). Frontend takes the min
         // valid_from per sprint_id = real sprint start, for lead/cycle time.
         slice("sprint_starts",
@@ -1307,6 +1317,16 @@ public final class LoreSlices {
             new LinkedHashMap<>(Map.of(
                 "dict_type", " WHERE dict_type = :dict_type")),
             " ORDER BY dict_type, sort_order");
+
+        // AL-43: SCD2 history for one dict entry — same close/open pattern as
+        // history_sprint/history_task/adr_history, keyed by the composite
+        // (dict_type, code) denormalized onto KnowDictEntryHist rather than a
+        // graph traversal (KnowDictEntry's key isn't a single field).
+        slice("history_dict",
+            "SELECT valid_from, valid_to, label_ru, label_en, color, icon, sort_order, " +
+            "is_active, is_extensible FROM KnowDictEntryHist " +
+            "WHERE dict_type = :dict_type AND code = :code ORDER BY valid_from",
+            List.of("dict_type", "code"), Map.of(), "");
 
         // ADR-LORE-012 level B: components linked to an area via the IN_AREA edge
         // (graph traversal, not the string field) — «all components in area X».

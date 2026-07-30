@@ -130,6 +130,80 @@ class LoreScd2AndRollbackLiveDbTest {
         assertEquals("✅ DONE", openRow2.get("status_raw"));
     }
 
+    // ── AL-48 item 3: dict/entry write must be reflected in the dictionary slice
+    // (regression class AL-19/AL-28 — "admin panel lied": the write endpoint
+    // and the slice reading it back drifted, and the admin UI showed stale data). ──
+
+    @Test
+    void dictEntryWriteIsReflectedInDictionarySlice() {
+        final String dictType = "c5_dict_probe";
+        final String code = "alpha";
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"dict_type\":\"" + dictType + "\",\"code\":\"" + code
+                + "\",\"label_ru\":\"Альфа\",\"color\":\"#ABCDEF\",\"sort_order\":10}")
+        .when().post("/lore/dict/entry")
+        .then().statusCode(200);
+
+        List<Map<String, Object>> rows = given()
+            .when().get("/lore/slice/dictionary?dict_type=" + dictType)
+            .then().statusCode(200)
+            .extract().jsonPath().getList("rows");
+
+        assertEquals(1, rows.size(), "dict/entry write should produce exactly one row for this dict_type");
+        assertEquals(code, rows.get(0).get("code"));
+        assertEquals("Альфа", rows.get(0).get("label_ru"),
+            "dictionary slice must reflect exactly what dict/entry wrote");
+        assertEquals("#ABCDEF", rows.get(0).get("color"));
+    }
+
+    // ── AL-48 item 4 / AL-43: KnowDictEntry SCD2 history — every edit opens a
+    // new hist row (close-then-open, unconditional, unlike KnowSpecHist's
+    // checkpoint-gated variant), and the snapshot is the FULL merged vertex,
+    // not just the fields the request touched. ──
+
+    @Test
+    void dictEntryEditOpensNewHistRowAndClosesOldWithFullSnapshot() {
+        final String dictType = "c5_dict_scd2_probe";
+        final String code = "beta";
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"dict_type\":\"" + dictType + "\",\"code\":\"" + code
+                + "\",\"label_ru\":\"Бета v1\",\"sort_order\":1}")
+        .when().post("/lore/dict/entry")
+        .then().statusCode(200);
+
+        List<Map<String, Object>> afterFirst = given()
+            .when().get("/lore/slice/history_dict?dict_type=" + dictType + "&code=" + code)
+            .then().statusCode(200)
+            .extract().jsonPath().getList("rows");
+        assertEquals(1, afterFirst.size(), "first write should seed exactly one hist row");
+        assertNull(afterFirst.get(0).get("valid_to"), "freshly seeded hist row must be open");
+        assertEquals("Бета v1", afterFirst.get(0).get("label_ru"));
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"dict_type\":\"" + dictType + "\",\"code\":\"" + code + "\",\"label_ru\":\"Бета v2\"}")
+        .when().post("/lore/dict/entry")
+        .then().statusCode(200);
+
+        List<Map<String, Object>> afterSecond = given()
+            .when().get("/lore/slice/history_dict?dict_type=" + dictType + "&code=" + code)
+            .then().statusCode(200)
+            .extract().jsonPath().getList("rows");
+        assertEquals(2, afterSecond.size(), "second write must open a NEW hist row, not amend in place");
+        long openCount = afterSecond.stream().filter(r -> r.get("valid_to") == null).count();
+        assertEquals(1, openCount, "exactly one open hist row after the edit");
+        Map<String, Object> openRow = afterSecond.stream()
+            .filter(r -> r.get("valid_to") == null).findFirst().orElseThrow();
+        assertEquals("Бета v2", openRow.get("label_ru"));
+        Map<String, Object> closedRow = afterSecond.stream()
+            .filter(r -> r.get("valid_to") != null).findFirst().orElseThrow();
+        assertEquals("Бета v1", closedRow.get("label_ru"), "closed row must keep its original snapshot");
+        assertEquals(1, ((Number) openRow.get("sort_order")).intValue(),
+            "partial edit must carry forward untouched fields (writeDictHist reads back the "
+            + "full merged vertex, not just the fields the request touched)");
+    }
+
     // ── A1: a failing statement inside an atomic sqlscript leaves no orphan ──
 
     @Test

@@ -32,6 +32,14 @@
       "autoPort": false
     },
     {
+      "_comment": "Фронт из worktree UnlimitedLORE-product-layer, а не из основного каталога. Без --prefix сервер поднимается в C:/AIDA/UnlimitedLORE и отдаёт код ДРУГОЙ ветки — правки в worktree при этом не видны, а выглядит как «изменения не применились».",
+      "name": "lore-worktree",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:/AIDA/UnlimitedLORE-product-layer", "run", "dev", "--", "--port", "5193", "--strictPort", "--host", "127.0.0.1"],
+      "port": 5193,
+      "autoPort": false
+    },
+    {
       "name": "lore-dev-preview",
       "runtimeExecutable": "cmd",
       "runtimeArgs": [

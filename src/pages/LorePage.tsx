@@ -40,7 +40,7 @@ import { FilterBar, FilterDimensionMulti, type FilterTagData } from '../componen
 import LoreFeatures    from '../components/lore/product/LoreFeatures';
 import LoreUserStories from '../components/lore/product/LoreUserStories';
 import LoreActors      from '../components/lore/product/LoreActors';
-import LoreVpRegistry  from '../components/lore/product/LoreVpRegistry';
+import LorePainGainJobRegistry  from '../components/lore/product/LorePainGainJobRegistry';
 import LoreVpCanvas    from '../components/lore/product/LoreVpCanvas';
 
 // ── Sections ──────────────────────────────────────────────────────────────────
@@ -1139,7 +1139,7 @@ export default function LorePage() {
           {section === 'plan' && <LorePlanBoard onError={handleFetchError} onNavigateToSprint={navigateToSprint} />}
           {/* ── Продуктовый слой (глава «Зачем», ADR-LORE-022/032) — самодостаточные экраны ── */}
           {section === 'actors'      && <LoreActors      selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
-          {section === 'vpProfile'   && <LoreVpRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
+          {section === 'vpProfile'   && <LorePainGainJobRegistry  selectedId={passport || null} onSelect={id => id ? selectItem(id) : clearItem()} onNavigate={navigateProduct} onError={handleFetchError} listSearch={search} onListSearch={setSearch} />}
           {/* Канва выбирается как всё остальное — через `?passport=`. Раньше сюда
               шли `selectedId={null}` и пустой onSelect: экран не мог ни узнать
               выбранную канву, ни сменить её, и ссылки на конкретную канву не

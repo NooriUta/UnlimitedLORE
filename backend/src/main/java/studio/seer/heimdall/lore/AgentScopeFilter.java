@@ -57,8 +57,17 @@ public class AgentScopeFilter implements ContainerRequestFilter {
 
     private static final Logger LOG = Logger.getLogger(AgentScopeFilter.class);
 
-    /** Семейства, закрытые для агентов совсем — их правит только человек. */
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc");
+    /**
+     * Семейства, закрытые для агентов совсем — их правит только человек.
+     *
+     * <p>{@code admin} добавлен АТ-66/АЛ-47 (регресс-гвард {@code
+     * AgentScopeMatrixCoverageTest} поймал): {@code POST /lore/admin/lore/ingest}
+     * перезапускает переиндексацию ВСЕГО корпуса документов (ADR, решения,
+     * спринты, раннбуки, QG, доки, задачи, релизы) и был защищён только ролью
+     * {@code admin} — а её несут все семь узких профилей, иначе им нечем
+     * писать вообще. Маркетолог с валидным токеном мог передёрнуть весь ingest.
+     */
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
@@ -93,9 +102,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("release",   Set.of("full", "developer")),
         Map.entry("qg",        Set.of("full", "tester")),
         Map.entry("question",  Set.of("full", "architect", "analyst", "pm", "product-analyst")),
-        Map.entry("metric",    Set.of("full", "analyst", "product-analyst")),
-        Map.entry("insight",   Set.of("full", "analyst", "marketer", "product-analyst")),
-        Map.entry("rec",       Set.of("full", "analyst", "marketer", "product-analyst")),
+        // metric/insight/rec СНЯТЫ (AL-47, регресс-гвард поймал): нет ни одного
+        // write-пути с этими семействами — metric_log/insight_new пишут в
+        // /lore/bragi/metric и /lore/bragi/insight (семейство "bragi"),
+        // rec_new/rec_promote — в /lore/qg/recommendation (семейство "qg").
+        // Мёртвые строки хуже отсутствующих: показывают права на несуществующее.
         // ── Продуктовый слой (ADR-LORE-022/030/032) ──────────────────────────
         // Владельцы по mcp-server/agent-profiles/README.md. Раньше эти семейства
         // были ВНЕ таблицы и пропускались как «неизвестные» — писать в них мог
@@ -110,7 +121,9 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("actor",     Set.of("full", "architect", "pm")),
         // ── Прочее из README, чего тоже не было ──────────────────────────────
         Map.entry("component", Set.of("full", "architect")),
-        Map.entry("tech",      Set.of("full", "architect", "developer")),
+        // tech СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
+        // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-..."), не заводит
+        // отдельного /lore/tech — семейство "spec" уже покрывает этот путь.
         Map.entry("project",   Set.of("full", "architect", "pm")),
         Map.entry("bragi",     Set.of("full", "marketer")),
         // ── Найдено сверкой таблицы с реальными путями записи (AL-62) ────────
@@ -148,8 +161,8 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         "spec/delete",  Set.of("full", "architect"),
         "doc/delete",   Set.of("full", "architect"));
 
-    /** Методы, которые ничего не меняют — вне проверки. */
-    private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
+    /** Методы, которые ничего не меняют — вне проверки. Package-private: AL-20 (аудит-лог) тоже фильтрует по ним. */
+    static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
     /** Чтобы «семейство вне матрицы» логировалось один раз, а не на каждый запрос. */
     private final Set<String> loggedUnlisted = ConcurrentHashMap.newKeySet();
@@ -204,6 +217,15 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      * провижининга, и молча выбирать «самый широкий» было бы опаснее, чем отказать.
      */
     private String agentScope() {
+        return agentScopeOf(identity);
+    }
+
+    /**
+     * Статический вариант {@link #agentScope()} — вынесен для AL-20 (аудит-лог):
+     * фильтру логирования нужна ТА ЖЕ логика разбора клейма (включая снятие кавычек
+     * ниже), а не вторая копия с риском разойтись после следующей правки одной из них.
+     */
+    static String agentScopeOf(SecurityIdentity identity) {
         if (!(identity.getPrincipal() instanceof JsonWebToken jwt)) return null;
         Object raw = jwt.getClaim("agent_scope");
         if (raw == null) return null;

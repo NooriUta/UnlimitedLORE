@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { Modal } from '@mantine/core';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, loreMutate, type LoreQuestionRow, type LoreDecisionPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
@@ -11,6 +12,7 @@ import { projLabel } from './LoreSprintTree';
 import LoreSkeleton from './LoreSkeleton';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
 import { LoreLinkChips, type LinkMeta } from './LoreLinkChips';
+import TipTapField from './TipTapField';
 
 // Editable fields — question is vertex-only, so a single upsert POST /lore/question
 // (partial-safe) covers both create and edit. status='deferred' requires trigger.
@@ -90,14 +92,28 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   // QANS-01: раскрывающийся ответ у закрытого вопроса (лениво тянем решение).
   const [openAns, setOpenAns] = useState<string | null>(null);
   const [ansCache, setAnsCache] = useState<Record<string, LoreDecisionPassport>>({});
-  function toggleAns(qid: string, decisionId: string) {
+  // QANS-02: раньше пустой результат/ошибка запроса были неотличимы от «ещё
+  // грузится» — «Загрузка ответа…» висела вечно без объяснения и без повтора.
+  const [ansFailed, setAnsFailed] = useState<Record<string, boolean>>({});
+  function fetchDecision(decisionId: string) {
+    setAnsFailed(prev => (prev[decisionId] ? { ...prev, [decisionId]: false } : prev));
+    fetchLoreSlice<LoreDecisionPassport>('decision', { id: decisionId })
+      .then(rows => {
+        if (rows[0]) setAnsCache(prev => ({ ...prev, [decisionId]: rows[0] }));
+        else setAnsFailed(prev => ({ ...prev, [decisionId]: true }));
+      })
+      .catch(e => { setAnsFailed(prev => ({ ...prev, [decisionId]: true })); onError(e); });
+  }
+  // QANS-02: единая точка раскрытия строки — раньше «через чип ← #N» (тянет
+  // решение) и «через заголовок» (toggleBody, добавлен позже для вопросов без
+  // ответа) были РАЗНЫМИ функциями с одним и тем же openAns-стейтом; клик по
+  // заголовку у ЗАКРЫТОГО отвеченного вопроса открывал панель, но фетч решения
+  // не запускался никогда — «Загрузка ответа…» висела вечно. decisionId теперь
+  // опционален и фетчится независимо от того, каким элементом строку открыли.
+  function toggleRow(qid: string, decisionId?: string) {
     if (openAns === qid) { setOpenAns(null); return; }
     setOpenAns(qid);
-    if (!ansCache[decisionId]) {
-      fetchLoreSlice<LoreDecisionPassport>('decision', { id: decisionId })
-        .then(rows => { if (rows[0]) setAnsCache(prev => ({ ...prev, [decisionId]: rows[0] })); })
-        .catch(onError);
-    }
+    if (decisionId && !ansCache[decisionId]) fetchDecision(decisionId);
   }
   // T43: project filter selection.
   const [projSel, setProjSel] = useState<Set<string>>(new Set());
@@ -386,11 +402,14 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
         </div>
       </FilterBar>
 
-      {editId !== null && (
-        <div style={S.formPanel}>
-          <div style={S.formTitle}>
-            {editId === '__new__' ? t('lore.oqBoard.formNew', 'Новый вопрос') : t('lore.oqBoard.formEdit', 'Правка {{id}}', { id: editId })}
-          </div>
+      {/* PL-49: попап всегда смонтирован, opened — обычный boolean-проп, а не
+          условное монтирование ({editId && <Modal opened />}) — тот же анти-
+          паттерн, что чинили в PainGainJobModal: компонент рождался бы сразу
+          с opened=true, минуя переход false→true, на который расчитан Mantine. */}
+      <Modal opened={editId !== null} onClose={cancel} size={700}
+        title={editId === '__new__' ? t('lore.oqBoard.formNew', 'Новый вопрос') : t('lore.oqBoard.formEdit', 'Правка {{id}}', { id: editId })}>
+        {editId !== null && (
+          <>
           <div style={S.formGrid}>
             {editId === '__new__' && (
               <input style={S.input} placeholder="ID (Q-M1, OQ7, …)" value={form.question_id}
@@ -398,9 +417,17 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
             )}
             <input style={{ ...S.input, gridColumn: '1 / -1' }} placeholder="Заголовок вопроса" value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-            <textarea style={{ ...S.input, gridColumn: '1 / -1', minHeight: 44, resize: 'vertical' as const }}
-              placeholder="Контекст / критерий закрытия (опц.)" value={form.body_md}
-              onChange={e => setForm(f => ({ ...f, body_md: e.target.value }))} />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <TipTapField
+                value={form.body_md}
+                onChange={v => setForm(f => ({ ...f, body_md: v }))}
+                minHeight={80}
+                enableImages={false}
+                enableHtmlMode={false}
+                placeholder={t('lore.oqBoard.bodyPlaceholder', 'Контекст / критерий закрытия (опц.)')}
+                ariaLabel={t('lore.oqBoard.bodyPlaceholder', 'Контекст / критерий закрытия (опц.)')}
+              />
+            </div>
             <input style={S.input} placeholder={t('lore.oqBoard.componentPick', 'Компонент — выбор из списка')}
               list="lore-qform-comps" value={form.component_id}
               onChange={e => setForm(f => ({ ...f, component_id: e.target.value }))} />
@@ -502,12 +529,13 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
             <input style={S.input} placeholder="Поставлен в ADR (raised_in)" value={form.raised_in}
               onChange={e => setForm(f => ({ ...f, raised_in: e.target.value }))} />
           </div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
             <button style={S.saveBtn} disabled={saving} onClick={save}>{saving ? '…' : t('lore.oqBoard.save', 'Сохранить')}</button>
             <button style={S.cancelBtn} onClick={cancel}>{t('lore.oqBoard.cancel', 'Отмена')}</button>
           </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
       <div style={S.list}>
         {display.length === 0 && <div style={S.empty}>{t('lore.oqBoard.none', 'Вопросов не найдено.')}</div>}
         {display.map(r => {
@@ -517,7 +545,8 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
           const gate = gatingCount(r);
           const adr = first(r.raised_adr);
           const ans = (r.answered_by ?? []).filter(Boolean);
-          const ansOpen = openAns === r.question_id && ans.length > 0;
+          const rowOpen = openAns === r.question_id;
+          const hasBody = !!(r.body_md && r.body_md.trim());
           return (
             <div key={r.question_id} style={{ display: 'flex', flexDirection: 'column' as const }}>
             <div style={S.row}>
@@ -525,7 +554,19 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               <span style={{ ...S.statusDot(meta.color), ...(st === 'open' ? { background: 'transparent', border: `2px solid ${meta.color}`, boxSizing: 'border-box' as const } : {}) }} title={meta.label} />
               <span style={S.qid}>{r.question_id}</span>
               <div style={S.body}>
-                <span style={S.title}>{r.title ?? r.question_id}</span>
+                {/* Раньше тело вопроса рендерилось (MartProse) ТОЛЬКО у закрытых
+                    отвеченных — открытый вопрос показать было нечем, кроме ✎
+                    (голая textarea). Клик по заголовку раскрывает тело у ЛЮБОГО
+                    вопроса, если оно есть. */}
+                {hasBody ? (
+                  <span style={{ ...S.title, cursor: 'pointer' }}
+                    title={t('lore.oqBoard.bodyToggle', 'клик раскроет текст вопроса')}
+                    {...a11yClick(() => toggleRow(r.question_id, ans[0] as string | undefined))}>
+                    {rowOpen ? '▾ ' : '▸ '}{r.title ?? r.question_id}
+                  </span>
+                ) : (
+                  <span style={S.title}>{r.title ?? r.question_id}</span>
+                )}
               </div>
               {r.priority && (
                 <span style={S.prioChip(PRIORITY_META[r.priority]?.color ?? 'var(--t3)')}>
@@ -548,7 +589,7 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               {st === 'closed' && ans.length > 0 && (
                 <span style={{ ...S.ansChip, cursor: 'pointer' }}
                   title={t('lore.oqBoard.answeredToggle', 'закрыт решением — клик раскроет ответ')}
-                  {...a11yClick(() => toggleAns(r.question_id, ans[0] as string))}>
+                  {...a11yClick(() => toggleRow(r.question_id, ans[0] as string))}>
                   {openAns === r.question_id ? '▾' : '▸'} ← #{ans.join(', #')}
                 </span>
               )}
@@ -564,14 +605,22 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               )}
               <button style={S.editBtn} title={t('lore.oqBoard.edit', 'Править')} onClick={() => startEdit(r)}>✎</button>
             </div>
-            {/* QANS-01: дочерний раскрывающийся блок — доп. контекст вопроса + ответ. Шапка выше статична. */}
-            {ansOpen && (() => {
-              const det = ansCache[ans[0] as string];
+            {/* QANS-01: дочерний раскрывающийся блок — доп. контекст вопроса + ответ (если есть). Шапка выше статична. */}
+            {rowOpen && (() => {
+              const decisionId = ans.length > 0 ? (ans[0] as string) : undefined;
+              const det = decisionId ? ansCache[decisionId] : undefined;
+              const failed = decisionId ? !!ansFailed[decisionId] : false;
               const parentAdr = det?.adr_refs?.filter(Boolean)[0];
               return (
                 <div style={S.ansPanel}>
                   {r.body_md && <div style={S.ansCtx}><MartProse text={r.body_md} /></div>}
-                  {!det && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.oqBoard.ansLoading', 'Загрузка ответа…')}</span>}
+                  {decisionId && !det && !failed && <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.oqBoard.ansLoading', 'Загрузка ответа…')}</span>}
+                  {decisionId && !det && failed && (
+                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--err)', cursor: 'pointer' }}
+                      {...a11yClick(() => fetchDecision(decisionId))}>
+                      {t('lore.oqBoard.ansFailed', 'Не удалось загрузить решение #{{id}} — клик повторит', { id: decisionId })}
+                    </span>
+                  )}
                   {det && (
                     <div>
                       <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', textTransform: 'uppercase' as const, letterSpacing: '.05em', marginBottom: 3 }}>{t('lore.oqBoard.answer', 'Ответ (решение)')}</div>
@@ -655,8 +704,6 @@ const S = {
     fontSize: 'var(--fs-xs)', padding: '1px 5px', borderRadius: 3, cursor: 'pointer', flexShrink: 0,
     border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)',
   },
-  formPanel: { padding: '10px 16px', borderBottom: '1px solid var(--bd)', background: 'var(--bg2)', flexShrink: 0 },
-  formTitle: { fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t2)', marginBottom: 6 },
   formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 },
   input: {
     fontSize: 'var(--fs-sm)', padding: '4px 8px', borderRadius: 4, minWidth: 0,

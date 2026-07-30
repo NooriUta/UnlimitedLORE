@@ -41,8 +41,11 @@ class AgentScopeFilterTest {
     // ── Содержание матрицы ───────────────────────────────────────────────────
 
     @Test
-    void словариИучёткиЗакрытыДляАгентовСовсем() {
-        assertEquals(Set.of("dict", "kc"), AgentScopeFilter.humanOnlyFamilies());
+    void словариУчёткиИИнгестЗакрытыДляАгентовСовсем() {
+        // admin добавлен AL-47 (регресс-гвард AgentScopeMatrixCoverageTest поймал):
+        // /lore/admin/lore/ingest перезапускает переиндексацию всего корпуса и был
+        // защищён только ролью admin, которую несут все семь узких агентных профилей.
+        assertEquals(Set.of("dict", "kc", "admin"), AgentScopeFilter.humanOnlyFamilies());
     }
 
     @Test

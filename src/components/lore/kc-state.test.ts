@@ -1,9 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { loadKc, loadKcObj } from './kc-state';
+import * as session from '../../auth/session';
 
 // AL-47 (регрессия AL-31): «пусто», «отказано», «мост не настроен» и «сеть умерла» —
 // ЧЕТЫРЕ разных состояния. До фикса 403/503 рисовали тот же экран, что и пустой
 // realm («заведите первого»), — противоположные ситуации выглядели одинаково.
+
+vi.mock('../../auth/session', () => ({
+  authHeaders: vi.fn(() => ({ Authorization: 'Bearer test-token' })),
+  sessionExpired: vi.fn(),
+}));
 
 const resp = (status: number, body: unknown = {}) =>
   (async () => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })) as unknown as typeof fetch;
@@ -46,6 +52,26 @@ describe('loadKc — разбор исходов KC-моста', () => {
     const s = await loadKc('/lore/kc/users', dead);
     expect(s).toEqual({ k: 'error', detail: 'fetch failed' });
   });
+
+  // AL-87: раньше запрос нёс жёстко зашитый {'X-Seer-Role':'admin'}, а не
+  // authHeaders() — на проде (AUTH_ENABLED=true) это гарантированный 401
+  // ВСЕГДА, не только при истёкшей сессии, и падал в общий 'error' ("Keycloak
+  // не ответил") вместо явного «сессия истекла».
+  it('401 → error + sessionExpired() вызван (не путается с сетевым сбоем)', async () => {
+    const s = await loadKc('/lore/kc/users', resp(401, { error: 'UNAUTHORIZED' }));
+    expect(s).toEqual({ k: 'error', detail: 'session expired' });
+    expect(session.sessionExpired).toHaveBeenCalled();
+  });
+
+  it('запрос несёт заголовки из authHeaders(), не хардкод', async () => {
+    let seenHeaders: HeadersInit | undefined;
+    const capture = (async (_url: string, init?: RequestInit) => {
+      seenHeaders = init?.headers;
+      return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    await loadKc('/lore/kc/users', capture);
+    expect(seenHeaders).toEqual({ Authorization: 'Bearer test-token' });
+  });
 });
 
 describe('loadKcObj — одиночные объекты (preflight/denials)', () => {
@@ -56,5 +82,11 @@ describe('loadKcObj — одиночные объекты (preflight/denials)', 
     expect(await loadKcObj('/x', resp(403))).toBeNull();
     const dead = (async () => { throw new Error('down'); }) as unknown as typeof fetch;
     expect(await loadKcObj('/x', dead)).toBeNull();
+  });
+
+  it('401 → null + sessionExpired() вызван', async () => {
+    vi.mocked(session.sessionExpired).mockClear();
+    expect(await loadKcObj('/lore/kc/auth-preflight', resp(401))).toBeNull();
+    expect(session.sessionExpired).toHaveBeenCalled();
   });
 });
