@@ -219,7 +219,7 @@ export default function LorePainGainJobRegistry({ selectedId, onSelect, onNaviga
         <PassportHeader title={p.title ?? p.pain_id}>
           <Pill tone="warn">{t('lore.product.vp.pain', 'боль')}</Pill>
           <Pill>{levelLabel(t, p.severity)}</Pill>
-          {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity, actorIds: p.actor_ids ?? [] })}
+          {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity, actorIds: p.actor_ids ?? [], blocksJobIds: p.blocks_job_ids ?? [] })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(p.pain_id), marginBottom: 8 }}>{p.pain_id}</div>
 
@@ -254,7 +254,7 @@ export default function LorePainGainJobRegistry({ selectedId, onSelect, onNaviga
         <PassportHeader title={g.title ?? g.gain_id}>
           <Pill tone="ok">{t('lore.product.vp.gain', 'выгода')}</Pill>
           <Pill>{gainRankLabel(t, g.rank)}</Pill>
-          {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md, actorIds: g.actor_ids ?? [] })}
+          {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md, actorIds: g.actor_ids ?? [], rank: g.rank, successOfJobIds: g.success_of_job_ids ?? [] })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(g.gain_id), marginBottom: 8 }}>{g.gain_id}</div>
 

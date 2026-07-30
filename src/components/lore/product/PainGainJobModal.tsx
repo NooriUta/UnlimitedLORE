@@ -12,8 +12,9 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import { saveLorePain, saveLoreGain, saveLoreJob, linkLoreVp, fetchLoreSlice } from '../../../api/lore';
-import type { LoreActorRow } from '../../../api/lore';
+import type { LoreActorRow, LoreJobRow } from '../../../api/lore';
 import TipTapField from '../TipTapField';
+import { gainRankLabel } from './vocab';
 
 export type PainGainJobKind = 'job' | 'pain' | 'gain';
 
@@ -53,6 +54,12 @@ export interface PainGainJobDraft {
   jobKind?: string | null;
   /** FELT_BY / DESIRED_BY / PERFORMED_BY — чья это боль, выгода, работа */
   actorIds?: string[] | null;
+  /** только у выгоды — essential | expected | desired | unexpected (Kano) */
+  rank?: string | null;
+  /** только у боли — BLOCKS: каким работам мешает */
+  blocksJobIds?: string[] | null;
+  /** только у выгоды — SUCCESS_OF: успех в какой работе */
+  successOfJobIds?: string[] | null;
 }
 
 export default function PainGainJobModal({
@@ -95,6 +102,28 @@ export default function PainGainJobModal({
     return () => ctrl.abort();
   }, [opened]);
 
+  /**
+   * Ранг выгоды (Kano) и связь с работой (PL-49 / FIT-01).
+   *
+   * До этой правки оба пути существовали только в MCP: владелец не мог задать
+   * ранг выгоды или отметить, какой работе мешает боль / в какой работе
+   * выгода — форма их просто не показывала, хотя `saveLoreGain`/`linkLoreVp`
+   * уже умели то и другое.
+   */
+  const [rank, setRank] = useState(initial?.rank ?? '');
+  const [jobLinks, setJobLinks] = useState<string[]>(
+    (kind === 'pain' ? initial?.blocksJobIds : initial?.successOfJobIds) ?? [],
+  );
+  const [jobs, setJobs] = useState<LoreJobRow[]>([]);
+  useEffect(() => {
+    if (!opened || (kind !== 'pain' && kind !== 'gain')) return;
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreJobRow>('jobs', undefined, ctrl.signal)
+      .then(setJobs)
+      .catch(() => { /* список работ не критичен: форма сохранится и без него */ });
+    return () => ctrl.abort();
+  }, [opened, kind]);
+
   // Предзаполнение приходит асинхронно (слайс мог ещё грузиться), поэтому
   // синхронизируем состояние с ним, а не только начальным значением: иначе
   // форма правки открывалась бы пустой и «сохранение» стирало бы поля.
@@ -105,11 +134,16 @@ export default function PainGainJobModal({
     setExtra(initial?.extra ?? '');
     setJobKind(initial?.jobKind ?? '');
     setActorIds(initial?.actorIds ?? []);
-  }, [initial]);
+    setRank(initial?.rank ?? '');
+    setJobLinks((kind === 'pain' ? initial?.blocksJobIds : initial?.successOfJobIds) ?? []);
+  }, [initial, kind]);
 
   const finalId = editing ? (initial?.id ?? '') : normalizePainGainJobId(kind, id);
 
-  const reset = () => { setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); setActorIds([]); };
+  const reset = () => {
+    setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); setActorIds([]);
+    setRank(''); setJobLinks([]);
+  };
   const close = () => { if (!editing) reset(); onClose(); };
 
   const submit = async () => {
@@ -120,7 +154,7 @@ export default function PainGainJobModal({
       if (kind === 'pain') {
         await saveLorePain({ pain_id: finalId, ...common, severity: extra || undefined });
       } else if (kind === 'gain') {
-        await saveLoreGain({ gain_id: finalId, ...common, metric_md: extra || undefined });
+        await saveLoreGain({ gain_id: finalId, ...common, metric_md: extra || undefined, rank: rank || undefined });
       } else {
         await saveLoreJob({ job_id: finalId, ...common, kind: jobKind || undefined, importance: extra || undefined });
       }
@@ -133,6 +167,17 @@ export default function PainGainJobModal({
       }
       for (const a of was.filter(x => !actorIds.includes(x))) {
         await linkLoreVp({ source_id: finalId, rel, target_id: a, action: 'remove' });
+      }
+      // Связь с работой — BLOCKS у боли, SUCCESS_OF у выгоды (FIT-01).
+      if (kind === 'pain' || kind === 'gain') {
+        const jobRel = kind === 'pain' ? 'blocks' : 'success_of';
+        const wasJobs = (kind === 'pain' ? initial?.blocksJobIds : initial?.successOfJobIds) ?? [];
+        for (const j of jobLinks.filter(x => !wasJobs.includes(x))) {
+          await linkLoreVp({ source_id: finalId, rel: jobRel, target_id: j });
+        }
+        for (const j of wasJobs.filter(x => !jobLinks.includes(x))) {
+          await linkLoreVp({ source_id: finalId, rel: jobRel, target_id: j, action: 'remove' });
+        }
       }
       onCreated(finalId);
       if (!editing) reset();
@@ -256,8 +301,53 @@ export default function PainGainJobModal({
               ⚠ {t('lore.product.vp.noMetricWarn', 'без метрики выгода не попадёт в fit VP-канвы')}
             </div>
           )}
+          <label style={label}>{t('lore.product.vp.fieldRank', 'Ранг (Kano)')}</label>
+          <select style={field} value={rank} onChange={e => setRank(e.target.value)}>
+            <option value="">{t('lore.product.vp.rankNone', '— не указан —')}</option>
+            <option value="essential">{gainRankLabel(t, 'essential')}</option>
+            <option value="expected">{gainRankLabel(t, 'expected')}</option>
+            <option value="desired">{gainRankLabel(t, 'desired')}</option>
+            <option value="unexpected">{gainRankLabel(t, 'unexpected')}</option>
+          </select>
         </>
       ) : levelSelect}
+
+      {/* Связь с работой — BLOCKS у боли, SUCCESS_OF у выгоды (FIT-01). Оба
+          пути уже писались через MCP (vp_link), но форма их не показывала:
+          заполнить мог только тот, у кого есть доступ к MCP, а не владелец,
+          который знает клиента. */}
+      {(kind === 'pain' || kind === 'gain') && (
+        <>
+          <label style={label}>
+            {kind === 'pain' && t('lore.product.vp.fieldBlocks', 'Мешает работам (BLOCKS)')}
+            {kind === 'gain' && t('lore.product.vp.fieldSuccessOf', 'Успех в работе (SUCCESS_OF)')}
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {jobs.map(j => {
+              const on = jobLinks.includes(j.job_id);
+              return (
+                <button
+                  key={j.job_id}
+                  type="button"
+                  onClick={() => setJobLinks(v => on ? v.filter(x => x !== j.job_id) : [...v, j.job_id])}
+                  aria-pressed={on}
+                  style={{
+                    padding: '2px 9px', borderRadius: 999, cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                    border: `1px solid ${on ? 'var(--job)' : 'var(--bd)'}`,
+                    background: on ? 'var(--bg2)' : 'transparent',
+                    color: on ? 'var(--t1)' : 'var(--t2)',
+                  }}
+                >
+                  {j.title ?? j.job_id}
+                </button>
+              );
+            })}
+            {jobs.length === 0 && (
+              <span style={hint}>{t('lore.product.vp.noJobs', 'работ пока нет — заведите через «+ Работа»')}</span>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Чей это профиль. Без ответа VP-канва показывает боли всех сегментов в
           одном круге — а канон Остервальдера строится на ОДНОМ сегменте: боли
