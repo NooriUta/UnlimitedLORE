@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
+import { Modal } from '@mantine/core';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, loreMutate, type LoreQuestionRow, type LoreDecisionPassport } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
@@ -401,11 +402,14 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
         </div>
       </FilterBar>
 
-      {editId !== null && (
-        <div style={S.formPanel}>
-          <div style={S.formTitle}>
-            {editId === '__new__' ? t('lore.oqBoard.formNew', 'Новый вопрос') : t('lore.oqBoard.formEdit', 'Правка {{id}}', { id: editId })}
-          </div>
+      {/* PL-49: попап всегда смонтирован, opened — обычный boolean-проп, а не
+          условное монтирование ({editId && <Modal opened />}) — тот же анти-
+          паттерн, что чинили в PainGainJobModal: компонент рождался бы сразу
+          с opened=true, минуя переход false→true, на который расчитан Mantine. */}
+      <Modal opened={editId !== null} onClose={cancel} size={700}
+        title={editId === '__new__' ? t('lore.oqBoard.formNew', 'Новый вопрос') : t('lore.oqBoard.formEdit', 'Правка {{id}}', { id: editId })}>
+        {editId !== null && (
+          <>
           <div style={S.formGrid}>
             {editId === '__new__' && (
               <input style={S.input} placeholder="ID (Q-M1, OQ7, …)" value={form.question_id}
@@ -525,12 +529,13 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
             <input style={S.input} placeholder="Поставлен в ADR (raised_in)" value={form.raised_in}
               onChange={e => setForm(f => ({ ...f, raised_in: e.target.value }))} />
           </div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
             <button style={S.saveBtn} disabled={saving} onClick={save}>{saving ? '…' : t('lore.oqBoard.save', 'Сохранить')}</button>
             <button style={S.cancelBtn} onClick={cancel}>{t('lore.oqBoard.cancel', 'Отмена')}</button>
           </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
       <div style={S.list}>
         {display.length === 0 && <div style={S.empty}>{t('lore.oqBoard.none', 'Вопросов не найдено.')}</div>}
         {display.map(r => {
@@ -699,8 +704,6 @@ const S = {
     fontSize: 'var(--fs-xs)', padding: '1px 5px', borderRadius: 3, cursor: 'pointer', flexShrink: 0,
     border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t3)',
   },
-  formPanel: { padding: '10px 16px', borderBottom: '1px solid var(--bd)', background: 'var(--bg2)', flexShrink: 0 },
-  formTitle: { fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--t2)', marginBottom: 6 },
   formGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 },
   input: {
     fontSize: 'var(--fs-sm)', padding: '4px 8px', borderRadius: 4, minWidth: 0,
