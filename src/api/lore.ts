@@ -1039,12 +1039,30 @@ export interface LoreRelease {
   git_project: string | null;
 }
 
+// AL-30: fields beyond the SCD2 envelope are UNION of what history_sprint /
+// adr_history / history_task actually select — each slice sends only its own
+// subset, the rest arrive as undefined. LoreEvolutionView's FIELDS config picks
+// per-kind which of these it reads, so a stray key here never surfaces in the UI.
 export interface LoreHistRow {
   valid_from: string | null;
   valid_to: string | null;
   content_hash: string | null;
   source_commit: string | null;
   status_raw?: string | null;
+  // sprint
+  priority?: string | null;
+  planned_start_date?: string | null;
+  planned_end_date?: string | null;
+  track_id?: string | null;
+  pr_refs?: string | null;
+  context_md?: string | null;
+  outcome_md?: string | null;
+  // adr
+  decision_md?: string | null;
+  consequences_md?: string | null;
+  // task
+  effort_days?: number | null;
+  note_md?: string | null;
 }
 
 export interface LorePlanVersion {

@@ -911,6 +911,16 @@ public final class LoreSlices {
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
+        // AL-30: тот же паттерн для задач — раньше был только status_raw через
+        // task_done_dates/task_starts (агрегатные min/max, не полная цепочка).
+        // effort_days и note_md версионируются (task_set пишет их в открытую
+        // HAS_STATE), но ни один слайс не отдавал цепочку ревизий целиком.
+        slice("history_task",
+            "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
+            "effort_days, note_md " +
+            "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid[0] = :id ORDER BY valid_from",
+            List.of("id"), Map.of(), "");
+
         // Bulk: every sprint state row (scalar valid_from). Frontend takes the min
         // valid_from per sprint_id = real sprint start, for lead/cycle time.
         slice("sprint_starts",
