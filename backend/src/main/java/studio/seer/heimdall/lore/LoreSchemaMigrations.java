@@ -500,7 +500,17 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowDictEntryHist.is_extensible  IF NOT EXISTS BOOLEAN",
             "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (state_uid) UNIQUE",
             "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (dict_type, code) NOTUNIQUE"
-        ))
+        )),
+
+        // AL-29 (OQ-ADMIN-TAG-SPLIT): KnowTag и LoreTag несли одни и те же теги
+        // (security/frontend/lineage/schema/scd2…) под двумя разными вершинами
+        // в зависимости от того, откуда пришёл тег — вопросам (LoreTag) или
+        // ADR/decision/task (KnowTag). Схлопывается в KnowTag (шире по охвату
+        // сущностей) — javaStep(17): mergeLoreTagIntoKnowTag. 3-арг конструктор,
+        // не 4-арг с compatMajor=13 — шаг ТРОГАЕТ ДАННЫЕ (переносит рёбра, сносит
+        // тип), как V13 mergeFeaturesIntoUseCases, а не просто добавляет схему.
+        // tag_id уже STRING на обоих типах — новых свойств шагу не нужно.
+        new Step(17, "loretag_merged_into_knowtag", List.of())
     );
 
     /**

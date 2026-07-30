@@ -1303,9 +1303,8 @@ public final class LoreSlices {
         slice("tags_usage",
             "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
             List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
-        slice("lore_tags_usage",
-            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM LoreTag",
-            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+        // lore_tags_usage удалён вместе с типом LoreTag (AL-29, миграция V17) —
+        // KnowTag/LoreTag были дублирующими справочниками, схлопнуты в один.
 
         slice("dictionary",
             // ifnull() masks the brief NULL-flag window on a freshly-upserted row

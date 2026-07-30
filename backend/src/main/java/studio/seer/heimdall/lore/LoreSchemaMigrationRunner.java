@@ -206,6 +206,7 @@ public class LoreSchemaMigrationRunner {
         // охватом индекса: поиск по контексту корня молча перестал бы находить.
         // Ровно тот сценарий, на котором уже обожглись с ретайром легаси-индексов.
         if (version == 13) { mergeFeaturesIntoUseCases(); createFullTextIndexes(); }
+        if (version == 17) mergeLoreTagIntoKnowTag();
     }
 
     /**
@@ -330,6 +331,80 @@ public class LoreSchemaMigrationRunner {
 
         LOG.infof("[LORE MIGRATE] V13: фич перенесено %d, рёбер перевешено %d, тип KnowFeature снят",
             created, movedEdges);
+    }
+
+    /**
+     * AL-29 (OQ-ADMIN-TAG-SPLIT): LoreTag и KnowTag несли одни и те же теги
+     * под двумя разными вершинами в зависимости от того, откуда пришёл тег —
+     * вопросам (LoreTag) или ADR/decision/task (KnowTag). Схлопывается в
+     * KnowTag — она шире по охвату типов сущностей.
+     *
+     * Почему Java, а не SQL-стейтменты шага — та же причина, что у V13
+     * (mergeFeaturesIntoUseCases): у рёбер TAGGED_WITH неизменяемые концы,
+     * «перецепить» дальний конец одним UPDATE нельзя, нужна @rid-адресация
+     * поимённо; DELETE EDGE в этой сборке не работает — только
+     * `SELECT outE/inE(...).@rid` и затем `DELETE FROM <ТипРебра> WHERE @rid=#x:y`.
+     *
+     * Идемпотентность: тип LoreTag может отсутствовать (свежая БД — нечего
+     * переносить); тег с таким tag_id может уже существовать в KnowTag
+     * (переиспользуем, не дублируем); рёбра — быть перевешены на прошлом
+     * заходе (IF NOT EXISTS на CREATE EDGE).
+     */
+    private void mergeLoreTagIntoKnowTag() {
+        if (!typeExists("LoreTag")) {
+            LOG.info("[LORE MIGRATE] V17: типа LoreTag нет — свежая БД, переносить нечего");
+            return;
+        }
+
+        List<Map<String, Object>> tags = ingest.queryPublic("SELECT @rid AS rid, tag_id FROM LoreTag", Map.of());
+
+        int reused = 0, created = 0, movedEdges = 0;
+        for (Map<String, Object> t : tags) {
+            String tagId = str(t.get("tag_id"));
+            if (tagId == null || tagId.isBlank()) {
+                throw new IllegalStateException("[LORE MIGRATE] V17: LoreTag " + t.get("rid")
+                    + " без tag_id — перенос невозможен, проставьте вручную и повторите старт.");
+            }
+
+            boolean already = !ingest.queryPublic(
+                "SELECT @rid FROM KnowTag WHERE tag_id = :id", Map.of("id", tagId)).isEmpty();
+            if (already) {
+                reused++;
+            } else {
+                command("INSERT INTO KnowTag SET tag_id=:id", Map.of("id", tagId));
+                created++;
+            }
+
+            String knowTagRid = firstRid("SELECT @rid AS rid FROM KnowTag WHERE tag_id = :id", Map.of("id", tagId));
+            if (knowTagRid == null) {
+                throw new IllegalStateException("[LORE MIGRATE] V17: тег " + tagId
+                    + " не найден в KnowTag сразу после создания — перенос прерван.");
+            }
+
+            // Рёбра TAGGED_WITH ВХОДЯТ в LoreTag (сущность --TAGGED_WITH--> тег) —
+            // перецепляем дальний конец (@out) на тот же KnowTag.
+            List<Map<String, Object>> edges = ingest.queryPublic(
+                "SELECT @rid AS rid, @out AS src FROM TAGGED_WITH WHERE @in = " + t.get("rid"), Map.of());
+            for (Map<String, Object> e : edges) {
+                String src = str(e.get("src"));
+                exec(String.format("CREATE EDGE TAGGED_WITH FROM %s TO %s IF NOT EXISTS", src, knowTagRid));
+                exec("DELETE FROM TAGGED_WITH WHERE @rid = " + e.get("rid"));
+                movedEdges++;
+            }
+
+            exec("DELETE VERTEX FROM LoreTag WHERE @rid = " + t.get("rid"));
+        }
+
+        boolean empty = ingest.queryPublic("SELECT @rid FROM LoreTag LIMIT 1", Map.of()).isEmpty();
+        if (empty) {
+            exec("DROP TYPE LoreTag IF EXISTS UNSAFE");
+        } else {
+            throw new IllegalStateException("[LORE MIGRATE] V17: в LoreTag остались вершины "
+                + "после переноса — тип не снесён, разберитесь вручную (бэкап снят).");
+        }
+
+        LOG.infof("[LORE MIGRATE] V17: тегов перенесено (переиспользовано %d, создано %d), рёбер перевешено %d, тип LoreTag снят",
+            reused, created, movedEdges);
     }
 
     private boolean typeExists(String name) {
