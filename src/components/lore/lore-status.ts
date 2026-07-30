@@ -46,7 +46,10 @@ const FALLBACK: StatusMeta = { icon: 'checkbox-tree', color: 'var(--t3)' };
 // бэкенд без слайса). Статусы живут в трёх dict_type, ключ у всех — тот же код.
 // До этого правка цвета статуса в Admin LORE не меняла в UI ничего: словарь
 // показывался, а рисовалось из STATUS_META.
-const STATUS_DICTS = ['task_status', 'sprint_status', 'adr_status'];
+// AL-86: decision_status добавлен — до этого он существовал в словаре (AL-79,
+// V14), но фронт его не читал вовсе: dictColor/dictIcon для него всегда
+// возвращали пусто, независимо от содержимого записи.
+const STATUS_DICTS = ['task_status', 'sprint_status', 'adr_status', 'decision_status'];
 function fromDict(code: string): StatusMeta | undefined {
   for (const d of STATUS_DICTS) {
     const color = dictColor(d, code), icon = dictIcon(d, code);
