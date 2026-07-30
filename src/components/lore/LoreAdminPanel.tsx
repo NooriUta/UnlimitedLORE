@@ -290,7 +290,6 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const [dicts, setDicts] = useState<DictRow[]>([]);
   const [projects, setProjects] = useState<ProjRow[]>([]);
   const [knowTags, setKnowTags] = useState<TagRow[]>([]);
-  const [loreTags, setLoreTags] = useState<TagRow[]>([]);
   const [sprintsByProject, setSprintsByProject] = useState<Record<string, number>>({});
   const [areaUsage, setAreaUsage] = useState<Record<string, number>>({});
   const [users, setUsers] = useState<KcState<KcUser>>({ k: 'loading' });
@@ -303,7 +302,6 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
     fetchLoreSlice<DictRow>('dictionary', {}).then(setDicts).catch(onError);
     fetchLoreSlice<ProjRow>('git_projects', {}).then(setProjects).catch(onError);
     fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnowTags).catch(onError);
-    fetchLoreSlice<TagRow>('lore_tags_usage', {}).then(setLoreTags).catch(() => { /* optional */ });
     fetchLoreSlice<{ sprint_id: string; git_projects: string[] | null }>('sprints', {})
       .then(rows => {
         const m: Record<string, number> = {};
@@ -327,7 +325,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
     agents: agents.k === 'ok' ? agents.rows.length : undefined,
     dicts: dictTypes.length || undefined,
     projects: projects.length || undefined,
-    tags: (knowTags.length + loreTags.length) || undefined,
+    tags: knowTags.length || undefined,
   };
 
   return (
@@ -370,7 +368,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} preflight={preflight} />}
           {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
           {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} onError={onError} reload={bump} />}
-          {tab === 'tags' && <TagsTab know={knowTags} lore={loreTags} />}
+          {tab === 'tags' && <TagsTab know={knowTags} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
         </main>
       </div>
@@ -982,7 +980,7 @@ function ProjectsTab({ rows, sprints, onError, reload }: {
 }
 
 // ── Теги (AL-40: поиск/сортировка по 93 строкам) ────────────────────────────
-function TagsTab({ know, lore }: { know: TagRow[]; lore: TagRow[] }) {
+function TagsTab({ know }: { know: TagRow[] }) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<'uses' | 'alpha'>('uses');
@@ -1015,14 +1013,13 @@ function TagsTab({ know, lore }: { know: TagRow[]; lore: TagRow[] }) {
   };
   return (
     <div>
-      <div style={S.card}>{t('lore.admin.tagsNote', 'Read-only (D6): слияние/переименование — 2-я итерация (миграция рёбер TAGGED_WITH, AL-29 ждёт решения владельца).')}</div>
+      <div style={S.card}>{t('lore.admin.tagsNote', 'Read-only (D6): слияние/переименование через MCP-инструменты, отдельного UI-редактора нет.')}</div>
       <Toolbar q={q} setQ={setQ}
-        shown={know.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length + lore.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length}
-        total={know.length + lore.length}
+        shown={know.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length}
+        total={know.length}
         seg={{ options: [['uses', t('lore.admin.byUses', 'По использованию')], ['alpha', t('lore.admin.byAlpha', 'По алфавиту')]], value: sort, set: v => setSort(v as 'uses' | 'alpha') }} />
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        {list('KnowTag (ADR/решения/задачи)', know)}
-        {list('LoreTag (темы вопросов)', lore)}
+        {list('KnowTag', know)}
       </div>
     </div>
   );

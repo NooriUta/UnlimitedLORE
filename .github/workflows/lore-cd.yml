@@ -14,9 +14,11 @@ name: LORE CD (ci-server stand)
 # on-demand run, a concurrency group so two deploys never race, and a real
 # post-deploy health check instead of trusting `docker compose up` succeeding.
 #
-# Runs via the Forgejo act_runner registered on THIS host (label "ubuntu-latest",
-# see the job's runs-on comment) — a github-hosted runner has no access to this
-# machine's Docker Desktop / compose stack at all, so this only makes sense here.
+# Runs via the Forgejo act_runner registered on THIS host (label "lore-only",
+# see the job's runs-on comment — AL-88, 2026-07-30: dedicated runner, was
+# "ubuntu-latest" against the shared pool before) — a github-hosted runner has
+# no access to this machine's Docker Desktop / compose stack at all, so this
+# only makes sense here.
 
 # ── Место в цепочке: develop → preprod → main ────────────────────────────────
 # Деплоит ТОЛЬКО ветка `preprod`, а не `develop`. Раньше стенд обновлялся с
@@ -50,11 +52,20 @@ permissions:
 jobs:
   deploy:
     name: Build + deploy to local Docker stand
-    # Matches backend-ci.yml: the only registered runner label is "ubuntu-latest"
-    # (mapped by the runner's own config to the forgejo-ci-runtime:jdk21 image),
-    # NOT "self-hosted" — that label doesn't exist here and the job would queue
-    # forever. github-hosted runners can't reach this host's Docker Desktop at
-    # all, so this workflow only makes sense running here regardless of the label name.
+    # AL-88 (2026-07-30): tried a dedicated runner (label "lore-only",
+    # registered on ci-server, forgejo-runner-lore container) instead of the
+    # shared pool, to stop queueing behind Shuttle/Hound/aida-root jobs — but
+    # every job on it fails right after "Point live-DB tests…" with exitcode 1
+    # despite `set -x` tracing showing every script command succeed, including
+    # the $GITHUB_ENV write. Cause not found after three attempts (identical
+    # config.yml, identical image digest, identical resource limits, named
+    # volume vs bind mount — neither fixed it). Reverted to "ubuntu-latest"
+    # (matches the shared pool — its three runners carry no labels of their
+    # own) until this is root-caused; forgejo-runner-lore/volva_only stay
+    # registered on ci-server but unwired. NOT "self-hosted" — that label
+    # doesn't exist here and the job would queue forever. github-hosted runners
+    # can't reach this host's Docker Desktop at all, so this workflow only
+    # makes sense running here regardless of the label name.
     runs-on: ubuntu-latest
     # This job's checkout has no .env (gitignored — it holds the ArcadeDB root
     # password). docker-compose.yml reads ARCADEDB_ROOT_PASSWORD from the shell
@@ -256,10 +267,42 @@ jobs:
           # /q/health/ready — та же дырка в SeerRoleFromTokenFilter.isProtected,
           # что у /q/health/live (healthcheck compose), поэтому читается без
           # токена независимо от режима auth (LoreBridgeHealthCheck).
-          hbody=$(docker exec "$cid" curl -s -m 10 http://127.0.0.1:9100/q/health/ready || true)
+          #
+          # AL-88 (2026-07-30): раньше это был ОДИН curl сразу после «backend
+          # healthy» — гонка, не отказ Infisical. Живой факт-проверкой на
+          # ci-server (docker exec в контейнер того самого «упавшего» деплоя,
+          # спустя час после провала): kc_configured уже true, в логах бэкенда
+          # ни одной ошибки SecretProvider/Infisical вообще. Секрет забирается
+          # чуть дольше, чем живёт контейнер к моменту ЭТОГО конкретного шага —
+          # LoreAuthStartupGuard ретраит сам (3×3с), но deploy-скрипт проверял
+          # результат раньше, чем ретраи успевали закончиться. Даём то же окно,
+          # что уже есть у «Wait for backend health» выше (24×5с = 120с), а не
+          # один шанс.
+          hbody=""
+          for i in $(seq 1 24); do
+            hbody=$(docker exec "$cid" curl -s -m 10 http://127.0.0.1:9100/q/health/ready || true)
+            case "$hbody" in
+              *'"kc_configured":true'*) break ;;
+              *) sleep 5 ;;
+            esac
+          done
           case "$hbody" in
             *'"kc_configured":true'*) echo "KC-мост настроен" ;;
-            *) echo "::error::KC-мост не получил секрет (kc_configured != true в /q/health/ready). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."; exit 1 ;;
+            *)
+              echo "::error::КС-мост не получил секрет за 120с (kc_configured != true в /q/health/ready). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."
+              # AL-88 (2026-07-30, воспроизведено дважды): голого текста ошибки
+              # недостаточно, чтобы отличить «Infisical недоступен по сети» от
+              # «доступен, но identity/project отклонён» — оба дают ровно тот же
+              # kc_configured:false снаружи. Дампим три вещи, которых раньше не
+              # было в логе CD вообще:
+              echo "--- /q/health/ready тело (полностью) ---"
+              echo "$hbody"
+              echo "--- сетевая связность контейнера до Infisical (host-gateway:18080) ---"
+              docker exec "$cid" curl -sv -m 10 -o /dev/null "${LORE_SECRETS_URL:-http://infisical:18080}" 2>&1 || true
+              echo "--- логи lore-backend (последние 150 строк, фильтр SecretProvider/Infisical/KC) ---"
+              docker compose logs --no-color --tail=150 lore-backend 2>&1 | grep -iE "secretprovider|infisical|kcbridge|authstartupguard" || echo "(в логах ничего не найдено по фильтру — секцию расширить вручную: docker compose logs lore-backend)"
+              exit 1
+              ;;
           esac
 
       - name: Verify frontend serves
