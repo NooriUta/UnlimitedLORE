@@ -11,7 +11,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # AL-88 (2026-07-30): выделенный раннер под LORE — см. тот же комментарий в backend-ci.yml.
+    runs-on: lore-only
     steps:
       - uses: actions/checkout@v7
 

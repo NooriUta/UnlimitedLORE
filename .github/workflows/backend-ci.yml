@@ -12,7 +12,10 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # AL-88 (2026-07-30): выделенный раннер под LORE вместо общего пула ci-server
+    # (label ubuntu-latest матчил ЛЮБОЙ раннер — три общих без явных labels — и
+    # CI LORE вставал в очередь за Shuttle/Hound/aida-root на чужих прогонах).
+    runs-on: lore-only
     # Пароль ArcadeDB для live-DB тестов приходит секретом, как в lore-cd.yml.
     # Раньше он был захардкожен в шаге ниже (dev-стенд, задокументирован в
     # docs/DEPLOYMENT.md). После переезда БД на ci-server это перестало быть
