@@ -148,8 +148,8 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         "spec/delete",  Set.of("full", "architect"),
         "doc/delete",   Set.of("full", "architect"));
 
-    /** Методы, которые ничего не меняют — вне проверки. */
-    private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
+    /** Методы, которые ничего не меняют — вне проверки. Package-private: AL-20 (аудит-лог) тоже фильтрует по ним. */
+    static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
     /** Чтобы «семейство вне матрицы» логировалось один раз, а не на каждый запрос. */
     private final Set<String> loggedUnlisted = ConcurrentHashMap.newKeySet();
@@ -204,6 +204,15 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      * провижининга, и молча выбирать «самый широкий» было бы опаснее, чем отказать.
      */
     private String agentScope() {
+        return agentScopeOf(identity);
+    }
+
+    /**
+     * Статический вариант {@link #agentScope()} — вынесен для AL-20 (аудит-лог):
+     * фильтру логирования нужна ТА ЖЕ логика разбора клейма (включая снятие кавычек
+     * ниже), а не вторая копия с риском разойтись после следующей правки одной из них.
+     */
+    static String agentScopeOf(SecurityIdentity identity) {
         if (!(identity.getPrincipal() instanceof JsonWebToken jwt)) return null;
         Object raw = jwt.getClaim("agent_scope");
         if (raw == null) return null;
