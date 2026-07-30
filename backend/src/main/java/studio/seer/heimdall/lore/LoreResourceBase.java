@@ -182,6 +182,48 @@ public abstract class LoreResourceBase {
     }
 
     /**
+     * Снести рёбра типа {@code edgeType}, подходящие под {@code where} — единственным
+     * способом, который работает на ArcadeDB.
+     *
+     * <p><b>Почему не {@code DELETE EDGE}.</b> Этой команды нет в грамматике ArcadeDB
+     * 26.7.2 <i>вовсе</i>: любая её форма — не «ребро не нашлось», а parse error, то
+     * есть гарантированная 500-я на каждый вызов. Проверено на живом сервисе
+     * 2026-07-30: {@code release_unlink} падал три раза подряд с
+     * {@code Internal Server Error} — спринт остался висеть сразу на двух релизах,
+     * старом и новом. Отказ при этом выглядит как поломка сервиса, а не как
+     * неподдерживаемый синтаксис, и диагностика уходит не туда.
+     *
+     * <p>Рабочий путь один: выбрать {@code @rid} рёбер и удалить их поимённо через
+     * {@code DELETE FROM}. Он же чистит {@code outE}/{@code inE} у вершин, так что
+     * висячих ссылок не остаётся.
+     *
+     * <p>В {@code where} концы ребра адресуются как {@code @out.поле}/{@code @in.поле}
+     * — например {@code "@out.sprint_id=:sid AND @in.release_uid=:ruid"}.
+     *
+     * <p>Хелпер был приватно продублирован в {@code LoreDecisionResource} и
+     * {@code LoreQuestionResource}, а {@code LoreReleaseResource} про него не знал и
+     * остался на {@code DELETE EDGE} — отсюда и падение. Одинаковая логика при трёх
+     * вызывающих живёт в базе (тот же довод, что у {@code linkStateCmd} и
+     * {@code relinkAreaEdge}), иначе четвёртый вызывающий напишет её заново, и с
+     * той же вероятностью — неверно.
+     *
+     * @return сколько рёбер удалено
+     */
+    int deleteEdges(String edgeType, String where, Map<String, Object> params) {
+        List<Map<String, Object>> edges = ingestService.queryPublic(
+            "SELECT @rid FROM " + edgeType + " WHERE " + where, params);
+        int removed = 0;
+        for (Map<String, Object> e : edges) {
+            Object rid = e.get("@rid");
+            if (rid == null) continue;
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM " + edgeType + " WHERE @rid=" + rid)).await().indefinitely();
+            removed++;
+        }
+        return removed;
+    }
+
+    /**
      * ADR-LORE-012 level B: component → area dictionary edge (IN_AREA). Keeps
      * the edge in sync with LoreComponent.area (dual-write: the string stays
      * for existing readers, the edge enables graph traversal). Shared between

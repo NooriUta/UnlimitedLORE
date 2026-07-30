@@ -293,15 +293,6 @@ public class LoreQuestionResource extends LoreResourceBase {
         if (val != null) { sql.append(", ").append(col).append('=').append(bind); p.put(bind.substring(1), val); }
     }
 
-    private void deleteEdges(String edgeType, String where, Map<String, Object> params) {
-        List<Map<String, Object>> edges = ingestService.queryPublic(
-            "SELECT @rid FROM " + edgeType + " WHERE " + where, params);
-        for (Map<String, Object> e : edges) {
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM " + edgeType + " WHERE @rid=" + e.get("@rid").toString(), null)).await().indefinitely();
-        }
-    }
-
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
             .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
