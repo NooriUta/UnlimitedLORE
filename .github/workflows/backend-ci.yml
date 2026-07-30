@@ -69,6 +69,10 @@ jobs:
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
             echo "github-hosted — тесты пойдут через Testcontainers"; exit 0
           fi
+          echo "DIAG: GITHUB_ENV=[$GITHUB_ENV]"
+          ls -la "$(dirname "$GITHUB_ENV")" 2>&1 || echo "DIAG: dirname listing failed"
+          touch "$GITHUB_ENV" 2>&1 && echo "DIAG: touch ok" || echo "DIAG: touch FAILED rc=$?"
+          set -x
           PW="${ARCADEDB_ROOT_PASSWORD:-playwithdata}"
           # Проверяем ДОСТУП, а не доступность. /api/v1/ready отвечает 204 кому
           # угодно — по нему сервер «живой» даже с неверным паролем, и тесты потом
