@@ -1937,6 +1937,7 @@
       "viewerGives": "Read-only access to LORE. Does not allow into administration"
     },
     "oqBoard": {
+      "ansFailed": "Failed to load decision #{{id}} — click to retry",
       "ansLoading": "Loading answer…",
       "answer": "Answer (decision)",
       "answerAuto": "answer code: {{id}} (auto) · inherits the question's component{{adr}}",
@@ -1947,6 +1948,8 @@
       "answerLinkBtn": "close with this decision ✓",
       "answerNewBtn": "answer and close ✓",
       "answerTitle": "Answer — a one-line rule (this is the decision)",
+      "bodyPlaceholder": "Context / closing criterion (opt.)",
+      "bodyToggle": "click to expand the question text",
       "cancel": "Cancel",
       "componentLabel": "Component",
       "componentPick": "Component — pick from list",
