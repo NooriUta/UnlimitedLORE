@@ -470,6 +470,36 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET label_ru='Вытеснено — заменено более поздним решением',         icon='pause-button', color='var(--t3)'  UPSERT WHERE dict_type='decision_status' AND code='superseded'",
             "UPDATE KnowDictEntry SET label_ru='Fixed (легаси сида) — к ревизии',                     icon='battery-50',   color='var(--wrn)' UPSERT WHERE dict_type='decision_status' AND code='fixed'",
             "UPDATE KnowDictEntry SET label_ru='Done (легаси сида) — к ревизии',                      icon='battery-50',   color='var(--wrn)' UPSERT WHERE dict_type='decision_status' AND code='done'"
+        )),
+
+        // AL-43 (указание владельца: вариант (а) — тот же HAS_STATE+Hist, что у
+        // задач/спринтов/ADR/спек, а не отдельный механизм): «продукт про SCD2,
+        // а кто и когда менял справочник — нигде». Ключ у KnowDictEntry составной
+        // (dict_type, code), не одно поле — Hist-строка несёт ОБА, денормализовано,
+        // как KnowSpecHist несёт spec_id (запрос по составному ключу без обхода
+        // графа, тот же выбор, что у спек). WHO закрывает AL-20 (аудит-лог,
+        // dict — семейство HUMAN_ONLY, значит axis всегда human): Hist отвечает на
+        // «когда и что», лог — на «кто». compatMajor=13: старый бинарь читает/пишет
+        // KnowDictEntry как раньше и просто не видит историю — не ломающий шаг.
+        new Step(16, 13, "dict_entry_scd2_history", List.of(
+            "CREATE VERTEX TYPE KnowDictEntryHist IF NOT EXISTS",
+            "CREATE PROPERTY KnowDictEntryHist.state_uid      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.dict_type      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.code           IF NOT EXISTS STRING",
+            // DATETIME, не STRING: SPRINT_PLANITEM_RETIRE уже ловил "Comparison
+            // method violates its general contract!" на смешанных типах
+            // valid_from в ORDER BY (LoreSchemaInitializer, комментарий рядом).
+            "CREATE PROPERTY KnowDictEntryHist.valid_from     IF NOT EXISTS DATETIME",
+            "CREATE PROPERTY KnowDictEntryHist.valid_to       IF NOT EXISTS DATETIME",
+            "CREATE PROPERTY KnowDictEntryHist.label_ru       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.label_en       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.color          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.icon           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.sort_order     IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowDictEntryHist.is_active      IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowDictEntryHist.is_extensible  IF NOT EXISTS BOOLEAN",
+            "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (state_uid) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (dict_type, code) NOTUNIQUE"
         ))
     );
 

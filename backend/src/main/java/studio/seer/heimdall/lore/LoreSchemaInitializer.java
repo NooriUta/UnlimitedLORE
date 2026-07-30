@@ -145,6 +145,7 @@ public class LoreSchemaInitializer {
         "CREATE VERTEX TYPE KnowMilestoneHist IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowPhaseHist     IF NOT EXISTS EXTENDS V",
         "CREATE VERTEX TYPE KnowTaskHist      IF NOT EXISTS EXTENDS V",
+        "CREATE VERTEX TYPE KnowDictEntryHist IF NOT EXISTS EXTENDS V", // AL-43
 
         // ── Edge types ────────────────────────────────────────────────────────
         "CREATE EDGE TYPE DECIDED_IN       IF NOT EXISTS EXTENDS E",
@@ -281,6 +282,7 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowMilestoneHist.valid_to IF NOT EXISTS DATETIME",
         "CREATE PROPERTY KnowPhaseHist.valid_to     IF NOT EXISTS DATETIME",
         "CREATE PROPERTY KnowTaskHist.valid_to      IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowDictEntryHist.valid_to IF NOT EXISTS DATETIME", // AL-43
         "CREATE INDEX IF NOT EXISTS ON KnowDecisionHist  (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowADRHist       (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowSprintHist    (valid_to) NOTUNIQUE",
@@ -290,6 +292,7 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowMilestoneHist (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowPhaseHist     (valid_to) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowTaskHist      (valid_to) NOTUNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (valid_to) NOTUNIQUE", // AL-43
 
         // ── Phase 5 (v1.2): KnowRunbook + QualityGate + QGMetric ────────────────
         "CREATE VERTEX TYPE KnowRunbook     IF NOT EXISTS EXTENDS V",
@@ -313,6 +316,15 @@ public class LoreSchemaInitializer {
         "CREATE INDEX IF NOT EXISTS ON KnowRunbook    (runbook_id)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (state_uid)  UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowRunbookHist (valid_to)   NOTUNIQUE",
+
+        // AL-43: KnowDictEntry SCD2 history — composite key (dict_type, code)
+        // denormalized onto the Hist row, same choice LoreSlices' history_dict
+        // slice relies on (see LoreSchemaMigrations Step 16 for the full field set).
+        "CREATE PROPERTY KnowDictEntryHist.state_uid IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntryHist.dict_type IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntryHist.code      IF NOT EXISTS STRING",
+        "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (state_uid) UNIQUE",
+        "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (dict_type, code) NOTUNIQUE",
         "CREATE INDEX IF NOT EXISTS ON QualityGate   (qg_id)        UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON QGMetric      (metric_id)    UNIQUE",
         "CREATE INDEX IF NOT EXISTS ON KnowDoc       (doc_id)       UNIQUE",
