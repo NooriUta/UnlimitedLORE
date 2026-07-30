@@ -1318,6 +1318,16 @@ public final class LoreSlices {
                 "dict_type", " WHERE dict_type = :dict_type")),
             " ORDER BY dict_type, sort_order");
 
+        // AL-43: SCD2 history for one dict entry — same close/open pattern as
+        // history_sprint/history_task/adr_history, keyed by the composite
+        // (dict_type, code) denormalized onto KnowDictEntryHist rather than a
+        // graph traversal (KnowDictEntry's key isn't a single field).
+        slice("history_dict",
+            "SELECT valid_from, valid_to, label_ru, label_en, color, icon, sort_order, " +
+            "is_active, is_extensible FROM KnowDictEntryHist " +
+            "WHERE dict_type = :dict_type AND code = :code ORDER BY valid_from",
+            List.of("dict_type", "code"), Map.of(), "");
+
         // ADR-LORE-012 level B: components linked to an area via the IN_AREA edge
         // (graph traversal, not the string field) — «all components in area X».
         slice("components_in_area",

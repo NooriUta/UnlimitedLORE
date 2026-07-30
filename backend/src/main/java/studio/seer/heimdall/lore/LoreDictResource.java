@@ -9,8 +9,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * ADR-LORE-012: KnowDictEntry write endpoints — dictionary entries (dict_type,
@@ -74,6 +76,7 @@ public class LoreDictResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowDictEntry SET is_extensible=false WHERE dict_type=:dt AND code=:code AND is_extensible IS NULL",
                 key)).await().indefinitely();
+            writeDictHist(req.dict_type(), req.code());
             return noStore(Response.ok(Map.of("ok", true,
                 "dict_type", req.dict_type(), "code", req.code())));
         } catch (Exception e) {
@@ -81,6 +84,40 @@ public class LoreDictResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    /**
+     * AL-43: close-then-open on EVERY edit (unlike KnowSpecHist's checkpoint-gated
+     * variant) — a dict entry is a small vertex with no separate "body" field
+     * whose churn would flood history; every write here already IS a deliberate
+     * admin action, so every one deserves its own revision. Reads back the
+     * post-upsert vertex (not the request) so a partial update still snapshots
+     * the FULL merged state, same as every other Hist type.
+     *
+     * <p>WHO made the edit is NOT captured here — that's AL-20's job (lore.audit
+     * log; dict is a HUMAN_ONLY family, so the axis is always "human"). This
+     * method only answers "when" and "what changed".
+     */
+    private void writeDictHist(String dictType, String code) {
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT label_ru, label_en, color, icon, sort_order, " +
+            "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible " +
+            "FROM KnowDictEntry WHERE dict_type=:dt AND code=:code",
+            Map.of("dt", dictType, "code", code));
+        if (rows.isEmpty()) return; // defensive — the upsert above always creates the row
+        Map<String, Object> hp = new java.util.HashMap<>(rows.get(0));
+        hp.put("dt", dictType);
+        hp.put("code", code);
+        hp.put("nsid", UUID.randomUUID().toString());
+        hp.put("now", Instant.now().toString());
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
+            "UPDATE KnowDictEntryHist SET valid_to=:now WHERE dict_type=:dt AND code=:code AND valid_to IS NULL;" +
+            "INSERT INTO KnowDictEntryHist SET dict_type=:dt, code=:code, state_uid=:nsid, valid_from=:now, " +
+            "label_ru=:label_ru, label_en=:label_en, color=:color, icon=:icon, sort_order=:sort_order, " +
+            "is_active=:is_active, is_extensible=:is_extensible;" +
+            "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowDictEntry WHERE dict_type=:dt AND code=:code) " +
+            "TO (SELECT FROM KnowDictEntryHist WHERE state_uid=:nsid);",
+            hp)).await().indefinitely();
     }
 
     // One-time (idempotent) backfill of IN_AREA edges from existing area strings —
