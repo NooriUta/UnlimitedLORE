@@ -12,10 +12,19 @@ on:
 
 jobs:
   build:
-    # AL-88 (2026-07-30): выделенный раннер под LORE вместо общего пула ci-server
-    # (label ubuntu-latest матчил ЛЮБОЙ раннер — три общих без явных labels — и
-    # CI LORE вставал в очередь за Shuttle/Hound/aida-root на чужих прогонах).
-    runs-on: lore-only
+    # AL-88 (2026-07-30): пробовали выделенный раннер lore-only вместо общего
+    # пула ci-server (очередь за Shuttle/Hound/aida-root на чужих прогонах) —
+    # но на нём КАЖДЫЙ прогон падает сразу после «Point live-DB tests…» с
+    # exitcode 1, хотя `set -x` трассировка шага показывает, что все команды
+    # скрипта отработали БЕЗ ошибки (включая запись в $GITHUB_ENV) — сбоит
+    # что-то в самом раннере ПОСЛЕ конца скрипта, причина не найдена за три
+    # прогона (identical config.yml, identical image sha256:d85b420…, identical
+    # resource limits, named-volume vs bind-mount — не помогло ни то, ни
+    # другое). Раннеры lore-only/volva_only остаются зарегистрированы на
+    # ci-server, но НЕ подключены сюда до отдельного расследования — иначе
+    # каждый PR/промоушн этого репозитория красный без единой реальной причины
+    # в самом коде.
+    runs-on: ubuntu-latest
     # Пароль ArcadeDB для live-DB тестов приходит секретом, как в lore-cd.yml.
     # Раньше он был захардкожен в шаге ниже (dev-стенд, задокументирован в
     # docs/DEPLOYMENT.md). После переезда БД на ci-server это перестало быть
@@ -69,10 +78,6 @@ jobs:
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
             echo "github-hosted — тесты пойдут через Testcontainers"; exit 0
           fi
-          echo "DIAG: GITHUB_ENV=[$GITHUB_ENV]"
-          ls -la "$(dirname "$GITHUB_ENV")" 2>&1 || echo "DIAG: dirname listing failed"
-          touch "$GITHUB_ENV" 2>&1 && echo "DIAG: touch ok" || echo "DIAG: touch FAILED rc=$?"
-          set -x
           PW="${ARCADEDB_ROOT_PASSWORD:-playwithdata}"
           # Проверяем ДОСТУП, а не доступность. /api/v1/ready отвечает 204 кому
           # угодно — по нему сервер «живой» даже с неверным паролем, и тесты потом

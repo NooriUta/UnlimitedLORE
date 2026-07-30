@@ -52,16 +52,21 @@ permissions:
 jobs:
   deploy:
     name: Build + deploy to local Docker stand
-    # AL-88 (2026-07-30): dedicated runner (label "lore-only", registered on
-    # ci-server, forgejo-runner-lore container) instead of the shared pool
-    # (previously "ubuntu-latest", matched by any of the three general-purpose
-    # runners whose own labels are empty — Shuttle/Hound/aida-root jobs on the
-    # same pool queued LORE's checks behind theirs, and this deploy gate's own
-    # health checks have no slack for that). NOT "self-hosted" — that label
+    # AL-88 (2026-07-30): tried a dedicated runner (label "lore-only",
+    # registered on ci-server, forgejo-runner-lore container) instead of the
+    # shared pool, to stop queueing behind Shuttle/Hound/aida-root jobs — but
+    # every job on it fails right after "Point live-DB tests…" with exitcode 1
+    # despite `set -x` tracing showing every script command succeed, including
+    # the $GITHUB_ENV write. Cause not found after three attempts (identical
+    # config.yml, identical image digest, identical resource limits, named
+    # volume vs bind mount — neither fixed it). Reverted to "ubuntu-latest"
+    # (matches the shared pool — its three runners carry no labels of their
+    # own) until this is root-caused; forgejo-runner-lore/volva_only stay
+    # registered on ci-server but unwired. NOT "self-hosted" — that label
     # doesn't exist here and the job would queue forever. github-hosted runners
     # can't reach this host's Docker Desktop at all, so this workflow only
     # makes sense running here regardless of the label name.
-    runs-on: lore-only
+    runs-on: ubuntu-latest
     # This job's checkout has no .env (gitignored — it holds the ArcadeDB root
     # password). docker-compose.yml reads ARCADEDB_ROOT_PASSWORD from the shell
     # environment (which wins over any .env), so pass it here from a repo

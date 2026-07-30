@@ -11,8 +11,9 @@ on:
 
 jobs:
   build:
-    # AL-88 (2026-07-30): выделенный раннер под LORE — см. тот же комментарий в backend-ci.yml.
-    runs-on: lore-only
+    # AL-88 (2026-07-30): пробовали выделенный раннер lore-only — см. тот же
+    # комментарий в backend-ci.yml про необъяснённый сбой. Откачено к общему пулу.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
