@@ -728,6 +728,7 @@
       "kindSprint": "Sprint",
       "kindPlanItem": "PlanItem",
       "kindAdr": "ADR",
+      "kindTask": "Task",
       "loadingHint": "loading…",
       "listErrorHint": "list error",
       "entityCountHint": "{{count}} entities",
