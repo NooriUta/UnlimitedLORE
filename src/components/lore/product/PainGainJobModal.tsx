@@ -15,12 +15,12 @@ import { saveLorePain, saveLoreGain, saveLoreJob, linkLoreVp, fetchLoreSlice } f
 import type { LoreActorRow } from '../../../api/lore';
 import TipTapField from '../TipTapField';
 
-export type VpKind = 'job' | 'pain' | 'gain';
+export type PainGainJobKind = 'job' | 'pain' | 'gain';
 
-const PREFIX: Record<VpKind, string> = { job: 'JOB-', pain: 'PAIN-', gain: 'GAIN-' };
+const PREFIX: Record<PainGainJobKind, string> = { job: 'JOB-', pain: 'PAIN-', gain: 'GAIN-' };
 
 /** Тип записи по её id — тем же префиксом, которым ветвится весь реестр. */
-export function vpKindOf(id: string): VpKind | null {
+export function painGainJobKindOf(id: string): PainGainJobKind | null {
   if (id.startsWith('JOB-')) return 'job';
   if (id.startsWith('PAIN-')) return 'pain';
   if (id.startsWith('GAIN-')) return 'gain';
@@ -35,7 +35,7 @@ export function vpKindOf(id: string): VpKind | null {
  * реестре — отказ, замаскированный под успех, поэтому чиним ввод, а не браним
  * пользователя.
  */
-export function normalizeVpId(kind: VpKind, raw: string): string {
+export function normalizePainGainJobId(kind: PainGainJobKind, raw: string): string {
   const prefix = PREFIX[kind];
   const v = raw.trim().toUpperCase().replace(/\s+/g, '-');
   if (!v) return '';
@@ -43,7 +43,7 @@ export function normalizeVpId(kind: VpKind, raw: string): string {
 }
 
 /** Значения, которыми форма открывается на правку существующей записи. */
-export interface VpDraft {
+export interface PainGainJobDraft {
   id: string;
   title?: string | null;
   body_md?: string | null;
@@ -55,16 +55,16 @@ export interface VpDraft {
   actorIds?: string[] | null;
 }
 
-export default function VpCreateModal({
+export default function PainGainJobModal({
   kind, opened, onClose, onCreated, onError, initial,
 }: {
-  kind: VpKind;
+  kind: PainGainJobKind;
   opened: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
   onError: (e: unknown) => void;
   /** задан — форма открыта на правку: id заблокирован, поля предзаполнены */
-  initial?: VpDraft;
+  initial?: PainGainJobDraft;
 }) {
   const { t } = useTranslation();
   const editing = !!initial;
@@ -107,7 +107,7 @@ export default function VpCreateModal({
     setActorIds(initial?.actorIds ?? []);
   }, [initial]);
 
-  const finalId = editing ? (initial?.id ?? '') : normalizeVpId(kind, id);
+  const finalId = editing ? (initial?.id ?? '') : normalizePainGainJobId(kind, id);
 
   const reset = () => { setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); setActorIds([]); };
   const close = () => { if (!editing) reset(); onClose(); };
@@ -154,12 +154,12 @@ export default function VpCreateModal({
   };
   const hint: React.CSSProperties = { fontSize: 10.5, color: 'var(--t3)', marginTop: 3 };
 
-  const titles: Record<VpKind, string> = {
+  const titles: Record<PainGainJobKind, string> = {
     job: t('lore.product.vp.newJob', '+ Работа'),
     pain: t('lore.product.vp.newPain', '+ Боль'),
     gain: t('lore.product.vp.newGain', '+ Выгода'),
   };
-  const idRules: Record<VpKind, string> = {
+  const idRules: Record<PainGainJobKind, string> = {
     job: t('lore.product.vp.idRuleJob', 'JOB-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: JOB-LORE-SHIP-RELEASE'),
     pain: t('lore.product.vp.idRulePain', 'PAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: PAIN-LORE-MANUAL-HANDOFF'),
     gain: t('lore.product.vp.idRuleGain', 'GAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: GAIN-LORE-LINKED-RELEASES'),
