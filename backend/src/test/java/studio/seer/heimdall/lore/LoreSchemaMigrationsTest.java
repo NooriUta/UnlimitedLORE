@@ -122,18 +122,38 @@ class LoreSchemaMigrationsTest {
      */
     @Test
     void breakingStepRaisesCompatMajorAndBlocksOldBinary() {
+        // Проверяем СОБСТВЕННОЕ свойство V13 — оно не меняется, сколько бы
+        // более поздних шагов (аддитивных или ломающих) ни добавили дальше.
+        // «Текущий major кода» — отдельная проверка, у неё свой тест
+        // (breakingStepV17RaisesCompatMajorAndBlocksOldBinary), потому что
+        // «текущий» неизбежно съезжает на следующий ломающий шаг.
         var v13 = step(13);
         assertEquals(13, v13.compatMajor(),
             "слияние типов ломает совместимость — major обязан скакнуть");
-        assertEquals(13, LoreSchemaMigrations.codeCompatMajor());
-        // НЕ пин на «13.0»: точный minor — то самое временное совпадение, о
-        // котором javadoc выше (V11-эра теста) уже предупреждал; аддитивные шаги
-        // (V14 словарь decision_status — первый) двигают minor, не major.
-        assertTrue(LoreSchemaMigrations.codeHuman().startsWith("13."),
-            "ось совместимости остаётся 13.x, пока не появится следующий ЛОМАЮЩИЙ шаг");
         assertEquals(LoreSchemaMigrations.StartupDecision.INCOMPATIBLE,
             LoreSchemaMigrations.decide(13, 13, 12, 10),
             "бинарь до PL-28 обязан ОТКАЗАТЬСЯ стартовать против схемы без KnowFeature");
+    }
+
+    /**
+     * AL-29 (V17): слияние LoreTag в KnowTag — второй ЛОМАЮЩИЙ шаг реестра.
+     * Тот же класс операции, что V13 (снос типа, перенос данных в javaStep),
+     * поэтому та же логика: старый бинарь читает LoreTag в слайсе
+     * lore_tags_usage и в живом моменте отдал бы 404 вместо тихой полуправды —
+     * скачок major превращает это в честный отказ старта раньше, до первого
+     * непонятного запроса.
+     */
+    @Test
+    void breakingStepV17RaisesCompatMajorAndBlocksOldBinary() {
+        var v17 = step(17);
+        assertEquals(17, v17.compatMajor(),
+            "слияние LoreTag→KnowTag ломает совместимость — major обязан скакнуть");
+        assertEquals(17, LoreSchemaMigrations.codeCompatMajor());
+        assertTrue(LoreSchemaMigrations.codeHuman().startsWith("17."),
+            "ось совместимости — 17.x, пока не появится следующий ЛОМАЮЩИЙ шаг");
+        assertEquals(LoreSchemaMigrations.StartupDecision.INCOMPATIBLE,
+            LoreSchemaMigrations.decide(17, 17, 16, 13),
+            "бинарь до AL-29 обязан ОТКАЗАТЬСЯ стартовать против схемы без LoreTag");
     }
 
     /**
