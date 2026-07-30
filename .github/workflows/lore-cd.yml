@@ -233,23 +233,14 @@ jobs:
         if: steps.which.outputs.backend == 'true'
         run: |
           cid=$(docker compose ps -q lore-backend)
-          # Проверка зависит от режима, и это НЕ усложнение ради усложнения.
-          #
-          # Пока auth выключен, представиться админом можно заголовком
-          # X-Seer-Role — без него эндпоинт под requireAdmin отдаёт 403, и
-          # проверка ложно объявила бы мост несконфигуренным.
-          #
-          # После включения auth бэкенд этому заголовку НЕ ДОВЕРЯЕТ (в том и
-          # смысл), поэтому тот же запрос честно получает 401. Прежняя проверка
-          # уронила бы деплой ровно в момент успешного включения — отказ,
-          # неотличимый от настоящей поломки.
-          #
-          # Поэтому 401 при LORE_AUTH_ENABLED=true — это ПОДТВЕРЖДЕНИЕ: бэкенд
-          # поднялся и требует токен. А вот 200 в этом режиме означал бы, что
-          # флаг не доехал до сборки (build-time!) и auth молча остался выключен.
-          code=$(docker exec "$cid" curl -s -o /tmp/pf.json -w '%{http_code}' -m 10 \
+          # Проверка enforcement (auth реально требует токен) зависит от
+          # режима — auth-preflight сам под requireAdmin, а после включения
+          # auth заголовку X-Seer-Role больше не верят, так что тот же запрос
+          # честно получает 401/403. Это ПОДТВЕРЖДЕНИЕ: бэкенд поднялся и
+          # требует токен. 200 в этом режиме означал бы, что флаг не попал в
+          # СБОРКУ образа (quarkus.oidc.enabled фиксируется на build-time).
+          code=$(docker exec "$cid" curl -s -o /dev/null -w '%{http_code}' -m 10 \
             -H 'X-Seer-Role: admin' http://127.0.0.1:9100/lore/kc/auth-preflight || echo 000)
-          body=$(docker exec "$cid" cat /tmp/pf.json 2>/dev/null || true)
           echo "auth-preflight -> HTTP $code"
           if [ "${LORE_AUTH_ENABLED}" = "true" ]; then
             case "$code" in
@@ -257,12 +248,19 @@ jobs:
               200) echo "::error::auth должен быть включён, но эндпоинт пустил по заголовку X-Seer-Role. Значит LORE_AUTH_ENABLED не попал в СБОРКУ образа (quarkus.oidc.enabled фиксируется на build-time) — проверьте build-args в compose."; exit 1 ;;
               *)   echo "::error::бэкенд не ответил на auth-preflight (HTTP $code)"; exit 1 ;;
             esac
-          else
-            case "$body" in
-              *'"kc_configured":true'*) echo "KC-мост настроен" ;;
-              *) echo "::error::KC-мост не получил секрет (kc_configured != true). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."; exit 1 ;;
-            esac
           fi
+          # MIG-33: kc_configured проверяется ЗДЕСЬ, в ОБЕИХ ветках одинаково —
+          # раньше это было только в auth-off ветке (через auth-preflight,
+          # который при auth on сам требует токен и JSON-тело не отдаёт), и
+          # мёртвый мост за корректно включённым auth проходил CD зелёным.
+          # /q/health/ready — та же дырка в SeerRoleFromTokenFilter.isProtected,
+          # что у /q/health/live (healthcheck compose), поэтому читается без
+          # токена независимо от режима auth (LoreBridgeHealthCheck).
+          hbody=$(docker exec "$cid" curl -s -m 10 http://127.0.0.1:9100/q/health/ready || true)
+          case "$hbody" in
+            *'"kc_configured":true'*) echo "KC-мост настроен" ;;
+            *) echo "::error::KC-мост не получил секрет (kc_configured != true в /q/health/ready). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."; exit 1 ;;
+          esac
 
       - name: Verify frontend serves
         if: steps.which.outputs.frontend == 'true'
