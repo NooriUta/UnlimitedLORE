@@ -44,14 +44,16 @@ export default function LoreBragiPlan() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<CalendarRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [cursor, setCursor] = useState(() => new Date());
   const [creatingDate, setCreatingDate] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
+    setError(false);
     return fetchLoreSlice<CalendarRow>('bragi_calendar')
       .then(rs => { setRows(rs); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoading(false); setError(true); });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -98,6 +100,7 @@ export default function LoreBragiPlan() {
   }
 
   if (loading) return <div style={S.hint}>{t('bragi.plan.loading', 'загрузка…')}</div>;
+  if (error) return <div style={S.hint}>{t('bragi.plan.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
 
   return (
     <div>

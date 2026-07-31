@@ -40,6 +40,8 @@ export function LoreBragiKeys() {
   const [rows, setRows] = useState<KeywordRow[]>([]);
   const [rubrics, setRubrics] = useState<RubricRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // AL-85: «ошибка загрузки» ≠ «записей нет» — .catch раньше глушил обе ветки в одно и то же пустое состояние.
+  const [error, setError] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingRow, setEditingRow] = useState<KeywordRow | null>(null);
 
@@ -50,12 +52,13 @@ export function LoreBragiKeys() {
 
   const load = useCallback(() => {
     setLoading(true);
+    setError(false);
     return Promise.all([
       fetchLoreSlice<KeywordRow>('bragi_keys'),
       fetchLoreSlice<RubricRow>('bragi_rubrics'),
     ])
       .then(([r, rub]) => { setRows(r); setRubrics(rub); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoading(false); setError(true); });
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -80,6 +83,7 @@ export function LoreBragiKeys() {
   const clearAll = () => { setIntentSel(new Set()); setClusterSel(new Set()); setRubricSel(new Set()); };
 
   if (loading) return <div style={S.hint}>{t('bragi.extras.keys.loading', 'загрузка…')}</div>;
+  if (error) return <div style={S.hint}>{t('bragi.extras.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
 
   /**
    * Форма — модалкой ПОВЕРХ таблицы, а не вместо неё (PL-38).
@@ -192,6 +196,7 @@ export function LoreBragiArchive() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<ArchiveRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [channelSel, setChannelSel] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
   useEffect(() => {
@@ -207,7 +212,7 @@ export function LoreBragiArchive() {
         return { ...c, views: sum('views'), clicks: sum('clicks'), demo: sum('demo_conv') };
       }));
       if (!cancelled) { setRows(withMetrics); setLoading(false); }
-    }).catch(() => { if (!cancelled) setLoading(false); });
+    }).catch(() => { if (!cancelled) { setLoading(false); setError(true); } });
     return () => { cancelled = true; };
   }, []);
   const channels = useMemo(() => distinct(rows, r => r.channel_id), [rows]);
@@ -217,6 +222,7 @@ export function LoreBragiArchive() {
   const toggleChannel = mkSetToggle(setChannelSel);
 
   if (loading) return <div style={S.hint}>{t('bragi.extras.archive.loading', 'загрузка…')}</div>;
+  if (error) return <div style={S.hint}>{t('bragi.extras.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
   return (
     <div>
       <div style={S.desc}>{t('bragi.extras.archive.desc', 'ретроспектива: опубликованное и что оно дало.')}</div>
@@ -275,13 +281,15 @@ export function LoreBragiInsights() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<InsightRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetchLoreSlice<InsightRow>('bragi_insights').then(r => { if (!cancelled) { setRows(r); setLoading(false); } })
-      .catch(() => { if (!cancelled) setLoading(false); });
+      .catch(() => { if (!cancelled) { setLoading(false); setError(true); } });
     return () => { cancelled = true; };
   }, []);
   if (loading) return <div style={S.hint}>{t('bragi.extras.insights.loading', 'загрузка…')}</div>;
+  if (error) return <div style={S.hint}>{t('bragi.extras.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
   return (
     <div>
       <div style={S.desc}>{t('bragi.extras.insights.title', 'выводы из данных → задачи и решения.')}</div>
@@ -315,19 +323,22 @@ export function LoreBragiIntegrations() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<IntegrationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingRow, setEditingRow] = useState<IntegrationRow | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
+    setError(false);
     return fetchLoreSlice<IntegrationRow>('bragi_integrations')
       .then(r => { setRows(r); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoading(false); setError(true); });
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <div style={S.hint}>{t('bragi.extras.integrations.loading', 'загрузка…')}</div>;
+  if (error) return <div style={S.hint}>{t('bragi.extras.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
   return (
     <div>
       {/* Та же причина, что у ключевых слов: правя коннектор, надо видеть

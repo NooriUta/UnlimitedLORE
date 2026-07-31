@@ -480,9 +480,15 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                             <input style={S.input} autoFocus
                               placeholder={t('lore.oqBoard.answerTitle', 'Ответ — правило одной строкой (это и есть решение)')}
                               value={answerTitle} onChange={e => setAnswerTitle(e.target.value)} />
-                            <textarea style={{ ...S.input, minHeight: 44, resize: 'vertical' as const }}
+                            <TipTapField
+                              value={answerBody}
+                              onChange={setAnswerBody}
+                              minHeight={44}
+                              enableImages={false}
+                              enableHtmlMode={false}
                               placeholder={t('lore.oqBoard.answerBody', 'Обоснование / детали (опц.)')}
-                              value={answerBody} onChange={e => setAnswerBody(e.target.value)} />
+                              ariaLabel={t('lore.oqBoard.answerBody', 'Обоснование / детали (опц.)')}
+                            />
                             <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
                               {t('lore.oqBoard.answerAuto', 'код ответа: {{id}} (авто) · унаследует компонент вопроса{{adr}}', {
                                 id: nextDecisionId, adr: parentAdr ? ` и родителя ${parentAdr}` : '',
