@@ -123,6 +123,15 @@ export default function PainGainJobModal({
       .catch(() => { /* список работ не критичен: форма сохранится и без него */ });
     return () => ctrl.abort();
   }, [opened, kind]);
+  /**
+   * Поиск по работам (FIT-08).
+   *
+   * Плоский ряд пилюль работал на трёх работах в корпусе — на десятках его
+   * уже не прочитать, а на сотнях в нём физически не найти нужную. Выбранные
+   * остаются отдельным рядом чипов (иначе фильтр прячет уже отмеченное и
+   * выглядит как потеря выбора), кандидаты сужаются по вводу.
+   */
+  const [jobQuery, setJobQuery] = useState('');
 
   // Предзаполнение приходит асинхронно (слайс мог ещё грузиться), поэтому
   // синхронизируем состояние с ним, а не только начальным значением: иначе
@@ -136,13 +145,14 @@ export default function PainGainJobModal({
     setActorIds(initial?.actorIds ?? []);
     setRank(initial?.rank ?? '');
     setJobLinks((kind === 'pain' ? initial?.blocksJobIds : initial?.successOfJobIds) ?? []);
+    setJobQuery('');
   }, [initial, kind]);
 
   const finalId = editing ? (initial?.id ?? '') : normalizePainGainJobId(kind, id);
 
   const reset = () => {
     setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); setActorIds([]);
-    setRank(''); setJobLinks([]);
+    setRank(''); setJobLinks([]); setJobQuery('');
   };
   const close = () => { if (!editing) reset(); onClose(); };
 
@@ -322,29 +332,65 @@ export default function PainGainJobModal({
             {kind === 'pain' && t('lore.product.vp.fieldBlocks', 'Мешает работам (BLOCKS)')}
             {kind === 'gain' && t('lore.product.vp.fieldSuccessOf', 'Успех в работе (SUCCESS_OF)')}
           </label>
+          {/* Выбранные — отдельным рядом, ВСЕГДА видны независимо от фильтра:
+              спрятать их за поиском выглядело бы как «выбор потерялся». */}
+          {jobLinks.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 5 }}>
+              {jobLinks.map(id => {
+                const j = jobs.find(x => x.job_id === id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setJobLinks(v => v.filter(x => x !== id))}
+                    style={{
+                      padding: '2px 9px', borderRadius: 999, cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                      border: '1px solid var(--job)', background: 'var(--bg2)', color: 'var(--t1)',
+                    }}
+                  >
+                    {(j?.title ?? id)} ✕
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {jobs.length > 0 && (
+            <input
+              style={{ ...field, marginBottom: 5 }}
+              value={jobQuery}
+              onChange={e => setJobQuery(e.target.value)}
+              placeholder={t('lore.product.vp.jobSearchPh', 'искать работу…')}
+            />
+          )}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {jobs.map(j => {
-              const on = jobLinks.includes(j.job_id);
-              return (
+            {jobs.length === 0 && (
+              <span style={hint}>{t('lore.product.vp.noJobs', 'работ пока нет — заведите через «+ Работа»')}</span>
+            )}
+            {jobs.length > 0 && (() => {
+              const q = jobQuery.trim().toLowerCase();
+              const candidates = jobs
+                .filter(j => !jobLinks.includes(j.job_id))
+                .filter(j => !q || (j.title ?? j.job_id).toLowerCase().includes(q) || j.job_id.toLowerCase().includes(q));
+              if (candidates.length === 0) {
+                return <span style={hint}>{t('lore.product.vp.noJobMatch', 'ничего не найдено')}</span>;
+              }
+              // Длинный список без фильтра засорял бы форму — предлагаем
+              // первые совпадения и просим уточнить запрос, а не рендерим
+              // сотню пилюль разом (та же проблема, которую чиним).
+              return candidates.slice(0, 20).map(j => (
                 <button
                   key={j.job_id}
                   type="button"
-                  onClick={() => setJobLinks(v => on ? v.filter(x => x !== j.job_id) : [...v, j.job_id])}
-                  aria-pressed={on}
+                  onClick={() => { setJobLinks(v => [...v, j.job_id]); setJobQuery(''); }}
                   style={{
                     padding: '2px 9px', borderRadius: 999, cursor: 'pointer', fontSize: 'var(--fs-xs)',
-                    border: `1px solid ${on ? 'var(--job)' : 'var(--bd)'}`,
-                    background: on ? 'var(--bg2)' : 'transparent',
-                    color: on ? 'var(--t1)' : 'var(--t2)',
+                    border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)',
                   }}
                 >
                   {j.title ?? j.job_id}
                 </button>
-              );
-            })}
-            {jobs.length === 0 && (
-              <span style={hint}>{t('lore.product.vp.noJobs', 'работ пока нет — заведите через «+ Работа»')}</span>
-            )}
+              ));
+            })()}
           </div>
         </>
       )}
