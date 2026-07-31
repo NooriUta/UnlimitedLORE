@@ -9,7 +9,9 @@
     "spaces": "LORE · spaces",
     "transitions": "Go to",
     "here": "here",
-    "tenant": "Workspace (tenant)",
+    "project": "Project",
+    "projectAll": "All projects",
+    "projectNote": "Project ⟂ navigation: switching scope doesn't change section — you stay put. Today it affects Plan and Milestones.",
     "secondary": "Secondary",
     "searchData": "search data",
     "hit": {
@@ -26,7 +28,7 @@
       "gain": "Gain"
     },
     "brandTitle": "LORE — spaces",
-    "tenantTitle": "Data workspace",
+    "projectTitle": "Data workspace (project)",
     "searchTitle": "Search data (/)",
     "searchAria": "Search",
     "testDbTitle": "Backend is NOT pointed at the prod database",

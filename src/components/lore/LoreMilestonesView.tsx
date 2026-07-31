@@ -9,6 +9,7 @@ import { GameIcon } from './GameIcon';
 import { statusMeta } from './lore-status';
 import LoreSkeleton from './LoreSkeleton';
 import TipTapField from './TipTapField';
+import { useProjectScope, sliceParamsForProject } from '../../context/ProjectScopeContext';
 
 const TODAY = new Date();
 const RU_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -78,6 +79,7 @@ interface EditState { label: string; date_display: string; week: string; priorit
 
 export default function LoreMilestonesView({ onError, onNavigateToSprint }: Props) {
   const { t } = useTranslation();
+  const { project } = useProjectScope();
   const [milestones, setMilestones] = useState<LoreMilestone[]>([]);
   const [sprints, setSprints]       = useState<LoreSprintRow[]>([]);
   const [doneDates, setDoneDates]   = useState<LoreSprintDoneDate[]>([]);
@@ -98,12 +100,12 @@ export default function LoreMilestonesView({ onError, onNavigateToSprint }: Prop
     const ctrl = new AbortController();
     Promise.all([
       fetchLoreSlice<LoreMilestone>('milestones', undefined, ctrl.signal),
-      fetchLoreSlice<LoreSprintRow>('sprints', undefined, ctrl.signal),
+      fetchLoreSlice<LoreSprintRow>('sprints', sliceParamsForProject(project), ctrl.signal),
       fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
     ]).then(([ms, sp, dd]) => { setMilestones(ms); setSprints(sp); setDoneDates(dd); setLoading(false); })
       .catch(e => { if (!ctrl.signal.aborted) { onError(e); setLoading(false); } });
     return () => ctrl.abort();
-  }, [onError, reload]);
+  }, [onError, reload, project]);
 
   const doneSet = useMemo(() => new Set(sprints.filter(isDone).map(s => s.sprint_id)), [sprints]);
   const byId    = useMemo(() => new Map(sprints.map(s => [s.sprint_id, s])), [sprints]);
