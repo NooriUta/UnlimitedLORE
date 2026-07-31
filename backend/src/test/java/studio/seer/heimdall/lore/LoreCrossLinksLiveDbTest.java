@@ -35,8 +35,12 @@ class LoreCrossLinksLiveDbTest {
     @Test
     @Order(1)
     void setUp() {
-        post("/lore/project", "{\"slug\":\"acme/one\",\"name\":\"Первый продукт\"}");
-        post("/lore/project", "{\"slug\":\"acme/two\",\"name\":\"Второй продукт\"}");
+        // AL-84: /lore/project требует superadmin — общий хелпер post() шлёт admin
+        // для остальных семейств этого файла, здесь отдельные вызовы.
+        for (String body : new String[]{"{\"slug\":\"acme/one\",\"name\":\"Первый продукт\"}", "{\"slug\":\"acme/two\",\"name\":\"Второй продукт\"}"}) {
+            given().header("X-Seer-Role", "superadmin").contentType("application/json").body(body)
+                .when().post("/lore/project").then().statusCode(200);
+        }
         // Компоненты заводим свои, а не полагаемся на сид: сидер компонентов
         // гоняется на старте и на изолированной БД может не успеть/упасть
         // (MIG-31 — гонка сидера с DDL раннера). Тест не должен зависеть от

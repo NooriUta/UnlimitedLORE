@@ -29,8 +29,12 @@ class LoreActorLoadLiveDbTest {
 
     @Test
     void loadMapSplitsRolesAndRespectsProjectBoundary() {
-        post("/lore/project", "{\"slug\":\"TEST/proj-load\",\"name\":\"Проект нагрузки\"}");
-        post("/lore/project", "{\"slug\":\"TEST/proj-other\",\"name\":\"Чужой проект\"}");
+        // AL-84: /lore/project требует superadmin — общий хелпер post() шлёт admin
+        // для остальных семейств этого файла, здесь отдельные вызовы.
+        for (String body : new String[]{"{\"slug\":\"TEST/proj-load\",\"name\":\"Проект нагрузки\"}", "{\"slug\":\"TEST/proj-other\",\"name\":\"Чужой проект\"}"}) {
+            given().header("X-Seer-Role", "superadmin").contentType("application/json").body(body)
+                .when().post("/lore/project").then().statusCode(200);
+        }
 
         post("/lore/actor", "{\"actor_id\":\"ACT-LOAD-BUSY\",\"name\":\"Рабочая лошадь\","
             + "\"kind\":\"human-role\",\"project\":\"TEST/proj-load\"}");

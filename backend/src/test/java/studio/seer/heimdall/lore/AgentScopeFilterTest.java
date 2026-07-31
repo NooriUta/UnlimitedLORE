@@ -46,7 +46,8 @@ class AgentScopeFilterTest {
         // /lore/admin/lore/ingest перезапускает переиндексацию всего корпуса и был
         // защищён только ролью admin, которую несут все семь узких агентных профилей.
         // user добавлен AL-82: назначение проектной роли человеку — тот же класс.
-        assertEquals(Set.of("dict", "kc", "admin", "user"), AgentScopeFilter.humanOnlyFamilies());
+        // project добавлен AL-84: создание проекта — единица изоляции модели.
+        assertEquals(Set.of("dict", "kc", "admin", "user", "project"), AgentScopeFilter.humanOnlyFamilies());
     }
 
     @Test

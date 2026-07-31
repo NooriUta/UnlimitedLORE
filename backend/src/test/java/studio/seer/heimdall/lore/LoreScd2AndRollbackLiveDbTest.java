@@ -251,7 +251,7 @@ class LoreScd2AndRollbackLiveDbTest {
         final String sprintId = "SPRINT_C5_PROJECT_SCOPE_PROBE";
         final String slug = "LORE_TEST_ORG/scope-probe-repo";
 
-        given().header("X-Seer-Role", "admin").contentType("application/json")
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"slug\":\"" + slug + "\"}")
         .when().post("/lore/project")
         .then().statusCode(200);
@@ -276,7 +276,7 @@ class LoreScd2AndRollbackLiveDbTest {
         final String sprintB = "SPRINT_C5_SCOPE_FILTER_B";
 
         for (String slug : List.of(slugA, slugB)) {
-            given().header("X-Seer-Role", "admin").contentType("application/json")
+            given().header("X-Seer-Role", "superadmin").contentType("application/json")
                 .body("{\"slug\":\"" + slug + "\"}")
             .when().post("/lore/project")
             .then().statusCode(200);
@@ -303,7 +303,7 @@ class LoreScd2AndRollbackLiveDbTest {
     void projectCreateUpsertsAndPreservesNameOnPartialUpdate() {
         final String slug = "LORE_TEST_ORG/lore-test-repo";
 
-        given().header("X-Seer-Role", "admin").contentType("application/json")
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"slug\":\"" + slug + "\",\"name\":\"Original Name\"}")
         .when().post("/lore/project")
         .then().statusCode(200);
@@ -312,7 +312,7 @@ class LoreScd2AndRollbackLiveDbTest {
             .get(0).get("name"));
 
         // slug-only re-call (name omitted) must NOT wipe the existing name — LH-44 partial-safe upsert.
-        given().header("X-Seer-Role", "admin").contentType("application/json")
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"slug\":\"" + slug + "\"}")
         .when().post("/lore/project")
         .then().statusCode(200);

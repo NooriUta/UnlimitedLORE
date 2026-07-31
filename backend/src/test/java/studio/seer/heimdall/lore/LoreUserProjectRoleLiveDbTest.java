@@ -31,7 +31,7 @@ class LoreUserProjectRoleLiveDbTest {
     @Test
     @Order(1)
     void setUp() {
-        given().header("X-Seer-Role", "admin").contentType("application/json")
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"slug\":\"" + PROJECT + "\"}")
         .when().post("/lore/project")
         .then().statusCode(200);
