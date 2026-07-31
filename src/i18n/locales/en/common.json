@@ -2049,6 +2049,7 @@
       }
     },
     "extras": {
+      "loadError": "failed to load — data may still exist, check your session/network and reload",
       "keys": {
         "loading": "loading…",
         "desc": "semantic core: clusters, exact frequency [!], intent, target page.",
@@ -2152,6 +2153,7 @@
     },
     "plan": {
       "loading": "loading…",
+      "loadError": "failed to load — data may still exist, check your session/network and reload",
       "desc": "2-month content push · VC + Habr + Telegram · social-capital stage.",
       "calendarTitle": "publication calendar",
       "navPrev": "‹ prev.",
@@ -2243,6 +2245,7 @@
     "publications": {
       "noImage": "no image",
       "loading": "loading…",
+      "loadError": "failed to load — data may still exist, check your session/network and reload",
       "filterAll": "all",
       "filterDrafts": "drafts",
       "desc": "main text + channel variants: one publication groups its versions; each has its own text, status, and image.",
@@ -2295,9 +2298,11 @@
         "kpiPublications": "publications",
         "kpiPublished": "published",
         "kpiCompetitors": "competitors tracked",
+        "kpiError": "some metrics failed to load — check your session/network and reload the page",
         "publicationsTitle": "publications",
         "publicationsMeta": "→ Publications",
-        "noPublications": "no publications yet"
+        "noPublications": "no publications yet",
+        "publicationsError": "failed to load publications — data may still exist, check your session/network"
       },
       "loading": "loading…"
     }
