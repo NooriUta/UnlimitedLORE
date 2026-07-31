@@ -529,6 +529,22 @@ final class LoreSchemaMigrations {
             "CREATE INDEX IF NOT EXISTS ON KnowUser (kc_sub) UNIQUE",
             "CREATE EDGE TYPE HAS_PROJECT_ROLE IF NOT EXISTS",
             "CREATE PROPERTY HAS_PROJECT_ROLE.role IF NOT EXISTS STRING"
+        )),
+
+        // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
+        // client_id — то же значение, что несёт клейм client_id/azp токена
+        // агента (KC clientId, напр. "lore-mcp-full"), НЕ внутренний UUID
+        // клиента KC. OWNED_BY без свойств: один агент — один живой владелец
+        // (переприсвоение — снести старое ребро и создать новое, как у
+        // HAS_PROJECT_ROLE, не накапливать историю рёбер). Без UNIQUE-индекса
+        // на client_id: у большинства акторов (kind≠agent) поле пустое, а
+        // поведение ArcadeDB UNIQUE на множественных NULL не проверено —
+        // дубль client_id у двух акторов сегодня ловится детектором
+        // осиротевших (agent-orphans), не индексом.
+        new Step(19, 17, "actor_agent_owner", List.of(
+            "CREATE PROPERTY KnowActor.client_id IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (client_id) NOTUNIQUE",
+            "CREATE EDGE TYPE OWNED_BY IF NOT EXISTS"
         ))
     );
 
