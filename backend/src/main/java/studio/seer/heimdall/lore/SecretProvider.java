@@ -126,6 +126,7 @@ public class SecretProvider {
             LOG.warn("[LORE secrets] провайдер=infisical, но lore.secrets.url не задан — секреты недоступны");
             return Optional.empty();
         }
+        long t0 = System.currentTimeMillis();
         try {
             Optional<String> bearer = bearer();
             if (bearer.isEmpty()) return Optional.empty();
@@ -141,7 +142,11 @@ public class SecretProvider {
             }
             return v;
         } catch (Exception e) {
-            LOG.warnf("[LORE secrets] сервис недоступен (%s) — %s не прочитан", e.getMessage(), key);
+            // AL-88: тип исключения важен для диагноза — таймаут (сервис
+            // медленный/перегружен) и connection-refused (сервис не поднят)
+            // требуют разных действий, а голый getMessage() их не различал.
+            LOG.warnf("[LORE secrets] сервис недоступен (%s: %s) за %dмс — %s не прочитан",
+                e.getClass().getSimpleName(), e.getMessage(), System.currentTimeMillis() - t0, key);
             return Optional.empty();
         }
     }
@@ -168,12 +173,20 @@ public class SecretProvider {
                 .put("clientSecret", clientSecret.get())
                 .encode()))
             .build();
+        // AL-88 (2026-07-31): четыре подряд провала CD-гейта kc_configured не
+        // объяснились ни границей окна, ни docker exec — снаружи виден только
+        // финальный результат, а не то, СКОЛЬКО реально занял этот вызов и
+        // почему. Таймстамп до/после и длительность — минимум, без которого
+        // следующий провал снова будет чёрным ящиком.
+        long t0 = System.currentTimeMillis();
         HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        long ms = System.currentTimeMillis() - t0;
         if (r.statusCode() != 200) {
-            LOG.warnf("[LORE secrets] Universal Auth login вернул %d — проверьте client-id/client-secret "
-                + "и что identity добавлена в проект", r.statusCode());
+            LOG.warnf("[LORE secrets] Universal Auth login вернул %d за %dмс — проверьте client-id/client-secret "
+                + "и что identity добавлена в проект", r.statusCode(), ms);
             return Optional.empty();
         }
+        LOG.infof("[LORE secrets] Universal Auth login: 200 за %dмс", ms);
         io.vertx.core.json.JsonObject body = new io.vertx.core.json.JsonObject(r.body());
         String at = body.getString("accessToken");
         if (at == null || at.isBlank()) return Optional.empty();
@@ -200,11 +213,14 @@ public class SecretProvider {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url.toString()))
             .header("Authorization", "Bearer " + bearer)
             .GET().build();
+        long t0 = System.currentTimeMillis();
         HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        long ms = System.currentTimeMillis() - t0;
         if (r.statusCode() != 200) {
-            LOG.warnf("[LORE secrets] сервис вернул %d для %s", r.statusCode(), key);
+            LOG.warnf("[LORE secrets] сервис вернул %d для %s за %dмс", r.statusCode(), key, ms);
             return Optional.empty();
         }
+        LOG.infof("[LORE secrets] %s получен за %dмс", key, ms);
         String v = new io.vertx.core.json.JsonObject(r.body())
             .getJsonObject("secret", new io.vertx.core.json.JsonObject())
             .getString("secretValue");
