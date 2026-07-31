@@ -28,6 +28,7 @@ import {
   type LoreComponent,
 } from '../../api/lore';
 import { areaColor, compArea } from './LoreComponentList';
+import { useProjectScope, sliceParamsForProject } from '../../context/ProjectScopeContext';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
 import { GameIcon } from './GameIcon';
 import { statusMeta, taskTick } from './lore-status';
@@ -157,6 +158,7 @@ function computeCriticalPath(
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   const { t } = useTranslation();
+  const { project } = useProjectScope();
   const [config,   setConfig]   = useState<LorePlanConfig | null>(null);
   const [comps,    setComps]    = useState<LoreComponent[]>([]);
   const [sections, setSections] = useState<LorePlanSection[]>([]);
@@ -204,7 +206,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       fetchLoreSlice<LoreMilestone>('milestones',        undefined, ctrl.signal),
       fetchLoreSlice<LoreRelease>('releases',            undefined, ctrl.signal),
       fetchLoreSlice<LoreSprintDoneDate>('sprint_done_dates', undefined, ctrl.signal),
-      fetchLoreSlice<LoreSprintRow>('sprints',            undefined, ctrl.signal),
+      fetchLoreSlice<LoreSprintRow>('sprints',            sliceParamsForProject(project), ctrl.signal),
       fetchLoreSlice<LoreComponent>('components',         undefined, ctrl.signal),
     ])
       .then(([cfgs, secs, chkps, milestones, rels, dones, sprintRows, components]) => {
@@ -229,7 +231,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
       })
       .catch(e => { onError(e); setLoading(false); });
     return () => ctrl.abort();
-  }, [onError]);
+  }, [onError, project]);
 
   // ── Derived scalars ──────────────────────────────────────────────────────────
   const w0 = useMemo(() => config ? new Date(config.w0_date) : null, [config]);
