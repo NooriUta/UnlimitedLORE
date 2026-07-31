@@ -71,6 +71,23 @@ public class AidaLoreResource extends LoreResourceBase {
         return noStore(Response.ok(Map.of("slices", infos)));
     }
 
+    public record EnvInfo(String db) {}
+
+    // FIT-05: который бэкенд отвечает — единственный источник правды о том,
+    // тестовая база или прод. Локальный дев-фронт и MCP исторически смотрели
+    // в РАЗНЫЕ базы одновременно (см. LoreArcadeDbTestResource, lore.db
+    // переопределяется на lore_ci_test под CI/тестами) — «данные пропали» и
+    // «данные есть» оба оказывались правдой каждый про свою базу. Признак
+    // берётся из САМОГО сервера, не из сборки фронта: подделать конфигом
+    // клиента нельзя.
+    @GET
+    @Path("env")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response env() {
+        if (!enabled) return disabled();
+        return noStore(Response.ok(new EnvInfo(db)));
+    }
+
     // ── Analytics: pre-aggregated dashboard data ─────────────────────────────
     // Computed in Java from a handful of light queries (KnowTaskHist current rows
     // instead of per-task HAS_STATE traversal — fast). Tasks are mapped to sprints
