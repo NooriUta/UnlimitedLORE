@@ -129,6 +129,23 @@ public abstract class LoreResourceBase {
     }
 
     /**
+     * client_id клиента KC, выдавшего токен, либо {@code null} у человека
+     * (и вообще при отсутствии верифицированного JWT — dev-режим/выключенный
+     * OIDC). AL-68/AL-90: клеймовое имя подтверждено конфигурацией маппера
+     * «Client ID» (Keycloak, встроенный client scope {@code service_account},
+     * тип User Session Note, Token Claim Name = {@code client_id}) — НЕ
+     * {@code azp}, как можно было бы предположить по OIDC-конвенции.
+     */
+    String callerClientId() {
+        if (identity == null
+                || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) {
+            return null;
+        }
+        Object raw = jwt.getClaim("client_id");
+        return raw == null ? null : String.valueOf(raw);
+    }
+
+    /**
      * Полный носитель: агент профиля {@code agent-full} либо человек-администратор
      * (ADR-LORE-014-D4). Используется там, где правило рассчитано на ДВОИХ, а
      * полный носитель работает один. <b>Новых прав на запись не даёт</b> —
@@ -160,6 +177,16 @@ public abstract class LoreResourceBase {
         return noStore(Response.status(Response.Status.NOT_FOUND)
             .entity(new LoreError("LORE_DISABLED",
                 "lore.enabled=false (lore is dev-only)")));
+    }
+
+    /**
+     * AL-68/AL-90: тот же код ошибки, что уже отдаёт {@link AgentScopeFilter}
+     * (агенты его уже умеют разбирать) — но здесь решение по матрице D4
+     * (роль владельца в проекте), не по статической `FAMILY_AGENTS`.
+     */
+    Response agentScopeForbidden(String detail) {
+        return noStore(Response.status(Response.Status.FORBIDDEN)
+            .entity(new LoreError("AGENT_SCOPE_FORBIDDEN", detail)));
     }
 
     String basicAuth() {
