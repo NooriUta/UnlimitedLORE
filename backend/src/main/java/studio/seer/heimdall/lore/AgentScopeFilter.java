@@ -67,7 +67,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      * {@code admin} — а её несут все семь узких профилей, иначе им нечем
      * писать вообще. Маркетолог с валидным токеном мог передёрнуть весь ingest.
      */
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin");
+    // AL-82/ADR-LORE-036: "user" — назначение проектной роли человеку. Тот же
+    // класс, что dict/kc: правит человек, не агент (ADR-LORE-025-D13 прямо
+    // запрещает MCP-инструменты для user-management) — иначе агент смог бы
+    // выдать себе (своему владельцу) любую роль в любом проекте.
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
@@ -159,7 +163,13 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         "adr/delete",   Set.of("full", "architect"),
         "adr/rename",   Set.of("full", "architect"),
         "spec/delete",  Set.of("full", "architect"),
-        "doc/delete",   Set.of("full", "architect"));
+        "doc/delete",   Set.of("full", "architect"),
+        // AL-83/ADR-LORE-036: назначение владельца агента — пустой набор, а не
+        // отсутствие строки: НИ ОДИН агентный профиль, включая full, не пишет
+        // сюда. Иначе агент мог бы переписать себе владельца на человека с
+        // более широкими правами — self-эскалация через ровно тот механизм,
+        // которым AL-68 будет выводить эффективные права агента.
+        "actor/owner",  Set.of());
 
     /** Методы, которые ничего не меняют — вне проверки. Package-private: AL-20 (аудит-лог) тоже фильтрует по ним. */
     static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");

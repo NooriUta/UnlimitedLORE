@@ -510,7 +510,42 @@ final class LoreSchemaMigrations {
         // не 4-арг с compatMajor=13 — шаг ТРОГАЕТ ДАННЫЕ (переносит рёбра, сносит
         // тип), как V13 mergeFeaturesIntoUseCases, а не просто добавляет схему.
         // tag_id уже STRING на обоих типах — новых свойств шагу не нужно.
-        new Step(17, "loretag_merged_into_knowtag", List.of())
+        new Step(17, "loretag_merged_into_knowtag", List.of()),
+
+        // AL-82/ADR-LORE-036: предусловие всей проектной RBAC-модели — человек
+        // как вершина графа (по вердикту 148 источник истины о правах — граф,
+        // а человека в нём нет вовсе). KnowUser ключуется по kc_sub (клейм
+        // Keycloak), НЕ по имени — имя меняется, sub нет. HAS_PROJECT_ROLE —
+        // то же устройство, что HAS_ACTOR со свойством role (ADR-028 D19):
+        // одно ребро на пару человек×проект, роль — свойством, множественность
+        // по построению (человек в нескольких проектах с разными ролями).
+        // compatMajor=17 (не 13): 13 был последним breaking ДО V17
+        // (loretag-merge подняло планку) — новая база для аддитивных шагов.
+        // Чисто новые типы, старый бинарь их просто не видит — не ломающий шаг.
+        new Step(18, 17, "user_project_role", List.of(
+            "CREATE VERTEX TYPE KnowUser IF NOT EXISTS",
+            "CREATE PROPERTY KnowUser.kc_sub       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUser.display_name IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUser (kc_sub) UNIQUE",
+            "CREATE EDGE TYPE HAS_PROJECT_ROLE IF NOT EXISTS",
+            "CREATE PROPERTY HAS_PROJECT_ROLE.role IF NOT EXISTS STRING"
+        )),
+
+        // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
+        // client_id — то же значение, что несёт клейм client_id/azp токена
+        // агента (KC clientId, напр. "lore-mcp-full"), НЕ внутренний UUID
+        // клиента KC. OWNED_BY без свойств: один агент — один живой владелец
+        // (переприсвоение — снести старое ребро и создать новое, как у
+        // HAS_PROJECT_ROLE, не накапливать историю рёбер). Без UNIQUE-индекса
+        // на client_id: у большинства акторов (kind≠agent) поле пустое, а
+        // поведение ArcadeDB UNIQUE на множественных NULL не проверено —
+        // дубль client_id у двух акторов сегодня ловится детектором
+        // осиротевших (agent-orphans), не индексом.
+        new Step(19, 17, "actor_agent_owner", List.of(
+            "CREATE PROPERTY KnowActor.client_id IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (client_id) NOTUNIQUE",
+            "CREATE EDGE TYPE OWNED_BY IF NOT EXISTS"
+        ))
     );
 
     /**

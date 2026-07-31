@@ -45,7 +45,8 @@ class AgentScopeFilterTest {
         // admin добавлен AL-47 (регресс-гвард AgentScopeMatrixCoverageTest поймал):
         // /lore/admin/lore/ingest перезапускает переиндексацию всего корпуса и был
         // защищён только ролью admin, которую несут все семь узких агентных профилей.
-        assertEquals(Set.of("dict", "kc", "admin"), AgentScopeFilter.humanOnlyFamilies());
+        // user добавлен AL-82: назначение проектной роли человеку — тот же класс.
+        assertEquals(Set.of("dict", "kc", "admin", "user"), AgentScopeFilter.humanOnlyFamilies());
     }
 
     @Test

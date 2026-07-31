@@ -57,4 +57,21 @@ class LoreKcSafetyEndpointsTest {
         .when().get("/lore/kc/denials")
         .then().statusCode(403);
     }
+
+    // AL-82: детектор расхождений KC↔граф зовёт живой KC — без секрета обязан
+    // честно сказать «не настроено», а не притвориться пустым списком (тот же
+    // класс инварианта, что у preflight выше).
+    @Test
+    void userOrphansForbiddenWithoutAdminRole() {
+        given().header("X-Seer-Role", "viewer")
+        .when().get("/lore/kc/user-orphans")
+        .then().statusCode(403).body("error", equalTo("FORBIDDEN"));
+    }
+
+    @Test
+    void userOrphansSaysNotConfiguredWhenKcUnconfigured() {
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/kc/user-orphans")
+        .then().statusCode(503).body("error", equalTo("KC_NOT_CONFIGURED"));
+    }
 }
