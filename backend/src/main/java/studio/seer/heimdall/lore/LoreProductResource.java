@@ -99,6 +99,9 @@ public class LoreProductResource extends LoreResourceBase {
     @Inject
     LoreIngestService ingest;
 
+    @Inject
+    ProjectRbacService projectRbac;
+
     // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
     //
     // PL-28 (решение №141): отдельного типа больше нет. Эндпоинт сохранён и
@@ -322,6 +325,21 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("actor_id contains illegal characters");
         if (req.kind() != null && !List.of("human-role", "system", "agent").contains(req.kind()))
             return badParams("kind must be human-role|system|agent");
+        // AL-68/AL-90 (первое семейство для обкатки D4, ADR-LORE-036): агентный
+        // вызывающий с явным project в теле — проверить, разрешает ли роль его
+        // владельца в ЭТОМ проекте профиль, под которым он пишет. Человека это
+        // не касается (его прямые права — отдельный, ещё не закодированный
+        // путь, §10.3 SPEC-RBAC-OMILORE-AGENTS) — requireAdmin() выше и так
+        // единственный гейт человеческого вызова, здесь его не сужаем.
+        String agentScope = callerAgentScope();
+        if (agentScope != null && req.project() != null && !req.project().isBlank()) {
+            String clientId = callerClientId();
+            if (clientId == null || !projectRbac.agentAllowedInProject(clientId, req.project(), agentScope)) {
+                return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
+                    + "для проекта '" + req.project() + "': роль владельца там не делегирует этот профиль "
+                    + "(или клиент/владелец/роль не сопоставлены в графе)");
+            }
+        }
         try {
             StringBuilder sql = new StringBuilder("UPDATE KnowActor SET actor_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
