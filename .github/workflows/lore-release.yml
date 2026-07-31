@@ -274,3 +274,62 @@ jobs:
             echo "::warning::публикация релиза $TAG в зеркале вернула HTTP $code — тег и main доехали, описание нет"
             head -c 300 /tmp/gh-created.json
           fi
+
+      # ── Оповещение о релизе (TG-01, хвост) ─────────────────────────────────
+      # Telegram в этом файле раньше был только про здоровье GH_MIRROR_TOKEN
+      # (шаг Verify mirror token выше) — про сам факт «релиз X вышел» файл
+      # молчал вовсе, хотя lore-cd.yml оповещает о каждом деплое на стенд.
+      # Форма — та же, что у lore-cd.yml (secrets.TELEGRAM_TOKEN/CHAT_ID,
+      # тихий no-op без них, 3 попытки, continue-on-error): работающий шаг
+      # не переизобретаем.
+      #
+      # БЕЗ явного `if:` — намеренно, той же формы, что у шага Mirror выше.
+      # `success()` (умолчательное условие) остаётся true после Mirror, даже
+      # если ОН внутри вернул ненулевой код: `continue-on-error: true`
+      # форсирует conclusion=success для целей этой проверки, только outcome
+      # шага остаётся failure. Поэтому оповещение срабатывает, когда Publish
+      # реально прошёл, независимо от исхода зеркала — а если Publish упал
+      # (нет RELEASE-файла, ошибка API), шаг унаследованно не выполнится
+      # вовсе: оповещать о несостоявшемся релизе было бы хуже, чем молчать.
+      #
+      # Нет дублирования с MIR-01/TG-03: прочитан весь файл целиком —
+      # оповещения о самом релизе здесь не было ни в одной ветке этого шага.
+      - name: Notify release
+        continue-on-error: true
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+          GH_REPO:  ${{ secrets.GH_MIRROR_REPO }}
+          PUBLIC_REPO: https://git.seidrstudio.pro/AIDA/UnlimitedLORE
+          INPUT_TAG: ${{ inputs.tag || '' }}
+        run: |
+          [ -z "${TG_TOKEN:-}" ] && exit 0
+          TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
+          FILE="RELEASE-${TAG}.md"
+          [ -f "$FILE" ] || exit 0
+          TITLE=$(head -1 "$FILE" | sed 's/^#\+[[:space:]]*//')
+          [ -z "$TITLE" ] && TITLE="$TAG"
+          # «Первый раздел» — всё после заголовка до следующего ## (или до
+          # конца файла, если разделов нет). Обрезка до 900 байт: лимит
+          # Telegram у sendMessage — 4096 символов на всё сообщение, а не
+          # только на этот блок.
+          SECTION=$(awk 'NR==1{next} /^##/{exit} {print}' "$FILE" | sed '/^$/d' | head -c 900)
+          FG_LINK="${PUBLIC_REPO}/releases/tag/${TAG}"
+          GH_LINE=""
+          [ -n "${GH_REPO:-}" ] && GH_LINE=$(printf "\nGitHub: https://github.com/%s/releases/tag/%s" "$GH_REPO" "$TAG")
+          MSG=$(printf "🏷️ LORE: релиз %s опубликован\n%s\n\n%s\n\nForgejo: %s%s" \
+            "$TAG" "$TITLE" "$SECTION" "$FG_LINK" "$GH_LINE")
+          jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
+            '{"chat_id":$chat,"text":$text}' > /tmp/tg-release.json
+          for attempt in 1 2 3; do
+            if curl -sf --max-time 10 -X POST \
+                 "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                 -H "Content-Type: application/json" \
+                 -d @/tmp/tg-release.json; then
+              echo "[tg] release notification sent (attempt $attempt)"
+              break
+            fi
+            echo "::warning::[tg] release-notify attempt $attempt/3 failed"
+            [ $attempt -lt 3 ] && sleep $((attempt * 5))
+          done
+          exit 0

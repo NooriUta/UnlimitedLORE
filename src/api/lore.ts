@@ -143,6 +143,16 @@ export async function fetchLoreSliceCatalog(signal?: AbortSignal): Promise<LoreS
   return body.slices ?? [];
 }
 
+// FIT-05: какая база отвечает — единственный источник правды с самого
+// сервера, не из сборки фронта. Локальный дев-стенд и MCP исторически
+// смотрели в разные базы одновременно; признак нельзя подделать конфигом
+// клиента, потому что он вообще не приходит с клиента.
+export async function fetchLoreEnv(signal?: AbortSignal): Promise<{ db: string } | null> {
+  const res = await fetch(`${LORE_BASE}/env`, { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return null;
+  return (await res.json()) as { db: string };
+}
+
 // ── Analytics dashboard (GET /lore/analytics) ──────────────────────────────
 export interface LoreAnalyticsComponent {
   component_id: string;

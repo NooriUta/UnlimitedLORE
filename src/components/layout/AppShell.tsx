@@ -9,6 +9,7 @@ import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '..
 import { Modal } from '@mantine/core';
 import { LoreSearchScreen } from '../lore/LoreSearchScreen';
 import { useIsAdmin } from '../../auth/useRole';
+import { fetchLoreEnv } from '../../api/lore';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
@@ -64,6 +65,18 @@ export default function AppShell() {
   const [tenant, setTenant] = useState('DEFAULT');
   const [palOpen, setPalOpen] = useState(false);
   const [palQ, setPalQ] = useState('');
+  // FIT-05: чью базу видит фронт — читаем у САМОГО бэкенда (GET /lore/env),
+  // не из своей сборки. Локальный дев и MCP исторически смотрели в разные
+  // базы одновременно — «данные пропали» и «данные есть» оба были правдой,
+  // каждая про свою базу. dbName===null, пока не пришёл ответ — бейдж тогда
+  // не рисуется вовсе, а не врёт «прод» по умолчанию.
+  const [dbName, setDbName] = useState<string | null>(null);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreEnv(ctrl.signal).then(r => { if (r) setDbName(r.db); }).catch(() => { /* бейдж просто не покажется */ });
+    return () => ctrl.abort();
+  }, []);
+  const isTestDb = !!dbName && dbName !== 'system_aida_lore';
   // Время окончания сессии для меню профиля (AL-76). Считается на каждый рендер,
   // а не по таймеру: меню открывают редко, а лишний интервал пришлось бы гасить
   // при размонтировании — цена выше пользы. Пустая строка, когда auth выключен
@@ -335,6 +348,22 @@ export default function AppShell() {
             от ОС и не подчинялся нашей типографике вовсе. Замерено — ширина
             глифа одинакова во всех трёх наших шрифтах (23.1px), тогда как
             буква «M» даёт 33.6 / 24 / 22: верный признак чужого фолбэка. */}
+        {/* FIT-05: плашка базы. Показывается ТОЛЬКО для тестовой (прод — тихий
+            умолчательный случай, не нуждается в напоминании на каждом экране);
+            признак пришёл с сервера, подделать конфигом фронта нельзя. */}
+        {isTestDb && (
+          <span
+            title={t('shell.testDbTitle', 'Бэкенд смотрит НЕ в прод-базу') + `: ${dbName}`}
+            style={{
+              flexShrink: 0, fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)',
+              border: '1px solid var(--wrn)', borderRadius: 999, padding: '1px 8px',
+              color: 'var(--wrn)', whiteSpace: 'nowrap',
+            }}
+          >
+            ⚠ {narrow ? t('shell.testDbShort', 'тест') : t('shell.testDb', 'тестовая база')}
+          </span>
+        )}
+
         <button type="button" onClick={() => setPalOpen(true)}
           title={t('shell.searchTitle', 'Поиск по данным (/)')} aria-label={t('shell.searchAria', 'Поиск')}
           style={{ ...btnStyle, textTransform: 'none' as const, display: 'inline-flex', alignItems: 'center' }}>
