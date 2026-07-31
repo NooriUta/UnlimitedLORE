@@ -629,6 +629,26 @@ public final class LoreSlices {
         // Разбивка primary/supporting — по свойству role ребра HAS_ACTOR (D19).
         // Фильтр по проекту ОБЯЗАТЕЛЕН (D18: акторы проектные — одноимённые роли
         // разных продуктов не должны склеиваться в одну строку нагрузки).
+        // AL-82/ADR-LORE-036: роль человека в проекте — по вердикту 148 источник
+        // истины о правах граф, не KC. Два слайса — обе стороны ребра
+        // HAS_PROJECT_ROLE, как явно требует задача («роли человека по проектам»
+        // и обратный «кто имеет роль в проекте P»), не один слайс с фильтром:
+        // AL-36 просил именно обратную матрицу для ревью доступа.
+        slice("user_project_roles",
+            "SELECT kc_sub, display_name, " +
+            "out('HAS_PROJECT_ROLE').slug AS projects, " +
+            "outE('HAS_PROJECT_ROLE').role AS roles " +
+            "FROM KnowUser WHERE kc_sub = :kc_sub",
+            List.of("kc_sub"), Map.of(), "");
+
+        slice("project_users",
+            "SELECT slug, " +
+            "in('HAS_PROJECT_ROLE').kc_sub AS kc_subs, " +
+            "in('HAS_PROJECT_ROLE').display_name AS display_names, " +
+            "inE('HAS_PROJECT_ROLE').role AS roles " +
+            "FROM KnowGitProject WHERE slug = :project",
+            List.of("project"), Map.of(), "");
+
         slice("actor_load",
             "SELECT actor_id, name, kind, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +

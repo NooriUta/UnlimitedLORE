@@ -85,6 +85,42 @@ public class LoreKcResource extends LoreResourceBase {
         } catch (Exception e) { return upstream(e); }
     }
 
+    // AL-82: два источника знают о людях — KC (учётки) и граф (роли в проектах).
+    // Инвариант «пользователь KC без вершины KnowUser не получает проектных
+    // прав» дырой не является (это и есть defaults-to-deny), но живёт незаметно
+    // — учётка есть, войти можно, а прав нигде не назначено, и разница между
+    // «забыли назначить» и «умышленно без доступа» не видна без явной сверки.
+    // По образцу asset_orphans, но НЕ статический слайс: список KC-пользователей
+    // не лежит в ArcadeDB, сверка возможна только здесь, живым запросом к KC.
+    @GET
+    @Path("user-orphans")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response userOrphans(@HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!configured()) return notConfigured();
+        try {
+            String t = adminToken();
+            HttpResponse<String> users = kc("GET", "/users?max=200", null, t);
+            io.vertx.core.json.JsonArray arr = new io.vertx.core.json.JsonArray(users.body());
+            java.util.List<Map<String, Object>> graphUsers = ingestService.queryPublic(
+                "SELECT kc_sub FROM KnowUser", Map.of());
+            java.util.Set<String> known = new java.util.HashSet<>();
+            for (Map<String, Object> r : graphUsers) known.add(String.valueOf(r.get("kc_sub")));
+            io.vertx.core.json.JsonArray out = new io.vertx.core.json.JsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                io.vertx.core.json.JsonObject u = arr.getJsonObject(i);
+                String id = u.getString("id");
+                if (!known.contains(id)) {
+                    out.add(io.vertx.core.json.JsonObject.of(
+                        "id", id, "username", u.getString("username"),
+                        "email", u.getString("email"), "enabled", u.getBoolean("enabled")));
+                }
+            }
+            return noStore(Response.ok(Map.of("orphans", out.getList())));
+        } catch (Exception e) { return upstream(e); }
+    }
+
     public record KcUserCreate(String username, String email) {}
 
     @POST

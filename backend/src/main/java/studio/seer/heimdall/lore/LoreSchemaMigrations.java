@@ -510,7 +510,26 @@ final class LoreSchemaMigrations {
         // не 4-арг с compatMajor=13 — шаг ТРОГАЕТ ДАННЫЕ (переносит рёбра, сносит
         // тип), как V13 mergeFeaturesIntoUseCases, а не просто добавляет схему.
         // tag_id уже STRING на обоих типах — новых свойств шагу не нужно.
-        new Step(17, "loretag_merged_into_knowtag", List.of())
+        new Step(17, "loretag_merged_into_knowtag", List.of()),
+
+        // AL-82/ADR-LORE-036: предусловие всей проектной RBAC-модели — человек
+        // как вершина графа (по вердикту 148 источник истины о правах — граф,
+        // а человека в нём нет вовсе). KnowUser ключуется по kc_sub (клейм
+        // Keycloak), НЕ по имени — имя меняется, sub нет. HAS_PROJECT_ROLE —
+        // то же устройство, что HAS_ACTOR со свойством role (ADR-028 D19):
+        // одно ребро на пару человек×проект, роль — свойством, множественность
+        // по построению (человек в нескольких проектах с разными ролями).
+        // compatMajor=17 (не 13): 13 был последним breaking ДО V17
+        // (loretag-merge подняло планку) — новая база для аддитивных шагов.
+        // Чисто новые типы, старый бинарь их просто не видит — не ломающий шаг.
+        new Step(18, 17, "user_project_role", List.of(
+            "CREATE VERTEX TYPE KnowUser IF NOT EXISTS",
+            "CREATE PROPERTY KnowUser.kc_sub       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUser.display_name IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUser (kc_sub) UNIQUE",
+            "CREATE EDGE TYPE HAS_PROJECT_ROLE IF NOT EXISTS",
+            "CREATE PROPERTY HAS_PROJECT_ROLE.role IF NOT EXISTS STRING"
+        ))
     );
 
     /**
