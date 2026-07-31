@@ -1713,6 +1713,8 @@
         "fieldBlocks": "Мешает работам (BLOCKS)",
         "fieldSuccessOf": "Успех в работе (SUCCESS_OF)",
         "noJobs": "работ пока нет — заведите через «+ Работа»",
+        "jobSearchPh": "искать работу…",
+        "noJobMatch": "ничего не найдено",
         "fieldRank": "Ранг (Kano)",
         "rankNone": "— не указан —",
         "create": "Создать",

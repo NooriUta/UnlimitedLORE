@@ -1713,6 +1713,8 @@
         "fieldBlocks": "Blocks jobs (BLOCKS)",
         "fieldSuccessOf": "Success in job (SUCCESS_OF)",
         "noJobs": "no jobs yet — create one via \"+ Job\"",
+        "jobSearchPh": "search a job…",
+        "noJobMatch": "no matches",
         "fieldRank": "Rank (Kano)",
         "rankNone": "— unset —",
         "create": "Create",
