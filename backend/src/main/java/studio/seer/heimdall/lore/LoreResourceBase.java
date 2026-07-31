@@ -93,6 +93,15 @@ public abstract class LoreResourceBase {
         }
     }
 
+    // AL-84/ADR-LORE-025-D17: создание проекта — единица изоляции всей модели
+    // (кто-то становится владельцем, получает право делегировать роли), поэтому
+    // строже обычного requireAdmin — только super-admin, не admin.
+    void requireSuperAdmin(String role) {
+        if (!"superadmin".equals(role)) {
+            throw new LoreExceptions.Forbidden("super-admin role required");
+        }
+    }
+
     @Inject
     io.quarkus.security.identity.SecurityIdentity identity;
 

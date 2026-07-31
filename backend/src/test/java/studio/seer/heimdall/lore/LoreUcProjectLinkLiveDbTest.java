@@ -35,7 +35,11 @@ class LoreUcProjectLinkLiveDbTest {
     @Test
     @Order(1)
     void setUp() {
-        post("/lore/project", "{\"slug\":\"acme/prod\",\"name\":\"Продукт\"}");
+        // AL-84: /lore/project требует superadmin — общий хелпер post() шлёт admin
+        // для остальных семейств этого файла, здесь отдельный вызов.
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"slug\":\"acme/prod\",\"name\":\"Продукт\"}")
+        .when().post("/lore/project").then().statusCode(200);
         post("/lore/feature", "{\"feature_id\":\"FEAT-PROJ-1\",\"title\":\"корень с проектом\",\"goal_level\":\"cloud\"}");
         post("/lore/uc/link", "{\"uc_id\":\"FEAT-PROJ-1\",\"rel\":\"project\",\"target_id\":\"acme/prod\"}");
     }

@@ -46,7 +46,7 @@ class ProjectRbacServiceLiveDbTest {
     @Test
     @Order(1)
     void setUp() {
-        given().header("X-Seer-Role", "admin").contentType("application/json")
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"slug\":\"" + PROJECT + "\"}")
         .when().post("/lore/project").then().statusCode(200);
 
@@ -117,7 +117,7 @@ class ProjectRbacServiceLiveDbTest {
         // Парная проба из акцептанса AL-68/ADR-036: та же связка (владелец
         // архитектор здесь), другой проект — роли там нет вовсе, отказ.
         String otherProject = "LORE_TEST_ORG/al68-other-repo";
-        given().header("X-Seer-Role", "admin").contentType("application/json")
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"slug\":\"" + otherProject + "\"}")
         .when().post("/lore/project").then().statusCode(200);
 
