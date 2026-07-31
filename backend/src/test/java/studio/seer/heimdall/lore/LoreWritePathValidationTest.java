@@ -183,7 +183,7 @@ class LoreWritePathValidationTest {
     @Test
     void projectCreateRejectsIllegalId() {
         given()
-            .header("X-Seer-Role", "admin")
+            .header("X-Seer-Role", "superadmin")
             .contentType("application/json")
             .body("{\"slug\":\"" + ILLEGAL_ID + "\"}")
         .when()

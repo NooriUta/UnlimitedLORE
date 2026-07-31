@@ -46,8 +46,12 @@ class LoreSearchFacetsLiveDbTest {
     @Test
     @Order(1)
     void setUp() {
-        post("/lore/project", "{\"slug\":\"acme/alpha\",\"name\":\"Альфа\"}");
-        post("/lore/project", "{\"slug\":\"acme/beta\",\"name\":\"Бета\"}");
+        // AL-84: /lore/project требует superadmin — общий хелпер post() шлёт admin
+        // для остальных семейств этого файла, здесь отдельные вызовы.
+        for (String body : new String[]{"{\"slug\":\"acme/alpha\",\"name\":\"Альфа\"}", "{\"slug\":\"acme/beta\",\"name\":\"Бета\"}"}) {
+            given().header("X-Seer-Role", "superadmin").contentType("application/json").body(body)
+                .when().post("/lore/project").then().statusCode(200);
+        }
 
         post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_FA\",\"name\":\"фасеты альфа контекст\"}");
         post("/lore/sprint/create", "{\"sprint_id\":\"SPRINT_FB\",\"name\":\"фасеты бета контекст\"}");

@@ -17,10 +17,15 @@ import java.util.Map;
  * see MEMORY lore_git_project_registration) — sprint_link(rel:"project")/release_new/
  * release_mv all assume the target KnowGitProject vertex already exists and silently no-op
  * (ok:true, no edge/vertex written) when it doesn't. This gives project registration a real,
- * idempotent write path. RBAC beyond the standard X-Seer-Role: admin gate (restricting to
- * pm+architect+full agent profiles) lives at the MCP tool-allow-list layer (T11's
- * agent-profiles/*.json), not here — this endpoint itself only enforces the same admin
- * check every other LORE write does.
+ * idempotent write path.
+ *
+ * <p>AL-84/ADR-LORE-025-D17: единственный write-путь этого ресурса (create И update —
+ * LH-44 partial upsert по slug, отдельного «только создание» пути нет) требует
+ * super-admin, не admin, и заперт для агентов вовсе (AgentScopeFilter.HUMAN_ONLY):
+ * проект — единица изоляции всей проектной RBAC-модели (ADR-LORE-036), заводить её
+ * может только самый доверенный человек. Привязка УЖЕ существующих сущностей к
+ * проекту (sprint_link rel=project, release_new) идёт другими путями, этого
+ * ограничения не касается.
  */
 @Path("/lore")
 public class LoreProjectResource extends LoreResourceBase {
@@ -37,7 +42,10 @@ public class LoreProjectResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response createProject(ProjectCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        requireAdmin(role);
+        // AL-84/ADR-LORE-025-D17: проект — единица изоляции всей RBAC-модели,
+        // требует super-admin (не admin, не агент — семейство "project" в
+        // AgentScopeFilter.HUMAN_ONLY).
+        requireSuperAdmin(role);
         if (req == null || req.slug() == null || req.slug().isBlank())
             return badParams("slug required");
         if (!SAFE_ID.matcher(req.slug()).matches())
