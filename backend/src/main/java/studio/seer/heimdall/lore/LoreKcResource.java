@@ -215,6 +215,39 @@ public class LoreKcResource extends LoreResourceBase {
         } catch (Exception e) { return upstream(e); }
     }
 
+    // AL-83/ADR-LORE-036: та же ловушка, что user-orphans, на оси агентов —
+    // клиент KC без KnowActor(kind=agent).client_id в графе не имеет
+    // владельца, а значит AL-68 не сможет вывести ему проектную роль вовсе
+    // (не «отказ по матрице», а «нет входа в цепочку client_id→агент»).
+    @GET
+    @Path("agent-orphans")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response agentOrphans(@HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (!configured()) return notConfigured();
+        try {
+            String t = adminToken();
+            HttpResponse<String> cs = kc("GET", "/clients?max=200", null, t);
+            io.vertx.core.json.JsonArray arr = new io.vertx.core.json.JsonArray(cs.body());
+            java.util.List<Map<String, Object>> graphAgents = ingestService.queryPublic(
+                "SELECT client_id FROM KnowActor WHERE kind = 'agent' AND client_id IS NOT NULL", Map.of());
+            java.util.Set<String> known = new java.util.HashSet<>();
+            for (Map<String, Object> r : graphAgents) known.add(String.valueOf(r.get("client_id")));
+            io.vertx.core.json.JsonArray out = new io.vertx.core.json.JsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                io.vertx.core.json.JsonObject c = arr.getJsonObject(i);
+                String cid = c.getString("clientId", "");
+                if (!cid.startsWith("lore-mcp")) continue;
+                if (!known.contains(cid)) {
+                    out.add(io.vertx.core.json.JsonObject.of(
+                        "clientId", cid, "id", c.getString("id"), "enabled", c.getBoolean("enabled")));
+                }
+            }
+            return noStore(Response.ok(Map.of("orphans", out.getList())));
+        } catch (Exception e) { return upstream(e); }
+    }
+
     @POST
     @Path("agent/{id}/rotate")
     @Produces(MediaType.APPLICATION_JSON)

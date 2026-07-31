@@ -649,6 +649,16 @@ public final class LoreSlices {
             "FROM KnowGitProject WHERE slug = :project",
             List.of("project"), Map.of(), "");
 
+        // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
+        // ревью доступа, что у project_users. Один агент — один живой
+        // OWNED_BY (out()/outE() без индекса ok — единственная строка).
+        slice("agent_owners",
+            "SELECT actor_id, client_id, " +
+            "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
+            "out('OWNED_BY').display_name AS owner_display_name " +
+            "FROM KnowActor WHERE kind = 'agent' AND client_id IS NOT NULL",
+            List.of(), Map.of(), "");
+
         slice("actor_load",
             "SELECT actor_id, name, kind, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +

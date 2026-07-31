@@ -163,7 +163,13 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         "adr/delete",   Set.of("full", "architect"),
         "adr/rename",   Set.of("full", "architect"),
         "spec/delete",  Set.of("full", "architect"),
-        "doc/delete",   Set.of("full", "architect"));
+        "doc/delete",   Set.of("full", "architect"),
+        // AL-83/ADR-LORE-036: назначение владельца агента — пустой набор, а не
+        // отсутствие строки: НИ ОДИН агентный профиль, включая full, не пишет
+        // сюда. Иначе агент мог бы переписать себе владельца на человека с
+        // более широкими правами — self-эскалация через ровно тот механизм,
+        // которым AL-68 будет выводить эффективные права агента.
+        "actor/owner",  Set.of());
 
     /** Методы, которые ничего не меняют — вне проверки. Package-private: AL-20 (аудит-лог) тоже фильтрует по ним. */
     static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");

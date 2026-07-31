@@ -361,6 +361,68 @@ public class LoreProductResource extends LoreResourceBase {
         }
     }
 
+    // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
+    // Отдельный подпуть, не поле в upsertActor: назначение владельца агента —
+    // административный акт (кто может писать под этим клиентом KC), не
+    // редактирование карточки актора. SUBPATH_AGENTS запрещает его ВСЕМ
+    // агентным профилям, включая full — иначе агент мог бы переписать себе
+    // владельца на более привилегированного человека (эскалация).
+    public record ActorOwnerRequest(String actor_id, String client_id, String kc_sub) {}
+
+    @POST
+    @Path("actor/owner")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setActorOwner(ActorOwnerRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
+            return badParams("actor_id required");
+        if (!SAFE_ID.matcher(req.actor_id()).matches())
+            return badParams("actor_id contains illegal characters");
+        if (req.client_id() == null || req.client_id().isBlank())
+            return badParams("client_id required");
+        if (req.kc_sub() == null || req.kc_sub().isBlank())
+            return badParams("kc_sub required");
+        try {
+            List<Map<String, Object>> actor = ingest.queryPublic(
+                "SELECT kind FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
+            if (actor == null || actor.isEmpty())
+                return badParams("actor '" + req.actor_id() + "' не найден — заведите его через actor_new");
+            if (!"agent".equals(actor.get(0).get("kind")))
+                return badParams("actor '" + req.actor_id() + "' не kind=agent — владелец назначается только агентам");
+
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowActor SET client_id=:c WHERE actor_id=:id",
+                Map.of("c", req.client_id(), "id", req.actor_id()))).await().indefinitely();
+
+            // Один живой владелец: снести старое ребро, поставить новое —
+            // тот же паттерн, что HAS_PROJECT_ROLE reassign (AL-82).
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(outE('OWNED_BY')) FROM KnowActor WHERE actor_id=:id)",
+                Map.of("id", req.actor_id()))).await().indefinitely();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE OWNED_BY FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                    "TO (SELECT FROM KnowUser WHERE kc_sub=:s) IF NOT EXISTS",
+                    Map.of("id", req.actor_id(), "s", req.kc_sub())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            out.put("client_id", req.client_id());
+            out.put("owner_linked", linked);
+            if (!linked) out.put("hint", "пользователь kc_sub=" + req.kc_sub()
+                + " не заведён в графе — сперва POST /lore/user, иначе владелец молча не привязан");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ACTOR OWNER] %s: %s", req.actor_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
     // ── Job / Pain / Gain — профиль клиента по Остервальдеру (ADR-LORE-032 §2) ──
     // Три столпа VPC: РАБОТЫ (что клиент пытается сделать), БОЛИ (что мешает
     // работе) и ВЫГОДЫ (что значит успех в работе). Все три — ВЕРШИНЫ, а не проза
