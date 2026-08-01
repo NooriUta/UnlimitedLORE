@@ -152,7 +152,9 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         slice("decision",
-            "SELECT decision_id, title, date_created, " +
+            // AL-79: status_raw в паспорте — раньше статус был виден в списках,
+            // но не в карточке одного решения.
+            "SELECT decision_id, title, date_created, status_raw, " +
             "body_md, rationale_md, refs_raw, " +
             "adr_refs, sprint_refs, pr_refs, release_refs, " +
             "out('SUPERSEDES').decision_id AS supersedes_ids " +
@@ -524,6 +526,166 @@ public final class LoreSlices {
             "ORDER BY task_uid",
             List.of(), Map.of(), "");
 
+        // AN-02 (ADR-LORE-030 §2 срез E): гигиена связок ОДНИМ срезом — четыре
+        // обязательные связки D16/D5 с типом находки и ссылкой на сущность.
+        // Пока здесь не ноль, остальная аналитика (fit/покрытие/динамика) ВРЁТ:
+        // незамкнутая связка неотличима от несделанной работы. Advisory, не гейт
+        // записи — гейт задушил бы ввод (TOC-раздел ADR-022).
+        // «UC без приёмки» — только сценарные уровни (sea-level/subfunction):
+        // acceptance_md — свойство сценария; у корней cloud/kite приёмка агрегатная,
+        // её отсутствие — не нарушение (ADR-032 §1).
+        slice("product_hygiene",
+            "SELECT finding, entity_type, ref_id, title, sprint_id " +
+            "FROM (SELECT expand(unionall($ut, $et, $ua, $pr)) LET " +
+            "$ut = (SELECT 'uc_task_without_realizes' AS finding, 'task' AS entity_type, " +
+            "       task_uid AS ref_id, title, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "       FROM KnowTask WHERE work_class = 'uc' AND out('REALIZES').size() = 0), " +
+            "$et = (SELECT 'enb_task_without_justification' AS finding, 'task' AS entity_type, " +
+            "       task_uid AS ref_id, title, out('PART_OF').sprint_id[0] AS sprint_id " +
+            "       FROM KnowTask WHERE work_class = 'enb' AND out('JUSTIFIED_BY').size() = 0), " +
+            // sprint_id у uc/pain-веток отсутствует НАМЕРЕННО: unionall терпит
+            // разнородные документы, внешний SELECT отдаст поле как null —
+            // литерал `null AS ...` в грамматике прецедента в корпусе не имеет.
+            "$ua = (SELECT 'uc_without_acceptance' AS finding, 'uc' AS entity_type, " +
+            "       uc_id AS ref_id, title " +
+            "       FROM KnowUseCase WHERE goal_level IN ['sea-level', 'subfunction'] " +
+            "       AND (acceptance_md IS NULL OR acceptance_md = '')), " +
+            "$pr = (SELECT 'pain_without_relief' AS finding, 'pain' AS entity_type, " +
+            "       pain_id AS ref_id, title " +
+            "       FROM KnowPain WHERE in('RELIEVES').size() = 0)" +
+            ") ORDER BY finding, ref_id",
+            List.of(), Map.of(), "");
+
+        // AN-03 (ADR-LORE-030 §2 срез B): две стороны одного ребра TARGETS_MILESTONE.
+        // KAOS-чтение (ADR-032 §1): веха = goal, фича = refinement — срез показывает
+        // дыры в ОБОИХ направлениях декомпозиции: ценность вне стратегии (корень без
+        // вехи) и цель без реализации (веха без корней).
+        // Фильтр по классу источника обязателен: в веху целятся И спринты, И корни
+        // слоя — веха со спринтами, но без единой фичи, всё равно «цель без
+        // ценности». Класс вершины из траверса — ТОЛЬКО `.@type` (`.@class` в
+        // грамматике 26.7.2 не парсится: «no viable alternative at input '@'»).
+        slice("strategic_coverage",
+            "SELECT finding, entity_type, ref_id, title " +
+            "FROM (SELECT expand(unionall($f, $m)) LET " +
+            "$f = (SELECT 'feature_without_milestone' AS finding, 'uc' AS entity_type, " +
+            "       uc_id AS ref_id, title " +
+            "       FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite'] " +
+            "       AND out('TARGETS_MILESTONE').size() = 0), " +
+            "$m = (SELECT 'milestone_without_features' AS finding, 'milestone' AS entity_type, " +
+            "       milestone_id AS ref_id, label AS title " +
+            "       FROM KnowMilestone " +
+            "       WHERE NOT (in('TARGETS_MILESTONE').@type CONTAINS 'KnowUseCase'))" +
+            ") ORDER BY finding, ref_id",
+            List.of(), Map.of(), "");
+
+        // AN-04 (ADR-LORE-030 §2 срез D): инвестиционный профиль — сырые слим-факты
+        // задача × work_class × effort × спринт × релизы. БЕЗ GROUP BY намеренно:
+        // на этой версии ArcadeDB GROUP BY молча группирует неверно (см. MartSlices —
+        // аналитика возит raw fact rows, агрегирует клиент). Клиент считает долю
+        // uc/jtd/enb по effort_days с фолбэком на счёт по штукам и обязан честно
+        // помечать, какая доля считана по штукам (строки с effort_days = null).
+        // work_class = null — легальная строка (неклассифицированное — тоже сигнал).
+        slice("invest_profile",
+            "SELECT task_uid, work_class, task_type, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "out('PART_OF').out('IMPLEMENTED_IN_RELEASE').release_id  AS release_ids " +
+            "FROM KnowTask ORDER BY task_uid",
+            List.of(), Map.of(), "");
+
+        // AN-01 (ADR-LORE-030 §1) — ядро VP-аналитики: строка на корень линейки
+        // (cloud/kite) со ВСЕМИ множествами для fit по трём осям. Замыкание считает
+        // потребитель разностью множеств (тот же принцип raw-фактов, что invest_profile):
+        //  - jobs:  claimed (HELPS_WITH корня) vs performed (PERFORMS его сценариев);
+        //  - pains: claimed (ADDRESSES) vs relieved (RELIEVES сценариев);
+        //  - gains: claimed (PROMISES) vs delivered (DELIVERS), причём замыкает только
+        //    выгода С МЕТРИКОЙ — delivered_measured_gain_ids отдельным множеством
+        //    (metric_md пуст → доставка не измерима, fit не засчитывается, ADR-032 §2);
+        //  - «ценность доехала» (D17): jobs, выполняемые shipped-сценариями;
+        //  - actors: ФАКТИЧЕСКИЕ исполнители через HAS_ACTOR сценариев — расхождение
+        //    с заявленным «для кого» видно сразу.
+        // «Заявлено vs доставлено» — характер утверждения, не уровень узла (D20):
+        // клеймы читаются с корня, доставка — со сценариев через DECOMPOSES_INTO.
+        slice("feature_vp_analytics",
+            "SELECT uc_id, title, status, shipped_at, goal_level, " +
+            "out('TARGETS_MILESTONE').milestone_id[0] AS milestone_id, " +
+            "out('HELPS_WITH').job_id  AS claimed_job_ids, " +
+            "out('ADDRESSES').pain_id  AS claimed_pain_ids, " +
+            "out('PROMISES').gain_id   AS claimed_gain_ids, " +
+            "out('DECOMPOSES_INTO').out('PERFORMS').job_id  AS performed_job_ids, " +
+            "out('DECOMPOSES_INTO').out('RELIEVES').pain_id AS relieved_pain_ids, " +
+            "out('DECOMPOSES_INTO').out('DELIVERS').gain_id AS delivered_gain_ids, " +
+            "out('DECOMPOSES_INTO').out('DELIVERS')[metric_md IS NOT NULL].gain_id " +
+            "    AS delivered_measured_gain_ids, " +
+            "out('DECOMPOSES_INTO')[status = 'shipped'].out('PERFORMS').job_id AS shipped_job_ids, " +
+            "out('DECOMPOSES_INTO').out('HAS_ACTOR').actor_id AS actor_ids " +
+            "FROM KnowUseCase WHERE goal_level IN ['cloud', 'kite'] ORDER BY uc_id",
+            List.of(), Map.of(), "");
+
+        // AN-07 (ADR-LORE-030 §2 срез A): карта нагрузки ролей. Два сигнала:
+        // перегруз (роль тянет несоразмерно много сценариев — кандидат на
+        // расщепление) и мёртвая роль (0 UC — заявлена, но не используется).
+        // Разбивка primary/supporting — по свойству role ребра HAS_ACTOR (D19).
+        // Фильтр по проекту ОБЯЗАТЕЛЕН (D18: акторы проектные — одноимённые роли
+        // разных продуктов не должны склеиваться в одну строку нагрузки).
+        // AL-82/ADR-LORE-036: роль человека в проекте — по вердикту 148 источник
+        // истины о правах граф, не KC. Два слайса — обе стороны ребра
+        // HAS_PROJECT_ROLE, как явно требует задача («роли человека по проектам»
+        // и обратный «кто имеет роль в проекте P»), не один слайс с фильтром:
+        // AL-36 просил именно обратную матрицу для ревью доступа.
+        slice("user_project_roles",
+            "SELECT kc_sub, display_name, " +
+            "out('HAS_PROJECT_ROLE').slug AS projects, " +
+            "outE('HAS_PROJECT_ROLE').role AS roles " +
+            "FROM KnowUser WHERE kc_sub = :kc_sub",
+            List.of("kc_sub"), Map.of(), "");
+
+        slice("project_users",
+            "SELECT slug, " +
+            "in('HAS_PROJECT_ROLE').kc_sub AS kc_subs, " +
+            "in('HAS_PROJECT_ROLE').display_name AS display_names, " +
+            "inE('HAS_PROJECT_ROLE').role AS roles " +
+            "FROM KnowGitProject WHERE slug = :project",
+            List.of("project"), Map.of(), "");
+
+        // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
+        // ревью доступа, что у project_users. Один агент — один живой
+        // OWNED_BY (out()/outE() без индекса ok — единственная строка).
+        slice("agent_owners",
+            "SELECT actor_id, client_id, " +
+            "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
+            "out('OWNED_BY').display_name AS owner_display_name " +
+            "FROM KnowActor WHERE kind = 'agent' AND client_id IS NOT NULL",
+            List.of(), Map.of(), "");
+
+        slice("actor_load",
+            "SELECT actor_id, name, kind, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('HAS_ACTOR').uc_id AS uc_ids, " +
+            "in('HAS_ACTOR').size() AS uc_count, " +
+            "inE('HAS_ACTOR')[role = 'primary'].size()    AS primary_count, " +
+            "inE('HAS_ACTOR')[role = 'supporting'].size() AS supporting_count " +
+            "FROM KnowActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
+            "ORDER BY actor_id",
+            List.of("project"), Map.of(), "");
+
+        // AN-05 (ADR-LORE-030 §2 срез C, зависимость PL-15): shipped-динамика.
+        // Сырые строки по выехавшим сценариям; периоды/релизы группирует клиент
+        // по shipped_at (GROUP BY-ловушка). Lead time = shipped_at −
+        // min(active_since_dates): даты берутся из ИСТОРИИ задач (первая
+        // IN PROGRESS-ревизия каждой REALIZES-задачи), НЕ из valid_from вершин —
+        // sprints.valid_from = дата текущего состояния SCD2, и lead time по нему
+        // выходил бы ~0 (ловушка корпуса).
+        slice("shipped_dynamics",
+            "SELECT uc_id, title, goal_level, shipped_at, status, " +
+            "in('DECOMPOSES_INTO').uc_id[0] AS root_uc_id, " +
+            "in('REALIZES').task_uid AS task_uids, " +
+            "in('REALIZES').out('HAS_STATE')[status_raw LIKE '%IN PROGRESS%'].valid_from " +
+            "    AS active_since_dates " +
+            "FROM KnowUseCase WHERE shipped_at IS NOT NULL ORDER BY shipped_at",
+            List.of(), Map.of(), "");
+
         // Batch variant: fetch tasks for multiple sprints in one query.
         // sprint_ids is a comma-separated string that the slice layer splits into a list.
         slice("tasks_of_sprints_batch",
@@ -777,6 +939,16 @@ public final class LoreSlices {
             "priority, planned_start_date, planned_end_date, track_id, pr_refs, " +
             "context_md, outcome_md " +
             "FROM KnowSprintHist WHERE in('HAS_STATE').sprint_id[0] = :id ORDER BY valid_from",
+            List.of("id"), Map.of(), "");
+
+        // AL-30: тот же паттерн для задач — раньше был только status_raw через
+        // task_done_dates/task_starts (агрегатные min/max, не полная цепочка).
+        // effort_days и note_md версионируются (task_set пишет их в открытую
+        // HAS_STATE), но ни один слайс не отдавал цепочку ревизий целиком.
+        slice("history_task",
+            "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
+            "effort_days, note_md " +
+            "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
         // Bulk: every sprint state row (scalar valid_from). Frontend takes the min
@@ -1161,9 +1333,8 @@ public final class LoreSlices {
         slice("tags_usage",
             "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM KnowTag",
             List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
-        slice("lore_tags_usage",
-            "SELECT tag_id, in('TAGGED_WITH').size() AS uses FROM LoreTag",
-            List.of(), Map.of(), " ORDER BY uses DESC, tag_id LIMIT 500");
+        // lore_tags_usage удалён вместе с типом LoreTag (AL-29, миграция V17) —
+        // KnowTag/LoreTag были дублирующими справочниками, схлопнуты в один.
 
         slice("dictionary",
             // ifnull() masks the brief NULL-flag window on a freshly-upserted row
@@ -1175,6 +1346,16 @@ public final class LoreSlices {
             new LinkedHashMap<>(Map.of(
                 "dict_type", " WHERE dict_type = :dict_type")),
             " ORDER BY dict_type, sort_order");
+
+        // AL-43: SCD2 history for one dict entry — same close/open pattern as
+        // history_sprint/history_task/adr_history, keyed by the composite
+        // (dict_type, code) denormalized onto KnowDictEntryHist rather than a
+        // graph traversal (KnowDictEntry's key isn't a single field).
+        slice("history_dict",
+            "SELECT valid_from, valid_to, label_ru, label_en, color, icon, sort_order, " +
+            "is_active, is_extensible FROM KnowDictEntryHist " +
+            "WHERE dict_type = :dict_type AND code = :code ORDER BY valid_from",
+            List.of("dict_type", "code"), Map.of(), "");
 
         // ADR-LORE-012 level B: components linked to an area via the IN_AREA edge
         // (graph traversal, not the string field) — «all components in area X».

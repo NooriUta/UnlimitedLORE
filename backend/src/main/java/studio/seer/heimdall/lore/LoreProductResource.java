@@ -99,6 +99,9 @@ public class LoreProductResource extends LoreResourceBase {
     @Inject
     LoreIngestService ingest;
 
+    @Inject
+    ProjectRbacService projectRbac;
+
     // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
     //
     // PL-28 (решение №141): отдельного типа больше нет. Эндпоинт сохранён и
@@ -322,6 +325,21 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("actor_id contains illegal characters");
         if (req.kind() != null && !List.of("human-role", "system", "agent").contains(req.kind()))
             return badParams("kind must be human-role|system|agent");
+        // AL-68/AL-90 (первое семейство для обкатки D4, ADR-LORE-036): агентный
+        // вызывающий с явным project в теле — проверить, разрешает ли роль его
+        // владельца в ЭТОМ проекте профиль, под которым он пишет. Человека это
+        // не касается (его прямые права — отдельный, ещё не закодированный
+        // путь, §10.3 SPEC-RBAC-OMILORE-AGENTS) — requireAdmin() выше и так
+        // единственный гейт человеческого вызова, здесь его не сужаем.
+        String agentScope = callerAgentScope();
+        if (agentScope != null && req.project() != null && !req.project().isBlank()) {
+            String clientId = callerClientId();
+            if (clientId == null || !projectRbac.agentAllowedInProject(clientId, req.project(), agentScope)) {
+                return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
+                    + "для проекта '" + req.project() + "': роль владельца там не делегирует этот профиль "
+                    + "(или клиент/владелец/роль не сопоставлены в графе)");
+            }
+        }
         try {
             StringBuilder sql = new StringBuilder("UPDATE KnowActor SET actor_id=:id");
             Map<String, Object> p = new LinkedHashMap<>();
@@ -357,6 +375,68 @@ public class LoreProductResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR] %s: %s", req.actor_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
+    // Отдельный подпуть, не поле в upsertActor: назначение владельца агента —
+    // административный акт (кто может писать под этим клиентом KC), не
+    // редактирование карточки актора. SUBPATH_AGENTS запрещает его ВСЕМ
+    // агентным профилям, включая full — иначе агент мог бы переписать себе
+    // владельца на более привилегированного человека (эскалация).
+    public record ActorOwnerRequest(String actor_id, String client_id, String kc_sub) {}
+
+    @POST
+    @Path("actor/owner")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setActorOwner(ActorOwnerRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
+            return badParams("actor_id required");
+        if (!SAFE_ID.matcher(req.actor_id()).matches())
+            return badParams("actor_id contains illegal characters");
+        if (req.client_id() == null || req.client_id().isBlank())
+            return badParams("client_id required");
+        if (req.kc_sub() == null || req.kc_sub().isBlank())
+            return badParams("kc_sub required");
+        try {
+            List<Map<String, Object>> actor = ingest.queryPublic(
+                "SELECT kind FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
+            if (actor == null || actor.isEmpty())
+                return badParams("actor '" + req.actor_id() + "' не найден — заведите его через actor_new");
+            if (!"agent".equals(actor.get(0).get("kind")))
+                return badParams("actor '" + req.actor_id() + "' не kind=agent — владелец назначается только агентам");
+
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowActor SET client_id=:c WHERE actor_id=:id",
+                Map.of("c", req.client_id(), "id", req.actor_id()))).await().indefinitely();
+
+            // Один живой владелец: снести старое ребро, поставить новое —
+            // тот же паттерн, что HAS_PROJECT_ROLE reassign (AL-82).
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(outE('OWNED_BY')) FROM KnowActor WHERE actor_id=:id)",
+                Map.of("id", req.actor_id()))).await().indefinitely();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE OWNED_BY FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                    "TO (SELECT FROM KnowUser WHERE kc_sub=:s) IF NOT EXISTS",
+                    Map.of("id", req.actor_id(), "s", req.kc_sub())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            out.put("client_id", req.client_id());
+            out.put("owner_linked", linked);
+            if (!linked) out.put("hint", "пользователь kc_sub=" + req.kc_sub()
+                + " не заведён в графе — сперва POST /lore/user, иначе владелец молча не привязан");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ACTOR OWNER] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
         }
     }
@@ -866,6 +946,66 @@ public class LoreProductResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.NOT_FOUND)
                 .entity(new LoreError("NOT_FOUND", "UC " + req.uc_id() + " не найден")));
         return noStore(Response.ok(q));
+    }
+
+    /**
+     * Порог «UC ниже плинтуса» для среза F. Настройка, не догма: 0.6 = «больше
+     * половины ОБЯЗАТЕЛЬНЫХ для своего веса проверок закрыто, с запасом» —
+     * стартовое значение до накопления статистики по живому корпусу.
+     */
+    @org.eclipse.microprofile.config.inject.ConfigProperty(
+        name = "lore.uc.quality.threshold", defaultValue = "0.6")
+    double qualityThreshold;
+
+    /**
+     * AN-08 (ADR-LORE-030 §2 срез F): распределение линтер-оценок по всему слою.
+     * Зовёт ТОТ ЖЕ {@link UcQuality#evaluate} — правила не дублируются (027-D3).
+     * Не слайс намеренно: линтер — Java-алгоритм, SQL его не повторит без второго
+     * источника правды. Сравнение только НОРМИРОВАННОЕ (score/max своего веса):
+     * знаменатель у casual меньше, чем у fully-dressed (027-D1), и по сырому score
+     * casual-UC выглядели бы ложно «лучше». Гистограммы/динамику строит клиент
+     * (date_created — ось когорт); оценки не хранятся — принцип ADR-030.
+     */
+    @jakarta.ws.rs.GET
+    @Path("uc/quality/all")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response ucQualityAll() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
+                "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
+                "out('TRACED_TO').size() AS traced " +
+                "FROM KnowUseCase ORDER BY uc_id", Map.of());
+            List<Map<String, Object>> out = new java.util.ArrayList<>();
+            for (Map<String, Object> r : rows) {
+                UcQuality.Result res = UcQuality.evaluate(
+                    str(r.get("rigor")), str(r.get("goal_level")),
+                    str(r.get("scenario_md")), str(r.get("acceptance_md")),
+                    num(r.get("primary_actors")) > 0, num(r.get("traced")) > 0);
+                double normalized = res.max() == 0 ? 1.0 : (double) res.score() / res.max();
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("uc_id", r.get("uc_id"));
+                row.put("title", r.get("title"));
+                row.put("goal_level", r.get("goal_level"));
+                row.put("rigor", res.rigor());
+                row.put("score", res.score());
+                row.put("max", res.max());
+                row.put("normalized", Math.round(normalized * 1000.0) / 1000.0);
+                row.put("below_threshold", normalized < qualityThreshold);
+                row.put("date_created", r.get("date_created"));
+                out.add(row);
+            }
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("threshold", qualityThreshold);
+            body.put("note", "normalized = score/max ОБЯЗАТЕЛЬНЫХ проверок своего веса — "
+                + "сырые score между casual и fully-dressed несравнимы (ADR-LORE-027 D1)");
+            body.put("rows", out);
+            return noStore(Response.ok(body));
+        } catch (Exception e) {
+            LOG.warnf("[LORE UC QUALITY ALL] %s", e.getMessage());
+            return upstream(e);
+        }
     }
 
     private Response upstream(Exception e) {

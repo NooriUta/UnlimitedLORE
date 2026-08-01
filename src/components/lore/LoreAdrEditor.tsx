@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Modal } from '@mantine/core';
 import {
   createLoreAdr,
   fetchLoreSlice,
+  loreMutate,
   type LoreAdrRow,
   type LoreComponent,
 } from '../../api/lore';
 import { adrStatusLabel } from './LoreAdrList';
 import TipTapField from './TipTapField';
+import { LoreLinkChips, type LinkMeta } from './LoreLinkChips';
 
 type AdrStatus = 'PROPOSED' | 'ACCEPTED' | 'DEPRECATED' | 'SUPERSEDED';
 const ADR_STATUSES: AdrStatus[] = ['PROPOSED', 'ACCEPTED', 'DEPRECATED', 'SUPERSEDED'];
@@ -29,6 +32,7 @@ interface FormState {
   depends_on_ids: string[];
   supersedes_ids: string[];
   component_ids: string[];
+  git_projects: string[];
   tags: string[];
 }
 
@@ -56,6 +60,7 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
     depends_on_ids:  initial?.depends_on_ids  ?? [],
     supersedes_ids:  initial?.supersedes_ids  ?? [],
     component_ids:   initial?.component_ids   ?? [],
+    git_projects:    initial?.git_projects    ?? [],
     tags:            initial?.tags            ?? [],
   });
 
@@ -63,14 +68,24 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
   const [errMsg, setErrMsg]     = useState<string | null>(null);
   const [adrList, setAdrList]   = useState<string[]>([]);
   const [compList, setCompList] = useState<Array<{ id: string; label: string }>>([]);
+  const [compMeta, setCompMeta] = useState<Record<string, LinkMeta>>({});
+  const [projList, setProjList] = useState<string[]>([]);
 
   useEffect(() => {
     fetchLoreSlice<LoreAdrRow>('adrs')
       .then(rows => setAdrList(rows.map(r => r.adr_id)))
       .catch(() => {});
     fetchLoreSlice<LoreComponent>('components')
-      .then(rows => setCompList(rows.map(r => ({ id: r.component_id, label: r.full_name || r.component_id }))))
+      .then(rows => {
+        setCompList(rows.map(r => ({ id: r.component_id, label: r.full_name || r.component_id })));
+        const m: Record<string, LinkMeta> = {};
+        rows.forEach(r => { if (r.component_id) m[r.component_id] = { game_icon: r.game_icon, area: r.area, full_name: r.full_name }; });
+        setCompMeta(m);
+      })
       .catch(() => {});
+    fetchLoreSlice<{ slug: string }>('git_projects')
+      .then(rows => setProjList(rows.map(r => r.slug).filter(Boolean).sort()))
+      .catch(() => { /* поле проектов деградирует в пустой список кандидатов */ });
   }, []);
 
   const set = <K extends keyof FormState>(key: K) => (v: FormState[K]) =>
@@ -96,6 +111,17 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
         component_ids:   form.component_ids,
         tags:            form.tags,
       });
+      // Проекты идут отдельным endpoint'ом (/adr/project, ADRPROJ-01), а не в
+      // теле create: диф против initial, чтобы правка не трогала нетронутые
+      // связи (создание — initial пуст, значит только add).
+      const before = new Set(initial?.git_projects ?? []);
+      const after  = new Set(form.git_projects);
+      await Promise.all([
+        ...form.git_projects.filter(p => !before.has(p)).map(p =>
+          loreMutate('/adr/project', { adr_id: id, project: p, action: 'add' })),
+        ...[...before].filter(p => !after.has(p)).map(p =>
+          loreMutate('/adr/project', { adr_id: id, project: p, action: 'remove' })),
+      ]);
       onSaved(id);
     } catch (e) {
       setErrMsg(String((e as Error).message ?? e));
@@ -124,11 +150,22 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
     />
   );
 
+  // AL-97: попап (Mantine Modal, ADR-LORE-034 — focus trap, Escape, возврат
+  // фокуса, role=dialog из коробки) вместо прежней подмены целой панели.
+  // Оба call-site (создание из списка, правка из паспорта) рендерят редактор
+  // поверх контента, не выбрасывая пользователя из контекста.
   return (
+    <Modal
+      opened
+      onClose={saving ? () => {} : onCancel}
+      size="960px"
+      title={lockId ? t('lore.adrEditor.editingTitle', 'Редактирование {{id}}', { id: form.adr_id }) : t('lore.adrEditor.newTitle', 'Новый ADR')}
+      overlayProps={{ backgroundOpacity: 0.6, blur: 2 }}
+      styles={{ body: { maxHeight: '78vh', overflowY: 'auto' } }}
+    >
     <div style={S.root}>
-      {/* Header */}
+      {/* Header — только кнопки: заголовок несёт шапка модалки */}
       <div style={S.head}>
-        <span style={S.title}>{lockId ? t('lore.adrEditor.editingTitle', 'Редактирование {{id}}', { id: form.adr_id }) : t('lore.adrEditor.newTitle', 'Новый ADR')}</span>
         <div style={S.headBtns}>
           <button style={S.btnGhost} onClick={onCancel} disabled={saving}>{t('lore.adrEditor.cancel', 'Отмена')}</button>
           <button style={S.btnPrimary} onClick={handleSave} disabled={saving}>
@@ -186,35 +223,29 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
       <Sec label={t('lore.adrEditor.sectionDecision', 'Decision — что именно решили')}>{ta('decision_md', t('lore.adrEditor.decisionPlaceholder', 'Опишите принятое решение…'), t('lore.adrEditor.sectionDecision', 'Decision — что именно решили'))}</Sec>
       <Sec label={t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs')}>{ta('consequences_md', t('lore.adrEditor.consequencesPlaceholder', 'Положительные и отрицательные последствия…'), t('lore.adrEditor.sectionConsequences', 'Consequences — следствия и trade-offs'), 9)}</Sec>
 
-      {/* Relations */}
-      <Sec label={t('lore.adrEditor.sectionDependsOn', 'Зависит от других ADR (DEPENDS_ON)')}>
-        <MultiChip
-          values={form.depends_on_ids}
-          onChange={set('depends_on_ids')}
-          suggestions={adrList.filter(id => id !== form.adr_id)}
-          placeholder={t('lore.multiChip.adrIdPlaceholder', 'ADR-XXX-NNN…')}
-          freeForm={false}
-        />
-      </Sec>
-      <Sec label={t('lore.adrEditor.sectionSupersedes', 'Заменяет ADR (SUPERSEDES)')}>
-        <MultiChip
-          values={form.supersedes_ids}
-          onChange={set('supersedes_ids')}
-          suggestions={adrList.filter(id => id !== form.adr_id)}
-          placeholder={t('lore.multiChip.adrIdPlaceholder', 'ADR-XXX-NNN…')}
-          freeForm={false}
-        />
-      </Sec>
-      <Sec label={t('lore.adrEditor.sectionComponents', 'Модули / компоненты (BELONGS_TO)')}>
-        <MultiChip
-          values={form.component_ids}
-          onChange={set('component_ids')}
-          suggestions={compList.map(c => c.id)}
-          suggestionLabels={Object.fromEntries(compList.map(c => [c.id, c.label]))}
-          placeholder={t('lore.multiChip.componentPlaceholder', 'HND, FE, …')}
-          freeForm={false}
-        />
-      </Sec>
+      {/* Relations — AL-97: LoreLinkChips (T43, тот же компонент, что в паспорте
+          ADR и попапе решений) вместо локального MultiChip. Обработчики локальные:
+          состояние живёт в form до сохранения, рёбра пишутся на save. */}
+      <div style={S.linksBlock}>
+        <LoreLinkChips label={t('lore.adrEditor.dependsShort', 'Зависит от')}
+          values={form.depends_on_ids} options={adrList.filter(id => id !== form.adr_id)}
+          onAdd={v => set('depends_on_ids')([...form.depends_on_ids, v])}
+          onRemove={v => set('depends_on_ids')(form.depends_on_ids.filter(x => x !== v))} />
+        <LoreLinkChips label={t('lore.adrEditor.supersedesShort', 'Заменяет')}
+          values={form.supersedes_ids} options={adrList.filter(id => id !== form.adr_id)}
+          onAdd={v => set('supersedes_ids')([...form.supersedes_ids, v])}
+          onRemove={v => set('supersedes_ids')(form.supersedes_ids.filter(x => x !== v))} />
+        <LoreLinkChips label={t('lore.adrEditor.componentsShort', 'Компоненты')} meta={compMeta}
+          values={form.component_ids} options={compList.map(c => c.id)}
+          onAdd={v => set('component_ids')([...form.component_ids, v])}
+          onRemove={v => set('component_ids')(form.component_ids.filter(x => x !== v))} />
+        <LoreLinkChips label={t('lore.adrEditor.projectsShort', 'Проекты')} color="var(--suc)"
+          values={form.git_projects} options={projList}
+          onAdd={v => set('git_projects')([...form.git_projects, v])}
+          onRemove={v => set('git_projects')(form.git_projects.filter(x => x !== v))} />
+      </div>
+      {/* Теги остаются на MultiChip осознанно: LoreLinkChips — редактор связей с
+          ограниченным списком кандидатов, а тег — свободный текст. */}
       <Sec label={t('lore.adrEditor.sectionTags', 'Теги')}>
         <MultiChip
           values={form.tags}
@@ -225,6 +256,7 @@ export default function LoreAdrEditor({ initial, lockId, onSaved, onCancel }: Lo
         />
       </Sec>
     </div>
+    </Modal>
   );
 }
 
@@ -325,10 +357,11 @@ export function MultiChip({ values, onChange, suggestions, suggestionLabels, pla
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S: Record<string, React.CSSProperties> = {
-  root:     { flex: 1, overflowY: 'auto', padding: '14px 20px 40px', fontFamily: 'var(--font)', fontSize: 'var(--fs-base)' },
-  head:     { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10 },
-  title:    { fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--t1)' },
+  // AL-97: прокрутка и рамки — у тела модалки; корню остаётся только шрифт.
+  root:     { fontFamily: 'var(--font)', fontSize: 'var(--fs-base)' },
+  head:     { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 10, gap: 10 },
   headBtns: { display: 'flex', gap: 8 },
+  linksBlock:{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 },
   errBanner:{ marginBottom: 10, padding: '6px 10px', borderRadius: 5, fontSize: 'var(--fs-sm)',
               background: 'color-mix(in srgb, var(--dng) 12%, transparent)',
               color: 'var(--dng)', border: '1px solid color-mix(in srgb, var(--dng) 30%, transparent)' },

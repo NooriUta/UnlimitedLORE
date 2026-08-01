@@ -267,6 +267,13 @@ printf '%s\\n' \\
  '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"query_slice","arguments":{"slice":"plan_config"}}}' \\
  | node dist/index.js`;
 
+// AL-18: client_credentials fields kept in sync with the real repo-root
+// .mcp.json — LORE_OIDC_ISSUER/LORE_MCP_CLIENT_ID/LORE_MCP_CLIENT_SECRET are
+// not optional extras, they're what makes AgentScopeFilter see agent_scope
+// at all (no OIDC config = the caller is treated as human/unauthenticated).
+// LORE_MCP_CLIENT_ID picks the profile; the matching secret's Infisical key
+// is LORE_MCP_CLIENT_SECRET_<PROFILE> (uppercase) — the local env var name
+// is always the generic LORE_MCP_CLIENT_SECRET, one profile per session.
 const MCP_JSON = `{
   "mcpServers": {
     "aida-lore": {
@@ -274,7 +281,10 @@ const MCP_JSON = `{
       "args": ["mcp-server/dist/index.js"],
       "env": {
         "LORE_BACKEND_URL": "http://localhost:9100",
-        "LORE_SEER_ROLE": "admin"
+        "LORE_SEER_ROLE": "admin",
+        "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
+        "LORE_MCP_CLIENT_ID": "lore-mcp-full",
+        "LORE_MCP_CLIENT_SECRET": "\${LORE_MCP_CLIENT_SECRET}"
       }
     }
   }
@@ -290,7 +300,10 @@ const OPENCODE_JSON = `{
       "command": ["node", "mcp-server/dist/index.js"],
       "environment": {
         "LORE_BACKEND_URL": "http://localhost:9100",
-        "LORE_SEER_ROLE": "admin"
+        "LORE_SEER_ROLE": "admin",
+        "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
+        "LORE_MCP_CLIENT_ID": "lore-mcp-architect",
+        "LORE_MCP_CLIENT_SECRET": "\${LORE_MCP_CLIENT_SECRET}"
       }
     }
   },

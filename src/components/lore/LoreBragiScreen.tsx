@@ -35,20 +35,30 @@ export default function LoreBragiScreen() {
   const [competitors, setCompetitors] = useState<CompetitorRow[]>([]);
   const [publications, setPublications] = useState<PublicationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  // AL-85: три слайса — три НЕЗАВИСИМЫХ исхода. Раньше общий .catch на
+  // Promise.all гасил все три виджета разом при падении одного (BRAGI-обзор
+  // KPI зависел от bragi_overview — если он один падал, competitors и
+  // publications, УЖЕ успешно пришедшие, всё равно стирались в пустоту).
+  const [overviewError, setOverviewError] = useState(false);
+  const [competitorsError, setCompetitorsError] = useState(false);
+  const [publicationsError, setPublicationsError] = useState(false);
 
   useEffect(() => {
     if (tab !== 'obzor') return;
     let cancelled = false;
     setLoading(true);
-    Promise.all([
+    setOverviewError(false); setCompetitorsError(false); setPublicationsError(false);
+    Promise.allSettled([
       fetchLoreSlice<OverviewRow>('bragi_overview'),
       fetchLoreSlice<CompetitorRow>('bragi_competitors'),
       fetchLoreSlice<PublicationRow>('bragi_publications'),
     ]).then(([ov, comp, pubs]) => {
       if (cancelled) return;
-      setOverview(ov); setCompetitors(comp); setPublications(pubs);
+      if (ov.status === 'fulfilled') setOverview(ov.value); else setOverviewError(true);
+      if (comp.status === 'fulfilled') setCompetitors(comp.value); else setCompetitorsError(true);
+      if (pubs.status === 'fulfilled') setPublications(pubs.value); else setPublicationsError(true);
       setLoading(false);
-    }).catch(() => { if (!cancelled) setLoading(false); });
+    });
     return () => { cancelled = true; };
   }, [tab]);
 
@@ -89,26 +99,35 @@ export default function LoreBragiScreen() {
                 <div style={S.kpis}>
                   <div style={S.kpi}>
                     <div style={S.kpiLab}>{t('bragi.screen.overview.kpiPublications', 'публикаций')}</div>
-                    <div style={S.kpiVal}>{total}</div>
+                    <div style={S.kpiVal}>{overviewError ? '?' : total}</div>
                   </div>
                   <div style={S.kpi}>
                     <div style={S.kpiLab}>{t('bragi.screen.overview.kpiPublished', 'опубликовано')}</div>
-                    <div style={S.kpiVal}>{published}</div>
+                    <div style={S.kpiVal}>{overviewError ? '?' : published}</div>
                   </div>
                   <div style={S.kpi}>
                     <div style={S.kpiLab}>{t('bragi.screen.overview.kpiCompetitors', 'конкурентов в срезе')}</div>
-                    <div style={S.kpiVal}>{competitors.length}</div>
+                    <div style={S.kpiVal}>{competitorsError ? '?' : competitors.length}</div>
                   </div>
                 </div>
+                {(overviewError || competitorsError) && (
+                  <div style={S.hint}>{t('bragi.screen.overview.kpiError', 'часть показателей не загрузилась — проверьте сессию/сеть и обновите страницу')}</div>
+                )}
                 <div style={S.card}>
                   <h2 style={S.cardH2}>{t('bragi.screen.overview.publicationsTitle', 'публикации')} <span style={S.meta}>{t('bragi.screen.overview.publicationsMeta', '→ Публикации')}</span></h2>
                   <div style={{ fontSize: 'var(--fs-md)', lineHeight: 2 }}>
-                    {publications.slice(0, 5).map(p => (
-                      <div key={p.publication_id}>
-                        <span style={S.chip}>{p.status_general ?? '—'}</span> {p.title}
-                      </div>
-                    ))}
-                    {publications.length === 0 && <span style={S.hint}>{t('bragi.screen.overview.noPublications', 'публикаций пока нет')}</span>}
+                    {publicationsError ? (
+                      <span style={S.hint}>{t('bragi.screen.overview.publicationsError', 'не удалось загрузить публикации — данные могут быть, проверьте сессию/сеть')}</span>
+                    ) : (
+                      <>
+                        {publications.slice(0, 5).map(p => (
+                          <div key={p.publication_id}>
+                            <span style={S.chip}>{p.status_general ?? '—'}</span> {p.title}
+                          </div>
+                        ))}
+                        {publications.length === 0 && <span style={S.hint}>{t('bragi.screen.overview.noPublications', 'публикаций пока нет')}</span>}
+                      </>
+                    )}
                   </div>
                 </div>
               </>

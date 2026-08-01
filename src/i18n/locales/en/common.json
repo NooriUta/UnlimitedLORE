@@ -9,7 +9,9 @@
     "spaces": "LORE · spaces",
     "transitions": "Go to",
     "here": "here",
-    "tenant": "Workspace (tenant)",
+    "project": "Project",
+    "projectAll": "All projects",
+    "projectNote": "Project ⟂ navigation: switching scope doesn't change section — you stay put. Today it affects Plan and Milestones.",
     "secondary": "Secondary",
     "searchData": "search data",
     "hit": {
@@ -26,9 +28,12 @@
       "gain": "Gain"
     },
     "brandTitle": "LORE — spaces",
-    "tenantTitle": "Data workspace",
+    "projectTitle": "Data workspace (project)",
     "searchTitle": "Search data (/)",
     "searchAria": "Search",
+    "testDbTitle": "Backend is NOT pointed at the prod database",
+    "testDb": "test database",
+    "testDbShort": "test",
     "moreTitle": "More — theme, palette, language",
     "themeDark": "Dark theme",
     "themeLight": "Light theme",
@@ -416,6 +421,10 @@
       "sectionDependsOn": "Depends on other ADRs (DEPENDS_ON)",
       "sectionSupersedes": "Supersedes ADR (SUPERSEDES)",
       "sectionComponents": "Modules / components (BELONGS_TO)",
+      "dependsShort": "Depends on",
+      "supersedesShort": "Supersedes",
+      "componentsShort": "Components",
+      "projectsShort": "Projects",
       "sectionTags": "Tags"
     },
     "multiChip": {
@@ -728,6 +737,7 @@
       "kindSprint": "Sprint",
       "kindPlanItem": "PlanItem",
       "kindAdr": "ADR",
+      "kindTask": "Task",
       "loadingHint": "loading…",
       "listErrorHint": "list error",
       "entityCountHint": "{{count}} entities",
@@ -1709,6 +1719,13 @@
         "fieldPerformedBy": "Who performs the job (actors)",
         "noActors": "no actors yet — create them on the Customer screen",
         "noActorWarn": "without an actor the entry stays out of any single customer profile",
+        "fieldBlocks": "Blocks jobs (BLOCKS)",
+        "fieldSuccessOf": "Success in job (SUCCESS_OF)",
+        "noJobs": "no jobs yet — create one via \"+ Job\"",
+        "jobSearchPh": "search a job…",
+        "noJobMatch": "no matches",
+        "fieldRank": "Rank (Kano)",
+        "rankNone": "— unset —",
         "create": "Create",
         "cancel": "Cancel",
         "promisedVsDelivered": "Promised vs delivered",
@@ -1936,6 +1953,7 @@
       "viewerGives": "Read-only access to LORE. Does not allow into administration"
     },
     "oqBoard": {
+      "ansFailed": "Failed to load decision #{{id}} — click to retry",
       "ansLoading": "Loading answer…",
       "answer": "Answer (decision)",
       "answerAuto": "answer code: {{id}} (auto) · inherits the question's component{{adr}}",
@@ -1946,6 +1964,8 @@
       "answerLinkBtn": "close with this decision ✓",
       "answerNewBtn": "answer and close ✓",
       "answerTitle": "Answer — a one-line rule (this is the decision)",
+      "bodyPlaceholder": "Context / closing criterion (opt.)",
+      "bodyToggle": "click to expand the question text",
       "cancel": "Cancel",
       "componentLabel": "Component",
       "componentPick": "Component — pick from list",
@@ -2035,6 +2055,7 @@
       }
     },
     "extras": {
+      "loadError": "failed to load — data may still exist, check your session/network and reload",
       "keys": {
         "loading": "loading…",
         "desc": "semantic core: clusters, exact frequency [!], intent, target page.",
@@ -2138,6 +2159,7 @@
     },
     "plan": {
       "loading": "loading…",
+      "loadError": "failed to load — data may still exist, check your session/network and reload",
       "desc": "2-month content push · VC + Habr + Telegram · social-capital stage.",
       "calendarTitle": "publication calendar",
       "navPrev": "‹ prev.",
@@ -2229,6 +2251,7 @@
     "publications": {
       "noImage": "no image",
       "loading": "loading…",
+      "loadError": "failed to load — data may still exist, check your session/network and reload",
       "filterAll": "all",
       "filterDrafts": "drafts",
       "desc": "main text + channel variants: one publication groups its versions; each has its own text, status, and image.",
@@ -2281,9 +2304,11 @@
         "kpiPublications": "publications",
         "kpiPublished": "published",
         "kpiCompetitors": "competitors tracked",
+        "kpiError": "some metrics failed to load — check your session/network and reload the page",
         "publicationsTitle": "publications",
         "publicationsMeta": "→ Publications",
-        "noPublications": "no publications yet"
+        "noPublications": "no publications yet",
+        "publicationsError": "failed to load publications — data may still exist, check your session/network"
       },
       "loading": "loading…"
     }

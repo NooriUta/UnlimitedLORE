@@ -12,15 +12,16 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
 import { saveLorePain, saveLoreGain, saveLoreJob, linkLoreVp, fetchLoreSlice } from '../../../api/lore';
-import type { LoreActorRow } from '../../../api/lore';
+import type { LoreActorRow, LoreJobRow } from '../../../api/lore';
 import TipTapField from '../TipTapField';
+import { gainRankLabel } from './vocab';
 
-export type VpKind = 'job' | 'pain' | 'gain';
+export type PainGainJobKind = 'job' | 'pain' | 'gain';
 
-const PREFIX: Record<VpKind, string> = { job: 'JOB-', pain: 'PAIN-', gain: 'GAIN-' };
+const PREFIX: Record<PainGainJobKind, string> = { job: 'JOB-', pain: 'PAIN-', gain: 'GAIN-' };
 
 /** Тип записи по её id — тем же префиксом, которым ветвится весь реестр. */
-export function vpKindOf(id: string): VpKind | null {
+export function painGainJobKindOf(id: string): PainGainJobKind | null {
   if (id.startsWith('JOB-')) return 'job';
   if (id.startsWith('PAIN-')) return 'pain';
   if (id.startsWith('GAIN-')) return 'gain';
@@ -35,7 +36,7 @@ export function vpKindOf(id: string): VpKind | null {
  * реестре — отказ, замаскированный под успех, поэтому чиним ввод, а не браним
  * пользователя.
  */
-export function normalizeVpId(kind: VpKind, raw: string): string {
+export function normalizePainGainJobId(kind: PainGainJobKind, raw: string): string {
   const prefix = PREFIX[kind];
   const v = raw.trim().toUpperCase().replace(/\s+/g, '-');
   if (!v) return '';
@@ -43,7 +44,7 @@ export function normalizeVpId(kind: VpKind, raw: string): string {
 }
 
 /** Значения, которыми форма открывается на правку существующей записи. */
-export interface VpDraft {
+export interface PainGainJobDraft {
   id: string;
   title?: string | null;
   body_md?: string | null;
@@ -53,18 +54,24 @@ export interface VpDraft {
   jobKind?: string | null;
   /** FELT_BY / DESIRED_BY / PERFORMED_BY — чья это боль, выгода, работа */
   actorIds?: string[] | null;
+  /** только у выгоды — essential | expected | desired | unexpected (Kano) */
+  rank?: string | null;
+  /** только у боли — BLOCKS: каким работам мешает */
+  blocksJobIds?: string[] | null;
+  /** только у выгоды — SUCCESS_OF: успех в какой работе */
+  successOfJobIds?: string[] | null;
 }
 
-export default function VpCreateModal({
+export default function PainGainJobModal({
   kind, opened, onClose, onCreated, onError, initial,
 }: {
-  kind: VpKind;
+  kind: PainGainJobKind;
   opened: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
   onError: (e: unknown) => void;
   /** задан — форма открыта на правку: id заблокирован, поля предзаполнены */
-  initial?: VpDraft;
+  initial?: PainGainJobDraft;
 }) {
   const { t } = useTranslation();
   const editing = !!initial;
@@ -95,6 +102,37 @@ export default function VpCreateModal({
     return () => ctrl.abort();
   }, [opened]);
 
+  /**
+   * Ранг выгоды (Kano) и связь с работой (PL-49 / FIT-01).
+   *
+   * До этой правки оба пути существовали только в MCP: владелец не мог задать
+   * ранг выгоды или отметить, какой работе мешает боль / в какой работе
+   * выгода — форма их просто не показывала, хотя `saveLoreGain`/`linkLoreVp`
+   * уже умели то и другое.
+   */
+  const [rank, setRank] = useState(initial?.rank ?? '');
+  const [jobLinks, setJobLinks] = useState<string[]>(
+    (kind === 'pain' ? initial?.blocksJobIds : initial?.successOfJobIds) ?? [],
+  );
+  const [jobs, setJobs] = useState<LoreJobRow[]>([]);
+  useEffect(() => {
+    if (!opened || (kind !== 'pain' && kind !== 'gain')) return;
+    const ctrl = new AbortController();
+    fetchLoreSlice<LoreJobRow>('jobs', undefined, ctrl.signal)
+      .then(setJobs)
+      .catch(() => { /* список работ не критичен: форма сохранится и без него */ });
+    return () => ctrl.abort();
+  }, [opened, kind]);
+  /**
+   * Поиск по работам (FIT-08).
+   *
+   * Плоский ряд пилюль работал на трёх работах в корпусе — на десятках его
+   * уже не прочитать, а на сотнях в нём физически не найти нужную. Выбранные
+   * остаются отдельным рядом чипов (иначе фильтр прячет уже отмеченное и
+   * выглядит как потеря выбора), кандидаты сужаются по вводу.
+   */
+  const [jobQuery, setJobQuery] = useState('');
+
   // Предзаполнение приходит асинхронно (слайс мог ещё грузиться), поэтому
   // синхронизируем состояние с ним, а не только начальным значением: иначе
   // форма правки открывалась бы пустой и «сохранение» стирало бы поля.
@@ -105,11 +143,17 @@ export default function VpCreateModal({
     setExtra(initial?.extra ?? '');
     setJobKind(initial?.jobKind ?? '');
     setActorIds(initial?.actorIds ?? []);
-  }, [initial]);
+    setRank(initial?.rank ?? '');
+    setJobLinks((kind === 'pain' ? initial?.blocksJobIds : initial?.successOfJobIds) ?? []);
+    setJobQuery('');
+  }, [initial, kind]);
 
-  const finalId = editing ? (initial?.id ?? '') : normalizeVpId(kind, id);
+  const finalId = editing ? (initial?.id ?? '') : normalizePainGainJobId(kind, id);
 
-  const reset = () => { setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); setActorIds([]); };
+  const reset = () => {
+    setId(''); setTitle(''); setBody(''); setExtra(''); setJobKind(''); setActorIds([]);
+    setRank(''); setJobLinks([]); setJobQuery('');
+  };
   const close = () => { if (!editing) reset(); onClose(); };
 
   const submit = async () => {
@@ -120,7 +164,7 @@ export default function VpCreateModal({
       if (kind === 'pain') {
         await saveLorePain({ pain_id: finalId, ...common, severity: extra || undefined });
       } else if (kind === 'gain') {
-        await saveLoreGain({ gain_id: finalId, ...common, metric_md: extra || undefined });
+        await saveLoreGain({ gain_id: finalId, ...common, metric_md: extra || undefined, rank: rank || undefined });
       } else {
         await saveLoreJob({ job_id: finalId, ...common, kind: jobKind || undefined, importance: extra || undefined });
       }
@@ -133,6 +177,17 @@ export default function VpCreateModal({
       }
       for (const a of was.filter(x => !actorIds.includes(x))) {
         await linkLoreVp({ source_id: finalId, rel, target_id: a, action: 'remove' });
+      }
+      // Связь с работой — BLOCKS у боли, SUCCESS_OF у выгоды (FIT-01).
+      if (kind === 'pain' || kind === 'gain') {
+        const jobRel = kind === 'pain' ? 'blocks' : 'success_of';
+        const wasJobs = (kind === 'pain' ? initial?.blocksJobIds : initial?.successOfJobIds) ?? [];
+        for (const j of jobLinks.filter(x => !wasJobs.includes(x))) {
+          await linkLoreVp({ source_id: finalId, rel: jobRel, target_id: j });
+        }
+        for (const j of wasJobs.filter(x => !jobLinks.includes(x))) {
+          await linkLoreVp({ source_id: finalId, rel: jobRel, target_id: j, action: 'remove' });
+        }
       }
       onCreated(finalId);
       if (!editing) reset();
@@ -154,12 +209,12 @@ export default function VpCreateModal({
   };
   const hint: React.CSSProperties = { fontSize: 10.5, color: 'var(--t3)', marginTop: 3 };
 
-  const titles: Record<VpKind, string> = {
+  const titles: Record<PainGainJobKind, string> = {
     job: t('lore.product.vp.newJob', '+ Работа'),
     pain: t('lore.product.vp.newPain', '+ Боль'),
     gain: t('lore.product.vp.newGain', '+ Выгода'),
   };
-  const idRules: Record<VpKind, string> = {
+  const idRules: Record<PainGainJobKind, string> = {
     job: t('lore.product.vp.idRuleJob', 'JOB-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: JOB-LORE-SHIP-RELEASE'),
     pain: t('lore.product.vp.idRulePain', 'PAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: PAIN-LORE-MANUAL-HANDOFF'),
     gain: t('lore.product.vp.idRuleGain', 'GAIN-‹ОБЛАСТЬ›-‹СУТЬ›, латиницей через дефис. Область — компонент или продукт: GAIN-LORE-LINKED-RELEASES'),
@@ -256,8 +311,89 @@ export default function VpCreateModal({
               ⚠ {t('lore.product.vp.noMetricWarn', 'без метрики выгода не попадёт в fit VP-канвы')}
             </div>
           )}
+          <label style={label}>{t('lore.product.vp.fieldRank', 'Ранг (Kano)')}</label>
+          <select style={field} value={rank} onChange={e => setRank(e.target.value)}>
+            <option value="">{t('lore.product.vp.rankNone', '— не указан —')}</option>
+            <option value="essential">{gainRankLabel(t, 'essential')}</option>
+            <option value="expected">{gainRankLabel(t, 'expected')}</option>
+            <option value="desired">{gainRankLabel(t, 'desired')}</option>
+            <option value="unexpected">{gainRankLabel(t, 'unexpected')}</option>
+          </select>
         </>
       ) : levelSelect}
+
+      {/* Связь с работой — BLOCKS у боли, SUCCESS_OF у выгоды (FIT-01). Оба
+          пути уже писались через MCP (vp_link), но форма их не показывала:
+          заполнить мог только тот, у кого есть доступ к MCP, а не владелец,
+          который знает клиента. */}
+      {(kind === 'pain' || kind === 'gain') && (
+        <>
+          <label style={label}>
+            {kind === 'pain' && t('lore.product.vp.fieldBlocks', 'Мешает работам (BLOCKS)')}
+            {kind === 'gain' && t('lore.product.vp.fieldSuccessOf', 'Успех в работе (SUCCESS_OF)')}
+          </label>
+          {/* Выбранные — отдельным рядом, ВСЕГДА видны независимо от фильтра:
+              спрятать их за поиском выглядело бы как «выбор потерялся». */}
+          {jobLinks.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 5 }}>
+              {jobLinks.map(id => {
+                const j = jobs.find(x => x.job_id === id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setJobLinks(v => v.filter(x => x !== id))}
+                    style={{
+                      padding: '2px 9px', borderRadius: 999, cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                      border: '1px solid var(--job)', background: 'var(--bg2)', color: 'var(--t1)',
+                    }}
+                  >
+                    {(j?.title ?? id)} ✕
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {jobs.length > 0 && (
+            <input
+              style={{ ...field, marginBottom: 5 }}
+              value={jobQuery}
+              onChange={e => setJobQuery(e.target.value)}
+              placeholder={t('lore.product.vp.jobSearchPh', 'искать работу…')}
+            />
+          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {jobs.length === 0 && (
+              <span style={hint}>{t('lore.product.vp.noJobs', 'работ пока нет — заведите через «+ Работа»')}</span>
+            )}
+            {jobs.length > 0 && (() => {
+              const q = jobQuery.trim().toLowerCase();
+              const candidates = jobs
+                .filter(j => !jobLinks.includes(j.job_id))
+                .filter(j => !q || (j.title ?? j.job_id).toLowerCase().includes(q) || j.job_id.toLowerCase().includes(q));
+              if (candidates.length === 0) {
+                return <span style={hint}>{t('lore.product.vp.noJobMatch', 'ничего не найдено')}</span>;
+              }
+              // Длинный список без фильтра засорял бы форму — предлагаем
+              // первые совпадения и просим уточнить запрос, а не рендерим
+              // сотню пилюль разом (та же проблема, которую чиним).
+              return candidates.slice(0, 20).map(j => (
+                <button
+                  key={j.job_id}
+                  type="button"
+                  onClick={() => { setJobLinks(v => [...v, j.job_id]); setJobQuery(''); }}
+                  style={{
+                    padding: '2px 9px', borderRadius: 999, cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                    border: '1px solid var(--bd)', background: 'transparent', color: 'var(--t2)',
+                  }}
+                >
+                  {j.title ?? j.job_id}
+                </button>
+              ));
+            })()}
+          </div>
+        </>
+      )}
 
       {/* Чей это профиль. Без ответа VP-канва показывает боли всех сегментов в
           одном круге — а канон Остервальдера строится на ОДНОМ сегменте: боли

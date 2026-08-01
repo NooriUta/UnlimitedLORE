@@ -420,6 +420,131 @@ final class LoreSchemaMigrations {
             "CREATE INDEX IF NOT EXISTS ON KnowUseCase (parent_uc_id) NOTUNIQUE",
             "CREATE INDEX IF NOT EXISTS ON KnowUseCase (body_md)    FULL_TEXT",
             "CREATE INDEX IF NOT EXISTS ON KnowUseCase (context_md) FULL_TEXT"
+        )),
+
+        // AL-79 (указание владельца 2026-07-23): статус решения — ЗНАЧЕНИЕ СЛОВАРЯ,
+        // а не свободный текст. До этого статусы жили только у решений, залитых
+        // прямой записью при сидировании (fixed 79 / accepted 58 / done 20), а
+        // инструмента простановки не существовало вовсе — decision_new статуса не
+        // имел, status_set решения не принимал. Сид повторяет фактический зоопарк
+        // прода: fixed/done — легаси-значения, оставлены активными (79+20 живых
+        // решений не должны стать «вне канона» задним числом); их судьба — ревизия
+        // при вердикте владельца, выключаются флагом is_active в админке, не кодом.
+        // Поле вершины — status_raw (так лежат статусы сида и так читают слайсы
+        // decisions/decisions_of_adr), НЕ status: второе имя стало бы второй правдой.
+        // АДДИТИВНЫЙ шаг (ordinal 14, major 13 → «13.1»): свойство IF NOT EXISTS +
+        // строки словаря. Старый бинарь против этой схемы работает — плоский
+        // конструктор объявил бы шаг ломающим и зря отказал в старте всем без V14.
+        new Step(14, 13, "decision_status_dictionary", List.of(
+            "CREATE PROPERTY KnowDecision.status_raw IF NOT EXISTS STRING",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='proposed',   label_ru='📋 Предложено — правило сформулировано, вердикта нет', color='#5AB4E8', sort_order=10, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='proposed'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='accepted',   label_ru='✅ Принято — действующее правило', color='#A8B860', sort_order=20, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='accepted'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='deferred',   label_ru='⏸ Отложено — намеренно не сейчас', color='#B8A860', sort_order=30, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='deferred'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='superseded', label_ru='♻ Вытеснено — заменено более поздним решением', color='#665C48', sort_order=40, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='superseded'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='fixed',      label_ru='📌 Fixed (легаси сида) — к ревизии', color='#88B8A8', sort_order=50, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='fixed'",
+            "UPDATE KnowDictEntry SET dict_type='decision_status', code='done',       label_ru='☑ Done (легаси сида) — к ревизии', color='#7A8890', sort_order=60, is_active=true, is_extensible=false UPSERT WHERE dict_type='decision_status' AND code='done'"
+        )),
+
+        // AL-86 (найдено вопросом владельца 2026-07-30 «один статус — несколько
+        // иконок?»): V14 завела decision_status с двумя расхождениями от канона
+        // task_status/adr_status — эмодзи вписан ПРЯМО В ТЕКСТ label_ru вместо
+        // структурного icon-слага (game-icons), и цвет — сырой hex вместо
+        // семантического CSS-токена (var(--suc) и т.п.), который один адаптируется
+        // под тему и палитру (lore-status.ts). Плюс словарь не читался фронтом
+        // вовсе — STATUS_DICTS не включал decision_status, так что dictColor/
+        // dictIcon для него всегда возвращали пусто, каким бы ни был контент строки.
+        //
+        // Иконография — та же, что у adr_status для общих кодов (proposed/
+        // accepted/superseded): статус решения и статус ADR — близкие понятия,
+        // разная иконография для одного смысла путала бы глаз сильнее, чем
+        // помогала различать. legacy fixed/done намеренно НЕ зелёные: это не
+        // «всё хорошо», а «требует ревизии» (OQ-DECSTATUS-LEGACY) — amber,
+        // battery-50, тот же маркер, что у partial.
+        // major=13, не 14: чисто содержательная правка словаря (цвет/иконка),
+        // старый бинарь рендерит decision-чипы устаревшими, но работает — не
+        // повод поднимать ось несовместимости выше того, что уже задал V13.
+        new Step(15, 13, "decision_status_icons_and_semantic_colors", List.of(
+            "UPDATE KnowDictEntry SET label_ru='Предложено — правило сформулировано, вердикта нет', icon='calendar',      color='var(--inf)' UPSERT WHERE dict_type='decision_status' AND code='proposed'",
+            "UPDATE KnowDictEntry SET label_ru='Принято — действующее правило',                      icon='laurel-crown', color='var(--suc)' UPSERT WHERE dict_type='decision_status' AND code='accepted'",
+            "UPDATE KnowDictEntry SET label_ru='Отложено — намеренно не сейчас',                      icon='pause-button', color='var(--t3)'  UPSERT WHERE dict_type='decision_status' AND code='deferred'",
+            "UPDATE KnowDictEntry SET label_ru='Вытеснено — заменено более поздним решением',         icon='pause-button', color='var(--t3)'  UPSERT WHERE dict_type='decision_status' AND code='superseded'",
+            "UPDATE KnowDictEntry SET label_ru='Fixed (легаси сида) — к ревизии',                     icon='battery-50',   color='var(--wrn)' UPSERT WHERE dict_type='decision_status' AND code='fixed'",
+            "UPDATE KnowDictEntry SET label_ru='Done (легаси сида) — к ревизии',                      icon='battery-50',   color='var(--wrn)' UPSERT WHERE dict_type='decision_status' AND code='done'"
+        )),
+
+        // AL-43 (указание владельца: вариант (а) — тот же HAS_STATE+Hist, что у
+        // задач/спринтов/ADR/спек, а не отдельный механизм): «продукт про SCD2,
+        // а кто и когда менял справочник — нигде». Ключ у KnowDictEntry составной
+        // (dict_type, code), не одно поле — Hist-строка несёт ОБА, денормализовано,
+        // как KnowSpecHist несёт spec_id (запрос по составному ключу без обхода
+        // графа, тот же выбор, что у спек). WHO закрывает AL-20 (аудит-лог,
+        // dict — семейство HUMAN_ONLY, значит axis всегда human): Hist отвечает на
+        // «когда и что», лог — на «кто». compatMajor=13: старый бинарь читает/пишет
+        // KnowDictEntry как раньше и просто не видит историю — не ломающий шаг.
+        new Step(16, 13, "dict_entry_scd2_history", List.of(
+            "CREATE VERTEX TYPE KnowDictEntryHist IF NOT EXISTS",
+            "CREATE PROPERTY KnowDictEntryHist.state_uid      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.dict_type      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.code           IF NOT EXISTS STRING",
+            // DATETIME, не STRING: SPRINT_PLANITEM_RETIRE уже ловил "Comparison
+            // method violates its general contract!" на смешанных типах
+            // valid_from в ORDER BY (LoreSchemaInitializer, комментарий рядом).
+            "CREATE PROPERTY KnowDictEntryHist.valid_from     IF NOT EXISTS DATETIME",
+            "CREATE PROPERTY KnowDictEntryHist.valid_to       IF NOT EXISTS DATETIME",
+            "CREATE PROPERTY KnowDictEntryHist.label_ru       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.label_en       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.color          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.icon           IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowDictEntryHist.sort_order     IF NOT EXISTS INTEGER",
+            "CREATE PROPERTY KnowDictEntryHist.is_active      IF NOT EXISTS BOOLEAN",
+            "CREATE PROPERTY KnowDictEntryHist.is_extensible  IF NOT EXISTS BOOLEAN",
+            "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (state_uid) UNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowDictEntryHist (dict_type, code) NOTUNIQUE"
+        )),
+
+        // AL-29 (OQ-ADMIN-TAG-SPLIT): KnowTag и LoreTag несли одни и те же теги
+        // (security/frontend/lineage/schema/scd2…) под двумя разными вершинами
+        // в зависимости от того, откуда пришёл тег — вопросам (LoreTag) или
+        // ADR/decision/task (KnowTag). Схлопывается в KnowTag (шире по охвату
+        // сущностей) — javaStep(17): mergeLoreTagIntoKnowTag. 3-арг конструктор,
+        // не 4-арг с compatMajor=13 — шаг ТРОГАЕТ ДАННЫЕ (переносит рёбра, сносит
+        // тип), как V13 mergeFeaturesIntoUseCases, а не просто добавляет схему.
+        // tag_id уже STRING на обоих типах — новых свойств шагу не нужно.
+        new Step(17, "loretag_merged_into_knowtag", List.of()),
+
+        // AL-82/ADR-LORE-036: предусловие всей проектной RBAC-модели — человек
+        // как вершина графа (по вердикту 148 источник истины о правах — граф,
+        // а человека в нём нет вовсе). KnowUser ключуется по kc_sub (клейм
+        // Keycloak), НЕ по имени — имя меняется, sub нет. HAS_PROJECT_ROLE —
+        // то же устройство, что HAS_ACTOR со свойством role (ADR-028 D19):
+        // одно ребро на пару человек×проект, роль — свойством, множественность
+        // по построению (человек в нескольких проектах с разными ролями).
+        // compatMajor=17 (не 13): 13 был последним breaking ДО V17
+        // (loretag-merge подняло планку) — новая база для аддитивных шагов.
+        // Чисто новые типы, старый бинарь их просто не видит — не ломающий шаг.
+        new Step(18, 17, "user_project_role", List.of(
+            "CREATE VERTEX TYPE KnowUser IF NOT EXISTS",
+            "CREATE PROPERTY KnowUser.kc_sub       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowUser.display_name IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowUser (kc_sub) UNIQUE",
+            "CREATE EDGE TYPE HAS_PROJECT_ROLE IF NOT EXISTS",
+            "CREATE PROPERTY HAS_PROJECT_ROLE.role IF NOT EXISTS STRING"
+        )),
+
+        // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
+        // client_id — то же значение, что несёт клейм client_id/azp токена
+        // агента (KC clientId, напр. "lore-mcp-full"), НЕ внутренний UUID
+        // клиента KC. OWNED_BY без свойств: один агент — один живой владелец
+        // (переприсвоение — снести старое ребро и создать новое, как у
+        // HAS_PROJECT_ROLE, не накапливать историю рёбер). Без UNIQUE-индекса
+        // на client_id: у большинства акторов (kind≠agent) поле пустое, а
+        // поведение ArcadeDB UNIQUE на множественных NULL не проверено —
+        // дубль client_id у двух акторов сегодня ловится детектором
+        // осиротевших (agent-orphans), не индексом.
+        new Step(19, 17, "actor_agent_owner", List.of(
+            "CREATE PROPERTY KnowActor.client_id IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (client_id) NOTUNIQUE",
+            "CREATE EDGE TYPE OWNED_BY IF NOT EXISTS"
         ))
     );
 

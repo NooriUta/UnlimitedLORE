@@ -14,9 +14,11 @@ name: LORE CD (ci-server stand)
 # on-demand run, a concurrency group so two deploys never race, and a real
 # post-deploy health check instead of trusting `docker compose up` succeeding.
 #
-# Runs via the Forgejo act_runner registered on THIS host (label "ubuntu-latest",
-# see the job's runs-on comment) — a github-hosted runner has no access to this
-# machine's Docker Desktop / compose stack at all, so this only makes sense here.
+# Runs via the Forgejo act_runner registered on THIS host (label "lore-only",
+# see the job's runs-on comment — AL-88, 2026-07-30: dedicated runner, was
+# "ubuntu-latest" against the shared pool before) — a github-hosted runner has
+# no access to this machine's Docker Desktop / compose stack at all, so this
+# only makes sense here.
 
 # ── Место в цепочке: develop → preprod → main ────────────────────────────────
 # Деплоит ТОЛЬКО ветка `preprod`, а не `develop`. Раньше стенд обновлялся с
@@ -50,11 +52,20 @@ permissions:
 jobs:
   deploy:
     name: Build + deploy to local Docker stand
-    # Matches backend-ci.yml: the only registered runner label is "ubuntu-latest"
-    # (mapped by the runner's own config to the forgejo-ci-runtime:jdk21 image),
-    # NOT "self-hosted" — that label doesn't exist here and the job would queue
-    # forever. github-hosted runners can't reach this host's Docker Desktop at
-    # all, so this workflow only makes sense running here regardless of the label name.
+    # AL-88 (2026-07-30): tried a dedicated runner (label "lore-only",
+    # registered on ci-server, forgejo-runner-lore container) instead of the
+    # shared pool, to stop queueing behind Shuttle/Hound/aida-root jobs — but
+    # every job on it fails right after "Point live-DB tests…" with exitcode 1
+    # despite `set -x` tracing showing every script command succeed, including
+    # the $GITHUB_ENV write. Cause not found after three attempts (identical
+    # config.yml, identical image digest, identical resource limits, named
+    # volume vs bind mount — neither fixed it). Reverted to "ubuntu-latest"
+    # (matches the shared pool — its three runners carry no labels of their
+    # own) until this is root-caused; forgejo-runner-lore/volva_only stay
+    # registered on ci-server but unwired. NOT "self-hosted" — that label
+    # doesn't exist here and the job would queue forever. github-hosted runners
+    # can't reach this host's Docker Desktop at all, so this workflow only
+    # makes sense running here regardless of the label name.
     runs-on: ubuntu-latest
     # This job's checkout has no .env (gitignored — it holds the ArcadeDB root
     # password). docker-compose.yml reads ARCADEDB_ROOT_PASSWORD from the shell
@@ -233,23 +244,19 @@ jobs:
         if: steps.which.outputs.backend == 'true'
         run: |
           cid=$(docker compose ps -q lore-backend)
-          # Проверка зависит от режима, и это НЕ усложнение ради усложнения.
-          #
-          # Пока auth выключен, представиться админом можно заголовком
-          # X-Seer-Role — без него эндпоинт под requireAdmin отдаёт 403, и
-          # проверка ложно объявила бы мост несконфигуренным.
-          #
-          # После включения auth бэкенд этому заголовку НЕ ДОВЕРЯЕТ (в том и
-          # смысл), поэтому тот же запрос честно получает 401. Прежняя проверка
-          # уронила бы деплой ровно в момент успешного включения — отказ,
-          # неотличимый от настоящей поломки.
-          #
-          # Поэтому 401 при LORE_AUTH_ENABLED=true — это ПОДТВЕРЖДЕНИЕ: бэкенд
-          # поднялся и требует токен. А вот 200 в этом режиме означал бы, что
-          # флаг не доехал до сборки (build-time!) и auth молча остался выключен.
-          code=$(docker exec "$cid" curl -s -o /tmp/pf.json -w '%{http_code}' -m 10 \
-            -H 'X-Seer-Role: admin' http://127.0.0.1:9100/lore/kc/auth-preflight || echo 000)
-          body=$(docker exec "$cid" cat /tmp/pf.json 2>/dev/null || true)
+          # Проверка enforcement (auth реально требует токен) зависит от
+          # режима — auth-preflight сам под requireAdmin, а после включения
+          # auth заголовку X-Seer-Role больше не верят, так что тот же запрос
+          # честно получает 401/403. Это ПОДТВЕРЖДЕНИЕ: бэкенд поднялся и
+          # требует токен. 200 в этом режиме означал бы, что флаг не попал в
+          # СБОРКУ образа (quarkus.oidc.enabled фиксируется на build-time).
+          # AL-88 (2026-07-30): curl идёт через ОТДЕЛЬНЫЙ throwaway-контейнер на
+          # compose-сети проекта (`docker run --network ..._default`), а не
+          # `docker exec` внутрь backend'а и не host.docker.internal — сама
+          # причина расписана ниже, у гейта kc_configured (тот же класс фикса).
+          code=$(docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" curlimages/curl:latest \
+            curl -s -o /dev/null -w '%{http_code}' -m 10 \
+            -H 'X-Seer-Role: admin' http://lore-backend:9100/lore/kc/auth-preflight || echo 000)
           echo "auth-preflight -> HTTP $code"
           if [ "${LORE_AUTH_ENABLED}" = "true" ]; then
             case "$code" in
@@ -257,12 +264,68 @@ jobs:
               200) echo "::error::auth должен быть включён, но эндпоинт пустил по заголовку X-Seer-Role. Значит LORE_AUTH_ENABLED не попал в СБОРКУ образа (quarkus.oidc.enabled фиксируется на build-time) — проверьте build-args в compose."; exit 1 ;;
               *)   echo "::error::бэкенд не ответил на auth-preflight (HTTP $code)"; exit 1 ;;
             esac
-          else
-            case "$body" in
-              *'"kc_configured":true'*) echo "KC-мост настроен" ;;
-              *) echo "::error::KC-мост не получил секрет (kc_configured != true). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."; exit 1 ;;
-            esac
           fi
+          # MIG-33: kc_configured проверяется ЗДЕСЬ, в ОБЕИХ ветках одинаково —
+          # раньше это было только в auth-off ветке (через auth-preflight,
+          # который при auth on сам требует токен и JSON-тело не отдаёт), и
+          # мёртвый мост за корректно включённым auth проходил CD зелёным.
+          # /q/health/ready — та же дырка в SeerRoleFromTokenFilter.isProtected,
+          # что у /q/health/live (healthcheck compose), поэтому читается без
+          # токена независимо от режима auth (LoreBridgeHealthCheck).
+          #
+          # AL-88 (30-31.07.2026) — ШЕСТЬ провалов подряд, реальная причина
+          # найдена на шестом. Хроника (полная — в задаче AL-88 LORE, не тут):
+          # окно 120с/200с/450с/300с/300с, механизм docker-exec-в-цикле →
+          # throwaway-контейнер → реже опрос — ничего не помогало, потому что
+          # ни одна из гипотез (гонка тайминга, exec-interference, частота
+          # опроса) не была настоящей причиной. Диагностическое логирование
+          # внутри SecretProvider (шестой прогон) впервые дало факт: секрет
+          # получен за 110-130мс, kc_configured становился true в течение ~1с
+          # после старта контейнера — то есть ДО первой же проверки этого шага.
+          # А цикл всё равно не находил совпадение все 12 попыток подряд.
+          #
+          # Настоящая причина — опечатка в паттерне: JSON отдаёт
+          # `"kc_configured": true` (ПРОБЕЛ после двоеточия — стандартное
+          # форматирование Vert.x JsonObject), а паттерн искал
+          # `"kc_configured":true` БЕЗ пробела. Совпасть не мог НИКОГДА,
+          # независимо от того, что происходило с секретом, Infisical или
+          # частотой опроса — все шесть падений с первого до последнего были
+          # этим одним и тем же missing-space багом. Диагностический дамп
+          # каждый раз показывал true СРАЗУ после отказа именно потому, что он
+          # печатал сырое тело, а не прогонял его через тот же кривой паттерн.
+          #
+          # Канал опроса (throwaway-контейнер на compose-сети
+          # `${COMPOSE_PROJECT_NAME}_default`, не host.docker.internal — тот
+          # смотрит на loopback-порт, недостижимый с моста) и интервал 25с
+          # остаются оправданными сами по себе — они не были причиной, но и не
+          # были ошибкой.
+          hbody=$(docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" curlimages/curl:latest sh -c '
+            hbody=""
+            for i in $(seq 1 12); do
+              hbody=$(curl -s -m 10 http://lore-backend:9100/q/health/ready || true)
+              if echo "$hbody" | grep -qE "\"kc_configured\"[[:space:]]*:[[:space:]]*true"; then break; fi
+              sleep 25
+            done
+            echo "$hbody"
+          ')
+          case "$hbody" in
+            *'"kc_configured": true'*|*'"kc_configured":true'*) echo "KC-мост настроен" ;;
+            *)
+              echo "::error::КС-мост не получил секрет за 300с (kc_configured != true в /q/health/ready). Секреты берутся из Infisical по machine identity — проверьте LORE_SECRETS_* и что identity добавлена в проект."
+              # AL-88 (2026-07-30, воспроизведено дважды): голого текста ошибки
+              # недостаточно, чтобы отличить «Infisical недоступен по сети» от
+              # «доступен, но identity/project отклонён» — оба дают ровно тот же
+              # kc_configured:false снаружи. Дампим три вещи, которых раньше не
+              # было в логе CD вообще:
+              echo "--- /q/health/ready тело (полностью) ---"
+              echo "$hbody"
+              echo "--- сетевая связность контейнера до Infisical (host-gateway:18080) ---"
+              docker exec "$cid" curl -sv -m 10 -o /dev/null "${LORE_SECRETS_URL:-http://infisical:18080}" 2>&1 || true
+              echo "--- логи lore-backend (последние 150 строк, фильтр SecretProvider/Infisical/KC) ---"
+              docker compose logs --no-color --tail=150 lore-backend 2>&1 | grep -iE "secretprovider|infisical|kcbridge|authstartupguard" || echo "(в логах ничего не найдено по фильтру — секцию расширить вручную: docker compose logs lore-backend)"
+              exit 1
+              ;;
+          esac
 
       - name: Verify frontend serves
         if: steps.which.outputs.frontend == 'true'
@@ -293,18 +356,37 @@ jobs:
       # anyway: the proxy is a detail of THIS dev machine, not guaranteed to
       # exist on whatever CI host eventually replaces it, so an unreachable
       # Telegram still must not turn a healthy deploy red.
+      # Ссылки в сообщении — ТОЛЬКО публичные (2026-07-24, замечание владельца).
+      # github.server_url внутри act_runner = внутренний ROOT_URL Forgejo
+      # (http://forgejo:3000) — такая ссылка с телефона мертва. Публичная база
+      # захардкожена сознательно: это свойство ЭТОГО стенда, как и сам runner.
+      # PR промоушна вытаскивается из merge-коммита (push в preprod — всегда
+      # результат мержа PR develop→preprod); нет номера — строка опускается,
+      # а не рисуется битой.
       - name: Notify success
         if: success()
         continue-on-error: true
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUBLIC_REPO: https://git.seidrstudio.pro/AIDA/UnlimitedLORE
+          STAND_URL: https://lore.odal.seidrstudio.pro
         run: |
           [ -z "${TG_TOKEN}" ] && exit 0
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG=$(printf "✅ LORE local CD deployed\nRef: %s\nSHA: %s\nBy: %s\nService: %s\n\nRun: %s" \
+          RUN_URL="${PUBLIC_REPO}/actions/runs/${{ github.run_number }}"
+          SUBJ=$(git log -1 --pretty=%s)
+          PR_NUM=$(printf '%s' "$SUBJ" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          # Заголовок PR из merge-коммита — «что именно выехало» читается из
+          # уведомления, без похода по ссылке (замечание владельца 2026-07-24).
+          PR_TITLE=$(printf '%s' "$SUBJ" | sed -E "s/^Merge pull request '(.*)' \(#[0-9]+\).*$/\1/")
+          [ "$PR_TITLE" = "$SUBJ" ] && PR_TITLE=""
+          PR_LINE=""
+          [ -n "$PR_NUM" ]   && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          [ -n "$PR_TITLE" ] && PR_LINE=$(printf "\nЧто: %s%s" "$PR_TITLE" "$PR_LINE")
+          MSG=$(printf "✅ LORE CD: стенд обновлён\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nСтенд: %s\nРелизы: %s/releases\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
-            "${{ github.event.inputs.service || 'both' }}" "$RUN_URL")
+            "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" \
+            "$STAND_URL" "$PUBLIC_REPO" "$RUN_URL")
           jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
             '{"chat_id":$chat,"text":$text}' > /tmp/tg-payload.json
           for attempt in 1 2 3; do
@@ -326,12 +408,20 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+          PUBLIC_REPO: https://git.seidrstudio.pro/AIDA/UnlimitedLORE
         run: |
           [ -z "${TG_TOKEN}" ] && exit 0
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG=$(printf "❌ LORE local CD FAILED\nRef: %s\nSHA: %s\nBy: %s\nService: %s\n\nRun: %s" \
+          RUN_URL="${PUBLIC_REPO}/actions/runs/${{ github.run_number }}"
+          SUBJ=$(git log -1 --pretty=%s)
+          PR_NUM=$(printf '%s' "$SUBJ" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+          PR_TITLE=$(printf '%s' "$SUBJ" | sed -E "s/^Merge pull request '(.*)' \(#[0-9]+\).*$/\1/")
+          [ "$PR_TITLE" = "$SUBJ" ] && PR_TITLE=""
+          PR_LINE=""
+          [ -n "$PR_NUM" ]   && PR_LINE=$(printf "\nPR: %s/pulls/%s" "$PUBLIC_REPO" "$PR_NUM")
+          [ -n "$PR_TITLE" ] && PR_LINE=$(printf "\nЧто: %s%s" "$PR_TITLE" "$PR_LINE")
+          MSG=$(printf "❌ LORE CD: деплой УПАЛ\nRef: %s @ %.10s\nBy: %s\nService: %s%s\n\nRun: %s" \
             "${{ github.ref_name }}" "${{ github.sha }}" "${{ github.actor }}" \
-            "${{ github.event.inputs.service || 'both' }}" "$RUN_URL")
+            "${{ github.event.inputs.service || 'both' }}" "$PR_LINE" "$RUN_URL")
           jq -n --arg chat "$TG_CHAT" --arg text "$MSG" \
             '{"chat_id":$chat,"text":$text}' > /tmp/tg-payload.json
           for attempt in 1 2 3; do

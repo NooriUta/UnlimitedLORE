@@ -24,7 +24,7 @@ import {
   EditButton,
   IconPill,
 } from './shared';
-import VpCreateModal, { vpKindOf, type VpKind, type VpDraft } from './VpCreateModal';
+import PainGainJobModal, { painGainJobKindOf, type PainGainJobKind, type PainGainJobDraft } from './PainGainJobModal';
 import { jobKindLabel, levelLabel, gainRankLabel } from './vocab';
 import { VP_ICON, iconOf } from './icons';
 
@@ -58,11 +58,11 @@ function LabeledChips({ label, children }: { label: string; children: ReactNode 
   );
 }
 
-export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
+export default function LorePainGainJobRegistry({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
   const { t } = useTranslation();
   const [typeFilter, setTypeFilter] = useState<VpType>('all');
-  const [creating, setCreating] = useState<VpKind | null>(null);
-  const [editing, setEditing] = useState<VpDraft | null>(null);
+  const [creating, setCreating] = useState<PainGainJobKind | null>(null);
+  const [editing, setEditing] = useState<PainGainJobDraft | null>(null);
   // Счётчик перезагрузки: после создания реестр обязан показать новую запись.
   // Без него форма закрывалась бы «успешно» на неизменившемся списке — самый
   // убедительный вид потери данных, какой бывает.
@@ -102,7 +102,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
       <ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.vp.searchPh', 'работа / боль / выгода…')} />
       <FilterChips options={chipDefs} value={typeFilter} onChange={setTypeFilter} />
       <div style={{ display: 'flex', gap: 6, padding: '6px 9px', borderBottom: '1px solid var(--bd)' }}>
-        {(['job', 'pain', 'gain'] as VpKind[]).map(k => (
+        {(['job', 'pain', 'gain'] as PainGainJobKind[]).map(k => (
           <button
             key={k}
             type="button"
@@ -159,7 +159,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
 
   // Карандаш правки — один на все три паспорта. Форма та же, что у создания:
   // поля совпадают дословно, и вторая её копия разъехалась бы с первой.
-  const editBtn = (draft: VpDraft) => (
+  const editBtn = (draft: PainGainJobDraft) => (
     <EditButton
       onClick={() => { setCreating(null); setEditing(draft); }}
       title={t('lore.product.vp.edit', 'Правка')}
@@ -219,7 +219,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         <PassportHeader title={p.title ?? p.pain_id}>
           <Pill tone="warn">{t('lore.product.vp.pain', 'боль')}</Pill>
           <Pill>{levelLabel(t, p.severity)}</Pill>
-          {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity, actorIds: p.actor_ids ?? [] })}
+          {editBtn({ id: p.pain_id, title: p.title, body_md: p.body_md, extra: p.severity, actorIds: p.actor_ids ?? [], blocksJobIds: p.blocks_job_ids ?? [] })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(p.pain_id), marginBottom: 8 }}>{p.pain_id}</div>
 
@@ -254,7 +254,7 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
         <PassportHeader title={g.title ?? g.gain_id}>
           <Pill tone="ok">{t('lore.product.vp.gain', 'выгода')}</Pill>
           <Pill>{gainRankLabel(t, g.rank)}</Pill>
-          {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md, actorIds: g.actor_ids ?? [] })}
+          {editBtn({ id: g.gain_id, title: g.title, body_md: g.body_md, extra: g.metric_md, actorIds: g.actor_ids ?? [], rank: g.rank, successOfJobIds: g.success_of_job_ids ?? [] })}
         </PassportHeader>
         <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: productColor(g.gain_id), marginBottom: 8 }}>{g.gain_id}</div>
 
@@ -312,25 +312,29 @@ export default function LoreVpRegistry({ selectedId, onSelect, onNavigate, onErr
       <MasterDetail
       hasDetail={!!selectedId}
       onBack={() => onSelect(null)} list={<>{filterChips}{rows}</>} detail={detail} />
-      {creating && (
-        <VpCreateModal
-          kind={creating}
-          opened
-          onClose={() => setCreating(null)}
-          onCreated={id => { setReloadKey(k => k + 1); onSelect(id); }}
-          onError={onError}
-        />
-      )}
-      {editing && vpKindOf(editing.id) && (
-        <VpCreateModal
-          kind={vpKindOf(editing.id) as VpKind}
-          opened
-          initial={editing}
-          onClose={() => setEditing(null)}
-          onCreated={() => setReloadKey(k => k + 1)}
-          onError={onError}
-        />
-      )}
+      {/* PL-49: Mantine Modal мгновенно рождается через УСЛОВНОЕ МОНТИРОВАНИЕ
+          ({condition && <Modal opened />}) не переживает transition-цикл:
+          компонент монтируется СРАЗУ с opened=true, без перехода false→true,
+          на который Modal рассчитывает внутри (useModalTransition ждёт
+          именно фронт смены пропа). Итог — пустой .mantine-Modal-root без
+          единого дочернего узла, кнопок в том числе не видно. Компонент
+          остаётся смонтированным всегда, opened переключается обычным
+          пропом — так transition реально видит false→true. */}
+      <PainGainJobModal
+        kind={creating ?? 'pain'}
+        opened={!!creating}
+        onClose={() => setCreating(null)}
+        onCreated={id => { setReloadKey(k => k + 1); onSelect(id); }}
+        onError={onError}
+      />
+      <PainGainJobModal
+        kind={(editing && painGainJobKindOf(editing.id)) || 'pain'}
+        opened={!!(editing && painGainJobKindOf(editing.id))}
+        initial={editing ?? undefined}
+        onClose={() => setEditing(null)}
+        onCreated={() => setReloadKey(k => k + 1)}
+        onError={onError}
+      />
     </>
   );
 }

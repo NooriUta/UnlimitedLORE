@@ -44,6 +44,9 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Словари', api: '/lore/dict/entry', humanOnly: true, agents: [] },
   { what: 'Учётные записи', api: '/lore/kc/*', humanOnly: true, agents: [] },
   { what: 'Включение auth', api: 'LORE_AUTH_ENABLED', humanOnly: true, agents: [] },
+  // AL-47 (регресс-гвард поймал): полная переиндексация корпуса документов, была
+  // защищена только ролью admin — а её несут все семь узких агентных профилей.
+  { what: 'Переиндексация корпуса', api: '/lore/admin/lore/ingest', humanOnly: true, agents: [] },
   { what: 'ADR', api: '/lore/adr*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
   { what: 'Решения', api: '/lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
   { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },
@@ -52,9 +55,11 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
   { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },
   { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm', 'product-analyst'] },
-  { what: 'Метрики', api: '/lore/metric*', humanOnly: false, agents: ['full', 'analyst', 'product-analyst'] },
-  { what: 'Инсайты', api: '/lore/insight*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
-  { what: 'Рекомендации', api: '/lore/rec*', humanOnly: false, agents: ['full', 'analyst', 'marketer', 'product-analyst'] },
+  // Метрики/Инсайты/Рекомендации СНЯТЫ (AL-47, регресс-гвард AgentScopeMatrixCoverageTest
+  // поймал расхождение с бэкендом): metric_log/insight_new пишут в /lore/bragi/metric и
+  // /lore/bragi/insight (строка «Публикации BRAGI» ниже), rec_new/rec_promote — в
+  // /lore/qg/recommendation (строка «Гейты качества»). Отдельного /lore/metric|insight|rec
+  // не существует — строки показывали права на несуществующий путь.
   // Продуктовый слой (ADR-LORE-022/030/032). Владелец — product-analyst, восьмой
   // профиль: он курирует VP-канву. До AL-17 эти строки в матрице отсутствовали, и
   // писать в них мог любой профиль — проверять было нечему.
@@ -66,7 +71,8 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'VP-связи', api: '/lore/vp*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'Акторы', api: '/lore/actor*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
   { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
-  { what: 'Тех-реестр', api: '/lore/tech*', humanOnly: false, agents: ['full', 'architect', 'developer'] },
+  // Тех-реестр СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
+  // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-…") — строка «Спеки/ранбуки/доки» выше.
   { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
   { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
   // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
@@ -284,7 +290,6 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const [dicts, setDicts] = useState<DictRow[]>([]);
   const [projects, setProjects] = useState<ProjRow[]>([]);
   const [knowTags, setKnowTags] = useState<TagRow[]>([]);
-  const [loreTags, setLoreTags] = useState<TagRow[]>([]);
   const [sprintsByProject, setSprintsByProject] = useState<Record<string, number>>({});
   const [areaUsage, setAreaUsage] = useState<Record<string, number>>({});
   const [users, setUsers] = useState<KcState<KcUser>>({ k: 'loading' });
@@ -297,7 +302,6 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
     fetchLoreSlice<DictRow>('dictionary', {}).then(setDicts).catch(onError);
     fetchLoreSlice<ProjRow>('git_projects', {}).then(setProjects).catch(onError);
     fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnowTags).catch(onError);
-    fetchLoreSlice<TagRow>('lore_tags_usage', {}).then(setLoreTags).catch(() => { /* optional */ });
     fetchLoreSlice<{ sprint_id: string; git_projects: string[] | null }>('sprints', {})
       .then(rows => {
         const m: Record<string, number> = {};
@@ -321,7 +325,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
     agents: agents.k === 'ok' ? agents.rows.length : undefined,
     dicts: dictTypes.length || undefined,
     projects: projects.length || undefined,
-    tags: (knowTags.length + loreTags.length) || undefined,
+    tags: knowTags.length || undefined,
   };
 
   return (
@@ -364,7 +368,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} preflight={preflight} />}
           {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
           {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} onError={onError} reload={bump} />}
-          {tab === 'tags' && <TagsTab know={knowTags} lore={loreTags} />}
+          {tab === 'tags' && <TagsTab know={knowTags} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
         </main>
       </div>
@@ -976,7 +980,7 @@ function ProjectsTab({ rows, sprints, onError, reload }: {
 }
 
 // ── Теги (AL-40: поиск/сортировка по 93 строкам) ────────────────────────────
-function TagsTab({ know, lore }: { know: TagRow[]; lore: TagRow[] }) {
+function TagsTab({ know }: { know: TagRow[] }) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<'uses' | 'alpha'>('uses');
@@ -1009,14 +1013,13 @@ function TagsTab({ know, lore }: { know: TagRow[]; lore: TagRow[] }) {
   };
   return (
     <div>
-      <div style={S.card}>{t('lore.admin.tagsNote', 'Read-only (D6): слияние/переименование — 2-я итерация (миграция рёбер TAGGED_WITH, AL-29 ждёт решения владельца).')}</div>
+      <div style={S.card}>{t('lore.admin.tagsNote', 'Read-only (D6): слияние/переименование через MCP-инструменты, отдельного UI-редактора нет.')}</div>
       <Toolbar q={q} setQ={setQ}
-        shown={know.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length + lore.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length}
-        total={know.length + lore.length}
+        shown={know.filter(r => !q || r.tag_id.includes(q.toLowerCase())).length}
+        total={know.length}
         seg={{ options: [['uses', t('lore.admin.byUses', 'По использованию')], ['alpha', t('lore.admin.byAlpha', 'По алфавиту')]], value: sort, set: v => setSort(v as 'uses' | 'alpha') }} />
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        {list('KnowTag (ADR/решения/задачи)', know)}
-        {list('LoreTag (темы вопросов)', lore)}
+        {list('KnowTag', know)}
       </div>
     </div>
   );

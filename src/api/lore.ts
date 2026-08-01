@@ -27,6 +27,19 @@ function assertJson(res: Response): void {
 }
 
 async function parseError(res: Response): Promise<never> {
+  // AL-85: статус проверяется ПЕРВОЙ строкой, ДО assertJson. Протухшая сессия
+  // за прокси (nginx/Traefik/Keycloak) отдаёт 401 с HTML-телом, не JSON —
+  // assertJson бросил(а) бы LoreUpstreamError раньше, чем этот код успел бы
+  // увидеть 401, и sessionExpired() не вызвался бы вовсе. Без этой ветки
+  // протухший токен выглядел как пустой экран: `authHeaders()` не находит
+  // валидного токена, ответ 401 (от бэкенда ИЛИ от прокси — неважно откуда),
+  // а список рендерится как «не найдено». Уводим в состояние «нет сессии» —
+  // дальше AuthGate сам отправит на вход. Тело не читаем — оно может быть
+  // произвольным HTML, разбирать его смысла нет.
+  if (res.status === 401) {
+    sessionExpired();
+    throw new Error('401 unauthenticated');
+  }
   assertJson(res);
   let code = '';
   let detail = '';
@@ -35,12 +48,6 @@ async function parseError(res: Response): Promise<never> {
     code = body.error ?? '';
     detail = body.detail ?? '';
   } catch { /* fall through */ }
-  // 401 — сессия недействительна, а не «данных нет». Без этой ветки протухший
-  // токен выглядел как пустой экран: `authHeaders()` не находит валидного
-  // токена и шлёт запрос БЕЗ заголовка, бэкенд отвечает 401, а список
-  // рендерится как «не найдено». Уводим в состояние «нет сессии» — дальше
-  // AuthGate сам отправит на вход.
-  if (res.status === 401) sessionExpired();
   if (code === 'LORE_DISABLED') throw new LoreDisabledError();
   if (code === 'LORE_UPSTREAM') throw new LoreUpstreamError(detail);
   if (code === 'NOT_FOUND')     throw new LoreNotFoundError(detail);
@@ -59,8 +66,8 @@ export async function fetchLoreSlice<T>(
   // запрос стал бы 401 на каждом экране, то есть выглядел бы как «LORE сломался»,
   // а не как «не хватает токена».
   const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   const body = (await res.json()) as { rows?: T[] };
   return body.rows ?? [];
 }
@@ -103,8 +110,8 @@ export async function loreMutate<T = { ok: boolean; [k: string]: unknown }>(
     body: JSON.stringify(body),
     signal,
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return (await res.json()) as T;
 }
 
@@ -121,8 +128,8 @@ export async function fetchBragiMetrics(
   const url = new URL(`${LORE_BASE}/bragi/metric/query`, location.origin);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const res = await fetch(url.toString(), { signal, headers: { ...authHeaders() } });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   const body = (await res.json()) as { rows?: BragiMetricPoint[] };
   return body.rows ?? [];
 }
@@ -137,10 +144,20 @@ export interface LoreSliceDescriptor {
 
 export async function fetchLoreSliceCatalog(signal?: AbortSignal): Promise<LoreSliceDescriptor[]> {
   const res = await fetch(`${LORE_BASE}/slices`, { signal, headers: { ...authHeaders() } });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   const body = (await res.json()) as { slices?: LoreSliceDescriptor[] };
   return body.slices ?? [];
+}
+
+// FIT-05: какая база отвечает — единственный источник правды с самого
+// сервера, не из сборки фронта. Локальный дев-стенд и MCP исторически
+// смотрели в разные базы одновременно; признак нельзя подделать конфигом
+// клиента, потому что он вообще не приходит с клиента.
+export async function fetchLoreEnv(signal?: AbortSignal): Promise<{ db: string } | null> {
+  const res = await fetch(`${LORE_BASE}/env`, { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return null;
+  return (await res.json()) as { db: string };
 }
 
 // ── Analytics dashboard (GET /lore/analytics) ──────────────────────────────
@@ -171,8 +188,8 @@ export interface LoreAnalytics {
 
 export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnalytics> {
   const res = await fetch(`${LORE_BASE}/analytics`, { signal, headers: { ...authHeaders() } });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return (await res.json()) as LoreAnalytics;
 }
 
@@ -242,8 +259,8 @@ export async function fetchLoreSearch(p: LoreSearchParams, signal?: AbortSignal)
   if (p.offset) qs.set('offset', String(p.offset));
   if (p.mode) qs.set('mode', p.mode);
   const res = await fetch(`${LORE_BASE}/search?${qs}`, { signal, headers: { ...authHeaders() } });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return (await res.json()) as LoreSearchResult;
 }
 
@@ -349,8 +366,8 @@ export async function createLoreAdr(payload: AdrWritePayload): Promise<{ ok: boo
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; adr_id: string; hist_created: boolean }>;
 }
 
@@ -483,8 +500,8 @@ export async function updateLoreComponent(payload: ComponentUpdatePayload): Prom
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; component_id: string }>;
 }
 
@@ -695,8 +712,8 @@ export async function postLoreStatus(
     },
     body: JSON.stringify({ entity_type: entityType, id, status }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<LoreStatusUpdateResponse>;
 }
 
@@ -708,8 +725,8 @@ export async function uploadBragiAsset(file: File): Promise<{ ok: boolean; file_
     headers: { ...authHeaders() },
     body: form,
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; file_url: string; size_bytes: number }>;
 }
 
@@ -725,8 +742,8 @@ export async function attachBragiAsset(p: {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; asset_id: string; attached_to: string }>;
 }
 
@@ -741,8 +758,8 @@ export async function createBragiCampaign(p: {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; campaign_id: string; linked_variant: boolean }>;
 }
 
@@ -759,8 +776,8 @@ export async function linkBragiForseti(p: {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(p),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; entity_id: string; target_id: string; action: string }>;
 }
 
@@ -786,8 +803,8 @@ export async function createLoreTask(
       task_type: taskType ?? null,
     }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<LoreTaskWriteResponse>;
 }
 
@@ -825,8 +842,8 @@ export async function editLoreTask(
       uc_id: agents?.ucId ?? null,
     }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<LoreTaskWriteResponse>;
 }
 
@@ -841,8 +858,8 @@ export async function linkTaskComponent(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ task_uid: taskUid, component_id: componentId, action }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; task_uid: string; component_id: string; action: string }>;
 }
 
@@ -856,8 +873,8 @@ export async function linkSprintComponent(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, component_id: componentId, action }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string; component_id: string; action: string }>;
 }
 
@@ -871,8 +888,8 @@ export async function linkSprintProject(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, git_project: gitProject, action }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string; git_project: string; action: string }>;
 }
 
@@ -887,8 +904,8 @@ export async function linkSprintMilestone(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, milestone_id: milestoneId, action }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string; milestone_id: string; action: string }>;
 }
 
@@ -936,8 +953,8 @@ export async function upsertTech(p: TechUpsertPayload): Promise<{ ok: boolean; s
       content_md: lines.join('\n'),
     }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; spec_id: string }>;
 }
 
@@ -953,8 +970,8 @@ export async function linkSprintRelease(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ release_id: releaseId, git_project: gitProject, sprint_ids: [sprintId] }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean }>;
 }
 
@@ -967,8 +984,8 @@ export async function upsertMilestone(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(m),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; milestone_id: string }>;
 }
 
@@ -981,8 +998,8 @@ export async function updateLoreSprint(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string }>;
 }
 
@@ -1004,8 +1021,8 @@ export async function updateSprintPlan(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ sprint_id: sprintId, ...fields }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string }>;
 }
 
@@ -1019,8 +1036,8 @@ export async function createLoreSprint(payload: {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(payload),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; sprint_id: string; created: boolean }>;
 }
 
@@ -1039,12 +1056,30 @@ export interface LoreRelease {
   git_project: string | null;
 }
 
+// AL-30: fields beyond the SCD2 envelope are UNION of what history_sprint /
+// adr_history / history_task actually select — each slice sends only its own
+// subset, the rest arrive as undefined. LoreEvolutionView's FIELDS config picks
+// per-kind which of these it reads, so a stray key here never surfaces in the UI.
 export interface LoreHistRow {
   valid_from: string | null;
   valid_to: string | null;
   content_hash: string | null;
   source_commit: string | null;
   status_raw?: string | null;
+  // sprint
+  priority?: string | null;
+  planned_start_date?: string | null;
+  planned_end_date?: string | null;
+  track_id?: string | null;
+  pr_refs?: string | null;
+  context_md?: string | null;
+  outcome_md?: string | null;
+  // adr
+  decision_md?: string | null;
+  consequences_md?: string | null;
+  // task
+  effort_days?: number | null;
+  note_md?: string | null;
 }
 
 export interface LorePlanVersion {
@@ -1096,8 +1131,8 @@ export async function updateLoreDoc(
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ doc_id: docId, ...fields }),
   });
-  assertJson(res);
   if (!res.ok) return parseError(res);
+  assertJson(res);
   return res.json() as Promise<{ ok: boolean; doc_id: string }>;
 }
 

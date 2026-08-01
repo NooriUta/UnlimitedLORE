@@ -62,6 +62,7 @@ export default function LoreBragiPublications() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<PublicationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [statusSel, setStatusSel] = useState<Set<string>>(new Set());
   const [rubricSel, setRubricSel] = useState<Set<string>>(new Set());
   const [channelSel, setChannelSel] = useState<Set<string>>(new Set());
@@ -75,9 +76,10 @@ export default function LoreBragiPublications() {
 
   const load = useCallback(() => {
     setLoading(true);
+    setError(false);
     return fetchLoreSlice<PublicationRow>('bragi_publications')
       .then(rs => { setRows(rs); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { setLoading(false); setError(true); });
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -190,6 +192,7 @@ export default function LoreBragiPublications() {
   }
 
   if (loading) return <div style={S.hint}>{t('bragi.publications.loading', 'загрузка…')}</div>;
+  if (error) return <div style={S.hint}>{t('bragi.publications.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
 
   return (
     <div>

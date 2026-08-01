@@ -86,4 +86,33 @@ class LoreAdminGuardTest {
             .statusCode(403)
             .body("error", equalTo("FORBIDDEN"));
     }
+
+    // AL-84/ADR-LORE-025-D17: requireSuperAdmin — стрOже обычного requireAdmin.
+    // Плейн admin проходит на КАЖДЫЙ другой write выше, но не на создание
+    // проекта: единица изоляции всей проектной RBAC-модели, только super-admin.
+    @Test
+    void projectCreateRejectsPlainAdminRequiresSuperAdmin() {
+        given()
+            .header("X-Seer-Role", "admin")
+            .contentType("application/json")
+            .body("{\"slug\":\"acme/guard-probe\"}")
+        .when()
+            .post("/lore/project")
+        .then()
+            .statusCode(403)
+            .body("error", equalTo("FORBIDDEN"));
+    }
+
+    @Test
+    void projectCreateRejectsViewerRole() {
+        given()
+            .header("X-Seer-Role", "viewer")
+            .contentType("application/json")
+            .body("{\"slug\":\"acme/guard-probe-2\"}")
+        .when()
+            .post("/lore/project")
+        .then()
+            .statusCode(403)
+            .body("error", equalTo("FORBIDDEN"));
+    }
 }

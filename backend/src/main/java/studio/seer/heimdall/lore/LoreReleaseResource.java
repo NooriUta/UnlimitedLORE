@@ -284,23 +284,19 @@ public class LoreReleaseResource extends LoreResourceBase {
             for (String sid : (req.sprint_ids() != null ? req.sprint_ids() : List.<String>of())) {
                 if (!SAFE_ID.matcher(sid).matches()) { errors.add("bad sprint id: " + sid); continue; }
                 try {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE EDGE IMPLEMENTED_IN_RELEASE " +
-                        "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
-                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
-                        Map.of("sid", sid, "ruid", ruid))).await().indefinitely();
-                    sprintsRemoved++;
+                    // deleteEdges, а не DELETE EDGE: последней команды нет в грамматике
+                    // ArcadeDB 26.7.2 совсем — см. LoreResourceBase#deleteEdges.
+                    sprintsRemoved += deleteEdges("IMPLEMENTED_IN_RELEASE",
+                        "@out.sprint_id=:sid AND @in.release_uid=:ruid",
+                        Map.of("sid", sid, "ruid", ruid));
                 } catch (Exception e) { errors.add("sprint " + sid + ": " + e.getMessage()); }
             }
             for (Integer prNum : (req.pr_numbers() != null ? req.pr_numbers() : List.<Integer>of())) {
                 String prUid = gp + "#" + prNum;
                 try {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE EDGE SHIPPED_IN " +
-                        "FROM (SELECT FROM KnowPR WHERE pr_uid=:uid) " +
-                        "TO   (SELECT FROM KnowRelease WHERE release_uid=:ruid)",
-                        Map.of("uid", prUid, "ruid", ruid))).await().indefinitely();
-                    prsRemoved++;
+                    prsRemoved += deleteEdges("SHIPPED_IN",
+                        "@out.pr_uid=:uid AND @in.release_uid=:ruid",
+                        Map.of("uid", prUid, "ruid", ruid));
                 } catch (Exception e) { errors.add("pr #" + prNum + ": " + e.getMessage()); }
             }
         } catch (Exception e) {
@@ -358,9 +354,13 @@ public class LoreReleaseResource extends LoreResourceBase {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE " + rid + " SET git_project=:gp, pr_uid=:uid",
                     Map.of("gp", req.git_project(), "uid", newUid))).await().indefinitely();
-                // Re-wire BELONGS_TO_PROJECT: delete old edge, create new
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE EDGE BELONGS_TO_PROJECT FROM " + rid, null)).await().indefinitely();
+                // Re-wire BELONGS_TO_PROJECT: delete old edge, create new.
+                //
+                // Здесь DELETE EDGE был опаснее, чем в unlink выше: UPDATE вершины уже
+                // прошёл строкой ранее, а parse error на этой команде обрывал метод —
+                // git_project и pr_uid оказывались новыми, ребро оставалось старым.
+                // То есть отказ был не «ничего не произошло», а расхождение поля и графа.
+                deleteEdges("BELONGS_TO_PROJECT", "@out=" + rid, Map.of());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE BELONGS_TO_PROJECT FROM " + rid +
                     " TO (SELECT FROM KnowGitProject WHERE slug=:gp)",

@@ -41,12 +41,27 @@ public class LoreAuthStartupGuard {
     @PostConstruct
     void check() {
         if (!oidcEnabled || !requireAdmin) return;
-        if (!kc.configured()) {
+        // MIG-33: Infisical нередко поднимается ПАРАЛЛЕЛЬНО с бэкендом (одна
+        // compose-команда, оба контейнера стартуют вместе) — секрет может быть
+        // недоступен ровно в момент этой проверки, хотя сервис почти готов.
+        // Несколько попыток с паузой закрывают транзиентную гонку старта прямо
+        // здесь, а не полагаются на то, что кто-то потом случайно дёрнет мост
+        // и SecretProvider перечитает секрет заново (он и так не кэширует
+        // отказ — см. SecretProvider.get() — но ЭТА проверка одноразовая).
+        boolean configured = kc.configured();
+        for (int attempt = 1; !configured && attempt <= 3; attempt++) {
+            LOG.warnf("[LORE AUTH GUARD] KC-мост не настроен (попытка %d/4) — секрет-сервис мог не "
+                + "успеть подняться, повтор через 3с", attempt);
+            sleepQuietly(3000);
+            configured = kc.configured();
+        }
+        if (!configured) {
             // Auth включён, а мост не сконфигурирован: людей завести/проверить нечем.
             // Токены при этом валидируются самим OIDC — не смертельно, но громко.
             LOG.error("[LORE AUTH GUARD] auth включён (LORE_AUTH_ENABLED=true), но KC-мост не настроен ("
-                + KcBridge.KC_SECRET_KEY + " unset) — проверить наличие администраторов невозможно, "
-                + "управление пользователями из Admin LORE работать не будет.");
+                + KcBridge.KC_SECRET_KEY + " unset) после 4 попыток — проверить наличие администраторов "
+                + "невозможно, управление пользователями из Admin LORE работать не будет. "
+                + "/q/health/ready несёт kc_configured=false для мониторинга (MIG-33).");
             return;
         }
         Set<String> admins;
@@ -68,5 +83,13 @@ public class LoreAuthStartupGuard {
                 + "снова. Обход для аварийных случаев: lore.auth.require-admin=false.");
         }
         LOG.infof("[LORE AUTH GUARD] auth включён, администраторов в realm: %d — ok", admins.size());
+    }
+
+    private static void sleepQuietly(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

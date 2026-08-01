@@ -23,9 +23,32 @@ public class LoreDecisionResource extends LoreResourceBase {
 
     // ADR-019: component_id (vertex filter axis), adr_id (parent → DECIDED_IN edge),
     // tags (KnowTag → TAGGED_WITH). Decision stays vertex-only — no KnowDecisionHist.
+    // AL-79: status — значение словаря decision_status (V14), не свободный текст.
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
         String date_created, String refs_raw, String component_id, String adr_id,
-        java.util.List<String> tags) {}
+        java.util.List<String> tags, String status) {}
+
+    /**
+     * AL-79: фолбэк на случай пустого словаря (свежая БД до сидов) — тот же
+     * приём, что UC_GOAL_LEVELS_FALLBACK в LoreProductResource (PL-29): канон —
+     * словарь decision_status, константа только страхует старт.
+     */
+    static final java.util.List<String> DECISION_STATUSES_FALLBACK =
+        java.util.List.of("proposed", "accepted", "deferred", "superseded", "fixed", "done");
+
+    private java.util.List<String> dictCodes(String dictType, java.util.List<String> fallback) {
+        try {
+            java.util.List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT code FROM KnowDictEntry WHERE dict_type=:dt AND is_active=true",
+                Map.of("dt", dictType));
+            java.util.List<String> codes = rows.stream()
+                .map(r -> r.get("code")).filter(java.util.Objects::nonNull)
+                .map(String::valueOf).toList();
+            return codes.isEmpty() ? fallback : codes;
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
 
     // ── Write-path: create / upsert KnowDecision ─────────────────────────────
 
@@ -41,6 +64,12 @@ public class LoreDecisionResource extends LoreResourceBase {
             return badParams("decision_id required");
         if (req.title() == null || req.title().isBlank())
             return badParams("title required");
+        // AL-79: статус — только из словаря; неактивное значение перестаёт проходить.
+        if (req.status() != null && !req.status().isBlank()
+                && !dictCodes("decision_status", DECISION_STATUSES_FALLBACK).contains(req.status()))
+            return badParams("status must be one of: "
+                + dictCodes("decision_status", DECISION_STATUSES_FALLBACK)
+                + " (словарь decision_status, правится в админке)");
         try {
             // LH-44: only SET provided fields — a title-only re-call must not wipe
             // body_md/refs_raw or reset date_created to today.
@@ -52,6 +81,11 @@ public class LoreDecisionResource extends LoreResourceBase {
             if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
             if (req.refs_raw() != null)     { dsql.append(", refs_raw=:refs");     p.put("refs", req.refs_raw()); }
             if (req.component_id() != null) { dsql.append(", component_id=:comp"); p.put("comp", req.component_id()); }
+            // status_raw — то же поле, где лежат статусы сида и которое читают
+            // слайсы decisions/decisions_of_adr; имя status было бы второй правдой.
+            if (req.status() != null && !req.status().isBlank()) {
+                dsql.append(", status_raw=:st"); p.put("st", req.status());
+            }
             dsql.append(" UPSERT WHERE decision_id=:did");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dsql.toString(), p)).await().indefinitely();
@@ -87,6 +121,55 @@ public class LoreDecisionResource extends LoreResourceBase {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    // ── AL-79: статус существующего решения ──────────────────────────────────
+    // Отдельный эндпоинт, НЕ расширение /lore/status: status_set — это SCD2
+    // close-open по Hist-цепочке (спринты/задачи/фазы), а у KnowDecision истории
+    // нет by design (vertex-only) — статус здесь плоское поле вершины. Смешивать
+    // две механики под одним контрактом = обещать ревизии там, где их не будет.
+
+    public record DecisionStatusRequest(String decision_id, String status) {}
+
+    @POST
+    @Path("decision/status")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response setDecisionStatus(DecisionStatusRequest req,
+                                      @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.decision_id() == null || req.decision_id().isBlank()
+                || req.status() == null || req.status().isBlank())
+            return badParams("decision_id and status required");
+        if (!SAFE_ID.matcher(req.decision_id()).matches())
+            return badParams("decision_id contains illegal characters");
+        java.util.List<String> allowed = dictCodes("decision_status", DECISION_STATUSES_FALLBACK);
+        if (!allowed.contains(req.status()))
+            return badParams("status must be one of: " + allowed
+                + " (словарь decision_status, правится в админке)");
+        try {
+            // Читаем старое значение ДО записи: UPDATE в ArcadeDB отвечает count,
+            // и «решения нет» иначе неотличимо от «статус уже такой» (ok:true-ловушка).
+            java.util.List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT status_raw FROM KnowDecision WHERE decision_id=:d", Map.of("d", req.decision_id()));
+            if (rows.isEmpty())
+                return noStore(Response.status(Response.Status.NOT_FOUND)
+                    .entity(new LoreError("NOT_FOUND", "решение " + req.decision_id() + " не найдено")));
+            Object old = rows.get(0).get("status_raw");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowDecision SET status_raw=:s WHERE decision_id=:d",
+                Map.of("s", req.status(), "d", req.decision_id()))).await().indefinitely();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("decision_id", req.decision_id());
+            out.put("old_status", old);
+            out.put("new_status", req.status());
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DECISION STATUS] %s: %s", req.decision_id(), e.getMessage());
+            return upstream(e);
         }
     }
 
@@ -156,15 +239,6 @@ public class LoreDecisionResource extends LoreResourceBase {
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION PROJECT] %s: %s", req.decision_id(), e.getMessage());
             return upstream(e);
-        }
-    }
-
-    private void deleteEdges(String edgeType, String where, Map<String, Object> params) {
-        java.util.List<Map<String, Object>> edges = ingestService.queryPublic(
-            "SELECT @rid FROM " + edgeType + " WHERE " + where, params);
-        for (Map<String, Object> e : edges) {
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "DELETE FROM " + edgeType + " WHERE @rid=" + e.get("@rid").toString(), null)).await().indefinitely();
         }
     }
 

@@ -9,6 +9,8 @@ import { AUTH_ENABLED, displayName, getRole, logout, sessionExpiresAt } from '..
 import { Modal } from '@mantine/core';
 import { LoreSearchScreen } from '../lore/LoreSearchScreen';
 import { useIsAdmin } from '../../auth/useRole';
+import { fetchLoreEnv } from '../../api/lore';
+import { ProjectScopeProvider, useProjectScope } from '../../context/ProjectScopeContext';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
@@ -25,6 +27,14 @@ function activeTabId(pathname: string): ShellTab['id'] {
 }
 
 export default function AppShell() {
+  return (
+    <ProjectScopeProvider>
+      <AppShellBody />
+    </ProjectScopeProvider>
+  );
+}
+
+function AppShellBody() {
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -60,10 +70,22 @@ export default function AppShell() {
   const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
 
   // ── Seiðr-шапка: бренд/тенант/«ещё» как dropdown'ы + палитра поиска ──────────
-  const [openDD, setOpenDD] = useState<null | 'brand' | 'tenant' | 'chapters' | 'more' | 'user'>(null);
-  const [tenant, setTenant] = useState('DEFAULT');
+  const [openDD, setOpenDD] = useState<null | 'brand' | 'project' | 'chapters' | 'more' | 'user'>(null);
+  const { project, setProject, projects } = useProjectScope();
   const [palOpen, setPalOpen] = useState(false);
   const [palQ, setPalQ] = useState('');
+  // FIT-05: чью базу видит фронт — читаем у САМОГО бэкенда (GET /lore/env),
+  // не из своей сборки. Локальный дев и MCP исторически смотрели в разные
+  // базы одновременно — «данные пропали» и «данные есть» оба были правдой,
+  // каждая про свою базу. dbName===null, пока не пришёл ответ — бейдж тогда
+  // не рисуется вовсе, а не врёт «прод» по умолчанию.
+  const [dbName, setDbName] = useState<string | null>(null);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreEnv(ctrl.signal).then(r => { if (r) setDbName(r.db); }).catch(() => { /* бейдж просто не покажется */ });
+    return () => ctrl.abort();
+  }, []);
+  const isTestDb = !!dbName && dbName !== 'system_aida_lore';
   // Время окончания сессии для меню профиля (AL-76). Считается на каждый рендер,
   // а не по таймеру: меню открывают редко, а лишний интервал пришлось бы гасить
   // при размонтировании — цена выше пользы. Пустая строка, когда auth выключен
@@ -223,27 +245,39 @@ export default function AppShell() {
 
         {!narrow && <div style={{ width: 1, height: 20, background: 'var(--bd)', margin: '0 2px', flexShrink: 0 }} />}
 
-        {/* ── Тенант — самостоятельный контрол: контекст ДАННЫХ, а не «куда идём» ── */}
+        {/* ── Проект — самостоятельный контрол: контекст ДАННЫХ, а не «куда идём» ──
+            AL-78: раньше здесь был декоративный tenant-стаб (DEFAULT/DEMO), ни на
+            что не влиявший. Теперь — реальный проектный скоуп (KnowGitProject),
+            пробрасывается только в слайс 'sprints' (ADR-LORE-017, единственный
+            сегодня принимающий `project`) на страницах, где своего фильтра ещё
+            нет (План, Вехи). LoreSprintTree/LoreAnalytics уже несут собственный
+            клиентский фильтр по проекту — им эта шапка ничего не добавляет. */}
         {!narrow && (
           <div style={{ position: 'relative', flexShrink: 0 }} data-dd>
-            <button type="button" aria-expanded={openDD === 'tenant'} aria-haspopup="menu"
-              title={t('shell.tenantTitle', 'Рабочее пространство данных')}
-              onClick={() => setOpenDD(d => d === 'tenant' ? null : 'tenant')}
+            <button type="button" aria-expanded={openDD === 'project'} aria-haspopup="menu"
+              title={t('shell.projectTitle', 'Рабочее пространство данных (проект)')}
+              onClick={() => setOpenDD(d => d === 'project' ? null : 'project')}
               style={pill(false)}>
-              <span style={liveDot} />{tenant}<span style={caret}>⌄</span>
+              <span style={liveDot} />{project ?? t('shell.projectAll', 'ВСЕ ПРОЕКТЫ')}<span style={caret}>⌄</span>
             </button>
-            {openDD === 'tenant' && (
+            {openDD === 'project' && (
               <div style={dd} role="menu">
-                <div style={ddHead}>{t('shell.tenant', 'Рабочее пространство (тенант)')}</div>
-                {['DEFAULT', 'DEMO'].map(tn => (
-                  <button key={tn} type="button" role="menuitem" style={ddItem(tn === tenant)}
-                    onClick={() => { setTenant(tn); setOpenDD(null); }}>
-                    <span style={{ width: 15, textAlign: 'center' }}>{tn === 'DEMO' ? '◐' : '◉'}</span>
-                    <span style={{ fontWeight: tn === tenant ? 700 : 500 }}>{tn}</span>
-                    {tn === tenant && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
+                <div style={ddHead}>{t('shell.project', 'Проект')}</div>
+                <button type="button" role="menuitem" style={ddItem(project === null)}
+                  onClick={() => { setProject(null); setOpenDD(null); }}>
+                  <span style={{ width: 15, textAlign: 'center' }}>◉</span>
+                  <span style={{ fontWeight: project === null ? 700 : 500 }}>{t('shell.projectAll', 'Все проекты')}</span>
+                  {project === null && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
+                </button>
+                {projects.map(p => (
+                  <button key={p.slug} type="button" role="menuitem" style={ddItem(p.slug === project)}
+                    onClick={() => { setProject(p.slug); setOpenDD(null); }}>
+                    <span style={{ width: 15, textAlign: 'center' }}>◐</span>
+                    <span style={{ fontWeight: p.slug === project ? 700 : 500 }}>{p.name ?? p.slug}</span>
+                    {p.slug === project && <span style={ddBadge}>{t('shell.here', 'здесь')}</span>}
                   </button>
                 ))}
-                <div style={ddNote}>Тенант ⟂ навигация: смена пространства данных не меняет раздел — вы остаётесь там же.</div>
+                <div style={ddNote}>{t('shell.projectNote', 'Проект ⟂ навигация: смена скоупа не меняет раздел — вы остаётесь там же. Сегодня влияет на План и Вехи.')}</div>
               </div>
             )}
           </div>
@@ -335,6 +369,22 @@ export default function AppShell() {
             от ОС и не подчинялся нашей типографике вовсе. Замерено — ширина
             глифа одинакова во всех трёх наших шрифтах (23.1px), тогда как
             буква «M» даёт 33.6 / 24 / 22: верный признак чужого фолбэка. */}
+        {/* FIT-05: плашка базы. Показывается ТОЛЬКО для тестовой (прод — тихий
+            умолчательный случай, не нуждается в напоминании на каждом экране);
+            признак пришёл с сервера, подделать конфигом фронта нельзя. */}
+        {isTestDb && (
+          <span
+            title={t('shell.testDbTitle', 'Бэкенд смотрит НЕ в прод-базу') + `: ${dbName}`}
+            style={{
+              flexShrink: 0, fontFamily: 'var(--mono)', fontSize: 'var(--fs-2xs)',
+              border: '1px solid var(--wrn)', borderRadius: 999, padding: '1px 8px',
+              color: 'var(--wrn)', whiteSpace: 'nowrap',
+            }}
+          >
+            ⚠ {narrow ? t('shell.testDbShort', 'тест') : t('shell.testDb', 'тестовая база')}
+          </span>
+        )}
+
         <button type="button" onClick={() => setPalOpen(true)}
           title={t('shell.searchTitle', 'Поиск по данным (/)')} aria-label={t('shell.searchAria', 'Поиск')}
           style={{ ...btnStyle, textTransform: 'none' as const, display: 'inline-flex', alignItems: 'center' }}>

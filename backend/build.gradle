@@ -53,6 +53,13 @@ dependencies {
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
 
+    // AL-90: эмуляция JWT-клеймов (agent_scope/client_id) в REST-round-trip
+    // тестах через @TestSecurity + @Claim — без него SecurityIdentity в
+    // тестовом профиле не несёт JWT вовсе, и agent-scope-зависимые пути
+    // (AgentScopeFilter, callerAgentScope/callerClientId) нельзя было
+    // проверить иначе как прямым вызовом Java-метода.
+    testImplementation 'io.quarkus:quarkus-test-security-jwt'
+
     // C5 (SPRINT_LORE_PROD_HARDENING): real ArcadeDB in a throwaway container
     // for SCD2-transition and A1-rollback tests — not part of the Quarkus
     // platform BOM, so pinned directly.

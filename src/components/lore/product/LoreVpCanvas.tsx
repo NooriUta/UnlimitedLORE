@@ -184,6 +184,33 @@ function StickerNode({ data }: NodeProps) {
 
 const RF_NODE_TYPES = { frame: FrameNode, sector: SectorNode, sticker: StickerNode };
 
+/**
+ * Строит один ReactFlow-узел «стикер» (FIT-06).
+ *
+ * Вынесена в чистую функцию НАРОЧНО: 2026-07-23 замена `width`/`height` (ВЕРХНИЙ
+ * уровень узла — по ним ReactFlow считает позиции хендлов) на `style: { width,
+ * height }` (косметика, движок её не читает) прошла типы, тесты и сборку —
+ * и уронила ВСЕ рёбра канвы разом, без единой ошибки в консоли. Отладка заняла
+ * час вслепую (подозревались тип ребра, zIndex, кэш Vite, дубль модуля).
+ *
+ * У этого репозитория нет инфраструктуры для рендер-тестов React (jsdom/
+ * @testing-library ни разу не подключались) — заводить её ради одного теста
+ * было бы решением большего масштаба, чем сам тест. Вместо рендеринга канвы
+ * тест проверяет ИМЕННО тот контракт, который сломался: `width`/`height`
+ * узла — числа на верхнем уровне, не вложены в `style`.
+ */
+export function buildStickerNode(params: {
+  id: string; parentId: string; width: number; height: number;
+  position: { x: number; y: number }; title: string; code: string;
+  color: string; rank: string | null; dim: boolean;
+}): Node {
+  const { id, parentId, width, height, position, title, code, color, rank, dim } = params;
+  return {
+    id, type: 'sticker', parentId, width, height, extent: 'parent', position,
+    data: { title, code, color, w: width, h: height, rank, dim },
+  };
+}
+
 const S = {
   wrap: { padding: 14, width: '100%' } as CSSProperties,
   navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
@@ -441,18 +468,15 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           x: 6 + (i % cols) * (size.w + 8),
           y: 24 + Math.floor(i / cols) * (size.h + 8),
         };
-        out.push({
-          id, type: 'sticker', parentId: key, width: size.w, height: size.h,
-          // Секция — родитель, а `extent: 'parent'` физически не выпускает
-          // стикер наружу: перетащить боль в чужой сектор нельзя, потому что
-          // это была бы не правка раскладки, а порча смысла.
-          extent: 'parent', position: pos[id] ?? grid,
-          data: {
-            title: titleOf.get(bare) ?? bare, code: bare, color, w: size.w, h: size.h,
-            rank: rankOf.get(bare)?.label ?? null,
-            dim: !!hover && hover !== id && !links.some(l => (l.from === hover || l.to === hover) && (l.from === id || l.to === id)),
-          },
-        });
+        // Секция — родитель, а `extent: 'parent'` физически не выпускает
+        // стикер наружу: перетащить боль в чужой сектор нельзя, потому что
+        // это была бы не правка раскладки, а порча смысла.
+        out.push(buildStickerNode({
+          id, parentId: key, width: size.w, height: size.h, position: pos[id] ?? grid,
+          title: titleOf.get(bare) ?? bare, code: bare, color,
+          rank: rankOf.get(bare)?.label ?? null,
+          dim: !!hover && hover !== id && !links.some(l => (l.from === hover || l.to === hover) && (l.from === id || l.to === id)),
+        }));
       });
     };
     fill('ps', ucs.map(u => u.uc_id), 'ps-', 'var(--g-do)', SCEN);

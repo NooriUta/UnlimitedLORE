@@ -179,28 +179,29 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   if (loading) return <div style={S.empty}>{t('lore.adrPassportView.loading', 'Загрузка {{adrId}}…', { adrId })}</div>;
   if (!data)   return <div style={S.empty}>{t('lore.adrPassportView.notFound', 'ADR не найден: {{adrId}}', { adrId })}</div>;
 
-  if (editing) {
-    return (
-      <LoreAdrEditor
-        lockId
-        initial={{
-          adr_id:          data.adr_id,
-          name:            data.name            ?? '',
-          status:          (data.status?.toUpperCase()) ?? 'PROPOSED',
-          date_created:    data.date_created    ?? '',
-          context_md:      data.context_md      ?? '',
-          decision_md:     data.decision_md     ?? '',
-          consequences_md: data.consequences_md ?? '',
-          depends_on_ids:  data.depends_on_ids  ?? [],
-          supersedes_ids:  data.supersedes_ids  ?? [],
-          component_ids:   data.components      ?? [],
-          tags:            data.tags            ?? [],
-        }}
-        onSaved={() => { setEditing(false); setReload(r => r + 1); }}
-        onCancel={() => setEditing(false)}
-      />
-    );
-  }
+  // AL-97: редактор — попап поверх паспорта (Modal внутри LoreAdrEditor), а не
+  // подмена панели: паспорт остаётся на месте, отмена не «телепортирует» назад.
+  const editorPopup = editing && (
+    <LoreAdrEditor
+      lockId
+      initial={{
+        adr_id:          data.adr_id,
+        name:            data.name            ?? '',
+        status:          (data.status?.toUpperCase()) ?? 'PROPOSED',
+        date_created:    data.date_created    ?? '',
+        context_md:      data.context_md      ?? '',
+        decision_md:     data.decision_md     ?? '',
+        consequences_md: data.consequences_md ?? '',
+        depends_on_ids:  data.depends_on_ids  ?? [],
+        supersedes_ids:  data.supersedes_ids  ?? [],
+        component_ids:   data.components      ?? [],
+        git_projects:    (data.git_projects   ?? []).filter(Boolean) as string[],
+        tags:            data.tags            ?? [],
+      }}
+      onSaved={() => { setEditing(false); setReload(r => r + 1); }}
+      onCancel={() => setEditing(false)}
+    />
+  );
 
   const components    = data.components        ?? [];
   const dependsOn     = data.depends_on_ids    ?? [];
@@ -260,6 +261,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
 
   return (
     <div style={S.root}>
+      {editorPopup}
       <div style={S.topBar}>
         <button style={S.back} onClick={onBack}>{t('lore.adrPassportView.backToList', '← К списку')}</button>
         <div style={{ display: 'flex', gap: 8 }}>

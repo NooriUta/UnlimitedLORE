@@ -12,6 +12,18 @@ on:
 
 jobs:
   build:
+    # AL-88 (2026-07-30): пробовали выделенный раннер lore-only вместо общего
+    # пула ci-server (очередь за Shuttle/Hound/aida-root на чужих прогонах) —
+    # но на нём КАЖДЫЙ прогон падает сразу после «Point live-DB tests…» с
+    # exitcode 1, хотя `set -x` трассировка шага показывает, что все команды
+    # скрипта отработали БЕЗ ошибки (включая запись в $GITHUB_ENV) — сбоит
+    # что-то в самом раннере ПОСЛЕ конца скрипта, причина не найдена за три
+    # прогона (identical config.yml, identical image sha256:d85b420…, identical
+    # resource limits, named-volume vs bind-mount — не помогло ни то, ни
+    # другое). Раннеры lore-only/volva_only остаются зарегистрированы на
+    # ci-server, но НЕ подключены сюда до отдельного расследования — иначе
+    # каждый PR/промоушн этого репозитория красный без единой реальной причины
+    # в самом коде.
     runs-on: ubuntu-latest
     # Пароль ArcadeDB для live-DB тестов приходит секретом, как в lore-cd.yml.
     # Раньше он был захардкожен в шаге ниже (dev-стенд, задокументирован в
@@ -88,7 +100,15 @@ jobs:
           fi
           echo "тест-БД: $FOUND"
           echo "LORE_TEST_DB_URL=$FOUND" >> "$GITHUB_ENV"
-          echo "LORE_TEST_DB_NAME=lore_ci_test" >> "$GITHUB_ENV"
+          # CI-01: имя БД РАЗНОЕ для push и pull_request. Один SHA всегда запускает
+          # оба прогона ОДНОВРЕМЕННО, и оба пересоздавали lore_ci_test — кто пришёл
+          # вторым, получал базу в момент drop/create («Database is not available»,
+          # найдено на 94157290: push зелёный, pull_request красный). Ретраи не
+          # спасают — это не сеть, а конфликт двух живых прогонов. Разведение по
+          # event_name убирает ровно эту гонку по построению; одновременные прогоны
+          # ОДНОГО типа (два разных PR разом) всё ещё делят базу — редкий случай,
+          # осознанно не усложняем именами из run_id (те копились бы без сноса).
+          echo "LORE_TEST_DB_NAME=lore_ci_${{ github.event_name }}" >> "$GITHUB_ENV"
           echo "LORE_TEST_DB_PASSWORD=$PW" >> "$GITHUB_ENV"
 
       # GitHub-hosted: fetch the JDK the normal way.

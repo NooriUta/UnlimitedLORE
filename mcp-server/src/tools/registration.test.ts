@@ -43,7 +43,9 @@ describe('registerLoreWrite', () => {
     // + job_new/vp_link (ADR-032 §2 Остервальдер, V10 — третий столп профиля)
     // + spec_link (PL-34 — перепривязка спеки ребром: component_id полем вершины
     //   слайсы не читают, и смена компонента через spec_set была тихим no-op).
-    expect(names).toHaveLength(75);
+    // + decision_set (AL-79 — статус решения из словаря decision_status; отдельный
+    //   инструмент, не status_set: у KnowDecision нет SCD2-истории)
+    expect(names).toHaveLength(76);
   });
 
   it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {

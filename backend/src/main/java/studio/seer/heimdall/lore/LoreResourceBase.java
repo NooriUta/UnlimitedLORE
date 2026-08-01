@@ -93,6 +93,15 @@ public abstract class LoreResourceBase {
         }
     }
 
+    // AL-84/ADR-LORE-025-D17: создание проекта — единица изоляции всей модели
+    // (кто-то становится владельцем, получает право делегировать роли), поэтому
+    // строже обычного requireAdmin — только super-admin, не admin.
+    void requireSuperAdmin(String role) {
+        if (!"superadmin".equals(role)) {
+            throw new LoreExceptions.Forbidden("super-admin role required");
+        }
+    }
+
     @Inject
     io.quarkus.security.identity.SecurityIdentity identity;
 
@@ -117,6 +126,23 @@ public abstract class LoreResourceBase {
         if (scope == null || scope.isBlank()) return null;
         scope = scope.replace("\"", "").trim();
         return scope.startsWith("agent-") ? scope.substring("agent-".length()) : scope;
+    }
+
+    /**
+     * client_id клиента KC, выдавшего токен, либо {@code null} у человека
+     * (и вообще при отсутствии верифицированного JWT — dev-режим/выключенный
+     * OIDC). AL-68/AL-90: клеймовое имя подтверждено конфигурацией маппера
+     * «Client ID» (Keycloak, встроенный client scope {@code service_account},
+     * тип User Session Note, Token Claim Name = {@code client_id}) — НЕ
+     * {@code azp}, как можно было бы предположить по OIDC-конвенции.
+     */
+    String callerClientId() {
+        if (identity == null
+                || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) {
+            return null;
+        }
+        Object raw = jwt.getClaim("client_id");
+        return raw == null ? null : String.valueOf(raw);
     }
 
     /**
@@ -153,6 +179,16 @@ public abstract class LoreResourceBase {
                 "lore.enabled=false (lore is dev-only)")));
     }
 
+    /**
+     * AL-68/AL-90: тот же код ошибки, что уже отдаёт {@link AgentScopeFilter}
+     * (агенты его уже умеют разбирать) — но здесь решение по матрице D4
+     * (роль владельца в проекте), не по статической `FAMILY_AGENTS`.
+     */
+    Response agentScopeForbidden(String detail) {
+        return noStore(Response.status(Response.Status.FORBIDDEN)
+            .entity(new LoreError("AGENT_SCOPE_FORBIDDEN", detail)));
+    }
+
     String basicAuth() {
         return mart.basicAuth();
     }
@@ -179,6 +215,48 @@ public abstract class LoreResourceBase {
 
     static Response noStore(Response.ResponseBuilder builder) {
         return builder.type(MediaType.APPLICATION_JSON).header("Cache-Control", "no-store").build();
+    }
+
+    /**
+     * Снести рёбра типа {@code edgeType}, подходящие под {@code where} — единственным
+     * способом, который работает на ArcadeDB.
+     *
+     * <p><b>Почему не {@code DELETE EDGE}.</b> Этой команды нет в грамматике ArcadeDB
+     * 26.7.2 <i>вовсе</i>: любая её форма — не «ребро не нашлось», а parse error, то
+     * есть гарантированная 500-я на каждый вызов. Проверено на живом сервисе
+     * 2026-07-30: {@code release_unlink} падал три раза подряд с
+     * {@code Internal Server Error} — спринт остался висеть сразу на двух релизах,
+     * старом и новом. Отказ при этом выглядит как поломка сервиса, а не как
+     * неподдерживаемый синтаксис, и диагностика уходит не туда.
+     *
+     * <p>Рабочий путь один: выбрать {@code @rid} рёбер и удалить их поимённо через
+     * {@code DELETE FROM}. Он же чистит {@code outE}/{@code inE} у вершин, так что
+     * висячих ссылок не остаётся.
+     *
+     * <p>В {@code where} концы ребра адресуются как {@code @out.поле}/{@code @in.поле}
+     * — например {@code "@out.sprint_id=:sid AND @in.release_uid=:ruid"}.
+     *
+     * <p>Хелпер был приватно продублирован в {@code LoreDecisionResource} и
+     * {@code LoreQuestionResource}, а {@code LoreReleaseResource} про него не знал и
+     * остался на {@code DELETE EDGE} — отсюда и падение. Одинаковая логика при трёх
+     * вызывающих живёт в базе (тот же довод, что у {@code linkStateCmd} и
+     * {@code relinkAreaEdge}), иначе четвёртый вызывающий напишет её заново, и с
+     * той же вероятностью — неверно.
+     *
+     * @return сколько рёбер удалено
+     */
+    int deleteEdges(String edgeType, String where, Map<String, Object> params) {
+        List<Map<String, Object>> edges = ingestService.queryPublic(
+            "SELECT @rid FROM " + edgeType + " WHERE " + where, params);
+        int removed = 0;
+        for (Map<String, Object> e : edges) {
+            Object rid = e.get("@rid");
+            if (rid == null) continue;
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM " + edgeType + " WHERE @rid=" + rid)).await().indefinitely();
+            removed++;
+        }
+        return removed;
     }
 
     /**
