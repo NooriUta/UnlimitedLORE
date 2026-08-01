@@ -146,6 +146,21 @@ public abstract class LoreResourceBase {
     }
 
     /**
+     * AL-94: {@code sub} токена — он же {@code KnowUser.kc_sub} в графе (AL-82).
+     * {@code null}, когда токена нет (auth выключен) или вызывающий — агент
+     * сервис-аккаунта: у последнего sub есть, но KnowUser с таким sub не
+     * заводится, права агента идут по {@link #callerClientId()}.
+     */
+    String callerKcSub() {
+        if (identity == null
+                || !(identity.getPrincipal() instanceof org.eclipse.microprofile.jwt.JsonWebToken jwt)) {
+            return null;
+        }
+        String sub = jwt.getSubject();
+        return sub == null || sub.isBlank() ? null : sub;
+    }
+
+    /**
      * Полный носитель: агент профиля {@code agent-full} либо человек-администратор
      * (ADR-LORE-014-D4). Используется там, где правило рассчитано на ДВОИХ, а
      * полный носитель работает один. <b>Новых прав на запись не даёт</b> —
