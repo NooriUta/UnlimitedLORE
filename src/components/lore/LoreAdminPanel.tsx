@@ -376,6 +376,111 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   );
 }
 
+// ── Проектные роли человека (AL-98) ─────────────────────────────────────────
+//
+// Вторая, ОТДЕЛЬНАЯ ось прав (ADR-LORE-036): realm-роль KC отвечает на «кто ты
+// в LORE» (admin/viewer), а эта — на «что ты в ПРОЕКТЕ» (owner/architect/pm/…).
+// Именно она кормит матрицу делегирования D4 (агент не может быть шире
+// владельца) и проектный read-скоуп AL-94. До этого экрана рёбра
+// HAS_PROJECT_ROLE заводились только через MCP — то есть графа ролей на проде
+// фактически не было, и скоуп нельзя было включить.
+//
+// kc_sub здесь = KC user id (`selected.id`): именно он приходит в `sub` токена
+// и по нему резолвер ищет KnowUser (AL-93).
+const PROJECT_ROLES = ['owner', 'architect', 'pm', 'developer', 'business-analyst', 'marketer', 'tester', 'reader'];
+
+function ProjectRolesEditor({ kcSub, username, onError }: {
+  kcSub: string; username: string; onError: (e: unknown) => void;
+}) {
+  const { t } = useTranslation();
+  const [rows, setRows] = useState<{ projects: (string | null)[] | null; roles: (string | null)[] | null } | null>(null);
+  const [projects, setProjects] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [pick, setPick] = useState<{ project: string; role: string }>({ project: '', role: 'developer' });
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ projects: (string | null)[] | null; roles: (string | null)[] | null }>(
+      'user_project_roles', { kc_sub: kcSub }, ctrl.signal)
+      .then(rs => setRows(rs[0] ?? { projects: [], roles: [] }))
+      .catch(() => setRows({ projects: [], roles: [] })); // человека ещё нет в графе — не ошибка
+    fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
+      .then(ps => setProjects(ps.map(p => p.slug).filter(Boolean).sort()))
+      .catch(() => { /* пикер деградирует в пустой список */ });
+    return () => ctrl.abort();
+  }, [kcSub, reload]);
+
+  // Слайс отдаёт две параллельные колонки-массива (проекты и роли ребра) —
+  // сшиваем по индексу, как их и вернул траверс.
+  const pairs = (rows?.projects ?? []).map((p, i) => ({ project: p, role: (rows?.roles ?? [])[i] }))
+    .filter((x): x is { project: string; role: string } => Boolean(x.project));
+
+  async function apply(project: string, role: string, action: 'add' | 'remove') {
+    setBusy(true); setErr(null);
+    try {
+      // display_name передаётся вместе с ролью: KnowUser создаётся тем же
+      // вызовом, если человека в графе ещё не было (LH-44 partial-safe).
+      await loreMutate('/user/role', { kc_sub: kcSub, display_name: username, project, role, action });
+      setReload(r => r + 1);
+      setPick(p => ({ ...p, project: '' }));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      onError(e);
+    } finally { setBusy(false); }
+  }
+
+  const free = projects.filter(p => !pairs.some(x => x.project === p));
+
+  return (
+    <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
+      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>
+        {t('lore.admin.projectRoles', 'Роли в проектах')}
+      </div>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
+        {t('lore.admin.projectRolesNote', 'Вторая ось прав: что человек делает в конкретном проекте. Отсюда же берётся, что может делать его агент (матрица делегирования) и какие проекты он видит.')}
+      </div>
+      {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 6 }}>{err}</div>}
+      {rows === null ? (
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.loading', 'загрузка…')}</div>
+      ) : (
+        <>
+          {pairs.length === 0 && (
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
+              {t('lore.admin.projectRolesEmpty', 'ролей в проектах нет — человек не видит ни одного проекта, когда проектный скоуп включён')}
+            </div>
+          )}
+          {pairs.map(x => (
+            <div key={x.project} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ ...S.pill('var(--acc)') }}>{x.role}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.project}</span>
+              <button style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', font: 'inherit' }}
+                disabled={busy} title={t('lore.admin.removeProjectRole', 'снять роль в проекте')}
+                onClick={() => apply(x.project, x.role, 'remove')}>✕</button>
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+            <select style={S.input} value={pick.project} disabled={busy || free.length === 0}
+              onChange={e => setPick(p => ({ ...p, project: e.target.value }))}>
+              <option value="">{free.length ? t('lore.admin.pickProject', 'проект…') : t('lore.admin.noFreeProjects', 'все проекты уже назначены')}</option>
+              {free.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select style={S.input} value={pick.role} disabled={busy}
+              onChange={e => setPick(p => ({ ...p, role: e.target.value }))}>
+              {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <button style={S.primary} disabled={busy || !pick.project}
+              onClick={() => apply(pick.project, pick.role, 'add')}>
+              {t('lore.admin.addProjectRole', '+ роль в проекте')}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Люди: список + карточка (AL-36) ─────────────────────────────────────────
 function UsersTab({ st, preflight, onError, reload }: {
   st: KcState<KcUser>; preflight: Preflight | null; onError: (e: unknown) => void; reload: () => void;
@@ -472,6 +577,7 @@ function UsersTab({ st, preflight, onError, reload }: {
               <dt style={{ color: 'var(--t3)' }}>{t('lore.admin.cardId', 'KC id')}</dt>
               <dd style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{selected.id}</dd>
             </dl>
+            <ProjectRolesEditor kcSub={selected.id} username={selected.username} onError={onError} />
             <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
               <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>
                 {t('lore.admin.cardHistory', 'История доступа и действий')}
