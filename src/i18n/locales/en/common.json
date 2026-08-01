@@ -421,6 +421,10 @@
       "sectionDependsOn": "Depends on other ADRs (DEPENDS_ON)",
       "sectionSupersedes": "Supersedes ADR (SUPERSEDES)",
       "sectionComponents": "Modules / components (BELONGS_TO)",
+      "dependsShort": "Depends on",
+      "supersedesShort": "Supersedes",
+      "componentsShort": "Components",
+      "projectsShort": "Projects",
       "sectionTags": "Tags"
     },
     "multiChip": {
