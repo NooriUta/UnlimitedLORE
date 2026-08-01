@@ -598,6 +598,57 @@
         "empty": "No technologies registered for any component.",
         "subtitle": "{{techs}} technologies · {{comps}} components",
         "title": "Technology × component matrix"
+      },
+      "tabs": {
+        "product": "Product"
+      },
+      "product": {
+        "loading": "loading product layer…",
+        "partialError": "Some slices failed to load ({{list}}) — their tiles are empty, the remaining numbers are honest.",
+        "hygieneTitle": "E · Link hygiene",
+        "hygieneWarn": "first-priority slice: until this is zero, the other numbers lie",
+        "hygieneClean": "links are clean — the numbers below can be trusted",
+        "finding": {
+          "uc_task_without_realizes": "uc task without REALIZES",
+          "enb_task_without_justification": "enb task without ADR",
+          "uc_without_acceptance": "UC without acceptance",
+          "pain_without_relief": "pain without relief"
+        },
+        "vpTitle": "Value by feature — Value Proposition",
+        "vpSubtitle": "{{n}} features · average fit {{fit}}%",
+        "vpEmpty": "no lineup roots (cloud/kite) yet",
+        "col": {
+          "feature": "Feature",
+          "fit": "fit",
+          "actors": "for whom",
+          "shipped": "value delivered",
+          "milestone": "milestone"
+        },
+        "fitHint": "click — what is not closed",
+        "shippedJobs": "{{done}} of {{all}} jobs",
+        "noMilestone": "no milestone ⚠",
+        "loadTitle": "A · Role load map",
+        "ucCount": "{{n}} UC",
+        "deadRole": "⚠ dead role",
+        "loadEmpty": "no actors in scope",
+        "coverageTitle": "B · Strategic coverage",
+        "featNoMs": "features without milestone: {{n}}",
+        "msNoFeat": "milestones without features: {{n}}",
+        "investTitle": "D · Investment profile",
+        "investHint": "\"all in jtd\" = a signal that value is stalled",
+        "investEmpty": "no tasks linked to releases",
+        "byCount": "by count",
+        "byCountHint": "some tasks have no effort_days",
+        "qualityTitle": "F · Documentation quality",
+        "qualityNorm": "normalized score/max of its own rigor",
+        "qualityBelow": "below threshold: {{n}} UC",
+        "qualityClick": "(click — list)",
+        "laterTitle": "C · G · I — enabled later",
+        "laterC": "C · shipped dynamics / lead time — once shipped_at accumulates (ADR-029)",
+        "laterG": "G · lineup graph \"builds on → unlocks\" — once \"Place in lineup\" is filled",
+        "laterI": "I · rework load — once in_rework lands (ADR-029)",
+        "laterH": "H · the RBAC matrix lives in the actor registry —",
+        "actorsLink": "open"
       }
     },
     "artifactDoc": {
