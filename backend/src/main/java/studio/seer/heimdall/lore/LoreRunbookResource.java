@@ -72,6 +72,52 @@ public class LoreRunbookResource extends LoreResourceBase {
         }
     }
 
+    // AL-92: проектная ось для KnowRunbook — тот же паттерн, что doc/project.
+    public record RunbookProjectLinkRequest(String runbook_id, String project, String action) {}
+
+    @POST
+    @Path("runbook/project")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkRunbookProject(RunbookProjectLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.runbook_id() == null || req.runbook_id().isBlank()
+                || req.project() == null || req.project().isBlank())
+            return badParams("runbook_id and project required");
+        if (!SAFE_ID.matcher(req.runbook_id()).matches())
+            return badParams("runbook_id contains illegal characters");
+        if (!SAFE_ID.matcher(req.project()).matches())
+            return badParams("project contains illegal characters");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowRunbook WHERE runbook_id=:id) " +
+                    "WHERE @in.slug = :p",
+                    Map.of("id", req.runbook_id(), "p", req.project()))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                    "project", req.project(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT " +
+                    "FROM (SELECT FROM KnowRunbook    WHERE runbook_id = :id) " +
+                    "TO   (SELECT FROM KnowGitProject WHERE slug       = :p) IF NOT EXISTS",
+                    Map.of("id", req.runbook_id(), "p", req.project())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            return noStore(Response.ok(Map.of("ok", true, "runbook_id", req.runbook_id(),
+                "project", req.project(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — check runbook_id exists and project is registered (project_new)")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE RUNBOOK PROJECT] %s: %s", req.runbook_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
     // ── Runbook write ────────────────────────────────────────────────────────
     public record RunbookUpsertRequest(String runbook_id, String name, String area,
         String date_created, String content_md) {}
