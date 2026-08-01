@@ -101,4 +101,57 @@ public class ProjectRbacService {
         String role = ownerRoleInProject(owner, project);
         return delegationAllowed(role, agentScope);
     }
+
+    // ── AL-93 (фаза PROJECT_SCOPE): список разрешённых проектов вызывающего ──
+    //
+    // Резолвер ЧИСТЫЙ: superadmin-bypass и «auth off = superadmin» решаются на
+    // уровне вызывающего (скоуп-фильтры AL-94), не здесь — иначе каждая ветка
+    // обхода должна была бы знать про роли реалма, и bypass расползся бы по
+    // графовым запросам. Пустое множество = «не видит ни одного проекта» —
+    // честный ответ для вызывающего без ролей, не ошибка.
+
+    /**
+     * Проекты, где у человека (kc_sub) есть ЛЮБАЯ роль — сама роль для read-скоупа
+     * не важна: даже reader видит проект, просто ничего в нём не пишет.
+     */
+    public Set<String> allowedProjectsForUser(String kcSub) {
+        if (kcSub == null || kcSub.isBlank()) return Set.of();
+        var rows = ingestService.queryPublic(
+            "SELECT out('HAS_PROJECT_ROLE').slug AS slugs FROM KnowUser WHERE kc_sub = :sub",
+            Map.of("sub", kcSub));
+        if (rows.isEmpty()) return Set.of();
+        return distinct(rows.get(0).get("slugs"));
+    }
+
+    /**
+     * Проекты, где роль ВЛАДЕЛЬЦА агента делегирует профиль этого агента
+     * (матрица D4 поверх всех ролей владельца одним запросом по рёбрам,
+     * а не обходом всех KnowGitProject). Осиротевший клиент → пустое множество.
+     */
+    public Set<String> allowedProjectsForAgent(String clientId, String agentScope) {
+        String owner = ownerKcSub(clientId);
+        if (owner == null || agentScope == null) return Set.of();
+        var rows = ingestService.queryPublic(
+            "SELECT @in.slug AS slug, role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+            Map.of("sub", owner));
+        var out = new java.util.LinkedHashSet<String>();
+        for (var r : rows) {
+            Object slug = r.get("slug");
+            if (slug != null && delegationAllowed(String.valueOf(r.get("role")), agentScope)) {
+                out.add(String.valueOf(slug));
+            }
+        }
+        return out;
+    }
+
+    /** Результат графового траверса (скаляр или список) → distinct non-null строки. */
+    private static Set<String> distinct(Object raw) {
+        var out = new java.util.LinkedHashSet<String>();
+        if (raw instanceof java.util.Collection<?> c) {
+            for (Object o : c) if (o != null && !String.valueOf(o).isBlank()) out.add(String.valueOf(o));
+        } else if (raw != null && !String.valueOf(raw).isBlank()) {
+            out.add(String.valueOf(raw));
+        }
+        return out;
+    }
 }
