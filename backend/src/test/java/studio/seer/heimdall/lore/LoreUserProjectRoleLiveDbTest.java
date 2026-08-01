@@ -100,6 +100,88 @@ class LoreUserProjectRoleLiveDbTest {
             .body("rows[0].projects", empty());
     }
 
+    // ── AL-100: защиты при снятии роли ──────────────────────────────────────
+    //
+    // Проверяемо здесь ТОЛЬКО правило «последний owner». Второе правило —
+    // «своя последняя роль» — через REST в этом сьюте не проверить: OIDC в
+    // тестовом профиле выключен, значит callerKcSub() = null, вызывающий не
+    // распознаётся как человек и правило намеренно не срабатывает (иначе оно
+    // било бы по агентам, чей доступ от HAS_PROJECT_ROLE не зависит).
+    // Это ограничение среды, а не пробел логики — фиксирую явно, чтобы
+    // «тесты зелёные» не читались как «оба правила доказаны».
+
+    private static final String OWNER_A = "al100-owner-a";
+    private static final String OWNER_B = "al100-owner-b";
+
+    @Test
+    @Order(6)
+    void lastOwnerCannotBeRemoved() {
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + OWNER_A + "\",\"display_name\":\"Owner A\","
+                + "\"project\":\"" + PROJECT + "\",\"role\":\"owner\"}")
+        .when().post("/lore/user/role")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + OWNER_A + "\",\"project\":\"" + PROJECT + "\",\"action\":\"remove\"}")
+        .when().post("/lore/user/role")
+        .then().statusCode(409)
+            .body("error", equalTo("ROLE_REMOVAL_BLOCKED"));
+
+        // Ребро на месте — отказ именно предотвратил удаление, а не сопроводил его.
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/slice/user_project_roles?kc_sub=" + OWNER_A)
+        .then().statusCode(200)
+            .body("rows[0].roles", hasItem("owner"));
+    }
+
+    @Test
+    @Order(7)
+    void superadminDoesNotBypassTheGuard() {
+        // Защита не от нехватки прав, а от необратимой ошибки — большие права
+        // её не отменяют. Если этот кейс однажды покраснеет, значит гард
+        // обвесили исключением по роли, чего делать нельзя.
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + OWNER_A + "\",\"project\":\"" + PROJECT + "\",\"action\":\"remove\"}")
+        .when().post("/lore/user/role")
+        .then().statusCode(409);
+    }
+
+    @Test
+    @Order(8)
+    void secondOwnerUnblocksRemovalOfTheFirst() {
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + OWNER_B + "\",\"display_name\":\"Owner B\","
+                + "\"project\":\"" + PROJECT + "\",\"role\":\"owner\"}")
+        .when().post("/lore/user/role")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + OWNER_A + "\",\"project\":\"" + PROJECT + "\",\"action\":\"remove\"}")
+        .when().post("/lore/user/role")
+        .then().statusCode(200)
+            .body("removed", equalTo(true));
+    }
+
+    @Test
+    @Order(9)
+    void ordinaryRoleRemovalStaysUnblocked() {
+        // Негативный кейс, без которого гард легко перестраховать: снятие
+        // обычной роли (не owner, не последняя своя) обязано проходить.
+        String plain = "al100-plain-reader";
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + plain + "\",\"display_name\":\"Plain\","
+                + "\"project\":\"" + PROJECT + "\",\"role\":\"reader\"}")
+        .when().post("/lore/user/role")
+        .then().statusCode(200);
+
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + plain + "\",\"project\":\"" + PROJECT + "\",\"action\":\"remove\"}")
+        .when().post("/lore/user/role")
+        .then().statusCode(200)
+            .body("removed", equalTo(true));
+    }
+
     // "user" — HUMAN_ONLY (AgentScopeFilter): AgentScopeFilter сам JWT/OIDC-гейт
     // (short-circuit при oidcEnabled=false, как в тестовом профиле) — REST-запрос
     // с голым X-Seer-Role здесь этот путь не проходит. Покрытие семейства "user"

@@ -21,6 +21,19 @@ export class LoreNotFoundError extends Error {
   constructor(id: string) { super(`lore entity not found: ${id}`); }
 }
 
+/**
+ * AL-100: 409 — запрос корректен, но конфликтует с состоянием графа
+ * (например, снятие последнего владельца проекта).
+ *
+ * Отдельный класс нужен ради текста: `detail` у 409 бэкенд пишет ДЛЯ ЧЕЛОВЕКА
+ * и объясняет, что сделать. Общая ветка ниже склеила бы его с кодом и статусом
+ * («409 ROLE_REMOVAL_BLOCKED: …»), то есть подала бы объяснение как техническую
+ * ошибку.
+ */
+export class LoreConflictError extends Error {
+  constructor(detail?: string) { super(detail ?? 'операция конфликтует с текущим состоянием'); }
+}
+
 function assertJson(res: Response): void {
   const ct = res.headers.get('content-type') ?? '';
   if (!ct.includes('application/json')) throw new LoreUpstreamError(`backend returned ${res.status} non-JSON`);
@@ -51,6 +64,7 @@ async function parseError(res: Response): Promise<never> {
   if (code === 'LORE_DISABLED') throw new LoreDisabledError();
   if (code === 'LORE_UPSTREAM') throw new LoreUpstreamError(detail);
   if (code === 'NOT_FOUND')     throw new LoreNotFoundError(detail);
+  if (res.status === 409)       throw new LoreConflictError(detail);
   throw new Error(`${res.status} ${code || res.statusText}${detail ? `: ${detail}` : ''}`);
 }
 
