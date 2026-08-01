@@ -156,4 +156,39 @@ class ProjectRbacServiceLiveDbTest {
         assertEquals(OWNER_SUB, rbac.ownerKcSub(OWNER_CLIENT));
         assertEquals(ARCHITECT_SUB, rbac.ownerKcSub(ARCHITECT_CLIENT));
     }
+
+    // ── AL-93: список разрешённых проектов (на тех же фикстурах) ────────────
+
+    @Test
+    @Order(9)
+    void allowedProjectsForUserListsOnlyProjectsWithAnyRole() {
+        assertTrue(rbac.allowedProjectsForUser(OWNER_SUB).contains(PROJECT));
+        assertTrue(rbac.allowedProjectsForUser(ARCHITECT_SUB).contains(PROJECT));
+        // otherProject создан в Order(4), но роли туда никому не выдавались.
+        assertFalse(rbac.allowedProjectsForUser(ARCHITECT_SUB).contains("LORE_TEST_ORG/al68-other-repo"));
+        // Человек без единой роли — пустое множество, не ошибка.
+        assertTrue(rbac.allowedProjectsForUser(READER_SUB).isEmpty());
+        assertTrue(rbac.allowedProjectsForUser("no-such-sub").isEmpty());
+        assertTrue(rbac.allowedProjectsForUser(null).isEmpty());
+    }
+
+    @Test
+    @Order(10)
+    void allowedProjectsForAgentFiltersByDelegationMatrix() {
+        // Владелец-owner делегирует любой профиль → проект в списке для всех.
+        assertTrue(rbac.allowedProjectsForAgent(OWNER_CLIENT, "full").contains(PROJECT));
+        assertTrue(rbac.allowedProjectsForAgent(OWNER_CLIENT, "marketer").contains(PROJECT));
+        // Владелец-архитектор: architect-профиль виден, full — нет НИГДЕ.
+        assertTrue(rbac.allowedProjectsForAgent(ARCHITECT_CLIENT, "architect").contains(PROJECT));
+        assertTrue(rbac.allowedProjectsForAgent(ARCHITECT_CLIENT, "full").isEmpty(),
+            "агент не может быть шире владельца ни в одном проекте");
+    }
+
+    @Test
+    @Order(11)
+    void allowedProjectsForOrphanOrUnknownAgentIsEmpty() {
+        assertTrue(rbac.allowedProjectsForAgent(ORPHAN_CLIENT, "full").isEmpty());
+        assertTrue(rbac.allowedProjectsForAgent("lore-mcp-does-not-exist", "full").isEmpty());
+        assertTrue(rbac.allowedProjectsForAgent(OWNER_CLIENT, null).isEmpty());
+    }
 }
