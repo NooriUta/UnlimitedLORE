@@ -7,6 +7,7 @@ import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
 import { parseRoutine, parseInvariants, type ParsedInv } from '../../lib/qgContentMd';
 import { isStale as isTechStale, parseFields as parseTechFields } from './LoreTechRegistry';
+import LoreAnalyticsProduct from './LoreAnalyticsProduct';
 
 interface Props {
   onError: (e: unknown) => void;
@@ -26,7 +27,7 @@ const STATUS_ORDER = [
   'todo', 'design', 'backlog', 'deferred', 'blocked', 'cancelled', 'none',
 ];
 
-type AnalyticsTab = 'overview' | 'progress' | 'flow' | 'sprints' | 'quality' | 'tech';
+type AnalyticsTab = 'overview' | 'progress' | 'flow' | 'sprints' | 'quality' | 'tech' | 'product';
 type CompGroupBy  = 'area' | 'platform' | 'project';
 type SprintFilter = 'all' | 'active' | 'ready' | 'done' | 'empty';
 
@@ -92,6 +93,9 @@ const TABS: { key: AnalyticsTab; icon: string; label: string }[] = [
   { key: 'sprints',    icon: 'sprint',        label: 'Спринты'  },
   { key: 'quality',    icon: 'guards',        label: 'Quality'  },
   { key: 'tech',       icon: 'cog',           label: 'Технологии' },
+  // AN-10: продуктовый слой (ADR-LORE-030) — данные грузит сам компонент
+  // вкладки лениво, в общий Promise.all этого экрана НЕ входит.
+  { key: 'product',    icon: 'bullseye',      label: 'Продукт'  },
 ];
 
 const SPRINT_FILTERS: { key: SprintFilter; label: string }[] = [
@@ -2445,6 +2449,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {tab === 'sprints'    && tabSprints}
       {tab === 'quality'    && tabQuality}
       {tab === 'tech'       && tabTech}
+      {tab === 'product'    && <LoreAnalyticsProduct onError={onError} />}
     </div>
   );
 }
