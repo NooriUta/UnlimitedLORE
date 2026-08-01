@@ -88,3 +88,22 @@ if [ -n "${GITHUB_ENV:-}" ]; then
 else
   echo "  npm: GITHUB_ENV не задан (запуск вне CI) — реестр не переключаю"
 fi
+
+# ── docker build ─────────────────────────────────────────────────────────────
+# Init-скрипт выше лежит в GRADLE_USER_HOME РАННЕРА, а сборка образа идёт
+# внутри `docker build` со своим чистым HOME — туда он не попадает вовсе.
+# Dockerfile.local умеет зеркало сам (ARG LORE_MAVEN_MIRROR, строит свой
+# init.d/nexus.gradle), и lore-cd.yml этот arg передаёт — поэтому НОЧНЫЕ ДЕПЛОИ
+# шли через зеркало. А backend-ci.yml его не передавал: сборка образа в CI
+# ходила в Maven Central напрямую и падала на обрыве TLS (2026-08-01, PR #312 —
+# `Remote host terminated the handshake` на error_prone_annotations). Настройка
+# была, но не на том пути, который ломается.
+#
+# Отдаём адреса job'у — шаг docker build пробросит их build-arg'ами. Переменные
+# ставятся ТОЛЬКО когда зеркало реально ответило (проверка выше), поэтому
+# мёртвый Nexus по-прежнему означает «собираем напрямую», а не красный билд.
+if [ -n "${GITHUB_ENV:-}" ]; then
+  echo "LORE_MAVEN_MIRROR=$MAVEN_MIRROR"   >> "$GITHUB_ENV"
+  echo "LORE_PLUGIN_MIRROR=$PLUGIN_MIRROR" >> "$GITHUB_ENV"
+  echo "  docker build → build-arg LORE_MAVEN_MIRROR=$MAVEN_MIRROR"
+fi
