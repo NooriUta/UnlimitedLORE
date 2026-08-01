@@ -5,6 +5,7 @@ import { areaColor, compArea } from './LoreComponentList';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
 import { FilterBar, Chip, type FilterTagData } from './FilterPrimitives';
+import LoreTechMatrix from './LoreTechMatrix';
 
 // checked_at older than this reads as stale — same intent as TR-05's
 // "не разово, а по регламенту" (a registry with no upkeep signal rots).
@@ -51,7 +52,14 @@ const S = {
   th: { textAlign: 'left' as const, padding: '5px 12px', color: 'var(--t3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' as const, letterSpacing: '0.04em', fontWeight: 600 },
   td: { padding: '5px 12px', borderTop: '1px solid var(--bd)', color: 'var(--t2)' },
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
+  seg: { display: 'inline-flex', border: '1px solid var(--b3)', borderRadius: 5, overflow: 'hidden' as const, marginBottom: 12 },
+  segBtn: (on: boolean) => ({
+    font: 'inherit', fontSize: 'var(--fs-xs)', padding: '3px 12px', cursor: 'pointer', border: 'none',
+    background: on ? 'var(--bg3)' : 'var(--bg1)', color: on ? 'var(--t1)' : 'var(--t3)', fontWeight: on ? 600 : 400,
+  }),
 };
+
+type TechView = 'list' | 'matrix';
 
 export default function LoreTechRegistry({ onError }: { onError: (e: unknown) => void }) {
   const { t } = useTranslation();
@@ -64,6 +72,9 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
   // ("which components use ArcadeDB?"). Empty = show all.
   const [techSel, setTechSel] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
+  const [view, setView] = useState<TechView>('list');
+  // Технология, предзаполняемая в форме после клика по ячейке матрицы.
+  const [addTech, setAddTech] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -117,7 +128,32 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
 
   return (
     <div style={S.root}>
-      {allTech.length > 1 && (
+      <div style={S.seg}>
+        <button style={S.segBtn(view === 'list')} onClick={() => setView('list')}>
+          {t('lore.techRegistry.viewList', 'Список')}
+        </button>
+        <button style={S.segBtn(view === 'matrix')} onClick={() => setView('matrix')}>
+          {t('lore.techRegistry.viewMatrix', 'Матрица')}
+        </button>
+      </div>
+
+      {view === 'matrix' && (
+        <LoreTechMatrix
+          byArea={byArea}
+          rowsByComponent={rowsByComponent}
+          allTech={allTech}
+          techCounts={techCounts}
+          onPick={(cid, tech) => {
+            // Клик по ячейке ведёт в ту же форму, что и в списке: второго
+            // способа править технологию заводить нельзя, разойдутся.
+            setView('list');
+            setAddTech(tech);
+            setAddingFor(cid);
+          }}
+        />
+      )}
+
+      {view === 'list' && allTech.length > 1 && (
         <FilterBar
           tier="local"
           label={t('lore.techRegistry.filtersLabel', 'Фильтры')}
@@ -140,7 +176,7 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
           </div>
         </FilterBar>
       )}
-      {byArea
+      {view === 'list' && byArea
         .map(([area, areaComps]): [string, LoreComponent[]] => [area, areaComps.filter(c => compMatchesTech(c.component_id))])
         .filter(([, areaComps]) => areaComps.length > 0)
         .map(([area, areaComps]) => (
@@ -162,8 +198,13 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
 
                 {addingFor === c.component_id && (
                   <TechAddForm
+                    // key по технологии: без него форма, уже смонтированная для
+                    // этого компонента, не подхватит предзаполнение из матрицы —
+                    // useState читает initialTech только при монтировании.
+                    key={addTech ?? 'blank'}
                     componentId={c.component_id}
-                    onSaved={() => { setAddingFor(null); setReloadKey(k => k + 1); }}
+                    initialTech={addTech ?? ''}
+                    onSaved={() => { setAddingFor(null); setAddTech(null); setReloadKey(k => k + 1); }}
                     onError={onError}
                   />
                 )}
@@ -225,13 +266,15 @@ export default function LoreTechRegistry({ onError }: { onError: (e: unknown) =>
   );
 }
 
-function TechAddForm({ componentId, onSaved, onError }: {
+function TechAddForm({ componentId, initialTech = '', onSaved, onError }: {
   componentId: string;
+  /** Приходит из матрицы: клик по ячейке уже знает, какую технологию заводим. */
+  initialTech?: string;
   onSaved: () => void;
   onError: (e: unknown) => void;
 }) {
   const { t } = useTranslation();
-  const [techName, setTechName] = useState('');
+  const [techName, setTechName] = useState(initialTech);
   const [version, setVersion]   = useState('');
   const [releaseDate, setReleaseDate] = useState('');
   const [license, setLicense]   = useState('');
