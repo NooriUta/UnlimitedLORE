@@ -1371,6 +1371,72 @@ public final class LoreSlices {
 
     public static SliceDef get(String id) { return SLICES.get(id); }
 
+    /**
+     * AL-94: слайсы, у которых сущность несёт ребро BELONGS_TO_PROJECT напрямую,
+     * и потому read-скоуп применим (значение — выражение траверса до slug'ов).
+     *
+     * <p>Список намеренно КОРОТКИЙ и явный, а не «все слайсы с project-фильтром»:
+     * скоуп меняет видимость данных, и молча накрыть им слайс, чью проектную ось
+     * никто не проверял, — способ получить пустой экран без объяснения. Типы с
+     * derived-привязкой (components — через спринты) сюда не входят: у них
+     * «проект» вычислим, но не является фактом самой вершины (решение AL-92).</p>
+     */
+    static final Map<String, String> PROJECT_SCOPED = Map.of(
+        "sprints",   "out('BELONGS_TO_PROJECT').slug",
+        "adrs",      "out('BELONGS_TO_PROJECT').slug",
+        "releases",  "out('BELONGS_TO_PROJECT').slug",
+        "docs",      "out('BELONGS_TO_PROJECT').slug",
+        "runbooks",  "out('BELONGS_TO_PROJECT').slug",
+        "specs",     "out('BELONGS_TO_PROJECT').slug"
+    );
+
+    /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */
+    static final String SCOPE_NONE = "__no_project__";
+
+    /**
+     * Скоуп-вариант compose: {@code allowed == null} — без ограничения
+     * (superadmin, выключенная аутентификация, слайс вне PROJECT_SCOPED),
+     * непустое множество — «виден, если разрешён ХОТЯ БЫ ОДИН его проект»
+     * (решение владельца про сущности на пересечении), пустое множество —
+     * не видно ничего (заведомо ложное условие через SCOPE_NONE, а не пустой
+     * IN: поведение пустого списка в грамматике ArcadeDB не проверено).
+     *
+     * <p>Сущность БЕЗ единого ребра проекта скоупом отсекается — это осознанно:
+     * иначе «ничьё» было бы видно всем, и скоуп ничего не гарантировал бы. Хвост
+     * непривязанных вершин после V20 (AL-92) — причина держать enforcement за
+     * флагом до наполнения графа.</p>
+     */
+    public static Composed compose(String id, Map<String, String> given, java.util.Set<String> allowed) {
+        Composed base = compose(id, given);
+        String traversal = allowed == null ? null : PROJECT_SCOPED.get(id);
+        if (traversal == null) return base;
+
+        Map<String, Object> params = new LinkedHashMap<>(base.params());
+        String condition;
+        if (allowed.isEmpty()) {
+            params.put("__scope0", SCOPE_NONE);
+            condition = traversal + " CONTAINS :__scope0";
+        } else {
+            StringBuilder or = new StringBuilder();
+            int i = 0;
+            for (String slug : allowed) {
+                String key = "__scope" + i++;
+                params.put(key, slug);
+                if (or.length() > 0) or.append(" OR ");
+                or.append(traversal).append(" CONTAINS :").append(key);
+            }
+            condition = "(" + or + ")";
+        }
+        // Скоуп дописывается ПОСЛЕ suffix'а базового SQL нельзя — ORDER BY/LIMIT
+        // уже там. Поэтому пересобираем: условие идёт перед хвостом слайса.
+        String sql = base.sql();
+        SliceDef def = SLICES.get(id);
+        String suffix = def.suffix();
+        String head = suffix.isEmpty() || !sql.endsWith(suffix) ? sql : sql.substring(0, sql.length() - suffix.length());
+        String connector = containsWhere(head) ? " AND " : " WHERE ";
+        return new Composed(head + connector + condition + suffix, params);
+    }
+
     public static Composed compose(String id, Map<String, String> given) {
         SliceDef def = SLICES.get(id);
         if (def == null) throw new IllegalArgumentException("unknown slice: " + id);
