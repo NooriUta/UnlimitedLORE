@@ -317,16 +317,26 @@ public class AidaLoreResource extends LoreResourceBase {
      * ролей — отдельное решение владельца, не побочный эффект этой задачи.</p>
      *
      * <p><b>Bypass по роли — только для ЧЕЛОВЕКА.</b> Агент опознаётся раньше
-     * и уходит в {@code allowedProjectsForAgent} независимо от того, какая роль
+     * и уходит в {@code visibleProjectsForAgent} независимо от того, какая роль
      * пришла в {@code X-Seer-Role}. Иначе узкий профиль агента читал бы весь
      * корпус мимо проектов своего владельца — см. {@link #bypassesScope}.</p>
+     *
+     * <p><b>Чтение и запись сужаются ПО-РАЗНОМУ.</b> Видимость — по проектам
+     * (все проекты владельца, роль не важна), право менять — по роли (D4).
+     * Иначе участник проекта не знал бы артефактов собственного проекта.</p>
      */
     java.util.Set<String> allowedProjectsOrNull(String role) {
         if (!scopeEnforce) return null;
         // ПОРЯДОК СУЩЕСТВЕННЫЙ: агент опознаётся ДО роли. См. bypassesScope().
         String clientId = callerClientId();
         if (clientId != null) {
-            return projectRbac.allowedProjectsForAgent(clientId, callerAgentScope());
+            // ЧТЕНИЕ — по проектам владельца, БЕЗ сужения матрицей D4 (решение
+            // владельца 2026-08-01: «читать всё в пределах своих проектов,
+            // изменять — в пределах роли»). D4 отвечает, что агенту позволено
+            // ДЕЛАТЬ, а не что ему позволено ЗНАТЬ: участник проекта должен
+            // видеть артефакты своего проекта. Для записи — по-прежнему
+            // allowedProjectsForAgent.
+            return projectRbac.visibleProjectsForAgent(clientId);
         }
         if (bypassesScope(role, null)) return null;
         String kcSub = callerKcSub();
