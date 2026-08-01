@@ -207,6 +207,7 @@ public class LoreSchemaMigrationRunner {
         // Ровно тот сценарий, на котором уже обожглись с ретайром легаси-индексов.
         if (version == 13) { mergeFeaturesIntoUseCases(); createFullTextIndexes(); }
         if (version == 17) mergeLoreTagIntoKnowTag();
+        if (version == 20) backfillProjectEdges();
     }
 
     /**
@@ -572,6 +573,85 @@ public class LoreSchemaMigrationRunner {
             }
         }
         return type + "[" + String.join(",", flat) + "]";
+    }
+
+    // AL-92 (V20): бэкфилл BELONGS_TO_PROJECT у исторических вершин трёх типов.
+    // Идемпотентно вдвойне: выборка — только вершины БЕЗ единого исходящего
+    // ребра проекта, вставка — IF NOT EXISTS. Проекты-цели должны быть
+    // зарегистрированы (KnowGitProject) — незарегистрированный slug даёт 0
+    // созданных рёбер и попадает в лог, а не падает.
+    private void backfillProjectEdges() {
+        // 1) KnowADR ← проекты его спринтов (IMPLEMENTED_IN → BELONGS_TO_PROJECT).
+        //    Мультипривязка ВСЕХ distinct-проектов: решение владельца — общее
+        //    владение на пересечении это норма, не конфликт.
+        int adrTouched = 0, adrEdges = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT adr_id, out('IMPLEMENTED_IN').out('BELONGS_TO_PROJECT').slug AS slugs "
+                + "FROM KnowADR WHERE out('BELONGS_TO_PROJECT').size() = 0", Map.of())) {
+            java.util.Set<String> slugs = distinctSlugs(r.get("slugs"));
+            if (slugs.isEmpty()) continue;
+            adrTouched++;
+            for (String slug : slugs) {
+                command("CREATE EDGE BELONGS_TO_PROJECT "
+                    + "FROM (SELECT FROM KnowADR WHERE adr_id = :a) "
+                    + "TO (SELECT FROM KnowGitProject WHERE slug = :p) IF NOT EXISTS",
+                    Map.of("a", r.get("adr_id"), "p", slug));
+                adrEdges++;
+            }
+        }
+        LOG.infof("[LORE MIGRATE] V20 backfill ADR→project: %d ADR, %d рёбер", adrTouched, adrEdges);
+
+        // 2) KnowRelease ← плоское поле git_project (двойная правда из аудита
+        //    AL-96: ребро выравнивается по полю; поле остаётся как денормализация).
+        //    Матч источника по @rid — release_id не уникален между проектами.
+        int relEdges = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT @rid AS rid, git_project FROM KnowRelease "
+                + "WHERE out('BELONGS_TO_PROJECT').size() = 0 AND git_project IS NOT NULL", Map.of())) {
+            command("CREATE EDGE BELONGS_TO_PROJECT FROM " + r.get("rid")
+                + " TO (SELECT FROM KnowGitProject WHERE slug = :p) IF NOT EXISTS",
+                Map.of("p", r.get("git_project")));
+            relEdges++;
+        }
+        LOG.infof("[LORE MIGRATE] V20 backfill Release→project: %d рёбер", relEdges);
+
+        // 3) KnowSpec ← проекты спринтов его компонентов, ТОЛЬКО при ровно одном
+        //    distinct-проекте: цепочка spec→component→sprint→project слишком
+        //    косвенная, чтобы мультипривязывать автоматически — неоднозначные
+        //    остаются на ручную привязку (spec_link rel=project), и это видно в логе.
+        int specEdges = 0, specSkipped = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT spec_id, out('BELONGS_TO').in('BELONGS_TO')[@this INSTANCEOF 'KnowSprint']"
+                + ".out('BELONGS_TO_PROJECT').slug AS slugs "
+                + "FROM KnowSpec WHERE out('BELONGS_TO_PROJECT').size() = 0", Map.of())) {
+            java.util.Set<String> slugs = distinctSlugs(r.get("slugs"));
+            if (slugs.size() != 1) {
+                if (slugs.size() > 1) {
+                    specSkipped++;
+                    LOG.infof("[LORE MIGRATE] V20 spec %s: %d проектов через компоненты — пропуск, привязать вручную",
+                        r.get("spec_id"), slugs.size());
+                }
+                continue;
+            }
+            command("CREATE EDGE BELONGS_TO_PROJECT "
+                + "FROM (SELECT FROM KnowSpec WHERE spec_id = :s) "
+                + "TO (SELECT FROM KnowGitProject WHERE slug = :p) IF NOT EXISTS",
+                Map.of("s", r.get("spec_id"), "p", slugs.iterator().next()));
+            specEdges++;
+        }
+        LOG.infof("[LORE MIGRATE] V20 backfill Spec→project: %d рёбер, %d неоднозначных пропущено",
+            specEdges, specSkipped);
+    }
+
+    /** Плоский/списочный результат графового траверса → distinct non-null slugs. */
+    private static java.util.Set<String> distinctSlugs(Object raw) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        if (raw instanceof java.util.Collection<?> c) {
+            for (Object o : c) if (o != null && !o.toString().isBlank()) out.add(o.toString());
+        } else if (raw != null && !raw.toString().isBlank()) {
+            out.add(raw.toString());
+        }
+        return out;
     }
 
     // SV-10 backfill: content_hash по существующим Hist-строкам, батчами ДО

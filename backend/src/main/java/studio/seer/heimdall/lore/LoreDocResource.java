@@ -208,6 +208,9 @@ public class LoreDocResource extends LoreResourceBase {
     // breaking migration of existing plain-field data.
     public record DocComponentLinkRequest(String doc_id, String component_id, String action) {}
     public record DocSprintLinkRequest(String doc_id, String sprint_id, String action) {}
+    // AL-92: проектная ось для KnowDoc — до этого docs были единственным (вместе
+    // с runbooks) типом слоя знаний вообще БЕЗ ребра BELONGS_TO_PROJECT.
+    public record DocProjectLinkRequest(String doc_id, String project, String action) {}
 
     @POST
     @Path("doc/component")
@@ -247,6 +250,51 @@ public class LoreDocResource extends LoreResourceBase {
                 "hint", linked ? "" : "no edge created — check doc_id/component_id exist")));
         } catch (Exception e) {
             LOG.warnf("[LORE DOC COMPONENT] %s: %s", req.doc_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    @POST
+    @Path("doc/project")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkDocProject(DocProjectLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.doc_id() == null || req.doc_id().isBlank()
+                || req.project() == null || req.project().isBlank())
+            return badParams("doc_id and project required");
+        if (!SAFE_ID.matcher(req.doc_id()).matches())
+            return badParams("doc_id contains illegal characters");
+        if (!SAFE_ID.matcher(req.project()).matches())
+            return badParams("project contains illegal characters");
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            if (remove) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowDoc WHERE doc_id=:id) " +
+                    "WHERE @in.slug = :p",
+                    Map.of("id", req.doc_id(), "p", req.project()))).await().indefinitely();
+                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                    "project", req.project(), "action", "removed")));
+            }
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT " +
+                    "FROM (SELECT FROM KnowDoc        WHERE doc_id = :id) " +
+                    "TO   (SELECT FROM KnowGitProject WHERE slug   = :p) IF NOT EXISTS",
+                    Map.of("id", req.doc_id(), "p", req.project())))
+                .await().indefinitely().result();
+            boolean linked = created != null && !created.isEmpty();
+            // linked=false при незарегистрированном проекте — честная подсказка,
+            // а не молчаливый no-op (урок lore_git_project_registration).
+            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
+                "project", req.project(), "action", "added", "linked", linked,
+                "hint", linked ? "" : "no edge created — check doc_id exists and project is registered (project_new)")));
+        } catch (Exception e) {
+            LOG.warnf("[LORE DOC PROJECT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
