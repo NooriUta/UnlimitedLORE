@@ -1335,3 +1335,82 @@ export function checkLoreUcQuality(
 ) {
   return loreMutate<LoreUcQualityResult>('/uc/quality', body, signal);
 }
+
+// ── AN-10 (ADR-LORE-030): аналитика продуктового слоя — типы raw-фактов ──────
+// Слайсы возят сырые множества/строки, агрегирует клиент (GROUP BY-ловушка
+// ArcadeDB, см. комментарий у invest_profile в LoreSlices.java). Все массивы
+// из графовых траверсов могут нести null-элементы — фильтровать на клиенте.
+
+/** Слайс feature_vp_analytics (AN-01): строка на корень линейки (cloud/kite). */
+export interface LoreVpAnalyticsRow {
+  uc_id: string;
+  title: string | null;
+  status: string | null;
+  shipped_at: string | null;
+  goal_level: string | null;
+  milestone_id: string | null;
+  claimed_job_ids: (string | null)[] | null;
+  claimed_pain_ids: (string | null)[] | null;
+  claimed_gain_ids: (string | null)[] | null;
+  performed_job_ids: (string | null)[] | null;
+  relieved_pain_ids: (string | null)[] | null;
+  delivered_gain_ids: (string | null)[] | null;
+  delivered_measured_gain_ids: (string | null)[] | null;
+  shipped_job_ids: (string | null)[] | null;
+  actor_ids: (string | null)[] | null;
+}
+
+/** Слайс actor_load (AN-07, срез A) — ТРЕБУЕТ параметр project (D18). */
+export interface LoreActorLoadRow {
+  actor_id: string;
+  name: string | null;
+  kind: string | null;
+  projects: (string | null)[] | null;
+  uc_ids: (string | null)[] | null;
+  uc_count: number | null;
+  primary_count: number | null;
+  supporting_count: number | null;
+}
+
+/** Слайсы strategic_coverage (срез B) и product_hygiene (срез E) — находки. */
+export interface LoreCoverageFindingRow {
+  finding: string;
+  entity_type: string;
+  ref_id: string;
+  title: string | null;
+  sprint_id?: string | null;
+}
+
+/** Слайс invest_profile (AN-04, срез D) — задача × work_class × effort × релизы. */
+export interface LoreInvestProfileRow {
+  task_uid: string;
+  work_class: string | null;
+  task_type: string | null;
+  sprint_id: string | null;
+  status_raw: string | null;
+  effort_days: number | null;
+  release_ids: (string | null)[] | null;
+}
+
+/** GET /lore/uc/quality/all (AN-08, срез F): нормированные линтер-оценки всех UC. */
+export interface LoreUcQualityAllRow {
+  uc_id: string;
+  title: string | null;
+  goal_level: string | null;
+  rigor: string | null;
+  score: number;
+  max: number;
+  normalized: number;
+  below_threshold: boolean;
+  date_created: string | null;
+}
+
+export async function fetchUcQualityAll(signal?: AbortSignal): Promise<{
+  threshold: number; rows: LoreUcQualityAllRow[];
+}> {
+  const res = await fetch(`${LORE_BASE}/uc/quality/all`, { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  const body = (await res.json()) as { threshold?: number; rows?: LoreUcQualityAllRow[] };
+  return { threshold: body.threshold ?? 0.6, rows: body.rows ?? [] };
+}

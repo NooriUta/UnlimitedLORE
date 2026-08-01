@@ -598,6 +598,57 @@
         "empty": "Технологии не зарегистрированы ни для одного компонента.",
         "subtitle": "{{techs}} технологий · {{comps}} компонентов",
         "title": "Матрица технологии × компоненты"
+      },
+      "tabs": {
+        "product": "Продукт"
+      },
+      "product": {
+        "loading": "загрузка продуктового слоя…",
+        "partialError": "Часть срезов не загрузилась ({{list}}) — их плитки пусты, остальные цифры честные.",
+        "hygieneTitle": "E · Гигиена связок",
+        "hygieneWarn": "срез первой очереди: пока тут не ноль — остальные цифры врут",
+        "hygieneClean": "связки чистые — цифрам ниже можно верить",
+        "finding": {
+          "uc_task_without_realizes": "uc-задача без REALIZES",
+          "enb_task_without_justification": "enb-задача без ADR",
+          "uc_without_acceptance": "UC без приёмки",
+          "pain_without_relief": "боль без снятия"
+        },
+        "vpTitle": "Ценность по фичам — Value Proposition",
+        "vpSubtitle": "{{n}} фич · средний fit {{fit}}%",
+        "vpEmpty": "корней линейки (cloud/kite) пока нет",
+        "col": {
+          "feature": "Фича",
+          "fit": "fit",
+          "actors": "для кого",
+          "shipped": "ценность доехала",
+          "milestone": "веха"
+        },
+        "fitHint": "клик — что не замкнуто",
+        "shippedJobs": "{{done}} из {{all}} работ",
+        "noMilestone": "без вехи ⚠",
+        "loadTitle": "A · Карта нагрузки ролей",
+        "ucCount": "{{n}} UC",
+        "deadRole": "⚠ мёртвая роль",
+        "loadEmpty": "акторов в скоупе нет",
+        "coverageTitle": "B · Стратегическое покрытие",
+        "featNoMs": "фичи без вехи: {{n}}",
+        "msNoFeat": "вехи без фич: {{n}}",
+        "investTitle": "D · Инвестиционный профиль",
+        "investHint": "«всё в jtd» = сигнал, что ценность стоит",
+        "investEmpty": "задач с привязкой к релизам нет",
+        "byCount": "по штукам",
+        "byCountHint": "у части задач нет effort_days",
+        "qualityTitle": "F · Качество оформления",
+        "qualityNorm": "нормировано score/max своего веса",
+        "qualityBelow": "ниже порога: {{n}} UC",
+        "qualityClick": "(клик — список)",
+        "laterTitle": "C · G · I — включаются позже",
+        "laterC": "C · shipped-динамика / lead time — после накопления shipped_at (ADR-029)",
+        "laterG": "G · граф линейки «опирается → открывает» — после наполнения «Мест в линейке»",
+        "laterI": "I · реинжиниринг-нагрузка — после in_rework (ADR-029)",
+        "laterH": "H · RBAC-матрица живёт в реестре акторов —",
+        "actorsLink": "открыть"
       }
     },
     "artifactDoc": {
