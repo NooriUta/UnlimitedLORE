@@ -191,4 +191,42 @@ class ProjectRbacServiceLiveDbTest {
         assertTrue(rbac.allowedProjectsForAgent("lore-mcp-does-not-exist", "full").isEmpty());
         assertTrue(rbac.allowedProjectsForAgent(OWNER_CLIENT, null).isEmpty());
     }
+
+    // ── Решение владельца 2026-08-01: читать — в пределах своих проектов,
+    //    изменять — в пределах роли. Видимость и право менять расходятся.
+
+    @Test
+    @Order(12)
+    void visibilityIsWiderThanWriteRights() {
+        // Тот же клиент, тот же проект: для ЗАПИСИ профиль full у
+        // architect-владельца не проходит (D4 не делегирует), а ВИДЕТЬ проект
+        // он обязан — иначе участник проекта не знает его артефактов.
+        assertTrue(rbac.allowedProjectsForAgent(ARCHITECT_CLIENT, "full").isEmpty(),
+            "запись сужается ролью — это правило не меняется");
+        assertTrue(rbac.visibleProjectsForAgent(ARCHITECT_CLIENT).contains(PROJECT),
+            "чтение сужается только проектом, не ролью");
+    }
+
+    @Test
+    @Order(13)
+    void visibilityNeverExceedsTheOwner() {
+        // Агент не видит больше владельца: множество берётся из его рёбер.
+        assertEquals(rbac.allowedProjectsForUser(ARCHITECT_SUB),
+            rbac.visibleProjectsForAgent(ARCHITECT_CLIENT));
+        // READER_SUB ролей не имеет вовсе — значит и агент такого владельца
+        // не увидел бы ничего. Проверяем через владельца напрямую: клиента на
+        // reader'а в фикстурах нет, и заводить его ради одного утверждения
+        // дороже, чем сверить исходное множество.
+        assertTrue(rbac.allowedProjectsForUser(READER_SUB).isEmpty());
+    }
+
+    @Test
+    @Order(14)
+    void visibilityForOrphanOrUnknownAgentIsEmpty() {
+        // Fail-closed на чтении так же, как на записи: неопознанный клиент
+        // не получает корпус целиком.
+        assertTrue(rbac.visibleProjectsForAgent(ORPHAN_CLIENT).isEmpty());
+        assertTrue(rbac.visibleProjectsForAgent("lore-mcp-does-not-exist").isEmpty());
+        assertTrue(rbac.visibleProjectsForAgent(null).isEmpty());
+    }
 }
