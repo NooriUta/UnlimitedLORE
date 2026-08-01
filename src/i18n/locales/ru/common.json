@@ -421,6 +421,10 @@
       "sectionDependsOn": "Зависит от других ADR (DEPENDS_ON)",
       "sectionSupersedes": "Заменяет ADR (SUPERSEDES)",
       "sectionComponents": "Модули / компоненты (BELONGS_TO)",
+      "dependsShort": "Зависит от",
+      "supersedesShort": "Заменяет",
+      "componentsShort": "Компоненты",
+      "projectsShort": "Проекты",
       "sectionTags": "Теги"
     },
     "multiChip": {
