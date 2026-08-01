@@ -1534,7 +1534,22 @@
       },
       "backToList": "to list"
     },
+    "techMatrix": {
+      "empty": "No technologies registered.",
+      "component": "Component",
+      "showAll": "Show all ({{n}})",
+      "sharedOnly": "Shared only ({{n}})",
+      "counts": "{{c}} components · {{t}} technologies",
+      "usedBy": "Components: {{n}}",
+      "staleHint": "not checked in a long time",
+      "addHint": "Add {{tech}} to {{comp}}",
+      "legendOk": "version is current",
+      "legendStale": "not checked in a long time",
+      "legendEmpty": "empty — technology not registered for this component"
+    },
     "techRegistry": {
+      "viewList": "List",
+      "viewMatrix": "Matrix",
       "noArea": "no area",
       "empty": "No components found.",
       "addButton": "+ technology",
