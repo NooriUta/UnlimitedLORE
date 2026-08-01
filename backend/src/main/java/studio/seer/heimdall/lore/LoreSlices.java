@@ -999,7 +999,8 @@ public final class LoreSlices {
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
-            "out('IMPLEMENTED_IN').sprint_id AS sprint_ids " +
+            "out('IMPLEMENTED_IN').sprint_id AS sprint_ids, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-92: проектная ось
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -1028,7 +1029,8 @@ public final class LoreSlices {
         // ── §9 KnowRunbook (Phase 5 LAL-29) ─────────────────────────────────
         slice("runbooks",
             "SELECT runbook_id, name, area, date_created, " +
-            "out('REFERENCES_ADR').adr_id AS adr_ids " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-92: проектная ось
             "FROM KnowRunbook",
             List.of(),
             new LinkedHashMap<>(Map.of(

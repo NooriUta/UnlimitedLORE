@@ -545,7 +545,19 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowActor.client_id IF NOT EXISTS STRING",
             "CREATE INDEX IF NOT EXISTS ON KnowActor (client_id) NOTUNIQUE",
             "CREATE EDGE TYPE OWNED_BY IF NOT EXISTS"
-        ))
+        )),
+
+        // AL-92/ADR-LORE-036 (фаза PROJECT_SCOPE): бэкфилл рёбер BELONGS_TO_PROJECT
+        // у сущностей, где write-path давно есть, а исторические вершины остались
+        // без привязки. SQL-часть пустая — тип ребра существует с ранних шагов;
+        // вся работа в javaStep(20) (три категории, идемпотентно — только вершины
+        // БЕЗ единого out('BELONGS_TO_PROJECT')):
+        //   KnowADR      ← проекты его спринтов (IMPLEMENTED_IN), мультипривязка;
+        //   KnowRelease  ← плоское поле git_project (ребро выравнивается по полю —
+        //                  двойная правда, найденная аудитом AL-96);
+        //   KnowSpec     ← проекты спринтов его компонентов, ТОЛЬКО при ровно
+        //                  одном distinct-проекте (неоднозначные — вручную).
+        new Step(20, 17, "project_edges_backfill", List.of())
     );
 
     /**

@@ -748,22 +748,34 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
-  // ── runbook_link(rel) — rename only, single edge type today ──
-  definePostTool(server, {
-    name: 'runbook_link',
-    description: 'Link (or unlink) a KnowRunbook to the KnowADR it references via a REFERENCES_ADR edge (feeds the ' +
-      '"runbooks"/"runbook_by_id" slices\' adr_ids field). A runbook mentioning an ADR only as a text-only ' +
-      '[[ADR-ID]] wiki link inside content_md has NO real graph edge — this creates one. Idempotent on add. ' +
-      'rel is always "adr" today (kept for symmetry with other *_link tools).',
-    schema: {
+  // ── runbook_link(rel) — adr (REFERENCES_ADR) + project (BELONGS_TO_PROJECT, AL-92) ──
+  server.tool(
+    'runbook_link',
+    'Link (or unlink) a KnowRunbook. rel="adr" (default): REFERENCES_ADR edge to the ADR it references ' +
+      '(feeds the "runbooks"/"runbook_by_id" slices\' adr_ids field) — a text-only [[ADR-ID]] wiki link ' +
+      'inside content_md has NO real graph edge, this creates one; pass adr_id. rel="project" (AL-92): ' +
+      'BELONGS_TO_PROJECT edge, pass project (git_project slug, e.g. "NooriUta/UnlimitedLORE") — the ' +
+      'project must be registered (project_new), otherwise linked:false with a hint. Idempotent on add. ' +
+      'Mutates system_aida_lore.',
+    {
       runbook_id: z.string().describe('e.g. "RUNBOOK-INFISICAL-LOCAL-SETUP"'),
-      rel:        z.literal('adr').optional().default('adr'),
-      adr_id:     z.string().describe('e.g. "ADR-MT-011"'),
+      rel:        z.enum(['adr', 'project']).optional().default('adr'),
+      adr_id:     z.string().optional().describe('rel="adr": e.g. "ADR-MT-011"'),
+      project:    z.string().optional().describe('rel="project": git_project slug'),
       action:     z.enum(['add', 'remove']).optional().default('add'),
     },
-    path: '/lore/runbook/adr',
-    body: ({ runbook_id, adr_id, action }) => ({ runbook_id, adr_id, action: action ?? 'add' }),
-  });
+    async ({ runbook_id, rel, adr_id, project, action }) => {
+      try {
+        const act = action ?? 'add';
+        if ((rel ?? 'adr') === 'project') {
+          if (!project) return err(new Error('project required for rel="project"'));
+          return json(await lorePost('/lore/runbook/project', { runbook_id, project, action: act }));
+        }
+        if (!adr_id) return err(new Error('adr_id required for rel="adr"'));
+        return json(await lorePost('/lore/runbook/adr', { runbook_id, adr_id, action: act }));
+      } catch (e) { return err(e); }
+    },
+  );
 
   definePostTool(server, {
     name: 'adr_rename',
@@ -1245,11 +1257,13 @@ export function registerLoreWrite(server: McpServer): void {
       'tree) — a doc has at most one parent, action="add" always replaces any existing parent edge first ' +
       '(so moving a page is one call); action="remove" detaches to top level (target_id not needed). ' +
       'rel="component": BELONGS_TO edge, target_id=component_id. rel="sprint": IMPLEMENTED_IN edge, ' +
-      'target_id=sprint_id. Idempotent on add. Mutates system_aida_lore.',
+      'target_id=sprint_id. rel="project" (AL-92): BELONGS_TO_PROJECT edge, target_id=git_project slug ' +
+      '(e.g. "NooriUta/UnlimitedLORE") — the project must be registered (project_new), otherwise the ' +
+      'response carries linked:false with a hint. Idempotent on add. Mutates system_aida_lore.',
     {
       doc_id:    z.string().describe('e.g. "guide_onboarding"'),
-      rel:       z.enum(['parent', 'component', 'sprint']),
-      target_id: z.string().optional().describe('parent_doc_id / component_id / sprint_id, matching rel — optional only for rel="parent"+action="remove"'),
+      rel:       z.enum(['parent', 'component', 'sprint', 'project']),
+      target_id: z.string().optional().describe('parent_doc_id / component_id / sprint_id / project slug, matching rel — optional only for rel="parent"+action="remove"'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },
     async ({ doc_id, rel, target_id, action }) => {
@@ -1261,6 +1275,9 @@ export function registerLoreWrite(server: McpServer): void {
         if (!target_id) return err(new Error(`target_id required for rel="${rel}"`));
         if (rel === 'component') {
           return json(await lorePost('/lore/doc/component', { doc_id, component_id: target_id, action: act }));
+        }
+        if (rel === 'project') {
+          return json(await lorePost('/lore/doc/project', { doc_id, project: target_id, action: act }));
         }
         return json(await lorePost('/lore/doc/sprint', { doc_id, sprint_id: target_id, action: act }));
       } catch (e) { return err(e); }
