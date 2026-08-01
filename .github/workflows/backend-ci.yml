@@ -175,6 +175,16 @@ jobs:
             eval "val=\${$v:-}"
             [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
           done
+          # Зеркало Nexus — В САМУ СБОРКУ ОБРАЗА, а не только в gradle-шаги job'а.
+          # Init-скрипт от use-nexus.sh живёт в GRADLE_USER_HOME раннера, куда
+          # `docker build` не заглядывает: до этой строки образ собирался прямо
+          # из Maven Central и падал на обрывах TLS, пока ночные ДЕПЛОИ шли через
+          # зеркало (lore-cd.yml этот arg передавал с самого начала). Переменные
+          # ставит use-nexus.sh и только при живом Nexus — пусто значит «напрямую».
+          for v in LORE_MAVEN_MIRROR LORE_PLUGIN_MIRROR; do
+            eval "val=\${$v:-}"
+            [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
+          done
           # MIG-25: ретрай оставлен ТОЛЬКО для транзиентов. Раньше любой отказ
           # помечался «transient network?» и повторялся трижды — детерминированная
           # конфиг-ошибка (SRCFG00040 от пустого ARG, PR #164) съедала три попытки
@@ -184,6 +194,15 @@ jobs:
           # совпадении падаем С ПЕРВОЙ попытки и поднимаем НАСТОЯЩУЮ строку
           # ошибки в ::error::, а не утверждение о причине.
           DETERMINISTIC='SRCFG[0-9]+|Configuration validation failed|FAILURE: Build failed with an exception|Compilation failed|error: cannot find symbol|CommandSQLParsingException'
+          # ...но сначала — ЯВНЫЕ маркеры сети. Gradle печатает «FAILURE: Build
+          # failed with an exception» на ЛЮБОЙ отказ, включая обрыв TLS при
+          # скачивании зависимостей — из-за чего сетевой сбой попадал в список
+          # детерминированных и ретрай не отрабатывал вовсе (2026-08-01, PR #312:
+          # упало с ПЕРВОЙ попытки на `Remote host terminated the handshake`,
+          # хотя три попытки были предусмотрены именно для этого случая).
+          # Проверка идёт раньше и перекрывает общий маркер: не смогли скачать —
+          # это сеть, чем бы Gradle это ни назвал.
+          TRANSIENT='Could not download|Could not GET|Remote host terminated the handshake|Read timed out|Connection reset|Could not resolve all (artifacts|files)'
           for attempt in 1 2 3; do
             echo "::group::docker build (attempt $attempt)"
             # shellcheck disable=SC2086
@@ -191,6 +210,11 @@ jobs:
             rc=${PIPESTATUS[0]}
             echo "::endgroup::"
             [ "$rc" -eq 0 ] && exit 0
+            if grep -qE "$TRANSIENT" /tmp/build.log; then
+              echo "::warning::попытка $attempt: отказ сети при скачивании зависимостей ($(grep -m1 -E "$TRANSIENT" /tmp/build.log | head -c 200)) — повторяю"
+              sleep 10
+              continue
+            fi
             if grep -qE "$DETERMINISTIC" /tmp/build.log; then
               echo "::error::сборка упала ДЕТЕРМИНИРОВАННО — повтор не поможет. Причина: $(grep -m1 -E "$DETERMINISTIC" /tmp/build.log | head -c 300)"
               exit 1
