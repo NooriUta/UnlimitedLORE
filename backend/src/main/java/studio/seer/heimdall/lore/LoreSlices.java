@@ -892,7 +892,11 @@ public final class LoreSlices {
         // lore-backfill-spec-titles.mjs; until then the frontend falls back to spec_id.
         slice("specs",
             "SELECT spec_id, title, file_path, " +
-            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
+            // AL-96: ребро писалось (spec_link rel=project) с самого начала, но
+            // ни один слайс его не читал — привязку можно было создать и нельзя
+            // увидеть. Самый тихий вид разрыва: write-path «работает», данных нет.
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -908,7 +912,8 @@ public final class LoreSlices {
             "out('HAS_STATE').summary[0]                          AS summary, " +
             "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
             "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
-            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-96
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -1160,6 +1165,11 @@ public final class LoreSlices {
         slice("releases",
             "SELECT release_id, release_uid, git_tag, version, week, type, " +
             "release_date, is_current, description_md, git_project, " +
+            // AL-96: плоское git_project и ребро BELONGS_TO_PROJECT — две правды
+            // об одном (аудит проектной оси). Поле оставлено: на нём живут табы
+            // фронта и release_uid. Ребро выведено рядом — по нему работает
+            // read-скоуп (AL-94), и расхождение теперь ВИДНО, а не скрыто.
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
             "in('SHIPPED_IN').size() AS pr_count " +
             "FROM KnowRelease ORDER BY release_id DESC",
