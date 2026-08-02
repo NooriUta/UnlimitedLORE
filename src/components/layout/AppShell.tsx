@@ -24,14 +24,21 @@ const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
  * `amber-forest` вместо прежнего `amber` — имя платформы; старое значение
  * мигрируется при чтении, чтобы никому не сбросило выбор.
  */
-type Palette = 'amber-forest' | 'lichen' | 'slate' | 'juniper';
+type Palette = 'amber-forest' | 'lichen' | 'slate' | 'juniper' | 'warm-dark';
 type Mode    = 'dark'  | 'light';
 
+/**
+ * Пять палитр — полный набор платформы, сверенный по трём местам: темы
+ * Keycloak (seer/heimdall/volva/lore) дают четыре, фронтенды aida-root —
+ * пять. `warm-dark` есть только у вторых, и без неё выбор, сделанный в
+ * Verdandi или Heimdall, здесь молча откатывался бы к умолчанию.
+ */
 const PALETTES: { id: Palette; label: string; swatch: string }[] = [
   { id: 'amber-forest', label: 'amber forest', swatch: '#A8B860' },
-  { id: 'lichen',       label: 'lichen',       swatch: '#7ab87c' },
+  { id: 'lichen',       label: 'lichen',       swatch: '#7CB870' },
   { id: 'slate',        label: 'slate',        swatch: '#6aa6ff' },
-  { id: 'juniper',      label: 'juniper',      swatch: '#6ab89a' },
+  { id: 'juniper',      label: 'juniper',      swatch: '#50C090' },
+  { id: 'warm-dark',    label: 'warm dark',    swatch: '#D4A830' },
 ];
 
 /**
