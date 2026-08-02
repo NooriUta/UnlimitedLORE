@@ -93,10 +93,7 @@ public class LoreSchemaMigrationRunner {
             try { return op.get(); }
             catch (RuntimeException e) {
                 last = e;
-                String detail = e.getMessage();
-                if (e instanceof jakarta.ws.rs.WebApplicationException w) {
-                    try { detail = w.getResponse().readEntity(String.class); } catch (Exception ignored) { /* keep msg */ }
-                }
+                String detail = LoreUpstream.detail(e);
                 LOG.warnf("[LORE MIGRATE] %s: попытка %d/5 не удалась (%s)", what, attempt, detail);
                 try { Thread.sleep(700L * attempt); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             }
@@ -196,10 +193,7 @@ public class LoreSchemaMigrationRunner {
         try {
             rows = ingest.queryPublic("SELECT version, checksum, compat_major FROM LoreSchemaVersion", Map.of());
         } catch (RuntimeException e) {
-            String detail = e.getMessage();
-            if (e instanceof jakarta.ws.rs.WebApplicationException w) {
-                try { detail = w.getResponse().readEntity(String.class); } catch (Exception ignored) { /* keep msg */ }
-            }
+            String detail = LoreUpstream.detail(e);
             String d = String.valueOf(detail);
             boolean noSuchType = d.contains("LoreSchemaVersion")
                 && (d.contains("not found") || d.contains("does not exist") || d.contains("was not found"));
