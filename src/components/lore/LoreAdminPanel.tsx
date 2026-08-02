@@ -765,10 +765,22 @@ function AgentsTab({ st, people, preflight, onError }: {
     } catch (e) { onError(e); } finally { setBusy(false); }
   }
 
-  const note = <div style={S.card}>{t('lore.admin.agentsNote', 'AI-агенты — client-роли сервис-аккаунтов (ось «агенты», клейм agent_scope). Провижинятся скриптом, не заводятся руками. Ротация показывает секрет ОДИН раз — LORE его не хранит.')}</div>;
+  // Текст правился вместе с разделением сущностей: раньше он утверждал, что
+  // агенты «не заводятся руками», и это перестало быть правдой ровно на этом
+  // экране. Учётка и агент — разные вещи с разным способом появления.
+  const note = <div style={S.card}>{t('lore.admin.agentsNote', 'Агент — это пара «владелец × роль», и заводится он здесь. Учётные записи Keycloak под них провижинятся скриптом: ротация показывает секрет ОДИН раз, LORE его не хранит. Права агент берёт у владельца — своих не имеет.')}</div>;
   if (st.k !== 'ok') return <div>{note}<KcStateView s={st} empty={null} /></div>;
 
   const rows = st.rows;
+
+  // Роль, которая есть в Keycloak, но отсутствует в справочнике agent_role:
+  // агента с ней здесь не завести — селект ролей берётся из справочника.
+  // Показать обязательно: молча пропущенная роль выглядит как «такой роли
+  // нет вовсе», хотя учётка под неё уже выпущена и клейм работает.
+  const orphanScopes = Array.from(new Set(rows.flatMap(c => c.agent_scope ?? [])))
+    .map(s => s.replace(/^agent-/, ''))
+    .filter(code => !roles.some(r => r.code === code))
+    .sort();
   const shown = rows.filter(a => !q || a.clientId.includes(q) || a.agent_scope.some(s => s.includes(q)));
   return (
     <div>
@@ -864,6 +876,13 @@ function AgentsTab({ st, people, preflight, onError }: {
           </tbody>
         </table>
       </div>
+      {orphanScopes.length > 0 && (
+        <div style={S.warn}>
+          {t('lore.admin.scopeNotInDict',
+             'В Keycloak выпущены учётки под роли, которых нет в справочнике agent_role: {{list}}. Агента с такой ролью здесь не завести — список берётся из справочника. Добавить запись может только человек: справочники агентам не отдаются.',
+             { list: orphanScopes.join(', ') })}
+        </div>
+      )}
 
       {/* ── Учётные записи KC ─────────────────────────────────────────── */}
       <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '20px 0 4px' }}>
