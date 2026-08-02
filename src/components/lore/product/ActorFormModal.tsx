@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
-import { saveLoreActor } from '../../../api/lore';
+import { fetchLoreSlice, saveLoreActor } from '../../../api/lore';
 import TipTapField from '../TipTapField';
 
 /** Нормализация id к виду `ACT-…` — префикс задаёт цвет и разбор паспорта. */
@@ -41,6 +41,7 @@ export default function ActorFormModal({
   const [kind, setKind] = useState(initial?.kind ?? 'human-role');
   const [body, setBody] = useState(initial?.body_md ?? '');
   const [project, setProject] = useState(initial?.project ?? '');
+  const [projects, setProjects] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -50,6 +51,18 @@ export default function ActorFormModal({
     setBody(initial?.body_md ?? '');
     setProject(initial?.project ?? '');
   }, [initial]);
+
+  // Список проектов для пикера. Грузится при открытии, а не при монтировании:
+  // форма живёт в дереве постоянно, и запрос на каждый рендер списка акторов
+  // был бы платой ни за что.
+  useEffect(() => {
+    if (!opened) return;
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
+      .then(ps => setProjects(ps.map(p => p.slug).filter(Boolean).sort()))
+      .catch(() => { /* без списка остаётся текущее значение — форма рабочая */ });
+    return () => ctrl.abort();
+  }, [opened]);
 
   const finalId = editing ? (initial?.actor_id ?? '') : normalizeActorId(id);
 
@@ -119,11 +132,30 @@ export default function ActorFormModal({
       </select>
 
       <label style={label}>{t('lore.product.actor.project', 'Проект')}</label>
-      <input style={{ ...field, fontFamily: 'var(--mono)' }} value={project} onChange={e => setProject(e.target.value)} placeholder="AIDA/UnlimitedLORE" />
+      {/* Выбор, а не свободный ввод: слаг, которого нет среди KnowGitProject,
+          не даёт ошибки — привязка молча не создаётся при ok:true. Поле-строка
+          с плейсхолдером «AIDA/UnlimitedLORE» приглашала набрать ровно такой
+          несуществующий слаг (зарегистрирован NooriUta/UnlimitedLORE). */}
+      <select style={{ ...field, fontFamily: 'var(--mono)' }} value={project}
+              onChange={e => setProject(e.target.value)}>
+        <option value="">{t('lore.product.actor.projectNone', '— без проекта —')}</option>
+        {projects.map(p => <option key={p} value={p}>{p}</option>)}
+        {/* Значение, которого нет в списке (легаси или прежняя опечатка),
+            показываем отдельной строкой: молча подменить его на пустое —
+            значит стереть привязку, не сказав об этом. */}
+        {project && !projects.includes(project) && (
+          <option value={project}>{project} — {t('lore.product.actor.projectUnknown', 'нет такого проекта')}</option>
+        )}
+      </select>
       {/* D18: актор ПРОЕКТНЫЙ. Схема проект не требует, но одноимённые роли
           разных продуктов без него склеиваются в одну строку RBAC-матрицы —
           поэтому подсказка стоит здесь, а не в документации, куда не смотрят. */}
       <div style={hint}>{t('lore.product.actor.projectHint', 'без проекта одноимённые роли разных продуктов сольются в одну')}</div>
+      {project && !projects.includes(project) && (
+        <div style={{ ...hint, color: 'var(--wrn)' }}>
+          {t('lore.product.actor.projectUnknownHint', 'такого проекта нет в реестре — привязка не создастся, ответ при этом будет успешным')}
+        </div>
+      )}
 
       <label style={label}>{t('lore.product.actor.about', 'О роли')}</label>
       <TipTapField
