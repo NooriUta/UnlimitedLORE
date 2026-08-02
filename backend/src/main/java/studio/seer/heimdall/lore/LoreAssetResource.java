@@ -182,25 +182,65 @@ public class LoreAssetResource extends LoreResourceBase {
 
     // ── настройки из словаря app_setting (значение — label_ru, AL-38) ────────
 
+    /**
+     * DBR-04: «настройки не прочитаны» и «настройка не задана» — РАЗНОЕ.
+     *
+     * <p>Прежняя редакция возвращала {@code null} в обоих случаях, и отказ БД
+     * становился неотличим от отсутствия записи. Для флага это опаснее, чем
+     * выглядит: дефолт может быть {@code true}, и выключенный владельцем
+     * переключатель при недоступной БД сам собой ВКЛЮЧАЛСЯ бы.
+     *
+     * <p>Здесь отказ пробрасывается, а решение «падать или брать дефолт»
+     * принимает вызывающий — оно зависит от того, что делает конкретная
+     * настройка.
+     */
     private String setting(String code) {
-        try {
-            List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT label_ru FROM KnowDictEntry WHERE dict_type='app_setting' AND code=:c AND is_active=true",
-                Map.of("c", code));
-            return rows.isEmpty() ? null : str(rows.get(0).get("label_ru"));
-        } catch (Exception e) {
-            return null; // настройки недоступны → работаем по дефолтам, не падаем
-        }
+        List<Map<String, Object>> rows = ingestService.queryPublic(
+            "SELECT label_ru FROM KnowDictEntry WHERE dict_type='app_setting' AND code=:c AND is_active=true",
+            Map.of("c", code));
+        return rows.isEmpty() ? null : str(rows.get(0).get("label_ru"));
     }
 
+    /**
+     * Флаг настройки.
+     *
+     * <p><b>При отказе БД возвращается {@code false}, а НЕ дефолт.</b> Все флаги
+     * этого словаря что-то РАЗРЕШАЮТ или ВКЛЮЧАЮТ, поэтому неизвестность должна
+     * читаться как «нельзя»: включить функцию из-за недоступной БД хуже, чем не
+     * включить. Отказ при этом не молчит — уходит в лог с причиной.
+     */
     boolean settingBool(String code, boolean def) {
-        String v = setting(code);
+        String v;
+        try {
+            v = setting(code);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE SETTING] %s не прочитана (%s) — считаем ВЫКЛЮЧЕНной, "
+                + "дефолт %b не применяется: неизвестность не должна включать функции",
+                code, LoreUpstream.detail(e), def);
+            return false;
+        }
         return v == null || v.isEmpty() ? def : !"false".equalsIgnoreCase(v);
     }
 
+    /**
+     * Числовая настройка (лимиты, размеры).
+     *
+     * <p>Здесь дефолт при отказе БД оправдан, в отличие от флага: число задаёт
+     * ГРАНИЦУ уже разрешённой операции, и падать на каждом обращении к ассету
+     * из-за непрочитанного лимита — хуже, чем взять прежнее значение. Но отказ
+     * так же не молчит: с непрочитанным лимитом надо разбираться, просто не
+     * ценой отказа в обслуживании.
+     */
     long settingLong(String code, long def) {
+        String v;
         try {
-            String v = setting(code);
+            v = setting(code);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE SETTING] %s не прочитана (%s) — берём дефолт %d",
+                code, LoreUpstream.detail(e), def);
+            return def;
+        }
+        try {
             return v == null || v.isEmpty() ? def : Long.parseLong(v.trim());
         } catch (NumberFormatException e) {
             return def;

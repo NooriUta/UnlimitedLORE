@@ -130,8 +130,12 @@ public class LoreDictResource extends LoreResourceBase {
         if (!enabled) return disabled();
         requireAdmin(role);
         try {
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE TYPE IN_AREA IF NOT EXISTS")).await().indefinitely();
+            // DBR-06: объявление типа IN_AREA переехало в реестр миграций
+            // (шаг V22). Здесь его больше нет намеренно: рантайм ходит в БД
+            // токеном БЕЗ права менять схему, и `CREATE EDGE TYPE` из обычного
+            // эндпоинта дал бы 403 на ровном месте — бэкфилл рёбер не обязан
+            // требовать прав на DDL. Тип создаёт накатка, этот путь только
+            // перевешивает рёбра.
             List<Map<String, Object>> comps = ingestService.queryPublic(
                 "SELECT component_id, area FROM LoreComponent WHERE area IS NOT NULL", Map.of());
             int n = 0;

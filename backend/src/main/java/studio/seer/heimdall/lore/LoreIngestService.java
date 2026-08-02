@@ -118,9 +118,22 @@ public class LoreIngestService {
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> queryRows(String sql, Map<String, Object> params) {
-        LoreCommandClient.LoreCommandResult r = client.command(db, basicAuth(),
-                new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
-        return r.result() instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        try {
+            LoreCommandClient.LoreCommandResult r = client.command(db, basicAuth(),
+                    new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
+            return r.result() instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
+        } catch (RuntimeException e) {
+            // DBR-05: тело ответа ArcadeDB несёт настоящую причину («Index not
+            // found …», «no viable alternative at input …», локаут креда), а
+            // наружу без этого уходит родовое сообщение RESTEasy, одинаковое
+            // для всех отказов. Разворачиваем здесь — это единственная точка,
+            // через которую идут все чтения.
+            //
+            // SQL добавляем к сообщению, параметры — НЕТ: в них ходят значения
+            // корпуса, а сообщение может уехать в ответ клиенту.
+            throw new IllegalStateException(
+                "[LORE QUERY] " + LoreUpstream.detail(e) + " | sql: " + sql, e);
+        }
     }
 
     public IngestReport ingest(String docsRootOverride) {

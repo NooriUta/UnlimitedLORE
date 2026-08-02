@@ -198,6 +198,13 @@ public class LoreSearchResource extends LoreResourceBase {
 
         // Ищем, какому типу принадлежит идентификатор. Ветки без FT-индекса
         // (quality_gate) пропускаем сразу: «похожих» им взять неоткуда.
+        //
+        // DBR-04: считаем, сколько веток реально опрошено. При лежащей БД все
+        // они уходили в `continue`, и метод доходил до финального 404 «ref не
+        // найден ни в одном типе» — то есть отвечал УТВЕРЖДЕНИЕМ О ДАННЫХ там,
+        // где не смог посмотреть. Ни одной успешной ветки — это 502, а не 404.
+        int probed = 0;
+        List<String> branchErrors = new ArrayList<>();
         for (Branch b : BRANCHES) {
             if (b.indexName() == null) continue;
             List<Map<String, Object>> src;
@@ -205,8 +212,11 @@ public class LoreSearchResource extends LoreResourceBase {
                 src = ingestService.queryPublic(
                     "SELECT @rid AS rid FROM " + b.vertexClass() + " WHERE " + b.idField() + " = :ref LIMIT 1",
                     Map.of("ref", ref));
+                probed++;
             } catch (Exception e) {
-                LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), e.getMessage());
+                String why = LoreUpstream.detail(e);
+                LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), why);
+                branchErrors.add(b.type() + ": " + why);
                 continue;
             }
             if (src.isEmpty()) continue;
@@ -251,6 +261,21 @@ public class LoreSearchResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         }
 
+        // DBR-04: «не найден» имеет право прозвучать только если мы ИСКАЛИ.
+        // Ни одной опрошенной ветки — отказ БД, и говорить о данных нельзя.
+        if (probed == 0) {
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", "ни одна ветка не опрошена: "
+                    + String.join("; ", branchErrors))));
+        }
+        // Часть веток упала — «не найдено» остаётся возможным ответом (в
+        // опрошенных его правда нет), но умалчивать о непроверенных нельзя:
+        // ref мог лежать именно там.
+        if (!branchErrors.isEmpty()) {
+            return noStore(Response.status(Response.Status.NOT_FOUND)
+                .entity(new LoreError("NOT_FOUND", "ref «" + ref + "» не найден в опрошенных типах; "
+                    + "НЕ опрошены: " + String.join("; ", branchErrors))));
+        }
         return noStore(Response.status(Response.Status.NOT_FOUND)
             .entity(new LoreError("NOT_FOUND", "ref «" + ref + "» не найден ни в одном индексируемом типе")));
     }
@@ -311,10 +336,14 @@ public class LoreSearchResource extends LoreResourceBase {
         // Минус-единица как сигнал ошибки хуже отсутствия сигнала: она
         // выглядит данными.
         List<Map<String, Object>> warnings = new ArrayList<>();
+        // DBR-05: ветка может отработать НАПОЛОВИНУ — вершина опрошена, история
+        // нет (или наоборот). Это не отказ ветки и не полный успех, и третье
+        // состояние надо назвать: иначе половина выдачи выглядит как вся.
+        Map<String, String> partialBranches = new LinkedHashMap<>();
 
         for (Branch b : active) {
             try {
-                List<Map<String, Object>> rows = queryBranch(b, lucene, q, comps, projs);
+                List<Map<String, Object>> rows = queryBranch(b, lucene, q, comps, projs, partialBranches);
                 byType.put(b.type(), rows.size());
                 // Нормировка внутри ветки: BM25 разных бакетов несравним, а
                 // после деления на максимум ветки хотя бы порядок внутри типа
@@ -367,10 +396,19 @@ public class LoreSearchResource extends LoreResourceBase {
                 // нашлось», а про упавшую ветку мы этого не знаем. Отдельное
                 // поле warnings говорит «здесь не искали», и это принципиально
                 // иное утверждение, чем «здесь ничего нет».
-                LOG.warnf("[LORE SEARCH] ветка %s упала: %s", b.type(), e.getMessage());
-                warnings.add(Map.of("type", b.type(), "error", String.valueOf(e.getMessage())));
+                // DBR-05: в warnings идёт РАЗВЁРНУТАЯ причина (тело ответа
+                // ArcadeDB), а не родовое сообщение RESTEasy — оно одинаково
+                // для локаута креда, снесённого индекса и битого SQL.
+                String why = LoreUpstream.detail(e);
+                LOG.warnf("[LORE SEARCH] ветка %s упала: %s", b.type(), why);
+                warnings.add(Map.of("type", b.type(), "error", String.valueOf(why)));
             }
         }
+        // Частично опрошенные ветки — тоже предупреждение, но с иным смыслом:
+        // «здесь искали не везде», а не «здесь не искали». Отдельный признак
+        // partial, чтобы читающий не принял половину за целое.
+        partialBranches.forEach((type, why) ->
+            warnings.add(Map.of("type", type, "partial", true, "error", why)));
 
         hits.sort((a, bb) -> Double.compare(
             ((Number) bb.get("score")).doubleValue(), ((Number) a.get("score")).doubleValue()));
@@ -402,8 +440,15 @@ public class LoreSearchResource extends LoreResourceBase {
     }
 
     /** Одна ветка: вершина + (если есть) открытая hist-строка со схлопыванием. */
+    /**
+     * @param partialBranches куда записать «ветка опрошена наполовину»: тип →
+     *        причина. Не возвращается результатом, потому что частичный ответ
+     *        остаётся ВАЛИДНЫМ ответом — вызывающий кладёт такие ветки и в
+     *        by_type, и в warnings одновременно, и различать их надо ему.
+     */
     private List<Map<String, Object>> queryBranch(Branch b, String lucene, String rawQ,
-                                                  List<String> comps, List<String> projs) {
+                                                  List<String> comps, List<String> projs,
+                                                  Map<String, String> partialBranches) {
         Map<String, Object> params = new HashMap<>();
         params.put("q", lucene);
         String compFilter = componentFilter(b, comps, params, false);
@@ -425,9 +470,20 @@ public class LoreSearchResource extends LoreResourceBase {
             + " ORDER BY score DESC LIMIT " + BRANCH_CAP;
         params.put("idlike", "%" + rawQ + "%");
 
+        // DBR-05: две половины ветки — по вершине и по hist — идут в РАЗНЫХ
+        // try. Раньше они лежали в одном, и падение одного full-text индекса
+        // выкашивало ветку целиком, включая работоспособную половину: живой
+        // симптом — ветка `adr` стабильно отдавала 500 в warnings, хотя вершинный
+        // запрос мог отработать. Половина результатов лучше, чем ноль, если про
+        // недостачу сказано вслух.
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (Map<String, Object> r : ingestService.queryPublic(sql, params)) {
-            rows.add(shapeHit(b, r, rawQ, b.vertexTextFields(), false));
+        List<String> partial = new ArrayList<>();
+        try {
+            for (Map<String, Object> r : ingestService.queryPublic(sql, params)) {
+                rows.add(shapeHit(b, r, rawQ, b.vertexTextFields(), false));
+            }
+        } catch (RuntimeException e) {
+            partial.add("вершина: " + LoreUpstream.detail(e));
         }
 
         if (b.histClass() != null) {
@@ -451,9 +507,26 @@ public class LoreSearchResource extends LoreResourceBase {
                 + "AND SEARCH_INDEX('" + b.histIndexName() + "', :q) = true"
                 + hCompFilter + hProjFilter
                 + " ORDER BY score DESC LIMIT " + BRANCH_CAP;
-            for (Map<String, Object> r : ingestService.queryPublic(hsql, hp)) {
-                rows.add(shapeHit(b, r, rawQ, b.histTextFields(), true));
+            try {
+                for (Map<String, Object> r : ingestService.queryPublic(hsql, hp)) {
+                    rows.add(shapeHit(b, r, rawQ, b.histTextFields(), true));
+                }
+            } catch (RuntimeException e) {
+                partial.add("история: " + LoreUpstream.detail(e));
             }
+        }
+
+        // Обе половины упали — это отказ ветки, а не частичный результат:
+        // отдавать пустой список молча значило бы утверждать «здесь ничего нет».
+        if (!partial.isEmpty() && rows.isEmpty()) {
+            throw new IllegalStateException(String.join("; ", partial));
+        }
+        if (!partial.isEmpty()) {
+            // Половина не опрошена — сказать об этом обязательно, иначе выдача
+            // выглядит полной. Ветка при этом остаётся в by_type: часть данных
+            // мы всё же посмотрели.
+            LOG.warnf("[LORE SEARCH] ветка %s опрошена частично: %s", b.type(), String.join("; ", partial));
+            partialBranches.put(b.type(), String.join("; ", partial));
         }
 
         // Дедуп по ref_id: вершина и её hist могли совпасть оба — оставляем
