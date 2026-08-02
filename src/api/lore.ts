@@ -1258,7 +1258,15 @@ export function saveLoreActor(body: {
   name?: string;
   kind?: 'human-role' | 'system' | 'agent';
   body_md?: string;
+  /** Прежняя форма — ОДИН проект. Бэкенд трактует как набор из одного. */
   project?: string;
+  /**
+   * AL-107: полный набор проектов актора. Передан — задаёт набор целиком
+   * (в том числе пустым списком «отвязать все»); не передан — рёбра не
+   * трогаются. До этого запись схлопывала мультипроектного актора в один
+   * проект и молча теряла остальные.
+   */
+  projects?: string[];
 }, signal?: AbortSignal) {
   return loreMutate<LoreProductWriteResult>('/actor', body, signal);
 }
