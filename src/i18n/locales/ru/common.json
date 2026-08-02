@@ -767,6 +767,8 @@
       "parentHas": "Под ADR",
       "parentLabel": "Привязка к ADR",
       "parentOrphan": "Независимые",
+      "projectLabel": "Проект",
+      "noProject": "без проекта",
       "statusLabel": "Статус"
     },
     "docView": {
@@ -1477,6 +1479,8 @@
         "filtersLabel": "Фильтры",
         "noComponent": "без компонента",
         "noTag": "без тега",
+        "noProject": "без проекта",
+        "projectDim": "Проект",
         "periodDim": "Период",
         "sortComp": "Компонент",
         "sortDate": "Дата",
@@ -1623,6 +1627,10 @@
         "kind": "Вид",
         "project": "Проект",
         "projectHint": "без проекта одноимённые роли разных продуктов сольются в одну",
+        "projects": "Проекты",
+        "noProjects": "⚠ проект не задан — при включённом проектном скоупе этот актор не будет виден никому",
+        "projAll": "все проекты",
+        "projNone": "без проекта",
         "idRule": "ACT-‹РОЛЬ›, латиницей через дефис: ACT-ARCHITECT",
         "segment": "сегмент клиента"
       },

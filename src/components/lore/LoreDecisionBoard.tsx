@@ -49,6 +49,8 @@ function inferDecisionStatus(title: string | null): string | null {
 }
 
 const STATUS_ORDER = ['fixed', 'accepted', 'done', 'deferred', 'rejected', 'superseded'];
+/** Значение фасета «решения без единого проекта» (AL-96). */
+const NO_PROJ = '__noproj__';
 
 const dimLbl = {
   fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase' as const,
@@ -74,6 +76,7 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
   const [filterOpen,     setFilterOpen]     = useState(false);
   // ADR-019 "rule" mode facets: component + parent (has ADR / orphan).
   const [compSel,        setCompSel]        = useState<Set<string>>(new Set());
+  const [projSel,        setProjSel]        = useState<Set<string>>(new Set());
   const [parentFilter,   setParentFilter]   = useState<'all' | 'has' | 'orphan'>('all');
 
   useEffect(() => {
@@ -110,6 +113,9 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
   function toggleStatus(s: string) {
     setStatusSel(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
   }
+  function toggleProj(p: string) {
+    setProjSel(prev => { const n = new Set(prev); n.has(p) ? n.delete(p) : n.add(p); return n; });
+  }
   // Available status chips: only categories actually present, ordered by STATUS_ORDER.
   const statusCounts = (() => {
     const m: Record<string, number> = {};
@@ -127,6 +133,15 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
   })();
   const allComps = Object.keys(compCounts).sort((a, b) => (compCounts[b] - compCounts[a]) || a.localeCompare(b));
   const orphanCount = rows.filter(d => !d.parent_adr).length;
+  // AL-96: слайс `decisions` отдаёт projects с T43, но экран о проектах не знал
+  // вовсе. Решение мультипроектное — считаем вхождение в каждый его проект.
+  const projCounts = (() => {
+    const m: Record<string, number> = {};
+    rows.forEach(d => (d.projects ?? []).forEach(p => { if (p) m[p] = (m[p] || 0) + 1; }));
+    return m;
+  })();
+  const allProjs = Object.keys(projCounts).sort((a, b) => (projCounts[b] - projCounts[a]) || a.localeCompare(b));
+  const noProjCount = rows.filter(d => (d.projects ?? []).filter(Boolean).length === 0).length;
 
   const filtered = rows
     .filter(d => {
@@ -140,6 +155,14 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
     })
     .filter(d => statusSel.size === 0 || statusSel.has(decStatus(d) ?? '\0'))
     .filter(d => compSel.size === 0 || (d.component_id != null && compSel.has(d.component_id)))
+    .filter(d => {
+      if (projSel.size === 0) return true;
+      const ps = (d.projects ?? []).filter(Boolean) as string[];
+      // «Без проекта» — отдельный чип, а не отсутствие выбора: при включённом
+      // скоупе такие решения не увидит никто, и найти их надо уметь.
+      if (projSel.has(NO_PROJ) && ps.length === 0) return true;
+      return ps.some(p => projSel.has(p));
+    })
     .filter(d => parentFilter === 'all' || (parentFilter === 'has' ? !!d.parent_adr : !d.parent_adr));
 
   const display = [...filtered].sort((a, b) => {
@@ -292,11 +315,11 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
         </div>
       </div>
       {/* T34: status facet filter (collapsible one-line band, same as QG/Знания) */}
-      {(allStatuses.length > 1 || allComps.length > 0) && (
+      {(allStatuses.length > 1 || allComps.length > 0 || allProjs.length > 0) && (
         <FilterBar
           tier="local"
           label={t('lore.decisionBoard.filtersLabel', 'Фильтры')}
-          activeCount={statusSel.size + compSel.size + (parentFilter !== 'all' ? 1 : 0)}
+          activeCount={statusSel.size + compSel.size + projSel.size + (parentFilter !== 'all' ? 1 : 0)}
           summaryTags={[
             ...[...statusSel].map((s): FilterTagData => ({
               key: 's:' + s, label: statusLabel(s), color: resolveStatusMeta(s).color,
@@ -306,12 +329,17 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
               key: 'c:' + c, label: c,
               onRemove: () => setCompSel(prev => { const n = new Set(prev); n.delete(c); return n; }),
             })),
+            ...[...projSel].map((p): FilterTagData => ({
+              key: 'pj:' + p, label: p === NO_PROJ ? t('lore.decisionBoard.noProject', 'без проекта') : p,
+              color: 'var(--suc)',
+              onRemove: () => setProjSel(prev => { const n = new Set(prev); n.delete(p); return n; }),
+            })),
             ...(parentFilter !== 'all' ? [{
               key: 'p', label: parentFilter === 'has' ? t('lore.decisionBoard.parentHas', 'Под ADR') : t('lore.decisionBoard.parentOrphan', 'Независимые'),
               onRemove: () => setParentFilter('all'),
             } as FilterTagData] : []),
           ]}
-          onClear={() => { setStatusSel(new Set()); setCompSel(new Set()); setParentFilter('all'); }}
+          onClear={() => { setStatusSel(new Set()); setCompSel(new Set()); setProjSel(new Set()); setParentFilter('all'); }}
           open={filterOpen}
           onToggleOpen={() => setFilterOpen(v => !v)}
         >
@@ -334,6 +362,19 @@ export default function LoreDecisionBoard({ q, onError, onNavigateAdr }: Props) 
                     onClick={() => setCompSel(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; })}
                     count={compCounts[c]} dot />
                 ))}
+              </div>
+            )}
+            {(allProjs.length > 0 || noProjCount > 0) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
+                <span style={dimLbl}>{t('lore.decisionBoard.projectLabel', 'Проект')}</span>
+                {allProjs.map(p => (
+                  <Chip key={p} label={p} pressed={projSel.has(p)}
+                    onClick={() => toggleProj(p)} count={projCounts[p]} color="var(--suc)" dot />
+                ))}
+                {noProjCount > 0 && (
+                  <Chip label={t('lore.decisionBoard.noProject', 'без проекта')} pressed={projSel.has(NO_PROJ)}
+                    onClick={() => toggleProj(NO_PROJ)} count={noProjCount} />
+                )}
               </div>
             )}
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, alignItems: 'center' }}>
