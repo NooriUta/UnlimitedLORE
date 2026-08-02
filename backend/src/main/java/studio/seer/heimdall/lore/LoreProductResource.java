@@ -310,8 +310,18 @@ public class LoreProductResource extends LoreResourceBase {
     // роль, что одноимённая роль другого, и без разделения RBAC-матрица,
     // выводимая из тройки «роль × компонент × сценарий», склеивает чужие
     // продукты в одну строку.
+    /**
+     * @param project  ОДИН проект — прежняя форма, оставлена для совместимости
+     *                 (MCP {@code actor_new} и вызовы, писавшиеся до AL-107).
+     *                 Трактуется как список из одного элемента.
+     * @param projects ПОЛНЫЙ набор проектов актора. Актор может принадлежать
+     *                 нескольким продуктам — слайс {@code actors} и раньше
+     *                 отдавал их массивом, а запись схлопывала в один и сносила
+     *                 остальные (AL-107). Передан — задаёт набор целиком; не
+     *                 передан — рёбра не трогаются вовсе.
+     */
     public record ActorRequest(String actor_id, String name, String kind, String body_md,
-                               String project) {}
+                               String project, List<String> projects) {}
 
     @POST
     @Path("actor")
@@ -333,12 +343,20 @@ public class LoreProductResource extends LoreResourceBase {
         // путь, §10.3 SPEC-RBAC-OMILORE-AGENTS) — requireAdmin() выше и так
         // единственный гейт человеческого вызова, здесь его не сужаем.
         String agentScope = callerAgentScope();
-        if (agentScope != null && req.project() != null && !req.project().isBlank()) {
+        if (agentScope != null) {
+            // AL-107: проверять НАБОР целиком, а не только скалярный project.
+            // Иначе добавление массива `projects` открыло бы обход: агент,
+            // которому запрещён проект X, прислал бы его вторым элементом и
+            // прошёл бы гейт, потому что скаляр пуст. Разрешение нужно на
+            // КАЖДЫЙ проект, куда он просит привязать актора.
+            List<String> asked = requestedProjects(req);
             String clientId = callerClientId();
-            if (clientId == null || !projectRbac.agentAllowedInProject(clientId, req.project(), agentScope)) {
-                return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
-                    + "для проекта '" + req.project() + "': роль владельца там не делегирует этот профиль "
-                    + "(или клиент/владелец/роль не сопоставлены в графе)");
+            for (String slug : asked == null ? List.<String>of() : asked) {
+                if (clientId == null || !projectRbac.agentAllowedInProject(clientId, slug, agentScope)) {
+                    return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
+                        + "для проекта '" + slug + "': роль владельца там не делегирует этот профиль "
+                        + "(или клиент/владелец/роль не сопоставлены в графе)");
+                }
             }
         }
         try {
@@ -357,27 +375,103 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("actor_id", req.actor_id());
             // D18: принадлежность проекту — РЕБРО, а не поле. Поле было бы второй
             // правдой рядом с BELONGS_TO_PROJECT, который уже несут спринты.
-            if (req.project() != null && !req.project().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowActor WHERE actor_id=:id)",
-                    Map.of("id", req.actor_id()))).await().indefinitely();
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> created = (List<Map<String, Object>>)
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
-                        "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
-                        Map.of("id", req.actor_id(), "p", req.project())))
-                    .await().indefinitely().result();
-                boolean linked = created != null && !created.isEmpty();
-                out.put("project_linked", linked);
-                if (!linked) out.put("hint", "проект «" + req.project() + "» не зарегистрирован — "
-                    + "заведите его через project_new, иначе привязка молча не создаётся");
-            }
+            syncActorProjects(req, out);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /**
+     * AL-107: привести набор рёбер {@code BELONGS_TO_PROJECT} актора к тому,
+     * что прислал вызывающий.
+     *
+     * <p><b>Порядок операций существенный: сначала создаём, потом удаляем
+     * лишние.</b> Прежняя редакция делала наоборот — сносила ВСЕ рёбра и
+     * создавала одно. Обрыв между двумя запросами оставлял актора вообще без
+     * проектов, а мультипроектного актора такая запись схлопывала всегда, даже
+     * без обрыва. Решение [[DBR-04]]: сбой должен оставлять дубли, а не
+     * пустоту — дубли чинятся, потеря нет.
+     *
+     * <p><b>Отсутствие ключа и пустой список — РАЗНОЕ.</b> Не передали ничего —
+     * рёбра не трогаем (так работают прежние вызовы, которые о проектах не
+     * знают). Передали пустой список — это осознанное «убрать все».
+     *
+     * <p>Незарегистрированный слаг не даёт ошибки: {@code CREATE EDGE} с пустым
+     * TO — тихий no-op. Поэтому считаем фактически созданные рёбра и, если
+     * что-то не привязалось, говорим об этом в ответе, а не молчим при ok:true.
+     */
+    private void syncActorProjects(ActorRequest req, Map<String, Object> out) {
+        List<String> wanted = requestedProjects(req);
+        if (wanted == null) return;   // ключ не передан — не наше дело
+
+        List<String> missing = new java.util.ArrayList<>();
+        for (String slug : wanted) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("id", req.actor_id(), "p", slug)))
+                .await().indefinitely().result();
+            // Пусто и при «уже было», и при «проекта нет» — различаем запросом
+            // к самому ребру, иначе повторное сохранение выглядело бы как отказ.
+            if (created == null || created.isEmpty()) {
+                var exists = ingest.queryPublic(
+                    "SELECT count(*) AS n FROM BELONGS_TO_PROJECT "
+                    + "WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug));
+                long n = exists.isEmpty() ? 0 : ((Number) exists.get(0).getOrDefault("n", 0)).longValue();
+                if (n == 0) missing.add(slug);
+            }
+        }
+
+        // Удаляем ровно лишние. NOT IN по списку не строим: параметр-коллекция
+        // в этой грамматике ведёт себя непредсказуемо — удаляем поштучно по
+        // фактическому набору, вычтя запрошенный.
+        var current = ingest.queryPublic(
+            "SELECT out('BELONGS_TO_PROJECT').slug AS slugs FROM KnowActor WHERE actor_id = :id",
+            Map.of("id", req.actor_id()));
+        int removed = 0;
+        if (!current.isEmpty() && current.get(0).get("slugs") instanceof List<?> have) {
+            for (Object o : have) {
+                if (o == null) continue;
+                String slug = String.valueOf(o);
+                if (wanted.contains(slug)) continue;
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM BELONGS_TO_PROJECT WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug))).await().indefinitely();
+                removed++;
+            }
+        }
+
+        out.put("projects_linked", wanted.size() - missing.size());
+        out.put("projects_removed", removed);
+        if (!missing.isEmpty()) {
+            out.put("projects_missing", missing);
+            out.put("hint", "не зарегистрированы в реестре: " + String.join(", ", missing)
+                + " — заведите через project_new, иначе привязка молча не создаётся");
+        }
+        // Совместимость: скалярная форма продолжает отдавать project_linked.
+        // Поле описано в схеме MCP-инструмента actor_new как признак «проект не
+        // зарегистрирован», и на него смотрят вызывающие, писавшиеся до AL-107.
+        // Убрать его молча означало бы сломать документированный контракт ради
+        // косметики — новые поля добавлены РЯДОМ, а не вместо.
+        if (req.projects() == null && req.project() != null && !req.project().isBlank()) {
+            out.put("project_linked", missing.isEmpty());
+        }
+    }
+
+    /** Запрошенный набор проектов: {@code null} — ключей нет, трогать нечего. */
+    private static List<String> requestedProjects(ActorRequest req) {
+        if (req.projects() != null) {
+            return req.projects().stream()
+                .filter(s -> s != null && !s.isBlank())
+                .distinct().toList();
+        }
+        if (req.project() != null && !req.project().isBlank()) return List.of(req.project());
+        return null;
     }
 
     // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
