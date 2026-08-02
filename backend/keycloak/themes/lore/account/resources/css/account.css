@@ -1,0 +1,61 @@
+/*
+ * LORE Graph — KC Account Console (v3, React/PatternFly) branding. Same CSS
+ * as aida-root's seer account theme (same default palette) — see that file
+ * for the full rationale. Only logo.svg (mark letter) differs.
+ *
+ * Scope deliberately narrow (KCT-01): logo/palette/fonts/background only,
+ * not a re-layout — the Account Console is KC's own React SPA and doesn't
+ * load our seer-prefs picker JS, so unlike the login theme this is ONE
+ * static brand skin (amber-forest light, matching the app's own default),
+ * not a live theme/palette switcher.
+ *
+ * Two layers of override, both needed:
+ * 1. PatternFly v5's own global CSS custom properties — the documented,
+ *    stable way to reskin without hunting every component class. Covers
+ *    most buttons/links/focus-rings in one place.
+ * 2. A few specific component classes (masthead, nav) that don't fully
+ *    derive from the globals, found by inspecting the live rendered DOM
+ *    (not guessed from docs — PatternFly's actual class output for a given
+ *    version can drift from its own examples).
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Unbounded:wght@800&display=swap');
+
+:root {
+  --pf-v5-global--primary-color--100: #6b7a2a;
+  --pf-v5-global--primary-color--200: #55611f;
+  --pf-v5-global--link--Color: #6b7a2a;
+  --pf-v5-global--link--Color--hover: #55611f;
+  --pf-v5-global--BackgroundColor--100: #f5f3ee;
+  --pf-v5-global--BackgroundColor--dark-100: #1e1a12;
+  --pf-v5-global--Color--100: #1e1a12;
+  --pf-v5-global--FontFamily--sans-serif: 'Manrope', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--pf-v5-global--FontFamily--sans-serif);
+}
+
+.pf-v5-c-masthead {
+  background: #1e1a12;
+}
+.pf-v5-c-masthead__brand,
+.pf-v5-c-masthead .pf-v5-c-brand {
+  color: #f5f3ee;
+}
+
+.pf-v5-c-nav__link.pf-m-current,
+.pf-v5-c-nav__link[aria-current="page"] {
+  color: #6b7a2a;
+  border-left-color: #6b7a2a;
+}
+.pf-v5-c-nav__link:hover {
+  color: #55611f;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  background-color: #6b7a2a;
+}
+.pf-v5-c-button.pf-m-primary:hover {
+  background-color: #55611f;
+}
