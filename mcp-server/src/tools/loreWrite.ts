@@ -495,12 +495,18 @@ export function registerLoreWrite(server: McpServer): void {
       kind:     z.enum(['human-role', 'system', 'agent']).optional(),
       body_md:  z.string().optional().describe('кто это, права, ожидания'),
       project:  z.string().optional()
-        .describe('D18: git-project slug the role belongs to. Without it "Администратор" of one product and the same-named role of another collapse into one row of the derived RBAC matrix. project_linked:false in the response = the project is not registered (project_new), not a silent no-op.'),
+        .describe('D18: ONE git-project slug. Kept for compatibility — treated as a one-item set, so it DETACHES the actor from every other project. Prefer `projects` when the actor belongs to more than one. project_linked:false in the response = the project is not registered (project_new), not a silent no-op.'),
+      projects: z.array(z.string()).optional()
+        .describe('AL-107: FULL set of git-project slugs. An actor may belong to several products, and the graph always stored a set — sending one slug used to wipe the rest silently at ok:true. Passing this key REPLACES the whole set (an empty array detaches from all); omitting BOTH keys leaves the edges untouched. Response: projects_linked / projects_removed / projects_missing (unregistered slugs — those are no-ops, not errors).'),
     },
     path: '/lore/actor',
-    body: ({ actor_id, name, kind, body_md, project }) => ({
+    body: ({ actor_id, name, kind, body_md, project, projects }) => ({
       actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+      // Оба ключа отдаются как есть, включая undefined: бэкенд различает
+      // «ключа нет» (рёбра не трогать) и «пустой список» (снять все), и
+      // подмена undefined на null стёрла бы это различие.
       project: project ?? null,
+      ...(projects === undefined ? {} : { projects }),
     }),
   });
 
