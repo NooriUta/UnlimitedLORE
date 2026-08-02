@@ -1,5 +1,7 @@
 package studio.seer.heimdall.lore;
 
+import io.quarkus.runtime.Startup;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -37,7 +39,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * отвечает 503 «not configured» — pluggable-контракт D14.
  *
  * Значения секретов НИКОГДА не логируются.
+ *
+ * <p>VLT-01/02: третий равноправный источник — <b>vault</b> (HashiCorp Vault, KV v2).
+ * Включается {@code lore.secrets.provider=vault} + {@code lore.secrets.vault.url}
+ * + {@code lore.secrets.vault.token} (token-auth; X-Vault-Token). Все ключи LORE
+ * живут ОДНИМ KV-секретом по пути {@code lore.secrets.vault.path} (полный
+ * KV v2-путь с {@code data/}, напр. {@code secret/data/lore}) — поле секрета =
+ * логическое имя ключа. Недоконфиг при {@code provider=vault} — ошибка СТАРТА,
+ * не тихий фолбэк (решение 138: провайдеры равноправны, выбор явный; молчаливый
+ * фолбэк = «выглядит настроенным, по факту не применяется»).</p>
  */
+@Startup
 @ApplicationScoped
 public class SecretProvider {
 
@@ -84,6 +96,43 @@ public class SecretProvider {
     @ConfigProperty(name = "lore.secrets.scope", defaultValue = "/lore")
     String scope;
 
+    // ── vault (VLT-01) ────────────────────────────────────────────────────────
+
+    /** Базовый URL Vault, напр. http://localhost:8200 (только для provider=vault). */
+    @ConfigProperty(name = "lore.secrets.vault.url")
+    Optional<String> vaultUrl;
+
+    /** Token-auth: значение заголовка X-Vault-Token. */
+    @ConfigProperty(name = "lore.secrets.vault.token")
+    Optional<String> vaultToken;
+
+    /**
+     * Полный KV v2-путь секрета С сегментом {@code data/} (mount/data/название):
+     * дефолт {@code secret/data/lore}. Один секрет-объект на все ключи LORE —
+     * ротация одного ключа не трогает соседей, а лишний ключ в объекте безвреден.
+     */
+    @ConfigProperty(name = "lore.secrets.vault.path", defaultValue = "secret/data/lore")
+    String vaultPath;
+
+    /**
+     * VLT-02: недоконфиг при явно выбранном vault — ошибка старта, не фолбэк.
+     * Тот же класс проблем, что ловил спринт миграции: конфиг «выглядит
+     * настроенным», а фактически секреты молча идут из env.
+     */
+    @PostConstruct
+    void validateProviderConfig() {
+        if ("vault".equalsIgnoreCase(provider)) {
+            if (vaultUrl.isEmpty() || vaultToken.isEmpty()) {
+                throw new IllegalStateException(
+                    "lore.secrets.provider=vault, но не заданы "
+                    + (vaultUrl.isEmpty() ? "lore.secrets.vault.url " : "")
+                    + (vaultToken.isEmpty() ? "lore.secrets.vault.token " : "")
+                    + "— провайдеры равноправны и тихий фолбэк на env запрещён (решение 138); "
+                    + "задайте конфиг или переключите провайдер явно");
+            }
+        }
+    }
+
     private final ConcurrentHashMap<String, String> cache = new ConcurrentHashMap<>();
 
     /** Access-token, полученный по Universal Auth. Живёт до истечения TTL. */
@@ -98,7 +147,10 @@ public class SecretProvider {
         String cached = cache.get(key);
         if (cached != null) return Optional.of(cached);
 
-        Optional<String> val = "infisical".equalsIgnoreCase(provider) ? fromService(key) : fromEnv(key);
+        Optional<String> val =
+            "infisical".equalsIgnoreCase(provider) ? fromService(key)
+            : "vault".equalsIgnoreCase(provider)   ? fromVault(key)
+            : fromEnv(key);
         val.ifPresent(v -> cache.put(key, v));
         if (val.isEmpty()) {
             LOG.debugf("[LORE secrets] %s не найден (провайдер=%s)", key, provider);
@@ -146,6 +198,51 @@ public class SecretProvider {
             // медленный/перегружен) и connection-refused (сервис не поднят)
             // требуют разных действий, а голый getMessage() их не различал.
             LOG.warnf("[LORE secrets] сервис недоступен (%s: %s) за %dмс — %s не прочитан",
+                e.getClass().getSimpleName(), e.getMessage(), System.currentTimeMillis() - t0, key);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * VLT-01: чтение из HashiCorp Vault (KV v2, token-auth). Семантика та же,
+     * что у {@link #fromService}: не найдено/недоступно → empty (мосты отвечают
+     * 503 pluggable), тип исключения и длительность — в лог (урок AL-88),
+     * значения секретов в лог не попадают никогда.
+     */
+    private Optional<String> fromVault(String key) {
+        // validateProviderConfig() гарантирует наличие на старте; проверка здесь —
+        // защита пути «вызван вручную в тесте без конфига», не рабочая ветка.
+        if (vaultUrl.isEmpty() || vaultToken.isEmpty()) {
+            LOG.warn("[LORE secrets] провайдер=vault, но vault.url/vault.token не заданы — секреты недоступны");
+            return Optional.empty();
+        }
+        long t0 = System.currentTimeMillis();
+        try {
+            HttpRequest req = HttpRequest.newBuilder(
+                    URI.create(vaultUrl.get() + "/v1/" + vaultPath))
+                .header("X-Vault-Token", vaultToken.get())
+                .GET().build();
+            HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+            long ms = System.currentTimeMillis() - t0;
+            if (r.statusCode() != 200) {
+                // 403 — policy/протухший токен, 503 — sealed vault: коды в лог,
+                // чтобы отказ различался без раскопок (runbook опирается на это).
+                LOG.warnf("[LORE secrets] vault вернул %d для пути %s за %dмс — %s не прочитан "
+                    + "(403 = policy/токен, 503 = sealed)", r.statusCode(), vaultPath, ms, key);
+                return Optional.empty();
+            }
+            String v = new io.vertx.core.json.JsonObject(r.body())
+                .getJsonObject("data", new io.vertx.core.json.JsonObject())
+                .getJsonObject("data", new io.vertx.core.json.JsonObject())
+                .getString(key);
+            if (v == null || v.isBlank()) {
+                LOG.debugf("[LORE secrets] vault: поле %s отсутствует в %s (за %dмс)", key, vaultPath, ms);
+                return Optional.empty();
+            }
+            LOG.infof("[LORE secrets] %s получен из vault за %dмс", key, ms);
+            return Optional.of(v);
+        } catch (Exception e) {
+            LOG.warnf("[LORE secrets] vault недоступен (%s: %s) за %dмс — %s не прочитан",
                 e.getClass().getSimpleName(), e.getMessage(), System.currentTimeMillis() - t0, key);
             return Optional.empty();
         }

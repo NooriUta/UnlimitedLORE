@@ -6,7 +6,7 @@ import gameIconsData from '@iconify-json/game-icons/icons.json';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { loadKc, loadKcObj, type KcState } from './kc-state';
 import { GameIcon } from './GameIcon';
-import { AUTH_ENABLED } from '../../auth/session';
+import { AUTH_ENABLED, authHeaders } from '../../auth/session';
 import { useRole } from '../../auth/useRole';
 
 // ⚙ Admin LORE (ADR-LORE-025, SPEC-ADMIN-LORE-UC): администрирование доступа и
@@ -364,14 +364,119 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
         <main style={S.main}>
           <div style={S.crumb}>{t('lore.admin.crumb', 'Администрирование')} · <span style={S.crumbB}>{TAB_TITLES[tab]}</span></div>
           {tab === 'users' && <UsersTab st={users} preflight={preflight} onError={onError} reload={bump} />}
-          {tab === 'agents' && <AgentsTab st={agents} preflight={preflight} onError={onError} />}
+          {tab === 'agents' && <AgentsTab st={agents} people={users} preflight={preflight} onError={onError} />}
           {tab === 'roles' && <RolesTab dicts={dicts} users={users} agents={agents} preflight={preflight} />}
           {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
-          {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} onError={onError} reload={bump} />}
+          {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} people={users} onError={onError} reload={bump} />}
           {tab === 'tags' && <TagsTab know={knowTags} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
         </main>
       </div>
+    </div>
+  );
+}
+
+// ── Проектные роли человека (AL-98) ─────────────────────────────────────────
+//
+// Вторая, ОТДЕЛЬНАЯ ось прав (ADR-LORE-036): realm-роль KC отвечает на «кто ты
+// в LORE» (admin/viewer), а эта — на «что ты в ПРОЕКТЕ» (owner/architect/pm/…).
+// Именно она кормит матрицу делегирования D4 (агент не может быть шире
+// владельца) и проектный read-скоуп AL-94. До этого экрана рёбра
+// HAS_PROJECT_ROLE заводились только через MCP — то есть графа ролей на проде
+// фактически не было, и скоуп нельзя было включить.
+//
+// kc_sub здесь = KC user id (`selected.id`): именно он приходит в `sub` токена
+// и по нему резолвер ищет KnowUser (AL-93).
+const PROJECT_ROLES = ['owner', 'architect', 'pm', 'developer', 'business-analyst', 'marketer', 'tester', 'reader'];
+
+function ProjectRolesEditor({ kcSub, username, onError }: {
+  kcSub: string; username: string; onError: (e: unknown) => void;
+}) {
+  const { t } = useTranslation();
+  const [rows, setRows] = useState<{ projects: (string | null)[] | null; roles: (string | null)[] | null } | null>(null);
+  const [projects, setProjects] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [pick, setPick] = useState<{ project: string; role: string }>({ project: '', role: 'developer' });
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ projects: (string | null)[] | null; roles: (string | null)[] | null }>(
+      'user_project_roles', { kc_sub: kcSub }, ctrl.signal)
+      .then(rs => setRows(rs[0] ?? { projects: [], roles: [] }))
+      .catch(() => setRows({ projects: [], roles: [] })); // человека ещё нет в графе — не ошибка
+    fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
+      .then(ps => setProjects(ps.map(p => p.slug).filter(Boolean).sort()))
+      .catch(() => { /* пикер деградирует в пустой список */ });
+    return () => ctrl.abort();
+  }, [kcSub, reload]);
+
+  // Слайс отдаёт две параллельные колонки-массива (проекты и роли ребра) —
+  // сшиваем по индексу, как их и вернул траверс.
+  const pairs = (rows?.projects ?? []).map((p, i) => ({ project: p, role: (rows?.roles ?? [])[i] }))
+    .filter((x): x is { project: string; role: string } => Boolean(x.project));
+
+  async function apply(project: string, role: string, action: 'add' | 'remove') {
+    setBusy(true); setErr(null);
+    try {
+      // display_name передаётся вместе с ролью: KnowUser создаётся тем же
+      // вызовом, если человека в графе ещё не было (LH-44 partial-safe).
+      await loreMutate('/user/role', { kc_sub: kcSub, display_name: username, project, role, action });
+      setReload(r => r + 1);
+      setPick(p => ({ ...p, project: '' }));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      onError(e);
+    } finally { setBusy(false); }
+  }
+
+  const free = projects.filter(p => !pairs.some(x => x.project === p));
+
+  return (
+    <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
+      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>
+        {t('lore.admin.projectRoles', 'Роли в проектах')}
+      </div>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
+        {t('lore.admin.projectRolesNote', 'Вторая ось прав: что человек делает в конкретном проекте. Отсюда же берётся, что может делать его агент (матрица делегирования) и какие проекты он видит.')}
+      </div>
+      {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 6 }}>{err}</div>}
+      {rows === null ? (
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.loading', 'загрузка…')}</div>
+      ) : (
+        <>
+          {pairs.length === 0 && (
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
+              {t('lore.admin.projectRolesEmpty', 'ролей в проектах нет — человек не видит ни одного проекта, когда проектный скоуп включён')}
+            </div>
+          )}
+          {pairs.map(x => (
+            <div key={x.project} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ ...S.pill('var(--acc)') }}>{x.role}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' }}>{x.project}</span>
+              <button style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', font: 'inherit' }}
+                disabled={busy} title={t('lore.admin.removeProjectRole', 'снять роль в проекте')}
+                onClick={() => apply(x.project, x.role, 'remove')}>✕</button>
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+            <select style={S.input} value={pick.project} disabled={busy || free.length === 0}
+              onChange={e => setPick(p => ({ ...p, project: e.target.value }))}>
+              <option value="">{free.length ? t('lore.admin.pickProject', 'проект…') : t('lore.admin.noFreeProjects', 'все проекты уже назначены')}</option>
+              {free.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select style={S.input} value={pick.role} disabled={busy}
+              onChange={e => setPick(p => ({ ...p, role: e.target.value }))}>
+              {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <button style={S.primary} disabled={busy || !pick.project}
+              onClick={() => apply(pick.project, pick.role, 'add')}>
+              {t('lore.admin.addProjectRole', '+ роль в проекте')}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -472,6 +577,7 @@ function UsersTab({ st, preflight, onError, reload }: {
               <dt style={{ color: 'var(--t3)' }}>{t('lore.admin.cardId', 'KC id')}</dt>
               <dd style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{selected.id}</dd>
             </dl>
+            <ProjectRolesEditor kcSub={selected.id} username={selected.username} onError={onError} />
             <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
               <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>
                 {t('lore.admin.cardHistory', 'История доступа и действий')}
@@ -538,14 +644,117 @@ function UsersTab({ st, preflight, onError, reload }: {
 }
 
 // ── Агенты ───────────────────────────────────────────────────────────────────
-function AgentsTab({ st, preflight, onError }: {
-  st: KcState<KcAgent>; preflight: Preflight | null; onError: (e: unknown) => void;
+/**
+ * AL-104: агент в графе — единица прав. Роль берётся из поля `agent_role`
+ * (миграция V21), а НЕ выводится из имени учётки: раньше роль и учётка были
+ * неразличимы, и двух агентов одной роли завести было некуда
+ * ([[D-AGENT-IDENTITY-PROFILE-VS-INSTANCE]]).
+ */
+interface AgentRow {
+  actor_id: string;
+  name: string | null;
+  client_id: string | null;
+  agent_role: string | null;
+  owner_kc_sub: (string | null)[] | string | null;
+  owner_display_name: (string | null)[] | string | null;
+}
+
+/** Траверс отдаёт скаляр или список — берём первое непустое. */
+const firstOf = (v: unknown): string | null => {
+  if (Array.isArray(v)) return (v.find(x => x) as string | undefined) ?? null;
+  return (v as string | null) ?? null;
+};
+
+function AgentsTab({ st, people, preflight, onError }: {
+  st: KcState<KcAgent>; people: KcState<KcUser>;
+  preflight: Preflight | null; onError: (e: unknown) => void;
 }) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [secret, setSecret] = useState<{ client: string; value: string } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [agents, setAgents] = useState<AgentRow[]>([]);
+  const [roles, setRoles] = useState<DictRow[]>([]);
+  const [matrix, setMatrix] = useState<Record<string, string[]>>({});
+  const [projRoles, setProjRoles] = useState<Record<string, { projects: string[]; roles: string[] }>>({});
+  const [reload, setReload] = useState(0);
+  const [err, setErr] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ name: '', role: '', owner: '', client: '' });
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<AgentRow>('agent_owners', {}, ctrl.signal).then(setAgents).catch(() => setAgents([]));
+    fetchLoreSlice<DictRow>('dictionary', { dict_type: 'agent_role' }, ctrl.signal)
+      .then(rs => setRoles(rs.filter(r => r.is_active !== false))).catch(() => setRoles([]));
+    // Матрица D4 — с бэкенда, не константой на фронте: правило живёт в
+    // ProjectRbacService, вторая копия разошлась бы с первой.
+    fetch('/lore/rbac/agent-matrix', { signal: ctrl.signal, headers: { ...authHeaders() } })
+      .then(r => r.ok ? r.json() : { matrix: {} })
+      .then(b => setMatrix(b?.matrix ?? {})).catch(() => setMatrix({}));
+    return () => ctrl.abort();
+  }, [reload]);
+
+  // Проектные роли владельцев — по одному запросу на владельца, только для тех,
+  // кто реально владеет агентом.
+  useEffect(() => {
+    const subs = [...new Set(agents.map(a => firstOf(a.owner_kc_sub)).filter((s): s is string => !!s))];
+    if (!subs.length) return;
+    const ctrl = new AbortController();
+    Promise.allSettled(subs.map(sub =>
+      fetchLoreSlice<{ projects: (string | null)[] | null; roles: (string | null)[] | null }>(
+        'user_project_roles', { kc_sub: sub }, ctrl.signal)
+        .then(rs => [sub, rs[0]] as const)))
+      .then(res => {
+        const m: Record<string, { projects: string[]; roles: string[] }> = {};
+        for (const r of res) {
+          if (r.status !== 'fulfilled') continue;
+          const [sub, row] = r.value;
+          m[sub] = {
+            projects: (row?.projects ?? []).filter((p): p is string => !!p),
+            roles: (row?.roles ?? []).filter((x): x is string => !!x),
+          };
+        }
+        setProjRoles(m);
+      });
+    return () => ctrl.abort();
+  }, [agents]);
+
+  /** Видит — все проекты владельца, роль НЕ сужает (D-AL-94-AGENT-SCOPE-ORDER). */
+  const seesCount = (sub: string | null) => sub ? (projRoles[sub]?.projects.length ?? 0) : 0;
+  /** Пишет — только там, где роль владельца делегирует роль агента (D4). */
+  const writesIn = (sub: string | null, agentRole: string | null): string[] => {
+    if (!sub || !agentRole) return [];
+    const pr = projRoles[sub];
+    if (!pr) return [];
+    // Слайс отдаёт две параллельные колонки-массива — проект и роль сшиваются
+    // по индексу, как их вернул траверс.
+    return pr.projects.filter((_, i) => (matrix[pr.roles[i]] ?? []).includes(agentRole));
+  };
+
+  async function saveAgent() {
+    if (!draft.name.trim() || !draft.role || !draft.owner || !draft.client) {
+      setErr(t('lore.admin.agentFormIncomplete', 'Заполните имя, роль, владельца и учётку.')); return;
+    }
+    const busyClient = agents.find(a => a.client_id === draft.client);
+    if (busyClient) {
+      setErr(t('lore.admin.clientBusy', 'Учётка {{c}} уже занята агентом «{{n}}». Одна учётка — один агент: владелец ищется по client_id, и двух бэкенд не различит.', { c: draft.client, n: busyClient.name ?? busyClient.actor_id }));
+      return;
+    }
+    setBusy(true); setErr(null);
+    try {
+      const actorId = 'AGENT-' + draft.client.replace(/^lore-mcp-?/, '').toUpperCase() + '-' + Date.now().toString(36);
+      await loreMutate('/actor', { actor_id: actorId, name: draft.name.trim(), kind: 'agent' });
+      await loreMutate('/actor/owner', {
+        actor_id: actorId, client_id: draft.client, kc_sub: draft.owner, agent_role: draft.role,
+      });
+      setDraft({ name: '', role: '', owner: '', client: '' });
+      setReload(r => r + 1);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      onError(e);
+    } finally { setBusy(false); }
+  }
 
   async function rotate(a: KcAgent) {
     setBusy(true);
@@ -572,10 +781,98 @@ function AgentsTab({ st, preflight, onError }: {
           <div><button style={S.btn} onClick={() => setSecret(null)}>{t('lore.admin.hide', 'скрыть')}</button></div>
         </div>
       )}
+      {/* ── Агенты: единицы прав (имя + роль + владелец) ──────────────── */}
+      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '14px 0 4px' }}>
+        {t('lore.admin.agentsSection', 'Агенты')}
+      </div>
+      {agents.length === 0 && (
+        <div style={S.warn}>
+          {t('lore.admin.noAgents', 'Агентов нет ни одного. Роли и учётки заведены, но кто ими пользуется — не записано: права агента берутся у владельца, а владельца нет. При включённом проектном скоупе такой агент увидит пустой LORE.')}
+        </div>
+      )}
+      {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>{err}</div>}
+      <div style={S.tw}>
+        <table style={S.table}>
+          <thead><tr>{['агент', 'роль', 'владелец', 'учётка', 'видит', 'пишет', 'куда пишет'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {agents.map(a => {
+              const sub = firstOf(a.owner_kc_sub);
+              const w = writesIn(sub, a.agent_role);
+              return (
+                <tr key={a.actor_id}>
+                  <td style={S.td}>{a.name ?? a.actor_id}</td>
+                  <td style={S.td}>{a.agent_role
+                    ? <span style={S.pill('var(--inf)')}>{a.agent_role}</span>
+                    : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noRole', '⚠ роль не задана')}</span>}</td>
+                  <td style={S.td}>{firstOf(a.owner_display_name)
+                    ?? <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noOwner', '⚠ нет владельца')}</span>}</td>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{a.client_id ?? '—'}</td>
+                  <td style={{ ...S.td, ...S.num }}>{seesCount(sub)}</td>
+                  <td style={{ ...S.td, ...S.num, color: w.length ? 'var(--t2)' : 'var(--wrn)' }}>{w.length}</td>
+                  <td style={{ ...S.td, fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{w.slice(0, 3).join(', ')}{w.length > 3 ? ' …' : ''}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, alignItems: 'center', marginTop: 8 }}>
+        <input style={{ ...S.input, width: 170 }} placeholder={t('lore.admin.agentName', 'имя агента')}
+               value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
+        <select style={S.select} value={draft.role} onChange={e => setDraft(d => ({ ...d, role: e.target.value }))}>
+          <option value="">{t('lore.admin.pickRole', '— роль —')}</option>
+          {roles.map(r => <option key={r.code} value={r.code}>{r.code}</option>)}
+        </select>
+        <select style={S.select} value={draft.owner} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))}>
+          <option value="">{t('lore.admin.pickOwner', '— владелец —')}</option>
+          {(people.k === 'ok' ? people.rows : []).map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+        </select>
+        <select style={S.select} value={draft.client} onChange={e => setDraft(d => ({ ...d, client: e.target.value }))}>
+          <option value="">{t('lore.admin.pickClient', '— учётка —')}</option>
+          {(st.k === 'ok' ? st.rows : [])
+            .filter(c => (c.agent_scope ?? []).length && !agents.some(a => a.client_id === c.clientId))
+            .map(c => <option key={c.id} value={c.clientId}>{c.clientId}</option>)}
+        </select>
+        <button style={S.primary} disabled={busy} onClick={saveAgent}>{busy ? '…' : t('lore.admin.addAgent', '+ агент')}</button>
+      </div>
+
+      {/* ── Роли агентов: справочник + кто вправе делегировать ─────────── */}
+      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '20px 0 4px' }}>
+        {t('lore.admin.agentRolesSection', 'Роли агентов')}
+      </div>
+      <div style={S.tw}>
+        <table style={S.table}>
+          <thead><tr>{['код', 'название', 'кто вправе делегировать (D4)', 'учётка в KC', 'агентов'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {roles.map(r => {
+              const by = Object.entries(matrix).filter(([, list]) => list.includes(r.code)).map(([role]) => role);
+              const hasClient = (st.k === 'ok' ? st.rows : []).some(c => (c.agent_scope ?? []).includes('agent-' + r.code));
+              return (
+                <tr key={r.code}>
+                  <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{r.code}</td>
+                  <td style={S.td}>{r.label_ru ?? r.code}</td>
+                  <td style={S.td}>{by.length
+                    ? by.map(x => <span key={x} style={{ ...S.pill('var(--t3)'), marginRight: 4 }}>{x}</span>)
+                    : <span style={{ color: 'var(--t3)' }}>—</span>}</td>
+                  <td style={S.td}>{hasClient
+                    ? '✓'
+                    : <span style={{ color: 'var(--dng)' }}>{t('lore.admin.noClientForRole', 'нет учётки')}</span>}</td>
+                  <td style={{ ...S.td, ...S.num }}>{agents.filter(a => a.agent_role === r.code).length}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Учётные записи KC ─────────────────────────────────────────── */}
+      <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '20px 0 4px' }}>
+        {t('lore.admin.kcClientsSection', 'Учётные записи Keycloak')}
+      </div>
       <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
       <div style={S.tw}>
         <table style={S.table}>
-          <thead><tr>{['клиент', 'agent_scope', 'вкл', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{['клиент', 'agent_scope', 'вкл', 'агент', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>
             {shown.map(a => (
               <tr key={a.id}>
@@ -586,6 +883,16 @@ function AgentsTab({ st, preflight, onError }: {
                     : <span style={{ color: 'var(--t3)' }}>{t('lore.admin.noScope', '— (оси не несёт, легаси)')}</span>}
                 </td>
                 <td style={S.td}>{a.enabled ? '✓' : '✗'}</td>
+                <td style={S.td}>
+                  {(a.agent_scope ?? []).length === 0
+                    ? <span style={{ color: 'var(--t3)' }}>{t('lore.admin.legacyNoBind', 'привязка запрещена')}</span>
+                    : (() => {
+                        const bound = agents.find(x => x.client_id === a.clientId);
+                        return bound
+                          ? <span style={{ color: 'var(--suc)' }}>{bound.name ?? bound.actor_id}</span>
+                          : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noAgentForClient', 'агента нет')}</span>;
+                      })()}
+                </td>
                 <td style={S.td}>
                   {confirm === a.id
                     ? <button style={S.primary} disabled={busy} onClick={() => rotate(a)}>{t('lore.admin.confirmRotate', 'точно ротировать?')}</button>
@@ -898,14 +1205,123 @@ function DictsTab({ rows, areaUsage, onError, reload }: {
 }
 
 // ── Проекты ──────────────────────────────────────────────────────────────────
-function ProjectsTab({ rows, sprints, onError, reload }: {
-  rows: ProjRow[]; sprints: Record<string, number>; onError: (e: unknown) => void; reload: () => void;
+/**
+ * AL-99: «кто имеет доступ к проекту» — зеркало блока «Роли в проектах» из
+ * карточки человека. Бэкенд для этого готов с AL-36: слайс `project_users`
+ * заведён именно для ревью доступа и до сих пор не имел UI.
+ *
+ * Оба вида пишут через один и тот же `POST /lore/user/role` — второго способа
+ * менять проектные роли нет и заводить нельзя, иначе разойдутся.
+ */
+function ProjectMembers({ slug, people, onError }: {
+  slug: string; people: KcState<KcUser>; onError: (e: unknown) => void;
+}) {
+  const { t } = useTranslation();
+  const [rows, setRows] = useState<{ kc_subs: (string | null)[] | null; display_names: (string | null)[] | null; roles: (string | null)[] | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+  const [pick, setPick] = useState<{ sub: string; role: string }>({ sub: '', role: 'reader' });
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ kc_subs: (string | null)[] | null; display_names: (string | null)[] | null; roles: (string | null)[] | null }>(
+      'project_users', { project: slug }, ctrl.signal)
+      .then(rs => setRows(rs[0] ?? { kc_subs: [], display_names: [], roles: [] }))
+      .catch(() => setRows({ kc_subs: [], display_names: [], roles: [] })); // проект без участников — не ошибка
+    return () => ctrl.abort();
+  }, [slug, reload]);
+
+  // Слайс отдаёт параллельные колонки-массивы — сшиваем по индексу, как вернул траверс.
+  const members = (rows?.kc_subs ?? []).map((sub, i) => ({
+    sub, name: (rows?.display_names ?? [])[i], role: (rows?.roles ?? [])[i],
+  })).filter((m): m is { sub: string; name: string | null; role: string } => Boolean(m.sub && m.role));
+
+  const owners = members.filter(m => m.role === 'owner').length;
+  const kcUsers: KcUser[] = people.k === 'ok' ? people.rows : [];
+  const free = kcUsers.filter(u => !members.some(m => m.sub === u.id));
+
+  async function apply(kcSub: string, displayName: string, role: string, action: 'add' | 'remove') {
+    setBusy(true); setErr(null);
+    try {
+      await loreMutate('/user/role', { kc_sub: kcSub, display_name: displayName, project: slug, role, action });
+      setReload(r => r + 1);
+      setPick(p => ({ ...p, sub: '' }));
+    } catch (e) {
+      // 409 приходит с человеческим текстом (AL-100: последний owner и т.п.) —
+      // показываем как есть, это объяснение, а не техническая ошибка.
+      setErr(e instanceof Error ? e.message : String(e));
+      onError(e);
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)' }}>
+          {t('lore.admin.projectMembers', 'Участники проекта')}
+        </span>
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+          {t('lore.admin.membersCount', '{{n}} чел. · {{o}} owner', { n: members.length, o: owners })}
+        </span>
+      </div>
+
+      {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 6 }}>{err}</div>}
+
+      {members.length === 0 ? (
+        <div style={{ ...S.warn, marginBottom: 6 }}>
+          {t('lore.admin.noMembers', 'В проекте нет ни одного участника — при включённом проектном скоупе его не увидит никто.')}
+        </div>
+      ) : members.map(m => (
+        <div key={m.sub} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+          <span style={{ minWidth: 200 }}>{m.name ?? m.sub}</span>
+          <select style={S.select} value={m.role} disabled={busy}
+                  onChange={e => apply(m.sub, m.name ?? m.sub, e.target.value, 'add')}>
+            {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <button style={S.btn} disabled={busy}
+                  title={m.role === 'owner' && owners === 1
+                    ? t('lore.admin.lastOwnerHint', 'последнего владельца снять нельзя — назначьте другого')
+                    : t('lore.admin.removeProjectRole', 'снять роль в проекте')}
+                  onClick={() => apply(m.sub, m.name ?? m.sub, m.role, 'remove')}>✕</button>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+        <select style={S.select} value={pick.sub} disabled={busy || free.length === 0}
+                onChange={e => setPick(p => ({ ...p, sub: e.target.value }))}>
+          <option value="">{free.length ? t('lore.admin.pickPerson', '— выберите человека —') : t('lore.admin.allAdded', '— все уже добавлены —')}</option>
+          {free.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+        </select>
+        <select style={S.select} value={pick.role} disabled={busy}
+                onChange={e => setPick(p => ({ ...p, role: e.target.value }))}>
+          {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <button style={S.primary} disabled={busy || !pick.sub}
+                onClick={() => {
+                  const u = kcUsers.find(x => x.id === pick.sub);
+                  if (u) apply(u.id, u.username, pick.role, 'add');
+                }}>
+          {busy ? '…' : t('lore.admin.addMember', 'Добавить')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProjectsTab({ rows, sprints, people, onError, reload }: {
+  rows: ProjRow[]; sprints: Record<string, number>; people: KcState<KcUser>;
+  onError: (e: unknown) => void; reload: () => void;
 }) {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<ProjRow | null>(null);
   const [hosts, setHosts] = useState<HostRow[]>([]);
   const [saving, setSaving] = useState(false);
+  // AL-99: зеркальный вид к «Роли в проектах» в карточке человека. Тот же
+  // граф с другой стороны — иначе на вопрос «кто вообще видит этот проект»
+  // приходится открывать людей по одному.
+  const [membersOf, setMembersOf] = useState<string | null>(null);
 
   function startEdit(p: ProjRow) {
     setEdit({ ...p });
@@ -942,9 +1358,24 @@ function ProjectsTab({ rows, sprints, onError, reload }: {
                   {p.hosts ? (() => { try { return (JSON.parse(p.hosts) as HostRow[]).map(h => h.remote).join(' · '); } catch { return '⚠ bad JSON'; } })() : '—'}
                 </td>
                 <td style={{ ...S.td, ...S.num }}><span style={{ color: sprints[p.slug] ? 'var(--t2)' : 'var(--t3)' }}>{sprints[p.slug] ?? 0}</span></td>
-                <td style={S.td}><button style={S.btn} onClick={() => startEdit(p)}>{t('lore.admin.edit', 'Править')}</button></td>
+                <td style={S.td}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button style={S.btn} onClick={() => setMembersOf(v => v === p.slug ? null : p.slug)}
+                            title={t('lore.admin.membersTitle', 'кто имеет доступ к проекту')}>
+                      {membersOf === p.slug ? '✕' : t('lore.admin.members', 'Участники')}
+                    </button>
+                    <button style={S.btn} onClick={() => startEdit(p)}>{t('lore.admin.edit', 'Править')}</button>
+                  </div>
+                </td>
               </tr>
             ))}
+            {membersOf && shown.some(p => p.slug === membersOf) && (
+              <tr>
+                <td colSpan={6} style={{ ...S.td, background: 'var(--bg2)' }}>
+                  <ProjectMembers slug={membersOf} people={people} onError={onError} />
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

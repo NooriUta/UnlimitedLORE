@@ -156,4 +156,77 @@ class ProjectRbacServiceLiveDbTest {
         assertEquals(OWNER_SUB, rbac.ownerKcSub(OWNER_CLIENT));
         assertEquals(ARCHITECT_SUB, rbac.ownerKcSub(ARCHITECT_CLIENT));
     }
+
+    // ── AL-93: список разрешённых проектов (на тех же фикстурах) ────────────
+
+    @Test
+    @Order(9)
+    void allowedProjectsForUserListsOnlyProjectsWithAnyRole() {
+        assertTrue(rbac.allowedProjectsForUser(OWNER_SUB).contains(PROJECT));
+        assertTrue(rbac.allowedProjectsForUser(ARCHITECT_SUB).contains(PROJECT));
+        // otherProject создан в Order(4), но роли туда никому не выдавались.
+        assertFalse(rbac.allowedProjectsForUser(ARCHITECT_SUB).contains("LORE_TEST_ORG/al68-other-repo"));
+        // Человек без единой роли — пустое множество, не ошибка.
+        assertTrue(rbac.allowedProjectsForUser(READER_SUB).isEmpty());
+        assertTrue(rbac.allowedProjectsForUser("no-such-sub").isEmpty());
+        assertTrue(rbac.allowedProjectsForUser(null).isEmpty());
+    }
+
+    @Test
+    @Order(10)
+    void allowedProjectsForAgentFiltersByDelegationMatrix() {
+        // Владелец-owner делегирует любой профиль → проект в списке для всех.
+        assertTrue(rbac.allowedProjectsForAgent(OWNER_CLIENT, "full").contains(PROJECT));
+        assertTrue(rbac.allowedProjectsForAgent(OWNER_CLIENT, "marketer").contains(PROJECT));
+        // Владелец-архитектор: architect-профиль виден, full — нет НИГДЕ.
+        assertTrue(rbac.allowedProjectsForAgent(ARCHITECT_CLIENT, "architect").contains(PROJECT));
+        assertTrue(rbac.allowedProjectsForAgent(ARCHITECT_CLIENT, "full").isEmpty(),
+            "агент не может быть шире владельца ни в одном проекте");
+    }
+
+    @Test
+    @Order(11)
+    void allowedProjectsForOrphanOrUnknownAgentIsEmpty() {
+        assertTrue(rbac.allowedProjectsForAgent(ORPHAN_CLIENT, "full").isEmpty());
+        assertTrue(rbac.allowedProjectsForAgent("lore-mcp-does-not-exist", "full").isEmpty());
+        assertTrue(rbac.allowedProjectsForAgent(OWNER_CLIENT, null).isEmpty());
+    }
+
+    // ── Решение владельца 2026-08-01: читать — в пределах своих проектов,
+    //    изменять — в пределах роли. Видимость и право менять расходятся.
+
+    @Test
+    @Order(12)
+    void visibilityIsWiderThanWriteRights() {
+        // Тот же клиент, тот же проект: для ЗАПИСИ профиль full у
+        // architect-владельца не проходит (D4 не делегирует), а ВИДЕТЬ проект
+        // он обязан — иначе участник проекта не знает его артефактов.
+        assertTrue(rbac.allowedProjectsForAgent(ARCHITECT_CLIENT, "full").isEmpty(),
+            "запись сужается ролью — это правило не меняется");
+        assertTrue(rbac.visibleProjectsForAgent(ARCHITECT_CLIENT).contains(PROJECT),
+            "чтение сужается только проектом, не ролью");
+    }
+
+    @Test
+    @Order(13)
+    void visibilityNeverExceedsTheOwner() {
+        // Агент не видит больше владельца: множество берётся из его рёбер.
+        assertEquals(rbac.allowedProjectsForUser(ARCHITECT_SUB),
+            rbac.visibleProjectsForAgent(ARCHITECT_CLIENT));
+        // READER_SUB ролей не имеет вовсе — значит и агент такого владельца
+        // не увидел бы ничего. Проверяем через владельца напрямую: клиента на
+        // reader'а в фикстурах нет, и заводить его ради одного утверждения
+        // дороже, чем сверить исходное множество.
+        assertTrue(rbac.allowedProjectsForUser(READER_SUB).isEmpty());
+    }
+
+    @Test
+    @Order(14)
+    void visibilityForOrphanOrUnknownAgentIsEmpty() {
+        // Fail-closed на чтении так же, как на записи: неопознанный клиент
+        // не получает корпус целиком.
+        assertTrue(rbac.visibleProjectsForAgent(ORPHAN_CLIENT).isEmpty());
+        assertTrue(rbac.visibleProjectsForAgent("lore-mcp-does-not-exist").isEmpty());
+        assertTrue(rbac.visibleProjectsForAgent(null).isEmpty());
+    }
 }

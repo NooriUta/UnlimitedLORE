@@ -57,6 +57,67 @@ public class LoreUserResource extends LoreResourceBase {
         }
     }
 
+    /**
+     * AL-100: причина, по которой снятие роли запрещено, либо {@code null},
+     * если снимать можно.
+     *
+     * <p>Два сценария, оба необратимы при включённом {@code lore.scope.enforce}:
+     * <ol>
+     *   <li><b>Своя последняя роль.</b> Сняв её, человек теряет доступ ко всему
+     *       LORE — включая саму админку, через которую роль возвращают.
+     *       Восстановление остаётся только прямым запросом в БД.</li>
+     *   <li><b>Последний owner проекта.</b> Проектом становится некому
+     *       управлять, и назначить нового владельца тоже некому.</li>
+     * </ol>
+     *
+     * <p><b>Правило «сам себе» — только для людей.</b> Когда роль снимает агент,
+     * его собственный доступ не зависит от {@code HAS_PROJECT_ROLE} (права
+     * агента идут по {@code client_id}), и запрет был бы ложным срабатыванием.
+     *
+     * <p><b>superadmin эти проверки НЕ обходит.</b> Здесь защита не от нехватки
+     * прав, а от необратимой ошибки — большие права её не отменяют.
+     */
+    private String removalBlockedBecause(String kcSub, String project) {
+        String caller = callerKcSub();
+        boolean callerIsHuman = callerClientId() == null && caller != null;
+        if (callerIsHuman && caller.equals(kcSub)) {
+            long mine = countRows("SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub",
+                Map.of("sub", kcSub));
+            if (mine <= 1) {
+                return "Это ваша единственная проектная роль. Сняв её, вы потеряете доступ "
+                     + "ко всему LORE, как только включится lore.scope.enforce, — и вернуть "
+                     + "роль этой же админкой уже не сможете.";
+            }
+        }
+        String role = firstString(
+            "SELECT role FROM HAS_PROJECT_ROLE WHERE @out.kc_sub = :sub AND @in.slug = :proj",
+            Map.of("sub", kcSub, "proj", project));
+        if ("owner".equals(role)) {
+            long owners = countRows(
+                "SELECT count(*) AS n FROM HAS_PROJECT_ROLE WHERE @in.slug = :proj AND role = 'owner'",
+                Map.of("proj", project));
+            if (owners <= 1) {
+                return "Это последний владелец проекта " + project + ". Без владельца проектом "
+                     + "некому управлять — назначьте другого owner'а до снятия этого.";
+            }
+        }
+        return null;
+    }
+
+    private long countRows(String sql, Map<String, Object> params) {
+        List<Map<String, Object>> rows = ingestService.queryPublic(sql, params);
+        if (rows.isEmpty()) return 0;
+        Object n = rows.get(0).get("n");
+        return n instanceof Number num ? num.longValue() : 0;
+    }
+
+    private String firstString(String sql, Map<String, Object> params) {
+        List<Map<String, Object>> rows = ingestService.queryPublic(sql, params);
+        if (rows.isEmpty()) return null;
+        Object v = rows.get(0).get("role");
+        return v == null ? null : String.valueOf(v);
+    }
+
     // LH-44 partial-safe: display_name опущен -> не трогаем существующее значение.
     private void upsertUserVertex(String kcSub, String displayName) {
         StringBuilder sql = new StringBuilder("UPDATE KnowUser SET kc_sub=:sub");
@@ -90,6 +151,15 @@ public class LoreUserResource extends LoreResourceBase {
             return badParams("role required unless action=remove");
         try {
             if (remove) {
+                // AL-100: снятие роли необратимо в обе стороны — вернуть её можно
+                // только этой же админкой, а она сама живёт за проектным скоупом.
+                // Поэтому две проверки ДО удаления, а не предупреждение после.
+                String block = removalBlockedBecause(req.kc_sub(), req.project());
+                if (block != null) {
+                    // 409, а не 400: запрос корректен, конфликтует состояние графа.
+                    return noStore(Response.status(Response.Status.CONFLICT)
+                        .entity(new LoreError("ROLE_REMOVAL_BLOCKED", block)));
+                }
                 // ArcadeDB грамматика: DELETE EDGE не существует ни в одной форме
                 // (памятка feedback_arcadedb_edge_delete) — DELETE FROM по @rid,
                 // @out/@in для матча по свойствам соседних вершин.

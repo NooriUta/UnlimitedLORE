@@ -545,7 +545,27 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowActor.client_id IF NOT EXISTS STRING",
             "CREATE INDEX IF NOT EXISTS ON KnowActor (client_id) NOTUNIQUE",
             "CREATE EDGE TYPE OWNED_BY IF NOT EXISTS"
-        ))
+        )),
+
+        // AL-92/ADR-LORE-036 (фаза PROJECT_SCOPE): бэкфилл рёбер BELONGS_TO_PROJECT
+        // у сущностей, где write-path давно есть, а исторические вершины остались
+        // без привязки. SQL-часть пустая — тип ребра существует с ранних шагов;
+        // вся работа в javaStep(20) (три категории, идемпотентно — только вершины
+        // БЕЗ единого out('BELONGS_TO_PROJECT')):
+        //   KnowADR      ← проекты его спринтов (IMPLEMENTED_IN), мультипривязка;
+        //   KnowRelease  ← плоское поле git_project (ребро выравнивается по полю —
+        //                  двойная правда, найденная аудитом AL-96);
+        //   KnowSpec     ← проекты спринтов его компонентов, ТОЛЬКО при ровно
+        //                  одном distinct-проекте (неоднозначные — вручную).
+        new Step(20, 17, "project_edges_backfill", List.of()),
+
+        // AL-104/D-AGENT-IDENTITY: роль агента — СВОЙСТВО агента, а не следствие
+        // имени его учётки. До этого шага роль нигде не хранилась: её выводили
+        // из client_id (`lore-mcp-architect` → architect), из-за чего роль и
+        // учётка были неразличимы, а двух агентов одной роли завести было
+        // некуда. Значения — коды справочника `agent_role`.
+        new Step(21, 17, "actor_agent_role", List.of(
+            "CREATE PROPERTY KnowActor.agent_role IF NOT EXISTS STRING"))
     );
 
     /**

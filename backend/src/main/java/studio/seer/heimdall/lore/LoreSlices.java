@@ -652,12 +652,17 @@ public final class LoreSlices {
         // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
         // ревью доступа, что у project_users. Один агент — один живой
         // OWNED_BY (out()/outE() без индекса ok — единственная строка).
+        // AL-104: agent_role отдаётся отдельной колонкой, а НЕ выводится из
+        // client_id. Роль — свойство агента (миграция V21); вывод из имени
+        // учётки и был тем местом, где роль с учёткой слипались.
+        // Фильтр по client_id снят: агент без учётки — это заполняемое
+        // состояние, и экран обязан его показать, а не спрятать.
         slice("agent_owners",
-            "SELECT actor_id, client_id, " +
+            "SELECT actor_id, name, client_id, agent_role, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
             "out('OWNED_BY').display_name AS owner_display_name " +
-            "FROM KnowActor WHERE kind = 'agent' AND client_id IS NOT NULL",
-            List.of(), Map.of(), "");
+            "FROM KnowActor WHERE kind = 'agent'",
+            List.of(), Map.of(), " ORDER BY actor_id");
 
         slice("actor_load",
             "SELECT actor_id, name, kind, " +
@@ -892,7 +897,11 @@ public final class LoreSlices {
         // lore-backfill-spec-titles.mjs; until then the frontend falls back to spec_id.
         slice("specs",
             "SELECT spec_id, title, file_path, " +
-            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
+            // AL-96: ребро писалось (spec_link rel=project) с самого начала, но
+            // ни один слайс его не читал — привязку можно было создать и нельзя
+            // увидеть. Самый тихий вид разрыва: write-path «работает», данных нет.
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowSpec",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -908,7 +917,8 @@ public final class LoreSlices {
             "out('HAS_STATE').summary[0]                          AS summary, " +
             "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
             "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
-            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-96
             "FROM KnowSpec WHERE spec_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -999,7 +1009,8 @@ public final class LoreSlices {
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component_id, " +
-            "out('IMPLEMENTED_IN').sprint_id AS sprint_ids " +
+            "out('IMPLEMENTED_IN').sprint_id AS sprint_ids, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-92: проектная ось
             "FROM KnowDoc",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -1028,7 +1039,8 @@ public final class LoreSlices {
         // ── §9 KnowRunbook (Phase 5 LAL-29) ─────────────────────────────────
         slice("runbooks",
             "SELECT runbook_id, name, area, date_created, " +
-            "out('REFERENCES_ADR').adr_id AS adr_ids " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-92: проектная ось
             "FROM KnowRunbook",
             List.of(),
             new LinkedHashMap<>(Map.of(
@@ -1158,6 +1170,11 @@ public final class LoreSlices {
         slice("releases",
             "SELECT release_id, release_uid, git_tag, version, week, type, " +
             "release_date, is_current, description_md, git_project, " +
+            // AL-96: плоское git_project и ребро BELONGS_TO_PROJECT — две правды
+            // об одном (аудит проектной оси). Поле оставлено: на нём живут табы
+            // фронта и release_uid. Ребро выведено рядом — по нему работает
+            // read-скоуп (AL-94), и расхождение теперь ВИДНО, а не скрыто.
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
             "in('SHIPPED_IN').size() AS pr_count " +
             "FROM KnowRelease ORDER BY release_id DESC",
@@ -1368,6 +1385,72 @@ public final class LoreSlices {
     public static Set<String> ids() { return SLICES.keySet(); }
 
     public static SliceDef get(String id) { return SLICES.get(id); }
+
+    /**
+     * AL-94: слайсы, у которых сущность несёт ребро BELONGS_TO_PROJECT напрямую,
+     * и потому read-скоуп применим (значение — выражение траверса до slug'ов).
+     *
+     * <p>Список намеренно КОРОТКИЙ и явный, а не «все слайсы с project-фильтром»:
+     * скоуп меняет видимость данных, и молча накрыть им слайс, чью проектную ось
+     * никто не проверял, — способ получить пустой экран без объяснения. Типы с
+     * derived-привязкой (components — через спринты) сюда не входят: у них
+     * «проект» вычислим, но не является фактом самой вершины (решение AL-92).</p>
+     */
+    static final Map<String, String> PROJECT_SCOPED = Map.of(
+        "sprints",   "out('BELONGS_TO_PROJECT').slug",
+        "adrs",      "out('BELONGS_TO_PROJECT').slug",
+        "releases",  "out('BELONGS_TO_PROJECT').slug",
+        "docs",      "out('BELONGS_TO_PROJECT').slug",
+        "runbooks",  "out('BELONGS_TO_PROJECT').slug",
+        "specs",     "out('BELONGS_TO_PROJECT').slug"
+    );
+
+    /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */
+    static final String SCOPE_NONE = "__no_project__";
+
+    /**
+     * Скоуп-вариант compose: {@code allowed == null} — без ограничения
+     * (superadmin, выключенная аутентификация, слайс вне PROJECT_SCOPED),
+     * непустое множество — «виден, если разрешён ХОТЯ БЫ ОДИН его проект»
+     * (решение владельца про сущности на пересечении), пустое множество —
+     * не видно ничего (заведомо ложное условие через SCOPE_NONE, а не пустой
+     * IN: поведение пустого списка в грамматике ArcadeDB не проверено).
+     *
+     * <p>Сущность БЕЗ единого ребра проекта скоупом отсекается — это осознанно:
+     * иначе «ничьё» было бы видно всем, и скоуп ничего не гарантировал бы. Хвост
+     * непривязанных вершин после V20 (AL-92) — причина держать enforcement за
+     * флагом до наполнения графа.</p>
+     */
+    public static Composed compose(String id, Map<String, String> given, java.util.Set<String> allowed) {
+        Composed base = compose(id, given);
+        String traversal = allowed == null ? null : PROJECT_SCOPED.get(id);
+        if (traversal == null) return base;
+
+        Map<String, Object> params = new LinkedHashMap<>(base.params());
+        String condition;
+        if (allowed.isEmpty()) {
+            params.put("__scope0", SCOPE_NONE);
+            condition = traversal + " CONTAINS :__scope0";
+        } else {
+            StringBuilder or = new StringBuilder();
+            int i = 0;
+            for (String slug : allowed) {
+                String key = "__scope" + i++;
+                params.put(key, slug);
+                if (or.length() > 0) or.append(" OR ");
+                or.append(traversal).append(" CONTAINS :").append(key);
+            }
+            condition = "(" + or + ")";
+        }
+        // Скоуп дописывается ПОСЛЕ suffix'а базового SQL нельзя — ORDER BY/LIMIT
+        // уже там. Поэтому пересобираем: условие идёт перед хвостом слайса.
+        String sql = base.sql();
+        SliceDef def = SLICES.get(id);
+        String suffix = def.suffix();
+        String head = suffix.isEmpty() || !sql.endsWith(suffix) ? sql : sql.substring(0, sql.length() - suffix.length());
+        String connector = containsWhere(head) ? " AND " : " WHERE ";
+        return new Composed(head + connector + condition + suffix, params);
+    }
 
     public static Composed compose(String id, Map<String, String> given) {
         SliceDef def = SLICES.get(id);

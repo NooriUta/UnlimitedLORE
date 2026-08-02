@@ -51,6 +51,13 @@ public class AidaLoreResource extends LoreResourceBase {
 
     public record SliceInfo(String id, List<String> required, List<String> optional) {}
 
+    /** AL-94: применять ли проектный read-скоуп. По умолчанию ВЫКЛЮЧЕН — см. allowedProjectsOrNull. */
+    @ConfigProperty(name = "lore.scope.enforce", defaultValue = "false")
+    boolean scopeEnforce;
+
+    @Inject
+    ProjectRbacService projectRbac;
+
     // SAFE_ID, ENTITY_TYPES/PLAN_STATUSES/ADR_STATUSES/SCD2_STATUS_RAW, the
     // ArcadeDB clients, config, and shared helpers all live in LoreResourceBase
     // now (B2 God-class split) — every write-path domain (release/adr/spec/
@@ -255,7 +262,8 @@ public class AidaLoreResource extends LoreResourceBase {
     @GET
     @Path("slice/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Uni<Response> slice(@PathParam("id") String id, @Context UriInfo uriInfo) {
+    public Uni<Response> slice(@PathParam("id") String id, @Context UriInfo uriInfo,
+                               @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
         if (LoreSlices.get(id) == null) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.NOT_FOUND)
@@ -269,7 +277,7 @@ public class AidaLoreResource extends LoreResourceBase {
 
         LoreSlices.Composed composed;
         try {
-            composed = LoreSlices.compose(id, given);
+            composed = LoreSlices.compose(id, given, allowedProjectsOrNull(role));
         } catch (IllegalArgumentException e) {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
                 .entity(new LoreError("BAD_PARAMS", e.getMessage()))));
@@ -287,6 +295,77 @@ public class AidaLoreResource extends LoreResourceBase {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", String.valueOf(ex.getMessage()))));
             });
+    }
+
+    /**
+     * AL-94: множество проектов, которыми ограничен read вызывающего, либо
+     * {@code null} — «без ограничения».
+     *
+     * <p><b>За флагом {@code lore.scope.enforce} (по умолчанию ВЫКЛЮЧЕН).</b>
+     * Причина не в осторожности вообще, а в состоянии данных: граф ролей
+     * (KnowUser/HAS_PROJECT_ROLE, AL-82) сегодня почти пуст, а часть сущностей
+     * после бэкфилла V20 (AL-92) осталась без проектных рёбер. Включить скоуп
+     * до наполнения графа значит выдать живым пользователям пустые экраны —
+     * ровно тот класс «выглядит работающим, показывает пустоту», от которого
+     * этот спринт и защищает. Флаг снимается владельцем после наполнения
+     * ролей — тогда же решается вопрос про роль {@code admin} (см. ниже).</p>
+     *
+     * <p>Bypass получают: выключенная аутентификация (токена нет вовсе —
+     * локальная разработка не должна видеть пустоту, решение владельца),
+     * {@code superadmin} и — ПОКА — {@code admin}: администратор LORE
+     * администрирует весь корпус, а не проект, и его сужение до проектных
+     * ролей — отдельное решение владельца, не побочный эффект этой задачи.</p>
+     *
+     * <p><b>Bypass по роли — только для ЧЕЛОВЕКА.</b> Агент опознаётся раньше
+     * и уходит в {@code visibleProjectsForAgent} независимо от того, какая роль
+     * пришла в {@code X-Seer-Role}. Иначе узкий профиль агента читал бы весь
+     * корпус мимо проектов своего владельца — см. {@link #bypassesScope}.</p>
+     *
+     * <p><b>Чтение и запись сужаются ПО-РАЗНОМУ.</b> Видимость — по проектам
+     * (все проекты владельца, роль не важна), право менять — по роли (D4).
+     * Иначе участник проекта не знал бы артефактов собственного проекта.</p>
+     */
+    java.util.Set<String> allowedProjectsOrNull(String role) {
+        if (!scopeEnforce) return null;
+        // ПОРЯДОК СУЩЕСТВЕННЫЙ: агент опознаётся ДО роли. См. bypassesScope().
+        String clientId = callerClientId();
+        if (clientId != null) {
+            // ЧТЕНИЕ — по проектам владельца, БЕЗ сужения матрицей D4 (решение
+            // владельца 2026-08-01: «читать всё в пределах своих проектов,
+            // изменять — в пределах роли»). D4 отвечает, что агенту позволено
+            // ДЕЛАТЬ, а не что ему позволено ЗНАТЬ: участник проекта должен
+            // видеть артефакты своего проекта. Для записи — по-прежнему
+            // allowedProjectsForAgent.
+            return projectRbac.visibleProjectsForAgent(clientId);
+        }
+        if (bypassesScope(role, null)) return null;
+        String kcSub = callerKcSub();
+        if (kcSub == null) return null; // токена нет — auth выключен
+        return projectRbac.allowedProjectsForUser(kcSub);
+    }
+
+    /**
+     * Чистое решение «скоуп не применяется» — вынесено ради теста без CDI.
+     *
+     * <p><b>Агент не обходит скоуп никогда, какой бы ни была его realm-роль.</b>
+     * Это исправление дефекта первой редакции AL-94, где проверка роли стояла
+     * ПЕРВОЙ:
+     * <pre>if ("superadmin".equals(role) || "admin".equals(role)) return null;</pre>
+     * Write-путь требует {@code admin}, поэтому с этой ролью приходят и узкие
+     * профили агентов — проверка роли первой делала исключение всеобщим, и
+     * ветка {@code allowedProjectsForAgent} была недостижима. Практическое
+     * следствие: агент с профилем pm читал слайсы всего корпуса, минуя проекты
+     * своего владельца. Тот же урок уже записан в javadoc
+     * {@code LoreResourceBase.fullBearer()} — «роль из заголовка НЕ годится как
+     * разделитель»; здесь он был повторно нарушен.
+     *
+     * <p>Права агента считаются от владельца ({@code OWNED_BY}) и сужаются
+     * матрицей делегирования D4 — агент не может видеть больше человека,
+     * которому принадлежит.
+     */
+    static boolean bypassesScope(String role, String clientId) {
+        if (clientId != null) return false;
+        return "superadmin".equals(role) || "admin".equals(role);
     }
 
     // ── Admin: ingest pipeline (Phase 2, LAL-13) ─────────────────────────────
