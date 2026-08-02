@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -235,52 +236,35 @@ public class LoreAdrResource extends LoreResourceBase {
                 ? req.component_ids()
                 : (req.component_id() != null && !req.component_id().isBlank()
                     ? List.of(req.component_id()) : null);
+            // DBR-04: порядок «сначала создать, потом удалить лишние» и СЧЁТ
+            // фактически записанного. Прежняя редакция сносила все рёбра, потом
+            // создавала новые, а падение каждого шага уходило в WARN — худший
+            // случай (DELETE прошёл, CREATE упал) оставлял ADR вообще без
+            // компонентов при ответе ok:true. Сбой должен оставлять дубли, а не
+            // пустоту: дубли чинятся, потеря нет.
+            List<String> compFailed = new ArrayList<>();
             if (compIds != null) {
-                try {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM (SELECT expand(outE('BELONGS_TO')) FROM KnowADR WHERE adr_id = :id)",
-                        Map.of("id", req.adr_id()))).await().indefinitely();
-                } catch (Exception ex) {
-                    LOG.warnf("[LORE ADR BELONGS_TO DEL] %s: %s", req.adr_id(), ex.getMessage());
-                }
-                for (String cid : compIds) {
-                    if (cid == null || cid.isBlank()) continue;
-                    try {
-                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            "CREATE EDGE BELONGS_TO " +
-                            "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
-                            "TO   (SELECT FROM LoreComponent WHERE component_id = :cid)",
-                            Map.of("id", req.adr_id(), "cid", cid))).await().indefinitely();
-                    } catch (Exception ex) {
-                        LOG.warnf("[LORE ADR BELONGS_TO] %s → %s: %s", req.adr_id(), cid, ex.getMessage());
-                    }
-                }
+                compFailed = syncEdges("BELONGS_TO", "LoreComponent", "component_id",
+                    req.adr_id(), compIds);
             }
 
             // Step 7: replace TAGGED_WITH edges (upsert KnowTag on the fly)
+            List<String> tagFailed = new ArrayList<>();
             if (req.tags() != null) {
-                try {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "DELETE FROM (SELECT expand(outE('TAGGED_WITH')) FROM KnowADR WHERE adr_id = :id)",
-                        Map.of("id", req.adr_id()))).await().indefinitely();
-                } catch (Exception ex) {
-                    LOG.warnf("[LORE ADR TAGGED_WITH DEL] %s: %s", req.adr_id(), ex.getMessage());
-                }
+                // Вершины тегов заводим ДО синхронизации рёбер: CREATE EDGE с
+                // пустым TO — тихий no-op, и без апсерта тег молча не привязался
+                // бы, а ответ остался бы успешным.
                 for (String tag : req.tags()) {
                     if (tag == null || tag.isBlank()) continue;
                     try {
                         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                             "UPDATE KnowTag SET tag_id=:tag UPSERT WHERE tag_id=:tag",
                             Map.of("tag", tag))).await().indefinitely();
-                        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                            "CREATE EDGE TAGGED_WITH " +
-                            "FROM (SELECT FROM KnowADR WHERE adr_id = :id) " +
-                            "TO   (SELECT FROM KnowTag WHERE tag_id = :tag)",
-                            Map.of("id", req.adr_id(), "tag", tag))).await().indefinitely();
                     } catch (Exception ex) {
-                        LOG.warnf("[LORE ADR TAGGED_WITH] %s → %s: %s", req.adr_id(), tag, ex.getMessage());
+                        LOG.warnf("[LORE ADR TAG UPSERT] %s → %s: %s", req.adr_id(), tag, LoreUpstream.detail(ex));
                     }
                 }
+                tagFailed = syncEdges("TAGGED_WITH", "KnowTag", "tag_id", req.adr_id(), req.tags());
             }
 
             Map<String, Object> out = new LinkedHashMap<>();
@@ -295,8 +279,18 @@ public class LoreAdrResource extends LoreResourceBase {
             // markdown-раздел. Тело с «Открытыми вопросами» = вопросы, которые
             // никто не найдёт фильтром, не увидит просроченными и не закроет
             // решением. Ловим на записи и подсказываем вызывающему (агенту).
+            // DBR-04: несделанная работа названа в ответе. Раньше провалившаяся
+            // привязка уходила в WARN, а вызывающий видел ok:true и считал, что
+            // связи на месте.
+            if (!compFailed.isEmpty()) out.put("components_failed", compFailed);
+            if (!tagFailed.isEmpty())  out.put("tags_failed", tagFailed);
+
             String qHint = questionsInBodyHint(req);
             if (qHint != null) out.put("hint", qHint);
+            if (!compFailed.isEmpty() || !tagFailed.isEmpty()) {
+                out.put("hint", "часть привязок НЕ записана — проверьте, что цели существуют "
+                    + "(несуществующая цель даёт тихий no-op, а не ошибку)");
+            }
             hashStamper.stampOpenHist("KnowADRHist", "KnowADR", "adr_id", req.adr_id());
             return noStore(Response.ok(out));
         } catch (Exception e) {
@@ -709,6 +703,83 @@ public class LoreAdrResource extends LoreResourceBase {
     private static final java.util.regex.Pattern QUESTION_SECTION = java.util.regex.Pattern.compile(
         "(?imu)^\\s*(?:#{1,6}\\s*|\\*\\*\\s*)"
         + "(открыт\\p{L}*\\s+вопрос|нерешённ\\p{L}*\\s+вопрос|open\\s+questions)");
+
+    /**
+     * DBR-04: привести рёбра ADR данного типа к запрошенному набору и вернуть
+     * список целей, которые записать НЕ удалось.
+     *
+     * <p><b>Порядок: сначала создать, потом удалить лишние.</b> Прежняя
+     * редакция делала наоборот — сносила все рёбра и создавала заново, а каждый
+     * шаг был в своём {@code try} с одним WARN. Худший случай: DELETE прошёл,
+     * CREATE упал — ADR остался вообще без компонентов, ответ был {@code
+     * ok:true}. Обратный порядок при сбое оставляет ДУБЛИ, а не пустоту; дубли
+     * чинятся повторным вызовом, потеря не чинится ничем.
+     *
+     * <p>{@code IF NOT EXISTS} обязателен именно из-за нового порядка: без него
+     * повторный вызов плодил бы вторые рёбра к тем же целям.
+     *
+     * <p>Несуществующая цель — не ошибка, а тихий no-op: {@code CREATE EDGE} с
+     * пустым TO ничего не создаёт и не жалуется. Поэтому проверяем факт
+     * отдельным запросом и возвращаем список непривязанных наверх, вместо того
+     * чтобы отчитаться успехом.
+     */
+    private List<String> syncEdges(String edgeType, String targetClass, String targetIdField,
+                                   String adrId, List<String> wantedRaw) {
+        List<String> wanted = wantedRaw.stream()
+            .filter(s -> s != null && !s.isBlank()).distinct().toList();
+        List<String> failed = new ArrayList<>();
+
+        for (String target : wanted) {
+            try {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE " + edgeType
+                    + " FROM (SELECT FROM KnowADR WHERE adr_id = :id) "
+                    + "TO   (SELECT FROM " + targetClass + " WHERE " + targetIdField + " = :t) "
+                    + "IF NOT EXISTS",
+                    Map.of("id", adrId, "t", target))).await().indefinitely();
+            } catch (Exception ex) {
+                LOG.warnf("[LORE ADR %s] %s → %s: %s", edgeType, adrId, target, LoreUpstream.detail(ex));
+                failed.add(target);
+                continue;
+            }
+            // Пусто и при «уже было», и при «цели нет» — различаем фактом.
+            try {
+                var exists = ingestService.queryPublic(
+                    "SELECT count(*) AS n FROM " + edgeType
+                    + " WHERE @out.adr_id = :id AND @in." + targetIdField + " = :t",
+                    Map.of("id", adrId, "t", target));
+                long n = exists.isEmpty() ? 0 : ((Number) exists.get(0).getOrDefault("n", 0)).longValue();
+                if (n == 0) failed.add(target);
+            } catch (Exception ex) {
+                LOG.warnf("[LORE ADR %s verify] %s → %s: %s", edgeType, adrId, target, LoreUpstream.detail(ex));
+                failed.add(target);
+            }
+        }
+
+        // Лишние — поштучно по фактическому набору: DELETE EDGE в грамматике
+        // ArcadeDB 26.7.2 отсутствует, работает удаление строки ребра по типу.
+        try {
+            var current = ingestService.queryPublic(
+                "SELECT out('" + edgeType + "')." + targetIdField + " AS ids FROM KnowADR WHERE adr_id = :id",
+                Map.of("id", adrId));
+            if (!current.isEmpty() && current.get(0).get("ids") instanceof List<?> have) {
+                for (Object o : have) {
+                    if (o == null) continue;
+                    String t = String.valueOf(o);
+                    if (wanted.contains(t)) continue;
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM " + edgeType
+                        + " WHERE @out.adr_id = :id AND @in." + targetIdField + " = :t",
+                        Map.of("id", adrId, "t", t))).await().indefinitely();
+                }
+            }
+        } catch (Exception ex) {
+            // Не смогли убрать лишнее — это дубль, а не потеря: говорим в лог,
+            // но не валим запись, которая в основном удалась.
+            LOG.warnf("[LORE ADR %s cleanup] %s: %s", edgeType, adrId, LoreUpstream.detail(ex));
+        }
+        return failed;
+    }
 
     static String questionsInBodyHint(AdrCreateRequest req) {
         int hits = 0;
