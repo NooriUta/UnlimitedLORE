@@ -565,7 +565,16 @@ final class LoreSchemaMigrations {
         // учётка были неразличимы, а двух агентов одной роли завести было
         // некуда. Значения — коды справочника `agent_role`.
         new Step(21, 17, "actor_agent_role", List.of(
-            "CREATE PROPERTY KnowActor.agent_role IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowActor.agent_role IF NOT EXISTS STRING")),
+
+        // DBR-06: тип IN_AREA объявлялся В РАНТАЙМЕ — эндпоинт бэкфилла
+        // (`/lore/dict/backfill-area`) начинался с `CREATE EDGE TYPE ... IF NOT
+        // EXISTS`. Это была компенсация отключённого в проде bootstrap-DDL, и с
+        // токеном без updateSchema она даст 403: обычная операция бэкфилла
+        // упёрлась бы в право менять схему, которого у рантайма больше нет.
+        // Объявление переезжает сюда, эндпоинт остаётся чистым бэкфиллом рёбер.
+        new Step(22, 17, "in_area_edge_type", List.of(
+            "CREATE EDGE TYPE IN_AREA IF NOT EXISTS"))
     );
 
     /**
