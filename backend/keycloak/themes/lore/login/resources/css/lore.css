@@ -27,6 +27,10 @@
   --acc:    #A8B860;
   --wrn:    #D4922A;
   --danger: #C85848;
+  /* Illustration secondary tone — 16% here, 32% in [data-theme="light"] below.
+     See aida-root's seer.css for the full rationale (dark needs a lower
+     ratio than light for the same perceived visual weight). */
+  --illustration-secondary: color-mix(in srgb, var(--acc) 16%, var(--bg0));
   /* Typography */
   --font:         'Manrope', system-ui, sans-serif;
   --mono:         'IBM Plex Mono', monospace;
@@ -50,6 +54,7 @@
   --acc:    #6b7a2a;
   --wrn:    #a06010;
   --danger: #c03030;
+  --illustration-secondary: color-mix(in srgb, var(--acc) 32%, var(--bg0));
 }
 
 [data-palette="lichen"] {
@@ -149,7 +154,6 @@ html.login-pf {
    mirrors Völva's own `background-size: 100% auto`. */
 .seer-illustration {
   --illustration-primary: var(--acc);
-  --illustration-secondary: color-mix(in srgb, var(--acc) 32%, var(--bg0));
   --illustration-background: var(--bg0);
   position: absolute;
   bottom: 0;
