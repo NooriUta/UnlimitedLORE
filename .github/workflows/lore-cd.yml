@@ -338,6 +338,82 @@ jobs:
           fi
           echo "frontend OK ($code)"
 
+      # ── Keycloak-тема LORE ────────────────────────────────────────────────
+      #
+      # Тема живёт в этом репозитории (backend/keycloak/themes/lore), а
+      # раскатывалась руками — то есть репозиторий и стенд расходились молча.
+      #
+      # Шаг СОЗНАТЕЛЬНО последний: Keycloak — общий сервис, на нём висят
+      # seer/heimdall/volva. Падение выката темы не должно откатывать уже
+      # поднятое приложение, но и пропускаться молча тоже не должно — поэтому
+      # шаг блокирующий, но стоит после проверок бэкенда и фронта.
+      #
+      # Что он НЕ делает, и это главное:
+      #   • не перезапускает Keycloak — контейнер поднят в `start-dev`, кэш тем
+      #     выключен, файлы подхватываются на лету (проверено 2026-08-02: после
+      #     копирования страница входа сразу отдала новый lore.css, 12210 байт
+      #     против прежних 7310, без рестарта);
+      #   • не трогает темы seer/heimdall/volva — пишет РОВНО в каталог темы
+      #     lore, полученный из docker inspect;
+      #   • не трогает compose и не пересоздаёт контейнер.
+      #
+      # Почему через helper-контейнер, а не docker cp: все четыре mount'а темы
+      # смонтированы READ-ONLY (rw=false), и `docker cp` в них отвечает
+      # «mounted volume is marked read-only». Пишем в ХОСТОВЫЙ каталог, смонтировав
+      # его себе на запись; исходники приходят tar'ом по stdin, поэтому путь
+      # внутри раннера роли не играет (у docker-демона свой взгляд на пути).
+      #
+      # Путь берётся из `docker inspect`, а не прибит: переедет каталог тем —
+      # выкат поедет за ним, а не запишет в мёртвое место.
+      - name: Deploy Keycloak theme (lore only)
+        run: |
+          set -e
+          THEME_SRC=backend/keycloak/themes/lore
+          [ -f "$THEME_SRC/login/theme.properties" ] || {
+            echo "::error::в репозитории нет $THEME_SRC/login/theme.properties — выкат темы не с чего делать"; exit 1; }
+
+          if ! docker inspect keycloak >/dev/null 2>&1; then
+            echo "::error::контейнер keycloak не найден — тема не выкачена. Это общий сервис платформы, LORE его не поднимает."
+            exit 1
+          fi
+
+          # Гард ровно против той поломки, что случилась с темой volva 2026-08-02:
+          # файлы легли на хост, а внутри контейнера их не было — тема
+          # «выкачена» и не применилась. Без mount'а docker cp/копирование
+          # ушло бы в слой контейнера и исчезло при пересоздании.
+          HOST_DIR=$(docker inspect keycloak \
+            --format '{{range .Mounts}}{{if eq .Destination "/opt/keycloak/themes/lore"}}{{.Source}}{{end}}{{end}}')
+          if [ -z "$HOST_DIR" ]; then
+            echo "::error::/opt/keycloak/themes/lore не примонтирован в контейнер keycloak."
+            echo "::error::Добавьте bind-mount в docker-compose.override.yml Keycloak (рядом с seer/heimdall/volva) и пересоздайте контейнер."
+            exit 1
+          fi
+          echo "каталог темы на хосте: $HOST_DIR"
+
+          # Копирование, а не rm -rf + cp: каталог общий с платформой, и
+          # сносить его целиком — рисковать чужими файлами, если там когда-то
+          # окажется что-то ещё. Удалённые в репозитории файлы при этом
+          # останутся на стенде — осознанный размен в пользу безопасности.
+          tar czf - -C backend/keycloak/themes lore \
+            | docker run --rm -i -v "$HOST_DIR:/dst" alpine:3 sh -c '
+                set -e
+                mkdir -p /tmp/in && tar xzf - -C /tmp/in
+                test -f /tmp/in/lore/login/theme.properties || { echo "в архиве нет темы"; exit 1; }
+                cp -a /tmp/in/lore/. /dst/
+              '
+          echo "файлы скопированы"
+
+          # Проверка ФАКТОМ, а не кодом возврата: контейнер обязан видеть
+          # ровно тот css, что лежит в репозитории. Сверка по размеру ловит и
+          # «скопировалось не туда», и «скопировалось наполовину».
+          WANT=$(wc -c < "$THEME_SRC/login/resources/css/lore.css")
+          GOT=$(docker exec keycloak wc -c < /opt/keycloak/themes/lore/login/resources/css/lore.css 2>/dev/null || echo 0)
+          if [ "$WANT" != "$GOT" ]; then
+            echo "::error::контейнер видит lore.css в $GOT байт, а в репозитории $WANT — тема не доехала"
+            exit 1
+          fi
+          echo "тема применена: lore.css $GOT байт, рестарт Keycloak не потребовался"
+
       # Telegram notifications — same pattern as aida-root's cd.yml (secrets.
       # TELEGRAM_TOKEN/TELEGRAM_CHAT_ID, silent no-op if unset so this doesn't
       # fail for anyone who hasn't configured them on THIS repo — Forgejo
