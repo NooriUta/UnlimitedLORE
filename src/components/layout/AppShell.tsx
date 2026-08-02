@@ -15,8 +15,59 @@ import { ProjectScopeProvider, useProjectScope } from '../../context/ProjectScop
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
 
-type Palette = 'amber' | 'slate';
+/**
+ * Палитры — ОБЩИЕ С ПЛАТФОРМОЙ: те же четыре, что предлагает страница входа
+ * Keycloak (её пикер пишет их в cookie `seer-prefs`). До этого приложение
+ * знало две своих (`amber`/`slate`), и выбор, сделанный на входе, до него не
+ * доезжал: другое хранилище, другой словарь значений.
+ *
+ * `amber-forest` вместо прежнего `amber` — имя платформы; старое значение
+ * мигрируется при чтении, чтобы никому не сбросило выбор.
+ */
+type Palette = 'amber-forest' | 'lichen' | 'slate' | 'juniper';
 type Mode    = 'dark'  | 'light';
+
+const PALETTES: { id: Palette; label: string; swatch: string }[] = [
+  { id: 'amber-forest', label: 'amber forest', swatch: '#A8B860' },
+  { id: 'lichen',       label: 'lichen',       swatch: '#7ab87c' },
+  { id: 'slate',        label: 'slate',        swatch: '#6aa6ff' },
+  { id: 'juniper',      label: 'juniper',      swatch: '#6ab89a' },
+];
+
+/**
+ * Общие настройки внешнего вида платформы.
+ *
+ * Cookie, а не localStorage: страница входа живёт на ДРУГОМ origin
+ * (`odal.seidrstudio.pro` против `lore.odal.seidrstudio.pro`), и localStorage
+ * между ними не разделяется по построению. Cookie ставится с
+ * `Domain=.odal.seidrstudio.pro`, поэтому видна обеим сторонам.
+ */
+const PREFS_COOKIE = 'seer-prefs';
+
+function readPrefs(): { theme?: string; palette?: string } {
+  const m = document.cookie.match(/(?:^|; )seer-prefs=([^;]*)/);
+  if (!m) return {};
+  try { return JSON.parse(decodeURIComponent(m[1])) as { theme?: string; palette?: string }; }
+  catch { return {}; }
+}
+
+function writePrefs(patch: { theme?: string; palette?: string }) {
+  const next = { ...readPrefs(), ...patch };
+  const h = location.hostname;
+  // Домен не ставим для localhost и голых IP — браузер отвергнет такую cookie
+  // целиком, и настройка не сохранится вовсе (та же проверка в теме входа).
+  const domain = (!h || h === 'localhost' || !h.includes('.') || /^\d+\.\d+\.\d+\.\d+$/.test(h))
+    ? '' : '; Domain=.' + h.split('.').slice(-3).join('.');
+  document.cookie = `${PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(next))}`
+    + '; Path=/; Max-Age=31536000; SameSite=Lax' + domain;
+}
+
+/** Прежние значения приложения → имена платформы. */
+function normalizePalette(v: string | null | undefined): Palette | null {
+  if (!v) return null;
+  if (v === 'amber') return 'amber-forest';           // старое имя того же цвета
+  return PALETTES.some(p => p.id === v) ? (v as Palette) : null;
+}
 
 function activeTabId(pathname: string): ShellTab['id'] {
   if (pathname.startsWith('/benchmark')) return 'research';
@@ -48,13 +99,18 @@ function AppShellBody() {
   // toggle so everything fits without clipping.
   const narrow = useIsNarrow(720);
 
-  const [palette, setPalette] = useState<Palette>(() => {
-    const saved = localStorage.getItem('lore-palette') ?? localStorage.getItem('lore-theme');
-    return (saved === 'slate') ? 'slate' : 'amber';
-  });
+  // Порядок источников: свой localStorage → общая cookie платформы → умолчание.
+  // Свой первым, чтобы уже сделанный в приложении выбор не перебивался тем,
+  // что осталось на странице входа; cookie подхватывается ровно тогда, когда
+  // в приложении выбора ещё не делали — то есть при первом входе.
+  const [palette, setPalette] = useState<Palette>(() =>
+    normalizePalette(localStorage.getItem('lore-palette') ?? localStorage.getItem('lore-theme'))
+    ?? normalizePalette(readPrefs().palette)
+    ?? 'amber-forest');
   const [mode, setMode] = useState<Mode>(() => {
     const saved = localStorage.getItem('lore-mode') ?? localStorage.getItem('lore-theme');
-    return (saved === 'light') ? 'light' : 'dark';
+    if (saved === 'light' || saved === 'dark') return saved;
+    return readPrefs().theme === 'light' ? 'light' : 'dark';
   });
 
   useEffect(() => {
@@ -64,9 +120,11 @@ function AppShellBody() {
     else                  el.removeAttribute('data-mode');
     localStorage.setItem('lore-palette', palette);
     localStorage.setItem('lore-mode',    mode);
+    // Пишем и в общую cookie: выбор, сделанный в приложении, должен доехать
+    // до страницы входа так же, как обратный.
+    writePrefs({ palette, theme: mode });
   }, [palette, mode]);
 
-  const togglePalette = () => setPalette(p => p === 'amber' ? 'slate' : 'amber');
   const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
 
   // ── Seiðr-шапка: бренд/тенант/«ещё» как dropdown'ы + палитра поиска ──────────
@@ -399,10 +457,29 @@ function AppShellBody() {
           {openDD === 'more' && (
             <div style={{ ...dd, left: 'auto', right: 0 }} role="menu">
               <div style={ddHead}>{t('shell.secondary', 'Вторичное')}</div>
-              <button type="button" role="menuitem" style={ddItem(false)} onClick={togglePalette}>
-                <span style={{ width: 15, textAlign: 'center' }}>{palette === 'amber' ? '◑' : '◐'}</span>
-                Палитра: {palette}
-              </button>
+              {/* Палитр стало четыре (общие с платформой), и перебор кнопкой
+                  «следующая» заставлял бы прощёлкивать мимо нужной. Сватчи
+                  показывают сразу все и текущую — как на странице входа. */}
+              <div style={{ ...ddItem(false), cursor: 'default', gap: 8 }}>
+                <span style={{ width: 15, textAlign: 'center' }}>◐</span>
+                <span style={{ display: 'inline-flex', gap: 5 }}>
+                  {PALETTES.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      title={p.label}
+                      aria-label={p.label}
+                      aria-pressed={palette === p.id}
+                      onClick={() => setPalette(p.id)}
+                      style={{
+                        width: 15, height: 15, borderRadius: '50%', cursor: 'pointer',
+                        background: p.swatch, padding: 0,
+                        border: palette === p.id ? '2px solid var(--t1)' : '1px solid var(--bd)',
+                      }}
+                    />
+                  ))}
+                </span>
+              </div>
               <button type="button" role="menuitem" style={ddItem(false)} onClick={toggleMode}>
                 <span style={{ width: 15, textAlign: 'center' }}>{mode === 'dark' ? '🌙' : '☀'}</span>
                 {mode === 'dark' ? t('shell.themeDark', 'Тёмная тема') : t('shell.themeLight', 'Светлая тема')}
