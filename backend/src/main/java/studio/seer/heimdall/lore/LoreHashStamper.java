@@ -72,6 +72,20 @@ public class LoreHashStamper {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE " + rows.get(0).get("rid") + " SET content_hash=:ch",
                 Map.of("ch", LoreContentHash.of(parts)))).await().indefinitely();
+        } catch (IllegalStateException e) {
+            // Ошибка модели потоков — ДЕФЕКТ КОДА, а не отказ окружения: значит
+            // штамповку позвали из реактивного колбэка, где блокироваться нельзя.
+            // Она обязана быть отличима от «БД не ответила»: под общим WARN этот
+            // случай прожил незамеченным, и content_hash не проставлялся вовсе,
+            // хотя ответ приходил успешным (DBR-07). Лечится переносом вызова на
+            // worker-пул у ВЫЗЫВАЮЩЕГО — см. LoreStatusResource как образец.
+            if (String.valueOf(e.getMessage()).contains("cannot be blocked")) {
+                LOG.errorf("[LORE HASH] %s/%s: штамповка позвана на event loop — "
+                    + "content_hash НЕ проставлен, перенесите вызов на worker-пул: %s",
+                    histType, id, e.getMessage());
+            } else {
+                LOG.warnf("[LORE HASH] %s/%s: %s", histType, id, e.getMessage());
+            }
         } catch (Exception e) {
             LOG.warnf("[LORE HASH] %s/%s: %s", histType, id, e.getMessage());
         }

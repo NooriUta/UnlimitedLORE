@@ -215,12 +215,18 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                           .append("TO (SELECT FROM KnowUseCase WHERE uc_id = :ucid);");
                     p.put("ucid", req.uc_id());
                 }
+                // Штамповка хеша уезжает на worker-пул: она блокирующая, а колбэк
+                // исполняется на потоке, отдавшем элемент, — на event loop. Иначе
+                // `stampOpenHist` падает с «current thread cannot be blocked» и
+                // гасится собственным catch: content_hash остаётся пустым при
+                // успешном ответе, и reconcile перестаёт видеть дрейф.
                 Uni<Response> write = writeClient.command(db, basicAuth(),
                         new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
-                    .map(__ -> {
-                        hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
-                        return noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order)));
-                    });
+                    .chain(__ -> Uni.createFrom().item(() -> {
+                            hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
+                            return noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order)));
+                        })
+                        .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()));
 
                 // Сценарий проверяем ДО записи, а не после. CREATE EDGE в пустой TO —
                 // тихий no-op: задача создалась бы, ребра не было бы, ответ пришёл бы
@@ -655,11 +661,19 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             // Переподвес REALIZES идёт ЦЕПОЧКОЙ, а не блокирующим вызовом внутри
             // map: этот путь реактивный, и await на IO-потоке даёт 502.
             .chain(__ -> relinkRealizesUni(uid, req.uc_id()))
-            .map(__ -> {
-                if (req.note_md() != null)
-                    hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
-                return noStore(Response.ok(new TaskWriteResponse(true, uid, null, null)));
-            })
+            // Штамповка хеша БЛОКИРУЮЩАЯ, а колбэк map исполняется на том потоке,
+            // который отдал элемент, — то есть на event loop. Соседняя строка выше
+            // фиксирует ровно этот урок для REALIZES; для хеша он не был применён,
+            // и `stampOpenHist` падал на «current thread cannot be blocked»,
+            // молча съедаясь собственным catch. Результат: content_hash не
+            // проставлялся, а на нём стоит обнаружение дрейфа в reconcile.
+            // Приём тот же, что в LoreStatusResource: уехать на worker-пул.
+            .chain(__ -> Uni.createFrom().item(() -> {
+                    if (req.note_md() != null)
+                        hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
+                    return noStore(Response.ok(new TaskWriteResponse(true, uid, null, null)));
+                })
+                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE TASK EDIT] %s: %s", uid, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
