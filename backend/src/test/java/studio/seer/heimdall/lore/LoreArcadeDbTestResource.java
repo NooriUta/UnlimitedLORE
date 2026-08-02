@@ -72,6 +72,11 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
             // ADR-LORE-023: раннер миграций гоняется на каждом тестовом старте —
             // fresh-путь (bootstrap → шаги → ledger) доказывается на каждой сборке.
             "lore.migrate", "true",
+            // DBR-06: в тестовом профиле сверка версии выключена по умолчанию
+            // (классы без живой БД падали бы на чтении ledger). Здесь БД есть,
+            // поэтому включаем обратно ЯВНО — иначе выключенная ради чужих
+            // тестов проверка тихо не работала бы и там, где её проверяют.
+            "lore.schema.verify", "true",
             "bench.mart.user", "root",
             "bench.mart.password", ROOT_PASSWORD
         );

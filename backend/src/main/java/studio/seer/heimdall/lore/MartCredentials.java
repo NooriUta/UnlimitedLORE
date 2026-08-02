@@ -40,6 +40,17 @@ public class MartCredentials {
     @ConfigProperty(name = "bench.mart.password", defaultValue = "")
     String passwordFromConfig;
 
+    /**
+     * DBR-06: КЛЮЧ секрета, а не сам секрет. Был захардкожен как
+     * {@code ARCADEDB_ROOT_PASSWORD}, и это ломало разделение кредов ещё до
+     * того, как оно началось: контейнер накатки ходит под root, приложение —
+     * своим кредом, но оба читали бы ОДНО значение из хранилища, потому что
+     * при провайдере Infisical секрет-сервис перекрывает env контейнера.
+     * Два креда молча оказались бы одним, и деплой при этом был бы зелёным.
+     */
+    @ConfigProperty(name = "lore.secrets.key.mart-password", defaultValue = "ARCADEDB_ROOT_PASSWORD")
+    String secretKey;
+
     @Inject
     SecretProvider secrets;
 
@@ -48,7 +59,7 @@ public class MartCredentials {
     }
 
     public String password() {
-        return secrets.get("ARCADEDB_ROOT_PASSWORD")
+        return secrets.get(secretKey)
             .filter(v -> !v.isBlank())
             .orElse(passwordFromConfig);
     }
