@@ -17,13 +17,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * DBR-07: {@code content_hash} у открытой Hist-строки реально проставляется.
+ * DBR-07: {@code content_hash} у открытой Hist-строки действительно записывается.
  *
- * <p><b>Зачем тест на такую мелочь.</b> Штамповка хеша — блокирующая, а стояла
- * она в колбэке {@code map()} реактивной цепочки, то есть исполнялась на event
- * loop, где блокироваться нельзя. Падала она с
- * {@code IllegalStateException: The current thread cannot be blocked}, ловилась
- * общим {@code catch} внутри {@link LoreHashStamper} и уходила в предупреждение.
+ * <p><b>Зачем тест на такую мелочь.</b> Запись хеша — блокирующая операция, а
+ * вызов стоял в колбэке {@code map()} реактивной цепочки, то есть исполнялся на
+ * event loop, где блокироваться нельзя. Вызов падал с
+ * {@code IllegalStateException: The current thread cannot be blocked}, ошибку
+ * ловил общий {@code catch} внутри {@link LoreHashStamper} и писал в лог
+ * предупреждение.
  *
  * <p>Наружу это выглядело как полный успех: задача создана, ответ {@code ok},
  * а {@code content_hash} пуст. На нём стоит обнаружение дрейфа в
@@ -68,8 +69,8 @@ class LoreHashStampLiveDbTest {
         assertEquals(1, rows.size(), "у задачи нет открытой Hist-строки — сломана фикстура, а не хеш");
 
         Object hash = rows.get(0).get("content_hash");
-        assertNotNull(hash, "content_hash пуст: штамповка не отработала — скорее всего, "
-            + "её снова позвали из реактивного колбэка (см. LoreHashStamper)");
+        assertNotNull(hash, "content_hash пуст: хеш не записан — скорее всего, вызов "
+            + "снова сделан из реактивного колбэка (см. LoreHashStamper)");
         assertFalse(String.valueOf(hash).isBlank(), "content_hash пустая строка");
 
         // Хеш обязан совпадать с тем, что даёт функция от тела: иначе он есть,

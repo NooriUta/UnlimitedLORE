@@ -176,6 +176,41 @@ export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
 
   useEffect(() => { localStorage.setItem(LIST_WIDTH_KEY, String(width)); }, [width]);
 
+  /**
+   * Высота колонок — по ИЗМЕРЕННОМУ отступу сверху, а не по угаданному.
+   *
+   * Было `calc(100vh - 200px)`, где 200 — предполагаемая высота шапки. Замер на
+   * стенде: шапка занимает 82px, viewport 714px. Колонки получали 514px вместо
+   * доступных 632 — список обрезался и скроллился внутри себя, а под паспортом
+   * оставалось 118px пустоты. При другом масштабе или переносе шапки на две
+   * строки расхождение только росло.
+   *
+   * Здесь отступ берётся у самого контейнера (`getBoundingClientRect().top`) и
+   * пересчитывается на resize: любая шапка, любой зум — колонка занимает ровно
+   * то, что осталось. `null` до первого замера означает «ограничения нет»:
+   * лучше один кадр без скролла, чем кадр с неверной высотой.
+   */
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [avail, setAvail] = useState<number | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const el = rootRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      // Нижний запас — под возможную подвальную полосу; без него колонка
+      // упирается ровно в край окна и последняя строка списка липнет к нему.
+      setAvail(Math.max(240, window.innerHeight - top - 8));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // Шапка меняет высоту не только от resize: переключение раздела может
+    // добавить строку фильтров. ResizeObserver ловит и это.
+    const ro = new ResizeObserver(measure);
+    if (rootRef.current?.parentElement) ro.observe(rootRef.current.parentElement);
+    return () => { window.removeEventListener('resize', measure); ro.disconnect(); };
+  }, []);
+  const colMaxHeight = avail == null ? undefined : avail;
+
   const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     dragRef.current = { startX: e.clientX, startW: width };
@@ -238,8 +273,8 @@ export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
-      <div style={{ width, flexShrink: 0, background: 'var(--bg1)', overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{list}</div>
+    <div ref={rootRef} style={{ display: 'flex', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
+      <div style={{ width, flexShrink: 0, background: 'var(--bg1)', overflow: 'auto', maxHeight: colMaxHeight }}>{list}</div>
       {/* Ручка стоит НА границе: отдельная полоса съела бы место, а в границу
           между колонками мышью целятся и так. */}
       <div
@@ -248,7 +283,7 @@ export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
         aria-orientation="vertical"
         style={{ width: 5, flexShrink: 0, cursor: 'col-resize', borderLeft: '1px solid var(--bd)' }}
       />
-      <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{detail}</div>
+      <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto', maxHeight: colMaxHeight }}>{detail}</div>
     </div>
   );
 }
