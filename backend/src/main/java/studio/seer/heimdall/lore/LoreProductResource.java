@@ -1008,16 +1008,23 @@ public class LoreProductResource extends LoreResourceBase {
         return o instanceof Number n ? n.longValue() : 0L;
     }
 
-    /** Сколько у UC уже primary-акторов (D19: должен быть ровно один). */
+    /**
+     * Сколько у UC уже primary-акторов (D19: должен быть ровно один).
+     *
+     * <p><b>DBR-04: отказ БД больше не превращается в ноль.</b> Прежняя
+     * редакция ловила любое исключение и возвращала 0 — то есть при недоступной
+     * БД гейт D19 отвечал «primary ещё нет», и новый актор становился ВТОРЫМ
+     * primary. Инвариант нарушался, ответ приходил 200, и обнаруживалось это
+     * потом по двум primary у одного сценария.
+     *
+     * <p>Неизвестность — не ноль. Пробрасываем наверх, где вызывающий отдаст
+     * 502: отказаться от записи честнее, чем записать не то.
+     */
     private long countPrimaryActors(String ucId) {
-        try {
-            List<Map<String, Object>> rows = ingest.queryPublic(
-                "SELECT outE('HAS_ACTOR')[role='primary'].size() AS n FROM KnowUseCase WHERE uc_id=:id",
-                Map.of("id", ucId));
-            return rows.isEmpty() ? 0 : num(rows.get(0).get("n"));
-        } catch (Exception e) {
-            return 0;
-        }
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT outE('HAS_ACTOR')[role='primary'].size() AS n FROM KnowUseCase WHERE uc_id=:id",
+            Map.of("id", ucId));
+        return rows.isEmpty() ? 0 : num(rows.get(0).get("n"));
     }
 
     /**

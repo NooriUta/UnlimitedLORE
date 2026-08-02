@@ -198,6 +198,13 @@ public class LoreSearchResource extends LoreResourceBase {
 
         // Ищем, какому типу принадлежит идентификатор. Ветки без FT-индекса
         // (quality_gate) пропускаем сразу: «похожих» им взять неоткуда.
+        //
+        // DBR-04: считаем, сколько веток реально опрошено. При лежащей БД все
+        // они уходили в `continue`, и метод доходил до финального 404 «ref не
+        // найден ни в одном типе» — то есть отвечал УТВЕРЖДЕНИЕМ О ДАННЫХ там,
+        // где не смог посмотреть. Ни одной успешной ветки — это 502, а не 404.
+        int probed = 0;
+        List<String> branchErrors = new ArrayList<>();
         for (Branch b : BRANCHES) {
             if (b.indexName() == null) continue;
             List<Map<String, Object>> src;
@@ -205,8 +212,11 @@ public class LoreSearchResource extends LoreResourceBase {
                 src = ingestService.queryPublic(
                     "SELECT @rid AS rid FROM " + b.vertexClass() + " WHERE " + b.idField() + " = :ref LIMIT 1",
                     Map.of("ref", ref));
+                probed++;
             } catch (Exception e) {
-                LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), e.getMessage());
+                String why = LoreUpstream.detail(e);
+                LOG.warnf("[LORE SIMILAR] ветка %s не опрошена: %s", b.type(), why);
+                branchErrors.add(b.type() + ": " + why);
                 continue;
             }
             if (src.isEmpty()) continue;
@@ -251,6 +261,21 @@ public class LoreSearchResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         }
 
+        // DBR-04: «не найден» имеет право прозвучать только если мы ИСКАЛИ.
+        // Ни одной опрошенной ветки — отказ БД, и говорить о данных нельзя.
+        if (probed == 0) {
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", "ни одна ветка не опрошена: "
+                    + String.join("; ", branchErrors))));
+        }
+        // Часть веток упала — «не найдено» остаётся возможным ответом (в
+        // опрошенных его правда нет), но умалчивать о непроверенных нельзя:
+        // ref мог лежать именно там.
+        if (!branchErrors.isEmpty()) {
+            return noStore(Response.status(Response.Status.NOT_FOUND)
+                .entity(new LoreError("NOT_FOUND", "ref «" + ref + "» не найден в опрошенных типах; "
+                    + "НЕ опрошены: " + String.join("; ", branchErrors))));
+        }
         return noStore(Response.status(Response.Status.NOT_FOUND)
             .entity(new LoreError("NOT_FOUND", "ref «" + ref + "» не найден ни в одном индексируемом типе")));
     }
