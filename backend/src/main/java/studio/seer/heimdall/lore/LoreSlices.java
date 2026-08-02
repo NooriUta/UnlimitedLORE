@@ -652,12 +652,17 @@ public final class LoreSlices {
         // AL-83/ADR-LORE-036: обратная матрица агент→владелец, тот же мотив
         // ревью доступа, что у project_users. Один агент — один живой
         // OWNED_BY (out()/outE() без индекса ok — единственная строка).
+        // AL-104: agent_role отдаётся отдельной колонкой, а НЕ выводится из
+        // client_id. Роль — свойство агента (миграция V21); вывод из имени
+        // учётки и был тем местом, где роль с учёткой слипались.
+        // Фильтр по client_id снят: агент без учётки — это заполняемое
+        // состояние, и экран обязан его показать, а не спрятать.
         slice("agent_owners",
-            "SELECT actor_id, client_id, " +
+            "SELECT actor_id, name, client_id, agent_role, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
             "out('OWNED_BY').display_name AS owner_display_name " +
-            "FROM KnowActor WHERE kind = 'agent' AND client_id IS NOT NULL",
-            List.of(), Map.of(), "");
+            "FROM KnowActor WHERE kind = 'agent'",
+            List.of(), Map.of(), " ORDER BY actor_id");
 
         slice("actor_load",
             "SELECT actor_id, name, kind, " +

@@ -5,6 +5,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -385,7 +386,30 @@ public class LoreProductResource extends LoreResourceBase {
     // редактирование карточки актора. SUBPATH_AGENTS запрещает его ВСЕМ
     // агентным профилям, включая full — иначе агент мог бы переписать себе
     // владельца на более привилегированного человека (эскалация).
-    public record ActorOwnerRequest(String actor_id, String client_id, String kc_sub) {}
+    /**
+     * AL-104: матрица делегирования D4 наружу — «роль человека в проекте →
+     * какие профили агента она вправе задействовать».
+     *
+     * <p>Нужна экрану «Агенты», чтобы показать, куда агент может ПИСАТЬ (в
+     * отличие от того, что он видит). Отдаётся эндпоинтом, а НЕ дублируется
+     * константой на фронте: правило живёт в {@link ProjectRbacService#ROLE_AGENT_MATRIX},
+     * и вторая копия разошлась бы с первой при первой же правке — ровно так
+     * уже расходились справочник и realm (см. {@code product-analyst}).
+     */
+    @GET
+    @Path("rbac/agent-matrix")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response agentMatrix() {
+        if (!enabled) return disabled();
+        return noStore(Response.ok(Map.of("matrix", ProjectRbacService.ROLE_AGENT_MATRIX)));
+    }
+
+    /**
+     * AL-104: {@code agent_role} — роль агента из справочника {@code agent_role}.
+     * Необязателен: старые вызовы (до V21) роль не передавали, и затирать её
+     * пустым значением при повторной привязке владельца нельзя.
+     */
+    public record ActorOwnerRequest(String actor_id, String client_id, String kc_sub, String agent_role) {}
 
     @POST
     @Path("actor/owner")
@@ -410,9 +434,18 @@ public class LoreProductResource extends LoreResourceBase {
             if (!"agent".equals(actor.get(0).get("kind")))
                 return badParams("actor '" + req.actor_id() + "' не kind=agent — владелец назначается только агентам");
 
+            // agent_role пишем ТОЛЬКО когда передан: вызов без него (легаси или
+            // повторная привязка владельца) не должен затирать уже выставленную
+            // роль пустым значением.
+            String setSql = "UPDATE KnowActor SET client_id=:c"
+                + (req.agent_role() != null && !req.agent_role().isBlank() ? ", agent_role=:r" : "")
+                + " WHERE actor_id=:id";
+            Map<String, Object> setParams = new LinkedHashMap<>();
+            setParams.put("c", req.client_id());
+            setParams.put("id", req.actor_id());
+            if (req.agent_role() != null && !req.agent_role().isBlank()) setParams.put("r", req.agent_role());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowActor SET client_id=:c WHERE actor_id=:id",
-                Map.of("c", req.client_id(), "id", req.actor_id()))).await().indefinitely();
+                setSql, setParams)).await().indefinitely();
 
             // Один живой владелец: снести старое ребро, поставить новое —
             // тот же паттерн, что HAS_PROJECT_ROLE reassign (AL-82).

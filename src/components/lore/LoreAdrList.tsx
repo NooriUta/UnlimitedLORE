@@ -56,6 +56,19 @@ export function matchComponents(components: string[], sel: Set<string>): boolean
   if (sel.has(NO_COMPONENT) && components.length === 0) return true;
   return components.some(c => sel.has(c));
 }
+// AL-96: то же для проектной оси. Пустышка нужна по той же причине, что у
+// тегов и компонентов, — но здесь она весомее: после бэкфилла V20 проектные
+// рёбра есть у 80 ADR из 144, и «без проекта» — это ровно те, которые при
+// включённом lore.scope.enforce не увидит никто, кроме superadmin.
+// Значения приходят обходом рёбер, поэтому null внутри массива отсеиваем:
+// иначе он стал бы отдельным «проектом» в фасете.
+export const NO_PROJECT_ADR = '__noproj__';
+export function matchProjects(projects: (string | null)[], sel: Set<string>): boolean {
+  if (sel.size === 0) return true;
+  const real = projects.filter(Boolean) as string[];
+  if (sel.has(NO_PROJECT_ADR) && real.length === 0) return true;
+  return real.some(p => sel.has(p));
+}
 // Client-side sort (data is small — ~130 ADRs; ArcadeDB can't bind ORDER BY,
 // and compose() can't AND-join filters, so all list logic lives here).
 export type AdrSortKey = 'date' | 'id' | 'status' | 'component';
@@ -145,6 +158,7 @@ interface Props {
   statusSel: Set<string>;
   compSel: Set<string>;
   tagSel: Set<string>;
+  projSel: Set<string>;
   selectedId?: string;
   onError: (e: unknown) => void;
   onOpen: (id: string) => void;
@@ -152,9 +166,10 @@ interface Props {
   onCounts: (counts: Record<string, number>) => void;
   onCompCounts: (counts: Record<string, number>) => void;
   onTagCounts: (counts: Record<string, number>) => void;
+  onProjCounts: (counts: Record<string, number>) => void;
 }
 
-export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts }: Props) {
+export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, projSel, selectedId, onError, onOpen, onNew, onCounts, onCompCounts, onTagCounts, onProjCounts }: Props) {
   const { t } = useTranslation();
   const [rows, setRows]             = useState<LoreAdrRow[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -191,6 +206,7 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sel
     const c: Record<string, number> = {};
     const cc: Record<string, number> = {};
     const tc: Record<string, number> = {};
+    const pc: Record<string, number> = {};
     rows.forEach(r => {
       const k = (r.status ?? 'PROPOSED').toUpperCase();
       c[k] = (c[k] || 0) + 1;
@@ -200,9 +216,12 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sel
       const tags = r.tags ?? [];
       if (tags.length === 0) tc[NO_TAG] = (tc[NO_TAG] || 0) + 1;
       else tags.forEach(tg => { tc[tg] = (tc[tg] || 0) + 1; });
+      const projs = (r.git_projects ?? []).filter(Boolean) as string[];
+      if (projs.length === 0) pc[NO_PROJECT_ADR] = (pc[NO_PROJECT_ADR] || 0) + 1;
+      else projs.forEach(p => { pc[p] = (pc[p] || 0) + 1; });
     });
-    onCounts(c); onCompCounts(cc); onTagCounts(tc);
-  }, [rows, onCounts, onCompCounts, onTagCounts]);
+    onCounts(c); onCompCounts(cc); onTagCounts(tc); onProjCounts(pc);
+  }, [rows, onCounts, onCompCounts, onTagCounts, onProjCounts]);
 
   const shown = useMemo(() => {
     const ql     = q.trim().toLowerCase();
@@ -211,10 +230,11 @@ export default function LoreAdrList({ module, q, statusSel, compSel, tagSel, sel
       .filter(r => statusSel.size === 0 || statusSel.has((r.status ?? 'PROPOSED').toUpperCase()))
       .filter(r => matchComponents(r.components ?? [], compSel))
       .filter(r => matchTags(r.tags ?? [], tagSel))
+      .filter(r => matchProjects(r.git_projects ?? [], projSel))
       .filter(r => !cutoff || (r.date_created ?? '') >= cutoff)
       .filter(r => !ql || r.adr_id.toLowerCase().includes(ql) || (r.name ?? '').toLowerCase().includes(ql));
     return sortAdrs(filtered, sortKey, sortDir);
-  }, [rows, q, [...statusSel].sort().join(','), [...compSel].sort().join(','), [...tagSel].sort().join(','), datePreset, sortKey, sortDir]);
+  }, [rows, q, [...statusSel].sort().join(','), [...compSel].sort().join(','), [...tagSel].sort().join(','), [...projSel].sort().join(','), datePreset, sortKey, sortDir]);
 
   return (
     <div style={S.root}>

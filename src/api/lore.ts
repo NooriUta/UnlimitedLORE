@@ -296,6 +296,8 @@ export interface LoreAdrRow {
   component: string | null;
   components: string[] | null;
   tags: string[] | null;
+  /** AL-92: ребро BELONGS_TO_PROJECT; слайс отдаёт его под именем git_projects. */
+  git_projects?: (string | null)[] | null;
   decision_count: number | null;
 }
 
@@ -647,6 +649,12 @@ export interface LoreActorRow {
   name?: string | null;
   kind?: string | null;              // human-role | system | agent
   body_md?: string | null;
+  /**
+   * D18: актор проектный — одноимённые роли разных продуктов не склеиваются.
+   * Слайс `actors` отдаёт это поле с AL-92, но до AL-96 его никто не читал:
+   * рёбра писались, а UI их не показывал.
+   */
+  projects?: (string | null)[] | null;
   uc_ids?: string[] | null;
   uc_count?: number | null;
 }
