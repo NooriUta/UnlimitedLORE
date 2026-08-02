@@ -13,7 +13,7 @@ import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type D
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT, NO_PROJECT_ADR } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
@@ -259,6 +259,9 @@ export default function LorePage() {
   const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
   const [adrCompCollapsed, setAdrCompCollapsed] = useState(true);
   const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
+  const [adrProjSel, setAdrProjSel]         = useState<Set<string>>(new Set());
+  const [adrProjCounts, setAdrProjCounts]   = useState<Record<string, number>>({});
+  const [adrProjCollapsed, setAdrProjCollapsed] = useState(true);
   // ADR-LORE-025 D8: role from the verified source — gates the ⚙ Админ section.
   const isAdmin = useIsAdmin();
   // T34: filter chrome bars collapse to one summary line by default (approved
@@ -775,7 +778,7 @@ export default function LorePage() {
         <FilterBar
           tier="local"
           label={t('lore.page.adrs.filtersLabel', 'Фильтры')}
-          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size}
+          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size + adrProjSel.size}
           summaryTags={[
             ...ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
               key: 'st:' + f.key, label: adrStatusLabel(t, f.key), color: f.color,
@@ -789,8 +792,13 @@ export default function LorePage() {
               key: 'tg:' + tg, label: tg === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : tg,
               onRemove: () => setAdrTagSel(prev => { const n = new Set(prev); n.delete(tg); return n; }),
             })),
+            ...[...adrProjSel].map((p): FilterTagData => ({
+              key: 'pj:' + p, label: p === NO_PROJECT_ADR ? t('lore.page.adrs.noProject', 'без проекта') : p,
+              color: 'var(--suc)',
+              onRemove: () => setAdrProjSel(prev => { const n = new Set(prev); n.delete(p); return n; }),
+            })),
           ]}
-          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }}
+          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); setAdrProjSel(new Set()); }}
           open={adrFilterOpen}
           onToggleOpen={() => setAdrFilterOpen(v => !v)}
         >
@@ -855,6 +863,29 @@ export default function LorePage() {
                 collapsible
                 collapsed={adrTagCollapsed}
                 onToggleCollapsed={() => setAdrTagCollapsed(v => !v)}
+              />
+            )}
+            {/* AL-96: проектный разрез. Стоит последним намеренно — пока
+                скоуп не включён, это справочная ось, а не рабочая. После
+                бэкфилла V20 «без проекта» — это 64 ADR из 144, и именно их
+                при включённом lore.scope.enforce не увидит никто. */}
+            {Object.keys(adrProjCounts).length > 0 && (
+              <FilterDimensionMulti
+                label={t('lore.page.adrs.projectDim', 'Проект')}
+                options={[
+                  ...Object.keys(adrProjCounts).filter(p => p !== NO_PROJECT_ADR)
+                    .sort((a, b) => (adrProjCounts[b] - adrProjCounts[a]) || a.localeCompare(b))
+                    .map(p => ({ value: p, label: p })),
+                  ...(adrProjCounts[NO_PROJECT_ADR]
+                    ? [{ value: NO_PROJECT_ADR, label: t('lore.page.adrs.noProject', 'без проекта') }]
+                    : []),
+                ]}
+                selected={adrProjSel}
+                onToggle={v => setAdrProjSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
+                counts={adrProjCounts}
+                collapsible
+                collapsed={adrProjCollapsed}
+                onToggleCollapsed={() => setAdrProjCollapsed(v => !v)}
               />
             )}
           </div>
@@ -990,6 +1021,7 @@ export default function LorePage() {
                 statusSel={adrStatusSel}
                 compSel={adrCompSel}
                 tagSel={adrTagSel}
+                projSel={adrProjSel}
                 selectedId={passport === '__new' ? undefined : passport}
                 onError={handleFetchError}
                 onOpen={selectItem}
@@ -997,6 +1029,7 @@ export default function LorePage() {
                 onCounts={setAdrCounts}
                 onCompCounts={setAdrCompCounts}
                 onTagCounts={setAdrTagCounts}
+                onProjCounts={setAdrProjCounts}
               />
             )}
             {section === 'sprints' && (

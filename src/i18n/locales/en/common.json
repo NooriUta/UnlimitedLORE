@@ -767,6 +767,8 @@
       "parentHas": "Under an ADR",
       "parentLabel": "ADR link",
       "parentOrphan": "Independent",
+      "projectLabel": "Project",
+      "noProject": "no project",
       "statusLabel": "Status"
     },
     "docView": {
@@ -1477,6 +1479,8 @@
         "filtersLabel": "Filters",
         "noComponent": "no component",
         "noTag": "no tag",
+        "noProject": "no project",
+        "projectDim": "Project",
         "periodDim": "Period",
         "sortComp": "Component",
         "sortDate": "Date",
@@ -1623,6 +1627,10 @@
         "kind": "Kind",
         "project": "Project",
         "projectHint": "without a project, same-named roles of different products merge into one",
+        "projects": "Projects",
+        "noProjects": "⚠ no project set — with project scope enabled nobody will see this actor",
+        "projAll": "all projects",
+        "projNone": "no project",
         "idRule": "ACT-‹ROLE›, latin, dash-separated: ACT-ARCHITECT",
         "segment": "customer segment"
       },
