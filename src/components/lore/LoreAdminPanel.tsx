@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { iconLoaded } from '@iconify/react';
@@ -481,6 +481,131 @@ function ProjectRolesEditor({ kcSub, username, onError }: {
   );
 }
 
+/**
+ * AL-101: карта «человек → его проектные роли» для СПИСКА людей.
+ *
+ * Читается через `project_users` (по одному вызову на проект), а не через
+ * `user_project_roles` (по вызову на человека), потому что проектов обычно
+ * меньше, чем людей, и число запросов не растёт при найме. Ответы собираются
+ * через `allSettled`: недоступность одного проекта не должна гасить остальные
+ * (урок AL-85 — общий catch превращал ошибку в пустой экран).
+ */
+function useProjectRoleMap(reloadKey: number) {
+  const [map, setMap] = useState<Map<string, { project: string; role: string }[]>>(new Map());
+  const [projects, setProjects] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    let alive = true;
+    setLoading(true);
+    fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
+      .then(async ps => {
+        const slugs = ps.map(p => p.slug).filter(Boolean).sort();
+        if (alive) setProjects(slugs);
+        const settled = await Promise.allSettled(slugs.map(slug =>
+          fetchLoreSlice<{ kc_subs: (string | null)[] | null; roles: (string | null)[] | null }>(
+            'project_users', { project: slug }, ctrl.signal).then(rs => ({ slug, row: rs[0] }))));
+        if (!alive) return;
+        const m = new Map<string, { project: string; role: string }[]>();
+        for (const s of settled) {
+          if (s.status !== 'fulfilled' || !s.value.row) continue;
+          const { slug, row } = s.value;
+          // Две параллельные колонки траверса — сшиваем по индексу.
+          (row.kc_subs ?? []).forEach((sub, i) => {
+            const role = (row.roles ?? [])[i];
+            if (!sub || !role) return;
+            m.set(sub, [...(m.get(sub) ?? []), { project: slug, role }]);
+          });
+        }
+        setMap(m);
+        setLoading(false);
+      })
+      .catch(() => { if (alive) { setMap(new Map()); setLoading(false); } });
+    return () => { alive = false; ctrl.abort(); };
+  }, [reloadKey]);
+
+  return { map, projects, loading };
+}
+
+/**
+ * AL-101: назначение проектных ролей прямо из строки списка.
+ *
+ * Существующий {@link ProjectRolesEditor} в карточке НЕ заменяется — он
+ * остаётся для подробного просмотра. Этот путь нужен для первичного
+ * наполнения: сегодня, чтобы раздать роли, надо открыть карточку каждого.
+ */
+function InlineRolesPopup({ kcSub, username, projects, current, onClose, onChanged, onError }: {
+  kcSub: string; username: string; projects: string[];
+  current: { project: string; role: string }[];
+  onClose: () => void; onChanged: () => void; onError: (e: unknown) => void;
+}) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const box = useRef<HTMLDivElement | null>(null);
+
+  // Закрытие по клику СНАРУЖИ. Клик внутри не закрывает — иначе каждое
+  // назначение требовало бы открывать попап заново, а он и заведён ради
+  // массовой раздачи ролей.
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) onClose();
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onEsc);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc); };
+  }, [onClose]);
+
+  async function apply(project: string, role: string, action: 'add' | 'remove') {
+    setBusy(project); setErr(null);
+    try {
+      await loreMutate('/user/role', { kc_sub: kcSub, display_name: username, project, role, action });
+      onChanged();
+    } catch (e) {
+      // 409 из AL-100 (последний owner / собственная последняя роль) — ответ
+      // по существу, а не сбой страницы: показать здесь же, с причиной.
+      setErr(e instanceof Error ? e.message : String(e));
+      onError(e);
+    } finally { setBusy(null); }
+  }
+
+  return (
+    <div ref={box} style={{
+      position: 'absolute', zIndex: 20, right: 0, marginTop: 4, minWidth: 340, maxHeight: 320,
+      overflowY: 'auto', background: 'var(--bg1)', border: '1px solid var(--bdh)',
+      borderRadius: 6, boxShadow: '0 6px 24px rgba(0,0,0,.28)', padding: 8, textAlign: 'left',
+    }}>
+      <div style={{ fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--t3)', marginBottom: 6 }}>
+        {t('lore.admin.inlineRolesH', 'Проекты и роли')} · {username}
+      </div>
+      {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 6 }}>{err}</div>}
+      {projects.length === 0 && (
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.inlineNoProjects', 'проектов нет — заведите их в разделе «Проекты»')}</div>
+      )}
+      {projects.map(p => {
+        const has = current.find(x => x.project === p);
+        return (
+          <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+            <input type="checkbox" checked={!!has} disabled={busy === p}
+              aria-label={p}
+              // Новое назначение — самая узкая роль. Расширять надо осознанно,
+              // а не получать developer'а одним кликом по чекбоксу.
+              onChange={() => apply(p, has ? has.role : 'reader', has ? 'remove' : 'add')} />
+            <span style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{p}</span>
+            <select style={{ ...S.input, minWidth: 120 }} value={has?.role ?? ''} disabled={!has || busy === p}
+              onChange={e => apply(p, e.target.value, 'add')}>
+              {!has && <option value="">—</option>}
+              {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Люди: список + карточка (AL-36) ─────────────────────────────────────────
 function UsersTab({ st, preflight, onError, reload }: {
   st: KcState<KcUser>; preflight: Preflight | null; onError: (e: unknown) => void; reload: () => void;
@@ -492,6 +617,10 @@ function UsersTab({ st, preflight, onError, reload }: {
   const [nu, setNu] = useState<{ username: string; email: string } | null>(null);
   const [confirmAdmin, setConfirmAdmin] = useState<string | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
+  // AL-101: инлайн-назначение ролей из строки списка.
+  const [rolesFor, setRolesFor] = useState<string | null>(null);
+  const [projReload, setProjReload] = useState(0);
+  const { map: projRoles, projects: allProjects, loading: projLoading } = useProjectRoleMap(projReload);
 
   const rows = st.k === 'ok' ? st.rows : [];
   const selectedId = params.get('user');
@@ -600,9 +729,11 @@ function UsersTab({ st, preflight, onError, reload }: {
       {rows.length > 0 && (
         <div style={S.tw}>
           <table style={S.table}>
-            <thead><tr>{['логин', 'email', 'вкл', 'роли', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{['логин', 'email', 'вкл', 'роли', 'проекты и роли', ''].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
-              {shown.map(u => (
+              {shown.map(u => {
+                const mine = projRoles.get(u.id) ?? [];
+                return (
                 <tr key={u.id}>
                   <td style={{ ...S.td, fontFamily: 'var(--mono)' }}>{u.username}</td>
                   <td style={S.td}>{u.email ?? '—'}</td>
@@ -612,9 +743,40 @@ function UsersTab({ st, preflight, onError, reload }: {
                       <span key={r} style={{ ...S.pill(r === 'viewer' ? 'var(--t2)' : 'var(--dng)'), marginRight: 4 }}>{r}</span>
                     ))}
                   </td>
-                  <td style={S.td}><button style={S.btn} onClick={() => openCard(u.id)}>{t('lore.admin.open', 'Открыть')}</button></td>
+                  {/* AL-101: видно прямо в строке, без раскрытия карточки.
+                      Человек без проектных ролей помечается сразу — при
+                      включённом скоупе он не увидит вообще ничего, и это
+                      состояние не должно требовать раскопок. */}
+                  <td style={S.td}>
+                    {projLoading ? <span style={{ color: 'var(--t3)' }}>…</span>
+                      : mine.length === 0
+                        ? <span style={{ color: 'var(--wrn)', fontSize: 'var(--fs-xs)' }}>
+                            {t('lore.admin.noProjectRoles', '⚠ нет проектов — не увидит ничего')}
+                          </span>
+                        : mine.map(x => (
+                            <span key={x.project} style={{ ...S.pill('var(--suc)'), marginRight: 4 }}
+                                  title={`${x.project} · ${x.role}`}>
+                              {x.project.split('/').pop()} · {x.role}
+                            </span>
+                          ))}
+                  </td>
+                  <td style={{ ...S.td, position: 'relative', whiteSpace: 'nowrap' }}>
+                    <button style={S.btn} onClick={() => setRolesFor(v => v === u.id ? null : u.id)}>
+                      {t('lore.admin.editRoles', 'Изменить')}
+                    </button>{' '}
+                    <button style={S.btn} onClick={() => openCard(u.id)}>{t('lore.admin.open', 'Открыть')}</button>
+                    {rolesFor === u.id && (
+                      <InlineRolesPopup
+                        kcSub={u.id} username={u.username} projects={allProjects} current={mine}
+                        onClose={() => setRolesFor(null)}
+                        onChanged={() => setProjReload(r => r + 1)}
+                        onError={onError}
+                      />
+                    )}
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
