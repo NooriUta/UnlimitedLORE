@@ -307,7 +307,34 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
   border-color: var(--acc);
 }
 
-.btn, .btn-primary, input[type="submit"], .pf-c-button, .pf-c-button.pf-m-primary {
+/* Password show/hide toggle — see aida-root's seer.css for why this is split
+   out from the submit-button rule (was making the eye icon a full-width bar). */
+.pf-c-input-group { display: flex; align-items: stretch; }
+.pf-c-input-group input.form-control,
+.pf-c-input-group input[type="password"] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+.pf-c-input-group .pf-c-button.pf-m-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  flex: 0 0 auto;
+  padding: 0;
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-left: none;
+  border-top-right-radius: var(--r-sm);
+  border-bottom-right-radius: var(--r-sm);
+  color: var(--t2);
+  cursor: pointer;
+}
+.pf-c-input-group .pf-c-button.pf-m-control:hover { color: var(--t1); }
+.pf-c-input-group .pf-c-button.pf-m-control .fa { font-size: 14px; }
+
+.btn, .btn-primary, input[type="submit"], .pf-c-button.pf-m-primary {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -327,7 +354,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
   box-shadow: none;
 }
 .btn:hover, .btn-primary:hover, input[type="submit"]:hover,
-.pf-c-button:hover, .pf-c-button.pf-m-primary:hover {
+.pf-c-button.pf-m-primary:hover {
   background: color-mix(in srgb, var(--acc) 80%, white);
   color: var(--bg0);
 }
