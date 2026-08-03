@@ -481,7 +481,7 @@
           "bucket15to30": "15–30d",
           "bucket30plus": "30d+"
         },
-        "accuracyHint": "Estimate accuracy for closed tasks: plan = effort_days, actual = calendar duration (created→closed). ⚠ \"spent\" is wall-clock, not net effort. Real closures only (since Jun 12, states>1).",
+        "efficiencyHint": "Share of a task's life spent actually being worked on: effort (effort_days, person-days) ÷ calendar span created→closed. Estimate accuracy is NOT measured: the corpus has no actual time spent, only the estimate and the calendar. Real closures only (since Jun 12, states>1).",
         "blockedHint": "Sprints that ever passed through BLOCKED status (by state history): {{ever}} of {{total}} ({{pct}}%). Currently blocked: {{nowBlocked}}.",
         "deployLagHint": "Days from sprint closure (done_date) to the first release it shipped in (release_dates). Median/p75 across such sprints. On the right — how many done sprints still have no release.",
         "leadTimeHint": "Days from the sprint's actual start (earliest valid_from in state history, sprint_starts slice) to closure (done_date). Median/p25/p75/max + histogram across closed sprints.",
