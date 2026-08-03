@@ -30,11 +30,24 @@ on:
         description: 'Метка раннера (lore-only | volva_only | ubuntu-latest для контроля)'
         required: true
         default: 'lore-only'
+      image:
+        description: 'Образ джоба. Боевой backend-CI работает на forgejo-ci-runtime:jdk21'
+        required: true
+        default: 'forgejo-ci-runtime:jdk21'
 
 jobs:
   probe:
     name: Bisect the AL-88 failure
     runs-on: ${{ inputs.runner_label }}
+    # Первый прогон (2026-08-03) прошёл ВЕСЬ пробник на lore-only без единого
+    # отказа — и этим ничего не доказал: метка подняла джоб на node:22-bookworm,
+    # тогда как боевой backend-CI работает на forgejo-ci-runtime:jdk21. То есть
+    # проверен был раннер, но не та среда, в которой падало.
+    #
+    # Образ пинуется явно, чтобы развести две причины, которые до сих пор
+    # смешивались: сам раннер и образ джоба. Метка и образ задаются независимо,
+    # поэтому одна и та же проба гоняется во всех четырёх сочетаниях.
+    container: ${{ inputs.image }}
     steps:
       # A. Джоб вообще стартует на этой метке. Отказ здесь = раннер не забрал
       #    задачу или образ не поднялся; всё остальное тогда неинформативно.
@@ -94,7 +107,9 @@ jobs:
         run: |
           set -x
           for cand in http://host.docker.internal:2480 http://172.17.0.1:2480 http://127.0.0.1:2480; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' -m 4 "$cand/api/v1/ready" || echo 000)
+            # без `|| echo 000`: curl и так печатает 000 через -w, а сложение
+            # двух источников давало в первом прогоне бессмысленное «000000»
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 4 "$cand/api/v1/ready")
             echo "$cand -> $code"
           done
 
