@@ -499,6 +499,39 @@ public class LoreProductResource extends LoreResourceBase {
     }
 
     /**
+     * MT-02: на какой доле корпуса посчитан INVEST-профиль.
+     *
+     * <p>Отдельным эндпоинтом, а не полем внутри среза: срез возвращает СЫРЫЕ
+     * строки задач, и подмешивать в них агрегат значило бы менять его контракт.
+     * Потребитель зовёт оба и показывает долю рядом с балансом.
+     */
+    @GET
+    @Path("product/invest-coverage")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response investCoverage() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                LoreSlices.get("invest_profile").baseSql(), Map.of());
+            return noStore(Response.ok(VpFitGaps.coverage(rows)));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE INVEST-COVERAGE] %s", LoreUpstream.detail(e));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+        }
+    }
+
+    /** Плоский справочник ключ→значение из запроса с колонками k и v. */
+    private Map<String, String> dictOf(String sql) {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> r : ingest.queryPublic(sql, Map.of())) {
+            Object k = r.get("k"), v = r.get("v");
+            if (k != null && v != null) out.put(String.valueOf(k), String.valueOf(v));
+        }
+        return out;
+    }
+
+    /**
      * Разрыв «заявлено против доставлено» готовыми строками.
      *
      * <p>Срез {@code feature_vp_analytics} отдаёт сырые множества, а разницу
@@ -519,10 +552,23 @@ public class LoreProductResource extends LoreResourceBase {
         try {
             List<Map<String, Object>> rows = ingest.queryPublic(
                 LoreSlices.get("feature_vp_analytics").baseSql(), Map.of());
-            List<VpFitGaps.Gap> gaps = VpFitGaps.evaluate(rows);
+            // MT-04: ранги тянутся отдельными запросами, а не добавляются в
+            // слайс. Слайс отдаёт строку НА КОРЕНЬ, а ранг живёт на выгоде —
+            // втащить его туда значило бы либо дублировать строки, либо возить
+            // параллельные массивы «id → ранг», которые разъезжаются при первой
+            // же правке порядка. Два плоских справочника дешевле и честнее.
+            Map<String, String> gainRanks = dictOf(
+                "SELECT gain_id AS k, rank AS v FROM KnowGain");
+            Map<String, String> painSeverities = dictOf(
+                "SELECT pain_id AS k, severity AS v FROM KnowPain");
+            List<VpFitGaps.Gap> gaps = VpFitGaps.evaluate(rows, gainRanks, painSeverities);
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("gaps", gaps);
             out.put("roots_checked", rows.size());
+            // Сводка по весам: одна строка «3 из 17 существенные» отвечает на
+            // вопрос «плохо ли всё» без чтения списка.
+            long essential = gaps.stream().filter(VpFitGaps.Gap::essential).count();
+            out.put("essential_gaps", essential);
             // Пустой список — это «дыр нет», а не «посмотреть не удалось»:
             // отказ уходит 502 ниже. Разводить эти два состояния обязательно,
             // иначе пустая выдача читается как здоровье (урок DBR-09).

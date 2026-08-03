@@ -114,6 +114,95 @@ class VpFitGapsTest {
         assertTrue(gaps.isEmpty());
     }
 
+    // ── MT-04: веса ──────────────────────────────────────────────────────────
+
+    @Test
+    void существеннаяДыраПоднимаетсяНаверх() {
+        // Порядок во входе обратный нужному — сортировка обязана его исправить.
+        var gaps = VpFitGaps.evaluate(
+            List.of(root("F", List.of(), List.of(), List.of(), List.of(),
+                List.of("G-MINOR", "G-CORE"), List.of())),
+            Map.of("G-MINOR", "unexpected", "G-CORE", "essential"), Map.of());
+
+        assertEquals("G-CORE", gaps.get(0).missingId(), "essential обязана быть первой");
+        assertTrue(gaps.get(0).essential());
+        assertFalse(gaps.get(1).essential());
+    }
+
+    @Test
+    void рангПопадаетВСтроку() {
+        var gaps = VpFitGaps.evaluate(
+            List.of(root("F", List.of(), List.of(), List.of(), List.of(),
+                List.of("G1"), List.of())),
+            Map.of("G1", "desired"), Map.of());
+        assertEquals("desired", gaps.get(0).weight());
+    }
+
+    @Test
+    void остраяБольСчитаетсяСущественной() {
+        var gaps = VpFitGaps.evaluate(
+            List.of(root("F", List.of(), List.of(), List.of("P1"), List.of(),
+                List.of(), List.of())),
+            Map.of(), Map.of("P1", "high"));
+        assertTrue(gaps.get(0).essential());
+    }
+
+    @Test
+    void невыполненнаяРаботаСущественнаВсегда() {
+        // У работ своей шкалы в разрыве нет: если работу никто не выполняет,
+        // линия не делает того, ради чего заявлена.
+        var gaps = VpFitGaps.evaluate(
+            List.of(root("F", List.of("J1"), List.of(), List.of(), List.of(),
+                List.of(), List.of())),
+            Map.of(), Map.of());
+        assertTrue(gaps.get(0).essential());
+    }
+
+    @Test
+    void неизвестныйРангНеДелаетДыруСущественной() {
+        // Ранг не проставлен — повышать приоритет наугад нельзя: так
+        // существенное потонет среди повышенного без причины.
+        var gaps = VpFitGaps.evaluate(
+            List.of(root("F", List.of(), List.of(), List.of(), List.of(),
+                List.of("G1"), List.of())),
+            Map.of(), Map.of());
+        assertFalse(gaps.get(0).essential());
+        assertEquals(null, gaps.get(0).weight());
+    }
+
+    // ── MT-02: покрытие INVEST ───────────────────────────────────────────────
+
+    @Test
+    void покрытиеСчитаетсяИПоШтукамИПоТрудоёмкости() {
+        var rows = List.<Map<String, Object>>of(
+            Map.of("work_class", "uc", "effort_days", 1.0),
+            Map.of("work_class", "enb", "effort_days", 3.0),
+            Map.of("effort_days", 96.0));               // без класса
+        var c = VpFitGaps.coverage(rows);
+
+        assertEquals(3, c.tasksTotal());
+        assertEquals(2, c.tasksClassified());
+        assertEquals(100.0, c.effortTotal(), 0.001);
+        assertEquals(4.0, c.effortClassified(), 0.001);
+        // Ровно та ловушка, ради которой задача заведена: по штукам покрытие
+        // выглядит приличным, по трудоёмкости — нет.
+        assertEquals(0.667, c.taskShare(), 0.01);
+        assertEquals(0.04, c.effortShare(), 0.001);
+    }
+
+    @Test
+    void пустойКлассНеСчитаетсяЗаданным() {
+        var c = VpFitGaps.coverage(List.of(Map.of("work_class", "  ", "effort_days", 5.0)));
+        assertEquals(0, c.tasksClassified());
+    }
+
+    @Test
+    void пустойКорпусНеДелитНаНоль() {
+        var c = VpFitGaps.coverage(List.of());
+        assertEquals(0.0, c.taskShare(), 0.001);
+        assertEquals(0.0, c.effortShare(), 0.001);
+    }
+
     @Test
     void пустойВходНеПадает() {
         assertTrue(VpFitGaps.evaluate(null).isEmpty());
