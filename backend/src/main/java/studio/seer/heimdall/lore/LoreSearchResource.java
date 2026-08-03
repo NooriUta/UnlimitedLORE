@@ -52,6 +52,10 @@ public class LoreSearchResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreSearchResource.class);
 
+    /** DBR-09: вердикт о пригодности FT-индекса — по нему ветка идёт индексом или сканом. */
+    @jakarta.inject.Inject
+    LoreFtIndexHealth ftHealth;
+
     /** Ветка поиска: всё, что нужно знать об одном типе. */
     record Branch(
         String type,            // имя типа в API (adr, task, …)
@@ -340,10 +344,14 @@ public class LoreSearchResource extends LoreResourceBase {
         // нет (или наоборот). Это не отказ ветки и не полный успех, и третье
         // состояние надо назвать: иначе половина выдачи выглядит как вся.
         Map<String, String> partialBranches = new LinkedHashMap<>();
+        // DBR-09: и четвёртое состояние — «здесь искали, но сканом». Оно не
+        // ошибка и не половина: выдача полная, а вот ранжирования у неё нет.
+        Map<String, String> scannedBranches = new LinkedHashMap<>();
 
         for (Branch b : active) {
             try {
-                List<Map<String, Object>> rows = queryBranch(b, lucene, q, comps, projs, partialBranches);
+                List<Map<String, Object>> rows =
+                    queryBranch(b, lucene, q, comps, projs, partialBranches, scannedBranches);
                 byType.put(b.type(), rows.size());
                 // Нормировка внутри ветки: BM25 разных бакетов несравним, а
                 // после деления на максимум ветки хотя бы порядок внутри типа
@@ -409,6 +417,11 @@ public class LoreSearchResource extends LoreResourceBase {
         // partial, чтобы читающий не принял половину за целое.
         partialBranches.forEach((type, why) ->
             warnings.add(Map.of("type", type, "partial", true, "error", why)));
+        // Скан — тоже повод сказать вслух, хотя выдача полная: без ранжирования
+        // порядок внутри такой ветки произволен, и молчать об этом значило бы
+        // выдавать её за индексную.
+        scannedBranches.forEach((type, why) ->
+            warnings.add(Map.of("type", type, "scanned", true, "error", why)));
 
         hits.sort((a, bb) -> Double.compare(
             ((Number) bb.get("score")).doubleValue(), ((Number) a.get("score")).doubleValue()));
@@ -445,22 +458,33 @@ public class LoreSearchResource extends LoreResourceBase {
      *        причина. Не возвращается результатом, потому что частичный ответ
      *        остаётся ВАЛИДНЫМ ответом — вызывающий кладёт такие ветки и в
      *        by_type, и в warnings одновременно, и различать их надо ему.
+     * @param scannedBranches куда записать «половина отвечена сканом»: тип →
+     *        какая именно. DBR-09.
      */
     private List<Map<String, Object>> queryBranch(Branch b, String lucene, String rawQ,
                                                   List<String> comps, List<String> projs,
-                                                  Map<String, String> partialBranches) {
+                                                  Map<String, String> partialBranches,
+                                                  Map<String, String> scannedBranches) {
         Map<String, Object> params = new HashMap<>();
         params.put("q", lucene);
         String compFilter = componentFilter(b, comps, params, false);
         String projFilter = projectFilter(b, projs, params, false);
 
+        // DBR-09: индекс, признанный непригодным, — это не повод отдать пустоту.
+        // Пустая выдача неотличима от «в базе такого нет», а данные-то на месте:
+        // пострадал только индекс. Поэтому ветка исполняется сканом по тем же
+        // полям, что перечислены для неё в реестре FT_INDEXES.
+        List<String> scanned = new ArrayList<>();
+        boolean vertexByIndex = b.indexName() != null && ftHealth.usable(b.indexName());
+        if (b.indexName() != null && !vertexByIndex) scanned.add("вершина");
+
         String textCols = String.join(", ", b.vertexTextFields());
-        String matcher = b.indexName() != null
+        String matcher = vertexByIndex
             ? "SEARCH_INDEX('" + b.indexName() + "', :q) = true"
             : ilikeMatcher(b, params, rawQ);
 
         String sql = "SELECT " + b.idField() + " AS ref_id, " + b.titleField() + " AS title, "
-            + (b.indexName() != null ? "$score AS score, " : "1.0 AS score, ")
+            + (vertexByIndex ? "$score AS score, " : "1.0 AS score, ")
             + textCols + ", "
             + b.compExpr() + " AS comp_direct, "
             + (b.compInheritedExpr() != null ? b.compInheritedExpr() : "null") + " AS comp_inherited, "
@@ -502,17 +526,28 @@ public class LoreSearchResource extends LoreResourceBase {
             // сама hist-строка рёбер компонентов не несёт.
             String hCompFilter = componentFilter(b, comps, hp, true);
             String hProjFilter = projectFilter(b, projs, hp, true);
+            boolean histByIndex = ftHealth.usable(b.histIndexName());
+            if (!histByIndex) scanned.add("история");
+            // Скан истории идёт ТОЛЬКО по открытым строкам. Ограничение
+            // `valid_to IS NULL` стоит здесь и так — оно же и делает скан
+            // приемлемым: закрытые ревизии в выдаче не нужны, поиск всё равно
+            // схлопывает результат к текущей версии записи, а объём обхода
+            // падает вдвое.
+            String hMatcher = histByIndex
+                ? "SEARCH_INDEX('" + b.histIndexName() + "', :q) = true"
+                : histIlikeMatcher(b, hp, rawQ);
             // [0] только у скалярных проекций (ref_id/title — родитель один);
             // компоненты/проекты — СПИСКИ, [0] оставил бы один случайный.
             String hsql = "SELECT in('HAS_STATE')." + b.idField() + "[0] AS ref_id, "
-                + "in('HAS_STATE')." + b.titleField() + "[0] AS title, $score AS score, "
+                + "in('HAS_STATE')." + b.titleField() + "[0] AS title, "
+                + (histByIndex ? "$score AS score, " : "1.0 AS score, ")
                 + histText + ", "
                 + "in('HAS_STATE')." + b.compExpr() + " AS comp_direct, "
                 + (b.compInheritedExpr() != null
                     ? "in('HAS_STATE')." + b.compInheritedExpr() : "null") + " AS comp_inherited, "
                 + "in('HAS_STATE')." + b.projExpr() + " AS proj "
                 + "FROM " + b.histClass() + " WHERE valid_to IS NULL "
-                + "AND SEARCH_INDEX('" + b.histIndexName() + "', :q) = true"
+                + "AND (" + hMatcher + ")"
                 + hCompFilter + hProjFilter
                 + " ORDER BY score DESC LIMIT " + BRANCH_CAP;
             try {
@@ -539,6 +574,12 @@ public class LoreSearchResource extends LoreResourceBase {
             LOG.warnf("[LORE SEARCH] ветка %s опрошена частично: %s", b.type(), String.join("; ", partial));
             partialBranches.put(b.type(), String.join("; ", partial));
         }
+        if (!scanned.isEmpty()) {
+            String why = String.join(" и ", scanned)
+                + ": FT-индекс непригоден, отвечено сканом — выдача полная, ранжирования нет";
+            LOG.warnf("[LORE SEARCH] ветка %s: %s", b.type(), why);
+            scannedBranches.put(b.type(), why);
+        }
 
         // Дедуп по ref_id: вершина и её hist могли совпасть оба — оставляем
         // более сильный score (обе формы уже нормируются одной веткой).
@@ -563,6 +604,24 @@ public class LoreSearchResource extends LoreResourceBase {
         params.put("txtlike", "%" + rawQ + "%");
         List<String> parts = new ArrayList<>();
         for (String f : b.vertexTextFields()) parts.add(f + " ILIKE :txtlike");
+        return String.join(" OR ", parts);
+    }
+
+    /**
+     * То же для hist-половины (DBR-09): поля берутся из {@code histTextFields},
+     * то есть ровно те, что перечислены для этого индекса в реестре.
+     *
+     * <p>Как и {@link #ilikeMatcher}, возвращает выражение БЕЗ собственных
+     * скобок — их ставит вызывающий. Здесь это обязательно: выражение
+     * подставляется после {@code AND}, и без скобок {@code AND a OR b}
+     * разобралось бы как {@code (… AND a) OR b}, то есть {@code valid_to IS
+     * NULL} перестало бы действовать на вторую половину OR и в выдачу поехали
+     * бы закрытые ревизии.
+     */
+    private String histIlikeMatcher(Branch b, Map<String, Object> params, String rawQ) {
+        params.put("txtlike", "%" + rawQ + "%");
+        List<String> parts = new ArrayList<>();
+        for (String f : b.histTextFields()) parts.add(f + " ILIKE :txtlike");
         return String.join(" OR ", parts);
     }
 
