@@ -1,0 +1,122 @@
+package studio.seer.heimdall.lore;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Разрыв «заявлено против доставлено» — чистая функция, без БД.
+ *
+ * <p>Опорный кейс взят с натуры: {@code FEAT-VP-FIT} стояла {@code shipped} с
+ * тремя пустыми осями доставки, и это нашлось глазами, а не системой. Тест
+ * фиксирует, что теперь находится системой.
+ */
+class VpFitGapsTest {
+
+    private static Map<String, Object> root(String id, Object claimedJobs, Object performedJobs,
+                                            Object claimedPains, Object relievedPains,
+                                            Object claimedGains, Object deliveredMeasured) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("uc_id", id);
+        m.put("title", "заголовок " + id);
+        m.put("claimed_job_ids", claimedJobs);
+        m.put("performed_job_ids", performedJobs);
+        m.put("claimed_pain_ids", claimedPains);
+        m.put("relieved_pain_ids", relievedPains);
+        m.put("claimed_gain_ids", claimedGains);
+        m.put("delivered_measured_gain_ids", deliveredMeasured);
+        return m;
+    }
+
+    private static boolean has(List<VpFitGaps.Gap> gaps, String finding, String missing) {
+        return gaps.stream().anyMatch(g -> g.finding().equals(finding) && g.missingId().equals(missing));
+    }
+
+    @Test
+    void случайСНатурыКорневаяФичаБезЕдинойДоставки() {
+        // FEAT-VP-FIT: заявлено по одному на каждой оси, доставлено ничего.
+        var gaps = VpFitGaps.evaluate(List.of(root("FEAT-VP-FIT",
+            List.of("JOB-DECIDE-SCOPE"), List.of(),
+            List.of("PAIN-FIT-BLIND"), List.of(),
+            List.of("GAIN-FIT-EVIDENCE"), List.of())));
+
+        assertEquals(3, gaps.size(), "три оси — три дыры");
+        assertTrue(has(gaps, "job_claimed_not_performed", "JOB-DECIDE-SCOPE"));
+        assertTrue(has(gaps, "pain_claimed_not_relieved", "PAIN-FIT-BLIND"));
+        assertTrue(has(gaps, "gain_claimed_not_delivered", "GAIN-FIT-EVIDENCE"));
+    }
+
+    @Test
+    void полностьюЗамкнутыйКореньДырНеДаёт() {
+        var gaps = VpFitGaps.evaluate(List.of(root("FEAT-OK",
+            List.of("J1"), List.of("J1"),
+            List.of("P1"), List.of("P1"),
+            List.of("G1"), List.of("G1"))));
+        assertTrue(gaps.isEmpty());
+    }
+
+    @Test
+    void выгодаБезМетрикиНеЗасчитываетсяКакДоставленная() {
+        // Ключевой инвариант ADR-032 §2: доставка без метрики fit не замыкает.
+        // Считаем ТОЛЬКО delivered_measured — иначе прятали бы ровно то, ради
+        // чего метрика введена.
+        Map<String, Object> r = root("FEAT-X",
+            List.of(), List.of(), List.of(), List.of(),
+            List.of("G1"), List.of());
+        r.put("delivered_gain_ids", List.of("G1"));   // доставлена, но БЕЗ метрики
+        var gaps = VpFitGaps.evaluate(List.of(r));
+        assertTrue(has(gaps, "gain_claimed_not_delivered", "G1"),
+            "доставка без метрики не должна закрывать ось");
+    }
+
+    @Test
+    void доставленоеБезЗаявкиТожеСигнал() {
+        // Не ошибка, но и не норма: либо забыли заявку, либо сценарий делает
+        // не то, ради чего заведён.
+        var gaps = VpFitGaps.evaluate(List.of(root("FEAT-Y",
+            List.of(), List.of(), List.of(), List.of(),
+            List.of(), List.of("G-UNCLAIMED"))));
+        assertTrue(has(gaps, "gain_delivered_not_claimed", "G-UNCLAIMED"));
+    }
+
+    @Test
+    void частичноеЗакрытиеПоказываетТолькоНедостающее() {
+        var gaps = VpFitGaps.evaluate(List.of(root("FEAT-Z",
+            List.of("J1", "J2"), List.of("J1"),
+            List.of(), List.of(), List.of(), List.of())));
+        assertEquals(1, gaps.size());
+        assertTrue(has(gaps, "job_claimed_not_performed", "J2"));
+        assertFalse(has(gaps, "job_claimed_not_performed", "J1"));
+    }
+
+    @Test
+    void дублиВДоставкеНеПлодятДыр() {
+        // Срез возвращает по ребру: три сценария, снимающих одну боль, дают
+        // её id трижды. Множество это схлопывает.
+        var gaps = VpFitGaps.evaluate(List.of(root("FEAT-D",
+            List.of(), List.of(),
+            List.of("P1"), List.of("P1", "P1", "P1"),
+            List.of(), List.of())));
+        assertTrue(gaps.isEmpty());
+    }
+
+    @Test
+    void скалярВместоСпискаЧитаетсяКакОдинЭлемент() {
+        // Траверс ArcadeDB отдаёт одиночное значение не списком.
+        var gaps = VpFitGaps.evaluate(List.of(root("FEAT-S",
+            "J1", "J1", null, null, null, null)));
+        assertTrue(gaps.isEmpty());
+    }
+
+    @Test
+    void пустойВходНеПадает() {
+        assertTrue(VpFitGaps.evaluate(null).isEmpty());
+        assertTrue(VpFitGaps.evaluate(List.of()).isEmpty());
+    }
+}

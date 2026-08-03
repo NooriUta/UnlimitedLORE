@@ -499,6 +499,43 @@ public class LoreProductResource extends LoreResourceBase {
     }
 
     /**
+     * Разрыв «заявлено против доставлено» готовыми строками.
+     *
+     * <p>Срез {@code feature_vp_analytics} отдаёт сырые множества, а разницу
+     * оставляет потребителю — и разницу не считал НИКТО. Цена выяснилась на
+     * самой канве: {@code FEAT-VP-FIT}, фича ровно про ловлю этого разрыва,
+     * стояла {@code shipped} с тремя пустыми осями доставки, и обнаружено это
+     * было сверкой шести массивов глазами.
+     *
+     * <p>SQL переиспользуется из того же слайса, а не переписывается рядом:
+     * вторая копия разошлась бы с первой при первой же правке — так уже
+     * расходились справочник и realm.
+     */
+    @GET
+    @Path("product/fit-gaps")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response fitGaps() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                LoreSlices.get("feature_vp_analytics").baseSql(), Map.of());
+            List<VpFitGaps.Gap> gaps = VpFitGaps.evaluate(rows);
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("gaps", gaps);
+            out.put("roots_checked", rows.size());
+            // Пустой список — это «дыр нет», а не «посмотреть не удалось»:
+            // отказ уходит 502 ниже. Разводить эти два состояния обязательно,
+            // иначе пустая выдача читается как здоровье (урок DBR-09).
+            out.put("clean", gaps.isEmpty());
+            return noStore(Response.ok(out));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE FIT-GAPS] %s", LoreUpstream.detail(e));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+        }
+    }
+
+    /**
      * AL-104: {@code agent_role} — роль агента из справочника {@code agent_role}.
      * Необязателен: старые вызовы (до V21) роль не передавали, и затирать её
      * пустым значением при повторной привязке владельца нельзя.
