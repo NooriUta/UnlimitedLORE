@@ -70,12 +70,52 @@ class WorkQualityTest {
     }
 
     @Test
-    void классРаботыСамПоСебеТолькоПодсказка() {
-        // D3: work_class законно бывает пустым, штрафовать за это нельзя.
+    void классРаботыТеперьОбязателен() {
+        // Решение владельца 2026-08-03: ADR-LORE-022 D3 разрешал пустой класс,
+        // и цена оказалась в том, что «зачем-ось» INVEST считается на 2.3%
+        // трудоёмкости. Проверка остаётся advisory — понижает счёт, не блокирует.
         var r = WorkQuality.evaluateTask("📋 PLANNED", 1.0, null,
             List.of("OMILORE"), List.of("proj"), null, null);
-        assertFalse(find(r, "work_class").required(), "класс работы не обязателен");
-        assertEquals(r.max(), r.score(), "его отсутствие не должно снижать счёт");
+        assertTrue(find(r, "work_class").required(), "класс работы обязателен");
+        assertFalse(find(r, "work_class").ok());
+        assertTrue(r.score() < r.max(), "его отсутствие обязано снижать счёт");
+    }
+
+    @Test
+    void заданныйКлассРаботыЗасчитывается() {
+        var r = WorkQuality.evaluateTask("📋 PLANNED", 1.0, "jtd",
+            List.of("OMILORE"), List.of("proj"), null, null);
+        assertTrue(find(r, "work_class").ok());
+    }
+
+    // ── фаза ─────────────────────────────────────────────────────────────────
+
+    @Test
+    void полнаяФазаНабираетМаксимум() {
+        var r = WorkQuality.evaluatePhase("Подготовка", "Что делаем и зачем", 1);
+        assertEquals(r.max(), r.score());
+        assertEquals("phase", r.kind());
+    }
+
+    @Test
+    void безымяннаяФазаКраснеет() {
+        // Фаза без названия — разделитель, а не этап: по строке отчёта
+        // невозможно принять решение.
+        var r = WorkQuality.evaluatePhase("  ", null, 1);
+        assertFalse(find(r, "title").ok());
+    }
+
+    @Test
+    void описаниеФазыТолькоПодсказка() {
+        var r = WorkQuality.evaluatePhase("Подготовка", null, 1);
+        assertFalse(find(r, "summary").required());
+        assertEquals(r.max(), r.score(), "отсутствие описания не снижает счёт");
+    }
+
+    @Test
+    void фазаБезПорядковогоНомераКраснеет() {
+        var r = WorkQuality.evaluatePhase("Подготовка", "текст", null);
+        assertFalse(find(r, "order_index").ok());
     }
 
     @Test

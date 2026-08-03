@@ -70,9 +70,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index,
         WorkQuality.Result quality) {}
     // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
-    public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index) {}
+    public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index,
+        String summary_md) {}
     public record PhaseWriteResponse(boolean ok, String phase_uid, String phase_id,
-        Integer order_index, boolean created) {}
+        Integer order_index, boolean created, WorkQuality.Result quality) {}
     public record TaskPhaseRequest(String task_uid, String phase_uid, String action) {}
 
     public record SprintCreateRequest(String sprint_id, String name, String status,
@@ -461,6 +462,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         final String uid     = sid + "/PHASE_" + key;
         final String display = "Фаза " + key;
         final String name    = req.name();
+        final String summary = req.summary_md();
         final String now     = Instant.now().toString();
         final String nsid    = UUID.randomUUID().toString();
 
@@ -473,8 +475,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
                 if (!rows.isEmpty()) {   // idempotent: phase already registered
                     Object oi = rows.get(0).get("order_index");
+                    Integer oiv = oi instanceof Number n ? n.intValue() : null;
                     return Uni.createFrom().item(noStore(Response.ok(new PhaseWriteResponse(
-                        true, uid, display, oi instanceof Number n ? n.intValue() : null, false))));
+                        true, uid, display, oiv, false,
+                        WorkQuality.evaluatePhase(name, summary, oiv)))));
                 }
                 MartQuery sprintQ = new MartQuery("sql",
                     "SELECT sprint_id FROM KnowSprint WHERE sprint_id = :sid LIMIT 1",
@@ -498,7 +502,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                         // without its PART_OF/HAS_STATE edges.
                         String script =
                             "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
-                            "order_index = :oi, src = 'manual';" +
+                            "summary_md = :summary, order_index = :oi, src = 'manual';" +
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
                             "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
@@ -506,10 +510,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid);";
                         Map<String, Object> p = mapOfNullable("uid", uid, "pid", display, "name", name,
-                            "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                            "summary", summary, "oi", order, "sid", sid, "nsid", nsid, "now", now);
                         return writeClient.command(db, basicAuth(),
                                 new LoreCommandClient.LoreCommand("sqlscript", script, p))
-                            .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true))));
+                            .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true,
+                                WorkQuality.evaluatePhase(name, summary, order)))));
                     });
                 });
             })
