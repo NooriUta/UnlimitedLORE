@@ -103,6 +103,9 @@ public class LoreProductResource extends LoreResourceBase {
     @Inject
     ProjectRbacService projectRbac;
 
+    @Inject
+    UcReadinessCalculator readiness;
+
     // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
     //
     // PL-28 (решение №141): отдельного типа больше нет. Эндпоинт сохранён и
@@ -1013,6 +1016,17 @@ public class LoreProductResource extends LoreResourceBase {
                     : "DELETE FROM (SELECT expand(inE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) WHERE @out.task_uid=:tid";
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", delSql, p))
                     .await().indefinitely();
+                // MT-07: отвязка задачи тоже меняет готовность. Снятие последней
+                // задачи обязано вернуть статус к намерению автора — иначе
+                // сценарий остаётся «выпущенным» без единой задачи.
+                if ("task".equals(req.rel())) {
+                    try {
+                        readiness.recompute(req.uc_id());
+                    } catch (RuntimeException e) {
+                        LOG.warnf("[LORE READINESS] %s: пересчёт после отвязки не выполнен (%s)",
+                            req.uc_id(), LoreUpstream.detail(e));
+                    }
+                }
                 return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
             }
@@ -1056,6 +1070,32 @@ public class LoreProductResource extends LoreResourceBase {
                 "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
                 "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют"));
             if ("actor".equals(req.rel()) && linked) out.put("quality", qualityOf(req.uc_id()));
+            // MT-07: привязка задачи меняет картину готовности — пересчитываем.
+            //
+            // Вычислитель просыпался ТОЛЬКО из recomputeForTask при смене статуса
+            // задачи. Значит порядок «сначала сделали, потом описали» — основной
+            // при реконструкции продуктового слоя задним числом — оставлял
+            // сценарий невыпущенным НАВСЕГДА: задача уже закрыта, статус её
+            // больше не меняется, а привязка пересчёт не будила.
+            //
+            // Найдено экспериментом 2026-08-03: три сценария привязаны к закрытым
+            // задачам, shipped стал только тот, у которого потом дёрнули
+            // status_set. Отсюда же пустой shipped_job_ids у всех корней —
+            // читалось как «ценность не доехала», означало «пересчёт не звали».
+            //
+            // Отвязка тоже считается: снятие последней задачи возвращает статус
+            // к намерению автора, и промолчать об этом значит оставить сценарий
+            // выпущенным без единой задачи.
+            if ("task".equals(req.rel())) {
+                try {
+                    readiness.recompute(req.uc_id());
+                } catch (RuntimeException e) {
+                    // Пересчёт вспомогательный: его отказ не имеет права
+                    // превратить успешную привязку в ошибку.
+                    LOG.warnf("[LORE READINESS] %s: пересчёт после привязки не выполнен (%s)",
+                        req.uc_id(), LoreUpstream.detail(e));
+                }
+            }
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE UC LINK] %s: %s", req.uc_id(), e.getMessage());
