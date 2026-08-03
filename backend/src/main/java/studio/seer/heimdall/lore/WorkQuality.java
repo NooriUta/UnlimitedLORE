@@ -112,6 +112,58 @@ final class WorkQuality {
         return score("sprint", f);
     }
 
+    /**
+     * Релиз. Самая дорогая из проверок этого набора: пустые связи релиза —
+     * записанная боль [[PAIN-LORE-BROKEN-LINKS]], а не гипотеза. Релиз уезжает,
+     * выглядит опубликованным, и только потом выясняется, что по нему нельзя
+     * ответить, что в него вошло — когда контекст уже утерян.
+     *
+     * <p>Спринты и PR проверяются РАЗДЕЛЬНО намеренно: это два разных вызова
+     * {@code release_link}, и забывается обычно первый. «Связи есть» без
+     * разделения показывало бы зелёное при половине работы.
+     */
+    static Result evaluateRelease(String gitTag, String descriptionMd,
+                                  Object sprints, Object prs, Object projects) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "git_tag", filled(gitTag), "Тег задан");
+        req(f, "description", filled(descriptionMd),
+            "Описание непусто — пустой релиз выглядит опубликованным и прячет пропажу описания");
+        req(f, "sprints_linked", any(sprints), "Привязан хотя бы один спринт");
+        req(f, "prs_linked", any(prs), "Привязан хотя бы один PR");
+        req(f, "project", any(projects), "Проект привязан");
+
+        return score("release", f);
+    }
+
+    /**
+     * ADR. Тела проверяются на НЕПУСТОТУ, а не на содержание: судить текст
+     * линтер не может и не должен. Но ADR без раздела «решение» — это не
+     * решение, а заметка, и отличить одно от другого структурно можно.
+     *
+     * @param hasDecisions есть ли дочерние KnowDecision (DECIDED_IN)
+     */
+    static Result evaluateAdr(String status, Object components, Object projects,
+                              boolean hasDecisions,
+                              String contextMd, String decisionMd, String consequencesMd) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "status", filled(status), "Статус задан");
+        req(f, "component", any(components), "Компонент привязан");
+        req(f, "project", any(projects), "Проект привязан");
+        req(f, "context", filled(contextMd), "Контекст заполнен");
+        req(f, "decision", filled(decisionMd), "Решение заполнено");
+        // Последствия — подсказка: бывают ADR, у которых их честно нет, и
+        // требовать текст ради текста значит поощрять воду.
+        hint(f, "consequences", filled(consequencesMd), "Последствия заполнены — желательно");
+        // Атомарные решения: ADR без них не разложен на проверяемые правила
+        // (ADR-LORE-014 §4). Подсказка, а не штраф: разложение — отдельный шаг,
+        // и требовать его в момент заведения ADR значит блокировать черновик.
+        hint(f, "decisions", hasDecisions, "Разложен на атомарные решения — желательно");
+
+        return score("adr", f);
+    }
+
     private static Result score(String kind, List<Finding> f) {
         int max = 0, score = 0;
         for (Finding x : f) if (x.required()) { max++; if (x.ok()) score++; }
