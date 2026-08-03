@@ -680,10 +680,21 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // Lead/cycle time — days from real start (min valid_from) to done_date.
   const leadTime = useMemo(() => {
     const durations: number[] = [];
+    // Спринты, у которых истории состояний нет вовсе. Раньше им подставлялся
+    // `valid_from` самого спринта — а это дата ТЕКУЩЕГО состояния SCD2, а не
+    // старта. Длительность выходила около нуля и была неотличима от спринта,
+    // который действительно закрыли за день. Подстановка давала правдоподобное
+    // число там, где данных нет, — то есть занижала медиану молча.
+    //
+    // Теперь такие спринты из метрики исключаются и считаются отдельно: цифра
+    // рядом с медианой честно говорит, на скольких спринтах она НЕ посчитана.
+    let noHistory = 0;
     sprintRows.forEach(s => {
-      const start = startBySprint.get(s.sprint_id) ?? parseDoneDate(s.valid_from);
-      const done  = parseDoneDate(s.done_date);
-      if (start && done && done >= start) durations.push(daysBetween(start, done));
+      const done = parseDoneDate(s.done_date);
+      if (!done) return;
+      const start = startBySprint.get(s.sprint_id);
+      if (!start) { noHistory++; return; }
+      if (done >= start) durations.push(daysBetween(start, done));
     });
     if (!durations.length) return null;
     // histogram buckets: 0-3, 4-7, 8-14, 15-30, 30+
@@ -702,6 +713,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       p75: Math.round(quantile(durations, 0.75)),
       max: Math.max(...durations),
       buckets,
+      noHistory,
     };
   }, [sprintRows, startBySprint]);
 
@@ -714,7 +726,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         return !(t && t.total > 0 && t.done >= t.total);
       })
       .map(s => {
-        const start = startBySprint.get(s.sprint_id) ?? parseDoneDate(s.valid_from);
+        // Та же причина, что в leadTime: без истории возраст неизвестен, и
+        // подставлять дату текущего состояния значит показать «спринт идёт
+        // ноль дней» вместо честного «не знаем». Спринт без истории просто
+        // не попадает в список — фильтр по null ниже.
+        const start = startBySprint.get(s.sprint_id);
         return { ...s, age: start ? daysBetween(start, TODAY) : null };
       })
       .filter(s => s.age !== null)
@@ -1687,7 +1703,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: 2 }}>
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>p25 <b style={{ color: 'var(--t1)' }}>{leadTime.p25}д</b> · p75 <b style={{ color: 'var(--t1)' }}>{leadTime.p75}д</b></span>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>макс {leadTime.max}д · n={leadTime.count}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+                    макс {leadTime.max}д · n={leadTime.count}
+                    {/* Сколько закрытых спринтов в метрику НЕ попало из-за
+                        отсутствия истории. Без этой цифры медиана молчит о
+                        своей выборке — ровно та ловушка, что у INVEST. */}
+                    {leadTime.noHistory > 0 && (
+                      <span title="Закрытые спринты без истории состояний: старт неизвестен, в расчёт не взяты">
+                        {' '}· без истории {leadTime.noHistory}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 56 }}>
