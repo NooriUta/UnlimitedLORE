@@ -994,9 +994,23 @@ public class LoreProductResource extends LoreResourceBase {
                     Map.of("r", desired, "uid", req.uc_id(), "tid", req.target_id())))
                     .await().indefinitely();
             }
-            return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
+            // MT-01: вердикт ПЕРЕСЧИТЫВАЕТСЯ после привязки. primary-актор входит
+            // в знаменатель UcQuality, но привязывается отдельным вызовом уже
+            // ПОСЛЕ uc_new — поэтому любой новый сценарий получал 9/10, каким бы
+            // полным он ни был (воспроизведено пять раз подряд 2026-08-03).
+            // Оценка врала вниз систематически, а к систематическому вранью
+            // привыкают: 9/10 читалось как «норма для нового», и настоящая
+            // девятка терялась в шуме.
+            //
+            // Пересчёт только для actor: остальные rel в знаменатель не входят,
+            // и лишний запрос к графу на каждую привязку задачи или компонента
+            // был бы платой ни за что.
+            Map<String, Object> out = new java.util.LinkedHashMap<>(Map.of(
+                "ok", true, "uc_id", req.uc_id(),
                 "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют")));
+                "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют"));
+            if ("actor".equals(req.rel()) && linked) out.put("quality", qualityOf(req.uc_id()));
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE UC LINK] %s: %s", req.uc_id(), e.getMessage());
             return upstream(e);
