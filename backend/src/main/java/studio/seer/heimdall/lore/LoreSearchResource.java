@@ -478,10 +478,18 @@ public class LoreSearchResource extends LoreResourceBase {
         // недостачу сказано вслух.
         List<Map<String, Object>> rows = new ArrayList<>();
         List<String> partial = new ArrayList<>();
+        // Считаем УСПЕШНЫЕ половины, а не найденные строки. Первая редакция
+        // решала «ветка упала» по `rows.isEmpty()`, и это была та же ошибка,
+        // против которой вся задача: половина, честно вернувшая НОЛЬ совпадений,
+        // неотличима от половины, которая не отработала. Поймано сразу на живом
+        // стенде — запрос, не находящий ничего, помечал ветку упавшей целиком,
+        // хотя вершинная половина отработала штатно.
+        int halvesOk = 0;
         try {
             for (Map<String, Object> r : ingestService.queryPublic(sql, params)) {
                 rows.add(shapeHit(b, r, rawQ, b.vertexTextFields(), false));
             }
+            halvesOk++;
         } catch (RuntimeException e) {
             partial.add("вершина: " + LoreUpstream.detail(e));
         }
@@ -511,14 +519,17 @@ public class LoreSearchResource extends LoreResourceBase {
                 for (Map<String, Object> r : ingestService.queryPublic(hsql, hp)) {
                     rows.add(shapeHit(b, r, rawQ, b.histTextFields(), true));
                 }
+                halvesOk++;
             } catch (RuntimeException e) {
                 partial.add("история: " + LoreUpstream.detail(e));
             }
         }
 
-        // Обе половины упали — это отказ ветки, а не частичный результат:
-        // отдавать пустой список молча значило бы утверждать «здесь ничего нет».
-        if (!partial.isEmpty() && rows.isEmpty()) {
+        // Отказ ветки — это НИ ОДНОЙ успешной половины, а не «ноль строк».
+        // Пустая выдача при отработавшей половине — законный ответ «не нашли»,
+        // и превращать его в отказ значит терять единственное, что мы точно
+        // знаем: в опрошенной половине совпадений нет.
+        if (halvesOk == 0) {
             throw new IllegalStateException(String.join("; ", partial));
         }
         if (!partial.isEmpty()) {
