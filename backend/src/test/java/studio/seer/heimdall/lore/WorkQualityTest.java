@@ -131,6 +131,71 @@ class WorkQualityTest {
         assertEquals(r.max(), r.score(), "отсутствие вехи не снижает счёт");
     }
 
+    // ── релиз ────────────────────────────────────────────────────────────────
+
+    @Test
+    void полныйРелизНабираетМаксимум() {
+        var r = WorkQuality.evaluateRelease("v1.2.0", "## Что вошло\nПравки.",
+            List.of("SPRINT_A"), List.of(362), List.of("NooriUta/UnlimitedLORE"));
+        assertEquals(r.max(), r.score());
+        assertEquals("release", r.kind());
+    }
+
+    @Test
+    void релизБезСвязейКраснеетПоОбеимОсямРаздельно() {
+        // Спринты и PR — два разных вызова release_link, и забывается обычно
+        // первый. Общая проверка «связи есть» показывала бы зелёное при
+        // половине работы.
+        var r = WorkQuality.evaluateRelease("v1.2.0", "описание",
+            List.of(), List.of(), List.of("proj"));
+        assertFalse(find(r, "sprints_linked").ok());
+        assertFalse(find(r, "prs_linked").ok());
+    }
+
+    @Test
+    void релизСPRНоБезСпринтовВсёРавноНеполон() {
+        var r = WorkQuality.evaluateRelease("v1.2.0", "описание",
+            List.of(), List.of(362), List.of("proj"));
+        assertFalse(find(r, "sprints_linked").ok(), "PR не компенсируют отсутствие спринтов");
+        assertTrue(find(r, "prs_linked").ok());
+    }
+
+    @Test
+    void релизБезОписанияКраснеет() {
+        var r = WorkQuality.evaluateRelease("v1.2.0", "  ",
+            List.of("S"), List.of(1), List.of("proj"));
+        assertFalse(find(r, "description").ok(), "пробелы не описание");
+    }
+
+    // ── ADR ──────────────────────────────────────────────────────────────────
+
+    @Test
+    void полныйAdrНабираетМаксимум() {
+        var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
+            true, "контекст", "решение", "последствия");
+        assertEquals(r.max(), r.score());
+        assertEquals("adr", r.kind());
+    }
+
+    @Test
+    void adrБезРешенияКраснеет() {
+        // ADR без раздела «решение» — заметка, а не решение.
+        var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
+            true, "контекст", null, "последствия");
+        assertFalse(find(r, "decision").ok());
+    }
+
+    @Test
+    void последствияИАтомарныеРешенияТолькоПодсказки() {
+        // Бывают ADR, у которых последствий честно нет; разложение на решения —
+        // отдельный шаг, и требовать его в момент заведения значит блокировать черновик.
+        var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
+            false, "контекст", "решение", null);
+        assertFalse(find(r, "consequences").required());
+        assertFalse(find(r, "decisions").required());
+        assertEquals(r.max(), r.score(), "подсказки не снижают счёт");
+    }
+
     @Test
     void пустойСпринтКраснеетПоВсемОбязательным() {
         var r = WorkQuality.evaluateSprint(null, null, null, null, null, null);
