@@ -37,34 +37,31 @@ export function VpPalette({ disabled }: { disabled?: boolean }) {
     { kind: 'job', label: t('lore.product.vp.paletteAddJob', '+ Работа'), sub: t('lore.product.vp.paletteAddJobSub', 'что делает актор'), color: 'var(--job)' },
   ];
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', gap: 6, opacity: disabled ? .4 : 1,
-      // Оверлей поверх канвы (ReactFlow Panel): свой фон обязателен, иначе
-      // карточки сливаются с точечной сеткой холста под ними.
-      width: 132, padding: 8, borderRadius: 8,
-      background: 'color-mix(in srgb, var(--bg1) 88%, transparent)',
-      border: '1px solid var(--bd)', backdropFilter: 'blur(2px)',
-    }}>
-      <span style={{
-        fontSize: 'var(--fs-2xs)', fontWeight: 700, textTransform: 'uppercase',
-        letterSpacing: '.06em', color: 'var(--t3)', padding: '0 2px',
-      }}>
-        {t('lore.product.vp.paletteLabel', 'Палитра — тащи на канву')}
-      </span>
+    <div
+      // Компактный оверлей (замечание владельца: крупные карточки закрывали
+      // канву). Подпись «что это» — в title, не в теле карточки.
+      title={t('lore.product.vp.paletteLabel', 'Палитра — тащи на канву')}
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 4, opacity: disabled ? .4 : 1,
+        padding: 5, borderRadius: 7,
+        // Оверлей поверх канвы (ReactFlow Panel): свой фон обязателен, иначе
+        // карточки сливаются с точечной сеткой холста под ними.
+        background: 'color-mix(in srgb, var(--bg1) 88%, transparent)',
+        border: '1px solid var(--bd)', backdropFilter: 'blur(2px)',
+      }}
+    >
       {items.map(it => (
         <div
           key={it.kind}
           draggable={!disabled}
           onDragStart={e => { e.dataTransfer.setData('application/x-lore-vp-kind', it.kind); e.dataTransfer.effectAllowed = 'copy'; }}
-          title={it.label}
+          title={`${it.label} — ${it.sub}`}
           style={{
-            border: `1.5px dashed color-mix(in srgb, ${it.color} 45%, var(--bd))`, borderRadius: 6,
-            background: 'var(--bg2)', padding: '7px 9px', cursor: disabled ? 'default' : 'grab',
-            display: 'flex', flexDirection: 'column', gap: 2,
+            border: `1px dashed color-mix(in srgb, ${it.color} 45%, var(--bd))`, borderRadius: 5,
+            background: 'var(--bg2)', padding: '3px 7px', cursor: disabled ? 'default' : 'grab',
           }}
         >
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: it.color }}>{it.label}</span>
-          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>{it.sub}</span>
+          <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: it.color, whiteSpace: 'nowrap' }}>{it.label}</span>
         </div>
       ))}
     </div>
