@@ -27,7 +27,9 @@ import { fetchLoreSlice } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import { type ProductScreenProps, useSlice, asArray } from './shared';
-import VpValuePicker, { VpPalette, vpDragKind, type VpPickerRequest } from './VpValuePicker';
+import VpValuePicker, {
+  VpPalette, vpDragKind, isUcSector, type VpPickerRequest, type VpDragTarget,
+} from './VpValuePicker';
 import type { PainGainJobKind } from './PainGainJobModal';
 
 /** Пара «заявлено vs сделано» — одна на все три вида ценности. */
@@ -76,16 +78,17 @@ const SEC_FALLBACK: Record<string, string> = {
 };
 
 /**
- * Единственный сектор, куда ложится ценность каждого вида — и он всегда в
- * КРУГЕ (профиль клиента).
+ * Единственный сектор, куда ложится перетаскиваемое.
  *
- * Сектора квадрата (`ps`/`gc`/`pr` — Products & Services, Gain Creators, Pain
- * Relievers) заполняются НЕ ценностями, а сценариями, которые их закрывают.
- * Уронить туда боль значит записать «наша работа» вместо «боль клиента»:
- * запись легла бы не туда, а канва при этом выглядела бы исправной.
+ * Ценность всегда попадает в КРУГ (профиль клиента), сценарий — в свой сектор
+ * КВАДРАТА (карта ценности). Уронить боль в «Снимают боль» значило бы
+ * записать «наша работа» вместо «боль клиента»: запись легла бы не туда, а
+ * канва при этом выглядела бы исправной. Ключ здесь — он же значение для
+ * секторов квадрата: сценарий бросают ровно в тот сектор, который назван.
  */
-const KIND_SECTOR: Record<PainGainJobKind, 'pains' | 'gains' | 'jobs'> = {
+const TARGET_SECTOR: Record<VpDragTarget, string> = {
   pain: 'pains', gain: 'gains', job: 'jobs',
+  ps: 'ps', gc: 'gc', pr: 'pr',
 };
 
 /** Абсолютный (в координатах холста) прямоугольник сектора. */
@@ -237,7 +240,11 @@ const S = {
   navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
 };
 
-export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate }: ProductScreenProps) {
+// `onNavigate` больше не нужен: единственное место, где канва уводила на
+// другой экран («Завести сценарий» → US), теперь открывает форму на месте
+// (VP-01). Проп остаётся в контракте ProductScreenProps — его ждут соседние
+// экраны, — но здесь не используется.
+export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductScreenProps) {
   const { t } = useTranslation();
 
   // VP-01: бампается после создания/привязки боли-выгоды-работы с канвы —
@@ -450,9 +457,15 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
   // VP-01: запрос на добавление боли/выгоды/работы — открыт кликом по пустой
   // карточке сектора ИЛИ дропом карточки из палитры. null — пикер закрыт.
   const [pickerRequest, setPickerRequest] = useState<VpPickerRequest | null>(null);
-  const openPicker = useCallback((kind: PainGainJobKind) => {
-    if (!actorId) return; // некому привязывать — «все акторы вместе» не сегмент
-    setPickerRequest({ kind, actorId, actorName: actorName.get(actorId) ?? actorId });
+  const openPicker = useCallback((target: VpDragTarget) => {
+    // Сценарий — про НАШУ работу, сегмент ему не нужен. Ценность без сегмента
+    // повисла бы ничьей, поэтому для неё актор обязателен.
+    if (!isUcSector(target) && !actorId) return;
+    setPickerRequest({
+      target,
+      actorId: actorId || undefined,
+      actorName: actorId ? (actorName.get(actorId) ?? actorId) : undefined,
+    });
   }, [actorId, actorName]);
 
   /**
@@ -464,17 +477,18 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
    * показывает «сюда нельзя» ещё до отпускания.
    */
   const rf = useRef<ReactFlowInstance | null>(null);
-  const dropSpot = useCallback((kind: PainGainJobKind, clientX: number, clientY: number) => {
+  const dropSpot = useCallback((target: VpDragTarget, clientX: number, clientY: number) => {
     const inst = rf.current;
     if (!inst) return null;
     const p = inst.screenToFlowPosition({ x: clientX, y: clientY });
-    const r = sectorRect(KIND_SECTOR[kind]);
+    const r = sectorRect(TARGET_SECTOR[target]);
     if (p.x < r.x || p.x > r.x + r.w || p.y < r.y || p.y > r.y + r.h) return null;
     // Клампим так, чтобы карточка целиком осталась в секторе: `extent: 'parent'`
     // всё равно втянул бы её обратно, но уже после видимого прыжка.
+    const size = isUcSector(target) ? SCEN : VAL;
     return {
-      x: Math.min(Math.max(p.x - r.x - VAL.w / 2, 4), Math.max(4, r.w - VAL.w - 4)),
-      y: Math.min(Math.max(p.y - r.y - VAL.h / 2, 22), Math.max(22, r.h - VAL.h - 4)),
+      x: Math.min(Math.max(p.x - r.x - size.w / 2, 4), Math.max(4, r.w - size.w - 4)),
+      y: Math.min(Math.max(p.y - r.y - size.h / 2, 22), Math.max(22, r.h - size.h - 4)),
     };
   }, []);
   /** Куда лечь карточке, созданной последним дропом (id узнаём только после записи). */
@@ -603,9 +617,10 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           ghost: true, code: '', color: 'var(--wrn)', w: SCEN.w, h: SCEN.h, dim: false,
           add: true, count: n,
           title: t('lore.product.canvas.addScenario', 'Завести сценарий'),
-          // Форма создания US живёт на своём экране и знает про родителя —
-          // дублировать её в канве значило бы держать две формы одной сущности.
-          onAdd: () => onNavigate('userStories', featureId),
+          // Открывает пикер прямо здесь (VP-01): уход на экран US разрывал
+          // работу ровно там, где виден разрыв, который её и вызвал. Форма
+          // создания при этом та же самая (UsFormModal), не копия.
+          onAdd: () => openPicker(key as VpDragTarget),
         },
       });
     }
@@ -870,23 +885,24 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
       <div
         ref={boxRef}
         onDragOver={e => {
-          // Принимаем ТОЛЬКО над своим сектором круга. Без preventDefault
-          // браузер сам рисует «сюда нельзя» — отказ виден до отпускания, а не
-          // после того, как ценность уже уехала не туда.
-          const kind = actorId ? vpDragKind(e.dataTransfer.types) : null;
-          if (kind && dropSpot(kind, e.clientX, e.clientY)) {
+          // Принимаем ТОЛЬКО над своим сектором. Без preventDefault браузер сам
+          // рисует «сюда нельзя» — отказ виден до отпускания, а не после того,
+          // как запись уже уехала не туда.
+          const tgt = vpDragKind(e.dataTransfer.types);
+          if (!tgt || (!isUcSector(tgt) && !actorId)) return;
+          if (dropSpot(tgt, e.clientX, e.clientY)) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
           }
         }}
         onDrop={e => {
-          const kind = actorId ? vpDragKind(e.dataTransfer.types) : null;
-          if (!kind) return;
-          const spot = dropSpot(kind, e.clientX, e.clientY);
+          const tgt = vpDragKind(e.dataTransfer.types);
+          if (!tgt || (!isUcSector(tgt) && !actorId)) return;
+          const spot = dropSpot(tgt, e.clientX, e.clientY);
           if (!spot) return;          // мимо своего сектора — не наше дело
           e.preventDefault();
           dropPos.current = spot;     // карточка ляжет туда, куда донесли
-          openPicker(kind);
+          openPicker(tgt);
         }}
         style={{
           // Высота задана напрямую, БЕЗ aspect-ratio. С `aspect-ratio` минимум
@@ -919,12 +935,12 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           <Background variant={BackgroundVariant.Dots} color="var(--bd)" gap={22} size={1} />
           {/* VP-01: палитра — ЧАСТЬ канвы (оверлей ReactFlow Panel), а не
               внешний блок: внешняя колонка сужала холст, замечание владельца.
-              Скрыта без выбранного актора: привязывать заведомо некому. */}
-          {!!actorId && (
-            <Panel position="top-left" style={{ margin: 8 }}>
-              <VpPalette disabled={false} />
-            </Panel>
-          )}
+              Показана ВСЕГДА: спрятанная палитра унесла с собой и знание, что
+              такая возможность есть («откуда тащить то?»). Недоступность
+              объясняется подсказкой на самой карточке. */}
+          <Panel position="top-left" style={{ margin: 8 }}>
+            <VpPalette noActor={!actorId} />
+          </Panel>
         </ReactFlow>
       </div>
 
@@ -934,13 +950,24 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
         pains={pains}
         gains={gains}
         jobs={jobs}
+        ucs={ucs}
+        featurePainIds={painIds}
+        featureGainIds={gainIds}
         onClose={() => { dropPos.current = null; setPickerRequest(null); }}
         onLinked={id => {
           // Позиция известна только для дропа: у клика по пустой карточке её
           // нет, и узел встаёт по сетке сектора, как любой другой.
           const spot = dropPos.current;
+          const tgt = pickerRequest?.target;
           dropPos.current = null;
-          if (spot) { setPos(prev => ({ ...prev, [id]: spot })); persist(); }
+          if (spot && tgt) {
+            // Ключ позиции — id УЗЛА, а он в квадрате несёт префикс сектора
+            // (см. fill): без префикса карточка легла бы по сетке, а сохранённая
+            // позиция осталась бы висеть на несуществующем узле.
+            const prefix = tgt === 'ps' ? 'ps-' : tgt === 'gc' ? 'crt-' : tgt === 'pr' ? 'rel-' : '';
+            setPos(prev => ({ ...prev, [prefix + id]: spot }));
+            persist();
+          }
           setRefreshKey(k => k + 1);
         }}
         onError={onError}
