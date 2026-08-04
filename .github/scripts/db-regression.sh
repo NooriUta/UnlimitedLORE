@@ -244,6 +244,124 @@ observe "sql.edge_in_out_fields"    "SELECT @out.k AS src, @in.k AS dst FROM RgL
 observe "sql.traverse_where"        "SELECT FROM (TRAVERSE out('RgLink') FROM (SELECT FROM RgA WHERE k = 'a1')) WHERE @class = 'RgB'"
 observe "sql.contains_on_traversal" "SELECT FROM RgA WHERE out('RgLink').k CONTAINS 'b1'"
 
+# --- C10. Супернода и конкурентная запись рёбер (#5302) ----------------------
+# В 26.7.3 исправлено: «edge-append merge больше не откатывает конкурентные
+# записи на многостраничных чанках рёбер» — то есть ПОТЕРЯ ДАННЫХ в сценариях
+# с супернодами. Мы сидели на 26.7.2, где дефект действует, и никогда его не
+# проверяли.
+#
+# Для нас это не абстракция: суперноды штатные — спринт с сотней задач
+# (PART_OF), актор со всеми сценариями (HAS_ACTOR), релиз со спринтами и PR.
+# Конкурентная запись тоже штатная: параллельные сессии агентов пишут в один
+# корпус.
+#
+# Проверка: набить вершине рёбер так, чтобы чанк стал многостраничным, затем
+# добавлять параллельно и сверить ЧИСЛО рёбер с числом подтверждённых записей.
+
+sql "CREATE VERTEX TYPE RgHub IF NOT EXISTS" >/dev/null
+sql "CREATE VERTEX TYPE RgLeaf IF NOT EXISTS" >/dev/null
+sql "CREATE EDGE TYPE RgHas IF NOT EXISTS" >/dev/null
+sql "INSERT INTO RgHub SET k = 'hub'" >/dev/null
+
+SEED=400          # чтобы чанк рёбер заведомо перестал быть одностраничным
+PAR=6             # параллельных писателей
+PER=40            # рёбер на писателя
+
+seed_file="$(mktemp)"
+{
+  printf '{"language":"sqlscript","command":"'
+  for i in $(seq 1 "$SEED"); do
+    printf "INSERT INTO RgLeaf SET k = 's%s';" "$i"
+    printf "CREATE EDGE RgHas FROM (SELECT FROM RgHub WHERE k = 'hub') TO (SELECT FROM RgLeaf WHERE k = 's%s');" "$i"
+  done
+  printf '"}'
+} > "$seed_file"
+api "command/$DB_NAME" "@$seed_file" >/dev/null
+rm -f "$seed_file"
+
+SEEDED=$(scalar "$(sql "SELECT out('RgHas').size() AS n FROM RgHub WHERE k = 'hub'")" n)
+
+# Параллельные писатели. Каждый подтверждает свои записи кодом 200; сколько
+# подтверждено — столько рёбер и обязано быть.
+ok_dir="$(mktemp -d)"
+for w in $(seq 1 "$PAR"); do
+  (
+    f="$(mktemp)"
+    {
+      printf '{"language":"sqlscript","command":"'
+      for j in $(seq 1 "$PER"); do
+        printf "INSERT INTO RgLeaf SET k = 'w%s_%s';" "$w" "$j"
+        printf "CREATE EDGE RgHas FROM (SELECT FROM RgHub WHERE k = 'hub') TO (SELECT FROM RgLeaf WHERE k = 'w%s_%s');" "$w" "$j"
+      done
+      printf '"}'
+    } > "$f"
+    code=$(curl -s -u "$DB_USER:$DB_PASS" -H 'Content-Type: application/json' \
+      -X POST "$DB_URL/api/v1/command/$DB_NAME" --data-binary "@$f" \
+      -o /dev/null -w '%{http_code}')
+    [ "$code" = "200" ] && printf '%s\n' "$PER" > "$ok_dir/$w"
+    rm -f "$f"
+  ) &
+done
+wait
+
+CONFIRMED=0
+WRITERS_OK=0
+for f in "$ok_dir"/*; do
+  if [ -f "$f" ]; then
+    CONFIRMED=$((CONFIRMED + $(cat "$f")))
+    WRITERS_OK=$((WRITERS_OK + 1))
+  fi
+done
+rm -rf "$ok_dir"
+
+ACTUAL=$(scalar "$(sql "SELECT out('RgHas').size() AS n FROM RgHub WHERE k = 'hub'")" n)
+EXPECTED=$((SEEDED + CONFIRMED))
+
+# Доля подтверждённых записей — ОТДЕЛЬНЫЙ вердикт, а не деталь предыдущего.
+#
+# Замер 2026-08-04: на 26.7.2 запись подтвердили 2 писателя из 6, на 26.8.1 —
+# все 6. То есть #5302 проявляется у нас не тихой потерей, а ВИДИМЫМ отказом
+# конкурентных писателей: рёбер ровно столько, сколько подтверждено, и кейс
+# выше зелёный на обеих версиях. Без отдельного вердикта разница осела бы в
+# строке детали и в глаза не бросилась — то есть проверка, ради которой всё
+# затевалось, не отличала бы версии.
+if [ "${WRITERS_OK:-0}" -eq "$PAR" ]; then
+  emit "edges.concurrent_write_accepted" "PASS" "все $PAR писателей приняты"
+else
+  emit "edges.concurrent_write_accepted" "FAIL" "приняты $WRITERS_OK из $PAR — конкурентная запись в супернод отбивается"
+fi
+
+if [ -z "$ACTUAL" ] || [ -z "$SEEDED" ]; then
+  emit "edges.supernode_concurrent" "UNAVAILABLE" "не удалось сосчитать рёбра: seeded='$SEEDED' actual='$ACTUAL'"
+elif [ "$CONFIRMED" -eq 0 ]; then
+  emit "edges.supernode_concurrent" "UNAVAILABLE" "ни один писатель не подтвердил запись — проверять нечего"
+elif [ "$ACTUAL" = "$EXPECTED" ]; then
+  emit "edges.supernode_concurrent" "PASS" "рёбер $ACTUAL == посеяно $SEEDED + подтверждено $CONFIRMED"
+else
+  emit "edges.supernode_concurrent" "FAIL" "рёбер $ACTUAL, ожидалось $EXPECTED (посеяно $SEEDED + подтверждено $CONFIRMED) — потеряно $((EXPECTED - ACTUAL)) при конкурентной записи"
+fi
+
+# --- C11. Проекции SCD2, на которых стоят ВСЕ слайсы -------------------------
+# Открытая строка истории читается везде одинаково: HAS_STATE с фильтром по
+# непустому полю и взятием [0]. Если эта форма поедет, молча поедут все слайсы
+# разом — а выглядеть будет как «данные пропали».
+
+sql "CREATE VERTEX TYPE RgEnt IF NOT EXISTS" >/dev/null
+sql "CREATE VERTEX TYPE RgEntHist IF NOT EXISTS" >/dev/null
+sql "CREATE EDGE TYPE RgHasState IF NOT EXISTS" >/dev/null
+sql "INSERT INTO RgEnt SET uid = 'e1'" >/dev/null
+sql "INSERT INTO RgEntHist SET sid = 'h1', status_raw = 'DONE', valid_to = 'closed'" >/dev/null
+sql "INSERT INTO RgEntHist SET sid = 'h2', status_raw = 'OPEN'" >/dev/null
+sql "CREATE EDGE RgHasState FROM (SELECT FROM RgEnt WHERE uid = 'e1') TO (SELECT FROM RgEntHist WHERE sid = 'h1')" >/dev/null
+sql "CREATE EDGE RgHasState FROM (SELECT FROM RgEnt WHERE uid = 'e1') TO (SELECT FROM RgEntHist WHERE sid = 'h2')" >/dev/null
+
+OPEN_ROW=$(sql "SELECT out('RgHasState')[valid_to IS NULL].status_raw[0] AS st FROM RgEnt WHERE uid = 'e1'")
+if printf '%s' "$OPEN_ROW" | grep -q '"st":"OPEN"'; then
+  emit "sql.scd2_open_row_projection" "PASS" "открытая строка истории читается: OPEN"
+else
+  emit "sql.scd2_open_row_projection" "FAIL" "проекция открытой строки сломана — на ней стоят все слайсы: $(printf '%s' "$OPEN_ROW" | head -c 200)"
+fi
+
 # --- Самоконтроль: кейс, который ОБЯЗАН покраснеть ---------------------------
 # Без него зелёный прогон означал бы «набор ничего не смотрит» — ровно та
 # ошибка, что с выкаченным за флагом скоупом.
