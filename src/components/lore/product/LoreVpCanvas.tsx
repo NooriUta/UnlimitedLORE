@@ -20,10 +20,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import {
   ReactFlow, Controls, Background, BackgroundVariant, Panel, Handle, Position,
   type NodeProps, type Node, type Edge, type NodeChange, type ReactFlowInstance,
+  type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { LoreFeatureRow, LoreUcRow, LorePainRow, LoreGainRow, LoreJobRow, LoreActorRow } from '../../../api/lore';
-import { fetchLoreSlice } from '../../../api/lore';
+import { fetchLoreSlice, linkLoreUc, linkLoreVp } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import { type ProductScreenProps, useSlice, asArray } from './shared';
@@ -200,8 +201,23 @@ function StickerNode({ data }: NodeProps) {
         color: 'var(--t3)', maxWidth: 'calc(100% - 44px)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{d.ghost ? '' : d.code}</span>
-      <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
-      <Handle type="source" position={Position.Right} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
+      {/* VP-01: точки связи. У «дыры» их нет — она не сущность корпуса, и
+          тянуть от неё нечего. Полупрозрачны в покое и проявляются на
+          наведении: постоянно видимые восемь точек на карточку превратили бы
+          канву в схему электропроводки. Что с чем соединимо, решает
+          `isValidConnection` — рука не дотянется до несовместимого. */}
+      {!d.ghost && (
+        <>
+          <Handle
+            type="target" position={Position.Left} isConnectable
+            style={{ width: 7, height: 7, background: d.color, border: '1px solid var(--bg0)', opacity: .45 }}
+          />
+          <Handle
+            type="source" position={Position.Right} isConnectable
+            style={{ width: 7, height: 7, background: d.color, border: '1px solid var(--bg0)', opacity: .45 }}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -239,6 +255,47 @@ const S = {
   wrap: { padding: 14, width: '100%' } as CSSProperties,
   navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
 };
+
+/** Сущность за узлом канвы: квадрат несёт префикс сектора, круг — голый id. */
+function entityOf(
+  nodeId: string | null,
+  ids: { pains: string[]; gains: string[]; jobs: string[] },
+): { kind: 'uc' | 'pain' | 'gain' | 'job'; bare: string } | null {
+  if (!nodeId) return null;
+  if (nodeId.startsWith('ps-')) return { kind: 'uc', bare: nodeId.slice(3) };
+  if (nodeId.startsWith('crt-') || nodeId.startsWith('rel-')) return { kind: 'uc', bare: nodeId.slice(4) };
+  if (ids.pains.includes(nodeId)) return { kind: 'pain', bare: nodeId };
+  if (ids.gains.includes(nodeId)) return { kind: 'gain', bare: nodeId };
+  if (ids.jobs.includes(nodeId)) return { kind: 'job', bare: nodeId };
+  return null;   // рамка, сектор, карточка-дыра — не сущности корпуса
+}
+
+/**
+ * Какое ребро означает протянутая связь «откуда → куда» (FIT-08). null —
+ * такой связи не бывает, и рука до неё не дотянется (`isValidConnection`).
+ *
+ * Чистая функция и покрыта тестом НАРОЧНО: ошибка здесь не роняет экран, а
+ * пишет в корпус НЕ ТО ребро — то есть выглядит как успешная работа. Тот же
+ * повод, по которому вынесен `buildStickerNode`.
+ *
+ * Направление несёт смысл и не симметрично: сценарий СНИМАЕТ боль, боль МЕШАЕТ
+ * работе. Обратное перетаскивание — не «то же самое наоборот», а другое
+ * утверждение, поэтому оно просто не соединяется.
+ */
+export function vpConnection(
+  from: string | null,
+  to: string | null,
+  ids: { pains: string[]; gains: string[]; jobs: string[] },
+): { scope: 'uc' | 'vp'; rel: string; source: string; target: string } | null {
+  const s = entityOf(from, ids), t = entityOf(to, ids);
+  if (!s || !t || s.bare === t.bare) return null;
+  if (s.kind === 'uc' && t.kind === 'pain') return { scope: 'uc', rel: 'relieves', source: s.bare, target: t.bare };
+  if (s.kind === 'uc' && t.kind === 'gain') return { scope: 'uc', rel: 'delivers', source: s.bare, target: t.bare };
+  if (s.kind === 'uc' && t.kind === 'job') return { scope: 'uc', rel: 'performs', source: s.bare, target: t.bare };
+  if (s.kind === 'pain' && t.kind === 'job') return { scope: 'vp', rel: 'blocks', source: s.bare, target: t.bare };
+  if (s.kind === 'gain' && t.kind === 'job') return { scope: 'vp', rel: 'success_of', source: s.bare, target: t.bare };
+  return null;
+}
 
 // `onNavigate` больше не нужен: единственное место, где канва уводила на
 // другой экран («Завести сценарий» → US), теперь открывает форму на месте
@@ -494,6 +551,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   /** Куда лечь карточке, созданной последним дропом (id узнаём только после записи). */
   const dropPos = useRef<{ x: number; y: number } | null>(null);
 
+  const relOf = useCallback(
+    (from: string | null, to: string | null) => vpConnection(from, to, { pains: painIds, gains: gainIds, jobs: jobIds }),
+    [painIds, gainIds, jobIds],
+  );
+
   const nodes: Node[] = useMemo(() => {
     const out: Node[] = [];
     // Порядок обязателен: родитель должен идти В МАССИВЕ раньше ребёнка, иначе
@@ -683,6 +745,22 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
   const persist = useCallback(() => {
     setPos(p => { localStorage.setItem('lore.vp.pos', JSON.stringify(p)); return p; });
   }, []);
+
+  /** Гейт соединения: рука не дотянется до несовместимого (FIT-08). */
+  const isValidConnection = useCallback(
+    (c: Connection | Edge) => !!relOf(c.source ?? null, c.target ?? null),
+    [relOf],
+  );
+
+  /** Связь протянута — записываем ребро и перечитываем канву. */
+  const onConnect = useCallback((c: Connection) => {
+    const link = relOf(c.source ?? null, c.target ?? null);
+    if (!link) return;   // до сюда не дойдёт: isValidConnection уже отбил
+    const write = link.scope === 'uc'
+      ? linkLoreUc({ uc_id: link.source, rel: link.rel as 'relieves' | 'delivers' | 'performs', target_id: link.target })
+      : linkLoreVp({ source_id: link.source, rel: link.rel as 'blocks' | 'success_of', target_id: link.target });
+    write.then(() => setRefreshKey(k => k + 1)).catch(onError);
+  }, [relOf, onError]);
 
   /**
    * Перевписать сцену при изменении размера окна и при смене канвы.
@@ -922,7 +1000,9 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           onNodeDragStop={persist}
           onNodeMouseEnter={(_, n) => setHover(n.id)}
           onNodeMouseLeave={() => setHover(null)}
-          nodesConnectable={false}
+          nodesConnectable
+          onConnect={onConnect}
+          isValidConnection={isValidConnection}
           nodesFocusable={false}
           edgesFocusable={false}
           fitView
@@ -982,6 +1062,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductS
           {t('lore.product.canvas.legendProven', 'подтверждено метрикой')}</span>
         <span><i style={{ display: 'inline-block', width: 22, borderTop: '1px dashed var(--t3)', verticalAlign: 'middle', marginRight: 5 }} />
           {t('lore.product.canvas.legendProfile', 'внутри клиента: боль мешает работе, выгода — её успех')}</span>
+        {/* Связь рисуется, а не заводится в форме (FIT-08). Без подписи об этом
+            не догадаться: точки на карточках проявляются только на наведении. */}
+        <span style={{ color: 'var(--t3)' }}>
+          ⟶ {t('lore.product.canvas.legendConnect', 'тяните от точки карточки к другой: сценарий → боль/выгода/работа, боль → работа, выгода → работа')}
+        </span>
       </div>
 
       {/* Навигатор по канвам — ПОД канвой: сверху он отжимал саму канву вниз, а
