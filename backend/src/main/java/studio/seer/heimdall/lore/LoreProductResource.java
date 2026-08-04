@@ -103,6 +103,9 @@ public class LoreProductResource extends LoreResourceBase {
     @Inject
     ProjectRbacService projectRbac;
 
+    @Inject
+    UcReadinessCalculator readiness;
+
     // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
     //
     // PL-28 (решение №141): отдельного типа больше нет. Эндпоинт сохранён и
@@ -496,6 +499,89 @@ public class LoreProductResource extends LoreResourceBase {
     public Response agentMatrix() {
         if (!enabled) return disabled();
         return noStore(Response.ok(Map.of("matrix", ProjectRbacService.ROLE_AGENT_MATRIX)));
+    }
+
+    /**
+     * MT-02: на какой доле корпуса посчитан INVEST-профиль.
+     *
+     * <p>Отдельным эндпоинтом, а не полем внутри среза: срез возвращает СЫРЫЕ
+     * строки задач, и подмешивать в них агрегат значило бы менять его контракт.
+     * Потребитель зовёт оба и показывает долю рядом с балансом.
+     */
+    @GET
+    @Path("product/invest-coverage")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response investCoverage() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                LoreSlices.get("invest_profile").baseSql(), Map.of());
+            return noStore(Response.ok(VpFitGaps.coverage(rows)));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE INVEST-COVERAGE] %s", LoreUpstream.detail(e));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+        }
+    }
+
+    /** Плоский справочник ключ→значение из запроса с колонками k и v. */
+    private Map<String, String> dictOf(String sql) {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> r : ingest.queryPublic(sql, Map.of())) {
+            Object k = r.get("k"), v = r.get("v");
+            if (k != null && v != null) out.put(String.valueOf(k), String.valueOf(v));
+        }
+        return out;
+    }
+
+    /**
+     * Разрыв «заявлено против доставлено» готовыми строками.
+     *
+     * <p>Срез {@code feature_vp_analytics} отдаёт сырые множества, а разницу
+     * оставляет потребителю — и разницу не считал НИКТО. Цена выяснилась на
+     * самой канве: {@code FEAT-VP-FIT}, фича ровно про ловлю этого разрыва,
+     * стояла {@code shipped} с тремя пустыми осями доставки, и обнаружено это
+     * было сверкой шести массивов глазами.
+     *
+     * <p>SQL переиспользуется из того же слайса, а не переписывается рядом:
+     * вторая копия разошлась бы с первой при первой же правке — так уже
+     * расходились справочник и realm.
+     */
+    @GET
+    @Path("product/fit-gaps")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response fitGaps() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                LoreSlices.get("feature_vp_analytics").baseSql(), Map.of());
+            // MT-04: ранги тянутся отдельными запросами, а не добавляются в
+            // слайс. Слайс отдаёт строку НА КОРЕНЬ, а ранг живёт на выгоде —
+            // втащить его туда значило бы либо дублировать строки, либо возить
+            // параллельные массивы «id → ранг», которые разъезжаются при первой
+            // же правке порядка. Два плоских справочника дешевле и честнее.
+            Map<String, String> gainRanks = dictOf(
+                "SELECT gain_id AS k, rank AS v FROM KnowGain");
+            Map<String, String> painSeverities = dictOf(
+                "SELECT pain_id AS k, severity AS v FROM KnowPain");
+            List<VpFitGaps.Gap> gaps = VpFitGaps.evaluate(rows, gainRanks, painSeverities);
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("gaps", gaps);
+            out.put("roots_checked", rows.size());
+            // Сводка по весам: одна строка «3 из 17 существенные» отвечает на
+            // вопрос «плохо ли всё» без чтения списка.
+            long essential = gaps.stream().filter(VpFitGaps.Gap::essential).count();
+            out.put("essential_gaps", essential);
+            // Пустой список — это «дыр нет», а не «посмотреть не удалось»:
+            // отказ уходит 502 ниже. Разводить эти два состояния обязательно,
+            // иначе пустая выдача читается как здоровье (урок DBR-09).
+            out.put("clean", gaps.isEmpty());
+            return noStore(Response.ok(out));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE FIT-GAPS] %s", LoreUpstream.detail(e));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+        }
     }
 
     /**
@@ -930,6 +1016,17 @@ public class LoreProductResource extends LoreResourceBase {
                     : "DELETE FROM (SELECT expand(inE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) WHERE @out.task_uid=:tid";
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", delSql, p))
                     .await().indefinitely();
+                // MT-07: отвязка задачи тоже меняет готовность. Снятие последней
+                // задачи обязано вернуть статус к намерению автора — иначе
+                // сценарий остаётся «выпущенным» без единой задачи.
+                if ("task".equals(req.rel())) {
+                    try {
+                        readiness.recompute(req.uc_id());
+                    } catch (RuntimeException e) {
+                        LOG.warnf("[LORE READINESS] %s: пересчёт после отвязки не выполнен (%s)",
+                            req.uc_id(), LoreUpstream.detail(e));
+                    }
+                }
                 return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
             }
@@ -957,9 +1054,49 @@ public class LoreProductResource extends LoreResourceBase {
                     Map.of("r", desired, "uid", req.uc_id(), "tid", req.target_id())))
                     .await().indefinitely();
             }
-            return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
+            // MT-01: вердикт ПЕРЕСЧИТЫВАЕТСЯ после привязки. primary-актор входит
+            // в знаменатель UcQuality, но привязывается отдельным вызовом уже
+            // ПОСЛЕ uc_new — поэтому любой новый сценарий получал 9/10, каким бы
+            // полным он ни был (воспроизведено пять раз подряд 2026-08-03).
+            // Оценка врала вниз систематически, а к систематическому вранью
+            // привыкают: 9/10 читалось как «норма для нового», и настоящая
+            // девятка терялась в шуме.
+            //
+            // Пересчёт только для actor: остальные rel в знаменатель не входят,
+            // и лишний запрос к графу на каждую привязку задачи или компонента
+            // был бы платой ни за что.
+            Map<String, Object> out = new java.util.LinkedHashMap<>(Map.of(
+                "ok", true, "uc_id", req.uc_id(),
                 "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют")));
+                "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют"));
+            if ("actor".equals(req.rel()) && linked) out.put("quality", qualityOf(req.uc_id()));
+            // MT-07: привязка задачи меняет картину готовности — пересчитываем.
+            //
+            // Вычислитель просыпался ТОЛЬКО из recomputeForTask при смене статуса
+            // задачи. Значит порядок «сначала сделали, потом описали» — основной
+            // при реконструкции продуктового слоя задним числом — оставлял
+            // сценарий невыпущенным НАВСЕГДА: задача уже закрыта, статус её
+            // больше не меняется, а привязка пересчёт не будила.
+            //
+            // Найдено экспериментом 2026-08-03: три сценария привязаны к закрытым
+            // задачам, shipped стал только тот, у которого потом дёрнули
+            // status_set. Отсюда же пустой shipped_job_ids у всех корней —
+            // читалось как «ценность не доехала», означало «пересчёт не звали».
+            //
+            // Отвязка тоже считается: снятие последней задачи возвращает статус
+            // к намерению автора, и промолчать об этом значит оставить сценарий
+            // выпущенным без единой задачи.
+            if ("task".equals(req.rel())) {
+                try {
+                    readiness.recompute(req.uc_id());
+                } catch (RuntimeException e) {
+                    // Пересчёт вспомогательный: его отказ не имеет права
+                    // превратить успешную привязку в ошибку.
+                    LOG.warnf("[LORE READINESS] %s: пересчёт после привязки не выполнен (%s)",
+                        req.uc_id(), LoreUpstream.detail(e));
+                }
+            }
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE UC LINK] %s: %s", req.uc_id(), e.getMessage());
             return upstream(e);

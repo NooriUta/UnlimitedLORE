@@ -64,11 +64,16 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     public record TaskEditRequest(String task_uid, String title, String note_md, Double effort_days,
         String work_class, String uc_id,
         String author_agent, String executor_agent, String reviewer_agent, String task_type) {}
-    public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index) {}
+    // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
+    // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
+    // а не когда кто-то откроет срез гигиены через неделю.
+    public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index,
+        WorkQuality.Result quality) {}
     // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
-    public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index) {}
+    public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index,
+        String summary_md) {}
     public record PhaseWriteResponse(boolean ok, String phase_uid, String phase_id,
-        Integer order_index, boolean created) {}
+        Integer order_index, boolean created, WorkQuality.Result quality) {}
     public record TaskPhaseRequest(String task_uid, String phase_uid, String action) {}
 
     public record SprintCreateRequest(String sprint_id, String name, String status,
@@ -112,6 +117,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
             out.put("created", r.created());
+            out.put("quality", sprintQuality(req.sprint_id()));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT CREATE] %s: %s", req.sprint_id(), e.getMessage());
@@ -224,7 +230,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                         new LoreCommandClient.LoreCommand("sqlscript", script.toString(), p))
                     .chain(__ -> Uni.createFrom().item(() -> {
                             hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
-                            return noStore(Response.ok(new TaskWriteResponse(true, uid, tid, order)));
+                            return noStore(Response.ok(
+                                new TaskWriteResponse(true, uid, tid, order, taskQuality(uid))));
                         })
                         .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()));
 
@@ -248,6 +255,74 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
                     .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
             });
+    }
+
+    // ── Линтер полноты: вердикт в ответе на запись ───────────────────────────
+    //
+    // Четыре поля забывались раз за разом — статус, компонент, оценка, проект, —
+    // и напоминал о них ЧЕЛОВЕК. Слайсы гигиены ловят часть, но постфактум и
+    // только если кто-то откроет срез: к тому моменту контекст записи утерян.
+    // Здесь вердикт возвращается в момент записи, когда автор ещё может дописать.
+    //
+    // Проба ЧИТАЮЩАЯ и обёрнута в catch: сам линтер — вспомогательная функция,
+    // и его отказ не имеет права превратить успешную запись в ошибку. Не смогли
+    // собрать факты — вердикта в ответе просто нет (null), и это честнее, чем
+    // вердикт, посчитанный по недособранным фактам.
+    //
+    // Блокирующий вызов допустим только там, откуда он зовётся: в createTask и
+    // editTask — внутри блока на рабочем пуле (рядом со stampOpenHist), в
+    // sprint-путях — из синхронного метода.
+    private WorkQuality.Result taskQuality(String uid) {
+        try {
+            var res = client.query(db, basicAuth(), new MartQuery("sql",
+                "SELECT work_class, "
+                + "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, "
+                + "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, "
+                // Компонент: свой ИЛИ унаследованный от спринта — задача,
+                // сидящая в размеченном спринте, компонент уже имеет.
+                + "out('TAGGED_WITH').component_id AS own_components, "
+                + "out('PART_OF').out('BELONGS_TO').component_id AS sprint_components, "
+                // Проекта своего у задачи нет по модели — только через спринт.
+                + "out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects, "
+                + "out('REALIZES').uc_id AS realizes_uc, "
+                + "out('JUSTIFIED_BY').adr_id AS justified_by "
+                + "FROM KnowTask WHERE task_uid = :uid", Map.of("uid", uid), 1))
+                .await().indefinitely();
+            var rows = res.result();
+            if (rows == null || rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            Object comps = r.get("own_components");
+            if (!(comps instanceof java.util.Collection<?> c) || c.isEmpty()) comps = r.get("sprint_components");
+            Object eff = r.get("effort_days");
+            Double effort = eff instanceof Number n ? n.doubleValue() : null;
+            return WorkQuality.evaluateTask(str(r.get("status_raw")), effort, str(r.get("work_class")),
+                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] задача %s: вердикт не собран (%s)", uid, LoreUpstream.detail(e));
+            return null;
+        }
+    }
+
+    private WorkQuality.Result sprintQuality(String sid) {
+        try {
+            var res = client.query(db, basicAuth(), new MartQuery("sql",
+                "SELECT out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, "
+                + "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0] AS planned_start_date, "
+                + "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]     AS planned_end_date, "
+                + "out('BELONGS_TO_PROJECT').slug        AS projects, "
+                + "out('BELONGS_TO').component_id        AS components, "
+                + "out('TARGETS_MILESTONE').milestone_id AS milestones "
+                + "FROM KnowSprint WHERE sprint_id = :sid", Map.of("sid", sid), 1))
+                .await().indefinitely();
+            var rows = res.result();
+            if (rows == null || rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            return WorkQuality.evaluateSprint(str(r.get("status_raw")), r.get("projects"), r.get("components"),
+                str(r.get("planned_start_date")), str(r.get("planned_end_date")), r.get("milestones"));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] спринт %s: вердикт не собран (%s)", sid, LoreUpstream.detail(e));
+            return null;
+        }
     }
 
     // ── ADR-LORE-013: move a task between sprints (cancel + recreate) ────────
@@ -387,6 +462,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         final String uid     = sid + "/PHASE_" + key;
         final String display = "Фаза " + key;
         final String name    = req.name();
+        final String summary = req.summary_md();
         final String now     = Instant.now().toString();
         final String nsid    = UUID.randomUUID().toString();
 
@@ -399,8 +475,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 List<Map<String, Object>> rows = res.result() != null ? res.result() : List.of();
                 if (!rows.isEmpty()) {   // idempotent: phase already registered
                     Object oi = rows.get(0).get("order_index");
+                    Integer oiv = oi instanceof Number n ? n.intValue() : null;
                     return Uni.createFrom().item(noStore(Response.ok(new PhaseWriteResponse(
-                        true, uid, display, oi instanceof Number n ? n.intValue() : null, false))));
+                        true, uid, display, oiv, false,
+                        WorkQuality.evaluatePhase(name, summary, oiv)))));
                 }
                 MartQuery sprintQ = new MartQuery("sql",
                     "SELECT sprint_id FROM KnowSprint WHERE sprint_id = :sid LIMIT 1",
@@ -424,7 +502,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                         // without its PART_OF/HAS_STATE edges.
                         String script =
                             "INSERT INTO KnowPhase SET phase_uid = :uid, phase_id = :pid, name = :name, " +
-                            "order_index = :oi, src = 'manual';" +
+                            "summary_md = :summary, order_index = :oi, src = 'manual';" +
                             "CREATE EDGE PART_OF FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowSprint WHERE sprint_id = :sid);" +
                             "INSERT INTO KnowPhaseHist SET state_uid = :nsid, status_raw = '📋 PLANNED', " +
@@ -432,10 +510,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                             "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowPhase WHERE phase_uid = :uid) " +
                             "TO (SELECT FROM KnowPhaseHist WHERE state_uid = :nsid);";
                         Map<String, Object> p = mapOfNullable("uid", uid, "pid", display, "name", name,
-                            "oi", order, "sid", sid, "nsid", nsid, "now", now);
+                            "summary", summary, "oi", order, "sid", sid, "nsid", nsid, "now", now);
                         return writeClient.command(db, basicAuth(),
                                 new LoreCommandClient.LoreCommand("sqlscript", script, p))
-                            .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true))));
+                            .map(__ -> noStore(Response.ok(new PhaseWriteResponse(true, uid, display, order, true,
+                                WorkQuality.evaluatePhase(name, summary, order)))));
                     });
                 });
             })
@@ -671,7 +750,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             .chain(__ -> Uni.createFrom().item(() -> {
                     if (req.note_md() != null)
                         hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
-                    return noStore(Response.ok(new TaskWriteResponse(true, uid, null, null)));
+                    return noStore(Response.ok(
+                        new TaskWriteResponse(true, uid, null, null, taskQuality(uid))));
                 })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             .onFailure().recoverWithItem(ex -> {

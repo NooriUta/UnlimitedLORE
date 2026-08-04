@@ -1,0 +1,168 @@
+name: Runner probe (AL-88)
+
+# Диагностика выделенного раннера, НЕ часть CI.
+#
+# Зачем. Мы хотим съехать с общего пула ci-server на свой раннер: в общем пуле
+# прогоны стоят в очереди за Shuttle/Hound/aida-root, а 2026-08-03 общий пул
+# дал ещё и гонку за тест-БД (CIM-04). Съезд заблокирован AL-88: на раннере с
+# меткой lore-only КАЖДЫЙ job падал сразу после шага «Point live-DB tests…» с
+# кодом 1, хотя `set -x` показывал все команды шага успешными, включая запись
+# в $GITHUB_ENV. За три попытки причина не найдена, раннер отцеплен.
+#
+# Почему отдельный workflow, а не возврат метки в backend-ci. Вернуть
+# `runs-on: lore-only` в боевой CI значит покрасить КАЖДЫЙ PR, пока идёт
+# расследование — ровно поэтому раннер и отцепили в прошлый раз. Здесь триггер
+# только ручной: на PR и push не запускается вообще, ничей чек не трогает.
+#
+# Почему все шаги под continue-on-error. Прошлые три попытки умирали на первом
+# же отказе и давали по одному биту за прогон. Здесь job доходит до конца в
+# любом случае, и один запуск показывает СРАЗУ, какие звенья живы, а какие нет:
+# отказ на B при живом A — это $GITHUB_ENV, отказ на E при живых A–D — сеть или
+# DooD, отказ только на F — что-то в самом боевом скрипте, а не в раннере.
+#
+# Файл удалить, когда AL-88 закрыт: диагностический инструмент, оставленный
+# «на всякий случай», со временем перестаёт отражать то, что диагностирует.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_label:
+        description: 'Метка раннера (lore-only | volva_only | ubuntu-latest для контроля)'
+        required: true
+        default: 'lore-only'
+      image:
+        description: 'Образ джоба. Боевой backend-CI работает на forgejo-ci-runtime:jdk21'
+        required: true
+        default: 'forgejo-ci-runtime:jdk21'
+
+jobs:
+  probe:
+    name: Bisect the AL-88 failure
+    runs-on: ${{ inputs.runner_label }}
+    # Первый прогон (2026-08-03) прошёл ВЕСЬ пробник на lore-only без единого
+    # отказа — и этим ничего не доказал: метка подняла джоб на node:22-bookworm,
+    # тогда как боевой backend-CI работает на forgejo-ci-runtime:jdk21. То есть
+    # проверен был раннер, но не та среда, в которой падало.
+    #
+    # Образ пинуется явно, чтобы развести две причины, которые до сих пор
+    # смешивались: сам раннер и образ джоба. Метка и образ задаются независимо,
+    # поэтому одна и та же проба гоняется во всех четырёх сочетаниях.
+    container: ${{ inputs.image }}
+    steps:
+      # A0. JS-экшены. Второй прогон (метка × образ, все сочетания) прошёл
+      #     чисто — и это НЕ означало «блокера нет»: в боевом job до падавшего
+      #     шага исполняются node-экшены (checkout, setup-java), а в пробе их не
+      #     было вообще. То есть проверено было «не воспроизводится БЕЗ
+      #     экшенов» — утверждение слабее нужного.
+      #
+      #     Экшены идут ПЕРВЫМИ и под continue-on-error, как всё остальное:
+      #     если ломается именно их исполнение, отказ должен быть виден
+      #     отдельной строкой, а не утащить за собой шаги, которые к нему
+      #     отношения не имеют.
+      - name: 'A0. checkout (JS-экшен)'
+        continue-on-error: true
+        uses: actions/checkout@v7
+
+      - name: 'A1. setup-java (JS-экшен)'
+        continue-on-error: true
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # A. Джоб вообще стартует на этой метке. Отказ здесь = раннер не забрал
+      #    задачу или образ не поднялся; всё остальное тогда неинформативно.
+      - name: 'A. джоб стартовал'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -x
+          echo "раннер: ${{ inputs.runner_label }}"
+          id; pwd; uname -a
+          echo "RUNNER_TEMP=${RUNNER_TEMP:-<не задан>}"
+          echo "GITHUB_ENV=${GITHUB_ENV:-<не задан>}"
+          ls -la "$(dirname "${GITHUB_ENV:-/tmp/x}")" || true
+
+      # B. Запись в $GITHUB_ENV. Главный подозреваемый: боевой шаг падает
+      #    ИМЕННО после записи, и act читает этот файл уже после конца скрипта —
+      #    то есть там, куда трассировка шага не достаёт.
+      - name: 'B. простая запись в $GITHUB_ENV'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -x
+          echo "PROBE_SIMPLE=plain" >> "$GITHUB_ENV"
+          wc -c "$GITHUB_ENV"
+
+      # C. Значение вернулось в следующий шаг. Пустота здесь при успешном B
+      #    означает, что файл пишется не туда, откуда act его читает.
+      - name: 'C. значение доехало до следующего шага'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -x
+          test "${PROBE_SIMPLE:-}" = "plain" || { echo "::error::PROBE_SIMPLE=<${PROBE_SIMPLE:-пусто}>, ожидалось plain"; exit 1; }
+
+      # D. Значение вида URL. Боевой шаг пишет http://host:2480 — двоеточия и
+      #    слэши уже ломали разбор в других местах этого репозитория.
+      - name: 'D. запись URL-значения'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -x
+          echo "PROBE_URL=http://host.docker.internal:2480" >> "$GITHUB_ENV"
+
+      - name: 'E. URL доехал целым'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -x
+          test "${PROBE_URL:-}" = "http://host.docker.internal:2480" || { echo "::error::PROBE_URL=<${PROBE_URL:-пусто}>"; exit 1; }
+
+      # F. Сеть до ArcadeDB. Отдельно от $GITHUB_ENV: на выделенном раннере
+      #    может не быть маршрута до хоста, и тогда боевой шаг падал бы по
+      #    совсем другой причине, чем мы думали.
+      - name: 'F. видно ли ArcadeDB с этого раннера'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -x
+          for cand in http://host.docker.internal:2480 http://172.17.0.1:2480 http://127.0.0.1:2480; do
+            # без `|| echo 000`: curl и так печатает 000 через -w, а сложение
+            # двух источников давало в первом прогоне бессмысленное «000000»
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 4 "$cand/api/v1/ready")
+            echo "$cand -> $code"
+          done
+
+      # G. Точная копия боевого шага. Если A–F зелёные, а G красный — дело не в
+      #    раннере как таковом, а во взаимодействии этого скрипта с ним, и
+      #    искать надо в скрипте.
+      - name: 'G. копия боевого шага Point live-DB tests'
+        continue-on-error: true
+        shell: bash
+        env:
+          ARCADEDB_ROOT_PASSWORD: ${{ secrets.ARCADEDB_ROOT_PASSWORD }}
+        run: |
+          set -x
+          PW="${ARCADEDB_ROOT_PASSWORD:-playwithdata}"
+          FOUND=""
+          for cand in ${LORE_CI_DB_URL:-} http://host.docker.internal:2480 http://172.17.0.1:2480 http://127.0.0.1:2480; do
+            curl -sf -m 4 "$cand/api/v1/ready" >/dev/null 2>&1 || continue
+            if curl -sf -m 6 -u "root:$PW" "$cand/api/v1/databases" >/dev/null 2>&1; then FOUND="$cand"; break; fi
+          done
+          echo "FOUND=<$FOUND>"
+          [ -n "$FOUND" ] || exit 1
+          echo "LORE_TEST_DB_URL=$FOUND" >> "$GITHUB_ENV"
+          echo "LORE_TEST_DB_NAME=lore_ci_probe" >> "$GITHUB_ENV"
+          echo "LORE_TEST_DB_PASSWORD=$PW" >> "$GITHUB_ENV"
+
+      # H. Дошли до конца. Именно этого не случалось ни разу за три попытки:
+      #    job умирал раньше. Строка в логе = раннер способен довести job до
+      #    конца, и дальше разбираем, какие из A–G покраснели.
+      - name: 'H. итог'
+        if: always()
+        shell: bash
+        run: |
+          echo "проба дошла до конца на раннере ${{ inputs.runner_label }}"
+          echo "LORE_TEST_DB_URL=<${LORE_TEST_DB_URL:-пусто}>"
+          echo "LORE_TEST_DB_NAME=<${LORE_TEST_DB_NAME:-пусто}>"
