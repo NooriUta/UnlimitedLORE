@@ -1172,8 +1172,25 @@ public final class LoreSlices {
             // «нет роли» в UI не означало отсутствие роли, а означало, что слайс её
             // не отдал. Ровно тот класс, что ловили весь спринт: данные есть, путь
             // их не доносит.
-            "SELECT task_uid, task_id, title, status_raw, priority, component_id, task_type, " +
+            // MT-12: статус читается из ОТКРЫТОЙ СТРОКИ ИСТОРИИ, а не с вершины.
+            //
+            // Прежняя редакция брала status_raw прямо с KnowTask — и 1421 задача
+            // из 3279 (43%) выглядела «без статуса», потому что на вершине поле
+            // пустое. Тот же срез при этом УЖЕ читал note_md и effort_days через
+            // HAS_STATE: их починил SPRINT_LORE_TASK_NOTE_MD_FIX, а status_raw в
+            // той правке пропустили.
+            //
+            // Цена: 04.08 по этому срезу я вывела, что «25 задач открыты в
+            // спринтах, помеченных DONE», и записала это в план как находку
+            // гигиены. Проверка через tasks_of_sprint показала, что все они
+            // закрыты. Дефект не роняет запрос — он меняет ответ на
+            // противоположный, и по нему строятся планы.
+            //
+            // Правило: у поля SCD2 ровно один законный источник — открытая
+            // строка истории. Чтение с вершины даёт правдоподобную неправду.
+            "SELECT task_uid, task_id, title, priority, component_id, task_type, " +
             "author_agent, executor_agent, reviewer_agent, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +
