@@ -18,7 +18,7 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
-  ReactFlow, Controls, Background, BackgroundVariant, Handle, Position,
+  ReactFlow, Controls, Background, BackgroundVariant, Panel, Handle, Position,
   type NodeProps, type Node, type Edge, type NodeChange, type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -27,6 +27,8 @@ import { fetchLoreSlice } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import { type ProductScreenProps, useSlice, asArray } from './shared';
+import VpValuePicker, { VpPalette, type VpPickerRequest } from './VpValuePicker';
+import type { PainGainJobKind } from './PainGainJobModal';
 
 /** Пара «заявлено vs сделано» — одна на все три вида ценности. */
 interface Link {
@@ -219,10 +221,14 @@ const S = {
 export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate }: ProductScreenProps) {
   const { t } = useTranslation();
 
-  const { rows: features, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
-  const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
-  const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
-  const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, []);
+  // VP-01: бампается после создания/привязки боли-выгоды-работы с канвы —
+  // `useSlice` грузит один раз при монтировании (см. shared.tsx), и без этого
+  // свежесозданная запись не появилась бы на канве без полной перезагрузки.
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { rows: features, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, [refreshKey]);
+  const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, [refreshKey]);
+  const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, [refreshKey]);
+  const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, [refreshKey]);
   const { rows: actors } = useSlice<LoreActorRow>('actors', undefined, onError, []);
 
   // Выбранная канва живёт в `?passport=` — ссылкой делятся, и локальное
@@ -422,6 +428,13 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
     try { return JSON.parse(localStorage.getItem('lore.vp.pos') ?? '{}'); } catch { return {}; }
   });
   const [hover, setHover] = useState<string | null>(null);
+  // VP-01: запрос на добавление боли/выгоды/работы — открыт кликом по пустой
+  // карточке сектора ИЛИ дропом карточки из палитры. null — пикер закрыт.
+  const [pickerRequest, setPickerRequest] = useState<VpPickerRequest | null>(null);
+  const openPicker = useCallback((kind: PainGainJobKind) => {
+    if (!actorId) return; // некому привязывать — «все акторы вместе» не сегмент
+    setPickerRequest({ kind, actorId, actorName: actorName.get(actorId) ?? actorId });
+  }, [actorId, actorName]);
 
   const nodes: Node[] = useMemo(() => {
     const out: Node[] = [];
@@ -487,6 +500,35 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
     fill('pains', painIds, '', 'var(--pain)', VAL);
 
     /**
+     * VP-01: пустая карточка «добавить» в секторе профиля клиента (круг), КОГДА
+     * у выбранного актора нет ни одной боли/выгоды/работы вообще — раньше
+     * такой сектор был просто пуст, вопрос «а что тут?» повисал. Отличается от
+     * «дыры» выше: там ценность ЕСТЬ, но не закрыта сценарием; здесь ценности
+     * нет вовсе. Только при выбранном сегменте — «все акторы вместе» не
+     * актор, привязывать некому (см. openPicker).
+     */
+    if (actorId) {
+      const emptyKinds: { key: 'pains' | 'gains' | 'jobs'; ids: string[]; kind: PainGainJobKind; color: string; label: string }[] = [
+        { key: 'pains', ids: painIds, kind: 'pain', color: 'var(--pain)', label: t('lore.product.vp.addEmptyPain', 'добавить боль') },
+        { key: 'gains', ids: gainIds, kind: 'gain', color: 'var(--gain)', label: t('lore.product.vp.addEmptyGain', 'добавить выгоду') },
+        { key: 'jobs', ids: jobIds, kind: 'job', color: 'var(--job)', label: t('lore.product.vp.addEmptyJob', 'добавить работу') },
+      ];
+      for (const ek of emptyKinds) {
+        if (ek.ids.length > 0) continue;
+        out.push({
+          id: `empty-${ek.key}`, type: 'sticker', parentId: ek.key, width: VAL.w, height: VAL.h,
+          extent: 'parent', draggable: false, selectable: false,
+          position: { x: 6, y: 24 },
+          data: {
+            ghost: true, code: '', color: ek.color, w: VAL.w, h: VAL.h, dim: false,
+            add: true, title: ek.label,
+            onAdd: () => openPicker(ek.kind),
+          },
+        });
+      }
+    }
+
+    /**
      * Пустая карточка «делать некому» — начало пунктирных связей.
      *
      * Раньше такая связь выходила из края сектора и читалась как ребро в
@@ -524,7 +566,7 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
       });
     }
     return out;
-  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName]);
+  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName, openPicker]);
 
   const edges: Edge[] = useMemo(() => {
     const dim = (a: string | null, b: string) => hover && a !== hover && b !== hover;
@@ -784,6 +826,16 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           остаётся пустой — канва при этом выглядит мельче, чем могла бы. */}
       <div
         ref={boxRef}
+        onDragOver={e => { if (actorId) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }}
+        onDrop={e => {
+          e.preventDefault();
+          const kind = e.dataTransfer.getData('application/x-lore-vp-kind') as PainGainJobKind | '';
+          // Секция дропа геометрически не разбирается: канва физически не
+          // выпускает стикер за пределы `extent: 'parent'`, а новая запись
+          // всё равно рождается через привязку (см. VpValuePicker), а не
+          // прямой вставкой узла — точка дропа для неё не несёт смысла.
+          if (kind) openPicker(kind);
+        }}
         style={{
           // Высота задана напрямую, БЕЗ aspect-ratio. С `aspect-ratio` минимум
           // высоты раздувает ШИРИНУ: на 375px контейнер вырастал до 836px и
@@ -813,8 +865,27 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
         >
           <Controls showInteractive={false} />
           <Background variant={BackgroundVariant.Dots} color="var(--bd)" gap={22} size={1} />
+          {/* VP-01: палитра — ЧАСТЬ канвы (оверлей ReactFlow Panel), а не
+              внешний блок: внешняя колонка сужала холст, замечание владельца.
+              Скрыта без выбранного актора: привязывать заведомо некому. */}
+          {!!actorId && (
+            <Panel position="top-left" style={{ margin: 8 }}>
+              <VpPalette disabled={false} />
+            </Panel>
+          )}
         </ReactFlow>
       </div>
+
+      <VpValuePicker
+        request={pickerRequest}
+        featureId={featureId}
+        pains={pains}
+        gains={gains}
+        jobs={jobs}
+        onClose={() => setPickerRequest(null)}
+        onLinked={() => setRefreshKey(k => k + 1)}
+        onError={onError}
+      />
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginTop: 10 }}>
         <span><i style={{ display: 'inline-block', width: 22, borderTop: '2px solid var(--suc)', verticalAlign: 'middle', marginRight: 5 }} />
