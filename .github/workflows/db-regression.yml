@@ -26,69 +26,122 @@ on:
     - cron: '17 2 * * 6'
 
 jobs:
+  # ОДНО задание на обе версии, а не матрица из двух.
+  #
+  # Матрица требовала передавать выдачу между заданиями через артефакты, а
+  # upload-artifact@v4 на Forgejo не работает вовсе: «@actions/artifact v2.0.0+
+  # … are not currently supported on GHES». Прогон 04.08 отработал полностью и
+  # всё равно был помечен упавшим — из-за шага выгрузки, а не из-за тестов.
+  #
+  # Параллельность здесь ничего не стоит: набор отрабатывает за две секунды.
+  # Зато сравнение делается на месте, без переноса файлов между заданиями.
   regress:
     runs-on: ubuntu-latest
-    strategy:
-      # fail-fast выключен НАМЕРЕННО: смысл прогона — сравнить две версии.
-      # Упавший baseline не должен отменять кандидата, иначе сравнивать нечего
-      # и причина отказа останется неизвестной.
-      fail-fast: false
-      matrix:
-        version:
-          - ${{ inputs.baseline || '26.7.2' }}
-          - ${{ inputs.candidate || '26.8.1' }}
     steps:
       - uses: actions/checkout@v7
 
       # Пароль пробы — локальный контейнер, живёт минуты и умирает вместе с
       # прогоном. Секрет прода сюда не нужен и намеренно не берётся: набор не
       # ходит ни в прод, ни в общую тест-БД.
-      - name: Поднять ArcadeDB ${{ matrix.version }}
-        run: |
-          docker run -d --name arcade-regress \
-            -p 2480:2480 \
-            -e JAVA_OPTS="-Darcadedb.server.rootPassword=regress-local -Darcadedb.server.defaultDatabases=probe[root]" \
-            arcadedata/arcadedb:${{ matrix.version }}
-
-      # Ожидание ДОСТУПА, а не доступности: /api/v1/ready отвечает кому угодно,
-      # и по нему сервер «живой» даже с неверным паролем — дальше тесты падают
-      # непрозрачными 500. Годным считается только тот, кто под нашей учёткой
-      # отдаёт список баз (тот же урок, что в backend-ci.yml).
-      - name: Дождаться доступа под учёткой
-        run: |
-          for i in $(seq 1 60); do
-            if curl -sf -m 4 -u root:regress-local http://localhost:2480/api/v1/databases >/dev/null 2>&1; then
-              echo "готов через ${i}s"; exit 0
-            fi
-            sleep 1
-          done
-          echo "::error::ArcadeDB ${{ matrix.version }} не пустил под root за 60s"
-          docker logs arcade-regress | tail -50
-          exit 1
-
-      - name: Прогон регресс-набора
+      #
+      # Порт на хост НЕ публикуется: `-p 2480:2480` упирался в «port is already
+      # allocated» — на ci-server этот порт держит БОЕВОЙ LORE-ygg. Проба
+      # обязана быть безразлична к тому, что ещё крутится на машине.
+      #
+      # Связь по имени контейнера в общей docker-сети: задание живёт в своём
+      # контейнере, docker здесь хостовый (DooD), поэтому localhost не годится.
+      - name: Прогон обеих версий
         env:
-          DB_URL: http://localhost:2480
-          DB_USER: root
-          DB_PASS: regress-local
-          DB_NAME: regress_${{ github.run_id }}
+          BASELINE: ${{ inputs.baseline || '26.7.2' }}
+          CANDIDATE: ${{ inputs.candidate || '26.8.1' }}
         run: |
-          bash .github/scripts/db-regression.sh | tee "result-${{ matrix.version }}.tsv"
+          set -eu
+          NET=$(docker inspect "$(hostname)" \
+                --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}' 2>/dev/null \
+                | head -1)
+          if [ -z "$NET" ]; then
+            echo "::error::не определить docker-сеть задания — проба не достучится до БД"
+            exit 1
+          fi
+          echo "сеть задания: $NET"
+
+          run_one() {
+            ver="$1"; name="arcade-regress-$ver"
+            docker rm -f "$name" >/dev/null 2>&1 || true
+            docker run -d --name "$name" --network "$NET" \
+              -e JAVA_OPTS="-Darcadedb.server.rootPassword=regress-local -Darcadedb.server.defaultDatabases=probe[root]" \
+              "arcadedata/arcadedb:$ver" >/dev/null
+
+            # Ожидание ДОСТУПА, а не доступности: /api/v1/ready отвечает кому
+            # угодно, и по нему сервер «живой» даже с неверным паролем — дальше
+            # тесты падают непрозрачными 500. Годным считается только тот, кто
+            # под нашей учёткой отдаёт список баз.
+            ok=0
+            for i in $(seq 1 60); do
+              if curl -sf -m 4 -u root:regress-local "http://$name:2480/api/v1/databases" >/dev/null 2>&1; then
+                echo "$ver готов через ${i}s"; ok=1; break
+              fi
+              sleep 1
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "::error::ArcadeDB $ver не пустил под root за 60s"
+              docker logs "$name" 2>&1 | tail -50
+              docker rm -f "$name" >/dev/null 2>&1 || true
+              return 1
+            fi
+
+            DB_URL="http://$name:2480" DB_USER=root DB_PASS=regress-local \
+              DB_NAME="regress_${GITHUB_RUN_ID:-local}" \
+              bash .github/scripts/db-regression.sh > "result-$ver.tsv" || true
+
+            docker rm -f "$name" >/dev/null 2>&1 || true
+
+            # Пустая выдача — это «прогон не состоялся», а НЕ «провалов нет».
+            # Прежняя редакция печатала «провалов нет» после того, как
+            # контейнер вовсе не поднялся: grep не нашёл файла, ветка else
+            # отрапортовала чистоту. Подмена «не удалось посмотреть» на
+            # «посмотрел и там пусто» — против неё весь набор и написан.
+            if [ ! -s "result-$ver.tsv" ]; then
+              echo "::error::выдачи $ver нет — прогон не состоялся"
+              return 1
+            fi
+            cat "result-$ver.tsv"
+          }
+
+          rc=0
+          echo "## Регресс $BASELINE против $CANDIDATE" >> "$GITHUB_STEP_SUMMARY"
+          for v in "$BASELINE" "$CANDIDATE"; do
+            echo "::group::$v"
+            run_one "$v" || rc=1
+            echo "::endgroup::"
+            {
+              echo "### $v"
+              echo '```'
+              cat "result-$v.tsv" 2>/dev/null || echo "(выдачи нет)"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+          exit "$rc"
 
       # Самоконтроль набора. Если кейс, обязанный краснеть, зелёный — весь
       # прогон недостоверен, и это единственное условие, при котором шаг падает.
       # Иначе «регресс зелёный» может означать «набор ничего не смотрит».
       - name: Проверить, что набор вообще способен видеть поломку
+        if: always()
         run: |
-          line=$(grep -P '^selfcheck\.detects_missing_index\t' "result-${{ matrix.version }}.tsv" || true)
-          if [ -z "$line" ]; then
-            echo "::error::кейс самоконтроля не отработал вовсе — вердиктам прогона верить нельзя"
-            exit 1
-          fi
-          case "$line" in
-            *"$(printf '\t')PASS$(printf '\t')"*) echo "самоконтроль в порядке: $line" ;;
-            *) echo "::error::самоконтроль не прошёл — набор не видит заведомой поломки: $line"; exit 1 ;;
-          esac
+          rc=0
+          for f in result-*.tsv; do
+            [ -e "$f" ] || { echo "::error::нет ни одной выдачи — проверять нечего"; exit 1; }
+            line=$(grep -P '^selfcheck\.detects_missing_index\t' "$f" || true)
+            if [ -z "$line" ]; then
+              echo "::error::$f: кейс самоконтроля не отработал — вердиктам верить нельзя"; rc=1; continue
+            fi
+            case "$line" in
+              *"$(printf '\t')PASS$(printf '\t')"*) echo "$f: самоконтроль в порядке" ;;
+              *) echo "::error::$f: набор не видит заведомой поломки: $line"; rc=1 ;;
+            esac
+          done
+          exit "$rc"
 
       # Найденные расхождения называются поимённо. «Регресс упал» без указания
       # кейса бесполезен: именно так однажды пришлось поднимать полный лог
@@ -96,57 +149,38 @@ jobs:
       - name: Назвать провалившиеся кейсы
         if: always()
         run: |
-          fails=$(grep -P '\tFAIL\t' "result-${{ matrix.version }}.tsv" || true)
-          if [ -n "$fails" ]; then
-            echo "::warning::на ${{ matrix.version }} провалились кейсы:"
-            printf '%s\n' "$fails" | while IFS= read -r l; do echo "::warning::  $l"; done
-          else
-            echo "на ${{ matrix.version }} провалов нет"
-          fi
-
-      - name: Сохранить выдачу
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: db-regression-${{ matrix.version }}
-          path: result-${{ matrix.version }}.tsv
-
-      # always(): контейнер должен уходить и после падения, иначе следующий
-      # прогон упрётся в занятый порт 2480 и отказ будет выглядеть как дефект БД.
-      - name: Убрать контейнер
-        if: always()
-        continue-on-error: true
-        run: docker rm -f arcade-regress || true
-
-  # Отдельным job'ом, а не шагом: дифф нужен ПОСЛЕ обеих версий, и барьер здесь
-  # оправдан — сравнивать нечего, пока не готовы оба результата.
-  diff:
-    needs: regress
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: results
+          for f in result-*.tsv; do
+            [ -e "$f" ] || continue
+            fails=$(grep -P '\tFAIL\t' "$f" || true)
+            if [ -n "$fails" ]; then
+              echo "::warning::$f — провалившиеся кейсы:"
+              printf '%s\n' "$fails" | while IFS= read -r l; do echo "::warning::  $l"; done
+            else
+              echo "$f: провалов нет (кейсов в выдаче: $(grep -c . "$f"))"
+            fi
+          done
 
       # Дифф отвечает на вопрос, ради которого набор и заведён: что ИЗМЕНИЛОСЬ
       # между версиями. Кейсы OBSERVE верного ответа не знают — про них можно
       # судить только сравнением, и молчаливое изменение грамматики видно
       # именно здесь (ровно так однажды пропала форма DELETE EDGE).
       - name: Сравнить версии
+        if: always()
+        env:
+          BASELINE: ${{ inputs.baseline || '26.7.2' }}
+          CANDIDATE: ${{ inputs.candidate || '26.8.1' }}
         run: |
-          files=$(find results -name 'result-*.tsv' | sort)
-          count=$(printf '%s\n' "$files" | grep -c . || true)
-          if [ "$count" -lt 2 ]; then
-            echo "::warning::готов только $count результат — сравнивать не с чем. Это НЕ значит «различий нет»."
+          a="result-$BASELINE.tsv"; b="result-$CANDIDATE.tsv"
+          if [ ! -s "$a" ] || [ ! -s "$b" ]; then
+            echo "::warning::готова не обе выдачи — сравнивать не с чем. Это НЕ значит «различий нет»."
             exit 0
           fi
-          a=$(printf '%s\n' "$files" | head -1)
-          b=$(printf '%s\n' "$files" | tail -1)
-          echo "## Сравнение: $(basename "$a") против $(basename "$b")" >> "$GITHUB_STEP_SUMMARY"
-          echo '```diff' >> "$GITHUB_STEP_SUMMARY"
-          diff "$a" "$b" >> "$GITHUB_STEP_SUMMARY" || true
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Дифф $BASELINE → $CANDIDATE"
+            echo '```diff'
+            diff "$a" "$b" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
           if diff -q "$a" "$b" >/dev/null; then
             echo "поведение версий совпадает по всем кейсам набора"
           else
