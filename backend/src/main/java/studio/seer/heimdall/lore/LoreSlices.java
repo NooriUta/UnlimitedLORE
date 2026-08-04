@@ -796,31 +796,33 @@ public final class LoreSlices {
         // У этого слайса и так нет ранжирования (см. выше — оно у /lore/search),
         // поэтому лечение — не health-gating (это живёт в LoreSearchResource
         // для актуального поиска), а снятие самого источника падения: ILIKE
-        // без морфологии, зато не падает НИКОГДА, независимо от состояния
-        // индексов. Для *Hist-веток, где раньше SEARCH_INDEX был единственным
-        // условием, подставлены реальные текстовые поля из реестра FT_INDEXES
-        // (LoreSchemaMigrations) — без них эти пять веток стали бы пустыми.
+        // по тем же полям, что раньше индексировал SEARCH_INDEX (реестр
+        // FT_INDEXES, LoreSchemaMigrations), без морфологии, зато не падает
+        // НИКОГДА, независимо от состояния индексов. Первая редакция этой
+        // правки по ошибке обрезала не только морфологию, а вообще все поля
+        // кроме id — восстановлено по точному списку полей каждого индекса.
         slice("search",
             "SELECT DISTINCT type, ref_id, title FROM " +
             "(SELECT expand(unionall($a, $ah, $s, $sh, $p, $ph, $t, $th, $q, $r, $rh, $d, $c, $qn, $u, $pn, $gn, $jb, $ac)) LET " +
             "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
-            "      WHERE adr_id ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE adr_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$ah = (SELECT 'adr' AS type, in('HAS_STATE').adr_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
             "      FROM KnowADRHist WHERE valid_to IS NULL AND (" +
             "      context_md ILIKE ('%' + :pattern + '%') OR decision_md ILIKE ('%' + :pattern + '%') " +
             "      OR consequences_md ILIKE ('%' + :pattern + '%')) LIMIT 15), " +
             "$s = (SELECT 'spec' AS type, spec_id AS ref_id, title FROM KnowSpec " +
-            "      WHERE spec_id ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE spec_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$sh = (SELECT 'spec' AS type, in('HAS_STATE').spec_id[0] AS ref_id, in('HAS_STATE').title[0] AS title " +
             "      FROM KnowSpecHist WHERE valid_to IS NULL " +
             "      AND content_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$p = (SELECT 'sprint' AS type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
-            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR context_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$ph = (SELECT 'sprint' AS type, in('HAS_STATE').sprint_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
             "      FROM KnowSprintHist WHERE valid_to IS NULL AND (" +
             "      context_md ILIKE ('%' + :pattern + '%') OR outcome_md ILIKE ('%' + :pattern + '%')) LIMIT 15), " +
             "$t = (SELECT 'task' AS type, task_uid AS ref_id, title FROM KnowTask " +
-            "      WHERE task_uid ILIKE ('%' + :pattern + '%') LIMIT 15), " +
+            "      WHERE task_uid ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$th = (SELECT 'task' AS type, in('HAS_STATE').task_uid[0] AS ref_id, in('HAS_STATE').title[0] AS title " +
             "      FROM KnowTaskHist WHERE valid_to IS NULL " +
             "      AND note_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
@@ -828,30 +830,40 @@ public final class LoreSlices {
             "      WHERE qg_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR content_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$r = (SELECT 'runbook' AS type, runbook_id AS ref_id, name AS title FROM KnowRunbook " +
-            "      WHERE runbook_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE runbook_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$rh = (SELECT 'runbook' AS type, in('HAS_STATE').runbook_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
             "      FROM KnowRunbookHist WHERE valid_to IS NULL " +
             "      AND content_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$d = (SELECT 'doc' AS type, doc_id AS ref_id, title FROM KnowDoc " +
-            "      WHERE doc_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR content_md ILIKE ('%' + :pattern + '%') OR content_md_en ILIKE ('%' + :pattern + '%') " +
+            "      OR content_md_ru ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
-            "      WHERE decision_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             // Вопросы раньше не искались ВООБЩЕ, хотя ftKnowQuestion существует —
             // реестр ОВ был невидим для единого окна.
             "$qn = (SELECT 'question' AS type, question_id AS ref_id, title FROM KnowQuestion " +
-            "      WHERE question_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE question_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             // ── продуктовый слой (ADR-LORE-022/032) ──
             // PL-28: ветка одна — фича стала корневым сценарием того же типа.
             "$u = (SELECT 'use_case' AS type, uc_id AS ref_id, title FROM KnowUseCase " +
-            "      WHERE uc_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE uc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') OR context_md ILIKE ('%' + :pattern + '%') " +
+            "      OR scenario_md ILIKE ('%' + :pattern + '%') OR acceptance_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$pn = (SELECT 'pain' AS type, pain_id AS ref_id, title FROM KnowPain " +
-            "      WHERE pain_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE pain_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$gn = (SELECT 'gain' AS type, gain_id AS ref_id, title FROM KnowGain " +
-            "      WHERE gain_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE gain_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') OR metric_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
-            "      WHERE job_id ILIKE ('%' + :pattern + '%') LIMIT 10), " +
+            "      WHERE job_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
-            "      WHERE actor_id ILIKE ('%' + :pattern + '%') LIMIT 10))",
+            "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10))",
             List.of("pattern"), Map.of(), "");
 
         // ── §5 Plan ──────────────────────────────────────────────────────────
