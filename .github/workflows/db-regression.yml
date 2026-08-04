@@ -43,10 +43,31 @@ jobs:
       # Пароль пробы — локальный контейнер, живёт минуты и умирает вместе с
       # прогоном. Секрет прода сюда не нужен и намеренно не берётся: набор не
       # ходит ни в прод, ни в общую тест-БД.
+      # Порт на хост НЕ публикуется, и имя контейнера несёт версию. Обе правки
+      # по факту падения прогона 04.08:
+      #
+      # 1. `-p 2480:2480` упёрся в «port is already allocated» — на ci-server
+      #    этот порт держит БОЕВОЙ LORE-ygg. Проба обязана быть безразлична к
+      #    тому, что ещё крутится на машине.
+      # 2. Матрица идёт ПАРАЛЛЕЛЬНО, и одно имя `arcade-regress` на два задания
+      #    привело бы к конфликту имён — второе задание падало бы «случайно».
+      #
+      # Связь через общую docker-сеть по имени контейнера: задание само живёт в
+      # контейнере, docker здесь — хостовый (DooD), поэтому localhost не годится.
       - name: Поднять ArcadeDB ${{ matrix.version }}
         run: |
-          docker run -d --name arcade-regress \
-            -p 2480:2480 \
+          set -eu
+          NET=$(docker inspect "$(hostname)" \
+                --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}' 2>/dev/null \
+                | head -1)
+          if [ -z "$NET" ]; then
+            echo "::error::не определить docker-сеть задания — проба не сможет достучаться до БД"
+            exit 1
+          fi
+          echo "сеть задания: $NET"
+          echo "ARCADE_HOST=arcade-regress-${{ matrix.version }}" >> "$GITHUB_ENV"
+          docker run -d --name "arcade-regress-${{ matrix.version }}" \
+            --network "$NET" \
             -e JAVA_OPTS="-Darcadedb.server.rootPassword=regress-local -Darcadedb.server.defaultDatabases=probe[root]" \
             arcadedata/arcadedb:${{ matrix.version }}
 
@@ -57,18 +78,18 @@ jobs:
       - name: Дождаться доступа под учёткой
         run: |
           for i in $(seq 1 60); do
-            if curl -sf -m 4 -u root:regress-local http://localhost:2480/api/v1/databases >/dev/null 2>&1; then
+            if curl -sf -m 4 -u root:regress-local "http://$ARCADE_HOST:2480/api/v1/databases" >/dev/null 2>&1; then
               echo "готов через ${i}s"; exit 0
             fi
             sleep 1
           done
           echo "::error::ArcadeDB ${{ matrix.version }} не пустил под root за 60s"
-          docker logs arcade-regress | tail -50
+          docker logs "arcade-regress-${{ matrix.version }}" 2>&1 | tail -50
           exit 1
 
       - name: Прогон регресс-набора
         env:
-          DB_URL: http://localhost:2480
+          DB_URL: http://${{ env.ARCADE_HOST }}:2480
           DB_USER: root
           DB_PASS: regress-local
           DB_NAME: regress_${{ github.run_id }}
@@ -96,12 +117,23 @@ jobs:
       - name: Назвать провалившиеся кейсы
         if: always()
         run: |
-          fails=$(grep -P '\tFAIL\t' "result-${{ matrix.version }}.tsv" || true)
+          f="result-${{ matrix.version }}.tsv"
+          # Отсутствие файла — это «прогон не состоялся», а НЕ «провалов нет».
+          # Первая редакция печатала «провалов нет» после того, как контейнер
+          # вообще не поднялся: шаг под always() выполнился, grep не нашёл
+          # файла, и ветка else отрапортовала чистоту. Ровно та подмена «не
+          # удалось посмотреть» на «посмотрел и там пусто», против которой
+          # написан весь этот набор.
+          if [ ! -s "$f" ]; then
+            echo "::error::выдачи ${{ matrix.version }} нет — прогон не состоялся. Это НЕ «провалов нет»."
+            exit 1
+          fi
+          fails=$(grep -P '\tFAIL\t' "$f" || true)
           if [ -n "$fails" ]; then
             echo "::warning::на ${{ matrix.version }} провалились кейсы:"
             printf '%s\n' "$fails" | while IFS= read -r l; do echo "::warning::  $l"; done
           else
-            echo "на ${{ matrix.version }} провалов нет"
+            echo "на ${{ matrix.version }} провалов нет (кейсов в выдаче: $(grep -c . "$f"))"
           fi
 
       - name: Сохранить выдачу
@@ -111,12 +143,13 @@ jobs:
           name: db-regression-${{ matrix.version }}
           path: result-${{ matrix.version }}.tsv
 
-      # always(): контейнер должен уходить и после падения, иначе следующий
-      # прогон упрётся в занятый порт 2480 и отказ будет выглядеть как дефект БД.
+      # always(): контейнер должен уходить и после падения, иначе на машине
+      # копятся мёртвые пробы и следующий прогон спотыкается о занятое имя —
+      # отказ при этом выглядит как дефект БД, а не как мусор от прошлого раза.
       - name: Убрать контейнер
         if: always()
         continue-on-error: true
-        run: docker rm -f arcade-regress || true
+        run: docker rm -f "arcade-regress-${{ matrix.version }}" || true
 
   # Отдельным job'ом, а не шагом: дифф нужен ПОСЛЕ обеих версий, и барьер здесь
   # оправдан — сравнивать нечего, пока не готовы оба результата.
