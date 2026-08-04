@@ -1844,6 +1844,7 @@
         "jobOne": "job",
         "searchPh": "job / pain / gain…",
         "paletteLabel": "Palette — drag onto the canvas",
+        "paletteDropHint": "Drop only into its own sector of the circle",
         "paletteAddPain": "+ Pain",
         "paletteAddPainSub": "blocks a job",
         "paletteAddGain": "+ Gain",

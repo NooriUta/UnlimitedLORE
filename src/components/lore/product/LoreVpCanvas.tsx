@@ -27,7 +27,7 @@ import { fetchLoreSlice } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import { type ProductScreenProps, useSlice, asArray } from './shared';
-import VpValuePicker, { VpPalette, type VpPickerRequest } from './VpValuePicker';
+import VpValuePicker, { VpPalette, vpDragKind, type VpPickerRequest } from './VpValuePicker';
 import type { PainGainJobKind } from './PainGainJobModal';
 
 /** Пара «заявлено vs сделано» — одна на все три вида ценности. */
@@ -74,6 +74,25 @@ const SEC_FALLBACK: Record<string, string> = {
   ps: 'Products & Services', gc: 'Gain Creators', pr: 'Pain Relievers',
   gains: 'Gains', pains: 'Pains', jobs: 'Customer Jobs',
 };
+
+/**
+ * Единственный сектор, куда ложится ценность каждого вида — и он всегда в
+ * КРУГЕ (профиль клиента).
+ *
+ * Сектора квадрата (`ps`/`gc`/`pr` — Products & Services, Gain Creators, Pain
+ * Relievers) заполняются НЕ ценностями, а сценариями, которые их закрывают.
+ * Уронить туда боль значит записать «наша работа» вместо «боль клиента»:
+ * запись легла бы не туда, а канва при этом выглядела бы исправной.
+ */
+const KIND_SECTOR: Record<PainGainJobKind, 'pains' | 'gains' | 'jobs'> = {
+  pain: 'pains', gain: 'gains', job: 'jobs',
+};
+
+/** Абсолютный (в координатах холста) прямоугольник сектора. */
+function sectorRect(key: string) {
+  const s = SECTORS[key];
+  return { x: (s.fig === 'vm' ? 0 : FIG + GAP) + s.x, y: s.y, w: s.w, h: s.h };
+}
 
 /* ── узлы (объявлены вне рендера: ReactFlow требует стабильных ссылок) ── */
 
@@ -436,6 +455,31 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
     setPickerRequest({ kind, actorId, actorName: actorName.get(actorId) ?? actorId });
   }, [actorId, actorName]);
 
+  /**
+   * Точка дропа — В СВОЁМ секторе или нигде.
+   *
+   * Возвращает координаты ВНУТРИ сектора (для `pos`, чтобы карточка легла
+   * туда, куда её донесли) либо null, если бросают мимо. Дроп мимо не
+   * отменяется молча: `onDragOver` не зовёт `preventDefault`, и курсор сам
+   * показывает «сюда нельзя» ещё до отпускания.
+   */
+  const rf = useRef<ReactFlowInstance | null>(null);
+  const dropSpot = useCallback((kind: PainGainJobKind, clientX: number, clientY: number) => {
+    const inst = rf.current;
+    if (!inst) return null;
+    const p = inst.screenToFlowPosition({ x: clientX, y: clientY });
+    const r = sectorRect(KIND_SECTOR[kind]);
+    if (p.x < r.x || p.x > r.x + r.w || p.y < r.y || p.y > r.y + r.h) return null;
+    // Клампим так, чтобы карточка целиком осталась в секторе: `extent: 'parent'`
+    // всё равно втянул бы её обратно, но уже после видимого прыжка.
+    return {
+      x: Math.min(Math.max(p.x - r.x - VAL.w / 2, 4), Math.max(4, r.w - VAL.w - 4)),
+      y: Math.min(Math.max(p.y - r.y - VAL.h / 2, 22), Math.max(22, r.h - VAL.h - 4)),
+    };
+  }, []);
+  /** Куда лечь карточке, созданной последним дропом (id узнаём только после записи). */
+  const dropPos = useRef<{ x: number; y: number } | null>(null);
+
   const nodes: Node[] = useMemo(() => {
     const out: Node[] = [];
     // Порядок обязателен: родитель должен идти В МАССИВЕ раньше ребёнка, иначе
@@ -632,7 +676,6 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
    * холст оставался в прежнем масштабе, и нижняя фигура уезжала за кромку —
    * канва выглядела обрезанной при полностью живых данных.
    */
-  const rf = useRef<ReactFlowInstance | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = boxRef.current;
@@ -826,15 +869,24 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           остаётся пустой — канва при этом выглядит мельче, чем могла бы. */}
       <div
         ref={boxRef}
-        onDragOver={e => { if (actorId) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }}
+        onDragOver={e => {
+          // Принимаем ТОЛЬКО над своим сектором круга. Без preventDefault
+          // браузер сам рисует «сюда нельзя» — отказ виден до отпускания, а не
+          // после того, как ценность уже уехала не туда.
+          const kind = actorId ? vpDragKind(e.dataTransfer.types) : null;
+          if (kind && dropSpot(kind, e.clientX, e.clientY)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }
+        }}
         onDrop={e => {
+          const kind = actorId ? vpDragKind(e.dataTransfer.types) : null;
+          if (!kind) return;
+          const spot = dropSpot(kind, e.clientX, e.clientY);
+          if (!spot) return;          // мимо своего сектора — не наше дело
           e.preventDefault();
-          const kind = e.dataTransfer.getData('application/x-lore-vp-kind') as PainGainJobKind | '';
-          // Секция дропа геометрически не разбирается: канва физически не
-          // выпускает стикер за пределы `extent: 'parent'`, а новая запись
-          // всё равно рождается через привязку (см. VpValuePicker), а не
-          // прямой вставкой узла — точка дропа для неё не несёт смысла.
-          if (kind) openPicker(kind);
+          dropPos.current = spot;     // карточка ляжет туда, куда донесли
+          openPicker(kind);
         }}
         style={{
           // Высота задана напрямую, БЕЗ aspect-ratio. С `aspect-ratio` минимум
@@ -882,8 +934,15 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
         pains={pains}
         gains={gains}
         jobs={jobs}
-        onClose={() => setPickerRequest(null)}
-        onLinked={() => setRefreshKey(k => k + 1)}
+        onClose={() => { dropPos.current = null; setPickerRequest(null); }}
+        onLinked={id => {
+          // Позиция известна только для дропа: у клика по пустой карточке её
+          // нет, и узел встаёт по сетке сектора, как любой другой.
+          const spot = dropPos.current;
+          dropPos.current = null;
+          if (spot) { setPos(prev => ({ ...prev, [id]: spot })); persist(); }
+          setRefreshKey(k => k + 1);
+        }}
         onError={onError}
       />
 
