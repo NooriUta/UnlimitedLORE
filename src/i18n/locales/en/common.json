@@ -1770,6 +1770,7 @@
         "segmentsHint": "The feature serves several segments — a reason to split it, not a sign of breadth",
         "legendProven": "proven by metric",
         "legendProfile": "inside the customer: a pain blocks a job, a gain is its success",
+        "legendConnect": "drag from a card's dot to another: scenario → pain/gain/job, pain → job, gain → job",
         "noActorsOnCanvas": "segment not set — values carry no actors"
       },
       "vp": {
