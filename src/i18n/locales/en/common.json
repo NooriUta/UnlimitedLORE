@@ -648,7 +648,19 @@
         "laterG": "G · lineup graph \"builds on → unlocks\" — once \"Place in lineup\" is filled",
         "laterI": "I · rework load — once in_rework lands (ADR-029)",
         "laterH": "H · the RBAC matrix lives in the actor registry —",
-        "actorsLink": "open"
+        "actorsLink": "open",
+        "selfCheck": {
+          "title": "Corpus self-check",
+          "run": "Check",
+          "running": "checking…",
+          "ranAt": "run at {{time}}",
+          "empty": "click \"Check\" — the run takes a few seconds",
+          "loadError": "the run failed entirely — try again",
+          "unavailable": "could not check",
+          "foundOf": "{{found}} of {{denom}}",
+          "clickToOpen": "(click — list)",
+          "truncated": "showing the first {{n}} of {{total}} — the rest is omitted, not absent"
+        }
       }
     },
     "artifactDoc": {
