@@ -1,0 +1,154 @@
+name: DB regression (ArcadeDB)
+
+# DBU-08: постоянный регресс СУБД по матрице версий.
+#
+# НЕ гейт релиза. Прогон разведочный: красный результат на кандидате не должен
+# ронять пайплайн develop, иначе чужой релиз начнёт блокировать нашу работу.
+# Гейтом набор становится только в момент явного апгрейда (DBU-09).
+#
+# Зачем вообще: апгрейд СУБД у нас каждый раз превращался в разведку заново, а
+# заметкам релиза верить нельзя — 26.8.1 объявлял исправленными #4732 и
+# #5675/#5765, обе правки оказались неполными (DBR-12, DBR-13).
+on:
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: 'Текущая рабочая версия — эталон сравнения'
+        required: true
+        default: '26.7.2'
+      candidate:
+        description: 'Версия-кандидат на апгрейд'
+        required: true
+        default: '26.8.1'
+  schedule:
+    # Раз в неделю: ловит новые релизы без ручного захода. Ночь субботы —
+    # прогон ни с чем не конкурирует за раннер.
+    - cron: '17 2 * * 6'
+
+jobs:
+  regress:
+    runs-on: ubuntu-latest
+    strategy:
+      # fail-fast выключен НАМЕРЕННО: смысл прогона — сравнить две версии.
+      # Упавший baseline не должен отменять кандидата, иначе сравнивать нечего
+      # и причина отказа останется неизвестной.
+      fail-fast: false
+      matrix:
+        version:
+          - ${{ inputs.baseline || '26.7.2' }}
+          - ${{ inputs.candidate || '26.8.1' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Пароль пробы — локальный контейнер, живёт минуты и умирает вместе с
+      # прогоном. Секрет прода сюда не нужен и намеренно не берётся: набор не
+      # ходит ни в прод, ни в общую тест-БД.
+      - name: Поднять ArcadeDB ${{ matrix.version }}
+        run: |
+          docker run -d --name arcade-regress \
+            -p 2480:2480 \
+            -e JAVA_OPTS="-Darcadedb.server.rootPassword=regress-local -Darcadedb.server.defaultDatabases=probe[root]" \
+            arcadedata/arcadedb:${{ matrix.version }}
+
+      # Ожидание ДОСТУПА, а не доступности: /api/v1/ready отвечает кому угодно,
+      # и по нему сервер «живой» даже с неверным паролем — дальше тесты падают
+      # непрозрачными 500. Годным считается только тот, кто под нашей учёткой
+      # отдаёт список баз (тот же урок, что в backend-ci.yml).
+      - name: Дождаться доступа под учёткой
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf -m 4 -u root:regress-local http://localhost:2480/api/v1/databases >/dev/null 2>&1; then
+              echo "готов через ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::ArcadeDB ${{ matrix.version }} не пустил под root за 60s"
+          docker logs arcade-regress | tail -50
+          exit 1
+
+      - name: Прогон регресс-набора
+        env:
+          DB_URL: http://localhost:2480
+          DB_USER: root
+          DB_PASS: regress-local
+          DB_NAME: regress_${{ github.run_id }}
+        run: |
+          bash .github/scripts/db-regression.sh | tee "result-${{ matrix.version }}.tsv"
+
+      # Самоконтроль набора. Если кейс, обязанный краснеть, зелёный — весь
+      # прогон недостоверен, и это единственное условие, при котором шаг падает.
+      # Иначе «регресс зелёный» может означать «набор ничего не смотрит».
+      - name: Проверить, что набор вообще способен видеть поломку
+        run: |
+          line=$(grep -P '^selfcheck\.detects_missing_index\t' "result-${{ matrix.version }}.tsv" || true)
+          if [ -z "$line" ]; then
+            echo "::error::кейс самоконтроля не отработал вовсе — вердиктам прогона верить нельзя"
+            exit 1
+          fi
+          case "$line" in
+            *"$(printf '\t')PASS$(printf '\t')"*) echo "самоконтроль в порядке: $line" ;;
+            *) echo "::error::самоконтроль не прошёл — набор не видит заведомой поломки: $line"; exit 1 ;;
+          esac
+
+      # Найденные расхождения называются поимённо. «Регресс упал» без указания
+      # кейса бесполезен: именно так однажды пришлось поднимать полный лог
+      # раннера, чтобы понять, что упало не из-за правки.
+      - name: Назвать провалившиеся кейсы
+        if: always()
+        run: |
+          fails=$(grep -P '\tFAIL\t' "result-${{ matrix.version }}.tsv" || true)
+          if [ -n "$fails" ]; then
+            echo "::warning::на ${{ matrix.version }} провалились кейсы:"
+            printf '%s\n' "$fails" | while IFS= read -r l; do echo "::warning::  $l"; done
+          else
+            echo "на ${{ matrix.version }} провалов нет"
+          fi
+
+      - name: Сохранить выдачу
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-regression-${{ matrix.version }}
+          path: result-${{ matrix.version }}.tsv
+
+      # always(): контейнер должен уходить и после падения, иначе следующий
+      # прогон упрётся в занятый порт 2480 и отказ будет выглядеть как дефект БД.
+      - name: Убрать контейнер
+        if: always()
+        continue-on-error: true
+        run: docker rm -f arcade-regress || true
+
+  # Отдельным job'ом, а не шагом: дифф нужен ПОСЛЕ обеих версий, и барьер здесь
+  # оправдан — сравнивать нечего, пока не готовы оба результата.
+  diff:
+    needs: regress
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: results
+
+      # Дифф отвечает на вопрос, ради которого набор и заведён: что ИЗМЕНИЛОСЬ
+      # между версиями. Кейсы OBSERVE верного ответа не знают — про них можно
+      # судить только сравнением, и молчаливое изменение грамматики видно
+      # именно здесь (ровно так однажды пропала форма DELETE EDGE).
+      - name: Сравнить версии
+        run: |
+          files=$(find results -name 'result-*.tsv' | sort)
+          count=$(printf '%s\n' "$files" | grep -c . || true)
+          if [ "$count" -lt 2 ]; then
+            echo "::warning::готов только $count результат — сравнивать не с чем. Это НЕ значит «различий нет»."
+            exit 0
+          fi
+          a=$(printf '%s\n' "$files" | head -1)
+          b=$(printf '%s\n' "$files" | tail -1)
+          echo "## Сравнение: $(basename "$a") против $(basename "$b")" >> "$GITHUB_STEP_SUMMARY"
+          echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+          diff "$a" "$b" >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if diff -q "$a" "$b" >/dev/null; then
+            echo "поведение версий совпадает по всем кейсам набора"
+          else
+            echo "::warning::поведение версий РАЗЛИЧАЕТСЯ — см. сводку прогона"
+          fi
