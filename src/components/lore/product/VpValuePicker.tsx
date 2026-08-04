@@ -22,6 +22,25 @@ const REL: Record<PainGainJobKind, 'felt_by' | 'desired_by' | 'performed_by'> = 
   pain: 'felt_by', gain: 'desired_by', job: 'performed_by',
 };
 
+/**
+ * Вид перетаскиваемой карточки кодируется в ИМЕНИ mime-типа, а не в значении.
+ *
+ * Иначе никак: во время `dragover` браузер отдаёт только `types`, а
+ * `getData()` возвращает пустую строку (защита от чтения содержимого до
+ * дропа). Без вида на `dragover` нельзя ответить, годится ли сектор под
+ * курсором, — а именно это отличает «донёс куда надо» от «бросил куда попало».
+ */
+const DND_PREFIX = 'application/x-lore-vp-';
+
+export function vpDragKind(types: readonly string[]): PainGainJobKind | null {
+  for (const ty of types) {
+    if (!ty.startsWith(DND_PREFIX)) continue;
+    const k = ty.slice(DND_PREFIX.length);
+    if (k === 'pain' || k === 'gain' || k === 'job') return k;
+  }
+  return null;
+}
+
 function rowsOf(kind: PainGainJobKind, pains: LorePainRow[], gains: LoreGainRow[], jobs: LoreJobRow[]): ValueRow[] {
   if (kind === 'pain') return pains.map(p => ({ id: p.pain_id, title: p.title }));
   if (kind === 'gain') return gains.map(g => ({ id: g.gain_id, title: g.title }));
@@ -54,8 +73,11 @@ export function VpPalette({ disabled }: { disabled?: boolean }) {
         <div
           key={it.kind}
           draggable={!disabled}
-          onDragStart={e => { e.dataTransfer.setData('application/x-lore-vp-kind', it.kind); e.dataTransfer.effectAllowed = 'copy'; }}
-          title={`${it.label} — ${it.sub}`}
+          onDragStart={e => {
+            e.dataTransfer.setData(DND_PREFIX + it.kind, it.kind);
+            e.dataTransfer.effectAllowed = 'copy';
+          }}
+          title={`${it.label} — ${it.sub}. ${t('lore.product.vp.paletteDropHint', 'Бросать только в свой сектор круга')}`}
           style={{
             border: `1px dashed color-mix(in srgb, ${it.color} 45%, var(--bd))`, borderRadius: 5,
             background: 'var(--bg2)', padding: '3px 7px', cursor: disabled ? 'default' : 'grab',

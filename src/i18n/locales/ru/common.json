@@ -1844,6 +1844,7 @@
         "jobOne": "работа",
         "searchPh": "работа / боль / выгода…",
         "paletteLabel": "Палитра — тащи на канву",
+        "paletteDropHint": "Бросать только в свой сектор круга",
         "paletteAddPain": "+ Боль",
         "paletteAddPainSub": "мешает работе",
         "paletteAddGain": "+ Выгода",
