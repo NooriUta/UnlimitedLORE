@@ -648,7 +648,19 @@
         "laterG": "G · lineup graph \"builds on → unlocks\" — once \"Place in lineup\" is filled",
         "laterI": "I · rework load — once in_rework lands (ADR-029)",
         "laterH": "H · the RBAC matrix lives in the actor registry —",
-        "actorsLink": "open"
+        "actorsLink": "open",
+        "selfCheck": {
+          "title": "Corpus self-check",
+          "run": "Check",
+          "running": "checking…",
+          "ranAt": "run at {{time}}",
+          "empty": "click \"Check\" — the run takes a few seconds",
+          "loadError": "the run failed entirely — try again",
+          "unavailable": "could not check",
+          "foundOf": "{{found}} of {{denom}}",
+          "clickToOpen": "(click — list)",
+          "truncated": "showing the first {{n}} of {{total}} — the rest is omitted, not absent"
+        }
       }
     },
     "artifactDoc": {
@@ -1830,7 +1842,28 @@
         "save": "Save",
         "idRuleJob": "JOB-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: JOB-LORE-SHIP-RELEASE",
         "jobOne": "job",
-        "searchPh": "job / pain / gain…"
+        "searchPh": "job / pain / gain…",
+        "paletteLabel": "Palette — drag onto the canvas",
+        "paletteAddPain": "+ Pain",
+        "paletteAddPainSub": "blocks a job",
+        "paletteAddGain": "+ Gain",
+        "paletteAddGainSub": "delivers a result",
+        "paletteAddJob": "+ Job",
+        "paletteAddJobSub": "what the actor does",
+        "addEmptyPain": "add a pain",
+        "addEmptyGain": "add a gain",
+        "addEmptyJob": "add a job",
+        "pickerAdd": "Add: {{kind}}",
+        "pickerTitlePain": "Pain",
+        "pickerTitleGain": "Gain",
+        "pickerTitleJob": "Job",
+        "pickerSearchPlaceholder": "Search across everything that already exists…",
+        "pickerSearchHint": "We search existing ones first — so we don't create duplicates.",
+        "pickerNoResults": "Nothing matching found",
+        "pickerTypeToSearch": "Start typing to search among existing ones",
+        "pickerAttach": "attach →",
+        "pickerOr": "or",
+        "pickerCreateNew": "Create new"
       },
       "pickItem": "Pick an item on the left",
       "vocab": {

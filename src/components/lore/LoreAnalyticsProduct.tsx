@@ -11,9 +11,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  fetchLoreSlice, fetchUcQualityAll,
+  fetchLoreSlice, fetchUcQualityAll, fetchLoreSelfCheck,
   type LoreActorLoadRow, type LoreCoverageFindingRow,
   type LoreInvestProfileRow, type LoreUcQualityAllRow, type LoreVpAnalyticsRow,
+  type LoreSelfCheckRun, type LoreSelfCheckFinding,
 } from '../../api/lore';
 import { investShares, mergeActorLoad, vpFit, type VpFit } from './analyticsProduct';
 import { useProjectScope } from '../../context/ProjectScopeContext';
@@ -42,6 +43,29 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
   const [failed, setFailed] = useState<string[]>([]);
   const [openFit, setOpenFit] = useState<string | null>(null);
   const [openQuality, setOpenQuality] = useState(false);
+
+  // MT-10: самопроверка — ПО КНОПКЕ, не в общий Promise.allSettled выше. Девять
+  // сверок дороже шести обычных срезов (три ходят построчно по всем задачам/
+  // ADR/UC корпуса), и включать их в каждую загрузку вкладки значило бы платить
+  // эту цену, даже когда никто не смотрит на панель самопроверки.
+  const [selfCheck, setSelfCheck] = useState<LoreSelfCheckRun | null>(null);
+  const [selfCheckLoading, setSelfCheckLoading] = useState(false);
+  const [selfCheckError, setSelfCheckError] = useState(false);
+  const [openCheck, setOpenCheck] = useState<string | null>(null);
+
+  const runSelfCheck = () => {
+    setSelfCheckLoading(true);
+    setSelfCheckError(false);
+    fetchLoreSelfCheck()
+      .then(r => setSelfCheck(r))
+      .catch(e => { setSelfCheckError(true); onError(e); })
+      .finally(() => setSelfCheckLoading(false));
+  };
+
+  const goFinding = (f: LoreSelfCheckFinding) => {
+    if (!f.section) return;
+    navigate(`/lore?section=${f.section}&passport=${encodeURIComponent(f.passport)}`);
+  };
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -112,6 +136,90 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
           {t('lore.analytics.product.partialError', 'Часть срезов не загрузилась ({{list}}) — их плитки пусты, остальные цифры честные.', { list: failed.join(', ') })}
         </div>
       )}
+
+      {/* ── Самопроверка (MT-10): девять уже написанных сверок в один прогон ── */}
+      <div style={S.panel}>
+        <div style={S.panelHead}>
+          <GameIcon slug="checked-shield" size={15} style={{ color: 'var(--acc)' }} />
+          <b>{t('lore.analytics.product.selfCheck.title', 'Самопроверка корпуса')}</b>
+          <button style={S.selfCheckBtn} onClick={runSelfCheck} disabled={selfCheckLoading}>
+            {selfCheckLoading
+              ? t('lore.analytics.product.selfCheck.running', 'проверяю…')
+              : t('lore.analytics.product.selfCheck.run', 'Проверить')}
+          </button>
+          {selfCheck && (
+            <span style={S.meta}>
+              {t('lore.analytics.product.selfCheck.ranAt', 'прогон {{time}}', { time: new Date(selfCheck.run_at).toLocaleString() })}
+            </span>
+          )}
+        </div>
+
+        {selfCheckError && !selfCheck && (
+          <div style={{ ...S.hint, color: 'var(--dng)' }}>
+            {t('lore.analytics.product.selfCheck.loadError', 'прогон не удался целиком — попробуй ещё раз')}
+          </div>
+        )}
+
+        {!selfCheck && !selfCheckLoading && !selfCheckError && (
+          <div style={S.hint}>
+            {t('lore.analytics.product.selfCheck.empty', 'нажми «Проверить» — прогон займёт несколько секунд')}
+          </div>
+        )}
+
+        {selfCheck && (
+          <div style={S.list}>
+            {selfCheck.checks.map(c => {
+              // Три состояния, не два: unavailable — «сверку не удалось
+              // выполнить», это НЕ то же самое, что passed. Подменять одно
+              // другим — тот самый дефект, из-за которого проверка темы в CD
+              // однажды обвинила успешный выкат.
+              const color = c.state === 'passed' ? 'var(--suc)' : c.state === 'unavailable' ? 'var(--dng)' : 'var(--wrn)';
+              const icon = c.state === 'passed' ? '✓' : c.state === 'unavailable' ? '✕' : '⚠';
+              const isOpen = openCheck === c.id;
+              const clickable = c.findings.length > 0;
+              return (
+                <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div
+                    style={{ ...S.listRow, cursor: clickable ? 'pointer' : 'default' }}
+                    onClick={() => clickable && setOpenCheck(isOpen ? null : c.id)}>
+                    <span style={{ color }}>{icon}</span>
+                    <span>{c.title}</span>
+                    <span style={S.mono}>
+                      {c.state === 'unavailable'
+                        ? t('lore.analytics.product.selfCheck.unavailable', 'не удалось проверить')
+                        : t('lore.analytics.product.selfCheck.foundOf', '{{found}} из {{denom}}', { found: c.found, denom: c.denominator })}
+                    </span>
+                    {clickable && <span style={S.dim}>{t('lore.analytics.product.selfCheck.clickToOpen', '(клик — список)')}</span>}
+                  </div>
+                  {c.state === 'unavailable' && c.error && (
+                    <div style={{ ...S.dim, paddingLeft: 18, fontSize: 'var(--fs-sm)' }}>{c.error}</div>
+                  )}
+                  {isOpen && (
+                    <div style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {c.findings.map(f => (
+                        <div key={`${c.id}:${f.ref_id}`} style={S.listRow}>
+                          <span
+                            style={f.section ? { ...S.link, ...S.mono } : S.mono}
+                            onClick={() => goFinding(f)}>
+                            {f.ref_id}
+                          </span>
+                          {f.title && <span style={S.dim}>{f.title}</span>}
+                          {f.detail && <span style={{ ...S.dim, fontSize: 'var(--fs-xs)' }}>· {f.detail}</span>}
+                        </div>
+                      ))}
+                      {c.truncated && (
+                        <div style={{ ...S.dim, fontSize: 'var(--fs-xs)' }}>
+                          {t('lore.analytics.product.selfCheck.truncated', 'показаны первые {{n}} из {{total}} — остальное не выведено, а не отсутствует', { n: c.findings.length, total: c.found })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── E · Гигиена связок — ПЕРВОЙ очередью ── */}
       <div style={{ ...S.panel, borderLeft: `3px solid ${hygiene.length ? 'var(--wrn)' : 'var(--suc)'}` }}>
@@ -340,4 +448,5 @@ const S: Record<string, React.CSSProperties> = {
   actorChip:{ display: 'inline-block', border: '1px solid var(--bd)', borderRadius: 999, padding: '0 7px', fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginRight: 4 },
   stack:    { display: 'flex', height: 7, borderRadius: 4, overflow: 'hidden', background: 'var(--b3)' },
   errBanner:{ padding: '7px 11px', borderRadius: 6, fontSize: 'var(--fs-sm)', color: 'var(--wrn)', border: '1px solid color-mix(in srgb, var(--wrn) 35%, transparent)', background: 'color-mix(in srgb, var(--wrn) 8%, transparent)' },
+  selfCheckBtn: { marginLeft: 'auto', padding: '4px 12px', borderRadius: 6, border: '1px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer' },
 };
