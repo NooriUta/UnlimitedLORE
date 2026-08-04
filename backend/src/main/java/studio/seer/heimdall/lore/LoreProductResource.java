@@ -12,10 +12,14 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * ADR-LORE-022 (ACCEPTED) + PL-28 (решение №141): продуктовый слой — ОДИН тип
@@ -105,6 +109,9 @@ public class LoreProductResource extends LoreResourceBase {
 
     @Inject
     UcReadinessCalculator readiness;
+
+    @Inject
+    LoreFtIndexHealth ftIndexHealth;
 
     // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
     //
@@ -1237,36 +1244,47 @@ public class LoreProductResource extends LoreResourceBase {
      * casual-UC выглядели бы ложно «лучше». Гистограммы/динамику строит клиент
      * (date_created — ось когорт); оценки не хранятся — принцип ADR-030.
      */
+    /**
+     * Факты + вердикт по каждому UC слоя. Извлечён из {@code ucQualityAll} в
+     * MT-10, чтобы прогон самопроверки судил ТЕМ ЖЕ методом, а не отдельной
+     * копией запроса — иначе цифра на панели качества и цифра в самопроверке
+     * рано или поздно разойдутся, и непонятно будет, какой верить.
+     */
+    private List<Map<String, Object>> computeUcQualityRows() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
+            "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
+            "out('TRACED_TO').size() AS traced " +
+            "FROM KnowUseCase ORDER BY uc_id", Map.of());
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            UcQuality.Result res = UcQuality.evaluate(
+                str(r.get("rigor")), str(r.get("goal_level")),
+                str(r.get("scenario_md")), str(r.get("acceptance_md")),
+                num(r.get("primary_actors")) > 0, num(r.get("traced")) > 0);
+            double normalized = res.max() == 0 ? 1.0 : (double) res.score() / res.max();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("uc_id", r.get("uc_id"));
+            row.put("title", r.get("title"));
+            row.put("goal_level", r.get("goal_level"));
+            row.put("rigor", res.rigor());
+            row.put("score", res.score());
+            row.put("max", res.max());
+            row.put("normalized", Math.round(normalized * 1000.0) / 1000.0);
+            row.put("below_threshold", normalized < qualityThreshold);
+            row.put("date_created", r.get("date_created"));
+            out.add(row);
+        }
+        return out;
+    }
+
     @jakarta.ws.rs.GET
     @Path("uc/quality/all")
     @Produces(MediaType.APPLICATION_JSON)
     public Response ucQualityAll() {
         if (!enabled) return disabled();
         try {
-            List<Map<String, Object>> rows = ingest.queryPublic(
-                "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
-                "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
-                "out('TRACED_TO').size() AS traced " +
-                "FROM KnowUseCase ORDER BY uc_id", Map.of());
-            List<Map<String, Object>> out = new java.util.ArrayList<>();
-            for (Map<String, Object> r : rows) {
-                UcQuality.Result res = UcQuality.evaluate(
-                    str(r.get("rigor")), str(r.get("goal_level")),
-                    str(r.get("scenario_md")), str(r.get("acceptance_md")),
-                    num(r.get("primary_actors")) > 0, num(r.get("traced")) > 0);
-                double normalized = res.max() == 0 ? 1.0 : (double) res.score() / res.max();
-                Map<String, Object> row = new LinkedHashMap<>();
-                row.put("uc_id", r.get("uc_id"));
-                row.put("title", r.get("title"));
-                row.put("goal_level", r.get("goal_level"));
-                row.put("rigor", res.rigor());
-                row.put("score", res.score());
-                row.put("max", res.max());
-                row.put("normalized", Math.round(normalized * 1000.0) / 1000.0);
-                row.put("below_threshold", normalized < qualityThreshold);
-                row.put("date_created", r.get("date_created"));
-                out.add(row);
-            }
+            List<Map<String, Object>> out = computeUcQualityRows();
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("threshold", qualityThreshold);
             body.put("note", "normalized = score/max ОБЯЗАТЕЛЬНЫХ проверок своего веса — "
@@ -1282,5 +1300,309 @@ public class LoreProductResource extends LoreResourceBase {
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
             .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+    }
+
+    // ── MT-10: самопроверка корпуса ───────────────────────────────────────────
+    //
+    // Разбор метрик 02–03.08 показал, что каждый найденный дефект был дефектом
+    // ИЗМЕРЕНИЯ, а не работы: механизм написан правильно, но либо никто его не
+    // вызывает (fit-gaps и invest-coverage не встречались во фронте ни разу;
+    // LoreFtIndexHealth.check() не был выставлен ни одним эндпоинтом), либо
+    // сигнал прячет свой знаменатель или момент («85.6% с оценкой» без «из
+    // скольких», totalIndexed при почти пустом индексе). Владелец сформулировала
+    // прямо: сверок стало больше, чем можно отсмотреть глазами. Нужен не ещё
+    // один экран, а прогон, который собирает то, что уже написано, и один раз
+    // называет вердикт.
+    //
+    // Считается на бэкенде ОДНИМ эндпоинтом, а не девятью запросами с фронта:
+    // половина сверок (WorkQuality, VpFitGaps, LoreFtIndexHealth) — package-
+    // private Java без HTTP-выхода, и плодить под каждую отдельный контракт
+    // значит закладывать девять разных способов сообщить об отказе вместо
+    // одного.
+
+    /** Сколько находок на проверку показываем в ответе — остальное считается, но не перечисляется. */
+    private static final int SELF_CHECK_FINDINGS_CAP = 50;
+
+    /** Факты одной проверки: found/denominator — числа, findings — witnesses (обрезаны капом). */
+    private record CheckOutcome(int found, int denominator, List<Map<String, Object>> findings, boolean truncated) {}
+
+    /** Одна находка: что, где искать глазами, куда вести по клику. */
+    private static Map<String, Object> finding(Object refId, Object title, String detail, String section, Object passport) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("ref_id", refId);
+        m.put("title", title);
+        m.put("detail", detail);
+        m.put("section", section);
+        m.put("passport", passport != null ? passport : refId);
+        return m;
+    }
+
+    /** cloud/kite — корень (features), sea-level/subfunction — сценарий (userStories). */
+    private static String goalLevelSection(String goalLevel) {
+        return ("cloud".equals(goalLevel) || "kite".equals(goalLevel)) ? "features" : "userStories";
+    }
+
+    private long countOf(String sql) {
+        List<Map<String, Object>> r = ingest.queryPublic(sql, Map.of());
+        return r.isEmpty() ? 0 : num(r.get(0).get("n"));
+    }
+
+    /**
+     * Выполняет одну проверку и переводит её исход в конверт самопроверки.
+     *
+     * <p>Отказ проверки (исключение) — ОТДЕЛЬНОЕ состояние {@code unavailable},
+     * не {@code passed} с нулём находок. Это тот самый дефект, из-за которого
+     * проверка темы в Keycloak-CD однажды обвинила успешный выкат: `2>/dev/null
+     * || echo 0` подменял «не удалось посмотреть» на «посмотрел и там пусто».
+     * Здесь эта подмена невозможна структурно — try/catch снаружи логики
+     * проверки, а не внутри.
+     */
+    private Map<String, Object> runSelfCheck(String id, String title, Supplier<CheckOutcome> fn) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", id);
+        out.put("title", title);
+        try {
+            CheckOutcome r = fn.get();
+            out.put("state", r.found() == 0 ? "passed" : "failed");
+            out.put("found", r.found());
+            out.put("denominator", r.denominator());
+            out.put("error", null);
+            out.put("findings", r.findings());
+            out.put("truncated", r.truncated());
+        } catch (Exception e) {
+            LOG.warnf("[LORE SELF-CHECK] %s: %s", id, e.getMessage());
+            out.put("state", "unavailable");
+            out.put("found", null);
+            out.put("denominator", null);
+            out.put("error", e.getMessage());
+            out.put("findings", List.of());
+            out.put("truncated", false);
+        }
+        return out;
+    }
+
+    private CheckOutcome checkWorkQualityTasks() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT task_uid, title, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "out('TAGGED_WITH').component_id AS own_components, " +
+            "out('PART_OF').out('BELONGS_TO').component_id AS sprint_components, " +
+            "out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "out('REALIZES').uc_id AS realizes_uc, " +
+            "out('JUSTIFIED_BY').adr_id AS justified_by, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask", Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            Object comps = r.get("own_components");
+            if (!(comps instanceof Collection<?> c) || c.isEmpty()) comps = r.get("sprint_components");
+            Object eff = r.get("effort_days");
+            Double effort = eff instanceof Number n ? n.doubleValue() : null;
+            WorkQuality.Result res = WorkQuality.evaluateTask(
+                str(r.get("status_raw")), effort, str(r.get("work_class")),
+                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"));
+            if (res.score() < res.max()) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = res.findings().stream()
+                        .filter(fnd -> fnd.required() && !fnd.ok())
+                        .map(WorkQuality.Finding::message)
+                        .reduce((a, b) -> a + "; " + b).orElse("");
+                    findings.add(finding(r.get("task_uid"), r.get("title"), detail, "sprints", r.get("sprint_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
+    private CheckOutcome checkWorkQualityAdr() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT adr_id, name, status, " +
+            "out('HAS_STATE').context_md[0] AS context_md, " +
+            "out('HAS_STATE').decision_md[0] AS decision_md, " +
+            "out('HAS_STATE').consequences_md[0] AS consequences_md, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('DECIDED_IN').size() AS decision_count " +
+            "FROM KnowADR", Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            WorkQuality.Result res = WorkQuality.evaluateAdr(
+                str(r.get("status")), r.get("components"), r.get("projects"),
+                num(r.get("decision_count")) > 0,
+                str(r.get("context_md")), str(r.get("decision_md")), str(r.get("consequences_md")));
+            if (res.score() < res.max()) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = res.findings().stream()
+                        .filter(fnd -> fnd.required() && !fnd.ok())
+                        .map(WorkQuality.Finding::message)
+                        .reduce((a, b) -> a + "; " + b).orElse("");
+                    findings.add(finding(r.get("adr_id"), r.get("name"), detail, "adrs", r.get("adr_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
+    private CheckOutcome checkUcQuality() {
+        List<Map<String, Object>> rows = computeUcQualityRows();
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            if (Boolean.TRUE.equals(r.get("below_threshold"))) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    double normalized = ((Number) r.get("normalized")).doubleValue();
+                    String detail = String.format(java.util.Locale.ROOT,
+                        "оценка %.2f ниже порога %.2f", normalized, qualityThreshold);
+                    findings.add(finding(r.get("uc_id"), r.get("title"), detail,
+                        goalLevelSection(str(r.get("goal_level"))), r.get("uc_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
+    private CheckOutcome checkFitGaps() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("feature_vp_analytics").baseSql(), Map.of());
+        Map<String, String> gainRanks = dictOf("SELECT gain_id AS k, rank AS v FROM KnowGain");
+        Map<String, String> painSeverities = dictOf("SELECT pain_id AS k, severity AS v FROM KnowPain");
+        List<VpFitGaps.Gap> gaps = VpFitGaps.evaluate(rows, gainRanks, painSeverities);
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(gaps.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            VpFitGaps.Gap g = gaps.get(i);
+            String detail = g.finding() + " — не закрыто: " + g.missingId() + " (вес " + g.weight() + ")";
+            findings.add(finding(g.refId(), g.title(), detail, "features", g.refId()));
+        }
+        return new CheckOutcome(gaps.size(), rows.size(), findings, gaps.size() > cap);
+    }
+
+    /**
+     * Доля неклассифицированных задач по work_class (INVEST-профиль). Числа
+     * агрегированные — VpFitGaps.coverage() не отдаёт построчных ссылок, поэтому
+     * findings пуст: found/denominator сами по себе полный ответ на вопрос
+     * «сколько и из скольких», а не список для клика.
+     */
+    private CheckOutcome checkInvestCoverage() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("invest_profile").baseSql(), Map.of());
+        VpFitGaps.InvestCoverage cov = VpFitGaps.coverage(rows);
+        int unclassified = cov.tasksTotal() - cov.tasksClassified();
+        return new CheckOutcome(unclassified, cov.tasksTotal(), List.of(), false);
+    }
+
+    private CheckOutcome checkProductHygiene() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("product_hygiene").baseSql(), Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(rows.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            Map<String, Object> r = rows.get(i);
+            String entityType = str(r.get("entity_type"));
+            String section = switch (entityType) {
+                case "task" -> "sprints";
+                case "uc" -> "userStories";
+                case "pain" -> "vpProfile";
+                default -> "sprints";
+            };
+            Object passport = "task".equals(entityType) ? r.get("sprint_id") : r.get("ref_id");
+            findings.add(finding(r.get("ref_id"), r.get("title"), str(r.get("finding")), section, passport));
+        }
+        // Знаменатель — население, на котором слайс вообще ищет находки (задачи,
+        // сценарии US, боли), а НЕ весь корпус: иначе доля выглядела бы заниженной
+        // сравнением с сущностями, которых эта проверка никогда не коснётся.
+        long denominator = countOf("SELECT count(*) AS n FROM KnowTask")
+            + countOf("SELECT count(*) AS n FROM KnowUseCase WHERE goal_level IN ['sea-level','subfunction']")
+            + countOf("SELECT count(*) AS n FROM KnowPain");
+        return new CheckOutcome(rows.size(), (int) denominator, findings, rows.size() > cap);
+    }
+
+    private CheckOutcome checkStrategicCoverage() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("strategic_coverage").baseSql(), Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(rows.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            Map<String, Object> r = rows.get(i);
+            String section = "uc".equals(str(r.get("entity_type"))) ? "features" : "milestones";
+            findings.add(finding(r.get("ref_id"), r.get("title"), str(r.get("finding")), section, r.get("ref_id")));
+        }
+        long denominator = countOf("SELECT count(*) AS n FROM KnowUseCase WHERE goal_level IN ['cloud','kite']")
+            + countOf("SELECT count(*) AS n FROM KnowMilestone");
+        return new CheckOutcome(rows.size(), (int) denominator, findings, rows.size() > cap);
+    }
+
+    /**
+     * Роли без единого сценария. Не через слайс {@code actor_load} (он требует
+     * project и меряет по одному проекту за раз) — самопроверка смотрит на весь
+     * корпус, поэтому считает {@code HAS_ACTOR} напрямую по всем акторам.
+     */
+    private CheckOutcome checkActorLoadDead() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowActor", Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            if (num(r.get("uc_count")) == 0) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    findings.add(finding(r.get("actor_id"), r.get("name"),
+                        "роль без единого сценария", "actors", r.get("actor_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, false);
+    }
+
+    /**
+     * {@link LoreFtIndexHealth#check()} возвращает ТОЛЬКО непригодные индексы —
+     * пустой список значит «все здоровы». Знаменатель поэтому берётся из
+     * реестра {@link LoreSchemaMigrations#FT_INDEXES}, а не из размера ответа:
+     * «0 находок из 0» неотличимо от «не проверяли», а реестр даёт настоящее
+     * число проверенных веток поиска.
+     */
+    private CheckOutcome checkFtIndexHealth() {
+        List<LoreFtIndexHealth.Finding> bad = ftIndexHealth.check();
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(bad.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            LoreFtIndexHealth.Finding f = bad.get(i);
+            findings.add(finding(f.index(), f.type(), f.detail(), null, null));
+        }
+        return new CheckOutcome(bad.size(), LoreSchemaMigrations.FT_INDEXES.size(), findings, bad.size() > cap);
+    }
+
+    @GET
+    @Path("product/self-check")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response selfCheck() {
+        if (!enabled) return disabled();
+        List<Map<String, Object>> checks = new ArrayList<>();
+        checks.add(runSelfCheck("work_quality_tasks", "Полнота задач (статус · компонент · оценка · класс работы)", this::checkWorkQualityTasks));
+        checks.add(runSelfCheck("work_quality_adr", "Полнота ADR (контекст · решение · связи)", this::checkWorkQualityAdr));
+        checks.add(runSelfCheck("uc_quality", "Сценарии ниже порога качества", this::checkUcQuality));
+        checks.add(runSelfCheck("fit_gaps", "Заявлено, но не доставлено (VP fit)", this::checkFitGaps));
+        checks.add(runSelfCheck("invest_coverage", "Задачи без класса работы (INVEST)", this::checkInvestCoverage));
+        checks.add(runSelfCheck("product_hygiene", "Гигиена продуктового слоя", this::checkProductHygiene));
+        checks.add(runSelfCheck("strategic_coverage", "Стратегическое покрытие (фичи ↔ вехи)", this::checkStrategicCoverage));
+        checks.add(runSelfCheck("actor_load_dead", "Роли без сценариев", this::checkActorLoadDead));
+        checks.add(runSelfCheck("ft_index_health", "Пригодность полнотекстовых индексов", this::checkFtIndexHealth));
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("run_at", Instant.now().toString());
+        body.put("checks", checks);
+        return noStore(Response.ok(body));
     }
 }

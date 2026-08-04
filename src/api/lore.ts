@@ -1444,3 +1444,45 @@ export async function fetchUcQualityAll(signal?: AbortSignal): Promise<{
   const body = (await res.json()) as { threshold?: number; rows?: LoreUcQualityAllRow[] };
   return { threshold: body.threshold ?? 0.6, rows: body.rows ?? [] };
 }
+
+/**
+ * GET /lore/product/self-check (MT-10): девять уже написанных сверок в один
+ * прогон. `state` — три исхода, не два: `unavailable` значит «сверку не
+ * удалось выполнить», и это НЕ то же самое, что `passed` — подмена одного
+ * другим однажды заставила проверку в CD обвинить успешный выкат.
+ */
+export interface LoreSelfCheckFinding {
+  ref_id: string;
+  title: string | null;
+  detail: string | null;
+  /** Раздел LORE для дип-линка; null — находка без экрана для перехода (напр. индекс СУБД). */
+  section: string | null;
+  /** Что подставить в `?passport=` — может отличаться от ref_id (задача → её спринт). */
+  passport: string;
+}
+
+export interface LoreSelfCheck {
+  id: string;
+  title: string;
+  state: 'passed' | 'failed' | 'unavailable';
+  /** Сколько всего проблем — независимо от того, сколько findings реально прислано. */
+  found: number | null;
+  /** На какой выборке считали — без него число found нечитаемо. */
+  denominator: number | null;
+  error: string | null;
+  findings: LoreSelfCheckFinding[];
+  /** true — found больше, чем прислано findings; список обрезан, а не исчерпывающий. */
+  truncated: boolean;
+}
+
+export interface LoreSelfCheckRun {
+  run_at: string;
+  checks: LoreSelfCheck[];
+}
+
+export async function fetchLoreSelfCheck(signal?: AbortSignal): Promise<LoreSelfCheckRun> {
+  const res = await fetch(`${LORE_BASE}/product/self-check`, { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return (await res.json()) as LoreSelfCheckRun;
+}
