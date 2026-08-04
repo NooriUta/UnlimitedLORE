@@ -29,8 +29,16 @@ api() { # api <path> <json-file-or-inline>
        -X POST "$DB_URL/api/v1/$1" --data-binary "$2"
 }
 
+# Запрос уходит ФАЙЛОМ, а не инлайновым -d. Причина не в удобстве: инлайновая
+# передача бьёт не-ASCII на пути через оболочку, и кириллический кейс ниже
+# ложно краснел («нашёл 0 вместо 2»), хотя на тех же данных, записанных
+# файлом, поиск находил обе строки. Ловушка известная и уже стоила разбора в
+# других инструментах — сломанная мерка выглядит как дефект СУБД.
 sql() { # sql "<query>" — без двойных кавычек внутри
-  api "command/$DB_NAME" "{\"language\":\"sql\",\"command\":\"$1\"}"
+  local f; f=$(mktemp)
+  printf '{"language":"sql","command":"%s"}' "$1" > "$f"
+  api "command/$DB_NAME" "@$f"
+  rm -f "$f"
 }
 
 script_sql() { # script_sql <file with payload json>
@@ -60,10 +68,31 @@ VERSION=$(curl -s -u "$DB_USER:$DB_PASS" "$DB_URL/api/v1/databases" \
   | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
 emit "meta.version" "INFO" "${VERSION:-unknown}"
 
+# --- C0. Годность самого эталона ---------------------------------------------
+# Все скан-кейсы ниже опираются на MATCHES. Если оператор не работает или
+# экранирование не доходит до regex, скан вернёт 0 — и это прочитается как
+# «данных нет», то есть как ЗДОРОВЬЕ индекса.
+#
+# Поймано на живом корпусе 2026-08-04: `MATCHES '(?s).*\blore\b.*'` вернул 0
+# при 1506 совпадениях по подстроке. Ноль был сломанной меркой, а не находкой.
+# Поэтому эталон проверяется заведомо истинным шаблоном ДО того, как по нему
+# что-то утверждается.
+
+sql "CREATE VERTEX TYPE RgOracle IF NOT EXISTS" >/dev/null
+sql "INSERT INTO RgOracle SET body = 'kontrolnaya stroka'" >/dev/null
+ORACLE_ALL=$(scalar "$(sql "SELECT count(*) AS n FROM RgOracle WHERE body MATCHES '(?s).*'")" n)
+ORACLE_OK=0
+if [ "${ORACLE_ALL:-0}" -ge 1 ]; then
+  ORACLE_OK=1
+  emit "oracle.matches_works" "PASS" "контрольный шаблон вернул $ORACLE_ALL — эталону можно верить"
+else
+  emit "oracle.matches_works" "FAIL" "контрольный шаблон вернул '$ORACLE_ALL' вместо >=1 — ВСЕ скан-кейсы ниже недостоверны"
+fi
+
 # --- C1. FULL_TEXT по СУЩЕСТВУЮЩИМ данным ------------------------------------
 # Главный кейс. Дефект 2026-08: индекс, созданный на типе с данными,
 # отчитывается числом записей, но находит только те строки, что записаны
-# ПОСЛЕ создания. На проде скан находил токен в 714 строках, индекс — в одной.
+# ПОСЛЕ создания. На копии прода: скан 979, индекс 256 (26%).
 
 sql "CREATE VERTEX TYPE RgDoc IF NOT EXISTS" >/dev/null
 sql "CREATE PROPERTY RgDoc.body IF NOT EXISTS STRING" >/dev/null
@@ -130,6 +159,63 @@ elif printf '%s' "$CRE" | grep -q '"created":true'; then
   emit "index.create_if_not_exists_names" "FAIL" "ответ created:true, но имени rgFt2 в схеме нет — успех при несделанной работе"
 else
   emit "index.create_if_not_exists_names" "OBSERVE" "не создано и не отрапортовано созданием: $(printf '%s' "$CRE" | head -c 200)"
+fi
+
+# --- C4b. Кириллица ----------------------------------------------------------
+# Отдельным кейсом: анализатор у нас RussianAnalyzer, и кириллица уже дважды
+# ломалась в других местах — java `\w` без UNICODE_CHARACTER_CLASS отбивал её
+# как 400 BAD_PARAMS, а 400 маскировался под пустую выдачу. Латинская проба
+# такую поломку не увидит вовсе.
+
+sql "CREATE VERTEX TYPE RgRu IF NOT EXISTS" >/dev/null
+sql "CREATE PROPERTY RgRu.body IF NOT EXISTS STRING" >/dev/null
+sql "INSERT INTO RgRu SET body = 'решение принято по спринту'" >/dev/null
+sql "INSERT INTO RgRu SET body = 'решение отложено до релиза'" >/dev/null
+sql "INSERT INTO RgRu SET body = 'postoronnij tekst'" >/dev/null
+sql "CREATE INDEX rgFtRu ON RgRu (body) FULL_TEXT METADATA {\\\"analyzer\\\":\\\"org.apache.lucene.analysis.ru.RussianAnalyzer\\\",\\\"similarity\\\":\\\"BM25\\\"}" >/dev/null
+RU_IDX=$(scalar "$(sql "SELECT count(*) AS n FROM RgRu WHERE SEARCH_INDEX('rgFtRu', 'решение') = true")" n)
+if [ "${RU_IDX:-0}" -ge 2 ]; then
+  emit "ft.cyrillic_term" "PASS" "кириллический терм нашёл $RU_IDX из 2"
+else
+  emit "ft.cyrillic_term" "FAIL" "кириллический терм нашёл '$RU_IDX' вместо 2 — либо анализатор, либо кодировка по пути"
+fi
+
+# --- C4c. Многополевой индекс ------------------------------------------------
+# У нас индекс на тип покрывает заголовок и все *_md (ADR-LORE-033 D10), то
+# есть один вызов SEARCH_INDEX на тип. Сверять его сканом по ОДНОМУ полю —
+# негодная мерка: на копии прода это дало «индекс 88 против скана 53» и
+# читалось как «индекс находит лишнее». Эталон обязан покрывать те же поля.
+
+sql "CREATE VERTEX TYPE RgMulti IF NOT EXISTS" >/dev/null
+sql "CREATE PROPERTY RgMulti.a IF NOT EXISTS STRING" >/dev/null
+sql "CREATE PROPERTY RgMulti.b IF NOT EXISTS STRING" >/dev/null
+sql "INSERT INTO RgMulti SET a = 'ALPHA tut', b = 'nichego'" >/dev/null
+sql "INSERT INTO RgMulti SET a = 'nichego', b = 'ALPHA tut'" >/dev/null
+sql "INSERT INTO RgMulti SET a = 'nichego', b = 'nichego'" >/dev/null
+sql "CREATE INDEX rgFtMulti ON RgMulti (a, b) FULL_TEXT" >/dev/null
+M_SCAN=$(scalar "$(sql "SELECT count(*) AS n FROM RgMulti WHERE a LIKE '%ALPHA%' OR b LIKE '%ALPHA%'")" n)
+M_IDX=$(scalar "$(sql "SELECT count(*) AS n FROM RgMulti WHERE SEARCH_INDEX('rgFtMulti', 'ALPHA') = true")" n)
+if [ "$M_SCAN" = "$M_IDX" ]; then
+  emit "ft.multifield_covers_all" "PASS" "скан по обоим полям=$M_SCAN == индекс=$M_IDX"
+else
+  emit "ft.multifield_covers_all" "FAIL" "скан по обоим полям=$M_SCAN, индекс=$M_IDX — индекс покрывает не все объявленные поля"
+fi
+
+# --- C4d. Индекс НЕ самолечится при восстановлении ---------------------------
+# Установлено 2026-08-04 на копии прода: восстановленный из бэкапа индекс
+# приезжает ровно таким, каким был собран (256 из 979), и новая версия СУБД
+# сама его не чинит. Апгрейд без ПЕРЕСОЗДАНИЯ индексов не даёт ничего.
+#
+# Здесь проверяется вторая половина того же факта: пересоздание НА МЕСТЕ
+# обязано дать полное покрытие. Если и оно не даёт — апгрейд бесполезен.
+
+sql "DROP INDEX rgFtMulti" >/dev/null
+sql "CREATE INDEX rgFtMulti ON RgMulti (a, b) FULL_TEXT" >/dev/null
+M_IDX2=$(scalar "$(sql "SELECT count(*) AS n FROM RgMulti WHERE SEARCH_INDEX('rgFtMulti', 'ALPHA') = true")" n)
+if [ "$M_SCAN" = "$M_IDX2" ]; then
+  emit "ft.recreate_restores_coverage" "PASS" "после пересоздания индекс=$M_IDX2 == скан=$M_SCAN"
+else
+  emit "ft.recreate_restores_coverage" "FAIL" "после пересоздания индекс=$M_IDX2, скан=$M_SCAN — пересоздание не лечит"
 fi
 
 # --- C5..C9. Контракты грамматики (OBSERVE) ----------------------------------
