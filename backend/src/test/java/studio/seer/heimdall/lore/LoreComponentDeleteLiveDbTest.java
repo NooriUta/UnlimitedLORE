@@ -79,9 +79,18 @@ class LoreComponentDeleteLiveDbTest {
         .when().post("/lore/sprint/create")
         .then().statusCode(200);
         given().header("X-Seer-Role", "admin").contentType("application/json")
-            .body("{\"sprint_id\":\"SPRINT_TEST_DEL_USED\",\"task_id\":\"T1\",\"title\":\"держит компонент\"," +
-                  "\"component_id\":\"TEST-DEL-USED\"}")
+            .body("{\"sprint_id\":\"SPRINT_TEST_DEL_USED\",\"task_id\":\"T1\",\"title\":\"держит компонент\"}")
         .when().post("/lore/task")
+        .then().statusCode(200);
+        // TaskCreateRequest НЕ несёт component_id вовсе (только sprint_id/task_id/
+        // title/note_md/phase_uid/*_agent/task_type/work_class/uc_id) — задача и
+        // компонент связываются ОТДЕЛЬНЫМ вызовом, TAGGED_WITH-ребром, не полем.
+        // Первая версия теста слала component_id прямо в /lore/task: Jackson тихо
+        // отбросил незнакомое поле, задача создалась без единой связи с компонентом,
+        // и гейт честно нашёл 0 — красный тест на пустом месте (MT-09 в профиль).
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"task_uid\":\"SPRINT_TEST_DEL_USED/T1\",\"component_id\":\"TEST-DEL-USED\"}")
+        .when().post("/lore/task/component")
         .then().statusCode(200);
 
         given().header("X-Seer-Role", "admin").contentType("application/json")

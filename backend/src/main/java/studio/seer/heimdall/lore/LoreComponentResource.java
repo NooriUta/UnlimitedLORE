@@ -168,10 +168,24 @@ public class LoreComponentResource extends LoreResourceBase {
             putIfPositive(blockers, "children",           countN("SELECT count(*) AS n FROM LoreComponent WHERE parent_id=:cid", p));
             putIfPositive(blockers, "belongs_to_edges",    countN("SELECT count(*) AS n FROM (SELECT expand(in('BELONGS_TO')) FROM LoreComponent WHERE component_id=:cid)", p));
             putIfPositive(blockers, "documented_specs",    countN("SELECT count(*) AS n FROM (SELECT expand(out('DOCUMENTED_IN')) FROM LoreComponent WHERE component_id=:cid)", p));
-            putIfPositive(blockers, "tasks",               countN("SELECT count(*) AS n FROM KnowTask WHERE component_id=:cid", p));
+            // Задача ссылается на компонент ДВУМЯ путями одновременно: обычное
+            // создание (/lore/task, task/component) кладёт TAGGED_WITH-ребро, а
+            // промоушен QG-рекомендации (LoreQgResource) пишет плоское поле
+            // KnowTask.component_id напрямую, в обход ребра. Проверка только
+            // поля находила бы 0 всегда для первого пути — тот самый молчаливый
+            // ноль вместо честного отказа, от которого предостерегает FEAT-LORE-HONEST.
+            putIfPositive(blockers, "tasks", countN(
+                "SELECT count(*) AS n FROM (" +
+                "SELECT expand(in('TAGGED_WITH')) FROM LoreComponent WHERE component_id=:cid" +
+                ") WHERE @class = 'KnowTask'", p)
+                + countN("SELECT count(*) AS n FROM KnowTask WHERE component_id=:cid", p));
             putIfPositive(blockers, "questions",           countN("SELECT count(*) AS n FROM KnowQuestion WHERE component_id=:cid", p));
             putIfPositive(blockers, "quality_gates",       countN("SELECT count(*) AS n FROM QualityGate WHERE component_id=:cid", p));
-            putIfPositive(blockers, "qg_job_tasks",        countN("SELECT count(*) AS n FROM QGJobTask WHERE component_id=:cid", p));
+            // QGJobTask НЕ несёт component_id ни в одном пути записи (проверено:
+            // ни одна из ~9 CREATE PROPERTY QGJobTask.* в LoreSchemaInitializer, ни
+            // resolveJob в LoreQgResource его не пишут) — родительский QualityGate
+            // уже покрыт строкой выше. Проверка поля, которого нет в схеме, всегда
+            // 0 и не блокирует НИКОГДА — вычеркнута, а не оставлена мёртвым чеком.
             putIfPositive(blockers, "qg_recommendations",  countN("SELECT count(*) AS n FROM QGRecommendation WHERE component_id=:cid", p));
             putIfPositive(blockers, "decisions",           countN("SELECT count(*) AS n FROM KnowDecision WHERE component_id=:cid", p));
 
