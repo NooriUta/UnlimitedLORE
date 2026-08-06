@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchLoreSlice, updateLoreDoc } from '../../api/lore';
+import { fetchLoreSlice, updateLoreDoc, updateLoreRunbook, updateLoreQualityGate } from '../../api/lore';
 import { MartProse } from '../bench/MartProse';
 import SandboxedHtmlFrame from './SandboxedHtmlFrame';
 import TipTapField from './TipTapField';
@@ -105,6 +105,12 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   const [editing, setEditing] = useState(false);
   const [draftEn, setDraftEn] = useState('');
   const [draftRu, setDraftRu] = useState('');
+  // AL-109: раньше правка была только у `doc` (двуязычный content_md_en/ru).
+  // У runbook/qg тело односложное — один content_md, свой черновик отдельным
+  // полем, а не переиспользуя draftEn: смешение полей разных сущностей в
+  // одном состоянии рано или поздно отправило бы черновик doc туда, где его
+  // не ждут.
+  const [draftBody, setDraftBody] = useState('');
   const [saving, setSaving]   = useState(false);
 
   useEffect(() => {
@@ -130,37 +136,49 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   if (!row)    return <div style={S.empty}>{t('lore.artifactDoc.notFound', 'Не найдено: {{id}}', { id })}</div>;
 
   const startEdit = () => {
-    setDraftEn(row.content_md_en ?? '');
-    setDraftRu(row.content_md_ru ?? '');
-    setEditLang(lang);
+    if (kind === 'doc') {
+      setDraftEn(row.content_md_en ?? '');
+      setDraftRu(row.content_md_ru ?? '');
+      setEditLang(lang);
+    } else {
+      setDraftBody(row.content_md ?? '');
+    }
     setEditing(true);
   };
 
   const saveEdit = async () => {
     setSaving(true);
     try {
-      // `row` still holds the pre-edit values here (only updated after a
-      // successful save below), so it doubles as "was this field ever set".
-      // Send a field when either it now has content, or it HAD content and
-      // the user cleared it (an intentional clear) — only skip it when both
-      // the draft and the original were empty (never touched, don't turn a
-      // never-set null into ''). The backend's partial-upsert only skips a
-      // JSON-absent field, so sending both unconditionally regardless of
-      // prior state would overwrite an untouched null field with ''.
-      const sendEn = draftEn !== '' || !!row.content_md_en;
-      const sendRu = draftRu !== '' || !!row.content_md_ru;
-      await updateLoreDoc(id, {
-        ...(sendEn ? { content_md_en: draftEn } : {}),
-        ...(sendRu ? { content_md_ru: draftRu } : {}),
-      });
-      // Mirror the send condition exactly — a field the backend was told to
-      // skip (never touched) must stay whatever it already was locally too,
-      // not silently become '' just because the draft box started empty.
-      setRow(r => (r ? {
-        ...r,
-        content_md_en: sendEn ? draftEn : r.content_md_en,
-        content_md_ru: sendRu ? draftRu : r.content_md_ru,
-      } : r));
+      if (kind === 'doc') {
+        // `row` still holds the pre-edit values here (only updated after a
+        // successful save below), so it doubles as "was this field ever set".
+        // Send a field when either it now has content, or it HAD content and
+        // the user cleared it (an intentional clear) — only skip it when both
+        // the draft and the original were empty (never touched, don't turn a
+        // never-set null into ''). The backend's partial-upsert only skips a
+        // JSON-absent field, so sending both unconditionally regardless of
+        // prior state would overwrite an untouched null field with ''.
+        const sendEn = draftEn !== '' || !!row.content_md_en;
+        const sendRu = draftRu !== '' || !!row.content_md_ru;
+        await updateLoreDoc(id, {
+          ...(sendEn ? { content_md_en: draftEn } : {}),
+          ...(sendRu ? { content_md_ru: draftRu } : {}),
+        });
+        // Mirror the send condition exactly — a field the backend was told to
+        // skip (never touched) must stay whatever it already was locally too,
+        // not silently become '' just because the draft box started empty.
+        setRow(r => (r ? {
+          ...r,
+          content_md_en: sendEn ? draftEn : r.content_md_en,
+          content_md_ru: sendRu ? draftRu : r.content_md_ru,
+        } : r));
+      } else if (kind === 'runbook') {
+        await updateLoreRunbook(id, { content_md: draftBody });
+        setRow(r => (r ? { ...r, content_md: draftBody } : r));
+      } else {
+        await updateLoreQualityGate(id, { content_md: draftBody });
+        setRow(r => (r ? { ...r, content_md: draftBody } : r));
+      }
       setEditing(false);
     } catch (e) {
       onError(e);
@@ -190,7 +208,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
         {row.status && <span style={S.statusChip}>{row.status}</span>}
         <span style={S.title}>{title}</span>
         {row.component_id && <span style={S.comp}>{row.component_id}</span>}
-        {kind === 'doc' && !editing && (
+        {!editing && (
           <button style={S.editBtn} onClick={startEdit}>{t('lore.artifactDoc.edit', '✎ Редактировать')}</button>
         )}
       </div>
@@ -221,7 +239,21 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
 
       {row.description && <div style={S.desc}>{row.description}</div>}
 
-      {kind === 'doc' && editing ? (
+      {editing && kind !== 'doc' ? (
+        <>
+          <div style={S.editField}>
+            <TipTapField value={draftBody} onChange={setDraftBody} placeholder="Markdown…" enableImages={false} enableHtmlMode={false} />
+          </div>
+          <div style={S.editActions}>
+            <button style={S.saveBtn} disabled={saving} onClick={saveEdit}>
+              {saving ? t('lore.artifactDoc.saving', 'Сохранение…') : t('lore.artifactDoc.save', 'Сохранить')}
+            </button>
+            <button style={S.cancelBtn} disabled={saving} onClick={() => setEditing(false)}>
+              {t('lore.artifactDoc.cancel', 'Отмена')}
+            </button>
+          </div>
+        </>
+      ) : kind === 'doc' && editing ? (
         <>
           {row.content_html && !row.content_md_en && !row.content_md_ru && (
             <div style={S.cdnBanner}>
