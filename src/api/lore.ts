@@ -1158,6 +1158,38 @@ export async function updateLoreDoc(
   return res.json() as Promise<{ ok: boolean; doc_id: string }>;
 }
 
+// Partial upsert, тот же контракт, что POST /lore/runbook (backend upsert по
+// runbook_id): передан только content_md — остальные поля (name/area) не
+// затрагиваются.
+export async function updateLoreRunbook(
+  runbookId: string,
+  fields: { content_md?: string },
+): Promise<{ ok: boolean; runbook_id: string }> {
+  const res = await fetch(`${LORE_BASE}/runbook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ runbook_id: runbookId, ...fields }),
+  });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ ok: boolean; runbook_id: string }>;
+}
+
+// Partial upsert, тот же контракт, что POST /lore/quality-gate.
+export async function updateLoreQualityGate(
+  qgId: string,
+  fields: { content_md?: string },
+): Promise<{ ok: boolean; qg_id: string }> {
+  const res = await fetch(`${LORE_BASE}/quality-gate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ qg_id: qgId, ...fields }),
+  });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ ok: boolean; qg_id: string }>;
+}
+
 // ── QG dashboard types ──────────────────────────────────────────────────────
 
 export interface LoreQGViolation {
