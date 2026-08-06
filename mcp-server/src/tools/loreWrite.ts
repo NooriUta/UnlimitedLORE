@@ -1526,6 +1526,23 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
+  definePostTool(server, {
+    name: 'component_del',
+    description: 'Delete a LoreComponent vertex — GUARDED, unlike adr_del/doc_del which delete ' +
+      'unconditionally. Fails with 409 and a breakdown when the component still has children, ' +
+      'BELONGS_TO edges (from any source type, not just ADR/spec/sprint), documented specs, or a ' +
+      'flat component_id reference on KnowTask/KnowQuestion/QualityGate/QGJobTask/' +
+      'QGRecommendation/KnowDecision. Reparent or unlink the blockers first (component_set for ' +
+      'reparenting; the owning entity\'s own tool for its component_id/link). ' +
+      'Use for empty duplicate/mistaken components — never on one with real history. ' +
+      'Mutates the shared system_aida_lore.',
+    schema: {
+      component_id: z.string().describe('ID of the component to delete, e.g. "MIGGEN-PDM"'),
+    },
+    path: '/lore/component/delete',
+    body: ({ component_id }) => ({ component_id }),
+  });
+
   // ── BRAGI content archive (SPEC-BRAGI-ARCHIVE-001 v0.4) ──────────────────
   // Sub-namespaced per ADR-LORE-014 §2's own table (bragi_pub_new, bragi_channel_set, …)
   // rather than flattened bragi_new/bragi_set — BRAGI covers 9+ distinct sub-entities,
