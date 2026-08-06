@@ -174,10 +174,13 @@ public class LoreComponentResource extends LoreResourceBase {
             // KnowTask.component_id напрямую, в обход ребра. Проверка только
             // поля находила бы 0 всегда для первого пути — тот самый молчаливый
             // ноль вместо честного отказа, от которого предостерегает FEAT-LORE-HONEST.
+            // Без фильтра по классу: TAGGED_WITH, входящий В LoreComponent, кладёт
+            // ТОЛЬКО код привязки задачи (grep подтверждён) — ArcadeDB SQL не
+            // принимает `WHERE @class=` поверх expand() подзапроса (parse error:
+            // "mismatched input '@'"), а фильтровать нечего, других источников нет.
             putIfPositive(blockers, "tasks", countN(
                 "SELECT count(*) AS n FROM (" +
-                "SELECT expand(in('TAGGED_WITH')) FROM LoreComponent WHERE component_id=:cid" +
-                ") WHERE @class = 'KnowTask'", p)
+                "SELECT expand(in('TAGGED_WITH')) FROM LoreComponent WHERE component_id=:cid)", p)
                 + countN("SELECT count(*) AS n FROM KnowTask WHERE component_id=:cid", p));
             putIfPositive(blockers, "questions",           countN("SELECT count(*) AS n FROM KnowQuestion WHERE component_id=:cid", p));
             putIfPositive(blockers, "quality_gates",       countN("SELECT count(*) AS n FROM QualityGate WHERE component_id=:cid", p));
