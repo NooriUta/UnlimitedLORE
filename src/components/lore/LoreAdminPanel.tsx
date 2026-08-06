@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { iconLoaded } from '@iconify/react';
@@ -534,6 +534,14 @@ function useProjectRoleMap(reloadKey: number) {
  * Существующий {@link ProjectRolesEditor} в карточке НЕ заменяется — он
  * остаётся для подробного просмотра. Этот путь нужен для первичного
  * наполнения: сегодня, чтобы раздать роли, надо открыть карточку каждого.
+ *
+ * AL-108: центрированное модальное окно, а не привязанная к кнопке
+ * абсолютная панель. Замечание владельца — «странное поведение админки»:
+ * прежняя панель (`position: absolute; right: 0`) росла вниз от кнопки, и у
+ * строки ближе к нижнему краю таблицы/страницы обрезалась вьюпортом —
+ * видно было 1-2 первых проекта из девяти, хотя все они были в разметке.
+ * Модалка с фиксированным центрированием не зависит от того, где в таблице
+ * стоит строка.
  */
 function InlineRolesPopup({ kcSub, username, projects, current, onClose, onChanged, onError }: {
   kcSub: string; username: string; projects: string[];
@@ -543,19 +551,11 @@ function InlineRolesPopup({ kcSub, username, projects, current, onClose, onChang
   const { t } = useTranslation();
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const box = useRef<HTMLDivElement | null>(null);
 
-  // Закрытие по клику СНАРУЖИ. Клик внутри не закрывает — иначе каждое
-  // назначение требовало бы открывать попап заново, а он и заведён ради
-  // массовой раздачи ролей.
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) onClose();
-    };
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onEsc);
-    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc); };
+    return () => document.removeEventListener('keydown', onEsc);
   }, [onClose]);
 
   async function apply(project: string, role: string, action: 'add' | 'remove') {
@@ -572,36 +572,55 @@ function InlineRolesPopup({ kcSub, username, projects, current, onClose, onChang
   }
 
   return (
-    <div ref={box} style={{
-      position: 'absolute', zIndex: 20, right: 0, marginTop: 4, minWidth: 340, maxHeight: 320,
-      overflowY: 'auto', background: 'var(--bg1)', border: '1px solid var(--bdh)',
-      borderRadius: 6, boxShadow: '0 6px 24px rgba(0,0,0,.28)', padding: 8, textAlign: 'left',
-    }}>
-      <div style={{ fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--t3)', marginBottom: 6 }}>
-        {t('lore.admin.inlineRolesH', 'Проекты и роли')} · {username}
+    <div
+      role="dialog" aria-modal="true"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200, display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(2px)',
+      }}
+      // Клик по фону закрывает, клик внутри карточки — нет: иначе каждое
+      // назначение роли требовало бы открывать попап заново, а он и заведён
+      // ради массовой раздачи ролей нескольким проектам подряд.
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        width: 380, maxWidth: '92vw', maxHeight: '80vh', overflowY: 'auto',
+        background: 'var(--bg1)', border: '1px solid var(--bdh)', borderRadius: 10,
+        boxShadow: '0 12px 40px rgba(0,0,0,.4)', padding: 14, textAlign: 'left',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{ flex: 1, fontSize: 'var(--fs-2xs)', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--t3)' }}>
+            {t('lore.admin.inlineRolesH', 'Проекты и роли')} · {username}
+          </span>
+          <button type="button" onClick={onClose} style={{
+            width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', border: 'none', color: 'var(--t3)', cursor: 'pointer', borderRadius: 5,
+          }}>✕</button>
+        </div>
+        {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 8 }}>{err}</div>}
+        {projects.length === 0 && (
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.inlineNoProjects', 'проектов нет — заведите их в разделе «Проекты»')}</div>
+        )}
+        {projects.map(p => {
+          const has = current.find(x => x.project === p);
+          return (
+            <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0' }}>
+              <input type="checkbox" checked={!!has} disabled={busy === p}
+                aria-label={p}
+                // Новое назначение — самая узкая роль. Расширять надо осознанно,
+                // а не получать developer'а одним кликом по чекбоксу.
+                onChange={() => apply(p, has ? has.role : 'reader', has ? 'remove' : 'add')} />
+              <span style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{p}</span>
+              <select style={{ ...S.input, minWidth: 120 }} value={has?.role ?? ''} disabled={!has || busy === p}
+                onChange={e => apply(p, e.target.value, 'add')}>
+                {!has && <option value="">—</option>}
+                {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          );
+        })}
       </div>
-      {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)', marginBottom: 6 }}>{err}</div>}
-      {projects.length === 0 && (
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)' }}>{t('lore.admin.inlineNoProjects', 'проектов нет — заведите их в разделе «Проекты»')}</div>
-      )}
-      {projects.map(p => {
-        const has = current.find(x => x.project === p);
-        return (
-          <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
-            <input type="checkbox" checked={!!has} disabled={busy === p}
-              aria-label={p}
-              // Новое назначение — самая узкая роль. Расширять надо осознанно,
-              // а не получать developer'а одним кликом по чекбоксу.
-              onChange={() => apply(p, has ? has.role : 'reader', has ? 'remove' : 'add')} />
-            <span style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)' }}>{p}</span>
-            <select style={{ ...S.input, minWidth: 120 }} value={has?.role ?? ''} disabled={!has || busy === p}
-              onChange={e => apply(p, e.target.value, 'add')}>
-              {!has && <option value="">—</option>}
-              {PROJECT_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
-        );
-      })}
     </div>
   );
 }
