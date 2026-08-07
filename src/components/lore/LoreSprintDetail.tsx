@@ -153,17 +153,22 @@ const TASK_PICK_TOKENS = ['todo', 'planned', 'active', 'partial', 'ready_for_dep
 // T18: memoized -- rendered once per task/phase row in potentially large
 // sprints, and its own render (building the status option list + several
 // chip elements) is nontrivial relative to a plain row.
-const StatusPicker = memo(function StatusPicker({ entityType, id, current, onChanged, onError }: {
+const StatusPicker = memo(function StatusPicker({ entityType, id, current, onChanged, onError, compactUi }: {
   entityType: 'sprint' | 'task' | 'phase';
   id: string;
   current: LorePlanItemStatus;
   onChanged: () => void;
   onError: (e: unknown) => void;
+  /** MOB-13: на narrow даже у спринта нужен compact-рендер (иконки без
+      abbr-текста, как уже у task/phase) — иначе 10 подписанных кнопок дают
+      497px в 300px-контейнере. Раньше compact был жёстко привязан к
+      entityType и никогда не включался для sprint. */
+  compactUi?: boolean;
 }) {
   const { t } = useTranslation();
   const sprintOpts = buildSprintPickOpts(t);
   const opts    = entityType === 'sprint' ? sprintOpts : sprintOpts.filter(o => TASK_PICK_TOKENS.includes(o.token));
-  const compact = entityType !== 'sprint';
+  const compact = !!compactUi || entityType !== 'sprint';
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
     if (next === current || busy) return;
@@ -746,7 +751,17 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             </span>
           );
         })}
-        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {/* MOB-13: этот span был единственным потомком строки задачи БЕЗ
+            собственного flexWrap — три ролевых бейджа + effort + StatusPicker
+            (8 кнопок) + две иконки-кнопки шли одной неразрывной полосой.
+            Строка-родитель (S.task) сама несёт flexWrap:'wrap', но перенести
+            один слишком широкий дочерний элемент на несколько строк она не
+            может — переносятся ЦЕЛЫЕ элементы, а не их содержимое. Отсюда
+            scrollWidth 433 при clientWidth 239 на 300px, при живом виде
+            flexWrap:'wrap' на самой строке. minWidth:0 — тот же класс
+            причины: без него flex-элемент не сжимается ниже natural-ширины
+            содержимого даже когда мог бы. */}
+        <span style={{ marginLeft: 'auto', display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {/* ADR-LORE-014 §4: all three roles visible at a glance, not only in
               the edit form — makes a reviewer==executor gate conflict obvious
               before the ✓ click hits the backend's 409. */}
@@ -1093,6 +1108,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
    */
   const [metaOpen, setMetaOpen] = useState(!narrow);
   useEffect(() => { setMetaOpen(!narrow); }, [narrow]);
+  // MOB-13: те же основания, что у metaOpen, но отдельный тоггл — фильтр по
+  // статусу/типу задач смыслово не «контекст и привязки» (прототип v4,
+  // одобрен владельцем 2026-08-08 держит их раздельно).
+  const [filtersOpen, setFiltersOpen] = useState(!narrow);
+  useEffect(() => { setFiltersOpen(!narrow); }, [narrow]);
   const reload = useCallback(() => setReloadKey(k => k + 1), []);
 
   // Drag-resize the right meta column (projects/milestones/modules/ADR) — same
@@ -1274,7 +1294,12 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           current={toToken(status)}
           onChanged={reload}
           onError={onError}
+          compactUi={narrow}
         />
+        {/* S.header уже flexWrap:'wrap' — статус/приоритет и так встают в
+            одну строку, если помещаются, и переносятся, если нет. Разделитель
+            — та же S.barDivider, что уже используется между группами prBar. */}
+        <span style={S.barDivider} />
         <PriorityPicker
           sprintId={sprint.sprint_id}
           current={sprint.priority}
@@ -1282,8 +1307,24 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         />
         {tasks.length > 0 && (
           <>
-            <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
-            <TypeCounts tasks={tasks} filter={typeFilter} onFilter={toggleTypeFilter} />
+            {/* MOB-13: StatusCounts/TypeCounts ФИЛЬТРУЮТ список задач (просмотр,
+                ничего не пишут) — в отличие от StatusPicker/PriorityPicker выше,
+                которым compactUi/полный размер достаточно. На narrow это вторично
+                для первого взгляда на паспорт, поэтому за раскрывашкой, свёрнуто
+                по умолчанию. Счётчик "готово/всего" и сумма effort — не фильтр,
+                короткая сводка, остаётся видна всегда. */}
+            {!narrow && (
+              <>
+                <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
+                <TypeCounts tasks={tasks} filter={typeFilter} onFilter={toggleTypeFilter} />
+              </>
+            )}
+            {narrow && (
+              <button type="button" onClick={() => setFiltersOpen(v => !v)} aria-expanded={filtersOpen}
+                style={{ ...S.meta, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                {filtersOpen ? '▾' : '▸'} {t('lore.sprintDetail.filtersToggle', 'фильтр по статусу/типу')}
+              </button>
+            )}
             <span style={S.meta}>{doneTotal}/{tasks.length}</span>
             {(() => {
               const effortSum = visibleTasks.reduce((s, tk) => s + (tk.effort_days ?? 0), 0);
@@ -1294,12 +1335,24 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             })()}
           </>
         )}
+        {narrow && filtersOpen && tasks.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, width: '100%', paddingTop: 4 }}>
+            <StatusCounts tasks={tasks} filter={filter} onFilter={toggleFilter} />
+            <TypeCounts tasks={tasks} filter={typeFilter} onFilter={toggleTypeFilter} />
+          </div>
+        )}
         {sprint.milestone_ids?.length ? (
           <span style={S.meta}>→ {sprint.milestone_ids.join(', ')}</span>
         ) : null}
       </div>
 
-      {(() => {
+      {/* MOB-13: раньше эта полоса не участвовала в metaOpen-сворачивании
+          вовсе — рендерилась ДО тоггла, всегда видна, съедая место на narrow
+          независимо от того, свёрнут ли "Контекст и привязки". Владелец:
+          «контекст привязка PR релизов и проектов это тоже занимает место».
+          Гейт по тому же metaOpen — не переносим блок физически (риск при
+          таком объёме JSX), просто прячем вместе с остальной метой. */}
+      {(narrow && !metaOpen) ? null : (() => {
         // Проект + Релиз + PR merged into one strip (T25-follow-up reorg —
         // "атрибуция одной веткой": project/release/PR are all "where this
         // sprint belongs / shipped", one glance instead of 3 separate boxes).

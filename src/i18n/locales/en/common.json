@@ -1383,6 +1383,7 @@
         "ariaLabel": "Tasks by type (multi-select)"
       },
       "metaToggle": "Context and links",
+      "filtersToggle": "filter by status/type",
       "wcUc": "realizes a scenario",
       "wcJtd": "supporting job",
       "wcEnb": "enabler — justified by an ADR"
