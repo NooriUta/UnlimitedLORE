@@ -4,8 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../../api/lore';
-import { marked } from '../markdown';
-import { sanitizeMd } from '../sanitizeHtml';
+import { toSegments, MermaidDiagram, BpmnDiagram } from '../../bench/MartProse';
 import { GameIcon } from '../GameIcon';
 import { useIsNarrow } from '../../../hooks/useMediaQuery';
 
@@ -309,17 +308,27 @@ export function ListRow({ id, title, meta, selected, onClick }: { id: string; ti
  *
  * `marked` берём из общего модуля (там же его конфиг), санитайзер обязателен:
  * тело приходит из корпуса и может содержать HTML.
+ *
+ * Фенсы ```mermaid/```bpmn разбираются через `toSegments` MartProse и
+ * рендерятся её же `MermaidDiagram`/`BpmnDiagram` — до этого продуктовый
+ * слой не проходил через «стандартный компонент» вовсе: диаграмма в
+ * `scenario_md` UC показывалась исходником в `<pre>`, хотя ADR/спеки/decision
+ * тот же фенс рендерят с 2026-08-06. Обёртка `.lore-md` (не `.mart-prose`)
+ * сохранена намеренно — иначе шрифт/отступы продуктового слоя разъехались бы
+ * с остальными экранами этой ветки навигации.
  */
 export function Markdown({ md, style }: { md: string | null | undefined; style?: CSSProperties }) {
   const text = (md ?? '').trim();
   if (!text) return null;
-  const html = sanitizeMd(marked.parse(text) as string);
+  const segments = toSegments(text);
   return (
-    <div
-      className="lore-md"
-      style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', ...style }}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="lore-md" style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', ...style }}>
+      {segments.map((seg, i) =>
+        seg.kind === 'html' ? <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />
+        : seg.kind === 'mermaid' ? <MermaidDiagram key={i} def={seg.def} />
+        : <BpmnDiagram key={i} def={seg.def} />,
+      )}
+    </div>
   );
 }
 
