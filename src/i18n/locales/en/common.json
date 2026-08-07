@@ -608,6 +608,9 @@
         "hygieneTitle": "E · Link hygiene",
         "hygieneWarn": "first-priority slice: until this is zero, the other numbers lie",
         "hygieneClean": "links are clean — the numbers below can be trusted",
+        "hygieneSearchPh": "find by id or title…",
+        "hygieneAll": "all",
+        "hygieneNoMatch": "nothing matches the filter/search",
         "finding": {
           "uc_task_without_realizes": "uc task without REALIZES",
           "enb_task_without_justification": "enb task without ADR",

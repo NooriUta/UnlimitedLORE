@@ -19,6 +19,7 @@ import {
 import { investShares, mergeActorLoad, vpFit, type VpFit } from './analyticsProduct';
 import { useProjectScope } from '../../context/ProjectScopeContext';
 import { GameIcon } from './GameIcon';
+import { ListSearch, FilterChips } from './product/shared';
 
 const WC_COLOR: Record<string, string> = {
   // Палитра work_class из прототипа — СВОЯ, не пересекается со статусами.
@@ -43,6 +44,10 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
   const [failed, setFailed] = useState<string[]>([]);
   const [openFit, setOpenFit] = useState<string | null>(null);
   const [openQuality, setOpenQuality] = useState(false);
+  // AL-115: список нарушений гигиены рос молча — 489 строк без единого способа
+  // сузить выборку, единственный список в приложении без поиска/фильтра.
+  const [hygieneSearch, setHygieneSearch] = useState('');
+  const [hygieneFilter, setHygieneFilter] = useState<string>('all');
 
   // MT-10: самопроверка — ПО КНОПКЕ, не в общий Promise.allSettled выше. Девять
   // сверок дороже шести обычных срезов (три ходят построчно по всем задачам/
@@ -128,6 +133,22 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
     uc_without_acceptance: 'UC без приёмки',
     pain_without_relief: 'боль без снятия',
   }[f] ?? f);
+
+  // AL-115: фасет собирается из встреченных `finding` — как проектный фасет в
+  // LoreActors.tsx (не жёсткий список), иначе новый тип нарушения появится в
+  // данных раньше, чем в чипах фильтра, и будет невидим до правки кода.
+  const hygieneFindingCounts = new Map<string, number>();
+  hygiene.forEach(h => hygieneFindingCounts.set(h.finding, (hygieneFindingCounts.get(h.finding) ?? 0) + 1));
+  const hygieneFilterDefs = [
+    { key: 'all', label: `${t('lore.analytics.product.hygieneAll', 'все')} ${hygiene.length}` },
+    ...[...hygieneFindingCounts.entries()].map(([f, n]) => ({ key: f, label: `${hygieneFindingLabel(f)} ${n}` })),
+  ];
+  const hygieneQuery = hygieneSearch.trim().toLowerCase();
+  const filteredHygiene = hygiene.filter(h => {
+    if (hygieneFilter !== 'all' && h.finding !== hygieneFilter) return false;
+    if (!hygieneQuery) return true;
+    return h.ref_id.toLowerCase().includes(hygieneQuery) || (h.title ?? '').toLowerCase().includes(hygieneQuery);
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -232,23 +253,38 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
         {hygiene.length === 0 ? (
           <div style={{ ...S.hint, color: 'var(--suc)' }}>{t('lore.analytics.product.hygieneClean', 'связки чистые — цифрам ниже можно верить')}</div>
         ) : (
-          <div style={S.list}>
-            {hygiene.map(h => (
-              <div key={`${h.finding}:${h.ref_id}`} style={S.listRow}>
-                <span style={{ color: 'var(--wrn)' }}>⚠</span>
-                <span style={S.mono}>{hygieneFindingLabel(h.finding)}:</span>
-                <span
-                  style={h.entity_type === 'task' && h.sprint_id ? S.link : h.entity_type === 'uc' ? S.link : undefined}
-                  onClick={() => {
-                    if (h.entity_type === 'task' && h.sprint_id) goSprint(h.sprint_id);
-                    else if (h.entity_type === 'uc') goFeature(h.ref_id);
-                  }}>
-                  {h.ref_id}
-                </span>
-                <span style={S.dim}>{h.title}</span>
+          <>
+            {/* AL-115: 489 строк без поиска были нечинибельны — единственный
+                список в приложении без search/фильтра. ListSearch/FilterChips —
+                те же общие компоненты, что у списков продуктового слоя. */}
+            <div style={{ margin: '-10px -14px 10px' }}>
+              <ListSearch value={hygieneSearch} onChange={setHygieneSearch}
+                placeholder={t('lore.analytics.product.hygieneSearchPh', 'найти по id или названию…')} />
+              {hygieneFilterDefs.length > 2 &&
+                <FilterChips options={hygieneFilterDefs} value={hygieneFilter} onChange={setHygieneFilter} />}
+            </div>
+            {filteredHygiene.length === 0 ? (
+              <div style={S.hint}>{t('lore.analytics.product.hygieneNoMatch', 'ничего не найдено по фильтру/поиску')}</div>
+            ) : (
+              <div style={S.list}>
+                {filteredHygiene.map(h => (
+                  <div key={`${h.finding}:${h.ref_id}`} style={S.listRow}>
+                    <span style={{ color: 'var(--wrn)' }}>⚠</span>
+                    <span style={S.mono}>{hygieneFindingLabel(h.finding)}:</span>
+                    <span
+                      style={h.entity_type === 'task' && h.sprint_id ? S.link : h.entity_type === 'uc' ? S.link : undefined}
+                      onClick={() => {
+                        if (h.entity_type === 'task' && h.sprint_id) goSprint(h.sprint_id);
+                        else if (h.entity_type === 'uc') goFeature(h.ref_id);
+                      }}>
+                      {h.ref_id}
+                    </span>
+                    <span style={S.dim}>{h.title}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 

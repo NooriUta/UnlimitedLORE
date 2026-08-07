@@ -608,6 +608,9 @@
         "hygieneTitle": "E · Гигиена связок",
         "hygieneWarn": "срез первой очереди: пока тут не ноль — остальные цифры врут",
         "hygieneClean": "связки чистые — цифрам ниже можно верить",
+        "hygieneSearchPh": "найти по id или названию…",
+        "hygieneAll": "все",
+        "hygieneNoMatch": "ничего не найдено по фильтру/поиску",
         "finding": {
           "uc_task_without_realizes": "uc-задача без REALIZES",
           "enb_task_without_justification": "enb-задача без ADR",
