@@ -1063,7 +1063,9 @@
         "milestone": "веха",
         "currentRelease": "текущий релиз",
         "phase": "фаза",
-        "clickHint": "клик по бару → карточка спринта"
+        "clickHint": "клик по бару → карточка спринта",
+        "toggleShow": "легенда",
+        "toggleHide": "легенда"
       },
       "card": {
         "registerTooltip": "Создать KnowSprint, связать план-элемент (REPRESENTS) и завести начальный статус",

@@ -1341,7 +1341,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
             <TypeCounts tasks={tasks} filter={typeFilter} onFilter={toggleTypeFilter} />
           </div>
         )}
-        {sprint.milestone_ids?.length ? (
+        {/* MOB-13: на narrow владелец сочла эту строку избыточной — веха и так
+            видна и редактируется внутри "Контекст и привязки" → "Планирование"
+            (:1618). На широком экране оставляем как есть — не через что
+            пролистывать, место не в дефиците. */}
+        {!narrow && sprint.milestone_ids?.length ? (
           <span style={S.meta}>→ {sprint.milestone_ids.join(', ')}</span>
         ) : null}
       </div>

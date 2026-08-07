@@ -249,6 +249,12 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
   // MOB: on narrow screens the swimlane group labels collapse to icons only,
   // tinted by the component's area (type) colour — same idea as the section nav.
   const narrow = useIsNarrow(720);
+  // MOB-13-follow-up: легенда — чистая справка, самый большой по объёму блок
+  // тулбара (заливка-статусы + веха/релиз/фаза + подсказка «клик по бару»).
+  // На narrow сворачиваем по умолчанию, тем же паттерном, что фильтры в
+  // паспорте спринта (filtersOpen) — владелец отметила ту же проблему здесь.
+  const [legendOpen, setLegendOpen] = useState(!narrow);
+  useEffect(() => { setLegendOpen(!narrow); }, [narrow]);
 
   // ── Component-tree resolver ───────────────────────────────────────────────
   // The board groups by the real component tree: Project (root) → Component
@@ -897,10 +903,22 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         <span style={S.stat} title={t('lore.planBoard.toolbar.parityTooltip', 'Паритет: доля спринтов с плановыми датами')}>
           {t('lore.planBoard.toolbar.parity', '{{pct}}% parity', { pct: parityPct })}
         </span>
-        <span style={{ ...S.zlabel, opacity: 0.6 }}>{t('lore.planBoard.toolbar.hint', 'Ctrl+колесо = зум · тащить = листать')}</span>
+        {/* MOB-13-follow-up: подсказка про Ctrl+колесо/тащить бессмысленна на
+            тач-экране — нет ни колеса, ни Ctrl. */}
+        {!narrow && (
+          <span style={{ ...S.zlabel, opacity: 0.6 }}>{t('lore.planBoard.toolbar.hint', 'Ctrl+колесо = зум · тащить = листать')}</span>
+        )}
+        {narrow && (
+          <button style={S.btn} onClick={() => setLegendOpen(v => !v)}>
+            {legendOpen
+              ? '▾ ' + t('lore.planBoard.legend.toggleHide', 'легенда')
+              : '▸ ' + t('lore.planBoard.legend.toggleShow', 'легенда')}
+          </button>
+        )}
       </div>
 
       {/* ── Legend ─────────────────────────────────────────────────────────── */}
+      {(!narrow || legendOpen) && (
       <div style={S.legend}>
         <span style={S.legendCap}>{t('lore.planBoard.legend.caption', 'заливка = статус:')}</span>
         {presentStatuses.filter(s => s !== 'todo').map(s => (
@@ -925,6 +943,7 @@ export default function LorePlanBoard({ onError, onNavigateToSprint }: Props) {
         </span>
         <span style={S.legendDim}>{t('lore.planBoard.legend.clickHint', 'клик по бару → паспорт спринта')}</span>
       </div>
+      )}
 
       {/* ── Main: timeline host + side panel ───────────────────────────────── */}
       <div style={S.main}>
