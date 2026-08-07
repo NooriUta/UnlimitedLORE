@@ -523,7 +523,12 @@ function AppShellBody() {
             <button type="button" aria-expanded={openDD === 'user'} aria-haspopup="menu"
               title={t('shell.profile', 'Профиль')}
               onClick={() => setOpenDD(d => d === 'user' ? null : 'user')}
-              style={{ ...btnStyle, textTransform: 'none' as const }}>
+              // AL-113: btnStyle несёт моно-шрифт + letter-spacing + uppercase —
+              // рассчитан на короткие символьные кнопки (лупа, «⋯»), единственные
+              // соседи в этой строке. Имя пользователя — читаемый текст переменной
+              // длины; та же типографика делала его визуально тяжелее/крупнее
+              // соседних элементов (найдено на мобильном виде, где строка тесная).
+              style={{ ...btnStyle, textTransform: 'none' as const, fontFamily: 'inherit', letterSpacing: 'normal', fontSize: 'var(--fs-xs)' }}>
               {displayName() ?? '…'} ▾
             </button>
             {openDD === 'user' && (
