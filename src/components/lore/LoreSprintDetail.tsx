@@ -1296,6 +1296,10 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
           onError={onError}
           compactUi={narrow}
         />
+        {/* S.header уже flexWrap:'wrap' — статус/приоритет и так встают в
+            одну строку, если помещаются, и переносятся, если нет. Разделитель
+            — та же S.barDivider, что уже используется между группами prBar. */}
+        <span style={S.barDivider} />
         <PriorityPicker
           sprintId={sprint.sprint_id}
           current={sprint.priority}
