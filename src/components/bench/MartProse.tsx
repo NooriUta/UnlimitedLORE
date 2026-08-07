@@ -169,7 +169,11 @@ function buildInit(t: DiagramTheme, elk: boolean): string {
   return `%%{init: ${JSON.stringify(cfg)}}%%`;
 }
 
-function MermaidDiagram({ def }: { def: string }) {
+/** Экспортирована, чтобы продуктовый `Markdown` (shared.tsx) мог рендерить те
+ * же диаграммы внутри своего собственного `.lore-md`-обёртки, а не только
+ * внутри MartProse — тела UC/актора/боли и т.п. ходят через другой рендерер
+ * markdown, но фенсы `mermaid`/`bpmn` в них те же самые. */
+export function MermaidDiagram({ def }: { def: string }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [themeIdx, setThemeIdx] = useState(0);
@@ -241,7 +245,8 @@ function MermaidDiagram({ def }: { def: string }) {
  *    `destroy()` при размонтировании/смене def, иначе утечка DOM и
  *    обработчиков (mermaid ничего подобного не держит).
  */
-function BpmnDiagram({ def }: { def: string }) {
+/** Экспортирована по той же причине, что и {@link MermaidDiagram}. */
+export function BpmnDiagram({ def }: { def: string }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
