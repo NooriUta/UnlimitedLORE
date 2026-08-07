@@ -1063,7 +1063,9 @@
         "milestone": "milestone",
         "currentRelease": "current release",
         "phase": "phase",
-        "clickHint": "click a bar → sprint card"
+        "clickHint": "click a bar → sprint card",
+        "toggleShow": "legend",
+        "toggleHide": "legend"
       },
       "card": {
         "registerTooltip": "Create a KnowSprint, link the plan item (REPRESENTS), and set an initial status",
