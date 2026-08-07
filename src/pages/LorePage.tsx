@@ -946,7 +946,10 @@ export default function LorePage() {
       )}
 
       {/* ── Sprint stats row ─────────────────────────────────────────────────── */}
-      {section === 'sprints' && sprintStats.total > 0 && (
+      {/* MOB-13: на narrow, когда уже открыт конкретный спринт (паспорт вместо
+          списка), сводка по ВСЕМ спринтам не нужна — прячем, освобождая
+          вертикальное место для самого паспорта. */}
+      {section === 'sprints' && sprintStats.total > 0 && !(narrow && hasDetailSelection) && (
         <div style={{
           display: 'flex', alignItems: 'stretch',
           borderBottom: '1px solid var(--bd)', flexShrink: 0, overflowX: 'auto',

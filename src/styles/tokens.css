@@ -592,18 +592,22 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
      is <16px — every input in the app is 11-13px via INLINE styles, hence the
      !important.
 
-     Условие сужено до СЕНСОРНОГО ввода (`pointer: coarse`). Автозум при
-     фокусе бывает только на тач-экране; ширина окна к нему отношения не
-     имеет. Прежняя привязка «всё уже 768px» раздувала поля до 16px и на
-     десктопе с узким окном — а там при базе 12px они выглядели заметно
-     крупнее окружающего интерфейса. Именно это и было замечено как
-     «странный размер шрифтов»: 516px ширины хватало, чтобы правило
-     сработало, хотя ни зума, ни тача нет. */
+     Условие сужено до СЕНСОРНОГО ввода (`pointer: coarse`) И до `.ios-touch`
+     (класс на <html>, ставится в main.tsx по UA/maxTouchPoints — зум при
+     фокусе есть только у iOS Safari, но pointer:coarse одинаково триггерится
+     и на Android, который эту цену платил напрасно: Mantine-контролы
+     (Веха/Даты в паспорте спринта) раздувались до 16px против xs-размера
+     компонента везде, где нет самого зума — владелец заметила на реальном
+     touch-устройстве, 2026-08-08). Прежняя привязка «всё уже 768px» раздувала
+     поля до 16px и на десктопе с узким окном — а там при базе 12px они
+     выглядели заметно крупнее окружающего интерфейса. Именно это и было
+     замечено как «странный размер шрифтов»: 516px ширины хватало, чтобы
+     правило сработало, хотя ни зума, ни тача нет. */
   @media (pointer: coarse) {
-    input, select, textarea {
+    html.ios-touch input, html.ios-touch select, html.ios-touch textarea {
       font-size: 16px !important;
     }
-    .ProseMirror, [contenteditable='true'] {
+    html.ios-touch .ProseMirror, html.ios-touch [contenteditable='true'] {
       font-size: 16px !important;
     }
   }
