@@ -98,12 +98,17 @@ const STORY_S = {
   subBar: { display: 'flex', gap: 3, padding: '6px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap' as const, alignItems: 'center', overflowX: 'auto' as const },
   // Выделение подвкладки — как у глав в шапке: скруглённый прямоугольник с
   // рамкой и лёгкой подсветкой цвета главы, без залитого эллипса.
-  subItem: (on: boolean, gc: string) => ({
-    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 'var(--fs-base)', cursor: 'pointer',
+  // MOB-13 (п.5): на narrow подпись прячется — иконка без текста, тот же
+  // приём что у navItemNarrow (MOB-01), иначе подвкладки главы переносятся
+  // на 2-3 строки и съедают вертикальное место так же, как всё остальное.
+  subItem: (on: boolean, gc: string, narrow?: boolean) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: narrow ? 0 : 6,
+    padding: narrow ? '6px 8px' : '4px 11px', borderRadius: 7, fontSize: 'var(--fs-base)', cursor: 'pointer',
     color: on ? 'var(--t1)' : 'var(--t2)',
     border: `1px solid ${on ? `color-mix(in srgb, ${gc} 55%, var(--bd))` : 'transparent'}`,
     background: on ? `color-mix(in srgb, ${gc} 12%, transparent)` : 'transparent',
     whiteSpace: 'nowrap' as const, fontWeight: (on ? 700 : 500) as number,
+    flexShrink: 0,
   }),
 };
 
@@ -471,10 +476,10 @@ export default function LorePage() {
         const label = t(s.labelKey, s.fallback);
         return (
           <button key={sid} role="tab" aria-selected={on} title={label}
-            style={STORY_S.subItem(on, activeChapter.color)}
+            style={STORY_S.subItem(on, activeChapter.color, narrow)}
             onClick={() => go(sid)}>
             {s.icon && <GameIcon slug={s.icon} size={14} style={{ color: on ? activeChapter.color : SECTION_COLORS[sid] }} />}
-            <span>{label}</span>
+            {!narrow && <span>{label}</span>}
           </button>
         );
       })}
