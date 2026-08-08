@@ -56,7 +56,7 @@ export default function LoreSpecView({ specId, onError, onBack, onNavigateCompon
   if (!data)   return <div style={S.empty}>{t('lore.specView.notFound', 'Спека не найдена: {{specId}}', { specId })}</div>;
 
   return (
-    <div style={S.root}>
+    <div className="lore-spec-view-root" style={S.root}>
       <button style={S.back} onClick={onBack}>{t('lore.specView.backButton', '← К списку')}</button>
 
       <div style={S.header}>

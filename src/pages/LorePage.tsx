@@ -1161,7 +1161,7 @@ export default function LorePage() {
         // inside it, the button ate the row and pushed the detail out of view
         // (blank ADR page bug). Column direction when the back bar is shown.
         <div
-          className={narrow && hasDetailSelection && section === 'sprints' ? 'lore-page-content lore-doc-scroll-pilot' : 'lore-page-content'}
+          className={narrow && hasDetailSelection && isMasterDetail ? 'lore-page-content lore-doc-scroll-pilot' : 'lore-page-content'}
           style={narrow && isMasterDetail && hasDetailSelection ? { ...S.content, flexDirection: 'column' } : S.content}
         >
           {/* adrs' own passport view already renders a "← К списку" — skip the

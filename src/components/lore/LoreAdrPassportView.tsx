@@ -264,7 +264,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   };
 
   return (
-    <div style={S.root}>
+    <div className="lore-adr-passport-root" style={S.root}>
       {editorPopup}
       <div style={S.topBar}>
         <button style={S.back} onClick={onBack}>{t('lore.adrPassportView.backToList', '← К списку')}</button>
