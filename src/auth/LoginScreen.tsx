@@ -11,8 +11,10 @@
 // lore): человек нажимает кнопку и попадает на страницу того же вида, а не в
 // чужой интерфейс. Расхождение этих двух экранов читается как «меня увели не
 // туда» — то есть как фишинг.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { login, wasSessionLost } from './session';
+import { applyStoredTheme } from '../theme/prefs';
+import { BrandIllustration } from '../components/layout/BrandIllustration';
 
 const OIDC_ISSUER = import.meta.env.VITE_OIDC_ISSUER as string | undefined;
 
@@ -32,6 +34,13 @@ export default function LoginScreen() {
   const lost = wasSessionLost();
   const host = issuerHost();
 
+  // Экран рендерится до входа — свой data-theme/data-mode он не ставит
+  // сам по себе (в отличие от AppShell), а без них темнеет/светлеет
+  // случайно относительно того, что человек выбрал в приложении или на
+  // самом Keycloak. Владелец: cookie с темой должна доезжать сюда так же,
+  // как AppShell уже пишет её при выборе палитры (см. theme/prefs.ts).
+  useEffect(() => { applyStoredTheme(); }, []);
+
   async function go(): Promise<void> {
     setGoing(true);
     setError(null);
@@ -49,12 +58,15 @@ export default function LoginScreen() {
 
   return (
     <div style={{
+      position: 'relative', overflow: 'hidden',
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 28,
       background: 'var(--bg0)', color: 'var(--t1)', fontFamily: 'var(--font)', padding: 24,
     }}>
+      <BrandIllustration />
+
       {/* ── Бренд ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
         <div style={{
           width: 44, height: 44, borderRadius: 10, background: 'var(--acc)',
           color: 'var(--bg0)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -75,6 +87,7 @@ export default function LoginScreen() {
       <div style={{
         width: '100%', maxWidth: 380, background: 'var(--bg1)', border: '1px solid var(--bd)',
         borderRadius: 12, padding: '28px 28px 24px', display: 'flex', flexDirection: 'column', gap: 16,
+        position: 'relative', zIndex: 1,
       }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
@@ -99,7 +112,7 @@ export default function LoginScreen() {
             cursor: going ? 'default' : 'pointer',
           }}
         >
-          {going ? 'Переход в Keycloak…' : 'Войти через Keycloak'}
+          {going ? 'Переход…' : 'Войти'}
         </button>
 
         {host && (

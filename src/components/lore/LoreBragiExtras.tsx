@@ -413,6 +413,8 @@ const S: Record<string, React.CSSProperties> = {
   insightLinks:{ marginTop: 9, display: 'flex', gap: 7, flexWrap: 'wrap' },
   chipAcc: { background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
              borderRadius: 6, padding: '1px 8px', fontSize: 'var(--fs-sm)', color: 'var(--acc)' },
-  editBtn: { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
+  // Тот же анти-паттерн, что в паспортах ADR/компонента: transparent на
+  // светлых темах сливается с фоном страницы. Заливка var(--b2).
+  editBtn: { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--b3)',
              borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
 };
