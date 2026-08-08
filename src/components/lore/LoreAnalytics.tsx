@@ -680,10 +680,21 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
   // Lead/cycle time — days from real start (min valid_from) to done_date.
   const leadTime = useMemo(() => {
     const durations: number[] = [];
+    // Спринты, у которых истории состояний нет вовсе. Раньше им подставлялся
+    // `valid_from` самого спринта — а это дата ТЕКУЩЕГО состояния SCD2, а не
+    // старта. Длительность выходила около нуля и была неотличима от спринта,
+    // который действительно закрыли за день. Подстановка давала правдоподобное
+    // число там, где данных нет, — то есть занижала медиану молча.
+    //
+    // Теперь такие спринты из метрики исключаются и считаются отдельно: цифра
+    // рядом с медианой честно говорит, на скольких спринтах она НЕ посчитана.
+    let noHistory = 0;
     sprintRows.forEach(s => {
-      const start = startBySprint.get(s.sprint_id) ?? parseDoneDate(s.valid_from);
-      const done  = parseDoneDate(s.done_date);
-      if (start && done && done >= start) durations.push(daysBetween(start, done));
+      const done = parseDoneDate(s.done_date);
+      if (!done) return;
+      const start = startBySprint.get(s.sprint_id);
+      if (!start) { noHistory++; return; }
+      if (done >= start) durations.push(daysBetween(start, done));
     });
     if (!durations.length) return null;
     // histogram buckets: 0-3, 4-7, 8-14, 15-30, 30+
@@ -702,6 +713,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       p75: Math.round(quantile(durations, 0.75)),
       max: Math.max(...durations),
       buckets,
+      noHistory,
     };
   }, [sprintRows, startBySprint]);
 
@@ -714,7 +726,11 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         return !(t && t.total > 0 && t.done >= t.total);
       })
       .map(s => {
-        const start = startBySprint.get(s.sprint_id) ?? parseDoneDate(s.valid_from);
+        // Та же причина, что в leadTime: без истории возраст неизвестен, и
+        // подставлять дату текущего состояния значит показать «спринт идёт
+        // ноль дней» вместо честного «не знаем». Спринт без истории просто
+        // не попадает в список — фильтр по null ниже.
+        const start = startBySprint.get(s.sprint_id);
         return { ...s, age: start ? daysBetween(start, TODAY) : null };
       })
       .filter(s => s.age !== null)
@@ -837,16 +853,30 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
     return { weeks, counted, avg };
   }, [taskDone]);
 
-  // Effort accuracy — план (effort_days) vs факт (календарная длительность created→done).
-  // «Потраченное» = календарь (прокси, не чистые трудозатраты). Только реальные закрытия.
-  const effortAccuracy = useMemo(() => {
+  // Эффективность потока: сколько задача ДЕЛАЛАСЬ против того, сколько ЖИЛА.
+  //
+  // Раньше эта же арифметика называлась «точностью оценок» и делила календарный
+  // срок на человеко-дни — величины разной природы. Задача на 1 человеко-день,
+  // пролежавшая три недели, попадала в «дольше плана» с 2100%, хотя оценка была
+  // идеальной, а задача просто ждала. Метрика систематически объявляла оценки
+  // заниженными и тем хуже, чем длиннее очередь — то есть измеряла очередь,
+  // а называлась качеством оценки.
+  //
+  // Точность оценок измерить НЕЧЕМ: фактических трудозатрат в корпусе нет,
+  // есть только оценка и календарные границы. Поэтому метрика переименована в
+  // то, что данные действительно позволяют посчитать, — flow efficiency
+  // (работа / срок жизни). Это стандартная величина, и вопрос «сколько задача
+  // лежала против того, сколько делалась» до сих пор никто не закрывал.
+  //
+  // MT-08. Единицы подписаны раздельно: чел.-дн против кал.дн.
+  const flowEfficiency = useMemo(() => {
     const created = new Map<string, string>();
     taskStarts.forEach(r => {
       const raw = String(r.valid_from ?? ''); if (!/^\d{4}-\d{2}-\d{2}/.test(raw)) return;
       const d = raw.slice(0, 10); const cur = created.get(r.task_id);
       if (!cur || d < cur) created.set(r.task_id, d);
     });
-    let plan = 0, act = 0, n = 0, under = 0, on = 0, over = 0;
+    let work = 0, elapsed = 0, n = 0, flowing = 0, waiting = 0, stalled = 0;
     taskDone.forEach(t => {
       const st = Array.isArray(t.states) ? t.states[0] : t.states;
       const ef = Array.isArray(t.effort_days) ? t.effort_days[0] : t.effort_days;
@@ -855,11 +885,20 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       if (done < TASK_THROUGHPUT_CUTOFF || !(st && st > 1) || !ef || ef <= 0) return;
       const cr = created.get(t.task_id); if (!cr) return;
       const dur = Math.max(0, Math.round((new Date(done).getTime() - new Date(cr).getTime()) / 86400000));
-      n++; plan += ef; act += dur;
-      const r = dur / ef;
-      if (r < 0.8) under++; else if (r <= 1.25) on++; else over++;
+      n++; work += ef; elapsed += dur;
+      // Календарных дней на каждый человеко-день работы. Задача, сделанная в
+      // день заведения, даёт 0 — это не «мгновенно», а «не ждала ни дня».
+      const perWorkDay = dur / ef;
+      if (perWorkDay <= 2) flowing++;
+      else if (perWorkDay <= 5) waiting++;
+      else stalled++;
     });
-    return { n, plan, act, ratio: plan ? act / plan : 0, under, on, over };
+    // Доля жизни задачи, когда над ней действительно работали. Больше — лучше.
+    // Срок не может быть меньше работы по смыслу, но в данных бывает: задача
+    // на 1.5 человеко-дня, закрытая в день заведения, даёт elapsed=0. Поэтому
+    // значение ограничивается сверху, а не выдаётся как 150% занятости.
+    const efficiency = elapsed > 0 ? Math.min(1, work / elapsed) : 1;
+    return { n, work, elapsed, efficiency, flowing, waiting, stalled };
   }, [taskDone, taskStarts]);
 
   // QG status breakdown + by component
@@ -1638,30 +1677,38 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
       {/* Effort accuracy — план vs факт (календарь) */}
       <section style={S.panel}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={S.panelTitle} title={t('lore.analytics.flow.accuracyHint', 'Точность оценок по закрытым задачам: план = effort_days, факт = календарная длительность (создано→закрыто). ⚠ «потраченное» = календарь (wall-clock), а не чистые трудозатраты. Только реальные закрытия (с 12 июн, states>1).')}>
-            Точность оценок <span style={S.dim}>· план vs факт (календарь)</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
+          <div style={S.panelTitle} title={t('lore.analytics.flow.efficiencyHint', 'Доля жизни задачи, когда над ней работали: трудоёмкость (effort_days, чел.-дн) ÷ календарный срок создано→закрыто. Точность оценок НЕ измеряется: фактических трудозатрат в корпусе нет, есть только оценка и календарь. Только реальные закрытия (с 12 июн, states>1).')}>
+            Ожидание против работы <span style={S.dim}>· доля времени в работе</span> <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', opacity: 0.6 }}>ⓘ</span>
           </div>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>n=<b style={{ color: 'var(--t1)' }}>{effortAccuracy.n}</b></span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>n=<b style={{ color: 'var(--t1)' }}>{flowEfficiency.n}</b></span>
         </div>
-        {effortAccuracy.n === 0 ? <div style={S.empty}>Нет данных.</div> : (
+        {flowEfficiency.n === 0 ? <div style={S.empty}>Нет данных.</div> : (
           <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' as const }}>
             <div style={{ display: 'flex', flexDirection: 'column' as const }}>
+              {/* Больше — лучше: задача меньше лежала. Пороги грубые намеренно —
+                  величина шумная на малых сроках, и точная шкала создавала бы
+                  ложную точность. */}
               <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, lineHeight: 1,
-                color: effortAccuracy.ratio <= 1.1 && effortAccuracy.ratio >= 0.9 ? 'var(--suc)' : effortAccuracy.ratio > 1.25 ? 'var(--dng)' : 'var(--wrn)' }}>
-                {Math.round(effortAccuracy.ratio * 100)}%
+                color: flowEfficiency.efficiency >= 0.5 ? 'var(--suc)' : flowEfficiency.efficiency >= 0.2 ? 'var(--wrn)' : 'var(--dng)' }}>
+                {Math.round(flowEfficiency.efficiency * 100)}%
               </span>
-              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>факт/план · Σ {effortAccuracy.act}/{effortAccuracy.plan} дн</span>
+              {/* Единицы РАЗНЫЕ и подписаны раздельно: работа — человеко-дни,
+                  срок — календарные. Пока обе стояли как «дн», отношение
+                  читалось как сравнение однородных величин. */}
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                работа/срок · Σ {flowEfficiency.work} чел.-дн / {flowEfficiency.elapsed} кал.дн
+              </span>
             </div>
             <div style={{ flex: 1, minWidth: 220, display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
               {[
-                { label: 'быстрее плана (<80%)', n: effortAccuracy.under, col: 'var(--suc)' },
-                { label: '~в плане (80–125%)',   n: effortAccuracy.on,    col: 'var(--inf)' },
-                { label: 'дольше (>125%)',        n: effortAccuracy.over,  col: 'var(--dng)' },
+                { label: 'почти не ждала (≤2 кал.дн на чел.-день)', n: flowEfficiency.flowing, col: 'var(--suc)' },
+                { label: 'ждала умеренно (2–5)',                    n: flowEfficiency.waiting, col: 'var(--inf)' },
+                { label: 'в основном лежала (>5)',                  n: flowEfficiency.stalled, col: 'var(--dng)' },
               ].map(b => (
                 <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)' }}>
                   <span style={{ color: 'var(--t2)', minWidth: 150 }}>{b.label}</span>
                   <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--b3)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct(b.n, effortAccuracy.n)}%`, background: b.col, borderRadius: 3 }} />
+                    <div style={{ height: '100%', width: `${pct(b.n, flowEfficiency.n)}%`, background: b.col, borderRadius: 3 }} />
                   </div>
                   <b style={{ color: 'var(--t1)', width: 30, textAlign: 'right' as const }}>{b.n}</b>
                 </div>
@@ -1687,7 +1734,17 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, justifyContent: 'center', gap: 2 }}>
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t2)' }}>p25 <b style={{ color: 'var(--t1)' }}>{leadTime.p25}д</b> · p75 <b style={{ color: 'var(--t1)' }}>{leadTime.p75}д</b></span>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>макс {leadTime.max}д · n={leadTime.count}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>
+                    макс {leadTime.max}д · n={leadTime.count}
+                    {/* Сколько закрытых спринтов в метрику НЕ попало из-за
+                        отсутствия истории. Без этой цифры медиана молчит о
+                        своей выборке — ровно та ловушка, что у INVEST. */}
+                    {leadTime.noHistory > 0 && (
+                      <span title="Закрытые спринты без истории состояний: старт неизвестен, в расчёт не взяты">
+                        {' '}· без истории {leadTime.noHistory}
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 56 }}>
@@ -2043,9 +2100,14 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
           <div style={{ ...S.panelTitle, marginBottom: 0 }}>
             Спринты <span style={S.dim}>· {data.by_sprint.length}</span>
             <span style={{ ...S.openChip, marginLeft: 8 }}>{openSprintCount} открытых</span>
+            {/* Это ТРУДОЗАТРАТЫ (человеко-дни), а не срок. Рядом на экране живёт
+                lead time в календарных днях, и обе величины стояли под
+                одинаковым «д» — сумма оценок читалась как длительность проекта.
+                Единица подписана явно. */}
             {filteredEffortSum > 0 && (
-              <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--t2)', fontFamily: 'var(--mono)' }}>
-                Σ <b style={{ color: 'var(--acc)' }}>{filteredEffortSum}</b> д
+              <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--t2)', fontFamily: 'var(--mono)' }}
+                    title="Сумма оценок трудоёмкости задач — человеко-дни, не календарный срок">
+                Σ <b style={{ color: 'var(--acc)' }}>{filteredEffortSum}</b> чел.-дн
               </span>
             )}
           </div>

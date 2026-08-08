@@ -12,10 +12,14 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * ADR-LORE-022 (ACCEPTED) + PL-28 (решение №141): продуктовый слой — ОДИН тип
@@ -102,6 +106,12 @@ public class LoreProductResource extends LoreResourceBase {
 
     @Inject
     ProjectRbacService projectRbac;
+
+    @Inject
+    UcReadinessCalculator readiness;
+
+    @Inject
+    LoreFtIndexHealth ftIndexHealth;
 
     // ── Feature = КОРНЕВОЙ сценарий ──────────────────────────────────────────
     //
@@ -310,8 +320,18 @@ public class LoreProductResource extends LoreResourceBase {
     // роль, что одноимённая роль другого, и без разделения RBAC-матрица,
     // выводимая из тройки «роль × компонент × сценарий», склеивает чужие
     // продукты в одну строку.
+    /**
+     * @param project  ОДИН проект — прежняя форма, оставлена для совместимости
+     *                 (MCP {@code actor_new} и вызовы, писавшиеся до AL-107).
+     *                 Трактуется как список из одного элемента.
+     * @param projects ПОЛНЫЙ набор проектов актора. Актор может принадлежать
+     *                 нескольким продуктам — слайс {@code actors} и раньше
+     *                 отдавал их массивом, а запись схлопывала в один и сносила
+     *                 остальные (AL-107). Передан — задаёт набор целиком; не
+     *                 передан — рёбра не трогаются вовсе.
+     */
     public record ActorRequest(String actor_id, String name, String kind, String body_md,
-                               String project) {}
+                               String project, List<String> projects) {}
 
     @POST
     @Path("actor")
@@ -333,12 +353,20 @@ public class LoreProductResource extends LoreResourceBase {
         // путь, §10.3 SPEC-RBAC-OMILORE-AGENTS) — requireAdmin() выше и так
         // единственный гейт человеческого вызова, здесь его не сужаем.
         String agentScope = callerAgentScope();
-        if (agentScope != null && req.project() != null && !req.project().isBlank()) {
+        if (agentScope != null) {
+            // AL-107: проверять НАБОР целиком, а не только скалярный project.
+            // Иначе добавление массива `projects` открыло бы обход: агент,
+            // которому запрещён проект X, прислал бы его вторым элементом и
+            // прошёл бы гейт, потому что скаляр пуст. Разрешение нужно на
+            // КАЖДЫЙ проект, куда он просит привязать актора.
+            List<String> asked = requestedProjects(req);
             String clientId = callerClientId();
-            if (clientId == null || !projectRbac.agentAllowedInProject(clientId, req.project(), agentScope)) {
-                return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
-                    + "для проекта '" + req.project() + "': роль владельца там не делегирует этот профиль "
-                    + "(или клиент/владелец/роль не сопоставлены в графе)");
+            for (String slug : asked == null ? List.<String>of() : asked) {
+                if (clientId == null || !projectRbac.agentAllowedInProject(clientId, slug, agentScope)) {
+                    return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
+                        + "для проекта '" + slug + "': роль владельца там не делегирует этот профиль "
+                        + "(или клиент/владелец/роль не сопоставлены в графе)");
+                }
             }
         }
         try {
@@ -357,27 +385,103 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("actor_id", req.actor_id());
             // D18: принадлежность проекту — РЕБРО, а не поле. Поле было бы второй
             // правдой рядом с BELONGS_TO_PROJECT, который уже несут спринты.
-            if (req.project() != null && !req.project().isBlank()) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowActor WHERE actor_id=:id)",
-                    Map.of("id", req.actor_id()))).await().indefinitely();
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> created = (List<Map<String, Object>>)
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
-                        "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
-                        Map.of("id", req.actor_id(), "p", req.project())))
-                    .await().indefinitely().result();
-                boolean linked = created != null && !created.isEmpty();
-                out.put("project_linked", linked);
-                if (!linked) out.put("hint", "проект «" + req.project() + "» не зарегистрирован — "
-                    + "заведите его через project_new, иначе привязка молча не создаётся");
-            }
+            syncActorProjects(req, out);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /**
+     * AL-107: привести набор рёбер {@code BELONGS_TO_PROJECT} актора к тому,
+     * что прислал вызывающий.
+     *
+     * <p><b>Порядок операций существенный: сначала создаём, потом удаляем
+     * лишние.</b> Прежняя редакция делала наоборот — сносила ВСЕ рёбра и
+     * создавала одно. Обрыв между двумя запросами оставлял актора вообще без
+     * проектов, а мультипроектного актора такая запись схлопывала всегда, даже
+     * без обрыва. Решение [[DBR-04]]: сбой должен оставлять дубли, а не
+     * пустоту — дубли чинятся, потеря нет.
+     *
+     * <p><b>Отсутствие ключа и пустой список — РАЗНОЕ.</b> Не передали ничего —
+     * рёбра не трогаем (так работают прежние вызовы, которые о проектах не
+     * знают). Передали пустой список — это осознанное «убрать все».
+     *
+     * <p>Незарегистрированный слаг не даёт ошибки: {@code CREATE EDGE} с пустым
+     * TO — тихий no-op. Поэтому считаем фактически созданные рёбра и, если
+     * что-то не привязалось, говорим об этом в ответе, а не молчим при ok:true.
+     */
+    private void syncActorProjects(ActorRequest req, Map<String, Object> out) {
+        List<String> wanted = requestedProjects(req);
+        if (wanted == null) return;   // ключ не передан — не наше дело
+
+        List<String> missing = new java.util.ArrayList<>();
+        for (String slug : wanted) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("id", req.actor_id(), "p", slug)))
+                .await().indefinitely().result();
+            // Пусто и при «уже было», и при «проекта нет» — различаем запросом
+            // к самому ребру, иначе повторное сохранение выглядело бы как отказ.
+            if (created == null || created.isEmpty()) {
+                var exists = ingest.queryPublic(
+                    "SELECT count(*) AS n FROM BELONGS_TO_PROJECT "
+                    + "WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug));
+                long n = exists.isEmpty() ? 0 : ((Number) exists.get(0).getOrDefault("n", 0)).longValue();
+                if (n == 0) missing.add(slug);
+            }
+        }
+
+        // Удаляем ровно лишние. NOT IN по списку не строим: параметр-коллекция
+        // в этой грамматике ведёт себя непредсказуемо — удаляем поштучно по
+        // фактическому набору, вычтя запрошенный.
+        var current = ingest.queryPublic(
+            "SELECT out('BELONGS_TO_PROJECT').slug AS slugs FROM KnowActor WHERE actor_id = :id",
+            Map.of("id", req.actor_id()));
+        int removed = 0;
+        if (!current.isEmpty() && current.get(0).get("slugs") instanceof List<?> have) {
+            for (Object o : have) {
+                if (o == null) continue;
+                String slug = String.valueOf(o);
+                if (wanted.contains(slug)) continue;
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM BELONGS_TO_PROJECT WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug))).await().indefinitely();
+                removed++;
+            }
+        }
+
+        out.put("projects_linked", wanted.size() - missing.size());
+        out.put("projects_removed", removed);
+        if (!missing.isEmpty()) {
+            out.put("projects_missing", missing);
+            out.put("hint", "не зарегистрированы в реестре: " + String.join(", ", missing)
+                + " — заведите через project_new, иначе привязка молча не создаётся");
+        }
+        // Совместимость: скалярная форма продолжает отдавать project_linked.
+        // Поле описано в схеме MCP-инструмента actor_new как признак «проект не
+        // зарегистрирован», и на него смотрят вызывающие, писавшиеся до AL-107.
+        // Убрать его молча означало бы сломать документированный контракт ради
+        // косметики — новые поля добавлены РЯДОМ, а не вместо.
+        if (req.projects() == null && req.project() != null && !req.project().isBlank()) {
+            out.put("project_linked", missing.isEmpty());
+        }
+    }
+
+    /** Запрошенный набор проектов: {@code null} — ключей нет, трогать нечего. */
+    private static List<String> requestedProjects(ActorRequest req) {
+        if (req.projects() != null) {
+            return req.projects().stream()
+                .filter(s -> s != null && !s.isBlank())
+                .distinct().toList();
+        }
+        if (req.project() != null && !req.project().isBlank()) return List.of(req.project());
+        return null;
     }
 
     // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
@@ -402,6 +506,89 @@ public class LoreProductResource extends LoreResourceBase {
     public Response agentMatrix() {
         if (!enabled) return disabled();
         return noStore(Response.ok(Map.of("matrix", ProjectRbacService.ROLE_AGENT_MATRIX)));
+    }
+
+    /**
+     * MT-02: на какой доле корпуса посчитан INVEST-профиль.
+     *
+     * <p>Отдельным эндпоинтом, а не полем внутри среза: срез возвращает СЫРЫЕ
+     * строки задач, и подмешивать в них агрегат значило бы менять его контракт.
+     * Потребитель зовёт оба и показывает долю рядом с балансом.
+     */
+    @GET
+    @Path("product/invest-coverage")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response investCoverage() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                LoreSlices.get("invest_profile").baseSql(), Map.of());
+            return noStore(Response.ok(VpFitGaps.coverage(rows)));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE INVEST-COVERAGE] %s", LoreUpstream.detail(e));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+        }
+    }
+
+    /** Плоский справочник ключ→значение из запроса с колонками k и v. */
+    private Map<String, String> dictOf(String sql) {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> r : ingest.queryPublic(sql, Map.of())) {
+            Object k = r.get("k"), v = r.get("v");
+            if (k != null && v != null) out.put(String.valueOf(k), String.valueOf(v));
+        }
+        return out;
+    }
+
+    /**
+     * Разрыв «заявлено против доставлено» готовыми строками.
+     *
+     * <p>Срез {@code feature_vp_analytics} отдаёт сырые множества, а разницу
+     * оставляет потребителю — и разницу не считал НИКТО. Цена выяснилась на
+     * самой канве: {@code FEAT-VP-FIT}, фича ровно про ловлю этого разрыва,
+     * стояла {@code shipped} с тремя пустыми осями доставки, и обнаружено это
+     * было сверкой шести массивов глазами.
+     *
+     * <p>SQL переиспользуется из того же слайса, а не переписывается рядом:
+     * вторая копия разошлась бы с первой при первой же правке — так уже
+     * расходились справочник и realm.
+     */
+    @GET
+    @Path("product/fit-gaps")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response fitGaps() {
+        if (!enabled) return disabled();
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                LoreSlices.get("feature_vp_analytics").baseSql(), Map.of());
+            // MT-04: ранги тянутся отдельными запросами, а не добавляются в
+            // слайс. Слайс отдаёт строку НА КОРЕНЬ, а ранг живёт на выгоде —
+            // втащить его туда значило бы либо дублировать строки, либо возить
+            // параллельные массивы «id → ранг», которые разъезжаются при первой
+            // же правке порядка. Два плоских справочника дешевле и честнее.
+            Map<String, String> gainRanks = dictOf(
+                "SELECT gain_id AS k, rank AS v FROM KnowGain");
+            Map<String, String> painSeverities = dictOf(
+                "SELECT pain_id AS k, severity AS v FROM KnowPain");
+            List<VpFitGaps.Gap> gaps = VpFitGaps.evaluate(rows, gainRanks, painSeverities);
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("gaps", gaps);
+            out.put("roots_checked", rows.size());
+            // Сводка по весам: одна строка «3 из 17 существенные» отвечает на
+            // вопрос «плохо ли всё» без чтения списка.
+            long essential = gaps.stream().filter(VpFitGaps.Gap::essential).count();
+            out.put("essential_gaps", essential);
+            // Пустой список — это «дыр нет», а не «посмотреть не удалось»:
+            // отказ уходит 502 ниже. Разводить эти два состояния обязательно,
+            // иначе пустая выдача читается как здоровье (урок DBR-09).
+            out.put("clean", gaps.isEmpty());
+            return noStore(Response.ok(out));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE FIT-GAPS] %s", LoreUpstream.detail(e));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", LoreUpstream.detail(e))));
+        }
     }
 
     /**
@@ -836,6 +1023,17 @@ public class LoreProductResource extends LoreResourceBase {
                     : "DELETE FROM (SELECT expand(inE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:uid) WHERE @out.task_uid=:tid";
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", delSql, p))
                     .await().indefinitely();
+                // MT-07: отвязка задачи тоже меняет готовность. Снятие последней
+                // задачи обязано вернуть статус к намерению автора — иначе
+                // сценарий остаётся «выпущенным» без единой задачи.
+                if ("task".equals(req.rel())) {
+                    try {
+                        readiness.recompute(req.uc_id());
+                    } catch (RuntimeException e) {
+                        LOG.warnf("[LORE READINESS] %s: пересчёт после отвязки не выполнен (%s)",
+                            req.uc_id(), LoreUpstream.detail(e));
+                    }
+                }
                 return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
             }
@@ -863,9 +1061,49 @@ public class LoreProductResource extends LoreResourceBase {
                     Map.of("r", desired, "uid", req.uc_id(), "tid", req.target_id())))
                     .await().indefinitely();
             }
-            return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
+            // MT-01: вердикт ПЕРЕСЧИТЫВАЕТСЯ после привязки. primary-актор входит
+            // в знаменатель UcQuality, но привязывается отдельным вызовом уже
+            // ПОСЛЕ uc_new — поэтому любой новый сценарий получал 9/10, каким бы
+            // полным он ни был (воспроизведено пять раз подряд 2026-08-03).
+            // Оценка врала вниз систематически, а к систематическому вранью
+            // привыкают: 9/10 читалось как «норма для нового», и настоящая
+            // девятка терялась в шуме.
+            //
+            // Пересчёт только для actor: остальные rel в знаменатель не входят,
+            // и лишний запрос к графу на каждую привязку задачи или компонента
+            // был бы платой ни за что.
+            Map<String, Object> out = new java.util.LinkedHashMap<>(Map.of(
+                "ok", true, "uc_id", req.uc_id(),
                 "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют")));
+                "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют"));
+            if ("actor".equals(req.rel()) && linked) out.put("quality", qualityOf(req.uc_id()));
+            // MT-07: привязка задачи меняет картину готовности — пересчитываем.
+            //
+            // Вычислитель просыпался ТОЛЬКО из recomputeForTask при смене статуса
+            // задачи. Значит порядок «сначала сделали, потом описали» — основной
+            // при реконструкции продуктового слоя задним числом — оставлял
+            // сценарий невыпущенным НАВСЕГДА: задача уже закрыта, статус её
+            // больше не меняется, а привязка пересчёт не будила.
+            //
+            // Найдено экспериментом 2026-08-03: три сценария привязаны к закрытым
+            // задачам, shipped стал только тот, у которого потом дёрнули
+            // status_set. Отсюда же пустой shipped_job_ids у всех корней —
+            // читалось как «ценность не доехала», означало «пересчёт не звали».
+            //
+            // Отвязка тоже считается: снятие последней задачи возвращает статус
+            // к намерению автора, и промолчать об этом значит оставить сценарий
+            // выпущенным без единой задачи.
+            if ("task".equals(req.rel())) {
+                try {
+                    readiness.recompute(req.uc_id());
+                } catch (RuntimeException e) {
+                    // Пересчёт вспомогательный: его отказ не имеет права
+                    // превратить успешную привязку в ошибку.
+                    LOG.warnf("[LORE READINESS] %s: пересчёт после привязки не выполнен (%s)",
+                        req.uc_id(), LoreUpstream.detail(e));
+                }
+            }
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE UC LINK] %s: %s", req.uc_id(), e.getMessage());
             return upstream(e);
@@ -914,16 +1152,23 @@ public class LoreProductResource extends LoreResourceBase {
         return o instanceof Number n ? n.longValue() : 0L;
     }
 
-    /** Сколько у UC уже primary-акторов (D19: должен быть ровно один). */
+    /**
+     * Сколько у UC уже primary-акторов (D19: должен быть ровно один).
+     *
+     * <p><b>DBR-04: отказ БД больше не превращается в ноль.</b> Прежняя
+     * редакция ловила любое исключение и возвращала 0 — то есть при недоступной
+     * БД гейт D19 отвечал «primary ещё нет», и новый актор становился ВТОРЫМ
+     * primary. Инвариант нарушался, ответ приходил 200, и обнаруживалось это
+     * потом по двум primary у одного сценария.
+     *
+     * <p>Неизвестность — не ноль. Пробрасываем наверх, где вызывающий отдаст
+     * 502: отказаться от записи честнее, чем записать не то.
+     */
     private long countPrimaryActors(String ucId) {
-        try {
-            List<Map<String, Object>> rows = ingest.queryPublic(
-                "SELECT outE('HAS_ACTOR')[role='primary'].size() AS n FROM KnowUseCase WHERE uc_id=:id",
-                Map.of("id", ucId));
-            return rows.isEmpty() ? 0 : num(rows.get(0).get("n"));
-        } catch (Exception e) {
-            return 0;
-        }
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT outE('HAS_ACTOR')[role='primary'].size() AS n FROM KnowUseCase WHERE uc_id=:id",
+            Map.of("id", ucId));
+        return rows.isEmpty() ? 0 : num(rows.get(0).get("n"));
     }
 
     /**
@@ -999,36 +1244,47 @@ public class LoreProductResource extends LoreResourceBase {
      * casual-UC выглядели бы ложно «лучше». Гистограммы/динамику строит клиент
      * (date_created — ось когорт); оценки не хранятся — принцип ADR-030.
      */
+    /**
+     * Факты + вердикт по каждому UC слоя. Извлечён из {@code ucQualityAll} в
+     * MT-10, чтобы прогон самопроверки судил ТЕМ ЖЕ методом, а не отдельной
+     * копией запроса — иначе цифра на панели качества и цифра в самопроверке
+     * рано или поздно разойдутся, и непонятно будет, какой верить.
+     */
+    private List<Map<String, Object>> computeUcQualityRows() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
+            "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
+            "out('TRACED_TO').size() AS traced " +
+            "FROM KnowUseCase ORDER BY uc_id", Map.of());
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            UcQuality.Result res = UcQuality.evaluate(
+                str(r.get("rigor")), str(r.get("goal_level")),
+                str(r.get("scenario_md")), str(r.get("acceptance_md")),
+                num(r.get("primary_actors")) > 0, num(r.get("traced")) > 0);
+            double normalized = res.max() == 0 ? 1.0 : (double) res.score() / res.max();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("uc_id", r.get("uc_id"));
+            row.put("title", r.get("title"));
+            row.put("goal_level", r.get("goal_level"));
+            row.put("rigor", res.rigor());
+            row.put("score", res.score());
+            row.put("max", res.max());
+            row.put("normalized", Math.round(normalized * 1000.0) / 1000.0);
+            row.put("below_threshold", normalized < qualityThreshold);
+            row.put("date_created", r.get("date_created"));
+            out.add(row);
+        }
+        return out;
+    }
+
     @jakarta.ws.rs.GET
     @Path("uc/quality/all")
     @Produces(MediaType.APPLICATION_JSON)
     public Response ucQualityAll() {
         if (!enabled) return disabled();
         try {
-            List<Map<String, Object>> rows = ingest.queryPublic(
-                "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
-                "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
-                "out('TRACED_TO').size() AS traced " +
-                "FROM KnowUseCase ORDER BY uc_id", Map.of());
-            List<Map<String, Object>> out = new java.util.ArrayList<>();
-            for (Map<String, Object> r : rows) {
-                UcQuality.Result res = UcQuality.evaluate(
-                    str(r.get("rigor")), str(r.get("goal_level")),
-                    str(r.get("scenario_md")), str(r.get("acceptance_md")),
-                    num(r.get("primary_actors")) > 0, num(r.get("traced")) > 0);
-                double normalized = res.max() == 0 ? 1.0 : (double) res.score() / res.max();
-                Map<String, Object> row = new LinkedHashMap<>();
-                row.put("uc_id", r.get("uc_id"));
-                row.put("title", r.get("title"));
-                row.put("goal_level", r.get("goal_level"));
-                row.put("rigor", res.rigor());
-                row.put("score", res.score());
-                row.put("max", res.max());
-                row.put("normalized", Math.round(normalized * 1000.0) / 1000.0);
-                row.put("below_threshold", normalized < qualityThreshold);
-                row.put("date_created", r.get("date_created"));
-                out.add(row);
-            }
+            List<Map<String, Object>> out = computeUcQualityRows();
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("threshold", qualityThreshold);
             body.put("note", "normalized = score/max ОБЯЗАТЕЛЬНЫХ проверок своего веса — "
@@ -1044,5 +1300,309 @@ public class LoreProductResource extends LoreResourceBase {
     private Response upstream(Exception e) {
         return noStore(Response.status(Response.Status.BAD_GATEWAY)
             .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+    }
+
+    // ── MT-10: самопроверка корпуса ───────────────────────────────────────────
+    //
+    // Разбор метрик 02–03.08 показал, что каждый найденный дефект был дефектом
+    // ИЗМЕРЕНИЯ, а не работы: механизм написан правильно, но либо никто его не
+    // вызывает (fit-gaps и invest-coverage не встречались во фронте ни разу;
+    // LoreFtIndexHealth.check() не был выставлен ни одним эндпоинтом), либо
+    // сигнал прячет свой знаменатель или момент («85.6% с оценкой» без «из
+    // скольких», totalIndexed при почти пустом индексе). Владелец сформулировала
+    // прямо: сверок стало больше, чем можно отсмотреть глазами. Нужен не ещё
+    // один экран, а прогон, который собирает то, что уже написано, и один раз
+    // называет вердикт.
+    //
+    // Считается на бэкенде ОДНИМ эндпоинтом, а не девятью запросами с фронта:
+    // половина сверок (WorkQuality, VpFitGaps, LoreFtIndexHealth) — package-
+    // private Java без HTTP-выхода, и плодить под каждую отдельный контракт
+    // значит закладывать девять разных способов сообщить об отказе вместо
+    // одного.
+
+    /** Сколько находок на проверку показываем в ответе — остальное считается, но не перечисляется. */
+    private static final int SELF_CHECK_FINDINGS_CAP = 50;
+
+    /** Факты одной проверки: found/denominator — числа, findings — witnesses (обрезаны капом). */
+    private record CheckOutcome(int found, int denominator, List<Map<String, Object>> findings, boolean truncated) {}
+
+    /** Одна находка: что, где искать глазами, куда вести по клику. */
+    private static Map<String, Object> finding(Object refId, Object title, String detail, String section, Object passport) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("ref_id", refId);
+        m.put("title", title);
+        m.put("detail", detail);
+        m.put("section", section);
+        m.put("passport", passport != null ? passport : refId);
+        return m;
+    }
+
+    /** cloud/kite — корень (features), sea-level/subfunction — сценарий (userStories). */
+    private static String goalLevelSection(String goalLevel) {
+        return ("cloud".equals(goalLevel) || "kite".equals(goalLevel)) ? "features" : "userStories";
+    }
+
+    private long countOf(String sql) {
+        List<Map<String, Object>> r = ingest.queryPublic(sql, Map.of());
+        return r.isEmpty() ? 0 : num(r.get(0).get("n"));
+    }
+
+    /**
+     * Выполняет одну проверку и переводит её исход в конверт самопроверки.
+     *
+     * <p>Отказ проверки (исключение) — ОТДЕЛЬНОЕ состояние {@code unavailable},
+     * не {@code passed} с нулём находок. Это тот самый дефект, из-за которого
+     * проверка темы в Keycloak-CD однажды обвинила успешный выкат: `2>/dev/null
+     * || echo 0` подменял «не удалось посмотреть» на «посмотрел и там пусто».
+     * Здесь эта подмена невозможна структурно — try/catch снаружи логики
+     * проверки, а не внутри.
+     */
+    private Map<String, Object> runSelfCheck(String id, String title, Supplier<CheckOutcome> fn) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", id);
+        out.put("title", title);
+        try {
+            CheckOutcome r = fn.get();
+            out.put("state", r.found() == 0 ? "passed" : "failed");
+            out.put("found", r.found());
+            out.put("denominator", r.denominator());
+            out.put("error", null);
+            out.put("findings", r.findings());
+            out.put("truncated", r.truncated());
+        } catch (Exception e) {
+            LOG.warnf("[LORE SELF-CHECK] %s: %s", id, e.getMessage());
+            out.put("state", "unavailable");
+            out.put("found", null);
+            out.put("denominator", null);
+            out.put("error", e.getMessage());
+            out.put("findings", List.of());
+            out.put("truncated", false);
+        }
+        return out;
+    }
+
+    private CheckOutcome checkWorkQualityTasks() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT task_uid, title, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
+            "out('TAGGED_WITH').component_id AS own_components, " +
+            "out('PART_OF').out('BELONGS_TO').component_id AS sprint_components, " +
+            "out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "out('REALIZES').uc_id AS realizes_uc, " +
+            "out('JUSTIFIED_BY').adr_id AS justified_by, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id " +
+            "FROM KnowTask", Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            Object comps = r.get("own_components");
+            if (!(comps instanceof Collection<?> c) || c.isEmpty()) comps = r.get("sprint_components");
+            Object eff = r.get("effort_days");
+            Double effort = eff instanceof Number n ? n.doubleValue() : null;
+            WorkQuality.Result res = WorkQuality.evaluateTask(
+                str(r.get("status_raw")), effort, str(r.get("work_class")),
+                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"));
+            if (res.score() < res.max()) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = res.findings().stream()
+                        .filter(fnd -> fnd.required() && !fnd.ok())
+                        .map(WorkQuality.Finding::message)
+                        .reduce((a, b) -> a + "; " + b).orElse("");
+                    findings.add(finding(r.get("task_uid"), r.get("title"), detail, "sprints", r.get("sprint_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
+    private CheckOutcome checkWorkQualityAdr() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT adr_id, name, status, " +
+            "out('HAS_STATE').context_md[0] AS context_md, " +
+            "out('HAS_STATE').decision_md[0] AS decision_md, " +
+            "out('HAS_STATE').consequences_md[0] AS consequences_md, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "in('DECIDED_IN').size() AS decision_count " +
+            "FROM KnowADR", Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            WorkQuality.Result res = WorkQuality.evaluateAdr(
+                str(r.get("status")), r.get("components"), r.get("projects"),
+                num(r.get("decision_count")) > 0,
+                str(r.get("context_md")), str(r.get("decision_md")), str(r.get("consequences_md")));
+            if (res.score() < res.max()) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = res.findings().stream()
+                        .filter(fnd -> fnd.required() && !fnd.ok())
+                        .map(WorkQuality.Finding::message)
+                        .reduce((a, b) -> a + "; " + b).orElse("");
+                    findings.add(finding(r.get("adr_id"), r.get("name"), detail, "adrs", r.get("adr_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
+    private CheckOutcome checkUcQuality() {
+        List<Map<String, Object>> rows = computeUcQualityRows();
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            if (Boolean.TRUE.equals(r.get("below_threshold"))) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    double normalized = ((Number) r.get("normalized")).doubleValue();
+                    String detail = String.format(java.util.Locale.ROOT,
+                        "оценка %.2f ниже порога %.2f", normalized, qualityThreshold);
+                    findings.add(finding(r.get("uc_id"), r.get("title"), detail,
+                        goalLevelSection(str(r.get("goal_level"))), r.get("uc_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
+    private CheckOutcome checkFitGaps() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("feature_vp_analytics").baseSql(), Map.of());
+        Map<String, String> gainRanks = dictOf("SELECT gain_id AS k, rank AS v FROM KnowGain");
+        Map<String, String> painSeverities = dictOf("SELECT pain_id AS k, severity AS v FROM KnowPain");
+        List<VpFitGaps.Gap> gaps = VpFitGaps.evaluate(rows, gainRanks, painSeverities);
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(gaps.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            VpFitGaps.Gap g = gaps.get(i);
+            String detail = g.finding() + " — не закрыто: " + g.missingId() + " (вес " + g.weight() + ")";
+            findings.add(finding(g.refId(), g.title(), detail, "features", g.refId()));
+        }
+        return new CheckOutcome(gaps.size(), rows.size(), findings, gaps.size() > cap);
+    }
+
+    /**
+     * Доля неклассифицированных задач по work_class (INVEST-профиль). Числа
+     * агрегированные — VpFitGaps.coverage() не отдаёт построчных ссылок, поэтому
+     * findings пуст: found/denominator сами по себе полный ответ на вопрос
+     * «сколько и из скольких», а не список для клика.
+     */
+    private CheckOutcome checkInvestCoverage() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("invest_profile").baseSql(), Map.of());
+        VpFitGaps.InvestCoverage cov = VpFitGaps.coverage(rows);
+        int unclassified = cov.tasksTotal() - cov.tasksClassified();
+        return new CheckOutcome(unclassified, cov.tasksTotal(), List.of(), false);
+    }
+
+    private CheckOutcome checkProductHygiene() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("product_hygiene").baseSql(), Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(rows.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            Map<String, Object> r = rows.get(i);
+            String entityType = str(r.get("entity_type"));
+            String section = switch (entityType) {
+                case "task" -> "sprints";
+                case "uc" -> "userStories";
+                case "pain" -> "vpProfile";
+                default -> "sprints";
+            };
+            Object passport = "task".equals(entityType) ? r.get("sprint_id") : r.get("ref_id");
+            findings.add(finding(r.get("ref_id"), r.get("title"), str(r.get("finding")), section, passport));
+        }
+        // Знаменатель — население, на котором слайс вообще ищет находки (задачи,
+        // сценарии US, боли), а НЕ весь корпус: иначе доля выглядела бы заниженной
+        // сравнением с сущностями, которых эта проверка никогда не коснётся.
+        long denominator = countOf("SELECT count(*) AS n FROM KnowTask")
+            + countOf("SELECT count(*) AS n FROM KnowUseCase WHERE goal_level IN ['sea-level','subfunction']")
+            + countOf("SELECT count(*) AS n FROM KnowPain");
+        return new CheckOutcome(rows.size(), (int) denominator, findings, rows.size() > cap);
+    }
+
+    private CheckOutcome checkStrategicCoverage() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("strategic_coverage").baseSql(), Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(rows.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            Map<String, Object> r = rows.get(i);
+            String section = "uc".equals(str(r.get("entity_type"))) ? "features" : "milestones";
+            findings.add(finding(r.get("ref_id"), r.get("title"), str(r.get("finding")), section, r.get("ref_id")));
+        }
+        long denominator = countOf("SELECT count(*) AS n FROM KnowUseCase WHERE goal_level IN ['cloud','kite']")
+            + countOf("SELECT count(*) AS n FROM KnowMilestone");
+        return new CheckOutcome(rows.size(), (int) denominator, findings, rows.size() > cap);
+    }
+
+    /**
+     * Роли без единого сценария. Не через слайс {@code actor_load} (он требует
+     * project и меряет по одному проекту за раз) — самопроверка смотрит на весь
+     * корпус, поэтому считает {@code HAS_ACTOR} напрямую по всем акторам.
+     */
+    private CheckOutcome checkActorLoadDead() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowActor", Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            if (num(r.get("uc_count")) == 0) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    findings.add(finding(r.get("actor_id"), r.get("name"),
+                        "роль без единого сценария", "actors", r.get("actor_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, false);
+    }
+
+    /**
+     * {@link LoreFtIndexHealth#check()} возвращает ТОЛЬКО непригодные индексы —
+     * пустой список значит «все здоровы». Знаменатель поэтому берётся из
+     * реестра {@link LoreSchemaMigrations#FT_INDEXES}, а не из размера ответа:
+     * «0 находок из 0» неотличимо от «не проверяли», а реестр даёт настоящее
+     * число проверенных веток поиска.
+     */
+    private CheckOutcome checkFtIndexHealth() {
+        List<LoreFtIndexHealth.Finding> bad = ftIndexHealth.check();
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int cap = Math.min(bad.size(), SELF_CHECK_FINDINGS_CAP);
+        for (int i = 0; i < cap; i++) {
+            LoreFtIndexHealth.Finding f = bad.get(i);
+            findings.add(finding(f.index(), f.type(), f.detail(), null, null));
+        }
+        return new CheckOutcome(bad.size(), LoreSchemaMigrations.FT_INDEXES.size(), findings, bad.size() > cap);
+    }
+
+    @GET
+    @Path("product/self-check")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response selfCheck() {
+        if (!enabled) return disabled();
+        List<Map<String, Object>> checks = new ArrayList<>();
+        checks.add(runSelfCheck("work_quality_tasks", "Полнота задач (статус · компонент · оценка · класс работы)", this::checkWorkQualityTasks));
+        checks.add(runSelfCheck("work_quality_adr", "Полнота ADR (контекст · решение · связи)", this::checkWorkQualityAdr));
+        checks.add(runSelfCheck("uc_quality", "Сценарии ниже порога качества", this::checkUcQuality));
+        checks.add(runSelfCheck("fit_gaps", "Заявлено, но не доставлено (VP fit)", this::checkFitGaps));
+        checks.add(runSelfCheck("invest_coverage", "Задачи без класса работы (INVEST)", this::checkInvestCoverage));
+        checks.add(runSelfCheck("product_hygiene", "Гигиена продуктового слоя", this::checkProductHygiene));
+        checks.add(runSelfCheck("strategic_coverage", "Стратегическое покрытие (фичи ↔ вехи)", this::checkStrategicCoverage));
+        checks.add(runSelfCheck("actor_load_dead", "Роли без сценариев", this::checkActorLoadDead));
+        checks.add(runSelfCheck("ft_index_health", "Пригодность полнотекстовых индексов", this::checkFtIndexHealth));
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("run_at", Instant.now().toString());
+        body.put("checks", checks);
+        return noStore(Response.ok(body));
     }
 }

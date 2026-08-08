@@ -45,7 +45,9 @@ describe('registerLoreWrite', () => {
     //   слайсы не читают, и смена компонента через spec_set была тихим no-op).
     // + decision_set (AL-79 — статус решения из словаря decision_status; отдельный
     //   инструмент, не status_set: у KnowDecision нет SCD2-истории)
-    expect(names).toHaveLength(76);
+    // + component_del (AL-110 — единственный из _del с гейтом ссылок: 409 при
+    //   детях/BELONGS_TO/component_id-полях вместо безусловного удаления)
+    expect(names).toHaveLength(77);
   });
 
   it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
@@ -82,7 +84,7 @@ describe('registerLoreWrite', () => {
       'sprint_phase_new', 'adr_new', 'adr_set', 'adr_rename', 'adr_del',
       'decision_new', 'release_new', 'release_set', 'spec_new', 'spec_set', 'spec_del', 'spec_link',
       'tech_set', 'qg_new', 'qg_job_new', 'qg_run_log', 'rec_new', 'rec_promote',
-      'runbook_new', 'doc_new', 'doc_del', 'component_new', 'component_set',
+      'runbook_new', 'doc_new', 'doc_del', 'component_new', 'component_set', 'component_del',
       'dict_set', 'metric_log', 'metric_get', 'insight_new',
       'bragi_rubric_set', 'bragi_channel_set', 'bragi_pub_new', 'bragi_variant_new',
       'bragi_keyword_set', 'bragi_search', 'bragi_page_set', 'bragi_campaign_new',

@@ -1,33 +1,41 @@
 /*
  * LORE — KC login theme
- * Olive-lichen variant of the seer brand — matches the LORE frontend accent
- * (src/styles/tokens.css: --acc #A8B860 dark / #6b7a2a light). Same Amber Forest
- * base and the same structural layout as the seer/heimdall themes — only the
- * accent and the brand block differ, so layout fixes are worth porting across
- * the three rather than letting them drift apart.
+ * Same shared AIDA palette system as the seer/heimdall/volva themes (reads/
+ * writes the same seer-prefs cookie) — only the brand mark/wordmark/slogans
+ * differ. See aida-root's seer.css for the canonical version of every block
+ * below (this file was brought up to parity with it on 2026-08-02: previously
+ * had no illustration, no picker, only a single fixed olive accent).
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Unbounded:wght@800&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root,
 [data-theme="dark"] {
-  /* Backgrounds (Amber Forest dark, same base) */
+  /* Backgrounds (Amber Forest dark) */
   --bg0: #141108;
   --bg1: #1c1810;
   --bg2: #252019;
   --bg3: #302a20;
+  /* Borders */
   --bd:  #42382a;
   --bdh: #584c38;
+  /* Text */
   --t1:  #ede5d0;
   --t2:  #9a8c6e;
   --t3:  #665c48;
-  /* LORE olive-lichen accent */
+  /* Semantic */
   --acc:    #A8B860;
   --wrn:    #D4922A;
   --danger: #C85848;
+  /* Illustration secondary tone — 16% here, 32% in [data-theme="light"] below.
+     See aida-root's seer.css for the full rationale (dark needs a lower
+     ratio than light for the same perceived visual weight). */
+  --illustration-secondary: color-mix(in srgb, var(--acc) 16%, var(--bg0));
+  /* Typography */
   --font:         'Manrope', system-ui, sans-serif;
   --mono:         'IBM Plex Mono', monospace;
   --font-display: 'Unbounded', sans-serif;
+  /* Radius */
   --r-sm:  4px;
   --r-md:  6px;
   --r-lg:  8px;
@@ -43,10 +51,58 @@
   --t1:  #1e1a12;
   --t2:  #5c5240;
   --t3:  #9a8a6e;
-  /* Darker olive for light backgrounds */
   --acc:    #6b7a2a;
   --wrn:    #a06010;
   --danger: #c03030;
+  --illustration-secondary: color-mix(in srgb, var(--acc) 32%, var(--bg0));
+}
+
+[data-palette="lichen"] {
+  --bg0: #0b0e0c; --bg1: #0f1412; --bg2: #141b17; --bg3: #1a2320;
+  --bd:  #243028; --bdh: #2e3e34;
+  --t1: #c8d8cc;  --t2: #6a8a74;  --t3: #3e5848;
+  --acc: #7ab87c; --wrn: #c4902a; --danger: #c05848;
+}
+[data-palette="lichen"][data-theme="light"] {
+  --bg0: #eff5ef; --bg1: #f5fbf5; --bg2: #ffffff; --bg3: #e4ede5;
+  --bd:  #c0d4c2; --bdh: #a0c0a4;
+  --t1: #182418;  --t2: #3a6040;  --t3: #80a884;
+  --acc: #3a7040; --wrn: #a06010; --danger: #c03030;
+}
+
+[data-palette="slate"] {
+  --bg0: #0c0e12; --bg1: #11141e; --bg2: #161b26; --bg3: #1c2230;
+  --bd:  #262e42; --bdh: #303c54;
+  --t1: #c8d0e8;  --t2: #6878a0;  --t3: #404860;
+  --acc: #7890c8; --wrn: #c0902a; --danger: #c04848;
+}
+[data-palette="slate"][data-theme="light"] {
+  --bg0: #eff1f8; --bg1: #f6f8fd; --bg2: #ffffff; --bg3: #e4e8f4;
+  --bd:  #c0c8e0; --bdh: #a0acd0;
+  --t1: #14182a;  --t2: #384468;  --t3: #8090b4;
+  --acc: #3858a8; --wrn: #a06010; --danger: #c03030;
+}
+
+[data-palette="juniper"] {
+  --bg0: #08100e; --bg1: #0d1a16; --bg2: #12221c; --bg3: #182e26;
+  --bd:  #203828; --bdh: #2c4e38;
+  --t1: #c0e0d4;  --t2: #5c8c7c;  --t3: #3a5850;
+  --acc: #6ab89a; --wrn: #c09030; --danger: #c05040;
+}
+[data-palette="juniper"][data-theme="light"] {
+  --bg0: #edf5f1; --bg1: #f5fbf8; --bg2: #ffffff; --bg3: #deeee8;
+  --bd:  #b4d4c8; --bdh: #94c0b0;
+  --t1: #102820;  --t2: #286050;  --t3: #70a898;
+  --acc: #2a7860; --wrn: #a06010; --danger: #c03030;
+}
+
+/* ── Reset KC defaults ──────────────────────────────────────────────────────── */
+
+/* Without border-box the page's height comes out to 100vh + 24px×2 padding,
+   and a login page with nothing to scroll gets a scrollbar. Same fix now
+   applied across seer/heimdall/volva/lore — worth keeping identical. */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 html, body {
@@ -61,16 +117,23 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-body.login-pf, .login-pf body, .login-pf-page, html.login-pf {
+body.login-pf,
+.login-pf body,
+.login-pf-page,
+html.login-pf {
   background: var(--bg0) !important;
   color: var(--t1);
 }
 
-.login-pf-page-header, .login-pf-page-header h1, #kc-header, #kc-header-wrapper {
+.login-pf-page-header,
+.login-pf-page-header h1,
+#kc-header,
+#kc-header-wrapper {
   display: none !important;
 }
 
 .login-pf-page {
+  position: relative;
   background: var(--bg0);
   display: flex;
   flex-direction: column;
@@ -79,13 +142,42 @@ body.login-pf, .login-pf body, .login-pf-page, html.login-pf {
   min-height: 100vh;
   padding: 24px;
   margin: 0;
-  /* Без border-box высота выходит 100vh + 48px паддинга, и страница входа —
-     на которой заведомо нечего прокручивать — получает полосу прокрутки.
-     Та же строка нужна темам seer и heimdall: дефект унаследован от них. */
-  box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* ── LORE brand block ──────────────────────────────────────────────── */
+/* ── Background illustration ──────────────────────────────────────────────────
+   Same shared platform artwork as seer.css (viking-scene, ported from Völva's
+   own AuthLayout). --illustration-secondary uses a flat 32%-accent-toward-bg0
+   mix, not a literal copy of the app's own brand-ramp step — that was tried
+   on seer.css first and made clouds/sun disappear in light mode (see that
+   file's comment for the full contrast-measurement rationale). Sizing
+   mirrors Völva's own `background-size: 100% auto`. */
+.seer-illustration {
+  --illustration-primary: var(--acc);
+  --illustration-background: var(--bg0);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.seer-illustration svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.seer-brand,
+.card-pf,
+.seer-footer,
+#kc-locale {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── LORE brand block ──────────────────────────────────────────────────── */
 
 .seer-brand {
   display: flex;
@@ -103,6 +195,7 @@ body.login-pf, .login-pf body, .login-pf-page, html.login-pf {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .seer-mark span {
   font-family: var(--font-display);
@@ -138,9 +231,9 @@ body.login-pf, .login-pf body, .login-pf-page, html.login-pf {
   letter-spacing: 0.06em;
 }
 
-/* Чекбокс «Запомнить меня» без этого рисуется системным — белый квадрат с
-   синей галкой посреди оливково-тёмной страницы. Он мелкий, но единственный
-   элемент, выдающий чужую тему: остальное перекрашено. */
+/* Without this the "remember me" checkbox renders as a system control — a
+   white square with a blue check in the middle of an otherwise fully
+   recolored page. Small, but the one element that gives away a foreign theme. */
 input[type="checkbox"] {
   accent-color: var(--acc);
   width: 14px;
@@ -214,7 +307,34 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
   border-color: var(--acc);
 }
 
-.btn, .btn-primary, input[type="submit"], .pf-c-button, .pf-c-button.pf-m-primary {
+/* Password show/hide toggle — see aida-root's seer.css for why this is split
+   out from the submit-button rule (was making the eye icon a full-width bar). */
+.pf-c-input-group { display: flex; align-items: stretch; }
+.pf-c-input-group input.form-control,
+.pf-c-input-group input[type="password"] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+.pf-c-input-group .pf-c-button.pf-m-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  flex: 0 0 auto;
+  padding: 0;
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-left: none;
+  border-top-right-radius: var(--r-sm);
+  border-bottom-right-radius: var(--r-sm);
+  color: var(--t2);
+  cursor: pointer;
+}
+.pf-c-input-group .pf-c-button.pf-m-control:hover { color: var(--t1); }
+.pf-c-input-group .pf-c-button.pf-m-control .fa { font-size: 14px; }
+
+.btn, .btn-primary, input[type="submit"], .pf-c-button.pf-m-primary {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,7 +354,7 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focu
   box-shadow: none;
 }
 .btn:hover, .btn-primary:hover, input[type="submit"]:hover,
-.pf-c-button:hover, .pf-c-button.pf-m-primary:hover {
+.pf-c-button.pf-m-primary:hover {
   background: color-mix(in srgb, var(--acc) 80%, white);
   color: var(--bg0);
 }
@@ -277,6 +397,62 @@ a:hover { text-decoration: underline; }
 #kc-locale a {
   color: var(--t2);
   margin: 0 4px;
+}
+
+/* ── Style picker (theme + palette) — identical to seer.css ────────────────── */
+
+.seer-style-picker {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.seer-style-picker__theme {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--t3);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.seer-style-picker__theme svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+.seer-style-picker__theme:hover {
+  color: var(--t1);
+  background: var(--bg2);
+}
+.seer-style-picker__palettes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--bd);
+}
+.seer-style-picker__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  padding: 0;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.12s;
+}
+.seer-style-picker__swatch:hover {
+  transform: scale(1.15);
+}
+.seer-style-picker__swatch[data-active="true"] {
+  border-color: var(--t1);
 }
 
 .seer-footer {

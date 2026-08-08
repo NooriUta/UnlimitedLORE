@@ -481,7 +481,7 @@
           "bucket15to30": "15–30d",
           "bucket30plus": "30d+"
         },
-        "accuracyHint": "Estimate accuracy for closed tasks: plan = effort_days, actual = calendar duration (created→closed). ⚠ \"spent\" is wall-clock, not net effort. Real closures only (since Jun 12, states>1).",
+        "efficiencyHint": "Share of a task's life spent actually being worked on: effort (effort_days, person-days) ÷ calendar span created→closed. Estimate accuracy is NOT measured: the corpus has no actual time spent, only the estimate and the calendar. Real closures only (since Jun 12, states>1).",
         "blockedHint": "Sprints that ever passed through BLOCKED status (by state history): {{ever}} of {{total}} ({{pct}}%). Currently blocked: {{nowBlocked}}.",
         "deployLagHint": "Days from sprint closure (done_date) to the first release it shipped in (release_dates). Median/p75 across such sprints. On the right — how many done sprints still have no release.",
         "leadTimeHint": "Days from the sprint's actual start (earliest valid_from in state history, sprint_starts slice) to closure (done_date). Median/p25/p75/max + histogram across closed sprints.",
@@ -608,6 +608,9 @@
         "hygieneTitle": "E · Link hygiene",
         "hygieneWarn": "first-priority slice: until this is zero, the other numbers lie",
         "hygieneClean": "links are clean — the numbers below can be trusted",
+        "hygieneSearchPh": "find by id or title…",
+        "hygieneAll": "all",
+        "hygieneNoMatch": "nothing matches the filter/search",
         "finding": {
           "uc_task_without_realizes": "uc task without REALIZES",
           "enb_task_without_justification": "enb task without ADR",
@@ -648,7 +651,19 @@
         "laterG": "G · lineup graph \"builds on → unlocks\" — once \"Place in lineup\" is filled",
         "laterI": "I · rework load — once in_rework lands (ADR-029)",
         "laterH": "H · the RBAC matrix lives in the actor registry —",
-        "actorsLink": "open"
+        "actorsLink": "open",
+        "selfCheck": {
+          "title": "Corpus self-check",
+          "run": "Check",
+          "running": "checking…",
+          "ranAt": "run at {{time}}",
+          "empty": "click \"Check\" — the run takes a few seconds",
+          "loadError": "the run failed entirely — try again",
+          "unavailable": "could not check",
+          "foundOf": "{{found}} of {{denom}}",
+          "clickToOpen": "(click — list)",
+          "truncated": "showing the first {{n}} of {{total}} — the rest is omitted, not absent"
+        }
       }
     },
     "artifactDoc": {
@@ -767,6 +782,8 @@
       "parentHas": "Under an ADR",
       "parentLabel": "ADR link",
       "parentOrphan": "Independent",
+      "projectLabel": "Project",
+      "noProject": "no project",
       "statusLabel": "Status"
     },
     "docView": {
@@ -1046,7 +1063,9 @@
         "milestone": "milestone",
         "currentRelease": "current release",
         "phase": "phase",
-        "clickHint": "click a bar → sprint card"
+        "clickHint": "click a bar → sprint card",
+        "toggleShow": "legend",
+        "toggleHide": "legend"
       },
       "card": {
         "registerTooltip": "Create a KnowSprint, link the plan item (REPRESENTS), and set an initial status",
@@ -1366,6 +1385,7 @@
         "ariaLabel": "Tasks by type (multi-select)"
       },
       "metaToggle": "Context and links",
+      "filtersToggle": "filter by status/type",
       "wcUc": "realizes a scenario",
       "wcJtd": "supporting job",
       "wcEnb": "enabler — justified by an ADR"
@@ -1477,6 +1497,8 @@
         "filtersLabel": "Filters",
         "noComponent": "no component",
         "noTag": "no tag",
+        "noProject": "no project",
+        "projectDim": "Project",
         "periodDim": "Period",
         "sortComp": "Component",
         "sortDate": "Date",
@@ -1623,6 +1645,14 @@
         "kind": "Kind",
         "project": "Project",
         "projectHint": "without a project, same-named roles of different products merge into one",
+        "projectsHint": "an actor may belong to several products; without a project, same-named roles of different products merge into one",
+        "projectNone": "— no project —",
+        "projectUnknown": "no such project",
+        "projectUnknownHint": "not in the registry: {{list}} — the link will not be created, yet the response will look successful",
+        "projects": "Projects",
+        "noProjects": "⚠ no project set — with project scope enabled nobody will see this actor",
+        "projAll": "all projects",
+        "projNone": "no project",
         "idRule": "ACT-‹ROLE›, latin, dash-separated: ACT-ARCHITECT",
         "segment": "customer segment"
       },
@@ -1746,6 +1776,7 @@
         "segmentsHint": "The feature serves several segments — a reason to split it, not a sign of breadth",
         "legendProven": "proven by metric",
         "legendProfile": "inside the customer: a pain blocks a job, a gain is its success",
+        "legendConnect": "drag from a card's dot to another: scenario → pain/gain/job, pain → job, gain → job",
         "noActorsOnCanvas": "segment not set — values carry no actors"
       },
       "vp": {
@@ -1818,7 +1849,42 @@
         "save": "Save",
         "idRuleJob": "JOB-‹AREA›-‹POINT›, latin, dash-separated. Area is a component or product: JOB-LORE-SHIP-RELEASE",
         "jobOne": "job",
-        "searchPh": "job / pain / gain…"
+        "searchPh": "job / pain / gain…",
+        "paletteLabel": "Palette — drag onto the canvas",
+        "paletteDropHint": "Drop only into its own sector",
+        "paletteAddUc": "+ Scenario",
+        "paletteAddUcSub": "what closes it",
+        "paletteNeedsActor": "Pick a segment first — otherwise it belongs to no one",
+        "pickerTitleUc": "Scenario",
+        "pickerTitleUcGain": "Scenario — creates a gain",
+        "pickerTitleUcPain": "Scenario — relieves a pain",
+        "pickerUcHint": "Scenarios of this feature — or create a new one.",
+        "pickerCreateUc": "Create a scenario",
+        "pickerNext": "next →",
+        "pickerBack": "back",
+        "pickerWhichPain": "Which pain does this scenario relieve?",
+        "pickerWhichGain": "Which gain does this scenario create?",
+        "pickerNoCounterpart": "The feature has none yet — add one to the circle first",
+        "paletteAddPain": "+ Pain",
+        "paletteAddPainSub": "blocks a job",
+        "paletteAddGain": "+ Gain",
+        "paletteAddGainSub": "delivers a result",
+        "paletteAddJob": "+ Job",
+        "paletteAddJobSub": "what the actor does",
+        "addEmptyPain": "add a pain",
+        "addEmptyGain": "add a gain",
+        "addEmptyJob": "add a job",
+        "pickerAdd": "Add: {{kind}}",
+        "pickerTitlePain": "Pain",
+        "pickerTitleGain": "Gain",
+        "pickerTitleJob": "Job",
+        "pickerSearchPlaceholder": "Search across everything that already exists…",
+        "pickerSearchHint": "We search existing ones first — so we don't create duplicates.",
+        "pickerNoResults": "Nothing matching found",
+        "pickerTypeToSearch": "Start typing to search among existing ones",
+        "pickerAttach": "attach →",
+        "pickerOr": "or",
+        "pickerCreateNew": "Create new"
       },
       "pickItem": "Pick an item on the left",
       "vocab": {
@@ -1915,6 +1981,10 @@
       "projectRoles": "Project roles",
       "projectRolesNote": "The second axis of rights: what a person does in a specific project. It also determines what their agent may do (delegation matrix) and which projects they can see.",
       "projectRolesEmpty": "no project roles — this person sees no projects at all once the project scope is enabled",
+      "editRoles": "Edit",
+      "inlineRolesH": "Projects and roles",
+      "inlineNoProjects": "no projects — create them in the Projects section",
+      "noProjectRoles": "⚠ no projects — will see nothing",
       "removeProjectRole": "remove role in project",
       "agentsSection": "Agents",
       "agentRolesSection": "Agent roles",
@@ -1947,7 +2017,8 @@
       "loading": "loading…",
       "addValue": "+ value",
       "adminGives": "Administration: people, dictionaries, settings, enabling auth",
-      "agentsNote": "AI agents are client roles of service accounts (the \"agents\" axis, agent_scope claim). Provisioned by script, not created by hand. Rotation shows the secret ONCE — LORE does not store it.",
+      "agentsNote": "An agent is an owner × role pair, and it is created right here. The Keycloak accounts behind them are provisioned by script: rotation shows the secret ONCE, LORE does not store it. An agent takes its rights from its owner — it has none of its own.",
+      "scopeNotInDict": "Keycloak has accounts for roles missing from the agent_role dictionary: {{list}}. An agent with such a role cannot be created here — the list comes from the dictionary. Only a human can add the entry: dictionaries are not writable by agents.",
       "authBlockH": "Enabling authentication",
       "backToList": "Back to list",
       "byAlpha": "Alphabetical",

@@ -675,6 +675,39 @@ public final class LoreSlices {
             "ORDER BY actor_id",
             List.of("project"), Map.of(), "");
 
+        // MT-09: роль ребра HAS_ACTOR построчно.
+        //
+        // До этого среза роль ребра не отдавал НИКТО: `actor_load` даёт только
+        // счётчики primary/supporting по актору, `actors` — список сценариев
+        // без ролей. Узнать, у какого сценария кто primary, было нельзя в
+        // принципе; расхождение выявлялось лишь тем, что primary + supporting
+        // не сходится с uc_count, и то если специально сложить.
+        //
+        // Цена непроверяемости измерена 2026-08-04: девять вызовов uc_link с
+        // неверным именем параметра прошли с ok:true, роли назначились по
+        // умолчанию, два сценария остались БЕЗ primary — состояние, прямо
+        // запрещённое проверкой качества №7 (ADR-LORE-028 D19). Обнаружилось
+        // это через сутки и не тем способом.
+        //
+        // Строка на РЕБРО, а не на сценарий. Первая редакция отдавала два
+        // параллельных массива (акторы и роли) — и они разъезжаются: у ребра
+        // без роли место в массиве ролей занимает null, соответствие с
+        // массивом акторов держится только на порядке. Одна строка на ребро
+        // такого вопроса не создаёт.
+        //
+        // Сразу вскрыло то, что счётчиками не видно: у части рёбер роли НЕТ
+        // вовсе (легаси). Отсюда и расхождение «сценариев 12, а primary плюс
+        // supporting равно 10» — третьего состояния в счётчиках не было.
+        //
+        // Без uc_id отдаёт весь слой — на нём и считается «ровно один primary».
+        slice("uc_actors",
+            "SELECT @out.uc_id AS uc_id, @in.actor_id AS actor_id, " +
+            "@in.name AS actor_name, @in.kind AS actor_kind, role " +
+            "FROM HAS_ACTOR",
+            List.of(),
+            new LinkedHashMap<>(Map.of("uc_id", " WHERE @out.uc_id = :uc_id")),
+            " ORDER BY uc_id");
+
         // AN-05 (ADR-LORE-030 §2 срез C, зависимость PL-15): shipped-динамика.
         // Сырые строки по выехавшим сценариям; периоды/релизы группирует клиент
         // по shipped_at (GROUP BY-ловушка). Lead time = shipped_at −
@@ -753,70 +786,84 @@ public final class LoreSlices {
         // шлюз, скрипты, чужие сессии. Тихо отобранный эндпоинт — худший способ
         // узнать о зависимости: она проявится 404-ом у того, кто про эту правку
         // не знал. Удаление — отдельным шагом, после проверки логов обращений.
+        //
+        // 2026-08-04: SEARCH_INDEX(...) убран из всех веток. Причина —
+        // ArcadeDB/arcadedb#4732 (см. LoreFtIndexHealth): FULL_TEXT-индекс,
+        // хвост которого ушёл в бакетный подындекс, кидает NPE именно на
+        // ПРЕФИКСНЫХ запросах (`term*`) — ровно ту форму, что слала эта ветка.
+        // NPE всплывал наружу как 502 LORE_UPSTREAM на любой вызов, если хотя
+        // бы один из ~18 задействованных индексов был в этом состоянии.
+        // У этого слайса и так нет ранжирования (см. выше — оно у /lore/search),
+        // поэтому лечение — не health-gating (это живёт в LoreSearchResource
+        // для актуального поиска), а снятие самого источника падения: ILIKE
+        // по тем же полям, что раньше индексировал SEARCH_INDEX (реестр
+        // FT_INDEXES, LoreSchemaMigrations), без морфологии, зато не падает
+        // НИКОГДА, независимо от состояния индексов. Первая редакция этой
+        // правки по ошибке обрезала не только морфологию, а вообще все поля
+        // кроме id — восстановлено по точному списку полей каждого индекса.
         slice("search",
             "SELECT DISTINCT type, ref_id, title FROM " +
             "(SELECT expand(unionall($a, $ah, $s, $sh, $p, $ph, $t, $th, $q, $r, $rh, $d, $c, $qn, $u, $pn, $gn, $jb, $ac)) LET " +
             "$a = (SELECT 'adr' AS type, adr_id AS ref_id, name AS title FROM KnowADR " +
-            "      WHERE adr_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowADR', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      WHERE adr_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$ah = (SELECT 'adr' AS type, in('HAS_STATE').adr_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
-            "      FROM KnowADRHist WHERE valid_to IS NULL " +
-            "      AND SEARCH_INDEX('ftKnowADRHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      FROM KnowADRHist WHERE valid_to IS NULL AND (" +
+            "      context_md ILIKE ('%' + :pattern + '%') OR decision_md ILIKE ('%' + :pattern + '%') " +
+            "      OR consequences_md ILIKE ('%' + :pattern + '%')) LIMIT 15), " +
             "$s = (SELECT 'spec' AS type, spec_id AS ref_id, title FROM KnowSpec " +
-            "      WHERE spec_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowSpec', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      WHERE spec_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$sh = (SELECT 'spec' AS type, in('HAS_STATE').spec_id[0] AS ref_id, in('HAS_STATE').title[0] AS title " +
             "      FROM KnowSpecHist WHERE valid_to IS NULL " +
-            "      AND SEARCH_INDEX('ftKnowSpecHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      AND content_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$p = (SELECT 'sprint' AS type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
-            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowSprint', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      WHERE sprint_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR context_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$ph = (SELECT 'sprint' AS type, in('HAS_STATE').sprint_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
-            "      FROM KnowSprintHist WHERE valid_to IS NULL " +
-            "      AND SEARCH_INDEX('ftKnowSprintHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      FROM KnowSprintHist WHERE valid_to IS NULL AND (" +
+            "      context_md ILIKE ('%' + :pattern + '%') OR outcome_md ILIKE ('%' + :pattern + '%')) LIMIT 15), " +
             "$t = (SELECT 'task' AS type, task_uid AS ref_id, title FROM KnowTask " +
-            "      WHERE task_uid ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowTask', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      WHERE task_uid ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$th = (SELECT 'task' AS type, in('HAS_STATE').task_uid[0] AS ref_id, in('HAS_STATE').title[0] AS title " +
             "      FROM KnowTaskHist WHERE valid_to IS NULL " +
-            "      AND SEARCH_INDEX('ftKnowTaskHist', :pattern + ' ' + :pattern + '*') = true LIMIT 15), " +
+            "      AND note_md ILIKE ('%' + :pattern + '%') LIMIT 15), " +
             "$q = (SELECT 'quality_gate' AS type, qg_id AS ref_id, name AS title FROM QualityGate " +
             "      WHERE qg_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR content_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$r = (SELECT 'runbook' AS type, runbook_id AS ref_id, name AS title FROM KnowRunbook " +
-            "      WHERE runbook_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowRunbook', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE runbook_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$rh = (SELECT 'runbook' AS type, in('HAS_STATE').runbook_id[0] AS ref_id, in('HAS_STATE').name[0] AS title " +
             "      FROM KnowRunbookHist WHERE valid_to IS NULL " +
-            "      AND SEARCH_INDEX('ftKnowRunbookHist', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      AND content_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$d = (SELECT 'doc' AS type, doc_id AS ref_id, title FROM KnowDoc " +
-            "      WHERE doc_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowDoc', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE doc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR content_md ILIKE ('%' + :pattern + '%') OR content_md_en ILIKE ('%' + :pattern + '%') " +
+            "      OR content_md_ru ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$c = (SELECT 'decision' AS type, decision_id AS ref_id, title FROM KnowDecision " +
-            "      WHERE decision_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowDecision', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE decision_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             // Вопросы раньше не искались ВООБЩЕ, хотя ftKnowQuestion существует —
             // реестр ОВ был невидим для единого окна.
             "$qn = (SELECT 'question' AS type, question_id AS ref_id, title FROM KnowQuestion " +
-            "      WHERE question_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowQuestion', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE question_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             // ── продуктовый слой (ADR-LORE-022/032) ──
             // PL-28: ветка одна — фича стала корневым сценарием того же типа.
             "$u = (SELECT 'use_case' AS type, uc_id AS ref_id, title FROM KnowUseCase " +
-            "      WHERE uc_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowUseCase', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE uc_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') OR context_md ILIKE ('%' + :pattern + '%') " +
+            "      OR scenario_md ILIKE ('%' + :pattern + '%') OR acceptance_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$pn = (SELECT 'pain' AS type, pain_id AS ref_id, title FROM KnowPain " +
-            "      WHERE pain_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowPain', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE pain_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$gn = (SELECT 'gain' AS type, gain_id AS ref_id, title FROM KnowGain " +
-            "      WHERE gain_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowGain', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE gain_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') OR metric_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
-            "      WHERE job_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowJob', :pattern + ' ' + :pattern + '*') = true LIMIT 10), " +
+            "      WHERE job_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
             "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
-            "      WHERE actor_id ILIKE ('%' + :pattern + '%') " +
-            "      OR SEARCH_INDEX('ftKnowActor', :pattern + ' ' + :pattern + '*') = true LIMIT 10))",
+            "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
+            "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10))",
             List.of("pattern"), Map.of(), "");
 
         // ── §5 Plan ──────────────────────────────────────────────────────────
@@ -1139,8 +1186,25 @@ public final class LoreSlices {
             // «нет роли» в UI не означало отсутствие роли, а означало, что слайс её
             // не отдал. Ровно тот класс, что ловили весь спринт: данные есть, путь
             // их не доносит.
-            "SELECT task_uid, task_id, title, status_raw, priority, component_id, task_type, " +
+            // MT-12: статус читается из ОТКРЫТОЙ СТРОКИ ИСТОРИИ, а не с вершины.
+            //
+            // Прежняя редакция брала status_raw прямо с KnowTask — и 1421 задача
+            // из 3279 (43%) выглядела «без статуса», потому что на вершине поле
+            // пустое. Тот же срез при этом УЖЕ читал note_md и effort_days через
+            // HAS_STATE: их починил SPRINT_LORE_TASK_NOTE_MD_FIX, а status_raw в
+            // той правке пропустили.
+            //
+            // Цена: 04.08 по этому срезу я вывела, что «25 задач открыты в
+            // спринтах, помеченных DONE», и записала это в план как находку
+            // гигиены. Проверка через tasks_of_sprint показала, что все они
+            // закрыты. Дефект не роняет запрос — он меняет ответ на
+            // противоположный, и по нему строятся планы.
+            //
+            // Правило: у поля SCD2 ровно один законный источник — открытая
+            // строка истории. Чтение с вершины даёт правдоподобную неправду.
+            "SELECT task_uid, task_id, title, priority, component_id, task_type, " +
             "author_agent, executor_agent, reviewer_agent, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +
             "out('HAS_STATE')[note_md IS NOT NULL].note_md[0] AS note_md, " +

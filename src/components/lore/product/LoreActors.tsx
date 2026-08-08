@@ -48,15 +48,41 @@ export type ActorKind = 'all' | 'human-role' | 'agent' | 'system';
  * набранный текст обязаны сужать выборку вместе, иначе фильтр вида молча
  * перебивал бы поиск — самая правдоподобная ошибка при склейке этих двух.
  */
-export function filterActors<T extends { actor_id: string; name?: string | null; kind?: string | null }>(
-  rows: T[], kind: ActorKind, search: string,
+export function filterActors<T extends {
+  actor_id: string; name?: string | null; kind?: string | null; projects?: (string | null)[] | null;
+}>(
+  rows: T[], kind: ActorKind, search: string, project: string = ALL_PROJECTS,
 ): T[] {
   const q = search.trim().toLowerCase();
   return rows.filter(a => {
     if (kind !== 'all' && a.kind !== kind) return false;
+    // AL-96: проектный разрез. `NO_PROJECT` — отдельное значение, а не «все»:
+    // актор без проекта при включённом скоупе не виден никому, и найти таких
+    // должно быть можно намеренно, а не случайно заметить в общем списке.
+    if (project === NO_PROJECT) {
+      if ((a.projects ?? []).filter(Boolean).length > 0) return false;
+    } else if (project !== ALL_PROJECTS) {
+      if (!(a.projects ?? []).some(p => p === project)) return false;
+    }
     if (!q) return true;
     return a.actor_id.toLowerCase().includes(q) || (a.name ?? '').toLowerCase().includes(q);
   });
+}
+
+/** Значение фасета «не сужать по проекту». */
+export const ALL_PROJECTS = '';
+/** Значение фасета «только акторы без единого проекта». */
+export const NO_PROJECT = 'none';
+
+/** Проекты, встреченные у акторов, с числом строк на каждый. */
+export function actorProjectCounts(rows: { projects?: (string | null)[] | null }[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const r of rows) {
+    for (const p of (r.projects ?? [])) {
+      if (p) m.set(p, (m.get(p) ?? 0) + 1);
+    }
+  }
+  return m;
 }
 
 // Строка профиля Остервальдера: жирный uppercase-лейбл + чипы (или «— нет»).
@@ -94,6 +120,7 @@ function ProfileLine({
 export default function LoreActors({ selectedId, onSelect, onNavigate, onError, listSearch, onListSearch }: ProductScreenProps) {
   const { t } = useTranslation();
   const [kindFilter, setKindFilter] = useState<ActorKind>('all');
+  const [projFilter, setProjFilter] = useState<string>(ALL_PROJECTS);
   const [creating, setCreating] = useState(false);
   const [editingActor, setEditingActor] = useState<ActorDraft | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -139,8 +166,26 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
     { key: 'system', label: `${t('lore.product.actor.kindSystem', 'системы')}` },
   ];
 
+  // ── фасет по проекту (AL-96) ──
+  //
+  // Здесь набор СОБИРАЕТСЯ из данных, в отличие от видов выше: список проектов
+  // задаёт корпус, а не бэкенд, и жёсткий перечень устаревал бы при каждом
+  // новом репозитории. Отдельный чип «без проекта» добавляется всегда, когда
+  // такие акторы есть, — при включённом скоупе их не видит никто, и это
+  // состояние надо уметь найти намеренно.
+  const projCounts = actorProjectCounts(actors);
+  const orphanCount = actors.filter(a => (a.projects ?? []).filter(Boolean).length === 0).length;
+  const projDefs: { key: string; label: string }[] = [
+    { key: ALL_PROJECTS, label: t('lore.product.actor.projAll', 'все проекты') },
+    ...[...projCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([slug, n]) => ({ key: slug, label: `${slug.split('/').pop()} ${n}` })),
+    ...(orphanCount > 0
+      ? [{ key: NO_PROJECT, label: `${t('lore.product.actor.projNone', 'без проекта')} ${orphanCount}` }]
+      : []),
+  ];
+
   // ── список ──
-  const filtered = filterActors(actors, kindFilter, listSearch ?? '');
+  const filtered = filterActors(actors, kindFilter, listSearch ?? '', projFilter);
 
   let list;
   if (loading) {
@@ -186,16 +231,42 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
         .map(g => ({ id: g.gain_id, text: g.title ?? g.gain_id }));
 
       const ucIds = asArray(a.uc_ids);
+      const actorProjects = (a.projects ?? []).filter(Boolean) as string[];
 
       detail = (
         <div>
           <PassportHeader title={a.name ?? a.actor_id}>
             <IconPill icon={iconOf(ACTOR_KIND_ICON, a.kind)} tone={a.kind === 'agent' ? 'act' : 'muted'}>{actorKindLabel(t, a.kind)}</IconPill>
             <Pill>{t('lore.product.actor.segment', 'сегмент клиента')}</Pill>
-            <EditButton onClick={() => { setCreating(false); setEditingActor({ actor_id: a.actor_id, name: a.name, kind: a.kind, body_md: a.body_md }); }} title={t('lore.product.actor.edit', 'Правка')} />
+            {/* AL-107: в форму уходит ВЕСЬ набор проектов. Прежняя редакция
+                передавала `actorProjects[0]` — первый из списка, — и правка
+                многопроектного актора молча снимала остальные при ok:true.
+                Актор проектный по D18 и мультипроектный по данным; форма
+                обязана видеть то же, что слайс. */}
+            <EditButton onClick={() => { setCreating(false); setEditingActor({ actor_id: a.actor_id, name: a.name, kind: a.kind, body_md: a.body_md, projects: actorProjects }); }} title={t('lore.product.actor.edit', 'Правка')} />
           </PassportHeader>
 
           <div style={{ fontFamily: 'var(--mono)', fontSize: 9.5, color: 'var(--wrn)', marginBottom: 8 }}>{a.actor_id}</div>
+
+          {/* AL-96: проекты актора. Пустое состояние говорит прямым текстом —
+              молчаливое отсутствие чипов читалось бы как «проекты не заведены
+              вообще», а не как «этот актор не увидит никто». */}
+          <PSection title={t('lore.product.actor.projects', 'Проекты')}>
+            {actorProjects.length === 0 ? (
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--wrn)', padding: '2px 0' }}>
+                {t('lore.product.actor.noProjects',
+                   '⚠ проект не задан — при включённом проектном скоупе этот актор не будет виден никому')}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {actorProjects.map(p => (
+                  <LinkChip key={p} color="var(--suc)" onClick={() => setProjFilter(p)} title={p}>
+                    {p}
+                  </LinkChip>
+                ))}
+              </div>
+            )}
+          </PSection>
 
           <PSection title={t('lore.product.actor.profile', 'Профиль сегмента (Остервальдер)')}>
             <ProfileLine icon={iconOf(VP_ICON, 'job')} label={t('lore.product.actor.jobs', 'Работы')} items={jobItems} color="var(--job)" onNavigate={onNavigate} />
@@ -243,7 +314,12 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
     <MasterDetail
       hasDetail={!!selectedId}
       onBack={() => onSelect(null)}
-      list={<><ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.actor.searchPh', 'сегмент…')} /><FilterChips options={kindDefs} value={kindFilter} onChange={setKindFilter} />{createBar}{list}</>}
+      list={<>
+        <ListSearch value={listSearch ?? ''} onChange={v => onListSearch?.(v)} placeholder={t('lore.product.actor.searchPh', 'сегмент…')} />
+        <FilterChips options={kindDefs} value={kindFilter} onChange={setKindFilter} />
+        {projDefs.length > 1 && <FilterChips options={projDefs} value={projFilter} onChange={setProjFilter} />}
+        {createBar}{list}
+      </>}
       detail={detail}
     />
     {(creating || editingActor) && (

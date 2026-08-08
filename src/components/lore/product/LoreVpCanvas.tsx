@@ -18,15 +18,20 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
-  ReactFlow, Controls, Background, BackgroundVariant, Handle, Position,
+  ReactFlow, Controls, Background, BackgroundVariant, Panel, Handle, Position,
   type NodeProps, type Node, type Edge, type NodeChange, type ReactFlowInstance,
+  type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { LoreFeatureRow, LoreUcRow, LorePainRow, LoreGainRow, LoreJobRow, LoreActorRow } from '../../../api/lore';
-import { fetchLoreSlice } from '../../../api/lore';
+import { fetchLoreSlice, linkLoreUc, linkLoreVp } from '../../../api/lore';
 import LoreSkeleton from '../LoreSkeleton';
 import { EmptyState } from '../EmptyState';
 import { type ProductScreenProps, useSlice, asArray } from './shared';
+import VpValuePicker, {
+  VpPalette, vpDragKind, isUcSector, type VpPickerRequest, type VpDragTarget,
+} from './VpValuePicker';
+import type { PainGainJobKind } from './PainGainJobModal';
 
 /** Пара «заявлено vs сделано» — одна на все три вида ценности. */
 interface Link {
@@ -72,6 +77,26 @@ const SEC_FALLBACK: Record<string, string> = {
   ps: 'Products & Services', gc: 'Gain Creators', pr: 'Pain Relievers',
   gains: 'Gains', pains: 'Pains', jobs: 'Customer Jobs',
 };
+
+/**
+ * Единственный сектор, куда ложится перетаскиваемое.
+ *
+ * Ценность всегда попадает в КРУГ (профиль клиента), сценарий — в свой сектор
+ * КВАДРАТА (карта ценности). Уронить боль в «Снимают боль» значило бы
+ * записать «наша работа» вместо «боль клиента»: запись легла бы не туда, а
+ * канва при этом выглядела бы исправной. Ключ здесь — он же значение для
+ * секторов квадрата: сценарий бросают ровно в тот сектор, который назван.
+ */
+const TARGET_SECTOR: Record<VpDragTarget, string> = {
+  pain: 'pains', gain: 'gains', job: 'jobs',
+  ps: 'ps', gc: 'gc', pr: 'pr',
+};
+
+/** Абсолютный (в координатах холста) прямоугольник сектора. */
+function sectorRect(key: string) {
+  const s = SECTORS[key];
+  return { x: (s.fig === 'vm' ? 0 : FIG + GAP) + s.x, y: s.y, w: s.w, h: s.h };
+}
 
 /* ── узлы (объявлены вне рендера: ReactFlow требует стабильных ссылок) ── */
 
@@ -176,8 +201,23 @@ function StickerNode({ data }: NodeProps) {
         color: 'var(--t3)', maxWidth: 'calc(100% - 44px)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{d.ghost ? '' : d.code}</span>
-      <Handle type="target" position={Position.Left} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
-      <Handle type="source" position={Position.Right} isConnectable={false} style={{ opacity: 0, pointerEvents: 'none' }} />
+      {/* VP-01: точки связи. У «дыры» их нет — она не сущность корпуса, и
+          тянуть от неё нечего. Полупрозрачны в покое и проявляются на
+          наведении: постоянно видимые восемь точек на карточку превратили бы
+          канву в схему электропроводки. Что с чем соединимо, решает
+          `isValidConnection` — рука не дотянется до несовместимого. */}
+      {!d.ghost && (
+        <>
+          <Handle
+            type="target" position={Position.Left} isConnectable
+            style={{ width: 7, height: 7, background: d.color, border: '1px solid var(--bg0)', opacity: .45 }}
+          />
+          <Handle
+            type="source" position={Position.Right} isConnectable
+            style={{ width: 7, height: 7, background: d.color, border: '1px solid var(--bg0)', opacity: .45 }}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -216,13 +256,62 @@ const S = {
   navRow: { display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 14 },
 };
 
-export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate }: ProductScreenProps) {
+/** Сущность за узлом канвы: квадрат несёт префикс сектора, круг — голый id. */
+function entityOf(
+  nodeId: string | null,
+  ids: { pains: string[]; gains: string[]; jobs: string[] },
+): { kind: 'uc' | 'pain' | 'gain' | 'job'; bare: string } | null {
+  if (!nodeId) return null;
+  if (nodeId.startsWith('ps-')) return { kind: 'uc', bare: nodeId.slice(3) };
+  if (nodeId.startsWith('crt-') || nodeId.startsWith('rel-')) return { kind: 'uc', bare: nodeId.slice(4) };
+  if (ids.pains.includes(nodeId)) return { kind: 'pain', bare: nodeId };
+  if (ids.gains.includes(nodeId)) return { kind: 'gain', bare: nodeId };
+  if (ids.jobs.includes(nodeId)) return { kind: 'job', bare: nodeId };
+  return null;   // рамка, сектор, карточка-дыра — не сущности корпуса
+}
+
+/**
+ * Какое ребро означает протянутая связь «откуда → куда» (FIT-08). null —
+ * такой связи не бывает, и рука до неё не дотянется (`isValidConnection`).
+ *
+ * Чистая функция и покрыта тестом НАРОЧНО: ошибка здесь не роняет экран, а
+ * пишет в корпус НЕ ТО ребро — то есть выглядит как успешная работа. Тот же
+ * повод, по которому вынесен `buildStickerNode`.
+ *
+ * Направление несёт смысл и не симметрично: сценарий СНИМАЕТ боль, боль МЕШАЕТ
+ * работе. Обратное перетаскивание — не «то же самое наоборот», а другое
+ * утверждение, поэтому оно просто не соединяется.
+ */
+export function vpConnection(
+  from: string | null,
+  to: string | null,
+  ids: { pains: string[]; gains: string[]; jobs: string[] },
+): { scope: 'uc' | 'vp'; rel: string; source: string; target: string } | null {
+  const s = entityOf(from, ids), t = entityOf(to, ids);
+  if (!s || !t || s.bare === t.bare) return null;
+  if (s.kind === 'uc' && t.kind === 'pain') return { scope: 'uc', rel: 'relieves', source: s.bare, target: t.bare };
+  if (s.kind === 'uc' && t.kind === 'gain') return { scope: 'uc', rel: 'delivers', source: s.bare, target: t.bare };
+  if (s.kind === 'uc' && t.kind === 'job') return { scope: 'uc', rel: 'performs', source: s.bare, target: t.bare };
+  if (s.kind === 'pain' && t.kind === 'job') return { scope: 'vp', rel: 'blocks', source: s.bare, target: t.bare };
+  if (s.kind === 'gain' && t.kind === 'job') return { scope: 'vp', rel: 'success_of', source: s.bare, target: t.bare };
+  return null;
+}
+
+// `onNavigate` больше не нужен: единственное место, где канва уводила на
+// другой экран («Завести сценарий» → US), теперь открывает форму на месте
+// (VP-01). Проп остаётся в контракте ProductScreenProps — его ждут соседние
+// экраны, — но здесь не используется.
+export default function LoreVpCanvas({ onError, selectedId, onSelect }: ProductScreenProps) {
   const { t } = useTranslation();
 
-  const { rows: features, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, []);
-  const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, []);
-  const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, []);
-  const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, []);
+  // VP-01: бампается после создания/привязки боли-выгоды-работы с канвы —
+  // `useSlice` грузит один раз при монтировании (см. shared.tsx), и без этого
+  // свежесозданная запись не появилась бы на канве без полной перезагрузки.
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { rows: features, loading } = useSlice<LoreFeatureRow>('features', undefined, onError, [refreshKey]);
+  const { rows: pains } = useSlice<LorePainRow>('pains', undefined, onError, [refreshKey]);
+  const { rows: gains } = useSlice<LoreGainRow>('gains', undefined, onError, [refreshKey]);
+  const { rows: jobs } = useSlice<LoreJobRow>('jobs', undefined, onError, [refreshKey]);
   const { rows: actors } = useSlice<LoreActorRow>('actors', undefined, onError, []);
 
   // Выбранная канва живёт в `?passport=` — ссылкой делятся, и локальное
@@ -422,6 +511,50 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
     try { return JSON.parse(localStorage.getItem('lore.vp.pos') ?? '{}'); } catch { return {}; }
   });
   const [hover, setHover] = useState<string | null>(null);
+  // VP-01: запрос на добавление боли/выгоды/работы — открыт кликом по пустой
+  // карточке сектора ИЛИ дропом карточки из палитры. null — пикер закрыт.
+  const [pickerRequest, setPickerRequest] = useState<VpPickerRequest | null>(null);
+  const openPicker = useCallback((target: VpDragTarget) => {
+    // Сценарий — про НАШУ работу, сегмент ему не нужен. Ценность без сегмента
+    // повисла бы ничьей, поэтому для неё актор обязателен.
+    if (!isUcSector(target) && !actorId) return;
+    setPickerRequest({
+      target,
+      actorId: actorId || undefined,
+      actorName: actorId ? (actorName.get(actorId) ?? actorId) : undefined,
+    });
+  }, [actorId, actorName]);
+
+  /**
+   * Точка дропа — В СВОЁМ секторе или нигде.
+   *
+   * Возвращает координаты ВНУТРИ сектора (для `pos`, чтобы карточка легла
+   * туда, куда её донесли) либо null, если бросают мимо. Дроп мимо не
+   * отменяется молча: `onDragOver` не зовёт `preventDefault`, и курсор сам
+   * показывает «сюда нельзя» ещё до отпускания.
+   */
+  const rf = useRef<ReactFlowInstance | null>(null);
+  const dropSpot = useCallback((target: VpDragTarget, clientX: number, clientY: number) => {
+    const inst = rf.current;
+    if (!inst) return null;
+    const p = inst.screenToFlowPosition({ x: clientX, y: clientY });
+    const r = sectorRect(TARGET_SECTOR[target]);
+    if (p.x < r.x || p.x > r.x + r.w || p.y < r.y || p.y > r.y + r.h) return null;
+    // Клампим так, чтобы карточка целиком осталась в секторе: `extent: 'parent'`
+    // всё равно втянул бы её обратно, но уже после видимого прыжка.
+    const size = isUcSector(target) ? SCEN : VAL;
+    return {
+      x: Math.min(Math.max(p.x - r.x - size.w / 2, 4), Math.max(4, r.w - size.w - 4)),
+      y: Math.min(Math.max(p.y - r.y - size.h / 2, 22), Math.max(22, r.h - size.h - 4)),
+    };
+  }, []);
+  /** Куда лечь карточке, созданной последним дропом (id узнаём только после записи). */
+  const dropPos = useRef<{ x: number; y: number } | null>(null);
+
+  const relOf = useCallback(
+    (from: string | null, to: string | null) => vpConnection(from, to, { pains: painIds, gains: gainIds, jobs: jobIds }),
+    [painIds, gainIds, jobIds],
+  );
 
   const nodes: Node[] = useMemo(() => {
     const out: Node[] = [];
@@ -487,6 +620,35 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
     fill('pains', painIds, '', 'var(--pain)', VAL);
 
     /**
+     * VP-01: пустая карточка «добавить» в секторе профиля клиента (круг), КОГДА
+     * у выбранного актора нет ни одной боли/выгоды/работы вообще — раньше
+     * такой сектор был просто пуст, вопрос «а что тут?» повисал. Отличается от
+     * «дыры» выше: там ценность ЕСТЬ, но не закрыта сценарием; здесь ценности
+     * нет вовсе. Только при выбранном сегменте — «все акторы вместе» не
+     * актор, привязывать некому (см. openPicker).
+     */
+    if (actorId) {
+      const emptyKinds: { key: 'pains' | 'gains' | 'jobs'; ids: string[]; kind: PainGainJobKind; color: string; label: string }[] = [
+        { key: 'pains', ids: painIds, kind: 'pain', color: 'var(--pain)', label: t('lore.product.vp.addEmptyPain', 'добавить боль') },
+        { key: 'gains', ids: gainIds, kind: 'gain', color: 'var(--gain)', label: t('lore.product.vp.addEmptyGain', 'добавить выгоду') },
+        { key: 'jobs', ids: jobIds, kind: 'job', color: 'var(--job)', label: t('lore.product.vp.addEmptyJob', 'добавить работу') },
+      ];
+      for (const ek of emptyKinds) {
+        if (ek.ids.length > 0) continue;
+        out.push({
+          id: `empty-${ek.key}`, type: 'sticker', parentId: ek.key, width: VAL.w, height: VAL.h,
+          extent: 'parent', draggable: false, selectable: false,
+          position: { x: 6, y: 24 },
+          data: {
+            ghost: true, code: '', color: ek.color, w: VAL.w, h: VAL.h, dim: false,
+            add: true, title: ek.label,
+            onAdd: () => openPicker(ek.kind),
+          },
+        });
+      }
+    }
+
+    /**
      * Пустая карточка «делать некому» — начало пунктирных связей.
      *
      * Раньше такая связь выходила из края сектора и читалась как ребро в
@@ -517,14 +679,15 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           ghost: true, code: '', color: 'var(--wrn)', w: SCEN.w, h: SCEN.h, dim: false,
           add: true, count: n,
           title: t('lore.product.canvas.addScenario', 'Завести сценарий'),
-          // Форма создания US живёт на своём экране и знает про родителя —
-          // дублировать её в канве значило бы держать две формы одной сущности.
-          onAdd: () => onNavigate('userStories', featureId),
+          // Открывает пикер прямо здесь (VP-01): уход на экран US разрывал
+          // работу ровно там, где виден разрыв, который её и вызвал. Форма
+          // создания при этом та же самая (UsFormModal), не копия.
+          onAdd: () => openPicker(key as VpDragTarget),
         },
       });
     }
     return out;
-  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName]);
+  }, [t, ucs, creators, relievers, gainIds, jobIds, painIds, titleOf, pos, hover, links, doneBy, actorId, actorName, openPicker]);
 
   const edges: Edge[] = useMemo(() => {
     const dim = (a: string | null, b: string) => hover && a !== hover && b !== hover;
@@ -583,6 +746,22 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
     setPos(p => { localStorage.setItem('lore.vp.pos', JSON.stringify(p)); return p; });
   }, []);
 
+  /** Гейт соединения: рука не дотянется до несовместимого (FIT-08). */
+  const isValidConnection = useCallback(
+    (c: Connection | Edge) => !!relOf(c.source ?? null, c.target ?? null),
+    [relOf],
+  );
+
+  /** Связь протянута — записываем ребро и перечитываем канву. */
+  const onConnect = useCallback((c: Connection) => {
+    const link = relOf(c.source ?? null, c.target ?? null);
+    if (!link) return;   // до сюда не дойдёт: isValidConnection уже отбил
+    const write = link.scope === 'uc'
+      ? linkLoreUc({ uc_id: link.source, rel: link.rel as 'relieves' | 'delivers' | 'performs', target_id: link.target })
+      : linkLoreVp({ source_id: link.source, rel: link.rel as 'blocks' | 'success_of', target_id: link.target });
+    write.then(() => setRefreshKey(k => k + 1)).catch(onError);
+  }, [relOf, onError]);
+
   /**
    * Перевписать сцену при изменении размера окна и при смене канвы.
    *
@@ -590,7 +769,6 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
    * холст оставался в прежнем масштабе, и нижняя фигура уезжала за кромку —
    * канва выглядела обрезанной при полностью живых данных.
    */
-  const rf = useRef<ReactFlowInstance | null>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = boxRef.current;
@@ -784,6 +962,26 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           остаётся пустой — канва при этом выглядит мельче, чем могла бы. */}
       <div
         ref={boxRef}
+        onDragOver={e => {
+          // Принимаем ТОЛЬКО над своим сектором. Без preventDefault браузер сам
+          // рисует «сюда нельзя» — отказ виден до отпускания, а не после того,
+          // как запись уже уехала не туда.
+          const tgt = vpDragKind(e.dataTransfer.types);
+          if (!tgt || (!isUcSector(tgt) && !actorId)) return;
+          if (dropSpot(tgt, e.clientX, e.clientY)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+          }
+        }}
+        onDrop={e => {
+          const tgt = vpDragKind(e.dataTransfer.types);
+          if (!tgt || (!isUcSector(tgt) && !actorId)) return;
+          const spot = dropSpot(tgt, e.clientX, e.clientY);
+          if (!spot) return;          // мимо своего сектора — не наше дело
+          e.preventDefault();
+          dropPos.current = spot;     // карточка ляжет туда, куда донесли
+          openPicker(tgt);
+        }}
         style={{
           // Высота задана напрямую, БЕЗ aspect-ratio. С `aspect-ratio` минимум
           // высоты раздувает ШИРИНУ: на 375px контейнер вырастал до 836px и
@@ -802,7 +1000,9 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           onNodeDragStop={persist}
           onNodeMouseEnter={(_, n) => setHover(n.id)}
           onNodeMouseLeave={() => setHover(null)}
-          nodesConnectable={false}
+          nodesConnectable
+          onConnect={onConnect}
+          isValidConnection={isValidConnection}
           nodesFocusable={false}
           edgesFocusable={false}
           fitView
@@ -813,8 +1013,45 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
         >
           <Controls showInteractive={false} />
           <Background variant={BackgroundVariant.Dots} color="var(--bd)" gap={22} size={1} />
+          {/* VP-01: палитра — ЧАСТЬ канвы (оверлей ReactFlow Panel), а не
+              внешний блок: внешняя колонка сужала холст, замечание владельца.
+              Показана ВСЕГДА: спрятанная палитра унесла с собой и знание, что
+              такая возможность есть («откуда тащить то?»). Недоступность
+              объясняется подсказкой на самой карточке. */}
+          <Panel position="top-left" style={{ margin: 8 }}>
+            <VpPalette noActor={!actorId} />
+          </Panel>
         </ReactFlow>
       </div>
+
+      <VpValuePicker
+        request={pickerRequest}
+        featureId={featureId}
+        pains={pains}
+        gains={gains}
+        jobs={jobs}
+        ucs={ucs}
+        featurePainIds={painIds}
+        featureGainIds={gainIds}
+        onClose={() => { dropPos.current = null; setPickerRequest(null); }}
+        onLinked={id => {
+          // Позиция известна только для дропа: у клика по пустой карточке её
+          // нет, и узел встаёт по сетке сектора, как любой другой.
+          const spot = dropPos.current;
+          const tgt = pickerRequest?.target;
+          dropPos.current = null;
+          if (spot && tgt) {
+            // Ключ позиции — id УЗЛА, а он в квадрате несёт префикс сектора
+            // (см. fill): без префикса карточка легла бы по сетке, а сохранённая
+            // позиция осталась бы висеть на несуществующем узле.
+            const prefix = tgt === 'ps' ? 'ps-' : tgt === 'gc' ? 'crt-' : tgt === 'pr' ? 'rel-' : '';
+            setPos(prev => ({ ...prev, [prefix + id]: spot }));
+            persist();
+          }
+          setRefreshKey(k => k + 1);
+        }}
+        onError={onError}
+      />
 
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginTop: 10 }}>
         <span><i style={{ display: 'inline-block', width: 22, borderTop: '2px solid var(--suc)', verticalAlign: 'middle', marginRight: 5 }} />
@@ -825,6 +1062,11 @@ export default function LoreVpCanvas({ onError, selectedId, onSelect, onNavigate
           {t('lore.product.canvas.legendProven', 'подтверждено метрикой')}</span>
         <span><i style={{ display: 'inline-block', width: 22, borderTop: '1px dashed var(--t3)', verticalAlign: 'middle', marginRight: 5 }} />
           {t('lore.product.canvas.legendProfile', 'внутри клиента: боль мешает работе, выгода — её успех')}</span>
+        {/* Связь рисуется, а не заводится в форме (FIT-08). Без подписи об этом
+            не догадаться: точки на карточках проявляются только на наведении. */}
+        <span style={{ color: 'var(--t3)' }}>
+          ⟶ {t('lore.product.canvas.legendConnect', 'тяните от точки карточки к другой: сценарий → боль/выгода/работа, боль → работа, выгода → работа')}
+        </span>
       </div>
 
       {/* Навигатор по канвам — ПОД канвой: сверху он отжимал саму канву вниз, а

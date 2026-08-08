@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { marked } from '../lore/markdown';
 import mermaid from 'mermaid';
 import elkLayouts from '@mermaid-js/layout-elk';
 import { sanitizeMd, sanitizeSvg } from '../lore/sanitizeHtml';
+import NavigatedViewer from 'bpmn-js/lib/NavigatedViewer';
+import 'bpmn-js/dist/assets/diagram-js.css';
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 
 // The mart is a carrier of reasoning (v6.1): prose fields (narrative,
 // rationale/mechanism/interpretation, long_description, conclusions) are
@@ -93,26 +96,37 @@ function injectCssOnce(): void {
   cssInjected = true;
 }
 
-// Markdown split into renderable segments. Mermaid fences are pulled OUT of the
-// dangerouslySetInnerHTML stream and rendered by React (see MermaidDiagram), so
-// React owns the SVG node. The previous approach injected the SVG imperatively
-// into React-owned innerHTML and lost a race: any re-commit (StrictMode, i18n
-// language settle, sibling slice load) recreated the <pre> and clobbered the
-// injection — nondeterministically leaving the raw ```mermaid fence visible.
-type Segment = { kind: 'html'; html: string } | { kind: 'mermaid'; def: string };
+// Markdown split into renderable segments. Diagram fences (mermaid, bpmn) are
+// pulled OUT of the dangerouslySetInnerHTML stream and rendered by React (see
+// MermaidDiagram/BpmnDiagram), so React owns the diagram's DOM node. The
+// previous approach injected the SVG imperatively into React-owned innerHTML
+// and lost a race: any re-commit (StrictMode, i18n language settle, sibling
+// slice load) recreated the <pre> and clobbered the injection —
+// nondeterministically leaving the raw ```mermaid fence visible.
+type Segment =
+  | { kind: 'html'; html: string }
+  | { kind: 'mermaid'; def: string }
+  | { kind: 'bpmn'; def: string };
 
-const MERMAID_FENCE = /```mermaid[^\n]*\r?\n([\s\S]*?)```/g;
+// One regex for both fence languages (not two independent scans): scanning
+// separately would let a ```bpmn block that happens to sit after the LAST
+// mermaid match get silently absorbed into that match's "tail" HTML segment,
+// since each regex only knows about its own language.
+const DIAGRAM_FENCE = /```(mermaid|bpmn)[^\n]*\r?\n([\s\S]*?)```/g;
 
-function toSegments(text: string): Segment[] {
+/** Экспортирована ТОЛЬКО ради теста: у репозитория нет jsdom/@testing-library
+ * (см. LoreVpCanvas.tsx), поэтому проверяем логику разбора без монтирования
+ * React — ровно тот случай, ради которого здесь уже вынесен `vpConnection`. */
+export function toSegments(text: string): Segment[] {
   const segs: Segment[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
-  MERMAID_FENCE.lastIndex = 0;
-  while ((m = MERMAID_FENCE.exec(text)) !== null) {
+  DIAGRAM_FENCE.lastIndex = 0;
+  while ((m = DIAGRAM_FENCE.exec(text)) !== null) {
     const before = text.slice(last, m.index);
     if (before.trim()) segs.push({ kind: 'html', html: sanitizeMd(marked.parse(before) as string) });
-    segs.push({ kind: 'mermaid', def: m[1].trim() });
-    last = MERMAID_FENCE.lastIndex;
+    segs.push({ kind: m[1] as 'mermaid' | 'bpmn', def: m[2].trim() });
+    last = DIAGRAM_FENCE.lastIndex;
   }
   const tail = text.slice(last);
   if (tail.trim()) segs.push({ kind: 'html', html: sanitizeMd(marked.parse(tail) as string) });
@@ -155,7 +169,11 @@ function buildInit(t: DiagramTheme, elk: boolean): string {
   return `%%{init: ${JSON.stringify(cfg)}}%%`;
 }
 
-function MermaidDiagram({ def }: { def: string }) {
+/** Экспортирована, чтобы продуктовый `Markdown` (shared.tsx) мог рендерить те
+ * же диаграммы внутри своего собственного `.lore-md`-обёртки, а не только
+ * внутри MartProse — тела UC/актора/боли и т.п. ходят через другой рендерер
+ * markdown, но фенсы `mermaid`/`bpmn` в них те же самые. */
+export function MermaidDiagram({ def }: { def: string }) {
   const [svg, setSvg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [themeIdx, setThemeIdx] = useState(0);
@@ -210,6 +228,68 @@ function MermaidDiagram({ def }: { def: string }) {
   return <div style={{ minHeight: 24, margin: '0 0 0.8em' }} aria-hidden />;
 }
 
+/**
+ * ```bpmn — BPMN 2.0 XML, рендерится bpmn-js (NavigatedViewer: пан/зум, без
+ * редактирования — MartProse только читает). Тот же trust model, что у
+ * mermaid выше: тело авторизует владелец записи.
+ *
+ * Отличия от MermaidDiagram, из-за которых компонент не идентичен:
+ *  - `mermaid.render()` возвращает СТРОКУ SVG — мы её санитизируем и вставляем
+ *    сами. `viewer.importXML()` рисует ПРЯМО в переданный контейнер — своей
+ *    санитизации нет и быть не может, отсюда тот же trust model, что и для
+ *    остального тела (авторство доверенное, как у markdown/HTML-сегментов).
+ *  - Контейнеру нужна ЯВНАЯ высота ДО importXML: canvas bpmn-js схлопывается
+ *    в 0 у родителя с height:auto (в отличие от mermaid, где SVG сам задаёт
+ *    себе размер по содержимому).
+ *  - Viewer — объект с состоянием, а не чистая функция: обязателен
+ *    `destroy()` при размонтировании/смене def, иначе утечка DOM и
+ *    обработчиков (mermaid ничего подобного не держит).
+ */
+/** Экспортирована по той же причине, что и {@link MermaidDiagram}. */
+export function BpmnDiagram({ def }: { def: string }) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    let active = true;
+    setErr(null);
+    const viewer = new NavigatedViewer({ container: host });
+    viewer.importXML(def)
+      .then(() => {
+        if (!active) return;
+        // fit-viewport ПОСЛЕ импорта: до него canvas не знает размеров схемы.
+        // `.get()` без явного ServiceMap типизирован как unknown — bpmn-js не
+        // экспортирует типы своих внутренних сервисов (canvas — из diagram-js,
+        // не из bpmn-js), поэтому явный каст, а не борьба с generic-параметром.
+        (viewer.get('canvas') as { zoom: (mode: string) => void }).zoom('fit-viewport');
+      })
+      .catch((e: unknown) => {
+        console.warn('[mart-prose bpmn] render error:', e);
+        if (active) setErr(String((e as Error)?.message ?? e));
+      });
+    return () => {
+      active = false;
+      viewer.destroy();
+    };
+  }, [def]);
+
+  if (err) {
+    return <div style={{ color: 'var(--dng)', fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)', margin: '0 0 0.8em' }}>⚠ bpmn: {err}</div>;
+  }
+  return (
+    <div
+      // bpmn.io рисует тёмные фигуры/текст на прозрачном фоне — как и у
+      // mermaid, задаём светлый фон явно, а не полагаемся на тему хоста:
+      // на тёмной теме приложения тёмные линии стали бы нечитаемы.
+      ref={hostRef}
+      className="mart-bpmn"
+      style={{ height: 420, background: '#fbfbfb', border: '1px solid var(--bd)', borderRadius: 6, margin: '0 0 0.8em' }}
+    />
+  );
+}
+
 export function MartProse({ text, style }: { text?: string | null; style?: React.CSSProperties }) {
   const segments = useMemo(() => (text ? toSegments(text) : []), [text]);
 
@@ -218,11 +298,11 @@ export function MartProse({ text, style }: { text?: string | null; style?: React
   if (!text) return null;
   return (
     <div className="mart-prose" style={style}>
-      {segments.map((seg, i) =>
-        seg.kind === 'mermaid'
-          ? <MermaidDiagram key={i} def={seg.def} />
-          : <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />,
-      )}
+      {segments.map((seg, i) => {
+        if (seg.kind === 'mermaid') return <MermaidDiagram key={i} def={seg.def} />;
+        if (seg.kind === 'bpmn') return <BpmnDiagram key={i} def={seg.def} />;
+        return <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />;
+      })}
     </div>
   );
 }

@@ -262,6 +262,15 @@ public class AidaLoreResource extends LoreResourceBase {
     @GET
     @Path("slice/{id}")
     @Produces(MediaType.APPLICATION_JSON)
+    // @Blocking обязателен: при включённом lore.scope.enforce метод ходит в
+    // граф за проектами вызывающего (allowedProjectsOrNull → ProjectRbacService
+    // → queryPublic → .await()), а на event loop блокироваться нельзя — Quarkus
+    // отвечает 500 «The current thread cannot be blocked».
+    //
+    // Дефект не ловился ничем до AL-95: флаг по умолчанию снят, а под снятым
+    // флагом резолвер даже не вызывается — первая же строка возвращает null.
+    // То есть выкаченный за флагом код в ВКЛЮЧЁННОМ состоянии не работал вовсе.
+    @io.smallrye.common.annotation.Blocking
     public Uni<Response> slice(@PathParam("id") String id, @Context UriInfo uriInfo,
                                @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());

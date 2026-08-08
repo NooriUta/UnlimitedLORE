@@ -11,12 +11,10 @@ import { LoreSearchScreen } from '../lore/LoreSearchScreen';
 import { useIsAdmin } from '../../auth/useRole';
 import { fetchLoreEnv } from '../../api/lore';
 import { ProjectScopeProvider, useProjectScope } from '../../context/ProjectScopeContext';
+import { type Palette, type Mode, PALETTES, writePrefs, resolvePalette, resolveMode } from '../../theme/prefs';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
-
-type Palette = 'amber' | 'slate';
-type Mode    = 'dark'  | 'light';
 
 function activeTabId(pathname: string): ShellTab['id'] {
   if (pathname.startsWith('/benchmark')) return 'research';
@@ -48,14 +46,12 @@ function AppShellBody() {
   // toggle so everything fits without clipping.
   const narrow = useIsNarrow(720);
 
-  const [palette, setPalette] = useState<Palette>(() => {
-    const saved = localStorage.getItem('lore-palette') ?? localStorage.getItem('lore-theme');
-    return (saved === 'slate') ? 'slate' : 'amber';
-  });
-  const [mode, setMode] = useState<Mode>(() => {
-    const saved = localStorage.getItem('lore-mode') ?? localStorage.getItem('lore-theme');
-    return (saved === 'light') ? 'light' : 'dark';
-  });
+  // Порядок источников: свой localStorage → общая cookie платформы → умолчание.
+  // Свой первым, чтобы уже сделанный в приложении выбор не перебивался тем,
+  // что осталось на странице входа; cookie подхватывается ровно тогда, когда
+  // в приложении выбора ещё не делали — то есть при первом входе.
+  const [palette, setPalette] = useState<Palette>(resolvePalette);
+  const [mode, setMode] = useState<Mode>(resolveMode);
 
   useEffect(() => {
     const el = document.documentElement;
@@ -64,9 +60,11 @@ function AppShellBody() {
     else                  el.removeAttribute('data-mode');
     localStorage.setItem('lore-palette', palette);
     localStorage.setItem('lore-mode',    mode);
+    // Пишем и в общую cookie: выбор, сделанный в приложении, должен доехать
+    // до страницы входа так же, как обратный.
+    writePrefs({ palette, theme: mode });
   }, [palette, mode]);
 
-  const togglePalette = () => setPalette(p => p === 'amber' ? 'slate' : 'amber');
   const toggleMode    = () => setMode(m => m === 'dark' ? 'light' : 'dark');
 
   // ── Seiðr-шапка: бренд/тенант/«ещё» как dropdown'ы + палитра поиска ──────────
@@ -399,10 +397,29 @@ function AppShellBody() {
           {openDD === 'more' && (
             <div style={{ ...dd, left: 'auto', right: 0 }} role="menu">
               <div style={ddHead}>{t('shell.secondary', 'Вторичное')}</div>
-              <button type="button" role="menuitem" style={ddItem(false)} onClick={togglePalette}>
-                <span style={{ width: 15, textAlign: 'center' }}>{palette === 'amber' ? '◑' : '◐'}</span>
-                Палитра: {palette}
-              </button>
+              {/* Палитр стало четыре (общие с платформой), и перебор кнопкой
+                  «следующая» заставлял бы прощёлкивать мимо нужной. Сватчи
+                  показывают сразу все и текущую — как на странице входа. */}
+              <div style={{ ...ddItem(false), cursor: 'default', gap: 8 }}>
+                <span style={{ width: 15, textAlign: 'center' }}>◐</span>
+                <span style={{ display: 'inline-flex', gap: 5 }}>
+                  {PALETTES.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      title={p.label}
+                      aria-label={p.label}
+                      aria-pressed={palette === p.id}
+                      onClick={() => setPalette(p.id)}
+                      style={{
+                        width: 15, height: 15, borderRadius: '50%', cursor: 'pointer',
+                        background: p.swatch, padding: 0,
+                        border: palette === p.id ? '2px solid var(--t1)' : '1px solid var(--bd)',
+                      }}
+                    />
+                  ))}
+                </span>
+              </div>
               <button type="button" role="menuitem" style={ddItem(false)} onClick={toggleMode}>
                 <span style={{ width: 15, textAlign: 'center' }}>{mode === 'dark' ? '🌙' : '☀'}</span>
                 {mode === 'dark' ? t('shell.themeDark', 'Тёмная тема') : t('shell.themeLight', 'Светлая тема')}
@@ -439,7 +456,12 @@ function AppShellBody() {
             <button type="button" aria-expanded={openDD === 'user'} aria-haspopup="menu"
               title={t('shell.profile', 'Профиль')}
               onClick={() => setOpenDD(d => d === 'user' ? null : 'user')}
-              style={{ ...btnStyle, textTransform: 'none' as const }}>
+              // AL-113: btnStyle несёт моно-шрифт + letter-spacing + uppercase —
+              // рассчитан на короткие символьные кнопки (лупа, «⋯»), единственные
+              // соседи в этой строке. Имя пользователя — читаемый текст переменной
+              // длины; та же типографика делала его визуально тяжелее/крупнее
+              // соседних элементов (найдено на мобильном виде, где строка тесная).
+              style={{ ...btnStyle, textTransform: 'none' as const, fontFamily: 'inherit', letterSpacing: 'normal', fontSize: 'var(--fs-xs)' }}>
               {displayName() ?? '…'} ▾
             </button>
             {openDD === 'user' && (

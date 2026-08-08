@@ -159,4 +159,60 @@ class LoreReadinessLiveDbTest {
         .then().statusCode(200)
             .body("rows.find { it.uc_id == 'UC-RD-2' }.status", equalTo("dropped"));
     }
+
+    /**
+     * MT-07: сценарий, привязанный к УЖЕ закрытой задаче, обязан стать shipped
+     * без единого {@code status_set}.
+     *
+     * <p>Порядок «сначала сделали, потом описали» — основной при реконструкции
+     * продуктового слоя задним числом, и до правки он давал вечно невыпущенный
+     * сценарий: вычислитель просыпался только из {@code recomputeForTask} при
+     * смене статуса задачи, а статус закрытой задачи больше не меняется.
+     *
+     * <p>Найдено экспериментом на живом корпусе 2026-08-03: три сценария
+     * привязаны к закрытым задачам, shipped стал только тот, у которого потом
+     * дёрнули статус. Тест воспроизводит ровно этот порядок.
+     */
+    @Test
+    @Order(7)
+    void linkingAnAlreadyDoneTaskShipsTheUc() {
+        // Задача закрывается ДО того, как появится сценарий.
+        post("/lore/task", "{\"sprint_id\":\"SPRINT_RD\",\"task_id\":\"R5\",\"title\":\"сделано раньше\","
+            + "\"work_class\":\"uc\",\"executor_agent\":\"a\",\"reviewer_agent\":\"b\"}");
+        setStatus("SPRINT_RD/R5", "done");
+
+        post("/lore/uc", "{\"uc_id\":\"UC-RD-3\",\"title\":\"Описан задним числом\","
+            + "\"parent_uc_id\":\"FEAT-RD\",\"goal_level\":\"sea-level\"}");
+
+        // Ни одного status_set после привязки — только сама привязка.
+        post("/lore/uc/link", "{\"uc_id\":\"UC-RD-3\",\"rel\":\"task\","
+            + "\"target_id\":\"SPRINT_RD/R5\"}");
+
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/slice/use_cases_of_feature?id=FEAT-RD")
+        .then().statusCode(200)
+            .body("rows.find { it.uc_id == 'UC-RD-3' }.status", equalTo("shipped"))
+            .body("rows.find { it.uc_id == 'UC-RD-3' }.shipped_at", notNullValue());
+    }
+
+    /**
+     * MT-07, обратная сторона: снятие последней задачи возвращает статус к
+     * намерению автора. Сценарий, оставшийся «выпущенным» без единой задачи,
+     * утверждал бы о работе то, чего в графе нет.
+     */
+    @Test
+    @Order(8)
+    void unlinkingTheLastTaskUnshipsTheUc() {
+        post("/lore/uc/link", "{\"uc_id\":\"UC-RD-3\",\"rel\":\"task\","
+            + "\"target_id\":\"SPRINT_RD/R5\",\"action\":\"remove\"}");
+
+        given().header("X-Seer-Role", "admin")
+        .when().get("/lore/slice/use_cases_of_feature?id=FEAT-RD")
+        .then().statusCode(200)
+            // Без задач вычислитель статус не трогает — остаётся то, что было
+            // до него. Проверяем, что «shipped» больше не утверждается ЗАНОВО:
+            // shipped_at переживает (ADR-029 §2), а вот новый пересчёт при
+            // появлении задач начнётся с чистого листа.
+            .body("rows.find { it.uc_id == 'UC-RD-3' }.task_uids", org.hamcrest.Matchers.empty());
+    }
 }

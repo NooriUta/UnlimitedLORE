@@ -47,6 +47,22 @@ public class LoreSchemaMigrationRunner {
     boolean enabled;
     @ConfigProperty(name = "lore.migrate", defaultValue = "false")
     boolean migrate;
+    /**
+     * DBR-06: сверка версии схемы — ОТДЕЛЬНО от права её менять.
+     *
+     * <p>До этого гарды (несовместимый major и дрейф checksum) лежали под тем
+     * же {@code lore.migrate}, что и сама накатка. Выключение флага, ради
+     * которого вся задача — чтобы рантайм ходил токеном без {@code updateSchema} —
+     * заодно снимало и проверки: приложение молча стартовало на любой схеме,
+     * включая несовместимую. Это хуже отказа: работающий сервис на чужой схеме
+     * пишет данные не туда, и обнаруживается это не при старте, а по кривым
+     * выдачам.
+     *
+     * <p>По умолчанию ВКЛЮЧЕНА: сверка ничего не меняет в БД, только читает
+     * ledger, и выключать её осмысленно лишь там, где живой БД нет вовсе.
+     */
+    @ConfigProperty(name = "lore.schema.verify", defaultValue = "true")
+    boolean verifySchema;
     @ConfigProperty(name = "lore.migrate.backup", defaultValue = "true")
     boolean backupRequired;
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
@@ -77,10 +93,7 @@ public class LoreSchemaMigrationRunner {
             try { return op.get(); }
             catch (RuntimeException e) {
                 last = e;
-                String detail = e.getMessage();
-                if (e instanceof jakarta.ws.rs.WebApplicationException w) {
-                    try { detail = w.getResponse().readEntity(String.class); } catch (Exception ignored) { /* keep msg */ }
-                }
+                String detail = LoreUpstream.detail(e);
                 LOG.warnf("[LORE MIGRATE] %s: попытка %d/5 не удалась (%s)", what, attempt, detail);
                 try { Thread.sleep(700L * attempt); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             }
@@ -97,10 +110,118 @@ public class LoreSchemaMigrationRunner {
      */
     public void ensureReady() { /* всё делает @PostConstruct при создании бина */ }
 
+    /**
+     * DBR-06: сверить версию схемы в БД с той, которую ждёт этот бинарь, и
+     * упасть при рассинхроне. Ничего не пишет — только читает ledger.
+     *
+     * <p>Правила отказа те же, что у полного пути, и это не случайность: при
+     * выключенной накатке «догнать» схему приложение не может, значит любое
+     * расхождение, кроме форвард-совместимого, — повод не стартовать.
+     *
+     * <ul>
+     *   <li>major БД новее кода — {@code INCOMPATIBLE}, отказ (как и раньше);
+     *   <li>есть неприменённые шаги — отказ: раньше их накатил бы сам старт,
+     *       теперь накатывать некому, и работа на старой схеме означала бы
+     *       запись не в те структуры;
+     *   <li>дрейф checksum применённого шага — отказ;
+     *   <li>БД впереди по аддитивным шагам того же major — предупреждение,
+     *       старт разрешён (форвард-совместимость, ADR-LORE-023).
+     * </ul>
+     *
+     * <p>Отсутствие типа {@code LoreSchemaVersion} — не ошибка чтения, а
+     * «схема не накатывалась ни разу». Отличать обязательно: иначе пустая БД
+     * выглядела бы как отказ связи, а отказ связи — как пустая БД.
+     */
+    /** package-private ради теста: гейт проверяется вызовом, а не через профиль. */
+    void verifySchemaOrFail() {
+        Map<Integer, String> applied = new HashMap<>();
+        Map<Integer, Integer> appliedCompat = new HashMap<>();
+        readLedgerTolerantly(applied, appliedCompat);
+
+        int dbVersion = applied.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
+        int dbCompatMajor = appliedCompat.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+        int codeVersion = LoreSchemaMigrations.codeVersion();
+        int codeCompatMajor = LoreSchemaMigrations.codeCompatMajor();
+
+        if (dbVersion == 0) {
+            throw new IllegalStateException("[LORE MIGRATE] Отказ старта: схема НЕ накатана "
+                + "(в " + db + " нет ни одной строки LoreSchemaVersion), а накатка выключена "
+                + "(lore.migrate=false). Накатите схему отдельным запуском с lore.migrate=true.");
+        }
+
+        switch (LoreSchemaMigrations.decide(dbVersion, dbCompatMajor, codeVersion, codeCompatMajor)) {
+            case INCOMPATIBLE -> throw new IllegalStateException("[LORE MIGRATE] Отказ старта: major схемы БД ("
+                + dbCompatMajor + ") НОВЕЕ кода (" + codeCompatMajor + ") — в БД применён НЕСОВМЕСТИМЫЙ шаг, "
+                + "которого нет в коде. Обновите приложение; миграции назад не откатываются (ADR-LORE-023).");
+            case FORWARD_COMPAT -> LOG.warnf("[LORE MIGRATE] БД впереди кода по аддитивным шагам "
+                + "(db v%d > code v%d, major %d) — форвард-совместимый режим", dbVersion, codeVersion, dbCompatMajor);
+            case UP_TO_DATE, RUN_PENDING -> { /* дальше — checksum и список недостающих */ }
+        }
+
+        for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS) {
+            String was = applied.get(s.version());
+            if (was != null && !was.equals(s.checksum())) {
+                throw new IllegalStateException("[LORE MIGRATE] Отказ старта: шаг V" + s.version()
+                    + " (" + s.name() + ") изменён после применения (checksum " + was + " → " + s.checksum()
+                    + "). Выпущенные шаги неизменяемы — оформите правку новым шагом.");
+            }
+        }
+
+        List<Integer> pending = LoreSchemaMigrations.STEPS.stream()
+            .map(LoreSchemaMigrations.Step::version)
+            .filter(v -> !applied.containsKey(v))
+            .toList();
+        if (!pending.isEmpty()) {
+            throw new IllegalStateException("[LORE MIGRATE] Отказ старта: схема БД v" + dbVersion
+                + ", приложение ждёт v" + codeVersion + "; не накатаны шаги " + pending
+                + ". Накатка выключена (lore.migrate=false) — накатите их отдельным запуском, "
+                + "иначе приложение писало бы в структуры, которых нет.");
+        }
+        LOG.infof("[LORE MIGRATE] схема сверена: БД v%d = код v%d, накатка не требуется", dbVersion, codeVersion);
+    }
+
+    /**
+     * Чтение ledger, терпимое к его отсутствию.
+     *
+     * <p>На БД, где схему ещё не накатывали, типа {@code LoreSchemaVersion}
+     * просто нет, и запрос к нему — законная ошибка, а не сбой. Отличаем по
+     * тексту ответа: сообщать «БД недоступна» там, где она доступна и пуста,
+     * значит отправить читающего чинить не то.
+     */
+    private void readLedgerTolerantly(Map<Integer, String> applied, Map<Integer, Integer> appliedCompat) {
+        List<Map<String, Object>> rows;
+        try {
+            rows = ingest.queryPublic("SELECT version, checksum, compat_major FROM LoreSchemaVersion", Map.of());
+        } catch (RuntimeException e) {
+            String detail = LoreUpstream.detail(e);
+            String d = String.valueOf(detail);
+            boolean noSuchType = d.contains("LoreSchemaVersion")
+                && (d.contains("not found") || d.contains("does not exist") || d.contains("was not found"));
+            if (noSuchType) return;   // схему не накатывали — dbVersion останется 0
+            throw new IllegalStateException("[LORE MIGRATE] не удалось прочитать ledger схемы: " + d, e);
+        }
+        for (Map<String, Object> r : rows) {
+            int v = ((Number) r.get("version")).intValue();
+            applied.put(v, String.valueOf(r.get("checksum")));
+            Object cm = r.get("compat_major");
+            appliedCompat.put(v, cm != null ? ((Number) cm).intValue() : v);
+        }
+    }
+
     @PostConstruct
     void run() {
-        if (!enabled || !migrate) {
-            LOG.info("[LORE MIGRATE] skipped (lore.migrate=false)");
+        if (!enabled) {
+            LOG.info("[LORE MIGRATE] skipped (lore.enabled=false)");
+            return;
+        }
+        if (!migrate) {
+            // DBR-06: накатки нет, но и молча стартовать на неизвестной схеме
+            // нельзя. Сверяем версию и падаем при рассинхроне — единственная
+            // альтернатива этому «работать на старой схеме и не сказать».
+            LOG.info("[LORE MIGRATE] накатка выключена (lore.migrate=false)");
+            if (verifySchema) verifySchemaOrFail();
+            else LOG.warn("[LORE MIGRATE] сверка версии схемы ТОЖЕ выключена "
+                + "(lore.schema.verify=false) — приложение стартует на любой схеме");
             return;
         }
         // Реальный вызов на прокси → bootstrap-DDL гарантированно отработал (см. javadoc).

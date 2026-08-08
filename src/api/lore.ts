@@ -296,6 +296,8 @@ export interface LoreAdrRow {
   component: string | null;
   components: string[] | null;
   tags: string[] | null;
+  /** AL-92: ребро BELONGS_TO_PROJECT; слайс отдаёт его под именем git_projects. */
+  git_projects?: (string | null)[] | null;
   decision_count: number | null;
 }
 
@@ -647,6 +649,12 @@ export interface LoreActorRow {
   name?: string | null;
   kind?: string | null;              // human-role | system | agent
   body_md?: string | null;
+  /**
+   * D18: актор проектный — одноимённые роли разных продуктов не склеиваются.
+   * Слайс `actors` отдаёт это поле с AL-92, но до AL-96 его никто не читал:
+   * рёбра писались, а UI их не показывал.
+   */
+  projects?: (string | null)[] | null;
   uc_ids?: string[] | null;
   uc_count?: number | null;
 }
@@ -1150,6 +1158,38 @@ export async function updateLoreDoc(
   return res.json() as Promise<{ ok: boolean; doc_id: string }>;
 }
 
+// Partial upsert, тот же контракт, что POST /lore/runbook (backend upsert по
+// runbook_id): передан только content_md — остальные поля (name/area) не
+// затрагиваются.
+export async function updateLoreRunbook(
+  runbookId: string,
+  fields: { content_md?: string },
+): Promise<{ ok: boolean; runbook_id: string }> {
+  const res = await fetch(`${LORE_BASE}/runbook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ runbook_id: runbookId, ...fields }),
+  });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ ok: boolean; runbook_id: string }>;
+}
+
+// Partial upsert, тот же контракт, что POST /lore/quality-gate.
+export async function updateLoreQualityGate(
+  qgId: string,
+  fields: { content_md?: string },
+): Promise<{ ok: boolean; qg_id: string }> {
+  const res = await fetch(`${LORE_BASE}/quality-gate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ qg_id: qgId, ...fields }),
+  });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<{ ok: boolean; qg_id: string }>;
+}
+
 // ── QG dashboard types ──────────────────────────────────────────────────────
 
 export interface LoreQGViolation {
@@ -1250,7 +1290,15 @@ export function saveLoreActor(body: {
   name?: string;
   kind?: 'human-role' | 'system' | 'agent';
   body_md?: string;
+  /** Прежняя форма — ОДИН проект. Бэкенд трактует как набор из одного. */
   project?: string;
+  /**
+   * AL-107: полный набор проектов актора. Передан — задаёт набор целиком
+   * (в том числе пустым списком «отвязать все»); не передан — рёбра не
+   * трогаются. До этого запись схлопывала мультипроектного актора в один
+   * проект и молча теряла остальные.
+   */
+  projects?: string[];
 }, signal?: AbortSignal) {
   return loreMutate<LoreProductWriteResult>('/actor', body, signal);
 }
@@ -1427,4 +1475,46 @@ export async function fetchUcQualityAll(signal?: AbortSignal): Promise<{
   assertJson(res);
   const body = (await res.json()) as { threshold?: number; rows?: LoreUcQualityAllRow[] };
   return { threshold: body.threshold ?? 0.6, rows: body.rows ?? [] };
+}
+
+/**
+ * GET /lore/product/self-check (MT-10): девять уже написанных сверок в один
+ * прогон. `state` — три исхода, не два: `unavailable` значит «сверку не
+ * удалось выполнить», и это НЕ то же самое, что `passed` — подмена одного
+ * другим однажды заставила проверку в CD обвинить успешный выкат.
+ */
+export interface LoreSelfCheckFinding {
+  ref_id: string;
+  title: string | null;
+  detail: string | null;
+  /** Раздел LORE для дип-линка; null — находка без экрана для перехода (напр. индекс СУБД). */
+  section: string | null;
+  /** Что подставить в `?passport=` — может отличаться от ref_id (задача → её спринт). */
+  passport: string;
+}
+
+export interface LoreSelfCheck {
+  id: string;
+  title: string;
+  state: 'passed' | 'failed' | 'unavailable';
+  /** Сколько всего проблем — независимо от того, сколько findings реально прислано. */
+  found: number | null;
+  /** На какой выборке считали — без него число found нечитаемо. */
+  denominator: number | null;
+  error: string | null;
+  findings: LoreSelfCheckFinding[];
+  /** true — found больше, чем прислано findings; список обрезан, а не исчерпывающий. */
+  truncated: boolean;
+}
+
+export interface LoreSelfCheckRun {
+  run_at: string;
+  checks: LoreSelfCheck[];
+}
+
+export async function fetchLoreSelfCheck(signal?: AbortSignal): Promise<LoreSelfCheckRun> {
+  const res = await fetch(`${LORE_BASE}/product/self-check`, { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return (await res.json()) as LoreSelfCheckRun;
 }

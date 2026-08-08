@@ -4,8 +4,7 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchLoreSlice } from '../../../api/lore';
-import { marked } from '../markdown';
-import { sanitizeMd } from '../sanitizeHtml';
+import { toSegments, MermaidDiagram, BpmnDiagram } from '../../bench/MartProse';
 import { GameIcon } from '../GameIcon';
 import { useIsNarrow } from '../../../hooks/useMediaQuery';
 
@@ -176,6 +175,41 @@ export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
 
   useEffect(() => { localStorage.setItem(LIST_WIDTH_KEY, String(width)); }, [width]);
 
+  /**
+   * Высота колонок — по ИЗМЕРЕННОМУ отступу сверху, а не по угаданному.
+   *
+   * Было `calc(100vh - 200px)`, где 200 — предполагаемая высота шапки. Замер на
+   * стенде: шапка занимает 82px, viewport 714px. Колонки получали 514px вместо
+   * доступных 632 — список обрезался и скроллился внутри себя, а под паспортом
+   * оставалось 118px пустоты. При другом масштабе или переносе шапки на две
+   * строки расхождение только росло.
+   *
+   * Здесь отступ берётся у самого контейнера (`getBoundingClientRect().top`) и
+   * пересчитывается на resize: любая шапка, любой зум — колонка занимает ровно
+   * то, что осталось. `null` до первого замера означает «ограничения нет»:
+   * лучше один кадр без скролла, чем кадр с неверной высотой.
+   */
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [avail, setAvail] = useState<number | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const el = rootRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      // Нижний запас — под возможную подвальную полосу; без него колонка
+      // упирается ровно в край окна и последняя строка списка липнет к нему.
+      setAvail(Math.max(240, window.innerHeight - top - 8));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // Шапка меняет высоту не только от resize: переключение раздела может
+    // добавить строку фильтров. ResizeObserver ловит и это.
+    const ro = new ResizeObserver(measure);
+    if (rootRef.current?.parentElement) ro.observe(rootRef.current.parentElement);
+    return () => { window.removeEventListener('resize', measure); ro.disconnect(); };
+  }, []);
+  const colMaxHeight = avail == null ? undefined : avail;
+
   const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     dragRef.current = { startX: e.clientX, startW: width };
@@ -238,8 +272,8 @@ export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
-      <div style={{ width, flexShrink: 0, background: 'var(--bg1)', overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{list}</div>
+    <div ref={rootRef} style={{ display: 'flex', minHeight: 380, background: 'var(--bg0)', flex: 1 }}>
+      <div style={{ width, flexShrink: 0, background: 'var(--bg1)', overflow: 'auto', maxHeight: colMaxHeight }}>{list}</div>
       {/* Ручка стоит НА границе: отдельная полоса съела бы место, а в границу
           между колонками мышью целятся и так. */}
       <div
@@ -248,7 +282,7 @@ export function MasterDetail({ list, detail, hasDetail, onBack, backLabel }: {
         aria-orientation="vertical"
         style={{ width: 5, flexShrink: 0, cursor: 'col-resize', borderLeft: '1px solid var(--bd)' }}
       />
-      <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>{detail}</div>
+      <div style={{ flex: 1, minWidth: 0, padding: 14, overflow: 'auto', maxHeight: colMaxHeight }}>{detail}</div>
     </div>
   );
 }
@@ -274,17 +308,27 @@ export function ListRow({ id, title, meta, selected, onClick }: { id: string; ti
  *
  * `marked` берём из общего модуля (там же его конфиг), санитайзер обязателен:
  * тело приходит из корпуса и может содержать HTML.
+ *
+ * Фенсы ```mermaid/```bpmn разбираются через `toSegments` MartProse и
+ * рендерятся её же `MermaidDiagram`/`BpmnDiagram` — до этого продуктовый
+ * слой не проходил через «стандартный компонент» вовсе: диаграмма в
+ * `scenario_md` UC показывалась исходником в `<pre>`, хотя ADR/спеки/decision
+ * тот же фенс рендерят с 2026-08-06. Обёртка `.lore-md` (не `.mart-prose`)
+ * сохранена намеренно — иначе шрифт/отступы продуктового слоя разъехались бы
+ * с остальными экранами этой ветки навигации.
  */
 export function Markdown({ md, style }: { md: string | null | undefined; style?: CSSProperties }) {
   const text = (md ?? '').trim();
   if (!text) return null;
-  const html = sanitizeMd(marked.parse(text) as string);
+  const segments = toSegments(text);
   return (
-    <div
-      className="lore-md"
-      style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', ...style }}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="lore-md" style={{ fontSize: 'var(--fs-base)', color: 'var(--t2)', ...style }}>
+      {segments.map((seg, i) =>
+        seg.kind === 'html' ? <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />
+        : seg.kind === 'mermaid' ? <MermaidDiagram key={i} def={seg.def} />
+        : <BpmnDiagram key={i} def={seg.def} />,
+      )}
+    </div>
   );
 }
 

@@ -13,7 +13,7 @@ import LoreSprintTree, { STATUS_FILTERS, projColor, projLabel, compColor, type D
 import LoreComponentList, { areaColor } from '../components/lore/LoreComponentList';
 import LoreComponentPassport from '../components/lore/LoreComponentPassport';
 import LoreSpecView           from '../components/lore/LoreSpecView';
-import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT } from '../components/lore/LoreAdrList';
+import { ADR_STATUS_FILTERS, adrStatusLabel, NO_TAG, NO_COMPONENT, NO_PROJECT_ADR } from '../components/lore/LoreAdrList';
 import LorePlanBoard       from '../components/lore/LorePlanBoard';
 import LoreEvolutionView   from '../components/lore/LoreEvolutionView';
 import LoreTechRegistry    from '../components/lore/LoreTechRegistry';
@@ -98,12 +98,17 @@ const STORY_S = {
   subBar: { display: 'flex', gap: 3, padding: '6px 10px', background: 'var(--bg2)', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap' as const, alignItems: 'center', overflowX: 'auto' as const },
   // Выделение подвкладки — как у глав в шапке: скруглённый прямоугольник с
   // рамкой и лёгкой подсветкой цвета главы, без залитого эллипса.
-  subItem: (on: boolean, gc: string) => ({
-    display: 'flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 7, fontSize: 'var(--fs-base)', cursor: 'pointer',
+  // MOB-13 (п.5): на narrow подпись прячется — иконка без текста, тот же
+  // приём что у navItemNarrow (MOB-01), иначе подвкладки главы переносятся
+  // на 2-3 строки и съедают вертикальное место так же, как всё остальное.
+  subItem: (on: boolean, gc: string, narrow?: boolean) => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: narrow ? 0 : 6,
+    padding: narrow ? '6px 8px' : '4px 11px', borderRadius: 7, fontSize: 'var(--fs-base)', cursor: 'pointer',
     color: on ? 'var(--t1)' : 'var(--t2)',
     border: `1px solid ${on ? `color-mix(in srgb, ${gc} 55%, var(--bd))` : 'transparent'}`,
     background: on ? `color-mix(in srgb, ${gc} 12%, transparent)` : 'transparent',
     whiteSpace: 'nowrap' as const, fontWeight: (on ? 700 : 500) as number,
+    flexShrink: 0,
   }),
 };
 
@@ -259,6 +264,9 @@ export default function LorePage() {
   const [adrTagCounts, setAdrTagCounts]   = useState<Record<string, number>>({});
   const [adrCompCollapsed, setAdrCompCollapsed] = useState(true);
   const [adrTagCollapsed, setAdrTagCollapsed]   = useState(true);
+  const [adrProjSel, setAdrProjSel]         = useState<Set<string>>(new Set());
+  const [adrProjCounts, setAdrProjCounts]   = useState<Record<string, number>>({});
+  const [adrProjCollapsed, setAdrProjCollapsed] = useState(true);
   // ADR-LORE-025 D8: role from the verified source — gates the ⚙ Админ section.
   const isAdmin = useIsAdmin();
   // T34: filter chrome bars collapse to one summary line by default (approved
@@ -468,10 +476,10 @@ export default function LorePage() {
         const label = t(s.labelKey, s.fallback);
         return (
           <button key={sid} role="tab" aria-selected={on} title={label}
-            style={STORY_S.subItem(on, activeChapter.color)}
+            style={STORY_S.subItem(on, activeChapter.color, narrow)}
             onClick={() => go(sid)}>
             {s.icon && <GameIcon slug={s.icon} size={14} style={{ color: on ? activeChapter.color : SECTION_COLORS[sid] }} />}
-            <span>{label}</span>
+            {!narrow && <span>{label}</span>}
           </button>
         );
       })}
@@ -775,7 +783,7 @@ export default function LorePage() {
         <FilterBar
           tier="local"
           label={t('lore.page.adrs.filtersLabel', 'Фильтры')}
-          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size}
+          activeCount={adrStatusSel.size + adrCompSel.size + adrTagSel.size + adrProjSel.size}
           summaryTags={[
             ...ADR_STATUS_FILTERS.filter(f => adrStatusSel.has(f.key)).map((f): FilterTagData => ({
               key: 'st:' + f.key, label: adrStatusLabel(t, f.key), color: f.color,
@@ -789,8 +797,13 @@ export default function LorePage() {
               key: 'tg:' + tg, label: tg === NO_TAG ? t('lore.page.adrs.noTag', 'без тега') : tg,
               onRemove: () => setAdrTagSel(prev => { const n = new Set(prev); n.delete(tg); return n; }),
             })),
+            ...[...adrProjSel].map((p): FilterTagData => ({
+              key: 'pj:' + p, label: p === NO_PROJECT_ADR ? t('lore.page.adrs.noProject', 'без проекта') : p,
+              color: 'var(--suc)',
+              onRemove: () => setAdrProjSel(prev => { const n = new Set(prev); n.delete(p); return n; }),
+            })),
           ]}
-          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); }}
+          onClear={() => { setAdrStatusSel(new Set()); setAdrCompSel(new Set()); setAdrTagSel(new Set()); setAdrProjSel(new Set()); }}
           open={adrFilterOpen}
           onToggleOpen={() => setAdrFilterOpen(v => !v)}
         >
@@ -857,6 +870,29 @@ export default function LorePage() {
                 onToggleCollapsed={() => setAdrTagCollapsed(v => !v)}
               />
             )}
+            {/* AL-96: проектный разрез. Стоит последним намеренно — пока
+                скоуп не включён, это справочная ось, а не рабочая. После
+                бэкфилла V20 «без проекта» — это 64 ADR из 144, и именно их
+                при включённом lore.scope.enforce не увидит никто. */}
+            {Object.keys(adrProjCounts).length > 0 && (
+              <FilterDimensionMulti
+                label={t('lore.page.adrs.projectDim', 'Проект')}
+                options={[
+                  ...Object.keys(adrProjCounts).filter(p => p !== NO_PROJECT_ADR)
+                    .sort((a, b) => (adrProjCounts[b] - adrProjCounts[a]) || a.localeCompare(b))
+                    .map(p => ({ value: p, label: p })),
+                  ...(adrProjCounts[NO_PROJECT_ADR]
+                    ? [{ value: NO_PROJECT_ADR, label: t('lore.page.adrs.noProject', 'без проекта') }]
+                    : []),
+                ]}
+                selected={adrProjSel}
+                onToggle={v => setAdrProjSel(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })}
+                counts={adrProjCounts}
+                collapsible
+                collapsed={adrProjCollapsed}
+                onToggleCollapsed={() => setAdrProjCollapsed(v => !v)}
+              />
+            )}
           </div>
         </FilterBar>
       )}
@@ -910,7 +946,10 @@ export default function LorePage() {
       )}
 
       {/* ── Sprint stats row ─────────────────────────────────────────────────── */}
-      {section === 'sprints' && sprintStats.total > 0 && (
+      {/* MOB-13: на narrow, когда уже открыт конкретный спринт (паспорт вместо
+          списка), сводка по ВСЕМ спринтам не нужна — прячем, освобождая
+          вертикальное место для самого паспорта. */}
+      {section === 'sprints' && sprintStats.total > 0 && !(narrow && hasDetailSelection) && (
         <div style={{
           display: 'flex', alignItems: 'stretch',
           borderBottom: '1px solid var(--bd)', flexShrink: 0, overflowX: 'auto',
@@ -990,6 +1029,7 @@ export default function LorePage() {
                 statusSel={adrStatusSel}
                 compSel={adrCompSel}
                 tagSel={adrTagSel}
+                projSel={adrProjSel}
                 selectedId={passport === '__new' ? undefined : passport}
                 onError={handleFetchError}
                 onOpen={selectItem}
@@ -997,6 +1037,7 @@ export default function LorePage() {
                 onCounts={setAdrCounts}
                 onCompCounts={setAdrCompCounts}
                 onTagCounts={setAdrTagCounts}
+                onProjCounts={setAdrProjCounts}
               />
             )}
             {section === 'sprints' && (

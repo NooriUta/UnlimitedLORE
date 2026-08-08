@@ -6,7 +6,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from '@mantine/core';
-import { saveLoreActor } from '../../../api/lore';
+import { fetchLoreSlice, saveLoreActor } from '../../../api/lore';
+import { LoreLinkChips } from '../LoreLinkChips';
 import TipTapField from '../TipTapField';
 
 /** Нормализация id к виду `ACT-…` — префикс задаёт цвет и разбор паспорта. */
@@ -21,7 +22,8 @@ export interface ActorDraft {
   name?: string | null;
   kind?: string | null;
   body_md?: string | null;
-  project?: string | null;
+  /** AL-107: набор проектов, а не один. */
+  projects?: string[];
 }
 
 export default function ActorFormModal({
@@ -40,7 +42,9 @@ export default function ActorFormModal({
   const [name, setName] = useState(initial?.name ?? '');
   const [kind, setKind] = useState(initial?.kind ?? 'human-role');
   const [body, setBody] = useState(initial?.body_md ?? '');
-  const [project, setProject] = useState(initial?.project ?? '');
+  /** Выбранные проекты актора. Именно НАБОР — см. AL-107. */
+  const [picked, setPicked] = useState<string[]>(initial?.projects ?? []);
+  const [projects, setProjects] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -48,8 +52,24 @@ export default function ActorFormModal({
     setName(initial?.name ?? '');
     setKind(initial?.kind ?? 'human-role');
     setBody(initial?.body_md ?? '');
-    setProject(initial?.project ?? '');
+    setPicked(initial?.projects ?? []);
   }, [initial]);
+
+  // Слаги, которых нет в реестре: показать, а не подменить молча. Такой слаг
+  // не даёт ошибки при записи — привязка просто не создаётся при ok:true.
+  const unknown = picked.filter(p => projects.length > 0 && !projects.includes(p));
+
+  // Список проектов для пикера. Грузится при открытии, а не при монтировании:
+  // форма живёт в дереве постоянно, и запрос на каждый рендер списка акторов
+  // был бы платой ни за что.
+  useEffect(() => {
+    if (!opened) return;
+    const ctrl = new AbortController();
+    fetchLoreSlice<{ slug: string }>('git_projects', {}, ctrl.signal)
+      .then(ps => setProjects(ps.map(p => p.slug).filter(Boolean).sort()))
+      .catch(() => { /* без списка остаётся текущее значение — форма рабочая */ });
+    return () => ctrl.abort();
+  }, [opened]);
 
   const finalId = editing ? (initial?.actor_id ?? '') : normalizeActorId(id);
 
@@ -62,7 +82,10 @@ export default function ActorFormModal({
         name: name || undefined,
         kind: (kind || undefined) as 'human-role' | 'system' | 'agent' | undefined,
         body_md: body || undefined,
-        project: project || undefined,
+        // Шлём НАБОР всегда, даже пустой: пустой список — осознанное «убрать
+        // все», а отсутствие ключа бэкенд трактует как «рёбра не трогать».
+        // Разница существенная, поэтому ставим явно, а не через `|| undefined`.
+        projects: picked,
       });
       onSaved(finalId);
       onClose();
@@ -118,12 +141,29 @@ export default function ActorFormModal({
         <option value="system">{t('lore.product.vocab.actorKind.system', 'система')}</option>
       </select>
 
-      <label style={label}>{t('lore.product.actor.project', 'Проект')}</label>
-      <input style={{ ...field, fontFamily: 'var(--mono)' }} value={project} onChange={e => setProject(e.target.value)} placeholder="AIDA/UnlimitedLORE" />
+      <label style={label}>{t('lore.product.actor.projects', 'Проекты')}</label>
+      {/* AL-107: МНОЖЕСТВО, а не один. Актор принадлежит нескольким продуктам,
+          и слайс всегда отдавал их массивом — это форма схлопывала набор в
+          один и молча теряла остальные. Контрол тот же, что у ADR и вопросов:
+          чипы + выпадающий список, свободного ввода нет (несуществующий слаг
+          не даёт ошибки, привязка просто не создаётся при ok:true). */}
+      <LoreLinkChips
+        label=""
+        color="var(--suc)"
+        values={picked}
+        options={projects}
+        onAdd={v => setPicked(prev => [...prev, v])}
+        onRemove={v => setPicked(prev => prev.filter(x => x !== v))}
+      />
       {/* D18: актор ПРОЕКТНЫЙ. Схема проект не требует, но одноимённые роли
           разных продуктов без него склеиваются в одну строку RBAC-матрицы —
           поэтому подсказка стоит здесь, а не в документации, куда не смотрят. */}
-      <div style={hint}>{t('lore.product.actor.projectHint', 'без проекта одноимённые роли разных продуктов сольются в одну')}</div>
+      <div style={hint}>{t('lore.product.actor.projectsHint', 'актор может принадлежать нескольким продуктам; без проекта одноимённые роли разных продуктов сольются в одну')}</div>
+      {unknown.length > 0 && (
+        <div style={{ ...hint, color: 'var(--wrn)' }}>
+          {t('lore.product.actor.projectUnknownHint', 'нет в реестре: {{list}} — привязка не создастся, ответ при этом будет успешным', { list: unknown.join(', ') })}
+        </div>
+      )}
 
       <label style={label}>{t('lore.product.actor.about', 'О роли')}</label>
       <TipTapField

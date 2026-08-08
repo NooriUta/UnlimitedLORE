@@ -21,13 +21,23 @@ class MartCredentialsFallbackTest {
 
     /** Подменяет источник секретов, не поднимая CDI и не ходя в сеть. */
     private static MartCredentials with(Optional<String> fromService, String fromConfig) {
+        return with(fromService, fromConfig, "ARCADEDB_ROOT_PASSWORD", "ARCADEDB_ROOT_PASSWORD");
+    }
+
+    /**
+     * @param serviceKey ключ, по которому у секрет-сервиса ЛЕЖИТ значение
+     * @param lookupKey  ключ, по которому MartCredentials его СПРАШИВАЕТ
+     */
+    private static MartCredentials with(Optional<String> fromService, String fromConfig,
+                                        String serviceKey, String lookupKey) {
         MartCredentials mart = new MartCredentials();
         mart.user = "root";
         mart.passwordFromConfig = fromConfig;
+        mart.secretKey = lookupKey;
         mart.secrets = new SecretProvider() {
             @Override
             public Optional<String> get(String key) {
-                return "ARCADEDB_ROOT_PASSWORD".equals(key) ? fromService : Optional.empty();
+                return serviceKey.equals(key) ? fromService : Optional.empty();
             }
         };
         return mart;
@@ -58,5 +68,32 @@ class MartCredentialsFallbackTest {
         String expected = "Basic " + Base64.getEncoder().encodeToString(
             "root:из-инфисикал".getBytes(StandardCharsets.UTF_8));
         assertEquals(expected, with(Optional.of("из-инфисикал"), "из-env").basicAuth());
+    }
+
+    /**
+     * DBR-06: ключ секрета настраиваемый, и это не косметика.
+     *
+     * <p>Пока он был захардкожен как {@code ARCADEDB_ROOT_PASSWORD}, разделение
+     * кредов не состоялось бы: контейнер накатки ходит под root, приложение —
+     * своим кредом, но при провайдере Infisical оба читали бы ОДНО значение из
+     * хранилища, потому что секрет-сервис перекрывает env контейнера. Два креда
+     * молча оказались бы одним, и деплой при этом остался бы зелёным.
+     */
+    @Test
+    void ключСекретаНастраиваемый() {
+        // Значение лежит под ключом рантайма, спрашиваем его же — берём из сервиса.
+        assertEquals("креды-рантайма",
+            with(Optional.of("креды-рантайма"), "из-env",
+                 "LORE_MART_PASSWORD", "LORE_MART_PASSWORD").password());
+    }
+
+    @Test
+    void чужойКлючНеПодхватываетсяИзХранилища() {
+        // Значение лежит под root-ключом, а спрашиваем ключ рантайма — сервис
+        // молчит, и берётся конфиг. Именно это и разводит два креда: без такого
+        // поведения приложение подхватило бы root-пароль как свой.
+        assertEquals("из-env",
+            with(Optional.of("root-пароль"), "из-env",
+                 "ARCADEDB_ROOT_PASSWORD", "LORE_MART_PASSWORD").password());
     }
 }

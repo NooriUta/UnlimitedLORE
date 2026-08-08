@@ -100,15 +100,33 @@ jobs:
           fi
           echo "тест-БД: $FOUND"
           echo "LORE_TEST_DB_URL=$FOUND" >> "$GITHUB_ENV"
-          # CI-01: имя БД РАЗНОЕ для push и pull_request. Один SHA всегда запускает
-          # оба прогона ОДНОВРЕМЕННО, и оба пересоздавали lore_ci_test — кто пришёл
-          # вторым, получал базу в момент drop/create («Database is not available»,
-          # найдено на 94157290: push зелёный, pull_request красный). Ретраи не
-          # спасают — это не сеть, а конфликт двух живых прогонов. Разведение по
-          # event_name убирает ровно эту гонку по построению; одновременные прогоны
-          # ОДНОГО типа (два разных PR разом) всё ещё делят базу — редкий случай,
-          # осознанно не усложняем именами из run_id (те копились бы без сноса).
-          echo "LORE_TEST_DB_NAME=lore_ci_${{ github.event_name }}" >> "$GITHUB_ENV"
+          # CI-01/CIM-04: имя БД разводится по ИСТОЧНИКУ прогона, а не по типу
+          # события. Один SHA всегда запускает push и pull_request ОДНОВРЕМЕННО, и
+          # оба пересоздавали одну базу — кто пришёл вторым, получал её в момент
+          # drop/create («Database is not available», найдено на 94157290).
+          #
+          # Разведения по event_name не хватило. Оно убирало гонку push↔PR, но два
+          # РАЗНЫХ PR — событие у обоих pull_request — по-прежнему делили
+          # lore_ci_pull_request. Это было записано как «редкий случай»; редким он
+          # был ровно до того момента, когда в работе оказалось больше одного PR
+          # (поймано 2026-08-03 на #356 и #357: три попытки подряд, каждый раз
+          # падали РАЗНЫЕ тесты, ни один не связан с содержимым правки).
+          #
+          # Цена ошибки тут не в потерянном прогоне, а в неверном выводе: отказ
+          # выглядит как дефект правки, и по одному статусу «failure» читается
+          # именно так. Чтобы увидеть настоящую причину, пришлось поднимать полный
+          # лог раннера.
+          #
+          # Номер PR как имя (а не run_id, который копился бы без сноса): набор
+          # ограничен числом PR, а шаг уборки ниже снимает базу после прогона.
+          # push ограничен двумя ветками (см. `on:` вверху) — там имён всего два.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            DBNAME="lore_ci_pr_${{ github.event.number }}"
+          else
+            DBNAME="lore_ci_push_$(printf %s "${{ github.ref_name }}" | tr -c 'a-zA-Z0-9' '_')"
+          fi
+          echo "тест-БД этого прогона: $DBNAME"
+          echo "LORE_TEST_DB_NAME=$DBNAME" >> "$GITHUB_ENV"
           echo "LORE_TEST_DB_PASSWORD=$PW" >> "$GITHUB_ENV"
 
       # GitHub-hosted: fetch the JDK the normal way.
@@ -224,3 +242,35 @@ jobs:
           done
           echo "::error::docker image build failed after 3 attempts; последняя ошибка: $(tail -c 300 /tmp/build.log)"
           exit 1
+
+      # CIM-04: снять тест-БД этого прогона. Без уборки имена вида
+      # lore_ci_pr_<номер> копились бы на живом ArcadeDB по одному на каждый PR —
+      # ровно то возражение, из-за которого в прошлый раз отказались от имён на
+      # основе run_id.
+      #
+      # always(): база должна уходить и после падения тестов. Иначе уборка
+      # работала бы только там, где она не нужна.
+      #
+      # Отказ уборки НЕ валит прогон (|| true, continue-on-error): лишняя база —
+      # мусор, а красный CI из-за неубранного мусора скрыл бы настоящий результат
+      # сборки. Но и молчать нельзя: при отказе шаг пишет предупреждение, чтобы
+      # накопление было видно, а не обнаружилось однажды по месту на диске.
+      - name: Drop this run's test DB (self-hosted)
+        if: always() && runner.environment != 'github-hosted'
+        continue-on-error: true
+        shell: bash
+        run: |
+          if [ -z "${LORE_TEST_DB_URL:-}" ] || [ -z "${LORE_TEST_DB_NAME:-}" ]; then
+            echo "тест-БД не заводилась (шаг подбора не дошёл) — убирать нечего"
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/drop.out -w '%{http_code}' -m 15 \
+            -u "root:${LORE_TEST_DB_PASSWORD}" \
+            -H 'Content-Type: application/json' \
+            -d "{\"command\":\"drop database ${LORE_TEST_DB_NAME}\"}" \
+            "${LORE_TEST_DB_URL}/api/v1/server" || echo 000)
+          if [ "$code" = "200" ]; then
+            echo "тест-БД ${LORE_TEST_DB_NAME} снята"
+          else
+            echo "::warning::не удалось снять тест-БД ${LORE_TEST_DB_NAME} (HTTP $code): $(head -c 300 /tmp/drop.out). База осталась на сервере — если такое повторяется, базы копятся."
+          fi

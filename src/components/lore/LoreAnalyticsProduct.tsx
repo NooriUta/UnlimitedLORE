@@ -11,13 +11,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  fetchLoreSlice, fetchUcQualityAll,
+  fetchLoreSlice, fetchUcQualityAll, fetchLoreSelfCheck,
   type LoreActorLoadRow, type LoreCoverageFindingRow,
   type LoreInvestProfileRow, type LoreUcQualityAllRow, type LoreVpAnalyticsRow,
+  type LoreSelfCheckRun, type LoreSelfCheckFinding,
 } from '../../api/lore';
 import { investShares, mergeActorLoad, vpFit, type VpFit } from './analyticsProduct';
 import { useProjectScope } from '../../context/ProjectScopeContext';
 import { GameIcon } from './GameIcon';
+import { ListSearch, FilterChips } from './product/shared';
 
 const WC_COLOR: Record<string, string> = {
   // Палитра work_class из прототипа — СВОЯ, не пересекается со статусами.
@@ -42,6 +44,33 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
   const [failed, setFailed] = useState<string[]>([]);
   const [openFit, setOpenFit] = useState<string | null>(null);
   const [openQuality, setOpenQuality] = useState(false);
+  // AL-115: список нарушений гигиены рос молча — 489 строк без единого способа
+  // сузить выборку, единственный список в приложении без поиска/фильтра.
+  const [hygieneSearch, setHygieneSearch] = useState('');
+  const [hygieneFilter, setHygieneFilter] = useState<string>('all');
+
+  // MT-10: самопроверка — ПО КНОПКЕ, не в общий Promise.allSettled выше. Девять
+  // сверок дороже шести обычных срезов (три ходят построчно по всем задачам/
+  // ADR/UC корпуса), и включать их в каждую загрузку вкладки значило бы платить
+  // эту цену, даже когда никто не смотрит на панель самопроверки.
+  const [selfCheck, setSelfCheck] = useState<LoreSelfCheckRun | null>(null);
+  const [selfCheckLoading, setSelfCheckLoading] = useState(false);
+  const [selfCheckError, setSelfCheckError] = useState(false);
+  const [openCheck, setOpenCheck] = useState<string | null>(null);
+
+  const runSelfCheck = () => {
+    setSelfCheckLoading(true);
+    setSelfCheckError(false);
+    fetchLoreSelfCheck()
+      .then(r => setSelfCheck(r))
+      .catch(e => { setSelfCheckError(true); onError(e); })
+      .finally(() => setSelfCheckLoading(false));
+  };
+
+  const goFinding = (f: LoreSelfCheckFinding) => {
+    if (!f.section) return;
+    navigate(`/lore?section=${f.section}&passport=${encodeURIComponent(f.passport)}`);
+  };
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -105,6 +134,22 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
     pain_without_relief: 'боль без снятия',
   }[f] ?? f);
 
+  // AL-115: фасет собирается из встреченных `finding` — как проектный фасет в
+  // LoreActors.tsx (не жёсткий список), иначе новый тип нарушения появится в
+  // данных раньше, чем в чипах фильтра, и будет невидим до правки кода.
+  const hygieneFindingCounts = new Map<string, number>();
+  hygiene.forEach(h => hygieneFindingCounts.set(h.finding, (hygieneFindingCounts.get(h.finding) ?? 0) + 1));
+  const hygieneFilterDefs = [
+    { key: 'all', label: `${t('lore.analytics.product.hygieneAll', 'все')} ${hygiene.length}` },
+    ...[...hygieneFindingCounts.entries()].map(([f, n]) => ({ key: f, label: `${hygieneFindingLabel(f)} ${n}` })),
+  ];
+  const hygieneQuery = hygieneSearch.trim().toLowerCase();
+  const filteredHygiene = hygiene.filter(h => {
+    if (hygieneFilter !== 'all' && h.finding !== hygieneFilter) return false;
+    if (!hygieneQuery) return true;
+    return h.ref_id.toLowerCase().includes(hygieneQuery) || (h.title ?? '').toLowerCase().includes(hygieneQuery);
+  });
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {failed.length > 0 && (
@@ -112,6 +157,90 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
           {t('lore.analytics.product.partialError', 'Часть срезов не загрузилась ({{list}}) — их плитки пусты, остальные цифры честные.', { list: failed.join(', ') })}
         </div>
       )}
+
+      {/* ── Самопроверка (MT-10): девять уже написанных сверок в один прогон ── */}
+      <div style={S.panel}>
+        <div style={S.panelHead}>
+          <GameIcon slug="checked-shield" size={15} style={{ color: 'var(--acc)' }} />
+          <b>{t('lore.analytics.product.selfCheck.title', 'Самопроверка корпуса')}</b>
+          <button style={S.selfCheckBtn} onClick={runSelfCheck} disabled={selfCheckLoading}>
+            {selfCheckLoading
+              ? t('lore.analytics.product.selfCheck.running', 'проверяю…')
+              : t('lore.analytics.product.selfCheck.run', 'Проверить')}
+          </button>
+          {selfCheck && (
+            <span style={S.meta}>
+              {t('lore.analytics.product.selfCheck.ranAt', 'прогон {{time}}', { time: new Date(selfCheck.run_at).toLocaleString() })}
+            </span>
+          )}
+        </div>
+
+        {selfCheckError && !selfCheck && (
+          <div style={{ ...S.hint, color: 'var(--dng)' }}>
+            {t('lore.analytics.product.selfCheck.loadError', 'прогон не удался целиком — попробуй ещё раз')}
+          </div>
+        )}
+
+        {!selfCheck && !selfCheckLoading && !selfCheckError && (
+          <div style={S.hint}>
+            {t('lore.analytics.product.selfCheck.empty', 'нажми «Проверить» — прогон займёт несколько секунд')}
+          </div>
+        )}
+
+        {selfCheck && (
+          <div style={S.list}>
+            {selfCheck.checks.map(c => {
+              // Три состояния, не два: unavailable — «сверку не удалось
+              // выполнить», это НЕ то же самое, что passed. Подменять одно
+              // другим — тот самый дефект, из-за которого проверка темы в CD
+              // однажды обвинила успешный выкат.
+              const color = c.state === 'passed' ? 'var(--suc)' : c.state === 'unavailable' ? 'var(--dng)' : 'var(--wrn)';
+              const icon = c.state === 'passed' ? '✓' : c.state === 'unavailable' ? '✕' : '⚠';
+              const isOpen = openCheck === c.id;
+              const clickable = c.findings.length > 0;
+              return (
+                <div key={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div
+                    style={{ ...S.listRow, cursor: clickable ? 'pointer' : 'default' }}
+                    onClick={() => clickable && setOpenCheck(isOpen ? null : c.id)}>
+                    <span style={{ color }}>{icon}</span>
+                    <span>{c.title}</span>
+                    <span style={S.mono}>
+                      {c.state === 'unavailable'
+                        ? t('lore.analytics.product.selfCheck.unavailable', 'не удалось проверить')
+                        : t('lore.analytics.product.selfCheck.foundOf', '{{found}} из {{denom}}', { found: c.found, denom: c.denominator })}
+                    </span>
+                    {clickable && <span style={S.dim}>{t('lore.analytics.product.selfCheck.clickToOpen', '(клик — список)')}</span>}
+                  </div>
+                  {c.state === 'unavailable' && c.error && (
+                    <div style={{ ...S.dim, paddingLeft: 18, fontSize: 'var(--fs-sm)' }}>{c.error}</div>
+                  )}
+                  {isOpen && (
+                    <div style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {c.findings.map(f => (
+                        <div key={`${c.id}:${f.ref_id}`} style={S.listRow}>
+                          <span
+                            style={f.section ? { ...S.link, ...S.mono } : S.mono}
+                            onClick={() => goFinding(f)}>
+                            {f.ref_id}
+                          </span>
+                          {f.title && <span style={S.dim}>{f.title}</span>}
+                          {f.detail && <span style={{ ...S.dim, fontSize: 'var(--fs-xs)' }}>· {f.detail}</span>}
+                        </div>
+                      ))}
+                      {c.truncated && (
+                        <div style={{ ...S.dim, fontSize: 'var(--fs-xs)' }}>
+                          {t('lore.analytics.product.selfCheck.truncated', 'показаны первые {{n}} из {{total}} — остальное не выведено, а не отсутствует', { n: c.findings.length, total: c.found })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── E · Гигиена связок — ПЕРВОЙ очередью ── */}
       <div style={{ ...S.panel, borderLeft: `3px solid ${hygiene.length ? 'var(--wrn)' : 'var(--suc)'}` }}>
@@ -124,23 +253,38 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
         {hygiene.length === 0 ? (
           <div style={{ ...S.hint, color: 'var(--suc)' }}>{t('lore.analytics.product.hygieneClean', 'связки чистые — цифрам ниже можно верить')}</div>
         ) : (
-          <div style={S.list}>
-            {hygiene.map(h => (
-              <div key={`${h.finding}:${h.ref_id}`} style={S.listRow}>
-                <span style={{ color: 'var(--wrn)' }}>⚠</span>
-                <span style={S.mono}>{hygieneFindingLabel(h.finding)}:</span>
-                <span
-                  style={h.entity_type === 'task' && h.sprint_id ? S.link : h.entity_type === 'uc' ? S.link : undefined}
-                  onClick={() => {
-                    if (h.entity_type === 'task' && h.sprint_id) goSprint(h.sprint_id);
-                    else if (h.entity_type === 'uc') goFeature(h.ref_id);
-                  }}>
-                  {h.ref_id}
-                </span>
-                <span style={S.dim}>{h.title}</span>
+          <>
+            {/* AL-115: 489 строк без поиска были нечинибельны — единственный
+                список в приложении без search/фильтра. ListSearch/FilterChips —
+                те же общие компоненты, что у списков продуктового слоя. */}
+            <div style={{ margin: '-10px -14px 10px' }}>
+              <ListSearch value={hygieneSearch} onChange={setHygieneSearch}
+                placeholder={t('lore.analytics.product.hygieneSearchPh', 'найти по id или названию…')} />
+              {hygieneFilterDefs.length > 2 &&
+                <FilterChips options={hygieneFilterDefs} value={hygieneFilter} onChange={setHygieneFilter} />}
+            </div>
+            {filteredHygiene.length === 0 ? (
+              <div style={S.hint}>{t('lore.analytics.product.hygieneNoMatch', 'ничего не найдено по фильтру/поиску')}</div>
+            ) : (
+              <div style={S.list}>
+                {filteredHygiene.map(h => (
+                  <div key={`${h.finding}:${h.ref_id}`} style={S.listRow}>
+                    <span style={{ color: 'var(--wrn)' }}>⚠</span>
+                    <span style={S.mono}>{hygieneFindingLabel(h.finding)}:</span>
+                    <span
+                      style={h.entity_type === 'task' && h.sprint_id ? S.link : h.entity_type === 'uc' ? S.link : undefined}
+                      onClick={() => {
+                        if (h.entity_type === 'task' && h.sprint_id) goSprint(h.sprint_id);
+                        else if (h.entity_type === 'uc') goFeature(h.ref_id);
+                      }}>
+                      {h.ref_id}
+                    </span>
+                    <span style={S.dim}>{h.title}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
@@ -340,4 +484,5 @@ const S: Record<string, React.CSSProperties> = {
   actorChip:{ display: 'inline-block', border: '1px solid var(--bd)', borderRadius: 999, padding: '0 7px', fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginRight: 4 },
   stack:    { display: 'flex', height: 7, borderRadius: 4, overflow: 'hidden', background: 'var(--b3)' },
   errBanner:{ padding: '7px 11px', borderRadius: 6, fontSize: 'var(--fs-sm)', color: 'var(--wrn)', border: '1px solid color-mix(in srgb, var(--wrn) 35%, transparent)', background: 'color-mix(in srgb, var(--wrn) 8%, transparent)' },
+  selfCheckBtn: { marginLeft: 'auto', padding: '4px 12px', borderRadius: 6, border: '1px solid var(--acc)', background: 'color-mix(in srgb, var(--acc) 12%, transparent)', color: 'var(--acc)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer' },
 };

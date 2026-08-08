@@ -90,15 +90,19 @@ const S = {
   compId:   { fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' },
   fullName: { fontSize: 'var(--fs-sm)', color: 'var(--t2)', marginTop: 1 },
   titleCol: { flex: 1, minWidth: 0 },
+  // Владелец: «тоже так себе» — тот же анти-паттерн, что в паспорте ADR
+  // (LoreAdrPassportView.tsx editBtn): background:'transparent' на светлых
+  // темах совпадает с фоном страницы, кнопка читается только по тонкой
+  // границе. Заливка var(--b2), как у прочих action-кнопок.
   parentBtn: {
     padding: '2px 7px', borderRadius: 4, fontSize: 'var(--fs-xs)', flexShrink: 0,
-    background: 'transparent', color: 'var(--acc)',
+    background: 'var(--b2)', color: 'var(--acc)',
     border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
     cursor: 'pointer', whiteSpace: 'nowrap' as const, display: 'flex', alignItems: 'center', gap: 3,
   },
   editBtn: {
     padding: '2px 7px', borderRadius: 4, fontSize: 'var(--fs-xs)', flexShrink: 0,
-    background: 'transparent', color: 'var(--t3)',
+    background: 'var(--b2)', color: 'var(--t2)',
     border: '1px solid var(--bd)', cursor: 'pointer',
   },
 
