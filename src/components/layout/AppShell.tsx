@@ -178,6 +178,7 @@ function AppShellBody() {
     // 100vh hid the bottom of the UI under mobile browser chrome.
     <div className="shell-dvh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header
+        className="lore-appshell-header"
         style={{
           height: HEADER_H,
           flexShrink: 0,
@@ -520,7 +521,7 @@ function AppShellBody() {
         )}
       </Modal>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div className="lore-appshell-body" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Outlet />
       </div>
 
@@ -530,6 +531,7 @@ function AppShellBody() {
           subtabs; safe-area padding keeps it clear of the home indicator. */}
       {narrow && (
         <nav
+          className="lore-appshell-bottomnav"
           style={{
             flexShrink: 0,
             display: 'flex',
