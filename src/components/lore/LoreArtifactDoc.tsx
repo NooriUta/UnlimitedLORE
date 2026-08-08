@@ -198,7 +198,7 @@ export default function LoreArtifactDoc({ kind, id, onError, onBack, onNavigateS
   if (date)     metaBits.push(date.slice(0, 10));
 
   return (
-    <div style={S.root}>
+    <div className="lore-artifact-doc-root" style={S.root}>
       <button style={S.back} onClick={onBack}>{t('lore.artifactDoc.backToList', '← К списку')}</button>
       <div style={S.header}>
         <span style={S.kindTag(kindMeta?.color ?? 'var(--t3)')}>

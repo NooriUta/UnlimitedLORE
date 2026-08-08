@@ -590,16 +590,25 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-/* MOB-14 pilot (SPRINT_LORE_MOBILE_UX): document-level scroll on the sprint
-   passport screen, owner-approved reversible experiment. Nested
-   overflow:hidden containers (the app-shell architecture since MOB-05/10)
-   never trigger the mobile browser's toolbar auto-hide — only a genuine
-   document/html scroll gesture does. Scoped via :has() to elements whose
-   subtree carries `.lore-doc-scroll-pilot`, so every other screen keeps the
-   existing fixed-height nested-scroll layout untouched. Revert = drop the
-   five classNames (AppShell, LorePage x3, LoreSprintDetail x2) + this block.
-   Bottom-nav compensation height is the pilot's own explicit height override
-   below (icon 20 + label + padding, MOB-12), not the shell's natural size. */
+/* MOB-14 (SPRINT_LORE_MOBILE_UX): document-level scroll on narrow-viewport
+   master-detail passports. Nested overflow:hidden containers (the app-shell
+   architecture since MOB-05/10) never trigger the mobile browser's toolbar
+   auto-hide — only a genuine document/html scroll gesture does. Piloted on
+   the sprint passport alone first (owner-approved reversible experiment,
+   confirmed working on a real device 2026-08-08), then widened the SAME
+   session to all five Forseti master-detail sections (adrs/sprints/
+   components/knowledge/qg — `LorePage.tsx`'s `MASTER_DETAIL`) once the
+   pattern was proven. Scoped via :has() to elements whose subtree carries
+   `.lore-doc-scroll-pilot` (now set whenever `isMasterDetail`, not just
+   section==='sprints'), so screens OUTSIDE this widened scope — TYR/BRAGI/
+   MUNINN/HUGINN, each a separate sub-app with its own layout, not this
+   AppShell/LorePage scaffolding — keep the existing fixed-height
+   nested-scroll layout untouched; extending there is separate follow-up
+   work, not covered here. Revert = drop the classNames (AppShell, LorePage,
+   LoreSprintDetail, LoreAdrPassportView, LoreArtifactDoc, LoreSpecView,
+   LoreQGDetail, LoreComponentPassport) + this block. Bottom-nav compensation
+   height is the pilot's own explicit height override below (icon 20 + label
+   + padding, MOB-12), not the shell's natural size. */
 .shell-dvh:has(.lore-doc-scroll-pilot) {
   height: auto;
   min-height: 100vh;
@@ -640,6 +649,21 @@ select.field-input option { background: var(--bg2); color: var(--t1); }
   overflow: visible;
 }
 .lore-doc-scroll-pilot .lore-sprint-detail-tasks {
+  overflow: visible;
+}
+.lore-doc-scroll-pilot .lore-adr-passport-root,
+.lore-doc-scroll-pilot .lore-artifact-doc-root,
+.lore-doc-scroll-pilot .lore-spec-view-root {
+  overflow: visible;
+}
+.lore-doc-scroll-pilot .lore-qg-detail-root,
+.lore-doc-scroll-pilot .lore-qg-detail-body {
+  overflow: visible;
+}
+.lore-doc-scroll-pilot .lore-component-passport-root,
+.lore-doc-scroll-pilot .lore-component-passport-top,
+.lore-doc-scroll-pilot .lore-component-passport-reader,
+.lore-doc-scroll-pilot .lore-component-passport-reader-scroll {
   overflow: visible;
 }
 

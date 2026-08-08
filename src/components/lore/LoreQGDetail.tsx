@@ -272,7 +272,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
   const hasStructured = runs.some(r => r.run_id);
 
   return (
-    <div style={S.root}>
+    <div className="lore-qg-detail-root" style={S.root}>
       {/* Header */}
       <div style={S.header}>
         {onBack && <button style={S.backBtn} onClick={onBack}>←</button>}
@@ -315,7 +315,7 @@ export default function LoreQGDetail({ qgId, onError, onBack, onNavigateToSprint
         </div>
       </div>
 
-      <div style={S.body}>
+      <div className="lore-qg-detail-body" style={S.body}>
         {/* §2 ДИНАМИКА — run history */}
         <section style={S.section}>
           <div style={S.secLabel}>
