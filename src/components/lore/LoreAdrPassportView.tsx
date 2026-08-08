@@ -22,8 +22,12 @@ const S = {
     background: 'none', border: 'none', cursor: 'pointer',
     color: 'var(--acc)', fontSize: 'var(--fs-base)', padding: 0,
   },
+  // Владелец: «кнопки сливаются и теряются с фоном» — background:'none' на
+  // светлых темах давал ту же заливку, что и сама страница (граница едва
+  // читалась). Заливка var(--b2), как у прочих action-кнопок (LorePlanBoard
+  // S.btn) — контраст с фоном страницы гарантирован в любой теме.
   editBtn: {
-    background: 'none', border: '1px solid var(--b3)', cursor: 'pointer',
+    background: 'var(--b2)', border: '1px solid var(--b3)', cursor: 'pointer',
     color: 'var(--t2)', fontSize: 'var(--fs-sm)', padding: '2px 10px', borderRadius: 4,
   },
   header:  { display: 'flex', flexDirection: 'column' as const, gap: 6, marginBottom: 16 },
