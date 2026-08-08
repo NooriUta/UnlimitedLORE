@@ -349,7 +349,9 @@ const S: Record<string, React.CSSProperties> = {
   thumbSm:   { flex: 'none', width: 64, height: 46, background: 'var(--b2)', border: '1px solid var(--bd)', borderRadius: 8, display: 'inline-block' },
   pubttlRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   pubttl:    { fontSize: 'var(--fs-lg)', fontWeight: 500 },
-  editBtn:   { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'transparent', border: '1px solid var(--b3)',
+  // Тот же анти-паттерн, что в паспортах ADR/компонента: transparent на
+  // светлых темах сливается с фоном страницы. Заливка var(--b2).
+  editBtn:   { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--b3)',
                borderRadius: 5, padding: '3px 9px', cursor: 'pointer' },
   pubmeta:   { fontSize: 'var(--fs-base)', color: 'var(--t3)', marginTop: 5, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' },
   mainTextLink: { color: 'var(--acc)', cursor: 'pointer' },
