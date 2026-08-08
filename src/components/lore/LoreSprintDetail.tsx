@@ -550,13 +550,13 @@ function AgentRolePicker({ id, label, value, onChange, hint, warn }: {
         <select
           id={id} value={known ? value : ''} style={{ ...inputStyle, width: 134 }}
           onChange={e => {
-            if (e.target.value === ' custom') { onChange(''); setCustom(true); return; }
+            if (e.target.value === 'custom') { onChange(''); setCustom(true); return; }
             onChange(e.target.value);
           }}
         >
           <option value="">—</option>
           {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
-          <option value={' custom'}>+ своё значение…</option>
+          <option value={'custom'}>+ своё значение…</option>
         </select>
       )}
       {warn && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)' }}>{warn}</span>}
