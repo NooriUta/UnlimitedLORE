@@ -510,7 +510,7 @@ export default function LorePage() {
 
   return (
     <DictionaryProvider>
-    <div style={S.root}>
+    <div className="lore-page-root" style={S.root}>
       {/* ── Horizontal section nav ───────────────────────────────────────────
           Не показываем в Admin LORE: админка — уровень приложения (вход в шапке,
           ADR-LORE-025), разделы Forseti к её содержимому отношения не имеют. */}
@@ -992,7 +992,7 @@ export default function LorePage() {
       )}
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div style={S.body}>
+      <div className="lore-page-body" style={S.body}>
         {/* ── Master-detail layout ─────────────────────────────────────────── */}
         {/* MOB-04: on narrow screens the side-by-side pair becomes a two-step
             flow — list full-width until something is selected, then the detail
@@ -1160,7 +1160,10 @@ export default function LorePage() {
         // S.content is a ROW flex — with the narrow back-button (width:100%)
         // inside it, the button ate the row and pushed the detail out of view
         // (blank ADR page bug). Column direction when the back bar is shown.
-        <div style={narrow && isMasterDetail && hasDetailSelection ? { ...S.content, flexDirection: 'column' } : S.content}>
+        <div
+          className={narrow && hasDetailSelection && section === 'sprints' ? 'lore-page-content lore-doc-scroll-pilot' : 'lore-page-content'}
+          style={narrow && isMasterDetail && hasDetailSelection ? { ...S.content, flexDirection: 'column' } : S.content}
+        >
           {/* adrs' own passport view already renders a "← К списку" — skip the
               generic bar there to avoid two stacked back controls; knowledge's
               LoreArtifactDoc has its own back button too. */}

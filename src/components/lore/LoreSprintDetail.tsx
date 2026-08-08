@@ -1284,7 +1284,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const doneTotal = tasks.filter(t => taskTick(t.status_raw).done).length;
 
   return (
-    <div style={S.root}>
+    <div className="lore-sprint-detail-root" style={S.root}>
       <div style={S.header}>
         <span style={S.sprintId}>{sprint.sprint_id}</span>
         {status && <StatusChip status={status} />}
@@ -1811,7 +1811,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
       />
 
       {/* ── Tasks (full width, scrollable) ── */}
-      <div style={{ flex: 1, overflowY: 'auto' as const }}>
+      <div className="lore-sprint-detail-tasks" style={{ flex: 1, overflowY: 'auto' as const }}>
       <div style={S.section}>
         {/* Phases (when present) each with their tasks */}
         {phases.length > 0 && (
