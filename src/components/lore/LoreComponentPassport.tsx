@@ -416,9 +416,9 @@ export default function LoreComponentPassport({
         .filter(r => sprintStatusFilter.size === 0 || sprintStatusFilter.has(r.status ?? ''));
 
   return (
-    <div style={S.root}>
+    <div className="lore-component-passport-root" style={S.root}>
       {/* ── TOP ──────────────────────────────────────────────────────────── */}
-      <div style={{ ...S.top, height: topHeight, flexShrink: 0, overflow: 'hidden' }}>
+      <div className="lore-component-passport-top" style={{ ...S.top, height: topHeight, flexShrink: 0, overflow: 'hidden' }}>
         {/* Header row */}
         <div style={S.hdr}>
           <div style={S.iconLg(color)}>
@@ -595,7 +595,7 @@ export default function LoreComponentPassport({
       />
 
       {/* ── BOTTOM: reader ───────────────────────────────────────────────── */}
-      <div style={S.reader}>
+      <div className="lore-component-passport-reader" style={S.reader}>
         {!selDocId ? (
           <div style={S.placeholder}>{t('lore.componentPassport.reader.selectDoc', 'Выберите документ выше')}</div>
         ) : docLoading ? (
@@ -621,7 +621,7 @@ export default function LoreComponentPassport({
                 {docContent.type.toUpperCase()}
               </span>
             </div>
-            <div style={S.readerScroll}>
+            <div className="lore-component-passport-reader-scroll" style={S.readerScroll}>
               {docContent.type === 'adr' && (
                 <>
                   <MdBlock md={docContent.data.context_md}      label={t('lore.componentPassport.reader.context', 'Контекст')} />

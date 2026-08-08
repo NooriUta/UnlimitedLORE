@@ -153,7 +153,7 @@ const TASK_PICK_TOKENS = ['todo', 'planned', 'active', 'partial', 'ready_for_dep
 // T18: memoized -- rendered once per task/phase row in potentially large
 // sprints, and its own render (building the status option list + several
 // chip elements) is nontrivial relative to a plain row.
-const StatusPicker = memo(function StatusPicker({ entityType, id, current, onChanged, onError, compactUi }: {
+const StatusPicker = memo(function StatusPicker({ entityType, id, current, onChanged, onError, compactUi, ultraCompactUi }: {
   entityType: 'sprint' | 'task' | 'phase';
   id: string;
   current: LorePlanItemStatus;
@@ -164,11 +164,19 @@ const StatusPicker = memo(function StatusPicker({ entityType, id, current, onCha
       497px в 300px-контейнере. Раньше compact был жёстко привязан к
       entityType и никогда не включался для sprint. */
   compactUi?: boolean;
+  /** MOB-15: у task-строки picker и так уже compact (icon-only), но на
+      narrow в списке из десятков задач 8 иконок × ~20px всё равно раздували
+      трейлинг-группу строки (роли + effort + picker + ⊕/✎ — единая
+      flexWrap-полоса) — владелец явно попросила ужать именно эти иконки,
+      не остальные элементы строки. Отдельный тир поверх compact, не замена
+      ему: сжимает то, что уже сжато. */
+  ultraCompactUi?: boolean;
 }) {
   const { t } = useTranslation();
   const sprintOpts = buildSprintPickOpts(t);
   const opts    = entityType === 'sprint' ? sprintOpts : sprintOpts.filter(o => TASK_PICK_TOKENS.includes(o.token));
   const compact = !!compactUi || entityType !== 'sprint';
+  const tiny = compact && !!ultraCompactUi;
   const [busy, setBusy] = useState(false);
   async function set(next: LorePlanItemStatus) {
     if (next === current || busy) return;
@@ -180,7 +188,7 @@ const StatusPicker = memo(function StatusPicker({ entityType, id, current, onCha
   return (
     <span
       role="group" aria-label={t('lore.sprintDetail.statusPicker.ariaLabel', 'Изменить статус')}
-      style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
+      style={{ display: 'inline-flex', flexWrap: 'wrap', gap: tiny ? 1 : 2, flexShrink: 0, opacity: busy ? 0.5 : 1 }}
     >
       {opts.map(o => {
         const sel = o.token === current;
@@ -191,14 +199,14 @@ const StatusPicker = memo(function StatusPicker({ entityType, id, current, onCha
             onClick={e => { e.stopPropagation(); void set(o.token); }}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: compact ? 0 : 3,
-              padding: compact ? '0 4px' : '0 6px', height: 18,
+              padding: tiny ? '0 2px' : compact ? '0 4px' : '0 6px', height: tiny ? 15 : 18,
               cursor: busy ? 'default' : 'pointer', borderRadius: 3,
               opacity: sel ? 1 : 0.42,
               background: sel ? `color-mix(in srgb, ${o.c} 16%, transparent)` : 'transparent',
               border: `1px solid ${sel ? o.c : 'transparent'}`,
             }}
           >
-            <GameIcon slug={o.gi} size={compact ? 12 : 13} style={{ color: o.c }} />
+            <GameIcon slug={o.gi} size={tiny ? 10 : compact ? 12 : 13} style={{ color: o.c }} />
             {!compact && (
               <span style={{
                 fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', lineHeight: 1, letterSpacing: '0.03em',
@@ -571,6 +579,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
   onError: (e: unknown) => void;
 }) {
   const { t } = useTranslation();
+  const narrow = useIsNarrow();
   const meta = statusMeta(taskTick(task.status_raw).status);
   const hasDetail = !!(task.note_md && task.note_md.trim());
   const [expanded, setExpanded] = useState(false);
@@ -788,6 +797,7 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
             entityType="task" id={task.task_uid}
             current={toToken(taskTick(task.status_raw).status)}
             onChanged={onChanged} onError={onError}
+            ultraCompactUi={narrow}
           />
           <button type="button" style={iconBtn} title={t('lore.sprintDetail.task.componentsTitle', 'Компоненты')}
             onClick={e => { e.stopPropagation(); setCompPicker(v => !v); }}>⊕</button>
