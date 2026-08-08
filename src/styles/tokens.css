@@ -36,6 +36,15 @@
      white in every current palette (T16, part 2). */
   --on-accent: #fff;
 
+  /* Brand illustration (LoginScreen) — same formula as the Keycloak login
+     theme's lore.css, so the in-app pre-auth screen matches what Keycloak
+     shows right before/after it. --illustration-secondary needs a lower
+     accent ratio in dark than light for the same perceived visual weight
+     (see that file's comment) — 16% here, 32% under [data-mode='light']. */
+  --illustration-primary: var(--acc);
+  --illustration-background: var(--bg0);
+  --illustration-secondary: color-mix(in srgb, var(--acc) 16%, var(--bg0));
+
   /* LORE artifact-kind categorical palette (T16) — was hardcoded twice in
      LoreArtifactList.tsx (module-level ARTIFACT_KINDS_META + a component-
      local ALL_ARTIFACT_KINDS re-declaring the same 5 colours verbatim). */
@@ -179,6 +188,9 @@
   --inf:    #3a7060;
   --dng:    #c03030;
   --danger: #c03030;
+  /* Recomputes off whichever palette's --acc/--bg0 are active — one override
+     covers every palette's light mode, not just amber-forest (T16-illustration). */
+  --illustration-secondary: color-mix(in srgb, var(--acc) 32%, var(--bg0));
 }
 
 /* ---------- SLATE LIGHT ---------- */

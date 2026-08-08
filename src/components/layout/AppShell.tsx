@@ -11,70 +11,10 @@ import { LoreSearchScreen } from '../lore/LoreSearchScreen';
 import { useIsAdmin } from '../../auth/useRole';
 import { fetchLoreEnv } from '../../api/lore';
 import { ProjectScopeProvider, useProjectScope } from '../../context/ProjectScopeContext';
+import { type Palette, type Mode, PALETTES, writePrefs, resolvePalette, resolveMode } from '../../theme/prefs';
 
 const HEADER_H = 42;
 const accentSoft = 'color-mix(in srgb, var(--acc) 12%, transparent)';
-
-/**
- * Палитры — ОБЩИЕ С ПЛАТФОРМОЙ: те же четыре, что предлагает страница входа
- * Keycloak (её пикер пишет их в cookie `seer-prefs`). До этого приложение
- * знало две своих (`amber`/`slate`), и выбор, сделанный на входе, до него не
- * доезжал: другое хранилище, другой словарь значений.
- *
- * `amber-forest` вместо прежнего `amber` — имя платформы; старое значение
- * мигрируется при чтении, чтобы никому не сбросило выбор.
- */
-type Palette = 'amber-forest' | 'lichen' | 'slate' | 'juniper' | 'warm-dark';
-type Mode    = 'dark'  | 'light';
-
-/**
- * Пять палитр — полный набор платформы, сверенный по трём местам: темы
- * Keycloak (seer/heimdall/volva/lore) дают четыре, фронтенды aida-root —
- * пять. `warm-dark` есть только у вторых, и без неё выбор, сделанный в
- * Verdandi или Heimdall, здесь молча откатывался бы к умолчанию.
- */
-const PALETTES: { id: Palette; label: string; swatch: string }[] = [
-  { id: 'amber-forest', label: 'amber forest', swatch: '#A8B860' },
-  { id: 'lichen',       label: 'lichen',       swatch: '#7CB870' },
-  { id: 'slate',        label: 'slate',        swatch: '#6aa6ff' },
-  { id: 'juniper',      label: 'juniper',      swatch: '#50C090' },
-  { id: 'warm-dark',    label: 'warm dark',    swatch: '#D4A830' },
-];
-
-/**
- * Общие настройки внешнего вида платформы.
- *
- * Cookie, а не localStorage: страница входа живёт на ДРУГОМ origin
- * (`odal.seidrstudio.pro` против `lore.odal.seidrstudio.pro`), и localStorage
- * между ними не разделяется по построению. Cookie ставится с
- * `Domain=.odal.seidrstudio.pro`, поэтому видна обеим сторонам.
- */
-const PREFS_COOKIE = 'seer-prefs';
-
-function readPrefs(): { theme?: string; palette?: string } {
-  const m = document.cookie.match(/(?:^|; )seer-prefs=([^;]*)/);
-  if (!m) return {};
-  try { return JSON.parse(decodeURIComponent(m[1])) as { theme?: string; palette?: string }; }
-  catch { return {}; }
-}
-
-function writePrefs(patch: { theme?: string; palette?: string }) {
-  const next = { ...readPrefs(), ...patch };
-  const h = location.hostname;
-  // Домен не ставим для localhost и голых IP — браузер отвергнет такую cookie
-  // целиком, и настройка не сохранится вовсе (та же проверка в теме входа).
-  const domain = (!h || h === 'localhost' || !h.includes('.') || /^\d+\.\d+\.\d+\.\d+$/.test(h))
-    ? '' : '; Domain=.' + h.split('.').slice(-3).join('.');
-  document.cookie = `${PREFS_COOKIE}=${encodeURIComponent(JSON.stringify(next))}`
-    + '; Path=/; Max-Age=31536000; SameSite=Lax' + domain;
-}
-
-/** Прежние значения приложения → имена платформы. */
-function normalizePalette(v: string | null | undefined): Palette | null {
-  if (!v) return null;
-  if (v === 'amber') return 'amber-forest';           // старое имя того же цвета
-  return PALETTES.some(p => p.id === v) ? (v as Palette) : null;
-}
 
 function activeTabId(pathname: string): ShellTab['id'] {
   if (pathname.startsWith('/benchmark')) return 'research';
@@ -110,15 +50,8 @@ function AppShellBody() {
   // Свой первым, чтобы уже сделанный в приложении выбор не перебивался тем,
   // что осталось на странице входа; cookie подхватывается ровно тогда, когда
   // в приложении выбора ещё не делали — то есть при первом входе.
-  const [palette, setPalette] = useState<Palette>(() =>
-    normalizePalette(localStorage.getItem('lore-palette') ?? localStorage.getItem('lore-theme'))
-    ?? normalizePalette(readPrefs().palette)
-    ?? 'amber-forest');
-  const [mode, setMode] = useState<Mode>(() => {
-    const saved = localStorage.getItem('lore-mode') ?? localStorage.getItem('lore-theme');
-    if (saved === 'light' || saved === 'dark') return saved;
-    return readPrefs().theme === 'light' ? 'light' : 'dark';
-  });
+  const [palette, setPalette] = useState<Palette>(resolvePalette);
+  const [mode, setMode] = useState<Mode>(resolveMode);
 
   useEffect(() => {
     const el = document.documentElement;
