@@ -1,4 +1,6 @@
-import { Icon } from '@iconify/react';
+// /offline — see main.tsx's addCollection comment: never fetches unknown
+// slugs remotely (CSP blocks that anyway), just renders nothing for them.
+import { Icon } from '@iconify/react/offline';
 
 interface Props {
   slug: string | null | undefined;

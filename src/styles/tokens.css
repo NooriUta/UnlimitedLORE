@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+/* Шрифты — свои файлы через @fontsource (App.tsx), а не эта строка. CDN
+   @import сюда когда-то попал по инерции с темы Keycloak (её lore.css тянет
+   тем же способом — там это осознанный выбор, не бандлить шрифты в
+   FreeMarker-тему), но здесь CSP блокирует его на каждой загрузке страницы
+   (style-src 'self') — мёртвый код, а не рабочий фолбэк. */
 
 /* AMBER FOREST (умолчание) — значения платформы, источник
    aida-root/frontends/verdandi/src/styles/globals.css.

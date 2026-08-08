@@ -1,4 +1,11 @@
-import { addCollection } from '@iconify/react';
+// /offline (not the default '@iconify/react'): the whole game-icons set is
+// bundled via addCollection below, and CSP forbids remote icon fetches
+// anyway — the default Icon component tries api.iconify.design/unisvg.com/
+// simplesvg.com for any slug missing from the bundle (a data typo, e.g. a
+// LORE component's icon field), which CSP then blocks with a console error
+// per icon per render. /offline never attempts that fetch — unknown slugs
+// just render nothing, silently, same as GameIcon's own !slug fallback.
+import { addCollection } from '@iconify/react/offline';
 import gameIconsData from '@iconify-json/game-icons/icons.json';
 addCollection(gameIconsData as Parameters<typeof addCollection>[0]);
 
