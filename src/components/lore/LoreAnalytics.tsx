@@ -2148,7 +2148,7 @@ export default function LoreAnalyticsView({ onError, onNavigateToSprint, onNavig
         <Kpi icon="guards"     label="QG всего"       value={qgStats.total}      color="var(--acc)"
           sub={`${qgStats.compsWithQg} компонентов`}
           hint="Всего QualityGate вершин в LORE" />
-        <Kpi icon="warning"    label="Нарушения open" value={qgViolations.length} color="var(--dng)"
+        <Kpi icon="hazard-sign" label="Нарушения open" value={qgViolations.length} color="var(--dng)"
           sub="QGJobTask status=open" highlight={qgViolations.length > 0}
           hint="Открытые нарушения из последних прогонов" />
         <Kpi icon="text"       label="Рекомендации"   value={qgPendingRecs.length} color="var(--wrn)"
