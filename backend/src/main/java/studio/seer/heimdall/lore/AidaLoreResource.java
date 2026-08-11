@@ -100,10 +100,41 @@ public class AidaLoreResource extends LoreResourceBase {
     // instead of per-task HAS_STATE traversal — fast). Tasks are mapped to sprints
     // by task_uid prefix; sprints to components by the explicit BELONGS_TO edge.
 
-    private static String classifyStatus(String s) {
+    /**
+     * AL-117 (найдено miniLORE 2026-08-11): status_raw — свободный текст после
+     * значка ("✅ MERGED", "✅ СПРИНТ ЗАКРЫТ — НА РЕВИЗИИ", "✅ ALL PHASES DONE —
+     * Phase 7…"), и классификатор по словам-подстрокам систематически теряет
+     * формулировки, для которых не был написан. Их собственный парсер на этом
+     * потерял 27 закрытых спринтов, пока не переключился на значок — эта
+     * функция несла тот же дефект (ни "MERGED", ни "ЗАКРЫТ" в списке слов не
+     * было).
+     *
+     * <p>Значок — приоритетный сигнал, тот же порядок и набор, что уже
+     * проверенный {@code taskTick()} во фронтенде ({@code lore-status.ts},
+     * покрыт тестами). Слова остаются вторым уровнем — легаси-строки без
+     * значка встречаются (см. `sprint_done_dates`'s `LIKE '✅%' OR 'ЗАВЕРШЁН%'`
+     * для того же класса компромисса).
+     */
+    // Package-private (not private) so AidaLoreResourceTest can call it directly —
+    // same convention as WorkQuality's pure-function methods.
+    static String classifyStatus(String s) {
         if (s == null || s.isBlank()) return "none";   // status not set ≠ TODO
+        String trimmed = s.stripLeading();
+        if (trimmed.startsWith("✅")) return "done";
+        if (trimmed.startsWith("🔄")) return "in_progress";
+        if (trimmed.startsWith("🟡")) return "partial";
+        if (trimmed.startsWith("🚀")) return "ready_for_deploy";
+        if (trimmed.startsWith("🔴")) return "blocked";
+        if (trimmed.startsWith("🚫")) return "cancelled";
+        if (trimmed.startsWith("🔬")) return "design";
+        if (trimmed.startsWith("🟣")) return "backlog";
+        if (trimmed.startsWith("📋")) return "planned";
+        if (trimmed.startsWith("⏸")) return "deferred";
+        if (trimmed.startsWith("⬜")) return "todo";
+        // No leading marker (legacy row) — fall back to word matching.
         String u = s.toUpperCase();
-        if (u.contains("DONE") || u.contains("CLOSED") || u.contains("ЗАВЕРШ")) return "done";
+        if (u.contains("DONE") || u.contains("CLOSED") || u.contains("MERGED")
+            || u.contains("ЗАВЕРШ") || u.contains("ЗАКРЫТ"))                    return "done";
         if (u.contains("PROGRESS") || u.contains("WIP"))                        return "in_progress";
         if (u.contains("PARTIAL") || u.contains("ЧАСТИЧ"))                      return "partial";
         if (u.contains("READY") || u.contains("ДЕПЛО"))                         return "ready_for_deploy";

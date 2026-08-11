@@ -1800,6 +1800,43 @@ public class LoreProductResource extends LoreResourceBase {
         return new CheckOutcome(found, totalByProject.size(), findings, found > findings.size());
     }
 
+    /**
+     * AL-118 (найдено miniLORE 2026-08-11): {@code SPRINT_AUTH_CUTOVER} несёт
+     * {@code done_date = 2026-12-07} в срезе {@code sprint_done_dates} —
+     * ровно значение его же {@code planned_end_date}. Похоже, при простановке
+     * статуса DONE в историческую строку записали плановую дату вместо
+     * реальной даты перехода; сам спринт связан с релизом v1.6.19 (реальная
+     * дата — конец июня). {@code sprint_done_dates} и так читает из истории,
+     * а не с вершины (не класс MT-06/MT-12) — здесь неверна САМА историческая
+     * запись, точечно чинить руками не стал (нет безопасного MCP-инструмента
+     * для правки {@code valid_from} задним числом, только новый статус-переход).
+     *
+     * <p>Проверка ловит будущую дату у ЛЮБОГО спринта — не только этот
+     * случай, чтобы не завести проверку под одну находку.
+     */
+    private CheckOutcome checkSprintDoneDateFuture() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("sprint_done_dates").baseSql(), Map.of());
+        String today = LocalDate.now().toString();
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            String doneDate = str(r.get("done_date"));
+            if (doneDate == null || doneDate.length() < 10) continue;
+            String datePart = doneDate.substring(0, 10);
+            if (datePart.compareTo(today) > 0) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String sprintId = str(r.get("sprint_id"));
+                    findings.add(finding(sprintId, sprintId,
+                        "дата закрытия " + datePart + " — в будущем", "sprints", sprintId));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
     @GET
     @Path("product/self-check")
     @Produces(MediaType.APPLICATION_JSON)
@@ -1818,6 +1855,7 @@ public class LoreProductResource extends LoreResourceBase {
         checks.add(runSelfCheck("uc_single_primary", "Сценарии без ровно одного primary-актора", this::checkUcSinglePrimary));
         checks.add(runSelfCheck("actor_pairs", "Пары «роль — агент»: расхождение работ", this::checkActorPairs));
         checks.add(runSelfCheck("release_single_current", "Проекты без ровно одного текущего релиза", this::checkReleaseSingleCurrent));
+        checks.add(runSelfCheck("sprint_done_date_future", "Спринты с датой закрытия в будущем", this::checkSprintDoneDateFuture));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("run_at", Instant.now().toString());
