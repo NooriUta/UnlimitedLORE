@@ -102,6 +102,28 @@ public abstract class LoreResourceBase {
         }
     }
 
+    // AL-84/ADR-LORE-025-D17, поправка 2026-08-11 (решение владельца): единственный
+    // практический write-путь этого гейта был мёртв — ни один агентный профиль не
+    // писал в 'project' вовсе (AgentScopeFilter.HUMAN_ONLY), а у человека нет ни
+    // UI-кнопки на "Технологии"/паспорте проекта, ни проверенной superadmin-учётки.
+    // Открыт РОВНО agent-full — человеческий порог не понижен, там по-прежнему
+    // нужна именно роль superadmin, не admin.
+    //
+    // Носитель c agent_scope, но НЕ full, отклоняется НАПРЯМУЮ — роль из заголовка
+    // не годится разделителем (тот же порядок проверок, что в isFullScopeCaller):
+    // KC выдаёт всем семи узким агентным профилям роль admin, поэтому её значение
+    // ничего не разделяет. В боевом пути AgentScopeFilter уже отсекает не-full
+    // раньше, чем запрос сюда доходит, — эта ветка защищает второй эшелон
+    // (dev/тесты с выключенным OIDC, где AgentScopeFilter — no-op).
+    void requireSuperAdminOrAgentFull(String role) {
+        String scope = callerAgentScope();
+        if (scope != null) {
+            if ("full".equals(scope)) return;
+            throw new LoreExceptions.Forbidden("agent-" + scope + " не пишет в 'project'");
+        }
+        requireSuperAdmin(role);
+    }
+
     @Inject
     io.quarkus.security.identity.SecurityIdentity identity;
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { iconLoaded } from '@iconify/react';
 import gameIconsData from '@iconify-json/game-icons/icons.json';
+import { Modal } from '@mantine/core';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { loadKc, loadKcObj, type KcState } from './kc-state';
 import { GameIcon } from './GameIcon';
@@ -73,7 +74,11 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
   // Тех-реестр СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
   // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-…") — строка «Спеки/ранбуки/доки» выше.
-  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: строка была неверна ещё ДО этой
+  // правки (заявляла architect/pm, а бэкенд не пускал вовсе — семейство сидело в
+  // HUMAN_ONLY) и молчала, потому что coverage-тест пропускает пустые backend-сеты.
+  // Теперь бэкенд взаправду допускает РОВНО full — строка выровнена по факту.
+  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full'] },
   { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
   // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
   // в ветку «неизвестное — пропускаю». Держать синхронно с FAMILY_AGENTS в
@@ -1518,6 +1523,7 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<ProjRow | null>(null);
+  const [isNew, setIsNew] = useState(false);
   const [hosts, setHosts] = useState<HostRow[]>([]);
   const [saving, setSaving] = useState(false);
   // AL-99: зеркальный вид к «Роли в проектах» в карточке человека. Тот же
@@ -1527,18 +1533,29 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
 
   function startEdit(p: ProjRow) {
     setEdit({ ...p });
+    setIsNew(false);
     try { setHosts(p.hosts ? (JSON.parse(p.hosts) as HostRow[]) : []); } catch { setHosts([]); }
   }
+  // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: до сих пор в этой панели
+  // можно было только править уже существующий проект — заводить новый было
+  // негде совсем, ни кнопки, ни формы. POST /lore/project — LH-44 partial
+  // upsert по slug, так что «создать» и «сохранить правку» это буквально
+  // один и тот же save() с новым slug вместо старого.
+  function startNew() {
+    setEdit({ slug: '', name: '', default_branch: '', is_private: null, hosts: null });
+    setIsNew(true);
+    setHosts([]);
+  }
   async function save() {
-    if (!edit) return;
+    if (!edit || !edit.slug.trim()) return;
     setSaving(true);
     try {
       await loreMutate('/project', {
-        slug: edit.slug, name: edit.name ?? null,
+        slug: edit.slug.trim(), name: edit.name ?? null,
         hosts: hosts.length ? JSON.stringify(hosts) : null,
         default_branch: edit.default_branch || null,
       });
-      setEdit(null); reload();
+      setEdit(null); setIsNew(false); reload();
     } catch (e) { onError(e); } finally { setSaving(false); }
   }
   const setHost = (i: number, k: keyof HostRow, v: string) => setHosts(hs => hs.map((h, j) => j === i ? { ...h, [k]: v } : h));
@@ -1546,6 +1563,9 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
   const shown = rows.filter(p => !q || p.slug.toLowerCase().includes(q.toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.toLowerCase()));
   return (
     <div>
+      <div style={{ marginBottom: 8 }}>
+        <button style={S.btn} onClick={startNew}>{t('lore.admin.addProject', '+ Добавить проект')}</button>
+      </div>
       <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
       <div style={S.tw}>
         <table style={S.table}>
@@ -1581,33 +1601,50 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
           </tbody>
         </table>
       </div>
-      {edit && (
-        <div style={S.form}>
-          <div style={{ fontFamily: 'var(--mono)', color: 'var(--acc)' }}>{edit.slug}</div>
-          <input style={S.input} placeholder="name" value={edit.name ?? ''} onChange={e => setEdit(f => f && ({ ...f, name: e.target.value }))} />
-          <input style={S.input} placeholder="default_branch" value={edit.default_branch ?? ''} onChange={e => setEdit(f => f && ({ ...f, default_branch: e.target.value }))} />
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('lore.admin.hosts', 'Хостинги (origin + зеркала, ADR-018)')}</div>
-          {hosts.map((h, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 80px 1fr 1fr 1fr auto', gap: 4 }}>
-              <input style={S.input} placeholder="remote" value={h.remote} onChange={e => setHost(i, 'remote', e.target.value)} />
-              <input style={S.input} placeholder="role" value={h.role} onChange={e => setHost(i, 'role', e.target.value)} />
-              <input style={S.input} placeholder="base_url" value={h.base_url} onChange={e => setHost(i, 'base_url', e.target.value)} />
-              <input style={S.input} placeholder="file_url_template" value={h.file_url_template} onChange={e => setHost(i, 'file_url_template', e.target.value)} />
-              <input style={S.input} placeholder="pr_url_template" value={h.pr_url_template} onChange={e => setHost(i, 'pr_url_template', e.target.value)} />
-              <button style={S.btn} onClick={() => setHosts(hs => hs.filter((_, j) => j !== i))}>✕</button>
+      <Modal
+        opened={!!edit}
+        onClose={() => { setEdit(null); setIsNew(false); }}
+        title={isNew ? t('lore.admin.addProject', '+ Добавить проект') : edit?.slug}
+        size={620}
+      >
+        {edit && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {isNew ? (
+              <>
+                <input style={{ ...S.input, fontFamily: 'var(--mono)' }} placeholder="AIDA/miniLORE"
+                  value={edit.slug} onChange={e => setEdit(f => f && ({ ...f, slug: e.target.value }))} />
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                  {t('lore.admin.projectSlugHint', 'owner/repo — как в Forgejo/GitHub; правке не подлежит после создания')}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontFamily: 'var(--mono)', color: 'var(--acc)' }}>{edit.slug}</div>
+            )}
+            <input style={S.input} placeholder="name" value={edit.name ?? ''} onChange={e => setEdit(f => f && ({ ...f, name: e.target.value }))} />
+            <input style={S.input} placeholder="default_branch" value={edit.default_branch ?? ''} onChange={e => setEdit(f => f && ({ ...f, default_branch: e.target.value }))} />
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('lore.admin.hosts', 'Хостинги (origin + зеркала, ADR-018)')}</div>
+            {hosts.map((h, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 80px 1fr 1fr 1fr auto', gap: 4 }}>
+                <input style={S.input} placeholder="remote" value={h.remote} onChange={e => setHost(i, 'remote', e.target.value)} />
+                <input style={S.input} placeholder="role" value={h.role} onChange={e => setHost(i, 'role', e.target.value)} />
+                <input style={S.input} placeholder="base_url" value={h.base_url} onChange={e => setHost(i, 'base_url', e.target.value)} />
+                <input style={S.input} placeholder="file_url_template" value={h.file_url_template} onChange={e => setHost(i, 'file_url_template', e.target.value)} />
+                <input style={S.input} placeholder="pr_url_template" value={h.pr_url_template} onChange={e => setHost(i, 'pr_url_template', e.target.value)} />
+                <button style={S.btn} onClick={() => setHosts(hs => hs.filter((_, j) => j !== i))}>✕</button>
+              </div>
+            ))}
+            <div>
+              <button style={S.btn} onClick={() => setHosts(hs => [...hs, { remote: '', role: hs.length ? 'mirror' : 'primary', base_url: '', file_url_template: '{base}/src/branch/{branch}/{path}', pr_url_template: '{base}/pulls/{number}' }])}>
+                {t('lore.admin.addHost', '+ хостинг')}
+              </button>
             </div>
-          ))}
-          <div>
-            <button style={S.btn} onClick={() => setHosts(hs => [...hs, { remote: '', role: hs.length ? 'mirror' : 'primary', base_url: '', file_url_template: '{base}/src/branch/{branch}/{path}', pr_url_template: '{base}/pulls/{number}' }])}>
-              {t('lore.admin.addHost', '+ хостинг')}
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button style={S.primary} disabled={saving || !edit.slug.trim()} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
+              <button style={S.btn} onClick={() => { setEdit(null); setIsNew(false); }}>{t('lore.admin.cancel', 'Отмена')}</button>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={S.primary} disabled={saving} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
-            <button style={S.btn} onClick={() => setEdit(null)}>{t('lore.admin.cancel', 'Отмена')}</button>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
