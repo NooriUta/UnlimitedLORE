@@ -71,9 +71,9 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     // класс, что dict/kc: правит человек, не агент (ADR-LORE-025-D13 прямо
     // запрещает MCP-инструменты для user-management) — иначе агент смог бы
     // выдать себе (своему владельцу) любую роль в любом проекте.
-    // AL-84/ADR-LORE-025-D17: "project" — создание проекта, единицы изоляции
-    // всей модели; заводить её агенту нельзя ни при каком профиле, включая full.
-    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user", "project");
+    // "project" (AL-84/ADR-LORE-025-D17) переехал в FAMILY_AGENTS ниже, поправка
+    // 2026-08-11 (решение владельца) — см. комментарий там.
+    private static final Set<String> HUMAN_ONLY = Set.of("dict", "kc", "admin", "user");
 
     /**
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
@@ -130,8 +130,15 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // tech СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
         // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-..."), не заводит
         // отдельного /lore/tech — семейство "spec" уже покрывает этот путь.
-        // "project" СНЯТ (AL-84): переехал в HUMAN_ONLY — заводить проект
-        // может только super-admin, ни один агентный профиль вовсе.
+        // "project" (AL-84/ADR-LORE-025-D17, поправка 2026-08-11, решение
+        // владельца): единственный практический путь заведения проекта был
+        // мёртв — сидел в HUMAN_ONLY, ни один из семи агентных профилей не
+        // писал сюда, а у человека нет ни UI-кнопки, ни отдельной проверенной
+        // superadmin-учётки. Открыт РОВНО full — остальные шесть профилей
+        // по-прежнему без доступа. Человеческий порог не тронут: см.
+        // LoreResourceBase.requireSuperAdminOrAgentFull (там же по-прежнему
+        // нужна именно superadmin, не admin).
+        Map.entry("project",   Set.of("full")),
         Map.entry("bragi",     Set.of("full", "marketer")),
         // ── Найдено сверкой таблицы с реальными путями записи (AL-62) ────────
         // Три семейства имели живой POST под /lore, но в матрице отсутствовали,

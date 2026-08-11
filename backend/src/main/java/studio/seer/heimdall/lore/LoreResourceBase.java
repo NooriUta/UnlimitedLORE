@@ -102,6 +102,17 @@ public abstract class LoreResourceBase {
         }
     }
 
+    // AL-84/ADR-LORE-025-D17, поправка 2026-08-11 (решение владельца): единственный
+    // практический write-путь этого гейта был мёртв — ни один агентный профиль не
+    // писал в 'project' вовсе (AgentScopeFilter.HUMAN_ONLY), а у человека нет ни
+    // UI-кнопки на "Технологии"/паспорте проекта, ни проверенной superadmin-учётки.
+    // Открыт РОВНО agent-full — человеческий порог не понижен, там по-прежнему
+    // нужна именно роль superadmin, не admin.
+    void requireSuperAdminOrAgentFull(String role) {
+        if ("full".equals(callerAgentScope())) return;
+        requireSuperAdmin(role);
+    }
+
     @Inject
     io.quarkus.security.identity.SecurityIdentity identity;
 
