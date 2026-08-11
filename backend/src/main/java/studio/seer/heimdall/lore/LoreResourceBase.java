@@ -108,8 +108,19 @@ public abstract class LoreResourceBase {
     // UI-кнопки на "Технологии"/паспорте проекта, ни проверенной superadmin-учётки.
     // Открыт РОВНО agent-full — человеческий порог не понижен, там по-прежнему
     // нужна именно роль superadmin, не admin.
+    //
+    // Носитель c agent_scope, но НЕ full, отклоняется НАПРЯМУЮ — роль из заголовка
+    // не годится разделителем (тот же порядок проверок, что в isFullScopeCaller):
+    // KC выдаёт всем семи узким агентным профилям роль admin, поэтому её значение
+    // ничего не разделяет. В боевом пути AgentScopeFilter уже отсекает не-full
+    // раньше, чем запрос сюда доходит, — эта ветка защищает второй эшелон
+    // (dev/тесты с выключенным OIDC, где AgentScopeFilter — no-op).
     void requireSuperAdminOrAgentFull(String role) {
-        if ("full".equals(callerAgentScope())) return;
+        String scope = callerAgentScope();
+        if (scope != null) {
+            if ("full".equals(scope)) return;
+            throw new LoreExceptions.Forbidden("agent-" + scope + " не пишет в 'project'");
+        }
         requireSuperAdmin(role);
     }
 

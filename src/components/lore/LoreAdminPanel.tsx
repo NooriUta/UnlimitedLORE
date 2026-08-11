@@ -74,7 +74,11 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
   // Тех-реестр СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
   // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-…") — строка «Спеки/ранбуки/доки» выше.
-  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: строка была неверна ещё ДО этой
+  // правки (заявляла architect/pm, а бэкенд не пускал вовсе — семейство сидело в
+  // HUMAN_ONLY) и молчала, потому что coverage-тест пропускает пустые backend-сеты.
+  // Теперь бэкенд взаправду допускает РОВНО full — строка выровнена по факту.
+  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full'] },
   { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
   // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
   // в ветку «неизвестное — пропускаю». Держать синхронно с FAMILY_AGENTS в
