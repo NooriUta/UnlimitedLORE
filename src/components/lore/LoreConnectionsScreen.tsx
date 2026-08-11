@@ -28,7 +28,7 @@ const MINILORE_MCP_JSON = `{
 }`;
 
 const ATTACH_CMD = `cd <папка проекта>
-claude --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>`;
+& "$env:USERPROFILE\\.local\\bin\\claude.exe" --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>`;
 
 export default function LoreConnectionsScreen() {
   const { t } = useTranslation();
@@ -91,6 +91,9 @@ export default function LoreConnectionsScreen() {
               <Pre>{ATTACH_CMD}</Pre>
               <p style={S.noteTight}>
                 {t('lore.connections.step3Note', 'Не')} <code style={S.code}>-c</code>{t('lore.connections.step3NoteRest', ': он берёт самую свежую сессию в папке и легко подцепляет не тот диалог, если там недавно работало что-то ещё.')} <code style={S.codeAcc}>--resume &lt;sessionId&gt;</code>{t('lore.connections.step3NoteRest2', ' — адресный, ошибиться диалогом нельзя.')}
+              </p>
+              <p style={S.noteTight}>
+                {t('lore.connections.step3Shell', 'Команда — PowerShell')}{t('lore.connections.step3ShellRest', ' (оператор')} <code style={S.code}>&amp;</code>{t('lore.connections.step3ShellRest2', ' и')} <code style={S.code}>$env:</code>{t('lore.connections.step3ShellRest3', '); в Git Bash не сработает как есть.')}
               </p>
             </li>
           </ol>

@@ -1713,8 +1713,8 @@ const QUICK_GROUPS: { title: string; items: { label: string; cmd: string }[] }[]
     title: 'Канал miniLORE',
     items: [
       {
-        label: 'Подключить консоль к диалогу по sessionId (виден в приложении) — НЕ -c, он берёт не тот диалог',
-        cmd: 'claude --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>',
+        label: 'Подключить консоль к диалогу по sessionId (виден в приложении) — НЕ -c, он берёт не тот диалог. PowerShell.',
+        cmd: '& "$env:USERPROFILE\\.local\\bin\\claude.exe" --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>',
       },
     ],
   },
