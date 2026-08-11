@@ -50,6 +50,41 @@ export function sharedTechs(techs: string[], counts: Record<string, number>, min
   return techs.filter(t => (counts[t] ?? 0) >= min);
 }
 
+export type DriftSeverity = 'major' | 'minor' | 'patch' | null;
+
+/**
+ * VD-03: расхождения находились только глазами — владелец смотрела матрицу и
+ * замечала разные версии одной технологии. Сам реестр этого не показывал:
+ * есть признак «протухла запись» (`isStale`), признака «одна технология стоит
+ * разными версиями» не было. Возвращает силу расхождения (мажор заметнее
+ * минора/патча — VD-03 явно просит не топить мажор в шуме патчей), либо
+ * `null`, если версии совпадают или расхождений сравнивать не из чего.
+ *
+ * Версии без цифры в начале («latest (не закреплён)», «runtime (без
+ * закреплённой версии движка)») — НЕ расхождение версий, это отдельная
+ * проблема (незакреплённая версия), и функция намеренно их не сравнивает
+ * между собой и не смешивает с числовыми расхождениями.
+ */
+function versionKey(v: string): string | undefined {
+  return v.match(/^\d+(\.\d+)*/)?.[0];
+}
+
+export function techDrift(versions: (string | null | undefined)[]): DriftSeverity {
+  const parsed = versions
+    .filter((v): v is string => !!v)
+    .map(v => versionKey(v)?.split('.').map(Number))
+    .filter((p): p is number[] => p !== undefined);
+  if (parsed.length < 2) return null;
+  if (new Set(parsed.map(p => p[0] ?? 0)).size > 1) return 'major';
+  if (new Set(parsed.map(p => p[1] ?? 0)).size > 1) return 'minor';
+  if (new Set(parsed.map(p => p.join('.'))).size > 1) return 'patch';
+  return null;
+}
+
+const DRIFT_COLOR: Record<Exclude<DriftSeverity, null>, string> = {
+  major: 'var(--dng)', minor: 'var(--wrn)', patch: 'color-mix(in srgb, var(--wrn) 55%, var(--t3))',
+};
+
 const S = {
   wrap: { overflowX: 'auto' as const, width: '100%', border: '1px solid var(--bd)', borderRadius: 8, background: 'var(--bg1)' },
   table: { borderCollapse: 'separate' as const, borderSpacing: 0, fontSize: 'var(--fs-base)' },
@@ -108,6 +143,34 @@ export default function LoreTechMatrix({ byArea, rowsByComponent, allTech, techC
 
   const sharedCount = useMemo(() => sharedTechs(allTech, techCounts).length, [allTech, techCounts]);
 
+  // VD-03: по каждой технологии — сила расхождения версий + «модальная» версия
+  // (самая частая), чтобы подсветить не всю колонку одним цветом, а именно
+  // отклонившиеся ячейки. При ничьей (нет явного большинства) modeKey остаётся
+  // null — тогда подсвечивается вся колонка целиком, честнее, чем гадать.
+  const driftByTech = useMemo(() => {
+    const info = new Map<string, { severity: DriftSeverity; modeKey: string | null }>();
+    for (const tech of allTech) {
+      const versions: string[] = [];
+      for (const rows of rowsByComponent.values()) {
+        const v = rows.find(r => r.tech_name === tech)?.version;
+        if (v) versions.push(v);
+      }
+      const severity = techDrift(versions);
+      let modeKey: string | null = null;
+      if (severity) {
+        const counts = new Map<string, number>();
+        for (const v of versions) {
+          const k = versionKey(v);
+          if (k) counts.set(k, (counts.get(k) ?? 0) + 1);
+        }
+        let best = 0;
+        for (const [k, c] of counts) if (c > best) { best = c; modeKey = k; }
+      }
+      info.set(tech, { severity, modeKey });
+    }
+    return info;
+  }, [allTech, rowsByComponent]);
+
   if (allTech.length === 0) {
     return <div style={{ padding: 24, color: 'var(--t3)' }}>{t('lore.techMatrix.empty', 'Технологии не зарегистрированы.')}</div>;
   }
@@ -135,11 +198,25 @@ export default function LoreTechMatrix({ byArea, rowsByComponent, allTech, techC
           <thead>
             <tr>
               <th style={S.stickyHead}>{t('lore.techMatrix.component', 'Компонент')}</th>
-              {techs.map(tn => (
-                <th key={tn} style={S.techHead} title={t('lore.techMatrix.usedBy', 'Компонентов: {{n}}', { n: techCounts[tn] ?? 0 })}>
-                  {tn}
-                </th>
-              ))}
+              {techs.map(tn => {
+                const drift = driftByTech.get(tn);
+                const sev = drift?.severity ?? null;
+                return (
+                  <th
+                    key={tn}
+                    style={{
+                      ...S.techHead,
+                      ...(sev ? { color: DRIFT_COLOR[sev], fontWeight: 700 } : {}),
+                    }}
+                    title={
+                      t('lore.techMatrix.usedBy', 'Компонентов: {{n}}', { n: techCounts[tn] ?? 0 })
+                      + (sev ? ' · ' + t('lore.techMatrix.driftHint', 'версии расходятся ({{sev}})', { sev }) : '')
+                    }
+                  >
+                    {tn}{sev && ' ⚠'}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -159,7 +236,13 @@ export default function LoreTechMatrix({ byArea, rowsByComponent, allTech, techC
                           <span style={{ color: 'var(--t1)', fontSize: 'var(--fs-sm)' }}>{c.full_name ?? c.component_id}</span>
                         </span>
                       </td>
-                      {cells.map(cell => (
+                      {cells.map(cell => {
+                        const drift = driftByTech.get(cell.tech);
+                        // Ничья (modeKey=null) подсвечивает всю колонку — честнее,
+                        // чем приписывать «норму» случайно выбранной версии.
+                        const isDivergent = cell.present && cell.version && drift?.severity
+                          && (drift.modeKey === null || versionKey(cell.version) !== drift.modeKey);
+                        return (
                         <td
                           key={cell.tech}
                           style={{
@@ -170,11 +253,15 @@ export default function LoreTechMatrix({ byArea, rowsByComponent, allTech, techC
                                   ? 'color-mix(in srgb, var(--wrn) 10%, transparent)'
                                   : 'color-mix(in srgb, var(--acc) 8%, transparent)')
                               : 'transparent',
+                            ...(isDivergent
+                              ? { boxShadow: `inset 0 0 0 1px ${DRIFT_COLOR[drift!.severity!]}` }
+                              : {}),
                           }}
                           title={
                             cell.present
                               ? `${c.component_id} · ${cell.tech} ${cell.version ?? ''}`
                                 + (cell.stale ? ' — ' + t('lore.techMatrix.staleHint', 'давно не проверялось') : '')
+                                + (isDivergent ? ' — ' + t('lore.techMatrix.driftCellHint', 'версия расходится с остальными') : '')
                               : t('lore.techMatrix.addHint', 'Добавить {{tech}} компоненту {{comp}}', { tech: cell.tech, comp: c.component_id })
                           }
                           onClick={() => onPick(c.component_id, cell.tech)}
@@ -182,7 +269,8 @@ export default function LoreTechMatrix({ byArea, rowsByComponent, allTech, techC
                           {cell.present ? (cell.version ?? '✓') : ''}
                           {cell.stale && ' ⚠'}
                         </td>
-                      ))}
+                        );
+                      })}
                     </tr>
                   );
                 })}
@@ -198,6 +286,7 @@ export default function LoreTechMatrix({ byArea, rowsByComponent, allTech, techC
         <span><span style={{ display: 'inline-block', width: 10, height: 10, background: 'color-mix(in srgb, var(--wrn) 25%, transparent)', border: '1px solid var(--bd)', marginRight: 5 }} />
           {t('lore.techMatrix.legendStale', 'давно не проверялось')}</span>
         <span>{t('lore.techMatrix.legendEmpty', 'пусто — технология не зарегистрирована у компонента')}</span>
+        <span style={{ color: 'var(--wrn)' }}>⚠ {t('lore.techMatrix.legendDrift', 'заголовок технологии — версии расходятся; рамка ячейки — эта версия отличается от большинства')}</span>
       </div>
     </div>
   );
