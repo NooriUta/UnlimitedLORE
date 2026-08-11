@@ -46,8 +46,17 @@ class AgentScopeFilterTest {
         // /lore/admin/lore/ingest перезапускает переиндексацию всего корпуса и был
         // защищён только ролью admin, которую несут все семь узких агентных профилей.
         // user добавлен AL-82: назначение проектной роли человеку — тот же класс.
-        // project добавлен AL-84: создание проекта — единица изоляции модели.
-        assertEquals(Set.of("dict", "kc", "admin", "user", "project"), AgentScopeFilter.humanOnlyFamilies());
+        // project СНЯТ поправкой 2026-08-11 (AL-84/ADR-LORE-025-D17) — переехал в
+        // FAMILY_AGENTS с единственным допущенным профилем full, см. тест ниже.
+        assertEquals(Set.of("dict", "kc", "admin", "user"), AgentScopeFilter.humanOnlyFamilies());
+    }
+
+    @Test
+    void проектОткрытТолькоFullОстальныеПрофилиПрежнегоЗакрыты() {
+        // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: единственный практический
+        // путь заведения проекта был мёртв для всех — открыт РОВНО full, не все
+        // агентные профили сразу (в отличие от обычных семейств вроде task/status).
+        assertEquals(Set.of("full"), allowedFor("project"));
     }
 
     @Test

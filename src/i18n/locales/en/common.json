@@ -2030,6 +2030,8 @@
     },
     "admin": {
       "addHost": "+ hosting",
+      "addProject": "+ Add project",
+      "projectSlugHint": "owner/repo — same as Forgejo/GitHub; locked after creation",
       "addUser": "+ Person",
       "projectRoles": "Project roles",
       "projectRolesNote": "The second axis of rights: what a person does in a specific project. It also determines what their agent may do (delegation matrix) and which projects they can see.",
