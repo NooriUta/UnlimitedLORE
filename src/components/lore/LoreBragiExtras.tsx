@@ -11,6 +11,7 @@ import LoreBragiIntegrationEditor, { type LoreBragiIntegrationEditData } from '.
 import LoreBragiKeywordEditor, { type LoreBragiKeywordEditData } from './LoreBragiKeywordEditor';
 import LoreBragiRubricManager, { type RubricRow } from './LoreBragiRubricManager';
 import { FilterBar, FilterDimensionMulti, type FilterTagData } from './FilterPrimitives';
+import { ratioPct, channelCtrMedians, benchmarkArrow } from './bragiAnalytics';
 
 // Shared facet helpers for the Bragi tables (T35) — same "empty = all,
 // counts exclude own dimension" model as Forseti (T33/T34).
@@ -221,6 +222,21 @@ export function LoreBragiArchive() {
   const channelCounts = useMemo(() => facetCount(rows, () => true, r => r.channel_id), [rows]);
   const toggleChannel = mkSetToggle(setChannelSel);
 
+  // V2-03: CTR/демо-rate на чтении + медиана канала как бенчмарк «обычного
+  // результата» — считаются по ВСЕМ строкам (rows), не по отфильтрованным
+  // (filtered), иначе включённый фильтр канала менял бы саму мерку «типично
+  // для канала», а не только видимость строк.
+  const withRates = useMemo(() => rows.map(r => ({
+    ...r,
+    ctr: ratioPct(r.clicks, r.views),
+    demoRate: ratioPct(r.demo, r.clicks),
+  })), [rows]);
+  const ctrMedianByChannel = useMemo(
+    () => channelCtrMedians(withRates.map(r => ({ channel: r.channel_id[0] ?? null, ctr: r.ctr }))),
+    [withRates],
+  );
+  const filteredWithRates = useMemo(() => withRates.filter(matchChannel), [withRates, matchChannel]);
+
   if (loading) return <div style={S.hint}>{t('bragi.extras.archive.loading', 'загрузка…')}</div>;
   if (error) return <div style={S.hint}>{t('bragi.extras.loadError', 'не удалось загрузить — данные могут быть, проверьте сессию/сеть и обновите')}</div>;
   return (
@@ -249,18 +265,32 @@ export function LoreBragiArchive() {
           <thead><tr>
             <th style={S.th}>{t('bragi.extras.archive.colPublication', 'публикация')}</th><th style={S.th}>{t('bragi.extras.archive.colChannel', 'канал')}</th><th style={S.th}>{t('bragi.extras.archive.colDate', 'дата')}</th>
             <th style={S.thNum}>{t('bragi.extras.archive.colViews', 'просмотры')}</th><th style={S.thNum}>{t('bragi.extras.archive.colClicks', 'переходы')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemo', 'демо')}</th>
+            <th style={S.thNum}>{t('bragi.extras.archive.colCtr', 'CTR')}</th><th style={S.thNum}>{t('bragi.extras.archive.colDemoRate', 'демо-rate')}</th>
           </tr></thead>
           <tbody>
-            {filtered.map(r => (
-              <tr key={r.variant_id}>
-                <td style={S.td}>{r.title[0] ?? r.publication_id[0]}</td>
-                <td style={S.td}>{r.channel_id[0] ?? '—'}</td>
-                <td style={S.td}>{r.published_at}</td>
-                <td style={S.tdNum}>{r.views || '—'}</td>
-                <td style={S.tdNum}>{r.clicks || '—'}</td>
-                <td style={S.tdNum}>{r.demo || '—'}</td>
-              </tr>
-            ))}
+            {filteredWithRates.map(r => {
+              const channel = r.channel_id[0] ?? null;
+              const channelMedian = channel ? ctrMedianByChannel.get(channel) : undefined;
+              const arrow = benchmarkArrow(r.ctr, channelMedian);
+              const medianTitle = channelMedian !== undefined
+                ? t('bragi.extras.archive.ctrMedianTitle', 'медиана {{channel}}: {{v}}%', { channel, v: channelMedian.toFixed(1) })
+                : undefined;
+              return (
+                <tr key={r.variant_id}>
+                  <td style={S.td}>{r.title[0] ?? r.publication_id[0]}</td>
+                  <td style={S.td}>{channel ?? '—'}</td>
+                  <td style={S.td}>{r.published_at}</td>
+                  <td style={S.tdNum}>{r.views || '—'}</td>
+                  <td style={S.tdNum}>{r.clicks || '—'}</td>
+                  <td style={S.tdNum}>{r.demo || '—'}</td>
+                  <td style={S.tdNum} title={medianTitle}>
+                    {r.ctr === null ? '—' : `${r.ctr.toFixed(1)}%`}
+                    {arrow && <span style={arrow === '▲' ? S.arrowUp : S.arrowDown}> {arrow}</span>}
+                  </td>
+                  <td style={S.tdNum}>{r.demoRate === null ? '—' : `${r.demoRate.toFixed(1)}%`}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         </div>
@@ -413,6 +443,11 @@ const S: Record<string, React.CSSProperties> = {
   insightLinks:{ marginTop: 9, display: 'flex', gap: 7, flexWrap: 'wrap' },
   chipAcc: { background: 'color-mix(in srgb, var(--acc) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--acc) 30%, transparent)',
              borderRadius: 6, padding: '1px 8px', fontSize: 'var(--fs-sm)', color: 'var(--acc)' },
+  // V2-03: CTR выше/ниже медианы канала — тот же смысл, что светофор в
+  // остальном LORE (--suc/--dng), не жёлтый: тут не «предупреждение», а
+  // направленное сравнение с типичным результатом канала.
+  arrowUp:   { color: 'var(--suc)', fontWeight: 700 },
+  arrowDown: { color: 'var(--dng)', fontWeight: 700 },
   // Тот же анти-паттерн, что в паспортах ADR/компонента: transparent на
   // светлых темах сливается с фоном страницы. Заливка var(--b2).
   editBtn: { flex: 'none', fontSize: 'var(--fs-sm)', color: 'var(--t2)', background: 'var(--b2)', border: '1px solid var(--b3)',
