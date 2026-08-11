@@ -17,8 +17,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -657,6 +659,74 @@ public class LoreProductResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR OWNER] %s: %s", req.actor_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    /**
+     * MT-11/D-VP-ROLE-AGENT-PAIR: агент → роль, которую он исполняет.
+     * {@code rel} принимает единственное значение ({@code "fills_role"}) —
+     * enum ради согласованности с остальными {@code *_link}-инструментами
+     * (uc_link/task_link/…), не заглушка на будущее расширение конкретно
+     * здесь.
+     */
+    public record ActorLinkRequest(String actor_id, String rel, String target_id, String action) {}
+
+    @POST
+    @Path("actor/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkActor(ActorLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
+            return badParams("actor_id required");
+        if (!SAFE_ID.matcher(req.actor_id()).matches())
+            return badParams("actor_id contains illegal characters");
+        if (!"fills_role".equals(req.rel()))
+            return badParams("rel must be 'fills_role'");
+        if (req.target_id() == null || req.target_id().isBlank())
+            return badParams("target_id required");
+        boolean remove = "remove".equals(req.action());
+        try {
+            List<Map<String, Object>> agentRows = ingest.queryPublic(
+                "SELECT kind FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
+            if (agentRows == null || agentRows.isEmpty())
+                return badParams("actor '" + req.actor_id() + "' не найден — заведите через actor_new");
+            if (!"agent".equals(agentRows.get(0).get("kind")))
+                return badParams("actor '" + req.actor_id() + "' не kind=agent — FILLS_ROLE заводится от агента к роли");
+
+            // Один агент — одна действующая роль в любой момент: снести старое
+            // ребро, поставить новое (тот же паттерн, что OWNED_BY/
+            // HAS_PROJECT_ROLE reassign) — не накапливать историю рёбер.
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(outE('FILLS_ROLE')) FROM KnowActor WHERE actor_id=:id)",
+                Map.of("id", req.actor_id()))).await().indefinitely();
+
+            boolean linked = false;
+            if (!remove) {
+                List<Map<String, Object>> roleRows = ingest.queryPublic(
+                    "SELECT actor_id FROM KnowActor WHERE actor_id = :id", Map.of("id", req.target_id()));
+                if (roleRows == null || roleRows.isEmpty())
+                    return badParams("actor '" + req.target_id() + "' (роль) не найден — заведите через actor_new");
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> created = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE FILLS_ROLE FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                        "TO (SELECT FROM KnowActor WHERE actor_id=:t) IF NOT EXISTS",
+                        Map.of("id", req.actor_id(), "t", req.target_id())))
+                    .await().indefinitely().result();
+                linked = created != null && !created.isEmpty();
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            out.put("rel", req.rel());
+            out.put("target_id", req.target_id());
+            out.put("linked", linked);
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ACTOR LINK] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
         }
     }
@@ -1584,6 +1654,60 @@ public class LoreProductResource extends LoreResourceBase {
         return new CheckOutcome(bad.size(), LoreSchemaMigrations.FT_INDEXES.size(), findings, bad.size() > cap);
     }
 
+    private static Set<String> toStringSet(Object v) {
+        if (!(v instanceof Collection<?> c)) return Set.of();
+        Set<String> out = new LinkedHashSet<>();
+        for (Object o : c) if (o != null) out.add(o.toString());
+        return out;
+    }
+
+    /**
+     * MT-11/D-VP-ROLE-AGENT-PAIR (редакция 3): пара «агент — её роль»
+     * сходится, когда множества {@code PERFORMED_BY} у обоих совпадают.
+     * Расхождение — находка с разностью в ОБЕ стороны (чего не хватает
+     * агенту / что у агента лишнее), не булев вердикт: «не сходится»
+     * неотличимо от «не сходится» без списка того, чего не хватает —
+     * чинить нечего.
+     *
+     * <p>Актор БЕЗ ребра {@code FILLS_ROLE} вовсе не входит в
+     * {@code actor_pairs} — третье состояние («двойником не является») сюда
+     * не попадает и {@code found} не увеличивает: {@code ACT-LORE-AGENT-SESSION}
+     * намеренно без пары, это утверждение, а не пробел. Денаминатор — число
+     * СУЩЕСТВУЮЩИХ пар, а не число агентов: непарный актор — не то же самое,
+     * что непроверенная пара.
+     */
+    private CheckOutcome checkActorPairs() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("actor_pairs").baseSql(), Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            Set<String> jobsRole = toStringSet(r.get("jobs_role"));
+            Set<String> jobsAgent = toStringSet(r.get("jobs_agent"));
+            Set<String> missingInAgent = new LinkedHashSet<>(jobsRole);
+            missingInAgent.removeAll(jobsAgent);
+            Set<String> missingInRole = new LinkedHashSet<>(jobsAgent);
+            missingInRole.removeAll(jobsRole);
+            if (!missingInAgent.isEmpty() || !missingInRole.isEmpty()) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    int matched = jobsRole.size() - missingInAgent.size();
+                    StringBuilder detail = new StringBuilder()
+                        .append("у агента ").append(matched).append(" из ").append(jobsRole.size())
+                        .append(" работ роли");
+                    if (!missingInAgent.isEmpty())
+                        detail.append("; не хватает агенту: ").append(String.join(", ", missingInAgent));
+                    if (!missingInRole.isEmpty())
+                        detail.append("; лишнее у агента: ").append(String.join(", ", missingInRole));
+                    findings.add(finding(r.get("agent_id"), r.get("agent_name"), detail.toString(),
+                        "actors", r.get("agent_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
     @GET
     @Path("product/self-check")
     @Produces(MediaType.APPLICATION_JSON)
@@ -1599,6 +1723,7 @@ public class LoreProductResource extends LoreResourceBase {
         checks.add(runSelfCheck("strategic_coverage", "Стратегическое покрытие (фичи ↔ вехи)", this::checkStrategicCoverage));
         checks.add(runSelfCheck("actor_load_dead", "Роли без сценариев", this::checkActorLoadDead));
         checks.add(runSelfCheck("ft_index_health", "Пригодность полнотекстовых индексов", this::checkFtIndexHealth));
+        checks.add(runSelfCheck("actor_pairs", "Пары «роль — агент»: расхождение работ", this::checkActorPairs));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("run_at", Instant.now().toString());
