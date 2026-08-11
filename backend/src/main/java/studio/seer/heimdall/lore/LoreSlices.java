@@ -1247,6 +1247,37 @@ public final class LoreSlices {
             // silently truncate; still bounded to avoid an unbounded query.
             List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 5000");
 
+        // SE-01: пожелание сессии проекта UDWE/mig_gen (передано владельцем
+        // 2026-08-11/12) — `all_tasks` несёт `note_md`, из-за чего выдача по
+        // всему корпусу раздувается в сотни раз (4 млн символов / 57 730 строк
+        // на живом замере той же ночи), а получить «открытые задачи одного
+        // проекта» без note_md было нельзя вовсе. `open_tasks` — облегчённая
+        // проекция БЕЗ note_md, с фильтром «не done и не cancelled» встроенным
+        // в само название (не нужно перечислять статусы), плюс узкие фильтры
+        // по проекту/спринту/компоненту/классу работы (тоже из пожелания).
+        //
+        // "Открыто" читается по значку статуса (тот же icon-first паттерн,
+        // что в AidaLoreResource.classifyStatus/AL-117), а не по слову — иначе
+        // тот же класс дефекта, что уже ловили на этой же задаче раньше.
+        slice("open_tasks",
+            "SELECT task_uid, task_id, title, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('TAGGED_WITH').component_id AS component_ids, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
+            "FROM KnowTask " +
+            "WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '✅%' " +
+            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '🚫%'",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                // Двойной хоп — тот же паттерн, что уже проверен в этом файле
+                // (напр. tasks_of_uc: out('PART_OF').out('HAS_STATE')...).
+                "project", " WHERE out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+                "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint",
+                "component", " WHERE out('TAGGED_WITH').component_id CONTAINS :component",
+                "work_class", " WHERE work_class = :work_class")),
+            " ORDER BY sprint_id, task_uid LIMIT 3000");
+
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
             "SELECT finding_id, type, verified, source_sprint " +
