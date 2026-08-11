@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1584,6 +1585,52 @@ public class LoreProductResource extends LoreResourceBase {
         return new CheckOutcome(bad.size(), LoreSchemaMigrations.FT_INDEXES.size(), findings, bad.size() > cap);
     }
 
+    /**
+     * MT-09 / ADR-LORE-028 D19 (проверка качества №7): у сценария обязан быть
+     * РОВНО ОДИН primary-актор — ни ноль, ни несколько. Заявлено в ADR, но
+     * нигде не считалось: {@code actor_load} отдаёт primary_count по АКТОРУ
+     * (сколько сценариев он ведёт), а не по СЦЕНАРИЮ (сколько у него ведущих).
+     *
+     * <p>Обнаружено на практике: девять вызовов {@code uc_link} с параметром
+     * {@code role} вместо {@code actor_role} прошли с {@code ok:true}, роль
+     * отброшена как незнакомый параметр, и два сценария остались вовсе без
+     * primary — тот же заход (MT-09) закрыл и приём незнакомых параметров на
+     * входе MCP-инструментов (strict-схемы в mcp-server), так что впредь
+     * такое не пройдёт молча. Эта проверка — вторая линия: ловит то, что уже
+     * накопилось до фикса, и то, что могло прийти любым другим путём.
+     */
+    private CheckOutcome checkUcSinglePrimary() {
+        List<Map<String, Object>> ucRows = ingest.queryPublic(
+            "SELECT uc_id, title, goal_level FROM KnowUseCase", Map.of());
+        List<Map<String, Object>> actorRows = ingest.queryPublic(
+            LoreSlices.get("uc_actors").baseSql(), Map.of());
+
+        Map<String, Integer> primariesByUc = new HashMap<>();
+        for (Map<String, Object> r : actorRows) {
+            if (!"primary".equals(str(r.get("role")))) continue;
+            String ucId = str(r.get("uc_id"));
+            primariesByUc.merge(ucId, 1, Integer::sum);
+        }
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> uc : ucRows) {
+            String ucId = str(uc.get("uc_id"));
+            int primaries = primariesByUc.getOrDefault(ucId, 0);
+            if (primaries != 1) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = primaries == 0
+                        ? "нет primary-актора"
+                        : primaries + " primary-акторов вместо одного";
+                    findings.add(finding(ucId, uc.get("title"), detail,
+                        goalLevelSection(str(uc.get("goal_level"))), ucId));
+                }
+            }
+        }
+        return new CheckOutcome(found, ucRows.size(), findings, found > findings.size());
+    }
+
     @GET
     @Path("product/self-check")
     @Produces(MediaType.APPLICATION_JSON)
@@ -1599,6 +1646,7 @@ public class LoreProductResource extends LoreResourceBase {
         checks.add(runSelfCheck("strategic_coverage", "Стратегическое покрытие (фичи ↔ вехи)", this::checkStrategicCoverage));
         checks.add(runSelfCheck("actor_load_dead", "Роли без сценариев", this::checkActorLoadDead));
         checks.add(runSelfCheck("ft_index_health", "Пригодность полнотекстовых индексов", this::checkFtIndexHealth));
+        checks.add(runSelfCheck("uc_single_primary", "Сценарии без ровно одного primary-актора", this::checkUcSinglePrimary));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("run_at", Instant.now().toString());
