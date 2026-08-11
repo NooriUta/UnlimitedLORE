@@ -19,6 +19,12 @@
       "headers": {
         "Authorization": "Bearer ${FORGEJO_MCP_API_KEY}"
       }
+    },
+    "mobilepoc-channel": {
+      "command": "node",
+      "args": [
+        "D:/Mobilepoc/channel/server.js"
+      ]
     }
   }
 }
