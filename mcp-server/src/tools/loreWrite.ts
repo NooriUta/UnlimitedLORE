@@ -510,6 +510,30 @@ export function registerLoreWrite(server: McpServer): void {
     }),
   });
 
+  // MT-11/D-VP-ROLE-AGENT-PAIR (редакция 3): агент → роль, которую он
+  // исполняет. rel — enum ради согласованности с остальными *_link
+  // (uc_link/task_link/…), не задел на будущее расширение конкретно здесь.
+  // Один агент — одна действующая роль: переприсвоение сносит старое ребро,
+  // не накапливает историю (как OWNED_BY). linked:false = target_id (роль)
+  // не найден — не тихий no-op.
+  definePostTool(server, {
+    name: 'actor_link',
+    description: 'Link (or unlink) a KnowActor(kind=agent) to the KnowActor(kind=human-role) whose work it ' +
+      'performs — FILLS_ROLE edge (D-VP-ROLE-AGENT-PAIR). The pair is checked in product/self-check ' +
+      '(actor_pairs): the two actors\' PERFORMED_BY job sets must match — a mismatch is a real finding, ' +
+      'not a silent pass. Reassigning an agent replaces its previous FILLS_ROLE edge, it does not add a ' +
+      'second one. An agent with no FILLS_ROLE edge at all is a legitimate third state ("not a twin"), not ' +
+      'an error — ACT-LORE-AGENT-SESSION is deliberately unpaired. Mutates system_aida_lore.',
+    schema: {
+      actor_id:  z.string().describe('agent actor_id, e.g. "AGENT-ARCHITECT-msbt34au"'),
+      rel:       z.enum(['fills_role']),
+      target_id: z.string().describe('the human-role actor_id this agent fills, e.g. "ACT-LORE-ARCHITECT"'),
+      action:    z.enum(['add', 'remove']).optional().default('add'),
+    },
+    path: '/lore/actor/link',
+    body: ({ actor_id, rel, target_id, action }) => ({ actor_id, rel, target_id, action: action ?? 'add' }),
+  });
+
   // sprint_plan_set (MCPSYNC-01): закрывает единственную содержательную дыру
   // сверки REST↔MCP 2026-07-17 — /lore/sprint/plan (приоритет + плановые даты +
   // track_id, SCD2 close-open) был недостижим из агентов; sprint_set честно

@@ -574,7 +574,17 @@ final class LoreSchemaMigrations {
         // упёрлась бы в право менять схему, которого у рантайма больше нет.
         // Объявление переезжает сюда, эндпоинт остаётся чистым бэкфиллом рёбер.
         new Step(22, 17, "in_area_edge_type", List.of(
-            "CREATE EDGE TYPE IN_AREA IF NOT EXISTS"))
+            "CREATE EDGE TYPE IN_AREA IF NOT EXISTS")),
+
+        // MT-11/D-VP-ROLE-AGENT-PAIR (редакция 3): агент, исполняющий работу
+        // роли, связан с ней явным ребром KnowActor(agent) -> KnowActor(role)
+        // — различие не сворачивается в свойство. У ребра есть проверяемый
+        // инвариант (множества PERFORMED_BY у пары обязаны совпадать, см.
+        // LoreProductResource.checkActorPairs / срез actor_pairs), а не он
+        // сам несёт данные — без свойств, как OWNED_BY: переприсвоение — снести
+        // старое ребро и создать новое, не накапливать историю.
+        new Step(23, 17, "actor_fills_role", List.of(
+            "CREATE EDGE TYPE FILLS_ROLE IF NOT EXISTS"))
     );
 
     /**

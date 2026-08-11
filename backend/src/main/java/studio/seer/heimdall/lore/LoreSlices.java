@@ -708,6 +708,22 @@ public final class LoreSlices {
             new LinkedHashMap<>(Map.of("uc_id", " WHERE @out.uc_id = :uc_id")),
             " ORDER BY uc_id");
 
+        // MT-11/D-VP-ROLE-AGENT-PAIR: пары «агент → роль» построчно, сырые
+        // ингредиенты для проверки совпадения работ (сам диф — в Java,
+        // LoreProductResource.checkActorPairs, тем же приёмом, что
+        // uc_single_primary у uc_actors). Ребро FILLS_ROLE отдаёт ровно ОДНУ
+        // строку на агента (переприсвоение сносит старое — см. миграцию), так
+        // что actor_id агента здесь уникален; акторы без ребра сюда не
+        // попадают вовсе — это «двойником не является», третье состояние,
+        // не пустая находка.
+        slice("actor_pairs",
+            "SELECT @out.actor_id AS agent_id, @out.name AS agent_name, " +
+            "@in.actor_id AS role_id, @in.name AS role_name, " +
+            "@in.in('PERFORMED_BY').job_id AS jobs_role, " +
+            "@out.in('PERFORMED_BY').job_id AS jobs_agent " +
+            "FROM FILLS_ROLE",
+            List.of(), Map.of(), " ORDER BY role_id");
+
         // AN-05 (ADR-LORE-030 §2 срез C, зависимость PL-15): shipped-динамика.
         // Сырые строки по выехавшим сценариям; периоды/релизы группирует клиент
         // по shipped_at (GROUP BY-ловушка). Lead time = shipped_at −
