@@ -1047,8 +1047,16 @@ public final class LoreSlices {
         // status_raw is free text after the marker ("✅ MERGED", "✅ ЗАКРЫТ …"),
         // and DONE-only matching drops every Russian/synonym completion. Aligned
         // to the icon-prefix pattern already used by sprint_done_dates below.
+        //
+        // AL-119: task_uid added alongside task_id at miniLORE's request, backed
+        // by their own measurement — 295 of 2470 distinct task_id codes (12%)
+        // belong to more than one task (T-01 alone: 74 different tasks), and the
+        // worst offenders are exactly the short generic codes ("T-01", "P-01"..
+        // "P-04") most likely to show up here. task_id alone is not a safe join
+        // key; task_uid (sprint_id + "/" + task_id) is unique, same field every
+        // other task-facing slice (all_tasks, tasks_of_sprint) already carries.
         slice("task_done_dates",
-            "SELECT in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days " +
             "FROM KnowTaskHist WHERE valid_to IS NULL " +
