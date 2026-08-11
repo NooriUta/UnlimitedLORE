@@ -6,11 +6,14 @@ import { registerLoreWrite } from './tools/loreWrite.js';
 import { BACKEND_URL } from './backend.js';
 import { registerMuninn } from './tools/muninn.js';
 import { registerForgejo, forgejoConfigured } from './tools/forgejo.js';
+import { withStrictTools } from './tools/strictTool.js';
 
 // stdio MCP server for AIDA LORE. Talks to the UnlimitedLORE backend (:9100),
 // which in turn serves system_aida_lore. NEVER write to stdout — it is the
 // JSON-RPC channel; diagnostics go to stderr only.
-const server = new McpServer({ name: 'aida-lore', version: '1.0.0' });
+// withStrictTools (MT-09): wraps .tool() so every schema below is registered
+// strict — an unknown parameter is a 400, not a silently dropped key.
+const server = withStrictTools(new McpServer({ name: 'aida-lore', version: '1.0.0' }));
 
 registerLoreRead(server);
 registerLoreWrite(server);

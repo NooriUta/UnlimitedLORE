@@ -16,9 +16,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -657,6 +660,74 @@ public class LoreProductResource extends LoreResourceBase {
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR OWNER] %s: %s", req.actor_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    /**
+     * MT-11/D-VP-ROLE-AGENT-PAIR: агент → роль, которую он исполняет.
+     * {@code rel} принимает единственное значение ({@code "fills_role"}) —
+     * enum ради согласованности с остальными {@code *_link}-инструментами
+     * (uc_link/task_link/…), не заглушка на будущее расширение конкретно
+     * здесь.
+     */
+    public record ActorLinkRequest(String actor_id, String rel, String target_id, String action) {}
+
+    @POST
+    @Path("actor/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkActor(ActorLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
+            return badParams("actor_id required");
+        if (!SAFE_ID.matcher(req.actor_id()).matches())
+            return badParams("actor_id contains illegal characters");
+        if (!"fills_role".equals(req.rel()))
+            return badParams("rel must be 'fills_role'");
+        if (req.target_id() == null || req.target_id().isBlank())
+            return badParams("target_id required");
+        boolean remove = "remove".equals(req.action());
+        try {
+            List<Map<String, Object>> agentRows = ingest.queryPublic(
+                "SELECT kind FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
+            if (agentRows == null || agentRows.isEmpty())
+                return badParams("actor '" + req.actor_id() + "' не найден — заведите через actor_new");
+            if (!"agent".equals(agentRows.get(0).get("kind")))
+                return badParams("actor '" + req.actor_id() + "' не kind=agent — FILLS_ROLE заводится от агента к роли");
+
+            // Один агент — одна действующая роль в любой момент: снести старое
+            // ребро, поставить новое (тот же паттерн, что OWNED_BY/
+            // HAS_PROJECT_ROLE reassign) — не накапливать историю рёбер.
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(outE('FILLS_ROLE')) FROM KnowActor WHERE actor_id=:id)",
+                Map.of("id", req.actor_id()))).await().indefinitely();
+
+            boolean linked = false;
+            if (!remove) {
+                List<Map<String, Object>> roleRows = ingest.queryPublic(
+                    "SELECT actor_id FROM KnowActor WHERE actor_id = :id", Map.of("id", req.target_id()));
+                if (roleRows == null || roleRows.isEmpty())
+                    return badParams("actor '" + req.target_id() + "' (роль) не найден — заведите через actor_new");
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> created = (List<Map<String, Object>>)
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "CREATE EDGE FILLS_ROLE FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
+                        "TO (SELECT FROM KnowActor WHERE actor_id=:t) IF NOT EXISTS",
+                        Map.of("id", req.actor_id(), "t", req.target_id())))
+                    .await().indefinitely().result();
+                linked = created != null && !created.isEmpty();
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            out.put("rel", req.rel());
+            out.put("target_id", req.target_id());
+            out.put("linked", linked);
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE ACTOR LINK] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
         }
     }
@@ -1584,6 +1655,188 @@ public class LoreProductResource extends LoreResourceBase {
         return new CheckOutcome(bad.size(), LoreSchemaMigrations.FT_INDEXES.size(), findings, bad.size() > cap);
     }
 
+    private static Set<String> toStringSet(Object v) {
+        if (!(v instanceof Collection<?> c)) return Set.of();
+        Set<String> out = new LinkedHashSet<>();
+        for (Object o : c) if (o != null) out.add(o.toString());
+        return out;
+    }
+
+    /**
+     * MT-11/D-VP-ROLE-AGENT-PAIR (редакция 3): пара «агент — её роль»
+     * сходится, когда множества {@code PERFORMED_BY} у обоих совпадают.
+     * Расхождение — находка с разностью в ОБЕ стороны (чего не хватает
+     * агенту / что у агента лишнее), не булев вердикт: «не сходится»
+     * неотличимо от «не сходится» без списка того, чего не хватает —
+     * чинить нечего.
+     *
+     * <p>Актор БЕЗ ребра {@code FILLS_ROLE} вовсе не входит в
+     * {@code actor_pairs} — третье состояние («двойником не является») сюда
+     * не попадает и {@code found} не увеличивает: {@code ACT-LORE-AGENT-SESSION}
+     * намеренно без пары, это утверждение, а не пробел. Денаминатор — число
+     * СУЩЕСТВУЮЩИХ пар, а не число агентов: непарный актор — не то же самое,
+     * что непроверенная пара.
+     */
+    private CheckOutcome checkActorPairs() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("actor_pairs").baseSql(), Map.of());
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            Set<String> jobsRole = toStringSet(r.get("jobs_role"));
+            Set<String> jobsAgent = toStringSet(r.get("jobs_agent"));
+            Set<String> missingInAgent = new LinkedHashSet<>(jobsRole);
+            missingInAgent.removeAll(jobsAgent);
+            Set<String> missingInRole = new LinkedHashSet<>(jobsAgent);
+            missingInRole.removeAll(jobsRole);
+            if (!missingInAgent.isEmpty() || !missingInRole.isEmpty()) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    int matched = jobsRole.size() - missingInAgent.size();
+                    StringBuilder detail = new StringBuilder()
+                        .append("у агента ").append(matched).append(" из ").append(jobsRole.size())
+                        .append(" работ роли");
+                    if (!missingInAgent.isEmpty())
+                        detail.append("; не хватает агенту: ").append(String.join(", ", missingInAgent));
+                    if (!missingInRole.isEmpty())
+                        detail.append("; лишнее у агента: ").append(String.join(", ", missingInRole));
+                    findings.add(finding(r.get("agent_id"), r.get("agent_name"), detail.toString(),
+                        "actors", r.get("agent_id")));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
+    /**
+     * MT-09 / ADR-LORE-028 D19 (проверка качества №7): у сценария обязан быть
+     * РОВНО ОДИН primary-актор — ни ноль, ни несколько. Заявлено в ADR, но
+     * нигде не считалось: {@code actor_load} отдаёт primary_count по АКТОРУ
+     * (сколько сценариев он ведёт), а не по СЦЕНАРИЮ (сколько у него ведущих).
+     *
+     * <p>Обнаружено на практике: девять вызовов {@code uc_link} с параметром
+     * {@code role} вместо {@code actor_role} прошли с {@code ok:true}, роль
+     * отброшена как незнакомый параметр, и два сценария остались вовсе без
+     * primary — тот же заход (MT-09) закрыл и приём незнакомых параметров на
+     * входе MCP-инструментов (strict-схемы в mcp-server), так что впредь
+     * такое не пройдёт молча. Эта проверка — вторая линия: ловит то, что уже
+     * накопилось до фикса, и то, что могло прийти любым другим путём.
+     */
+    private CheckOutcome checkUcSinglePrimary() {
+        List<Map<String, Object>> ucRows = ingest.queryPublic(
+            "SELECT uc_id, title, goal_level FROM KnowUseCase", Map.of());
+        List<Map<String, Object>> actorRows = ingest.queryPublic(
+            LoreSlices.get("uc_actors").baseSql(), Map.of());
+
+        Map<String, Integer> primariesByUc = new HashMap<>();
+        for (Map<String, Object> r : actorRows) {
+            if (!"primary".equals(str(r.get("role")))) continue;
+            String ucId = str(r.get("uc_id"));
+            primariesByUc.merge(ucId, 1, Integer::sum);
+        }
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> uc : ucRows) {
+            String ucId = str(uc.get("uc_id"));
+            int primaries = primariesByUc.getOrDefault(ucId, 0);
+            if (primaries != 1) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = primaries == 0
+                        ? "нет primary-актора"
+                        : primaries + " primary-акторов вместо одного";
+                    findings.add(finding(ucId, uc.get("title"), detail,
+                        goalLevelSection(str(uc.get("goal_level"))), ucId));
+                }
+            }
+        }
+        return new CheckOutcome(found, ucRows.size(), findings, found > findings.size());
+    }
+
+    /**
+     * AL-116 (найдено miniLORE 2026-08-11, живым сравнением {@code is_current}
+     * против максимальной версии по проекту): у {@code KnowRelease} обязан
+     * быть ровно один {@code is_current} на {@code git_project} — инвариант
+     * нигде не проверялся. На практике разошёлся дважды: {@code NooriUta/AIDA}
+     * застрял на v1.3.0 (24 апреля) при максимуме v1.7.2 (10 июля, между ними
+     * ещё сто релизов), {@code NooriUta/seidr-site} нёс current СРАЗУ на двух
+     * версиях — проект задваивался у потребителей, фильтрующих по
+     * {@code is_current}. Оба исправлены вручную ({@code release_set}) тем же
+     * заходом; эта проверка — чтобы расхождение не накопилось молча снова.
+     *
+     * <p>{@code found} считает и «больше одного», и «ни одного» — оба
+     * состояния одинаково неверны для проекта, у которого релизы вообще
+     * есть. Проект без единого релиза в выборку не попадает (нечего
+     * проверять). Денаминатор — число проектов С РЕЛИЗАМИ, не число
+     * зарегистрированных {@code KnowGitProject}.
+     */
+    private CheckOutcome checkReleaseSingleCurrent() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("releases").baseSql(), Map.of());
+
+        Map<String, Integer> totalByProject = new HashMap<>();
+        Map<String, Integer> currentByProject = new HashMap<>();
+        for (Map<String, Object> r : rows) {
+            String proj = str(r.get("git_project"));
+            if (proj == null || proj.isBlank()) continue;
+            totalByProject.merge(proj, 1, Integer::sum);
+            if (Boolean.TRUE.equals(r.get("is_current"))) currentByProject.merge(proj, 1, Integer::sum);
+        }
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (String proj : totalByProject.keySet()) {
+            int cur = currentByProject.getOrDefault(proj, 0);
+            if (cur != 1) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = cur == 0 ? "нет текущего релиза" : cur + " текущих релиза вместо одного";
+                    findings.add(finding(proj, proj, detail, null, null));
+                }
+            }
+        }
+        return new CheckOutcome(found, totalByProject.size(), findings, found > findings.size());
+    }
+
+    /**
+     * AL-118 (найдено miniLORE 2026-08-11): {@code SPRINT_AUTH_CUTOVER} несёт
+     * {@code done_date = 2026-12-07} в срезе {@code sprint_done_dates} —
+     * ровно значение его же {@code planned_end_date}. Похоже, при простановке
+     * статуса DONE в историческую строку записали плановую дату вместо
+     * реальной даты перехода; сам спринт связан с релизом v1.6.19 (реальная
+     * дата — конец июня). {@code sprint_done_dates} и так читает из истории,
+     * а не с вершины (не класс MT-06/MT-12) — здесь неверна САМА историческая
+     * запись, точечно чинить руками не стал (нет безопасного MCP-инструмента
+     * для правки {@code valid_from} задним числом, только новый статус-переход).
+     *
+     * <p>Проверка ловит будущую дату у ЛЮБОГО спринта — не только этот
+     * случай, чтобы не завести проверку под одну находку.
+     */
+    private CheckOutcome checkSprintDoneDateFuture() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("sprint_done_dates").baseSql(), Map.of());
+        String today = LocalDate.now().toString();
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (Map<String, Object> r : rows) {
+            String doneDate = str(r.get("done_date"));
+            if (doneDate == null || doneDate.length() < 10) continue;
+            String datePart = doneDate.substring(0, 10);
+            if (datePart.compareTo(today) > 0) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String sprintId = str(r.get("sprint_id"));
+                    findings.add(finding(sprintId, sprintId,
+                        "дата закрытия " + datePart + " — в будущем", "sprints", sprintId));
+                }
+            }
+        }
+        return new CheckOutcome(found, rows.size(), findings, found > findings.size());
+    }
+
     @GET
     @Path("product/self-check")
     @Produces(MediaType.APPLICATION_JSON)
@@ -1599,6 +1852,10 @@ public class LoreProductResource extends LoreResourceBase {
         checks.add(runSelfCheck("strategic_coverage", "Стратегическое покрытие (фичи ↔ вехи)", this::checkStrategicCoverage));
         checks.add(runSelfCheck("actor_load_dead", "Роли без сценариев", this::checkActorLoadDead));
         checks.add(runSelfCheck("ft_index_health", "Пригодность полнотекстовых индексов", this::checkFtIndexHealth));
+        checks.add(runSelfCheck("uc_single_primary", "Сценарии без ровно одного primary-актора", this::checkUcSinglePrimary));
+        checks.add(runSelfCheck("actor_pairs", "Пары «роль — агент»: расхождение работ", this::checkActorPairs));
+        checks.add(runSelfCheck("release_single_current", "Проекты без ровно одного текущего релиза", this::checkReleaseSingleCurrent));
+        checks.add(runSelfCheck("sprint_done_date_future", "Спринты с датой закрытия в будущем", this::checkSprintDoneDateFuture));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("run_at", Instant.now().toString());

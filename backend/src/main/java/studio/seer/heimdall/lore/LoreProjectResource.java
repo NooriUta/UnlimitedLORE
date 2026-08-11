@@ -21,11 +21,17 @@ import java.util.Map;
  *
  * <p>AL-84/ADR-LORE-025-D17: единственный write-путь этого ресурса (create И update —
  * LH-44 partial upsert по slug, отдельного «только создание» пути нет) требует
- * super-admin, не admin, и заперт для агентов вовсе (AgentScopeFilter.HUMAN_ONLY):
- * проект — единица изоляции всей проектной RBAC-модели (ADR-LORE-036), заводить её
- * может только самый доверенный человек. Привязка УЖЕ существующих сущностей к
- * проекту (sprint_link rel=project, release_new) идёт другими путями, этого
- * ограничения не касается.
+ * super-admin, не admin. Привязка УЖЕ существующих сущностей к проекту
+ * (sprint_link rel=project, release_new) идёт другими путями, этого ограничения
+ * не касается.
+ *
+ * <p><b>Поправка 2026-08-11</b> (решение владельца): гейт был непроходим НИ ДЛЯ
+ * КОГО на практике — {@code project} сидел в {@code AgentScopeFilter.HUMAN_ONLY}
+ * (ни один из семи агентных профилей, включая {@code full}, не писал сюда), а у
+ * человека нет ни UI-кнопки, ни проверенной {@code superadmin}-учётки отдельно от
+ * обычного {@code admin}. Открыт РОВНО {@code agent-full}
+ * ({@link LoreResourceBase#requireSuperAdminOrAgentFull}) — человеческий порог не
+ * тронут, там по-прежнему нужна именно {@code superadmin}, не {@code admin}.
  */
 @Path("/lore")
 public class LoreProjectResource extends LoreResourceBase {
@@ -42,10 +48,9 @@ public class LoreProjectResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response createProject(ProjectCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        // AL-84/ADR-LORE-025-D17: проект — единица изоляции всей RBAC-модели,
-        // требует super-admin (не admin, не агент — семейство "project" в
-        // AgentScopeFilter.HUMAN_ONLY).
-        requireSuperAdmin(role);
+        // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: проект — единица изоляции
+        // всей RBAC-модели, требует super-admin (не admin) — либо agent-full.
+        requireSuperAdminOrAgentFull(role);
         if (req == null || req.slug() == null || req.slug().isBlank())
             return badParams("slug required");
         if (!SAFE_ID.matcher(req.slug()).matches())

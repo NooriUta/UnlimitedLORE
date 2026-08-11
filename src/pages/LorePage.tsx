@@ -23,6 +23,7 @@ import LoreDecisionBoard   from '../components/lore/LoreDecisionBoard';
 import LoreOpenQuestionsBoard from '../components/lore/LoreOpenQuestionsBoard';
 import LoreReleasesBoard   from '../components/lore/LoreReleasesBoard';
 import LoreMcpApiScreen    from '../components/lore/LoreMcpApiScreen';
+import LoreConnectionsScreen from '../components/lore/LoreConnectionsScreen';
 import LoreAdminPanel      from '../components/lore/LoreAdminPanel';
 import LoreAnalyticsView   from '../components/lore/LoreAnalytics';
 import LoreMilestonesView  from '../components/lore/LoreMilestonesView';
@@ -81,6 +82,7 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
+  { id: 'connections',icon: 'linked-rings',   labelKey: 'lore.page.nav.connections',fallback: 'Подключения'},
   // NB: 'admin' сознательно НЕ здесь — админка administers весь LORE, а не раздел
   // Forseti, поэтому вход живёт в шапке приложения (AppShell, ADR-LORE-025).
   // Секция остаётся валидным роутом ?section=admin и рендерится ниже под гейтом.
@@ -118,7 +120,7 @@ const SECTION_COLORS: Record<Section, string> = {
   milestones: 'var(--section-milestones)', plan: 'var(--section-plan)', sprints: 'var(--section-sprints)', adrs: 'var(--section-adrs)',
   decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
-  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', admin: 'var(--wrn)',
+  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', connections: 'var(--section-mcp)', admin: 'var(--wrn)',
   actors: 'var(--section-actors)', vpProfile: 'var(--section-rbjg)', vpCanvas: 'var(--section-vp)', features: 'var(--section-features)', userStories: 'var(--section-us)',
   search: 'var(--acc)',
 };
@@ -510,7 +512,7 @@ export default function LorePage() {
 
   return (
     <DictionaryProvider>
-    <div style={S.root}>
+    <div className="lore-page-root" style={S.root}>
       {/* ── Horizontal section nav ───────────────────────────────────────────
           Не показываем в Admin LORE: админка — уровень приложения (вход в шапке,
           ADR-LORE-025), разделы Forseti к её содержимому отношения не имеют. */}
@@ -992,7 +994,7 @@ export default function LorePage() {
       )}
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div style={S.body}>
+      <div className="lore-page-body" style={S.body}>
         {/* ── Master-detail layout ─────────────────────────────────────────── */}
         {/* MOB-04: on narrow screens the side-by-side pair becomes a two-step
             flow — list full-width until something is selected, then the detail
@@ -1160,7 +1162,10 @@ export default function LorePage() {
         // S.content is a ROW flex — with the narrow back-button (width:100%)
         // inside it, the button ate the row and pushed the detail out of view
         // (blank ADR page bug). Column direction when the back bar is shown.
-        <div style={narrow && isMasterDetail && hasDetailSelection ? { ...S.content, flexDirection: 'column' } : S.content}>
+        <div
+          className={narrow && hasDetailSelection && isMasterDetail ? 'lore-page-content lore-doc-scroll-pilot' : 'lore-page-content'}
+          style={narrow && isMasterDetail && hasDetailSelection ? { ...S.content, flexDirection: 'column' } : S.content}
+        >
           {/* adrs' own passport view already renders a "← К списку" — skip the
               generic bar there to avoid two stacked back controls; knowledge's
               LoreArtifactDoc has its own back button too. */}
@@ -1339,6 +1344,7 @@ export default function LorePage() {
 
           {/* MCP API — published reference for the aida-lore MCP server */}
           {section === 'mcp' && <LoreMcpApiScreen />}
+          {section === 'connections' && <LoreConnectionsScreen />}
 
           {/* ⚙ Admin LORE (ADR-LORE-025) — admin-gated reference-data management */}
           {section === 'admin' && isAdmin && <LoreAdminPanel onError={handleFetchError} />}

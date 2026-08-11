@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { iconLoaded } from '@iconify/react';
 import gameIconsData from '@iconify-json/game-icons/icons.json';
+import { Modal } from '@mantine/core';
 import { fetchLoreSlice, loreMutate } from '../../api/lore';
 import { loadKc, loadKcObj, type KcState } from './kc-state';
 import { GameIcon } from './GameIcon';
@@ -25,7 +26,7 @@ interface Preflight { auth_enabled: boolean; kc_configured: boolean; kc_reachabl
 interface Denial { ts: string; method: string; path: string; status: number; error: string; role: string }
 
 const CANON_TYPES = new Set(['adr_status', 'sprint_status', 'task_status', 'priority']);
-type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'settings';
+type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'settings' | 'quick';
 
 // RBAC scope per ADR-LORE-014 §3 (agent-profiles — файлы; read-only отображение).
 const PROFILE_SCOPE: [string, string][] = [
@@ -73,7 +74,11 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
   // Тех-реестр СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
   // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-…") — строка «Спеки/ранбуки/доки» выше.
-  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: строка была неверна ещё ДО этой
+  // правки (заявляла architect/pm, а бэкенд не пускал вовсе — семейство сидело в
+  // HUMAN_ONLY) и молчала, потому что coverage-тест пропускает пустые backend-сеты.
+  // Теперь бэкенд взаправду допускает РОВНО full — строка выровнена по факту.
+  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full'] },
   { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
   // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
   // в ветку «неизвестное — пропускаю». Держать синхронно с FAMILY_AGENTS в
@@ -265,11 +270,12 @@ function Toolbar({ q, setQ, shown, total, seg }: {
 const NAV_GROUPS: { label: string; rail: string; tabs: [Tab, string][] }[] = [
   { label: 'Доступ', rail: 'var(--dng)', tabs: [['users', 'Люди'], ['agents', 'Агенты'], ['roles', 'Роли и права']] },
   { label: 'Справочники', rail: 'var(--acc)', tabs: [['dicts', 'Словари'], ['projects', 'Проекты'], ['tags', 'Теги']] },
-  { label: 'Система', rail: 'var(--inf)', tabs: [['settings', 'Настройки']] },
+  { label: 'Система', rail: 'var(--inf)', tabs: [['settings', 'Настройки'], ['quick', 'Быстрые команды']] },
 ];
 const TAB_TITLES: Record<Tab, string> = {
   users: 'Люди', agents: 'Агенты', roles: 'Роли и права',
   dicts: 'Словари', projects: 'Проекты', tags: 'Теги', settings: 'Настройки',
+  quick: 'Быстрые команды',
 };
 const ALL_TABS = NAV_GROUPS.flatMap(g => g.tabs.map(([k]) => k));
 
@@ -370,6 +376,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} people={users} onError={onError} reload={bump} />}
           {tab === 'tags' && <TagsTab know={knowTags} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
+          {tab === 'quick' && <QuickCommandsTab />}
         </main>
       </div>
     </div>
@@ -1516,6 +1523,7 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const [edit, setEdit] = useState<ProjRow | null>(null);
+  const [isNew, setIsNew] = useState(false);
   const [hosts, setHosts] = useState<HostRow[]>([]);
   const [saving, setSaving] = useState(false);
   // AL-99: зеркальный вид к «Роли в проектах» в карточке человека. Тот же
@@ -1525,18 +1533,29 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
 
   function startEdit(p: ProjRow) {
     setEdit({ ...p });
+    setIsNew(false);
     try { setHosts(p.hosts ? (JSON.parse(p.hosts) as HostRow[]) : []); } catch { setHosts([]); }
   }
+  // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: до сих пор в этой панели
+  // можно было только править уже существующий проект — заводить новый было
+  // негде совсем, ни кнопки, ни формы. POST /lore/project — LH-44 partial
+  // upsert по slug, так что «создать» и «сохранить правку» это буквально
+  // один и тот же save() с новым slug вместо старого.
+  function startNew() {
+    setEdit({ slug: '', name: '', default_branch: '', is_private: null, hosts: null });
+    setIsNew(true);
+    setHosts([]);
+  }
   async function save() {
-    if (!edit) return;
+    if (!edit || !edit.slug.trim()) return;
     setSaving(true);
     try {
       await loreMutate('/project', {
-        slug: edit.slug, name: edit.name ?? null,
+        slug: edit.slug.trim(), name: edit.name ?? null,
         hosts: hosts.length ? JSON.stringify(hosts) : null,
         default_branch: edit.default_branch || null,
       });
-      setEdit(null); reload();
+      setEdit(null); setIsNew(false); reload();
     } catch (e) { onError(e); } finally { setSaving(false); }
   }
   const setHost = (i: number, k: keyof HostRow, v: string) => setHosts(hs => hs.map((h, j) => j === i ? { ...h, [k]: v } : h));
@@ -1544,6 +1563,9 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
   const shown = rows.filter(p => !q || p.slug.toLowerCase().includes(q.toLowerCase()) || (p.name ?? '').toLowerCase().includes(q.toLowerCase()));
   return (
     <div>
+      <div style={{ marginBottom: 8 }}>
+        <button style={S.btn} onClick={startNew}>{t('lore.admin.addProject', '+ Добавить проект')}</button>
+      </div>
       <Toolbar q={q} setQ={setQ} shown={shown.length} total={rows.length} />
       <div style={S.tw}>
         <table style={S.table}>
@@ -1579,33 +1601,50 @@ function ProjectsTab({ rows, sprints, people, onError, reload }: {
           </tbody>
         </table>
       </div>
-      {edit && (
-        <div style={S.form}>
-          <div style={{ fontFamily: 'var(--mono)', color: 'var(--acc)' }}>{edit.slug}</div>
-          <input style={S.input} placeholder="name" value={edit.name ?? ''} onChange={e => setEdit(f => f && ({ ...f, name: e.target.value }))} />
-          <input style={S.input} placeholder="default_branch" value={edit.default_branch ?? ''} onChange={e => setEdit(f => f && ({ ...f, default_branch: e.target.value }))} />
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('lore.admin.hosts', 'Хостинги (origin + зеркала, ADR-018)')}</div>
-          {hosts.map((h, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 80px 1fr 1fr 1fr auto', gap: 4 }}>
-              <input style={S.input} placeholder="remote" value={h.remote} onChange={e => setHost(i, 'remote', e.target.value)} />
-              <input style={S.input} placeholder="role" value={h.role} onChange={e => setHost(i, 'role', e.target.value)} />
-              <input style={S.input} placeholder="base_url" value={h.base_url} onChange={e => setHost(i, 'base_url', e.target.value)} />
-              <input style={S.input} placeholder="file_url_template" value={h.file_url_template} onChange={e => setHost(i, 'file_url_template', e.target.value)} />
-              <input style={S.input} placeholder="pr_url_template" value={h.pr_url_template} onChange={e => setHost(i, 'pr_url_template', e.target.value)} />
-              <button style={S.btn} onClick={() => setHosts(hs => hs.filter((_, j) => j !== i))}>✕</button>
+      <Modal
+        opened={!!edit}
+        onClose={() => { setEdit(null); setIsNew(false); }}
+        title={isNew ? t('lore.admin.addProject', '+ Добавить проект') : edit?.slug}
+        size={620}
+      >
+        {edit && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {isNew ? (
+              <>
+                <input style={{ ...S.input, fontFamily: 'var(--mono)' }} placeholder="AIDA/miniLORE"
+                  value={edit.slug} onChange={e => setEdit(f => f && ({ ...f, slug: e.target.value }))} />
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)' }}>
+                  {t('lore.admin.projectSlugHint', 'owner/repo — как в Forgejo/GitHub; правке не подлежит после создания')}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontFamily: 'var(--mono)', color: 'var(--acc)' }}>{edit.slug}</div>
+            )}
+            <input style={S.input} placeholder="name" value={edit.name ?? ''} onChange={e => setEdit(f => f && ({ ...f, name: e.target.value }))} />
+            <input style={S.input} placeholder="default_branch" value={edit.default_branch ?? ''} onChange={e => setEdit(f => f && ({ ...f, default_branch: e.target.value }))} />
+            <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{t('lore.admin.hosts', 'Хостинги (origin + зеркала, ADR-018)')}</div>
+            {hosts.map((h, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 80px 1fr 1fr 1fr auto', gap: 4 }}>
+                <input style={S.input} placeholder="remote" value={h.remote} onChange={e => setHost(i, 'remote', e.target.value)} />
+                <input style={S.input} placeholder="role" value={h.role} onChange={e => setHost(i, 'role', e.target.value)} />
+                <input style={S.input} placeholder="base_url" value={h.base_url} onChange={e => setHost(i, 'base_url', e.target.value)} />
+                <input style={S.input} placeholder="file_url_template" value={h.file_url_template} onChange={e => setHost(i, 'file_url_template', e.target.value)} />
+                <input style={S.input} placeholder="pr_url_template" value={h.pr_url_template} onChange={e => setHost(i, 'pr_url_template', e.target.value)} />
+                <button style={S.btn} onClick={() => setHosts(hs => hs.filter((_, j) => j !== i))}>✕</button>
+              </div>
+            ))}
+            <div>
+              <button style={S.btn} onClick={() => setHosts(hs => [...hs, { remote: '', role: hs.length ? 'mirror' : 'primary', base_url: '', file_url_template: '{base}/src/branch/{branch}/{path}', pr_url_template: '{base}/pulls/{number}' }])}>
+                {t('lore.admin.addHost', '+ хостинг')}
+              </button>
             </div>
-          ))}
-          <div>
-            <button style={S.btn} onClick={() => setHosts(hs => [...hs, { remote: '', role: hs.length ? 'mirror' : 'primary', base_url: '', file_url_template: '{base}/src/branch/{branch}/{path}', pr_url_template: '{base}/pulls/{number}' }])}>
-              {t('lore.admin.addHost', '+ хостинг')}
-            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button style={S.primary} disabled={saving || !edit.slug.trim()} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
+              <button style={S.btn} onClick={() => { setEdit(null); setIsNew(false); }}>{t('lore.admin.cancel', 'Отмена')}</button>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button style={S.primary} disabled={saving} onClick={save}>{saving ? '…' : t('lore.admin.save', 'Сохранить')}</button>
-            <button style={S.btn} onClick={() => setEdit(null)}>{t('lore.admin.cancel', 'Отмена')}</button>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
@@ -1652,6 +1691,83 @@ function TagsTab({ know }: { know: TagRow[] }) {
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {list('KnowTag', know)}
       </div>
+    </div>
+  );
+}
+
+// ── Быстрые команды — личная шпаргалка владельца (не продуктовая фича,
+//    не читает LORE-данные) ──────────────────────────────────────────────────
+// Формат нарочно плоский массив, а не таблица/справочник в БД: список личный,
+// правится редко и вручную, заводить под него ещё один dict_type — лишний слой
+// для того, что проще редактировать прямо в коде при следующем расширении.
+const QUICK_GROUPS: { title: string; items: { label: string; cmd: string }[] }[] = [
+  {
+    title: 'Перейти в проект',
+    items: [
+      { label: 'UnlimitedLORE', cmd: 'cd C:\\AIDA\\UnlimitedLORE' },
+      { label: 'aida-root', cmd: 'cd C:\\AIDA\\aida-root' },
+      { label: 'Mobilepoc', cmd: 'cd D:\\Mobilepoc' },
+    ],
+  },
+  {
+    title: 'Канал miniLORE',
+    items: [
+      {
+        label: 'Подключить консоль к диалогу по sessionId (виден в приложении) — НЕ -c, он берёт не тот диалог',
+        cmd: 'claude --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>',
+      },
+    ],
+  },
+];
+
+function CopyBlock({ cmd }: { cmd: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(cmd);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      title="Скопировать"
+      style={{
+        display: 'block', width: '100%', textAlign: 'left', font: 'inherit',
+        fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', lineHeight: 1.5,
+        padding: '7px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+        border: `1px solid ${copied ? 'var(--suc)' : 'var(--bd)'}`,
+        background: copied ? 'color-mix(in srgb, var(--suc) 10%, transparent)' : 'var(--bg1)',
+        color: copied ? 'var(--suc)' : 'var(--t1)',
+      }}
+    >
+      {copied ? '✓ скопировано' : cmd}
+    </button>
+  );
+}
+
+function QuickCommandsTab() {
+  return (
+    <div>
+      <div style={S.card}>
+        Личная шпаргалка — команды на каждый день, чтобы не вспоминать порядок заново. Клик по строке копирует её в буфер.
+        Полный рецепт с оговорками — вкладка «Подключения» в разделе «Основа».
+      </div>
+      {QUICK_GROUPS.map(g => (
+        <div key={g.title} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
+            {g.title}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {g.items.map(it => (
+              <div key={it.cmd}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 2 }}>{it.label}</div>
+                <CopyBlock cmd={it.cmd} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
