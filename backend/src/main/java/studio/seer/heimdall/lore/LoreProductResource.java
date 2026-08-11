@@ -1755,6 +1755,51 @@ public class LoreProductResource extends LoreResourceBase {
         return new CheckOutcome(found, ucRows.size(), findings, found > findings.size());
     }
 
+    /**
+     * AL-116 (найдено miniLORE 2026-08-11, живым сравнением {@code is_current}
+     * против максимальной версии по проекту): у {@code KnowRelease} обязан
+     * быть ровно один {@code is_current} на {@code git_project} — инвариант
+     * нигде не проверялся. На практике разошёлся дважды: {@code NooriUta/AIDA}
+     * застрял на v1.3.0 (24 апреля) при максимуме v1.7.2 (10 июля, между ними
+     * ещё сто релизов), {@code NooriUta/seidr-site} нёс current СРАЗУ на двух
+     * версиях — проект задваивался у потребителей, фильтрующих по
+     * {@code is_current}. Оба исправлены вручную ({@code release_set}) тем же
+     * заходом; эта проверка — чтобы расхождение не накопилось молча снова.
+     *
+     * <p>{@code found} считает и «больше одного», и «ни одного» — оба
+     * состояния одинаково неверны для проекта, у которого релизы вообще
+     * есть. Проект без единого релиза в выборку не попадает (нечего
+     * проверять). Денаминатор — число проектов С РЕЛИЗАМИ, не число
+     * зарегистрированных {@code KnowGitProject}.
+     */
+    private CheckOutcome checkReleaseSingleCurrent() {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            LoreSlices.get("releases").baseSql(), Map.of());
+
+        Map<String, Integer> totalByProject = new HashMap<>();
+        Map<String, Integer> currentByProject = new HashMap<>();
+        for (Map<String, Object> r : rows) {
+            String proj = str(r.get("git_project"));
+            if (proj == null || proj.isBlank()) continue;
+            totalByProject.merge(proj, 1, Integer::sum);
+            if (Boolean.TRUE.equals(r.get("is_current"))) currentByProject.merge(proj, 1, Integer::sum);
+        }
+
+        List<Map<String, Object>> findings = new ArrayList<>();
+        int found = 0;
+        for (String proj : totalByProject.keySet()) {
+            int cur = currentByProject.getOrDefault(proj, 0);
+            if (cur != 1) {
+                found++;
+                if (findings.size() < SELF_CHECK_FINDINGS_CAP) {
+                    String detail = cur == 0 ? "нет текущего релиза" : cur + " текущих релиза вместо одного";
+                    findings.add(finding(proj, proj, detail, null, null));
+                }
+            }
+        }
+        return new CheckOutcome(found, totalByProject.size(), findings, found > findings.size());
+    }
+
     @GET
     @Path("product/self-check")
     @Produces(MediaType.APPLICATION_JSON)
@@ -1772,6 +1817,7 @@ public class LoreProductResource extends LoreResourceBase {
         checks.add(runSelfCheck("ft_index_health", "Пригодность полнотекстовых индексов", this::checkFtIndexHealth));
         checks.add(runSelfCheck("uc_single_primary", "Сценарии без ровно одного primary-актора", this::checkUcSinglePrimary));
         checks.add(runSelfCheck("actor_pairs", "Пары «роль — агент»: расхождение работ", this::checkActorPairs));
+        checks.add(runSelfCheck("release_single_current", "Проекты без ровно одного текущего релиза", this::checkReleaseSingleCurrent));
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("run_at", Instant.now().toString());
