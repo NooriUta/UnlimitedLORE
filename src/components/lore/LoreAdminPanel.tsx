@@ -1673,14 +1673,10 @@ const QUICK_GROUPS: { title: string; items: { label: string; cmd: string }[] }[]
     ],
   },
   {
-    title: 'Канал MobilePoc',
+    title: 'Канал miniLORE',
     items: [
       {
-        label: 'Подключить консоль к текущему диалогу (из папки проекта)',
-        cmd: 'claude --dangerously-load-development-channels server:mobilepoc-channel -c',
-      },
-      {
-        label: 'То же, но по конкретному sessionId (надёжнее -c, если недавно был другой диалог)',
+        label: 'Подключить консоль к диалогу по sessionId (виден в приложении) — НЕ -c, он берёт не тот диалог',
         cmd: 'claude --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>',
       },
     ],
