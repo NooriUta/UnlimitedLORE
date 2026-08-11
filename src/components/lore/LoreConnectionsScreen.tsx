@@ -9,17 +9,20 @@
 // принадлежит СЕССИИ, а не проекту — предыдущая формулировка «канал один на
 // все проекты, определяет проект по рабочей папке» была неточной. Три факта
 // ниже — прямая цитата их правки, не обкатанное самостоятельно.
+//
+// Версия 3: секрет в config-файле не нужен вовсе — server.js читает его из
+// process.env, а MCP-сервер наследует окружение родительского процесса.
+// Блок env с ${VAR} в первой правке был лишним усложнением, снят по указанию
+// авторов miniLORE.
 import { useTranslation } from 'react-i18next';
+
+const SETX_CMD = `setx MOBILEPOC_CHANNEL_SECRET "<значение из gateway/.env>"`;
 
 const MINILORE_MCP_JSON = `{
   "mcpServers": {
     "mobilepoc-channel": {
       "command": "node",
-      "args": ["D:/Mobilepoc/channel/server.js"],
-      "env": {
-        "MOBILEPOC_GATEWAY_URL": "http://localhost:8787",
-        "MOBILEPOC_CHANNEL_SECRET": "<секрет из gateway/.env>"
-      }
+      "args": ["D:/Mobilepoc/channel/server.js"]
     }
   }
 }`;
@@ -66,10 +69,18 @@ export default function LoreConnectionsScreen() {
 
           <ol style={S.ol}>
             <li>
+              {t('lore.connections.setxLabel', 'Завести секрет переменной окружения — один раз на машину.')}{' '}
+              {t('lore.connections.setx1', 'Значение лежит в')} <code style={S.code}>gateway/.env</code>{t('lore.connections.setx1Rest', ', ключ')} <code style={S.codeAcc}>MOBILEPOC_CHANNEL_SECRET</code>{t('lore.connections.setx1Rest2', '. Сюда, на страницу, значение не копировать — только команда:')}
+              <Pre>{SETX_CMD}</Pre>
+              <p style={S.noteTight}>
+                {t('lore.connections.setxNote', 'setx действует только на НОВЫЕ процессы')}{t('lore.connections.setxNoteRest', ' — терминал, из которого ставили переменную, для канала не годится, нужен свежий.')}
+              </p>
+            </li>
+            <li>
               {t('lore.connections.step1', 'Дать проекту канал — добавить сервер в')} <code style={S.code}>.mcp.json</code> {t('lore.connections.step1Rest', 'этого проекта. Если у проекта уже есть свой')} <code style={S.code}>.mcp.json</code>{t('lore.connections.step1Rest2', ' — блок добавляется ВНУТРЬ существующего')} <code style={S.code}>mcpServers</code>{t('lore.connections.step1Rest3', ', файл не заменяется целиком:')}
               <Pre>{MINILORE_MCP_JSON}</Pre>
               <p style={S.noteTight}>
-                {t('lore.connections.secretNote', 'Секрет —')} <code style={S.codeAcc}>MOBILEPOC_CHANNEL_SECRET</code> {t('lore.connections.secretNoteRest', 'из')} <code style={S.code}>gateway/.env</code>{t('lore.connections.secretNoteRest2', '. Сюда, на страницу, значение не копировать — только ссылка на то, где оно лежит.')}
+                {t('lore.connections.secretNote', 'Секрет в конфиг не пишем')}{t('lore.connections.secretNoteRest', ' — сервер сам читает его из окружения процесса, унаследованного от родителя (шаг 1 выше), поэтому блок')} <code style={S.code}>env</code>{t('lore.connections.secretNoteRest2', ' тут не нужен.')}
               </p>
             </li>
             <li>
@@ -123,6 +134,12 @@ export default function LoreConnectionsScreen() {
                   <Td>{t('lore.connections.gotcha2Label', 'События не идут в приложение')}</Td>
                   <Td style={{ color: 'var(--t2)' }}>
                     {t('lore.connections.gotcha2', 'При первом запуске Claude Code спросит подтверждение на загрузку dev-канала и согласие на новый MCP-сервер. Нужно принять оба — иначе события внутрь не пойдут, а диалог будет выглядеть доступным на запись, хотя это не так.')}
+                  </Td>
+                </tr>
+                <tr style={S.tr}>
+                  <Td>{t('lore.connections.gotcha3Label', 'Диалог виден, но без явной ошибки только читается')}</Td>
+                  <Td style={{ color: 'var(--t2)' }}>
+                    {t('lore.connections.gotcha3', 'Если секрет не доехал, сервер не падает — поднимается с пустой строкой и получает от шлюза 403 на регистрацию, внешне неотличимо от read-only. Проверка: у диалога должна стать зелёная 🗨️. Серая — почти всегда несвежая консоль (см. шаг 1: setx не действует на уже открытый терминал).')}
                   </Td>
                 </tr>
               </tbody>
