@@ -25,7 +25,7 @@ interface Preflight { auth_enabled: boolean; kc_configured: boolean; kc_reachabl
 interface Denial { ts: string; method: string; path: string; status: number; error: string; role: string }
 
 const CANON_TYPES = new Set(['adr_status', 'sprint_status', 'task_status', 'priority']);
-type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'settings';
+type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'settings' | 'quick';
 
 // RBAC scope per ADR-LORE-014 §3 (agent-profiles — файлы; read-only отображение).
 const PROFILE_SCOPE: [string, string][] = [
@@ -265,11 +265,12 @@ function Toolbar({ q, setQ, shown, total, seg }: {
 const NAV_GROUPS: { label: string; rail: string; tabs: [Tab, string][] }[] = [
   { label: 'Доступ', rail: 'var(--dng)', tabs: [['users', 'Люди'], ['agents', 'Агенты'], ['roles', 'Роли и права']] },
   { label: 'Справочники', rail: 'var(--acc)', tabs: [['dicts', 'Словари'], ['projects', 'Проекты'], ['tags', 'Теги']] },
-  { label: 'Система', rail: 'var(--inf)', tabs: [['settings', 'Настройки']] },
+  { label: 'Система', rail: 'var(--inf)', tabs: [['settings', 'Настройки'], ['quick', 'Быстрые команды']] },
 ];
 const TAB_TITLES: Record<Tab, string> = {
   users: 'Люди', agents: 'Агенты', roles: 'Роли и права',
   dicts: 'Словари', projects: 'Проекты', tags: 'Теги', settings: 'Настройки',
+  quick: 'Быстрые команды',
 };
 const ALL_TABS = NAV_GROUPS.flatMap(g => g.tabs.map(([k]) => k));
 
@@ -370,6 +371,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} people={users} onError={onError} reload={bump} />}
           {tab === 'tags' && <TagsTab know={knowTags} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
+          {tab === 'quick' && <QuickCommandsTab />}
         </main>
       </div>
     </div>
@@ -1652,6 +1654,87 @@ function TagsTab({ know }: { know: TagRow[] }) {
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {list('KnowTag', know)}
       </div>
+    </div>
+  );
+}
+
+// ── Быстрые команды — личная шпаргалка владельца (не продуктовая фича,
+//    не читает LORE-данные) ──────────────────────────────────────────────────
+// Формат нарочно плоский массив, а не таблица/справочник в БД: список личный,
+// правится редко и вручную, заводить под него ещё один dict_type — лишний слой
+// для того, что проще редактировать прямо в коде при следующем расширении.
+const QUICK_GROUPS: { title: string; items: { label: string; cmd: string }[] }[] = [
+  {
+    title: 'Перейти в проект',
+    items: [
+      { label: 'UnlimitedLORE', cmd: 'cd C:\\AIDA\\UnlimitedLORE' },
+      { label: 'aida-root', cmd: 'cd C:\\AIDA\\aida-root' },
+      { label: 'Mobilepoc', cmd: 'cd D:\\Mobilepoc' },
+    ],
+  },
+  {
+    title: 'Канал MobilePoc',
+    items: [
+      {
+        label: 'Подключить консоль к текущему диалогу (из папки проекта)',
+        cmd: 'claude --dangerously-load-development-channels server:mobilepoc-channel -c',
+      },
+      {
+        label: 'То же, но по конкретному sessionId (надёжнее -c, если недавно был другой диалог)',
+        cmd: 'claude --dangerously-load-development-channels server:mobilepoc-channel --resume <sessionId>',
+      },
+    ],
+  },
+];
+
+function CopyBlock({ cmd }: { cmd: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(cmd);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      title="Скопировать"
+      style={{
+        display: 'block', width: '100%', textAlign: 'left', font: 'inherit',
+        fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', lineHeight: 1.5,
+        padding: '7px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'pre-wrap',
+        wordBreak: 'break-all',
+        border: `1px solid ${copied ? 'var(--suc)' : 'var(--bd)'}`,
+        background: copied ? 'color-mix(in srgb, var(--suc) 10%, transparent)' : 'var(--bg1)',
+        color: copied ? 'var(--suc)' : 'var(--t1)',
+      }}
+    >
+      {copied ? '✓ скопировано' : cmd}
+    </button>
+  );
+}
+
+function QuickCommandsTab() {
+  return (
+    <div>
+      <div style={S.card}>
+        Личная шпаргалка — команды на каждый день, чтобы не вспоминать порядок заново. Клик по строке копирует её в буфер.
+        Полный рецепт с оговорками — вкладка «Подключения» в разделе «Основа».
+      </div>
+      {QUICK_GROUPS.map(g => (
+        <div key={g.title} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
+            {g.title}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {g.items.map(it => (
+              <div key={it.cmd}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--t3)', marginBottom: 2 }}>{it.label}</div>
+                <CopyBlock cmd={it.cmd} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
