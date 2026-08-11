@@ -47,7 +47,15 @@ describe('registerLoreWrite', () => {
     //   инструмент, не status_set: у KnowDecision нет SCD2-истории)
     // + component_del (AL-110 — единственный из _del с гейтом ссылок: 409 при
     //   детях/BELONGS_TO/component_id-полях вместо безусловного удаления)
-    expect(names).toHaveLength(77);
+    // + actor_link (MT-11/D-VP-ROLE-AGENT-PAIR — FILLS_ROLE: агент → роль,
+    //   которую он исполняет; проверяется в product/self-check actor_pairs)
+    expect(names).toHaveLength(78);
+  });
+
+  it('registers actor_link (MT-11 — FILLS_ROLE, agent-to-role pairing)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    expect(names).toContain('actor_link');
   });
 
   it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
