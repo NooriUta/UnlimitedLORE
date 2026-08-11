@@ -1041,11 +1041,18 @@ public final class LoreSlices {
         // Task done-transitions for throughput. valid_from = when task became DONE.
         // states = total HAS_STATE rows of the task: states>1 means real progression
         // (vs archived "born done" dump). Frontend also cuts pre-LORE import dates.
+        //
+        // AL-117: was `status_raw LIKE '%DONE%'` — English-only substring, same
+        // bug class miniLORE found in their own status parser (2026-08-11):
+        // status_raw is free text after the marker ("✅ MERGED", "✅ ЗАКРЫТ …"),
+        // and DONE-only matching drops every Russian/synonym completion. Aligned
+        // to the icon-prefix pattern already used by sprint_done_dates below.
         slice("task_done_dates",
             "SELECT in('HAS_STATE').task_id[0] AS task_id, valid_from, " +
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days " +
-            "FROM KnowTaskHist WHERE valid_to IS NULL AND status_raw LIKE '%DONE%' AND valid_from IS NOT NULL",
+            "FROM KnowTaskHist WHERE valid_to IS NULL " +
+            "AND (status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%') AND valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
         // Every task state row (scalar valid_from). Frontend takes min per task = created date,
