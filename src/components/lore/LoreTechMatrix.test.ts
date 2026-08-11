@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildRow, sharedTechs } from './LoreTechMatrix';
+import { buildRow, sharedTechs, techDrift } from './LoreTechMatrix';
 import type { LoreTechRow } from '../../api/lore';
 
 const row = (tech: string, version: string | null, checkedAt: string | null): LoreTechRow => ({
@@ -81,5 +81,50 @@ describe('sharedTechs', () => {
 
   it('порог настраивается', () => {
     expect(sharedTechs(['React', 'Java'], { React: 4, Java: 6 }, 5)).toEqual(['Java']);
+  });
+});
+
+// VD-03: расхождение версий одной технологии между компонентами находилось
+// только глазами. Негативные кейсы несут основную нагрузку — проверка,
+// всегда отвечающая null, прошла бы и позитивный кейс тоже.
+describe('techDrift', () => {
+  it('все версии одинаковые — расхождения нет', () => {
+    expect(techDrift(['26.7.2', '26.7.2', '26.7.2'])).toBeNull();
+  });
+
+  it('отличается патч', () => {
+    expect(techDrift(['1.61.0', '1.61.1'])).toBe('patch');
+  });
+
+  it('отличается минор', () => {
+    expect(techDrift(['5.10.0', '5.8.5'])).toBe('minor');
+  });
+
+  it('отличается мажор', () => {
+    expect(techDrift(['6.0.3', '7.0.2'])).toBe('major');
+  });
+
+  it('мажор перекрывает минор — расхождение мажора не тонет в шуме патчей', () => {
+    expect(techDrift(['1.0.0', '1.0.1', '2.0.0'])).toBe('major');
+  });
+
+  it('часть версий пустая/не задана — сравниваются только заданные', () => {
+    expect(techDrift(['26.7.2', null, '26.7.2', undefined])).toBeNull();
+    expect(techDrift(['26.7.2', null, '26.8.1'])).toBe('minor');
+  });
+
+  it('меньше двух версий для сравнения — не расхождение', () => {
+    expect(techDrift([])).toBeNull();
+    expect(techDrift(['26.7.2'])).toBeNull();
+    expect(techDrift([null, undefined])).toBeNull();
+  });
+
+  it('незакреплённая версия (без цифры в начале) не считается расхождением сама по себе', () => {
+    expect(techDrift(['latest (не закреплён)', 'latest (не закреплён)'])).toBeNull();
+  });
+
+  it('незакреплённая версия не смешивается с числовым расхождением — сравниваются только числовые', () => {
+    // Одна числовая версия + одна нечисловая: меньше двух ЧИСЛОВЫХ версий для сравнения.
+    expect(techDrift(['26.7.2', 'runtime (без закреплённой версии движка)'])).toBeNull();
   });
 });

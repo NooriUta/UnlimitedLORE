@@ -1617,7 +1617,10 @@
       "addHint": "Add {{tech}} to {{comp}}",
       "legendOk": "version is current",
       "legendStale": "not checked in a long time",
-      "legendEmpty": "empty — technology not registered for this component"
+      "legendEmpty": "empty — technology not registered for this component",
+      "driftHint": "versions diverge ({{sev}})",
+      "driftCellHint": "this version differs from the rest",
+      "legendDrift": "technology header — versions diverge; cell outline — this version differs from the majority"
     },
     "techRegistry": {
       "viewList": "List",
