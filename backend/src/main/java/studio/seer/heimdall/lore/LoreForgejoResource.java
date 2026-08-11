@@ -173,17 +173,28 @@ public class LoreForgejoResource extends LoreResourceBase {
                 return noStore(Response.status(m.statusCode())
                     .entity(new LoreError("FORGEJO_UPSTREAM", m.body())));
 
-            // FJ-05: замыкание релиз-цикла — авто-линк PR→релиз (SHIPPED_IN) и
-            // спринт→релиз (IMPLEMENTED_IN_RELEASE). Валидируем существование целей:
-            // тихий no-op здесь уже стоил релизов с prs_linked:0 (ADR-024, контекст).
-            Map<String, Object> linked = autoLink(req.git_project(), number, req.release_id(), req.sprint_id());
-
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("merged", true);
             out.put("number", number);
             out.put("gate", gate.status());
-            out.putAll(linked);
+
+            // CIM-03: промоушн-PR (develop→preprod, preprod→main) и релизные PR не
+            // содержат сами по себе релизную работу — привязывать их к KnowRelease
+            // значило бы приписать релиз промежуточному мержу веток. #321 (v1.1.1)
+            // уехал в релиз ровно так: автолинк отработал по базовой ветке
+            // preprod, а не по содержимому PR.
+            if (!"preprod".equals(gate.baseRef()) && !"main".equals(gate.baseRef())) {
+                // FJ-05: замыкание релиз-цикла — авто-линк PR→релиз (SHIPPED_IN) и
+                // спринт→релиз (IMPLEMENTED_IN_RELEASE). Валидируем существование целей:
+                // тихий no-op здесь уже стоил релизов с prs_linked:0 (ADR-024, контекст).
+                Map<String, Object> linked = autoLink(req.git_project(), number, req.release_id(), req.sprint_id());
+                out.putAll(linked);
+            } else {
+                out.put("linked", false);
+                out.put("link_hint", "промоушн-PR (base=" + gate.baseRef()
+                    + ") не привязывается к релизу автоматически — это не содержательный PR");
+            }
             return noStore(Response.ok(out));
         } catch (Exception e) { return upstream(e); }
     }
@@ -243,7 +254,7 @@ public class LoreForgejoResource extends LoreResourceBase {
     /** Снимок PR + вычисленный статус §10. error!=null → upstream-ошибка (не UNKNOWN гейта:
      *  ошибка чтения самого PR — это 502/404 вызова, а не CI-статус). */
     record PrGate(long number, String title, String state, boolean mergedAlready, String headSha,
-                  String status, Map<String, String> checks, String error, int httpStatus) {
+                  String baseRef, String status, Map<String, String> checks, String error, int httpStatus) {
         Map<String, Object> toJson() {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("number", number);
@@ -261,9 +272,10 @@ public class LoreForgejoResource extends LoreResourceBase {
     private PrGate evaluate(ForgejoBridge.Repo repo, String gitProject, long number) throws Exception {
         HttpResponse<String> r = bridge.api(repo, "GET", "/repos/" + repo.path() + "/pulls/" + number, null);
         if (r.statusCode() >= 300)
-            return new PrGate(number, null, null, false, null, null, Map.of(), r.body(), r.statusCode());
+            return new PrGate(number, null, null, false, null, null, null, Map.of(), r.body(), r.statusCode());
         JsonObject pr = new JsonObject(r.body());
         String headSha = pr.getJsonObject("head", new JsonObject()).getString("sha", "");
+        String baseRef = pr.getJsonObject("base", new JsonObject()).getString("ref", "");
         long age = 0;
         String updated = pr.getString("updated_at");
         if (updated != null) {
@@ -274,7 +286,7 @@ public class LoreForgejoResource extends LoreResourceBase {
         String status = ForgejoBridge.gateStatus(probe.byContext(), bridge.requiredChecks(gitProject),
             probe.ageSeconds(), bridge.graceSeconds, probe.failed());
         return new PrGate(number, pr.getString("title"), pr.getString("state"),
-            Boolean.TRUE.equals(pr.getBoolean("merged")), headSha, status, probe.byContext(), null, 200);
+            Boolean.TRUE.equals(pr.getBoolean("merged")), headSha, baseRef, status, probe.byContext(), null, 200);
     }
 
     /** Комбинированный commit-status Forgejo по ref/sha → контекст→state. failed=true → UNKNOWN. */

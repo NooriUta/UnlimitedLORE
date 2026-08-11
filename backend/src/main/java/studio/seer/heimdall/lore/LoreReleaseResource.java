@@ -313,24 +313,36 @@ public class LoreReleaseResource extends LoreResourceBase {
             ? req.git_project() : "NooriUta/AIDA";
         String ruid = gp + "#" + req.release_id();
         int sprintsRemoved = 0, prsRemoved = 0;
+        List<String> requestedSprints = req.sprint_ids() != null ? req.sprint_ids() : List.of();
+        List<Integer> requestedPrs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
         List<String> errors = new java.util.ArrayList<>();
         try {
-            for (String sid : (req.sprint_ids() != null ? req.sprint_ids() : List.<String>of())) {
+            for (String sid : requestedSprints) {
                 if (!SAFE_ID.matcher(sid).matches()) { errors.add("bad sprint id: " + sid); continue; }
                 try {
                     // deleteEdges, а не DELETE EDGE: последней команды нет в грамматике
                     // ArcadeDB 26.7.2 совсем — см. LoreResourceBase#deleteEdges.
-                    sprintsRemoved += deleteEdges("IMPLEMENTED_IN_RELEASE",
+                    int n = deleteEdges("IMPLEMENTED_IN_RELEASE",
                         "@out.sprint_id=:sid AND @in.release_uid=:ruid",
                         Map.of("sid", sid, "ruid", ruid));
+                    sprintsRemoved += n;
+                    // CIM-03: ok:true при нуле снятых рёбер — тот же класс, что DBR-04.
+                    // Не ошибка исполнения (запрос отработал), но и не молчать: назвать,
+                    // что искали и не нашли, а не просто вернуть 0 в отдельном поле,
+                    // которое вызывающий может не посмотреть.
+                    if (n == 0) errors.add("sprint " + sid + ": ребро IMPLEMENTED_IN_RELEASE к "
+                        + ruid + " не найдено — уже снято или не было привязано этим ключом");
                 } catch (Exception e) { errors.add("sprint " + sid + ": " + e.getMessage()); }
             }
-            for (Integer prNum : (req.pr_numbers() != null ? req.pr_numbers() : List.<Integer>of())) {
+            for (Integer prNum : requestedPrs) {
                 String prUid = gp + "#" + prNum;
                 try {
-                    prsRemoved += deleteEdges("SHIPPED_IN",
+                    int n = deleteEdges("SHIPPED_IN",
                         "@out.pr_uid=:uid AND @in.release_uid=:ruid",
                         Map.of("uid", prUid, "ruid", ruid));
+                    prsRemoved += n;
+                    if (n == 0) errors.add("pr #" + prNum + ": ребро SHIPPED_IN к " + ruid
+                        + " не найдено — уже снято или не было привязано этим ключом");
                 } catch (Exception e) { errors.add("pr #" + prNum + ": " + e.getMessage()); }
             }
         } catch (Exception e) {
