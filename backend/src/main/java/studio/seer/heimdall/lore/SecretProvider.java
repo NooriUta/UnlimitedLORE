@@ -119,6 +119,15 @@ public class SecretProvider {
      * Тот же класс проблем, что ловил спринт миграции: конфиг «выглядит
      * настроенным», а фактически секреты молча идут из env.
      */
+    /**
+     * DBR-02: TTL кэша значений секретов. Секреты читаются редко, цена промаха
+     * мала — цена бессрочного залипания на протухшем кредe велика (см.
+     * {@link #cache}). Дефолт — порядка минут, не часов: свежесть важнее
+     * экономии на лишнем запросе к секрет-сервису.
+     */
+    @ConfigProperty(name = "lore.secrets.cache-ttl-seconds", defaultValue = "300")
+    long cacheTtlSeconds;
+
     @PostConstruct
     void validateProviderConfig() {
         if ("vault".equalsIgnoreCase(provider)) {
@@ -133,7 +142,18 @@ public class SecretProvider {
         }
     }
 
-    private final ConcurrentHashMap<String, String> cache = new ConcurrentHashMap<>();
+    /**
+     * DBR-02: значение + момент истечения, не голая строка. Бессрочный кэш
+     * держал бэкенд на протухшем креде после ротации до перезапуска — и именно
+     * так LORE становился источником локаута root-креда в ArcadeDB (см. DBR-01):
+     * счётчик неверных попыток у сервера не остывал, пока кто-то долбился
+     * устаревшим значением из этого кэша.
+     */
+    private record CacheEntry(String value, long expiresAt) {
+        boolean isExpired() { return System.currentTimeMillis() >= expiresAt; }
+    }
+
+    private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
 
     /** Access-token, полученный по Universal Auth. Живёт до истечения TTL. */
     private volatile String accessToken;
@@ -144,14 +164,23 @@ public class SecretProvider {
      * @return значение или empty, если не сконфигурировано/не найдено.
      */
     public Optional<String> get(String key) {
-        String cached = cache.get(key);
-        if (cached != null) return Optional.of(cached);
+        CacheEntry cached = cache.get(key);
+        if (cached != null) {
+            if (!cached.isExpired()) return Optional.of(cached.value());
+            // Протухшую запись убираем только если её никто не обновил параллельно
+            // (compare-and-remove) — иначе гонка двух потоков могла бы стереть
+            // только что записанное свежее значение.
+            cache.remove(key, cached);
+        }
 
         Optional<String> val =
             "infisical".equalsIgnoreCase(provider) ? fromService(key)
             : "vault".equalsIgnoreCase(provider)   ? fromVault(key)
             : fromEnv(key);
-        val.ifPresent(v -> cache.put(key, v));
+        // DBR-02: пустой результат сознательно НЕ кэшируется — иначе временный
+        // сбой источника застыл бы в кэше на весь TTL вместо того, чтобы
+        // повторить попытку на следующий вызов.
+        val.ifPresent(v -> cache.put(key, new CacheEntry(v, System.currentTimeMillis() + cacheTtlSeconds * 1000L)));
         if (val.isEmpty()) {
             LOG.debugf("[LORE secrets] %s не найден (провайдер=%s)", key, provider);
         }
@@ -163,7 +192,13 @@ public class SecretProvider {
         return get(key).filter(v -> !v.isBlank()).isPresent();
     }
 
-    /** Сбросить кэш (после ротации секрета). */
+    /**
+     * Сбросить кэш (после ротации секрета или отказа авторизации у потребителя,
+     * напр. 401 от ArcadeDB с текущим кредом). DBR-02: вызывающий обязан сделать
+     * РОВНО одну повторную попытку после {@code invalidate} — {@link #get}
+     * сам по себе не ретраит и не циклит; образец в этом же классе —
+     * одноразовый перелогин Infisical при 401 в {@link #fromService}.
+     */
     public void invalidate(String key) { cache.remove(key); }
 
     private Optional<String> fromEnv(String key) {

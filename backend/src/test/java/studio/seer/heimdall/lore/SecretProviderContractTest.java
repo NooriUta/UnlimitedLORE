@@ -102,6 +102,7 @@ class SecretProviderContractTest {
         p.vaultUrl = Optional.empty();
         p.vaultToken = Optional.empty();
         p.vaultPath = "secret/data/lore";
+        p.cacheTtlSeconds = 300;
         return p;
     }
 
@@ -174,6 +175,65 @@ class SecretProviderContractTest {
         SecretProvider p = row.fresh().get();
         p.get("VLT_CONTRACT_KEY");
         assertFalse(p.toString().contains("s3cr3t-value-must-not-leak"));
+    }
+
+    // ── DBR-02: TTL кэша + сброс по отказу авторизации у потребителя ────────
+
+    @ParameterizedTest(name = "{0}: TTL истёк — перечитывается из источника")
+    @MethodSource("providers")
+    void ttlПротухаетИПеречитывается(Row row) {
+        row.put().accept("VLT_CONTRACT_KEY", "old");
+        SecretProvider p = row.fresh().get();
+        p.cacheTtlSeconds = 0; // истекает немедленно — без сна на реальный TTL
+        assertEquals(Optional.of("old"), p.get("VLT_CONTRACT_KEY"));
+
+        row.put().accept("VLT_CONTRACT_KEY", "new");
+        assertEquals(Optional.of("new"), p.get("VLT_CONTRACT_KEY"),
+            "TTL=0 обязан требовать перечитывания на КАЖДЫЙ вызов, а не только на первый после истечения");
+    }
+
+    @ParameterizedTest(name = "{0}: значение живёт в кэше, пока TTL не истёк")
+    @MethodSource("providers")
+    void вПределахTtlОтдаётсяКэш(Row row) {
+        row.put().accept("VLT_CONTRACT_KEY", "cached-value");
+        SecretProvider p = row.fresh().get();
+        p.cacheTtlSeconds = 300;
+        assertEquals(Optional.of("cached-value"), p.get("VLT_CONTRACT_KEY"));
+
+        row.put().accept("VLT_CONTRACT_KEY", "changed-but-should-not-be-seen-yet");
+        assertEquals(Optional.of("cached-value"), p.get("VLT_CONTRACT_KEY"),
+            "TTL не истёк — обязана вернуться закэшированная запись, а не новая");
+    }
+
+    @ParameterizedTest(name = "{0}: протухший кред у потребителя — invalidate + ровно один повтор восстанавливает значение")
+    @MethodSource("providers")
+    void invalidateДаётРовноОдинПовторныйФетч(Row row) {
+        org.junit.jupiter.api.Assumptions.assumeTrue(row.supportsOutage(), "env не имеет бэкенда — сценарий ротации неприменим");
+        row.put().accept("VLT_CONTRACT_KEY", "stale");
+        SecretProvider p = row.fresh().get();
+        assertEquals(Optional.of("stale"), p.get("VLT_CONTRACT_KEY"), "закэшировано первым вызовом");
+
+        // Потребитель (напр. ArcadeDB-клиент) получил 401 со stale-кредом →
+        // ротация уже произошла на стороне секрет-сервиса, вызывающий делает
+        // invalidate + РОВНО один повторный get (без внутреннего цикла в get()).
+        row.put().accept("VLT_CONTRACT_KEY", "rotated");
+        p.invalidate("VLT_CONTRACT_KEY");
+        assertEquals(Optional.of("rotated"), p.get("VLT_CONTRACT_KEY"),
+            "один invalidate + один get обязаны вернуть новое значение");
+
+        // get() сам по себе не ретраит: один промах кэша = ровно один сетевой
+        // запрос к источнику, что и делает "третью попытку" не нужной в принципе.
+    }
+
+    @ParameterizedTest(name = "{0}: пустой результат не оседает в кэше")
+    @MethodSource("providers")
+    void пустойРезультатНеКэшируется(Row row) {
+        SecretProvider p = row.fresh().get();
+        assertEquals(Optional.empty(), p.get("VLT_CONTRACT_KEY"));
+
+        row.put().accept("VLT_CONTRACT_KEY", "appeared-later");
+        assertEquals(Optional.of("appeared-later"), p.get("VLT_CONTRACT_KEY"),
+            "если бы пустой результат кэшировался, свежее значение не появилось бы без invalidate");
     }
 
     // ── VLT-02: недоконфиг vault = ошибка старта, не тихий фолбэк ────────────
