@@ -6,6 +6,7 @@ import { LoreErrorBoundary } from '../components/lore/LoreErrorBoundary';
 import { LoreSearchScreen } from '../components/lore/LoreSearchScreen';
 import { DictionaryProvider } from '../components/lore/DictionaryProvider';
 import LoreTimeline        from '../components/lore/LoreTimeline';
+import LoreNewsFeed        from '../components/lore/LoreNewsFeed';
 import LoreAdrList         from '../components/lore/LoreAdrList';
 import LoreAdrPassportView from '../components/lore/LoreAdrPassportView';
 import LoreAdrEditor       from '../components/lore/LoreAdrEditor';
@@ -80,6 +81,7 @@ const SECTIONS: { id: Section; icon: string; labelKey: string; fallback: string 
   { id: 'tech',       icon: 'gears',          labelKey: 'lore.page.nav.tech',       fallback: 'Технологии' },
   { id: 'evolution',  icon: 'hourglass',      labelKey: 'lore.page.nav.evolution',  fallback: 'История'    },
   { id: 'timeline',   icon: 'tied-scroll',    labelKey: 'lore.page.nav.timeline',   fallback: 'Лента'      },
+  { id: 'news',       icon: 'town-crier',     labelKey: 'lore.page.nav.news',       fallback: 'Новости'    },
   { id: 'analytics',  icon: 'pie-chart',      labelKey: 'lore.page.nav.analytics',  fallback: 'Аналитика'  },
   { id: 'mcp',        icon: 'plug',           labelKey: 'lore.page.nav.mcp',        fallback: 'MCP API'    },
   { id: 'connections',icon: 'linked-rings',   labelKey: 'lore.page.nav.connections',fallback: 'Подключения'},
@@ -120,7 +122,7 @@ const SECTION_COLORS: Record<Section, string> = {
   milestones: 'var(--section-milestones)', plan: 'var(--section-plan)', sprints: 'var(--section-sprints)', adrs: 'var(--section-adrs)',
   decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
-  analytics: 'var(--section-analytics)', mcp: 'var(--section-mcp)', connections: 'var(--section-mcp)', admin: 'var(--wrn)',
+  analytics: 'var(--section-analytics)', news: 'var(--g-ctrl)', mcp: 'var(--section-mcp)', connections: 'var(--section-mcp)', admin: 'var(--wrn)',
   actors: 'var(--section-actors)', vpProfile: 'var(--section-rbjg)', vpCanvas: 'var(--section-vp)', features: 'var(--section-features)', userStories: 'var(--section-us)',
   search: 'var(--acc)',
 };
@@ -1320,6 +1322,19 @@ export default function LorePage() {
           {section === 'timeline' && (
             <LoreTimeline module="" q={debouncedQ} onError={handleFetchError}
               onSelect={navigateToAdr} onSelectSprint={navigateToSprint} />
+          )}
+
+          {/* Новости — сведённая лента «что изменилось» (ML-NEWS-ENDPOINT, /lore/news) */}
+          {section === 'news' && (
+            <LoreNewsFeed
+              onError={handleFetchError}
+              onOpen={(it) => {
+                if (it.kind === 'adr') navigateToAdr(it.title);
+                else if (it.kind === 'sprint') go('sprints');
+                else if (it.kind === 'release') go('releases');
+                else if (it.kind === 'decision') go('decisions');
+              }}
+            />
           )}
 
           {/* Analytics — aggregated task/sprint/component/release stats */}
