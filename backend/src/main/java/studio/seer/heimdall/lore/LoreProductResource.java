@@ -334,7 +334,8 @@ public class LoreProductResource extends LoreResourceBase {
      *                 передан — рёбра не трогаются вовсе.
      */
     public record ActorRequest(String actor_id, String name, String kind, String body_md,
-                               String project, List<String> projects) {}
+                               String project, List<String> projects,
+                               String machine_id, String session_id) {}
 
     @POST
     @Path("actor")
@@ -379,6 +380,11 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.name() != null)    { sql.append(", name=:n");    p.put("n", req.name()); }
             if (req.kind() != null)    { sql.append(", kind=:k");    p.put("k", req.kind()); }
             if (req.body_md() != null) { sql.append(", body_md=:b"); p.put("b", req.body_md()); }
+            // AL-108: сессия пишет своё «откуда» самостоятельно — не назначение
+            // владельца (client_id/agent_role остаются admin-путём actor/owner),
+            // а самоописание, эскалации прав не несёт.
+            if (req.machine_id() != null) { sql.append(", machine_id=:mid"); p.put("mid", req.machine_id()); }
+            if (req.session_id() != null) { sql.append(", session_id=:sid"); p.put("sid", req.session_id()); }
             sql.append(" UPSERT WHERE actor_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();

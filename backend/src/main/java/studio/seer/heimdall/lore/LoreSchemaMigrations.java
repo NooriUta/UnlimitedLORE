@@ -584,7 +584,24 @@ final class LoreSchemaMigrations {
         // сам несёт данные — без свойств, как OWNED_BY: переприсвоение — снести
         // старое ребро и создать новое, не накапливать историю.
         new Step(23, 17, "actor_fills_role", List.of(
-            "CREATE EDGE TYPE FILLS_ROLE IF NOT EXISTS"))
+            "CREATE EDGE TYPE FILLS_ROLE IF NOT EXISTS")),
+
+        // AL-108: несколько Claude-сессий пишут через ОДНОГО агента (общая
+        // учётка KC, agent-full) — доска и git не различали, какая сессия
+        // сделала запись (MG-SETTINGS-PARSE закрылась чужой сессией из того
+        // же индекса до того, как отчитывающаяся до неё дошла). machine_id/
+        // session_id — та же природа, что client_id/agent_role: свойство
+        // агента, обновляемое при каждой самозаписи (актор пишет их себе сам
+        // через actor_new — это не назначение владельца, эскалации тут нет),
+        // не накапливаемая история. Различить ДВЕ ОДНОВРЕМЕННЫЕ сессии одной
+        // роли это не позволяет (поле одно, последняя запись выигрывает) —
+        // для этого нужен tag в самой записи (commit/note_md), не в акторе;
+        // здесь — только «откуда агент писал в последний раз».
+        new Step(24, 17, "actor_machine_session", List.of(
+            "CREATE PROPERTY KnowActor.machine_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowActor.session_id IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (machine_id) NOTUNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (session_id) NOTUNIQUE"))
     );
 
     /**
