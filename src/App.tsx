@@ -31,6 +31,15 @@ import '@fontsource/manrope/700.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import '@fontsource/ibm-plex-mono/600.css';
+// LH-45: --display (Unbounded) объявлен в tokens.css и используется в 400/600/
+// 700/800 (AppShell/Login/Bragi/Muninn/Huginn/…), но НИ ОДИН вес не грузился —
+// @fontsource-импорта Unbounded не было, а CDN @import режет CSP (style-src
+// 'self'). Итог: везде системный sans-serif вместо брендового. Бандлим веса,
+// как Manrope/Mono рядом — вид перестаёт зависеть от внешней сети и CSP.
+import '@fontsource/unbounded/400.css';
+import '@fontsource/unbounded/600.css';
+import '@fontsource/unbounded/700.css';
+import '@fontsource/unbounded/800.css';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './styles/tokens.css';
