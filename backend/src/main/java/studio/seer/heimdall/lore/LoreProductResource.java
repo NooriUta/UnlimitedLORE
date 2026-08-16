@@ -494,9 +494,16 @@ public class LoreProductResource extends LoreResourceBase {
     }
 
     /**
-     * ADR-LORE-037 V1: журнал сессий агентов.
+     * ADR-LORE-037 V1/AL-110: журнал сессий агентов.
      *
-     * @param actor_id   agent actor_id, чья сессия это (LOGGED_BY target)
+     * @param actor_id   agent actor_id, чья сессия это (LOGGED_BY target). Опционален —
+     *                    когда не передан, резолвится из client_id токена вызывающего
+     *                    ({@link #callerClientId()}), тем же способом, каким уже читается
+     *                    {@code agentScope} в {@link #upsertActor}. Это то, что делает
+     *                    вызов пригодным для SessionStart-хука: хук знает только свой
+     *                    OIDC client_id (он же в конфиге), не свой actor_id в графе —
+     *                    заставлять его резолвить актора отдельным запросом значило бы
+     *                    городить лишний round-trip там, где бэкенд и так видит клейм.
      * @param session_id session_id этой самой сессии — первичный ключ вершины,
      *                    upsert по нему (сессия живёт — activity обновляется;
      *                    новая сессия — новая вершина, старая остаётся)
@@ -522,11 +529,22 @@ public class LoreProductResource extends LoreResourceBase {
     public Response logAgentSession(AgentSessionRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         requireAdmin(role);
-        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
-            return badParams("actor_id required");
-        if (req.session_id() == null || req.session_id().isBlank())
+        if (req == null || req.session_id() == null || req.session_id().isBlank())
             return badParams("session_id required");
-        if (!SAFE_ID.matcher(req.actor_id()).matches() || !SAFE_ID.matcher(req.session_id()).matches())
+        String actorId = req.actor_id();
+        if (actorId == null || actorId.isBlank()) {
+            String clientId = callerClientId();
+            if (clientId == null)
+                return badParams("actor_id required (не передан и не выводится из токена — "
+                    + "auth выключен или вызывающий не агент service-account)");
+            List<Map<String, Object>> byClient = ingest.queryPublic(
+                "SELECT actor_id FROM KnowActor WHERE client_id = :c", Map.of("c", clientId));
+            if (byClient.isEmpty())
+                return badParams("нет актора с client_id='" + clientId
+                    + "' — заведите через actor_new/actor_owner прежде чем логировать сессии");
+            actorId = String.valueOf(byClient.get(0).get("actor_id"));
+        }
+        if (!SAFE_ID.matcher(actorId).matches() || !SAFE_ID.matcher(req.session_id()).matches())
             return badParams("actor_id/session_id contains illegal characters");
         try {
             List<Map<String, Object>> existing = ingest.queryPublic(
@@ -557,17 +575,18 @@ public class LoreProductResource extends LoreResourceBase {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE LOGGED_BY FROM (SELECT FROM KnowAgentSession WHERE session_id=:sid) " +
                     "TO (SELECT FROM KnowActor WHERE actor_id=:aid) IF NOT EXISTS",
-                    Map.of("sid", req.session_id(), "aid", req.actor_id())))
+                    Map.of("sid", req.session_id(), "aid", actorId)))
                 .await().indefinitely().result();
             boolean logged = isNew ? (created != null && !created.isEmpty()) : true; // повтор — ребро уже есть
 
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("session_id", req.session_id());
+            out.put("actor_id", actorId);
             out.put("is_new", isNew);
             out.put("logged_by", logged);
             if (isNew && (created == null || created.isEmpty()))
-                out.put("hint", "агент '" + req.actor_id() + "' не найден — заведите через actor_new, "
+                out.put("hint", "агент '" + actorId + "' не найден — заведите через actor_new, "
                     + "иначе LOGGED_BY молча не создан");
             return noStore(Response.ok(out));
         } catch (Exception e) {
