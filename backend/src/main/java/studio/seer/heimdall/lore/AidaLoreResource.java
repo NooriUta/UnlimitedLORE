@@ -368,7 +368,13 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (date == null) continue;
                 String title = firstStr(sp.get("title"));
                 if (title == null) title = firstStr(sp.get("spec_id"));
-                items.add(newsItem("spec", date, title, firstStr(sp.get("spec_id")), null));
+                // Spec carries BELONGS_TO_PROJECT (unlike decision/adr, untagged
+                // by model) — first project so the client's project filter keeps it.
+                String project = null;
+                Object pr = sp.get("projects");
+                if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
+                    project = String.valueOf(l.get(0));
+                items.add(newsItem("spec", date, title, firstStr(sp.get("spec_id")), project));
             }
 
             // task_id → (title, sprintId); a second sighting marks the code unusable.
