@@ -657,8 +657,11 @@ public final class LoreSlices {
         // учётки и был тем местом, где роль с учёткой слипались.
         // Фильтр по client_id снят: агент без учётки — это заполняемое
         // состояние, и экран обязан его показать, а не спрятать.
+        // AL-108: machine_id/session_id — «откуда агент писал в последний
+        // раз» (самоописание через actor_new), не история и не различитель
+        // двух ОДНОВРЕМЕННЫХ сессий одной роли — только последняя.
         slice("agent_owners",
-            "SELECT actor_id, name, client_id, agent_role, " +
+            "SELECT actor_id, name, client_id, agent_role, machine_id, session_id, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
             "out('OWNED_BY').display_name AS owner_display_name " +
             "FROM KnowActor WHERE kind = 'agent'",
