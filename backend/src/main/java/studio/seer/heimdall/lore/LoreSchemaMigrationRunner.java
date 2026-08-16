@@ -329,6 +329,25 @@ public class LoreSchemaMigrationRunner {
         if (version == 13) { mergeFeaturesIntoUseCases(); createFullTextIndexes(); }
         if (version == 17) mergeLoreTagIntoKnowTag();
         if (version == 20) backfillProjectEdges();
+        if (version == 26) backfillReleaseProjectEdges();
+    }
+
+    // PS-20: добор рёбер BELONGS_TO_PROJECT у релизов, оставшихся без ребра после
+    // V20 (создано/перенесено позже). Та же идемпотентная логика size()=0, что во
+    // 2-й категории backfillProjectEdges: ребро выравнивается по полю git_project,
+    // матч источника по @rid (release_id не уникален между проектами). Существующие
+    // рёбра не трогаем — write-path (relinkReleaseProjectEdge) держит их в синхроне.
+    private void backfillReleaseProjectEdges() {
+        int relEdges = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT @rid AS rid, git_project FROM KnowRelease "
+                + "WHERE out('BELONGS_TO_PROJECT').size() = 0 AND git_project IS NOT NULL", Map.of())) {
+            command("CREATE EDGE BELONGS_TO_PROJECT FROM " + r.get("rid")
+                + " TO (SELECT FROM KnowGitProject WHERE slug = :p) IF NOT EXISTS",
+                Map.of("p", r.get("git_project")));
+            relEdges++;
+        }
+        LOG.infof("[LORE MIGRATE] V26 backfill Release→project (хвост после V20): %d рёбер", relEdges);
     }
 
     /**
