@@ -182,6 +182,8 @@ jobs:
       #      layer cache makes the retry cheap.
       - name: Docker image build (backend)
         run: |
+          # CIM-02: наблюдаемость registry-mirror базовых образов до сборки.
+          bash .github/scripts/registry-mirror-probe.sh || true
           # host.docker.internal внутри docker build НЕ резолвится сам: на Docker
           # Desktop это имя добавляет сам движок, на Linux-демоне ci-server — нет.
           # Прокси у раннера прописан именно так, поэтому без --add-host сборка
