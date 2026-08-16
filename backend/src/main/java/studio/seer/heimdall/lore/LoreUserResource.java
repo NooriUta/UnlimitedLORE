@@ -9,9 +9,11 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * KnowUser write path (AL-82, ADR-LORE-036). Предусловие всей проектной
@@ -167,6 +169,7 @@ public class LoreUserResource extends LoreResourceBase {
                     "DELETE FROM HAS_PROJECT_ROLE WHERE @out.kc_sub=:sub AND @in.slug=:proj",
                     Map.of("sub", req.kc_sub(), "proj", req.project())))
                     .await().indefinitely();
+                logRoleEvent(req.kc_sub(), req.project(), null, "remove", role); // AL-102
                 return noStore(Response.ok(Map.of("ok", true, "removed", true)));
             }
             // Роль человека в проекте — ребро ОДНО на пару (человек, проект),
@@ -183,12 +186,14 @@ public class LoreUserResource extends LoreResourceBase {
                     "UPDATE HAS_PROJECT_ROLE SET role=:r WHERE @out.kc_sub=:sub AND @in.slug=:proj",
                     Map.of("r", req.role(), "sub", req.kc_sub(), "proj", req.project())))
                     .await().indefinitely();
+                logRoleEvent(req.kc_sub(), req.project(), req.role(), "update", role); // AL-102
             } else {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE HAS_PROJECT_ROLE FROM (SELECT FROM KnowUser WHERE kc_sub=:sub) " +
                     "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role=:r",
                     Map.of("sub", req.kc_sub(), "proj", req.project(), "r", req.role())))
                     .await().indefinitely();
+                logRoleEvent(req.kc_sub(), req.project(), req.role(), "grant", role); // AL-102
             }
             return noStore(Response.ok(Map.of(
                 "ok", true, "kc_sub", req.kc_sub(), "project", req.project(), "role", req.role())));
@@ -196,6 +201,35 @@ public class LoreUserResource extends LoreResourceBase {
             LOG.warnf("[LORE USER ROLE] %s @ %s: %s", req.kc_sub(), req.project(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * AL-102: append-запись события выдачи/снятия проектной роли. best-effort —
+     * сбой журналирования не должен ронять уже выполненное изменение роли (оно
+     * первично; лог — производное наблюдение). role=null при снятии (SET строим
+     * динамически: ArcadeDB не принимает null-биндинг). event_uid — UUID.
+     * by_role = X-Seer-Role вызывающего: точная идентичность человека backend'у
+     * недоступна (аутентификация на ролевом заголовке), появится с sub в токене
+     * (AL-105).
+     */
+    private void logRoleEvent(String kcSub, String project, String roleGranted, String action, String byRole) {
+        try {
+            Map<String, Object> p = new HashMap<>();
+            p.put("eid", UUID.randomUUID().toString());
+            p.put("sub", kcSub);
+            p.put("proj", project);
+            p.put("act", action);
+            p.put("at", Instant.now().toString());
+            StringBuilder sql = new StringBuilder(
+                "INSERT INTO KnowProjectRoleEvent SET event_uid=:eid, kc_sub=:sub, project=:proj, "
+                + "action=:act, at=:at");
+            if (roleGranted != null) { sql.append(", role=:r");     p.put("r", roleGranted); }
+            if (byRole != null)      { sql.append(", by_role=:br"); p.put("br", byRole); }
+            writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sql", sql.toString(), p)).await().indefinitely();
+        } catch (Exception e) {
+            LOG.warnf("[LORE ROLE EVENT] %s @ %s (%s): %s", kcSub, project, action, e.getMessage());
         }
     }
 }
