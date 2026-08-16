@@ -1252,6 +1252,18 @@ public final class LoreSlices {
             "SELECT slug, name, hosts, default_branch FROM KnowGitProject",
             List.of(), Map.of(), " ORDER BY slug");
 
+        // AL-102: журнал выдачи/снятия проектных ролей (append-only, KnowProjectRoleEvent).
+        // «кто (роль) · кому (kc_sub) · что (project+role) · действие · когда (at)».
+        // Опциональные фильтры по человеку/проекту — узкий разрез для карточки.
+        slice("project_role_events",
+            "SELECT event_uid, kc_sub, project, role, action, by_role, at "
+            + "FROM KnowProjectRoleEvent",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "kc_sub",  " WHERE kc_sub = :kc_sub",
+                "project", " WHERE project = :project")),
+            " ORDER BY at DESC LIMIT 500");
+
         // Fixed 2026-07-02: PART_OF is Task --PART_OF--> Sprint (out from the task), so
         // in('PART_OF') on KnowTask always returns empty — the old query classified EVERY
         // task as backlog regardless of sprint membership.
