@@ -330,6 +330,28 @@ public class LoreSchemaMigrationRunner {
         if (version == 17) mergeLoreTagIntoKnowTag();
         if (version == 20) backfillProjectEdges();
         if (version == 26) backfillReleaseProjectEdges();
+        if (version == 28) recreateFtIndexes();
+    }
+
+    // DBU-09/DBR-12 (#5321): пересоздать FULL_TEXT-индексы свежими после апгрейда
+    // на 26.8.1. НЕ REBUILD (он на 26.8.1 теряет имя индекса — DBR-12), а DROP по
+    // имени из реестра + createFullTextIndexes (пересоздаёт свежими → корректный
+    // порядок ключей для кириллицы; клэши по полям чистит сам). Идемпотентно:
+    // повторный прогон снова снесёт и создаст, результат тот же.
+    private void recreateFtIndexes() {
+        Set<String> existing = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:indexes", Map.of())) {
+            existing.add(String.valueOf(r.get("name")));
+        }
+        int dropped = 0;
+        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
+            if (existing.contains(ix.name())) {
+                try { exec("DROP INDEX `" + ix.name() + "`"); dropped++; }
+                catch (Exception e) { LOG.warnf("[LORE MIGRATE] V28 DROP %s: %s", ix.name(), e.getMessage()); }
+            }
+        }
+        LOG.infof("[LORE MIGRATE] V28 (#5321): снято %d FT-индексов, пересоздаю свежими", dropped);
+        createFullTextIndexes();
     }
 
     // PS-20: добор рёбер BELONGS_TO_PROJECT у релизов, оставшихся без ребра после
