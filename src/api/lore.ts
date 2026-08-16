@@ -207,6 +207,29 @@ export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnal
   return (await res.json()) as LoreAnalytics;
 }
 
+// ── News feed (GET /lore/news) — ML-NEWS-ENDPOINT ───────────────────────────
+// Сведённая лента «что изменилось»: релизы, закрытые спринты, решения, ADR,
+// спеки, число закрытых задач за день. Сборка на бэкенде (один ответ вместо
+// разъезда по шести срезам). Первый живой потребитель — Forseti (шлюз miniLORE
+// заморожен). Одна строка на день-сущность; future — дата позже сегодня (опечатка
+// в дате в LORE, помечаем, а не прячем).
+export interface LoreNewsItem {
+  kind: 'release' | 'sprint' | 'decision' | 'adr' | 'spec' | 'tasks';
+  date: string;        // YYYY-MM-DD
+  title: string;
+  detail?: string;
+  project?: string;
+  future?: boolean;
+}
+
+export async function fetchLoreNews(limit = 60, signal?: AbortSignal): Promise<LoreNewsItem[]> {
+  const res = await fetch(`${LORE_BASE}/news?limit=${limit}`, { signal, headers: { ...authHeaders() } });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  const body = (await res.json()) as { items?: LoreNewsItem[] };
+  return body.items ?? [];
+}
+
 // ── Search v2 (SRCH-05, ADR-LORE-033) ──────────────────────────────────────
 // Отдельный helper, а не fetchLoreSlice: ответ несёт агрегаты by_type /
 // by_component, а не {rows} — та же причина, по которой analytics и

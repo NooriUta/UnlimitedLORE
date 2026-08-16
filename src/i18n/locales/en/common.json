@@ -1499,6 +1499,19 @@
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"
     },
+    "news": {
+      "empty": "Nothing has happened yet",
+      "future": "future",
+      "futureHint": "date is after today — likely a typo in LORE",
+      "kind": {
+        "release": "release",
+        "sprint": "sprint closed",
+        "decision": "decision",
+        "adr": "ADR",
+        "spec": "spec",
+        "tasks": "tasks"
+      }
+    },
     "page": {
       "disabled": {
         "message": "LORE is disabled in this environment.",
@@ -1588,6 +1601,7 @@
         "tech": "Tech",
         "evolution": "History",
         "timeline": "Feed",
+        "news": "News",
         "analytics": "Analytics",
         "mcp": "MCP API",
         "connections": "Connections",

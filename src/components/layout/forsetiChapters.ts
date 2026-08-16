@@ -6,7 +6,7 @@
 export type Section =
   | 'plan' | 'sprints' | 'adrs' | 'decisions' | 'openQuestions' | 'releases' | 'milestones' | 'admin'
   | 'knowledge' | 'components' | 'qg' | 'tech' | 'search'
-  | 'evolution' | 'timeline' | 'analytics' | 'mcp' | 'connections'
+  | 'evolution' | 'timeline' | 'analytics' | 'news' | 'mcp' | 'connections'
   // Продуктовый слой (ADR-LORE-022/032) — глава «Зачем».
   | 'actors' | 'vpProfile' | 'vpCanvas' | 'features' | 'userStories';
 
@@ -36,7 +36,7 @@ export const CHAPTERS: Chapter[] = [
   // больше нет, и обращение к icon отсутствующей записи роняло страницу.
   { id: 'know',  n: '03', icon: 'scroll-quill',   nameKey: 'lore.chapters.know.name',  name: 'Что решили', qKey: 'lore.chapters.know.q',  q: 'решения · знания',     color: 'var(--g-know)',  sections: ['adrs', 'decisions', 'openQuestions', 'knowledge'] },
   { id: 'tech',  n: '04', icon: 'gears',          nameKey: 'lore.chapters.tech.name',  name: 'Основа',     qKey: 'lore.chapters.tech.q',  q: 'компоненты · MCP',     color: 'var(--g-tech)',  sections: ['components', 'tech', 'mcp', 'connections'] },
-  { id: 'ctrl',  n: '05', icon: 'checkered-flag', nameKey: 'lore.chapters.ctrl.name',  name: 'Контроль',   qKey: 'lore.chapters.ctrl.q',  q: 'качество · аналитика', color: 'var(--g-ctrl)',  sections: ['analytics', 'qg', 'timeline', 'evolution'] },
+  { id: 'ctrl',  n: '05', icon: 'checkered-flag', nameKey: 'lore.chapters.ctrl.name',  name: 'Контроль',   qKey: 'lore.chapters.ctrl.q',  q: 'качество · аналитика', color: 'var(--g-ctrl)',  sections: ['news', 'analytics', 'qg', 'timeline', 'evolution'] },
 ];
 
 export const chapterOf = (s: Section): Chapter =>
