@@ -71,6 +71,20 @@ public final class LoreSlices {
             "FROM KnowRelease ORDER BY release_id DESC",
             List.of(), Map.of(), " LIMIT 100");
 
+        // AL-113 (запрошено miniLORE 2026-08-16): у среза `specs` даты не было,
+        // поэтому спеки не попадали в новостную ленту. Дата спеки = valid_from
+        // её ПЕРВОЙ HAS_STATE (создание) — та же природа, что date_created у
+        // ADR/decision. [0] = порядок вставки hist-строк = создание (вставки
+        // append, как в spec_by_id). WHERE по size()>0, не по [0] IS NOT NULL:
+        // индексация коллекции в WHERE ненадёжна (sprint_done_dates фильтрует
+        // тем же size()). Java-часть /lore/news всё равно сортирует по дате —
+        // здесь только отбор дат и потолок объёма.
+        slice("timeline_specs",
+            "SELECT spec_id, title, out('HAS_STATE').valid_from[0] AS date_created, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component " +
+            "FROM KnowSpec WHERE out('HAS_STATE').size() > 0",
+            List.of(), Map.of(), " LIMIT 400");
+
         slice("timeline_sprints",
             "SELECT sprint_id, name, " +
             "out('HAS_STATE').valid_from[0] AS valid_from, " +
@@ -128,6 +142,18 @@ public final class LoreSlices {
             "context_md, decision_md, consequences_md " +
             "FROM KnowADRHist WHERE in('HAS_STATE').adr_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
+
+        // AL-113 (запрошено miniLORE 2026-08-16): `adr_history` отдаёт правки
+        // ОДНОГО ADR за запрос (нужен :id) — для ленты редакций по всем ADR это
+        // N запросов. Батч-срез: по одной строке на каждую версию-открытие ADR
+        // сразу по всем, для новостной ленты правок. valid_from — реальная
+        // колонка KnowADRHist (ORDER BY по ней надёжен). Тела не тянем — лента
+        // показывает факт правки, не диф.
+        slice("adr_history_all",
+            "SELECT in('HAS_STATE').adr_id[0] AS adr_id, valid_from, valid_to, " +
+            "content_hash, source_commit " +
+            "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
+            List.of(), Map.of(), " LIMIT 300");
 
         // ── §2 Decisions ─────────────────────────────────────────────────────
         // ADR-019: KnowDecision as child of ADR. component_id/tags are filter axes,
