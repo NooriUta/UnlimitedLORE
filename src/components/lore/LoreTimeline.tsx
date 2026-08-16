@@ -9,8 +9,22 @@ import { GameIcon } from './GameIcon';
 const KIND_ICON: Record<string, string> = {
   adr: 'scroll-quill', decision: 'vote', release: 'rocket', sprint: 'sprint',
 };
+// TML-01: цвет на тип записи — иконка/метка/левый акцент строки красятся по типу,
+// чтобы вид события считывался мгновенно (те же section-токены, что в шапке Forseti).
+const KIND_COLOR: Record<string, string> = {
+  adr: 'var(--section-adrs)', decision: 'var(--section-decisions)',
+  release: 'var(--section-releases)', sprint: 'var(--section-sprints)',
+};
 const ALL_KINDS = ['adr', 'decision', 'release', 'sprint'] as const;
 type Kind = typeof ALL_KINDS[number];
+
+// TML-01: дата-фильтр — быстрые пресеты по «свежести» записи. days=0 → без границы.
+const DATE_PRESETS: { key: string; labelKey: string; label: string; days: number }[] = [
+  { key: 'all', labelKey: 'lore.timeline.date.all', label: 'всё',  days: 0 },
+  { key: '3m',  labelKey: 'lore.timeline.date.3m',  label: '3м',   days: 90 },
+  { key: '6m',  labelKey: 'lore.timeline.date.6m',  label: '6м',   days: 180 },
+  { key: '1y',  labelKey: 'lore.timeline.date.1y',  label: 'год',  days: 365 },
+];
 
 const S = {
   root:    { flex: 1, display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
@@ -76,6 +90,8 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
   const [allItems, setAllItems] = useState<LoreTimelineItem[]>([]);
   const [loading, setLoading]   = useState(true);
   const [kindSel, setKindSel]   = useState<Set<Kind>>(new Set());
+  const [datePreset, setDatePreset] = useState('all');   // TML-01: дата-фильтр
+  const [sortDesc, setSortDesc]     = useState(true);    // TML-01: видимая сортировка (новые↓ / старые↑)
 
   useEffect(() => {
     setLoading(true);
@@ -127,11 +143,26 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
 
   const items = useMemo(() => {
     const ql = q.toLowerCase();
-    return allItems
+    let cutoff = '';
+    const preset = DATE_PRESETS.find(p => p.key === datePreset);
+    if (preset && preset.days > 0) {
+      const d = new Date();
+      d.setDate(d.getDate() - preset.days);
+      cutoff = d.toISOString().slice(0, 10);
+    }
+    const out = allItems
       .filter(i => kindSel.size === 0 || kindSel.has(i.kind as Kind))
       .filter(i => !module || i.kind !== 'adr' || i.status === module)
+      .filter(i => !cutoff || (i.date ?? '').slice(0, 10) >= cutoff)
       .filter(i => !ql || i.title.toLowerCase().includes(ql) || i.ref_id.toLowerCase().includes(ql));
-  }, [allItems, kindSel, module, q]);
+    // TML-01: сортировка теперь переключаемая и видимая (кнопка в тулбаре),
+    // а не молча зашитая desc. .filter уже вернул новый массив — sort безопасен.
+    out.sort((a, b) => {
+      const cmp = (a.date ?? '').localeCompare(b.date ?? '');
+      return sortDesc ? -cmp : cmp;
+    });
+    return out;
+  }, [allItems, kindSel, module, q, datePreset, sortDesc]);
 
   function toggleKind(k: Kind) {
     setKindSel(prev => {
@@ -165,6 +196,21 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
             {t('lore.timeline.moduleFilter', '· фильтр по модулю {{module}} — только ADR', { module })}
           </span>
         )}
+        <span style={{ flex: 1 }} />
+        {/* TML-01: дата-фильтр (пресеты по свежести) */}
+        {DATE_PRESETS.map(p => {
+          const on = datePreset === p.key;
+          return (
+            <span key={p.key} style={S.chip(on)} {...a11yClick(() => setDatePreset(p.key))} aria-pressed={on}>
+              {t(p.labelKey, p.label)}
+            </span>
+          );
+        })}
+        {/* TML-01: видимая переключаемая сортировка по дате */}
+        <span style={S.chip(false)} {...a11yClick(() => setSortDesc(v => !v))}
+              title={t('lore.timeline.sortToggle', 'Порядок по дате')} aria-label={t('lore.timeline.sortToggle', 'Порядок по дате')}>
+          {sortDesc ? t('lore.timeline.sortNewest', '↓ новые') : t('lore.timeline.sortOldest', '↑ старые')}
+        </span>
       </div>
       <div style={S.list}>
         {loading && <div style={S.loading}>{t('lore.timeline.loading', 'Загрузка событий…')}</div>}
@@ -173,18 +219,19 @@ export default function LoreTimeline({ module, q, onError, onSelect, onSelectSpr
           const isSprint  = item.kind === 'sprint';
           const clickable = item.kind === 'adr' || item.kind === 'decision'
             || (isSprint && !!onSelectSprint);
+          const color = KIND_COLOR[item.kind] ?? 'var(--bd)';
           return (
             <div
               key={`${item.kind}-${item.ref_id}-${i}`}
-              style={{ ...S.item, cursor: clickable ? 'pointer' : 'default' }}
+              style={{ ...S.item, cursor: clickable ? 'pointer' : 'default', borderLeft: `3px solid ${color}` }}
               onClick={() => {
                 if (isSprint) onSelectSprint?.(item.ref_id);
                 else if (item.kind === 'adr' || item.kind === 'decision') onSelect(item.ref_id);
               }}
             >
               <span style={S.date}>{item.date?.slice(0, 10)}</span>
-              <span style={S.icon}><GameIcon slug={KIND_ICON[item.kind]} size={14} /></span>
-              <span style={S.kind}>{item.kind}</span>
+              <span style={{ ...S.icon, color }}><GameIcon slug={KIND_ICON[item.kind]} size={14} /></span>
+              <span style={{ ...S.kind, color }}>{item.kind}</span>
               <span style={S.ref}>{item.ref_id}</span>
               <span style={S.title}>{item.title}</span>
               {item.status && <StatusChip status={item.status} />}
