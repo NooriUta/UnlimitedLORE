@@ -81,7 +81,12 @@ public final class LoreSlices {
         // здесь только отбор дат и потолок объёма.
         slice("timeline_specs",
             "SELECT spec_id, title, out('HAS_STATE').valid_from[0] AS date_created, " +
-            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component, " +
+            // AL-113 follow-up: у спеки есть BELONGS_TO_PROJECT (в отличие от
+            // decision/adr, у которых проекта в модели нет) — отдаём, чтобы
+            // spec-запись новостной ленты несла project и фильтр по проекту на
+            // клиенте её не терял.
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowSpec WHERE out('HAS_STATE').size() > 0",
             List.of(), Map.of(), " LIMIT 400");
 
