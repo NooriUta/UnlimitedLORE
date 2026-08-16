@@ -667,6 +667,22 @@ public final class LoreSlices {
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
 
+        // ADR-LORE-037 V1: журнал сессий агентов — обратная сторона LOGGED_BY
+        // (agent_owners показывает АКТОРА, этот срез показывает КОНКРЕТНЫЕ
+        // сессии под ним, зачем и заводился — «какая сессия сделала запись»,
+        // а не только «под какой ролью»). Опциональный фильтр по актору:
+        // без него — общий журнал (свежие сверху), с ним — сессии одного
+        // агента (экран его карточки).
+        slice("agent_sessions",
+            "SELECT session_id, machine_id, project, entrypoint, dialogue_name, " +
+            "started_at, last_activity_at, " +
+            "out('LOGGED_BY').actor_id AS actor_ids " +
+            "FROM KnowAgentSession",
+            List.of(),
+            new LinkedHashMap<>(Map.of("actor_id",
+                " WHERE out('LOGGED_BY').actor_id CONTAINS :actor_id")),
+            " ORDER BY last_activity_at DESC LIMIT 200");
+
         slice("actor_load",
             "SELECT actor_id, name, kind, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +

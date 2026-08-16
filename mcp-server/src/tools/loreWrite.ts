@@ -540,6 +540,41 @@ export function registerLoreWrite(server: McpServer): void {
     body: ({ actor_id, rel, target_id, action }) => ({ actor_id, rel, target_id, action: action ?? 'add' }),
   });
 
+  // ADR-LORE-037 V1: журнал сессий агентов — ОТДЕЛЬНАЯ вершина KnowAgentSession
+  // (append: сессия закрылась — строка остаётся, новая сессия — новая
+  // строка), не поле на KnowActor (machine_id/session_id из actor_new — это
+  // mutable «сейчас», не журнал). Вызывать в начале сессии и периодически
+  // (bump last_activity_at) — не назначение владельца, эскалации нет.
+  definePostTool(server, {
+    name: 'agent_session_log',
+    description: 'Upsert this session\'s own KnowAgentSession row (by session_id) and its LOGGED_BY edge to ' +
+      'the calling agent actor — ADR-LORE-037 V1. Call once at session start and again on later activity to ' +
+      'bump last_activity_at (started_at is set only on the FIRST call for a given session_id, never ' +
+      'overwritten after). This is a session logging its own presence, not a content log — no message text, ' +
+      'no tool calls (that transcript already lives on disk and in the miniLORE gateway; duplicating it here ' +
+      'would be a third source of truth for no gain). Distinct from actor_new\'s machine_id/session_id: those ' +
+      'are a MUTABLE property on the shared agent actor ("where it last wrote from" — one field, last write ' +
+      'wins across concurrent sessions of the same role); this is an APPEND-ONLY row per session, so two ' +
+      'concurrent sessions under one shared agent-full identity now both leave a trace instead of one ' +
+      'overwriting the other\'s. Mutates system_aida_lore.',
+    schema: {
+      actor_id:       z.string().describe('agent actor_id this session is running as, e.g. "AGENT-FULL-msbt0fed"'),
+      session_id:     z.string().describe('this Claude session\'s own id (the local session registry id)'),
+      machine_id:     z.string().optional().describe('which machine this session is running on'),
+      project:        z.string().optional().describe('git-project slug this session is working in, if known'),
+      entrypoint:     z.enum(['cli', 'claude-desktop']).optional(),
+      dialogue_name:  z.string().optional().describe('the session\'s own title, if it has one'),
+    },
+    path: '/lore/actor/session',
+    body: ({ actor_id, session_id, machine_id, project, entrypoint, dialogue_name }) => ({
+      actor_id, session_id,
+      ...(machine_id === undefined ? {} : { machine_id }),
+      ...(project === undefined ? {} : { project }),
+      ...(entrypoint === undefined ? {} : { entrypoint }),
+      ...(dialogue_name === undefined ? {} : { dialogue_name }),
+    }),
+  });
+
   // sprint_plan_set (MCPSYNC-01): закрывает единственную содержательную дыру
   // сверки REST↔MCP 2026-07-17 — /lore/sprint/plan (приоритет + плановые даты +
   // track_id, SCD2 close-open) был недостижим из агентов; sprint_set честно
