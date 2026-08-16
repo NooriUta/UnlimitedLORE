@@ -493,6 +493,89 @@ public class LoreProductResource extends LoreResourceBase {
         return null;
     }
 
+    /**
+     * ADR-LORE-037 V1: журнал сессий агентов.
+     *
+     * @param actor_id   agent actor_id, чья сессия это (LOGGED_BY target)
+     * @param session_id session_id этой самой сессии — первичный ключ вершины,
+     *                    upsert по нему (сессия живёт — activity обновляется;
+     *                    новая сессия — новая вершина, старая остаётся)
+     */
+    public record AgentSessionRequest(String actor_id, String session_id, String machine_id,
+                                       String project, String entrypoint, String dialogue_name) {}
+
+    /**
+     * ADR-LORE-037 D1-D4: `KnowAgentSession` — ОТДЕЛЬНАЯ вершина от
+     * `KnowActor` (AL-108 несёт mutable «сейчас» на акторе, эта вершина несёт
+     * append-факт «что было»). Пишет сама сессия про себя — не назначение
+     * владельца, эскалации нет (симметрично `machine_id`/`session_id` в
+     * {@link #upsertActor}).
+     *
+     * <p>{@code started_at} выставляется ТОЛЬКО при создании строки — иначе
+     * повторный вызов (bump активности) переписал бы момент начала сессии на
+     * текущий, и «сколько сессия уже идёт» стало бы всегда нулём.
+     */
+    @POST
+    @Path("actor/session")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response logAgentSession(AgentSessionRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
+            return badParams("actor_id required");
+        if (req.session_id() == null || req.session_id().isBlank())
+            return badParams("session_id required");
+        if (!SAFE_ID.matcher(req.actor_id()).matches() || !SAFE_ID.matcher(req.session_id()).matches())
+            return badParams("actor_id/session_id contains illegal characters");
+        try {
+            List<Map<String, Object>> existing = ingest.queryPublic(
+                "SELECT count(*) AS n FROM KnowAgentSession WHERE session_id = :sid",
+                Map.of("sid", req.session_id()));
+            boolean isNew = existing.isEmpty()
+                || ((Number) existing.get(0).getOrDefault("n", 0)).longValue() == 0;
+
+            String now = Instant.now().toString();
+            StringBuilder sql = new StringBuilder(
+                "UPDATE KnowAgentSession SET session_id=:sid, last_activity_at=:now");
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("sid", req.session_id());
+            p.put("now", now);
+            if (isNew) { sql.append(", started_at=:st"); p.put("st", now); }
+            if (req.machine_id() != null)    { sql.append(", machine_id=:m");    p.put("m", req.machine_id()); }
+            if (req.project() != null)       { sql.append(", project=:p");       p.put("p", req.project()); }
+            if (req.entrypoint() != null)    { sql.append(", entrypoint=:e");    p.put("e", req.entrypoint()); }
+            if (req.dialogue_name() != null) { sql.append(", dialogue_name=:d"); p.put("d", req.dialogue_name()); }
+            sql.append(" UPSERT WHERE session_id=:sid");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
+                .await().indefinitely();
+
+            // LOGGED_BY БЕЗ UNIQUE: агент копит много сессий за жизнь — в
+            // отличие от OWNED_BY/FILLS_ROLE, здесь рёбра НАКАПЛИВАЮТСЯ.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE LOGGED_BY FROM (SELECT FROM KnowAgentSession WHERE session_id=:sid) " +
+                    "TO (SELECT FROM KnowActor WHERE actor_id=:aid) IF NOT EXISTS",
+                    Map.of("sid", req.session_id(), "aid", req.actor_id())))
+                .await().indefinitely().result();
+            boolean logged = isNew ? (created != null && !created.isEmpty()) : true; // повтор — ребро уже есть
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("session_id", req.session_id());
+            out.put("is_new", isNew);
+            out.put("logged_by", logged);
+            if (isNew && (created == null || created.isEmpty()))
+                out.put("hint", "агент '" + req.actor_id() + "' не найден — заведите через actor_new, "
+                    + "иначе LOGGED_BY молча не создан");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE AGENT-SESSION] %s: %s", req.session_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
     // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.
     // Отдельный подпуть, не поле в upsertActor: назначение владельца агента —
     // административный акт (кто может писать под этим клиентом KC), не

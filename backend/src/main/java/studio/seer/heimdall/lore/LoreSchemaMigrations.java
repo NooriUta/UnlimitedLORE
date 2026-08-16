@@ -601,7 +601,32 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowActor.machine_id IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowActor.session_id IF NOT EXISTS STRING",
             "CREATE INDEX IF NOT EXISTS ON KnowActor (machine_id) NOTUNIQUE",
-            "CREATE INDEX IF NOT EXISTS ON KnowActor (session_id) NOTUNIQUE"))
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (session_id) NOTUNIQUE")),
+
+        // ADR-LORE-037 V1: журнал сессий агентов — ОТДЕЛЬНАЯ вершина, не
+        // расширение KnowActor (шаг 24 несёт mutable «сейчас», этот шаг несёт
+        // append-факт «что было»). Одна вершина на сессию (upsert по
+        // session_id — сессия живёт, activity обновляется; сессия закрылась —
+        // строка остаётся, новая сессия создаёт новую строку: это и есть
+        // журнал). LOGGED_BY БЕЗ UNIQUE на своей стороне — агент копит много
+        // сессий за жизнь, в отличие от OWNED_BY/FILLS_ROLE, где
+        // переприсвоение сносит старое ребро.
+        // V1 намеренно не несёт содержимого диалога (текст реплик, tool-calls)
+        // — транскрипт уже живёт на диске и в гейтвее miniLORE, дублировать
+        // его в графе создало бы третий источник правды без выигрыша (см.
+        // ADR-LORE-037 D2). Timeseries-часть (D5) — открытый вопрос, эта
+        // миграция её не решает и не блокирует ею V1.
+        new Step(25, 17, "agent_session_log", List.of(
+            "CREATE VERTEX TYPE KnowAgentSession IF NOT EXISTS",
+            "CREATE PROPERTY KnowAgentSession.session_id       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.machine_id       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.project          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.entrypoint       IF NOT EXISTS STRING", // cli | claude-desktop
+            "CREATE PROPERTY KnowAgentSession.dialogue_name    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.started_at       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.last_activity_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowAgentSession (session_id) UNIQUE",
+            "CREATE EDGE TYPE LOGGED_BY IF NOT EXISTS")) // KnowAgentSession -> KnowActor(agent), multi
     );
 
     /**
