@@ -1494,7 +1494,11 @@
       "kindSprint": "Sprints",
       "moduleFilter": "· filtered by module {{module}} — ADR only",
       "loading": "Loading events…",
-      "empty": "No events found."
+      "empty": "No events found.",
+      "date": { "all": "all", "3m": "3m", "6m": "6m", "1y": "1y" },
+      "sortToggle": "Sort by date",
+      "sortNewest": "↓ newest",
+      "sortOldest": "↑ oldest"
     },
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"

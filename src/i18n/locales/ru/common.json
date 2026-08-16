@@ -1494,7 +1494,11 @@
       "kindSprint": "Спринты",
       "moduleFilter": "· фильтр по модулю {{module}} — только ADR",
       "loading": "Загрузка событий…",
-      "empty": "Событий не найдено."
+      "empty": "Событий не найдено.",
+      "date": { "all": "всё", "3m": "3м", "6m": "6м", "1y": "год" },
+      "sortToggle": "Порядок по дате",
+      "sortNewest": "↓ новые",
+      "sortOldest": "↑ старые"
     },
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"
