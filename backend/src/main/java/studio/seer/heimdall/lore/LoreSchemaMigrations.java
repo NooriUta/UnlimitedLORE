@@ -655,7 +655,20 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowProjectRoleEvent.action    IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowProjectRoleEvent.by_role   IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowProjectRoleEvent.at        IF NOT EXISTS STRING",
-            "CREATE INDEX IF NOT EXISTS ON KnowProjectRoleEvent (event_uid) UNIQUE"))
+            "CREATE INDEX IF NOT EXISTS ON KnowProjectRoleEvent (event_uid) UNIQUE")),
+
+        // DBU-09/DBR-12 (#5321): апгрейд ArcadeDB на 26.8.1 оставляет FULL_TEXT-
+        // индексы с НЕ-ASCII (кириллическими) ключами физически отсортированными
+        // в старом порядке — на 26.8.1 lookup по такому индексу возвращает МЕНЬШЕ
+        // записей, чем скан (движок предупреждает «should be rebuilt» при открытии
+        // system_aida_lore). Health-гейт LoreSearchResource это ловит и отвечает
+        // сканом (полная выдача, без ранжирования) — честно, но поиск теряет
+        // релевантность. Лечится ТОЛЬКО пересозданием (DROP+CREATE), НЕ REBUILD:
+        // на 26.8.1 REBUILD INDEX теряет имя индекса (DBR-12) — после него
+        // SEARCH_INDEX('ftИмя') находит «Index not found». Шаг сносит все FT из
+        // реестра по имени и пересоздаёт свежими через createFullTextIndexes
+        // (тот же vetted-путь, что V11/12/13; он же чистит клэши по полям).
+        new Step(28, 17, "ft_indexes_recreate_5321", List.of())
     );
 
     /**
