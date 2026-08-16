@@ -636,7 +636,26 @@ final class LoreSchemaMigrations {
         // release_mv в этой сессии). Write-path теперь выравнивает ребро по полю
         // (relinkReleaseProjectEdge); этот шаг добирает исторический хвост — та же
         // идемпотентная логика size()=0, что у V20 (см. backfillReleaseProjectEdges).
-        new Step(26, 17, "release_project_edges_backfill", List.of())
+        new Step(26, 17, "release_project_edges_backfill", List.of()),
+
+        // AL-102: журнал выдачи/снятия проектных ролей (append-only). Ребро
+        // HAS_PROJECT_ROLE хранит ТЕКУЩЕЕ состояние (одно на пару человек↔проект,
+        // роль свойством); кто/когда роль выдал или снял оно не помнит. Отдельная
+        // вершина-событие KnowProjectRoleEvent — та же природа, что KnowAgentSession
+        // (ADR-037): лог «что происходило», а не изменяемое состояние. Пишется на
+        // каждый grant/update/remove в setUserRole. Поля: кому (kc_sub), проект,
+        // роль (null при снятии), действие, чьей ролью выдано (by_role — точная
+        // идентичность человека требует sub в токене, см. AL-105), когда (at).
+        new Step(27, 17, "project_role_event_log", List.of(
+            "CREATE VERTEX TYPE KnowProjectRoleEvent IF NOT EXISTS",
+            "CREATE PROPERTY KnowProjectRoleEvent.event_uid IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.kc_sub    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.project   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.role      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.action    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.by_role   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.at        IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowProjectRoleEvent (event_uid) UNIQUE"))
     );
 
     /**
