@@ -28,11 +28,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -288,6 +291,172 @@ public class AidaLoreResource extends LoreResourceBase {
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    // ── News feed: what changed lately, across everything ────────────────────
+    // AL-113: Java-порт getNews() из miniLORE gateway (gateway/src/lore.ts) —
+    // единый GET /lore/news поверх существующих срезов, чтобы LORE-веб-UI не
+    // повторял разъезд по десятку слайсов, а miniLORE получил спеки (с датой) и
+    // правки ADR батчем (см. новые timeline_specs / adr_history_all).
+    //
+    // Возвращает Response (не Uni) → RESTEasy Reactive исполняет на worker-нити,
+    // блокирующий queryPublic безопасен (тот же приём, что analytics выше).
+    // Отдельные задачи не перечисляются, а считаются: task_done_dates несёт id
+    // без заголовков, и 2760 строк «AI-01 done» были бы шумом там, где новость —
+    // «14 задач закрыто». task_id — код в пределах спринта, не ключ (одна «T-01»
+    // у десятков задач): заголовок берём только когда код в корпусе ровно один.
+    private static final int NEWS_NAMED_PER_DAY = 4;
+    private static final Pattern NEWS_DAY = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})");
+
+    @GET
+    @Path("news")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response news(@QueryParam("limit") Integer limitParam,
+                         @QueryParam("since") String since,
+                         @QueryParam("before") String before) {
+        if (!enabled) return disabled();
+        int limit = (limitParam == null || limitParam <= 0) ? 60 : limitParam;
+        try {
+            List<Map<String, Object>> releases    = composeAndQuery("timeline_releases");
+            List<Map<String, Object>> sprintsDone = composeAndQuery("sprint_done_dates");
+            List<Map<String, Object>> decisions   = composeAndQuery("timeline_decisions");
+            List<Map<String, Object>> adrs        = composeAndQuery("timeline_adrs");
+            List<Map<String, Object>> specs       = composeAndQuery("timeline_specs");
+            List<Map<String, Object>> tasksDone   = composeAndQuery("task_done_dates");
+            List<Map<String, Object>> sprints     = composeAndQuery("sprints");
+            List<Map<String, Object>> allTasks    = composeAndQuery("all_tasks");
+
+            // Sprint rows carry only an id; the name a person gave it reads better.
+            // A sprint can span projects; the feed tags with the first (the one LORE
+            // itself leads with). Decisions/ADRs carry no project → stay untagged.
+            Map<String, String> sprintName = new HashMap<>();
+            Map<String, String> sprintProject = new HashMap<>();
+            for (Map<String, Object> s : sprints) {
+                String sid = firstStr(s.get("sprint_id"));
+                if (sid == null) continue;
+                sprintName.putIfAbsent(sid, firstStr(s.get("name")));
+                Object gp = s.get("git_projects");
+                if (gp instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
+                    sprintProject.putIfAbsent(sid, String.valueOf(l.get(0)));
+            }
+
+            List<Map<String, Object>> items = new ArrayList<>();
+
+            for (Map<String, Object> r : releases) {
+                String date = dayOf(r.get("release_date"));
+                if (date != null)
+                    items.add(newsItem("release", date, firstStr(r.get("release_id")), "released", firstStr(r.get("git_project"))));
+            }
+            for (Map<String, Object> s : sprintsDone) {
+                String date = dayOf(s.get("done_date"));
+                if (date == null) continue;
+                String sid = firstStr(s.get("sprint_id"));
+                items.add(newsItem("sprint", date, sprintName.getOrDefault(sid, sid), "sprint closed", sprintProject.get(sid)));
+            }
+            for (Map<String, Object> d : decisions) {
+                String date = dayOf(d.get("date_created"));
+                if (date != null)
+                    items.add(newsItem("decision", date, firstStr(d.get("title")), firstStr(d.get("decision_id")), null));
+            }
+            for (Map<String, Object> a : adrs) {
+                String date = dayOf(a.get("date_created"));
+                if (date != null)
+                    items.add(newsItem("adr", date, firstStr(a.get("adr_id")), firstStr(a.get("component")), null));
+            }
+            for (Map<String, Object> sp : specs) {
+                String date = dayOf(sp.get("date_created"));
+                if (date == null) continue;
+                String title = firstStr(sp.get("title"));
+                if (title == null) title = firstStr(sp.get("spec_id"));
+                items.add(newsItem("spec", date, title, firstStr(sp.get("spec_id")), null));
+            }
+
+            // task_id → (title, sprintId); a second sighting marks the code unusable.
+            Map<String, String[]> titleById = new HashMap<>();
+            Set<String> ambiguous = new HashSet<>();
+            for (Map<String, Object> t : allTasks) {
+                String tid = firstStr(t.get("task_id"));
+                if (tid == null) continue;
+                if (titleById.containsKey(tid)) ambiguous.add(tid);
+                else titleById.put(tid, new String[]{firstStr(t.get("title")), firstStr(t.get("sprint_id"))});
+            }
+            for (String a : ambiguous) titleById.remove(a);
+
+            // Newest first, so the per-day cap keeps the most recent of a busy day.
+            List<Map<String, Object>> closed = new ArrayList<>(tasksDone);
+            closed.sort((a, b) -> String.valueOf(b.get("valid_from")).compareTo(String.valueOf(a.get("valid_from"))));
+
+            Map<String, Integer> namedCount = new HashMap<>();
+            Map<String, Integer> unnamedCount = new HashMap<>();
+            for (Map<String, Object> t : closed) {
+                String date = dayOf(t.get("valid_from"));
+                if (date == null) continue;
+                String tid = firstStr(t.get("task_id"));
+                String[] known = tid == null ? null : titleById.get(tid);
+                int shown = namedCount.getOrDefault(date, 0);
+                if (known != null && known[0] != null && shown < NEWS_NAMED_PER_DAY) {
+                    namedCount.put(date, shown + 1);
+                    String project = known[1] == null ? null : sprintProject.get(known[1]);
+                    items.add(newsItem("tasks", date, known[0], tid + " closed", project));
+                } else {
+                    unnamedCount.merge(date, 1, Integer::sum);
+                }
+            }
+            for (Map.Entry<String, Integer> e : unnamedCount.entrySet()) {
+                int count = e.getValue();
+                items.add(newsItem("tasks", e.getKey(),
+                    count + " more task" + (count == 1 ? "" : "s") + " closed",
+                    namedCount.containsKey(e.getKey()) ? "same day" : "across all sprints", null));
+            }
+
+            // Date cursor for windowed / archive-tail loading (FN-12 «архив
+            // новостей одним запросом»): since = on/after, before = strictly older.
+            // Dates are YYYY-MM-DD, so lexicographic compare == chronological.
+            if (since != null && !since.isBlank())
+                items.removeIf(it -> String.valueOf(it.get("date")).compareTo(since) < 0);
+            if (before != null && !before.isBlank())
+                items.removeIf(it -> String.valueOf(it.get("date")).compareTo(before) >= 0);
+
+            String today = Instant.now().toString().substring(0, 10);
+            for (Map<String, Object> item : items)
+                if (String.valueOf(item.get("date")).compareTo(today) > 0) item.put("future", true);
+
+            items.sort((a, b) -> String.valueOf(b.get("date")).compareTo(String.valueOf(a.get("date"))));
+            List<Map<String, Object>> limited = items.size() > limit
+                ? new ArrayList<>(items.subList(0, limit)) : items;
+            return noStore(Response.ok(Map.of("items", limited)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE NEWS] %s", e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    private List<Map<String, Object>> composeAndQuery(String sliceId) {
+        LoreSlices.Composed c = LoreSlices.compose(sliceId, Map.of());
+        return ingestService.queryPublic(c.sql(), c.params());
+    }
+
+    /** "2026-06-11 22:26:41" and "2026-07-10" both → "2026-07-10". Null when no date. */
+    // Package-private so AidaLoreResourceTest can exercise it directly — same
+    // convention as classifyStatus above.
+    static String dayOf(Object value) {
+        if (value == null) return null;
+        String s = (value instanceof List<?> l)
+            ? (l.isEmpty() ? "" : String.valueOf(l.get(0)))
+            : String.valueOf(value);
+        Matcher m = NEWS_DAY.matcher(s.trim());
+        return m.find() ? m.group(1) : null;
+    }
+
+    private static Map<String, Object> newsItem(String kind, String date, String title, String detail, String project) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("kind", kind);
+        m.put("date", date);
+        m.put("title", title);
+        if (detail != null) m.put("detail", detail);
+        if (project != null) m.put("project", project);
+        return m;
     }
 
     @GET
