@@ -540,11 +540,14 @@ export function registerLoreWrite(server: McpServer): void {
     body: ({ actor_id, rel, target_id, action }) => ({ actor_id, rel, target_id, action: action ?? 'add' }),
   });
 
-  // ADR-LORE-037 V1: журнал сессий агентов — ОТДЕЛЬНАЯ вершина KnowAgentSession
-  // (append: сессия закрылась — строка остаётся, новая сессия — новая
-  // строка), не поле на KnowActor (machine_id/session_id из actor_new — это
-  // mutable «сейчас», не журнал). Вызывать в начале сессии и периодически
-  // (bump last_activity_at) — не назначение владельца, эскалации нет.
+  // ADR-LORE-037 V1/AL-110: журнал сессий агентов — ОТДЕЛЬНАЯ вершина
+  // KnowAgentSession (append: сессия закрылась — строка остаётся, новая
+  // сессия — новая строка), не поле на KnowActor (machine_id/session_id из
+  // actor_new — это mutable «сейчас», не журнал). Вызывать в начале сессии и
+  // периодически (bump last_activity_at) — не назначение владельца,
+  // эскалации нет. actor_id опционален — тем же путём вызывается
+  // автоматическим SessionStart-хуком (AL-110), который знает свой OIDC
+  // client_id, но не свой actor_id в графе.
   definePostTool(server, {
     name: 'agent_session_log',
     description: 'Upsert this session\'s own KnowAgentSession row (by session_id) and its LOGGED_BY edge to ' +
@@ -558,7 +561,9 @@ export function registerLoreWrite(server: McpServer): void {
       'concurrent sessions under one shared agent-full identity now both leave a trace instead of one ' +
       'overwriting the other\'s. Mutates system_aida_lore.',
     schema: {
-      actor_id:       z.string().describe('agent actor_id this session is running as, e.g. "AGENT-FULL-msbt0fed"'),
+      actor_id:       z.string().optional()
+        .describe('agent actor_id this session is running as, e.g. "AGENT-FULL-msbt0fed". Omit to resolve it ' +
+          'server-side from your own token\'s client_id (fails 400 if that lookup finds no actor or auth is off).'),
       session_id:     z.string().describe('this Claude session\'s own id (the local session registry id)'),
       machine_id:     z.string().optional().describe('which machine this session is running on'),
       project:        z.string().optional().describe('git-project slug this session is working in, if known'),
@@ -567,7 +572,8 @@ export function registerLoreWrite(server: McpServer): void {
     },
     path: '/lore/actor/session',
     body: ({ actor_id, session_id, machine_id, project, entrypoint, dialogue_name }) => ({
-      actor_id, session_id,
+      session_id,
+      ...(actor_id === undefined ? {} : { actor_id }),
       ...(machine_id === undefined ? {} : { machine_id }),
       ...(project === undefined ? {} : { project }),
       ...(entrypoint === undefined ? {} : { entrypoint }),
