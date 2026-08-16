@@ -1499,6 +1499,19 @@
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"
     },
+    "news": {
+      "empty": "Пока ничего не произошло",
+      "future": "будущее",
+      "futureHint": "дата позже сегодня — вероятно опечатка в LORE",
+      "kind": {
+        "release": "релиз",
+        "sprint": "спринт закрыт",
+        "decision": "решение",
+        "adr": "ADR",
+        "spec": "спека",
+        "tasks": "задачи"
+      }
+    },
     "page": {
       "disabled": {
         "message": "LORE отключён в этой среде.",
@@ -1588,6 +1601,7 @@
         "tech": "Технологии",
         "evolution": "История",
         "timeline": "Лента",
+        "news": "Новости",
         "analytics": "Аналитика",
         "mcp": "MCP API",
         "connections": "Подключения",
