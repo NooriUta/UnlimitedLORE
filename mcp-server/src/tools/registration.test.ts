@@ -49,13 +49,21 @@ describe('registerLoreWrite', () => {
     //   детях/BELONGS_TO/component_id-полях вместо безусловного удаления)
     // + actor_link (MT-11/D-VP-ROLE-AGENT-PAIR — FILLS_ROLE: агент → роль,
     //   которую он исполняет; проверяется в product/self-check actor_pairs)
-    expect(names).toHaveLength(78);
+    // + agent_session_log (ADR-LORE-037 V1 — KnowAgentSession, append-only
+    //   журнал сессий агентов; отдельная вершина, не поле на KnowActor)
+    expect(names).toHaveLength(79);
   });
 
   it('registers actor_link (MT-11 — FILLS_ROLE, agent-to-role pairing)', () => {
     const { server, names } = fakeServer();
     registerLoreWrite(server);
     expect(names).toContain('actor_link');
+  });
+
+  it('registers agent_session_log (ADR-LORE-037 V1 — KnowAgentSession append-only journal)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    expect(names).toContain('agent_session_log');
   });
 
   it('registers asset_up (ADR-LORE-031 — generic content-addressed asset)', () => {
