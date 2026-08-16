@@ -626,7 +626,17 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY KnowAgentSession.started_at       IF NOT EXISTS STRING",
             "CREATE PROPERTY KnowAgentSession.last_activity_at IF NOT EXISTS STRING",
             "CREATE INDEX IF NOT EXISTS ON KnowAgentSession (session_id) UNIQUE",
-            "CREATE EDGE TYPE LOGGED_BY IF NOT EXISTS")) // KnowAgentSession -> KnowActor(agent), multi
+            "CREATE EDGE TYPE LOGGED_BY IF NOT EXISTS")), // KnowAgentSession -> KnowActor(agent), multi
+
+        // PS-20: у релизов ребро BELONGS_TO_PROJECT не создавалось write-path'ом
+        // (ни createRelease, ни release_mv/update) — а срез release.projects читает
+        // ИМЕННО ребро, поэтому оно всегда было пустым при заполненном поле
+        // git_project. V20 бэкфиллил релизы разово; всё, что создано/перенесено
+        // ПОСЛЕ V20, снова осталось без ребра (напр. v1.0.23/v1.0.34 после
+        // release_mv в этой сессии). Write-path теперь выравнивает ребро по полю
+        // (relinkReleaseProjectEdge); этот шаг добирает исторический хвост — та же
+        // идемпотентная логика size()=0, что у V20 (см. backfillReleaseProjectEdges).
+        new Step(26, 17, "release_project_edges_backfill", List.of())
     );
 
     /**
