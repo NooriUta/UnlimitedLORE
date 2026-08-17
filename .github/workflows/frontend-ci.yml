@@ -115,6 +115,8 @@ jobs:
       # в никуда. Та же правка, что в backend-ci.yml.
       - name: Docker image build (frontend + nginx)
         run: |
+          # CIM-02: наблюдаемость registry-mirror базовых образов до сборки.
+          bash .github/scripts/registry-mirror-probe.sh || true
           ARGS="--add-host=host.docker.internal:host-gateway"
           for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy; do
             eval "val=\${$v:-}"
