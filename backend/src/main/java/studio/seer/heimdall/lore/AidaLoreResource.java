@@ -327,6 +327,7 @@ public class AidaLoreResource extends LoreResourceBase {
             List<Map<String, Object>> adrs        = composeAndQuery("timeline_adrs");
             List<Map<String, Object>> specs       = composeAndQuery("timeline_specs");
             List<Map<String, Object>> tasksDone   = composeAndQuery("task_done_dates");
+            List<Map<String, Object>> tasksHist   = composeAndQuery("task_created_dates");
             List<Map<String, Object>> sprints     = composeAndQuery("sprints");
             List<Map<String, Object>> allTasks    = composeAndQuery("all_tasks");
 
@@ -402,6 +403,34 @@ public class AidaLoreResource extends LoreResourceBase {
                 String project = (known != null && known[1] != null) ? sprintProject.get(known[1]) : null;
                 // ref = task_uid: miniLORE открывает карточку задачи; detail = tid.
                 items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), title, "closed", tid, project, uid));
+            }
+
+            // Событие «заведена»: min valid_from по задаче (task_created_dates —
+            // сырые строки истории, min считаем здесь: ArcadeDB не умеет ни min по
+            // строке-дате, ни GROUP BY с протаскиванием полей). Без этого день
+            // «закрыли 9, завели 10» читался как «убыло 9», а новые задачи
+            // udwe-rollout/udwe-mig-gen не попадали в ленту вовсе.
+            Map<String, String[]> firstByUid = new HashMap<>(); // uid -> {minValidFrom, sprintId}
+            for (Map<String, Object> h : tasksHist) {
+                String uid = firstStr(h.get("task_uid"));
+                String vf = firstStr(h.get("valid_from"));
+                if (uid == null || vf == null) continue;
+                String[] cur = firstByUid.get(uid);
+                if (cur == null || vf.compareTo(cur[0]) < 0)
+                    firstByUid.put(uid, new String[]{vf, firstStr(h.get("sprint_id"))});
+            }
+            for (Map.Entry<String, String[]> e : firstByUid.entrySet()) {
+                String uid = e.getKey();
+                String vf = e.getValue()[0];
+                String date = dayOf(vf);
+                if (date == null) continue;
+                String[] known = byUid.get(uid);
+                String title = (known != null && known[0] != null) ? known[0]
+                             : (uid.contains("/") ? uid.substring(uid.indexOf('/') + 1) : uid);
+                String sprintId = e.getValue()[1] != null ? e.getValue()[1]
+                                : (known != null ? known[1] : null);
+                String project = sprintId != null ? sprintProject.get(sprintId) : null;
+                items.add(newsItem("tasks", date, timeOf(vf), title, "created", null, project, uid));
             }
 
             // Date cursor for windowed / archive-tail loading (FN-12 «архив
