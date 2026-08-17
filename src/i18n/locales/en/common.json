@@ -1678,6 +1678,10 @@
       "techLabel": "Technology"
     },
     "chapters": {
+      "news": {
+        "name": "News",
+        "q": "what's new"
+      },
       "value": {
         "name": "Why",
         "q": "value"
