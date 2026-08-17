@@ -27,6 +27,12 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
+# CIM-02: сделать состояние registry-mirror базовых образов наблюдаемым до
+# сборки — мёртвое зеркало :8083 когда-то положило все image-сборки немым
+# отказом (CIM-01). Проба ничего не роняет: сборку не останавливает.
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$SELF_DIR/registry-mirror-probe.sh" || true
+
 attempt=1
 while : ; do
   echo "::group::docker compose build $* (попытка $attempt из $ATTEMPTS)"
