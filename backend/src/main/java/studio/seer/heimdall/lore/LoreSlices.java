@@ -1127,11 +1127,16 @@ public final class LoreSlices {
         // состояние). task_uid (не task_id: хвост уникален лишь внутри спринта,
         // и без uid карточку не открыть) + sprint_id (отнести к проекту).
         // GROUP BY по подзапросу: одна строка на задачу с датой её появления.
+        // valid_from — СТРОКА; ArcadeDB min() кастит её в дату и падает
+        // (ClassCastException). Поэтому не агрегат, а «первая строка группы»:
+        // подзапрос сортируем по valid_from ASC, GROUP BY task_uid берёт первую
+        // (= самую раннюю = дату заведения). Лексикографический порядок строк
+        // «YYYY-MM-DD…» совпадает с хронологическим.
         slice("task_created_dates",
-            "SELECT task_uid, sprint_id, min(valid_from) AS valid_from FROM (" +
+            "SELECT task_uid, sprint_id, valid_from FROM (" +
             "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
             "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from " +
-            "FROM KnowTaskHist WHERE valid_from IS NOT NULL" +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL ORDER BY valid_from ASC" +
             ") WHERE task_uid IS NOT NULL GROUP BY task_uid",
             List.of(), Map.of(), "");
 
