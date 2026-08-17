@@ -325,9 +325,8 @@ jobs:
           # 3600` (байты): 3600 байт ≤ 3600 символов ≤ 4096 при любом алфавите.
           BODY=$(tail -n +2 "$FILE")
           if [ "$(printf '%s' "$BODY" | LC_ALL=C.UTF-8 wc -m)" -gt 3600 ]; then
-            BODY="$(printf '%s' "$BODY" | head -c 3600)
-…
-(обрезано — полный список на странице релиза)"
+            TRUNC=$(printf '%s' "$BODY" | head -c 3600)
+            BODY=$(printf '%s\n\n… (обрезано — полный список на странице релиза)' "$TRUNC")
           fi
           FG_LINK="${PUBLIC_REPO}/releases/tag/${TAG}"
           GH_LINE=""
