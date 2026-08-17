@@ -1285,7 +1285,8 @@
       "prTitle": "PR #{{number}} · {{project}}",
       "decisionsLabel": "Решения",
       "noLinkedRecords": "Связанных записей не найдено.",
-      "githubReleaseTitle": "GitHub-релиз {{tag}}"
+      "githubReleaseTitle": "GitHub-релиз {{tag}}",
+      "remoteReleaseTitle": "{{role}} · релиз {{tag}} на {{url}}"
     },
     "runbookList": {
       "allFilter": "все",
