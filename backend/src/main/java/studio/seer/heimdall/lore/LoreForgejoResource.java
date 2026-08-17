@@ -62,7 +62,7 @@ public class LoreForgejoResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response health(@HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        requireAdmin(role);
+        // FJ-10: чтение — не merge. «Живо ли» не требует admin, читает любой агент.
         return noStore(Response.ok(Map.of("configured", bridge.configured())));
     }
 
@@ -121,7 +121,7 @@ public class LoreForgejoResource extends LoreResourceBase {
     public Response prStatus(@PathParam("n") long number, @QueryParam("git_project") String gitProject,
                              @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        requireAdmin(role);
+        // FJ-10: чтение статуса PR не требует admin — только merge (см. ниже).
         if (!bridge.configured()) return notConfigured();
         if (str(gitProject).isEmpty()) return badParams("git_project required");
         Optional<ForgejoBridge.Repo> repo = bridge.resolve(gitProject);
@@ -207,7 +207,7 @@ public class LoreForgejoResource extends LoreResourceBase {
     public Response ciStatus(@QueryParam("git_project") String gitProject, @QueryParam("ref") String ref,
                              @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        requireAdmin(role);
+        // FJ-10: чтение CI-статуса не требует admin — та же логика, что у pr/{n}.
         if (!bridge.configured()) return notConfigured();
         if (str(gitProject).isEmpty() || str(ref).isEmpty()) return badParams("git_project and ref required");
         Optional<ForgejoBridge.Repo> repo = bridge.resolve(gitProject);
@@ -233,7 +233,7 @@ public class LoreForgejoResource extends LoreResourceBase {
                                      @QueryParam("branch") String branch,
                                      @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        requireAdmin(role);
+        // FJ-10: чтение — решение 136 уже называло branch-protection read-only.
         if (!bridge.configured()) return notConfigured();
         if (str(gitProject).isEmpty()) return badParams("git_project required");
         Optional<ForgejoBridge.Repo> repo = bridge.resolve(gitProject);

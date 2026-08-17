@@ -334,7 +334,8 @@ public class LoreProductResource extends LoreResourceBase {
      *                 передан — рёбра не трогаются вовсе.
      */
     public record ActorRequest(String actor_id, String name, String kind, String body_md,
-                               String project, List<String> projects) {}
+                               String project, List<String> projects,
+                               String machine_id, String session_id) {}
 
     @POST
     @Path("actor")
@@ -379,6 +380,11 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.name() != null)    { sql.append(", name=:n");    p.put("n", req.name()); }
             if (req.kind() != null)    { sql.append(", kind=:k");    p.put("k", req.kind()); }
             if (req.body_md() != null) { sql.append(", body_md=:b"); p.put("b", req.body_md()); }
+            // AL-108: сессия пишет своё «откуда» самостоятельно — не назначение
+            // владельца (client_id/agent_role остаются admin-путём actor/owner),
+            // а самоописание, эскалации прав не несёт.
+            if (req.machine_id() != null) { sql.append(", machine_id=:mid"); p.put("mid", req.machine_id()); }
+            if (req.session_id() != null) { sql.append(", session_id=:sid"); p.put("sid", req.session_id()); }
             sql.append(" UPSERT WHERE actor_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
@@ -485,6 +491,108 @@ public class LoreProductResource extends LoreResourceBase {
         }
         if (req.project() != null && !req.project().isBlank()) return List.of(req.project());
         return null;
+    }
+
+    /**
+     * ADR-LORE-037 V1/AL-110: журнал сессий агентов.
+     *
+     * @param actor_id   agent actor_id, чья сессия это (LOGGED_BY target). Опционален —
+     *                    когда не передан, резолвится из client_id токена вызывающего
+     *                    ({@link #callerClientId()}), тем же способом, каким уже читается
+     *                    {@code agentScope} в {@link #upsertActor}. Это то, что делает
+     *                    вызов пригодным для SessionStart-хука: хук знает только свой
+     *                    OIDC client_id (он же в конфиге), не свой actor_id в графе —
+     *                    заставлять его резолвить актора отдельным запросом значило бы
+     *                    городить лишний round-trip там, где бэкенд и так видит клейм.
+     * @param session_id session_id этой самой сессии — первичный ключ вершины,
+     *                    upsert по нему (сессия живёт — activity обновляется;
+     *                    новая сессия — новая вершина, старая остаётся)
+     */
+    public record AgentSessionRequest(String actor_id, String session_id, String machine_id,
+                                       String project, String entrypoint, String dialogue_name) {}
+
+    /**
+     * ADR-LORE-037 D1-D4: `KnowAgentSession` — ОТДЕЛЬНАЯ вершина от
+     * `KnowActor` (AL-108 несёт mutable «сейчас» на акторе, эта вершина несёт
+     * append-факт «что было»). Пишет сама сессия про себя — не назначение
+     * владельца, эскалации нет (симметрично `machine_id`/`session_id` в
+     * {@link #upsertActor}).
+     *
+     * <p>{@code started_at} выставляется ТОЛЬКО при создании строки — иначе
+     * повторный вызов (bump активности) переписал бы момент начала сессии на
+     * текущий, и «сколько сессия уже идёт» стало бы всегда нулём.
+     */
+    @POST
+    @Path("actor/session")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response logAgentSession(AgentSessionRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.session_id() == null || req.session_id().isBlank())
+            return badParams("session_id required");
+        String actorId = req.actor_id();
+        if (actorId == null || actorId.isBlank()) {
+            String clientId = callerClientId();
+            if (clientId == null)
+                return badParams("actor_id required (не передан и не выводится из токена — "
+                    + "auth выключен или вызывающий не агент service-account)");
+            List<Map<String, Object>> byClient = ingest.queryPublic(
+                "SELECT actor_id FROM KnowActor WHERE client_id = :c", Map.of("c", clientId));
+            if (byClient.isEmpty())
+                return badParams("нет актора с client_id='" + clientId
+                    + "' — заведите через actor_new/actor_owner прежде чем логировать сессии");
+            actorId = String.valueOf(byClient.get(0).get("actor_id"));
+        }
+        if (!SAFE_ID.matcher(actorId).matches() || !SAFE_ID.matcher(req.session_id()).matches())
+            return badParams("actor_id/session_id contains illegal characters");
+        try {
+            List<Map<String, Object>> existing = ingest.queryPublic(
+                "SELECT count(*) AS n FROM KnowAgentSession WHERE session_id = :sid",
+                Map.of("sid", req.session_id()));
+            boolean isNew = existing.isEmpty()
+                || ((Number) existing.get(0).getOrDefault("n", 0)).longValue() == 0;
+
+            String now = Instant.now().toString();
+            StringBuilder sql = new StringBuilder(
+                "UPDATE KnowAgentSession SET session_id=:sid, last_activity_at=:now");
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("sid", req.session_id());
+            p.put("now", now);
+            if (isNew) { sql.append(", started_at=:st"); p.put("st", now); }
+            if (req.machine_id() != null)    { sql.append(", machine_id=:m");    p.put("m", req.machine_id()); }
+            if (req.project() != null)       { sql.append(", project=:p");       p.put("p", req.project()); }
+            if (req.entrypoint() != null)    { sql.append(", entrypoint=:e");    p.put("e", req.entrypoint()); }
+            if (req.dialogue_name() != null) { sql.append(", dialogue_name=:d"); p.put("d", req.dialogue_name()); }
+            sql.append(" UPSERT WHERE session_id=:sid");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
+                .await().indefinitely();
+
+            // LOGGED_BY БЕЗ UNIQUE: агент копит много сессий за жизнь — в
+            // отличие от OWNED_BY/FILLS_ROLE, здесь рёбра НАКАПЛИВАЮТСЯ.
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE LOGGED_BY FROM (SELECT FROM KnowAgentSession WHERE session_id=:sid) " +
+                    "TO (SELECT FROM KnowActor WHERE actor_id=:aid) IF NOT EXISTS",
+                    Map.of("sid", req.session_id(), "aid", actorId)))
+                .await().indefinitely().result();
+            boolean logged = isNew ? (created != null && !created.isEmpty()) : true; // повтор — ребро уже есть
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("session_id", req.session_id());
+            out.put("actor_id", actorId);
+            out.put("is_new", isNew);
+            out.put("logged_by", logged);
+            if (isNew && (created == null || created.isEmpty()))
+                out.put("hint", "агент '" + actorId + "' не найден — заведите через actor_new, "
+                    + "иначе LOGGED_BY молча не создан");
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE AGENT-SESSION] %s: %s", req.session_id(), e.getMessage());
+            return upstream(e);
+        }
     }
 
     // AL-83/ADR-LORE-036: связка KnowActor(kind=agent) ↔ владелец-человек.

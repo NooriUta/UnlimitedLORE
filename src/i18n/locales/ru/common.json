@@ -970,6 +970,10 @@
       "step3Note": "Не",
       "step3NoteRest": ": он берёт самую свежую сессию в папке и легко подцепляет не тот диалог, если там недавно работало что-то ещё.",
       "step3NoteRest2": " — адресный, ошибиться диалогом нельзя.",
+      "step3Shell": "Команда — PowerShell",
+      "step3ShellRest": " (оператор",
+      "step3ShellRest2": " и",
+      "step3ShellRest3": "); в Git Bash не сработает как есть.",
       "verifyLabel": "Как проверить, что получилось",
       "verifyLead": "В приложении у каждого диалога своя иконка — пометка честная при любом количестве каналов на проект:",
       "colIcon": "Иконка",
@@ -1490,10 +1494,27 @@
       "kindSprint": "Спринты",
       "moduleFilter": "· фильтр по модулю {{module}} — только ADR",
       "loading": "Загрузка событий…",
-      "empty": "Событий не найдено."
+      "empty": "Событий не найдено.",
+      "date": { "all": "всё", "3m": "3м", "6m": "6м", "1y": "год" },
+      "sortToggle": "Порядок по дате",
+      "sortNewest": "↓ новые",
+      "sortOldest": "↑ старые"
     },
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"
+    },
+    "news": {
+      "empty": "Пока ничего не произошло",
+      "future": "будущее",
+      "futureHint": "дата позже сегодня — вероятно опечатка в LORE",
+      "kind": {
+        "release": "релиз",
+        "sprint": "спринт закрыт",
+        "decision": "решение",
+        "adr": "ADR",
+        "spec": "спека",
+        "tasks": "задачи"
+      }
     },
     "page": {
       "disabled": {
@@ -1584,6 +1605,7 @@
         "tech": "Технологии",
         "evolution": "История",
         "timeline": "Лента",
+        "news": "Новости",
         "analytics": "Аналитика",
         "mcp": "MCP API",
         "connections": "Подключения",
@@ -2305,6 +2327,9 @@
         "colViews": "просмотры",
         "colClicks": "переходы",
         "colDemo": "демо",
+        "colCtr": "CTR",
+        "colDemoRate": "демо-rate",
+        "ctrMedianTitle": "медиана {{channel}}: {{v}}%",
         "colTakeaway": "вывод",
         "emptyState": "опубликованных вариаций пока нет",
         "emptyFiltered": "ничего не найдено под этим фильтром",

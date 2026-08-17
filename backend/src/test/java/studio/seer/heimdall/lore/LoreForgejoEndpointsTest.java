@@ -12,18 +12,46 @@ import static org.hamcrest.Matchers.not;
  * FJ-07 (ADR-LORE-024): поверхности Forgejo-моста, проверяемые БЕЗ живого Forgejo —
  * в тестовом окружении FORGEJO_API_TOKEN не задан, поэтому: health честно говорит
  * configured:false, каждый рабочий эндпоинт отвечает 503 (pluggable-контракт D14
- * из ADR-025, тот же, что у KC-моста), RBAC — admin-only, и токен не появляется
- * ни в одном теле ответа. Живой цикл PR→CI→merge — dogfood-прогон на стенде
- * :3030 при выпуске v1.0.52 (план спринта, шаг 7).
+ * из ADR-025, тот же, что у KC-моста), и токен не появляется ни в одном теле
+ * ответа. RBAC разведён FJ-10 (2026-08-12): чтение (health/pr-статус/ci/
+ * branch-protection) открыто любой роли, admin остаётся только на записи
+ * (create PR, merge) — до этого агент не мог прочитать статус CI через MCP,
+ * потому что мост требовал admin даже на GET, а MCP-клиент слал роль только
+ * на запись. Живой цикл PR→CI→merge — dogfood-прогон на стенде :3030 при
+ * выпуске v1.0.52 (план спринта, шаг 7).
  */
 @QuarkusTest
 class LoreForgejoEndpointsTest {
 
     @Test
-    void healthRequiresAdmin() {
+    void healthReadableWithoutAdmin() {
+        // FJ-10: чтение — не merge. Любая роль (в т.ч. viewer) обязана пройти.
         given().header("X-Seer-Role", "viewer")
         .when().get("/lore/forgejo/health")
-        .then().statusCode(403);
+        .then().statusCode(200).body("configured", equalTo(false));
+    }
+
+    @Test
+    void prStatusReadableWithoutAdmin() {
+        // 503 (не 403!) без токена доказывает, что гейт admin снят — запрос
+        // дошёл до проверки конфигурации моста, а не отбился раньше на роли.
+        given().header("X-Seer-Role", "viewer")
+        .when().get("/lore/forgejo/pr/1?git_project=NooriUta/UnlimitedLORE")
+        .then().statusCode(503).body("error", equalTo("FORGEJO_NOT_CONFIGURED"));
+    }
+
+    @Test
+    void ciStatusReadableWithoutAdmin() {
+        given().header("X-Seer-Role", "viewer")
+        .when().get("/lore/forgejo/ci?git_project=NooriUta/UnlimitedLORE&ref=develop")
+        .then().statusCode(503).body("error", equalTo("FORGEJO_NOT_CONFIGURED"));
+    }
+
+    @Test
+    void branchProtectionReadableWithoutAdmin() {
+        given().header("X-Seer-Role", "viewer")
+        .when().get("/lore/forgejo/branch-protection?git_project=NooriUta/UnlimitedLORE&branch=develop")
+        .then().statusCode(503).body("error", equalTo("FORGEJO_NOT_CONFIGURED"));
     }
 
     @Test

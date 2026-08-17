@@ -970,6 +970,10 @@
       "step3Note": "Not",
       "step3NoteRest": ": it attaches to the most recent session in the folder and easily grabs the wrong conversation if something else ran there recently.",
       "step3NoteRest2": " — targeted, can't get the wrong conversation.",
+      "step3Shell": "This command is PowerShell",
+      "step3ShellRest": " (the",
+      "step3ShellRest2": " operator and",
+      "step3ShellRest3": " syntax) — won't run as-is in Git Bash.",
       "verifyLabel": "How to check it worked",
       "verifyLead": "Every conversation gets its own icon in the app — an honest marker regardless of how many channels a project has:",
       "colIcon": "Icon",
@@ -1490,10 +1494,27 @@
       "kindSprint": "Sprints",
       "moduleFilter": "· filtered by module {{module}} — ADR only",
       "loading": "Loading events…",
-      "empty": "No events found."
+      "empty": "No events found.",
+      "date": { "all": "all", "3m": "3m", "6m": "6m", "1y": "1y" },
+      "sortToggle": "Sort by date",
+      "sortNewest": "↓ newest",
+      "sortOldest": "↑ oldest"
     },
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"
+    },
+    "news": {
+      "empty": "Nothing has happened yet",
+      "future": "future",
+      "futureHint": "date is after today — likely a typo in LORE",
+      "kind": {
+        "release": "release",
+        "sprint": "sprint closed",
+        "decision": "decision",
+        "adr": "ADR",
+        "spec": "spec",
+        "tasks": "tasks"
+      }
     },
     "page": {
       "disabled": {
@@ -1584,6 +1605,7 @@
         "tech": "Tech",
         "evolution": "History",
         "timeline": "Feed",
+        "news": "News",
         "analytics": "Analytics",
         "mcp": "MCP API",
         "connections": "Connections",
@@ -2305,6 +2327,9 @@
         "colViews": "views",
         "colClicks": "clicks",
         "colDemo": "demos",
+        "colCtr": "CTR",
+        "colDemoRate": "demo rate",
+        "ctrMedianTitle": "{{channel}} median: {{v}}%",
         "colTakeaway": "takeaway",
         "emptyState": "no published variants yet",
         "emptyFiltered": "nothing found under this filter",

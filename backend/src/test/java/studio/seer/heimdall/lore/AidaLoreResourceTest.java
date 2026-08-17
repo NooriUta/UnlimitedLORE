@@ -48,4 +48,40 @@ class AidaLoreResourceTest {
         assertEquals("none", AidaLoreResource.classifyStatus(""));
         assertEquals("none", AidaLoreResource.classifyStatus("   "));
     }
+
+    // AL-113: dayOf нормализует разнородные форматы дат из срезов к YYYY-MM-DD
+    // для новостной ленты (/lore/news). Часть срезов отдаёт timestamp до секунды,
+    // часть — только день; а traversal-поля приходят как список ([valid_from]).
+    @Test
+    void dayOfОбрезаетTimestampДоДня() {
+        assertEquals("2026-07-10", AidaLoreResource.dayOf("2026-07-10"));
+        assertEquals("2026-06-11", AidaLoreResource.dayOf("2026-06-11 22:26:41"));
+        assertEquals("2026-06-11", AidaLoreResource.dayOf("2026-06-11T22:26:41Z"));
+    }
+
+    // AL-113 follow-up (проверка miniLORE 2026-08-16): valid_from приходит в
+    // ТРЁХ формах вперемешку в одном срезе — ISO с наносекундами+Z, «через
+    // пробел» без зоны, и «только дата». dayOf РЕГЕКСНЫЙ (берёт первые YYYY-MM-DD),
+    // не Instant/LocalDateTime.parse — поэтому не падает и не роняет запись в
+    // чужой день ни на одной из форм. Замок ровно на три строки из их письма.
+    @Test
+    void dayOfРазбираетВсеТриФормыДат() {
+        assertEquals("2026-07-22", AidaLoreResource.dayOf("2026-07-22T04:02:26.661315312Z")); // ISO+нс+Z
+        assertEquals("2026-06-11", AidaLoreResource.dayOf("2026-06-11 15:29:17"));             // через пробел
+        assertEquals("2026-06-23", AidaLoreResource.dayOf("2026-06-23"));                       // только дата
+    }
+
+    @Test
+    void dayOfБеретПервыйЭлементСписка() {
+        // traversal-поля (out('HAS_STATE').valid_from) приходят массивом.
+        assertEquals("2026-08-16", AidaLoreResource.dayOf(java.util.List.of("2026-08-16T09:00:00Z")));
+    }
+
+    @Test
+    void dayOfВозвращаетNullНаБезДаты() {
+        assertEquals(null, AidaLoreResource.dayOf(null));
+        assertEquals(null, AidaLoreResource.dayOf(""));
+        assertEquals(null, AidaLoreResource.dayOf("не дата"));
+        assertEquals(null, AidaLoreResource.dayOf(java.util.List.of()));
+    }
 }

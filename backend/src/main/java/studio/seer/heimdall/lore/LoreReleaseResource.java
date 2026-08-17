@@ -123,6 +123,11 @@ public class LoreReleaseResource extends LoreResourceBase {
                 + "TO (SELECT FROM KnowReleaseHist WHERE state_uid=:nsid);";
             writeClient.command(db, basicAuth(),
                 new LoreCommandClient.LoreCommand("sqlscript", script, p)).await().indefinitely();
+            // PS-20: ребро BELONGS_TO_PROJECT раньше не создавалось НИ при создании,
+            // ни при переносе — а срез релиза читает `projects` именно из ребра
+            // (out('BELONGS_TO_PROJECT').slug), поэтому оно всегда было пустым при
+            // заполненном поле git_project. Выравниваем ребро по полю здесь же.
+            relinkReleaseProjectEdge(ruid, gp);
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("is_current", cur); out.put("created", now);
@@ -183,6 +188,9 @@ public class LoreReleaseResource extends LoreResourceBase {
                 p.put("rkey", req.git_project() + "#" + req.release_id());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     set + " WHERE release_uid=:rkey", p)).await().indefinitely();
+                // PS-20: смена git_project → перевесить ребро BELONGS_TO_PROJECT на
+                // новый проект (иначе поле и ребро расходятся, как нашёл аудит AL-96).
+                relinkReleaseProjectEdge(req.git_project() + "#" + req.release_id(), req.git_project());
             } else {
                 p.put("rid", req.release_id());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -414,16 +422,54 @@ public class LoreReleaseResource extends LoreResourceBase {
                 out.put("pr_uid", newUid);
 
             } else if ("release".equals(req.entity_type())) {
-                String newRuid = req.git_project() + "#" + req.id();
+                // req.id() принимает ОБЕ формы (голый release_id или составной
+                // release_uid, см. описание инструмента) — но newRuid раньше
+                // склеивался из git_project() и req.id() СЫРЬЁМ. Составной id
+                // на входе давал двойную склейку: "новый#старый#v1.0.23"
+                // (найдено 2026-08-16 на живом переносе v1.0.23 — release_uid
+                // вышел "NooriUta/UnlimitedLORE#AIDA/UnlimitedLORE#v1.0.23").
+                boolean compound = req.id().contains("#");
+                String bareId = compound ? req.id().substring(req.id().lastIndexOf('#') + 1) : req.id();
+                String newRuid = req.git_project() + "#" + bareId;
+
+                // Голый release_id неуникален МЕЖДУ проектами (та же природа,
+                // что у task_id внутри спринта, ADR-LORE-014 §4) — WHERE по
+                // нему одному рисковал бы задеть чужой релиз с тем же тегом
+                // разом с нужным (UPDATE в этой грамматике правит ВСЕ строки,
+                // подошедшие под WHERE). Составной release_uid матчит РОВНО
+                // одну строку по построению; голый — только если и правда
+                // уникален в корпусе, иначе явный отказ вместо тихой порчи
+                // сразу нескольких релизов.
+                String whereClause;
+                Map<String, Object> whereParams = new LinkedHashMap<>();
+                whereParams.put("gp", req.git_project());
+                whereParams.put("ruid", newRuid);
+                if (compound) {
+                    whereClause = "release_uid=:rid";
+                    whereParams.put("rid", req.id());
+                } else {
+                    List<Map<String, Object>> matches = ingestService.queryPublic(
+                        "SELECT release_uid FROM KnowRelease WHERE release_id=:bid", Map.of("bid", bareId));
+                    if (matches.size() > 1)
+                        return badParams("release_id '" + bareId + "' неоднозначен — совпало "
+                            + matches.size() + " релизов в разных проектах; передайте составной "
+                            + "release_uid (\"проект#" + bareId + "\")");
+                    whereClause = "release_id=:bid";
+                    whereParams.put("bid", bareId);
+                }
+
                 int updated = ((List<?>) writeClient.command(db, basicAuth(),
                     new LoreCommandClient.LoreCommand("sql",
-                        "UPDATE KnowRelease SET git_project=:gp, release_uid=:ruid " +
-                        "WHERE release_id=:rid OR release_uid=:rid",
-                        Map.of("gp", req.git_project(), "ruid", newRuid, "rid", req.id())))
+                        "UPDATE KnowRelease SET git_project=:gp, release_uid=:ruid WHERE " + whereClause,
+                        whereParams))
                     .await().indefinitely().result()).size();
                 if (updated == 0)
                     return noStore(Response.status(Response.Status.NOT_FOUND)
                         .entity(new LoreError("NOT_FOUND", "release not found: " + req.id())));
+                // PS-20: перенос менял только поле git_project + release_uid, но ребро
+                // BELONGS_TO_PROJECT (которое читает срез release.projects) оставалось
+                // старым/отсутствующим. Выравниваем на новый проект.
+                relinkReleaseProjectEdge(newRuid, req.git_project());
                 out.put("release_uid", newRuid);
             } else {
                 return badParams("entity_type must be 'pr' or 'release'");
@@ -433,6 +479,36 @@ public class LoreReleaseResource extends LoreResourceBase {
             LOG.warnf("[LORE PROJECT MOVE] %s %s: %s", req.entity_type(), req.id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * PS-20: выровнять ребро BELONGS_TO_PROJECT релиза по его проекту — одно
+     * ребро на релиз, совпадающее с полем git_project. Идемпотентно: снимает
+     * все текущие BELONGS_TO_PROJECT у вершины и создаёт одно к нужному проекту.
+     *
+     * Матч вершины по release_uid (release_id не уникален между проектами).
+     * Если проект не зарегистрирован (KnowGitProject нет) — TO пуст, ребро не
+     * создаётся (тот же безопасный no-op, что у V20-бэкфилла и PR-переноса).
+     * best-effort: сбой выравнивания ребра не должен ронять уже прошедшую
+     * запись поля — та первична.
+     */
+    @SuppressWarnings("unchecked")
+    private void relinkReleaseProjectEdge(String releaseUid, String slug) {
+        try {
+            List<Map<String, Object>> rows = (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand("sql",
+                    "SELECT @rid AS rid FROM KnowRelease WHERE release_uid=:ruid LIMIT 1",
+                    Map.of("ruid", releaseUid))).await().indefinitely().result();
+            if (rows == null || rows.isEmpty()) return;
+            String rid = String.valueOf(rows.get(0).get("rid"));
+            deleteEdges("BELONGS_TO_PROJECT", "@out=" + rid, Map.of());
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE BELONGS_TO_PROJECT FROM " + rid
+                + " TO (SELECT FROM KnowGitProject WHERE slug=:gp)",
+                Map.of("gp", slug))).await().indefinitely();
+        } catch (Exception e) {
+            LOG.warnf("[LORE RELEASE project-edge relink] %s -> %s: %s", releaseUid, slug, e.getMessage());
         }
     }
 }

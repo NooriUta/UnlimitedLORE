@@ -498,15 +498,21 @@ export function registerLoreWrite(server: McpServer): void {
         .describe('D18: ONE git-project slug. Kept for compatibility — treated as a one-item set, so it DETACHES the actor from every other project. Prefer `projects` when the actor belongs to more than one. project_linked:false in the response = the project is not registered (project_new), not a silent no-op.'),
       projects: z.array(z.string()).optional()
         .describe('AL-107: FULL set of git-project slugs. An actor may belong to several products, and the graph always stored a set — sending one slug used to wipe the rest silently at ok:true. Passing this key REPLACES the whole set (an empty array detaches from all); omitting BOTH keys leaves the edges untouched. Response: projects_linked / projects_removed / projects_missing (unregistered slugs — those are no-ops, not errors).'),
+      machine_id: z.string().optional()
+        .describe('AL-108: which machine this agent actor is currently writing from. Self-reported by the session on its own actor record — not an ownership assignment (that stays admin-only via actor/owner), so no privilege implication. One field, last write wins: does NOT distinguish two CONCURRENT sessions under the same shared agent identity — only "where it last wrote from". Omit to leave untouched.'),
+      session_id: z.string().optional()
+        .describe('AL-108: this Claude session\'s own id (the local session registry id), so a shared agent identity (e.g. agent-full) stops looking like one anonymous writer. Same last-write-wins caveat as machine_id — for distinguishing genuinely concurrent writes, tag the individual commit/note_md instead.'),
     },
     path: '/lore/actor',
-    body: ({ actor_id, name, kind, body_md, project, projects }) => ({
+    body: ({ actor_id, name, kind, body_md, project, projects, machine_id, session_id }) => ({
       actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
       // Оба ключа отдаются как есть, включая undefined: бэкенд различает
       // «ключа нет» (рёбра не трогать) и «пустой список» (снять все), и
       // подмена undefined на null стёрла бы это различие.
       project: project ?? null,
       ...(projects === undefined ? {} : { projects }),
+      ...(machine_id === undefined ? {} : { machine_id }),
+      ...(session_id === undefined ? {} : { session_id }),
     }),
   });
 
@@ -532,6 +538,47 @@ export function registerLoreWrite(server: McpServer): void {
     },
     path: '/lore/actor/link',
     body: ({ actor_id, rel, target_id, action }) => ({ actor_id, rel, target_id, action: action ?? 'add' }),
+  });
+
+  // ADR-LORE-037 V1/AL-110: журнал сессий агентов — ОТДЕЛЬНАЯ вершина
+  // KnowAgentSession (append: сессия закрылась — строка остаётся, новая
+  // сессия — новая строка), не поле на KnowActor (machine_id/session_id из
+  // actor_new — это mutable «сейчас», не журнал). Вызывать в начале сессии и
+  // периодически (bump last_activity_at) — не назначение владельца,
+  // эскалации нет. actor_id опционален — тем же путём вызывается
+  // автоматическим SessionStart-хуком (AL-110), который знает свой OIDC
+  // client_id, но не свой actor_id в графе.
+  definePostTool(server, {
+    name: 'agent_session_log',
+    description: 'Upsert this session\'s own KnowAgentSession row (by session_id) and its LOGGED_BY edge to ' +
+      'the calling agent actor — ADR-LORE-037 V1. Call once at session start and again on later activity to ' +
+      'bump last_activity_at (started_at is set only on the FIRST call for a given session_id, never ' +
+      'overwritten after). This is a session logging its own presence, not a content log — no message text, ' +
+      'no tool calls (that transcript already lives on disk and in the miniLORE gateway; duplicating it here ' +
+      'would be a third source of truth for no gain). Distinct from actor_new\'s machine_id/session_id: those ' +
+      'are a MUTABLE property on the shared agent actor ("where it last wrote from" — one field, last write ' +
+      'wins across concurrent sessions of the same role); this is an APPEND-ONLY row per session, so two ' +
+      'concurrent sessions under one shared agent-full identity now both leave a trace instead of one ' +
+      'overwriting the other\'s. Mutates system_aida_lore.',
+    schema: {
+      actor_id:       z.string().optional()
+        .describe('agent actor_id this session is running as, e.g. "AGENT-FULL-msbt0fed". Omit to resolve it ' +
+          'server-side from your own token\'s client_id (fails 400 if that lookup finds no actor or auth is off).'),
+      session_id:     z.string().describe('this Claude session\'s own id (the local session registry id)'),
+      machine_id:     z.string().optional().describe('which machine this session is running on'),
+      project:        z.string().optional().describe('git-project slug this session is working in, if known'),
+      entrypoint:     z.enum(['cli', 'claude-desktop']).optional(),
+      dialogue_name:  z.string().optional().describe('the session\'s own title, if it has one'),
+    },
+    path: '/lore/actor/session',
+    body: ({ actor_id, session_id, machine_id, project, entrypoint, dialogue_name }) => ({
+      session_id,
+      ...(actor_id === undefined ? {} : { actor_id }),
+      ...(machine_id === undefined ? {} : { machine_id }),
+      ...(project === undefined ? {} : { project }),
+      ...(entrypoint === undefined ? {} : { entrypoint }),
+      ...(dialogue_name === undefined ? {} : { dialogue_name }),
+    }),
   });
 
   // sprint_plan_set (MCPSYNC-01): закрывает единственную содержательную дыру

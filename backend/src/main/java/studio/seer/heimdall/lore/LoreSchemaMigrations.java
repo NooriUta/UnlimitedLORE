@@ -584,7 +584,91 @@ final class LoreSchemaMigrations {
         // сам несёт данные — без свойств, как OWNED_BY: переприсвоение — снести
         // старое ребро и создать новое, не накапливать историю.
         new Step(23, 17, "actor_fills_role", List.of(
-            "CREATE EDGE TYPE FILLS_ROLE IF NOT EXISTS"))
+            "CREATE EDGE TYPE FILLS_ROLE IF NOT EXISTS")),
+
+        // AL-108: несколько Claude-сессий пишут через ОДНОГО агента (общая
+        // учётка KC, agent-full) — доска и git не различали, какая сессия
+        // сделала запись (MG-SETTINGS-PARSE закрылась чужой сессией из того
+        // же индекса до того, как отчитывающаяся до неё дошла). machine_id/
+        // session_id — та же природа, что client_id/agent_role: свойство
+        // агента, обновляемое при каждой самозаписи (актор пишет их себе сам
+        // через actor_new — это не назначение владельца, эскалации тут нет),
+        // не накапливаемая история. Различить ДВЕ ОДНОВРЕМЕННЫЕ сессии одной
+        // роли это не позволяет (поле одно, последняя запись выигрывает) —
+        // для этого нужен tag в самой записи (commit/note_md), не в акторе;
+        // здесь — только «откуда агент писал в последний раз».
+        new Step(24, 17, "actor_machine_session", List.of(
+            "CREATE PROPERTY KnowActor.machine_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowActor.session_id IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (machine_id) NOTUNIQUE",
+            "CREATE INDEX IF NOT EXISTS ON KnowActor (session_id) NOTUNIQUE")),
+
+        // ADR-LORE-037 V1: журнал сессий агентов — ОТДЕЛЬНАЯ вершина, не
+        // расширение KnowActor (шаг 24 несёт mutable «сейчас», этот шаг несёт
+        // append-факт «что было»). Одна вершина на сессию (upsert по
+        // session_id — сессия живёт, activity обновляется; сессия закрылась —
+        // строка остаётся, новая сессия создаёт новую строку: это и есть
+        // журнал). LOGGED_BY БЕЗ UNIQUE на своей стороне — агент копит много
+        // сессий за жизнь, в отличие от OWNED_BY/FILLS_ROLE, где
+        // переприсвоение сносит старое ребро.
+        // V1 намеренно не несёт содержимого диалога (текст реплик, tool-calls)
+        // — транскрипт уже живёт на диске и в гейтвее miniLORE, дублировать
+        // его в графе создало бы третий источник правды без выигрыша (см.
+        // ADR-LORE-037 D2). Timeseries-часть (D5) — открытый вопрос, эта
+        // миграция её не решает и не блокирует ею V1.
+        new Step(25, 17, "agent_session_log", List.of(
+            "CREATE VERTEX TYPE KnowAgentSession IF NOT EXISTS",
+            "CREATE PROPERTY KnowAgentSession.session_id       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.machine_id       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.project          IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.entrypoint       IF NOT EXISTS STRING", // cli | claude-desktop
+            "CREATE PROPERTY KnowAgentSession.dialogue_name    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.started_at       IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowAgentSession.last_activity_at IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowAgentSession (session_id) UNIQUE",
+            "CREATE EDGE TYPE LOGGED_BY IF NOT EXISTS")), // KnowAgentSession -> KnowActor(agent), multi
+
+        // PS-20: у релизов ребро BELONGS_TO_PROJECT не создавалось write-path'ом
+        // (ни createRelease, ни release_mv/update) — а срез release.projects читает
+        // ИМЕННО ребро, поэтому оно всегда было пустым при заполненном поле
+        // git_project. V20 бэкфиллил релизы разово; всё, что создано/перенесено
+        // ПОСЛЕ V20, снова осталось без ребра (напр. v1.0.23/v1.0.34 после
+        // release_mv в этой сессии). Write-path теперь выравнивает ребро по полю
+        // (relinkReleaseProjectEdge); этот шаг добирает исторический хвост — та же
+        // идемпотентная логика size()=0, что у V20 (см. backfillReleaseProjectEdges).
+        new Step(26, 17, "release_project_edges_backfill", List.of()),
+
+        // AL-102: журнал выдачи/снятия проектных ролей (append-only). Ребро
+        // HAS_PROJECT_ROLE хранит ТЕКУЩЕЕ состояние (одно на пару человек↔проект,
+        // роль свойством); кто/когда роль выдал или снял оно не помнит. Отдельная
+        // вершина-событие KnowProjectRoleEvent — та же природа, что KnowAgentSession
+        // (ADR-037): лог «что происходило», а не изменяемое состояние. Пишется на
+        // каждый grant/update/remove в setUserRole. Поля: кому (kc_sub), проект,
+        // роль (null при снятии), действие, чьей ролью выдано (by_role — точная
+        // идентичность человека требует sub в токене, см. AL-105), когда (at).
+        new Step(27, 17, "project_role_event_log", List.of(
+            "CREATE VERTEX TYPE KnowProjectRoleEvent IF NOT EXISTS",
+            "CREATE PROPERTY KnowProjectRoleEvent.event_uid IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.kc_sub    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.project   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.role      IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.action    IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.by_role   IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectRoleEvent.at        IF NOT EXISTS STRING",
+            "CREATE INDEX IF NOT EXISTS ON KnowProjectRoleEvent (event_uid) UNIQUE")),
+
+        // DBU-09/DBR-12 (#5321): апгрейд ArcadeDB на 26.8.1 оставляет FULL_TEXT-
+        // индексы с НЕ-ASCII (кириллическими) ключами физически отсортированными
+        // в старом порядке — на 26.8.1 lookup по такому индексу возвращает МЕНЬШЕ
+        // записей, чем скан (движок предупреждает «should be rebuilt» при открытии
+        // system_aida_lore). Health-гейт LoreSearchResource это ловит и отвечает
+        // сканом (полная выдача, без ранжирования) — честно, но поиск теряет
+        // релевантность. Лечится ТОЛЬКО пересозданием (DROP+CREATE), НЕ REBUILD:
+        // на 26.8.1 REBUILD INDEX теряет имя индекса (DBR-12) — после него
+        // SEARCH_INDEX('ftИмя') находит «Index not found». Шаг сносит все FT из
+        // реестра по имени и пересоздаёт свежими через createFullTextIndexes
+        // (тот же vetted-путь, что V11/12/13; он же чистит клэши по полям).
+        new Step(28, 17, "ft_indexes_recreate_5321", List.of())
     );
 
     /**

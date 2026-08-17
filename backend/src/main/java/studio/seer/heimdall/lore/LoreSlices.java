@@ -71,6 +71,25 @@ public final class LoreSlices {
             "FROM KnowRelease ORDER BY release_id DESC",
             List.of(), Map.of(), " LIMIT 100");
 
+        // AL-113 (запрошено miniLORE 2026-08-16): у среза `specs` даты не было,
+        // поэтому спеки не попадали в новостную ленту. Дата спеки = valid_from
+        // её ПЕРВОЙ HAS_STATE (создание) — та же природа, что date_created у
+        // ADR/decision. [0] = порядок вставки hist-строк = создание (вставки
+        // append, как в spec_by_id). WHERE по size()>0, не по [0] IS NOT NULL:
+        // индексация коллекции в WHERE ненадёжна (sprint_done_dates фильтрует
+        // тем же size()). Java-часть /lore/news всё равно сортирует по дате —
+        // здесь только отбор дат и потолок объёма.
+        slice("timeline_specs",
+            "SELECT spec_id, title, out('HAS_STATE').valid_from[0] AS date_created, " +
+            "COALESCE(out('BELONGS_TO').component_id[0], component_id) AS component, " +
+            // AL-113 follow-up: у спеки есть BELONGS_TO_PROJECT (в отличие от
+            // decision/adr, у которых проекта в модели нет) — отдаём, чтобы
+            // spec-запись новостной ленты несла project и фильтр по проекту на
+            // клиенте её не терял.
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowSpec WHERE out('HAS_STATE').size() > 0",
+            List.of(), Map.of(), " LIMIT 400");
+
         slice("timeline_sprints",
             "SELECT sprint_id, name, " +
             "out('HAS_STATE').valid_from[0] AS valid_from, " +
@@ -128,6 +147,18 @@ public final class LoreSlices {
             "context_md, decision_md, consequences_md " +
             "FROM KnowADRHist WHERE in('HAS_STATE').adr_id[0] = :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
+
+        // AL-113 (запрошено miniLORE 2026-08-16): `adr_history` отдаёт правки
+        // ОДНОГО ADR за запрос (нужен :id) — для ленты редакций по всем ADR это
+        // N запросов. Батч-срез: по одной строке на каждую версию-открытие ADR
+        // сразу по всем, для новостной ленты правок. valid_from — реальная
+        // колонка KnowADRHist (ORDER BY по ней надёжен). Тела не тянем — лента
+        // показывает факт правки, не диф.
+        slice("adr_history_all",
+            "SELECT in('HAS_STATE').adr_id[0] AS adr_id, valid_from, valid_to, " +
+            "content_hash, source_commit " +
+            "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
+            List.of(), Map.of(), " LIMIT 300");
 
         // ── §2 Decisions ─────────────────────────────────────────────────────
         // ADR-019: KnowDecision as child of ADR. component_id/tags are filter axes,
@@ -657,12 +688,31 @@ public final class LoreSlices {
         // учётки и был тем местом, где роль с учёткой слипались.
         // Фильтр по client_id снят: агент без учётки — это заполняемое
         // состояние, и экран обязан его показать, а не спрятать.
+        // AL-108: machine_id/session_id — «откуда агент писал в последний
+        // раз» (самоописание через actor_new), не история и не различитель
+        // двух ОДНОВРЕМЕННЫХ сессий одной роли — только последняя.
         slice("agent_owners",
-            "SELECT actor_id, name, client_id, agent_role, " +
+            "SELECT actor_id, name, client_id, agent_role, machine_id, session_id, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
             "out('OWNED_BY').display_name AS owner_display_name " +
             "FROM KnowActor WHERE kind = 'agent'",
             List.of(), Map.of(), " ORDER BY actor_id");
+
+        // ADR-LORE-037 V1: журнал сессий агентов — обратная сторона LOGGED_BY
+        // (agent_owners показывает АКТОРА, этот срез показывает КОНКРЕТНЫЕ
+        // сессии под ним, зачем и заводился — «какая сессия сделала запись»,
+        // а не только «под какой ролью»). Опциональный фильтр по актору:
+        // без него — общий журнал (свежие сверху), с ним — сессии одного
+        // агента (экран его карточки).
+        slice("agent_sessions",
+            "SELECT session_id, machine_id, project, entrypoint, dialogue_name, " +
+            "started_at, last_activity_at, " +
+            "out('LOGGED_BY').actor_id AS actor_ids " +
+            "FROM KnowAgentSession",
+            List.of(),
+            new LinkedHashMap<>(Map.of("actor_id",
+                " WHERE out('LOGGED_BY').actor_id CONTAINS :actor_id")),
+            " ORDER BY last_activity_at DESC LIMIT 200");
 
         slice("actor_load",
             "SELECT actor_id, name, kind, " +
@@ -1202,6 +1252,18 @@ public final class LoreSlices {
             "SELECT slug, name, hosts, default_branch FROM KnowGitProject",
             List.of(), Map.of(), " ORDER BY slug");
 
+        // AL-102: журнал выдачи/снятия проектных ролей (append-only, KnowProjectRoleEvent).
+        // «кто (роль) · кому (kc_sub) · что (project+role) · действие · когда (at)».
+        // Опциональные фильтры по человеку/проекту — узкий разрез для карточки.
+        slice("project_role_events",
+            "SELECT event_uid, kc_sub, project, role, action, by_role, at "
+            + "FROM KnowProjectRoleEvent",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                "kc_sub",  " WHERE kc_sub = :kc_sub",
+                "project", " WHERE project = :project")),
+            " ORDER BY at DESC LIMIT 500");
+
         // Fixed 2026-07-02: PART_OF is Task --PART_OF--> Sprint (out from the task), so
         // in('PART_OF') on KnowTask always returns empty — the old query classified EVERY
         // task as backlog regardless of sprint membership.
@@ -1246,6 +1308,37 @@ public final class LoreSlices {
             // task-effort export (e.g. the fractional-hours migration) doesn't
             // silently truncate; still bounded to avoid an unbounded query.
             List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 5000");
+
+        // SE-01: пожелание сессии проекта UDWE/mig_gen (передано владельцем
+        // 2026-08-11/12) — `all_tasks` несёт `note_md`, из-за чего выдача по
+        // всему корпусу раздувается в сотни раз (4 млн символов / 57 730 строк
+        // на живом замере той же ночи), а получить «открытые задачи одного
+        // проекта» без note_md было нельзя вовсе. `open_tasks` — облегчённая
+        // проекция БЕЗ note_md, с фильтром «не done и не cancelled» встроенным
+        // в само название (не нужно перечислять статусы), плюс узкие фильтры
+        // по проекту/спринту/компоненту/классу работы (тоже из пожелания).
+        //
+        // "Открыто" читается по значку статуса (тот же icon-first паттерн,
+        // что в AidaLoreResource.classifyStatus/AL-117), а не по слову — иначе
+        // тот же класс дефекта, что уже ловили на этой же задаче раньше.
+        slice("open_tasks",
+            "SELECT task_uid, task_id, title, work_class, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('PART_OF').sprint_id[0] AS sprint_id, " +
+            "out('TAGGED_WITH').component_id AS component_ids, " +
+            "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
+            "FROM KnowTask " +
+            "WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '✅%' " +
+            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '🚫%'",
+            List.of(),
+            new LinkedHashMap<>(Map.of(
+                // Двойной хоп — тот же паттерн, что уже проверен в этом файле
+                // (напр. tasks_of_uc: out('PART_OF').out('HAS_STATE')...).
+                "project", " WHERE out('PART_OF').out('BELONGS_TO_PROJECT').slug CONTAINS :project",
+                "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint",
+                "component", " WHERE out('TAGGED_WITH').component_id CONTAINS :component",
+                "work_class", " WHERE work_class = :work_class")),
+            " ORDER BY sprint_id, task_uid LIMIT 3000");
 
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",

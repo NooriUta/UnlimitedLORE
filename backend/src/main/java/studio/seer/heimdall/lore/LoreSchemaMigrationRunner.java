@@ -329,6 +329,47 @@ public class LoreSchemaMigrationRunner {
         if (version == 13) { mergeFeaturesIntoUseCases(); createFullTextIndexes(); }
         if (version == 17) mergeLoreTagIntoKnowTag();
         if (version == 20) backfillProjectEdges();
+        if (version == 26) backfillReleaseProjectEdges();
+        if (version == 28) recreateFtIndexes();
+    }
+
+    // DBU-09/DBR-12 (#5321): пересоздать FULL_TEXT-индексы свежими после апгрейда
+    // на 26.8.1. НЕ REBUILD (он на 26.8.1 теряет имя индекса — DBR-12), а DROP по
+    // имени из реестра + createFullTextIndexes (пересоздаёт свежими → корректный
+    // порядок ключей для кириллицы; клэши по полям чистит сам). Идемпотентно:
+    // повторный прогон снова снесёт и создаст, результат тот же.
+    private void recreateFtIndexes() {
+        Set<String> existing = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:indexes", Map.of())) {
+            existing.add(String.valueOf(r.get("name")));
+        }
+        int dropped = 0;
+        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
+            if (existing.contains(ix.name())) {
+                try { exec("DROP INDEX `" + ix.name() + "`"); dropped++; }
+                catch (Exception e) { LOG.warnf("[LORE MIGRATE] V28 DROP %s: %s", ix.name(), e.getMessage()); }
+            }
+        }
+        LOG.infof("[LORE MIGRATE] V28 (#5321): снято %d FT-индексов, пересоздаю свежими", dropped);
+        createFullTextIndexes();
+    }
+
+    // PS-20: добор рёбер BELONGS_TO_PROJECT у релизов, оставшихся без ребра после
+    // V20 (создано/перенесено позже). Та же идемпотентная логика size()=0, что во
+    // 2-й категории backfillProjectEdges: ребро выравнивается по полю git_project,
+    // матч источника по @rid (release_id не уникален между проектами). Существующие
+    // рёбра не трогаем — write-path (relinkReleaseProjectEdge) держит их в синхроне.
+    private void backfillReleaseProjectEdges() {
+        int relEdges = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT @rid AS rid, git_project FROM KnowRelease "
+                + "WHERE out('BELONGS_TO_PROJECT').size() = 0 AND git_project IS NOT NULL", Map.of())) {
+            command("CREATE EDGE BELONGS_TO_PROJECT FROM " + r.get("rid")
+                + " TO (SELECT FROM KnowGitProject WHERE slug = :p) IF NOT EXISTS",
+                Map.of("p", r.get("git_project")));
+            relEdges++;
+        }
+        LOG.infof("[LORE MIGRATE] V26 backfill Release→project (хвост после V20): %d рёбер", relEdges);
     }
 
     /**
