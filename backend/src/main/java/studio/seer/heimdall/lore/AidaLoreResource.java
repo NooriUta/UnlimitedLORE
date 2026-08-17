@@ -328,7 +328,9 @@ public class AidaLoreResource extends LoreResourceBase {
             List<Map<String, Object>> specs       = composeAndQuery("timeline_specs");
             List<Map<String, Object>> tasksDone   = composeAndQuery("task_done_dates");
             List<Map<String, Object>> tasksHist   = composeAndQuery("task_created_dates");
-            List<Map<String, Object>> adrHist     = composeAndQuery("adr_history_all");
+            List<Map<String, Object>> adrHist      = composeAndQuery("adr_history_all");
+            List<Map<String, Object>> specHist     = composeAndQuery("spec_history_all");
+            List<Map<String, Object>> decisionHist = composeAndQuery("decision_history_all");
             List<Map<String, Object>> sprints     = composeAndQuery("sprints");
             List<Map<String, Object>> allTasks    = composeAndQuery("all_tasks");
 
@@ -359,10 +361,16 @@ public class AidaLoreResource extends LoreResourceBase {
                 String sid = firstStr(s.get("sprint_id"));
                 items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid), sid));
             }
+            // created-день и заголовок по id — нужны событию «изменено» ниже:
+            // день создания из changed исключаем, заголовок берём человекочитаемый.
+            Map<String, String> decisionCreatedDay = new HashMap<>(), decisionTitle = new HashMap<>();
+            Map<String, String> specCreatedDay     = new HashMap<>(), specTitle     = new HashMap<>();
             for (Map<String, Object> d : decisions) {
                 String date = dayOf(d.get("date_created"));
-                if (date != null)
-                    items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", firstStr(d.get("decision_id")), null, firstStr(d.get("decision_id"))));
+                if (date == null) continue;
+                String did = firstStr(d.get("decision_id"));
+                if (did != null) { decisionCreatedDay.put(did, date); decisionTitle.put(did, firstStr(d.get("title"))); }
+                items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", did, null, did));
             }
             Map<String, String> adrCreatedDay = new HashMap<>();
             for (Map<String, Object> a : adrs) {
@@ -373,34 +381,30 @@ public class AidaLoreResource extends LoreResourceBase {
                 items.add(newsItem("adr", date, timeOf(a.get("date_created")), aid, "created", firstStr(a.get("component")), null, aid));
             }
 
-            // Событие «изменено» из SCD2-истории ADR (решение владельца: развёрнутый
-            // SCD2 в ленте, но с ДЕДУПОМ ПО ДНЮ). SCD2 пишет строку на каждую правку
-            // тела/статуса — без сжатия один ADR за день дал бы пять строк «изменено»,
-            // и лента утонула бы в шуме (тот же урок, что с «49 more tasks»). Поэтому:
-            // одна запись на (adr_id, день), а день создания пропускаем — он уже
-            // покрыт событием created выше.
-            Set<String> changedSeen = new HashSet<>();
-            for (Map<String, Object> h : adrHist) {
-                String aid = firstStr(h.get("adr_id"));
-                String date = dayOf(h.get("valid_from"));
-                if (aid == null || date == null) continue;
-                if (date.equals(adrCreatedDay.get(aid))) continue;   // это создание, не правка
-                if (!changedSeen.add(aid + "|" + date)) continue;    // дедуп по дню
-                items.add(newsItem("adr", date, timeOf(h.get("valid_from")), aid, "changed", null, null, aid));
-            }
             for (Map<String, Object> sp : specs) {
                 String date = dayOf(sp.get("date_created"));
                 if (date == null) continue;
                 String title = firstStr(sp.get("title"));
                 if (title == null) title = firstStr(sp.get("spec_id"));
+                String spid = firstStr(sp.get("spec_id"));
+                if (spid != null) { specCreatedDay.put(spid, date); specTitle.put(spid, title); }
                 // Spec carries BELONGS_TO_PROJECT (unlike decision/adr, untagged
                 // by model) — first project so the client's project filter keeps it.
                 String project = null;
                 Object pr = sp.get("projects");
                 if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
                     project = String.valueOf(l.get(0));
-                items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", firstStr(sp.get("spec_id")), project, firstStr(sp.get("spec_id"))));
+                items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", spid, project, spid));
             }
+
+            // Событие «изменено» из SCD2-истории (ADR, спеки, решения). Дедуп по дню
+            // внутри emitChanged: SCD2 пишет строку на каждую правку, без сжатия один
+            // объект за день дал бы пять строк — тот же шум, что «49 more tasks».
+            // Идёт ПОСЛЕ created-циклов: им заполняются карты дней создания/заголовков.
+            Set<String> changedSeen = new HashSet<>();
+            emitChanged(items, adrHist,      "adr_id",      "adr",      adrCreatedDay,      null,          changedSeen);
+            emitChanged(items, specHist,     "spec_id",     "spec",     specCreatedDay,     specTitle,     changedSeen);
+            emitChanged(items, decisionHist, "decision_id", "decision", decisionCreatedDay, decisionTitle, changedSeen);
 
             // ПОЛНЫЙ список закрытых задач (решение владельца: «не сворачивай,
             // пусть будет полный список»). Раньше именованных капали (4/день),
@@ -505,6 +509,30 @@ public class AidaLoreResource extends LoreResourceBase {
     // ленте означает противоположное (задачи попадают при ЗАКРЫТИИ, ADR при
     // СОЗДАНИИ), и «что стало» несёт именно event, а не тип. detail — конкретика
     // (id/компонент), без дублирующего глагола: его теперь несёт event.
+    /**
+     * Событие «изменено» из SCD2-истории (ADR/спека/решение), ДЕДУП ПО ДНЮ.
+     * SCD2 пишет строку на каждую правку — без сжатия один объект за день дал бы
+     * пять строк «изменено», и лента утонула бы в шуме (урок «49 more tasks»).
+     * День создания пропускается: он уже покрыт событием created.
+     * titles == null → заголовком служит сам идентификатор (так у ADR).
+     */
+    private static void emitChanged(List<Map<String, Object>> items,
+                                    List<Map<String, Object>> hist,
+                                    String idField, String kind,
+                                    Map<String, String> createdDay,
+                                    Map<String, String> titles,
+                                    Set<String> seen) {
+        for (Map<String, Object> h : hist) {
+            String id = firstStr(h.get(idField));
+            String date = dayOf(h.get("valid_from"));
+            if (id == null || date == null) continue;
+            if (date.equals(createdDay.get(id))) continue;       // это создание, не правка
+            if (!seen.add(kind + "|" + id + "|" + date)) continue; // дедуп по дню
+            String title = (titles != null && titles.get(id) != null) ? titles.get(id) : id;
+            items.add(newsItem(kind, date, timeOf(h.get("valid_from")), title, "changed", null, null, id));
+        }
+    }
+
     static String timeOf(Object value) {
         if (value == null) return null;
         String s = (value instanceof List<?> l)

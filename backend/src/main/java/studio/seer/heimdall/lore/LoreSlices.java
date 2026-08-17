@@ -160,6 +160,19 @@ public final class LoreSlices {
             "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
+        // Зеркала adr_history_all для события «изменено» в ленте (ML-NEWS): правки
+        // спек и решений — такая же новость, как правка ADR. Свёртку «одна строка
+        // на (id, день)» делает потребитель (/news), здесь только сырые ревизии.
+        slice("spec_history_all",
+            "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash " +
+            "FROM KnowSpecHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
+            List.of(), Map.of(), " LIMIT 300");
+
+        slice("decision_history_all",
+            "SELECT in('HAS_STATE').decision_id[0] AS decision_id, valid_from, valid_to, content_hash " +
+            "FROM KnowDecisionHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
+            List.of(), Map.of(), " LIMIT 300");
+
         // ── §2 Decisions ─────────────────────────────────────────────────────
         // ADR-019: KnowDecision as child of ADR. component_id/tags are filter axes,
         // parent_adr (out DECIDED_IN) is the "rule → why" link. ORDER BY/LIMIT live
