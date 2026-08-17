@@ -1512,6 +1512,8 @@
       "futureHint": "дата позже сегодня — вероятно опечатка в LORE",
       "noProject": "без проекта",
       "tasksMore": "ещё {{count}} задач",
+      "sinceLast": "с прошлого раза: {{count}}",
+      "markRead": "прочитано",
       "kind": {
         "release": "релиз",
         "sprint": "спринт",
