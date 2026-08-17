@@ -1510,13 +1510,24 @@
       "empty": "Nothing has happened yet",
       "future": "future",
       "futureHint": "date is after today — likely a typo in LORE",
+      "noProject": "no project",
       "kind": {
         "release": "release",
-        "sprint": "sprint closed",
+        "sprint": "sprint",
         "decision": "decision",
         "adr": "ADR",
         "spec": "spec",
         "tasks": "tasks"
+      },
+      "event": {
+        "created": "created",
+        "closed": "closed",
+        "released": "released"
+      },
+      "group": {
+        "flat": "flat",
+        "kind": "by type",
+        "project": "by project"
       }
     },
     "page": {
