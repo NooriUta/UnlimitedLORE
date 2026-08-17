@@ -328,6 +328,7 @@ public class AidaLoreResource extends LoreResourceBase {
             List<Map<String, Object>> specs       = composeAndQuery("timeline_specs");
             List<Map<String, Object>> tasksDone   = composeAndQuery("task_done_dates");
             List<Map<String, Object>> tasksHist   = composeAndQuery("task_created_dates");
+            List<Map<String, Object>> adrHist     = composeAndQuery("adr_history_all");
             List<Map<String, Object>> sprints     = composeAndQuery("sprints");
             List<Map<String, Object>> allTasks    = composeAndQuery("all_tasks");
 
@@ -363,10 +364,29 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (date != null)
                     items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", firstStr(d.get("decision_id")), null, firstStr(d.get("decision_id"))));
             }
+            Map<String, String> adrCreatedDay = new HashMap<>();
             for (Map<String, Object> a : adrs) {
                 String date = dayOf(a.get("date_created"));
-                if (date != null)
-                    items.add(newsItem("adr", date, timeOf(a.get("date_created")), firstStr(a.get("adr_id")), "created", firstStr(a.get("component")), null, firstStr(a.get("adr_id"))));
+                if (date == null) continue;
+                String aid = firstStr(a.get("adr_id"));
+                if (aid != null) adrCreatedDay.put(aid, date);
+                items.add(newsItem("adr", date, timeOf(a.get("date_created")), aid, "created", firstStr(a.get("component")), null, aid));
+            }
+
+            // Событие «изменено» из SCD2-истории ADR (решение владельца: развёрнутый
+            // SCD2 в ленте, но с ДЕДУПОМ ПО ДНЮ). SCD2 пишет строку на каждую правку
+            // тела/статуса — без сжатия один ADR за день дал бы пять строк «изменено»,
+            // и лента утонула бы в шуме (тот же урок, что с «49 more tasks»). Поэтому:
+            // одна запись на (adr_id, день), а день создания пропускаем — он уже
+            // покрыт событием created выше.
+            Set<String> changedSeen = new HashSet<>();
+            for (Map<String, Object> h : adrHist) {
+                String aid = firstStr(h.get("adr_id"));
+                String date = dayOf(h.get("valid_from"));
+                if (aid == null || date == null) continue;
+                if (date.equals(adrCreatedDay.get(aid))) continue;   // это создание, не правка
+                if (!changedSeen.add(aid + "|" + date)) continue;    // дедуп по дню
+                items.add(newsItem("adr", date, timeOf(h.get("valid_from")), aid, "changed", null, null, aid));
             }
             for (Map<String, Object> sp : specs) {
                 String date = dayOf(sp.get("date_created"));
