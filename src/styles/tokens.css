@@ -111,6 +111,7 @@
   --gain: var(--suc);
   /* Шкала целей по Коберну ☁ cloud / 🪁 kite / 🌊 sea-level / 🐟 subfunction —
      стабильная идентичность уровня (как --section-*), не контраст к палитре. */
+  --g-news:  #E8705A;
   --g-value: #A8B860;
   --g-do:    #5AB4E8;
   --g-know:  #C0A36E;
