@@ -1120,6 +1120,21 @@ public final class LoreSlices {
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
+        // task_created_dates — зеркало task_done_dates для события «заведена»
+        // (ML-NEWS / запрос серверной сессии miniLORE): лента отдавала задачи
+        // ТОЛЬКО закрытием, и день «закрыли 9, завели 10» читался как «убыло 9».
+        // Создание = МИН valid_from по цепочке KnowTaskHist задачи (первое
+        // состояние). task_uid (не task_id: хвост уникален лишь внутри спринта,
+        // и без uid карточку не открыть) + sprint_id (отнести к проекту).
+        // GROUP BY по подзапросу: одна строка на задачу с датой её появления.
+        slice("task_created_dates",
+            "SELECT task_uid, sprint_id, min(valid_from) AS valid_from FROM (" +
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL" +
+            ") WHERE task_uid IS NOT NULL GROUP BY task_uid",
+            List.of(), Map.of(), "");
+
         // SPRINT_PLANITEM_RETIRE/T-23: history_plan_item removed — PlanItem is
         // deprecated (T-14) and this slice's only consumer (LoreEvolutionView.tsx)
         // was removed in T-22. Sprint plan-field history now lives on

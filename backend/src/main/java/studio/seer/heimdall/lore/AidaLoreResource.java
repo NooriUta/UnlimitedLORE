@@ -305,7 +305,6 @@ public class AidaLoreResource extends LoreResourceBase {
     // без заголовков, и 2760 строк «AI-01 done» были бы шумом там, где новость —
     // «14 задач закрыто». task_id — код в пределах спринта, не ключ (одна «T-01»
     // у десятков задач): заголовок берём только когда код в корпусе ровно один.
-    private static final int NEWS_NAMED_PER_DAY = 4;
     private static final Pattern NEWS_DAY = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})");
     // Время серверное, где есть: часть срезов несёт «YYYY-MM-DD HH:MM:SS»
     // (valid_from спринтов/спек/задач), часть — только день (релизы/ADR/решения).
@@ -382,46 +381,27 @@ public class AidaLoreResource extends LoreResourceBase {
                 items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", firstStr(sp.get("spec_id")), project, firstStr(sp.get("spec_id"))));
             }
 
-            // task_id → (title, sprintId); a second sighting marks the code unusable.
-            Map<String, String[]> titleById = new HashMap<>();
-            Set<String> ambiguous = new HashSet<>();
+            // ПОЛНЫЙ список закрытых задач (решение владельца: «не сворачивай,
+            // пусть будет полный список»). Раньше именованных капали (4/день),
+            // остальные сворачивали в «ещё N задач» — из-за неуникальности task_id
+            // название доставалось не всем. Ключуем по task_uid (уникален, AL-119):
+            // название есть у КАЖДОЙ задачи, кап и агрегат больше не нужны.
+            Map<String, String[]> byUid = new HashMap<>(); // uid -> {title, sprintId}
             for (Map<String, Object> t : allTasks) {
-                String tid = firstStr(t.get("task_id"));
-                if (tid == null) continue;
-                if (titleById.containsKey(tid)) ambiguous.add(tid);
-                else titleById.put(tid, new String[]{firstStr(t.get("title")), firstStr(t.get("sprint_id"))});
+                String uid = firstStr(t.get("task_uid"));
+                if (uid != null)
+                    byUid.put(uid, new String[]{firstStr(t.get("title")), firstStr(t.get("sprint_id"))});
             }
-            for (String a : ambiguous) titleById.remove(a);
-
-            // Newest first, so the per-day cap keeps the most recent of a busy day.
-            List<Map<String, Object>> closed = new ArrayList<>(tasksDone);
-            closed.sort((a, b) -> String.valueOf(b.get("valid_from")).compareTo(String.valueOf(a.get("valid_from"))));
-
-            Map<String, Integer> namedCount = new HashMap<>();
-            Map<String, Integer> unnamedCount = new HashMap<>();
-            for (Map<String, Object> t : closed) {
+            for (Map<String, Object> t : tasksDone) {
                 String date = dayOf(t.get("valid_from"));
                 if (date == null) continue;
+                String uid = firstStr(t.get("task_uid"));
                 String tid = firstStr(t.get("task_id"));
-                String[] known = tid == null ? null : titleById.get(tid);
-                int shown = namedCount.getOrDefault(date, 0);
-                if (known != null && known[0] != null && shown < NEWS_NAMED_PER_DAY) {
-                    namedCount.put(date, shown + 1);
-                    String project = known[1] == null ? null : sprintProject.get(known[1]);
-                    items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), known[0], "closed", tid, project, null));
-                } else {
-                    unnamedCount.merge(date, 1, Integer::sum);
-                }
-            }
-            // Агрегат «ещё N задач закрыто» — одна суммарная строка на день (не
-            // свёрнутая группа): отдельные закрытия задач шумны (иначе тысячи
-            // «AI-01 done»). Заголовок клиент строит сам из agg (i18n, склонение),
-            // а не английской строкой; внутренняя пометка same-day/across убрана —
-            // строка и так под заголовком дня, «в тот же день» избыточно.
-            for (Map.Entry<String, Integer> e : unnamedCount.entrySet()) {
-                Map<String, Object> agg = newsItem("tasks", e.getKey(), null, null, "closed", null, null, null);
-                agg.put("agg", e.getValue());
-                items.add(agg);
+                String[] known = uid == null ? null : byUid.get(uid);
+                String title = (known != null && known[0] != null) ? known[0] : (tid != null ? tid : uid);
+                String project = (known != null && known[1] != null) ? sprintProject.get(known[1]) : null;
+                // ref = task_uid: miniLORE открывает карточку задачи; detail = tid.
+                items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), title, "closed", tid, project, uid));
             }
 
             // Date cursor for windowed / archive-tail loading (FN-12 «архив
