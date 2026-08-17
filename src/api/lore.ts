@@ -218,6 +218,8 @@ export interface LoreNewsItem {
   /** что произошло (ML-NEWS): created · closed · released — «что стало», не «что есть» */
   event?: 'created' | 'closed' | 'released' | string;
   date: string;        // YYYY-MM-DD
+  /** HH:MM — серверное время, где срез его несёт; отсутствует, если только день */
+  time?: string;
   title: string;
   detail?: string;
   project?: string;

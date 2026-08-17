@@ -307,6 +307,11 @@ public class AidaLoreResource extends LoreResourceBase {
     // у десятков задач): заголовок берём только когда код в корпусе ровно один.
     private static final int NEWS_NAMED_PER_DAY = 4;
     private static final Pattern NEWS_DAY = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})");
+    // Время серверное, где есть: часть срезов несёт «YYYY-MM-DD HH:MM:SS»
+    // (valid_from спринтов/спек/задач), часть — только день (релизы/ADR/решения).
+    // Где времени нет — НЕ подставляем полночь (было бы время, которого никто не
+    // присылал), поле просто отсутствует.
+    private static final Pattern NEWS_TIME = Pattern.compile("\\d{4}-\\d{2}-\\d{2}[ T](\\d{2}:\\d{2})");
 
     @GET
     @Path("news")
@@ -345,23 +350,23 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map<String, Object> r : releases) {
                 String date = dayOf(r.get("release_date"));
                 if (date != null)
-                    items.add(newsItem("release", date, firstStr(r.get("release_id")), "released", null, firstStr(r.get("git_project"))));
+                    items.add(newsItem("release", date, timeOf(r.get("release_date")), firstStr(r.get("release_id")), "released", null, firstStr(r.get("git_project"))));
             }
             for (Map<String, Object> s : sprintsDone) {
                 String date = dayOf(s.get("done_date"));
                 if (date == null) continue;
                 String sid = firstStr(s.get("sprint_id"));
-                items.add(newsItem("sprint", date, sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid)));
+                items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid)));
             }
             for (Map<String, Object> d : decisions) {
                 String date = dayOf(d.get("date_created"));
                 if (date != null)
-                    items.add(newsItem("decision", date, firstStr(d.get("title")), "created", firstStr(d.get("decision_id")), null));
+                    items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", firstStr(d.get("decision_id")), null));
             }
             for (Map<String, Object> a : adrs) {
                 String date = dayOf(a.get("date_created"));
                 if (date != null)
-                    items.add(newsItem("adr", date, firstStr(a.get("adr_id")), "created", firstStr(a.get("component")), null));
+                    items.add(newsItem("adr", date, timeOf(a.get("date_created")), firstStr(a.get("adr_id")), "created", firstStr(a.get("component")), null));
             }
             for (Map<String, Object> sp : specs) {
                 String date = dayOf(sp.get("date_created"));
@@ -374,7 +379,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 Object pr = sp.get("projects");
                 if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
                     project = String.valueOf(l.get(0));
-                items.add(newsItem("spec", date, title, "created", firstStr(sp.get("spec_id")), project));
+                items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", firstStr(sp.get("spec_id")), project));
             }
 
             // task_id → (title, sprintId); a second sighting marks the code unusable.
@@ -403,7 +408,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (known != null && known[0] != null && shown < NEWS_NAMED_PER_DAY) {
                     namedCount.put(date, shown + 1);
                     String project = known[1] == null ? null : sprintProject.get(known[1]);
-                    items.add(newsItem("tasks", date, known[0], "closed", tid, project));
+                    items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), known[0], "closed", tid, project));
                 } else {
                     unnamedCount.merge(date, 1, Integer::sum);
                 }
@@ -414,7 +419,7 @@ public class AidaLoreResource extends LoreResourceBase {
             // а не английской строкой; внутренняя пометка same-day/across убрана —
             // строка и так под заголовком дня, «в тот же день» избыточно.
             for (Map.Entry<String, Integer> e : unnamedCount.entrySet()) {
-                Map<String, Object> agg = newsItem("tasks", e.getKey(), null, "closed", null, null);
+                Map<String, Object> agg = newsItem("tasks", e.getKey(), null, null, "closed", null, null);
                 agg.put("agg", e.getValue());
                 items.add(agg);
             }
@@ -431,7 +436,15 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map<String, Object> item : items)
                 if (String.valueOf(item.get("date")).compareTo(today) > 0) item.put("future", true);
 
-            items.sort((a, b) -> String.valueOf(b.get("date")).compareTo(String.valueOf(a.get("date"))));
+            // date DESC, затем time DESC. Запись без времени = начало своего дня
+            // (00:00): не всплывает «свежее» тех, у кого время реально позже.
+            items.sort((a, b) -> {
+                int d = String.valueOf(b.get("date")).compareTo(String.valueOf(a.get("date")));
+                if (d != 0) return d;
+                String ta = a.get("time") == null ? "00:00" : String.valueOf(a.get("time"));
+                String tb = b.get("time") == null ? "00:00" : String.valueOf(b.get("time"));
+                return tb.compareTo(ta);
+            });
             List<Map<String, Object>> limited = items.size() > limit
                 ? new ArrayList<>(items.subList(0, limit)) : items;
             return noStore(Response.ok(Map.of("items", limited)));
@@ -463,11 +476,21 @@ public class AidaLoreResource extends LoreResourceBase {
     // ленте означает противоположное (задачи попадают при ЗАКРЫТИИ, ADR при
     // СОЗДАНИИ), и «что стало» несёт именно event, а не тип. detail — конкретика
     // (id/компонент), без дублирующего глагола: его теперь несёт event.
-    private static Map<String, Object> newsItem(String kind, String date, String title, String event, String detail, String project) {
+    static String timeOf(Object value) {
+        if (value == null) return null;
+        String s = (value instanceof List<?> l)
+            ? (l.isEmpty() ? "" : String.valueOf(l.get(0)))
+            : String.valueOf(value);
+        Matcher m = NEWS_TIME.matcher(s.trim());
+        return m.find() ? m.group(1) : null;
+    }
+
+    private static Map<String, Object> newsItem(String kind, String date, String time, String title, String event, String detail, String project) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("kind", kind);
         m.put("event", event);
         m.put("date", date);
+        if (time != null) m.put("time", time);
         m.put("title", title);
         if (detail != null) m.put("detail", detail);
         if (project != null) m.put("project", project);
