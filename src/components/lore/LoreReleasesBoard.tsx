@@ -5,6 +5,7 @@ import { fetchLoreSlice, type LoreRelease, type LoreSprintTask } from '../../api
 import { StatusChip } from '../../pages/LorePage';
 import LoreSkeleton from './LoreSkeleton';
 import { useIsNarrow } from '../../hooks/useMediaQuery';
+import { parseHosts, releaseUrl, hostLabel } from './repo-url';
 
 interface Props {
   q: string;
@@ -207,6 +208,12 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
               const tasks   = taskMap[uid];
               const type   = r.type as string | null;
               const gp     = r.git_project ?? 'NooriUta/AIDA';
+              // AL-112: ссылки релиза строятся из hosts[] ПРОЕКТА (remote'ы
+              // primary|mirror), а не хардкодом github.com — у проекта с primary
+              // на Forgejo ссылка ведёт в Forgejo, а у проекта без github-зеркала
+              // больше нет мёртвой github.com-ссылки. Fallback на старый github.com
+              // — только когда hosts проекта не заведены (легаси-запись).
+              const hosts  = parseHosts(r.project_hosts);
               const ghUrl  = `https://github.com/${gp}/releases/tag/${tag}`;
               return (
                 <div
@@ -326,14 +333,32 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                   </div>
                   <div style={{ ...S.rowRight, ...(narrow ? S.rowRightNarrow : null) }}>
                     {r.release_date && <span style={S.date}>{r.release_date.slice(0, 10)}</span>}
-                    <a
-                      href={ghUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={e => e.stopPropagation()}
-                      style={S.ghLink}
-                      title={t('lore.releasesBoard.githubReleaseTitle', 'GitHub Release {{tag}}', { tag })}
-                    ><GhIcon /></a>
+                    {hosts.length > 0 ? hosts.map(h => {
+                      const label = hostLabel(h);
+                      const isGh  = label === 'GitHub';
+                      return (
+                        <a
+                          key={h.remote}
+                          href={releaseUrl(h, tag)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          style={S.ghLink}
+                          title={t('lore.releasesBoard.remoteReleaseTitle', '{{role}} · релиз {{tag}} на {{url}}', {
+                            role: h.role === 'primary' ? 'primary' : 'mirror', tag, url: releaseUrl(h, tag),
+                          })}
+                        >{isGh ? <GhIcon /> : <span style={S.hostLabel}>{label}</span>}</a>
+                      );
+                    }) : (
+                      <a
+                        href={ghUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={S.ghLink}
+                        title={t('lore.releasesBoard.githubReleaseTitle', 'GitHub Release {{tag}}', { tag })}
+                      ><GhIcon /></a>
+                    )}
                   </div>
                 </div>
               );
@@ -428,6 +453,8 @@ const S = {
   tagMajor: { color: 'var(--err)' },
   tagMinor: { color: 'var(--war)' },
   tagPatch: { color: 'var(--acc)' },
+  // AL-112: текстовый бейдж remote'а (Forgejo/local/…) там, где не github.
+  hostLabel: { fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', lineHeight: 1 },
 
   body: { flex: 1, minWidth: 0, display: 'flex', flexWrap: 'wrap' as const, alignItems: 'center', gap: 6 },
 

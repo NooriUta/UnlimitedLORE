@@ -1363,6 +1363,11 @@ public final class LoreSlices {
             // фронта и release_uid. Ребро выведено рядом — по нему работает
             // read-скоуп (AL-94), и расхождение теперь ВИДНО, а не скрыто.
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            // AL-112: hosts[] проекта релиза — remote'ы (primary|mirror) как
+            // места, где тег физически лежит. Клиент (Forseti/miniLORE) строит
+            // ссылку релиза per-host, а не хардкодом github.com, и показывает
+            // репозитории как remote'ы ОДНОГО проекта, а не отдельные проекты.
+            "out('BELONGS_TO_PROJECT').hosts[0] AS project_hosts, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
             "in('SHIPPED_IN').size() AS pr_count " +
             "FROM KnowRelease ORDER BY release_id DESC",
