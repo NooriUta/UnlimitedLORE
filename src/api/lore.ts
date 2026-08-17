@@ -222,6 +222,8 @@ export interface LoreNewsItem {
   detail?: string;
   project?: string;
   future?: boolean;
+  /** агрегат закрытых задач за день: число вместо title (клиент строит подпись) */
+  agg?: number;
 }
 
 export async function fetchLoreNews(limit = 60, signal?: AbortSignal): Promise<LoreNewsItem[]> {

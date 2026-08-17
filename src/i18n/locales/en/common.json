@@ -1511,6 +1511,7 @@
       "future": "future",
       "futureHint": "date is after today — likely a typo in LORE",
       "noProject": "no project",
+      "tasksMore": "{{count}} more tasks",
       "kind": {
         "release": "release",
         "sprint": "sprint",

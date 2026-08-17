@@ -408,11 +408,15 @@ public class AidaLoreResource extends LoreResourceBase {
                     unnamedCount.merge(date, 1, Integer::sum);
                 }
             }
+            // Агрегат «ещё N задач закрыто» — одна суммарная строка на день (не
+            // свёрнутая группа): отдельные закрытия задач шумны (иначе тысячи
+            // «AI-01 done»). Заголовок клиент строит сам из agg (i18n, склонение),
+            // а не английской строкой; внутренняя пометка same-day/across убрана —
+            // строка и так под заголовком дня, «в тот же день» избыточно.
             for (Map.Entry<String, Integer> e : unnamedCount.entrySet()) {
-                int count = e.getValue();
-                items.add(newsItem("tasks", e.getKey(),
-                    count + " more task" + (count == 1 ? "" : "s"), "closed",
-                    namedCount.containsKey(e.getKey()) ? "same day" : "across all sprints", null));
+                Map<String, Object> agg = newsItem("tasks", e.getKey(), null, "closed", null, null);
+                agg.put("agg", e.getValue());
+                items.add(agg);
             }
 
             // Date cursor for windowed / archive-tail loading (FN-12 «архив
