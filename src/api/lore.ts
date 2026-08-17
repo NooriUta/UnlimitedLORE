@@ -347,6 +347,8 @@ export interface LoreQuestionRow {
   title: string | null;
   body_md: string | null;                  // контекст вопроса (для раскрывающегося блока)
   status: string | null;                  // open | deferred | closed | dropped
+  /** условие возврата к вопросу; обязателен при status='deferred' (бэкенд отвергает без него) */
+  trigger?: string | null;
   component_id: string | null;
   components: (string | null)[] | null;    // T43: multi component via BELONGS_TO
   projects: (string | null)[] | null;      // T43: multi git project via BELONGS_TO_PROJECT

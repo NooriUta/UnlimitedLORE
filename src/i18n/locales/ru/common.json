@@ -1506,6 +1506,10 @@
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"
     },
+    "questions": {
+      "closedViaAnswer": "закрыт (через ответ-решение)",
+      "triggerPlaceholder": "условие возврата к вопросу (обязательно для «отложен»)"
+    },
     "news": {
       "empty": "Пока ничего не произошло",
       "future": "будущее",
