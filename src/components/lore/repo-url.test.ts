@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseHosts, primaryHost, fileUrl, prUrl, type RepoHost } from './repo-url';
+import { parseHosts, primaryHost, fileUrl, prUrl, releaseUrl, hostLabel, type RepoHost } from './repo-url';
 
 const forgejo: RepoHost = {
   remote: 'origin', role: 'primary',
@@ -58,5 +58,24 @@ describe('prUrl', () => {
   it('composes PR URLs per host (Forgejo /pulls/ vs GitHub /pull/)', () => {
     expect(prUrl(forgejo, 136)).toBe('http://localhost:3030/AIDA/UnlimitedLORE/pulls/136');
     expect(prUrl(github, 136)).toBe('https://github.com/NooriUta/UnlimitedLORE/pull/136');
+  });
+});
+
+describe('releaseUrl (AL-112)', () => {
+  it('builds the release page URL per host, not hardcoded github.com', () => {
+    expect(releaseUrl(forgejo, 'v1.5.0')).toBe('http://localhost:3030/AIDA/UnlimitedLORE/releases/tag/v1.5.0');
+    expect(releaseUrl(github, 'v1.5.0')).toBe('https://github.com/NooriUta/UnlimitedLORE/releases/tag/v1.5.0');
+  });
+  it('does not double the slash when base_url has a trailing one', () => {
+    const trailing = { ...github, base_url: 'https://github.com/NooriUta/UnlimitedLORE/' };
+    expect(releaseUrl(trailing, 'v1.5.0')).toBe('https://github.com/NooriUta/UnlimitedLORE/releases/tag/v1.5.0');
+  });
+});
+
+describe('hostLabel (AL-112)', () => {
+  it('labels by domain', () => {
+    expect(hostLabel(github)).toBe('GitHub');
+    expect(hostLabel(forgejo)).toBe('local'); // localhost:3030
+    expect(hostLabel({ ...forgejo, base_url: 'https://git.seidrstudio.pro/AIDA/UnlimitedLORE' })).toBe('Forgejo');
   });
 });

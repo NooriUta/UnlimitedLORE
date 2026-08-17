@@ -38,3 +38,28 @@ export function fileUrl(host: RepoHost, filePath: string, branch?: string | null
 export function prUrl(host: RepoHost, n: number | string): string {
   return sub(sub(host.pr_url_template, '{base}', host.base_url), '{n}', String(n));
 }
+
+/**
+ * Release page URL for a host+tag (AL-112). No release_url_template in the data:
+ * both Forgejo and GitHub expose the release page at {base}/releases/tag/{tag},
+ * so it's derived from base_url. Building it per-host (instead of hardcoding
+ * github.com) is the whole point — a project whose primary is Forgejo links to
+ * Forgejo, its GitHub mirror links to GitHub, and a project without a GitHub
+ * mirror no longer gets a dead github.com link.
+ */
+export function releaseUrl(host: RepoHost, tag: string): string {
+  return `${host.base_url.replace(/\/+$/, '')}/releases/tag/${tag}`;
+}
+
+/**
+ * Short human label for a host, by domain (AL-112 release remotes). Keeps the
+ * remotes row legible: "GitHub"/"Forgejo"/"local" instead of raw hostnames.
+ */
+export function hostLabel(host: RepoHost): string {
+  let hostname = '';
+  try { hostname = new URL(host.base_url).hostname; } catch { hostname = host.base_url; }
+  if (hostname.includes('github.com')) return 'GitHub';
+  if (hostname.includes('seidrstudio')) return 'Forgejo';
+  if (hostname === 'localhost' || hostname.startsWith('127.') || hostname.startsWith('192.168.')) return 'local';
+  return hostname;
+}
