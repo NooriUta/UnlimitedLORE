@@ -1099,6 +1099,8 @@ export interface LoreRelease {
   sprint_count: number | null;
   pr_count: number | null;
   git_project: string | null;
+  /** AL-112: hosts[] проекта релиза (JSON string of RepoHost[], ADR-018) — remote'ы primary|mirror. */
+  project_hosts?: string | null;
 }
 
 // AL-30: fields beyond the SCD2 envelope are UNION of what history_sprint /

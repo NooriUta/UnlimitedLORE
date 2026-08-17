@@ -1285,7 +1285,8 @@
       "prTitle": "PR #{{number}} · {{project}}",
       "decisionsLabel": "Decisions",
       "noLinkedRecords": "No linked records found.",
-      "githubReleaseTitle": "GitHub Release {{tag}}"
+      "githubReleaseTitle": "GitHub Release {{tag}}",
+      "remoteReleaseTitle": "{{role}} · release {{tag}} at {{url}}"
     },
     "runbookList": {
       "allFilter": "all",
