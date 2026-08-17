@@ -215,6 +215,8 @@ export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnal
 // в дате в LORE, помечаем, а не прячем).
 export interface LoreNewsItem {
   kind: 'release' | 'sprint' | 'decision' | 'adr' | 'spec' | 'tasks';
+  /** что произошло (ML-NEWS): created · closed · released — «что стало», не «что есть» */
+  event?: 'created' | 'closed' | 'released' | string;
   date: string;        // YYYY-MM-DD
   title: string;
   detail?: string;

@@ -345,23 +345,23 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map<String, Object> r : releases) {
                 String date = dayOf(r.get("release_date"));
                 if (date != null)
-                    items.add(newsItem("release", date, firstStr(r.get("release_id")), "released", firstStr(r.get("git_project"))));
+                    items.add(newsItem("release", date, firstStr(r.get("release_id")), "released", null, firstStr(r.get("git_project"))));
             }
             for (Map<String, Object> s : sprintsDone) {
                 String date = dayOf(s.get("done_date"));
                 if (date == null) continue;
                 String sid = firstStr(s.get("sprint_id"));
-                items.add(newsItem("sprint", date, sprintName.getOrDefault(sid, sid), "sprint closed", sprintProject.get(sid)));
+                items.add(newsItem("sprint", date, sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid)));
             }
             for (Map<String, Object> d : decisions) {
                 String date = dayOf(d.get("date_created"));
                 if (date != null)
-                    items.add(newsItem("decision", date, firstStr(d.get("title")), firstStr(d.get("decision_id")), null));
+                    items.add(newsItem("decision", date, firstStr(d.get("title")), "created", firstStr(d.get("decision_id")), null));
             }
             for (Map<String, Object> a : adrs) {
                 String date = dayOf(a.get("date_created"));
                 if (date != null)
-                    items.add(newsItem("adr", date, firstStr(a.get("adr_id")), firstStr(a.get("component")), null));
+                    items.add(newsItem("adr", date, firstStr(a.get("adr_id")), "created", firstStr(a.get("component")), null));
             }
             for (Map<String, Object> sp : specs) {
                 String date = dayOf(sp.get("date_created"));
@@ -374,7 +374,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 Object pr = sp.get("projects");
                 if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
                     project = String.valueOf(l.get(0));
-                items.add(newsItem("spec", date, title, firstStr(sp.get("spec_id")), project));
+                items.add(newsItem("spec", date, title, "created", firstStr(sp.get("spec_id")), project));
             }
 
             // task_id → (title, sprintId); a second sighting marks the code unusable.
@@ -403,7 +403,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (known != null && known[0] != null && shown < NEWS_NAMED_PER_DAY) {
                     namedCount.put(date, shown + 1);
                     String project = known[1] == null ? null : sprintProject.get(known[1]);
-                    items.add(newsItem("tasks", date, known[0], tid + " closed", project));
+                    items.add(newsItem("tasks", date, known[0], "closed", tid, project));
                 } else {
                     unnamedCount.merge(date, 1, Integer::sum);
                 }
@@ -411,7 +411,7 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map.Entry<String, Integer> e : unnamedCount.entrySet()) {
                 int count = e.getValue();
                 items.add(newsItem("tasks", e.getKey(),
-                    count + " more task" + (count == 1 ? "" : "s") + " closed",
+                    count + " more task" + (count == 1 ? "" : "s"), "closed",
                     namedCount.containsKey(e.getKey()) ? "same day" : "across all sprints", null));
             }
 
@@ -455,9 +455,14 @@ public class AidaLoreResource extends LoreResourceBase {
         return m.find() ? m.group(1) : null;
     }
 
-    private static Map<String, Object> newsItem(String kind, String date, String title, String detail, String project) {
+    // event (created·closed·released) — отдельно от kind: у разных типов число в
+    // ленте означает противоположное (задачи попадают при ЗАКРЫТИИ, ADR при
+    // СОЗДАНИИ), и «что стало» несёт именно event, а не тип. detail — конкретика
+    // (id/компонент), без дублирующего глагола: его теперь несёт event.
+    private static Map<String, Object> newsItem(String kind, String date, String title, String event, String detail, String project) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("kind", kind);
+        m.put("event", event);
         m.put("date", date);
         m.put("title", title);
         if (detail != null) m.put("detail", detail);
