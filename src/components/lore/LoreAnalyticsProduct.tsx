@@ -16,7 +16,7 @@ import {
   type LoreInvestProfileRow, type LoreUcQualityAllRow, type LoreVpAnalyticsRow,
   type LoreSelfCheckRun, type LoreSelfCheckFinding,
 } from '../../api/lore';
-import { investShares, mergeActorLoad, vpFit, type VpFit } from './analyticsProduct';
+import { investShares, investCoverage, mergeActorLoad, vpFit, type VpFit } from './analyticsProduct';
 import { useProjectScope } from '../../context/ProjectScopeContext';
 import { GameIcon } from './GameIcon';
 import { ListSearch, FilterChips } from './product/shared';
@@ -118,6 +118,7 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
   }, [fits]);
 
   const shares = useMemo(() => investShares(invest), [invest]);
+  const classCoverage = useMemo(() => investCoverage(invest), [invest]); // MT-02
   const belowThreshold = useMemo(() => (quality?.rows ?? []).filter(r => r.below_threshold), [quality]);
   const covNoMs = coverage.filter(c => c.finding === 'feature_without_milestone');
   const covNoFeat = coverage.filter(c => c.finding === 'milestone_without_features');
@@ -403,6 +404,26 @@ export default function LoreAnalyticsProduct({ onError }: Props) {
             <b>{t('lore.analytics.product.investTitle', 'D · Инвестиционный профиль')}</b>
             <span style={S.meta}>{t('lore.analytics.product.investHint', '«всё в jtd» = сигнал, что ценность стоит')}</span>
           </div>
+          {/* MT-02: доля покрытия классами — размер выборки, на которой держится профиль */}
+          <div
+            style={{
+              ...S.coverageNote,
+              ...(classCoverage.shareTasks < 0.5 ? S.coverageWarn : null),
+            }}
+            title={t('lore.analytics.product.coverageTitle',
+              'Профиль баланса uc/jtd/enb осмыслен только на задачах С классом. work_class задан не у всех (D3 это допускает) — строка показывает, на какой доле корпуса посчитан профиль.')}
+          >
+            {t('lore.analytics.product.coverage',
+              'Классами размечено: {{tasksPct}}% задач ({{tasksClassified}}/{{tasksTotal}}) · {{daysPct}}% трудоёмкости ({{daysClassified}}/{{daysTotal}} чел-дн)',
+              {
+                tasksPct: Math.round(classCoverage.shareTasks * 100),
+                tasksClassified: classCoverage.tasksClassified,
+                tasksTotal: classCoverage.tasksTotal,
+                daysPct: Math.round(classCoverage.shareDays * 100),
+                daysClassified: Math.round(classCoverage.daysClassified),
+                daysTotal: Math.round(classCoverage.daysTotal),
+              })}
+          </div>
           <div style={S.list}>
             {shares.slice(0, 6).map(s => (
               <div key={s.release} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -471,6 +492,17 @@ const S: Record<string, React.CSSProperties> = {
   badge:    { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)', border: '1px solid var(--bd)', borderRadius: 999, padding: '0 8px', color: 'var(--t2)' },
   meta:     { fontSize: 'var(--fs-sm)', color: 'var(--t3)' },
   hint:     { fontSize: 'var(--fs-base)', color: 'var(--t3)' },
+  // MT-02: строка покрытия классами над профилем
+  coverageNote: {
+    fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 8,
+    padding: '4px 8px', borderRadius: 4, border: '1px solid var(--bd)',
+    background: 'color-mix(in srgb, var(--t3) 6%, transparent)',
+  },
+  coverageWarn: {
+    color: 'var(--wrn)',
+    border: '1px solid color-mix(in srgb, var(--wrn) 40%, transparent)',
+    background: 'color-mix(in srgb, var(--wrn) 8%, transparent)',
+  },
   dim:      { color: 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   mono:     { fontFamily: 'var(--mono)', fontSize: 'var(--fs-sm)' },
   link:     { cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: 3 },
