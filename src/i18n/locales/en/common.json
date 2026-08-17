@@ -1524,6 +1524,7 @@
       },
       "event": {
         "created": "created",
+        "changed": "changed",
         "closed": "closed",
         "released": "released"
       },
