@@ -350,23 +350,23 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map<String, Object> r : releases) {
                 String date = dayOf(r.get("release_date"));
                 if (date != null)
-                    items.add(newsItem("release", date, timeOf(r.get("release_date")), firstStr(r.get("release_id")), "released", null, firstStr(r.get("git_project"))));
+                    items.add(newsItem("release", date, timeOf(r.get("release_date")), firstStr(r.get("release_id")), "released", null, firstStr(r.get("git_project")), firstStr(r.get("release_id"))));
             }
             for (Map<String, Object> s : sprintsDone) {
                 String date = dayOf(s.get("done_date"));
                 if (date == null) continue;
                 String sid = firstStr(s.get("sprint_id"));
-                items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid)));
+                items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid), sid));
             }
             for (Map<String, Object> d : decisions) {
                 String date = dayOf(d.get("date_created"));
                 if (date != null)
-                    items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", firstStr(d.get("decision_id")), null));
+                    items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", firstStr(d.get("decision_id")), null, firstStr(d.get("decision_id"))));
             }
             for (Map<String, Object> a : adrs) {
                 String date = dayOf(a.get("date_created"));
                 if (date != null)
-                    items.add(newsItem("adr", date, timeOf(a.get("date_created")), firstStr(a.get("adr_id")), "created", firstStr(a.get("component")), null));
+                    items.add(newsItem("adr", date, timeOf(a.get("date_created")), firstStr(a.get("adr_id")), "created", firstStr(a.get("component")), null, firstStr(a.get("adr_id"))));
             }
             for (Map<String, Object> sp : specs) {
                 String date = dayOf(sp.get("date_created"));
@@ -379,7 +379,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 Object pr = sp.get("projects");
                 if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
                     project = String.valueOf(l.get(0));
-                items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", firstStr(sp.get("spec_id")), project));
+                items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", firstStr(sp.get("spec_id")), project, firstStr(sp.get("spec_id"))));
             }
 
             // task_id → (title, sprintId); a second sighting marks the code unusable.
@@ -408,7 +408,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (known != null && known[0] != null && shown < NEWS_NAMED_PER_DAY) {
                     namedCount.put(date, shown + 1);
                     String project = known[1] == null ? null : sprintProject.get(known[1]);
-                    items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), known[0], "closed", tid, project));
+                    items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), known[0], "closed", tid, project, null));
                 } else {
                     unnamedCount.merge(date, 1, Integer::sum);
                 }
@@ -419,7 +419,7 @@ public class AidaLoreResource extends LoreResourceBase {
             // а не английской строкой; внутренняя пометка same-day/across убрана —
             // строка и так под заголовком дня, «в тот же день» избыточно.
             for (Map.Entry<String, Integer> e : unnamedCount.entrySet()) {
-                Map<String, Object> agg = newsItem("tasks", e.getKey(), null, null, "closed", null, null);
+                Map<String, Object> agg = newsItem("tasks", e.getKey(), null, null, "closed", null, null, null);
                 agg.put("agg", e.getValue());
                 items.add(agg);
             }
@@ -485,7 +485,7 @@ public class AidaLoreResource extends LoreResourceBase {
         return m.find() ? m.group(1) : null;
     }
 
-    private static Map<String, Object> newsItem(String kind, String date, String time, String title, String event, String detail, String project) {
+    private static Map<String, Object> newsItem(String kind, String date, String time, String title, String event, String detail, String project, String refId) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("kind", kind);
         m.put("event", event);
@@ -494,6 +494,10 @@ public class AidaLoreResource extends LoreResourceBase {
         m.put("title", title);
         if (detail != null) m.put("detail", detail);
         if (project != null) m.put("project", project);
+        // ref {type,id} — куда открыть карточку. Единый news-API самодостаточен:
+        // клиент (Forseti/miniLORE) навигирует по ref, а не восстанавливает id из
+        // title/detail по-своему. Нет ref (задачи: id неуникален) — открывать нечем.
+        if (refId != null) m.put("ref", Map.of("type", kind, "id", refId));
         return m;
     }
 

@@ -1329,8 +1329,10 @@ export default function LorePage() {
             <LoreNewsFeed
               onError={handleFetchError}
               onOpen={(it) => {
-                if (it.kind === 'adr') navigateToAdr(it.title);
-                else if (it.kind === 'sprint') go('sprints');
+                // Навигация по ref единого news-API (id из ref, не из title).
+                const id = it.ref?.id ?? it.title;
+                if (it.kind === 'adr') navigateToAdr(id);
+                else if (it.kind === 'sprint') navigateToSprint(id);
                 else if (it.kind === 'release') go('releases');
                 else if (it.kind === 'decision') go('decisions');
               }}
