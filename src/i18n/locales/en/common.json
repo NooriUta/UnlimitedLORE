@@ -642,6 +642,8 @@
         "investEmpty": "no tasks linked to releases",
         "byCount": "by count",
         "byCountHint": "some tasks have no effort_days",
+        "coverage": "Classified: {{tasksPct}}% of tasks ({{tasksClassified}}/{{tasksTotal}}) · {{daysPct}}% of effort ({{daysClassified}}/{{daysTotal}} person-days)",
+        "coverageTitle": "The uc/jtd/enb balance is meaningful only over classified tasks. work_class is not set on all of them (D3 allows that) — this line shows what share of the corpus the profile is computed on.",
         "qualityTitle": "F · Documentation quality",
         "qualityNorm": "normalized score/max of its own rigor",
         "qualityBelow": "below threshold: {{n}} UC",

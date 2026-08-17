@@ -113,3 +113,39 @@ export function investShares(rows: LoreInvestProfileRow[]): InvestShare[] {
     return 0;
   });
 }
+
+export interface InvestCoverage {
+  tasksTotal: number;
+  tasksClassified: number;
+  shareTasks: number;      // classified / total (0..1)
+  daysTotal: number;       // Σ effort_days по ВСЕМ задачам
+  daysClassified: number;  // Σ effort_days у задач с классом
+  shareDays: number;       // daysClassified / daysTotal (0..1)
+}
+
+/**
+ * MT-02: КОРПУСНАЯ доля покрытия классами — по штукам И по трудоёмкости.
+ * Смысл INVEST-профиля (баланс uc/jtd/enb) держится только на задачах С классом;
+ * при 7.8% покрытия по штукам и 2.3% по дням любой вывод — о выборке в сорок раз
+ * меньше корпуса. Считаем и показываем размер выборки рядом с профилем, чтобы
+ * красивая цифра «оценка есть у 85%» не читалась как «профиль полон» (тот же
+ * приём честности к выборке, что в MT-06). work_class=null легален (D3) — это не
+ * ошибка данных, а граница применимости среза, и её надо видеть.
+ */
+export function investCoverage(rows: LoreInvestProfileRow[]): InvestCoverage {
+  let tasksTotal = 0, tasksClassified = 0, daysTotal = 0, daysClassified = 0;
+  for (const r of rows) {
+    tasksTotal++;
+    const classified = r.work_class === 'uc' || r.work_class === 'jtd' || r.work_class === 'enb';
+    if (classified) tasksClassified++;
+    const d = r.effort_days ?? 0;
+    daysTotal += d;
+    if (classified) daysClassified += d;
+  }
+  return {
+    tasksTotal, tasksClassified,
+    shareTasks: tasksTotal ? tasksClassified / tasksTotal : 0,
+    daysTotal, daysClassified,
+    shareDays: daysTotal ? daysClassified / daysTotal : 0,
+  };
+}
