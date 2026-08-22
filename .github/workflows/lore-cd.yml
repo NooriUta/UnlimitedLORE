@@ -92,6 +92,14 @@ jobs:
       LORE_SECRETS_PROJECT_ID: ${{ secrets.LORE_SECRETS_PROJECT_ID }}
       LORE_SECRETS_ENVIRONMENT: prod
       LORE_SECRETS_SCOPE: /
+      # Пароль служебной учётки MinIO для соседей (ADR-INFRA-SHARED-COMPONENTS).
+      # Передаётся по той же причине, что и ARCADEDB_ROOT_PASSWORD: .env здесь
+      # нет, а compose читает окружение. Без этой строки секрет в Forgejo будет
+      # ЛЕЖАТЬ, но до minio-init не доедет — тот создаст корзину и политику,
+      # учётку не создаст и честно скажет об этом в логе. Деплой при этом
+      # зелёный, а сосед отвечает 503: расхождение видно только у соседа.
+      # Пустое значение — законное состояние, а не поломка.
+      MINILORE_S3_PASSWORD: ${{ secrets.MINILORE_S3_PASSWORD }}
       # Стенд переехал на ci-server: ArcadeDB, Keycloak, Forgejo и Infisical
       # живут на ТОМ ЖЕ хосте, поэтому host-gateway (дефолт compose) верен для
       # всех четырёх и переопределять их здесь не нужно.

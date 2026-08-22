@@ -642,6 +642,8 @@
         "investEmpty": "задач с привязкой к релизам нет",
         "byCount": "по штукам",
         "byCountHint": "у части задач нет effort_days",
+        "coverage": "Классами размечено: {{tasksPct}}% задач ({{tasksClassified}}/{{tasksTotal}}) · {{daysPct}}% трудоёмкости ({{daysClassified}}/{{daysTotal}} чел-дн)",
+        "coverageTitle": "Профиль баланса uc/jtd/enb осмыслен только на задачах С классом. work_class задан не у всех (D3 это допускает) — строка показывает, на какой доле корпуса посчитан профиль.",
         "qualityTitle": "F · Качество оформления",
         "qualityNorm": "нормировано score/max своего веса",
         "qualityBelow": "ниже порога: {{n}} UC",
@@ -1285,7 +1287,8 @@
       "prTitle": "PR #{{number}} · {{project}}",
       "decisionsLabel": "Решения",
       "noLinkedRecords": "Связанных записей не найдено.",
-      "githubReleaseTitle": "GitHub-релиз {{tag}}"
+      "githubReleaseTitle": "GitHub-релиз {{tag}}",
+      "remoteReleaseTitle": "{{role}} · релиз {{tag}} на {{url}}"
     },
     "runbookList": {
       "allFilter": "все",
@@ -1507,13 +1510,28 @@
       "empty": "Пока ничего не произошло",
       "future": "будущее",
       "futureHint": "дата позже сегодня — вероятно опечатка в LORE",
+      "noProject": "без проекта",
+      "tasksMore": "ещё {{count}} задач",
+      "sinceLast": "с прошлого раза: {{count}}",
+      "markRead": "прочитано",
       "kind": {
         "release": "релиз",
-        "sprint": "спринт закрыт",
+        "sprint": "спринт",
         "decision": "решение",
         "adr": "ADR",
         "spec": "спека",
         "tasks": "задачи"
+      },
+      "event": {
+        "created": "появилось",
+        "changed": "изменено",
+        "closed": "закрыто",
+        "released": "релиз"
+      },
+      "group": {
+        "flat": "подряд",
+        "kind": "по типам",
+        "project": "по проектам"
       }
     },
     "page": {
@@ -1675,6 +1693,10 @@
       "techLabel": "Технология"
     },
     "chapters": {
+      "news": {
+        "name": "Новости",
+        "q": "что нового"
+      },
       "value": {
         "name": "Зачем",
         "q": "ценность"

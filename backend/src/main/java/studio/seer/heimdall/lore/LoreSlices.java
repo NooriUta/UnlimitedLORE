@@ -160,6 +160,19 @@ public final class LoreSlices {
             "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
             List.of(), Map.of(), " LIMIT 300");
 
+        // Зеркала adr_history_all для события «изменено» в ленте (ML-NEWS): правки
+        // спек и решений — такая же новость, как правка ADR. Свёртку «одна строка
+        // на (id, день)» делает потребитель (/news), здесь только сырые ревизии.
+        slice("spec_history_all",
+            "SELECT in('HAS_STATE').spec_id[0] AS spec_id, valid_from, valid_to, content_hash " +
+            "FROM KnowSpecHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
+            List.of(), Map.of(), " LIMIT 300");
+
+        slice("decision_history_all",
+            "SELECT in('HAS_STATE').decision_id[0] AS decision_id, valid_from, valid_to, content_hash " +
+            "FROM KnowDecisionHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC",
+            List.of(), Map.of(), " LIMIT 300");
+
         // ── §2 Decisions ─────────────────────────────────────────────────────
         // ADR-019: KnowDecision as child of ADR. component_id/tags are filter axes,
         // parent_adr (out DECIDED_IN) is the "rule → why" link. ORDER BY/LIMIT live
@@ -1120,6 +1133,25 @@ public final class LoreSlices {
             "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
+        // task_created_dates — зеркало task_done_dates для события «заведена»
+        // (ML-NEWS / запрос серверной сессии miniLORE): лента отдавала задачи
+        // ТОЛЬКО закрытием, и день «закрыли 9, завели 10» читался как «убыло 9».
+        // Создание = МИН valid_from по цепочке KnowTaskHist задачи (первое
+        // состояние). task_uid (не task_id: хвост уникален лишь внутри спринта,
+        // и без uid карточку не открыть) + sprint_id (отнести к проекту).
+        // GROUP BY по подзапросу: одна строка на задачу с датой её появления.
+        // Сырые строки истории задач (task_uid, sprint_id, valid_from) — «заведение»
+        // = МИН valid_from по задаче, считается потребителем (в Java у /news), не в
+        // SQL: ArcadeDB min() кастит строку-дату и падает (ClassCastException), а
+        // GROUP BY не протаскивает неагрегированные поля из подзапроса (отдаёт
+        // null). Сырой слайс надёжен; одна строка на задачу собирается на нашей
+        // стороне. Зеркало task_starts, но с task_uid (уникален) и sprint_id.
+        slice("task_created_dates",
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, " +
+            "in('HAS_STATE').out('PART_OF').sprint_id[0] AS sprint_id, valid_from " +
+            "FROM KnowTaskHist WHERE valid_from IS NOT NULL",
+            List.of(), Map.of(), "");
+
         // SPRINT_PLANITEM_RETIRE/T-23: history_plan_item removed — PlanItem is
         // deprecated (T-14) and this slice's only consumer (LoreEvolutionView.tsx)
         // was removed in T-22. Sprint plan-field history now lives on
@@ -1363,6 +1395,11 @@ public final class LoreSlices {
             // фронта и release_uid. Ребро выведено рядом — по нему работает
             // read-скоуп (AL-94), и расхождение теперь ВИДНО, а не скрыто.
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            // AL-112: hosts[] проекта релиза — remote'ы (primary|mirror) как
+            // места, где тег физически лежит. Клиент (Forseti/miniLORE) строит
+            // ссылку релиза per-host, а не хардкодом github.com, и показывает
+            // репозитории как remote'ы ОДНОГО проекта, а не отдельные проекты.
+            "out('BELONGS_TO_PROJECT').hosts[0] AS project_hosts, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
             "in('SHIPPED_IN').size() AS pr_count " +
             "FROM KnowRelease ORDER BY release_id DESC",

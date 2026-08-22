@@ -215,11 +215,19 @@ export async function fetchLoreAnalytics(signal?: AbortSignal): Promise<LoreAnal
 // в дате в LORE, помечаем, а не прячем).
 export interface LoreNewsItem {
   kind: 'release' | 'sprint' | 'decision' | 'adr' | 'spec' | 'tasks';
+  /** что произошло (ML-NEWS): created · closed · released — «что стало», не «что есть» */
+  event?: 'created' | 'changed' | 'closed' | 'released' | string;
   date: string;        // YYYY-MM-DD
+  /** HH:MM — серверное время, где срез его несёт; отсутствует, если только день */
+  time?: string;
   title: string;
   detail?: string;
   project?: string;
   future?: boolean;
+  /** агрегат закрытых задач за день: число вместо title (клиент строит подпись) */
+  agg?: number;
+  /** куда открыть карточку (единый news-API): {type, id}; нет — открывать нечем */
+  ref?: { type: string; id: string };
 }
 
 export async function fetchLoreNews(limit = 60, signal?: AbortSignal): Promise<LoreNewsItem[]> {
@@ -1099,6 +1107,8 @@ export interface LoreRelease {
   sprint_count: number | null;
   pr_count: number | null;
   git_project: string | null;
+  /** AL-112: hosts[] проекта релиза (JSON string of RepoHost[], ADR-018) — remote'ы primary|mirror. */
+  project_hosts?: string | null;
 }
 
 // AL-30: fields beyond the SCD2 envelope are UNION of what history_sprint /

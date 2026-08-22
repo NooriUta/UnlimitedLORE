@@ -58,6 +58,38 @@ class LoreSchemaMigrationsTest {
         }
     }
 
+    // ── SELF-PROVISION-VERIFY-GAP: реестр обязательных «живых» типов ──
+
+    @Test
+    void requiredLiveTypesAreNonEmptyAndDeclaredBySomeStep() {
+        // Каждый тип из REQUIRED_LIVE_TYPES обязан создаваться каким-то шагом —
+        // иначе материальная сверка ложно роняла бы старт по опечатке в списке.
+        assertFalse(LoreSchemaMigrations.REQUIRED_LIVE_TYPES.isEmpty(),
+            "список обязательных типов не может быть пустым — иначе сверка ничего не проверяет");
+        Set<String> created = new HashSet<>();
+        for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS) {
+            for (String sql : s.sql()) {
+                int i = sql.indexOf("CREATE VERTEX TYPE ");
+                if (i >= 0) {
+                    String rest = sql.substring(i + "CREATE VERTEX TYPE ".length()).trim();
+                    created.add(rest.split("\\s+")[0]);
+                }
+            }
+        }
+        for (String t : LoreSchemaMigrations.REQUIRED_LIVE_TYPES) {
+            assertTrue(created.contains(t), "обязательный тип " + t + " не создаётся ни одним шагом реестра");
+        }
+    }
+
+    @Test
+    void requiredLiveTypesExcludeKnowFeature() {
+        // KnowFeature создаётся V6 и ДРОПАЕТСЯ V13 (растворён в KnowUseCase).
+        // На здоровой актуальной БД его нет — включение в обязательные ложно
+        // роняло бы старт. Гард от случайного возврата.
+        assertFalse(LoreSchemaMigrations.REQUIRED_LIVE_TYPES.contains("KnowFeature"),
+            "KnowFeature дропается в V13 — его нельзя требовать как «живой» тип");
+    }
+
     @Test
     void contentHashIsStableAndSeparatorSafe() {
         assertEquals(LoreContentHash.of("a", "b"), LoreContentHash.of("a", "b"));

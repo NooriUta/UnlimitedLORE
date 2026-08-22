@@ -642,6 +642,8 @@
         "investEmpty": "no tasks linked to releases",
         "byCount": "by count",
         "byCountHint": "some tasks have no effort_days",
+        "coverage": "Classified: {{tasksPct}}% of tasks ({{tasksClassified}}/{{tasksTotal}}) · {{daysPct}}% of effort ({{daysClassified}}/{{daysTotal}} person-days)",
+        "coverageTitle": "The uc/jtd/enb balance is meaningful only over classified tasks. work_class is not set on all of them (D3 allows that) — this line shows what share of the corpus the profile is computed on.",
         "qualityTitle": "F · Documentation quality",
         "qualityNorm": "normalized score/max of its own rigor",
         "qualityBelow": "below threshold: {{n}} UC",
@@ -1285,7 +1287,8 @@
       "prTitle": "PR #{{number}} · {{project}}",
       "decisionsLabel": "Decisions",
       "noLinkedRecords": "No linked records found.",
-      "githubReleaseTitle": "GitHub Release {{tag}}"
+      "githubReleaseTitle": "GitHub Release {{tag}}",
+      "remoteReleaseTitle": "{{role}} · release {{tag}} at {{url}}"
     },
     "runbookList": {
       "allFilter": "all",
@@ -1507,13 +1510,28 @@
       "empty": "Nothing has happened yet",
       "future": "future",
       "futureHint": "date is after today — likely a typo in LORE",
+      "noProject": "no project",
+      "tasksMore": "{{count}} more tasks",
+      "sinceLast": "since last time: {{count}}",
+      "markRead": "read",
       "kind": {
         "release": "release",
-        "sprint": "sprint closed",
+        "sprint": "sprint",
         "decision": "decision",
         "adr": "ADR",
         "spec": "spec",
         "tasks": "tasks"
+      },
+      "event": {
+        "created": "created",
+        "changed": "changed",
+        "closed": "closed",
+        "released": "released"
+      },
+      "group": {
+        "flat": "flat",
+        "kind": "by type",
+        "project": "by project"
       }
     },
     "page": {
@@ -1675,6 +1693,10 @@
       "techLabel": "Technology"
     },
     "chapters": {
+      "news": {
+        "name": "News",
+        "q": "what's new"
+      },
       "value": {
         "name": "Why",
         "q": "value"

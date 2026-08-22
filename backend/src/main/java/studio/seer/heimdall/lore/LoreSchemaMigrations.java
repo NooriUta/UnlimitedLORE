@@ -64,6 +64,26 @@ final class LoreSchemaMigrations {
     /** major.minor последнего шага — для логов и сообщений. */
     static String codeHuman() { return STEPS.get(STEPS.size() - 1).human(); }
 
+    /**
+     * Типы, которые ОБЯЗАНЫ физически существовать в схеме на любой БД, чей
+     * ledger заявляет актуальную версию (dbVersion == codeVersion). Продуктовый
+     * слой канвы Остервальдера: сценарии, боли, выгоды, работы, акторы, ассеты.
+     *
+     * <p>ЗАЧЕМ. Ledger-строка пишется отдельным INSERT ПОСЛЕ DDL/Java-шага
+     * (LoreSchemaMigrationRunner.run), не атомарно с ним. Шаг, чья часть сделала
+     * no-op или прервалась, оставляет «версия записана, а типов нет». Сверка
+     * ТОЛЬКО номера версии этого не ловит — приложение стартует и отдаёт 500 по
+     * продуктовым слайсам (features/pains/gains/jobs/actors/asset_orphans). Ровно
+     * этот отказ и наблюдался на внешней установке 2026-08-17. Материальная сверка
+     * превращает тихие 500 в громкий отказ старта с указанием, что накатить.
+     *
+     * <p>KnowFeature СОЗНАТЕЛЬНО отсутствует: V6 его создаёт, V13 растворяет в
+     * KnowUseCase и ДРОПАЕТ (mergeFeaturesIntoUseCases). На здоровой актуальной
+     * БД его быть НЕ должно — включение сюда ложно роняло бы старт.
+     */
+    static final List<String> REQUIRED_LIVE_TYPES = List.of(
+        "KnowUseCase", "KnowPain", "KnowGain", "KnowJob", "KnowActor", "KnowAsset");
+
     /** Решение раннера о старте по версиям — чистое, тестируется без БД (ADR-023). */
     enum StartupDecision {
         UP_TO_DATE,      // db == code

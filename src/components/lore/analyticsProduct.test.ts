@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { investShares, mergeActorLoad, vpFit } from './analyticsProduct';
+import { investShares, investCoverage, mergeActorLoad, vpFit } from './analyticsProduct';
 import type { LoreActorLoadRow, LoreInvestProfileRow, LoreVpAnalyticsRow } from '../../api/lore';
 
 const vpRow = (over: Partial<LoreVpAnalyticsRow>): LoreVpAnalyticsRow => ({
@@ -98,5 +98,45 @@ describe('investShares', () => {
     expect(shares.map(s => s.release)).toEqual(['v1.0.10', 'v1.0.9']);
     expect(shares[0].tasks).toBe(2);
     expect(shares[1].tasks).toBe(1);
+  });
+});
+
+describe('investCoverage (MT-02)', () => {
+  const task = (over: Partial<LoreInvestProfileRow>): LoreInvestProfileRow => ({
+    task_uid: 'S/T', work_class: null, task_type: 'dev', sprint_id: 'S',
+    status_raw: null, effort_days: null, release_ids: [], ...over,
+  });
+
+  it('доля покрытия классами — по штукам И по трудоёмкости, раздельно', () => {
+    // 1 задача с классом (10 дней) + 3 без класса (по 10 дней) = 25%/25%
+    const cov = investCoverage([
+      task({ task_uid: 'S/1', work_class: 'uc', effort_days: 10 }),
+      task({ task_uid: 'S/2', work_class: null, effort_days: 10 }),
+      task({ task_uid: 'S/3', work_class: null, effort_days: 10 }),
+      task({ task_uid: 'S/4', work_class: null, effort_days: 10 }),
+    ]);
+    expect(cov.tasksTotal).toBe(4);
+    expect(cov.tasksClassified).toBe(1);
+    expect(cov.shareTasks).toBeCloseTo(0.25);
+    expect(cov.daysTotal).toBeCloseTo(40);
+    expect(cov.daysClassified).toBeCloseTo(10);
+    expect(cov.shareDays).toBeCloseTo(0.25);
+  });
+
+  it('доля по дням расходится с долей по штукам, когда классифицированы дешёвые задачи', () => {
+    // классифицированы 2 из 3 задач (66%), но их дни малы против одной жирной без класса
+    const cov = investCoverage([
+      task({ task_uid: 'S/1', work_class: 'uc', effort_days: 1 }),
+      task({ task_uid: 'S/2', work_class: 'enb', effort_days: 1 }),
+      task({ task_uid: 'S/3', work_class: null, effort_days: 98 }),
+    ]);
+    expect(cov.shareTasks).toBeCloseTo(2 / 3);
+    expect(cov.shareDays).toBeCloseTo(0.02); // 2 из 100 дней
+  });
+
+  it('пустой корпус — нули, без деления на ноль', () => {
+    const cov = investCoverage([]);
+    expect(cov.shareTasks).toBe(0);
+    expect(cov.shareDays).toBe(0);
   });
 });

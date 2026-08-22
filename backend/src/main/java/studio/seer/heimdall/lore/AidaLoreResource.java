@@ -305,17 +305,28 @@ public class AidaLoreResource extends LoreResourceBase {
     // без заголовков, и 2760 строк «AI-01 done» были бы шумом там, где новость —
     // «14 задач закрыто». task_id — код в пределах спринта, не ключ (одна «T-01»
     // у десятков задач): заголовок берём только когда код в корпусе ровно один.
-    private static final int NEWS_NAMED_PER_DAY = 4;
     private static final Pattern NEWS_DAY = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})");
+    // Время серверное, где есть: часть срезов несёт «YYYY-MM-DD HH:MM:SS»
+    // (valid_from спринтов/спек/задач), часть — только день (релизы/ADR/решения).
+    // Где времени нет — НЕ подставляем полночь (было бы время, которого никто не
+    // присылал), поле просто отсутствует.
+    private static final Pattern NEWS_TIME = Pattern.compile("\\d{4}-\\d{2}-\\d{2}[ T](\\d{2}:\\d{2})");
 
     @GET
     @Path("news")
     @Produces(MediaType.APPLICATION_JSON)
     public Response news(@QueryParam("limit") Integer limitParam,
                          @QueryParam("since") String since,
-                         @QueryParam("before") String before) {
+                         @QueryParam("before") String before,
+                         @QueryParam("days") Integer daysParam) {
         if (!enabled) return disabled();
         int limit = (limitParam == null || limitParam <= 0) ? 60 : limitParam;
+        // ОКНО ПО ВРЕМЕНИ важнее счётчика (решение владельца: «выводи всё за неделю
+        // как минимум»). Лента, обрезанная по числу строк, в активный день теряет
+        // вчерашнее: 120 записей могут уместиться в полдня. Поэтому limit применяется
+        // ТОЛЬКО к тому, что старше окна days (по умолчанию 7 дней): всё, что попало
+        // в окно, отдаётся целиком, сколько бы его ни было.
+        int days = (daysParam == null || daysParam <= 0) ? 7 : daysParam;
         try {
             List<Map<String, Object>> releases    = composeAndQuery("timeline_releases");
             List<Map<String, Object>> sprintsDone = composeAndQuery("sprint_done_dates");
@@ -323,6 +334,10 @@ public class AidaLoreResource extends LoreResourceBase {
             List<Map<String, Object>> adrs        = composeAndQuery("timeline_adrs");
             List<Map<String, Object>> specs       = composeAndQuery("timeline_specs");
             List<Map<String, Object>> tasksDone   = composeAndQuery("task_done_dates");
+            List<Map<String, Object>> tasksHist   = composeAndQuery("task_created_dates");
+            List<Map<String, Object>> adrHist      = composeAndQuery("adr_history_all");
+            List<Map<String, Object>> specHist     = composeAndQuery("spec_history_all");
+            List<Map<String, Object>> decisionHist = composeAndQuery("decision_history_all");
             List<Map<String, Object>> sprints     = composeAndQuery("sprints");
             List<Map<String, Object>> allTasks    = composeAndQuery("all_tasks");
 
@@ -345,74 +360,108 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map<String, Object> r : releases) {
                 String date = dayOf(r.get("release_date"));
                 if (date != null)
-                    items.add(newsItem("release", date, firstStr(r.get("release_id")), "released", firstStr(r.get("git_project"))));
+                    items.add(newsItem("release", date, timeOf(r.get("release_date")), firstStr(r.get("release_id")), "released", null, firstStr(r.get("git_project")), firstStr(r.get("release_id"))));
             }
             for (Map<String, Object> s : sprintsDone) {
                 String date = dayOf(s.get("done_date"));
                 if (date == null) continue;
                 String sid = firstStr(s.get("sprint_id"));
-                items.add(newsItem("sprint", date, sprintName.getOrDefault(sid, sid), "sprint closed", sprintProject.get(sid)));
+                items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid), sid));
             }
+            // created-день и заголовок по id — нужны событию «изменено» ниже:
+            // день создания из changed исключаем, заголовок берём человекочитаемый.
+            Map<String, String> decisionCreatedDay = new HashMap<>(), decisionTitle = new HashMap<>();
+            Map<String, String> specCreatedDay     = new HashMap<>(), specTitle     = new HashMap<>();
             for (Map<String, Object> d : decisions) {
                 String date = dayOf(d.get("date_created"));
-                if (date != null)
-                    items.add(newsItem("decision", date, firstStr(d.get("title")), firstStr(d.get("decision_id")), null));
+                if (date == null) continue;
+                String did = firstStr(d.get("decision_id"));
+                if (did != null) { decisionCreatedDay.put(did, date); decisionTitle.put(did, firstStr(d.get("title"))); }
+                items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", did, null, did));
             }
+            Map<String, String> adrCreatedDay = new HashMap<>();
             for (Map<String, Object> a : adrs) {
                 String date = dayOf(a.get("date_created"));
-                if (date != null)
-                    items.add(newsItem("adr", date, firstStr(a.get("adr_id")), firstStr(a.get("component")), null));
+                if (date == null) continue;
+                String aid = firstStr(a.get("adr_id"));
+                if (aid != null) adrCreatedDay.put(aid, date);
+                items.add(newsItem("adr", date, timeOf(a.get("date_created")), aid, "created", firstStr(a.get("component")), null, aid));
             }
+
             for (Map<String, Object> sp : specs) {
                 String date = dayOf(sp.get("date_created"));
                 if (date == null) continue;
                 String title = firstStr(sp.get("title"));
                 if (title == null) title = firstStr(sp.get("spec_id"));
+                String spid = firstStr(sp.get("spec_id"));
+                if (spid != null) { specCreatedDay.put(spid, date); specTitle.put(spid, title); }
                 // Spec carries BELONGS_TO_PROJECT (unlike decision/adr, untagged
                 // by model) — first project so the client's project filter keeps it.
                 String project = null;
                 Object pr = sp.get("projects");
                 if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
                     project = String.valueOf(l.get(0));
-                items.add(newsItem("spec", date, title, firstStr(sp.get("spec_id")), project));
+                items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", spid, project, spid));
             }
 
-            // task_id → (title, sprintId); a second sighting marks the code unusable.
-            Map<String, String[]> titleById = new HashMap<>();
-            Set<String> ambiguous = new HashSet<>();
+            // Событие «изменено» из SCD2-истории (ADR, спеки, решения). Дедуп по дню
+            // внутри emitChanged: SCD2 пишет строку на каждую правку, без сжатия один
+            // объект за день дал бы пять строк — тот же шум, что «49 more tasks».
+            // Идёт ПОСЛЕ created-циклов: им заполняются карты дней создания/заголовков.
+            Set<String> changedSeen = new HashSet<>();
+            emitChanged(items, adrHist,      "adr_id",      "adr",      adrCreatedDay,      null,          changedSeen);
+            emitChanged(items, specHist,     "spec_id",     "spec",     specCreatedDay,     specTitle,     changedSeen);
+            emitChanged(items, decisionHist, "decision_id", "decision", decisionCreatedDay, decisionTitle, changedSeen);
+
+            // ПОЛНЫЙ список закрытых задач (решение владельца: «не сворачивай,
+            // пусть будет полный список»). Раньше именованных капали (4/день),
+            // остальные сворачивали в «ещё N задач» — из-за неуникальности task_id
+            // название доставалось не всем. Ключуем по task_uid (уникален, AL-119):
+            // название есть у КАЖДОЙ задачи, кап и агрегат больше не нужны.
+            Map<String, String[]> byUid = new HashMap<>(); // uid -> {title, sprintId}
             for (Map<String, Object> t : allTasks) {
-                String tid = firstStr(t.get("task_id"));
-                if (tid == null) continue;
-                if (titleById.containsKey(tid)) ambiguous.add(tid);
-                else titleById.put(tid, new String[]{firstStr(t.get("title")), firstStr(t.get("sprint_id"))});
+                String uid = firstStr(t.get("task_uid"));
+                if (uid != null)
+                    byUid.put(uid, new String[]{firstStr(t.get("title")), firstStr(t.get("sprint_id"))});
             }
-            for (String a : ambiguous) titleById.remove(a);
-
-            // Newest first, so the per-day cap keeps the most recent of a busy day.
-            List<Map<String, Object>> closed = new ArrayList<>(tasksDone);
-            closed.sort((a, b) -> String.valueOf(b.get("valid_from")).compareTo(String.valueOf(a.get("valid_from"))));
-
-            Map<String, Integer> namedCount = new HashMap<>();
-            Map<String, Integer> unnamedCount = new HashMap<>();
-            for (Map<String, Object> t : closed) {
+            for (Map<String, Object> t : tasksDone) {
                 String date = dayOf(t.get("valid_from"));
                 if (date == null) continue;
+                String uid = firstStr(t.get("task_uid"));
                 String tid = firstStr(t.get("task_id"));
-                String[] known = tid == null ? null : titleById.get(tid);
-                int shown = namedCount.getOrDefault(date, 0);
-                if (known != null && known[0] != null && shown < NEWS_NAMED_PER_DAY) {
-                    namedCount.put(date, shown + 1);
-                    String project = known[1] == null ? null : sprintProject.get(known[1]);
-                    items.add(newsItem("tasks", date, known[0], tid + " closed", project));
-                } else {
-                    unnamedCount.merge(date, 1, Integer::sum);
-                }
+                String[] known = uid == null ? null : byUid.get(uid);
+                String title = (known != null && known[0] != null) ? known[0] : (tid != null ? tid : uid);
+                String project = (known != null && known[1] != null) ? sprintProject.get(known[1]) : null;
+                // ref = task_uid: miniLORE открывает карточку задачи; detail = tid.
+                items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), title, "closed", tid, project, uid));
             }
-            for (Map.Entry<String, Integer> e : unnamedCount.entrySet()) {
-                int count = e.getValue();
-                items.add(newsItem("tasks", e.getKey(),
-                    count + " more task" + (count == 1 ? "" : "s") + " closed",
-                    namedCount.containsKey(e.getKey()) ? "same day" : "across all sprints", null));
+
+            // Событие «заведена»: min valid_from по задаче (task_created_dates —
+            // сырые строки истории, min считаем здесь: ArcadeDB не умеет ни min по
+            // строке-дате, ни GROUP BY с протаскиванием полей). Без этого день
+            // «закрыли 9, завели 10» читался как «убыло 9», а новые задачи
+            // udwe-rollout/udwe-mig-gen не попадали в ленту вовсе.
+            Map<String, String[]> firstByUid = new HashMap<>(); // uid -> {minValidFrom, sprintId}
+            for (Map<String, Object> h : tasksHist) {
+                String uid = firstStr(h.get("task_uid"));
+                String vf = firstStr(h.get("valid_from"));
+                if (uid == null || vf == null) continue;
+                String[] cur = firstByUid.get(uid);
+                if (cur == null || vf.compareTo(cur[0]) < 0)
+                    firstByUid.put(uid, new String[]{vf, firstStr(h.get("sprint_id"))});
+            }
+            for (Map.Entry<String, String[]> e : firstByUid.entrySet()) {
+                String uid = e.getKey();
+                String vf = e.getValue()[0];
+                String date = dayOf(vf);
+                if (date == null) continue;
+                String[] known = byUid.get(uid);
+                String title = (known != null && known[0] != null) ? known[0]
+                             : (uid.contains("/") ? uid.substring(uid.indexOf('/') + 1) : uid);
+                String sprintId = e.getValue()[1] != null ? e.getValue()[1]
+                                : (known != null ? known[1] : null);
+                String project = sprintId != null ? sprintProject.get(sprintId) : null;
+                items.add(newsItem("tasks", date, timeOf(vf), title, "created", null, project, uid));
             }
 
             // Date cursor for windowed / archive-tail loading (FN-12 «архив
@@ -427,10 +476,27 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map<String, Object> item : items)
                 if (String.valueOf(item.get("date")).compareTo(today) > 0) item.put("future", true);
 
-            items.sort((a, b) -> String.valueOf(b.get("date")).compareTo(String.valueOf(a.get("date"))));
-            List<Map<String, Object>> limited = items.size() > limit
-                ? new ArrayList<>(items.subList(0, limit)) : items;
-            return noStore(Response.ok(Map.of("items", limited)));
+            // date DESC, затем time DESC. Запись без времени = начало своего дня
+            // (00:00): не всплывает «свежее» тех, у кого время реально позже.
+            items.sort((a, b) -> {
+                int d = String.valueOf(b.get("date")).compareTo(String.valueOf(a.get("date")));
+                if (d != 0) return d;
+                String ta = a.get("time") == null ? "00:00" : String.valueOf(a.get("time"));
+                String tb = b.get("time") == null ? "00:00" : String.valueOf(b.get("time"));
+                return tb.compareTo(ta);
+            });
+            // Окно недели отдаётся ЦЕЛИКОМ, limit режет только хвост за окном:
+            // «выводи всё за неделю как минимум» — обрезка по числу строк в активный
+            // день съедала вчерашнее (120 записей умещались в полдня).
+            String windowStart = Instant.now().minus(java.time.Duration.ofDays(days)).toString().substring(0, 10);
+            List<Map<String, Object>> inWindow = new ArrayList<>(), older = new ArrayList<>();
+            for (Map<String, Object> it : items) {
+                if (String.valueOf(it.get("date")).compareTo(windowStart) >= 0) inWindow.add(it);
+                else older.add(it);
+            }
+            List<Map<String, Object>> out = new ArrayList<>(inWindow);
+            if (out.size() < limit) out.addAll(older.subList(0, Math.min(limit - out.size(), older.size())));
+            return noStore(Response.ok(Map.of("items", out)));
         } catch (Exception e) {
             LOG.warnf("[LORE NEWS] %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -455,13 +521,56 @@ public class AidaLoreResource extends LoreResourceBase {
         return m.find() ? m.group(1) : null;
     }
 
-    private static Map<String, Object> newsItem(String kind, String date, String title, String detail, String project) {
+    // event (created·closed·released) — отдельно от kind: у разных типов число в
+    // ленте означает противоположное (задачи попадают при ЗАКРЫТИИ, ADR при
+    // СОЗДАНИИ), и «что стало» несёт именно event, а не тип. detail — конкретика
+    // (id/компонент), без дублирующего глагола: его теперь несёт event.
+    /**
+     * Событие «изменено» из SCD2-истории (ADR/спека/решение), ДЕДУП ПО ДНЮ.
+     * SCD2 пишет строку на каждую правку — без сжатия один объект за день дал бы
+     * пять строк «изменено», и лента утонула бы в шуме (урок «49 more tasks»).
+     * День создания пропускается: он уже покрыт событием created.
+     * titles == null → заголовком служит сам идентификатор (так у ADR).
+     */
+    private static void emitChanged(List<Map<String, Object>> items,
+                                    List<Map<String, Object>> hist,
+                                    String idField, String kind,
+                                    Map<String, String> createdDay,
+                                    Map<String, String> titles,
+                                    Set<String> seen) {
+        for (Map<String, Object> h : hist) {
+            String id = firstStr(h.get(idField));
+            String date = dayOf(h.get("valid_from"));
+            if (id == null || date == null) continue;
+            if (date.equals(createdDay.get(id))) continue;       // это создание, не правка
+            if (!seen.add(kind + "|" + id + "|" + date)) continue; // дедуп по дню
+            String title = (titles != null && titles.get(id) != null) ? titles.get(id) : id;
+            items.add(newsItem(kind, date, timeOf(h.get("valid_from")), title, "changed", null, null, id));
+        }
+    }
+
+    static String timeOf(Object value) {
+        if (value == null) return null;
+        String s = (value instanceof List<?> l)
+            ? (l.isEmpty() ? "" : String.valueOf(l.get(0)))
+            : String.valueOf(value);
+        Matcher m = NEWS_TIME.matcher(s.trim());
+        return m.find() ? m.group(1) : null;
+    }
+
+    private static Map<String, Object> newsItem(String kind, String date, String time, String title, String event, String detail, String project, String refId) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("kind", kind);
+        m.put("event", event);
         m.put("date", date);
+        if (time != null) m.put("time", time);
         m.put("title", title);
         if (detail != null) m.put("detail", detail);
         if (project != null) m.put("project", project);
+        // ref {type,id} — куда открыть карточку. Единый news-API самодостаточен:
+        // клиент (Forseti/miniLORE) навигирует по ref, а не восстанавливает id из
+        // title/detail по-своему. Нет ref (задачи: id неуникален) — открывать нечем.
+        if (refId != null) m.put("ref", Map.of("type", kind, "id", refId));
         return m;
     }
 

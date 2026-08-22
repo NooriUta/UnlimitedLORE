@@ -20,6 +20,44 @@ services:
     volumes:
       - lore-minio-data:/data
 
+  # Раскладка общего MinIO под соседей (ADR-INFRA-SHARED-COMPONENTS): корзина
+  # продукта + учётка, которой видна ТОЛЬКО она. Заведено сервисом, а не руками
+  # в консоли, потому что консоль опубликована на 127.0.0.1:9001 и после
+  # переразворота ручная настройка исчезает молча: корзина пропадает, а сосед
+  # отвечает 503 — и выглядит это как поломка соседа, а не как потеря настройки.
+  #
+  # Одноразовый: отрабатывает и выходит. Идемпотентен — повторный запуск на
+  # готовом хранилище ничего не меняет и не падает.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    restart: "no"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_USER:-aida}
+      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD:-aidapassword}
+      - MINILORE_S3_BUCKET=${MINILORE_S3_BUCKET:-minilore-files}
+      - MINILORE_S3_USER=${MINILORE_S3_USER:-minilore}
+      - MINILORE_S3_PASSWORD=${MINILORE_S3_PASSWORD:-}
+    entrypoint: >
+      /bin/sh -c '
+      set -e;
+      until mc alias set lore http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
+        echo "minio-init: жду MinIO..."; sleep 2;
+      done;
+      mc mb --ignore-existing "lore/$$MINILORE_S3_BUCKET";
+      printf "%s" "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetBucketLocation\",\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::$$MINILORE_S3_BUCKET\"]},{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\",\"s3:PutObject\",\"s3:DeleteObject\"],\"Resource\":[\"arn:aws:s3:::$$MINILORE_S3_BUCKET/*\"]}]}" > /tmp/minilore.json;
+      mc admin policy create lore minilore-files-rw /tmp/minilore.json 2>/dev/null || mc admin policy update lore minilore-files-rw /tmp/minilore.json;
+      if [ -z "$$MINILORE_S3_PASSWORD" ]; then
+        echo "minio-init: MINILORE_S3_PASSWORD не задан — корзина и политика готовы, учётка НЕ создана.";
+        echo "minio-init: это не отказ: пароль служебной учётки задаёт человек, дефолт здесь стал бы известным паролем в git.";
+        exit 0;
+      fi;
+      mc admin user add lore "$$MINILORE_S3_USER" "$$MINILORE_S3_PASSWORD" 2>/dev/null || true;
+      mc admin policy attach lore minilore-files-rw --user "$$MINILORE_S3_USER" 2>/dev/null || true;
+      echo "minio-init: готово — корзина $$MINILORE_S3_BUCKET, учётка $$MINILORE_S3_USER, политика minilore-files-rw.";
+      '
+
   # Independent Quarkus backend — copied lore+bench logic, talks to the SAME
   # ArcadeDB (:2480 on the host) as the main project. Replaces heimdall-backend :9093.
   lore-backend:
@@ -161,6 +199,13 @@ services:
       # (OQ-023-DEVSTAND). При pending-шагах на БД с данными раннер сначала
       # снимает BACKUP DATABASE (SV-04); упавший шаг валит старт ГРОМКО.
       - lore.migrate=${LORE_MIGRATE:-true}
+      # SELF-PROVISION: на ЧИСТОЙ/внешней БД одного lore.migrate МАЛО. Ядро
+      # (KnowTask/KnowSprint/KnowADR + Hist + рёбра) создаёт ТОЛЬКО инициализатор
+      # под lore.bootstrap — миграции его не заводят, они добирают продуктовый
+      # слой поверх. Дефолт false: наш общий стенд ходит в уже поднятую БД, там
+      # повторный DDL не нужен. Для отдельной установки на пустую БД ставить
+      # LORE_BOOTSTRAP=true ВМЕСТЕ с LORE_MIGRATE=true (RUNBOOK-LORE-SELF-PROVISION).
+      - lore.bootstrap=${LORE_BOOTSTRAP:-false}
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs
       - S3_ENDPOINT=http://minio:9000

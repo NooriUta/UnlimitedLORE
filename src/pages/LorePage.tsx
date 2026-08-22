@@ -122,7 +122,7 @@ const SECTION_COLORS: Record<Section, string> = {
   milestones: 'var(--section-milestones)', plan: 'var(--section-plan)', sprints: 'var(--section-sprints)', adrs: 'var(--section-adrs)',
   decisions: 'var(--section-decisions)', openQuestions: 'var(--inf)', releases: 'var(--section-releases)', qg: 'var(--section-qg)', knowledge: 'var(--section-knowledge)',
   components: 'var(--section-components)', tech: 'var(--section-tech)', evolution: 'var(--section-evolution)', timeline: 'var(--section-timeline)',
-  analytics: 'var(--section-analytics)', news: 'var(--g-ctrl)', mcp: 'var(--section-mcp)', connections: 'var(--section-mcp)', admin: 'var(--wrn)',
+  analytics: 'var(--section-analytics)', news: 'var(--g-news)', mcp: 'var(--section-mcp)', connections: 'var(--section-mcp)', admin: 'var(--wrn)',
   actors: 'var(--section-actors)', vpProfile: 'var(--section-rbjg)', vpCanvas: 'var(--section-vp)', features: 'var(--section-features)', userStories: 'var(--section-us)',
   search: 'var(--acc)',
 };
@@ -1329,8 +1329,10 @@ export default function LorePage() {
             <LoreNewsFeed
               onError={handleFetchError}
               onOpen={(it) => {
-                if (it.kind === 'adr') navigateToAdr(it.title);
-                else if (it.kind === 'sprint') go('sprints');
+                // Навигация по ref единого news-API (id из ref, не из title).
+                const id = it.ref?.id ?? it.title;
+                if (it.kind === 'adr') navigateToAdr(id);
+                else if (it.kind === 'sprint') navigateToSprint(id);
                 else if (it.kind === 'release') go('releases');
                 else if (it.kind === 'decision') go('decisions');
               }}
