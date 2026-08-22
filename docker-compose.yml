@@ -199,6 +199,13 @@ services:
       # (OQ-023-DEVSTAND). При pending-шагах на БД с данными раннер сначала
       # снимает BACKUP DATABASE (SV-04); упавший шаг валит старт ГРОМКО.
       - lore.migrate=${LORE_MIGRATE:-true}
+      # SELF-PROVISION: на ЧИСТОЙ/внешней БД одного lore.migrate МАЛО. Ядро
+      # (KnowTask/KnowSprint/KnowADR + Hist + рёбра) создаёт ТОЛЬКО инициализатор
+      # под lore.bootstrap — миграции его не заводят, они добирают продуктовый
+      # слой поверх. Дефолт false: наш общий стенд ходит в уже поднятую БД, там
+      # повторный DDL не нужен. Для отдельной установки на пустую БД ставить
+      # LORE_BOOTSTRAP=true ВМЕСТЕ с LORE_MIGRATE=true (RUNBOOK-LORE-SELF-PROVISION).
+      - lore.bootstrap=${LORE_BOOTSTRAP:-false}
       - BENCH_ROOT=/bench-data
       - TEAM_DOCS_ROOT=/team-docs
       - S3_ENDPOINT=http://minio:9000
