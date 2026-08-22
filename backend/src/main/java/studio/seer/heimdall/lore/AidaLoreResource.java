@@ -317,9 +317,16 @@ public class AidaLoreResource extends LoreResourceBase {
     @Produces(MediaType.APPLICATION_JSON)
     public Response news(@QueryParam("limit") Integer limitParam,
                          @QueryParam("since") String since,
-                         @QueryParam("before") String before) {
+                         @QueryParam("before") String before,
+                         @QueryParam("days") Integer daysParam) {
         if (!enabled) return disabled();
         int limit = (limitParam == null || limitParam <= 0) ? 60 : limitParam;
+        // ОКНО ПО ВРЕМЕНИ важнее счётчика (решение владельца: «выводи всё за неделю
+        // как минимум»). Лента, обрезанная по числу строк, в активный день теряет
+        // вчерашнее: 120 записей могут уместиться в полдня. Поэтому limit применяется
+        // ТОЛЬКО к тому, что старше окна days (по умолчанию 7 дней): всё, что попало
+        // в окно, отдаётся целиком, сколько бы его ни было.
+        int days = (daysParam == null || daysParam <= 0) ? 7 : daysParam;
         try {
             List<Map<String, Object>> releases    = composeAndQuery("timeline_releases");
             List<Map<String, Object>> sprintsDone = composeAndQuery("sprint_done_dates");
@@ -478,9 +485,18 @@ public class AidaLoreResource extends LoreResourceBase {
                 String tb = b.get("time") == null ? "00:00" : String.valueOf(b.get("time"));
                 return tb.compareTo(ta);
             });
-            List<Map<String, Object>> limited = items.size() > limit
-                ? new ArrayList<>(items.subList(0, limit)) : items;
-            return noStore(Response.ok(Map.of("items", limited)));
+            // Окно недели отдаётся ЦЕЛИКОМ, limit режет только хвост за окном:
+            // «выводи всё за неделю как минимум» — обрезка по числу строк в активный
+            // день съедала вчерашнее (120 записей умещались в полдня).
+            String windowStart = Instant.now().minus(java.time.Duration.ofDays(days)).toString().substring(0, 10);
+            List<Map<String, Object>> inWindow = new ArrayList<>(), older = new ArrayList<>();
+            for (Map<String, Object> it : items) {
+                if (String.valueOf(it.get("date")).compareTo(windowStart) >= 0) inWindow.add(it);
+                else older.add(it);
+            }
+            List<Map<String, Object>> out = new ArrayList<>(inWindow);
+            if (out.size() < limit) out.addAll(older.subList(0, Math.min(limit - out.size(), older.size())));
+            return noStore(Response.ok(Map.of("items", out)));
         } catch (Exception e) {
             LOG.warnf("[LORE NEWS] %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

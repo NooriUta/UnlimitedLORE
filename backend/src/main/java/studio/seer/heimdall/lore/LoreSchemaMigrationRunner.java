@@ -177,7 +177,22 @@ public class LoreSchemaMigrationRunner {
                 + ". Накатка выключена (lore.migrate=false) — накатите их отдельным запуском, "
                 + "иначе приложение писало бы в структуры, которых нет.");
         }
-        LOG.infof("[LORE MIGRATE] схема сверена: БД v%d = код v%d, накатка не требуется", dbVersion, codeVersion);
+        // Материальная сверка (SELF-PROVISION-VERIFY-GAP): ledger заявляет
+        // актуальную версию — но пишется он отдельным INSERT ПОСЛЕ шага, не
+        // атомарно. Шаг, чья часть сделала no-op/прервалась, оставляет «версия
+        // есть, типов нет» — и приложение молча отдаёт 500 по продуктовым
+        // слайсам. Читаем схему (не мутируем) и падаем ГРОМКО, если чего-то нет.
+        List<String> missing = LoreSchemaMigrations.REQUIRED_LIVE_TYPES.stream()
+            .filter(t -> !typeExists(t))
+            .toList();
+        if (!missing.isEmpty()) {
+            throw new IllegalStateException("[LORE MIGRATE] Отказ старта: ledger заявляет схему v"
+                + dbVersion + " (актуальна), но в " + db + " ФИЗИЧЕСКИ НЕТ типов " + missing
+                + " — ledger разошёлся с реальной схемой (шаг записан, DDL не материализовался). "
+                + "Приложение бы стартовало и отдавало 500 по продуктовым слайсам. "
+                + "Накатите схему заново с lore.migrate=true (шаги идемпотентны, снимается BACKUP).");
+        }
+        LOG.infof("[LORE MIGRATE] схема сверена: БД v%d = код v%d, продуктовые типы на месте, накатка не требуется", dbVersion, codeVersion);
     }
 
     /**
