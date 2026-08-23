@@ -43,16 +43,41 @@ describe('compactVerdicts', () => {
     expect(JSON.stringify(out)).not.toContain('status');
   });
 
-  it('обрабатывает КАЖДЫЙ элемент batch-ответа, а не только корень', () => {
+  it('чистый батч сворачивается в одну строку, а не в N одинаковых', () => {
+    const items = ['A', 'B', 'C'].map(task_uid => ({
+      task_uid, quality: { kind: 'task', score: 1, max: 1, findings: [finding('status', true)] },
+    }));
+    const out = compactVerdicts({ ok: true, updated: 3, items }) as
+      { quality: unknown; items: Record<string, unknown>[] };
+    expect(out.quality).toBe('task: все 3 записей ok');
+    // Результат записи остаётся — выброшено только поле вердикта.
+    expect(out.items.map(i => i.task_uid)).toEqual(['A', 'B', 'C']);
+    expect(out.items[0]).not.toHaveProperty('quality');
+  });
+
+  it('в частично провалившемся батче прошедшие идут числом, проваленные — поимённо', () => {
     const out = compactVerdicts({
-      ok: true, updated: 2,
+      ok: true, updated: 3,
       items: [
         { task_uid: 'A', quality: { kind: 'task', score: 1, max: 1, findings: [finding('status', true)] } },
-        { task_uid: 'B', quality: { kind: 'task', score: 0, max: 1, findings: [finding('status', false)] } },
+        { task_uid: 'B', quality: { kind: 'task', score: 0, max: 1, findings: [finding('effort_days', false)] } },
+        { task_uid: 'C', quality: { kind: 'task', score: 1, max: 1, findings: [finding('status', true)] } },
       ],
-    }) as { items: { quality: unknown }[] };
+    }) as { quality: { ok: boolean; passed: number; failed: { id: string; findings: unknown[] }[] } };
+    expect(out.quality.ok).toBe(false);
+    expect(out.quality.passed).toBe(2);
+    expect(out.quality.failed).toHaveLength(1);
+    expect(out.quality.failed[0].id).toBe('B');
+    // Прошедшие поимённо в вердикте не называются.
+    expect(JSON.stringify(out.quality)).not.toContain('"A"');
+  });
+
+  it('одиночный элемент в массиве остаётся одиночной формой, не батчем', () => {
+    const out = compactVerdicts({
+      items: [{ task_uid: 'A', quality: { kind: 'task', score: 1, max: 1, findings: [finding('status', true)] } }],
+    }) as { quality?: unknown; items: { quality: unknown }[] };
+    expect(out.quality).toBeUndefined();
     expect(out.items[0].quality).toBe('task: все проверки ok (1/1)');
-    expect((out.items[1].quality as { ok: boolean }).ok).toBe(false);
   });
 
   it('не трогает UC-вердикт: у него rigor, а не kind', () => {

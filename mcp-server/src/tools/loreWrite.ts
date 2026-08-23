@@ -32,14 +32,78 @@ function reshapeVerdict(v: QVerdict): unknown {
   };
 }
 
+// Чем назвать элемент батча в разборе: первый идентификатор, который у него
+// есть. Без имени находка «не заполнена оценка» бесполезна — непонятно, у кого.
+const ITEM_ID = ['task_uid', 'adr_id', 'spec_id', 'decision_id', 'sprint_id', 'release_id', 'uid', 'id'];
+const itemName = (o: Record<string, unknown>): string | undefined => {
+  for (const k of ITEM_ID) if (typeof o[k] === 'string') return o[k] as string;
+  return undefined;
+};
+
+/**
+ * Свёртка батча (ADR-LORE-039 §2). Поэлементной формовки мало: батч из 12
+ * чистых задач вернул бы 12 одинаковых строк «все проверки ok» — короче
+ * прежнего, но всё ещё шум. Прошедшие в батче не перечисляются поимённо, только
+ * числом; поимённо — лишь проваленные. Тот же принцип, что в одиночном ответе,
+ * уровнем выше.
+ *
+ * Сам массив НЕ выбрасывается: в нём лежит результат записи (id, order_index),
+ * а не только вердикт. Убирается из элементов ровно поле вердикта, сводка
+ * поднимается в родителя.
+ */
+function collapseBatch(items: unknown[]): { quality: unknown; items: unknown[] } | null {
+  const verdicts: { name?: string; v: QVerdict }[] = [];
+  for (const it of items) {
+    if (!it || typeof it !== 'object' || Array.isArray(it)) return null;
+    const o = it as Record<string, unknown>;
+    if (!isVerdict(o.quality)) return null;
+    verdicts.push({ name: itemName(o), v: o.quality });
+  }
+  if (verdicts.length < 2) return null; // один элемент — это не батч, форма одиночная
+  const stripped = items.map(it => {
+    const { quality: _drop, ...rest } = it as Record<string, unknown>;
+    return rest;
+  });
+  const kind = verdicts[0].v.kind;
+  const failed = verdicts.filter(x => x.v.findings.some(f => f.required && !f.ok));
+  if (failed.length === 0) {
+    return { quality: `${kind}: все ${verdicts.length} записей ok`, items: stripped };
+  }
+  return {
+    quality: {
+      kind, ok: false, passed: verdicts.length - failed.length,
+      failed: failed.map(x => ({
+        ...(x.name ? { id: x.name } : {}),
+        score: x.v.score, max: x.v.max,
+        findings: x.v.findings.filter(f => f.required && !f.ok)
+          .map(f => ({ code: f.code, message: f.message })),
+      })),
+    },
+    items: stripped,
+  };
+}
+
 // Обход всего ответа, а не только корня: batch-путь возвращает вердикт на
 // КАЖДЫЙ элемент, и без рекурсии оптимизация обошла бы ровно тот случай, где
 // эха больше всего.
 export function compactVerdicts(data: unknown): unknown {
   if (Array.isArray(data)) return data.map(compactVerdicts);
   if (data && typeof data === 'object') {
+    const src = data as Record<string, unknown>;
+    // Свёртка идёт ДО поэлементной формовки: она читает сырые вердикты.
+    for (const [k, v] of Object.entries(src)) {
+      if (!Array.isArray(v)) continue;
+      const collapsed = collapseBatch(v);
+      if (!collapsed) continue;
+      const out: Record<string, unknown> = {};
+      for (const [k2, v2] of Object.entries(src)) {
+        out[k2] = k2 === k ? collapsed.items.map(compactVerdicts) : compactVerdicts(v2);
+      }
+      out.quality = collapsed.quality;
+      return out;
+    }
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(data)) out[k] = isVerdict(v) ? reshapeVerdict(v) : compactVerdicts(v);
+    for (const [k, v] of Object.entries(src)) out[k] = isVerdict(v) ? reshapeVerdict(v) : compactVerdicts(v);
     return out;
   }
   return data;
