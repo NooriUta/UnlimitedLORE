@@ -119,7 +119,10 @@ const S = {
     padding: '6px 10px', borderBottom: '1px solid var(--bd)', minWidth: 0,
   },
   line1: { display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 },
-  line2: { display: 'flex', alignItems: 'center', gap: 5, paddingLeft: 1 },
+  line2: {
+    display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 1,
+    flexWrap: 'nowrap' as const, overflow: 'hidden', minWidth: 0,
+  },
   id: {
     color: 'var(--acc)', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
@@ -133,10 +136,13 @@ const S = {
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   spinning: { display: 'inline-block', animation: 'lore-spin 0.6s linear infinite' },
 
-  // Task-status breakdown (per sprint row)
-  brk: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, minWidth: 0 },
+  // Task-status breakdown (per sprint row) — single line, no wrap
+  brk: {
+    display: 'flex', alignItems: 'center', gap: 4,
+    flexWrap: 'nowrap' as const, overflow: 'hidden', minWidth: 0,
+  },
   bkChip: (color: string) => ({
-    display: 'inline-flex', alignItems: 'center', gap: 2,
+    display: 'inline-flex', alignItems: 'center', gap: 1, flexShrink: 0,
     fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', fontWeight: 700,
     lineHeight: 1, color,
   }),
@@ -422,7 +428,6 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
           const status  = normalizeStatus(s.status_raw);
           const date    = (s.done_date ?? s.valid_from)?.slice(0, 10) ?? '';
           const release = s.release_ids?.[0] ?? (s.status_raw?.match(/v\d+\.\d+(?:\.\d+)?/)?.[0] ?? null);
-          const relDate = s.release_dates?.[0]?.slice(0, 10) ?? null;
           const active  = selectedId === s.sprint_id;
           // git_projects can carry the same slug more than once (one dot per
           // linked commit/PR, not per distinct project) — dedupe before using
@@ -454,13 +459,22 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                 {/* Sprint status icon — lifted up to the name line (was on line 2) */}
                 {status && (
                   <span style={S.statusHead} title={statusCountLabel[normalizeStatus(s.status_raw)] ?? status}>
-                    <GameIcon slug={statusMeta(status).icon} size={13}
+                    <GameIcon slug={statusMeta(status).icon} size={12}
                       style={{ color: statusMeta(status).color }} />
                   </span>
                 )}
                 <span style={S.id}>{s.sprint_id}</span>
+                {/* Release badge — moved up here so it never pushes the task
+                    breakdown on line 2 into a wrap. */}
+                {release && (
+                  <span style={{
+                    fontSize: 'var(--fs-2xs)', padding: '0 4px', borderRadius: 3, whiteSpace: 'nowrap' as const,
+                    flexShrink: 0, background: 'color-mix(in srgb, var(--acc) 16%, transparent)',
+                    color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 35%, transparent)',
+                  }}>{release}</span>
+                )}
               </div>
-              {(date || status || release || relDate || brkKeys.length > 0) && (
+              {(date || brkKeys.length > 0) && (
                 <div style={S.line2}>
                   {date && <span style={S.date}>{date}</span>}
                   {s.priority && (
@@ -470,14 +484,14 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                     }}>{s.priority}</span>
                   )}
                   {/* Task-status breakdown: one icon+count per present status,
-                      then done/total. Status icon of the sprint itself moved to
-                      line 1 (next to the name). */}
+                      then done/total — single line, no wrap. Sprint status icon
+                      and release badge live on line 1 so they don't crowd it. */}
                   {brkKeys.length > 0 && (
                     <span style={S.brk}>
                       {brkKeys.map(k => (
                         <span key={k} style={S.bkChip(statusMeta(k).color)}
                           title={`${statusCountLabel[k] ?? k}: ${counts[k]}`}>
-                          <GameIcon slug={statusMeta(k).icon} size={11}
+                          <GameIcon slug={statusMeta(k).icon} size={9}
                             style={{ color: statusMeta(k).color }} />
                           {counts[k]}
                         </span>
@@ -486,14 +500,6 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                       <span style={S.sum}>{brkDone}/{brkTot}</span>
                     </span>
                   )}
-                  {release && (
-                    <span style={{
-                      fontSize: 'var(--fs-xs)', padding: '0 5px', borderRadius: 3, whiteSpace: 'nowrap' as const,
-                      background: 'color-mix(in srgb, var(--acc) 16%, transparent)',
-                      color: 'var(--acc)', border: '1px solid color-mix(in srgb, var(--acc) 35%, transparent)',
-                    }}>{release}</span>
-                  )}
-                  {relDate && <span style={{ ...S.date, opacity: 0.7 }}>{relDate}</span>}
                 </div>
               )}
               {/* Thin progress bar — task-status proportions of the sprint */}
