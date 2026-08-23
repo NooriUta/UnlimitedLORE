@@ -157,6 +157,17 @@ public class AidaLoreResource extends LoreResourceBase {
         return String.valueOf(v);
     }
 
+    /** First non-null element of a list-valued slice field (e.g. projects[]),
+     *  or null. Unlike firstStr it skips a leading null instead of stringifying
+     *  it to "null" — a traversal like out(...).slug can yield [null]. */
+    private static String firstOfList(Object v) {
+        if (v instanceof List<?> l) {
+            for (Object o : l) if (o != null) return String.valueOf(o);
+            return null;
+        }
+        return v == null ? null : String.valueOf(v);
+    }
+
     @GET
     @Path("analytics")
     @Produces(MediaType.APPLICATION_JSON)
@@ -377,7 +388,12 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (date == null) continue;
                 String did = firstStr(d.get("decision_id"));
                 if (did != null) { decisionCreatedDay.put(did, date); decisionTitle.put(did, firstStr(d.get("title"))); }
-                items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", did, null, did));
+                // Project: the decision's own BELONGS_TO_PROJECT edge if any, else
+                // its parent ADR's (decision →DECIDED_IN→ ADR →BELONGS_TO_PROJECT).
+                // Without this decisions fell into the feed's «без проекта» group.
+                String decProject = firstOfList(d.get("projects"));
+                if (decProject == null) decProject = firstOfList(d.get("adr_projects"));
+                items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", did, decProject, did));
             }
             Map<String, String> adrCreatedDay = new HashMap<>();
             for (Map<String, Object> a : adrs) {

@@ -61,8 +61,17 @@ public final class LoreSlices {
             "FROM KnowADR WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 150");
 
+        // ML-NEWS project derivation for decisions: the feed grouped them under
+        // «без проекта» because this slice never carried a project. A decision's
+        // project is either its OWN BELONGS_TO_PROJECT edge (rare, 9/300) or —
+        // the model path — its parent ADR's (decision →DECIDED_IN→ ADR
+        // →BELONGS_TO_PROJECT, ADRPROJ-01). news() prefers the own edge, then the
+        // ADR's. Same shape as the spec row (projects[]).
         slice("timeline_decisions",
-            "SELECT decision_id, title, date_created FROM KnowDecision " +
+            "SELECT decision_id, title, date_created, " +
+            "out('BELONGS_TO_PROJECT').slug                  AS projects, " +
+            "out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug AS adr_projects " +
+            "FROM KnowDecision " +
             "WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 200");
 
