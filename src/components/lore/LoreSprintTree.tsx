@@ -474,7 +474,7 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                   }}>{release}</span>
                 )}
               </div>
-              {(date || brkKeys.length > 0) && (
+              {(date || s.priority) && (
                 <div style={S.line2}>
                   {date && <span style={S.date}>{date}</span>}
                   {s.priority && (
@@ -483,23 +483,23 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                       color: s.priority === 'P0' ? 'var(--dng)' : s.priority === 'P1' ? 'var(--wrn)' : 'var(--t3)',
                     }}>{s.priority}</span>
                   )}
-                  {/* Task-status breakdown: one icon+count per present status,
-                      then done/total — single line, no wrap. Sprint status icon
-                      and release badge live on line 1 so they don't crowd it. */}
-                  {brkKeys.length > 0 && (
-                    <span style={S.brk}>
-                      {brkKeys.map(k => (
-                        <span key={k} style={S.bkChip(statusMeta(k).color)}
-                          title={`${statusCountLabel[k] ?? k}: ${counts[k]}`}>
-                          <GameIcon slug={statusMeta(k).icon} size={9}
-                            style={{ color: statusMeta(k).color }} />
-                          {counts[k]}
-                        </span>
-                      ))}
-                      <span style={S.sumSep} />
-                      <span style={S.sum}>{brkDone}/{brkTot}</span>
+                </div>
+              )}
+              {/* Task-status breakdown on ITS OWN line — one icon+count per
+                  present status, then done/total. Kept off line 2 (date/priority)
+                  because with 4-5 statuses it doesn't fit next to them. */}
+              {brkKeys.length > 0 && (
+                <div style={S.brk}>
+                  {brkKeys.map(k => (
+                    <span key={k} style={S.bkChip(statusMeta(k).color)}
+                      title={`${statusCountLabel[k] ?? k}: ${counts[k]}`}>
+                      <GameIcon slug={statusMeta(k).icon} size={10}
+                        style={{ color: statusMeta(k).color }} />
+                      {counts[k]}
                     </span>
-                  )}
+                  ))}
+                  <span style={S.sumSep} />
+                  <span style={S.sum}>{brkDone}/{brkTot}</span>
                 </div>
               )}
               {/* Thin progress bar — task-status proportions of the sprint */}

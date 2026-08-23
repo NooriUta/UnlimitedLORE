@@ -118,6 +118,26 @@
   --g-tech:  #9A8CDB;
   --g-ctrl:  #D4922A;
 
+  /* LORE status categorical palette — 11 fixed, distinct hues so a status is
+     tellable by colour alone, independent of the active theme. The semantic
+     tokens (--suc/--inf/--wrn/--t3) collapsed 11 statuses into 5 families, and
+     on green-tinted palettes (lichen/juniper) the neutral --t3 read as green
+     and merged with done/active. Same rationale as --section-* / --g-*: a
+     stable per-status identity, NOT contrast-matching the palette. dark values
+     here, darker light-mode variants below so status TEXT stays legible on a
+     white background too. */
+  --st-done:             #5FB86A;  /* green   */
+  --st-ready_for_deploy: #3FB6C4;  /* cyan    */
+  --st-active:           #4A9CE6;  /* blue    */
+  --st-partial:          #E58A3A;  /* orange  */
+  --st-planned:          #D8B23A;  /* gold    */
+  --st-design:           #C08CC0;  /* mauve   */
+  --st-todo:             #9AA6AE;  /* l. grey */
+  --st-backlog:          #7C8896;  /* slate   */
+  --st-deferred:         #8892A0;  /* b-grey  */
+  --st-blocked:          #E0685A;  /* red     */
+  --st-cancelled:        #808080;  /* dim     */
+
   /* Mermaid diagrams always render on a fixed light backdrop regardless of
      page theme/mode (T15) — the 'forest' theme's own line/text colors assume
      a light background, and per-element dark-mode contrast was tried and
@@ -351,6 +371,23 @@
   --inf:    #3a6858;
   --dng:    #c03030;
   --danger: #c03030;
+}
+
+/* Status categorical palette — darker variants for any light mode, so status
+   text stays legible on a white background. One block covers every palette's
+   light mode (the per-status hues are theme-independent by design). */
+[data-mode='light'] {
+  --st-done:             #2E8B40;
+  --st-ready_for_deploy: #1E8C99;
+  --st-active:           #2D74C4;
+  --st-partial:          #C26A18;
+  --st-planned:          #9A7A10;
+  --st-design:           #8E5A8E;
+  --st-todo:             #5A6670;
+  --st-backlog:          #47535F;
+  --st-deferred:         #5A6472;
+  --st-blocked:          #C23A2C;
+  --st-cancelled:        #5A5A5A;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
