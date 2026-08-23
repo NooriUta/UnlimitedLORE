@@ -91,7 +91,14 @@ public class UcReadinessCalculator {
         List<Map<String, Object>> rows = ingest.queryPublic(
             "SELECT status, shipped_at, " +
             "in('REALIZES').size() AS task_total, " +
-            "in('REALIZES')[status_raw LIKE '%DONE%'].size() AS task_done, " +
+            // Статус задачи живёт на ОТКРЫТОЙ HAS_STATE (SCD2 копит строки, у
+            // текущей valid_to IS NULL), а не на вершине KnowTask — свойства
+            // status_raw у вершины в схеме нет вовсе. Фильтр по вершине молча
+            // давал task_done=0 всегда, и ни один сценарий не доходил до
+            // shipped: D17 систематически недосчитывал выпуск.
+            // Набор «закрыто» тот же, что у normalize(): DONE | CLOSED | ЗАВЕРШ.
+            "in('REALIZES').out('HAS_STATE')[valid_to IS NULL AND (status_raw LIKE '%DONE%' " +
+            "OR status_raw LIKE '%CLOSED%' OR status_raw LIKE '%ЗАВЕРШ%')].size() AS task_done, " +
             "out('DECOMPOSES_INTO').size() AS kid_total, " +
             "out('DECOMPOSES_INTO')[status = 'shipped'].size() AS kid_shipped, " +
             "out('DECOMPOSES_INTO')[status = 'in_rework'].size() AS kid_rework, " +

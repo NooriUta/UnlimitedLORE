@@ -1204,12 +1204,18 @@ export function registerLoreWrite(server: McpServer): void {
     schema: {
       spec_id:   z.string().describe('e.g. "LORE_DB_SPEC"'),
       target_id: z.string().describe('component_id (e.g. "OMILORE") or project slug, per `rel`'),
-      rel:       z.enum(['component', 'project']).optional().describe('default "component"'),
-      mode:      z.enum(['add', 'remove', 'replace']).optional()
-        .describe('default "replace" — drops existing links of this kind first'),
+      // .default() здесь, а не только в prose: без него пропущенный ключ уходил
+      // как undefined, и гарантия «один владелец / replace» держалась целиком на
+      // дефолте бэкенда — разъехались бы, и пропуск mode тихо накопил бы второй
+      // линк. Остальные link-тулы дефолт объявляют так же.
+      rel:       z.enum(['component', 'project']).optional().default('component'),
+      mode:      z.enum(['add', 'remove', 'replace']).optional().default('replace')
+        .describe('"replace" drops existing links of this kind first'),
     },
     path: '/lore/spec/link',
-    body: ({ spec_id, target_id, rel, mode }) => ({ spec_id, target_id, rel, mode }),
+    body: ({ spec_id, target_id, rel, mode }) => ({
+      spec_id, target_id, rel: rel ?? 'component', mode: mode ?? 'replace',
+    }),
   });
 
   definePostTool(server, {
@@ -1536,14 +1542,19 @@ export function registerLoreWrite(server: McpServer): void {
       })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
     async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id, metrics }) => {
-      return json(await lorePost('/lore/qg/run', {
-        routine_name, run_date, status,
-        started_at:  started_at  ?? null,
-        finished_at: finished_at ?? null,
-        flags:       flags       ?? null,
-        run_id:      run_id      ?? null,
-        metrics:     metrics     ?? [],
-      }));
+      // try/catch как у всех прочих write-тулов: этот эндпоинт умеет 500-ить на
+      // UPSERT-схеме, и без обёртки падение уходило необработанной ошибкой
+      // протокола вместо стандартного {isError:true}.
+      try {
+        return json(await lorePost('/lore/qg/run', {
+          routine_name, run_date, status,
+          started_at:  started_at  ?? null,
+          finished_at: finished_at ?? null,
+          flags:       flags       ?? null,
+          run_id:      run_id      ?? null,
+          metrics:     metrics     ?? [],
+        }));
+      } catch (e) { return err(e); }
     },
   );
 
@@ -2045,7 +2056,10 @@ export function registerLoreWrite(server: McpServer): void {
       try {
         const act = action ?? 'add';
         if (rel === 'rubric') {
-          return json(await lorePost('/lore/bragi/rubric/link', { entity_type, entity_id, rubric_id: target_id }));
+          // action пробрасываем как и остальные ветки: без него unlink возвращал
+          // ok:true, а ребро IN_RUBRIC оставалось на месте (тихий no-op).
+          return json(await lorePost('/lore/bragi/rubric/link',
+            { entity_type, entity_id, rubric_id: target_id, action: act }));
         }
         const edge_type = rel === 'produced_by' ? 'PRODUCED_BY' : 'SHIPPED_IN';
         const resolvedTargetType = rel === 'produced_by' ? (target_type ?? 'task') : 'release';

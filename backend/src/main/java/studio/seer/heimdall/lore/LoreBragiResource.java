@@ -404,7 +404,10 @@ public class LoreBragiResource extends LoreResourceBase {
     // Standalone assignment — lets a caller attach/replace a rubric without
     // re-supplying every other field of the target publication/keyword
     // (unlike rubric_id on the full upsert endpoints).
-    public record BragiRubricLinkRequest(String entity_type, String entity_id, String rubric_id) {}
+    // action: add (назначить/заменить) | remove (снять). Раньше поля не было
+    // вовсе, и MCP-вызов с action="remove" возвращал ok:true, оставляя ребро на
+    // месте — тихий no-op ровно того класса, что ловит DBR-04.
+    public record BragiRubricLinkRequest(String entity_type, String entity_id, String rubric_id, String action) {}
 
     @POST
     @Path("bragi/rubric/link")
@@ -422,9 +425,14 @@ public class LoreBragiResource extends LoreResourceBase {
         if ("publication".equals(req.entity_type())) { entityType = "BragiPublication"; idField = "publication_id"; }
         else if ("keyword".equals(req.entity_type())) { entityType = "BragiKeyword"; idField = "keyword_id"; }
         else return badParams("entity_type must be \"publication\" or \"keyword\"");
+        String act = req.action() == null || req.action().isBlank() ? "add" : req.action();
+        if (!"add".equals(act) && !"remove".equals(act))
+            return badParams("action must be \"add\" or \"remove\"");
         try {
-            assignRubric(entityType, idField, req.entity_id(), req.rubric_id());
-            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(), "rubric_id", req.rubric_id())));
+            if ("remove".equals(act)) clearRubric(idField, req.entity_id());
+            else assignRubric(entityType, idField, req.entity_id(), req.rubric_id());
+            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
+                "rubric_id", req.rubric_id(), "action", act)));
         } catch (Exception e) {
             LOG.warnf("[BRAGI RUBRIC LINK] %s: %s", req.entity_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -883,10 +891,19 @@ public class LoreBragiResource extends LoreResourceBase {
         }
     }
 
-    private void assignRubric(String entityType, String entityIdField, String entityId, String rubricId) {
+    /**
+     * Снять рубрику. Та же половина, что и у assignRubric — вынесена, чтобы
+     * action="remove" не переиспользовал назначение с пустой целью (это дало бы
+     * тихий no-op вместо снятия).
+     */
+    private void clearRubric(String entityIdField, String entityId) {
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
             "DELETE FROM IN_RUBRIC WHERE @out." + entityIdField + " = :id",
             Map.of("id", entityId))).await().indefinitely();
+    }
+
+    private void assignRubric(String entityType, String entityIdField, String entityId, String rubricId) {
+        clearRubric(entityIdField, entityId);
         writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
             "CREATE EDGE IN_RUBRIC FROM (SELECT FROM " + entityType + " WHERE " + entityIdField + "=:id) " +
             "TO (SELECT FROM BragiRubric WHERE rubric_id=:rid) IF NOT EXISTS",
