@@ -86,10 +86,40 @@ public class LoreQuestionResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowQuestion SET opened_date=:d WHERE question_id=:qid AND opened_date IS NULL",
                 Map.of("d", java.time.LocalDate.now().toString(), "qid", req.question_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id())));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("question_id", req.question_id());
+            // Вердикт полноты (ADR-LORE-039): вопрос без владельца не закрывается —
+            // он висит прочитанный и никем не взятый.
+            WorkQuality.Result quality = questionQuality(req.question_id());
+            if (quality != null) out.put("quality", quality);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION CREATE] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
+        }
+    }
+
+    /**
+     * Вердикт полноты открытого вопроса (ADR-LORE-039). Читается ПОСЛЕ записи —
+     * в том числе после проставления умолчаний (status=open, opened_date),
+     * иначе вердикт судил бы состояние, которого уже нет. Сбой сборки не роняет
+     * ответ: запись состоялась.
+     */
+    private WorkQuality.Result questionQuality(String questionId) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT title, status, owner, due_date, "
+                + "out('RAISED_IN').adr_id AS links "
+                + "FROM KnowQuestion WHERE question_id = :qid", Map.of("qid", questionId));
+            if (rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            return WorkQuality.evaluateQuestion(
+                str(r.get("title")), str(r.get("status")), str(r.get("owner")),
+                str(r.get("due_date")), r.get("links"));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] вопрос %s: вердикт не собран (%s)", questionId, LoreUpstream.detail(e));
+            return null;
         }
     }
 
