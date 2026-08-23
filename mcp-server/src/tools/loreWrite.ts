@@ -569,6 +569,31 @@ export function registerLoreWrite(server: McpServer): void {
     },
   );
 
+  // QUAL-7 / ADR-LORE-039: спросить вердикт полноты по УЖЕ существующим
+  // объектам, ничего не записывая. Тот же линтер, что отвечает на записи, —
+  // расхождение оценок невозможно по построению.
+  definePostTool(server, {
+    name: 'quality_check',
+    description: 'Ask the completeness verdict for a BATCH of existing entities WITHOUT writing anything ' +
+      '(ADR-LORE-039). Returns {kind, checked, passed, failed[], missing[]} — entities that pass are counted, ' +
+      'not listed; only the failing ones are named, each with score/max and the failed checks INCLUDING their ' +
+      'message (a bare code would send you to the docs). Worst first. `missing` lists ids that do not exist — ' +
+      '«no verdict» and «no such entity» are different answers.\n\n' +
+      'There is deliberately NO whole-layer mode: ask in chunks. `ids` is required, empty is a 400, and a batch ' +
+      'over 200 is a 400 rather than a silent truncation — a shortened answer that looks complete is worse than ' +
+      'a refusal. The whole batch is one graph query, not one per id.\n\n' +
+      'Read-only: nothing is written, no history row is opened. For UC use uc_quality instead — it has its own ' +
+      'richer Cockburn linter (ADR-LORE-027).',
+    schema: {
+      type: z.enum(['task', 'sprint', 'adr', 'decision', 'spec', 'release', 'component', 'milestone', 'question'])
+        .describe('entity kind; note release is addressed by release_uid ("{git_project}#{release_id}"), not the bare version'),
+      ids: z.array(z.string()).min(1).max(200)
+        .describe('ids of existing entities, e.g. ["SPRINT_X/A-1","SPRINT_X/A-2"]; max 200 per call'),
+    },
+    path: '/lore/quality',
+    body: ({ type, ids }) => ({ type, ids }),
+  });
+
   // ADR-LORE-027-D3 режим (б): re-lint без записи. Тот же алгоритм, что панель
   // качества в форме и ответ uc_new/uc_set — расхождение невозможно по построению.
   server.tool(
