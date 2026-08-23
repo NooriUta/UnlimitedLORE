@@ -354,7 +354,8 @@ public class AidaLoreResource extends LoreResourceBase {
 
             // Sprint rows carry only an id; the name a person gave it reads better.
             // A sprint can span projects; the feed tags with the first (the one LORE
-            // itself leads with). Decisions/ADRs carry no project → stay untagged.
+            // itself leads with). Decisions/ADRs derive project from their own
+            // BELONGS_TO_PROJECT edge (ADRPROJ-01), decisions also via parent ADR.
             Map<String, String> sprintName = new HashMap<>();
             Map<String, String> sprintProject = new HashMap<>();
             for (Map<String, Object> s : sprints) {
@@ -401,7 +402,10 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (date == null) continue;
                 String aid = firstStr(a.get("adr_id"));
                 if (aid != null) adrCreatedDay.put(aid, date);
-                items.add(newsItem("adr", date, timeOf(a.get("date_created")), aid, "created", firstStr(a.get("component")), null, aid));
+                // Project: ADR's BELONGS_TO_PROJECT edge (ADRPROJ-01) — иначе ADR
+                // со связкой на проект оседали в «без проекта».
+                String adrProject = firstOfList(a.get("projects"));
+                items.add(newsItem("adr", date, timeOf(a.get("date_created")), aid, "created", firstStr(a.get("component")), adrProject, aid));
             }
 
             for (Map<String, Object> sp : specs) {
