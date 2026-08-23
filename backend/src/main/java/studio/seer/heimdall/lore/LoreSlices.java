@@ -820,6 +820,18 @@ public final class LoreSlices {
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
 
+        // Lightweight projection: one row per task carrying only its sprint_id +
+        // status_raw. Feeds the sprint LIST (LoreSprintTree) task-status breakdown
+        // across ALL sprints — the frontend aggregates counts per sprint in JS.
+        // No GROUP BY on purpose (this ArcadeDB version groups incorrectly — same
+        // reason tasks_of_sprints_batch / MartSlices avoid it), and no note_md/title
+        // so the sidebar payload stays small even at 400+ sprints.
+        slice("task_status_by_sprint",
+            "SELECT out('PART_OF').sprint_id[0]                            AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]        AS status_raw " +
+            "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IS NOT NULL",
+            List.of(), Map.of(), " ORDER BY out('PART_OF').sprint_id[0]");
+
         // ── §3 Milestones ────────────────────────────────────────────────────
         slice("milestones",
             "SELECT milestone_id, label, week, date_display, priority, " +
