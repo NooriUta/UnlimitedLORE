@@ -2,8 +2,51 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 
+// ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
+// WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
+// три десятка строк эха, в котором незакрытые поля ещё надо высматривать.
+//   OK     → одна строка «все проверки ok (6/6)»; невыполненные подсказки — хвостом.
+//   не-OK  → только проваленные, С ТЕКСТОМ: код без сообщения заставляет лезть
+//            в документацию, то есть отвлекает ровно там, где нужно действовать.
+// Признак вердикта — поле kind: UC-линтер несёт rigor и формовкой не задевается.
+// Инвариант: компактность только для OK — прятать провалы формовке нельзя.
+interface QFinding { code: string; ok: boolean; required: boolean; message: string }
+interface QVerdict { kind: string; score: number; max: number; findings: QFinding[] }
+
+const isVerdict = (v: unknown): v is QVerdict =>
+  !!v && typeof v === 'object'
+  && typeof (v as QVerdict).kind === 'string'
+  && Array.isArray((v as QVerdict).findings);
+
+function reshapeVerdict(v: QVerdict): unknown {
+  const failed = v.findings.filter(f => f.required && !f.ok);
+  const hints  = v.findings.filter(f => !f.required && !f.ok).map(f => f.code);
+  if (failed.length === 0) {
+    const line = `${v.kind}: все проверки ok (${v.score}/${v.max})`;
+    return hints.length ? `${line} · подсказки: ${hints.join(', ')}` : line;
+  }
+  return {
+    kind: v.kind, score: v.score, max: v.max, ok: false,
+    findings: failed.map(f => ({ code: f.code, message: f.message })),
+    ...(hints.length ? { hints } : {}),
+  };
+}
+
+// Обход всего ответа, а не только корня: batch-путь возвращает вердикт на
+// КАЖДЫЙ элемент, и без рекурсии оптимизация обошла бы ровно тот случай, где
+// эха больше всего.
+export function compactVerdicts(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(compactVerdicts);
+  if (data && typeof data === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data)) out[k] = isVerdict(v) ? reshapeVerdict(v) : compactVerdicts(v);
+    return out;
+  }
+  return data;
+}
+
 const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+  content: [{ type: 'text' as const, text: JSON.stringify(compactVerdicts(data), null, 2) }],
 });
 const err = (e: unknown) => ({
   content: [{ type: 'text' as const, text: `ERROR: ${(e as Error).message ?? String(e)}` }],
