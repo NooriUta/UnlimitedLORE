@@ -54,6 +54,11 @@ public class LoreReleaseResource extends LoreResourceBase {
     // релиза при полностью пустом своём — то есть соврал ровно там, где должен
     // был предупредить. Тот же капкан, что AL-111 в release_mv.
     // Без git_project вердикт не собираем: угадывать, чей это релиз, нельзя.
+    /** Проект-владелец релиза: присланный или исторический дефолт. Одно место на весь ресурс. */
+    private static String projectOf(String gitProject) {
+        return gitProject != null && !gitProject.isBlank() ? gitProject : "NooriUta/AIDA";
+    }
+
     private WorkQuality.Result releaseQuality(String releaseId, String gitProject) {
         if (gitProject == null || gitProject.isBlank()) {
             LOG.warnf("[LORE QUALITY] релиз %s: вердикт пропущен — не задан git_project "
@@ -351,7 +356,10 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("release_id", req.release_id());
         out.put("sprints_linked", sprintsLinked);
         out.put("prs_linked", prsLinked);
-        out.put("quality", releaseQuality(req.release_id(), gp));
+        // Проект берём тем же правилом, что и внутри try (та переменная не видна
+        // здесь по области видимости) — дефолт обязан совпадать, иначе вердикт
+        // ушёл бы искать релиз не в том репозитории.
+        out.put("quality", releaseQuality(req.release_id(), projectOf(req.git_project())));
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
     }
