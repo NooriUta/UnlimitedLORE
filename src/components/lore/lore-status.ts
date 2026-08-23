@@ -8,36 +8,42 @@ import { dictColor, dictIcon } from './DictionaryProvider';
 
 export interface StatusMeta { icon: string; color: string }
 
+// Colours come from the fixed status categorical palette (--st-*, tokens.css),
+// not the semantic tokens (--suc/--inf/--wrn/--t3): those collapsed 11 statuses
+// into 5 families and, on green-tinted palettes (lichen/juniper), the neutral
+// --t3 read as green and merged with done/active. --st-* gives each status a
+// distinct, theme-independent hue.
 const STATUS_META: Record<string, StatusMeta> = {
-  // done / closed family → success green
-  done:        { icon: 'divided-spiral',  color: 'var(--suc)' },
-  fixed:       { icon: 'divided-spiral',  color: 'var(--suc)' },
-  reached:     { icon: 'divided-spiral',  color: 'var(--suc)' },
-  accepted:    { icon: 'laurel-crown',    color: 'var(--suc)' },
-  // in-progress family → info teal
-  active:      { icon: 'progression',    color: 'var(--inf)' },
-  in_progress: { icon: 'progression',    color: 'var(--inf)' },
-  upcoming:    { icon: 'progression',    color: 'var(--inf)' },
-  // planned / priority family → warning amber
-  planned:     { icon: 'calendar',       color: 'var(--wrn)' },
-  proposed:    { icon: 'calendar',       color: 'var(--wrn)' },
+  // done / closed family
+  done:        { icon: 'divided-spiral',  color: 'var(--st-done)' },
+  fixed:       { icon: 'divided-spiral',  color: 'var(--st-done)' },
+  reached:     { icon: 'divided-spiral',  color: 'var(--st-done)' },
+  accepted:    { icon: 'laurel-crown',    color: 'var(--st-done)' },
+  // in-progress family
+  active:      { icon: 'progression',    color: 'var(--st-active)' },
+  in_progress: { icon: 'progression',    color: 'var(--st-active)' },
+  upcoming:    { icon: 'progression',    color: 'var(--st-active)' },
+  // planned / proposed
+  planned:     { icon: 'calendar',       color: 'var(--st-planned)' },
+  proposed:    { icon: 'calendar',       color: 'var(--st-planned)' },
+  // priority marker — kept on the semantic warning token (it's not a status)
   high:        { icon: 'dice-fire',      color: 'var(--wrn)' },
-  // partially done — distinct from active → warning amber
-  partial:          { icon: 'battery-50',    color: 'var(--wrn)' },
+  // partially done — distinct from active
+  partial:          { icon: 'battery-50',    color: 'var(--st-partial)' },
   // ready for deploy — work done, waiting for release
-  ready_for_deploy: { icon: 'wave-crest',    color: 'var(--inf)' },
-  // blocked / rejected family → danger red
-  blocked:     { icon: 'handcuffed',     color: 'var(--dng)' },
-  rejected:    { icon: 'crossed-sabres', color: 'var(--dng)' },
-  missed:      { icon: 'crossed-sabres', color: 'var(--dng)' },
-  // design / backlog / neutral family → muted/amber
-  design:      { icon: 'magic-swirl',    color: 'var(--wrn)' },
-  backlog:     { icon: 'tied-scroll',    color: 'var(--t3)' },
-  todo:        { icon: 'checkbox-tree',  color: 'var(--t3)' },
-  deferred:    { icon: 'pause-button',   color: 'var(--t3)' },
-  superseded:  { icon: 'pause-button',   color: 'var(--t3)' },
+  ready_for_deploy: { icon: 'wave-crest',    color: 'var(--st-ready_for_deploy)' },
+  // blocked / rejected family
+  blocked:     { icon: 'handcuffed',     color: 'var(--st-blocked)' },
+  rejected:    { icon: 'crossed-sabres', color: 'var(--st-blocked)' },
+  missed:      { icon: 'crossed-sabres', color: 'var(--st-blocked)' },
+  // design / backlog / todo / deferred — each its own hue now
+  design:      { icon: 'magic-swirl',    color: 'var(--st-design)' },
+  backlog:     { icon: 'tied-scroll',    color: 'var(--st-backlog)' },
+  todo:        { icon: 'checkbox-tree',  color: 'var(--st-todo)' },
+  deferred:    { icon: 'pause-button',   color: 'var(--st-deferred)' },
+  superseded:  { icon: 'pause-button',   color: 'var(--st-deferred)' },
   // cancelled — task explicitly removed from scope
-  cancelled:   { icon: 'cross-mark',     color: 'var(--t3)' },
+  cancelled:   { icon: 'cross-mark',     color: 'var(--st-cancelled)' },
 };
 
 const FALLBACK: StatusMeta = { icon: 'checkbox-tree', color: 'var(--t3)' };
