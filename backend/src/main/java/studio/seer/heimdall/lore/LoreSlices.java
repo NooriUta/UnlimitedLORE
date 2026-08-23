@@ -57,7 +57,10 @@ public final class LoreSlices {
 
         slice("timeline_adrs",
             "SELECT adr_id, date_created, " +
-            "out('BELONGS_TO').component_id[0] AS component " +
+            "out('BELONGS_TO').component_id[0] AS component, " +
+            // ADRPROJ-01: у ADR есть BELONGS_TO_PROJECT — отдаём в ленту, иначе
+            // новые ADR со связкой на проект падали в «без проекта» (владелец).
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowADR WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 150");
 
