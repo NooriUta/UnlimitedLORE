@@ -116,11 +116,42 @@ public class LoreDecisionResource extends LoreResourceBase {
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("decision_id", req.decision_id());
+            // Вердикт полноты (ADR-LORE-039): решение без родителя-ADR или из
+            // одного заголовка — ярлык, а не правило. Advisory, на запись не влияет.
+            WorkQuality.Result quality = decisionQuality(req.decision_id());
+            if (quality != null) out.put("quality", quality);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * Вердикт полноты решения (ADR-LORE-039). Факты — из графа ПОСЛЕ записи
+     * рёбер: судится сохранённое состояние, а не присланный запрос, иначе
+     * провалившаяся привязка выглядела бы выполненной. KnowDecision плоская
+     * (без истории), поэтому тело читается прямо с вершины.
+     */
+    private WorkQuality.Result decisionQuality(String decisionId) {
+        try {
+            var res = client.query(db, basicAuth(), new studio.seer.heimdall.bench.MartQuery("sql",
+                "SELECT status, body_md, "
+                + "out('DECIDED_IN').size()        AS adr_count, "
+                + "out('BELONGS_TO').component_id  AS components, "
+                + "out('TAGGED_WITH').tag_id       AS tags "
+                + "FROM KnowDecision WHERE decision_id = :id", Map.of("id", decisionId), 1))
+                .await().indefinitely();
+            var rows = res.result();
+            if (rows == null || rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            boolean hasAdr = r.get("adr_count") instanceof Number n && n.intValue() > 0;
+            return WorkQuality.evaluateDecision(str(r.get("status")), str(r.get("body_md")), hasAdr,
+                r.get("components"), r.get("tags"));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] решение %s: вердикт не собран (%s)", decisionId, LoreUpstream.detail(e));
+            return null;
         }
     }
 

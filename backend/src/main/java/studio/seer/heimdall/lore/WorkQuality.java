@@ -224,6 +224,97 @@ final class WorkQuality {
         return score("adr", f);
     }
 
+    /**
+     * Решение (KnowDecision). ADR-LORE-039, таблица предлагаемых проверок.
+     *
+     * <p>Ключевая проверка — родитель: решение, не привязанное к ADR
+     * (DECIDED_IN, ADR-LORE-019), висит вне корпуса — его не найти от ADR, оно
+     * не попадает в разбор решения на правила и живёт как заметка.
+     *
+     * <p>Порог тела тот же, что у ADR: решение из одного заголовка — ЯРЛЫК, а
+     * правило должно быть сформулировано так, чтобы по нему можно было свериться.
+     */
+    static Result evaluateDecision(String status, String bodyMd, boolean hasParentAdr,
+                                   Object components, Object tags) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "status", filled(status), "Статус задан");
+        req(f, "body", filled(bodyMd), "Тело решения непусто");
+        req(f, "parent_adr", hasParentAdr, "Привязано к ADR (DECIDED_IN) — решение живёт под ADR");
+        req(f, "body_substantive", len(bodyMd) >= MIN_BODY,
+            "Решение сформулировано как правило (≥ " + MIN_BODY + " симв.), а не ярлык");
+
+        hint(f, "component", any(components), "Компонент привязан — желательно");
+        hint(f, "tags", any(tags), "Теги заданы — желательно");
+
+        return score("decision", f);
+    }
+
+    /**
+     * Спека (KnowSpec). Спека без содержания — заглушка: она занимает место в
+     * реестре знаний и создаёт впечатление, что тема покрыта.
+     */
+    static Result evaluateSpec(String status, String title, String contentMd,
+                               Object components, Object projects, String version) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "status", filled(status), "Статус задан");
+        req(f, "title", filled(title), "Заголовок задан");
+        req(f, "content", filled(contentMd), "Содержание непусто");
+        req(f, "component", any(components), "Компонент привязан");
+        req(f, "project", any(projects), "Проект привязан");
+
+        hint(f, "version", filled(version), "Версия задана — желательно");
+
+        return score("spec", f);
+    }
+
+    /**
+     * Компонент (LoreComponent). Голый {@code component_id} в списках нечитаем,
+     * а без области он не ложится ни в группировку, ни в цвет на доске.
+     */
+    static Result evaluateComponent(String fullName, String area, String owner, String gameIcon) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "full_name", filled(fullName), "Полное имя задано");
+        req(f, "area", filled(area), "Область (area) задана");
+
+        hint(f, "owner", filled(owner), "Владелец указан — желательно");
+        hint(f, "game_icon", filled(gameIcon), "Иконка задана — желательно");
+
+        return score("component", f);
+    }
+
+    /** Веха (KnowMilestone). Без целевой даты веха не ложится на план — она перестаёт быть вехой. */
+    static Result evaluateMilestone(String title, String targetDate, Object sprints) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "title", filled(title), "Заголовок задан");
+        req(f, "target_date", filled(targetDate), "Целевая дата задана");
+
+        hint(f, "sprints", any(sprints), "Привязаны спринты — иначе веха ничем не наполнена");
+
+        return score("milestone", f);
+    }
+
+    /**
+     * Открытый вопрос (KnowQuestion). Вопрос без адресата не закрывается: он
+     * висит в реестре, всеми прочитан и никем не взят.
+     */
+    static Result evaluateQuestion(String title, String status, String owner,
+                                   String dueDate, Object links) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "title", filled(title), "Заголовок задан");
+        req(f, "status", filled(status), "Статус задан");
+        req(f, "owner", filled(owner), "Владелец указан — без адресата вопрос не закрывается");
+
+        hint(f, "due_date", filled(dueDate), "Срок задан — желательно (иначе просроченность не видна)");
+        hint(f, "links", any(links), "Связь с ADR/компонентом — желательно");
+
+        return score("question", f);
+    }
+
     /** Порог «раздел заполнен, а не отписан». Символы, не слова: слова считать дороже, а разницы нет. */
     private static final int MIN_BODY = 120;
 
