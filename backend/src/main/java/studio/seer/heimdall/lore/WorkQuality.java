@@ -253,12 +253,16 @@ final class WorkQuality {
     /**
      * Спека (KnowSpec). Спека без содержания — заглушка: она занимает место в
      * реестре знаний и создаёт впечатление, что тема покрыта.
+     *
+     * <p><b>Статуса здесь нет намеренно.</b> У KnowSpec поля статуса нет в
+     * модели вовсе — его не пишет ни один write-путь и не читает ни один слайс.
+     * Проверка «статус задан» краснела бы всегда и на всех: не дисциплина, а
+     * постоянный ложный сигнал, от которого перестают читать весь вердикт.
      */
-    static Result evaluateSpec(String status, String title, String contentMd,
+    static Result evaluateSpec(String title, String contentMd,
                                Object components, Object projects, String version) {
         List<Finding> f = new ArrayList<>();
 
-        req(f, "status", filled(status), "Статус задан");
         req(f, "title", filled(title), "Заголовок задан");
         req(f, "content", filled(contentMd), "Содержание непусто");
         req(f, "component", any(components), "Компонент привязан");

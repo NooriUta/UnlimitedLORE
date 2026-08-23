@@ -308,10 +308,20 @@ class WorkQualityTest {
 
     @Test
     void спекаБезСодержанияЭтоЗаглушка() {
-        var r = WorkQuality.evaluateSpec("active", "Схема БД", null,
+        var r = WorkQuality.evaluateSpec("Схема БД", null,
             List.of("OMILORE"), List.of("proj"), "1.0");
         assertFalse(find(r, "content").ok());
         assertEquals("spec", r.kind());
+    }
+
+    @Test
+    void уСпекиНетПроверкиСтатуса() {
+        // Поля статуса у KnowSpec нет в модели вовсе — проверка краснела бы
+        // всегда и на всех, а от вечно красного вердикта перестают читать весь.
+        var r = WorkQuality.evaluateSpec("Схема БД", "тело",
+            List.of("OMILORE"), List.of("proj"), null);
+        assertNull(find(r, "status"));
+        assertEquals(r.max(), r.score());
     }
 
     @Test
