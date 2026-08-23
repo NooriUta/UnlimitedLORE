@@ -384,27 +384,37 @@ public class AidaLoreResource extends LoreResourceBase {
             // день создания из changed исключаем, заголовок берём человекочитаемый.
             Map<String, String> decisionCreatedDay = new HashMap<>(), decisionTitle = new HashMap<>();
             Map<String, String> specCreatedDay     = new HashMap<>(), specTitle     = new HashMap<>();
+            // Проект по id — чтобы событие «изменено» несло его так же, как
+            // «создано». Заполняются здесь и читаются в emitChanged ниже: у
+            // *Hist-строк своего ребра на проект нет, он живёт на вершине.
+            Map<String, String> decisionProject = new HashMap<>();
+            Map<String, String> adrProjectById  = new HashMap<>();
+            Map<String, String> specProject     = new HashMap<>();
             for (Map<String, Object> d : decisions) {
-                String date = dayOf(d.get("date_created"));
-                if (date == null) continue;
                 String did = firstStr(d.get("decision_id"));
-                if (did != null) { decisionCreatedDay.put(did, date); decisionTitle.put(did, firstStr(d.get("title"))); }
                 // Project: the decision's own BELONGS_TO_PROJECT edge if any, else
                 // its parent ADR's (decision →DECIDED_IN→ ADR →BELONGS_TO_PROJECT).
                 // Without this decisions fell into the feed's «без проекта» group.
                 String decProject = firstOfList(d.get("projects"));
                 if (decProject == null) decProject = firstOfList(d.get("adr_projects"));
+                // Карта заполняется ДО проверки даты: правка живёт и у сущности,
+                // у которой date_created пуст, — иначе changed снова без проекта.
+                if (did != null && decProject != null) decisionProject.put(did, decProject);
+                String date = dayOf(d.get("date_created"));
+                if (date == null) continue;
+                if (did != null) { decisionCreatedDay.put(did, date); decisionTitle.put(did, firstStr(d.get("title"))); }
                 items.add(newsItem("decision", date, timeOf(d.get("date_created")), firstStr(d.get("title")), "created", did, decProject, did));
             }
             Map<String, String> adrCreatedDay = new HashMap<>();
             for (Map<String, Object> a : adrs) {
-                String date = dayOf(a.get("date_created"));
-                if (date == null) continue;
                 String aid = firstStr(a.get("adr_id"));
-                if (aid != null) adrCreatedDay.put(aid, date);
                 // Project: ADR's BELONGS_TO_PROJECT edge (ADRPROJ-01) — иначе ADR
                 // со связкой на проект оседали в «без проекта».
                 String adrProject = firstOfList(a.get("projects"));
+                if (aid != null && adrProject != null) adrProjectById.put(aid, adrProject);
+                String date = dayOf(a.get("date_created"));
+                if (date == null) continue;
+                if (aid != null) adrCreatedDay.put(aid, date);
                 items.add(newsItem("adr", date, timeOf(a.get("date_created")), aid, "created", firstStr(a.get("component")), adrProject, aid));
             }
 
@@ -421,6 +431,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 Object pr = sp.get("projects");
                 if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
                     project = String.valueOf(l.get(0));
+                if (spid != null && project != null) specProject.put(spid, project);
                 items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", spid, project, spid));
             }
 
@@ -429,9 +440,9 @@ public class AidaLoreResource extends LoreResourceBase {
             // объект за день дал бы пять строк — тот же шум, что «49 more tasks».
             // Идёт ПОСЛЕ created-циклов: им заполняются карты дней создания/заголовков.
             Set<String> changedSeen = new HashSet<>();
-            emitChanged(items, adrHist,      "adr_id",      "adr",      adrCreatedDay,      null,          changedSeen);
-            emitChanged(items, specHist,     "spec_id",     "spec",     specCreatedDay,     specTitle,     changedSeen);
-            emitChanged(items, decisionHist, "decision_id", "decision", decisionCreatedDay, decisionTitle, changedSeen);
+            emitChanged(items, adrHist,      "adr_id",      "adr",      adrCreatedDay,      null,          adrProjectById,  changedSeen);
+            emitChanged(items, specHist,     "spec_id",     "spec",     specCreatedDay,     specTitle,     specProject,     changedSeen);
+            emitChanged(items, decisionHist, "decision_id", "decision", decisionCreatedDay, decisionTitle, decisionProject, changedSeen);
 
             // ПОЛНЫЙ список закрытых задач (решение владельца: «не сворачивай,
             // пусть будет полный список»). Раньше именованных капали (4/день),
@@ -551,12 +562,18 @@ public class AidaLoreResource extends LoreResourceBase {
      * пять строк «изменено», и лента утонула бы в шуме (урок «49 more tasks»).
      * День создания пропускается: он уже покрыт событием created.
      * titles == null → заголовком служит сам идентификатор (так у ADR).
+     *
+     * <p>projects — проект по id, собранный из created-циклов: у *Hist-строки
+     * своего ребра на проект нет (оно на вершине), а без него правка падала в
+     * группу «без проекта» и терялась под фильтром — created это уже чинили
+     * (ADRPROJ-01), changed оставался.
      */
     private static void emitChanged(List<Map<String, Object>> items,
                                     List<Map<String, Object>> hist,
                                     String idField, String kind,
                                     Map<String, String> createdDay,
                                     Map<String, String> titles,
+                                    Map<String, String> projects,
                                     Set<String> seen) {
         for (Map<String, Object> h : hist) {
             String id = firstStr(h.get(idField));
@@ -565,7 +582,8 @@ public class AidaLoreResource extends LoreResourceBase {
             if (date.equals(createdDay.get(id))) continue;       // это создание, не правка
             if (!seen.add(kind + "|" + id + "|" + date)) continue; // дедуп по дню
             String title = (titles != null && titles.get(id) != null) ? titles.get(id) : id;
-            items.add(newsItem(kind, date, timeOf(h.get("valid_from")), title, "changed", null, null, id));
+            String project = projects == null ? null : projects.get(id);
+            items.add(newsItem(kind, date, timeOf(h.get("valid_from")), title, "changed", null, project, id));
         }
     }
 
