@@ -165,8 +165,8 @@ final class WorkQuality {
     /**
      * ADR с механическими проверками структуры (ADR-LORE-039 §5).
      *
-     * @param hasSupersedesEdge есть ли ребро SUPERSEDES — нужно для проверки
-     *                          когерентности статуса SUPERSEDED
+     * @param hasSupersedesEdge пришло ли ВХОДЯЩЕЕ ребро SUPERSEDES (кто-то заменил
+     *                          этот ADR) — для когерентности статуса «Заменено»
      */
     static Result evaluateAdr(String status, Object components, Object projects,
                               boolean hasDecisions,
@@ -214,11 +214,17 @@ final class WorkQuality {
         opt(f, accepted, "decisions", hasDecisions,
             accepted ? "Разложен на атомарные решения" : "Разложен на атомарные решения — желательно");
 
-        // Когерентность статуса: SUPERSEDED без ребра SUPERSEDES — утверждение о
-        // замене, которое нечем проверить, и цепочка решений обрывается.
+        // Когерентность статуса: «Заменено» — утверждение о факте, и факт обязан
+        // быть в графе, иначе читающий видит тупик: заменено, а чем — неизвестно.
+        //
+        // Ребро ВХОДЯЩЕЕ: SUPERSEDES создаётся FROM нового ADR TO старого, поэтому
+        // у заменённого оно приходит извне. Раньше проверка смотрела исходящее и
+        // требовала от старой записи указывать на свою замену — граф так не
+        // устроен, и «починить» это можно было только ложным ребром. Поймано
+        // сессией MIDGARD 2026-08-23, которая отказалась подгонять данные под гейт.
         if ("SUPERSEDED".equalsIgnoreCase(status)) {
-            req(f, "supersedes_edge", hasSupersedesEdge,
-                "Статус SUPERSEDED требует ребра SUPERSEDES на заменяющий ADR");
+            req(f, "superseded_by", hasSupersedesEdge,
+                "Статус «Заменено» требует ребра SUPERSEDES ОТ заменяющего ADR — должно быть видно, чем именно перекрыт");
         }
 
         return score("adr", f);

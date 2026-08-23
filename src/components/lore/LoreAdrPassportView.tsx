@@ -213,6 +213,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
   const implementedIn = data.implemented_in_ids ?? [];
   const releasedIn    = data.release_ids        ?? [];
   const tags          = data.tags              ?? [];
+  const supersededBy  = data.superseded_by_ids  ?? [];   // FIX-7: обратное SUPERSEDES — «чем перекрыт»
   const tracedByUcs   = data.traced_by_ucs      ?? [];   // PL-19: обратное TRACED_TO
   const justifiedTasks = data.justified_task_uids ?? []; // PL-19: обратное JUSTIFIED_BY
 
@@ -228,6 +229,7 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
     if (tags.length)        meta.push(`- **Tags:** ${tags.join(', ')}`);
     if (dependsOn.length)   meta.push(`- **Depends on:** ${dependsOn.join(', ')}`);
     if (supersedes.length)  meta.push(`- **Supersedes:** ${supersedes.join(', ')}`);
+    if (supersededBy.length) meta.push(`- **Superseded by:** ${supersededBy.join(', ')}`);
     if (implementedIn.length) meta.push(`- **Implemented in:** ${implementedIn.join(', ')}`);
     if (releasedIn.length)  meta.push(`- **Released in:** ${releasedIn.join(', ')}`);
     if (meta.length) lines.push(...meta, '');
@@ -338,6 +340,24 @@ export default function LoreAdrPassportView({ adrId, onError, onBack, onNavigate
           <div style={S.chips}>
             {supersedes.map(id => (
               <span key={id} style={S.chip(true)} onClick={() => onNavigate(id)}>{id}</span>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Обратная сторона SUPERSEDES: ребро идёт ОТ нового ADR К старому, поэтому
+          у заменённого оно входящее — и до сих пор не показывалось нигде. Статус
+          «Заменено» стоял, а чем перекрыт, читающий не узнавал: цепочка решений
+          обрывалась ровно там, где нужна. Для заменённой записи это САМОЕ важное,
+          что есть на странице, поэтому блок выделен, а не спрятан среди прочих. */}
+      {supersededBy.length > 0 && (
+        <div style={S.section}>
+          <div style={{ ...S.sLabel, color: 'var(--wrn)' }}>
+            {t('lore.adrPassportView.supersededBy', 'Заменён на')}
+          </div>
+          <div style={S.chips}>
+            {supersededBy.map(id => (
+              <span key={id} style={{ ...S.chip(true), borderColor: 'var(--wrn)', color: 'var(--wrn)' }}
+                    onClick={() => onNavigate(id)}>{id}</span>
             ))}
           </div>
         </div>

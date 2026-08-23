@@ -146,7 +146,12 @@ public final class LoreSlices {
             // открыв каждый сценарий и каждую задачу. Прослеживаемость обязана
             // читаться в обе стороны от точки, где стоишь.
             "in('TRACED_TO').uc_id                AS traced_by_ucs, " +    // сценарии, ссылающиеся на ADR (D9)
-            "in('JUSTIFIED_BY').task_uid          AS justified_task_uids " + // enb-задачи, обоснованные им (PL-14)
+            "in('JUSTIFIED_BY').task_uid          AS justified_task_uids, " + // enb-задачи, обоснованные им (PL-14)
+            // То же правило, не применённое к SUPERSEDES: ребро идёт FROM нового
+            // ADR TO старого, поэтому у ЗАМЕНЁННОГО оно входящее и в паспорте не
+            // показывалось вовсе. Статус «Заменено» стоял, а чем перекрыт —
+            // нигде: цепочка решений обрывалась ровно там, где нужна.
+            "in('SUPERSEDES').adr_id              AS superseded_by_ids " +
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 

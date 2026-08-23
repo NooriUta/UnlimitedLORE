@@ -147,7 +147,9 @@ public class LoreQualityResource extends LoreResourceBase {
             + "out('BELONGS_TO').component_id AS components, "
             + "out('BELONGS_TO_PROJECT').slug AS projects, "
             + "in('DECIDED_IN').size()        AS decision_count, "
-            + "out('SUPERSEDES').size()       AS supersedes_count, "
+            // in, а НЕ out: SUPERSEDES идёт FROM нового ADR TO старого, поэтому у
+            // заменённого ребро входящее. Оно же отвечает на вопрос «кем заменён».
+            + "in('SUPERSEDES').adr_id        AS superseded_by, "
             + "out('HAS_STATE')[valid_to IS NULL].context_md[0]      AS context_md, "
             + "out('HAS_STATE')[valid_to IS NULL].decision_md[0]     AS decision_md, "
             + "out('HAS_STATE')[valid_to IS NULL].consequences_md[0] AS consequences_md"),
@@ -230,7 +232,10 @@ public class LoreQualityResource extends LoreResourceBase {
                         s(r, "planned_start_date"), s(r, "planned_end_date"), r.get("milestones"));
                 case ADR: {
                     boolean hasDecisions = r.get("decision_count") instanceof Number n && n.intValue() > 0;
-                    boolean hasSupersedes = r.get("supersedes_count") instanceof Number n2 && n2.intValue() > 0;
+                    Object sb = r.get("superseded_by");
+                    boolean hasSupersedes = sb instanceof java.util.Collection<?> c2
+                        ? c2.stream().anyMatch(o -> o != null && !String.valueOf(o).isBlank())
+                        : sb != null && !String.valueOf(sb).isBlank();
                     return WorkQuality.evaluateAdr(s(r, "status"), r.get("components"), r.get("projects"),
                         hasDecisions, s(r, "context_md"), s(r, "decision_md"), s(r, "consequences_md"), hasSupersedes);
                 }
