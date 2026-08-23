@@ -285,6 +285,13 @@ public class LoreAdrResource extends LoreResourceBase {
             if (!compFailed.isEmpty()) out.put("components_failed", compFailed);
             if (!tagFailed.isEmpty())  out.put("tags_failed", tagFailed);
 
+            // Вердикт полноты (ADR-LORE-039): линтер уже существовал, но звался
+            // только из self-check — то есть постфактум и лишь если кто-то
+            // откроет срез. Здесь он приходит в момент записи, пока автор ещё
+            // держит ADR в голове. Advisory: на запись не влияет.
+            WorkQuality.Result quality = adrQuality(req.adr_id());
+            if (quality != null) out.put("quality", quality);
+
             String qHint = questionsInBodyHint(req);
             if (qHint != null) out.put("hint", qHint);
             if (!compFailed.isEmpty() || !tagFailed.isEmpty()) {
@@ -301,6 +308,44 @@ public class LoreAdrResource extends LoreResourceBase {
     }
 
     // ── Write-path: ADR ↔ sprint/release links, rename, delete ──────────────
+    /**
+     * Вердикт полноты ADR (ADR-LORE-039). Факты берутся из графа ПОСЛЕ записи
+     * рёбер — то есть судится сохранённое состояние, а не присланный запрос:
+     * иначе провалившаяся привязка выглядела бы выполненной.
+     *
+     * <p>Тела читаются с ОТКРЫТОЙ Hist-строки (valid_to IS NULL), а не с
+     * вершины: они живут в истории, и на вершине их попросту нет.
+     *
+     * <p>Ошибка сборки вердикта не роняет ответ: запись уже состоялась и была
+     * тем, что просил вызывающий, — по образцу taskQuality/sprintQuality.
+     */
+    private WorkQuality.Result adrQuality(String adrId) {
+        try {
+            var res = client.query(db, basicAuth(), new studio.seer.heimdall.bench.MartQuery("sql",
+                "SELECT status, "
+                + "out('BELONGS_TO').component_id       AS components, "
+                + "out('BELONGS_TO_PROJECT').slug       AS projects, "
+                + "in('DECIDED_IN').size()              AS decision_count, "
+                + "out('SUPERSEDES').size()             AS supersedes_count, "
+                + "out('HAS_STATE')[valid_to IS NULL].context_md[0]      AS context_md, "
+                + "out('HAS_STATE')[valid_to IS NULL].decision_md[0]     AS decision_md, "
+                + "out('HAS_STATE')[valid_to IS NULL].consequences_md[0] AS consequences_md "
+                + "FROM KnowADR WHERE adr_id = :id", Map.of("id", adrId), 1))
+                .await().indefinitely();
+            var rows = res.result();
+            if (rows == null || rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            boolean hasDecisions = r.get("decision_count") instanceof Number n && n.intValue() > 0;
+            boolean hasSupersedes = r.get("supersedes_count") instanceof Number s && s.intValue() > 0;
+            return WorkQuality.evaluateAdr(str(r.get("status")), r.get("components"), r.get("projects"),
+                hasDecisions, str(r.get("context_md")), str(r.get("decision_md")), str(r.get("consequences_md")),
+                hasSupersedes);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] ADR %s: вердикт не собран (%s)", adrId, LoreUpstream.detail(e));
+            return null;
+        }
+    }
+
     public record AdrLinkRequest(String adr_id, String sprint_id, String release_id,
                                  String git_project, String action) {}
     public record AdrRenameRequest(String adr_id, String new_adr_id) {}

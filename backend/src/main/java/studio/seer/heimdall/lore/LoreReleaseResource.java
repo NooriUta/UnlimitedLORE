@@ -236,6 +236,9 @@ public class LoreReleaseResource extends LoreResourceBase {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("updated_at", Instant.now().toString());
+            // ADR-LORE-039: вердикт был на create и link, но не здесь — правка
+            // описания меняет ровно ту полноту, которую он и судит.
+            out.put("quality", releaseQuality(req.release_id()));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE UPDATE] %s: %s", req.release_id(), e.getMessage());
@@ -400,6 +403,9 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("release_id", req.release_id());
         out.put("sprints_removed", sprintsRemoved);
         out.put("prs_removed", prsRemoved);
+        // ADR-LORE-039: на снятии связей вердикт нужнее, чем где-либо — именно
+        // здесь релиз становится неполным, и сказать об этом надо сразу.
+        out.put("quality", releaseQuality(req.release_id()));
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
     }

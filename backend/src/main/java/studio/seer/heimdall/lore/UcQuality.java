@@ -83,10 +83,19 @@ final class UcQuality {
         return steps;
     }
 
-    /** Расширения «2a», «3b» → номер шага, на который ссылаются. */
+    /**
+     * Расширения «2a», «3b», «2а», «3б» → номер шага, на который ссылаются.
+     *
+     * <p>Буква — ЛЮБАЯ буквенная (\p{L} с UNICODE_CHARACTER_CLASS), не только
+     * ASCII: русскоязычные UC нумеруют расширения кириллицей, и класс {@code [a-z]}
+     * не видел их вовсе — чек {@code extensions_ref_steps} штрафовал сценарий за
+     * КОРРЕКТНО оформленные расширения. Тот же ASCII-капкан, что уже ловили в
+     * whitelist слайс-параметров.
+     */
     static List<Integer> extensionRefs(String scenarioMd) {
         List<Integer> refs = new ArrayList<>();
-        Matcher m = Pattern.compile("(?m)^\\s*(\\d+)[a-z]\\b").matcher(sectionBody(scenarioMd, "Расширения"));
+        Matcher m = Pattern.compile("(?mu)^\\s*(\\d+)\\p{L}\\b", Pattern.UNICODE_CHARACTER_CLASS)
+            .matcher(sectionBody(scenarioMd, "Расширения"));
         while (m.find()) refs.add(Integer.parseInt(m.group(1)));
         return refs;
     }
