@@ -2,8 +2,115 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 
+// ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
+// WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
+// три десятка строк эха, в котором незакрытые поля ещё надо высматривать.
+//   OK     → одна строка «все проверки ok (6/6)»; невыполненные подсказки — хвостом.
+//   не-OK  → только проваленные, С ТЕКСТОМ: код без сообщения заставляет лезть
+//            в документацию, то есть отвлекает ровно там, где нужно действовать.
+// Признак вердикта — поле kind: UC-линтер несёт rigor и формовкой не задевается.
+// Инвариант: компактность только для OK — прятать провалы формовке нельзя.
+interface QFinding { code: string; ok: boolean; required: boolean; message: string }
+interface QVerdict { kind: string; score: number; max: number; findings: QFinding[] }
+
+const isVerdict = (v: unknown): v is QVerdict =>
+  !!v && typeof v === 'object'
+  && typeof (v as QVerdict).kind === 'string'
+  && Array.isArray((v as QVerdict).findings);
+
+function reshapeVerdict(v: QVerdict): unknown {
+  const failed = v.findings.filter(f => f.required && !f.ok);
+  const hints  = v.findings.filter(f => !f.required && !f.ok).map(f => f.code);
+  if (failed.length === 0) {
+    const line = `${v.kind}: все проверки ok (${v.score}/${v.max})`;
+    return hints.length ? `${line} · подсказки: ${hints.join(', ')}` : line;
+  }
+  return {
+    kind: v.kind, score: v.score, max: v.max, ok: false,
+    findings: failed.map(f => ({ code: f.code, message: f.message })),
+    ...(hints.length ? { hints } : {}),
+  };
+}
+
+// Чем назвать элемент батча в разборе: первый идентификатор, который у него
+// есть. Без имени находка «не заполнена оценка» бесполезна — непонятно, у кого.
+const ITEM_ID = ['task_uid', 'adr_id', 'spec_id', 'decision_id', 'sprint_id', 'release_id', 'uid', 'id'];
+const itemName = (o: Record<string, unknown>): string | undefined => {
+  for (const k of ITEM_ID) if (typeof o[k] === 'string') return o[k] as string;
+  return undefined;
+};
+
+/**
+ * Свёртка батча (ADR-LORE-039 §2). Поэлементной формовки мало: батч из 12
+ * чистых задач вернул бы 12 одинаковых строк «все проверки ok» — короче
+ * прежнего, но всё ещё шум. Прошедшие в батче не перечисляются поимённо, только
+ * числом; поимённо — лишь проваленные. Тот же принцип, что в одиночном ответе,
+ * уровнем выше.
+ *
+ * Сам массив НЕ выбрасывается: в нём лежит результат записи (id, order_index),
+ * а не только вердикт. Убирается из элементов ровно поле вердикта, сводка
+ * поднимается в родителя.
+ */
+function collapseBatch(items: unknown[]): { quality: unknown; items: unknown[] } | null {
+  const verdicts: { name?: string; v: QVerdict }[] = [];
+  for (const it of items) {
+    if (!it || typeof it !== 'object' || Array.isArray(it)) return null;
+    const o = it as Record<string, unknown>;
+    if (!isVerdict(o.quality)) return null;
+    verdicts.push({ name: itemName(o), v: o.quality });
+  }
+  if (verdicts.length < 2) return null; // один элемент — это не батч, форма одиночная
+  const stripped = items.map(it => {
+    const { quality: _drop, ...rest } = it as Record<string, unknown>;
+    return rest;
+  });
+  const kind = verdicts[0].v.kind;
+  const failed = verdicts.filter(x => x.v.findings.some(f => f.required && !f.ok));
+  if (failed.length === 0) {
+    return { quality: `${kind}: все ${verdicts.length} записей ok`, items: stripped };
+  }
+  return {
+    quality: {
+      kind, ok: false, passed: verdicts.length - failed.length,
+      failed: failed.map(x => ({
+        ...(x.name ? { id: x.name } : {}),
+        score: x.v.score, max: x.v.max,
+        findings: x.v.findings.filter(f => f.required && !f.ok)
+          .map(f => ({ code: f.code, message: f.message })),
+      })),
+    },
+    items: stripped,
+  };
+}
+
+// Обход всего ответа, а не только корня: batch-путь возвращает вердикт на
+// КАЖДЫЙ элемент, и без рекурсии оптимизация обошла бы ровно тот случай, где
+// эха больше всего.
+export function compactVerdicts(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(compactVerdicts);
+  if (data && typeof data === 'object') {
+    const src = data as Record<string, unknown>;
+    // Свёртка идёт ДО поэлементной формовки: она читает сырые вердикты.
+    for (const [k, v] of Object.entries(src)) {
+      if (!Array.isArray(v)) continue;
+      const collapsed = collapseBatch(v);
+      if (!collapsed) continue;
+      const out: Record<string, unknown> = {};
+      for (const [k2, v2] of Object.entries(src)) {
+        out[k2] = k2 === k ? collapsed.items.map(compactVerdicts) : compactVerdicts(v2);
+      }
+      out.quality = collapsed.quality;
+      return out;
+    }
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(src)) out[k] = isVerdict(v) ? reshapeVerdict(v) : compactVerdicts(v);
+    return out;
+  }
+  return data;
+}
+
 const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+  content: [{ type: 'text' as const, text: JSON.stringify(compactVerdicts(data), null, 2) }],
 });
 const err = (e: unknown) => ({
   content: [{ type: 'text' as const, text: `ERROR: ${(e as Error).message ?? String(e)}` }],
