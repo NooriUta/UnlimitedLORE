@@ -7,6 +7,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -209,10 +210,16 @@ class WorkQualityTest {
 
     // ── ADR ──────────────────────────────────────────────────────────────────
 
+    /** Тело длиннее порога содержательности, со ссылкой на сущность корпуса. */
+    private static String body(String head) {
+        return head + ": развёрнутый текст, который заведомо длиннее порога в сто двадцать "
+            + "символов, чтобы проверка содержательности видела разбор, а не отписку (ADR-LORE-014).";
+    }
+
     @Test
     void полныйAdrНабираетМаксимум() {
         var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
-            true, "контекст", "решение", "последствия");
+            true, body("контекст"), body("решение"), "последствия");
         assertEquals(r.max(), r.score());
         assertEquals("adr", r.kind());
     }
@@ -221,19 +228,103 @@ class WorkQualityTest {
     void adrБезРешенияКраснеет() {
         // ADR без раздела «решение» — заметка, а не решение.
         var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
-            true, "контекст", null, "последствия");
+            true, body("контекст"), null, "последствия");
         assertFalse(find(r, "decision").ok());
     }
 
     @Test
-    void последствияИАтомарныеРешенияТолькоПодсказки() {
-        // Бывают ADR, у которых последствий честно нет; разложение на решения —
-        // отдельный шаг, и требовать его в момент заведения значит блокировать черновик.
-        var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
+    void уЧерновикаПоследствияИРазложениеТолькоПодсказки() {
+        // PROPOSED — черновик: бывают ADR, у которых последствий честно нет, а
+        // разложение на решения отдельный шаг. Требовать это при заведении
+        // значит давить на самом хрупком этапе (ADR-LORE-039 §5).
+        var r = WorkQuality.evaluateAdr("PROPOSED", List.of("OMILORE"), List.of("proj"),
             false, "контекст", "решение", null);
         assertFalse(find(r, "consequences").required());
         assertFalse(find(r, "decisions").required());
+        assertFalse(find(r, "context_substantive").required(), "порог у черновика — подсказка");
+        assertFalse(find(r, "traceability").required(), "трассируемость у черновика — подсказка");
         assertEquals(r.max(), r.score(), "подсказки не снижают счёт");
+    }
+
+    @Test
+    void уПринятогоТеЖеПроверкиСтановятсяОбязательными() {
+        // ACCEPTED — принятое правило: «принято» сказанное о заметке и есть та
+        // куцость, ради которой заведён вес по статусу. Набор проверок ТОТ ЖЕ,
+        // меняется знаменатель.
+        var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
+            false, "контекст", "решение", null);
+        assertTrue(find(r, "consequences").required());
+        assertTrue(find(r, "decisions").required());
+        assertTrue(find(r, "context_substantive").required());
+        assertFalse(find(r, "context_substantive").ok(), "полторы строки — отписка");
+        assertTrue(r.score() < r.max(), "куцый принятый ADR обязан покраснеть");
+    }
+
+    @Test
+    void альтернативыОстаютсяПодсказкойДажеУПринятого() {
+        // Бывают решения без развилки; требовать вымышленный второй вариант
+        // значит поощрять выдумку.
+        var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
+            true, body("контекст"), body("решение"), "последствия");
+        assertFalse(find(r, "alternatives").required());
+        assertEquals(r.max(), r.score(), "отсутствие альтернатив не снижает счёт");
+    }
+
+    @Test
+    void supersededБезРебраSupersedesКраснеет() {
+        // Статус «заменён» без ребра — утверждение о замене, которое нечем
+        // проверить: цепочка решений обрывается.
+        var r = WorkQuality.evaluateAdr("SUPERSEDED", List.of("OMILORE"), List.of("proj"),
+            true, body("контекст"), body("решение"), "последствия", false);
+        assertFalse(find(r, "supersedes_edge").ok());
+        var ok = WorkQuality.evaluateAdr("SUPERSEDED", List.of("OMILORE"), List.of("proj"),
+            true, body("контекст"), body("решение"), "последствия", true);
+        assertTrue(find(ok, "supersedes_edge").ok());
+    }
+
+    @Test
+    void проверкаЗаменыНеПоявляетсяУДругихСтатусов() {
+        var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
+            true, body("контекст"), body("решение"), "последствия");
+        assertNull(find(r, "supersedes_edge"));
+    }
+
+    // ── decision / spec / component / milestone / question ───────────────────
+
+    @Test
+    void решениеБезРодителяАдрКраснеет() {
+        // Решение вне ADR не найти от него и оно не попадает в разбор на правила.
+        var r = WorkQuality.evaluateDecision("accepted", body("правило"), false, null, null);
+        assertFalse(find(r, "parent_adr").ok());
+        assertEquals("decision", r.kind());
+    }
+
+    @Test
+    void решениеИзОдногоЗаголовкаЭтоЯрлык() {
+        var r = WorkQuality.evaluateDecision("accepted", "Кэшируем", true, null, null);
+        assertTrue(find(r, "body").ok(), "тело непусто");
+        assertFalse(find(r, "body_substantive").ok(), "но правилом это не назвать");
+    }
+
+    @Test
+    void спекаБезСодержанияЭтоЗаглушка() {
+        var r = WorkQuality.evaluateSpec("active", "Схема БД", null,
+            List.of("OMILORE"), List.of("proj"), "1.0");
+        assertFalse(find(r, "content").ok());
+        assertEquals("spec", r.kind());
+    }
+
+    @Test
+    void вехаБезЦелевойДатыКраснеет() {
+        var r = WorkQuality.evaluateMilestone("M1", null, null);
+        assertFalse(find(r, "target_date").ok());
+        assertFalse(find(r, "sprints").required(), "спринты — подсказка");
+    }
+
+    @Test
+    void вопросБезВладельцаКраснеет() {
+        var r = WorkQuality.evaluateQuestion("Как быть?", "open", null, null, null);
+        assertFalse(find(r, "owner").ok(), "без адресата вопрос не закрывается");
     }
 
     @Test
