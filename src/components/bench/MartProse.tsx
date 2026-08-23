@@ -35,6 +35,13 @@ mermaid.registerLayoutLoaders(elkLayouts);
 mermaid.initialize({
   startOnLoad: false,
   theme: 'forest',
+  // FIX-8: не давать mermaid рисовать свой error-SVG. При синтаксической ошибке
+  // он ВСТАВЛЯЕТ в DOM картинку бомбы с надписью «Syntax error in text» во всю
+  // ширину — она разворачивалась на пол-экрана и выталкивала текст ADR вниз
+  // (поймано владельцем на ADR-MIDGARD-008). Промис при этом реджектится, и
+  // наша собственная компактная плашка ниже уже показывает причину; бомба была
+  // чистым дублем, занимающим в сотню раз больше места, чем сообщение.
+  suppressErrorRendering: true,
   // SVG <text> labels, NOT HTML-in-foreignObject: our sanitizeSvg() (XSS pass)
   // strips the <div> content out of <foreignObject>, which left every node an
   // empty box. SVG text survives sanitisation and is coloured by themeVariables.
@@ -190,7 +197,19 @@ export function MermaidDiagram({ def }: { def: string }) {
   }, [def, themeIdx]);
 
   if (err) {
-    return <div style={{ color: 'var(--dng)', fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)', margin: '0 0 0.8em' }}>⚠ mermaid: {err}</div>;
+    // Сообщения мало: оно говорит, ЧТО не так, но не показывает, где. Исходник
+    // под <details> — автор правит текст, не открывая редактор; свёрнут, чтобы
+    // сломанная диаграмма занимала место сломанной диаграммы, а не полстраницы.
+    return (
+      <div style={{ color: 'var(--dng)', fontSize: 'var(--fs-base)', fontFamily: 'var(--mono)',
+                    margin: '0 0 0.8em', border: '1px solid var(--dng)', borderRadius: 4, padding: '4px 8px' }}>
+        ⚠ mermaid: {err}
+        <details style={{ marginTop: 4 }}>
+          <summary style={{ cursor: 'pointer', color: 'var(--t3)' }}>исходник диаграммы</summary>
+          <pre style={{ margin: '4px 0 0', whiteSpace: 'pre-wrap', color: 'var(--t2)' }}>{def}</pre>
+        </details>
+      </div>
+    );
   }
   if (svg) {
     // The diagram's colors (themeVariables above) assume a dark backdrop —

@@ -454,6 +454,7 @@
       "consequences": "Consequences",
       "dependsOn": "Depends on",
       "supersedes": "Supersedes",
+      "supersededBy": "Superseded by",
       "implementedInSprint": "Implemented in sprint",
       "releasedIn": "Released in",
       "tags": "Tags",

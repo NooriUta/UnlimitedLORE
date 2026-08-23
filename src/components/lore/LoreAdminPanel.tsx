@@ -55,6 +55,12 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst', 'architect'] },
   { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
   { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },
+  // QUAL-7: POST по форме, но ничего не пишет — спрашивает вердикт полноты по
+  // существующим записям (метод выбран из-за списка id, не влезающего в URL).
+  // Открыт всем профилям: узнать, чего не хватает в своей записи, обязан мочь
+  // каждый, кто эти записи заводит.
+  { what: 'Проверка полноты (без записи)', api: '/lore/quality', humanOnly: false,
+    agents: ['full', 'architect', 'developer', 'pm', 'marketer', 'analyst', 'product-analyst', 'tester'] },
   { what: 'Вопросы', api: '/lore/question*', humanOnly: false, agents: ['full', 'architect', 'analyst', 'pm', 'product-analyst'] },
   // Метрики/Инсайты/Рекомендации СНЯТЫ (AL-47, регресс-гвард AgentScopeMatrixCoverageTest
   // поймал расхождение с бэкендом): metric_log/insight_new пишут в /lore/bragi/metric и

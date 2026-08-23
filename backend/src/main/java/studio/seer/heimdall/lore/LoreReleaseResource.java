@@ -59,33 +59,18 @@ public class LoreReleaseResource extends LoreResourceBase {
         return gitProject != null && !gitProject.isBlank() ? gitProject : "NooriUta/AIDA";
     }
 
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
+    // Факты — из общего LoreQualityFacts. Адресация по release_uid, а не по
+    // номеру версии: он повторяется между репозиториями, и вердикт читал
+    // ЧУЖОЙ релиз. Без проекта не судим — угадывать, чей это релиз, нельзя.
     private WorkQuality.Result releaseQuality(String releaseId, String gitProject) {
         if (gitProject == null || gitProject.isBlank()) {
-            LOG.warnf("[LORE QUALITY] релиз %s: вердикт пропущен — не задан git_project "
-                + "(release_id неуникален между репозиториями)", releaseId);
+            LOG.warnf("[LORE QUALITY] релиз %s: вердикт пропущен — не задан git_project", releaseId);
             return null;
         }
-        try {
-            var res = client.query(db, basicAuth(), new MartQuery("sql",
-                "SELECT git_tag, description_md, "
-                // Оба ребра ВХОДЯЩИЕ: спринт → релиз (IMPLEMENTED_IN_RELEASE),
-                // PR → релиз (SHIPPED_IN). Направление сверено со срезами
-                // release_sprints / release_prs, а не выведено из названия.
-                + "in('IMPLEMENTED_IN_RELEASE').sprint_id AS sprints, "
-                + "in('SHIPPED_IN').pr_number             AS prs, "
-                + "out('BELONGS_TO_PROJECT').slug         AS projects "
-                + "FROM KnowRelease WHERE release_uid = :ruid",
-                Map.of("ruid", gitProject + "#" + releaseId), 1))
-                .await().indefinitely();
-            var rows = res.result();
-            if (rows == null || rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            return WorkQuality.evaluateRelease(str(r.get("git_tag")), str(r.get("description_md")),
-                r.get("sprints"), r.get("prs"), r.get("projects"));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] релиз %s: вердикт не собран (%s)", releaseId, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.RELEASE, gitProject + "#" + releaseId);
     }
 
     // ── Авто-current: этот релиз — самый свежий проекта? (ADR-LORE-025 / OP-04) ─

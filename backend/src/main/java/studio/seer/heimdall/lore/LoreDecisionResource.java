@@ -134,29 +134,15 @@ public class LoreDecisionResource extends LoreResourceBase {
      * провалившаяся привязка выглядела бы выполненной. KnowDecision плоская
      * (без истории), поэтому тело читается прямо с вершины.
      */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
     private WorkQuality.Result decisionQuality(String decisionId) {
-        try {
-            var res = client.query(db, basicAuth(), new studio.seer.heimdall.bench.MartQuery("sql",
-                // status_raw, а НЕ status: у KnowDecision статус живёт именно
-                // здесь (см. запись выше — «имя status было бы второй правдой»).
-                // Чтение не того поля давало вечное «Статус задан: нет» даже
-                // сразу после успешной установки статуса.
-                "SELECT status_raw AS status, body_md, "
-                + "out('DECIDED_IN').size()        AS adr_count, "
-                + "out('BELONGS_TO').component_id  AS components, "
-                + "out('TAGGED_WITH').tag_id       AS tags "
-                + "FROM KnowDecision WHERE decision_id = :id", Map.of("id", decisionId), 1))
-                .await().indefinitely();
-            var rows = res.result();
-            if (rows == null || rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            boolean hasAdr = r.get("adr_count") instanceof Number n && n.intValue() > 0;
-            return WorkQuality.evaluateDecision(str(r.get("status")), str(r.get("body_md")), hasAdr,
-                r.get("components"), r.get("tags"));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] решение %s: вердикт не собран (%s)", decisionId, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.DECISION, decisionId);
     }
 
     // ── AL-79: статус существующего решения ──────────────────────────────────
