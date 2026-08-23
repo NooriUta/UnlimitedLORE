@@ -228,19 +228,15 @@ public class LoreComponentResource extends LoreResourceBase {
      * теми же именами, которыми их пишет upsert выше — сверено, чтобы не завести
      * проверку на несуществующее поле (D-2026-LORE-QUALITY-NO-PHANTOM-CHECKS).
      */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
     private WorkQuality.Result componentQuality(String componentId) {
-        try {
-            java.util.List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT full_name, area, owner, game_icon FROM LoreComponent WHERE component_id = :cid",
-                Map.of("cid", componentId));
-            if (rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            return WorkQuality.evaluateComponent(str(r.get("full_name")), str(r.get("area")),
-                str(r.get("owner")), str(r.get("game_icon")));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] компонент %s: вердикт не собран (%s)", componentId, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.COMPONENT, componentId);
     }
 
     private long countN(String sql, Map<String, Object> params) {

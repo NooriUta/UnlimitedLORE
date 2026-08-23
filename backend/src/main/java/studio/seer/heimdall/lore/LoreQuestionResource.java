@@ -106,21 +106,15 @@ public class LoreQuestionResource extends LoreResourceBase {
      * иначе вердикт судил бы состояние, которого уже нет. Сбой сборки не роняет
      * ответ: запись состоялась.
      */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
     private WorkQuality.Result questionQuality(String questionId) {
-        try {
-            List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT title, status, owner, due_date, "
-                + "out('RAISED_IN').adr_id AS links "
-                + "FROM KnowQuestion WHERE question_id = :qid", Map.of("qid", questionId));
-            if (rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            return WorkQuality.evaluateQuestion(
-                str(r.get("title")), str(r.get("status")), str(r.get("owner")),
-                str(r.get("due_date")), r.get("links"));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] вопрос %s: вердикт не собран (%s)", questionId, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.QUESTION, questionId);
     }
 
     // ── Links ────────────────────────────────────────────────────────────────

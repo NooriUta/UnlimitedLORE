@@ -454,6 +454,7 @@
       "consequences": "Последствия",
       "dependsOn": "Зависит от",
       "supersedes": "Заменяет",
+      "supersededBy": "Заменён на",
       "implementedInSprint": "Реализовано в спринте",
       "releasedIn": "Выпущено в релизе",
       "tags": "Теги",

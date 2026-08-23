@@ -272,57 +272,15 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // Блокирующий вызов допустим только там, откуда он зовётся: в createTask и
     // editTask — внутри блока на рабочем пуле (рядом со stampOpenHist), в
     // sprint-путях — из синхронного метода.
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
     private WorkQuality.Result taskQuality(String uid) {
-        try {
-            var res = client.query(db, basicAuth(), new MartQuery("sql",
-                "SELECT work_class, "
-                + "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]   AS status_raw, "
-                + "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, "
-                // Компонент: свой ИЛИ унаследованный от спринта — задача,
-                // сидящая в размеченном спринте, компонент уже имеет.
-                + "out('TAGGED_WITH').component_id AS own_components, "
-                + "out('PART_OF').out('BELONGS_TO').component_id AS sprint_components, "
-                // Проекта своего у задачи нет по модели — только через спринт.
-                + "out('PART_OF').out('BELONGS_TO_PROJECT').slug AS projects, "
-                + "out('REALIZES').uc_id AS realizes_uc, "
-                + "out('JUSTIFIED_BY').adr_id AS justified_by "
-                + "FROM KnowTask WHERE task_uid = :uid", Map.of("uid", uid), 1))
-                .await().indefinitely();
-            var rows = res.result();
-            if (rows == null || rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            Object comps = r.get("own_components");
-            if (!(comps instanceof java.util.Collection<?> c) || c.isEmpty()) comps = r.get("sprint_components");
-            Object eff = r.get("effort_days");
-            Double effort = eff instanceof Number n ? n.doubleValue() : null;
-            return WorkQuality.evaluateTask(str(r.get("status_raw")), effort, str(r.get("work_class")),
-                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] задача %s: вердикт не собран (%s)", uid, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.TASK, uid);
     }
 
     private WorkQuality.Result sprintQuality(String sid) {
-        try {
-            var res = client.query(db, basicAuth(), new MartQuery("sql",
-                "SELECT out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, "
-                + "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0] AS planned_start_date, "
-                + "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]     AS planned_end_date, "
-                + "out('BELONGS_TO_PROJECT').slug        AS projects, "
-                + "out('BELONGS_TO').component_id        AS components, "
-                + "out('TARGETS_MILESTONE').milestone_id AS milestones "
-                + "FROM KnowSprint WHERE sprint_id = :sid", Map.of("sid", sid), 1))
-                .await().indefinitely();
-            var rows = res.result();
-            if (rows == null || rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            return WorkQuality.evaluateSprint(str(r.get("status_raw")), r.get("projects"), r.get("components"),
-                str(r.get("planned_start_date")), str(r.get("planned_end_date")), r.get("milestones"));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] спринт %s: вердикт не собран (%s)", sid, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.SPRINT, sid);
     }
 
     // ── ADR-LORE-013: move a task between sprints (cancel + recreate) ────────

@@ -179,7 +179,12 @@ class AgentScopeFilterTest {
 
     /** "/lore/adr*, /lore/decision*" → [adr, decision] */
     private static List<String> familiesFromApiCell(String cell) {
-        Matcher m = Pattern.compile("/?lore/([a-z]+)|(?<![/\\w])([a-z]+)\\*").matcher(cell);
+        // Дефис — часть имени семейства: familyOf() режет путь по '/', поэтому
+        // /lore/quality-gate это «quality-gate», а не «quality». Без дефиса в
+        // классе символов сверялось ЧУЖОЕ семейство: строка про гейты качества
+        // читалась как права на «quality», и пока такого семейства не
+        // существовало, проверка молча пропускалась (backend.isEmpty()).
+        Matcher m = Pattern.compile("/?lore/([a-z-]+)|(?<![/\\w])([a-z-]+)\\*").matcher(cell);
         java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
         while (m.find()) {
             String v = m.group(1) != null ? m.group(1) : m.group(2);
