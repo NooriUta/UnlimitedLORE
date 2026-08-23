@@ -140,6 +140,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // нужна именно superadmin, не admin).
         Map.entry("project",   Set.of("full")),
         Map.entry("bragi",     Set.of("full", "marketer")),
+        // NB: «quality» и «quality-gate» ниже — РАЗНЫЕ семейства. Первое —
+        // проверка полноты записи (ничего не пишет, открыта всем), второе —
+        // создание гейта качества (full/tester). familyOf() режет путь по '/',
+        // так что рантайм их не путает; путает человек, отсюда эта пометка.
+        //
         // quality (QUAL-7) — POST по форме, но НИЧЕГО не пишет: спрашивает
         // вердикт полноты по уже существующим объектам. Метод выбран POST не
         // ради записи, а потому что список id не влезает в query-строку.
