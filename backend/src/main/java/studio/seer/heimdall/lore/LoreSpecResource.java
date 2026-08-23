@@ -161,28 +161,15 @@ public class LoreSpecResource extends LoreResourceBase {
      * на ОТКРЫТОЙ Hist-строке, компонент — на ребре DOCUMENTED_IN (поле
      * component_id само по себе невидимо, см. комментарий на записи выше).
      */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
     private WorkQuality.Result specQuality(String specId) {
-        try {
-            var res = client.query(db, basicAuth(), new studio.seer.heimdall.bench.MartQuery("sql",
-                // COALESCE как в слайсе spec_by_id: тело и версия живут на
-                // открытой Hist-строке, но у легаси-спек лежат прямо на вершине.
-                // Чтение только из истории красило бы их «без содержания».
-                "SELECT title, "
-                + "COALESCE(out('HAS_STATE')[valid_to IS NULL].content_md[0], content_md) AS content_md, "
-                + "COALESCE(out('HAS_STATE')[valid_to IS NULL].version[0], version)       AS version, "
-                + "out('DOCUMENTED_IN').component_id                AS components, "
-                + "out('BELONGS_TO_PROJECT').slug                   AS projects "
-                + "FROM KnowSpec WHERE spec_id = :id", Map.of("id", specId), 1))
-                .await().indefinitely();
-            var rows = res.result();
-            if (rows == null || rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            return WorkQuality.evaluateSpec(str(r.get("title")), str(r.get("content_md")),
-                r.get("components"), r.get("projects"), str(r.get("version")));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] спека %s: вердикт не собран (%s)", specId, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.SPEC, specId);
     }
 
     /**

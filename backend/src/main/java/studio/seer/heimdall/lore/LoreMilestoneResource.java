@@ -136,20 +136,14 @@ public class LoreMilestoneResource extends LoreResourceBase {
      * обратным обходом TARGETS_MILESTONE. Сбой вердикта не роняет ответ: запись
      * уже состоялась и была тем, что просил вызывающий.
      */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
     private WorkQuality.Result milestoneQuality(String milestoneId) {
-        try {
-            List<Map<String, Object>> rows = ingestService.queryPublic(
-                "SELECT label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints "
-                + "FROM KnowMilestone WHERE milestone_id = :mid", Map.of("mid", milestoneId));
-            if (rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            return WorkQuality.evaluateMilestone(
-                r.get("label") == null ? null : String.valueOf(r.get("label")),
-                r.get("date_display") == null ? null : String.valueOf(r.get("date_display")),
-                r.get("sprints"));
-        } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] веха %s: вердикт не собран (%s)", milestoneId, LoreUpstream.detail(e));
-            return null;
-        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.MILESTONE, milestoneId);
     }
 }

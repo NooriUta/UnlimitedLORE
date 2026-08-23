@@ -276,17 +276,17 @@ class WorkQualityTest {
         // проверить: цепочка решений обрывается.
         var r = WorkQuality.evaluateAdr("SUPERSEDED", List.of("OMILORE"), List.of("proj"),
             true, body("контекст"), body("решение"), "последствия", false);
-        assertFalse(find(r, "supersedes_edge").ok());
+        assertFalse(find(r, "superseded_by").ok());
         var ok = WorkQuality.evaluateAdr("SUPERSEDED", List.of("OMILORE"), List.of("proj"),
             true, body("контекст"), body("решение"), "последствия", true);
-        assertTrue(find(ok, "supersedes_edge").ok());
+        assertTrue(find(ok, "superseded_by").ok());
     }
 
     @Test
     void проверкаЗаменыНеПоявляетсяУДругихСтатусов() {
         var r = WorkQuality.evaluateAdr("ACCEPTED", List.of("OMILORE"), List.of("proj"),
             true, body("контекст"), body("решение"), "последствия");
-        assertNull(find(r, "supersedes_edge"));
+        assertNull(find(r, "superseded_by"));
     }
 
     // ── decision / spec / component / milestone / question ───────────────────
