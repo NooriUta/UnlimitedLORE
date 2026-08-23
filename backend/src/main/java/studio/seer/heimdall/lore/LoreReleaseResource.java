@@ -70,6 +70,34 @@ public class LoreReleaseResource extends LoreResourceBase {
         }
     }
 
+    // ── Авто-current: этот релиз — самый свежий проекта? (ADR-LORE-025 / OP-04) ─
+    //
+    // Вызывается ТОЛЬКО когда пайплайн не прислал is_current. Сравнение по дате
+    // строкой ISO (YYYY-MM-DD) — лексикографический порядок совпадает с
+    // хронологическим. max()/min() по строке-дате в ArcadeDB даёт 500
+    // (ClassCastException, PAIN aggregation-traps), поэтому берём верхнюю строку
+    // через ORDER BY … DESC LIMIT 1, а не агрегат.
+    //
+    // Первый релиз проекта → текущий. Задним числом старее текущего → НЕ крадёт
+    // флаг. Сбой пробы → true: цель OP-04 в том, чтобы у проекта всегда был
+    // текущий; лучше пометить, чем оставить проект без current из-за read-сбоя.
+    private boolean isNewestForProject(String gp, String rdate) {
+        try {
+            var res = client.query(db, basicAuth(), new MartQuery("sql",
+                "SELECT release_date FROM KnowRelease WHERE git_project = :gp "
+                + "ORDER BY release_date DESC LIMIT 1", Map.of("gp", gp), 1))
+                .await().indefinitely();
+            var rows = res.result();
+            if (rows == null || rows.isEmpty()) return true;   // первый релиз проекта
+            String mx = str(rows.get(0).get("release_date"));
+            return mx == null || mx.isBlank() || rdate.compareTo(mx) >= 0;
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE RELEASE] auto-current: проба «самый свежий» для %s не удалась (%s) — помечаю текущим",
+                gp, LoreUpstream.detail(e));
+            return true;
+        }
+    }
+
     // ── Write-path: create a new KnowRelease ────────────────────────────────
 
     @POST
@@ -87,9 +115,20 @@ public class LoreReleaseResource extends LoreResourceBase {
             return badParams("release_id contains illegal characters");
         }
         try {
-            boolean cur = Boolean.TRUE.equals(req.is_current());
             String gp   = req.git_project() != null && !req.git_project().isBlank()
                           ? req.git_project() : "NooriUta/AIDA";
+            String rdate = req.release_date() != null ? req.release_date()
+                                                      : java.time.LocalDate.now().toString();
+            // ADR-LORE-025 (OP-04): текущий релиз самоисцеляется. Если пайплайн
+            // прислал is_current явно — уважаем как есть (переопределение). Если
+            // не прислал — самый свежий по дате автоматически становится текущим,
+            // снимая флаг со старого. Иначе проект копит релизы без единого
+            // текущего (NooriUta/AIDA: 101 релиз, ни одного current), и на это
+            // жалуется мобильное приложение. Правка целиком в LORE — чужой
+            // релизный пайплайн aida-root трогать не нужно.
+            boolean cur = req.is_current() != null
+                          ? req.is_current()
+                          : isNewestForProject(gp, rdate);
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + gp + "'",
@@ -103,8 +142,6 @@ public class LoreReleaseResource extends LoreResourceBase {
             StringBuilder set = new StringBuilder(
                 "INSERT INTO KnowRelease SET release_id=:rid, is_current=" + cur);
             if (req.git_tag()        != null) { set.append(", git_tag=:tag");          p.put("tag",   req.git_tag()); }
-            String rdate = req.release_date() != null ? req.release_date()
-                                                      : java.time.LocalDate.now().toString();
             set.append(", release_date=:date"); p.put("date", rdate);
             if (req.type()           != null) { set.append(", `type`=:rtype");       p.put("rtype", req.type()); }
             if (req.description_md() != null) { set.append(", description_md=:dmd"); p.put("dmd", req.description_md()); }
