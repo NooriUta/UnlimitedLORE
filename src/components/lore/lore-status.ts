@@ -1,10 +1,10 @@
 // Status → game-icon slug + colour, for LORE status ticks and chips.
-// Colours reuse the app's semantic design tokens (tokens.css), so they adapt to
-// both the theme (dark/light) AND the active palette (lichen/slate/juniper/…)
-// automatically — no hard-coded hex. Icons are game-icons, bundled offline via
-// addCollection in main.tsx (air-gap safe, ADR-FE-001).
+// Colours come from the fixed status categorical palette (--st-*, tokens.css) —
+// one distinct hue per status, theme-independent (like --section-*), with a
+// darker light-mode variant so status text stays legible on white. Icons are
+// game-icons, bundled offline via addCollection in main.tsx (air-gap, ADR-FE-001).
 
-import { dictColor, dictIcon } from './DictionaryProvider';
+import { dictIcon } from './DictionaryProvider';
 
 export interface StatusMeta { icon: string; color: string }
 
@@ -48,28 +48,26 @@ const STATUS_META: Record<string, StatusMeta> = {
 
 const FALLBACK: StatusMeta = { icon: 'checkbox-tree', color: 'var(--t3)' };
 
-// AL-28 (ADR-LORE-012): словарь — канон, карта выше — фолбэк (загрузка / старый
-// бэкенд без слайса). Статусы живут в трёх dict_type, ключ у всех — тот же код.
-// До этого правка цвета статуса в Admin LORE не меняла в UI ничего: словарь
-// показывался, а рисовалось из STATUS_META.
-// AL-86: decision_status добавлен — до этого он существовал в словаре (AL-79,
-// V14), но фронт его не читал вовсе: dictColor/dictIcon для него всегда
-// возвращали пусто, независимо от содержимого записи.
+// COLOUR is authoritative from the fixed --st-* palette (STATUS_META): the
+// per-status hue is a stable categorical identity, like --section-*/--g-* — not
+// something to recolour per install. The dictionary (ADR-LORE-012) still owns
+// the ICON per status (Admin can change icons); its `color` field is no longer
+// read for statuses (it only ever mirrored the semantic tokens, which collided
+// — see the --st-* rationale above). NB: dict writes are human-only (agent
+// scope forbids 'dict'), so code is the practical source for the palette anyway.
 const STATUS_DICTS = ['task_status', 'sprint_status', 'adr_status', 'decision_status'];
-function fromDict(code: string): StatusMeta | undefined {
+function dictIconFor(code: string): string | undefined {
   for (const d of STATUS_DICTS) {
-    const color = dictColor(d, code), icon = dictIcon(d, code);
-    if (color || icon) {
-      const base = STATUS_META[code] ?? FALLBACK;
-      return { icon: icon ?? base.icon, color: color ?? base.color };
-    }
+    const icon = dictIcon(d, code);
+    if (icon) return icon;
   }
   return undefined;
 }
 
 export function statusMeta(status: string | null | undefined): StatusMeta {
   const code = (status ?? '').toLowerCase();
-  return fromDict(code) ?? STATUS_META[code] ?? FALLBACK;
+  const base = STATUS_META[code] ?? FALLBACK;
+  return { icon: dictIconFor(code) ?? base.icon, color: base.color };
 }
 
 /**
@@ -77,13 +75,13 @@ export function statusMeta(status: string | null | undefined): StatusMeta {
  * marker line ("✅ DONE", "🟡 PARTIAL"). Plain keys hit STATUS_META directly;
  * emoji/prefix-marked raw statuses are normalized via {@link taskTick} first.
  * Avoids the silent FALLBACK (checkbox-tree) when given an emoji-prefixed status.
+ * Colour from the --st-* palette; dict supplies the icon.
  */
 export function resolveStatusMeta(status: string | null | undefined): StatusMeta {
   const code = (status ?? '').toLowerCase().trim();
-  const direct = fromDict(code) ?? STATUS_META[code];
-  if (direct) return direct;
-  const norm = taskTick(status).status;
-  return fromDict(norm) ?? STATUS_META[norm] ?? FALLBACK;
+  const key = STATUS_META[code] ? code : taskTick(status).status;
+  const base = STATUS_META[key] ?? FALLBACK;
+  return { icon: dictIconFor(key) ?? base.icon, color: base.color };
 }
 
 /**
