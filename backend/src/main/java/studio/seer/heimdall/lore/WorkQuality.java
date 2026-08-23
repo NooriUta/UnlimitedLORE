@@ -158,6 +158,27 @@ final class WorkQuality {
     static Result evaluateAdr(String status, Object components, Object projects,
                               boolean hasDecisions,
                               String contextMd, String decisionMd, String consequencesMd) {
+        return evaluateAdr(status, components, projects, hasDecisions,
+            contextMd, decisionMd, consequencesMd, false);
+    }
+
+    /**
+     * ADR с механическими проверками структуры (ADR-LORE-039 §5).
+     *
+     * @param hasSupersedesEdge есть ли ребро SUPERSEDES — нужно для проверки
+     *                          когерентности статуса SUPERSEDED
+     */
+    static Result evaluateAdr(String status, Object components, Object projects,
+                              boolean hasDecisions,
+                              String contextMd, String decisionMd, String consequencesMd,
+                              boolean hasSupersedesEdge) {
+        // ВЕС ПО СТАТУСУ, как casual/fully-dressed у UC (ADR-LORE-027). PROPOSED —
+        // черновик: разложение, последствия и альтернативы там законно
+        // отсутствуют, и штрафовать за это значит давить на самом хрупком этапе.
+        // ACCEPTED — принятое правило: оно обязано быть разложено и иметь
+        // последствия, иначе «принято» сказано о заметке. Один и тот же список
+        // проверок даёт разный ЗНАМЕНАТЕЛЬ, а не разный набор.
+        boolean accepted = "ACCEPTED".equalsIgnoreCase(status);
         List<Finding> f = new ArrayList<>();
 
         req(f, "status", filled(status), "Статус задан");
@@ -165,15 +186,67 @@ final class WorkQuality {
         req(f, "project", any(projects), "Проект привязан");
         req(f, "context", filled(contextMd), "Контекст заполнен");
         req(f, "decision", filled(decisionMd), "Решение заполнено");
-        // Последствия — подсказка: бывают ADR, у которых их честно нет, и
-        // требовать текст ради текста значит поощрять воду.
-        hint(f, "consequences", filled(consequencesMd), "Последствия заполнены — желательно");
-        // Атомарные решения: ADR без них не разложен на проверяемые правила
-        // (ADR-LORE-014 §4). Подсказка, а не штраф: разложение — отдельный шаг,
-        // и требовать его в момент заведения ADR значит блокировать черновик.
-        hint(f, "decisions", hasDecisions, "Разложен на атомарные решения — желательно");
+
+        // Порог содержательности. Судится ОБЪЁМ, не смысл: раздел из полутора
+        // строк — это отписка, и отличить её от разбора структурно можно, а
+        // судить формулировки линтер не может и не должен.
+        opt(f, accepted, "context_substantive", len(contextMd) >= MIN_BODY,
+            "Контекст содержателен (≥ " + MIN_BODY + " симв.)");
+        opt(f, accepted, "decision_substantive", len(decisionMd) >= MIN_BODY,
+            "Решение содержательно (≥ " + MIN_BODY + " симв.)");
+
+        // Разделы по конвенции заголовков. «Альтернативы» — подсказка даже у
+        // ACCEPTED: бывают решения без развилки, и требовать вымышленный второй
+        // вариант значит поощрять выдумку.
+        hint(f, "alternatives", hasHeading(decisionMd, "льтернатив"),
+            "Раздел «Рассмотренные альтернативы» — желательно");
+
+        // Трассируемость: решение, не ссылающееся ни на один ADR/решение, стоит
+        // особняком от корпуса. Подсказка у черновика, требование у принятого.
+        opt(f, accepted, "traceability", refsEntity(decisionMd),
+            "Решение ссылается хотя бы на один ADR-*/D-* — трассируемость");
+
+        // Последствия и разложение: у черновика — подсказки (разложение отдельный
+        // шаг, и требовать его при заведении значит блокировать черновик), у
+        // принятого — обязательны (ADR-LORE-014 §4).
+        opt(f, accepted, "consequences", filled(consequencesMd),
+            accepted ? "Последствия заполнены" : "Последствия заполнены — желательно");
+        opt(f, accepted, "decisions", hasDecisions,
+            accepted ? "Разложен на атомарные решения" : "Разложен на атомарные решения — желательно");
+
+        // Когерентность статуса: SUPERSEDED без ребра SUPERSEDES — утверждение о
+        // замене, которое нечем проверить, и цепочка решений обрывается.
+        if ("SUPERSEDED".equalsIgnoreCase(status)) {
+            req(f, "supersedes_edge", hasSupersedesEdge,
+                "Статус SUPERSEDED требует ребра SUPERSEDES на заменяющий ADR");
+        }
 
         return score("adr", f);
+    }
+
+    /** Порог «раздел заполнен, а не отписан». Символы, не слова: слова считать дороже, а разницы нет. */
+    private static final int MIN_BODY = 120;
+
+    private static int len(String s) {
+        return s == null ? 0 : s.trim().length();
+    }
+
+    /** Заголовок markdown, содержащий фрагмент (без учёта регистра и окончания). */
+    private static boolean hasHeading(String md, String fragment) {
+        if (md == null) return false;
+        return java.util.regex.Pattern
+            .compile("(?mi)^#{1,6}\\s*.*" + java.util.regex.Pattern.quote(fragment))
+            .matcher(md).find();
+    }
+
+    /** Ссылка на сущность корпуса: ADR-… или D-… . */
+    private static boolean refsEntity(String md) {
+        return md != null && java.util.regex.Pattern.compile("\\b(ADR-[A-Z0-9-]+|D-[A-Z0-9-]{4,})")
+            .matcher(md).find();
+    }
+
+    private static void opt(List<Finding> f, boolean requiredHere, String code, boolean ok, String msg) {
+        f.add(new Finding(code, ok, requiredHere, msg));
     }
 
     /**

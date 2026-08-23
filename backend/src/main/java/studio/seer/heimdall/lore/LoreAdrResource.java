@@ -326,6 +326,7 @@ public class LoreAdrResource extends LoreResourceBase {
                 + "out('BELONGS_TO').component_id       AS components, "
                 + "out('BELONGS_TO_PROJECT').slug       AS projects, "
                 + "in('DECIDED_IN').size()              AS decision_count, "
+                + "out('SUPERSEDES').size()             AS supersedes_count, "
                 + "out('HAS_STATE')[valid_to IS NULL].context_md[0]      AS context_md, "
                 + "out('HAS_STATE')[valid_to IS NULL].decision_md[0]     AS decision_md, "
                 + "out('HAS_STATE')[valid_to IS NULL].consequences_md[0] AS consequences_md "
@@ -335,8 +336,10 @@ public class LoreAdrResource extends LoreResourceBase {
             if (rows == null || rows.isEmpty()) return null;
             Map<String, Object> r = rows.get(0);
             boolean hasDecisions = r.get("decision_count") instanceof Number n && n.intValue() > 0;
+            boolean hasSupersedes = r.get("supersedes_count") instanceof Number s && s.intValue() > 0;
             return WorkQuality.evaluateAdr(str(r.get("status")), r.get("components"), r.get("projects"),
-                hasDecisions, str(r.get("context_md")), str(r.get("decision_md")), str(r.get("consequences_md")));
+                hasDecisions, str(r.get("context_md")), str(r.get("decision_md")), str(r.get("consequences_md")),
+                hasSupersedes);
         } catch (RuntimeException e) {
             LOG.warnf("[LORE QUALITY] ADR %s: вердикт не собран (%s)", adrId, LoreUpstream.detail(e));
             return null;
