@@ -145,7 +145,10 @@ public class LoreRequestStats {
 
     void flush() {
         if (counters.isEmpty()) return;
-        String ts = Instant.now().toString();
+        // ts в MetricSnapshot — TIMESTAMP типа LONG (epoch millis), не строка.
+        // ISO-строка отвергается базой целиком: «Cannot convert String to LONG».
+        // Поймано на CI — ни одна точка не записалась, при этом сбор «работал».
+        long ts = System.currentTimeMillis();
         int written = 0;
         // Снимаем ключи по одному: параллельные инкременты во время сброса
         // попадут в следующее окно, а не потеряются между чтением и очисткой.

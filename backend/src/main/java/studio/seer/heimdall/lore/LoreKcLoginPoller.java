@@ -135,7 +135,8 @@ public class LoreKcLoginPoller {
             String key = ts + "|" + user + "|" + e.getString("clientId", "");
             if (seen.contains(key)) continue;   // окна перекрываются по границе суток
             current.add(key);
-            if (write(Instant.ofEpochMilli(ts).toString(), user, e.getString("clientId", "unknown"))) written++;
+            // ts как есть, epoch millis: MetricSnapshot.ts — LONG, строку база не примет.
+            if (write(ts, user, e.getString("clientId", "unknown"))) written++;
         }
         seen.clear();
         seen.addAll(current);
@@ -160,7 +161,7 @@ public class LoreKcLoginPoller {
         return uid == null || uid.isBlank() ? "unknown" : uid;
     }
 
-    private boolean write(String ts, String user, String clientId) {
+    private boolean write(long ts, String user, String clientId) {
         try {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "INSERT INTO MetricSnapshot SET ts=:ts, object_type='caller', object_id=:user, "
