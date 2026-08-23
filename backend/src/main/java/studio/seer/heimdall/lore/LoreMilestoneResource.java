@@ -116,11 +116,40 @@ public class LoreMilestoneResource extends LoreResourceBase {
             }
             if (req.goal_md() != null)
                 hashStamper.stampOpenHist("KnowMilestoneHist", "KnowMilestone", "milestone_id", req.milestone_id());
-            return noStore(Response.ok(Map.of("ok", true, "milestone_id", req.milestone_id())));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("milestone_id", req.milestone_id());
+            // Вердикт полноты (ADR-LORE-039): веха без даты не ложится на план.
+            WorkQuality.Result quality = milestoneQuality(req.milestone_id());
+            if (quality != null) out.put("quality", quality);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE] %s: %s", req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * Вердикт полноты вехи (ADR-LORE-039). Поля читаются под их РЕАЛЬНЫМИ
+     * именами в модели — {@code label} и {@code date_display}; спринты берутся
+     * обратным обходом TARGETS_MILESTONE. Сбой вердикта не роняет ответ: запись
+     * уже состоялась и была тем, что просил вызывающий.
+     */
+    private WorkQuality.Result milestoneQuality(String milestoneId) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints "
+                + "FROM KnowMilestone WHERE milestone_id = :mid", Map.of("mid", milestoneId));
+            if (rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            return WorkQuality.evaluateMilestone(
+                r.get("label") == null ? null : String.valueOf(r.get("label")),
+                r.get("date_display") == null ? null : String.valueOf(r.get("date_display")),
+                r.get("sprints"));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] веха %s: вердикт не собран (%s)", milestoneId, LoreUpstream.detail(e));
+            return null;
         }
     }
 }

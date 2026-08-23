@@ -137,7 +137,11 @@ public class LoreDecisionResource extends LoreResourceBase {
     private WorkQuality.Result decisionQuality(String decisionId) {
         try {
             var res = client.query(db, basicAuth(), new studio.seer.heimdall.bench.MartQuery("sql",
-                "SELECT status, body_md, "
+                // status_raw, а НЕ status: у KnowDecision статус живёт именно
+                // здесь (см. запись выше — «имя status было бы второй правдой»).
+                // Чтение не того поля давало вечное «Статус задан: нет» даже
+                // сразу после успешной установки статуса.
+                "SELECT status_raw AS status, body_md, "
                 + "out('DECIDED_IN').size()        AS adr_count, "
                 + "out('BELONGS_TO').component_id  AS components, "
                 + "out('TAGGED_WITH').tag_id       AS tags "
