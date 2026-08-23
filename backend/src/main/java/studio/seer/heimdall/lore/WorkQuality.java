@@ -289,12 +289,19 @@ final class WorkQuality {
         return score("component", f);
     }
 
-    /** Веха (KnowMilestone). Без целевой даты веха не ложится на план — она перестаёт быть вехой. */
-    static Result evaluateMilestone(String title, String targetDate, Object sprints) {
+    /**
+     * Веха (KnowMilestone). Без даты веха не ложится на план — перестаёт быть
+     * вехой и становится просто ярлыком.
+     *
+     * <p>Имена полей — как в модели: {@code label} и {@code date_display}, а не
+     * «title»/«target_date». Проверка, названная по несуществующему полю,
+     * краснела бы всегда (D-2026-LORE-QUALITY-NO-PHANTOM-CHECKS).
+     */
+    static Result evaluateMilestone(String label, String dateDisplay, Object sprints) {
         List<Finding> f = new ArrayList<>();
 
-        req(f, "title", filled(title), "Заголовок задан");
-        req(f, "target_date", filled(targetDate), "Целевая дата задана");
+        req(f, "label", filled(label), "Название задано");
+        req(f, "date_display", filled(dateDisplay), "Дата задана");
 
         hint(f, "sprints", any(sprints), "Привязаны спринты — иначе веха ничем не наполнена");
 

@@ -325,9 +325,11 @@ class WorkQualityTest {
     }
 
     @Test
-    void вехаБезЦелевойДатыКраснеет() {
+    void вехаБезДатыКраснеет() {
+        // Поля называются как в модели: label / date_display, не title / target_date.
         var r = WorkQuality.evaluateMilestone("M1", null, null);
-        assertFalse(find(r, "target_date").ok());
+        assertFalse(find(r, "date_display").ok());
+        assertTrue(find(r, "label").ok());
         assertFalse(find(r, "sprints").required(), "спринты — подсказка");
     }
 

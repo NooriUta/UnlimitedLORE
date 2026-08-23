@@ -117,7 +117,14 @@ public class LoreComponentResource extends LoreResourceBase {
             }
             // ADR-LORE-012 level B: keep the IN_AREA edge in sync with the string.
             if (req.area() != null) relinkAreaEdge(req.component_id(), req.area());
-            return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("component_id", req.component_id());
+            // Вердикт полноты (ADR-LORE-039): голый component_id в списках
+            // нечитаем, а без области компонент не ложится в группировку.
+            WorkQuality.Result quality = componentQuality(req.component_id());
+            if (quality != null) out.put("quality", quality);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT CREATE] %s: %s", req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -213,6 +220,26 @@ public class LoreComponentResource extends LoreResourceBase {
             LOG.warnf("[LORE COMPONENT DELETE] %s: %s", cid, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * Вердикт полноты компонента (ADR-LORE-039). Все четыре поля читаются под
+     * теми же именами, которыми их пишет upsert выше — сверено, чтобы не завести
+     * проверку на несуществующее поле (D-2026-LORE-QUALITY-NO-PHANTOM-CHECKS).
+     */
+    private WorkQuality.Result componentQuality(String componentId) {
+        try {
+            java.util.List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT full_name, area, owner, game_icon FROM LoreComponent WHERE component_id = :cid",
+                Map.of("cid", componentId));
+            if (rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            return WorkQuality.evaluateComponent(str(r.get("full_name")), str(r.get("area")),
+                str(r.get("owner")), str(r.get("game_icon")));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] компонент %s: вердикт не собран (%s)", componentId, LoreUpstream.detail(e));
+            return null;
         }
     }
 
