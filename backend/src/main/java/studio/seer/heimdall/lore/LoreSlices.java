@@ -1567,6 +1567,53 @@ public final class LoreSlices {
             "AND NOT (ts = '2026-07-02 09:00:00' AND (object_type = 'competitor' OR object_id = 'KW-08'))",
             List.of(), Map.of(), " ORDER BY ts DESC LIMIT 100");
 
+        // ── STAT-1: кто что и по сколько запрашивает ─────────────────────────
+        //
+        // Сырьё пишет LoreRequestStats (агрегат за окно, не точка на запрос).
+        // Свёртка здесь именно SUM по (кто × ось × что): без неё окна за сутки
+        // читались бы вручную, а вопрос владельца — «по сколько», то есть итог.
+        //
+        // Порог по времени параметром: без него слайс всегда отдавал бы всю
+        // историю, и «за сегодня» пришлось бы считать глазами. Формат — ISO
+        // ('2026-08-23'), сравнение строкой работает, так как ts лексикографически
+        // упорядочен так же, как хронологически.
+        slice("requests_by_caller",
+            "SELECT object_id AS caller, segment AS axis, source AS what, sum(value) AS calls " +
+            "FROM MetricSnapshot WHERE metric = 'lore.requests' AND ts >= :since " +
+            "GROUP BY object_id, segment, source",
+            List.of("since"), Map.of(), " ORDER BY calls DESC LIMIT 200");
+
+        // Тот же ряд, свёрнутый до вызывающего: «кто вообще сколько зовёт»,
+        // без разбивки по эндпоинтам — верхний уровень ответа.
+        slice("requests_total",
+            "SELECT object_id AS caller, segment AS axis, sum(value) AS calls " +
+            "FROM MetricSnapshot WHERE metric = 'lore.requests' AND ts >= :since " +
+            "GROUP BY object_id, segment",
+            List.of("since"), Map.of(), " ORDER BY calls DESC LIMIT 100");
+
+        // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
+        // Отличать от sessions_recent намеренно: здесь наблюдённый факт входа,
+        // там — догадка LORE по первому запросу после паузы. source = clientId,
+        // то есть видно, куда именно человек вошёл.
+        slice("logins_recent",
+            "SELECT object_id AS user, source AS client_id, ts " +
+            "FROM MetricSnapshot WHERE metric = 'lore.login' AND ts >= :since",
+            List.of("since"), Map.of(), " ORDER BY ts DESC LIMIT 200");
+
+        slice("logins_by_user",
+            "SELECT object_id AS user, sum(value) AS logins " +
+            "FROM MetricSnapshot WHERE metric = 'lore.login' AND ts >= :since " +
+            "GROUP BY object_id",
+            List.of("since"), Map.of(), " ORDER BY logins DESC LIMIT 100");
+
+        // Начала сессий — догадка, а не факт: вход в Keycloak происходит вне
+        // периметра LORE. Полезно для АГЕНТОВ, у которых логина в KC нет вовсе
+        // (client_credentials): для них это единственный признак «пришёл».
+        slice("sessions_recent",
+            "SELECT object_id AS caller, segment AS axis, ts " +
+            "FROM MetricSnapshot WHERE metric = 'lore.session_start' AND ts >= :since",
+            List.of("since"), Map.of(), " ORDER BY ts DESC LIMIT 200");
+
         slice("bragi_competitors",
             "SELECT competitor_id, name FROM BragiCompetitor",
             List.of(), Map.of(), " ORDER BY competitor_id");
