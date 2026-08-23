@@ -2,10 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { a11yClick } from './a11y';
 import { fetchLoreSlice, type LoreSprintRow, type LoreComponent } from '../../api/lore';
-import { statusMeta } from './lore-status';
+import { statusMeta, taskTick } from './lore-status';
 import { GameIcon } from './GameIcon';
 import LoreSkeleton from './LoreSkeleton';
 import { normalizeStatus } from './loreUtils';
+import { STATUS_COUNT_ORDER, buildStatusCountLabel } from './LoreSprintDetail';
+
+// One row of the lightweight `task_status_by_sprint` slice: a task's sprint +
+// its raw status, nothing else — the sidebar aggregates counts per sprint in JS.
+interface TaskStatusRow { sprint_id: string | null; status_raw: string | null }
 
 // Semver-aware release comparator: v1.10.0 > v1.9.0
 function releaseKey(id: string | null | undefined): string {
@@ -127,6 +132,21 @@ const S = {
   }),
   empty: { padding: 24, color: 'var(--t3)', fontSize: 'var(--fs-base)' },
   spinning: { display: 'inline-block', animation: 'lore-spin 0.6s linear infinite' },
+
+  // Task-status breakdown (per sprint row)
+  brk: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' as const, minWidth: 0 },
+  bkChip: (color: string) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 2,
+    fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', fontWeight: 700,
+    lineHeight: 1, color,
+  }),
+  sum: { color: 'var(--t3)', fontSize: 'var(--fs-2xs)', fontFamily: 'var(--mono)', flexShrink: 0 },
+  sumSep: { width: 1, height: 10, background: 'var(--bd)', flexShrink: 0 },
+  bar: {
+    display: 'flex', height: 3, borderRadius: 2, overflow: 'hidden' as const,
+    background: 'var(--bd)', marginTop: 1,
+  },
+  statusHead: { display: 'inline-flex', alignItems: 'center', flexShrink: 0 },
 };
 
 export type DatePeriod = 'month' | 'quarter' | '90d' | null;
@@ -158,6 +178,7 @@ interface Props {
 
 export default function LoreSprintTree({ module: _module, q, statusFilter, priorityFilter, projectFilter, componentFilter, noRelease, datePeriod, selectedId, onError, onSelect, onCounts, onStats, onProjectFacets, onComponentFacets }: Props) {
   const { t } = useTranslation();
+  const statusCountLabel = buildStatusCountLabel(t);
   const [rows, setRows]           = useState<LoreSprintRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -170,6 +191,8 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
   const compSel     = componentFilter ?? new Set<string>();
   const abortRef = useRef<AbortController | null>(null);
   const [compMeta, setCompMeta] = useState<Map<string, LoreComponent>>(new Map());
+  // sprint_id → { statusKey → count } — task-status breakdown shown per row.
+  const [taskCounts, setTaskCounts] = useState<Map<string, Record<string, number>>>(new Map());
 
   useEffect(() => {
     abortRef.current?.abort();
@@ -193,6 +216,27 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
       .catch(() => { /* icons are cosmetic — silently fall back to a generic icon */ });
     return () => ctrl.abort();
   }, []);
+
+  // Task-status breakdown per sprint. One lightweight fetch of all task
+  // (sprint_id, status_raw) pairs, aggregated in JS — no GROUP BY on the
+  // backend (this ArcadeDB version groups incorrectly). Reloads with the list.
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchLoreSlice<TaskStatusRow>('task_status_by_sprint', undefined, ctrl.signal)
+      .then(list => {
+        const m = new Map<string, Record<string, number>>();
+        for (const r of list) {
+          if (!r.sprint_id) continue;
+          const k = taskTick(r.status_raw).status;
+          const bucket = m.get(r.sprint_id) ?? {};
+          bucket[k] = (bucket[k] ?? 0) + 1;
+          m.set(r.sprint_id, bucket);
+        }
+        setTaskCounts(m);
+      })
+      .catch(() => { /* breakdown is additive — fall back to no chips on error */ });
+    return () => ctrl.abort();
+  }, [reloadKey]);
 
   // All unique project slugs present in the data
   const allProjects = useMemo(() => {
@@ -385,6 +429,12 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
           // it as a React key source, or repeat entries collide (duplicate-key
           // warning, reproduces on any sprint touching a project more than once).
           const projs   = [...new Set(s.git_projects ?? [])];
+          // Task-status breakdown for this sprint (may be empty while loading /
+          // for a sprint with no tasks).
+          const counts  = taskCounts.get(s.sprint_id) ?? {};
+          const brkKeys = STATUS_COUNT_ORDER.filter(k => counts[k]);
+          const brkTot  = brkKeys.reduce((a, k) => a + counts[k], 0);
+          const brkDone = counts['done'] ?? 0;
 
           return (
             <div
@@ -401,9 +451,16 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                 {projs.map(g => (
                   <span key={g} style={S.projDot(projColor(g, allProjects))} title={g} />
                 ))}
+                {/* Sprint status icon — lifted up to the name line (was on line 2) */}
+                {status && (
+                  <span style={S.statusHead} title={statusCountLabel[normalizeStatus(s.status_raw)] ?? status}>
+                    <GameIcon slug={statusMeta(status).icon} size={13}
+                      style={{ color: statusMeta(status).color }} />
+                  </span>
+                )}
                 <span style={S.id}>{s.sprint_id}</span>
               </div>
-              {(date || status || release || relDate) && (
+              {(date || status || release || relDate || brkKeys.length > 0) && (
                 <div style={S.line2}>
                   {date && <span style={S.date}>{date}</span>}
                   {s.priority && (
@@ -412,10 +469,21 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                       color: s.priority === 'P0' ? 'var(--dng)' : s.priority === 'P1' ? 'var(--wrn)' : 'var(--t3)',
                     }}>{s.priority}</span>
                   )}
-                  {status && (
-                    <span title={status} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                      <GameIcon slug={statusMeta(status).icon} size={12}
-                        style={{ color: statusMeta(status).color }} />
+                  {/* Task-status breakdown: one icon+count per present status,
+                      then done/total. Status icon of the sprint itself moved to
+                      line 1 (next to the name). */}
+                  {brkKeys.length > 0 && (
+                    <span style={S.brk}>
+                      {brkKeys.map(k => (
+                        <span key={k} style={S.bkChip(statusMeta(k).color)}
+                          title={`${statusCountLabel[k] ?? k}: ${counts[k]}`}>
+                          <GameIcon slug={statusMeta(k).icon} size={11}
+                            style={{ color: statusMeta(k).color }} />
+                          {counts[k]}
+                        </span>
+                      ))}
+                      <span style={S.sumSep} />
+                      <span style={S.sum}>{brkDone}/{brkTot}</span>
                     </span>
                   )}
                   {release && (
@@ -426,6 +494,18 @@ export default function LoreSprintTree({ module: _module, q, statusFilter, prior
                     }}>{release}</span>
                   )}
                   {relDate && <span style={{ ...S.date, opacity: 0.7 }}>{relDate}</span>}
+                </div>
+              )}
+              {/* Thin progress bar — task-status proportions of the sprint */}
+              {brkTot > 0 && (
+                <div style={S.bar}>
+                  {brkKeys.map(k => (
+                    <span key={k} style={{
+                      display: 'block', height: '100%',
+                      width: `${(counts[k] / brkTot) * 100}%`,
+                      background: statusMeta(k).color,
+                    }} />
+                  ))}
                 </div>
               )}
             </div>
