@@ -138,12 +138,50 @@ public class LoreSpecResource extends LoreResourceBase {
             // синхроне, как T01 сделал для PARENT_OF.
             if (req.component_id() != null) relinkSpecComponentEdge(req.spec_id(), req.component_id());
             hashStamper.stampOpenHist("KnowSpecHist", "KnowSpec", "spec_id", req.spec_id());
-            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id(),
-                "body_written", histWritten)));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("spec_id", req.spec_id());
+            out.put("body_written", histWritten);
+            // Вердикт полноты (ADR-LORE-039): спека без содержания — заглушка,
+            // она занимает место в реестре знаний и создаёт впечатление, что
+            // тема покрыта. Advisory, на запись не влияет.
+            WorkQuality.Result quality = specQuality(req.spec_id());
+            if (quality != null) out.put("quality", quality);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * Вердикт полноты спеки (ADR-LORE-039). Факты — из графа ПОСЛЕ записи рёбер:
+     * судится сохранённое состояние, а не присланный запрос. Тело и версия живут
+     * на ОТКРЫТОЙ Hist-строке, компонент — на ребре DOCUMENTED_IN (поле
+     * component_id само по себе невидимо, см. комментарий на записи выше).
+     */
+    private WorkQuality.Result specQuality(String specId) {
+        try {
+            var res = client.query(db, basicAuth(), new studio.seer.heimdall.bench.MartQuery("sql",
+                // COALESCE как в слайсе spec_by_id: тело и версия живут на
+                // открытой Hist-строке, но у легаси-спек лежат прямо на вершине.
+                // Чтение только из истории красило бы их «без содержания».
+                "SELECT title, "
+                + "COALESCE(out('HAS_STATE')[valid_to IS NULL].content_md[0], content_md) AS content_md, "
+                + "COALESCE(out('HAS_STATE')[valid_to IS NULL].version[0], version)       AS version, "
+                + "out('DOCUMENTED_IN').component_id                AS components, "
+                + "out('BELONGS_TO_PROJECT').slug                   AS projects "
+                + "FROM KnowSpec WHERE spec_id = :id", Map.of("id", specId), 1))
+                .await().indefinitely();
+            var rows = res.result();
+            if (rows == null || rows.isEmpty()) return null;
+            Map<String, Object> r = rows.get(0);
+            return WorkQuality.evaluateSpec(str(r.get("title")), str(r.get("content_md")),
+                r.get("components"), r.get("projects"), str(r.get("version")));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE QUALITY] спека %s: вердикт не собран (%s)", specId, LoreUpstream.detail(e));
+            return null;
         }
     }
 

@@ -1512,6 +1512,7 @@
       "futureHint": "date is after today — likely a typo in LORE",
       "noProject": "no project",
       "tasksMore": "{{count}} more tasks",
+      "delta": "unique elements",
       "sinceLast": "since last time: {{count}}",
       "markRead": "read",
       "kind": {

@@ -57,12 +57,24 @@ public final class LoreSlices {
 
         slice("timeline_adrs",
             "SELECT adr_id, date_created, " +
-            "out('BELONGS_TO').component_id[0] AS component " +
+            "out('BELONGS_TO').component_id[0] AS component, " +
+            // ADRPROJ-01: у ADR есть BELONGS_TO_PROJECT — отдаём в ленту, иначе
+            // новые ADR со связкой на проект падали в «без проекта» (владелец).
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowADR WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 150");
 
+        // ML-NEWS project derivation for decisions: the feed grouped them under
+        // «без проекта» because this slice never carried a project. A decision's
+        // project is either its OWN BELONGS_TO_PROJECT edge (rare, 9/300) or —
+        // the model path — its parent ADR's (decision →DECIDED_IN→ ADR
+        // →BELONGS_TO_PROJECT, ADRPROJ-01). news() prefers the own edge, then the
+        // ADR's. Same shape as the spec row (projects[]).
         slice("timeline_decisions",
-            "SELECT decision_id, title, date_created FROM KnowDecision " +
+            "SELECT decision_id, title, date_created, " +
+            "out('BELONGS_TO_PROJECT').slug                  AS projects, " +
+            "out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug AS adr_projects " +
+            "FROM KnowDecision " +
             "WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 200");
 
@@ -819,6 +831,18 @@ public final class LoreSlices {
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
+
+        // Lightweight projection: one row per task carrying only its sprint_id +
+        // status_raw. Feeds the sprint LIST (LoreSprintTree) task-status breakdown
+        // across ALL sprints — the frontend aggregates counts per sprint in JS.
+        // No GROUP BY on purpose (this ArcadeDB version groups incorrectly — same
+        // reason tasks_of_sprints_batch / MartSlices avoid it), and no note_md/title
+        // so the sidebar payload stays small even at 400+ sprints.
+        slice("task_status_by_sprint",
+            "SELECT out('PART_OF').sprint_id[0]                            AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]        AS status_raw " +
+            "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IS NOT NULL",
+            List.of(), Map.of(), " ORDER BY out('PART_OF').sprint_id[0]");
 
         // ── §3 Milestones ────────────────────────────────────────────────────
         slice("milestones",

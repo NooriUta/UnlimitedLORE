@@ -293,11 +293,11 @@ function PriorityPicker({ sprintId, current, onChanged }: {
 
 // Status-count chips for the sprint header: one chip per present status (icon + count).
 // Multi-select: click chips to show only those statuses; click again to deselect.
-const STATUS_COUNT_ORDER = [
+export const STATUS_COUNT_ORDER = [
   'done', 'ready_for_deploy', 'active', 'partial', 'design',
   'planned', 'todo', 'deferred', 'backlog', 'blocked', 'cancelled',
 ] as const;
-function buildStatusCountLabel(t: (k: string, d: string) => string): Record<string, string> {
+export function buildStatusCountLabel(t: (k: string, d: string) => string): Record<string, string> {
   return {
     done: t('lore.sprintDetail.status.done', 'Готово'),
     ready_for_deploy: t('lore.sprintDetail.status.readyForDeploy', 'К деплою'),
