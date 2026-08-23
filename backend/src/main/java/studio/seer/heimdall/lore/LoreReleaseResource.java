@@ -47,7 +47,24 @@ public class LoreReleaseResource extends LoreResourceBase {
     //
     // Читающая проба под catch: линтер вспомогательный, его отказ не имеет
     // права превратить успешную запись в ошибку (то же правило, что у задач).
-    private WorkQuality.Result releaseQuality(String releaseId) {
+    // Ищем по release_uid, а НЕ по release_id: один и тот же номер версии живёт
+    // в разных репозиториях (на 2026-08-23 таких пересечений 13), и
+    // `WHERE release_id=… LIMIT 1` брал ПРОИЗВОЛЬНУЮ вершину. На живом выпуске
+    // v1.7.0 вердикт отчитался «спринты и PR привязаны», прочитав связи ЧУЖОГО
+    // релиза при полностью пустом своём — то есть соврал ровно там, где должен
+    // был предупредить. Тот же капкан, что AL-111 в release_mv.
+    // Без git_project вердикт не собираем: угадывать, чей это релиз, нельзя.
+    /** Проект-владелец релиза: присланный или исторический дефолт. Одно место на весь ресурс. */
+    private static String projectOf(String gitProject) {
+        return gitProject != null && !gitProject.isBlank() ? gitProject : "NooriUta/AIDA";
+    }
+
+    private WorkQuality.Result releaseQuality(String releaseId, String gitProject) {
+        if (gitProject == null || gitProject.isBlank()) {
+            LOG.warnf("[LORE QUALITY] релиз %s: вердикт пропущен — не задан git_project "
+                + "(release_id неуникален между репозиториями)", releaseId);
+            return null;
+        }
         try {
             var res = client.query(db, basicAuth(), new MartQuery("sql",
                 "SELECT git_tag, description_md, "
@@ -57,7 +74,8 @@ public class LoreReleaseResource extends LoreResourceBase {
                 + "in('IMPLEMENTED_IN_RELEASE').sprint_id AS sprints, "
                 + "in('SHIPPED_IN').pr_number             AS prs, "
                 + "out('BELONGS_TO_PROJECT').slug         AS projects "
-                + "FROM KnowRelease WHERE release_id = :rid", Map.of("rid", releaseId), 1))
+                + "FROM KnowRelease WHERE release_uid = :ruid",
+                Map.of("ruid", gitProject + "#" + releaseId), 1))
                 .await().indefinitely();
             var rows = res.result();
             if (rows == null || rows.isEmpty()) return null;
@@ -168,7 +186,7 @@ public class LoreReleaseResource extends LoreResourceBase {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("is_current", cur); out.put("created", now);
-            out.put("quality", releaseQuality(req.release_id()));
+            out.put("quality", releaseQuality(req.release_id(), gp));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE CREATE] %s: %s", req.release_id(), e.getMessage());
@@ -238,7 +256,7 @@ public class LoreReleaseResource extends LoreResourceBase {
             out.put("updated_at", Instant.now().toString());
             // ADR-LORE-039: вердикт был на create и link, но не здесь — правка
             // описания меняет ровно ту полноту, которую он и судит.
-            out.put("quality", releaseQuality(req.release_id()));
+            out.put("quality", releaseQuality(req.release_id(), ugp));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE UPDATE] %s: %s", req.release_id(), e.getMessage());
@@ -338,7 +356,10 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("release_id", req.release_id());
         out.put("sprints_linked", sprintsLinked);
         out.put("prs_linked", prsLinked);
-        out.put("quality", releaseQuality(req.release_id()));
+        // Проект берём тем же правилом, что и внутри try (та переменная не видна
+        // здесь по области видимости) — дефолт обязан совпадать, иначе вердикт
+        // ушёл бы искать релиз не в том репозитории.
+        out.put("quality", releaseQuality(req.release_id(), projectOf(req.git_project())));
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
     }
@@ -405,7 +426,7 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("prs_removed", prsRemoved);
         // ADR-LORE-039: на снятии связей вердикт нужнее, чем где-либо — именно
         // здесь релиз становится неполным, и сказать об этом надо сразу.
-        out.put("quality", releaseQuality(req.release_id()));
+        out.put("quality", releaseQuality(req.release_id(), gp));
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
     }
