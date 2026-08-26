@@ -1732,13 +1732,31 @@ public final class LoreSlices {
      * derived-привязкой (components — через спринты) сюда не входят: у них
      * «проект» вычислим, но не является фактом самой вершины (решение AL-92).</p>
      */
-    static final Map<String, String> PROJECT_SCOPED = Map.of(
-        "sprints",   "out('BELONGS_TO_PROJECT').slug",
-        "adrs",      "out('BELONGS_TO_PROJECT').slug",
-        "releases",  "out('BELONGS_TO_PROJECT').slug",
-        "docs",      "out('BELONGS_TO_PROJECT').slug",
-        "runbooks",  "out('BELONGS_TO_PROJECT').slug",
-        "specs",     "out('BELONGS_TO_PROJECT').slug"
+    // Несколько выражений на слайс (разделитель "|") = проверка И ПРЯМОЙ связи,
+    // И КОСВЕННОЙ — через родительский объект. Решение владельца: «проверять надо
+    // как прямую связь, так и косвенную через родительские объекты».
+    //
+    // Зачем: у решений собственного ребра проекта почти нет (300 из 300 — проект
+    // выводится через родительский ADR), у вопросов — у 24 из 37 непривязанных.
+    // Со строгой проверкой ТОЛЬКО прямой связи включённый скоуп отрезал бы автору
+    // его же вопрос, поднятый в его же ADR («не проходит редактирование с обрезкой
+    // прав по проектам»). Проверка «хотя бы один путь ведёт в разрешённый проект»
+    // сохраняет смысл скоупа и не наказывает за неполноту рёбер.
+    static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
+        Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("releases",  "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("docs",      "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("runbooks",  "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("specs",     "out('BELONGS_TO_PROJECT').slug"),
+        // Решение: своё ребро ИЛИ проект родительского ADR (DECIDED_IN).
+        Map.entry("decisions",
+            "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("decisions_of_adr",
+            "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        // Вопрос: своё ребро ИЛИ проект места, где он поднят (RAISED_IN → ADR/спринт).
+        Map.entry("open_questions",
+            "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug")
     );
 
     /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */
@@ -1763,18 +1781,28 @@ public final class LoreSlices {
         if (traversal == null) return base;
 
         Map<String, Object> params = new LinkedHashMap<>(base.params());
+        // Выражений может быть несколько (прямая связь | через родителя) — сущность
+        // видна, если ХОТЯ БЫ ОДИН путь ведёт в разрешённый проект.
+        String[] traversals = traversal.split("\\|");
         String condition;
         if (allowed.isEmpty()) {
             params.put("__scope0", SCOPE_NONE);
-            condition = traversal + " CONTAINS :__scope0";
+            StringBuilder or = new StringBuilder();
+            for (String tr : traversals) {
+                if (or.length() > 0) or.append(" OR ");
+                or.append(tr).append(" CONTAINS :__scope0");
+            }
+            condition = "(" + or + ")";
         } else {
             StringBuilder or = new StringBuilder();
             int i = 0;
             for (String slug : allowed) {
                 String key = "__scope" + i++;
                 params.put(key, slug);
-                if (or.length() > 0) or.append(" OR ");
-                or.append(traversal).append(" CONTAINS :").append(key);
+                for (String tr : traversals) {
+                    if (or.length() > 0) or.append(" OR ");
+                    or.append(tr).append(" CONTAINS :").append(key);
+                }
             }
             condition = "(" + or + ")";
         }
