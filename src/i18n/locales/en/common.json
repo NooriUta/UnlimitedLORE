@@ -1507,6 +1507,10 @@
     "sandboxedHtmlFrame": {
       "defaultTitle": "KnowDoc"
     },
+    "questions": {
+      "closedViaAnswer": "closed (via answering decision)",
+      "triggerPlaceholder": "condition to revisit (required for “deferred”)"
+    },
     "news": {
       "empty": "Nothing has happened yet",
       "future": "future",
