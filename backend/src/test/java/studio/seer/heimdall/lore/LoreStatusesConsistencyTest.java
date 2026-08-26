@@ -84,4 +84,36 @@ class LoreStatusesConsistencyTest {
                 "statusRaw['" + key + "'] value drift vs shared/lore-statuses.json");
         }
     }
+
+    /**
+     * SPRINT_QG_REBUILD/QG-13. Ось ЧТЕНИЯ — {@code statusMatch} — появилась
+     * позже остальных и по той же причине, по какой появились они: словарь
+     * распознавания был записан трижды и трижды по-разному. Разошлось молча и
+     * стоило одного спринта без даты закрытия и семи задач, числившихся
+     * открытыми (QG-06).
+     */
+    @Test
+    void statusMatchVocabularyMatchesCanonical() throws Exception {
+        JsonNode match = loadCanonical().get("statusMatch");
+        assertNotNull(match, "statusMatch missing from canonical JSON");
+
+        Set<String> jsonKeys = new LinkedHashSet<>();
+        match.fieldNames().forEachRemaining(jsonKeys::add);
+
+        Set<String> javaKeys = new LinkedHashSet<>();
+        LoreStatusVocabulary.ENTRIES.forEach(e -> javaKeys.add(e.canon()));
+        assertEquals(new TreeSet<>(jsonKeys), new TreeSet<>(javaKeys),
+            "набор статусов в LoreStatusVocabulary разошёлся с shared/lore-statuses.json.statusMatch");
+
+        for (LoreStatusVocabulary.Entry e : LoreStatusVocabulary.ENTRIES) {
+            JsonNode node = match.get(e.canon());
+            assertEquals(node.get("marker").asText(), e.marker(),
+                "значок '" + e.canon() + "' разошёлся с каноном");
+
+            Set<String> jsonWords = new LinkedHashSet<>();
+            node.get("words").forEach(n -> jsonWords.add(n.asText()));
+            assertEquals(new TreeSet<>(jsonWords), new TreeSet<>(e.words()),
+                "слова '" + e.canon() + "' разошлись с каноном");
+        }
+    }
 }
