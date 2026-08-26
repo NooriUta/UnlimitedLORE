@@ -72,9 +72,14 @@ public final class LoreSlices {
      * а не подстрокой. Ровно на подстроке {@code LIKE '%DONE%'} ошибалась версия до
      * AL-117: «📋 PLANNED — … DONE позже» ею считалось закрытым.
      */
-    static final String DONE_STATUS_SQL =
-        "status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%' " +
-        "OR status_raw LIKE 'DONE%' OR status_raw LIKE 'CLOSED%' OR status_raw LIKE 'MERGED%'";
+    static final String DONE_STATUS_SQL = LoreStatusVocabulary.anySql("status_raw", "done");
+
+    /**
+     * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
+     * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
+     */
+    private static final String OPEN_TASK_STATUS_EXPR =
+        "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
 
     static {
         // ── §1 Timeline — 3 separate slices, merged on frontend ──────────────
@@ -1415,15 +1420,10 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id AS component_ids, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
-            // Отрицание DONE_STATUS_SQL, раскрытое по де Моргану в цепочку NOT LIKE:
-            // грамматика ArcadeDB на `NOT ( ... OR ... )` в этой позиции не проверена,
-            // а тихо пустая выдача здесь неотличима от «открытых задач нет».
-            "WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '✅%' " +
-            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'ЗАВЕРШЁН%' " +
-            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'DONE%' " +
-            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'CLOSED%' " +
-            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'MERGED%' " +
-            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '🚫%'",
+            // «Открытая» = не закрытая и не отменённая. Оба словаря берутся из
+            // LoreStatusVocabulary, отрицание раскрыто по де Моргану в цепочку
+            // NOT LIKE — см. noneSql() про то, почему не NOT ( ... OR ... ).
+            "WHERE " + LoreStatusVocabulary.noneSql(OPEN_TASK_STATUS_EXPR, "done", "cancelled"),
             List.of(),
             new LinkedHashMap<>(Map.of(
                 // Двойной хоп — тот же паттерн, что уже проверен в этом файле
