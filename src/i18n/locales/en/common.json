@@ -454,6 +454,7 @@
       "consequences": "Consequences",
       "dependsOn": "Depends on",
       "supersedes": "Supersedes",
+      "supersededBy": "Superseded by",
       "implementedInSprint": "Implemented in sprint",
       "releasedIn": "Released in",
       "tags": "Tags",
@@ -1516,6 +1517,7 @@
       "futureHint": "date is after today — likely a typo in LORE",
       "noProject": "no project",
       "tasksMore": "{{count}} more tasks",
+      "delta": "unique elements",
       "sinceLast": "since last time: {{count}}",
       "markRead": "read",
       "kind": {

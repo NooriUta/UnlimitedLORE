@@ -454,6 +454,7 @@
       "consequences": "Последствия",
       "dependsOn": "Зависит от",
       "supersedes": "Заменяет",
+      "supersededBy": "Заменён на",
       "implementedInSprint": "Реализовано в спринте",
       "releasedIn": "Выпущено в релизе",
       "tags": "Теги",
@@ -1516,6 +1517,7 @@
       "futureHint": "дата позже сегодня — вероятно опечатка в LORE",
       "noProject": "без проекта",
       "tasksMore": "ещё {{count}} задач",
+      "delta": "уникальных элементов",
       "sinceLast": "с прошлого раза: {{count}}",
       "markRead": "прочитано",
       "kind": {

@@ -379,6 +379,12 @@ export interface LoreAdrPassport {
   implemented_in_ids: string[] | null;
   release_ids: string[] | null;
   supersedes_ids: string[] | null;
+  /**
+   * FIX-7: обратное SUPERSEDES — какие ADR заменили ЭТОТ. Ребро идёт от нового
+   * к старому, поэтому у заменённой записи оно входящее и в паспорте не
+   * показывалось вовсе: статус «Заменено» стоял, а чем перекрыт — нигде.
+   */
+  superseded_by_ids?: string[] | null;
   tags: string[] | null;
   /** ADRPROJ-01: git-проекты ADR (BELONGS_TO_PROJECT, multi). */
   git_projects?: string[] | null;

@@ -51,18 +51,60 @@ public final class LoreSlices {
         SLICES.put(id, new SliceDef(baseSql, required, optional, suffix));
     }
 
+    /**
+     * SQL-условие «состояние закрыто» — общее для всех слайсов, где закрытость
+     * определяется по тексту статуса. Объявлено ДО статического блока намеренно:
+     * блок его использует, а Java не допускает forward reference из инициализатора.
+     *
+     * <p>AL-117 сделал значок основным сигналом, и это верно: {@code status_raw} —
+     * свободный текст после значка, а матчинг по словам-подстрокам систематически
+     * терял формулировки, для которых не был написан. Но у отсечки строго по
+     * значку своя цена: строка БЕЗ значка перестала считаться закрытой вообще.
+     *
+     * <p>SPRINT_QG_REBUILD/QG-06 (2026-08-26), замерено на проде: один спринт
+     * ({@code SPRINT_SITE_SEO_PRERENDER}, открытая hist-строка ровно {@code "DONE"})
+     * и семь задач. Спринт остался без {@code done_date}; задачи хуже — они
+     * попадают в {@code open_tasks} и числятся незакрытыми. При этом
+     * {@code AidaLoreResource.classifyStatus()} те же строки считает закрытыми:
+     * аналитика и слайсы расходятся в том, что значит «закрыто», и расходятся молча.
+     *
+     * <p>Поэтому слова возвращаются вторым уровнем — но <b>якорем в начале строки</b>,
+     * а не подстрокой. Ровно на подстроке {@code LIKE '%DONE%'} ошибалась версия до
+     * AL-117: «📋 PLANNED — … DONE позже» ею считалось закрытым.
+     */
+    static final String DONE_STATUS_SQL = LoreStatusVocabulary.anySql("status_raw", "done");
+
+    /**
+     * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
+     * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
+     */
+    private static final String OPEN_TASK_STATUS_EXPR =
+        "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
+
     static {
         // ── §1 Timeline — 3 separate slices, merged on frontend ──────────────
         // No UNION in ArcadeDB /api/v1/query. Frontend fetches all 3, merges by date.
 
         slice("timeline_adrs",
             "SELECT adr_id, date_created, " +
-            "out('BELONGS_TO').component_id[0] AS component " +
+            "out('BELONGS_TO').component_id[0] AS component, " +
+            // ADRPROJ-01: у ADR есть BELONGS_TO_PROJECT — отдаём в ленту, иначе
+            // новые ADR со связкой на проект падали в «без проекта» (владелец).
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowADR WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 150");
 
+        // ML-NEWS project derivation for decisions: the feed grouped them under
+        // «без проекта» because this slice never carried a project. A decision's
+        // project is either its OWN BELONGS_TO_PROJECT edge (rare, 9/300) or —
+        // the model path — its parent ADR's (decision →DECIDED_IN→ ADR
+        // →BELONGS_TO_PROJECT, ADRPROJ-01). news() prefers the own edge, then the
+        // ADR's. Same shape as the spec row (projects[]).
         slice("timeline_decisions",
-            "SELECT decision_id, title, date_created FROM KnowDecision " +
+            "SELECT decision_id, title, date_created, " +
+            "out('BELONGS_TO_PROJECT').slug                  AS projects, " +
+            "out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug AS adr_projects " +
+            "FROM KnowDecision " +
             "WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 200");
 
@@ -134,7 +176,12 @@ public final class LoreSlices {
             // открыв каждый сценарий и каждую задачу. Прослеживаемость обязана
             // читаться в обе стороны от точки, где стоишь.
             "in('TRACED_TO').uc_id                AS traced_by_ucs, " +    // сценарии, ссылающиеся на ADR (D9)
-            "in('JUSTIFIED_BY').task_uid          AS justified_task_uids " + // enb-задачи, обоснованные им (PL-14)
+            "in('JUSTIFIED_BY').task_uid          AS justified_task_uids, " + // enb-задачи, обоснованные им (PL-14)
+            // То же правило, не применённое к SUPERSEDES: ребро идёт FROM нового
+            // ADR TO старого, поэтому у ЗАМЕНЁННОГО оно входящее и в паспорте не
+            // показывалось вовсе. Статус «Заменено» стоял, а чем перекрыт —
+            // нигде: цепочка решений обрывалась ровно там, где нужна.
+            "in('SUPERSEDES').adr_id              AS superseded_by_ids " +
             "FROM KnowADR WHERE adr_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -263,7 +310,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
-            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
+            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
@@ -325,13 +372,14 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         // Actual completion dates: valid_from of the first hist entry whose status
-        // starts with a done marker. Prefix match ('✅%') avoids false positives from
-        // TODO statuses that mention DONE in parentheses ("⬜ TODO — (V1 ✅ DONE…)").
+        // starts with a done marker. Prefix match avoids false positives from TODO
+        // statuses that mention DONE in parentheses ("⬜ TODO — (V1 ✅ DONE…)") —
+        // см. DONE_STATUS_SQL про то, почему якорь, а не подстрока.
         slice("sprint_done_dates",
             "SELECT sprint_id, " +
-            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date " +
+            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date " +
             "FROM KnowSprint " +
-            "WHERE out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].size() > 0",
+            "WHERE out('HAS_STATE')[" + DONE_STATUS_SQL + "].size() > 0",
             List.of(), Map.of(), "");
 
         // Phases of a sprint (via PART_OF edges from phases). The phase title is
@@ -820,6 +868,18 @@ public final class LoreSlices {
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
 
+        // Lightweight projection: one row per task carrying only its sprint_id +
+        // status_raw. Feeds the sprint LIST (LoreSprintTree) task-status breakdown
+        // across ALL sprints — the frontend aggregates counts per sprint in JS.
+        // No GROUP BY on purpose (this ArcadeDB version groups incorrectly — same
+        // reason tasks_of_sprints_batch / MartSlices avoid it), and no note_md/title
+        // so the sidebar payload stays small even at 400+ sprints.
+        slice("task_status_by_sprint",
+            "SELECT out('PART_OF').sprint_id[0]                            AS sprint_id, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]        AS status_raw " +
+            "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IS NOT NULL",
+            List.of(), Map.of(), " ORDER BY out('PART_OF').sprint_id[0]");
+
         // ── §3 Milestones ────────────────────────────────────────────────────
         slice("milestones",
             "SELECT milestone_id, label, week, date_display, priority, " +
@@ -1123,7 +1183,7 @@ public final class LoreSlices {
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days " +
             "FROM KnowTaskHist WHERE valid_to IS NULL " +
-            "AND (status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%') AND valid_from IS NOT NULL",
+            "AND (" + DONE_STATUS_SQL + ") AND valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
         // Every task state row (scalar valid_from). Frontend takes min per task = created date,
@@ -1360,8 +1420,10 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id AS component_ids, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
-            "WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '✅%' " +
-            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '🚫%'",
+            // «Открытая» = не закрытая и не отменённая. Оба словаря берутся из
+            // LoreStatusVocabulary, отрицание раскрыто по де Моргану в цепочку
+            // NOT LIKE — см. noneSql() про то, почему не NOT ( ... OR ... ).
+            "WHERE " + LoreStatusVocabulary.noneSql(OPEN_TASK_STATUS_EXPR, "done", "cancelled"),
             List.of(),
             new LinkedHashMap<>(Map.of(
                 // Двойной хоп — тот же паттерн, что уже проверен в этом файле
@@ -1537,6 +1599,55 @@ public final class LoreSlices {
             "AND NOT (ts = '2026-06-27 12:00:00' AND object_id IN ['PUB-04', 'PUB-04-VC', 'PUB-04-TG', 'PUB-05', 'PUB-05-HABR']) " +
             "AND NOT (ts = '2026-07-02 09:00:00' AND (object_type = 'competitor' OR object_id = 'KW-08'))",
             List.of(), Map.of(), " ORDER BY ts DESC LIMIT 100");
+
+        // ── STAT-1: кто что и по сколько запрашивает ─────────────────────────
+        //
+        // Сырьё пишет LoreRequestStats (агрегат за окно, не точка на запрос).
+        // Свёртка здесь именно SUM по (кто × ось × что): без неё окна за сутки
+        // читались бы вручную, а вопрос владельца — «по сколько», то есть итог.
+        //
+        // Порога по времени НЕТ намеренно: ts в MetricSnapshot — LONG (epoch
+        // millis), а параметры слайсов приходят строками, и сравнение строки с
+        // LONG молча не отберёт ничего. Отдавать «за период» здесь значило бы
+        // отдавать пустоту, выглядящую как «событий не было». Для интервалов
+        // есть metric_get (POST /lore/bragi/metric/query) — он умеет фильтры
+        // типизированно. Здесь верхний срез: агрегат и последние точки.
+        slice("requests_by_caller",
+            "SELECT object_id AS caller, segment AS axis, source AS what, sum(value) AS calls " +
+            "FROM MetricSnapshot WHERE metric = 'lore.requests' " +
+            "GROUP BY object_id, segment, source",
+            List.of(), Map.of(), " ORDER BY calls DESC LIMIT 200");
+
+        // Тот же ряд, свёрнутый до вызывающего: «кто вообще сколько зовёт»,
+        // без разбивки по эндпоинтам — верхний уровень ответа.
+        slice("requests_total",
+            "SELECT object_id AS caller, segment AS axis, sum(value) AS calls " +
+            "FROM MetricSnapshot WHERE metric = 'lore.requests' " +
+            "GROUP BY object_id, segment",
+            List.of(), Map.of(), " ORDER BY calls DESC LIMIT 100");
+
+        // НАСТОЯЩИЕ логины — события LOGIN из Keycloak (LoreKcLoginPoller).
+        // Отличать от sessions_recent намеренно: здесь наблюдённый факт входа,
+        // там — догадка LORE по первому запросу после паузы. source = clientId,
+        // то есть видно, куда именно человек вошёл.
+        slice("logins_recent",
+            "SELECT object_id AS user, source AS client_id, ts " +
+            "FROM MetricSnapshot WHERE metric = 'lore.login'",
+            List.of(), Map.of(), " ORDER BY ts DESC LIMIT 200");
+
+        slice("logins_by_user",
+            "SELECT object_id AS user, sum(value) AS logins " +
+            "FROM MetricSnapshot WHERE metric = 'lore.login' " +
+            "GROUP BY object_id",
+            List.of(), Map.of(), " ORDER BY logins DESC LIMIT 100");
+
+        // Начала сессий — догадка, а не факт: вход в Keycloak происходит вне
+        // периметра LORE. Полезно для АГЕНТОВ, у которых логина в KC нет вовсе
+        // (client_credentials): для них это единственный признак «пришёл».
+        slice("sessions_recent",
+            "SELECT object_id AS caller, segment AS axis, ts " +
+            "FROM MetricSnapshot WHERE metric = 'lore.session_start'",
+            List.of(), Map.of(), " ORDER BY ts DESC LIMIT 200");
 
         slice("bragi_competitors",
             "SELECT competitor_id, name FROM BragiCompetitor",

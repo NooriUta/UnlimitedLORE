@@ -151,7 +151,16 @@ public class LoreStatusResource extends LoreResourceBase {
                     readiness.recomputeForTask(req.id());
                     return r;
                 })
-                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool());
+                .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool())
+                // A sprint shouldn't stay in `planned` once its tasks are moving —
+                // recompute + persist the parent sprint's status. Best-effort: a
+                // failure here is logged, never turned into a failed task change.
+                .chain(rr -> autoDeriveSprintStatus(req.id())
+                    .onFailure().invoke(ex -> LOG.warnf(
+                        "[LORE STATUS] sprint auto-derive failed for task=%s (task flip itself succeeded): %s",
+                        req.id(), ex.getMessage()))
+                    .onFailure().recoverWithItem((Void) null)
+                    .replaceWith(rr));
         });
     }
 
@@ -301,6 +310,109 @@ public class LoreStatusResource extends LoreResourceBase {
         p.put("nsid", nsid);
         return writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
             set + " WHERE state_uid = :nsid", p));
+    }
+
+    // ── Auto-derive sprint status from its tasks ─────────────────────────────
+    // A sprint should not sit in `planned` while its tasks are already moving.
+    // After every task status flip we recompute the parent sprint's effective
+    // status and PROMOTE it (SCD2, persisted) when warranted:
+    //   • all tasks done                          → sprint `done`
+    //   • any task in progress AND sprint is one of
+    //     planned / todo / backlog                → sprint `active` (in progress)
+    // Deliberate/terminal sprint states are never overridden: blocked,
+    // cancelled, deferred, and ready_for_deploy (RFD is "work done, waiting for
+    // release" — an intentional hold, so all-done must not silently flip it to
+    // done). Best-effort: a failure here never fails the task status change.
+    private static final java.util.Set<String> SPRINT_AUTO_GUARD =
+        java.util.Set.of("blocked", "cancelled", "deferred", "ready_for_deploy");
+    private static final java.util.Set<String> TASK_PROGRESS =
+        java.util.Set.of("done", "active", "partial", "ready_for_deploy");
+    private static final java.util.Set<String> SPRINT_PROMOTABLE =
+        java.util.Set.of("planned", "todo", "backlog");
+
+    /** Classify a stored status_raw ("✅ DONE", "🔄 IN PROGRESS", …) into a token,
+     *  mirroring lore-status.ts taskTick. Returns null if unrecognised. */
+    static String rawToToken(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        if (s.startsWith("✅")) return "done";
+        if (s.startsWith("🔄")) return "active";
+        if (s.startsWith("🟡")) return "partial";
+        if (s.startsWith("🚀")) return "ready_for_deploy";
+        if (s.startsWith("🔴")) return "blocked";
+        if (s.startsWith("🚫")) return "cancelled";
+        if (s.startsWith("🔬")) return "design";
+        if (s.startsWith("🟣")) return "backlog";
+        if (s.startsWith("📋")) return "planned";
+        if (s.startsWith("⬜")) return "todo";
+        if (s.startsWith("⏸")) return "deferred";
+        // Keyword fallbacks for legacy rows written before the emoji convention.
+        String u = s.toUpperCase();
+        if (u.startsWith("DONE") || u.startsWith("CLOSED") || u.startsWith("ЗАВЕРШ")) return "done";
+        if (u.startsWith("IN PROGRESS") || u.startsWith("WIP") || u.startsWith("ACTIVE")) return "active";
+        if (u.startsWith("PARTIAL") || u.startsWith("ЧАСТИЧ")) return "partial";
+        if (u.startsWith("READY") || u.startsWith("RFD")) return "ready_for_deploy";
+        if (u.startsWith("BLOCK") || u.startsWith("ЗАБЛОК")) return "blocked";
+        if (u.startsWith("CANCEL") || u.startsWith("ОТМЕН")) return "cancelled";
+        if (u.startsWith("DESIGN") || u.startsWith("ДИЗАЙН")) return "design";
+        if (u.startsWith("BACKLOG") || u.startsWith("БЭКЛ")) return "backlog";
+        if (u.startsWith("PLAN") || u.startsWith("ЗАПЛАН")) return "planned";
+        if (u.startsWith("TODO") || u.startsWith("НЕ НАЧ")) return "todo";
+        if (u.startsWith("DEFER") || u.startsWith("ОТЛОЖ") || u.startsWith("HOLD") || u.startsWith("PAUSE")) return "deferred";
+        return null;
+    }
+
+    /** Given a sprint's current status token and its task status tokens, return the
+     *  token the sprint should be promoted to, or null for "leave unchanged". */
+    static String deriveSprintTarget(String currentToken, List<String> taskTokens) {
+        if (currentToken != null && SPRINT_AUTO_GUARD.contains(currentToken)) return null;
+        int total = 0, done = 0, progress = 0;
+        for (String tok : taskTokens) {
+            if (tok == null) continue;
+            total++;
+            if (tok.equals("done")) done++;
+            if (TASK_PROGRESS.contains(tok)) progress++;
+        }
+        String target = null;
+        if (total > 0 && done == total) target = "done";
+        else if (progress > 0 && (currentToken == null || SPRINT_PROMOTABLE.contains(currentToken))) target = "active";
+        if (target == null || target.equals(currentToken)) return null;
+        return target;
+    }
+
+    /** Recompute + persist the parent sprint's status after a task flip (best-effort). */
+    Uni<Void> autoDeriveSprintStatus(String taskUid) {
+        MartQuery ctxQ = new MartQuery("sql",
+            "SELECT out('PART_OF').sprint_id[0] AS sid, " +
+            "out('PART_OF').out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS sprint_status " +
+            "FROM KnowTask WHERE task_uid = :uid LIMIT 1",
+            Map.of("uid", taskUid), -1);
+        return client.query(db, basicAuth(), ctxQ).chain(ctxRes -> {
+            List<Map<String, Object>> ctx = ctxRes.result() != null ? ctxRes.result() : List.of();
+            if (ctx.isEmpty() || ctx.get(0).get("sid") == null) return Uni.createFrom().voidItem();
+            final String sid = String.valueOf(ctx.get(0).get("sid"));
+            final String curToken = rawToToken((String) ctx.get(0).get("sprint_status"));
+
+            MartQuery tasksQ = new MartQuery("sql",
+                "SELECT out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw " +
+                "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sid",
+                Map.of("sid", sid), -1);
+            return client.query(db, basicAuth(), tasksQ).chain(tRes -> {
+                List<Map<String, Object>> trows = tRes.result() != null ? tRes.result() : List.of();
+                List<String> tokens = trows.stream().map(r -> rawToToken((String) r.get("status_raw"))).toList();
+                final String target = deriveSprintTarget(curToken, tokens);
+                if (target == null) return Uni.createFrom().voidItem();
+
+                final String now2  = Instant.now().toString();
+                final String nsid2 = UUID.randomUUID().toString();
+                LOG.infof("[LORE STATUS] sprint=%s auto %s→%s (task %s changed)", sid, curToken, target, taskUid);
+                return readSprintPlanFields(sid).chain(fields ->
+                    updateScd2Status("sprint", "KnowSprint", "KnowSprintHist", "sprint_id", sid, target, now2, nsid2)
+                        .chain(resp -> resp.getStatus() >= 300
+                            ? Uni.createFrom().voidItem()
+                            : restoreSprintPlanFields(nsid2, fields).replaceWithVoid()));
+            });
+        });
     }
 
     // ── Write-path: real-SCD2 edit of sprint plan fields ─────────────────────

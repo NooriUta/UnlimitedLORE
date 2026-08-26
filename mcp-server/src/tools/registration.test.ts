@@ -51,7 +51,9 @@ describe('registerLoreWrite', () => {
     //   которую он исполняет; проверяется в product/self-check actor_pairs)
     // + agent_session_log (ADR-LORE-037 V1 — KnowAgentSession, append-only
     //   журнал сессий агентов; отдельная вершина, не поле на KnowActor)
-    expect(names).toHaveLength(79);
+    // + quality_check (QUAL-7, ADR-LORE-039 — вердикт полноты пачкой БЕЗ записи;
+    //   второй способ вызова того же линтера, что отвечает на write-пути)
+    expect(names).toHaveLength(80);
   });
 
   it('registers actor_link (MT-11 — FILLS_ROLE, agent-to-role pairing)', () => {

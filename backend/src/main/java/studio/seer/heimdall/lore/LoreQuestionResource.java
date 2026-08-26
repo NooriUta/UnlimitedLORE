@@ -86,11 +86,35 @@ public class LoreQuestionResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowQuestion SET opened_date=:d WHERE question_id=:qid AND opened_date IS NULL",
                 Map.of("d", java.time.LocalDate.now().toString(), "qid", req.question_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id())));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("question_id", req.question_id());
+            // Вердикт полноты (ADR-LORE-039): вопрос без владельца не закрывается —
+            // он висит прочитанный и никем не взятый.
+            WorkQuality.Result quality = questionQuality(req.question_id());
+            if (quality != null) out.put("quality", quality);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION CREATE] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /**
+     * Вердикт полноты открытого вопроса (ADR-LORE-039). Читается ПОСЛЕ записи —
+     * в том числе после проставления умолчаний (status=open, opened_date),
+     * иначе вердикт судил бы состояние, которого уже нет. Сбой сборки не роняет
+     * ответ: запись состоялась.
+     */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
+    private WorkQuality.Result questionQuality(String questionId) {
+        return qualityFacts.forOne(LoreQualityFacts.Kind.QUESTION, questionId);
     }
 
     // ── Links ────────────────────────────────────────────────────────────────

@@ -404,4 +404,16 @@ public abstract class LoreResourceBase {
     static String str(Object o) {
         return o == null ? "" : o.toString().trim();
     }
+
+    /**
+     * Есть ли хоть одно непустое значение. Траверс графа отдаёт либо скаляр,
+     * либо список, либо null — и «список из одного null» встречается там, где
+     * ребра нет: проверка на {@code != null} такое пропускает как «связь есть».
+     */
+    static boolean anyOf(Object raw) {
+        if (raw == null) return false;
+        if (raw instanceof java.util.Collection<?> c)
+            return c.stream().anyMatch(o -> o != null && !String.valueOf(o).isBlank());
+        return !String.valueOf(raw).isBlank();
+    }
 }

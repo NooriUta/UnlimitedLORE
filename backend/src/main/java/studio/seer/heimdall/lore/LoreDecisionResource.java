@@ -116,12 +116,33 @@ public class LoreDecisionResource extends LoreResourceBase {
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("decision_id", req.decision_id());
+            // Вердикт полноты (ADR-LORE-039): решение без родителя-ADR или из
+            // одного заголовка — ярлык, а не правило. Advisory, на запись не влияет.
+            WorkQuality.Result quality = decisionQuality(req.decision_id());
+            if (quality != null) out.put("quality", quality);
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    /**
+     * Вердикт полноты решения (ADR-LORE-039). Факты — из графа ПОСЛЕ записи
+     * рёбер: судится сохранённое состояние, а не присланный запрос, иначе
+     * провалившаяся привязка выглядела бы выполненной. KnowDecision плоская
+     * (без истории), поэтому тело читается прямо с вершины.
+     */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
+    private WorkQuality.Result decisionQuality(String decisionId) {
+        return qualityFacts.forOne(LoreQualityFacts.Kind.DECISION, decisionId);
     }
 
     // ── AL-79: статус существующего решения ──────────────────────────────────

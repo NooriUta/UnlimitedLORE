@@ -138,13 +138,38 @@ public class LoreSpecResource extends LoreResourceBase {
             // синхроне, как T01 сделал для PARENT_OF.
             if (req.component_id() != null) relinkSpecComponentEdge(req.spec_id(), req.component_id());
             hashStamper.stampOpenHist("KnowSpecHist", "KnowSpec", "spec_id", req.spec_id());
-            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id(),
-                "body_written", histWritten)));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("spec_id", req.spec_id());
+            out.put("body_written", histWritten);
+            // Вердикт полноты (ADR-LORE-039): спека без содержания — заглушка,
+            // она занимает место в реестре знаний и создаёт впечатление, что
+            // тема покрыта. Advisory, на запись не влияет.
+            WorkQuality.Result quality = specQuality(req.spec_id());
+            if (quality != null) out.put("quality", quality);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    /**
+     * Вердикт полноты спеки (ADR-LORE-039). Факты — из графа ПОСЛЕ записи рёбер:
+     * судится сохранённое состояние, а не присланный запрос. Тело и версия живут
+     * на ОТКРЫТОЙ Hist-строке, компонент — на ребре DOCUMENTED_IN (поле
+     * component_id само по себе невидимо, см. комментарий на записи выше).
+     */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
+    private WorkQuality.Result specQuality(String specId) {
+        return qualityFacts.forOne(LoreQualityFacts.Kind.SPEC, specId);
     }
 
     /**

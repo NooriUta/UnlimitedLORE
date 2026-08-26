@@ -43,8 +43,43 @@ function same(label, got) {
   else same('Frontend LorePlanItemStatus', extractQuoted(m[1]));
 }
 
+// 3) SPRINT_QG_REBUILD/QG-13 — the READ axis: taskTick() recognises free-text
+// status_raw, and its "done" vocabulary is a mirror of statusMatch.done. This is
+// the copy that actually drifted: MERGED and ЗАКРЫТ were missing here, so the
+// same task read as closed in the backend and open on screen.
+{
+  const canon = canonical.statusMatch?.done;
+  if (!canon) errors.push('statusMatch.done missing from shared/lore-statuses.json');
+  else {
+    const src = readFileSync(join(root, 'src/components/lore/lore-status.ts'), 'utf8');
+    const m = src.match(
+      /startsWith\('(.)'\)\s*\|\|\s*\/\^\(([^)]+)\)\/i\.test\(s\)\)\s*return\s*\{\s*status:\s*'done'/,
+    );
+    // A regex that stopped matching would turn this gate into a silent pass —
+    // the exact failure mode the whole sprint is about.
+    if (!m) {
+      errors.push(
+        "Frontend taskTick: could not locate the 'done' branch in lore-status.ts — " +
+          'the check would have passed without checking anything',
+      );
+    } else {
+      if (m[1] !== canon.marker) {
+        errors.push(`Frontend taskTick 'done' marker: got ${m[1]}, canonical ${canon.marker}`);
+      }
+      const got = m[2].split('|').map((w) => w.trim().toUpperCase()).filter(Boolean);
+      const a = [...canon.words].sort();
+      const b = [...got].sort();
+      if (a.length !== b.length || a.some((v, i) => v !== b[i])) {
+        errors.push(
+          `Frontend taskTick 'done' words: mismatch vs shared/lore-statuses.json.statusMatch.done\n  canonical: ${a.join(', ')}\n  got:       ${b.join(', ')}`,
+        );
+      }
+    }
+  }
+}
+
 if (errors.length) {
   console.error('✗ LORE status drift detected:\n\n' + errors.join('\n\n'));
   process.exit(1);
 }
-console.log(`✓ LORE status vocabularies in sync (${expected.length} plan statuses).`);
+console.log(`✓ LORE status vocabularies in sync (${expected.length} plan statuses, read-axis 'done' pinned).`);

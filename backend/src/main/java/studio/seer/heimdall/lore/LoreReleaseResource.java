@@ -47,26 +47,57 @@ public class LoreReleaseResource extends LoreResourceBase {
     //
     // Читающая проба под catch: линтер вспомогательный, его отказ не имеет
     // права превратить успешную запись в ошибку (то же правило, что у задач).
-    private WorkQuality.Result releaseQuality(String releaseId) {
+    // Ищем по release_uid, а НЕ по release_id: один и тот же номер версии живёт
+    // в разных репозиториях (на 2026-08-23 таких пересечений 13), и
+    // `WHERE release_id=… LIMIT 1` брал ПРОИЗВОЛЬНУЮ вершину. На живом выпуске
+    // v1.7.0 вердикт отчитался «спринты и PR привязаны», прочитав связи ЧУЖОГО
+    // релиза при полностью пустом своём — то есть соврал ровно там, где должен
+    // был предупредить. Тот же капкан, что AL-111 в release_mv.
+    // Без git_project вердикт не собираем: угадывать, чей это релиз, нельзя.
+    /** Проект-владелец релиза: присланный или исторический дефолт. Одно место на весь ресурс. */
+    private static String projectOf(String gitProject) {
+        return gitProject != null && !gitProject.isBlank() ? gitProject : "NooriUta/AIDA";
+    }
+
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
+    // Факты — из общего LoreQualityFacts. Адресация по release_uid, а не по
+    // номеру версии: он повторяется между репозиториями, и вердикт читал
+    // ЧУЖОЙ релиз. Без проекта не судим — угадывать, чей это релиз, нельзя.
+    private WorkQuality.Result releaseQuality(String releaseId, String gitProject) {
+        if (gitProject == null || gitProject.isBlank()) {
+            LOG.warnf("[LORE QUALITY] релиз %s: вердикт пропущен — не задан git_project", releaseId);
+            return null;
+        }
+        return qualityFacts.forOne(LoreQualityFacts.Kind.RELEASE, gitProject + "#" + releaseId);
+    }
+
+    // ── Авто-current: этот релиз — самый свежий проекта? (ADR-LORE-025 / OP-04) ─
+    //
+    // Вызывается ТОЛЬКО когда пайплайн не прислал is_current. Сравнение по дате
+    // строкой ISO (YYYY-MM-DD) — лексикографический порядок совпадает с
+    // хронологическим. max()/min() по строке-дате в ArcadeDB даёт 500
+    // (ClassCastException, PAIN aggregation-traps), поэтому берём верхнюю строку
+    // через ORDER BY … DESC LIMIT 1, а не агрегат.
+    //
+    // Первый релиз проекта → текущий. Задним числом старее текущего → НЕ крадёт
+    // флаг. Сбой пробы → true: цель OP-04 в том, чтобы у проекта всегда был
+    // текущий; лучше пометить, чем оставить проект без current из-за read-сбоя.
+    private boolean isNewestForProject(String gp, String rdate) {
         try {
             var res = client.query(db, basicAuth(), new MartQuery("sql",
-                "SELECT git_tag, description_md, "
-                // Оба ребра ВХОДЯЩИЕ: спринт → релиз (IMPLEMENTED_IN_RELEASE),
-                // PR → релиз (SHIPPED_IN). Направление сверено со срезами
-                // release_sprints / release_prs, а не выведено из названия.
-                + "in('IMPLEMENTED_IN_RELEASE').sprint_id AS sprints, "
-                + "in('SHIPPED_IN').pr_number             AS prs, "
-                + "out('BELONGS_TO_PROJECT').slug         AS projects "
-                + "FROM KnowRelease WHERE release_id = :rid", Map.of("rid", releaseId), 1))
+                "SELECT release_date FROM KnowRelease WHERE git_project = :gp "
+                + "ORDER BY release_date DESC LIMIT 1", Map.of("gp", gp), 1))
                 .await().indefinitely();
             var rows = res.result();
-            if (rows == null || rows.isEmpty()) return null;
-            Map<String, Object> r = rows.get(0);
-            return WorkQuality.evaluateRelease(str(r.get("git_tag")), str(r.get("description_md")),
-                r.get("sprints"), r.get("prs"), r.get("projects"));
+            if (rows == null || rows.isEmpty()) return true;   // первый релиз проекта
+            String mx = str(rows.get(0).get("release_date"));
+            return mx == null || mx.isBlank() || rdate.compareTo(mx) >= 0;
         } catch (RuntimeException e) {
-            LOG.warnf("[LORE QUALITY] релиз %s: вердикт не собран (%s)", releaseId, LoreUpstream.detail(e));
-            return null;
+            LOG.warnf("[LORE RELEASE] auto-current: проба «самый свежий» для %s не удалась (%s) — помечаю текущим",
+                gp, LoreUpstream.detail(e));
+            return true;
         }
     }
 
@@ -87,9 +118,20 @@ public class LoreReleaseResource extends LoreResourceBase {
             return badParams("release_id contains illegal characters");
         }
         try {
-            boolean cur = Boolean.TRUE.equals(req.is_current());
             String gp   = req.git_project() != null && !req.git_project().isBlank()
                           ? req.git_project() : "NooriUta/AIDA";
+            String rdate = req.release_date() != null ? req.release_date()
+                                                      : java.time.LocalDate.now().toString();
+            // ADR-LORE-025 (OP-04): текущий релиз самоисцеляется. Если пайплайн
+            // прислал is_current явно — уважаем как есть (переопределение). Если
+            // не прислал — самый свежий по дате автоматически становится текущим,
+            // снимая флаг со старого. Иначе проект копит релизы без единого
+            // текущего (NooriUta/AIDA: 101 релиз, ни одного current), и на это
+            // жалуется мобильное приложение. Правка целиком в LORE — чужой
+            // релизный пайплайн aida-root трогать не нужно.
+            boolean cur = req.is_current() != null
+                          ? req.is_current()
+                          : isNewestForProject(gp, rdate);
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + gp + "'",
@@ -103,8 +145,6 @@ public class LoreReleaseResource extends LoreResourceBase {
             StringBuilder set = new StringBuilder(
                 "INSERT INTO KnowRelease SET release_id=:rid, is_current=" + cur);
             if (req.git_tag()        != null) { set.append(", git_tag=:tag");          p.put("tag",   req.git_tag()); }
-            String rdate = req.release_date() != null ? req.release_date()
-                                                      : java.time.LocalDate.now().toString();
             set.append(", release_date=:date"); p.put("date", rdate);
             if (req.type()           != null) { set.append(", `type`=:rtype");       p.put("rtype", req.type()); }
             if (req.description_md() != null) { set.append(", description_md=:dmd"); p.put("dmd", req.description_md()); }
@@ -131,7 +171,7 @@ public class LoreReleaseResource extends LoreResourceBase {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("is_current", cur); out.put("created", now);
-            out.put("quality", releaseQuality(req.release_id()));
+            out.put("quality", releaseQuality(req.release_id(), gp));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE CREATE] %s: %s", req.release_id(), e.getMessage());
@@ -199,6 +239,9 @@ public class LoreReleaseResource extends LoreResourceBase {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("release_id", req.release_id());
             out.put("updated_at", Instant.now().toString());
+            // ADR-LORE-039: вердикт был на create и link, но не здесь — правка
+            // описания меняет ровно ту полноту, которую он и судит.
+            out.put("quality", releaseQuality(req.release_id(), ugp));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE UPDATE] %s: %s", req.release_id(), e.getMessage());
@@ -298,7 +341,10 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("release_id", req.release_id());
         out.put("sprints_linked", sprintsLinked);
         out.put("prs_linked", prsLinked);
-        out.put("quality", releaseQuality(req.release_id()));
+        // Проект берём тем же правилом, что и внутри try (та переменная не видна
+        // здесь по области видимости) — дефолт обязан совпадать, иначе вердикт
+        // ушёл бы искать релиз не в том репозитории.
+        out.put("quality", releaseQuality(req.release_id(), projectOf(req.git_project())));
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
     }
@@ -363,6 +409,9 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("release_id", req.release_id());
         out.put("sprints_removed", sprintsRemoved);
         out.put("prs_removed", prsRemoved);
+        // ADR-LORE-039: на снятии связей вердикт нужнее, чем где-либо — именно
+        // здесь релиз становится неполным, и сказать об этом надо сразу.
+        out.put("quality", releaseQuality(req.release_id(), gp));
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
     }

@@ -116,11 +116,34 @@ public class LoreMilestoneResource extends LoreResourceBase {
             }
             if (req.goal_md() != null)
                 hashStamper.stampOpenHist("KnowMilestoneHist", "KnowMilestone", "milestone_id", req.milestone_id());
-            return noStore(Response.ok(Map.of("ok", true, "milestone_id", req.milestone_id())));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("milestone_id", req.milestone_id());
+            // Вердикт полноты (ADR-LORE-039): веха без даты не ложится на план.
+            WorkQuality.Result quality = milestoneQuality(req.milestone_id());
+            if (quality != null) out.put("quality", quality);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE] %s: %s", req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    /**
+     * Вердикт полноты вехи (ADR-LORE-039). Поля читаются под их РЕАЛЬНЫМИ
+     * именами в модели — {@code label} и {@code date_display}; спринты берутся
+     * обратным обходом TARGETS_MILESTONE. Сбой вердикта не роняет ответ: запись
+     * уже состоялась и была тем, что просил вызывающий.
+     */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
+    private WorkQuality.Result milestoneQuality(String milestoneId) {
+        return qualityFacts.forOne(LoreQualityFacts.Kind.MILESTONE, milestoneId);
     }
 }

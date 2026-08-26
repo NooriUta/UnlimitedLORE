@@ -2,8 +2,115 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, lorePost, loreGet, loreUpload } from '../backend.js';
 
+// ── Вердикт полноты: компактный OK, разбор при провале (ADR-LORE-039 §2) ────
+// WorkQuality присылает ВСЕ проверки, включая пройденные: на чистой сущности это
+// три десятка строк эха, в котором незакрытые поля ещё надо высматривать.
+//   OK     → одна строка «все проверки ok (6/6)»; невыполненные подсказки — хвостом.
+//   не-OK  → только проваленные, С ТЕКСТОМ: код без сообщения заставляет лезть
+//            в документацию, то есть отвлекает ровно там, где нужно действовать.
+// Признак вердикта — поле kind: UC-линтер несёт rigor и формовкой не задевается.
+// Инвариант: компактность только для OK — прятать провалы формовке нельзя.
+interface QFinding { code: string; ok: boolean; required: boolean; message: string }
+interface QVerdict { kind: string; score: number; max: number; findings: QFinding[] }
+
+const isVerdict = (v: unknown): v is QVerdict =>
+  !!v && typeof v === 'object'
+  && typeof (v as QVerdict).kind === 'string'
+  && Array.isArray((v as QVerdict).findings);
+
+function reshapeVerdict(v: QVerdict): unknown {
+  const failed = v.findings.filter(f => f.required && !f.ok);
+  const hints  = v.findings.filter(f => !f.required && !f.ok).map(f => f.code);
+  if (failed.length === 0) {
+    const line = `${v.kind}: все проверки ok (${v.score}/${v.max})`;
+    return hints.length ? `${line} · подсказки: ${hints.join(', ')}` : line;
+  }
+  return {
+    kind: v.kind, score: v.score, max: v.max, ok: false,
+    findings: failed.map(f => ({ code: f.code, message: f.message })),
+    ...(hints.length ? { hints } : {}),
+  };
+}
+
+// Чем назвать элемент батча в разборе: первый идентификатор, который у него
+// есть. Без имени находка «не заполнена оценка» бесполезна — непонятно, у кого.
+const ITEM_ID = ['task_uid', 'adr_id', 'spec_id', 'decision_id', 'sprint_id', 'release_id', 'uid', 'id'];
+const itemName = (o: Record<string, unknown>): string | undefined => {
+  for (const k of ITEM_ID) if (typeof o[k] === 'string') return o[k] as string;
+  return undefined;
+};
+
+/**
+ * Свёртка батча (ADR-LORE-039 §2). Поэлементной формовки мало: батч из 12
+ * чистых задач вернул бы 12 одинаковых строк «все проверки ok» — короче
+ * прежнего, но всё ещё шум. Прошедшие в батче не перечисляются поимённо, только
+ * числом; поимённо — лишь проваленные. Тот же принцип, что в одиночном ответе,
+ * уровнем выше.
+ *
+ * Сам массив НЕ выбрасывается: в нём лежит результат записи (id, order_index),
+ * а не только вердикт. Убирается из элементов ровно поле вердикта, сводка
+ * поднимается в родителя.
+ */
+function collapseBatch(items: unknown[]): { quality: unknown; items: unknown[] } | null {
+  const verdicts: { name?: string; v: QVerdict }[] = [];
+  for (const it of items) {
+    if (!it || typeof it !== 'object' || Array.isArray(it)) return null;
+    const o = it as Record<string, unknown>;
+    if (!isVerdict(o.quality)) return null;
+    verdicts.push({ name: itemName(o), v: o.quality });
+  }
+  if (verdicts.length < 2) return null; // один элемент — это не батч, форма одиночная
+  const stripped = items.map(it => {
+    const { quality: _drop, ...rest } = it as Record<string, unknown>;
+    return rest;
+  });
+  const kind = verdicts[0].v.kind;
+  const failed = verdicts.filter(x => x.v.findings.some(f => f.required && !f.ok));
+  if (failed.length === 0) {
+    return { quality: `${kind}: все ${verdicts.length} записей ok`, items: stripped };
+  }
+  return {
+    quality: {
+      kind, ok: false, passed: verdicts.length - failed.length,
+      failed: failed.map(x => ({
+        ...(x.name ? { id: x.name } : {}),
+        score: x.v.score, max: x.v.max,
+        findings: x.v.findings.filter(f => f.required && !f.ok)
+          .map(f => ({ code: f.code, message: f.message })),
+      })),
+    },
+    items: stripped,
+  };
+}
+
+// Обход всего ответа, а не только корня: batch-путь возвращает вердикт на
+// КАЖДЫЙ элемент, и без рекурсии оптимизация обошла бы ровно тот случай, где
+// эха больше всего.
+export function compactVerdicts(data: unknown): unknown {
+  if (Array.isArray(data)) return data.map(compactVerdicts);
+  if (data && typeof data === 'object') {
+    const src = data as Record<string, unknown>;
+    // Свёртка идёт ДО поэлементной формовки: она читает сырые вердикты.
+    for (const [k, v] of Object.entries(src)) {
+      if (!Array.isArray(v)) continue;
+      const collapsed = collapseBatch(v);
+      if (!collapsed) continue;
+      const out: Record<string, unknown> = {};
+      for (const [k2, v2] of Object.entries(src)) {
+        out[k2] = k2 === k ? collapsed.items.map(compactVerdicts) : compactVerdicts(v2);
+      }
+      out.quality = collapsed.quality;
+      return out;
+    }
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(src)) out[k] = isVerdict(v) ? reshapeVerdict(v) : compactVerdicts(v);
+    return out;
+  }
+  return data;
+}
+
 const json = (data: unknown) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+  content: [{ type: 'text' as const, text: JSON.stringify(compactVerdicts(data), null, 2) }],
 });
 const err = (e: unknown) => ({
   content: [{ type: 'text' as const, text: `ERROR: ${(e as Error).message ?? String(e)}` }],
@@ -461,6 +568,31 @@ export function registerLoreWrite(server: McpServer): void {
       } catch (e) { return err(e); }
     },
   );
+
+  // QUAL-7 / ADR-LORE-039: спросить вердикт полноты по УЖЕ существующим
+  // объектам, ничего не записывая. Тот же линтер, что отвечает на записи, —
+  // расхождение оценок невозможно по построению.
+  definePostTool(server, {
+    name: 'quality_check',
+    description: 'Ask the completeness verdict for a BATCH of existing entities WITHOUT writing anything ' +
+      '(ADR-LORE-039). Returns {kind, checked, passed, failed[], missing[]} — entities that pass are counted, ' +
+      'not listed; only the failing ones are named, each with score/max and the failed checks INCLUDING their ' +
+      'message (a bare code would send you to the docs). Worst first. `missing` lists ids that do not exist — ' +
+      '«no verdict» and «no such entity» are different answers.\n\n' +
+      'There is deliberately NO whole-layer mode: ask in chunks. `ids` is required, empty is a 400, and a batch ' +
+      'over 200 is a 400 rather than a silent truncation — a shortened answer that looks complete is worse than ' +
+      'a refusal. The whole batch is one graph query, not one per id.\n\n' +
+      'Read-only: nothing is written, no history row is opened. For UC use uc_quality instead — it has its own ' +
+      'richer Cockburn linter (ADR-LORE-027).',
+    schema: {
+      type: z.enum(['task', 'sprint', 'adr', 'decision', 'spec', 'release', 'component', 'milestone', 'question'])
+        .describe('entity kind; note release is addressed by release_uid ("{git_project}#{release_id}"), not the bare version'),
+      ids: z.array(z.string()).min(1).max(200)
+        .describe('ids of existing entities, e.g. ["SPRINT_X/A-1","SPRINT_X/A-2"]; max 200 per call'),
+    },
+    path: '/lore/quality',
+    body: ({ type, ids }) => ({ type, ids }),
+  });
 
   // ADR-LORE-027-D3 режим (б): re-lint без записи. Тот же алгоритм, что панель
   // качества в форме и ответ uc_new/uc_set — расхождение невозможно по построению.
@@ -1204,12 +1336,18 @@ export function registerLoreWrite(server: McpServer): void {
     schema: {
       spec_id:   z.string().describe('e.g. "LORE_DB_SPEC"'),
       target_id: z.string().describe('component_id (e.g. "OMILORE") or project slug, per `rel`'),
-      rel:       z.enum(['component', 'project']).optional().describe('default "component"'),
-      mode:      z.enum(['add', 'remove', 'replace']).optional()
-        .describe('default "replace" — drops existing links of this kind first'),
+      // .default() здесь, а не только в prose: без него пропущенный ключ уходил
+      // как undefined, и гарантия «один владелец / replace» держалась целиком на
+      // дефолте бэкенда — разъехались бы, и пропуск mode тихо накопил бы второй
+      // линк. Остальные link-тулы дефолт объявляют так же.
+      rel:       z.enum(['component', 'project']).optional().default('component'),
+      mode:      z.enum(['add', 'remove', 'replace']).optional().default('replace')
+        .describe('"replace" drops existing links of this kind first'),
     },
     path: '/lore/spec/link',
-    body: ({ spec_id, target_id, rel, mode }) => ({ spec_id, target_id, rel, mode }),
+    body: ({ spec_id, target_id, rel, mode }) => ({
+      spec_id, target_id, rel: rel ?? 'component', mode: mode ?? 'replace',
+    }),
   });
 
   definePostTool(server, {
@@ -1536,14 +1674,19 @@ export function registerLoreWrite(server: McpServer): void {
       })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
     async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id, metrics }) => {
-      return json(await lorePost('/lore/qg/run', {
-        routine_name, run_date, status,
-        started_at:  started_at  ?? null,
-        finished_at: finished_at ?? null,
-        flags:       flags       ?? null,
-        run_id:      run_id      ?? null,
-        metrics:     metrics     ?? [],
-      }));
+      // try/catch как у всех прочих write-тулов: этот эндпоинт умеет 500-ить на
+      // UPSERT-схеме, и без обёртки падение уходило необработанной ошибкой
+      // протокола вместо стандартного {isError:true}.
+      try {
+        return json(await lorePost('/lore/qg/run', {
+          routine_name, run_date, status,
+          started_at:  started_at  ?? null,
+          finished_at: finished_at ?? null,
+          flags:       flags       ?? null,
+          run_id:      run_id      ?? null,
+          metrics:     metrics     ?? [],
+        }));
+      } catch (e) { return err(e); }
     },
   );
 
@@ -2045,7 +2188,10 @@ export function registerLoreWrite(server: McpServer): void {
       try {
         const act = action ?? 'add';
         if (rel === 'rubric') {
-          return json(await lorePost('/lore/bragi/rubric/link', { entity_type, entity_id, rubric_id: target_id }));
+          // action пробрасываем как и остальные ветки: без него unlink возвращал
+          // ok:true, а ребро IN_RUBRIC оставалось на месте (тихий no-op).
+          return json(await lorePost('/lore/bragi/rubric/link',
+            { entity_type, entity_id, rubric_id: target_id, action: act }));
         }
         const edge_type = rel === 'produced_by' ? 'PRODUCED_BY' : 'SHIPPED_IN';
         const resolvedTargetType = rel === 'produced_by' ? (target_type ?? 'task') : 'release';

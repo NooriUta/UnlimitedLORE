@@ -285,6 +285,13 @@ public class LoreAdrResource extends LoreResourceBase {
             if (!compFailed.isEmpty()) out.put("components_failed", compFailed);
             if (!tagFailed.isEmpty())  out.put("tags_failed", tagFailed);
 
+            // Вердикт полноты (ADR-LORE-039): линтер уже существовал, но звался
+            // только из self-check — то есть постфактум и лишь если кто-то
+            // откроет срез. Здесь он приходит в момент записи, пока автор ещё
+            // держит ADR в голове. Advisory: на запись не влияет.
+            WorkQuality.Result quality = adrQuality(req.adr_id());
+            if (quality != null) out.put("quality", quality);
+
             String qHint = questionsInBodyHint(req);
             if (qHint != null) out.put("hint", qHint);
             if (!compFailed.isEmpty() || !tagFailed.isEmpty()) {
@@ -301,6 +308,28 @@ public class LoreAdrResource extends LoreResourceBase {
     }
 
     // ── Write-path: ADR ↔ sprint/release links, rename, delete ──────────────
+    /**
+     * Вердикт полноты ADR (ADR-LORE-039). Факты берутся из графа ПОСЛЕ записи
+     * рёбер — то есть судится сохранённое состояние, а не присланный запрос:
+     * иначе провалившаяся привязка выглядела бы выполненной.
+     *
+     * <p>Тела читаются с ОТКРЫТОЙ Hist-строки (valid_to IS NULL), а не с
+     * вершины: они живут в истории, и на вершине их попросту нет.
+     *
+     * <p>Ошибка сборки вердикта не роняет ответ: запись уже состоялась и была
+     * тем, что просил вызывающий, — по образцу taskQuality/sprintQuality.
+     */
+    // Факты собирает LoreQualityFacts — один источник на путь записи и
+    // батч-API. Своя копия проекции здесь была причиной трёх разошедшихся
+    // прочтений за один день (status vs status_raw, поле не из модели,
+    // release_id вместо release_uid).
+    @jakarta.inject.Inject
+    LoreQualityFacts qualityFacts;
+
+    private WorkQuality.Result adrQuality(String adrId) {
+        return qualityFacts.forOne(LoreQualityFacts.Kind.ADR, adrId);
+    }
+
     public record AdrLinkRequest(String adr_id, String sprint_id, String release_id,
                                  String git_project, String action) {}
     public record AdrRenameRequest(String adr_id, String new_adr_id) {}

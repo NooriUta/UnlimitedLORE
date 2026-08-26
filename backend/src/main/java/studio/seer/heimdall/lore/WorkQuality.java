@@ -22,9 +22,10 @@ import java.util.List;
  * заставил бы обходить её мусорными значениями — а мусорное «0.1 дня» хуже
  * честного пропуска, потому что неотличимо от настоящей оценки.
  *
- * <p><b>Почему часть проверок условные.</b> {@code work_class} по ADR-LORE-022
- * (D3) законно бывает пустым, поэтому сам по себе он подсказка. Но ЕСЛИ класс
- * задан, дисциплина связей обязательна: {@code uc} без REALIZES и {@code enb}
+ * <p><b>Почему часть проверок условные.</b> {@code work_class} ADR-LORE-022 (D3)
+ * объявлял законно пустым, но решением владельца (2026-08-03) он ОБЯЗАТЕЛЕН —
+ * см. развёрнутое обоснование у самой проверки. Условны проверки связей: ЕСЛИ
+ * класс задан, дисциплина обязательна — {@code uc} без REALIZES и {@code enb}
  * без JUSTIFIED_BY — ровно те две находки, которые сегодня копятся в
  * {@code product_hygiene} сотнями.
  */
@@ -157,6 +158,27 @@ final class WorkQuality {
     static Result evaluateAdr(String status, Object components, Object projects,
                               boolean hasDecisions,
                               String contextMd, String decisionMd, String consequencesMd) {
+        return evaluateAdr(status, components, projects, hasDecisions,
+            contextMd, decisionMd, consequencesMd, false);
+    }
+
+    /**
+     * ADR с механическими проверками структуры (ADR-LORE-039 §5).
+     *
+     * @param hasSupersedesEdge пришло ли ВХОДЯЩЕЕ ребро SUPERSEDES (кто-то заменил
+     *                          этот ADR) — для когерентности статуса «Заменено»
+     */
+    static Result evaluateAdr(String status, Object components, Object projects,
+                              boolean hasDecisions,
+                              String contextMd, String decisionMd, String consequencesMd,
+                              boolean hasSupersedesEdge) {
+        // ВЕС ПО СТАТУСУ, как casual/fully-dressed у UC (ADR-LORE-027). PROPOSED —
+        // черновик: разложение, последствия и альтернативы там законно
+        // отсутствуют, и штрафовать за это значит давить на самом хрупком этапе.
+        // ACCEPTED — принятое правило: оно обязано быть разложено и иметь
+        // последствия, иначе «принято» сказано о заметке. Один и тот же список
+        // проверок даёт разный ЗНАМЕНАТЕЛЬ, а не разный набор.
+        boolean accepted = "ACCEPTED".equalsIgnoreCase(status);
         List<Finding> f = new ArrayList<>();
 
         req(f, "status", filled(status), "Статус задан");
@@ -164,15 +186,175 @@ final class WorkQuality {
         req(f, "project", any(projects), "Проект привязан");
         req(f, "context", filled(contextMd), "Контекст заполнен");
         req(f, "decision", filled(decisionMd), "Решение заполнено");
-        // Последствия — подсказка: бывают ADR, у которых их честно нет, и
-        // требовать текст ради текста значит поощрять воду.
-        hint(f, "consequences", filled(consequencesMd), "Последствия заполнены — желательно");
-        // Атомарные решения: ADR без них не разложен на проверяемые правила
-        // (ADR-LORE-014 §4). Подсказка, а не штраф: разложение — отдельный шаг,
-        // и требовать его в момент заведения ADR значит блокировать черновик.
-        hint(f, "decisions", hasDecisions, "Разложен на атомарные решения — желательно");
+
+        // Порог содержательности. Судится ОБЪЁМ, не смысл: раздел из полутора
+        // строк — это отписка, и отличить её от разбора структурно можно, а
+        // судить формулировки линтер не может и не должен.
+        opt(f, accepted, "context_substantive", len(contextMd) >= MIN_BODY,
+            "Контекст содержателен (≥ " + MIN_BODY + " симв.)");
+        opt(f, accepted, "decision_substantive", len(decisionMd) >= MIN_BODY,
+            "Решение содержательно (≥ " + MIN_BODY + " симв.)");
+
+        // Разделы по конвенции заголовков. «Альтернативы» — подсказка даже у
+        // ACCEPTED: бывают решения без развилки, и требовать вымышленный второй
+        // вариант значит поощрять выдумку.
+        hint(f, "alternatives", hasHeading(decisionMd, "льтернатив"),
+            "Раздел «Рассмотренные альтернативы» — желательно");
+
+        // Трассируемость: решение, не ссылающееся ни на один ADR/решение, стоит
+        // особняком от корпуса. Подсказка у черновика, требование у принятого.
+        opt(f, accepted, "traceability", refsEntity(decisionMd),
+            "Решение ссылается хотя бы на один ADR-*/D-* — трассируемость");
+
+        // Последствия и разложение: у черновика — подсказки (разложение отдельный
+        // шаг, и требовать его при заведении значит блокировать черновик), у
+        // принятого — обязательны (ADR-LORE-014 §4).
+        opt(f, accepted, "consequences", filled(consequencesMd),
+            accepted ? "Последствия заполнены" : "Последствия заполнены — желательно");
+        opt(f, accepted, "decisions", hasDecisions,
+            accepted ? "Разложен на атомарные решения" : "Разложен на атомарные решения — желательно");
+
+        // Когерентность статуса: «Заменено» — утверждение о факте, и факт обязан
+        // быть в графе, иначе читающий видит тупик: заменено, а чем — неизвестно.
+        //
+        // Ребро ВХОДЯЩЕЕ: SUPERSEDES создаётся FROM нового ADR TO старого, поэтому
+        // у заменённого оно приходит извне. Раньше проверка смотрела исходящее и
+        // требовала от старой записи указывать на свою замену — граф так не
+        // устроен, и «починить» это можно было только ложным ребром. Поймано
+        // сессией MIDGARD 2026-08-23, которая отказалась подгонять данные под гейт.
+        if ("SUPERSEDED".equalsIgnoreCase(status)) {
+            req(f, "superseded_by", hasSupersedesEdge,
+                "Статус «Заменено» требует ребра SUPERSEDES ОТ заменяющего ADR — должно быть видно, чем именно перекрыт");
+        }
 
         return score("adr", f);
+    }
+
+    /**
+     * Решение (KnowDecision). ADR-LORE-039, таблица предлагаемых проверок.
+     *
+     * <p>Ключевая проверка — родитель: решение, не привязанное к ADR
+     * (DECIDED_IN, ADR-LORE-019), висит вне корпуса — его не найти от ADR, оно
+     * не попадает в разбор решения на правила и живёт как заметка.
+     *
+     * <p>Порог тела тот же, что у ADR: решение из одного заголовка — ЯРЛЫК, а
+     * правило должно быть сформулировано так, чтобы по нему можно было свериться.
+     */
+    static Result evaluateDecision(String status, String bodyMd, boolean hasParentAdr,
+                                   Object components, Object tags) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "status", filled(status), "Статус задан");
+        req(f, "body", filled(bodyMd), "Тело решения непусто");
+        req(f, "parent_adr", hasParentAdr, "Привязано к ADR (DECIDED_IN) — решение живёт под ADR");
+        req(f, "body_substantive", len(bodyMd) >= MIN_BODY,
+            "Решение сформулировано как правило (≥ " + MIN_BODY + " симв.), а не ярлык");
+
+        hint(f, "component", any(components), "Компонент привязан — желательно");
+        hint(f, "tags", any(tags), "Теги заданы — желательно");
+
+        return score("decision", f);
+    }
+
+    /**
+     * Спека (KnowSpec). Спека без содержания — заглушка: она занимает место в
+     * реестре знаний и создаёт впечатление, что тема покрыта.
+     *
+     * <p><b>Статуса здесь нет намеренно.</b> У KnowSpec поля статуса нет в
+     * модели вовсе — его не пишет ни один write-путь и не читает ни один слайс.
+     * Проверка «статус задан» краснела бы всегда и на всех: не дисциплина, а
+     * постоянный ложный сигнал, от которого перестают читать весь вердикт.
+     */
+    static Result evaluateSpec(String title, String contentMd,
+                               Object components, Object projects, String version) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "title", filled(title), "Заголовок задан");
+        req(f, "content", filled(contentMd), "Содержание непусто");
+        req(f, "component", any(components), "Компонент привязан");
+        req(f, "project", any(projects), "Проект привязан");
+
+        hint(f, "version", filled(version), "Версия задана — желательно");
+
+        return score("spec", f);
+    }
+
+    /**
+     * Компонент (LoreComponent). Голый {@code component_id} в списках нечитаем,
+     * а без области он не ложится ни в группировку, ни в цвет на доске.
+     */
+    static Result evaluateComponent(String fullName, String area, String owner, String gameIcon) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "full_name", filled(fullName), "Полное имя задано");
+        req(f, "area", filled(area), "Область (area) задана");
+
+        hint(f, "owner", filled(owner), "Владелец указан — желательно");
+        hint(f, "game_icon", filled(gameIcon), "Иконка задана — желательно");
+
+        return score("component", f);
+    }
+
+    /**
+     * Веха (KnowMilestone). Без даты веха не ложится на план — перестаёт быть
+     * вехой и становится просто ярлыком.
+     *
+     * <p>Имена полей — как в модели: {@code label} и {@code date_display}, а не
+     * «title»/«target_date». Проверка, названная по несуществующему полю,
+     * краснела бы всегда (D-2026-LORE-QUALITY-NO-PHANTOM-CHECKS).
+     */
+    static Result evaluateMilestone(String label, String dateDisplay, Object sprints) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "label", filled(label), "Название задано");
+        req(f, "date_display", filled(dateDisplay), "Дата задана");
+
+        hint(f, "sprints", any(sprints), "Привязаны спринты — иначе веха ничем не наполнена");
+
+        return score("milestone", f);
+    }
+
+    /**
+     * Открытый вопрос (KnowQuestion). Вопрос без адресата не закрывается: он
+     * висит в реестре, всеми прочитан и никем не взят.
+     */
+    static Result evaluateQuestion(String title, String status, String owner,
+                                   String dueDate, Object links) {
+        List<Finding> f = new ArrayList<>();
+
+        req(f, "title", filled(title), "Заголовок задан");
+        req(f, "status", filled(status), "Статус задан");
+        req(f, "owner", filled(owner), "Владелец указан — без адресата вопрос не закрывается");
+
+        hint(f, "due_date", filled(dueDate), "Срок задан — желательно (иначе просроченность не видна)");
+        hint(f, "links", any(links), "Связь с ADR/компонентом — желательно");
+
+        return score("question", f);
+    }
+
+    /** Порог «раздел заполнен, а не отписан». Символы, не слова: слова считать дороже, а разницы нет. */
+    private static final int MIN_BODY = 120;
+
+    private static int len(String s) {
+        return s == null ? 0 : s.trim().length();
+    }
+
+    /** Заголовок markdown, содержащий фрагмент (без учёта регистра и окончания). */
+    private static boolean hasHeading(String md, String fragment) {
+        if (md == null) return false;
+        return java.util.regex.Pattern
+            .compile("(?mi)^#{1,6}\\s*.*" + java.util.regex.Pattern.quote(fragment))
+            .matcher(md).find();
+    }
+
+    /** Ссылка на сущность корпуса: ADR-… или D-… . */
+    private static boolean refsEntity(String md) {
+        return md != null && java.util.regex.Pattern.compile("\\b(ADR-[A-Z0-9-]+|D-[A-Z0-9-]{4,})")
+            .matcher(md).find();
+    }
+
+    private static void opt(List<Finding> f, boolean requiredHere, String code, boolean ok, String msg) {
+        f.add(new Finding(code, ok, requiredHere, msg));
     }
 
     /**
