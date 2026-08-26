@@ -51,6 +51,31 @@ public final class LoreSlices {
         SLICES.put(id, new SliceDef(baseSql, required, optional, suffix));
     }
 
+    /**
+     * SQL-условие «состояние закрыто» — общее для всех слайсов, где закрытость
+     * определяется по тексту статуса. Объявлено ДО статического блока намеренно:
+     * блок его использует, а Java не допускает forward reference из инициализатора.
+     *
+     * <p>AL-117 сделал значок основным сигналом, и это верно: {@code status_raw} —
+     * свободный текст после значка, а матчинг по словам-подстрокам систематически
+     * терял формулировки, для которых не был написан. Но у отсечки строго по
+     * значку своя цена: строка БЕЗ значка перестала считаться закрытой вообще.
+     *
+     * <p>SPRINT_QG_REBUILD/QG-06 (2026-08-26), замерено на проде: один спринт
+     * ({@code SPRINT_SITE_SEO_PRERENDER}, открытая hist-строка ровно {@code "DONE"})
+     * и семь задач. Спринт остался без {@code done_date}; задачи хуже — они
+     * попадают в {@code open_tasks} и числятся незакрытыми. При этом
+     * {@code AidaLoreResource.classifyStatus()} те же строки считает закрытыми:
+     * аналитика и слайсы расходятся в том, что значит «закрыто», и расходятся молча.
+     *
+     * <p>Поэтому слова возвращаются вторым уровнем — но <b>якорем в начале строки</b>,
+     * а не подстрокой. Ровно на подстроке {@code LIKE '%DONE%'} ошибалась версия до
+     * AL-117: «📋 PLANNED — … DONE позже» ею считалось закрытым.
+     */
+    static final String DONE_STATUS_SQL =
+        "status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%' " +
+        "OR status_raw LIKE 'DONE%' OR status_raw LIKE 'CLOSED%' OR status_raw LIKE 'MERGED%'";
+
     static {
         // ── §1 Timeline — 3 separate slices, merged on frontend ──────────────
         // No UNION in ArcadeDB /api/v1/query. Frontend fetches all 3, merges by date.
@@ -280,7 +305,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
-            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
+            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
@@ -342,13 +367,14 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         // Actual completion dates: valid_from of the first hist entry whose status
-        // starts with a done marker. Prefix match ('✅%') avoids false positives from
-        // TODO statuses that mention DONE in parentheses ("⬜ TODO — (V1 ✅ DONE…)").
+        // starts with a done marker. Prefix match avoids false positives from TODO
+        // statuses that mention DONE in parentheses ("⬜ TODO — (V1 ✅ DONE…)") —
+        // см. DONE_STATUS_SQL про то, почему якорь, а не подстрока.
         slice("sprint_done_dates",
             "SELECT sprint_id, " +
-            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date " +
+            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date " +
             "FROM KnowSprint " +
-            "WHERE out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].size() > 0",
+            "WHERE out('HAS_STATE')[" + DONE_STATUS_SQL + "].size() > 0",
             List.of(), Map.of(), "");
 
         // Phases of a sprint (via PART_OF edges from phases). The phase title is
@@ -1152,7 +1178,7 @@ public final class LoreSlices {
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days " +
             "FROM KnowTaskHist WHERE valid_to IS NULL " +
-            "AND (status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%') AND valid_from IS NOT NULL",
+            "AND (" + DONE_STATUS_SQL + ") AND valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
         // Every task state row (scalar valid_from). Frontend takes min per task = created date,
@@ -1389,7 +1415,14 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id AS component_ids, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
+            // Отрицание DONE_STATUS_SQL, раскрытое по де Моргану в цепочку NOT LIKE:
+            // грамматика ArcadeDB на `NOT ( ... OR ... )` в этой позиции не проверена,
+            // а тихо пустая выдача здесь неотличима от «открытых задач нет».
             "WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '✅%' " +
+            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'ЗАВЕРШЁН%' " +
+            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'DONE%' " +
+            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'CLOSED%' " +
+            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE 'MERGED%' " +
             "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '🚫%'",
             List.of(),
             new LinkedHashMap<>(Map.of(
