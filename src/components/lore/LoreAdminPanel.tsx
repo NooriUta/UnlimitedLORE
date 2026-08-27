@@ -4,7 +4,9 @@ import { useSearchParams } from 'react-router-dom';
 import { iconLoaded } from '@iconify/react';
 import gameIconsData from '@iconify-json/game-icons/icons.json';
 import { Modal } from '@mantine/core';
-import { fetchLoreSlice, loreMutate } from '../../api/lore';
+import { fetchLoreSlice, loreMutate, fetchLoreDoc, type LoreKnowDocRow, type LoreKnowDoc } from '../../api/lore';
+import { MartProse } from '../bench/MartProse';
+import SandboxedHtmlFrame from './SandboxedHtmlFrame';
 import { loadKc, loadKcObj, type KcState } from './kc-state';
 import { GameIcon } from './GameIcon';
 import { AUTH_ENABLED, authHeaders } from '../../auth/session';
@@ -26,7 +28,7 @@ interface Preflight { auth_enabled: boolean; kc_configured: boolean; kc_reachabl
 interface Denial { ts: string; method: string; path: string; status: number; error: string; role: string }
 
 const CANON_TYPES = new Set(['adr_status', 'sprint_status', 'task_status', 'priority']);
-type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'settings' | 'quick';
+type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'claudeRules' | 'settings' | 'quick';
 
 // RBAC scope per ADR-LORE-014 §3 (agent-profiles — файлы; read-only отображение).
 const PROFILE_SCOPE: [string, string][] = [
@@ -275,12 +277,12 @@ function Toolbar({ q, setQ, shown, total, seg }: {
 
 const NAV_GROUPS: { label: string; rail: string; tabs: [Tab, string][] }[] = [
   { label: 'Доступ', rail: 'var(--dng)', tabs: [['users', 'Люди'], ['agents', 'Агенты'], ['roles', 'Роли и права']] },
-  { label: 'Справочники', rail: 'var(--acc)', tabs: [['dicts', 'Словари'], ['projects', 'Проекты'], ['tags', 'Теги']] },
+  { label: 'Справочники', rail: 'var(--acc)', tabs: [['dicts', 'Словари'], ['projects', 'Проекты'], ['tags', 'Теги'], ['claudeRules', 'Правила CLAUDE']] },
   { label: 'Система', rail: 'var(--inf)', tabs: [['settings', 'Настройки'], ['quick', 'Быстрые команды']] },
 ];
 const TAB_TITLES: Record<Tab, string> = {
   users: 'Люди', agents: 'Агенты', roles: 'Роли и права',
-  dicts: 'Словари', projects: 'Проекты', tags: 'Теги', settings: 'Настройки',
+  dicts: 'Словари', projects: 'Проекты', tags: 'Теги', claudeRules: 'Правила CLAUDE', settings: 'Настройки',
   quick: 'Быстрые команды',
 };
 const ALL_TABS = NAV_GROUPS.flatMap(g => g.tabs.map(([k]) => k));
@@ -302,6 +304,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
   const [dicts, setDicts] = useState<DictRow[]>([]);
   const [projects, setProjects] = useState<ProjRow[]>([]);
   const [knowTags, setKnowTags] = useState<TagRow[]>([]);
+  const [claudeRules, setClaudeRules] = useState<LoreKnowDocRow[]>([]);
   const [sprintsByProject, setSprintsByProject] = useState<Record<string, number>>({});
   const [areaUsage, setAreaUsage] = useState<Record<string, number>>({});
   const [users, setUsers] = useState<KcState<KcUser>>({ k: 'loading' });
@@ -314,6 +317,8 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
     fetchLoreSlice<DictRow>('dictionary', {}).then(setDicts).catch(onError);
     fetchLoreSlice<ProjRow>('git_projects', {}).then(setProjects).catch(onError);
     fetchLoreSlice<TagRow>('tags_usage', {}).then(setKnowTags).catch(onError);
+    // kind — серверный фильтр: общий корпус KnowDoc упирается в LIMIT 200 слайса.
+    fetchLoreSlice<LoreKnowDocRow>('docs', { kind: 'claude-rules' }).then(setClaudeRules).catch(onError);
     fetchLoreSlice<{ sprint_id: string; git_projects: string[] | null }>('sprints', {})
       .then(rows => {
         const m: Record<string, number> = {};
@@ -338,6 +343,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
     dicts: dictTypes.length || undefined,
     projects: projects.length || undefined,
     tags: knowTags.length || undefined,
+    claudeRules: claudeRules.length || undefined,
   };
 
   return (
@@ -381,6 +387,7 @@ export default function LoreAdminPanel({ onError }: { onError: (e: unknown) => v
           {tab === 'dicts' && <DictsTab rows={dicts} areaUsage={areaUsage} onError={onError} reload={bump} />}
           {tab === 'projects' && <ProjectsTab rows={projects} sprints={sprintsByProject} people={users} onError={onError} reload={bump} />}
           {tab === 'tags' && <TagsTab know={knowTags} />}
+          {tab === 'claudeRules' && <ClaudeRulesTab rows={claudeRules} />}
           {tab === 'settings' && <SettingsTab dicts={dicts} preflight={preflight} onError={onError} reload={bump} />}
           {tab === 'quick' && <QuickCommandsTab />}
         </main>
@@ -1696,6 +1703,62 @@ function TagsTab({ know }: { know: TagRow[] }) {
         seg={{ options: [['uses', t('lore.admin.byUses', 'По использованию')], ['alpha', t('lore.admin.byAlpha', 'По алфавиту')]], value: sort, set: v => setSort(v as 'uses' | 'alpha') }} />
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         {list('KnowTag', know)}
+      </div>
+    </div>
+  );
+}
+
+// ── Правила CLAUDE — снимки CLAUDE.md машины и проектов ─────────────────────
+// Read-only витрина: источник истины — файлы CLAUDE.md на машине владельца,
+// в LORE они попадают как KnowDoc kind='claude-rules' (через doc_new).
+function ClaudeRulesTab({ rows }: { rows: LoreKnowDocRow[] }) {
+  const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
+  const sorted = useMemo(
+    () => [...rows].sort((a, b) => (a.sort_order ?? 99) - (b.sort_order ?? 99) || a.doc_id.localeCompare(b.doc_id)),
+    [rows],
+  );
+  const sel = params.get('doc') ?? sorted[0]?.doc_id ?? null;
+  const pick = (id: string) => {
+    const p = new URLSearchParams(params);
+    p.set('doc', id);
+    setParams(p, { replace: true });
+  };
+  const [body, setBody] = useState<LoreKnowDoc | null>(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!sel) return;
+    const ctl = new AbortController();
+    setLoading(true);
+    fetchLoreDoc(sel, ctl.signal)
+      .then(d => { setBody(d); setLoading(false); })
+      .catch(() => { /* abort или сбой сети — экран покажет «нет тела» */ setLoading(false); });
+    return () => ctl.abort();
+  }, [sel]);
+  if (!rows.length) {
+    return <div style={S.state('neutral')}>{t('lore.admin.claudeRulesEmpty', 'Правила не загружены: нет документов с kind claude-rules. Заводятся через MCP doc_new.')}</div>;
+  }
+  const md = body ? (body.content_md_ru ?? body.content_md_en) : null;
+  return (
+    <div>
+      <div style={S.card}>{t('lore.admin.claudeRulesNote', 'Снимки файлов CLAUDE.md: один глобальный (вся машина) и по одному на репозиторий. Источник истины — файлы на машине владельца; здесь read-only витрина, обновляется через MCP doc_new.')}</div>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flexBasis: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {sorted.map(r => (
+            <button key={r.doc_id} style={S.nav(sel === r.doc_id)} onClick={() => pick(r.doc_id)} aria-current={sel === r.doc_id}>
+              <span style={S.rail(sel === r.doc_id ? 'var(--acc)' : null)} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title ?? r.doc_id}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ flex: 1, minWidth: 300 }}>
+          {loading && <div style={S.state('neutral')}>{t('lore.admin.claudeRulesLoading', 'Читаем документ…')}</div>}
+          {!loading && body && md && <MartProse text={md} />}
+          {!loading && body && !md && body.content_html && <SandboxedHtmlFrame html={body.content_html} title={body.title ?? body.doc_id} />}
+          {!loading && (!body || (!md && !body.content_html)) && (
+            <div style={S.state('neutral')}>{t('lore.admin.claudeRulesNoBody', 'У документа нет тела — проверьте content_md_ru/content_md_en.')}</div>
+          )}
+        </div>
       </div>
     </div>
   );
