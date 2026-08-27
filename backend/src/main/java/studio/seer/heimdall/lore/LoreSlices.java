@@ -1237,7 +1237,10 @@ public final class LoreSlices {
                 // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
                 // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
                 // делало сущность видимой только под одним произвольным компонентом.
-                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component",
+                // Панель «Правила CLAUDE»: общий корпус KnowDoc уже упирается в
+                // LIMIT 200, серверный фильтр гарантирует полноту выборки по kind.
+                "kind", " WHERE kind = :kind")),
             " ORDER BY doc_id LIMIT 200");
 
         slice("doc_by_id",
