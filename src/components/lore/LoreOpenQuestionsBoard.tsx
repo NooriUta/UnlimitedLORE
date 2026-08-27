@@ -19,8 +19,10 @@ import TipTapField from './TipTapField';
 interface QForm {
   question_id: string; title: string; body_md: string; component_id: string;
   status: string; priority: string; due_date: string; owner: string; raised_in: string;
+  /** условие возврата к вопросу; бэкенд требует его при status='deferred' */
+  trigger: string;
 }
-const EMPTY_FORM: QForm = { question_id: '', title: '', body_md: '', component_id: '', status: 'open', priority: '', due_date: '', owner: '', raised_in: '' };
+const EMPTY_FORM: QForm = { question_id: '', title: '', body_md: '', component_id: '', status: 'open', priority: '', due_date: '', owner: '', raised_in: '', trigger: '' };
 
 interface Props {
   q: string;
@@ -173,6 +175,7 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
       question_id: r.question_id, title: r.title ?? '', body_md: r.body_md ?? '', component_id: r.component_id ?? '',
       status: r.status ?? 'open', priority: r.priority ?? '', due_date: (r.due_date ?? '').slice(0, 10),
       owner: r.owner ?? '', raised_in: (r.raised_adr ?? []).filter(Boolean)[0] ?? '',
+      trigger: r.trigger ?? '',
     });
     setEditId(r.question_id);
   }
@@ -211,17 +214,23 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
   async function save() {
     const f = form;
     if (!f.question_id.trim() || !f.title.trim()) { onError(new Error('question_id и title обязательны')); return; }
+    // «Отложен» без условия возврата бэкенд не примет — говорим об этом ДО отправки.
+    // Раньше статус в этом случае молча заменялся на null: пользователь менял статус,
+    // получал «сохранено», а в базе оставалось старое («статус не даёт сменить»).
+    if (f.status === 'deferred' && !f.trigger.trim()) {
+      onError(new Error('«Отложен» требует условия возврата — заполните поле триггера'));
+      return;
+    }
     setSaving(true);
     try {
-      // Upsert (partial-safe). status='deferred' needs a trigger — the form omits
-      // deferred to avoid the backend trigger requirement; use the row's ⏸ later.
-      // raised_in — НЕ поле /lore/question (бэкенд отвергал весь payload 400);
-      // это ребро — шлём отдельным вызовом ниже. status='closed' ставится только
-      // через ANSWERS — не отправляем его вовсе (инвариант бэкенда).
+      // Upsert (partial-safe). raised_in — НЕ поле /lore/question (бэкенд отвергал
+      // весь payload 400); это ребро — шлём отдельным вызовом ниже. status='closed'
+      // ставится ТОЛЬКО через ANSWERS (инвариант бэкенда) — его не отправляем.
       await loreMutate('/question', {
         question_id: f.question_id.trim(), title: f.title.trim(),
         body_md: f.body_md.trim() || null, component_id: f.component_id.trim() || null,
-        status: f.status === 'open' || f.status === 'dropped' ? f.status : null, priority: f.priority || null,
+        status: f.status === 'closed' ? null : f.status, priority: f.priority || null,
+        trigger: f.status === 'deferred' ? f.trigger.trim() : null,
         due_date: f.due_date || null, owner: f.owner.trim() || null,
       });
       if (f.raised_in.trim()) {
@@ -517,13 +526,24 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
               );
             })()}
             <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-              {/* closed ставится ТОЛЬКО через ANSWERS (инвариант ADR-021) — в селекте
-                  его нет; закрыть можно рядом, выбрав решение-ответ. */}
-              {(form.status === 'closed' || form.status === 'deferred') && (
-                <option value={form.status} disabled>{STATUS_META[form.status]?.label ?? form.status}</option>
+              {/* closed ставится ТОЛЬКО через ANSWERS (инвариант ADR-021) — выбрать
+                  его нельзя, показываем как текущее значение с подписью «через ответ».
+                  deferred ВЫБИРАЕМ (раньше был заперт disabled-заглушкой, и статус
+                  нельзя было сменить вовсе — жалоба архитектора): бэкенд требует
+                  trigger, поэтому рядом появляется обязательное поле. */}
+              {form.status === 'closed' && (
+                <option value="closed" disabled>{t('lore.questions.closedViaAnswer', 'закрыт (через ответ-решение)')}</option>
               )}
-              {['open', 'dropped'].map(s => <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>)}
+              {['open', 'deferred', 'dropped'].map(s => <option key={s} value={s}>{STATUS_META[s]?.label ?? s}</option>)}
             </select>
+            {form.status === 'deferred' && (
+              <input
+                style={{ ...S.input, borderColor: form.trigger.trim() ? undefined : 'var(--wrn)' }}
+                value={form.trigger}
+                onChange={e => setForm(f => ({ ...f, trigger: e.target.value }))}
+                placeholder={t('lore.questions.triggerPlaceholder', 'условие возврата к вопросу (обязательно для «отложен»)')}
+              />
+            )}
             <select style={S.input} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
               <option value="">— приоритет —</option>
               {PRIORITY_ORDER.map(p => <option key={p} value={p}>{PRIORITY_META[p].label}</option>)}

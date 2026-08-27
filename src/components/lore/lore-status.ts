@@ -102,7 +102,10 @@ export function statusLabel(status: string | null | undefined): string {
  */
 export function taskTick(statusRaw: string | null | undefined): { status: string; done: boolean } {
   const s = (statusRaw ?? '').trimStart();
-  if (s.startsWith('✅') || /^(DONE|CLOSED|ЗАВЕРШ)/i.test(s)) return { status: 'done', done: true };
+  // QG-13: слова «закрыто» — копия LoreStatusVocabulary.ENTRIES[done] на бэкенде,
+  // сверяется тестом LoreStatusVocabularyTest. MERGED и ЗАКРЫТ здесь не было, и
+  // из-за этого фронт и бэкенд расходились в том, закрыта задача или нет.
+  if (s.startsWith('✅') || /^(DONE|CLOSED|MERGED|ЗАВЕРШ|ЗАКРЫТ)/i.test(s)) return { status: 'done', done: true };
   if (s.startsWith('🔄') || /^(IN.?PROGRESS|WIP|ACTIVE)/i.test(s))
     return { status: 'active', done: false };
   if (s.startsWith('🟡') || /^(PARTIAL|ЧАСТИЧ)/i.test(s)) return { status: 'partial', done: false };

@@ -98,7 +98,17 @@ public class LoreQualityFacts {
             "title, "
             + "COALESCE(out('HAS_STATE')[valid_to IS NULL].content_md[0], content_md) AS content_md, "
             + "COALESCE(out('HAS_STATE')[valid_to IS NULL].version[0], version)       AS version, "
-            + "out('DOCUMENTED_IN').component_id AS components, "
+            // Компонент у спеки привязывается ТРЕМЯ разными способами, и проверять
+            // надо все: spec_link(rel=component) пишет BELONGS_TO (исходящее),
+            // spec_new(component_id) держит DOCUMENTED_IN (ВХОДЯЩЕЕ: компонент →
+            // спека), плюс есть плоское поле component_id на вершине.
+            // Чтение только out('DOCUMENTED_IN') не видело ни одного из них —
+            // направление неверное, и вердикт отчитывался «компонент не привязан»
+            // у спек, где он привязан всеми тремя способами сразу (поймано
+            // сессией MIDGARD на SPEC-MIDGARD-PLAN-WALL-MODEL-001).
+            + "out('BELONGS_TO').component_id   AS comp_edge, "
+            + "in('DOCUMENTED_IN').component_id AS comp_documented, "
+            + "component_id                     AS comp_field, "
             + "out('BELONGS_TO_PROJECT').slug    AS projects"),
         // Релиз адресуется release_uid ("{git_project}#{release_id}"): номер
         // версии повторяется между репозиториями (13 пересечений на 2026-08-23),
@@ -179,9 +189,16 @@ public class LoreQualityFacts {
                     return WorkQuality.evaluateDecision(s(r, "status"), s(r, "body_md"), hasAdr,
                         r.get("components"), r.get("tags"));
                 }
-                case SPEC:
+                case SPEC: {
+                    // Любой из трёх способов привязки засчитывается. Требовать
+                    // «правильный» значило бы заставить переделывать уже сделанное
+                    // ради формы — то есть городить четвёртый способ поверх трёх.
+                    Object comps = r.get("comp_edge");
+                    if (!any(comps)) comps = r.get("comp_documented");
+                    if (!any(comps)) comps = r.get("comp_field");
                     return WorkQuality.evaluateSpec(s(r, "title"), s(r, "content_md"),
-                        r.get("components"), r.get("projects"), s(r, "version"));
+                        comps, r.get("projects"), s(r, "version"));
+                }
                 case RELEASE:
                     return WorkQuality.evaluateRelease(s(r, "git_tag"), s(r, "description_md"),
                         r.get("sprints"), r.get("prs"), r.get("projects"));
@@ -202,6 +219,18 @@ public class LoreQualityFacts {
             Object v = r.get(key);
             if (v instanceof List<?> l) v = l.isEmpty() ? null : l.get(0);
             return v == null ? null : String.valueOf(v);
+        }
+
+        /**
+         * Есть ли хоть одно непустое значение. Траверс отдаёт скаляр, список или
+         * null, причём «список из одного null» приходит именно там, где ребра
+         * нет: проверка на {@code != null} такое приняла бы за связь.
+         */
+        private static boolean any(Object raw) {
+            if (raw == null) return false;
+            if (raw instanceof java.util.Collection<?> c)
+                return c.stream().anyMatch(o -> o != null && !String.valueOf(o).isBlank());
+            return !String.valueOf(raw).isBlank();
         }
     }
 }

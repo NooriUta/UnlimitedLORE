@@ -51,6 +51,36 @@ public final class LoreSlices {
         SLICES.put(id, new SliceDef(baseSql, required, optional, suffix));
     }
 
+    /**
+     * SQL-условие «состояние закрыто» — общее для всех слайсов, где закрытость
+     * определяется по тексту статуса. Объявлено ДО статического блока намеренно:
+     * блок его использует, а Java не допускает forward reference из инициализатора.
+     *
+     * <p>AL-117 сделал значок основным сигналом, и это верно: {@code status_raw} —
+     * свободный текст после значка, а матчинг по словам-подстрокам систематически
+     * терял формулировки, для которых не был написан. Но у отсечки строго по
+     * значку своя цена: строка БЕЗ значка перестала считаться закрытой вообще.
+     *
+     * <p>SPRINT_QG_REBUILD/QG-06 (2026-08-26), замерено на проде: один спринт
+     * ({@code SPRINT_SITE_SEO_PRERENDER}, открытая hist-строка ровно {@code "DONE"})
+     * и семь задач. Спринт остался без {@code done_date}; задачи хуже — они
+     * попадают в {@code open_tasks} и числятся незакрытыми. При этом
+     * {@code AidaLoreResource.classifyStatus()} те же строки считает закрытыми:
+     * аналитика и слайсы расходятся в том, что значит «закрыто», и расходятся молча.
+     *
+     * <p>Поэтому слова возвращаются вторым уровнем — но <b>якорем в начале строки</b>,
+     * а не подстрокой. Ровно на подстроке {@code LIKE '%DONE%'} ошибалась версия до
+     * AL-117: «📋 PLANNED — … DONE позже» ею считалось закрытым.
+     */
+    static final String DONE_STATUS_SQL = LoreStatusVocabulary.anySql("status_raw", "done");
+
+    /**
+     * Выражение статуса в {@code open_tasks} — двойной хоп, а не поле, поэтому
+     * предикат строится отдельно от {@link #DONE_STATUS_SQL}.
+     */
+    private static final String OPEN_TASK_STATUS_EXPR =
+        "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
+
     static {
         // ── §1 Timeline — 3 separate slices, merged on frontend ──────────────
         // No UNION in ArcadeDB /api/v1/query. Frontend fetches all 3, merges by date.
@@ -280,7 +310,7 @@ public final class LoreSlices {
             "out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0]       AS pr_refs, " +
             "out('IMPLEMENTED_IN_RELEASE').release_id   AS release_ids, " +
             "out('IMPLEMENTED_IN_RELEASE').release_date AS release_dates, " +
-            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date, " +
+            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date, " +
             "out('BELONGS_TO_PROJECT').slug             AS git_projects, " +
             "out('BELONGS_TO')[component_id IS NOT NULL].component_id AS components, " +
             "out('TARGETS_MILESTONE').milestone_id AS milestone_ids, " +
@@ -342,13 +372,14 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
 
         // Actual completion dates: valid_from of the first hist entry whose status
-        // starts with a done marker. Prefix match ('✅%') avoids false positives from
-        // TODO statuses that mention DONE in parentheses ("⬜ TODO — (V1 ✅ DONE…)").
+        // starts with a done marker. Prefix match avoids false positives from TODO
+        // statuses that mention DONE in parentheses ("⬜ TODO — (V1 ✅ DONE…)") —
+        // см. DONE_STATUS_SQL про то, почему якорь, а не подстрока.
         slice("sprint_done_dates",
             "SELECT sprint_id, " +
-            "out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].valid_from[0] AS done_date " +
+            "out('HAS_STATE')[" + DONE_STATUS_SQL + "].valid_from[0] AS done_date " +
             "FROM KnowSprint " +
-            "WHERE out('HAS_STATE')[status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%'].size() > 0",
+            "WHERE out('HAS_STATE')[" + DONE_STATUS_SQL + "].size() > 0",
             List.of(), Map.of(), "");
 
         // Phases of a sprint (via PART_OF edges from phases). The phase title is
@@ -1152,7 +1183,7 @@ public final class LoreSlices {
             "in('HAS_STATE').out('HAS_STATE').size() AS states, " +
             "in('HAS_STATE').effort_days[0] AS effort_days " +
             "FROM KnowTaskHist WHERE valid_to IS NULL " +
-            "AND (status_raw LIKE '✅%' OR status_raw LIKE 'ЗАВЕРШЁН%') AND valid_from IS NOT NULL",
+            "AND (" + DONE_STATUS_SQL + ") AND valid_from IS NOT NULL",
             List.of(), Map.of(), "");
 
         // Every task state row (scalar valid_from). Frontend takes min per task = created date,
@@ -1389,8 +1420,10 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id AS component_ids, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days " +
             "FROM KnowTask " +
-            "WHERE out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '✅%' " +
-            "AND out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] NOT LIKE '🚫%'",
+            // «Открытая» = не закрытая и не отменённая. Оба словаря берутся из
+            // LoreStatusVocabulary, отрицание раскрыто по де Моргану в цепочку
+            // NOT LIKE — см. noneSql() про то, почему не NOT ( ... OR ... ).
+            "WHERE " + LoreStatusVocabulary.noneSql(OPEN_TASK_STATUS_EXPR, "done", "cancelled"),
             List.of(),
             new LinkedHashMap<>(Map.of(
                 // Двойной хоп — тот же паттерн, что уже проверен в этом файле
@@ -1699,13 +1732,31 @@ public final class LoreSlices {
      * derived-привязкой (components — через спринты) сюда не входят: у них
      * «проект» вычислим, но не является фактом самой вершины (решение AL-92).</p>
      */
-    static final Map<String, String> PROJECT_SCOPED = Map.of(
-        "sprints",   "out('BELONGS_TO_PROJECT').slug",
-        "adrs",      "out('BELONGS_TO_PROJECT').slug",
-        "releases",  "out('BELONGS_TO_PROJECT').slug",
-        "docs",      "out('BELONGS_TO_PROJECT').slug",
-        "runbooks",  "out('BELONGS_TO_PROJECT').slug",
-        "specs",     "out('BELONGS_TO_PROJECT').slug"
+    // Несколько выражений на слайс (разделитель "|") = проверка И ПРЯМОЙ связи,
+    // И КОСВЕННОЙ — через родительский объект. Решение владельца: «проверять надо
+    // как прямую связь, так и косвенную через родительские объекты».
+    //
+    // Зачем: у решений собственного ребра проекта почти нет (300 из 300 — проект
+    // выводится через родительский ADR), у вопросов — у 24 из 37 непривязанных.
+    // Со строгой проверкой ТОЛЬКО прямой связи включённый скоуп отрезал бы автору
+    // его же вопрос, поднятый в его же ADR («не проходит редактирование с обрезкой
+    // прав по проектам»). Проверка «хотя бы один путь ведёт в разрешённый проект»
+    // сохраняет смысл скоупа и не наказывает за неполноту рёбер.
+    static final Map<String, String> PROJECT_SCOPED = Map.ofEntries(
+        Map.entry("sprints",   "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("releases",  "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("docs",      "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("runbooks",  "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("specs",     "out('BELONGS_TO_PROJECT').slug"),
+        // Решение: своё ребро ИЛИ проект родительского ADR (DECIDED_IN).
+        Map.entry("decisions",
+            "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("decisions_of_adr",
+            "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
+        // Вопрос: своё ребро ИЛИ проект места, где он поднят (RAISED_IN → ADR/спринт).
+        Map.entry("open_questions",
+            "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug")
     );
 
     /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */
@@ -1730,18 +1781,28 @@ public final class LoreSlices {
         if (traversal == null) return base;
 
         Map<String, Object> params = new LinkedHashMap<>(base.params());
+        // Выражений может быть несколько (прямая связь | через родителя) — сущность
+        // видна, если ХОТЯ БЫ ОДИН путь ведёт в разрешённый проект.
+        String[] traversals = traversal.split("\\|");
         String condition;
         if (allowed.isEmpty()) {
             params.put("__scope0", SCOPE_NONE);
-            condition = traversal + " CONTAINS :__scope0";
+            StringBuilder or = new StringBuilder();
+            for (String tr : traversals) {
+                if (or.length() > 0) or.append(" OR ");
+                or.append(tr).append(" CONTAINS :__scope0");
+            }
+            condition = "(" + or + ")";
         } else {
             StringBuilder or = new StringBuilder();
             int i = 0;
             for (String slug : allowed) {
                 String key = "__scope" + i++;
                 params.put(key, slug);
-                if (or.length() > 0) or.append(" OR ");
-                or.append(traversal).append(" CONTAINS :").append(key);
+                for (String tr : traversals) {
+                    if (or.length() > 0) or.append(" OR ");
+                    or.append(tr).append(" CONTAINS :").append(key);
+                }
             }
             condition = "(" + or + ")";
         }
