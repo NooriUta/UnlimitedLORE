@@ -85,9 +85,23 @@ public class LocalChatProvider implements LlmProvider {
                 return LlmAnswer.unavailable("локальная модель вернула ответ без вариантов");
             }
 
-            LocalChatClient.ChatMessage answer = response.choices().get(0).message();
-            if (answer == null || answer.content() == null) {
-                return LlmAnswer.unavailable("локальная модель вернула вариант без содержимого");
+            LocalChatClient.Choice choice = response.choices().get(0);
+            LocalChatClient.ChatMessage answer = choice.message();
+
+            // ПУСТАЯ СТРОКА — НЕ ОТВЕТ. Найдено первым же живым прогоном
+            // 2026-08-27: рассуждающая модель (Qwen3.8) израсходовала весь
+            // потолок на размышление, вернула HTTP 200, finish_reason="length"
+            // и content="" при 900 потраченных токенах. Прежняя проверка ловила
+            // только null и пропустила бы это дальше как успешный пустой ответ —
+            // то есть модуль, написанный против подмены отсутствия факта пустым
+            // значением, сам бы её и совершил.
+            if (answer == null || answer.content() == null || answer.content().isBlank()) {
+                String why = "length".equals(choice.finishReason())
+                    ? "ответ оборван потолком токенов до того, как модель начала отвечать "
+                    + "(finish_reason=length; у рассуждающих моделей потолок расходуется на размышление)"
+                    : "локальная модель вернула пустое содержимое"
+                    + (choice.finishReason() != null ? ", finish_reason=" + choice.finishReason() : "");
+                return LlmAnswer.unavailable(why);
             }
 
             long in = response.usage() != null && response.usage().promptTokens() != null

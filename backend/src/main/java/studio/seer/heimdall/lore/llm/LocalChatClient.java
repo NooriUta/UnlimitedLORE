@@ -51,8 +51,14 @@ public interface LocalChatClient {
         @JsonProperty("completion_tokens") Long completionTokens
     ) {}
 
+    /**
+     * {@code finishReason} нужен, чтобы отличить законченный ответ от оборванного.
+     * Значение {@code "length"} означает, что генерацию срезал потолок токенов —
+     * и тогда содержимое может оказаться пустым, хотя вызов формально успешен
+     * (HTTP 200). Без этого поля причину пустоты назвать нечем.
+     */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record Choice(ChatMessage message) {}
+    record Choice(ChatMessage message, @JsonProperty("finish_reason") String finishReason) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ChatResponse(String model, List<Choice> choices, Usage usage) {}
