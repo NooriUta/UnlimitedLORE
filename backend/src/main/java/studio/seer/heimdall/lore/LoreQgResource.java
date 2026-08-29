@@ -62,11 +62,27 @@ public class LoreQgResource extends LoreResourceBase {
     }
 
     // ── QG Run record (ClRoutineRun + ClRoutineMetric batch) ─────────────────
-    public record QGMetricEntry(String key, Double value, String unit, Double target, String status, String source) {}
+    //
+    // SPRINT_QG_REBUILD/QG-12 + QG-03 + QG-15. Схему расширила миграция 29, а
+    // контракт живёт на ПУТИ ЗАПИСИ: поля в схеме без проверок на входе — это те
+    // же 56 строк метрик без даты, только с новыми колонками.
+    //
+    // Сама запись и проверки — в LoreQgRunWriter, потому что писать прогоны нужно
+    // из ДВУХ мест: отсюда и из опроса Forgejo (LoreQgActionsPoller). Копия SQL во
+    // втором месте завела бы вторую правду о том, что считается корректной
+    // записью, и первая же правка проверок разошлась бы молча. Роль ⑥
+    // «Регистратор» из §11.2 — единственная точка записи, в одном экземпляре.
+
+    public record QGMetricEntry(String key, Double value, String unit, Double target, String status, String source,
+                                String not_measured_reason, String model) {}
     public record QGRunRequest(
         String run_id, String routine_name, String run_date, String status,
         String started_at, String finished_at, String flags,
+        String channel, String source_url, String commit_sha, Integer pr_number, String model,
         java.util.List<QGMetricEntry> metrics) {}
+
+    @jakarta.inject.Inject
+    LoreQgRunWriter runWriter;
 
     @POST
     @Path("qg/run")
@@ -76,41 +92,14 @@ public class LoreQgResource extends LoreResourceBase {
                                 @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         requireAdmin(role);
-        if (req == null || req.routine_name() == null || req.routine_name().isBlank())
-            return badParams("routine_name required");
-        String runId = req.run_id() != null ? req.run_id()
-            : req.routine_name() + "_" + (req.run_date() != null ? req.run_date() : "unknown");
         try {
-            // Upsert ClRoutineRun
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE ClRoutineRun SET run_id=:rid, routine_name=:rn, run_date=:rd, " +
-                "status=:st, started_at=:sa, finished_at=:fa, flags=:fl " +
-                "UPSERT WHERE run_id=:rid",
-                mapOfNullable("rid", runId, "rn", req.routine_name(), "rd", req.run_date(),
-                    "st", req.status(), "sa", req.started_at(), "fa", req.finished_at(),
-                    "fl", req.flags()))).await().indefinitely();
-            // Upsert ClRoutineMetric entries
-            int written = 0;
-            if (req.metrics() != null) {
-                for (QGMetricEntry m : req.metrics()) {
-                    if (m.key() == null) continue;
-                    String mId = runId + "_" + m.key();
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "UPDATE ClRoutineMetric SET metric_id=:mid, run_id=:rid, " +
-                        "routine_name=:rn, run_date=:rd, metric_key=:mk, value=:val, " +
-                        "unit=:unit, target=:tgt, status=:st, source=:src " +
-                        "UPSERT WHERE metric_id=:mid",
-                        mapOfNullable("mid", mId, "rid", runId, "rn", req.routine_name(),
-                            "rd", req.run_date(), "mk", m.key(), "val", m.value(),
-                            "unit", m.unit(), "tgt", m.target(), "st", m.status(),
-                            "src", m.source())))
-                        .await().indefinitely();
-                    written++;
-                }
-            }
-            return noStore(Response.ok(Map.of("ok", true, "run_id", runId, "metrics_written", written)));
+            LoreQgRunWriter.Result r = runWriter.record(req);
+            if (!r.ok()) return badParams(r.errorDetail());
+            return noStore(Response.ok(Map.of(
+                "ok", true, "run_id", r.runId(), "metrics_written", r.metricsWritten())));
         } catch (Exception e) {
-            LOG.warnf("[LORE QG RUN] %s: %s", runId, e.getMessage());
+            LOG.warnf("[LORE QG RUN] %s: %s",
+                req != null ? req.routine_name() : "<null>", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }

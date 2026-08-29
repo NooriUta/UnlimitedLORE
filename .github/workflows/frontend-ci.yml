@@ -176,3 +176,4 @@ jobs:
           grep -q "connect-src 'self' https://auth.example.org" /tmp/nginx-configured.conf || {
             echo "ОШИБКА: LORE_OIDC_ORIGIN не подставилась в CSP"; exit 1; }
           echo "ok: обе переменные подставились, синтаксис принят"
+

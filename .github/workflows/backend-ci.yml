@@ -276,3 +276,4 @@ jobs:
           else
             echo "::warning::не удалось снять тест-БД ${LORE_TEST_DB_NAME} (HTTP $code): $(head -c 300 /tmp/drop.out). База осталась на сервере — если такое повторяется, базы копятся."
           fi
+
