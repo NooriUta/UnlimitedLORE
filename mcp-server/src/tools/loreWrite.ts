@@ -1664,16 +1664,38 @@ export function registerLoreWrite(server: McpServer): void {
       finished_at:  z.string().optional().describe('ISO datetime when run finished'),
       flags:        z.string().optional().describe('Comma-separated flag strings, e.g. "coverage_low,shuttle_down"'),
       run_id:       z.string().optional().describe('Explicit run ID; auto-generated as routine_name+run_date if omitted'),
+      // SPRINT_QG_REBUILD/QG-12 (SPEC-QG-ARCHITECTURE §4.8, §4.9): channel and the
+      // change it is attributable to. Without `channel` "no commits this week" is
+      // indistinguishable from "the gate died" — two different verdicts.
+      channel:      z.enum(['actions', 'app_job']).optional().describe('Trigger channel: "actions" = Forgejo Actions (tied to a change), "app_job" = scheduled application job (tied to a date)'),
+      source_url:   z.string().optional().describe('Link to the run that produced this record (Actions run URL / job id) — one click from a red metric to its log'),
+      commit_sha:   z.string().optional().describe('Commit the verdict is attributable to (channel "actions")'),
+      pr_number:    z.number().int().optional().describe('PR the verdict is attributable to (channel "actions")'),
+      // QG-15: which model produced the judgement. The owner chose to keep the LLM
+      // call on our side specifically to compare models; a verdict whose model is
+      // unknown cannot be compared to anything. Empty is MEANINGFUL for channel
+      // "actions" — there is no judgement there, only the fact of a build.
+      model:        z.string().optional().describe('Model that produced the judgement, e.g. "claude-opus-5". Leave unset for channel "actions" — no judgement is made there'),
       metrics: z.array(z.object({
         key:    z.string().describe('Metric key, e.g. "inv_2_safecall_count" (one per invariant)'),
-        value:  z.number().describe('Numeric value (grep count / HTTP status / ms / ratio; -1 = SKIP/service down)'),
+        value:  z.number().describe('Numeric value (grep count / HTTP status / ms / ratio)'),
         unit:   z.string().optional().describe('Unit: "count" | "ratio" | "ms" | "bool" | "lines" | "pct"'),
         target: z.number().optional().describe('Target/threshold value'),
-        status: z.enum(['PASS', 'WARN', 'FAIL', 'SKIP']).optional().describe('Per-metric status vs target'),
+        status: z.enum(['PASS', 'WARN', 'FAIL', 'SKIP', 'NOT_MEASURED']).optional().describe('Per-metric status vs target. NOT_MEASURED = the measurement did not happen; it takes no part in the verdict but shows as failed in the report. SKIP is the legacy spelling of the same thing'),
         source: z.string().optional().describe('Exact reproducer command + file:line evidence, e.g. "grep -n safeCall CompositeListener.java → lines 47,89 (=5, want 8)". Drives _qg_recommend.'),
+        // §5: REQUIRED whenever status is NOT_MEASURED/SKIP — the backend rejects
+        // the whole run otherwise. Free text is refused on purpose: an untyped
+        // reason cannot be grouped or counted, so "how many days has this been
+        // unmeasured" has no answer. 35 silently skipped metrics are what this fixes.
+        not_measured_reason: z.enum([
+          'source_unreachable', 'source_missing', 'stand_absent', 'tool_disabled',
+          'script_absent', 'not_implemented', 'budget_exhausted', 'no_changes', 'no_evidence',
+        ]).optional().describe('REQUIRED when status is NOT_MEASURED or SKIP — why the measurement did not happen'),
+        model:  z.string().optional().describe('Model that judged this particular metric; defaults to the run-level model. Metrics collected by deterministic code have none'),
       })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
-    async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id, metrics }) => {
+    async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id,
+             channel, source_url, commit_sha, pr_number, model, metrics }) => {
       // try/catch как у всех прочих write-тулов: этот эндпоинт умеет 500-ить на
       // UPSERT-схеме, и без обёртки падение уходило необработанной ошибкой
       // протокола вместо стандартного {isError:true}.
@@ -1684,6 +1706,11 @@ export function registerLoreWrite(server: McpServer): void {
           finished_at: finished_at ?? null,
           flags:       flags       ?? null,
           run_id:      run_id      ?? null,
+          channel:     channel     ?? null,
+          source_url:  source_url  ?? null,
+          commit_sha:  commit_sha  ?? null,
+          pr_number:   pr_number   ?? null,
+          model:       model       ?? null,
           metrics:     metrics     ?? [],
         }));
       } catch (e) { return err(e); }
