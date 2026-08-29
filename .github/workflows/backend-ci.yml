@@ -276,3 +276,25 @@ jobs:
           else
             echo "::warning::не удалось снять тест-БД ${LORE_TEST_DB_NAME} (HTTP $code): $(head -c 300 /tmp/drop.out). База осталась на сервере — если такое повторяется, базы копятся."
           fi
+
+      # SPRINT_QG_REBUILD/QG-12: канал 1 оставляет след в LORE. Причины и весь
+      # разбор — в .github/scripts/qg-record-run.sh. Здесь важно одно: шаг стоит
+      # под `if: always()`, потому что красная сборка — это РЕЗУЛЬТАТ измерения,
+      # а не его отсутствие, и запись о ней нужна ровно так же, как о зелёной.
+      # continue-on-error намеренно: недоступный LORE не должен красить сборку,
+      # но и молчать не будет — скрипт печатает ::warning:: с кодом ответа.
+      - name: 'QG: записать прогон в LORE'
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          QG_ROUTINE:            qg-ci-backend
+          QG_JOB_STATUS:         ${{ job.status }}
+          QG_RUN_URL:            https://git.seidrstudio.pro/AIDA/UnlimitedLORE/actions/runs/${{ github.run_number }}
+          QG_COMMIT_SHA:         ${{ github.sha }}
+          QG_PR_NUMBER:          ${{ github.event.pull_request.number || 'null' }}
+          LORE_URL:              https://lore.odal.seidrstudio.pro
+          LORE_QG_CLIENT_ID:     ${{ secrets.LORE_QG_CLIENT_ID }}
+          LORE_QG_CLIENT_SECRET: ${{ secrets.LORE_QG_CLIENT_SECRET }}
+          LORE_QG_TOKEN_URL:     ${{ secrets.LORE_QG_TOKEN_URL }}
+        run: bash .github/scripts/qg-record-run.sh

@@ -62,10 +62,34 @@ public class LoreQgResource extends LoreResourceBase {
     }
 
     // ── QG Run record (ClRoutineRun + ClRoutineMetric batch) ─────────────────
-    public record QGMetricEntry(String key, Double value, String unit, Double target, String status, String source) {}
+    //
+    // SPRINT_QG_REBUILD/QG-12 + QG-03 + QG-15. Схему расширила миграция 29; здесь
+    // тот же контракт появляется на ПУТИ ЗАПИСИ, и это принципиально: поля в схеме
+    // без проверок на входе — это те же 56 строк метрик без даты, только с новыми
+    // колонками. Обязательность вводится там, где её можно объяснить отказом.
+
+    /** Канал запуска (SPEC-QG-ARCHITECTURE §4.8). Отличает «не было коммитов» от «гейт умер». */
+    private static final java.util.Set<String> QG_CHANNELS = java.util.Set.of("actions", "app_job");
+
+    /**
+     * Типизированные причины «не измерено» (§5). Свободный текст запрещён намеренно:
+     * по нему не сгруппировать и не посчитать, сколько дней держится. Метрика
+     * `lore_addr_drift` прожила пять дней незамеченной ровно потому, что причина не
+     * была счётной величиной.
+     */
+    private static final java.util.Set<String> QG_NOT_MEASURED_REASONS = java.util.Set.of(
+        "source_unreachable", "source_missing", "stand_absent", "tool_disabled",
+        "script_absent", "not_implemented", "budget_exhausted", "no_changes", "no_evidence");
+
+    /** Статусы метрики, означающие «измерения не было». SKIP — легаси-форма того же. */
+    private static final java.util.Set<String> QG_UNMEASURED_STATUSES = java.util.Set.of("NOT_MEASURED", "SKIP");
+
+    public record QGMetricEntry(String key, Double value, String unit, Double target, String status, String source,
+                                String not_measured_reason, String model) {}
     public record QGRunRequest(
         String run_id, String routine_name, String run_date, String status,
         String started_at, String finished_at, String flags,
+        String channel, String source_url, String commit_sha, Integer pr_number, String model,
         java.util.List<QGMetricEntry> metrics) {}
 
     @POST
@@ -78,17 +102,50 @@ public class LoreQgResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.routine_name() == null || req.routine_name().isBlank())
             return badParams("routine_name required");
+
+        // QG-03: дата обязательна. 56 строк метрик из 191 не имеют её вовсе, и
+        // метрика без даты не встаёт в ряд, не стареет и не поднимает детектор
+        // молчания — сказать «держится N дней» просто не от чего. Старые строки
+        // остаются видимым долгом, новые без даты больше не появляются.
+        if (req.run_date() == null || req.run_date().isBlank())
+            return badParams("run_date required — метрика без даты не встаёт в ряд и не стареет (SPEC-QG-ARCHITECTURE §5)");
+
+        // §4.8: канал — величина из двух значений, а не свободная строка.
+        if (req.channel() != null && !QG_CHANNELS.contains(req.channel()))
+            return badParams("channel must be one of " + QG_CHANNELS + ", got: " + req.channel());
+
+        // §5: «не измерено» обязано нести типизированную причину. Проверяем ДО
+        // первой записи — иначе прогон ляжет наполовину, и получится ровно та
+        // полуправда, ради которой всё это затевалось.
+        if (req.metrics() != null) {
+            for (QGMetricEntry m : req.metrics()) {
+                if (m.not_measured_reason() != null
+                        && !QG_NOT_MEASURED_REASONS.contains(m.not_measured_reason()))
+                    return badParams("not_measured_reason must be one of " + QG_NOT_MEASURED_REASONS
+                        + ", got: " + m.not_measured_reason() + " (metric " + m.key() + ")");
+                if (m.status() != null && QG_UNMEASURED_STATUSES.contains(m.status())
+                        && (m.not_measured_reason() == null || m.not_measured_reason().isBlank()))
+                    return badParams("metric '" + m.key() + "' has status " + m.status()
+                        + " without not_measured_reason — молчаливый SKIP и есть разбираемый дефект"
+                        + " (35 таких метрик, SPEC-QG-ARCHITECTURE §5). Допустимые причины: "
+                        + QG_NOT_MEASURED_REASONS);
+            }
+        }
+
         String runId = req.run_id() != null ? req.run_id()
-            : req.routine_name() + "_" + (req.run_date() != null ? req.run_date() : "unknown");
+            : req.routine_name() + "_" + req.run_date();
         try {
             // Upsert ClRoutineRun
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE ClRoutineRun SET run_id=:rid, routine_name=:rn, run_date=:rd, " +
-                "status=:st, started_at=:sa, finished_at=:fa, flags=:fl " +
+                "status=:st, started_at=:sa, finished_at=:fa, flags=:fl, " +
+                "channel=:ch, source_url=:su, commit_sha=:cs, pr_number=:pr, model=:mdl " +
                 "UPSERT WHERE run_id=:rid",
                 mapOfNullable("rid", runId, "rn", req.routine_name(), "rd", req.run_date(),
                     "st", req.status(), "sa", req.started_at(), "fa", req.finished_at(),
-                    "fl", req.flags()))).await().indefinitely();
+                    "fl", req.flags(),
+                    "ch", req.channel(), "su", req.source_url(), "cs", req.commit_sha(),
+                    "pr", req.pr_number(), "mdl", req.model()))).await().indefinitely();
             // Upsert ClRoutineMetric entries
             int written = 0;
             if (req.metrics() != null) {
@@ -98,12 +155,18 @@ public class LoreQgResource extends LoreResourceBase {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "UPDATE ClRoutineMetric SET metric_id=:mid, run_id=:rid, " +
                         "routine_name=:rn, run_date=:rd, metric_key=:mk, value=:val, " +
-                        "unit=:unit, target=:tgt, status=:st, source=:src " +
+                        "unit=:unit, target=:tgt, status=:st, source=:src, " +
+                        "not_measured_reason=:nmr, model=:mdl " +
                         "UPSERT WHERE metric_id=:mid",
                         mapOfNullable("mid", mId, "rid", runId, "rn", req.routine_name(),
                             "rd", req.run_date(), "mk", m.key(), "val", m.value(),
                             "unit", m.unit(), "tgt", m.target(), "st", m.status(),
-                            "src", m.source())))
+                            "src", m.source(),
+                            // модель метрики: суждение может выносить не та же
+                            // модель, что весь прогон (§4.4 — часть метрик
+                            // собирается кодом и модели не имеет вовсе)
+                            "nmr", m.not_measured_reason(),
+                            "mdl", m.model() != null ? m.model() : req.model())))
                         .await().indefinitely();
                     written++;
                 }
