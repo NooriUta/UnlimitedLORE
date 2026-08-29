@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerLoreRead } from './loreRead.js';
 import { registerLoreWrite } from './loreWrite.js';
 import { registerForgejo, forgejoConfigured } from './forgejo.js';
+import { registerClaudeRules } from './claudeRules.js';
 
 // Regression guard for ADR-LORE-014 §2 (T02): every tool renamed lore_* -> <category>_<verb>,
 // ~22 lore_link_*/lore_unlink_* collapsed into 8 <category>_link(rel, ...) tools. A stray
@@ -186,5 +187,18 @@ describe('registerForgejo', () => {
 
   it('LORE_FORGEJO=false wins over stray FORGEJO_* env (explicit off-switch)', () => {
     expect(forgejoConfigured({ LORE_FORGEJO: 'false', FORGEJO_X: 'y' } as NodeJS.ProcessEnv)).toBe(false);
+  });
+});
+
+// Правила CLAUDE переехали из репозитория в LORE (решение владельца 29.08.2026:
+// main зеркалируется в публичный GitHub). После переезда положить правила и
+// забрать их обратно можно ТОЛЬКО этими двумя инструментами — если они тихо
+// пропадут при рефакторинге, правила окажутся в базе без способа их достать,
+// и заметят это не сразу, а когда понадобятся.
+describe('registerClaudeRules', () => {
+  it('registers exactly the load/unload pair', () => {
+    const { server, names } = fakeServer();
+    registerClaudeRules(server);
+    expect(names).toEqual(['claude_rules_push', 'claude_rules_pull']);
   });
 });
