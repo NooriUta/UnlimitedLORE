@@ -144,12 +144,19 @@ jobs:
           # шаг видел бы только код grep — то есть синтаксическая ошибка в
           # конфиге прошла бы проверку насквозь, а именно её мы и ловим.
           set -eo pipefail
+          # Апстримы конфига (`proxy_pass http://lore-backend:9100`) резолвятся
+          # при ЗАГРУЗКЕ конфига, а не при запросе, — и вне compose-сети такого
+          # имени нет: nginx падает с «host not found in upstream» ещё до того,
+          # как дойдёт до проверяемых строк. Проверяем конфиг, а не наличие
+          # бэкенда, поэтому имена просто объявляем; заглушка на loopback здесь
+          # достаточна — соединяться мы никуда не собираемся.
+          STUBS="--add-host lore-backend:127.0.0.1 --add-host host.docker.internal:127.0.0.1"
           echo "── случай 1: переменные НЕ заданы (чужая установка) ──"
           # `nginx -T` печатает файл целиком, вместе с комментариями, а в
           # шаблоне прежний адрес НАЗВАН — в пояснении, почему его там больше
           # нет. Без отсечения комментариев проверка падала бы на собственной
           # документации. Сравниваем только боевые директивы.
-          docker run --rm lore-app:ci nginx -T | grep -v '^[[:space:]]*#' > /tmp/nginx-default.conf
+          docker run --rm $STUBS lore-app:ci nginx -T | grep -v '^[[:space:]]*#' > /tmp/nginx-default.conf
           if grep -q "seidrstudio\.pro" /tmp/nginx-default.conf; then
             echo "ОШИБКА: в конфиг без переменных попал адрес конкретной установки —"
             echo "посторонняя установка уедет редиректом на чужой хост."
@@ -159,7 +166,8 @@ jobs:
           echo "ok: адресов конкретной установки нет, синтаксис принят"
 
           echo "── случай 2: переменные заданы ──"
-          docker run --rm \
+          # shellcheck disable=SC2086
+          docker run --rm $STUBS \
             -e LORE_PUBLIC_URL=https://lore.example.org \
             -e LORE_OIDC_ORIGIN=https://auth.example.org \
             lore-app:ci nginx -T > /tmp/nginx-configured.conf
