@@ -2220,7 +2220,7 @@
       "claudeRulesEmpty": "No rules loaded: no documents with kind claude-rules. Create them via MCP doc_new.",
       "claudeRulesLoading": "Loading document…",
       "claudeRulesNoBody": "This document has no body — check content_md_ru/content_md_en.",
-      "claudeRulesNote": "Snapshots of CLAUDE.md files: one global (whole machine) and one per repository. Source of truth is the files on the owner's machine; this is a read-only view, updated via MCP doc_new.",
+      "claudeRulesNote": "Working rules: one global set for the machine and one per repository. Edited via MCP doc_new; this is a read-only view. For repositories whose release branch is mirrored publicly these docs are the only copy — there is deliberately no CLAUDE.md in the tree.",
       "tagOrphan": "candidate for removal",
       "tagsNote": "Read-only (D6): merge/rename is iteration 2 (TAGGED_WITH edge migration, AL-29 awaits an owner decision).",
       "unknownB": "These keys live in the database (dict_type=app_setting), but the app doesn't read them — most likely leftovers from a manual edit. Deleting them changes nothing (soft delete: is_active=false).",
