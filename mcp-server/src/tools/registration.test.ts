@@ -53,7 +53,11 @@ describe('registerLoreWrite', () => {
     //   журнал сессий агентов; отдельная вершина, не поле на KnowActor)
     // + quality_check (QUAL-7, ADR-LORE-039 — вердикт полноты пачкой БЕЗ записи;
     //   второй способ вызова того же линтера, что отвечает на write-пути)
-    expect(names).toHaveLength(80);
+    // + product_link (RM-P6, D-2026-LORE-PRODUCT-IS-OWN-ENTITY — рёбра продуктовой
+    //   оси: компонент/репозиторий/родительский продукт. Инструмента создания
+    //   продукта тут НЕТ намеренно: продукт — запись справочника, заводится
+    //   существующим dict_set, второй способ создать ту же запись не нужен)
+    expect(names).toHaveLength(81);
   });
 
   it('registers actor_link (MT-11 — FILLS_ROLE, agent-to-role pairing)', () => {

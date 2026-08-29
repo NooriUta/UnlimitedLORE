@@ -125,6 +125,19 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("job",       Set.of("full", "architect", "pm", "product-analyst")),
         Map.entry("vp",        Set.of("full", "architect", "pm", "product-analyst")),
         Map.entry("actor",     Set.of("full", "architect", "pm")),
+        // ── Продуктовая ОСЬ (RM-P6, D-2026-LORE-PRODUCT-IS-OWN-ENTITY) ───────
+        // Не путать с продуктовым СЛОЕМ выше: там Feature → UseCase → ценность,
+        // здесь «что мы делаем и продаём» — носитель дорожной карты. Совпадение
+        // по слову «продукт», не по смыслу; пути тоже соседние (/lore/product/*).
+        //
+        // Внесено СРАЗУ, а не после аудита: до этой строки семейство `product`
+        // в матрице отсутствовало, и `POST /lore/product/link` прошёл бы под
+        // любым агентным профилем — фильтр неизвестные семейства ПРОПУСКАЕТ
+        // (строка «семейство вне матрицы — пропускаю»). Ровно так же в v1.7.1
+        // оказался открыт `/lore/quality`. Три GET-эндпоинта продуктового слоя
+        // под тем же префиксом этой строкой не затрагиваются: READ_METHODS вне
+        // проверки.
+        Map.entry("product",   Set.of("full", "architect", "pm", "product-analyst")),
         // ── Прочее из README, чего тоже не было ──────────────────────────────
         Map.entry("component", Set.of("full", "architect")),
         // tech СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий

@@ -1667,6 +1667,42 @@ public final class LoreSlices {
                 "dict_type", " WHERE dict_type = :dict_type")),
             " ORDER BY dict_type, sort_order");
 
+        // ── RM-P6: продуктовая ось (D-2026-LORE-PRODUCT-IS-OWN-ENTITY) ───────
+        // Продукт — запись справочника dict_type='product'. Состав читается
+        // ТОЛЬКО рёбрами, денормализованных копий у него нет намеренно: ровно
+        // на копии разъехалось дерево компонентов (RM-P10 — у 12 вершин ребро
+        // было, а поле parent_id пустовало, и «сколько у нас корней» отвечалось
+        // 26 или 14 в зависимости от способа счёта).
+        //   компоненты      — in('IN_PRODUCT')      (компонент → продукт)
+        //   родительский    — out('PARENT_PRODUCT') (продукт → родитель)
+        //   суб-продукты    — in('PARENT_PRODUCT')
+        //   репозитории     — out('BELONGS_TO_PROJECT')
+        slice("products",
+            "SELECT code, label_ru, label_en, color, icon, sort_order, " +
+            "ifnull(is_active, true) AS is_active, " +
+            "in('IN_PRODUCT').component_id  AS components, " +
+            "out('PARENT_PRODUCT').code     AS parent_code, " +
+            "in('PARENT_PRODUCT').code      AS sub_products, " +
+            "out('BELONGS_TO_PROJECT').slug AS git_projects " +
+            "FROM KnowDictEntry WHERE dict_type = 'product'",
+            List.of(), Map.of(), " ORDER BY sort_order, code");
+
+        // Спринты продукта — через компоненты продукта. Отдельным срезом, потому
+        // что состав продукта это два перехода (продукт ← компонент ← спринт), а
+        // не поле: спринт к продукту напрямую не привязан и привязан не будет —
+        // иначе появится третья копия той же связи.
+        slice("product_sprints",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('BELONGS_TO').component_id AS components " +
+            "FROM KnowSprint " +
+            // CONTAINS, а не [0] = : у спринта несколько компонентов и у
+            // компонента несколько продуктов, поэтому обход отдаёт СПИСОК.
+            // Сравнение через [0] показало бы многосвязное под одним случайным
+            // значением — записанная ловушка ArcadeDB, уже ловившая нас.
+            "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY sprint_id");
+
         // AL-43: SCD2 history for one dict entry — same close/open pattern as
         // history_sprint/history_task/adr_history, keyed by the composite
         // (dict_type, code) denormalized onto KnowDictEntryHist rather than a

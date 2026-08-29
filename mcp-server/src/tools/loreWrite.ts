@@ -1585,6 +1585,39 @@ export function registerLoreWrite(server: McpServer): void {
         }),
   });
 
+  // ── RM-P6: продуктовая ось (D-2026-LORE-PRODUCT-IS-OWN-ENTITY) ──────────────
+  // Сам продукт заводится существующим dict_set(dict_type:"product") — второго
+  // способа создать ту же запись здесь нет намеренно. Тут только рёбра.
+  definePostTool(server, {
+    name: 'product_link',
+    description: 'Link (or unlink) a PRODUCT to a component, a git project, or a parent product. ' +
+      'A product is a dictionary entry (KnowDictEntry, dict_type="product") — create it with ' +
+      'dict_set, not here. rel="component": IN_PRODUCT edge from LoreComponent to the product, ' +
+      'with role="owner" (who builds it, default) or role="consumer" (who uses it) — a component ' +
+      'legitimately belongs to two products in DIFFERENT roles, which is why the role lives on the ' +
+      'edge. rel="parent": PARENT_PRODUCT edge to the parent product (sub-products); a SEPARATE ' +
+      'edge type from the component tree on purpose — the product tree and the component tree are ' +
+      'different trees, a sub-product can sit in the middle of another component\'s subtree. ' +
+      'rel="project": BELONGS_TO_PROJECT edge to a git project (a product spans several repos, and ' +
+      'a monorepo holds several products). Idempotent on add: the existing edge for that exact pair ' +
+      'is dropped first, so a repeat never accumulates duplicates. Both ends are checked — a missing ' +
+      'one is a 400, not a silent no-op that would answer ok:true on unwritten work. ' +
+      'Mutates the shared system_aida_lore.',
+    schema: {
+      product_code: z.string().describe('product dictionary code, e.g. "AIDA", "HOUND", "OMILORE"'),
+      rel: z.enum(['component', 'project', 'parent']),
+      target_id: z.string().describe('component_id (rel="component") | git project slug (rel="project") | parent product code (rel="parent")'),
+      role: z.enum(['owner', 'consumer']).optional()
+        .describe('rel="component" only: owner (default) = builds it, consumer = uses it'),
+      action: z.enum(['add', 'remove']).optional().describe('default "add"'),
+    },
+    path: '/lore/product/link',
+    body: ({ product_code, rel, target_id, role, action }) => ({
+          product_code, rel, target_id,
+          role: role ?? null, action: action ?? 'add',
+        }),
+  });
+
   definePostTool(server, {
     name: 'qg_job_new',
     description: 'Upsert a QGJobTask vertex and wire a YIELDED edge from the parent QualityGate. ' +

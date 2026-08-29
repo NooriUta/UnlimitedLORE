@@ -77,6 +77,11 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Работы', api: '/lore/job*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'VP-связи', api: '/lore/vp*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'Акторы', api: '/lore/actor*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  // Продуктовая ОСЬ (RM-P6) — не путать с продуктовым СЛОЕМ выше: там ценность
+  // (Feature → UseCase), здесь «что мы делаем и продаём», носитель дорожной карты.
+  // Сам продукт — запись справочника (dict_type='product'), поэтому его создание
+  // идёт строкой «Словари» и остаётся за человеком; здесь только рёбра.
+  { what: 'Продукты (ось)', api: '/lore/product/link', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
   // Тех-реестр СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
   // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-…") — строка «Спеки/ранбуки/доки» выше.
