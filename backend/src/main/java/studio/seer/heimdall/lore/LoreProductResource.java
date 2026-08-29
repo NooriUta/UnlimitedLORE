@@ -337,6 +337,44 @@ public class LoreProductResource extends LoreResourceBase {
                                String project, List<String> projects,
                                String machine_id, String session_id) {}
 
+    /**
+     * Чистая часть объяснения отказа — без похода в граф, поэтому проверяема
+     * тестом. Три случая, которые прежде выглядели одинаково:
+     *
+     * <ul>
+     *   <li>агента не опознали (нет client_id или он не привязан к актору);</li>
+     *   <li>у владельца НЕТ роли в этом проекте — чинится выдачей роли;</li>
+     *   <li>роль есть, но она не делегирует этот профиль — чинится другой ролью
+     *       либо другим профилем.</li>
+     * </ul>
+     *
+     * Разница не косметическая: в первых двух случаях правки прав профиля не
+     * помогут вовсе, а искать будут именно там — сообщение вело туда.
+     */
+    static String denialMessage(String clientId, String owner, String role,
+                                String project, String agentScope) {
+        String who = "агент agent-" + agentScope + " не пишет в 'actor' для проекта '" + project + "': ";
+        if (clientId == null)
+            return who + "вызывающий не предъявил client_id — агентная личность не опознана.";
+        if (owner == null)
+            return who + "клиент '" + clientId + "' не привязан ни к одному актору-агенту (KnowActor "
+                + "kind='agent', ребро OWNED_BY) — у агента нет владельца, а права наследуются от него.";
+        if (role == null)
+            return who + "у владельца НЕТ роли в этом проекте. Права профиля тут ни при чём — "
+                + "выдайте роль (админка LORE → Люди → карточка пользователя → роль в проекте), "
+                + "после чего вызов заработает без перезапуска. Проекты без единой роли видны "
+                + "срезом projects_without_role.";
+        return who + "роль владельца там '" + role + "', и она не делегирует профиль '" + agentScope
+            + "'. Нужна либо более широкая роль в проекте, либо другой профиль агента.";
+    }
+
+    /** Тот же ответ, но со сходом в граф за владельцем и его ролью. */
+    private String explainProjectDenial(String clientId, String project, String agentScope) {
+        String owner = clientId == null ? null : projectRbac.ownerKcSub(clientId);
+        String role = owner == null ? null : projectRbac.ownerRoleInProject(owner, project);
+        return denialMessage(clientId, owner, role, project, agentScope);
+    }
+
     @POST
     @Path("actor")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -367,9 +405,14 @@ public class LoreProductResource extends LoreResourceBase {
             String clientId = callerClientId();
             for (String slug : asked == null ? List.<String>of() : asked) {
                 if (clientId == null || !projectRbac.agentAllowedInProject(clientId, slug, agentScope)) {
-                    return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
-                        + "для проекта '" + slug + "': роль владельца там не делегирует этот профиль "
-                        + "(или клиент/владелец/роль не сопоставлены в графе)");
+                    // Прежнее сообщение сливало ТРИ разных случая в одну строку
+                    // «роль не делегирует (или не сопоставлены в графе)». Они
+                    // чинятся по-разному, а читались одинаково — и владелец
+                    // 30.08.2026 упёрлась ровно в это: отказ на AIDA/MIDGARD
+                    // выглядел как проблема прав профиля, тогда как роли в
+                    // проекте не было вовсе. Тот же класс, что И-6: «не найдено»
+                    // и «не выполнилось» обязаны различаться снаружи.
+                    return agentScopeForbidden(explainProjectDenial(clientId, slug, agentScope));
                 }
             }
         }
