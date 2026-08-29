@@ -322,13 +322,71 @@ public class LoreSchemaMigrationRunner {
                         + (hasData ? " — бэкап снят, восстановление: RESTORE DATABASE (RUNBOOK-LORE-SCHEMA-UPGRADE)." : ""), e);
                 }
             }
-            javaStep(s.version());
+            try {
+                javaStep(s.version());
+            } catch (RuntimeException e) {
+                // SQL-часть шага падает с контекстом (шаг + стейтмент), а
+                // java-часть падала голым стеком: в присланном логе было видно
+                // createFullTextIndexes и «Index 1 out of bounds», но НЕ было
+                // видно ни версии БД, ни того, сколько шагов ещё впереди, ни
+                // какие индексы уже стоят. По такому логу причину не отличить
+                // от следствия, что и произошло.
+                dumpSchemaDiagnostics("V" + s.version() + "__" + s.name(), dbVersion, codeVersion, pending);
+                throw e;
+            }
             Map<String, Object> p = Map.of("v", s.version(), "cm", s.compatMajor(), "n", s.name(),
                 "c", s.checksum(), "t", Instant.now().toString());
             command("INSERT INTO LoreSchemaVersion SET version=:v, compat_major=:cm, name=:n, checksum=:c, applied_at=:t", p);
         }
         LOG.infof("[LORE MIGRATE] готово: схема на версии %s (ordinal v%d)", LoreSchemaMigrations.codeHuman(), codeVersion);
         retireLegacyFullTextIndexes();
+    }
+
+    /**
+     * Паспорт состояния схемы на момент падения миграции. Пишется ОДНИМ блоком,
+     * чтобы его можно было целиком приложить к обращению, не собирая по стеку.
+     *
+     * Каждый запрос обёрнут отдельно и молчит про свою ошибку в одну строку:
+     * это путь аварийного разбора, и он не имеет права заслонить собой
+     * исходное исключение. Недоступный кусок диагностики — это «неизвестно»,
+     * а не новая ошибка поверх старой.
+     */
+    private void dumpSchemaDiagnostics(String step, long dbVersion, int codeVersion,
+                                       List<LoreSchemaMigrations.Step> pending) {
+        StringBuilder sb = new StringBuilder("\n[LORE MIGRATE] ── состояние схемы на момент падения ──\n");
+        sb.append("  упавший шаг:      ").append(step).append('\n');
+        sb.append("  версия БД:        ordinal v").append(dbVersion).append('\n');
+        sb.append("  версия кода:      ").append(LoreSchemaMigrations.codeHuman())
+          .append(" (ordinal v").append(codeVersion).append(")\n");
+        sb.append("  шагов в очереди:  ").append(pending.size()).append(' ')
+          .append(pending.stream().map(p -> "V" + p.version()).toList()).append('\n');
+
+        try {
+            sb.append("  типов в схеме:    ")
+              .append(ingest.queryPublic("SELECT name FROM schema:types", Map.of()).size()).append('\n');
+        } catch (Exception q) {
+            sb.append("  типов в схеме:    неизвестно (").append(q.getMessage()).append(")\n");
+        }
+
+        try {
+            Set<String> have = new HashSet<>();
+            for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:indexes", Map.of())) {
+                have.add(String.valueOf(r.get("name")));
+            }
+            List<String> missing = LoreSchemaMigrations.FT_INDEXES.stream()
+                .map(LoreSchemaMigrations.FtIndex::name).filter(n -> !have.contains(n)).toList();
+            sb.append("  индексов всего:   ").append(have.size()).append('\n');
+            sb.append("  FT из реестра:    есть ")
+              .append(LoreSchemaMigrations.FT_INDEXES.size() - missing.size())
+              .append(" из ").append(LoreSchemaMigrations.FT_INDEXES.size()).append('\n');
+            sb.append("  FT отсутствуют:   ").append(missing.isEmpty() ? "нет таких" : missing).append('\n');
+        } catch (Exception q) {
+            sb.append("  индексы:          неизвестно (").append(q.getMessage()).append(")\n");
+        }
+
+        sb.append("  что делать:       миграция идемпотентна — устранив причину, перезапустите старт; ")
+          .append("шаг в ledger не записан, повтор пойдёт с него же (RUNBOOK-LORE-SCHEMA-UPGRADE).");
+        LOG.error(sb.toString());
     }
 
     /** Java-шаги (то, что SQL не умеет). Нумерация совпадает с реестром. */
@@ -681,7 +739,29 @@ public class LoreSchemaMigrationRunner {
             // миграцию. Шаг, записанный в ledger как применённый при не созданных
             // индексах, — это молчаливая полуправда: поиск идёт сканом, а версия
             // схемы утверждает, что всё на месте. Ровно этот случай уже произошёл.
-            exec(ix.createSql());
+            try {
+                exec(ix.createSql());
+            } catch (RuntimeException e) {
+                // Наблюдавшийся отказ (2026-08-29, база на v10 догоняла v28):
+                //   Error on creating index 'KnowADRHist_0_…' ->
+                //   Index 1 out of bounds for length 1
+                // Что ПРОВЕРЕНО в тот же день на 26.8.1: тот же индекс (3 поля,
+                // RussianAnalyzer) создаётся и на пустом типе, и на типе с
+                // записями, где часть полей null. То есть ни многополевость, ни
+                // пустые значения причиной не были, а та же установка, поднятая
+                // С НУЛЯ, взлетела. Остаётся недомигрированное состояние базы.
+                // Версию движка называем как ТРЕБОВАНИЕ, а не как диагноз:
+                // подтверждения, что дело было в ней, нет.
+                LOG.errorf(e, "[LORE MIGRATE] не удалось создать FULL_TEXT-индекс %s на %s%s. "
+                    + "Две известные причины. (1) Движок: требуется ArcadeDB 26.8.1 или новее — "
+                    + "на 26.8.1 этот индекс создаётся, более старые сборки не проверялись. "
+                    + "(2) Недомигрированная база: наблюдалось на БД, догонявшей много версий "
+                    + "сразу; та же установка с ЧИСТОЙ базы поднялась без ошибки. "
+                    + "Миграция идемпотентна — после обновления движка её можно запустить заново; "
+                    + "если база пустая или одноразовая, быстрее пересоздать её.",
+                    ix.name(), ix.type(), ix.fields());
+                throw e;
+            }
             created++;
         }
         LOG.infof("[LORE MIGRATE] полнотекст: создано %d (взамен старых %d), уже было %d, типов нет %d — реестр %d",

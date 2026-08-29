@@ -26,5 +26,19 @@ RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Конфиг nginx стал ШАБЛОНОМ: адрес стенда и origin Keycloak подставляются на
+# старте контейнера, а не впекаются в образ. Образ nginx:alpine прогоняет
+# envsubst по /etc/nginx/templates/*.template и кладёт результат в conf.d.
+#
+# NGINX_ENVSUBST_FILTER обязателен. Без него envsubst заменил бы ВСЕ известные
+# ему имена, а в конфиге полно собственных переменных nginx ($host, $uri,
+# $request_uri, $lore_bare_ip): совпади любая из них с переменной окружения —
+# она молча превратилась бы в пустую строку, и сломался бы роутинг, а не сборка.
+# Фильтр сужает подстановку до наших LORE_*.
+ENV NGINX_ENVSUBST_FILTER="^LORE_" \
+    LORE_PUBLIC_URL="" \
+    LORE_OIDC_ORIGIN=""
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY docker/30-lore-public-url.sh /docker-entrypoint.d/30-lore-public-url.sh
+RUN chmod +x /docker-entrypoint.d/30-lore-public-url.sh
 EXPOSE 80

@@ -242,12 +242,26 @@ services:
         VITE_LORE_AUTH_ENABLED: ${VITE_LORE_AUTH_ENABLED:-}
         VITE_OIDC_ISSUER: ${VITE_OIDC_ISSUER:-}
         VITE_OIDC_CLIENT_ID: ${VITE_OIDC_CLIENT_ID:-}
+    environment:
+      # RUNTIME, а не build-arg — в отличие от VITE_* выше: эти два значения
+      # подставляются в конфиг nginx при старте контейнера (envsubst по
+      # шаблону), поэтому их можно менять пересозданием контейнера, без
+      # пересборки образа.
+      #
+      # По умолчанию ПУСТО, и это главное в этой правке: раньше адрес стенда
+      # был вшит в nginx.conf литералом, и любая посторонняя установка,
+      # открытая по IP, уводила браузер редиректом на чужой хост. Пусто →
+      # редиректа нет, приложение работает, а скрипт старта
+      # docker/30-lore-public-url.sh печатает, какие переменные задать.
+      # Значения для НАШЕГО стенда приходят из окружения (см. lore-cd.yml).
+      LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
+      LORE_OIDC_ORIGIN: ${LORE_OIDC_ORIGIN:-}
     ports:
       - "4400:80"
     # host.docker.internal is auto-provided by Docker Desktop but NOT by plain
     # Docker Engine (Ubuntu) — map it to the host gateway so the /tyr-* proxy can
     # reach the host's TYR process there too. nginx no longer fails to boot when
-    # this is unresolvable (deferred resolution in nginx.conf), so this only
+    # this is unresolvable (deferred resolution in nginx.conf.template), so this only
     # affects whether TYR is reachable, never whether the app starts.
     extra_hosts:
       - "host.docker.internal:host-gateway"

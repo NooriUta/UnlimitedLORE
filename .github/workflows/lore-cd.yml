@@ -127,6 +127,14 @@ jobs:
       VITE_LORE_AUTH_ENABLED: "true"
       VITE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
       VITE_OIDC_CLIENT_ID: lore-app
+      # ── Адреса ЭТОЙ установки ────────────────────────────────────────────
+      # Оба значения раньше были вшиты литералами в nginx.conf и потому ехали
+      # в образе: посторонняя установка, открытая по IP, получала 301 на ЧУЖОЙ
+      # стенд, а её собственный Keycloak был вне CSP. Теперь адрес установки
+      # задаётся здесь — то есть в конфигурации КОНКРЕТНОГО стенда, где ему и
+      # место, а образ остаётся нейтральным.
+      LORE_PUBLIC_URL: https://lore.odal.seidrstudio.pro
+      LORE_OIDC_ORIGIN: https://odal.seidrstudio.pro
       # ── HTTPS на LAN ─────────────────────────────────────────────────────
       # Оверлей подключается ТОЛЬКО здесь, а не в основном compose: сеть
       # `headscale-net` существует лишь на ci-server, и объявление её в
