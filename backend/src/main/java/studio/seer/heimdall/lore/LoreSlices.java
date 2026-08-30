@@ -283,6 +283,45 @@ public final class LoreSlices {
             "FROM KnowQuestion",
             List.of(), Map.of(), " ORDER BY question_id");
 
+
+        // Адресные формы по id (SL-01, запрос сессии miniLORE через владельца).
+        //
+        // Шлюз miniLORE открывает записи по идентификатору. У сценариев адресной
+        // формы не было ВООБЩЕ — только окрестности (`tasks_of_uc`, `uc_actors`),
+        // то есть открыть сам сценарий было нечем.
+        //
+        // У вопросов форма как бы была — `open_questions`, — но она по построению
+        // теряет закрытые и отложенные. Фильтровать её на стороне вызывающего
+        // нельзя: того, чего в выдаче нет, не отфильтруешь, и «вопрос не найден»
+        // означало бы «вопрос закрыт». Поэтому здесь БЕЗ фильтра по статусу.
+        slice("uc_by_id",
+            "SELECT uc_id, title, body_md, context_md, scenario_md, acceptance_md, " +
+            "status, goal_level, rigor, priority, date_created, shipped_at, parent_uc_id, " +
+            "out('BELONGS_TO').component_id[0] AS component_id, " +
+            "out('BELONGS_TO').component_id    AS component_ids, " +
+            "out('BELONGS_TO_PROJECT').slug    AS projects, " +
+            "out('DECOMPOSES_INTO').uc_id      AS child_uc_ids, " +
+            "in('DECOMPOSES_INTO').uc_id       AS parent_uc_ids, " +
+            "out('HAS_ACTOR').actor_id         AS actor_ids, " +
+            "out('ADDRESSES').pain_id          AS pain_ids, " +
+            "out('PROMISES').gain_id           AS gain_ids, " +
+            "out('HELPS_WITH').job_id          AS job_ids, " +
+            "in('REALIZES').task_uid           AS task_uids " +
+            "FROM KnowUseCase WHERE uc_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
+
+        slice("question_by_id",
+            "SELECT question_id, title, body_md, status, `trigger`, due_date, priority, owner, " +
+            "raised_by, opened_date, closed_date, " +
+            "out('BELONGS_TO').component_id[0] AS component_id, " +
+            "out('BELONGS_TO').component_id    AS components, " +
+            "out('BELONGS_TO_PROJECT').slug    AS projects, " +
+            "out('GATES').task_uid             AS gating_tasks, " +
+            "out('RAISED_IN').adr_id           AS raised_adr, " +
+            "out('RAISED_IN').sprint_id        AS raised_sprint, " +
+            "in('ANSWERS').decision_id         AS answered_by " +
+            "FROM KnowQuestion WHERE question_id = :id LIMIT 1",
+            List.of("id"), Map.of(), "");
         slice("questions_of_adr",
             "SELECT question_id, title, status, out('BELONGS_TO').component_id[0] AS component_id, due_date, priority, " +
             "out('BELONGS_TO').component_id AS components, " +
