@@ -351,17 +351,44 @@ public class LoreAdrResource extends LoreResourceBase {
      * <p>Лишний запрос уходит только по пустой ветке, то есть в меньшинстве
      * случаев: успешное создание отвечает сразу.
      */
+    /**
+     * Есть ли сейчас такое ребро. Вынесено, потому что нужно ОБОИМ путям и по
+     * разным причинам: связыванию — чтобы отличить «уже было» от «конца нет»,
+     * снятию — чтобы знать, было ли что снимать.
+     */
+    private boolean edgeExists(String edgeType, String adrId, String targetField, Object targetValue) {
+        try {
+            var rows = ingestService.queryPublic(
+                "SELECT count(*) AS n FROM " + edgeType
+                + " WHERE @out.adr_id = :id AND @in." + targetField + " = :t",
+                Map.of("id", adrId, "t", targetValue));
+            return !rows.isEmpty() && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+        } catch (Exception ex) {
+            LOG.warnf("[LORE ADR LINK verify] %s %s → %s: %s",
+                edgeType, adrId, targetValue, LoreUpstream.detail(ex));
+            return false;
+        }
+    }
+
+    /**
+     * Ответ снятия связи по ADR-LORE-043.
+     *
+     * <p>Проба идёт ДО удаления — после него она бессмысленна: ребра нет в
+     * обоих случаях, и «снято» стало бы утверждением без факта, то есть ровно
+     * тем, против чего написан ADR. Раньше {@code action:"removed"} приходил
+     * безусловно, поэтому «снял связь» и «такой связи не было» выглядели
+     * одинаково, и опечатка в идентификаторе читалась как успешная работа.
+     */
+    private Response unlinkOutcome(Map<String, Object> base, boolean had) {
+        return noStore(Response.ok(LoreOutcome.unlink(base, had)));
+    }
+
     private Response linkOutcome(Map<String, Object> base, boolean created, String edgeType,
                                  String adrId, String targetField, String targetValue, String what) {
         boolean exists = created;
         if (!created) {
             try {
-                var rows = ingestService.queryPublic(
-                    "SELECT count(*) AS n FROM " + edgeType
-                    + " WHERE @out.adr_id = :id AND @in." + targetField + " = :t",
-                    Map.of("id", adrId, "t", targetValue));
-                exists = !rows.isEmpty()
-                    && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+                exists = edgeExists(edgeType, adrId, targetField, targetValue);
             } catch (Exception ex) {
                 // Сверка не удалась — значит различить исходы НЕЧЕМ. Врать в
                 // сторону «уже было» нельзя: это бы скрыло пропажу конца.
@@ -390,12 +417,15 @@ public class LoreAdrResource extends LoreResourceBase {
         try {
             if (toSprint) {
                 if (remove) {
+                    // ÐÑÐ¾Ð±Ð° ÐÐ ÑÐ´Ð°Ð»ÐµÐ½Ð¸Ñ: Ð¿Ð¾ÑÐ»Ðµ Ð½ÐµÐ³Ð¾ Ð¾Ð½Ð° Ð±ÐµÑÑÐ¼ÑÑÐ»ÐµÐ½Ð½Ð° â ÑÐµÐ±ÑÐ° Ð½ÐµÑ Ð² Ð¾Ð±Ð¾Ð¸Ñ
+                    // ÑÐ»ÑÑÐ°ÑÑ, Ð¸ Â«ÑÐ½ÑÑÐ¾Â» ÑÑÐ°Ð»Ð¾ Ð±Ñ ÑÑÐ²ÐµÑÐ¶Ð´ÐµÐ½Ð¸ÐµÐ¼ Ð±ÐµÐ· ÑÐ°ÐºÑÐ°.
+                    boolean had = edgeExists("IMPLEMENTED_IN", req.adr_id(), "sprint_id", req.sprint_id());
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "DELETE FROM (SELECT expand(outE('IMPLEMENTED_IN')) FROM KnowADR WHERE adr_id=:id) " +
                         "WHERE @in.sprint_id = :sid",
                         Map.of("id", req.adr_id(), "sid", req.sprint_id()))).await().indefinitely();
-                    return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                        "sprint_id", req.sprint_id(), "action", "removed")));
+                    return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                        "sprint_id", req.sprint_id(), "action", "removed"), had);
                 }
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -419,12 +449,15 @@ public class LoreAdrResource extends LoreResourceBase {
             String relKey = "release_uid".equals(relField)
                 ? req.git_project() + "#" + req.release_id() : req.release_id();
             if (remove) {
+                // ÐÑÐ¾Ð±Ð° ÐÐ ÑÐ´Ð°Ð»ÐµÐ½Ð¸Ñ: Ð¿Ð¾ÑÐ»Ðµ Ð½ÐµÐ³Ð¾ Ð¾Ð½Ð° Ð±ÐµÑÑÐ¼ÑÑÐ»ÐµÐ½Ð½Ð° â ÑÐµÐ±ÑÐ° Ð½ÐµÑ Ð² Ð¾Ð±Ð¾Ð¸Ñ
+                // ÑÐ»ÑÑÐ°ÑÑ, Ð¸ Â«ÑÐ½ÑÑÐ¾Â» ÑÑÐ°Ð»Ð¾ Ð±Ñ ÑÑÐ²ÐµÑÐ¶Ð´ÐµÐ½Ð¸ÐµÐ¼ Ð±ÐµÐ· ÑÐ°ÐºÑÐ°.
+                boolean had = edgeExists("IMPLEMENTED_IN_RELEASE", req.adr_id(), relField, relKey);
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('IMPLEMENTED_IN_RELEASE')) FROM KnowADR WHERE adr_id=:id) " +
                     "WHERE @in." + relField + " = :rkey",
                     Map.of("id", req.adr_id(), "rkey", relKey))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                    "release_id", req.release_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "release_id", req.release_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -480,12 +513,15 @@ public class LoreAdrResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             if (remove) {
+                // ÐÑÐ¾Ð±Ð° ÐÐ ÑÐ´Ð°Ð»ÐµÐ½Ð¸Ñ: Ð¿Ð¾ÑÐ»Ðµ Ð½ÐµÐ³Ð¾ Ð¾Ð½Ð° Ð±ÐµÑÑÐ¼ÑÑÐ»ÐµÐ½Ð½Ð° â ÑÐµÐ±ÑÐ° Ð½ÐµÑ Ð² Ð¾Ð±Ð¾Ð¸Ñ
+                // ÑÐ»ÑÑÐ°ÑÑ, Ð¸ Â«ÑÐ½ÑÑÐ¾Â» ÑÑÐ°Ð»Ð¾ Ð±Ñ ÑÑÐ²ÐµÑÐ¶Ð´ÐµÐ½Ð¸ÐµÐ¼ Ð±ÐµÐ· ÑÐ°ÐºÑÐ°.
+                boolean had = edgeExists("BELONGS_TO_PROJECT", req.adr_id(), "slug", req.project());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowADR WHERE adr_id=:id) " +
                     "WHERE @in.slug = :gp",
                     Map.of("id", req.adr_id(), "gp", req.project()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                    "project", req.project(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "project", req.project(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -521,12 +557,15 @@ public class LoreAdrResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             if (remove) {
+                // ÐÑÐ¾Ð±Ð° ÐÐ ÑÐ´Ð°Ð»ÐµÐ½Ð¸Ñ: Ð¿Ð¾ÑÐ»Ðµ Ð½ÐµÐ³Ð¾ Ð¾Ð½Ð° Ð±ÐµÑÑÐ¼ÑÑÐ»ÐµÐ½Ð½Ð° â ÑÐµÐ±ÑÐ° Ð½ÐµÑ Ð² Ð¾Ð±Ð¾Ð¸Ñ
+                // ÑÐ»ÑÑÐ°ÑÑ, Ð¸ Â«ÑÐ½ÑÑÐ¾Â» ÑÑÐ°Ð»Ð¾ Ð±Ñ ÑÑÐ²ÐµÑÐ¶Ð´ÐµÐ½Ð¸ÐµÐ¼ Ð±ÐµÐ· ÑÐ°ÐºÑÐ°.
+                boolean had = edgeExists("BELONGS_TO", req.adr_id(), "component_id", req.component_id());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('BELONGS_TO')) FROM KnowADR WHERE adr_id=:id) " +
                     "WHERE @in.component_id = :cid",
                     Map.of("id", req.adr_id(), "cid", req.component_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                    "component_id", req.component_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "component_id", req.component_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -561,12 +600,15 @@ public class LoreAdrResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             if (remove) {
+                // Проба ДО удаления: после него она бессмысленна — ребра нет в обоих
+                // случаях, и «снято» стало бы утверждением без факта.
+                boolean had = edgeExists("DEPENDS_ON", req.adr_id(), "adr_id", req.dep_adr_id());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('DEPENDS_ON')) FROM KnowADR WHERE adr_id=:id) " +
                     "WHERE @in.adr_id = :dep",
                     Map.of("id", req.adr_id(), "dep", req.dep_adr_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                    "dep_adr_id", req.dep_adr_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "dep_adr_id", req.dep_adr_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -601,12 +643,15 @@ public class LoreAdrResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             if (remove) {
+                // Проба ДО удаления: после него она бессмысленна — ребра нет в обоих
+                // случаях, и «снято» стало бы утверждением без факта.
+                boolean had = edgeExists("SUPERSEDES", req.adr_id(), "adr_id", req.superseded_adr_id());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('SUPERSEDES')) FROM KnowADR WHERE adr_id=:id) " +
                     "WHERE @in.adr_id = :sup",
                     Map.of("id", req.adr_id(), "sup", req.superseded_adr_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                    "superseded_adr_id", req.superseded_adr_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "superseded_adr_id", req.superseded_adr_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -641,12 +686,15 @@ public class LoreAdrResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             if (remove) {
+                // ÐÑÐ¾Ð±Ð° ÐÐ ÑÐ´Ð°Ð»ÐµÐ½Ð¸Ñ: Ð¿Ð¾ÑÐ»Ðµ Ð½ÐµÐ³Ð¾ Ð¾Ð½Ð° Ð±ÐµÑÑÐ¼ÑÑÐ»ÐµÐ½Ð½Ð° â ÑÐµÐ±ÑÐ° Ð½ÐµÑ Ð² Ð¾Ð±Ð¾Ð¸Ñ
+                // ÑÐ»ÑÑÐ°ÑÑ, Ð¸ Â«ÑÐ½ÑÑÐ¾Â» ÑÑÐ°Ð»Ð¾ Ð±Ñ ÑÑÐ²ÐµÑÐ¶Ð´ÐµÐ½Ð¸ÐµÐ¼ Ð±ÐµÐ· ÑÐ°ÐºÑÐ°.
+                boolean had = edgeExists("TAGGED_WITH", req.adr_id(), "tag_id", req.tag_id());
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('TAGGED_WITH')) FROM KnowADR WHERE adr_id=:id) " +
                     "WHERE @in.tag_id = :tag",
                     Map.of("id", req.adr_id(), "tag", req.tag_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                    "tag_id", req.tag_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "tag_id", req.tag_id(), "action", "removed"), had);
             }
             // Upsert the tag vertex first (same as adr_new's tag step) —
             // tags are freeform, not a fixed vocabulary.
