@@ -65,7 +65,7 @@ jobs:
 
       - name: 'A1. setup-java (JS-экшен)'
         continue-on-error: true
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
