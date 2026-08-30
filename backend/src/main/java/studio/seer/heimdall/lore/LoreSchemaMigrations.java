@@ -2,7 +2,12 @@ package studio.seer.heimdall.lore;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * ADR-LORE-023: реестр миграций схемы system_aida_lore. Принципы взяты из
@@ -77,12 +82,61 @@ final class LoreSchemaMigrations {
      * этот отказ и наблюдался на внешней установке 2026-08-17. Материальная сверка
      * превращает тихие 500 в громкий отказ старта с указанием, что накатить.
      *
-     * <p>KnowFeature СОЗНАТЕЛЬНО отсутствует: V6 его создаёт, V13 растворяет в
-     * KnowUseCase и ДРОПАЕТ (mergeFeaturesIntoUseCases). На здоровой актуальной
-     * БД его быть НЕ должно — включение сюда ложно роняло бы старт.
+     * <p>СПИСОК ВЫВОДИТСЯ ИЗ САМИХ ШАГОВ, а не ведётся рукой. Рукой ведомый
+     * список отставал молча: в нём было шесть имён из сорока трёх, которые
+     * шаги создают, — то есть пропажа тридцати семи типов не роняла старт и
+     * обнаруживалась только запросом в рантайме. Ошибка не в том, что кто-то
+     * забыл дописать строку: список, который надо помнить, забывают по
+     * определению, и признака этого нет.
+     *
+     * <p>Ниже — ровно та же мысль, что во всём корпусе: две правды об одном
+     * факте расходятся, поэтому правда должна быть одна. Здесь источник правды
+     * — {@link #STEPS}, а сверка её читает.
+     *
+     * <p>Исключения именные и с причиной у каждого, потому что исключение
+     * обязано быть решением, а не тихой строкой.
      */
-    static final List<String> REQUIRED_LIVE_TYPES = List.of(
-        "KnowUseCase", "KnowPain", "KnowGain", "KnowJob", "KnowActor", "KnowAsset");
+    // МЕТОД, А НЕ ПОЛЕ, и это не стилистика. Статические поля инициализируются
+    // в порядке объявления: поле, посчитанное здесь, читало бы STEPS до того,
+    // как список создан, и класс падал бы при загрузке. Ленивое вычисление
+    // снимает зависимость от порядка строк в файле.
+    private static volatile List<String> requiredLiveTypes;
+
+    static List<String> requiredLiveTypes() {
+        List<String> v = requiredLiveTypes;
+        if (v == null) {
+            v = typesCreatedBySteps();
+            requiredLiveTypes = v;
+        }
+        return v;
+    }
+
+
+    /**
+     * Типы, которых на здоровой АКТУАЛЬНОЙ базе быть не должно, хотя шаг их
+     * когда-то создавал: позже другой шаг их растворил и удалил. Требовать их
+     * наличия значило бы ложно ронять старт.
+     */
+    private static final Set<String> DROPPED_BY_LATER_STEPS = Set.of(
+        // V6 создаёт, V13 растворяет в KnowUseCase и ДРОПАЕТ
+        // (mergeFeaturesIntoUseCases). На актуальной БД его нет и быть не должно.
+        "KnowFeature");
+
+    /** {@code CREATE VERTEX|EDGE|DOCUMENT TYPE X} — с {@code IF NOT EXISTS} и без. */
+    private static final Pattern CREATE_TYPE = Pattern.compile(
+        "(?i)CREATE\\s+(?:VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?`?(\\w+)`?");
+
+    private static List<String> typesCreatedBySteps() {
+        Set<String> types = new LinkedHashSet<>();
+        for (Step s : STEPS) {
+            for (String sql : s.sql()) {
+                Matcher m = CREATE_TYPE.matcher(sql);
+                while (m.find()) types.add(m.group(1));
+            }
+        }
+        types.removeAll(DROPPED_BY_LATER_STEPS);
+        return List.copyOf(types);
+    }
 
     /** Решение раннера о старте по версиям — чистое, тестируется без БД (ADR-023). */
     enum StartupDecision {
