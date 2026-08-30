@@ -82,7 +82,12 @@ final class LoreSchemaMigrations {
      * БД его быть НЕ должно — включение сюда ложно роняло бы старт.
      */
     static final List<String> REQUIRED_LIVE_TYPES = List.of(
-        "KnowUseCase", "KnowPain", "KnowGain", "KnowJob", "KnowActor", "KnowAsset");
+        "KnowUseCase", "KnowPain", "KnowGain", "KnowJob", "KnowActor", "KnowAsset",
+        // ADR-LORE-041: несущий тип продуктового слоя. Без него в списке
+        // непрошедшая миграция 30 не заметилась бы на старте — а именно она
+        // переносит описательных акторов, и её тихий пропуск оставил бы
+        // сценарии без действующих лиц при живом приложении.
+        "KnowProjectActor");
 
     /** Решение раннера о старте по версиям — чистое, тестируется без БД (ADR-023). */
     enum StartupDecision {
