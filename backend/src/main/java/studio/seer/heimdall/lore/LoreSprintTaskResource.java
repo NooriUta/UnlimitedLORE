@@ -132,6 +132,37 @@ public class LoreSprintTaskResource extends LoreResourceBase {
 
     // ── Write-path: create / edit a task ────────────────────────────────────
 
+    @jakarta.inject.Inject
+    TaskRoleService roleService;
+
+    /**
+     * Назначение роли на задаче (ADR-LORE-042, TR-04/TR-06).
+     *
+     * <p>Отдельный вызов, а не поле в {@code task_new}, потому что назначение —
+     * не свойство задачи, а СОБЫТИЕ: у него своя дата, свой прежний держатель и
+     * своя причина смены. Поля author/executor/reviewer_agent пока пишутся
+     * по-прежнему: обе правды живут рядом, пока не сойдутся, и снятие полей —
+     * отдельный последний шаг, а не побочный эффект этого.
+     *
+     * <p>Отказ отдаётся как {@code 400} с телом по ADR-LORE-043: {@code outcome}
+     * называет произошедшее, {@code reason} — почему. Молчаливого {@code ok:true}
+     * на неприменённом назначении здесь быть не может.
+     */
+    @POST
+    @Path("task/role")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response setTaskRole(TaskRoleService.RoleRequest req,
+                                @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        TaskRoleService.Result r = roleService.apply(req);
+        return noStore(r.applied()
+            ? Response.ok(r.body())
+            : Response.status(Response.Status.BAD_REQUEST).entity(r.body()));
+    }
+
     @POST
     @Path("task")
     @Consumes(MediaType.APPLICATION_JSON)

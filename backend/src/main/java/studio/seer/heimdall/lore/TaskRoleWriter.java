@@ -48,15 +48,12 @@ final class TaskRoleWriter {
      * Список ВЫВОДИТСЯ из графа, а не вспоминается пишущим — в этом вся разница
      * с полем, куда можно было написать что угодно.
      */
-    static List<String> candidates(Collection2 peopleInProject, Collection2 declaredAgents) {
+    static List<String> candidates(List<String> peopleInProject, List<String> declaredAgents) {
         Set<String> all = new LinkedHashSet<>();
-        all.addAll(peopleInProject.values());
-        all.addAll(declaredAgents.values());
+        all.addAll(peopleInProject);
+        all.addAll(declaredAgents);
         return List.copyOf(all);
     }
-
-    /** Минимальная обёртка, чтобы не тащить сюда типы графа. */
-    record Collection2(List<String> values) {}
 
     /**
      * Проверить назначение роли.

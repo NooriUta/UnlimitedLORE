@@ -231,7 +231,21 @@ public final class LoreSlices {
             "out('TAGGED_WITH').tag_id  AS tags, " +
             "out('DECIDED_IN').adr_id[0] AS parent_adr " +
             "FROM KnowDecision",
-            List.of(), Map.of(), " ORDER BY decision_id LIMIT 300");
+            // Потолок был 300 при сортировке по decision_id, и корпус вырос ровно
+            // до него: замер 30.08.2026 — 300 строк, самая поздняя date_created
+            // 31 июля. Весь август был невидим, а признака обрезки в ответе нет,
+            // поэтому «300» читалось как «все». Хуже, чем «последние 300»:
+            // выпадали не старые, а те, чей код лексикографически дальше, —
+            // свежие D-2026-MINILORE-… не попадали, хотя search их находил.
+            //
+            // Правится ДВУМЯ изменениями, и оба нужны. Порядок — от свежих:
+            // если потолок когда-нибудь снова достанут, он срежет старое, а не
+            // случайную по смыслу часть алфавита. Потолок поднят выше корпуса с
+            // запасом на годы — он остаётся защитой от выгрузки всей базы, а не
+            // рабочей отсечкой. Сообщить об обрезке в ответе слайс не может:
+            // он отдаёт строки, и места под признак в контракте нет — поэтому
+            // единственная честная настройка та, при которой обрезки не бывает.
+            List.of(), Map.of(), " ORDER BY date_created DESC, decision_id LIMIT 3000");
 
         // Decisions that belong to one ADR (in('DECIDED_IN') from the ADR side).
         slice("decisions_of_adr",
@@ -248,6 +262,18 @@ public final class LoreSlices {
             "SELECT decision_id, title, date_created, status_raw, " +
             "body_md, rationale_md, refs_raw, " +
             "adr_refs, sprint_refs, pr_refs, release_refs, " +
+            // Проект и компоненты в карточке. Их не было ни здесь, ни в
+            // списочном срезе после его обрезки — то есть принадлежность
+            // решения проекту НЕ ЧИТАЛАСЬ ничем: записать можно, проверить
+            // нечем. Это та же беда, что «карточка есть, а пути до неё нет»,
+            // только со стороны чтения, и замечалась она лишь задним числом на
+            // доске «что изменилось». Поля те же, что в списке, — карточка и
+            // список обязаны говорить об одном одинаково.
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
+            "out('BELONGS_TO').component_id AS components, " +
+            "out('BELONGS_TO').component_id[0] AS component_id, " +
+            "out('DECIDED_IN').adr_id[0] AS parent_adr, " +
+            "out('TAGGED_WITH').tag_id AS tags, " +
             "out('SUPERSEDES').decision_id AS supersedes_ids " +
             "FROM KnowDecision WHERE decision_id = :id",
             List.of("id"), Map.of(), "");
