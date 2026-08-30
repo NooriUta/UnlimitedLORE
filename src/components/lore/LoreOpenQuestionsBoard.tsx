@@ -550,9 +550,9 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
             </select>
             <input style={S.input} type="date" value={form.due_date}
               onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
-            <input style={S.input} placeholder="Владелец (owner)" value={form.owner}
+            <input style={S.input} placeholder={t('lore.oqBoard.ownerPlaceholder', 'Владелец вопроса')} value={form.owner}
               onChange={e => setForm(f => ({ ...f, owner: e.target.value }))} />
-            <input style={S.input} placeholder="Поставлен в ADR (raised_in)" value={form.raised_in}
+            <input style={S.input} placeholder={t('lore.oqBoard.raisedInPlaceholder', 'Поставлен в ADR')} value={form.raised_in}
               onChange={e => setForm(f => ({ ...f, raised_in: e.target.value }))} />
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
