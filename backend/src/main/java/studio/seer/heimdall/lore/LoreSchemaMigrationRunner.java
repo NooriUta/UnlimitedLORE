@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 /**
  * ADR-LORE-023: раннер миграций схемы. Свой, не ADR-HND-022 (OQ-023-RUNNER):
@@ -415,6 +417,7 @@ public class LoreSchemaMigrationRunner {
         // Порядок внутри шага существенный: SQL шага 30 создаёт тип ДО javaStep,
         // поэтому к моменту вызова индексировать уже есть что.
         if (version == 30) { splitProjectActors(); createFullTextIndexes(); }
+        if (version == 31) backfillComponentEdges();
         if (version == 28) recreateFtIndexes();
     }
 
@@ -797,6 +800,147 @@ public class LoreSchemaMigrationRunner {
         LOG.infof("[LORE MIGRATE] V17: тегов перенесено (переиспользовано %d, создано %d), рёбер перевешено %d, тип LoreTag снят",
             reused, created, movedEdges);
     }
+
+    /**
+     * Типы, у которых принадлежность компоненту жила ПОЛЕМ, и ключ, по которому
+     * такую запись видно в логе. Порядок — по величине расхождения на проде,
+     * чтобы самое крупное шло первым и было видно сразу.
+     *
+     * <p>{@code KnowTask} в списке при шести строках расхождения не ради этих
+     * шести: пропустить тип значило бы оставить исключение, о котором придётся
+     * помнить, — а гейт NM-04 всё равно считает по всем типам, и невключённый
+     * тип светился бы в нём вечно.
+     */
+    private static final Map<String, String> COMPONENT_FIELD_TYPES = new LinkedHashMap<>(Map.of(
+        "KnowDecision", "decision_id",
+        "KnowSpec",     "spec_id",
+        "KnowDoc",      "doc_id",
+        "KnowQuestion", "question_id",
+        "KnowADR",      "adr_id",
+        "QualityGate",  "gate_id",
+        "KnowTask",     "task_uid"));
+
+    /**
+     * NM-02: довести рёбра {@code BELONGS_TO} до полей {@code component_id}.
+     *
+     * <p><b>Шаг только ДОБАВЛЯЕТ.</b> Ни одно ребро и ни одно поле здесь не
+     * удаляется и не переписывается. Это не осторожность вообще, а следствие
+     * замера: представления расходятся в обе стороны, и «привести к ребру»
+     * переписыванием стёрло бы 740+ связей, живущих только полем. После шага обе
+     * правды совпадают, и любой следующий шаг можно отменить, вернувшись к полю.
+     *
+     * <p><b>Идемпотентность обязательна.</b> Ledger пишется ПОСЛЕ java-части,
+     * поэтому падение в середине даёт повторный прогон на частично обработанных
+     * данных. Ребро ставится только там, где его нет, поэтому повтор ничего не
+     * дублирует.
+     *
+     * <p><b>Несуществующий компонент — не повод промолчать.</b> {@code CREATE
+     * EDGE} с пустым TO в этой грамматике тихий no-op: строка «обработана», а
+     * ребра нет. Такие поля собираются и перечисляются в логе с числом. Ноль в
+     * этом счётчике — тоже результат, который надо увидеть, поэтому он пишется
+     * всегда, а не только когда ненулевой.
+     */
+    private void backfillComponentEdges() {
+        Set<String> knownComponents = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT component_id FROM LoreComponent", Map.of())) {
+            String c = str(r.get("component_id"));
+            if (c != null && !c.isBlank()) knownComponents.add(c);
+        }
+        if (knownComponents.isEmpty()) {
+            LOG.info("[LORE MIGRATE] V31: реестр компонентов пуст — свежая БД, доводить нечего");
+            return;
+        }
+
+        int totalCreated = 0, totalAlready = 0;
+        List<String> dangling = new ArrayList<>();
+
+        for (Map.Entry<String, String> e : COMPONENT_FIELD_TYPES.entrySet()) {
+            String type = e.getKey(), idField = e.getValue();
+            if (!typeExists(type)) continue;   // тип мог не дожить до этой версии
+
+            // Берём ВСЕ строки с непустым полем, а не только «без единого ребра»:
+            // у записи может быть ребро на ДРУГОЙ компонент, и тогда связь,
+            // записанная полем, всё равно отсутствует. Условие «нет рёбер вовсе»
+            // такие строки пропустило бы, а это как раз случай смены компонента,
+            // которая уезжала в поле и не доезжала до ребра.
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT " + idField + " AS id, component_id, "
+                + "out('BELONGS_TO').component_id AS linked "
+                + "FROM " + type + " WHERE component_id IS NOT NULL AND component_id <> ''", Map.of());
+
+            int created = 0, already = 0;
+            for (Map<String, Object> r : rows) {
+                String id = str(r.get("id"));
+                String want = str(r.get("component_id"));
+                if (id == null || id.isBlank() || want == null || want.isBlank()) continue;
+                if (alreadyLinked(r.get("linked"), want)) { already++; continue; }
+                if (!knownComponents.contains(want)) {
+                    dangling.add(type + '/' + id + " → " + want);
+                    continue;
+                }
+                // String.format, не именованные параметры: в этой грамматике
+                // CREATE EDGE с :param молча не подставляет (см. соседние шаги).
+                exec(String.format(
+                    "CREATE EDGE BELONGS_TO FROM (SELECT FROM %s WHERE %s = '%s') "
+                    + "TO (SELECT FROM LoreComponent WHERE component_id = '%s') IF NOT EXISTS",
+                    type, idField, esc(id), esc(want)));
+                created++;
+            }
+            LOG.infof("[LORE MIGRATE] V31: %-13s строк с полем %4d, ребро добавлено %4d, уже было %4d",
+                type, rows.size(), created, already);
+            totalCreated += created;
+            totalAlready += already;
+        }
+
+        LOG.infof("[LORE MIGRATE] V31: итого добавлено рёбер %d, уже совпадало %d, "
+            + "полей на несуществующий компонент %d", totalCreated, totalAlready, dangling.size());
+        if (!dangling.isEmpty()) {
+            // Не падаем: это данные, а не поломка шага, и остановка на них
+            // заблокировала бы слияние из-за мусора, который чинится отдельно.
+            // Но и не молчим — иначе «ноль расхождений» у гейта NM-04 окажется
+            // недостижим по причине, о которой никто не узнал.
+            LOG.warnf("[LORE MIGRATE] V31: поля, указывающие на незарегистрированный компонент "
+                + "(ребро НЕ создано, гейт NM-04 их увидит): %s",
+                String.join("; ", dangling.subList(0, Math.min(dangling.size(), 40))));
+        }
+
+        // Контроль на месте, а не «посмотрим потом»: пересчитываем то же, что
+        // мерили до шага. Отличие от простого «упало/не упало» в том, что здесь
+        // видно ИМЕННО остаток — и он обязан объясняться списком выше.
+        int leftover = 0;
+        for (Map.Entry<String, String> e : COMPONENT_FIELD_TYPES.entrySet()) {
+            if (!typeExists(e.getKey())) continue;
+            List<Map<String, Object>> n = ingest.queryPublic(
+                "SELECT count(*) AS n FROM " + e.getKey()
+                + " WHERE component_id IS NOT NULL AND component_id <> '' "
+                + "AND out('BELONGS_TO').size() = 0", Map.of());
+            leftover += n.isEmpty() ? 0 : ((Number) n.get(0).getOrDefault("n", 0)).intValue();
+        }
+        LOG.infof("[LORE MIGRATE] V31: осталось записей с полем и без единого ребра: %d "
+            + "(ожидание — только те, чей компонент не зарегистрирован: %d)",
+            leftover, dangling.size());
+    }
+
+    /**
+     * Есть ли уже ребро на ИМЕННО ТОТ компонент, что назван полем.
+     *
+     * <p>Вынесено отдельно, потому что здесь прячется решающая ошибка шага.
+     * Напрашивается условие «у записи вообще нет рёбер» — и оно пропустило бы
+     * записи, у которых ребро ведёт на ДРУГОЙ компонент. А это как раз самый
+     * частый способ разъехаться: компонент сменили, поле обновилось, ребро
+     * осталось на прежнем. Такая запись выглядит связанной, но связана не с тем,
+     * и «нет рёбер» её не ловит.
+     *
+     * <p>Ребро на другой компонент при этом НЕ удаляется: шаг только добавляет.
+     * Разбор, какое из двух верное, — работа человека, а не миграции.
+     */
+    static boolean alreadyLinked(Object linked, String want) {
+        return linked instanceof List<?> have && have.contains(want);
+    }
+
+    /** Экранирование одинарной кавычки для String.format-путей CREATE EDGE. */
+    private static String esc(String v) { return v.replace("'", "''"); }
 
     private boolean typeExists(String name) {
         return !ingest.queryPublic("SELECT name FROM schema:types WHERE name = :n",
