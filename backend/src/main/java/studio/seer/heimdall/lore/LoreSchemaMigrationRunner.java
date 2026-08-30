@@ -417,6 +417,9 @@ public class LoreSchemaMigrationRunner {
         // Порядок внутри шага существенный: SQL шага 30 создаёт тип ДО javaStep,
         // поэтому к моменту вызова индексировать уже есть что.
         if (version == 30) { splitProjectActors(); createFullTextIndexes(); }
+        // AC-04: повторный развод. Шаг 30 оставил ноль, но форма в UI ещё писала
+        // в реестр личностей — см. комментарий к шагу 32. Идемпотентен.
+        if (version == 32) splitProjectActors();
         if (version == 31) backfillComponentEdges();
         if (version == 28) recreateFtIndexes();
     }
