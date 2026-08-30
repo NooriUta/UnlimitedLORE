@@ -31,8 +31,8 @@ import static org.hamcrest.Matchers.hasSize;
 @DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class ComponentDriftSliceLiveDbTest {
 
-    /** 7 типов × 2 метрики. Держится синхронно с COMPONENT_FIELD_TYPES. */
-    private static final int EXPECTED_ROWS = 14;
+    /** 9 типов × 2 метрики. Держится синхронно с COMPONENT_FIELD_TYPES. */
+    private static final int EXPECTED_ROWS = 18;
 
     @Test
     void driftSliceRunsAndReportsEveryTypeInBothDirections() {

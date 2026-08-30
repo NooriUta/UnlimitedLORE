@@ -695,6 +695,10 @@ public final class LoreSlices {
             {"KnowTask",     "BELONGS_TO",    "out"},
             // компонент документирован В спеке — ребро входящее
             {"KnowSpec",     "DOCUMENTED_IN", "in"},
+            // NM-07: пропущены в первой редакции — «ноль по семи типам» был
+            // верен буквально и неполон по смыслу, носителей поля девять.
+            {"QGJobTask",       "BELONGS_TO", "out"},
+            {"QGRecommendation","BELONGS_TO", "out"},
         };
         for (int i = 0; i < driftTypes.length; i++) {
             String t = driftTypes[i][0], edge = driftTypes[i][1], side = driftTypes[i][2];
@@ -1407,13 +1411,14 @@ public final class LoreSlices {
 
         // ── §10b QG dashboard slices (no required params) ─────────────────────
         slice("qg_violations",
-            "SELECT job_id, inv_id, severity, status, run_date, note_md, qg_id, component_id " +
+            "SELECT job_id, inv_id, severity, status, run_date, note_md, qg_id, " +
+            "out('BELONGS_TO').component_id[0] AS component_id " +
             "FROM QGJobTask WHERE status = 'open' ORDER BY run_date DESC",
             List.of(), Map.of(), " LIMIT 300");
 
         slice("qg_pending_recs",
             "SELECT rec_id, title, body_md, status, priority, severity, effort_days, " +
-            "tags, component_id, qg_id, inv_id, fix_cmd, how_to_verify " +
+            "tags, out('BELONGS_TO').component_id[0] AS component_id, qg_id, inv_id, fix_cmd, how_to_verify " +
             "FROM QGRecommendation WHERE status = 'pending' ORDER BY priority ASC",
             List.of(), Map.of(), " LIMIT 200");
 
