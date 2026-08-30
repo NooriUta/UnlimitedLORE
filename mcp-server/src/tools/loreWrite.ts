@@ -648,6 +648,47 @@ export function registerLoreWrite(server: McpServer): void {
     }),
   });
 
+  // AC-02/ADR-LORE-041 §4: описательный актор проектируемой части — ОТДЕЛЬНЫЙ
+  // инструмент, а не флаг у actor_new.
+  //
+  // Разводится не хранение, а вопрос: actor_new заводит ЛИЧНОСТЬ (client_id,
+  // владелец, цепочка RBAC), этот — роль в сценарии. Слив их в один инструмент
+  // с переключателем вернул бы ровно ту неоднозначность, из-за которой у
+  // описания акторов появился проектный RBAC-гейт и 30.08.2026 остановил
+  // владельца на AIDA/MIDGARD.
+  definePostTool(server, {
+    name: 'project_actor_new',
+    description: 'Create or update a KnowProjectActor — the DESIGN-side actor: who acts in a use case, whose ' +
+      'pain it is, who performs a job (ADR-LORE-041 §4). Upserts by actor_id.\n\n' +
+      'This is NOT actor_new. actor_new writes KnowActor — an agent IDENTITY carrying client_id, OWNED_BY and ' +
+      'the whole RBAC chain; creating one there can create a link in the permission chain, which is why that ' +
+      'path has a per-project RBAC gate. A project actor carries no permissions at all, so it has no such gate: ' +
+      'you can describe actors for a project where you hold no role. That gate on descriptive work was the ' +
+      'defect this split fixes.\n\n' +
+      'kind accepts "automation", NOT "agent" — migration 30 renamed the value, and accepting both would ' +
+      'recreate two spellings of one meaning. An actor_id already taken by a KnowActor is a 400, not a silent ' +
+      'upsert: identity and description do not share identifiers. Mutates system_aida_lore.',
+    schema: {
+      actor_id: z.string().describe('e.g. "ACT-ANALYST", "ACT-CI-RUNNER"'),
+      name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Аналитик"'),
+      kind:     z.enum(['human-role', 'system', 'automation']).optional()
+        .describe('"agent" is rejected — renamed to "automation" by migration 30'),
+      body_md:  z.string().optional().describe('кто это, что делает, чего ждёт от системы'),
+      project:  z.string().optional()
+        .describe('ONE git-project slug — treated as a one-item set, so it DETACHES the actor from every other project. Prefer `projects` for a multi-project actor.'),
+      projects: z.array(z.string()).optional()
+        .describe('FULL set of git-project slugs; passing this key REPLACES the whole set (empty array detaches from all), omitting BOTH keys leaves the edges untouched. Response: projects_linked / projects_removed / projects_missing — an unregistered slug is reported, never a silent no-op.'),
+    },
+    path: '/lore/project-actor',
+    body: ({ actor_id, name, kind, body_md, project, projects }) => ({
+      actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+      // Как и в actor_new: undefined и null здесь значат разное — «ключа нет»
+      // против «снять все», и подмена стёрла бы различие.
+      project: project ?? null,
+      ...(projects === undefined ? {} : { projects }),
+    }),
+  });
+
   // MT-11/D-VP-ROLE-AGENT-PAIR (редакция 3): агент → роль, которую он
   // исполняет. rel — enum ради согласованности с остальными *_link
   // (uc_link/task_link/…), не задел на будущее расширение конкретно здесь.
