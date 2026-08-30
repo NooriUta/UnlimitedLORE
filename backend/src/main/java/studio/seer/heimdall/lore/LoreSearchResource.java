@@ -154,7 +154,38 @@ public class LoreSearchResource extends LoreResourceBase {
         new Branch("actor", "KnowProjectActor", "actor_id", "name", "ftKnowProjectActor",
             List.of("name", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 1.20));
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.20),
+
+        // Релизы не искались ВООБЩЕ, при том что полнотекстовых индексов у них
+        // два — ftKnowRelease и ftKnowReleaseHist. Индексы строились, велись и
+        // не читались никем: поиск по тегу находил только записи, где тег
+        // упомянут прозой, а сам релиз оставался недостижим. Найдено живыми
+        // пробами мобильного клиента 30.08.2026.
+        //
+        // У релиза НЕТ компонента и нет наследования — оси фасетов пусты, а
+        // проект берётся ребром BELONGS_TO_PROJECT (поле git_project — вторая
+        // правда, оставленная сознательно, см. слайс releases).
+        //
+        // Заголовок — git_tag, а не release_id: человек ищет «v1.9.1».
+        new Branch("release", "KnowRelease", "release_id", "git_tag", "ftKnowRelease",
+            List.of("description_md"),
+            "KnowReleaseHist", "ftKnowReleaseHist", List.of("description_md"),
+            null, null, null, DIRECT_PROJ, 1.15),
+
+        // Агентные личности. Индекс ftKnowActor существовал и до сегодня, но
+        // после развода акторов (ADR-LORE-041) ветка поиска уехала на
+        // KnowProjectActor, и читателя у него не осталось — индекс велся впустую,
+        // а личности стали ненаходимы. Это следствие МОЕЙ правки, замеченное
+        // не мной, а пробами с телефона.
+        //
+        // Отдельный тип, а не расширение ветки actor: слить их значило бы
+        // вернуть ту самую склейку личности и описательной роли, ради разведения
+        // которой всё и делалось. Имя типа в API совпадает с тем, что уже принял
+        // у себя шлюз miniLORE.
+        new Branch("agent_actor", "KnowActor", "actor_id", "name", "ftKnowActor",
+            List.of("name", "body_md"),
+            null, null, null,
+            null, null, null, DIRECT_PROJ, 1.10));
 
     /** Переопределение приоритетов без пересборки: "adr:1.4,task:0.5". */
     @ConfigProperty(name = "lore.search.type-priority")
