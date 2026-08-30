@@ -67,8 +67,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
     // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
     // а не когда кто-то откроет срез гигиены через неделю.
+    // quality — компактная форма (WorkQuality.compact): «x из y» плюс ТОЛЬКО
+    // непройденное. Полный список выдавал пройденные и непройденные проверки
+    // одинаково, и пропуск тонул среди пройденного — ответ task_new читают
+    // чаще всех, поэтому здесь это стоило дороже всего.
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index,
-        WorkQuality.Result quality) {}
+        java.util.Map<String, Object> quality) {}
     // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
     public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index,
         String summary_md) {}
@@ -117,7 +121,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
             out.put("created", r.created());
-            out.put("quality", sprintQuality(req.sprint_id()));
+            out.put("quality", WorkQuality.compact(sprintQuality(req.sprint_id())));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT CREATE] %s: %s", req.sprint_id(), e.getMessage());
@@ -231,7 +235,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .chain(__ -> Uni.createFrom().item(() -> {
                             hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
                             return noStore(Response.ok(
-                                new TaskWriteResponse(true, uid, tid, order, taskQuality(uid))));
+                                new TaskWriteResponse(true, uid, tid, order, WorkQuality.compact(taskQuality(uid)))));
                         })
                         .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()));
 
@@ -709,7 +713,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     if (req.note_md() != null)
                         hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
                     return noStore(Response.ok(
-                        new TaskWriteResponse(true, uid, null, null, taskQuality(uid))));
+                        new TaskWriteResponse(true, uid, null, null, WorkQuality.compact(taskQuality(uid)))));
                 })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             .onFailure().recoverWithItem(ex -> {
