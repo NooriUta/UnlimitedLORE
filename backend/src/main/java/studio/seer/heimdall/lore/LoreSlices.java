@@ -575,7 +575,7 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('HAS_ACTOR').uc_id AS uc_ids, " +
             "in('HAS_ACTOR').size() AS uc_count " +
-            "FROM KnowActor",
+            "FROM KnowProjectActor",
             List.of(),
             new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")),
             " ORDER BY actor_id");
@@ -663,6 +663,56 @@ public final class LoreSlices {
         //
         // Считаем ЛЮБУЮ роль, а не только owner: проект с ролью reader тоже
         // «настроен», просто узко, и это другой разговор, чем «о нём забыли».
+
+        // ── Расхождение поле/ребро (NM-04, ADR-LORE-041 §3) ──────────────────
+        //
+        // Пока поле component_id существует, оно обязано совпадать с ребром. Это
+        // счётная величина, и она СЧИТАЕТСЯ — иначе расхождение набирается
+        // заново. Оба раза дефект возник не из злого умысла, а потому что никто
+        // не мерил: в паспорте компонента просто было пусто.
+        //
+        // Ребро у каждого типа СВОЁ, и это не мелочь. Первый замер шёл по
+        // BELONGS_TO для всех типов и дал у спек 184 «поля без ребра» — число
+        // описывает отсутствие BELONGS_TO, а не отсутствие связи: спеки
+        // связаны ребром DOCUMENTED_IN и в обратную сторону (компонент → спека),
+        // 352 из 390. Общий счётчик по одному ребру дал бы у спек вечный
+        // ненулевой остаток и приучил бы его игнорировать — то есть гейт
+        // работал бы ровно наоборот задуманному.
+        //
+        // Две строки на тип, а не одна: «поле без ребра» и «ребро без поля»
+        // чинятся по-разному и в разные стороны. Сложить их в одно число
+        // значило бы потерять направление расхождения, а именно оно тут и
+        // оказалось неожиданным.
+        StringBuilder drift = new StringBuilder("SELECT type, edge, metric, n FROM (SELECT expand(unionall(");
+        StringBuilder driftLet = new StringBuilder(")) LET ");
+        String[][] driftTypes = {
+            // тип, каноническое ребро, сторона обхода от записи
+            {"KnowADR",      "BELONGS_TO",    "out"},
+            {"KnowDecision", "BELONGS_TO",    "out"},
+            {"KnowDoc",      "BELONGS_TO",    "out"},
+            {"KnowQuestion", "BELONGS_TO",    "out"},
+            {"QualityGate",  "BELONGS_TO",    "out"},
+            {"KnowTask",     "BELONGS_TO",    "out"},
+            // компонент документирован В спеке — ребро входящее
+            {"KnowSpec",     "DOCUMENTED_IN", "in"},
+        };
+        for (int i = 0; i < driftTypes.length; i++) {
+            String t = driftTypes[i][0], edge = driftTypes[i][1], side = driftTypes[i][2];
+            String traverse = side + "('" + edge + "')";
+            String vf = "$f" + i, ve = "$e" + i;
+            drift.append(i == 0 ? "" : ", ").append(vf).append(", ").append(ve);
+            driftLet.append(i == 0 ? "" : ", ")
+                .append(vf).append(" = (SELECT '").append(t).append("' AS type, '")
+                .append(edge).append("' AS edge, 'field_no_edge' AS metric, count(*) AS n FROM ").append(t)
+                .append(" WHERE component_id IS NOT NULL AND component_id <> '' AND ")
+                .append(traverse).append(".size() = 0), ")
+                .append(ve).append(" = (SELECT '").append(t).append("' AS type, '")
+                .append(edge).append("' AS edge, 'edge_no_field' AS metric, count(*) AS n FROM ").append(t)
+                .append(" WHERE ").append(traverse).append(".size() > 0 AND ")
+                .append("(component_id IS NULL OR component_id = ''))");
+        }
+        slice("component_field_edge_drift", drift.toString() + driftLet.toString() + ")",
+            List.of(), Map.of(), "");
         slice("projects_without_role",
             "SELECT slug, name, in('HAS_PROJECT_ROLE').size() AS roles " +
             "FROM KnowGitProject WHERE in('HAS_PROJECT_ROLE').size() = 0 ORDER BY slug",
@@ -772,6 +822,29 @@ public final class LoreSlices {
         // AL-108: machine_id/session_id — «откуда агент писал в последний
         // раз» (самоописание через actor_new), не история и не различитель
         // двух ОДНОВРЕМЕННЫХ сессий одной роли — только последняя.
+
+        // Описательные акторы, застрявшие в реестре ЛИЧНОСТЕЙ (AC-04).
+        //
+        // После развода (миграция 30) в KnowActor должны остаться только
+        // личности: с client_id и владельцем. Всё остальное там — след записи,
+        // ушедшей не по тому адресу.
+        //
+        // ЗАЧЕМ ОТДЕЛЬНЫЙ СРЕЗ. Такая вершина не видна НИГДЕ: `actors` читает
+        // KnowProjectActor, `agent_owners` фильтрует kind='agent', поиск ходит
+        // в индекс нового типа. Запись отвечает ok:true и исчезает. Ровно так
+        // и случилось: форма акторов в UI продолжала звать /lore/actor уже
+        // после того, как чтение переехало.
+        //
+        // Пустой ответ здесь — содержательный результат: он означает, что
+        // описательных следов не осталось. Поэтому срез отдаёт их поимённо, а
+        // не числом: по имени видно, откуда прилетело.
+        slice("actor_identity_orphans",
+            "SELECT actor_id, name, kind, client_id, "
+            + "out('OWNED_BY').kc_sub AS owners, "
+            + "in('HAS_ACTOR').size() AS uc_count "
+            + "FROM KnowActor "
+            + "WHERE (client_id IS NULL OR client_id = '') AND out('OWNED_BY').size() = 0",
+            List.of(), Map.of(), " ORDER BY actor_id");
         slice("agent_owners",
             "SELECT actor_id, name, client_id, agent_role, machine_id, session_id, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
@@ -802,7 +875,7 @@ public final class LoreSlices {
             "in('HAS_ACTOR').size() AS uc_count, " +
             "inE('HAS_ACTOR')[role = 'primary'].size()    AS primary_count, " +
             "inE('HAS_ACTOR')[role = 'supporting'].size() AS supporting_count " +
-            "FROM KnowActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
+            "FROM KnowProjectActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
             "ORDER BY actor_id",
             List.of("project"), Map.of(), "");
 
@@ -1020,7 +1093,7 @@ public final class LoreSlices {
             "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
             "      WHERE job_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
             "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
-            "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
+            "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowProjectActor " +
             "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10))",
             List.of("pattern"), Map.of(), "");

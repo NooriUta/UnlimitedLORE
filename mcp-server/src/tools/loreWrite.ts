@@ -546,7 +546,8 @@ export function registerLoreWrite(server: McpServer): void {
     'Link (or unlink) a KnowUseCase. rel="task": REALIZES edge (KnowTask→UC), target_id=full task_uid — ' +
       'REQUIRED discipline for tasks with work_class=uc (advisory, D3). rel="adr"/"decision": TRACED_TO ' +
       'edge (UC→justification) — OPTIONAL by design (D9). rel="actor": HAS_ACTOR edge (MULTI, D12) to a ' +
-      'KnowActor (create via actor_new first). rel="includes"/"extends": UC→UC graph relations (D13): ' +
+      'KnowProjectActor (create via project_actor_new first — NOT actor_new, that one writes agent identities). ' +
+      'rel="includes"/"extends": UC→UC graph relations (D13): ' +
       'includes = mandatory sub-scenario, extends = variant. rel="relieves"/"delivers" (ADR-LORE-032 §2): ' +
       'the UC actually relieves a KnowPain / delivers a KnowGain — these edges are what CLOSE the VP fit ' +
       'the feature only claimed via feature_link(pain|gain). rel="performs" (ADR-LORE-032 §2): the UC actually ' +
@@ -648,6 +649,47 @@ export function registerLoreWrite(server: McpServer): void {
     }),
   });
 
+  // AC-02/ADR-LORE-041 §4: описательный актор проектируемой части — ОТДЕЛЬНЫЙ
+  // инструмент, а не флаг у actor_new.
+  //
+  // Разводится не хранение, а вопрос: actor_new заводит ЛИЧНОСТЬ (client_id,
+  // владелец, цепочка RBAC), этот — роль в сценарии. Слив их в один инструмент
+  // с переключателем вернул бы ровно ту неоднозначность, из-за которой у
+  // описания акторов появился проектный RBAC-гейт и 30.08.2026 остановил
+  // владельца на AIDA/MIDGARD.
+  definePostTool(server, {
+    name: 'project_actor_new',
+    description: 'Create or update a KnowProjectActor — the DESIGN-side actor: who acts in a use case, whose ' +
+      'pain it is, who performs a job (ADR-LORE-041 §4). Upserts by actor_id.\n\n' +
+      'This is NOT actor_new. actor_new writes KnowActor — an agent IDENTITY carrying client_id, OWNED_BY and ' +
+      'the whole RBAC chain; creating one there can create a link in the permission chain, which is why that ' +
+      'path has a per-project RBAC gate. A project actor carries no permissions at all, so it has no such gate: ' +
+      'you can describe actors for a project where you hold no role. That gate on descriptive work was the ' +
+      'defect this split fixes.\n\n' +
+      'kind accepts "automation", NOT "agent" — migration 30 renamed the value, and accepting both would ' +
+      'recreate two spellings of one meaning. An actor_id already taken by a KnowActor is a 400, not a silent ' +
+      'upsert: identity and description do not share identifiers. Mutates system_aida_lore.',
+    schema: {
+      actor_id: z.string().describe('e.g. "ACT-ANALYST", "ACT-CI-RUNNER"'),
+      name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Аналитик"'),
+      kind:     z.enum(['human-role', 'system', 'automation']).optional()
+        .describe('"agent" is rejected — renamed to "automation" by migration 30'),
+      body_md:  z.string().optional().describe('кто это, что делает, чего ждёт от системы'),
+      project:  z.string().optional()
+        .describe('ONE git-project slug — treated as a one-item set, so it DETACHES the actor from every other project. Prefer `projects` for a multi-project actor.'),
+      projects: z.array(z.string()).optional()
+        .describe('FULL set of git-project slugs; passing this key REPLACES the whole set (empty array detaches from all), omitting BOTH keys leaves the edges untouched. Response: projects_linked / projects_removed / projects_missing — an unregistered slug is reported, never a silent no-op.'),
+    },
+    path: '/lore/project-actor',
+    body: ({ actor_id, name, kind, body_md, project, projects }) => ({
+      actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+      // Как и в actor_new: undefined и null здесь значат разное — «ключа нет»
+      // против «снять все», и подмена стёрла бы различие.
+      project: project ?? null,
+      ...(projects === undefined ? {} : { projects }),
+    }),
+  });
+
   // MT-11/D-VP-ROLE-AGENT-PAIR (редакция 3): агент → роль, которую он
   // исполняет. rel — enum ради согласованности с остальными *_link
   // (uc_link/task_link/…), не задел на будущее расширение конкретно здесь.
@@ -656,7 +698,8 @@ export function registerLoreWrite(server: McpServer): void {
   // не найден — не тихий no-op.
   definePostTool(server, {
     name: 'actor_link',
-    description: 'Link (or unlink) a KnowActor(kind=agent) to the KnowActor(kind=human-role) whose work it ' +
+    description: 'Link (or unlink) a KnowActor(kind=agent) — an agent IDENTITY — to the KnowProjectActor ' +
+      '(the design-side role, created via project_actor_new) whose work it ' +
       'performs — FILLS_ROLE edge (D-VP-ROLE-AGENT-PAIR). The pair is checked in product/self-check ' +
       '(actor_pairs): the two actors\' PERFORMED_BY job sets must match — a mismatch is a real finding, ' +
       'not a silent pass. Reassigning an agent replaces its previous FILLS_ROLE edge, it does not add a ' +

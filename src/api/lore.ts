@@ -1325,11 +1325,22 @@ export function saveLoreUc(body: {
   return loreMutate<LoreProductWriteResult>('/uc', body, signal);
 }
 
-/** Проектируемая роль. project обязателен по смыслу (D18), но не по схеме. */
+/**
+ * Актор ПРОЕКТИРУЕМОЙ части (ADR-LORE-041 §4): кто действует в сценарии.
+ *
+ * Пишет в `/lore/project-actor`, а НЕ в `/lore/actor`. Второй заводит агентную
+ * ЛИЧНОСТЬ со всей цепочкой RBAC, и у него есть проектный гейт прав — из-за
+ * него владелец не могла завести акторов для проекта, где у неё нет роли.
+ * Описательная форма к правам отношения не имеет и через тот гейт не ходит.
+ *
+ * Пока форма писала по старому адресу, она была сломана вдвойне: список акторов
+ * уже читает новый тип, поэтому только что созданный актор пропадал бы из
+ * списка — при успешном сохранении.
+ */
 export function saveLoreActor(body: {
   actor_id: string;
   name?: string;
-  kind?: 'human-role' | 'system' | 'agent';
+  kind?: 'human-role' | 'system' | 'automation';
   body_md?: string;
   /** Прежняя форма — ОДИН проект. Бэкенд трактует как набор из одного. */
   project?: string;
@@ -1341,7 +1352,7 @@ export function saveLoreActor(body: {
    */
   projects?: string[];
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/actor', body, signal);
+  return loreMutate<LoreProductWriteResult>('/project-actor', body, signal);
 }
 
 export function saveLorePain(body: {

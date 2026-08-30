@@ -37,8 +37,8 @@ class LoreProductLayerLiveDbTest {
             + "\"body_md\":\"ценность\",\"context_md\":\"большой контекст (D13)\"}");
         post("/lore/uc", "{\"uc_id\":\"UC-T-1\",\"title\":\"Базовый сценарий\",\"parent_uc_id\":\"FEAT-T\"}");
         post("/lore/uc", "{\"uc_id\":\"UC-T-2\",\"title\":\"Второй сценарий\",\"parent_uc_id\":\"FEAT-T\"}");
-        post("/lore/actor", "{\"actor_id\":\"ACT-T-ADMIN\",\"name\":\"Администратор\",\"kind\":\"human-role\"}");
-        post("/lore/actor", "{\"actor_id\":\"ACT-T-AGENT\",\"name\":\"Агент сессии\",\"kind\":\"agent\"}");
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-T-ADMIN\",\"name\":\"Администратор\",\"kind\":\"human-role\"}");
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-T-AGENT\",\"name\":\"Агент сессии\",\"kind\":\"automation\"}");
         // D12: у сценария НЕСКОЛЬКО акторов.
         post("/lore/uc/link", "{\"uc_id\":\"UC-T-1\",\"rel\":\"actor\",\"target_id\":\"ACT-T-ADMIN\"}");
         post("/lore/uc/link", "{\"uc_id\":\"UC-T-1\",\"rel\":\"actor\",\"target_id\":\"ACT-T-AGENT\"}");

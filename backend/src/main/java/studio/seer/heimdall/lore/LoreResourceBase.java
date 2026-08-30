@@ -282,6 +282,60 @@ public abstract class LoreResourceBase {
      *
      * @return сколько рёбер удалено
      */
+    /**
+     * NM-03 (ADR-LORE-041): поставить ребро {@code BELONGS_TO} на компонент,
+     * названный полем {@code component_id}.
+     *
+     * <p><b>Зачем помощник, а не строка в каждом ресурсе.</b> Принадлежность
+     * компоненту писали полем шесть разных путей, а читают её все — ребром.
+     * Каждый путь молча расходился по-своему: инструмент отвечал {@code ok:true},
+     * поле стояло, паспорт компонента оставался пуст. Шесть копий одной строки
+     * разъехались бы снова, причём поодиночке и незаметно.
+     *
+     * <p><b>Поле продолжает писаться</b> — до шага NM-05 обе правды держатся
+     * синхронно, чтобы переход оставался обратимым.
+     *
+     * <p><b>Отсутствие компонента не молчит.</b> {@code CREATE EDGE} с пустым TO
+     * в этой грамматике — тихий no-op: запрос успешен, ребра нет. Поэтому при
+     * пустом результате отдельно спрашиваем само ребро и различаем «уже было» от
+     * «компонента нет». Возвращаемое {@code false} вызывающий кладёт в ответ,
+     * а не проглатывает.
+     *
+     * @return {@code true} — ребро есть (создано сейчас или было раньше);
+     *         {@code false} — компонент не зарегистрирован, связь НЕ создана
+     */
+    boolean linkComponentEdge(String type, String idField, String id, String componentId) {
+        if (id == null || id.isBlank() || componentId == null || componentId.isBlank()) return true;
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> created = (List<Map<String, Object>>)
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE BELONGS_TO FROM (SELECT FROM " + type + " WHERE " + idField + "=:id) "
+                + "TO (SELECT FROM LoreComponent WHERE component_id=:c) IF NOT EXISTS",
+                Map.of("id", id, "c", componentId)))
+            .await().indefinitely().result();
+        if (created != null && !created.isEmpty()) return true;
+        List<Map<String, Object>> exists = ingestService.queryPublic(
+            "SELECT count(*) AS n FROM BELONGS_TO WHERE @out." + idField + "=:id AND @in.component_id=:c",
+            Map.of("id", id, "c", componentId));
+        return !exists.isEmpty() && ((Number) exists.get(0).getOrDefault("n", 0)).longValue() > 0;
+    }
+
+    /**
+     * То же, но сразу кладёт вердикт в тело ответа. Отдельный метод, чтобы
+     * «не сказать» стало труднее, чем сказать: забытая проверка возвращаемого
+     * значения — ровно тот способ, которым дефект и держался.
+     */
+    void linkComponentEdge(String type, String idField, String id, String componentId,
+                           Map<String, Object> out) {
+        if (componentId == null || componentId.isBlank()) return;
+        if (!linkComponentEdge(type, idField, id, componentId)) {
+            out.put("component_linked", false);
+            out.put("component_hint", "компонент '" + componentId + "' не зарегистрирован — "
+                + "поле записано, но связь не создана и в паспорте компонента запись не появится; "
+                + "заведите компонент, затем сохраните ещё раз");
+        }
+    }
+
     int deleteEdges(String edgeType, String where, Map<String, Object> params) {
         List<Map<String, Object>> edges = ingestService.queryPublic(
             "SELECT @rid FROM " + edgeType + " WHERE " + where, params);

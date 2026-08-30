@@ -85,7 +85,11 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Ожидания', api: '/lore/gain*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'Работы', api: '/lore/job*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'VP-связи', api: '/lore/vp*', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
-  { what: 'Акторы', api: '/lore/actor*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  // Две строки, а не одна: ADR-LORE-041 §4 развёл ЛИЧНОСТЬ и ОПИСАНИЕ по разным
+  // типам вершин, и права у них разные. Слитая строка врала бы про обе — именно
+  // такая слитность и дала дефект: RBAC-гейт личности резал описательную работу.
+  { what: 'Агентные личности', api: '/lore/actor*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
+  { what: 'Акторы проектов', api: '/lore/project-actor', humanOnly: false, agents: ['full', 'architect', 'pm', 'product-analyst'] },
   { what: 'Компоненты', api: '/lore/component*', humanOnly: false, agents: ['full', 'architect'] },
   // Тех-реестр СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
   // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-…") — строка «Спеки/ранбуки/доки» выше.

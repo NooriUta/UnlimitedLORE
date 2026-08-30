@@ -53,7 +53,14 @@ public class LoreQgResource extends LoreResourceBase {
             qsql.append(" UPSERT WHERE qg_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 qsql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "qg_id", req.qg_id())));
+            // NM-03 (ADR-LORE-041): гейт писал component_id полем, а паспорт
+            // компонента считает гейты ребром in('BELONGS_TO') — семь гейтов на
+            // проде не показывались нигде при исправно записанном поле.
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("qg_id", req.qg_id());
+            linkComponentEdge("QualityGate", "qg_id", req.qg_id(), req.component_id(), out);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QG UPSERT] %s: %s", req.qg_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -331,6 +338,12 @@ public class LoreQgResource extends LoreResourceBase {
                 mapOfNullable("uid", taskUid, "tid", taskId, "title", title, "note", note,
                     "cid", compId, "tt", taskType, "auth", "analyst")))
                 .await().indefinitely();
+            // NM-03 (ADR-LORE-041): задача из находки гейта получала компонент
+            // полем. Шесть таких задач на проде — единственные KnowTask с этим
+            // расхождением, и все они пришли отсюда: остальные пути задач давно
+            // ставят ребро. Компонент здесь всегда непустой (падает в "AIDA"),
+            // так что молчаливого пропуска быть не может.
+            linkComponentEdge("KnowTask", "task_uid", taskUid, compId);
             // Insert KnowTaskHist row with TODO status
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "INSERT INTO KnowTaskHist SET state_uid=:nsid, status_raw='⬜ TODO', valid_from=:now",

@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 /**
  * ADR-LORE-023: раннер миграций схемы. Свой, не ADR-HND-022 (OQ-023-RUNNER):
@@ -403,6 +405,22 @@ public class LoreSchemaMigrationRunner {
         if (version == 17) mergeLoreTagIntoKnowTag();
         if (version == 20) backfillProjectEdges();
         if (version == 26) backfillReleaseProjectEdges();
+        // Тот же капкан, что описан выше для V13, и он сработал: шаг 30 заводит
+        // НОВЫЙ тип KnowProjectActor, а createFullTextIndexes зовётся только из
+        // шагов 11/12/13 — давно применённых и на проде, и на свежей базе к
+        // моменту, когда тип появляется. Без этого вызова ftKnowProjectActor не
+        // создался бы НИГДЕ: на свежей БД индексный шаг проходит раньше типа
+        // («тип отсутствует — индекс пропущен» в логе), на проде — вообще не
+        // повторяется. Поиск по акторам молча перестал бы их находить, и
+        // выглядело бы это как «таких акторов нет».
+        //
+        // Порядок внутри шага существенный: SQL шага 30 создаёт тип ДО javaStep,
+        // поэтому к моменту вызова индексировать уже есть что.
+        if (version == 30) { splitProjectActors(); createFullTextIndexes(); }
+        // AC-04: повторный развод. Шаг 30 оставил ноль, но форма в UI ещё писала
+        // в реестр личностей — см. комментарий к шагу 32. Идемпотентен.
+        if (version == 32) splitProjectActors();
+        if (version == 31) backfillComponentEdges();
         if (version == 28) recreateFtIndexes();
     }
 
@@ -443,6 +461,149 @@ public class LoreSchemaMigrationRunner {
             relEdges++;
         }
         LOG.infof("[LORE MIGRATE] V26 backfill Release→project (хвост после V20): %d рёбер", relEdges);
+    }
+
+    /**
+     * V30 (решение владельца 30.08.2026): проектируемая роль уезжает из
+     * {@code KnowActor} в {@code KnowProjectActor}. RBAC не трогается вовсе —
+     * это прямое требование: «MCP, RBAC остаётся на старой ноде, весь
+     * бизнес-анализ переезжает на новую».
+     *
+     * <h3>Что считается личностью, а что описанием</h3>
+     *
+     * Личность — актор, у которого есть {@code client_id} ЛИБО ребро
+     * {@code OWNED_BY}. Проверяются оба признака, а не один: клиент могли ещё не
+     * прописать, а владельца уже назначить, и наоборот. Ошибка в эту сторону
+     * дороже — уехавшая личность разорвала бы цепочку прав.
+     *
+     * Всё остальное — описание, и уезжает целиком со своими рёбрами.
+     *
+     * <h3>Почему Java, а не SQL шага</h3>
+     *
+     * У ребра в ArcadeDB неизменяемые концы: перецепить нельзя, только создать
+     * новое и удалить старое по {@code @rid}. Плюс {@code DELETE EDGE} в этой
+     * сборке отсутствует — работает лишь {@code DELETE FROM <Тип> WHERE @rid=…}.
+     * Тот же приём, что в V13.
+     *
+     * <h3>Идемпотентность</h3>
+     *
+     * Ledger пишется ПОСЛЕ javaStep, поэтому падение между ними оставляет шаг
+     * pending и повтор обязан пройти чисто: вершина создаётся только если её
+     * ещё нет, рёбра переносятся с {@code IF NOT EXISTS}, старое удаляется сразу
+     * после создания нового.
+     */
+    /**
+     * Словарь вида роли в ПРОЕКТИРУЕМОМ реестре: {@code agent} становится
+     * {@code automation} (решение владельца 30.08.2026, «переименуй
+     * automation (agent scheme)»).
+     *
+     * <p>Причина не косметическая. После развода слово {@code agent} жило бы в
+     * ДВУХ реестрах сразу: в {@link KnowActor} — как учётная запись с
+     * {@code client_id}, владельцем и журналом сессий, а здесь — как роль агента
+     * в сценарии («Агент сессии», 14 сценариев). Формально их различает тип
+     * вершины; человека — нет. Ровно тот же вид ловушки, что {@code architect}
+     * как роль в проекте против {@code architect} как профиля агента, и что
+     * {@code SKIP}, читавшийся и «в порядке», и «не измерено».
+     *
+     * <p>Переименование делается ЗДЕСЬ, потому что миграция и так переписывает
+     * эти строки. Отдельно потом — это отдельная миграция и отдельный деплой
+     * ради одного слова.
+     */
+    static String projectActorKind(String kind) {
+        return "agent".equals(kind) ? "automation" : kind;
+    }
+
+    private void splitProjectActors() {
+        if (!typeExists("KnowActor")) {
+            LOG.info("[LORE MIGRATE] V30: типа KnowActor нет — свежая БД, переносить нечего");
+            return;
+        }
+
+        // Рёбра ОПИСАТЕЛЬНОЙ стороны. OWNED_BY и LOGGED_BY здесь отсутствуют
+        // НАМЕРЕННО: первое — цепочка прав, второе — журнал сессий, обе остаются
+        // на личности. Если такое ребро окажется у описательной вершины, это
+        // значит, что признак личности определён неверно, и шаг обязан упасть,
+        // а не тихо оставить ребро висеть на удалённой вершине.
+        final List<String> inEdges  = List.of("HAS_ACTOR", "PERFORMED_BY", "DESIRED_BY", "FELT_BY");
+        final List<String> outEdges = List.of("BELONGS_TO_PROJECT", "TAGGED_WITH", "ATTACHED_TO");
+
+        List<Map<String, Object>> design = ingest.queryPublic(
+            "SELECT @rid AS rid, actor_id, name, kind, body_md FROM KnowActor "
+            + "WHERE (client_id IS NULL OR client_id = '') AND out('OWNED_BY').size() = 0", Map.of());
+
+        int moved = 0, movedEdges = 0;
+        for (Map<String, Object> a : design) {
+            String actorId = str(a.get("actor_id"));
+            if (actorId == null || actorId.isBlank()) {
+                // Вершина без идентификатора: переносить не за что зацепиться при
+                // повторе. Валим громко — молчаливый пропуск потерял бы описание.
+                throw new IllegalStateException("[LORE MIGRATE] V30: KnowActor " + a.get("rid")
+                    + " без actor_id — перенос невозможен, проставьте идентификатор и повторите старт.");
+            }
+            // Журнал сессий на описательной вершине означал бы, что она всё-таки
+            // личность, а признак определён неверно. Лучше остановиться.
+            List<Map<String, Object>> logged = ingest.queryPublic(
+                "SELECT @rid FROM LOGGED_BY WHERE @in = " + a.get("rid") + " LIMIT 1", Map.of());
+            if (!logged.isEmpty()) {
+                throw new IllegalStateException("[LORE MIGRATE] V30: у актора " + actorId
+                    + " нет client_id и владельца, но есть записи сессий (LOGGED_BY) — "
+                    + "это личность с неполными полями, а не проектируемая роль. Перенос прерван.");
+            }
+
+            boolean already = !ingest.queryPublic(
+                "SELECT @rid FROM KnowProjectActor WHERE actor_id = :id", Map.of("id", actorId)).isEmpty();
+            if (!already) {
+                Map<String, Object> p = new HashMap<>();
+                p.put("id", actorId);
+                p.put("n",  str(a.get("name")));
+                p.put("k",  projectActorKind(str(a.get("kind"))));
+                p.put("b",  str(a.get("body_md")));
+                command("INSERT INTO KnowProjectActor SET actor_id=:id, name=:n, kind=:k, body_md=:b", p);
+                moved++;
+            }
+
+            String newRid = firstRid("SELECT @rid AS rid FROM KnowProjectActor WHERE actor_id = :id",
+                Map.of("id", actorId));
+            if (newRid == null) {
+                throw new IllegalStateException("[LORE MIGRATE] V30: роль " + actorId
+                    + " не найдена сразу после создания — перенос прерван.");
+            }
+
+            for (String edge : inEdges) {
+                if (!typeExists(edge)) continue;
+                for (Map<String, Object> e : ingest.queryPublic(
+                        "SELECT @rid AS rid, @out AS src FROM " + edge + " WHERE @in = " + a.get("rid"), Map.of())) {
+                    exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS",
+                        edge, str(e.get("src")), newRid));
+                    exec("DELETE FROM " + edge + " WHERE @rid = " + e.get("rid"));
+                    movedEdges++;
+                }
+            }
+            for (String edge : outEdges) {
+                if (!typeExists(edge)) continue;
+                for (Map<String, Object> e : ingest.queryPublic(
+                        "SELECT @rid AS rid, @in AS target FROM " + edge + " WHERE @out = " + a.get("rid"), Map.of())) {
+                    exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS",
+                        edge, newRid, str(e.get("target"))));
+                    exec("DELETE FROM " + edge + " WHERE @rid = " + e.get("rid"));
+                    movedEdges++;
+                }
+            }
+
+            exec("DELETE VERTEX FROM KnowActor WHERE @rid = " + a.get("rid"));
+        }
+
+        // Контроль, а не вера: в KnowActor обязаны остаться ТОЛЬКО личности.
+        List<Map<String, Object>> leftovers = ingest.queryPublic(
+            "SELECT actor_id FROM KnowActor "
+            + "WHERE (client_id IS NULL OR client_id = '') AND out('OWNED_BY').size() = 0", Map.of());
+        if (!leftovers.isEmpty()) {
+            throw new IllegalStateException("[LORE MIGRATE] V30: в KnowActor остались описательные "
+                + "акторы после переноса (" + leftovers.size() + ") — разберитесь вручную, бэкап снят.");
+        }
+
+        LOG.infof("[LORE MIGRATE] V30: ролей перенесено %d, рёбер перевешено %d; "
+            + "KnowActor остаётся личностью, RBAC не тронут", moved, movedEdges);
     }
 
     /**
@@ -642,6 +803,176 @@ public class LoreSchemaMigrationRunner {
         LOG.infof("[LORE MIGRATE] V17: тегов перенесено (переиспользовано %d, создано %d), рёбер перевешено %d, тип LoreTag снят",
             reused, created, movedEdges);
     }
+
+    /**
+     * Тип, его ключ и КАКИМ ребром он связан с компонентом.
+     *
+     * @param entityToComponent {@code true} — ребро идёт ОТ записи К компоненту
+     *        ({@code BELONGS_TO}); {@code false} — наоборот, от компонента к
+     *        записи ({@code DOCUMENTED_IN} у спек: «компонент документирован в
+     *        спеке»). Направление читается слайсами буквально, поэтому обратное
+     *        ребро для них не существует.
+     */
+    record ComponentLink(String type, String idField, String edge, boolean entityToComponent) {}
+
+    /**
+     * Типы, у которых принадлежность компоненту жила ПОЛЕМ {@code component_id}.
+     *
+     * <p><b>Ребро у спек другое, и это не мелочь.</b> Первый замер шёл по
+     * {@code BELONGS_TO} для всех типов и дал у спек 184 «поля без ребра». Число
+     * неверно: паспорт компонента читает спеки через {@code DOCUMENTED_IN}
+     * (сумма по компонентам — 352 из 390 спек), то есть они в основном связаны,
+     * просто другим ребром. Достроить им {@code BELONGS_TO} значило бы завести
+     * ТРЕТЬЕ представление там, где боремся со вторым.
+     *
+     * <p>Отсюда правило: канонично не «ребро вообще», а ребро, которое читают
+     * слайсы этого типа. Универсального ответа здесь нет, и делать вид, что
+     * есть, — способ размножить ту же болезнь под видом лечения.
+     *
+     * <p>{@code KnowTask} в списке при шести строках расхождения не ради этих
+     * шести: пропустить тип значило бы оставить исключение, о котором придётся
+     * помнить, — а гейт NM-04 считает по всем типам, и невключённый тип светился
+     * бы в нём вечно.
+     */
+    private static final List<ComponentLink> COMPONENT_FIELD_TYPES = List.of(
+        new ComponentLink("KnowDecision", "decision_id", "BELONGS_TO",    true),
+        new ComponentLink("KnowDoc",      "doc_id",      "BELONGS_TO",    true),
+        new ComponentLink("KnowQuestion", "question_id", "BELONGS_TO",    true),
+        new ComponentLink("KnowADR",      "adr_id",      "BELONGS_TO",    true),
+        new ComponentLink("QualityGate",  "qg_id",       "BELONGS_TO",    true),
+        new ComponentLink("KnowTask",     "task_uid",    "BELONGS_TO",    true),
+        new ComponentLink("KnowSpec",     "spec_id",     "DOCUMENTED_IN", false));
+
+    /**
+     * NM-02: довести рёбра {@code BELONGS_TO} до полей {@code component_id}.
+     *
+     * <p><b>Шаг только ДОБАВЛЯЕТ.</b> Ни одно ребро и ни одно поле здесь не
+     * удаляется и не переписывается. Это не осторожность вообще, а следствие
+     * замера: представления расходятся в обе стороны, и «привести к ребру»
+     * переписыванием стёрло бы 740+ связей, живущих только полем. После шага обе
+     * правды совпадают, и любой следующий шаг можно отменить, вернувшись к полю.
+     *
+     * <p><b>Идемпотентность обязательна.</b> Ledger пишется ПОСЛЕ java-части,
+     * поэтому падение в середине даёт повторный прогон на частично обработанных
+     * данных. Ребро ставится только там, где его нет, поэтому повтор ничего не
+     * дублирует.
+     *
+     * <p><b>Несуществующий компонент — не повод промолчать.</b> {@code CREATE
+     * EDGE} с пустым TO в этой грамматике тихий no-op: строка «обработана», а
+     * ребра нет. Такие поля собираются и перечисляются в логе с числом. Ноль в
+     * этом счётчике — тоже результат, который надо увидеть, поэтому он пишется
+     * всегда, а не только когда ненулевой.
+     */
+    private void backfillComponentEdges() {
+        Set<String> knownComponents = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT component_id FROM LoreComponent", Map.of())) {
+            String c = str(r.get("component_id"));
+            if (c != null && !c.isBlank()) knownComponents.add(c);
+        }
+        if (knownComponents.isEmpty()) {
+            LOG.info("[LORE MIGRATE] V31: реестр компонентов пуст — свежая БД, доводить нечего");
+            return;
+        }
+
+        int totalCreated = 0, totalAlready = 0;
+        List<String> dangling = new ArrayList<>();
+
+        for (ComponentLink link : COMPONENT_FIELD_TYPES) {
+            String type = link.type(), idField = link.idField();
+            if (!typeExists(type)) continue;   // тип мог не дожить до этой версии
+
+            // Направление ребра у типов разное, и читать надо ту же сторону,
+            // которую читают слайсы: спека связана ВХОДЯЩИМ DOCUMENTED_IN от
+            // компонента, остальные — исходящим BELONGS_TO к компоненту.
+            String traverse = link.entityToComponent()
+                ? "out('" + link.edge() + "').component_id"
+                : "in('"  + link.edge() + "').component_id";
+
+            // Берём ВСЕ строки с непустым полем, а не только «без единого ребра»:
+            // у записи может быть ребро на ДРУГОЙ компонент, и тогда связь,
+            // записанная полем, всё равно отсутствует. Условие «нет рёбер вовсе»
+            // такие строки пропустило бы, а это как раз случай смены компонента,
+            // которая уезжала в поле и не доезжала до ребра.
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                "SELECT " + idField + " AS id, component_id, "
+                + traverse + " AS linked "
+                + "FROM " + type + " WHERE component_id IS NOT NULL AND component_id <> ''", Map.of());
+
+            int created = 0, already = 0;
+            for (Map<String, Object> r : rows) {
+                String id = str(r.get("id"));
+                String want = str(r.get("component_id"));
+                if (id == null || id.isBlank() || want == null || want.isBlank()) continue;
+                if (alreadyLinked(r.get("linked"), want)) { already++; continue; }
+                if (!knownComponents.contains(want)) {
+                    dangling.add(type + '/' + id + " → " + want);
+                    continue;
+                }
+                // String.format, не именованные параметры: в этой грамматике
+                // CREATE EDGE с :param молча не подставляет (см. соседние шаги).
+                String entity = String.format("(SELECT FROM %s WHERE %s = '%s')", type, idField, esc(id));
+                String comp = String.format("(SELECT FROM LoreComponent WHERE component_id = '%s')", esc(want));
+                exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS", link.edge(),
+                    link.entityToComponent() ? entity : comp,
+                    link.entityToComponent() ? comp : entity));
+                created++;
+            }
+            LOG.infof("[LORE MIGRATE] V31: %-13s строк с полем %4d, ребро добавлено %4d, уже было %4d",
+                type, rows.size(), created, already);
+            totalCreated += created;
+            totalAlready += already;
+        }
+
+        LOG.infof("[LORE MIGRATE] V31: итого добавлено рёбер %d, уже совпадало %d, "
+            + "полей на несуществующий компонент %d", totalCreated, totalAlready, dangling.size());
+        if (!dangling.isEmpty()) {
+            // Не падаем: это данные, а не поломка шага, и остановка на них
+            // заблокировала бы слияние из-за мусора, который чинится отдельно.
+            // Но и не молчим — иначе «ноль расхождений» у гейта NM-04 окажется
+            // недостижим по причине, о которой никто не узнал.
+            LOG.warnf("[LORE MIGRATE] V31: поля, указывающие на незарегистрированный компонент "
+                + "(ребро НЕ создано, гейт NM-04 их увидит): %s",
+                String.join("; ", dangling.subList(0, Math.min(dangling.size(), 40))));
+        }
+
+        // Контроль на месте, а не «посмотрим потом»: пересчитываем то же, что
+        // мерили до шага. Отличие от простого «упало/не упало» в том, что здесь
+        // видно ИМЕННО остаток — и он обязан объясняться списком выше.
+        int leftover = 0;
+        for (ComponentLink link : COMPONENT_FIELD_TYPES) {
+            if (!typeExists(link.type())) continue;
+            String side = (link.entityToComponent() ? "out('" : "in('") + link.edge() + "')";
+            List<Map<String, Object>> n = ingest.queryPublic(
+                "SELECT count(*) AS n FROM " + link.type()
+                + " WHERE component_id IS NOT NULL AND component_id <> '' "
+                + "AND " + side + ".size() = 0", Map.of());
+            leftover += n.isEmpty() ? 0 : ((Number) n.get(0).getOrDefault("n", 0)).intValue();
+        }
+        LOG.infof("[LORE MIGRATE] V31: осталось записей с полем и без единого ребра: %d "
+            + "(ожидание — только те, чей компонент не зарегистрирован: %d)",
+            leftover, dangling.size());
+    }
+
+    /**
+     * Есть ли уже ребро на ИМЕННО ТОТ компонент, что назван полем.
+     *
+     * <p>Вынесено отдельно, потому что здесь прячется решающая ошибка шага.
+     * Напрашивается условие «у записи вообще нет рёбер» — и оно пропустило бы
+     * записи, у которых ребро ведёт на ДРУГОЙ компонент. А это как раз самый
+     * частый способ разъехаться: компонент сменили, поле обновилось, ребро
+     * осталось на прежнем. Такая запись выглядит связанной, но связана не с тем,
+     * и «нет рёбер» её не ловит.
+     *
+     * <p>Ребро на другой компонент при этом НЕ удаляется: шаг только добавляет.
+     * Разбор, какое из двух верное, — работа человека, а не миграции.
+     */
+    static boolean alreadyLinked(Object linked, String want) {
+        return linked instanceof List<?> have && have.contains(want);
+    }
+
+    /** Экранирование одинарной кавычки для String.format-путей CREATE EDGE. */
+    private static String esc(String v) { return v.replace("'", "''"); }
 
     private boolean typeExists(String name) {
         return !ingest.queryPublic("SELECT name FROM schema:types WHERE name = :n",
