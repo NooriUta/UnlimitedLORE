@@ -683,8 +683,8 @@ public final class LoreSlices {
         // чинятся по-разному и в разные стороны. Сложить их в одно число
         // значило бы потерять направление расхождения, а именно оно тут и
         // оказалось неожиданным.
-        StringBuilder drift = new StringBuilder("SELECT expand(unionall(");
-        StringBuilder driftLet = new StringBuilder(") LET ");
+        StringBuilder drift = new StringBuilder("SELECT type, edge, metric, n FROM (SELECT expand(unionall(");
+        StringBuilder driftLet = new StringBuilder(")) LET ");
         String[][] driftTypes = {
             // тип, каноническое ребро, сторона обхода от записи
             {"KnowADR",      "BELONGS_TO",    "out"},
@@ -711,7 +711,7 @@ public final class LoreSlices {
                 .append(" WHERE ").append(traverse).append(".size() > 0 AND ")
                 .append("(component_id IS NULL OR component_id = ''))");
         }
-        slice("component_field_edge_drift", drift.toString() + driftLet.toString(),
+        slice("component_field_edge_drift", drift.toString() + driftLet.toString() + ")",
             List.of(), Map.of(), "");
         slice("projects_without_role",
             "SELECT slug, name, in('HAS_PROJECT_ROLE').size() AS roles " +
