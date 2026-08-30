@@ -46,6 +46,13 @@ const PROFILE_SCOPE: [string, string][] = [
 const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: string[] }[] = [
   { what: 'Словари', api: '/lore/dict/entry', humanOnly: true, agents: [] },
   { what: 'Учётные записи', api: '/lore/kc/*', humanOnly: true, agents: [] },
+  // Решение владельца 30.08.2026: «раз full наследует от admin, то разрешается
+  // только роли full». Строки в матрице не было ВООБЩЕ — путь человеческий, а
+  // ревью доступа по этой таблице о нём молчало. Теперь он и открыт, и виден.
+  //
+  // Открыт ПОДПУТЬ, а не семейство: остальной /lore/user остаётся человеческим,
+  // поэтому строка выше про учётные записи не меняется.
+  { what: 'Роли в проектах', api: '/lore/user/role', humanOnly: false, agents: ['full'] },
   { what: 'Включение auth', api: 'LORE_AUTH_ENABLED', humanOnly: true, agents: [] },
   // AL-47 (регресс-гвард поймал): полная переиндексация корпуса документов, была
   // защищена только ролью admin — а её несут все семь узких агентных профилей.
