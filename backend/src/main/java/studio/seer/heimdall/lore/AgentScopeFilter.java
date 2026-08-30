@@ -194,6 +194,46 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // которым AL-68 будет выводить эффективные права агента.
         "actor/owner",  Set.of());
 
+    /**
+     * Изъятия из {@link #HUMAN_ONLY}: подпуть, который человеческому семейству
+     * принадлежит, но конкретным профилям всё же открыт.
+     *
+     * <p>Нужен отдельный список, а не строка в {@link #SUBPATH_AGENTS}: тот
+     * только СУЖАЕТ права внутри разрешённого семейства и на запрет семейства не
+     * влияет — разрешение там прошло бы проверку подпути и уткнулось бы в
+     * HUMAN_ONLY строкой ниже. Такое «разрешение», которое ничего не разрешает,
+     * — худший вид записи в матрице прав: выглядит как право, работает как его
+     * отсутствие.
+     *
+     * <p><b>user/role</b> — решение владельца 30.08.2026: «раз full наследует от
+     * admin, то разрешается только роли full». Обнаружено, когда full-сессия не
+     * смогла завести актора для AIDA/MIDGARD: у владельца не было роли в этом
+     * проекте, а выдать её агент не мог. При этом full уже пишет ADR, решения,
+     * спринты, релизы и проекты — запрет именно на роли не защищал ничего, а
+     * останавливал работу там, где всё прочее разрешено.
+     *
+     * <p>Что этим ослабляется, названо прямо в
+     * {@code D-2026-LORE-FULL-WRITES-PROJECT-ROLES}: full сможет выдать роль
+     * своему владельцу, то есть расширить собственное делегирование. Граница,
+     * которая НЕ двигается, — {@code actor/owner} выше: назначение владельца
+     * агента закрыто для всех профилей, включая full, поэтому присвоить чужую
+     * цепочку прав нельзя. Плюс выдача роли журналируется
+     * ({@code KnowProjectRoleEvent}), то есть остаётся видимой постфактум.
+     */
+    private static final Map<String, Set<String>> HUMAN_ONLY_EXEMPT = Map.of(
+        "user/role", Set.of("full"));
+
+    /**
+     * Чистая функция изъятия — отдельно тестируема без контейнера.
+     *
+     * @return {@code null}, если подпуть не изъят (решает обычная матрица);
+     *         иначе — разрешён ли он этому профилю.
+     */
+    static Boolean humanOnlyExemption(String subPath, String scope) {
+        Set<String> allowed = HUMAN_ONLY_EXEMPT.get(subPath);
+        return allowed == null ? null : allowed.contains(scope);
+    }
+
     /** Методы, которые ничего не меняют — вне проверки. Package-private: AL-20 (аудит-лог) тоже фильтрует по ним. */
     static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
 
@@ -226,7 +266,18 @@ public class AgentScopeFilter implements ContainerRequestFilter {
             return;
         }
 
-        if (HUMAN_ONLY.contains(family)) {
+        // Изъятие проверяется ДО запрета семейства: иначе разрешение подпути не
+        // имело бы силы — строка ниже отвергла бы его вместе со всем семейством.
+        Boolean exempt = humanOnlyExemption(subPathOf(path), scope);
+        if (exempt != null) {
+            if (!exempt) {
+                deny(ctx, scope, subPathOf(path),
+                    "подпуть человеческого семейства открыт только: "
+                    + String.join(", ", HUMAN_ONLY_EXEMPT.get(subPathOf(path))));
+                return;
+            }
+            // Разрешено явно — HUMAN_ONLY к этому подпути не применяется.
+        } else if (HUMAN_ONLY.contains(family)) {
             deny(ctx, scope, family, "это семейство правит только человек");
             return;
         }
