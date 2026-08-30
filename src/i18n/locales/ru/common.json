@@ -1736,7 +1736,7 @@
         "about": "О роли",
         "kindAll": "все",
         "kindHuman": "люди",
-        "kindAgent": "агенты",
+        "kindAutomation": "автоматизация",
         "kindSystem": "системы",
         "searchPh": "сегмент…",
         "new": "+ Клиент",
@@ -2028,7 +2028,7 @@
         "actorKind": {
           "human-role": "человек",
           "system": "система",
-          "agent": "агент"
+          "automation": "автоматизация"
         }
       }
     },

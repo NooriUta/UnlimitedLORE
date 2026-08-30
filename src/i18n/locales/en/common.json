@@ -1736,7 +1736,7 @@
         "about": "About the role",
         "kindAll": "all",
         "kindHuman": "people",
-        "kindAgent": "agents",
+        "kindAutomation": "automation",
         "kindSystem": "systems",
         "searchPh": "segment…",
         "new": "+ Customer",
@@ -2028,7 +2028,7 @@
         "actorKind": {
           "human-role": "person",
           "system": "system",
-          "agent": "agent"
+          "automation": "automation"
         }
       }
     },
