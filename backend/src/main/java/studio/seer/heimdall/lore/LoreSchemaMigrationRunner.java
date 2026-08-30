@@ -836,7 +836,7 @@ public class LoreSchemaMigrationRunner {
         new ComponentLink("KnowDoc",      "doc_id",      "BELONGS_TO",    true),
         new ComponentLink("KnowQuestion", "question_id", "BELONGS_TO",    true),
         new ComponentLink("KnowADR",      "adr_id",      "BELONGS_TO",    true),
-        new ComponentLink("QualityGate",  "gate_id",     "BELONGS_TO",    true),
+        new ComponentLink("QualityGate",  "qg_id",       "BELONGS_TO",    true),
         new ComponentLink("KnowTask",     "task_uid",    "BELONGS_TO",    true),
         new ComponentLink("KnowSpec",     "spec_id",     "DOCUMENTED_IN", false));
 

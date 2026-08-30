@@ -92,7 +92,15 @@ public class LoreDocResource extends LoreResourceBase {
                 }
             }
             hashStamper.stampOpenHist("KnowDocHist", "KnowDoc", "doc_id", req.doc_id());
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id())));
+            // NM-03 (ADR-LORE-041): поле component_id писалось, ребро — нет.
+            // 112 доков на проде связаны с компонентом ТОЛЬКО полем; ответ при
+            // этом всегда был ok:true, поэтому отсутствие связи выглядело как
+            // отсутствие компонента у документа.
+            java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("doc_id", req.doc_id());
+            linkComponentEdge("KnowDoc", "doc_id", req.doc_id(), req.component_id(), out);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DOC UPSERT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
