@@ -290,7 +290,7 @@ public class LoreAdrResource extends LoreResourceBase {
             // откроет срез. Здесь он приходит в момент записи, пока автор ещё
             // держит ADR в голове. Advisory: на запись не влияет.
             WorkQuality.Result quality = adrQuality(req.adr_id());
-            if (quality != null) out.put("quality", quality);
+            if (quality != null) out.put("quality", WorkQuality.compact(quality));
 
             String qHint = questionsInBodyHint(req);
             if (qHint != null) out.put("hint", qHint);

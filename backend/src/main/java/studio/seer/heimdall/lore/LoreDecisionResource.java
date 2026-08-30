@@ -124,7 +124,7 @@ public class LoreDecisionResource extends LoreResourceBase {
             // Вердикт полноты (ADR-LORE-039): решение без родителя-ADR или из
             // одного заголовка — ярлык, а не правило. Advisory, на запись не влияет.
             WorkQuality.Result quality = decisionQuality(req.decision_id());
-            if (quality != null) out.put("quality", quality);
+            if (quality != null) out.put("quality", WorkQuality.compact(quality));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION CREATE] %s: %s", req.decision_id(), e.getMessage());

@@ -146,7 +146,7 @@ public class LoreSpecResource extends LoreResourceBase {
             // она занимает место в реестре знаний и создаёт впечатление, что
             // тема покрыта. Advisory, на запись не влияет.
             WorkQuality.Result quality = specQuality(req.spec_id());
-            if (quality != null) out.put("quality", quality);
+            if (quality != null) out.put("quality", WorkQuality.compact(quality));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());

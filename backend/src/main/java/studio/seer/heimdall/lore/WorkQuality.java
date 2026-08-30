@@ -3,6 +3,8 @@ package studio.seer.heimdall.lore;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Линтер полноты спринта и задачи — ЧИСТАЯ логика, без БД и HTTP, по образцу
@@ -38,6 +40,40 @@ final class WorkQuality {
 
     /** Результат: score/max по обязательным + все находки, включая подсказки. */
     record Result(String kind, int score, int max, List<Finding> findings) {}
+
+    /**
+     * Ответ записи: счёт одной строкой, а НЕДОСТАЮЩЕЕ — поимённо.
+     *
+     * <p><b>Зачем.</b> Полный список находок выдавал пройденные и непройденные
+     * проверки одинаково: пять строк `ok:true` и одна `ok:false`, и разницу
+     * видно, только если читать все шесть. Замечание владельца 30.08.2026 —
+     * «ты на качество не реагируешь» — справедливо и объясняется именно этим:
+     * пропуск тонул среди пройденного.
+     *
+     * <p>Это тот же дефект, что мы весь день разбираем, только в ответе
+     * инструмента: сигнал есть, но он неотличим от шума, и потому не работает.
+     *
+     * <p>Поэтому наружу едет: {@code score} из {@code max} — «x из y», и
+     * список ТОЛЬКО непройденного. Всё выполнено — ключа {@code missing} нет
+     * вовсе, и короткий ответ сам по себе означает «полно».
+     *
+     * <p>Необязательные проверки (подсказки) вынесены отдельным ключом
+     * {@code hints}: они не входят в счёт и не должны выглядеть как долг.
+     */
+    static Map<String, Object> compact(Result r) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("kind", r.kind());
+        out.put("score", r.score() + " из " + r.max());
+        List<String> missing = new ArrayList<>();
+        List<String> hints = new ArrayList<>();
+        for (Finding f : r.findings()) {
+            if (f.ok()) continue;
+            (f.required() ? missing : hints).add(f.code() + " — " + f.message());
+        }
+        if (!missing.isEmpty()) out.put("missing", missing);
+        if (!hints.isEmpty()) out.put("hints", hints);
+        return out;
+    }
 
     private static boolean filled(String s) {
         return s != null && !s.isBlank();

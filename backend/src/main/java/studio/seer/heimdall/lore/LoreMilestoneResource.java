@@ -121,7 +121,7 @@ public class LoreMilestoneResource extends LoreResourceBase {
             out.put("milestone_id", req.milestone_id());
             // Вердикт полноты (ADR-LORE-039): веха без даты не ложится на план.
             WorkQuality.Result quality = milestoneQuality(req.milestone_id());
-            if (quality != null) out.put("quality", quality);
+            if (quality != null) out.put("quality", WorkQuality.compact(quality));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE MILESTONE] %s: %s", req.milestone_id(), e.getMessage());

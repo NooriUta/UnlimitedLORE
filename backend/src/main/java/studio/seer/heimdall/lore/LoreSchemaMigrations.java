@@ -915,7 +915,16 @@ final class LoreSchemaMigrations {
 
             // Индекс по роли: и добор, и чтение всегда спрашивают «роль такая-то
             // у этой задачи», а не перебирают все рёбра.
-            "CREATE INDEX IF NOT EXISTS ON ROLE_HELD_BY (role) NOTUNIQUE"))
+            "CREATE INDEX IF NOT EXISTS ON ROLE_HELD_BY (role) NOTUNIQUE")),
+
+        // Добор рёбер ролей из полей (TR-03). Шаг только ДОБАВЛЯЕТ: поля
+        // author/executor/reviewer_agent остаются нетронутыми, пока обе правды
+        // не сойдутся. Снятие — отдельным шагом и последним.
+        //
+        // Схемных изменений нет: тип ребра заведён шагом 35, вся работа в
+        // java-части, где её видно и можно пересчитать.
+        new Step(36, 17, "task_role_backfill", List.of(
+            "CREATE EDGE TYPE ROLE_HELD_BY IF NOT EXISTS"))
     );
 
     /**
