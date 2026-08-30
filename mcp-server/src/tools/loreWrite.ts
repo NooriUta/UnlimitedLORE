@@ -155,7 +155,7 @@ function definePostTool<S extends z.ZodRawShape>(
 // first, then mirror here.
 const LORE_STATUS = z.enum([
   'todo', 'planned', 'active', 'partial', 'done',
-  'blocked', 'high', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
+  'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
 ]);
 
 export function registerLoreWrite(server: McpServer): void {
