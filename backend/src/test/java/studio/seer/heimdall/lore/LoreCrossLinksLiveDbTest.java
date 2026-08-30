@@ -97,9 +97,9 @@ class LoreCrossLinksLiveDbTest {
     @Test
     @Order(4)
     void actorsAreScopedToTheirProject() {
-        post("/lore/actor", "{\"actor_id\":\"ACT-ONE-ADMIN\",\"name\":\"Администратор\","
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-ONE-ADMIN\",\"name\":\"Администратор\","
             + "\"kind\":\"human-role\",\"project\":\"acme/one\"}");
-        post("/lore/actor", "{\"actor_id\":\"ACT-TWO-ADMIN\",\"name\":\"Администратор\","
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-TWO-ADMIN\",\"name\":\"Администратор\","
             + "\"kind\":\"human-role\",\"project\":\"acme/two\"}");
 
         given().header("X-Seer-Role", "admin")

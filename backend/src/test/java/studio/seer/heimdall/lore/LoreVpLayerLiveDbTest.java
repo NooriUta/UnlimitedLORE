@@ -42,7 +42,7 @@ class LoreVpLayerLiveDbTest {
     @Order(1)
     void vpCanvasIsAssembledFromEdges() {
         post("/lore/feature", "{\"feature_id\":\"FEAT-VP\",\"title\":\"Фича с ценностью\"}");
-        post("/lore/actor", "{\"actor_id\":\"ACT-VP-AGENT\",\"name\":\"Агент\",\"kind\":\"agent\"}");
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-VP-AGENT\",\"name\":\"Агент\",\"kind\":\"automation\"}");
         post("/lore/pain", "{\"pain_id\":\"PAIN-VP-TOKEN\",\"title\":\"Сырые токены у агента\",\"severity\":\"high\"}");
         post("/lore/gain", "{\"gain_id\":\"GAIN-VP-LINKED\",\"title\":\"Связный граф релизов\","
             + "\"metric_md\":\"prs_linked > 0 у каждого релиза\"}");
@@ -193,7 +193,7 @@ class LoreVpLayerLiveDbTest {
     @Order(8)
     void firstActorIsPrimaryThenQualityPasses() {
         // D19: первый актор — primary по умолчанию; линтер видит рёбра, не текст.
-        post("/lore/actor", "{\"actor_id\":\"ACT-VP-2\",\"name\":\"Второй\",\"kind\":\"system\"}");
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-VP-2\",\"name\":\"Второй\",\"kind\":\"system\"}");
         post("/lore/uc/link", "{\"uc_id\":\"UC-VP-TPL\",\"rel\":\"actor\",\"target_id\":\"ACT-VP-AGENT\"}");
         post("/lore/uc/link", "{\"uc_id\":\"UC-VP-TPL\",\"rel\":\"actor\",\"target_id\":\"ACT-VP-2\"}");
 

@@ -575,7 +575,7 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('HAS_ACTOR').uc_id AS uc_ids, " +
             "in('HAS_ACTOR').size() AS uc_count " +
-            "FROM KnowActor",
+            "FROM KnowProjectActor",
             List.of(),
             new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")),
             " ORDER BY actor_id");
@@ -802,7 +802,7 @@ public final class LoreSlices {
             "in('HAS_ACTOR').size() AS uc_count, " +
             "inE('HAS_ACTOR')[role = 'primary'].size()    AS primary_count, " +
             "inE('HAS_ACTOR')[role = 'supporting'].size() AS supporting_count " +
-            "FROM KnowActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
+            "FROM KnowProjectActor WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project " +
             "ORDER BY actor_id",
             List.of("project"), Map.of(), "");
 
@@ -1020,7 +1020,7 @@ public final class LoreSlices {
             "$jb = (SELECT 'job' AS type, job_id AS ref_id, title FROM KnowJob " +
             "      WHERE job_id ILIKE ('%' + :pattern + '%') OR title ILIKE ('%' + :pattern + '%') " +
             "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10), " +
-            "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowActor " +
+            "$ac = (SELECT 'actor' AS type, actor_id AS ref_id, name AS title FROM KnowProjectActor " +
             "      WHERE actor_id ILIKE ('%' + :pattern + '%') OR name ILIKE ('%' + :pattern + '%') " +
             "      OR body_md ILIKE ('%' + :pattern + '%') LIMIT 10))",
             List.of("pattern"), Map.of(), "");
