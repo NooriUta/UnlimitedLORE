@@ -89,6 +89,11 @@ public class LoreQuestionResource extends LoreResourceBase {
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
             out.put("question_id", req.question_id());
+            // NM-03 (ADR-LORE-041): вопрос писал component_id полем; 86 вопросов
+            // на проде связаны с компонентом только так, и ни один слайс их не
+            // показывает. Отдельная ирония: реестр открытых вопросов ровно за
+            // тем и нужен, чтобы ничего не терялось.
+            linkComponentEdge("KnowQuestion", "question_id", req.question_id(), req.component_id(), out);
             // Вердикт полноты (ADR-LORE-039): вопрос без владельца не закрывается —
             // он висит прочитанный и никем не взятый.
             WorkQuality.Result quality = questionQuality(req.question_id());

@@ -663,6 +663,56 @@ public final class LoreSlices {
         //
         // Считаем ЛЮБУЮ роль, а не только owner: проект с ролью reader тоже
         // «настроен», просто узко, и это другой разговор, чем «о нём забыли».
+
+        // ── Расхождение поле/ребро (NM-04, ADR-LORE-041 §3) ──────────────────
+        //
+        // Пока поле component_id существует, оно обязано совпадать с ребром. Это
+        // счётная величина, и она СЧИТАЕТСЯ — иначе расхождение набирается
+        // заново. Оба раза дефект возник не из злого умысла, а потому что никто
+        // не мерил: в паспорте компонента просто было пусто.
+        //
+        // Ребро у каждого типа СВОЁ, и это не мелочь. Первый замер шёл по
+        // BELONGS_TO для всех типов и дал у спек 184 «поля без ребра» — число
+        // описывает отсутствие BELONGS_TO, а не отсутствие связи: спеки
+        // связаны ребром DOCUMENTED_IN и в обратную сторону (компонент → спека),
+        // 352 из 390. Общий счётчик по одному ребру дал бы у спек вечный
+        // ненулевой остаток и приучил бы его игнорировать — то есть гейт
+        // работал бы ровно наоборот задуманному.
+        //
+        // Две строки на тип, а не одна: «поле без ребра» и «ребро без поля»
+        // чинятся по-разному и в разные стороны. Сложить их в одно число
+        // значило бы потерять направление расхождения, а именно оно тут и
+        // оказалось неожиданным.
+        StringBuilder drift = new StringBuilder("SELECT expand(unionall(");
+        StringBuilder driftLet = new StringBuilder(") LET ");
+        String[][] driftTypes = {
+            // тип, каноническое ребро, сторона обхода от записи
+            {"KnowADR",      "BELONGS_TO",    "out"},
+            {"KnowDecision", "BELONGS_TO",    "out"},
+            {"KnowDoc",      "BELONGS_TO",    "out"},
+            {"KnowQuestion", "BELONGS_TO",    "out"},
+            {"QualityGate",  "BELONGS_TO",    "out"},
+            {"KnowTask",     "BELONGS_TO",    "out"},
+            // компонент документирован В спеке — ребро входящее
+            {"KnowSpec",     "DOCUMENTED_IN", "in"},
+        };
+        for (int i = 0; i < driftTypes.length; i++) {
+            String t = driftTypes[i][0], edge = driftTypes[i][1], side = driftTypes[i][2];
+            String traverse = side + "('" + edge + "')";
+            String vf = "$f" + i, ve = "$e" + i;
+            drift.append(i == 0 ? "" : ", ").append(vf).append(", ").append(ve);
+            driftLet.append(i == 0 ? "" : ", ")
+                .append(vf).append(" = (SELECT '").append(t).append("' AS type, '")
+                .append(edge).append("' AS edge, 'field_no_edge' AS metric, count(*) AS n FROM ").append(t)
+                .append(" WHERE component_id IS NOT NULL AND component_id <> '' AND ")
+                .append(traverse).append(".size() = 0), ")
+                .append(ve).append(" = (SELECT '").append(t).append("' AS type, '")
+                .append(edge).append("' AS edge, 'edge_no_field' AS metric, count(*) AS n FROM ").append(t)
+                .append(" WHERE ").append(traverse).append(".size() > 0 AND ")
+                .append("(component_id IS NULL OR component_id = ''))");
+        }
+        slice("component_field_edge_drift", drift.toString() + driftLet.toString(),
+            List.of(), Map.of(), "");
         slice("projects_without_role",
             "SELECT slug, name, in('HAS_PROJECT_ROLE').size() AS roles " +
             "FROM KnowGitProject WHERE in('HAS_PROJECT_ROLE').size() = 0 ORDER BY slug",
