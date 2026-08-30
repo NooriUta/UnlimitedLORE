@@ -2278,7 +2278,8 @@
       "save": "Сохранить",
       "statusLabel": "Статус",
       "ownerPlaceholder": "Владелец вопроса",
-      "raisedAdrPlaceholder": "Поставлен в ADR"
+      "raisedAdrPlaceholder": "Поставлен в ADR",
+      "raisedSprintTitle": "Поставлен в спринте"
     },
     "tiptap": {
       "addColumn": "+ столбец",

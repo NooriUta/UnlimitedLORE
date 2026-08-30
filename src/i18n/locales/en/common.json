@@ -2278,7 +2278,8 @@
       "save": "Save",
       "statusLabel": "Status",
       "ownerPlaceholder": "Question owner",
-      "raisedAdrPlaceholder": "Raised in ADR"
+      "raisedAdrPlaceholder": "Raised in ADR",
+      "raisedSprintTitle": "Raised in sprint"
     },
     "tiptap": {
       "addColumn": "+ column",
