@@ -61,32 +61,27 @@ class LoreSchemaMigrationsTest {
     // ── SELF-PROVISION-VERIFY-GAP: реестр обязательных «живых» типов ──
 
     @Test
-    void requiredLiveTypesAreNonEmptyAndDeclaredBySomeStep() {
-        // Каждый тип из REQUIRED_LIVE_TYPES обязан создаваться каким-то шагом —
-        // иначе материальная сверка ложно роняла бы старт по опечатке в списке.
-        assertFalse(LoreSchemaMigrations.REQUIRED_LIVE_TYPES.isEmpty(),
-            "список обязательных типов не может быть пустым — иначе сверка ничего не проверяет");
-        Set<String> created = new HashSet<>();
-        for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS) {
-            for (String sql : s.sql()) {
-                int i = sql.indexOf("CREATE VERTEX TYPE ");
-                if (i >= 0) {
-                    String rest = sql.substring(i + "CREATE VERTEX TYPE ".length()).trim();
-                    created.add(rest.split("\\s+")[0]);
-                }
-            }
-        }
-        for (String t : LoreSchemaMigrations.REQUIRED_LIVE_TYPES) {
-            assertTrue(created.contains(t), "обязательный тип " + t + " не создаётся ни одним шагом реестра");
-        }
+    void requiredLiveTypesAreDerivedAndNonEmpty() {
+        // Список ВЫВОДИТСЯ из STEPS, поэтому «каждый тип создаётся каким-то
+        // шагом» верно по построению, и проверять это вторым разбором значило
+        // бы завести вторую правду о том же — ровно то, против чего вся правка.
+        //
+        // Здесь остаётся то, что по построению НЕ следует: список непуст.
+        // Пустой список — это сверка, которая ничего не проверяет, и выглядит
+        // она как исправная.
+        assertFalse(LoreSchemaMigrations.requiredLiveTypes().isEmpty(),
+            "список обязательных типов пуст — сверка схемы ничего не проверяет");
+        assertTrue(LoreSchemaMigrations.requiredLiveTypes().contains("KnowUseCase"),
+            "в выведенном списке нет KnowUseCase — разбор шагов сломан");
     }
+
 
     @Test
     void requiredLiveTypesExcludeKnowFeature() {
         // KnowFeature создаётся V6 и ДРОПАЕТСЯ V13 (растворён в KnowUseCase).
         // На здоровой актуальной БД его нет — включение в обязательные ложно
         // роняло бы старт. Гард от случайного возврата.
-        assertFalse(LoreSchemaMigrations.REQUIRED_LIVE_TYPES.contains("KnowFeature"),
+        assertFalse(LoreSchemaMigrations.requiredLiveTypes().contains("KnowFeature"),
             "KnowFeature дропается в V13 — его нельзя требовать как «живой» тип");
     }
 

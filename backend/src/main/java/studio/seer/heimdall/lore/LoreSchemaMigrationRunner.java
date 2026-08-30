@@ -184,7 +184,7 @@ public class LoreSchemaMigrationRunner {
         // атомарно. Шаг, чья часть сделала no-op/прервалась, оставляет «версия
         // есть, типов нет» — и приложение молча отдаёт 500 по продуктовым
         // слайсам. Читаем схему (не мутируем) и падаем ГРОМКО, если чего-то нет.
-        List<String> missing = LoreSchemaMigrations.REQUIRED_LIVE_TYPES.stream()
+        List<String> missing = LoreSchemaMigrations.requiredLiveTypes().stream()
             .filter(t -> !typeExists(t))
             .toList();
         if (!missing.isEmpty()) {

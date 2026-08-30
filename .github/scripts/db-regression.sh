@@ -244,6 +244,50 @@ observe "sql.edge_in_out_fields"    "SELECT @out.k AS src, @in.k AS dst FROM RgL
 observe "sql.traverse_where"        "SELECT FROM (TRAVERSE out('RgLink') FROM (SELECT FROM RgA WHERE k = 'a1')) WHERE @class = 'RgB'"
 observe "sql.contains_on_traversal" "SELECT FROM RgA WHERE out('RgLink').k CONTAINS 'b1'"
 
+# --- C9b. Ранжирование: $score доступен ТОЛЬКО через именованный индекс -------
+# DBU-04. Порядок выдачи поиска — не косметика: без него список «что нашлось»
+# перестаёт быть списком «что нашлось СНАЧАЛА», а читают его именно так.
+#
+# $score берётся рядом с SEARCH_INDEX('<имя>', …). Отсюда прямая связь с C3/C4:
+# потеряно имя индекса — потеряно и ранжирование, причём молча: выдача
+# останется, просто порядок станет случайным. Заметки 26.8.1 трогали BM25
+# (#5267, #5181), поэтому порядок сравнивается с эталоном, а не глазами.
+
+SCORE_RAW=$(sql "SELECT \$score AS s FROM RgDoc WHERE SEARCH_INDEX('rgFt', 'TOKEN') = true LIMIT 1")
+if printf '%s' "$SCORE_RAW" | grep -q '"error"'; then
+  emit "ft.score_available" "FAIL" "score недоступен: $(printf '%s' "$SCORE_RAW" | grep -o '"detail":"[^"]*"' | head -c 200)"
+elif printf '%s' "$SCORE_RAW" | grep -qE '"s":[0-9]*\.?[0-9]+'; then
+  emit "ft.score_available" "PASS" "$(printf '%s' "$SCORE_RAW" | grep -o '"s":[0-9.]*' | head -1)"
+else
+  emit "ft.score_available" "FAIL" "ответ без числового score — ранжирования нет: $(printf '%s' "$SCORE_RAW" | head -c 160)"
+fi
+
+# Сами значения скора между версиями сравнивать бессмысленно (BM25 меняли), а
+# вот «сортировка по скору вообще возможна» — контракт, на котором стоит поиск.
+observe "ft.order_by_score" "SELECT \$score AS s FROM RgDoc WHERE SEARCH_INDEX('rgFt', 'TOKEN') = true ORDER BY s DESC LIMIT 3"
+
+# --- C9c. unionall: две вещи, которые нас уже кусали -------------------------
+# Первая: $score внутри unionall ТЕРЯЕТСЯ — поэтому ветки поиска выполняются
+# по отдельности, а не одним объединением (LoreSearchResource). В коде это
+# записано как факт, но не проверялось нигде: изменись поведение — не узнали бы.
+observe "sql.unionall_keeps_score" "SELECT expand(unionall((SELECT \$score AS s FROM RgDoc WHERE SEARCH_INDEX('rgFt','TOKEN') = true), (SELECT 1.0 AS s FROM RgRu LIMIT 1)))"
+
+# Вторая: expand(unionall(...)) с LET требует ВНЕШНЕГО SELECT — без обёртки
+# движок отвечает 400. Наступали; голая форма держится рядом намеренно, чтобы
+# дифф показал, если её однажды начнут принимать.
+observe "sql.unionall_let_outer" "SELECT FROM (SELECT expand(unionall(\$a, \$b)) LET \$a = (SELECT FROM RgA), \$b = (SELECT FROM RgB))"
+observe "sql.unionall_let_bare"  "SELECT expand(unionall(\$a, \$b)) LET \$a = (SELECT FROM RgA), \$b = (SELECT FROM RgB)"
+
+# --- C9d. «Похожие записи» (SEARCH_INDEX_MORE) -------------------------------
+# SRCH-06: на этой функции стоит блок «похожее» в карточке. Функция редкая, у
+# неё отдельная вероятность тихо пропасть между версиями.
+RID=$(sql "SELECT @rid AS r FROM RgDoc LIMIT 1" | grep -o '"r":"[^"]*"' | head -1 | cut -d'"' -f4)
+observe "ft.search_index_more" "SELECT count(*) AS n FROM RgDoc WHERE SEARCH_INDEX_MORE('rgFt', [$RID]) = true"
+
+# ПРО СНИППЕТЫ. Их в наборе намеренно НЕТ: подсветку совпадения считает наш
+# Java-код (LoreSearchResource), а не СУБД. Кейс здесь проверял бы нас самих
+# чужими руками и молчал бы о настоящем регрессе — место для него в юнит-тесте.
+
 # --- C10. Супернода и конкурентная запись рёбер (#5302) ----------------------
 # В 26.7.3 исправлено: «edge-append merge больше не откатывает конкурентные
 # записи на многостраничных чанках рёбер» — то есть ПОТЕРЯ ДАННЫХ в сценариях
