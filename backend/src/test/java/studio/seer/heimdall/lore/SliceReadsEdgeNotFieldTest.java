@@ -44,12 +44,6 @@ class SliceReadsEdgeNotFieldTest {
      */
     private static final Set<String> PENDING_NM07 = Set.of();
 
-    /**
-     * Сам срез расхождения читает поле НАМЕРЕННО — в этом его работа: он
-     * сравнивает поле с ребром. Исключение исчезнет вместе с полем.
-     */
-    private static final Set<String> MEASURES_THE_FIELD = Set.of("component_field_edge_drift");
-
     /** Остаток после вычёркивания обращений через ребро и псевдонимов. */
     private static final Pattern BARE_FIELD = Pattern.compile("\\bcomponent_id\\b");
 
@@ -57,8 +51,7 @@ class SliceReadsEdgeNotFieldTest {
     void noSliceReadsTheComponentFieldDirectly() {
         List<String> offenders = new ArrayList<>();
         for (String id : LoreSlices.ids()) {
-            if (OWN_IDENTITY.contains(id) || PENDING_NM07.contains(id)
-                || MEASURES_THE_FIELD.contains(id)) continue;
+            if (OWN_IDENTITY.contains(id) || PENDING_NM07.contains(id)) continue;
             String sql = LoreSlices.get(id).baseSql().replaceAll("\\s+", " ");
             // Вычёркиваем законные употребления, остаток и есть плоское чтение:
             //   1) обращение через ребро, с индексом или фильтром или без;
