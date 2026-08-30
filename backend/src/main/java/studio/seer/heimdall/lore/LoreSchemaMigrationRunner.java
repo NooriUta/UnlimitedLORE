@@ -420,7 +420,9 @@ public class LoreSchemaMigrationRunner {
         // AC-04: повторный развод. Шаг 30 оставил ноль, но форма в UI ещё писала
         // в реестр личностей — см. комментарий к шагу 32. Идемпотентен.
         if (version == 32) splitProjectActors();
-        if (version == 31) backfillComponentEdges();
+        // 31 — семь типов, 33 — те же плюс два QG-типа (NM-07). Добор
+        // идемпотентен, повторный проход по уже обработанным безвреден.
+        if (version == 31 || version == 33) backfillComponentEdges();
         if (version == 28) recreateFtIndexes();
     }
 
@@ -841,7 +843,22 @@ public class LoreSchemaMigrationRunner {
         new ComponentLink("KnowADR",      "adr_id",      "BELONGS_TO",    true),
         new ComponentLink("QualityGate",  "qg_id",       "BELONGS_TO",    true),
         new ComponentLink("KnowTask",     "task_uid",    "BELONGS_TO",    true),
-        new ComponentLink("KnowSpec",     "spec_id",     "DOCUMENTED_IN", false));
+        new ComponentLink("KnowSpec",     "spec_id",     "DOCUMENTED_IN", false),
+        // NM-07. Эти два типа были пропущены в первой редакции, и отчёт «ноль по
+        // всем семи типам» оказался верен буквально и неполон по смыслу:
+        // носителей поля девять.
+        //
+        // Ребра на компонент у них не было ВООБЩЕ — поле единственное
+        // представление. Поэтому третьего представления здесь не заводится:
+        // BELONGS_TO становится их первым.
+        //
+        // Рассматривался вывод компонента из родительского гейта (у обоих есть
+        // qg_id, и на проде компонент рекомендаций совпадает с компонентом
+        // гейта). Отвергнуто: связь с гейтом у них тоже скалярным полем, обхода
+        // по графу не построить — вывод пришлось бы считать в Java на каждом
+        // чтении, то есть заменить одну денормализацию другой.
+        new ComponentLink("QGJobTask",       "job_id", "BELONGS_TO", true),
+        new ComponentLink("QGRecommendation", "rec_id", "BELONGS_TO", true));
 
     /**
      * NM-02: довести рёбра {@code BELONGS_TO} до полей {@code component_id}.
