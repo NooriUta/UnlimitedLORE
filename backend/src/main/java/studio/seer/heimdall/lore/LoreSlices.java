@@ -822,6 +822,29 @@ public final class LoreSlices {
         // AL-108: machine_id/session_id — «откуда агент писал в последний
         // раз» (самоописание через actor_new), не история и не различитель
         // двух ОДНОВРЕМЕННЫХ сессий одной роли — только последняя.
+
+        // Описательные акторы, застрявшие в реестре ЛИЧНОСТЕЙ (AC-04).
+        //
+        // После развода (миграция 30) в KnowActor должны остаться только
+        // личности: с client_id и владельцем. Всё остальное там — след записи,
+        // ушедшей не по тому адресу.
+        //
+        // ЗАЧЕМ ОТДЕЛЬНЫЙ СРЕЗ. Такая вершина не видна НИГДЕ: `actors` читает
+        // KnowProjectActor, `agent_owners` фильтрует kind='agent', поиск ходит
+        // в индекс нового типа. Запись отвечает ok:true и исчезает. Ровно так
+        // и случилось: форма акторов в UI продолжала звать /lore/actor уже
+        // после того, как чтение переехало.
+        //
+        // Пустой ответ здесь — содержательный результат: он означает, что
+        // описательных следов не осталось. Поэтому срез отдаёт их поимённо, а
+        // не числом: по имени видно, откуда прилетело.
+        slice("actor_identity_orphans",
+            "SELECT actor_id, name, kind, client_id, "
+            + "out('OWNED_BY').kc_sub AS owners, "
+            + "in('HAS_ACTOR').size() AS uc_count "
+            + "FROM KnowActor "
+            + "WHERE (client_id IS NULL OR client_id = '') AND out('OWNED_BY').size() = 0",
+            List.of(), Map.of(), " ORDER BY actor_id");
         slice("agent_owners",
             "SELECT actor_id, name, client_id, agent_role, machine_id, session_id, " +
             "out('OWNED_BY').kc_sub AS owner_kc_sub, " +
