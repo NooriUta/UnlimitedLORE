@@ -169,7 +169,14 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id())));
+            // NM-03 (ADR-LORE-041): фича писала component_id полем, а слайсы
+            // продуктового слоя читают out('BELONGS_TO') — связь, записанная
+            // здесь, не доезжала ни до одного экрана.
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("feature_id", req.feature_id());
+            linkComponentEdge("KnowUseCase", "uc_id", req.feature_id(), req.component_id(), out);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);

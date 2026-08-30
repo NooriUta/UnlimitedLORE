@@ -116,6 +116,11 @@ public class LoreDecisionResource extends LoreResourceBase {
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("decision_id", req.decision_id());
+            // NM-03 (ADR-LORE-041): поле component_id писалось, ребро — нет.
+            // 358 решений на проде связаны с компонентом ТОЛЬКО полем, то есть
+            // ни один слайс их связи не показывает. Инструмент при этом всегда
+            // отвечал ok:true — отказ выглядел успехом.
+            linkComponentEdge("KnowDecision", "decision_id", req.decision_id(), req.component_id(), out);
             // Вердикт полноты (ADR-LORE-039): решение без родителя-ADR или из
             // одного заголовка — ярлык, а не правило. Advisory, на запись не влияет.
             WorkQuality.Result quality = decisionQuality(req.decision_id());
