@@ -122,6 +122,46 @@ final class TaskRoleWriter {
         return Decision.create();
     }
 
+    /**
+     * Гейт создания задачи АГЕНТОМ (решение владельца 30.08.2026):
+     * «отсутствующие роли не записывать для агентов, а возвращать ошибку
+     * записи задачи, пока не исправится».
+     *
+     * <p>Отказ, а не пометка в вердикте полноты. Вердикт советует, и это верно
+     * там, где пропуск честнее выдумки: оценку в днях лучше не ставить, чем
+     * поставить мусорную. С ролью наоборот — её не «не знают», её не пишут,
+     * потому что можно не писать. Так и накопились 4114 значений при 438
+     * неразбираемых: по одной необязательной записи.
+     *
+     * <p>Написание проверяется ТЕМ ЖЕ путём, что и запись роли ({@link #check}):
+     * иначе задача создалась бы с именем, которое потом невозможно превратить
+     * в ребро, и два пути записи разошлись бы молча.
+     *
+     * @return причина отказа либо {@code null}, если писать можно
+     */
+    static String refuseCreate(String author, String executor, List<String> known) {
+        List<String> missing = new ArrayList<>();
+        if (author == null || author.isBlank()) missing.add(TaskRole.AUTHOR);
+        if (executor == null || executor.isBlank()) missing.add(TaskRole.EXECUTOR);
+        if (!missing.isEmpty()) {
+            return "задача не создана: не указаны роли " + String.join(", ", missing)
+                + ". Агент обязан называть автора и исполнителя при создании — "
+                + "роль, оставленная на потом, не проставляется никогда. "
+                + (known.isEmpty()
+                    ? "Предложить некого: в проекте этого спринта нет ни одной роли "
+                      + "(срез projects_without_role) — это чинится в админке."
+                    : "Допустимы: " + String.join(", ", known));
+        }
+        for (String raw : List.of(author, executor)) {
+            TaskRoleMapping.Target t = TaskRoleMapping.of(raw);
+            String identity = t != null ? t.identity() : raw;
+            if (!known.contains(identity)) {
+                return "задача не создана: " + TaskRole.unknownIdentityError(raw, known);
+            }
+        }
+        return null;
+    }
+
     /** Исход ревью. Закрытый список: свободный текст здесь повторил бы историю ролей. */
     static final List<String> VERDICTS = List.of("accepted", "rework", "accepted_with_notes");
 

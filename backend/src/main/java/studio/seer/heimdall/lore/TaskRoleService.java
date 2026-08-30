@@ -177,6 +177,46 @@ public class TaskRoleService {
         return out;
     }
 
+    /**
+     * То же, но по спринту: на создании задачи её самой ещё нет, а проект
+     * известен — он висит на спринте.
+     */
+    List<String> peopleOfSprintProject(String sprintId) {
+        List<String> out = new ArrayList<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT @out.display_name AS person FROM HAS_PROJECT_ROLE WHERE @in.slug IN "
+                + "(SELECT expand(out('BELONGS_TO_PROJECT').slug) FROM KnowSprint "
+                + "WHERE sprint_id = :s)", Map.of("s", sprintId))) {
+            Object p = r.get("person");
+            if (p != null) out.add(String.valueOf(p));
+        }
+        return out;
+    }
+
+    /**
+     * Гейт создания задачи для АГЕНТА (решение владельца 30.08.2026):
+     * «отсутствующие роли не записывать для агентов, а возвращать ошибку
+     * записи задачи, пока не исправится».
+     *
+     * <p>Почему отказом, а не пометкой в вердикте полноты. Вердикт советует, и
+     * это правильно там, где пропуск честнее выдумки: оценку в днях лучше не
+     * ставить, чем поставить мусорную. С ролью наоборот — её не «не знают», её
+     * не пишут, потому что можно не писать. Задача без автора и исполнителя
+     * уходит в корпус и остаётся там навсегда: 4114 заполненных значений и 438
+     * неразбираемых накопились именно так, по одной необязательной записи.
+     *
+     * <p>Гейт только для агентов. Человек ставит роль в форме, видя список, и
+     * отказ ему мешал бы: он может завести задачу до того, как решено, кто её
+     * делает. У агента такого случая нет — он пишет из сценария, где обе роли
+     * известны, а «пока не знаю» на деле означает «не стал указывать».
+     *
+     * @return причина отказа либо {@code null}, если писать можно
+     */
+    public String refuseCreateForAgent(String sprintId, String author, String executor) {
+        return TaskRoleWriter.refuseCreate(author, executor,
+            TaskRoleWriter.candidates(peopleOfSprintProject(sprintId), declaredAgents()));
+    }
+
     /** Заявленные агентные личности. Спрашиваем граф, а не таблицу сопоставления. */
     List<String> declaredAgents() {
         List<String> out = new ArrayList<>();

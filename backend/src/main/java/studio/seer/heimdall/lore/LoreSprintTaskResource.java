@@ -198,6 +198,11 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     @Path("task")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    // @Blocking: гейт ролей для агента спрашивает граф синхронно, а без
+    // аннотации метод исполняется на event loop, где блокирующий вызов падает
+    // с «current thread cannot be blocked». Реактивная цепочка ниже от этого не
+    // меняется — меняется поток, на котором она собирается.
+    @io.smallrye.common.annotation.Blocking
     public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
         requireAdmin(role);
@@ -207,6 +212,22 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.task_id()).matches()) {
             return Uni.createFrom().item(badParams("sprint_id / task_id contain illegal characters"));
+        }
+        // Решение владельца 30.08.2026: агент не создаёт задачу без ролей —
+        // отказ, а не запись с пропуском. Проверка стоит ДО первой команды в
+        // базу: иначе задача легла бы, а отказ пришёл после, и «не создана»
+        // было бы неправдой.
+        //
+        // Только для агентов. Человек заводит задачу в форме, видя список, и
+        // законно может не знать исполнителя в момент создания. У агента этого
+        // случая нет: он пишет из сценария, где обе роли известны.
+        if (callerAgentScope() != null) {
+            String refuse = roleService.refuseCreateForAgent(
+                req.sprint_id(), req.author_agent(), req.executor_agent());
+            if (refuse != null) {
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("ok", false, "outcome", LoreOutcome.NOOP, "reason", refuse))));
+            }
         }
         if (req.phase_uid() != null && !SAFE_ID.matcher(req.phase_uid()).matches()) {
             return Uni.createFrom().item(badParams("phase_uid contains illegal characters"));
