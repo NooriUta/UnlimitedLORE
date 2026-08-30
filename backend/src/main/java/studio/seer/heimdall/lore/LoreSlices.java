@@ -288,6 +288,33 @@ public final class LoreSlices {
             "FROM KnowFile WHERE out('EDITED_IN').task_uid CONTAINS :id ORDER BY file_path",
             List.of("id"), Map.of(), "");
 
+        // ── Роли на задаче ребром (ADR-LORE-042, TR-04) ──────────────────────
+        // Держатель роли — ребро с открытым valid_to, как открытая строка
+        // истории у самой задачи. Личность приходит из вершины на другом
+        // конце, и ключ у неё ОДИН: человек и агент отвечают на один и тот же
+        // вопрос «кто», и разводить их двумя ключами значило бы заставить
+        // каждого читателя склеивать их заново — по-своему и с ошибками.
+        //
+        // Чем это отличается от полей author/executor/reviewer_agent, которые
+        // пока живут рядом: поле отвечало только на «кто сейчас». Вопрос
+        // «сколько раз передавали» был неотвечаем в принципе, потому что
+        // прежнее значение затиралось.
+        slice("task_roles",
+            "SELECT role, ifnull(@in.actor_id, @in.display_name) AS identity, "
+            + "profile, model, verdict, feedback_md, reviewed_at, valid_from "
+            + "FROM ROLE_HELD_BY WHERE @out.task_uid = :id AND valid_to IS NULL",
+            List.of("id"), Map.of(), " ORDER BY role");
+
+        // Тот же набор, но ВСЕ рёбра, включая закрытые. Отдельным срезом, а не
+        // флагом: «кто держит роль сейчас» спрашивают на каждом экране задачи,
+        // а «кто держал раньше» — редко и осознанно. Слить их в один срез
+        // значило бы показывать снятых держателей там, где ждут текущего.
+        slice("task_roles_history",
+            "SELECT role, ifnull(@in.actor_id, @in.display_name) AS identity, "
+            + "profile, model, verdict, feedback_md, reviewed_at, valid_from, valid_to "
+            + "FROM ROLE_HELD_BY WHERE @out.task_uid = :id",
+            List.of("id"), Map.of(), " ORDER BY valid_from DESC");
+
         // ── ADR-020/021 T25: open-questions register (ОВ) ─────────────────────
         // Derived overdue/blocking/age are computed on the client from the raw
         // fields (status/due_date + gating_tasks) — never stored.
