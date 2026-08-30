@@ -216,6 +216,10 @@ public class LoreDecisionResource extends LoreResourceBase {
             return badParams("ids contain illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            // Проба ДО записи и ДО удаления: исход обязан опираться на факт, а
+            // не на то, что вернул движок (ADR-LORE-043).
+            boolean had = edgeExists("BELONGS_TO", "decision_id", req.decision_id(),
+                "component_id", req.component_id());
             if (remove) {
                 deleteEdges("BELONGS_TO", "@out.decision_id=:d AND @in.component_id=:c",
                     Map.of("d", req.decision_id(), "c", req.component_id()));
@@ -228,8 +232,12 @@ public class LoreDecisionResource extends LoreResourceBase {
                     "UPDATE KnowDecision SET component_id=:c WHERE decision_id=:d AND component_id IS NULL",
                     Map.of("c", req.component_id(), "d", req.decision_id()))).await().indefinitely();
             }
-            return noStore(Response.ok(Map.of("ok", true, "decision_id", req.decision_id(),
-                "component_id", req.component_id(), "action", remove ? "removed" : "added")));
+            Map<String, Object> base = Map.of("ok", true, "decision_id", req.decision_id(),
+                "component_id", req.component_id(), "action", remove ? "removed" : "added");
+            return remove ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, false, "BELONGS_TO", "decision_id", req.decision_id(),
+                    "component_id", req.component_id(),
+                    "решение " + req.decision_id() + " или компонент " + req.component_id());
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION COMPONENT] %s: %s", req.decision_id(), e.getMessage());
             return upstream(e);
@@ -251,6 +259,8 @@ public class LoreDecisionResource extends LoreResourceBase {
             return badParams("decision_id contains illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            boolean had = edgeExists("BELONGS_TO_PROJECT", "decision_id", req.decision_id(),
+                "slug", req.project());
             if (remove) {
                 deleteEdges("BELONGS_TO_PROJECT", "@out.decision_id=:d AND @in.slug=:p",
                     Map.of("d", req.decision_id(), "p", req.project()));
@@ -260,8 +270,13 @@ public class LoreDecisionResource extends LoreResourceBase {
                     "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
                     Map.of("d", req.decision_id(), "p", req.project()))).await().indefinitely();
             }
-            return noStore(Response.ok(Map.of("ok", true, "decision_id", req.decision_id(),
-                "project", req.project(), "action", remove ? "removed" : "added")));
+            Map<String, Object> base = Map.of("ok", true, "decision_id", req.decision_id(),
+                "project", req.project(), "action", remove ? "removed" : "added");
+            return remove ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, false, "BELONGS_TO_PROJECT", "decision_id",
+                    req.decision_id(), "slug", req.project(),
+                    "решение " + req.decision_id() + " или проект " + req.project()
+                    + " (проект заводится через project_new)");
         } catch (Exception e) {
             LOG.warnf("[LORE DECISION PROJECT] %s: %s", req.decision_id(), e.getMessage());
             return upstream(e);
