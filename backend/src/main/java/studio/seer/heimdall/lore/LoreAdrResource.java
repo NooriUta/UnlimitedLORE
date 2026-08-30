@@ -335,6 +335,44 @@ public class LoreAdrResource extends LoreResourceBase {
     public record AdrRenameRequest(String adr_id, String new_adr_id) {}
     public record AdrDeleteRequest(String adr_id) {}
 
+    /**
+     * Ответ связывания по ADR-LORE-043: {@code outcome} рядом со старыми ключами.
+     *
+     * <p>Пустой результат {@code CREATE EDGE … IF NOT EXISTS} означает ДВА
+     * несовместимых исхода: связь уже была и конца не существует. Раньше оба
+     * давали {@code linked:false} с подсказкой «проверьте, что такие-то
+     * существуют» — законную идемпотентность объявляли возможной ошибкой, а
+     * настоящую ошибку — возможной нормой, и различить их читатель не мог.
+     *
+     * <p>Различаются они ФАКТОМ: если ребро не создано, спрашиваем, есть ли
+     * оно сейчас. Тот же приём уже применён в пакетной сверке рёбер ниже —
+     * здесь он доведён до одиночных вызовов, которыми пользуются чаще.
+     *
+     * <p>Лишний запрос уходит только по пустой ветке, то есть в меньшинстве
+     * случаев: успешное создание отвечает сразу.
+     */
+    private Response linkOutcome(Map<String, Object> base, boolean created, String edgeType,
+                                 String adrId, String targetField, String targetValue, String what) {
+        boolean exists = created;
+        if (!created) {
+            try {
+                var rows = ingestService.queryPublic(
+                    "SELECT count(*) AS n FROM " + edgeType
+                    + " WHERE @out.adr_id = :id AND @in." + targetField + " = :t",
+                    Map.of("id", adrId, "t", targetValue));
+                exists = !rows.isEmpty()
+                    && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+            } catch (Exception ex) {
+                // Сверка не удалась — значит различить исходы НЕЧЕМ. Врать в
+                // сторону «уже было» нельзя: это бы скрыло пропажу конца.
+                LOG.warnf("[LORE ADR LINK verify] %s %s → %s: %s",
+                    edgeType, adrId, targetValue, LoreUpstream.detail(ex));
+                exists = false;
+            }
+        }
+        return noStore(Response.ok(LoreOutcome.link(base, created, exists, what)));
+    }
+
     @POST
     @Path("adr/link")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -369,9 +407,10 @@ public class LoreAdrResource extends LoreResourceBase {
                     .await().indefinitely().result();
                 // CREATE EDGE into an empty FROM/TO set is a silent no-op — surface it.
                 boolean linked = created != null && !created.isEmpty();
-                return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                    "sprint_id", req.sprint_id(), "action", "added", "linked", linked,
-                    "hint", linked ? "" : "no edge created — check adr_id/sprint_id exist")));
+                return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                    "sprint_id", req.sprint_id(), "action", "added", "linked", linked),
+                    linked, "IMPLEMENTED_IN", req.adr_id(), "sprint_id", req.sprint_id(),
+                    "ADR " + req.adr_id() + " или спринт " + req.sprint_id());
             }
             // Release target: prefer release_uid (git_project#release_id) for multi-repo
             // safety; fall back to bare release_id when git_project is not supplied.
@@ -396,10 +435,11 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "rkey", relKey)))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                "release_id", req.release_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — release not found by " + relField + "='" + relKey
-                    + "' (register it via release_new, or pass git_project)")));
+            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                "release_id", req.release_id(), "action", "added", "linked", linked),
+                linked, "IMPLEMENTED_IN_RELEASE", req.adr_id(), relField, relKey,
+                "релиз по " + relField + "='" + relKey + "' (заведите его через release_new "
+                + "или передайте git_project)");
         } catch (Exception e) {
             LOG.warnf("[LORE ADR LINK] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -456,9 +496,11 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "gp", req.project())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                "project", req.project(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check adr_id exists and project is registered (project_new)")));
+            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                "project", req.project(), "action", "added", "linked", linked),
+                linked, "BELONGS_TO_PROJECT", req.adr_id(), "slug", req.project(),
+                "ADR " + req.adr_id() + " или проект " + req.project()
+                + " (проект заводится через project_new)");
         } catch (Exception e) {
             LOG.warnf("[LORE ADR PROJECT] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -495,9 +537,10 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "cid", req.component_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                "component_id", req.component_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check adr_id/component_id exist")));
+            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                "component_id", req.component_id(), "action", "added", "linked", linked),
+                linked, "BELONGS_TO", req.adr_id(), "component_id", req.component_id(),
+                "ADR " + req.adr_id() + " или компонент " + req.component_id());
         } catch (Exception e) {
             LOG.warnf("[LORE ADR COMPONENT] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -534,9 +577,10 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "dep", req.dep_adr_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                "dep_adr_id", req.dep_adr_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check both adr_id values exist")));
+            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                "dep_adr_id", req.dep_adr_id(), "action", "added", "linked", linked),
+                linked, "DEPENDS_ON", req.adr_id(), "adr_id", req.dep_adr_id(),
+                "ADR " + req.adr_id() + " или ADR " + req.dep_adr_id());
         } catch (Exception e) {
             LOG.warnf("[LORE ADR DEPENDS_ON] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -573,9 +617,10 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "sup", req.superseded_adr_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                "superseded_adr_id", req.superseded_adr_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check both adr_id values exist")));
+            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                "superseded_adr_id", req.superseded_adr_id(), "action", "added", "linked", linked),
+                linked, "SUPERSEDES", req.adr_id(), "adr_id", req.superseded_adr_id(),
+                "ADR " + req.adr_id() + " или ADR " + req.superseded_adr_id());
         } catch (Exception e) {
             LOG.warnf("[LORE ADR SUPERSEDES] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -617,9 +662,10 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "tag", req.tag_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "adr_id", req.adr_id(),
-                "tag_id", req.tag_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check adr_id exists")));
+            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                "tag_id", req.tag_id(), "action", "added", "linked", linked),
+                linked, "TAGGED_WITH", req.adr_id(), "tag_id", req.tag_id(),
+                "ADR " + req.adr_id() + " или тег " + req.tag_id());
         } catch (Exception e) {
             LOG.warnf("[LORE ADR TAG] %s: %s", req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
