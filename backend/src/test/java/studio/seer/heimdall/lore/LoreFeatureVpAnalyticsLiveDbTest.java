@@ -37,7 +37,7 @@ class LoreFeatureVpAnalyticsLiveDbTest {
             + "\"metric_md\":\"замкнутых связок > 0\"}");
         post("/lore/gain", "{\"gain_id\":\"GAIN-FIT-VAGUE\",\"title\":\"Выгода без метрики\"}");
         post("/lore/job", "{\"job_id\":\"JOB-FIT\",\"title\":\"Работа клиента\",\"kind\":\"functional\"}");
-        post("/lore/actor", "{\"actor_id\":\"ACT-FIT\",\"name\":\"Фактический исполнитель\",\"kind\":\"human-role\"}");
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-FIT\",\"name\":\"Фактический исполнитель\",\"kind\":\"human-role\"}");
         post("/lore/milestone", "{\"milestone_id\":\"M-FIT\",\"label\":\"Веха fit\",\"week\":95}");
 
         post("/lore/feature/link", "{\"feature_id\":\"FEAT-FIT\",\"rel\":\"pain\",\"target_id\":\"PAIN-FIT\"}");

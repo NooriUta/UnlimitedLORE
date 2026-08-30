@@ -36,11 +36,11 @@ class LoreActorLoadLiveDbTest {
                 .when().post("/lore/project").then().statusCode(200);
         }
 
-        post("/lore/actor", "{\"actor_id\":\"ACT-LOAD-BUSY\",\"name\":\"Рабочая лошадь\","
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-LOAD-BUSY\",\"name\":\"Рабочая лошадь\","
             + "\"kind\":\"human-role\",\"project\":\"TEST/proj-load\"}");
-        post("/lore/actor", "{\"actor_id\":\"ACT-LOAD-DEAD\",\"name\":\"Мёртвая роль\","
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-LOAD-DEAD\",\"name\":\"Мёртвая роль\","
             + "\"kind\":\"human-role\",\"project\":\"TEST/proj-load\"}");
-        post("/lore/actor", "{\"actor_id\":\"ACT-LOAD-ALIEN\",\"name\":\"Чужак\","
+        post("/lore/project-actor", "{\"actor_id\":\"ACT-LOAD-ALIEN\",\"name\":\"Чужак\","
             + "\"kind\":\"human-role\",\"project\":\"TEST/proj-other\"}");
 
         post("/lore/feature", "{\"feature_id\":\"FEAT-LOAD\",\"title\":\"Фича нагрузки\"}");

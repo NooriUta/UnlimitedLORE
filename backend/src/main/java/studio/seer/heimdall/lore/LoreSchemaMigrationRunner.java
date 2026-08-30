@@ -403,7 +403,18 @@ public class LoreSchemaMigrationRunner {
         if (version == 17) mergeLoreTagIntoKnowTag();
         if (version == 20) backfillProjectEdges();
         if (version == 26) backfillReleaseProjectEdges();
-        if (version == 30) splitProjectActors();
+        // Тот же капкан, что описан выше для V13, и он сработал: шаг 30 заводит
+        // НОВЫЙ тип KnowProjectActor, а createFullTextIndexes зовётся только из
+        // шагов 11/12/13 — давно применённых и на проде, и на свежей базе к
+        // моменту, когда тип появляется. Без этого вызова ftKnowProjectActor не
+        // создался бы НИГДЕ: на свежей БД индексный шаг проходит раньше типа
+        // («тип отсутствует — индекс пропущен» в логе), на проде — вообще не
+        // повторяется. Поиск по акторам молча перестал бы их находить, и
+        // выглядело бы это как «таких акторов нет».
+        //
+        // Порядок внутри шага существенный: SQL шага 30 создаёт тип ДО javaStep,
+        // поэтому к моменту вызова индексировать уже есть что.
+        if (version == 30) { splitProjectActors(); createFullTextIndexes(); }
         if (version == 28) recreateFtIndexes();
     }
 

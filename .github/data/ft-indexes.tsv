@@ -17,6 +17,7 @@ ftKnowPain	KnowPain	title,body_md	CREATE INDEX `ftKnowPain` ON KnowPain (title, 
 ftKnowGain	KnowGain	title,body_md,metric_md	CREATE INDEX `ftKnowGain` ON KnowGain (title, body_md, metric_md) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}
 ftKnowJob	KnowJob	title,body_md	CREATE INDEX `ftKnowJob` ON KnowJob (title, body_md) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}
 ftKnowActor	KnowActor	name,body_md	CREATE INDEX `ftKnowActor` ON KnowActor (name, body_md) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}
+ftKnowProjectActor	KnowProjectActor	name,body_md	CREATE INDEX `ftKnowProjectActor` ON KnowProjectActor (name, body_md) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}
 ftKnowRelease	KnowRelease	description_md	CREATE INDEX `ftKnowRelease` ON KnowRelease (description_md) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}
 ftKnowReleaseHist	KnowReleaseHist	description_md	CREATE INDEX `ftKnowReleaseHist` ON KnowReleaseHist (description_md) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}
 ftKnowFile	KnowFile	summary_md	CREATE INDEX `ftKnowFile` ON KnowFile (summary_md) FULL_TEXT METADATA {"analyzer":"org.apache.lucene.analysis.ru.RussianAnalyzer","similarity":"BM25"}
