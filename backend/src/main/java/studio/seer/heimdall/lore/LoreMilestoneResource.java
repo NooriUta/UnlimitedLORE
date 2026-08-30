@@ -42,6 +42,10 @@ public class LoreMilestoneResource extends LoreResourceBase {
             return badParams("sprint_id and milestone_id required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            // Проба ДО обеих веток: «связь уже была» и «конца нет» различимы
+            // только фактом (ADR-LORE-043).
+            boolean had = edgeExists("TARGETS_MILESTONE", "sprint_id", req.sprint_id(),
+                "milestone_id", req.milestone_id());
             if (remove) {
                 // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
                 List<Map<String, Object>> edges = ingestService.queryPublic(
@@ -67,7 +71,9 @@ public class LoreMilestoneResource extends LoreResourceBase {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
             out.put("milestone_id", req.milestone_id()); out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
+            return remove ? unlinkOutcome(out, had)
+                : linkOutcome(had, out, false, "TARGETS_MILESTONE", "sprint_id", req.sprint_id(),
+                    "milestone_id", req.milestone_id(), "спринт " + req.sprint_id() + " или веха " + req.milestone_id());
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT MILESTONE] %s / %s: %s", req.sprint_id(), req.milestone_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
