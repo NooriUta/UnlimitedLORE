@@ -151,7 +151,7 @@ public class LoreSearchResource extends LoreResourceBase {
             List.of("title", "body_md"),
             null, null, null,
             DIRECT_COMP, null, null, DIRECT_PROJ, 1.25),
-        new Branch("actor", "KnowActor", "actor_id", "name", "ftKnowActor",
+        new Branch("actor", "KnowProjectActor", "actor_id", "name", "ftKnowProjectActor",
             List.of("name", "body_md"),
             null, null, null,
             DIRECT_COMP, null, null, DIRECT_PROJ, 1.20));

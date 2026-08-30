@@ -536,6 +536,172 @@ public class LoreProductResource extends LoreResourceBase {
         return null;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Проектные акторы: описательная сторона, отделённая от прав (AC-02).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ADR-LORE-041 §4: актор ПРОЕКТИРУЕМОЙ части — кто действует в сценарии,
+     * чья это боль, кто выполняет работу.
+     *
+     * <p>Отдельный тип от {@code KnowActor} намеренно. {@code KnowActor} —
+     * личность: {@code client_id}, {@code OWNED_BY}, {@code LOGGED_BY}, вся
+     * цепочка RBAC. Здесь ничего этого нет и появиться не должно, иначе развод
+     * схлопнется обратно.
+     *
+     * <p>Полей {@code machine_id}/{@code session_id} тут тоже нет: это атрибуты
+     * работающей сессии, у роли в сценарии их не бывает.
+     */
+    public record ProjectActorRequest(String actor_id, String name, String kind, String body_md,
+                                      String project, List<String> projects) {}
+
+    /** Допустимые {@code kind} проектного актора. Значение agent снято миграцией 30. */
+    static final List<String> PROJECT_ACTOR_KINDS = List.of("human-role", "system", "automation");
+
+    /**
+     * Заведение/правка проектного актора.
+     *
+     * <p><b>Здесь НЕТ проектного RBAC-гейта — и это суть задачи, а не упущение.</b>
+     * У {@code /lore/actor} гейт стоит потому, что создание актора там могло
+     * создать агентную личность, то есть звено цепочки прав. Проектный актор
+     * прав не несёт вовсе: он ничего не разрешает и ни от кого не наследует.
+     * Гейт на нём проверял не то — и 30.08.2026 остановил владельца на описании
+     * акторов для AIDA/MIDGARD, где у неё просто не было роли в проекте.
+     *
+     * <p>Что остаётся гейтом: {@link #requireAdmin} и семейный агентный скоуп —
+     * запись всё так же не открыта кому попало. Сужается ровно проверка «роль
+     * владельца в конкретном проекте», которой тут нечего охранять.
+     *
+     * <p>{@code kind} принимает automation, но не agent: миграция 30
+     * переименовала значение, и принимать оба означало бы завести два написания
+     * одного смысла — ровно ту болезнь, от которой этот спринт.
+     */
+    @POST
+    @Path("project-actor")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertProjectActor(ProjectActorRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
+            return badParams("actor_id required");
+        if (!SAFE_ID.matcher(req.actor_id()).matches())
+            return badParams("actor_id contains illegal characters");
+        if (req.kind() != null && !PROJECT_ACTOR_KINDS.contains(req.kind()))
+            return badParams(projectActorKindError(req.kind()));
+        // Столкновение с личностью ловим ЗДЕСЬ, а не оставляем на потом: один и
+        // тот же actor_id в двух реестрах — это ровно та двойная правда, ради
+        // разведения которой заведён отдельный тип. Молчаливый upsert создал бы
+        // её на ходу.
+        var clash = ingest.queryPublic(
+            "SELECT count(*) AS n FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
+        long clashN = clash.isEmpty() ? 0 : ((Number) clash.get(0).getOrDefault("n", 0)).longValue();
+        if (clashN > 0) return badParams(identityClashError(req.actor_id()));
+
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE KnowProjectActor SET actor_id=:id");
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("id", req.actor_id());
+            if (req.name() != null)    { sql.append(", name=:n");    p.put("n", req.name()); }
+            if (req.kind() != null)    { sql.append(", kind=:k");    p.put("k", req.kind()); }
+            if (req.body_md() != null) { sql.append(", body_md=:b"); p.put("b", req.body_md()); }
+            sql.append(" UPSERT WHERE actor_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
+                .await().indefinitely();
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            syncProjectActorProjects(req, out);
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE PROJECT-ACTOR] %s: %s", req.actor_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    /**
+     * Сообщение о недопустимом kind. Отдельный метод, потому что случай
+     * переименованного значения обязан читаться иначе, чем просто опечатка:
+     * вызывающий, приславший agent, писал по прежнему справочнику, и ему нужно
+     * знать, что значение переехало, а не что он ошибся.
+     */
+    static String projectActorKindError(String kind) {
+        String base = "kind must be " + String.join("|", PROJECT_ACTOR_KINDS);
+        if (!"agent".equals(kind)) return base;
+        return base + " — значение agent переименовано в automation (миграция 30): на проектной "
+            + "стороне оно означало роль в сценарии, а в KnowActor — учётную запись с владельцем";
+    }
+
+    /** Сообщение о занятом идентификаторе: разводим типы, а не молча дублируем. */
+    static String identityClashError(String actorId) {
+        return "actor_id '" + actorId + "' уже занят агентной личностью (KnowActor). "
+            + "Проектный актор и личность — разные вершины и не делят идентификатор; "
+            + "возьмите другой actor_id либо правьте личность через /lore/actor";
+    }
+
+    /**
+     * То же приведение рёбер {@code BELONGS_TO_PROJECT}, что у личности, и с
+     * тем же порядком «сначала создать, потом убрать лишнее»: обрыв посередине
+     * оставляет дубли, а не актора без проектов.
+     */
+    private void syncProjectActorProjects(ProjectActorRequest req, Map<String, Object> out) {
+        List<String> wanted;
+        if (req.projects() != null) {
+            wanted = req.projects().stream().filter(s -> s != null && !s.isBlank()).distinct().toList();
+        } else if (req.project() != null && !req.project().isBlank()) {
+            wanted = List.of(req.project());
+        } else {
+            return;   // ключей нет — рёбра не наше дело
+        }
+
+        List<String> missing = new java.util.ArrayList<>();
+        for (String slug : wanted) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowProjectActor WHERE actor_id=:id) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("id", req.actor_id(), "p", slug)))
+                .await().indefinitely().result();
+            // Пусто и при «уже было», и при «проекта нет»: CREATE EDGE с пустым
+            // TO — тихий no-op. Различаем запросом к самому ребру, иначе
+            // незарегистрированный слаг уехал бы под ok:true.
+            if (created == null || created.isEmpty()) {
+                var exists = ingest.queryPublic(
+                    "SELECT count(*) AS n FROM BELONGS_TO_PROJECT "
+                    + "WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug));
+                long n = exists.isEmpty() ? 0 : ((Number) exists.get(0).getOrDefault("n", 0)).longValue();
+                if (n == 0) missing.add(slug);
+            }
+        }
+
+        var current = ingest.queryPublic(
+            "SELECT out('BELONGS_TO_PROJECT').slug AS slugs FROM KnowProjectActor WHERE actor_id = :id",
+            Map.of("id", req.actor_id()));
+        int removed = 0;
+        if (!current.isEmpty() && current.get(0).get("slugs") instanceof List<?> have) {
+            for (Object o : have) {
+                if (o == null) continue;
+                String slug = String.valueOf(o);
+                if (wanted.contains(slug)) continue;
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM BELONGS_TO_PROJECT WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug))).await().indefinitely();
+                removed++;
+            }
+        }
+
+        out.put("projects_linked", wanted.size() - missing.size());
+        out.put("projects_removed", removed);
+        if (!missing.isEmpty()) {
+            out.put("projects_missing", missing);
+            out.put("hint", "не зарегистрированы в реестре: " + String.join(", ", missing)
+                + " — заведите через project_new, иначе привязка молча не создаётся");
+        }
+    }
+
     /**
      * ADR-LORE-037 V1/AL-110: журнал сессий агентов.
      *
@@ -857,15 +1023,23 @@ public class LoreProductResource extends LoreResourceBase {
 
             boolean linked = false;
             if (!remove) {
+                // AC-03: цель ребра — РОЛЬ, а она после развода живёт в
+                // KnowProjectActor. FILLS_ROLE стало межтиповым, и это не
+                // побочный эффект, а точная запись смысла: личность исполняет
+                // описанную роль. Оставить обе стороны на KnowActor значило бы
+                // искать роль там, где её больше нет, и отвечать «не найдена»
+                // про каждую существующую.
                 List<Map<String, Object>> roleRows = ingest.queryPublic(
-                    "SELECT actor_id FROM KnowActor WHERE actor_id = :id", Map.of("id", req.target_id()));
+                    "SELECT actor_id FROM KnowProjectActor WHERE actor_id = :id", Map.of("id", req.target_id()));
                 if (roleRows == null || roleRows.isEmpty())
-                    return badParams("actor '" + req.target_id() + "' (роль) не найден — заведите через actor_new");
+                    return badParams("роль '" + req.target_id() + "' не найдена среди проектных акторов "
+                        + "(KnowProjectActor) — заведите через project_actor_new. Если вы искали агентную "
+                        + "личность, то FILLS_ROLE ведёт не к ней: связка идёт ОТ личности К роли");
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE FILLS_ROLE FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
-                        "TO (SELECT FROM KnowActor WHERE actor_id=:t) IF NOT EXISTS",
+                        "TO (SELECT FROM KnowProjectActor WHERE actor_id=:t) IF NOT EXISTS",
                         Map.of("id", req.actor_id(), "t", req.target_id())))
                     .await().indefinitely().result();
                 linked = created != null && !created.isEmpty();
@@ -1032,17 +1206,17 @@ public class LoreProductResource extends LoreResourceBase {
                 case "felt_by" -> {      // KnowPain -> KnowActor: чья это боль
                     edge = "FELT_BY";
                     fromSql = "(SELECT FROM KnowPain WHERE pain_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 case "desired_by" -> {   // KnowGain -> KnowActor: кто желает выгоду
                     edge = "DESIRED_BY";
                     fromSql = "(SELECT FROM KnowGain WHERE gain_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 case "performed_by" -> { // KnowJob -> KnowActor: чья это работа
                     edge = "PERFORMED_BY";
                     fromSql = "(SELECT FROM KnowJob WHERE job_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 case "blocks" -> {       // KnowPain -> KnowJob: боль мешает работе
                     edge = "BLOCKS";
@@ -1181,7 +1355,7 @@ public class LoreProductResource extends LoreResourceBase {
                 case "actor" -> { // D12: HAS_ACTOR — multi, UC -> KnowActor
                     edge = "HAS_ACTOR";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 // PL-10 (D14): компонент у сценария — ПРЯМОЙ, а не только через
                 // родителя. Ядро ценности слоя — тройка «роль × компонент ×
@@ -1772,7 +1946,12 @@ public class LoreProductResource extends LoreResourceBase {
      */
     private CheckOutcome checkActorLoadDead() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowActor", Map.of());
+            // AC-03: считаем по проектным акторам. Раньше сюда попадали и семь
+            // агентных личностей — у них ноль сценариев по определению, и каждая
+            // выдавалась находкой «роль без единого сценария». Семь постоянных
+            // ложных находок приучают пролистывать весь список, то есть проверка
+            // тем вернее молчит, чем громче кричит.
+            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowProjectActor", Map.of());
 
         List<Map<String, Object>> findings = new ArrayList<>();
         int found = 0;

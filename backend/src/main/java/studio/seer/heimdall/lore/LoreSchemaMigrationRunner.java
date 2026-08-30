@@ -403,6 +403,18 @@ public class LoreSchemaMigrationRunner {
         if (version == 17) mergeLoreTagIntoKnowTag();
         if (version == 20) backfillProjectEdges();
         if (version == 26) backfillReleaseProjectEdges();
+        // Тот же капкан, что описан выше для V13, и он сработал: шаг 30 заводит
+        // НОВЫЙ тип KnowProjectActor, а createFullTextIndexes зовётся только из
+        // шагов 11/12/13 — давно применённых и на проде, и на свежей базе к
+        // моменту, когда тип появляется. Без этого вызова ftKnowProjectActor не
+        // создался бы НИГДЕ: на свежей БД индексный шаг проходит раньше типа
+        // («тип отсутствует — индекс пропущен» в логе), на проде — вообще не
+        // повторяется. Поиск по акторам молча перестал бы их находить, и
+        // выглядело бы это как «таких акторов нет».
+        //
+        // Порядок внутри шага существенный: SQL шага 30 создаёт тип ДО javaStep,
+        // поэтому к моменту вызова индексировать уже есть что.
+        if (version == 30) { splitProjectActors(); createFullTextIndexes(); }
         if (version == 28) recreateFtIndexes();
     }
 
@@ -443,6 +455,149 @@ public class LoreSchemaMigrationRunner {
             relEdges++;
         }
         LOG.infof("[LORE MIGRATE] V26 backfill Release→project (хвост после V20): %d рёбер", relEdges);
+    }
+
+    /**
+     * V30 (решение владельца 30.08.2026): проектируемая роль уезжает из
+     * {@code KnowActor} в {@code KnowProjectActor}. RBAC не трогается вовсе —
+     * это прямое требование: «MCP, RBAC остаётся на старой ноде, весь
+     * бизнес-анализ переезжает на новую».
+     *
+     * <h3>Что считается личностью, а что описанием</h3>
+     *
+     * Личность — актор, у которого есть {@code client_id} ЛИБО ребро
+     * {@code OWNED_BY}. Проверяются оба признака, а не один: клиент могли ещё не
+     * прописать, а владельца уже назначить, и наоборот. Ошибка в эту сторону
+     * дороже — уехавшая личность разорвала бы цепочку прав.
+     *
+     * Всё остальное — описание, и уезжает целиком со своими рёбрами.
+     *
+     * <h3>Почему Java, а не SQL шага</h3>
+     *
+     * У ребра в ArcadeDB неизменяемые концы: перецепить нельзя, только создать
+     * новое и удалить старое по {@code @rid}. Плюс {@code DELETE EDGE} в этой
+     * сборке отсутствует — работает лишь {@code DELETE FROM <Тип> WHERE @rid=…}.
+     * Тот же приём, что в V13.
+     *
+     * <h3>Идемпотентность</h3>
+     *
+     * Ledger пишется ПОСЛЕ javaStep, поэтому падение между ними оставляет шаг
+     * pending и повтор обязан пройти чисто: вершина создаётся только если её
+     * ещё нет, рёбра переносятся с {@code IF NOT EXISTS}, старое удаляется сразу
+     * после создания нового.
+     */
+    /**
+     * Словарь вида роли в ПРОЕКТИРУЕМОМ реестре: {@code agent} становится
+     * {@code automation} (решение владельца 30.08.2026, «переименуй
+     * automation (agent scheme)»).
+     *
+     * <p>Причина не косметическая. После развода слово {@code agent} жило бы в
+     * ДВУХ реестрах сразу: в {@link KnowActor} — как учётная запись с
+     * {@code client_id}, владельцем и журналом сессий, а здесь — как роль агента
+     * в сценарии («Агент сессии», 14 сценариев). Формально их различает тип
+     * вершины; человека — нет. Ровно тот же вид ловушки, что {@code architect}
+     * как роль в проекте против {@code architect} как профиля агента, и что
+     * {@code SKIP}, читавшийся и «в порядке», и «не измерено».
+     *
+     * <p>Переименование делается ЗДЕСЬ, потому что миграция и так переписывает
+     * эти строки. Отдельно потом — это отдельная миграция и отдельный деплой
+     * ради одного слова.
+     */
+    static String projectActorKind(String kind) {
+        return "agent".equals(kind) ? "automation" : kind;
+    }
+
+    private void splitProjectActors() {
+        if (!typeExists("KnowActor")) {
+            LOG.info("[LORE MIGRATE] V30: типа KnowActor нет — свежая БД, переносить нечего");
+            return;
+        }
+
+        // Рёбра ОПИСАТЕЛЬНОЙ стороны. OWNED_BY и LOGGED_BY здесь отсутствуют
+        // НАМЕРЕННО: первое — цепочка прав, второе — журнал сессий, обе остаются
+        // на личности. Если такое ребро окажется у описательной вершины, это
+        // значит, что признак личности определён неверно, и шаг обязан упасть,
+        // а не тихо оставить ребро висеть на удалённой вершине.
+        final List<String> inEdges  = List.of("HAS_ACTOR", "PERFORMED_BY", "DESIRED_BY", "FELT_BY");
+        final List<String> outEdges = List.of("BELONGS_TO_PROJECT", "TAGGED_WITH", "ATTACHED_TO");
+
+        List<Map<String, Object>> design = ingest.queryPublic(
+            "SELECT @rid AS rid, actor_id, name, kind, body_md FROM KnowActor "
+            + "WHERE (client_id IS NULL OR client_id = '') AND out('OWNED_BY').size() = 0", Map.of());
+
+        int moved = 0, movedEdges = 0;
+        for (Map<String, Object> a : design) {
+            String actorId = str(a.get("actor_id"));
+            if (actorId == null || actorId.isBlank()) {
+                // Вершина без идентификатора: переносить не за что зацепиться при
+                // повторе. Валим громко — молчаливый пропуск потерял бы описание.
+                throw new IllegalStateException("[LORE MIGRATE] V30: KnowActor " + a.get("rid")
+                    + " без actor_id — перенос невозможен, проставьте идентификатор и повторите старт.");
+            }
+            // Журнал сессий на описательной вершине означал бы, что она всё-таки
+            // личность, а признак определён неверно. Лучше остановиться.
+            List<Map<String, Object>> logged = ingest.queryPublic(
+                "SELECT @rid FROM LOGGED_BY WHERE @in = " + a.get("rid") + " LIMIT 1", Map.of());
+            if (!logged.isEmpty()) {
+                throw new IllegalStateException("[LORE MIGRATE] V30: у актора " + actorId
+                    + " нет client_id и владельца, но есть записи сессий (LOGGED_BY) — "
+                    + "это личность с неполными полями, а не проектируемая роль. Перенос прерван.");
+            }
+
+            boolean already = !ingest.queryPublic(
+                "SELECT @rid FROM KnowProjectActor WHERE actor_id = :id", Map.of("id", actorId)).isEmpty();
+            if (!already) {
+                Map<String, Object> p = new HashMap<>();
+                p.put("id", actorId);
+                p.put("n",  str(a.get("name")));
+                p.put("k",  projectActorKind(str(a.get("kind"))));
+                p.put("b",  str(a.get("body_md")));
+                command("INSERT INTO KnowProjectActor SET actor_id=:id, name=:n, kind=:k, body_md=:b", p);
+                moved++;
+            }
+
+            String newRid = firstRid("SELECT @rid AS rid FROM KnowProjectActor WHERE actor_id = :id",
+                Map.of("id", actorId));
+            if (newRid == null) {
+                throw new IllegalStateException("[LORE MIGRATE] V30: роль " + actorId
+                    + " не найдена сразу после создания — перенос прерван.");
+            }
+
+            for (String edge : inEdges) {
+                if (!typeExists(edge)) continue;
+                for (Map<String, Object> e : ingest.queryPublic(
+                        "SELECT @rid AS rid, @out AS src FROM " + edge + " WHERE @in = " + a.get("rid"), Map.of())) {
+                    exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS",
+                        edge, str(e.get("src")), newRid));
+                    exec("DELETE FROM " + edge + " WHERE @rid = " + e.get("rid"));
+                    movedEdges++;
+                }
+            }
+            for (String edge : outEdges) {
+                if (!typeExists(edge)) continue;
+                for (Map<String, Object> e : ingest.queryPublic(
+                        "SELECT @rid AS rid, @in AS target FROM " + edge + " WHERE @out = " + a.get("rid"), Map.of())) {
+                    exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS",
+                        edge, newRid, str(e.get("target"))));
+                    exec("DELETE FROM " + edge + " WHERE @rid = " + e.get("rid"));
+                    movedEdges++;
+                }
+            }
+
+            exec("DELETE VERTEX FROM KnowActor WHERE @rid = " + a.get("rid"));
+        }
+
+        // Контроль, а не вера: в KnowActor обязаны остаться ТОЛЬКО личности.
+        List<Map<String, Object>> leftovers = ingest.queryPublic(
+            "SELECT actor_id FROM KnowActor "
+            + "WHERE (client_id IS NULL OR client_id = '') AND out('OWNED_BY').size() = 0", Map.of());
+        if (!leftovers.isEmpty()) {
+            throw new IllegalStateException("[LORE MIGRATE] V30: в KnowActor остались описательные "
+                + "акторы после переноса (" + leftovers.size() + ") — разберитесь вручную, бэкап снят.");
+        }
+
+        LOG.infof("[LORE MIGRATE] V30: ролей перенесено %d, рёбер перевешено %d; "
+            + "KnowActor остаётся личностью, RBAC не тронут", moved, movedEdges);
     }
 
     /**

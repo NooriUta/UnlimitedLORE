@@ -125,6 +125,18 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("job",       Set.of("full", "architect", "pm", "product-analyst")),
         Map.entry("vp",        Set.of("full", "architect", "pm", "product-analyst")),
         Map.entry("actor",     Set.of("full", "architect", "pm")),
+        // Проектный актор — то же семейство прав, что uc/feature/pain/gain, а не
+        // что "actor" выше. Разница осмысленная: "actor" правит агентную ЛИЧНОСТЬ
+        // (client_id, владелец, цепочка RBAC) и product-analyst туда не пускают;
+        // здесь же описание того, кто действует в сценарии, — работа ровно того
+        // же слоя, что сами сценарии. Держать его строже, чем UC, где этот актор
+        // и упоминается, значило бы закрыть половину одной работы.
+        //
+        // Строка обязательна: без неё семейство «вне матрицы» и пропускается
+        // ЛЮБОМУ профилю (см. allowed == null ниже) — тихо и с одной info-строкой
+        // в логе. Отсутствие правила читалось бы как отсутствие доступа, а
+        // означало бы обратное.
+        Map.entry("project-actor", Set.of("full", "architect", "pm", "product-analyst")),
         // ── Прочее из README, чего тоже не было ──────────────────────────────
         Map.entry("component", Set.of("full", "architect")),
         // tech СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий

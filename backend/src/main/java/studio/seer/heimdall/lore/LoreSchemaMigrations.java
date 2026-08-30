@@ -737,7 +737,50 @@ final class LoreSchemaMigrations {
             "CREATE PROPERTY ClRoutineMetric.not_measured_reason IF NOT EXISTS STRING",
             // отметка времени на самой метрике: run_date есть, но пустует у 56
             // строк. Отдельное поле не заводим — чинится путь записи, а не схема
-            "CREATE PROPERTY ClRoutineMetric.model     IF NOT EXISTS STRING"))
+            "CREATE PROPERTY ClRoutineMetric.model     IF NOT EXISTS STRING")),
+
+        // Развод акторов: проектируемая роль отдельно от агентной ЛИЧНОСТИ.
+        //
+        // ЧТО БЫЛО. KnowActor отвечал на два разных вопроса сразу. Как вершина
+        // продуктового слоя он описывал, кто пользуется системой (HAS_ACTOR из
+        // сценариев, FELT_BY у болей, DESIRED_BY у выгод, PERFORMED_BY у работ).
+        // И он же был НЕСУЩИМ для прав: ProjectRbacService резолвит владельца
+        // запросом `SELECT out('OWNED_BY').kc_sub FROM KnowActor WHERE
+        // kind='agent' AND client_id=:cid`, то есть цепочка прав начиналась в
+        // реестре описаний.
+        //
+        // ЧЕМ ЭТО АУКНУЛОСЬ. У заведения актора появился проектный RBAC-гейт,
+        // которого нет ни у фич, ни у сценариев: создание актора могло создать
+        // личность. Владелец 30.08.2026 упёрлась в отказ на описательной работе
+        // («в full-сессии не даёт завести акторов для UC и фич») — механизм для
+        // прав резал проектирование.
+        //
+        // РЕШЕНИЕ ВЛАДЕЛЬЦА (30.08.2026): «MCP, RBAC остаётся на старой ноде,
+        // весь бизнес-анализ переезжает на новую». KnowActor остаётся личностью
+        // и RBAC не трогается вовсе; описательная сторона уезжает в новый тип.
+        //
+        // РАЗРЕЗ ЧИСТЫЙ — измерено перед миграцией, а не предположено: 10 вершин
+        // без client_id держат ВСЕ 85 проектных рёбер, 7 вершин с client_id
+        // держат только OWNED_BY (7) и LOGGED_BY (55). Ни одна вершина не нужна
+        // обеим сторонам, поэтому двойники не заводятся.
+        new Step(30, 17, "project_actor_split", List.of(
+            "CREATE VERTEX TYPE KnowProjectActor IF NOT EXISTS",
+            "CREATE PROPERTY KnowProjectActor.actor_id IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectActor.name     IF NOT EXISTS STRING",
+            // kind — ОПИСАТЕЛЬНЫЙ признак: human-role | system | automation.
+            //
+            // `agent` переименован в `automation` при переносе (решение владельца
+            // 30.08.2026). Иначе слово `agent` осталось бы в ДВУХ реестрах: в
+            // KnowActor как учётная запись с client_id и владельцем, здесь — как
+            // роль агента в сценарии. Тип вершины их различает, человек нет —
+            // та же ловушка, что `architect` как роль проекта против `architect`
+            // как профиля агента. Переименование едет попутно: миграция и так
+            // переписывает эти строки, отдельно потом стоило бы своего деплоя.
+            "CREATE PROPERTY KnowProjectActor.kind     IF NOT EXISTS STRING",
+            "CREATE PROPERTY KnowProjectActor.body_md  IF NOT EXISTS STRING",
+            // UNIQUE: идентификатор роли — ключ, по которому её ищут ссылки и
+            // повторный прогон миграции. Дубль означал бы две правды об одной роли.
+            "CREATE INDEX IF NOT EXISTS ON KnowProjectActor (actor_id) UNIQUE"))
     );
 
     /**
@@ -832,6 +875,11 @@ final class LoreSchemaMigrations {
         new FtIndex("ftKnowGain",        "KnowGain",        List.of("title", "body_md", "metric_md")),
         new FtIndex("ftKnowJob",         "KnowJob",         List.of("title", "body_md")),
         new FtIndex("ftKnowActor",       "KnowActor",       List.of("name", "body_md")),
+        // AC-03: описательные акторы уехали в свой тип — вместе с ними обязан
+        // уехать и полнотекстовый индекс. Без этой строки поиск по акторам
+        // перестал бы находить ровно те 10 вершин, ради которых развод и делался,
+        // и выглядело бы это как «таких акторов нет», а не как «искали не там».
+        new FtIndex("ftKnowProjectActor", "KnowProjectActor", List.of("name", "body_md")),
         new FtIndex("ftKnowRelease",     "KnowRelease",     List.of("description_md")),
 
         // ── V12: добор по аудиту схемы ──────────────────────────────────────

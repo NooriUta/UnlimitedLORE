@@ -54,7 +54,22 @@ describe('registerLoreWrite', () => {
     //   журнал сессий агентов; отдельная вершина, не поле на KnowActor)
     // + quality_check (QUAL-7, ADR-LORE-039 — вердикт полноты пачкой БЕЗ записи;
     //   второй способ вызова того же линтера, что отвечает на write-пути)
-    expect(names).toHaveLength(80);
+    // + project_actor_new (AC-02, ADR-LORE-041 §4 — KnowProjectActor: актор
+    //   ПРОЕКТИРУЕМОЙ части. Отдельный инструмент, а не флаг у actor_new:
+    //   actor_new заводит агентную личность со всей цепочкой RBAC, и общий
+    //   вход с переключателем вернул бы ту самую неоднозначность, из-за
+    //   которой у описания акторов появился проектный RBAC-гейт)
+    expect(names).toHaveLength(81);
+  });
+
+  it('registers project_actor_new separately from actor_new (ADR-LORE-041 §4)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    // Оба обязаны существовать. Один вместо другого означал бы не переезд, а
+    // подмену: личности и описательные роли живут в разных типах вершин, и
+    // потеря любого из входов оставила бы одну из сторон без записи.
+    expect(names).toContain('project_actor_new');
+    expect(names).toContain('actor_new');
   });
 
   it('registers actor_link (MT-11 — FILLS_ROLE, agent-to-role pairing)', () => {
