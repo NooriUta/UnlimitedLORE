@@ -802,23 +802,43 @@ public class LoreSchemaMigrationRunner {
     }
 
     /**
-     * Типы, у которых принадлежность компоненту жила ПОЛЕМ, и ключ, по которому
-     * такую запись видно в логе. Порядок — по величине расхождения на проде,
-     * чтобы самое крупное шло первым и было видно сразу.
+     * Тип, его ключ и КАКИМ ребром он связан с компонентом.
+     *
+     * @param entityToComponent {@code true} — ребро идёт ОТ записи К компоненту
+     *        ({@code BELONGS_TO}); {@code false} — наоборот, от компонента к
+     *        записи ({@code DOCUMENTED_IN} у спек: «компонент документирован в
+     *        спеке»). Направление читается слайсами буквально, поэтому обратное
+     *        ребро для них не существует.
+     */
+    record ComponentLink(String type, String idField, String edge, boolean entityToComponent) {}
+
+    /**
+     * Типы, у которых принадлежность компоненту жила ПОЛЕМ {@code component_id}.
+     *
+     * <p><b>Ребро у спек другое, и это не мелочь.</b> Первый замер шёл по
+     * {@code BELONGS_TO} для всех типов и дал у спек 184 «поля без ребра». Число
+     * неверно: паспорт компонента читает спеки через {@code DOCUMENTED_IN}
+     * (сумма по компонентам — 352 из 390 спек), то есть они в основном связаны,
+     * просто другим ребром. Достроить им {@code BELONGS_TO} значило бы завести
+     * ТРЕТЬЕ представление там, где боремся со вторым.
+     *
+     * <p>Отсюда правило: канонично не «ребро вообще», а ребро, которое читают
+     * слайсы этого типа. Универсального ответа здесь нет, и делать вид, что
+     * есть, — способ размножить ту же болезнь под видом лечения.
      *
      * <p>{@code KnowTask} в списке при шести строках расхождения не ради этих
      * шести: пропустить тип значило бы оставить исключение, о котором придётся
-     * помнить, — а гейт NM-04 всё равно считает по всем типам, и невключённый
-     * тип светился бы в нём вечно.
+     * помнить, — а гейт NM-04 считает по всем типам, и невключённый тип светился
+     * бы в нём вечно.
      */
-    private static final Map<String, String> COMPONENT_FIELD_TYPES = new LinkedHashMap<>(Map.of(
-        "KnowDecision", "decision_id",
-        "KnowSpec",     "spec_id",
-        "KnowDoc",      "doc_id",
-        "KnowQuestion", "question_id",
-        "KnowADR",      "adr_id",
-        "QualityGate",  "gate_id",
-        "KnowTask",     "task_uid"));
+    private static final List<ComponentLink> COMPONENT_FIELD_TYPES = List.of(
+        new ComponentLink("KnowDecision", "decision_id", "BELONGS_TO",    true),
+        new ComponentLink("KnowDoc",      "doc_id",      "BELONGS_TO",    true),
+        new ComponentLink("KnowQuestion", "question_id", "BELONGS_TO",    true),
+        new ComponentLink("KnowADR",      "adr_id",      "BELONGS_TO",    true),
+        new ComponentLink("QualityGate",  "gate_id",     "BELONGS_TO",    true),
+        new ComponentLink("KnowTask",     "task_uid",    "BELONGS_TO",    true),
+        new ComponentLink("KnowSpec",     "spec_id",     "DOCUMENTED_IN", false));
 
     /**
      * NM-02: довести рёбра {@code BELONGS_TO} до полей {@code component_id}.
@@ -855,9 +875,16 @@ public class LoreSchemaMigrationRunner {
         int totalCreated = 0, totalAlready = 0;
         List<String> dangling = new ArrayList<>();
 
-        for (Map.Entry<String, String> e : COMPONENT_FIELD_TYPES.entrySet()) {
-            String type = e.getKey(), idField = e.getValue();
+        for (ComponentLink link : COMPONENT_FIELD_TYPES) {
+            String type = link.type(), idField = link.idField();
             if (!typeExists(type)) continue;   // тип мог не дожить до этой версии
+
+            // Направление ребра у типов разное, и читать надо ту же сторону,
+            // которую читают слайсы: спека связана ВХОДЯЩИМ DOCUMENTED_IN от
+            // компонента, остальные — исходящим BELONGS_TO к компоненту.
+            String traverse = link.entityToComponent()
+                ? "out('" + link.edge() + "').component_id"
+                : "in('"  + link.edge() + "').component_id";
 
             // Берём ВСЕ строки с непустым полем, а не только «без единого ребра»:
             // у записи может быть ребро на ДРУГОЙ компонент, и тогда связь,
@@ -866,7 +893,7 @@ public class LoreSchemaMigrationRunner {
             // которая уезжала в поле и не доезжала до ребра.
             List<Map<String, Object>> rows = ingest.queryPublic(
                 "SELECT " + idField + " AS id, component_id, "
-                + "out('BELONGS_TO').component_id AS linked "
+                + traverse + " AS linked "
                 + "FROM " + type + " WHERE component_id IS NOT NULL AND component_id <> ''", Map.of());
 
             int created = 0, already = 0;
@@ -881,10 +908,11 @@ public class LoreSchemaMigrationRunner {
                 }
                 // String.format, не именованные параметры: в этой грамматике
                 // CREATE EDGE с :param молча не подставляет (см. соседние шаги).
-                exec(String.format(
-                    "CREATE EDGE BELONGS_TO FROM (SELECT FROM %s WHERE %s = '%s') "
-                    + "TO (SELECT FROM LoreComponent WHERE component_id = '%s') IF NOT EXISTS",
-                    type, idField, esc(id), esc(want)));
+                String entity = String.format("(SELECT FROM %s WHERE %s = '%s')", type, idField, esc(id));
+                String comp = String.format("(SELECT FROM LoreComponent WHERE component_id = '%s')", esc(want));
+                exec(String.format("CREATE EDGE %s FROM %s TO %s IF NOT EXISTS", link.edge(),
+                    link.entityToComponent() ? entity : comp,
+                    link.entityToComponent() ? comp : entity));
                 created++;
             }
             LOG.infof("[LORE MIGRATE] V31: %-13s строк с полем %4d, ребро добавлено %4d, уже было %4d",
@@ -909,12 +937,13 @@ public class LoreSchemaMigrationRunner {
         // мерили до шага. Отличие от простого «упало/не упало» в том, что здесь
         // видно ИМЕННО остаток — и он обязан объясняться списком выше.
         int leftover = 0;
-        for (Map.Entry<String, String> e : COMPONENT_FIELD_TYPES.entrySet()) {
-            if (!typeExists(e.getKey())) continue;
+        for (ComponentLink link : COMPONENT_FIELD_TYPES) {
+            if (!typeExists(link.type())) continue;
+            String side = (link.entityToComponent() ? "out('" : "in('") + link.edge() + "')";
             List<Map<String, Object>> n = ingest.queryPublic(
-                "SELECT count(*) AS n FROM " + e.getKey()
+                "SELECT count(*) AS n FROM " + link.type()
                 + " WHERE component_id IS NOT NULL AND component_id <> '' "
-                + "AND out('BELONGS_TO').size() = 0", Map.of());
+                + "AND " + side + ".size() = 0", Map.of());
             leftover += n.isEmpty() ? 0 : ((Number) n.get(0).getOrDefault("n", 0)).intValue();
         }
         LOG.infof("[LORE MIGRATE] V31: осталось записей с полем и без единого ребра: %d "
