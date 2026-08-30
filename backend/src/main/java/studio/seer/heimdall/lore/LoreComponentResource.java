@@ -123,7 +123,7 @@ public class LoreComponentResource extends LoreResourceBase {
             // Вердикт полноты (ADR-LORE-039): голый component_id в списках
             // нечитаем, а без области компонент не ложится в группировку.
             WorkQuality.Result quality = componentQuality(req.component_id());
-            if (quality != null) out.put("quality", quality);
+            if (quality != null) out.put("quality", WorkQuality.compact(quality));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT CREATE] %s: %s", req.component_id(), e.getMessage());

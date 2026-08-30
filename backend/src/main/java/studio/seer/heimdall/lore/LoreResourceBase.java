@@ -304,6 +304,78 @@ public abstract class LoreResourceBase {
      * @return {@code true} — ребро есть (создано сейчас или было раньше);
      *         {@code false} — компонент не зарегистрирован, связь НЕ создана
      */
+    /**
+     * Есть ли сейчас ребро между двумя концами (ADR-LORE-043).
+     *
+     * <p>В базовом классе, а не по месту: пробу нужно делать на КАЖДОМ пути
+     * связывания и снятия, а шаблон, размноженный по шести ресурсам, разойдётся
+     * — и разойдётся молча, потому что расхождение проб выглядит как разница в
+     * данных.
+     *
+     * <p>Сверка не удалась — отвечаем «нет». Врать в сторону «уже было» нельзя:
+     * это скрыло бы пропажу конца, то есть настоящую ошибку.
+     */
+    boolean edgeExists(String edgeType, String outField, Object outValue,
+                       String inField, Object inValue) {
+        if (outValue == null || inValue == null) return false;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT count(*) AS n FROM " + edgeType
+                + " WHERE @out." + outField + " = :o AND @in." + inField + " = :i",
+                Map.of("o", outValue, "i", inValue));
+            return !rows.isEmpty()
+                && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Есть ли у вершины хоть одно исходящее ребро такого типа.
+     *
+     * <p>Нужно там, где вызов сначала СНОСИТ все рёбра, а потом ставит новое
+     * (перепривязка). Вопрос «был ли родитель вообще» и вопрос «был ли именно
+     * этот» — разные, и после сноса оба отвечают «нет».
+     */
+    boolean anyEdgeFrom(String edgeType, String outField, Object outValue) {
+        if (outValue == null) return false;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT count(*) AS n FROM " + edgeType + " WHERE @out." + outField + " = :o",
+                Map.of("o", outValue));
+            return !rows.isEmpty()
+                && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Ответ связывания по ADR-LORE-043 — с исходом, выведенным из ФАКТА.
+     *
+     * <p>{@code hadBefore} берётся ДО записи, и это не перестраховка. Исход,
+     * выведенный из результата {@code CREATE EDGE}, зависит от поведения
+     * движка: он возвращает пустоту и когда связь уже была, и когда конца нет,
+     * — а на повторе может вернуть и строку. Признак доказывает отсутствие
+     * ошибки, но не факт записи, и подменять им факт нельзя.
+     */
+    Response linkOutcome(boolean hadBefore, Map<String, Object> base, boolean created,
+                         String edgeType, String outField, Object outValue,
+                         String inField, Object inValue, String what) {
+        if (hadBefore) return noStore(Response.ok(LoreOutcome.link(base, false, true, what)));
+        boolean exists = created || edgeExists(edgeType, outField, outValue, inField, inValue);
+        return noStore(Response.ok(LoreOutcome.link(base, exists, false, what)));
+    }
+
+    /**
+     * Ответ снятия связи. {@code had} — проба ДО удаления: после него она
+     * бессмысленна, ребра нет в обоих случаях, и «снято» стало бы утверждением
+     * без факта.
+     */
+    Response unlinkOutcome(Map<String, Object> base, boolean had) {
+        return noStore(Response.ok(LoreOutcome.unlink(base, had)));
+    }
+
     boolean linkComponentEdge(String type, String idField, String id, String componentId) {
         if (id == null || id.isBlank() || componentId == null || componentId.isBlank()) return true;
         @SuppressWarnings("unchecked")

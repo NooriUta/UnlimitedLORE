@@ -424,6 +424,7 @@ public class LoreSchemaMigrationRunner {
         // идемпотентен, повторный проход по уже обработанным безвреден.
         if (version == 31 || version == 33) backfillComponentEdges();
         if (version == 34) dropComponentField();
+        if (version == 36) backfillTaskRoleEdges();
         if (version == 28) recreateFtIndexes();
     }
 
@@ -1079,6 +1080,130 @@ public class LoreSchemaMigrationRunner {
         }
         LOG.infof("[LORE MIGRATE] V34: поле component_id снято (значения у %d типов, объявление у %d); "
             + "связанных записей %d, до и после совпало", cleared, dropped, edgesAfter);
+    }
+
+    /** Поле задачи → роль на ребре. */
+    private static final Map<String, String> ROLE_FIELDS = new LinkedHashMap<>(Map.of(
+        "author_agent",   TaskRole.AUTHOR,
+        "executor_agent", TaskRole.EXECUTOR,
+        "reviewer_agent", TaskRole.REVIEWER));
+
+    /**
+     * TR-03: довести рёбра ролей до полей (ADR-LORE-042).
+     *
+     * <p><b>Шаг только ДОБАВЛЯЕТ.</b> Поля остаются нетронутыми: пока обе правды
+     * держатся синхронно, работу можно остановить на любом шаге без потерь.
+     * Снятие полей — отдельный шаг и последний.
+     *
+     * <p><b>Несопоставимое НЕ угадывается.</b> Сессии, проекты и проза (замер:
+     * 438 записей) остаются в поле без ребра, и их число печатается по группам.
+     * Ноль в этом счётчике был бы подозрителен — он означал бы, что шаг
+     * сопоставил то, о чём решения не было.
+     *
+     * <p><b>Идемпотентность обязательна:</b> ledger пишется ПОСЛЕ java-части,
+     * поэтому падение в середине даёт повторный прогон по частично обработанным
+     * данным. Ребро ставится только там, где активного ребра этой роли ещё нет.
+     */
+    private void backfillTaskRoleEdges() {
+        if (!typeExists("KnowTask")) {
+            LOG.info("[LORE MIGRATE] V36: типа KnowTask нет — свежая БД, доводить нечего");
+            return;
+        }
+
+        // Личности, на которые вообще можно сослаться. Спрашиваем граф, а не
+        // доверяем таблице: если личность переименовали или снесли, ребро
+        // молча не создастся (CREATE EDGE с пустым TO — тихий no-op), и мы
+        // получили бы «добавлено 0» под видом успеха.
+        Set<String> agents = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT actor_id FROM KnowActor", Map.of())) {
+            String v = str(r.get("actor_id"));
+            if (v != null) agents.add(v);
+        }
+        Set<String> users = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT display_name FROM KnowUser", Map.of())) {
+            String v = str(r.get("display_name"));
+            if (v != null) users.add(v);
+        }
+
+        String now = Instant.now().toString();
+        int created = 0, already = 0, unmapped = 0, missingIdentity = 0;
+        Map<String, Integer> unmappedByValue = new LinkedHashMap<>();
+
+        List<Map<String, Object>> tasks = ingest.queryPublic(
+            "SELECT task_uid, author_agent, executor_agent, reviewer_agent FROM KnowTask", Map.of());
+
+        for (Map<String, Object> t : tasks) {
+            String uid = str(t.get("task_uid"));
+            if (uid == null || uid.isBlank()) continue;
+
+            for (Map.Entry<String, String> fr : ROLE_FIELDS.entrySet()) {
+                String raw = str(t.get(fr.getKey()));
+                if (raw == null || raw.isBlank()) continue;
+
+                TaskRoleMapping.Target target = TaskRoleMapping.of(raw);
+                if (target == null) {
+                    unmapped++;
+                    unmappedByValue.merge(raw, 1, Integer::sum);
+                    continue;
+                }
+
+                String vertexType = target.isAgent() ? "KnowActor" : "KnowUser";
+                String keyField = target.isAgent() ? "actor_id" : "display_name";
+                Set<String> known = target.isAgent() ? agents : users;
+                if (!known.contains(target.identity())) {
+                    // Личность из таблицы не найдена в графе. Молчать нельзя:
+                    // ребро не создастся, а счётчик «добавлено» будет расти за
+                    // счёт других строк и скроет пропажу.
+                    missingIdentity++;
+                    continue;
+                }
+
+                String role = fr.getValue();
+                List<Map<String, Object>> exists = ingest.queryPublic(
+                    "SELECT count(*) AS n FROM ROLE_HELD_BY "
+                    + "WHERE @out.task_uid = :u AND role = :r AND valid_to IS NULL",
+                    Map.of("u", uid, "r", role));
+                long n = exists.isEmpty() ? 0 : ((Number) exists.get(0).getOrDefault("n", 0)).longValue();
+                if (n > 0) { already++; continue; }
+
+                StringBuilder set = new StringBuilder();
+                set.append(" SET role = '").append(role).append('\'')
+                   .append(", valid_from = '").append(now).append('\'');
+                if (target.profile() != null) set.append(", profile = '").append(target.profile()).append('\'');
+                if (target.model() != null)   set.append(", model = '").append(target.model()).append('\'');
+
+                exec(String.format(
+                    "CREATE EDGE ROLE_HELD_BY FROM (SELECT FROM KnowTask WHERE task_uid = '%s') "
+                    + "TO (SELECT FROM %s WHERE %s = '%s')%s",
+                    esc(uid), vertexType, keyField, esc(target.identity()), set));
+                created++;
+            }
+        }
+
+        LOG.infof("[LORE MIGRATE] V36: рёбер ролей создано %d, уже было %d, "
+            + "не сопоставлено %d (значений %d), личность не найдена %d",
+            created, already, unmapped, unmappedByValue.size(), missingIdentity);
+
+        if (missingIdentity > 0) {
+            // Это НЕ данные, а расхождение таблицы сопоставления с графом:
+            // значение считалось однозначным, а цели нет. Громко, потому что
+            // тихо оно выглядело бы как «нечего доводить».
+            LOG.warnf("[LORE MIGRATE] V36: %d значений сопоставлены на личность, которой НЕТ в "
+                + "графе — таблица TaskRoleMapping разошлась с реестром личностей", missingIdentity);
+        }
+
+        // Остаток печатается ПОИМЁННО и с числами: это рабочий список для
+        // разбора, а не строка отчёта. Верхние 40 — чтобы лог оставался
+        // читаемым; полный список даёт срез.
+        int shown = 0;
+        StringBuilder rest = new StringBuilder();
+        for (Map.Entry<String, Integer> e : unmappedByValue.entrySet()) {
+            if (shown++ >= 40) break;
+            rest.append(e.getKey()).append(" ×").append(e.getValue()).append("; ");
+        }
+        LOG.infof("[LORE MIGRATE] V36: остались в поле (сессии, проекты, проза): %s", rest);
     }
 
     private boolean typeExists(String name) {

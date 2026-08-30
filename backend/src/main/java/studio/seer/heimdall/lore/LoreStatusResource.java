@@ -598,19 +598,40 @@ public class LoreStatusResource extends LoreResourceBase {
         if (req.entity_type() == null || req.status() == null)
             return badParams("entity_type and status required");
         int updated = 0;
+        int unchanged = 0;
         List<String> errors = new java.util.ArrayList<>();
         for (String id : req.ids()) {
             try {
                 var body = new StatusUpdateRequest(req.entity_type(), id, req.status());
                 Response r = updateStatus(body, "admin").await().indefinitely();
-                if (r.getStatus() == 200) updated++;
-                else errors.add(id + ": HTTP " + r.getStatus());
+                if (r.getStatus() == 200) {
+                    // «Уже был такой статус» и «статус сменили» — разные исходы, и до
+                    // сих пор они складывались в одно число. «Обновлено 3» не
+                    // отличало работу от повтора (ADR-LORE-043).
+                    if (r.getEntity() instanceof Map<?, ?> m
+                            && m.get("old_status") != null
+                            && m.get("old_status").equals(m.get("new_status"))) {
+                        unchanged++;
+                    } else {
+                        updated++;
+                    }
+                } else {
+                    errors.add(id + ": HTTP " + r.getStatus());
+                }
             } catch (Exception e) {
                 errors.add(id + ": " + e.getMessage());
             }
         }
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("ok", errors.isEmpty()); out.put("updated", updated);
+        out.put("ok", errors.isEmpty());
+        // Три числа вместо одного, и ноль печатается наравне с ненулём:
+        // отсутствие ошибок не должно быть неотличимо от отсутствия проверки.
+        out.put("outcome", errors.isEmpty()
+            ? (updated > 0 ? LoreOutcome.UPDATED : LoreOutcome.UNCHANGED)
+            : LoreOutcome.NOOP);
+        out.put("updated", updated);
+        out.put("unchanged", unchanged);
+        out.put("failed", errors.size());
         if (!errors.isEmpty()) out.put("errors", errors);
         return noStore(Response.ok(out));
     }
