@@ -37,6 +37,13 @@ jobs:
   # Зато сравнение делается на месте, без переноса файлов между заданиями.
   regress:
     runs-on: ubuntu-latest
+    # Версии заданы ОДИН раз на задание. Раньше выражение
+    # `inputs.X || 'версия'` повторялось шестью строками ниже, и бамп означал
+    # шесть правок, любую из которых можно пропустить — а пропуск выглядел бы
+    # не ошибкой, а прогоном не той пары версий (ARC281-08).
+    env:
+      BASELINE: ${{ inputs.baseline || '26.7.2' }}
+      CANDIDATE: ${{ inputs.candidate || '26.8.1' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -51,9 +58,6 @@ jobs:
       # Связь по имени контейнера в общей docker-сети: задание живёт в своём
       # контейнере, docker здесь хостовый (DooD), поэтому localhost не годится.
       - name: Прогон обеих версий
-        env:
-          BASELINE: ${{ inputs.baseline || '26.7.2' }}
-          CANDIDATE: ${{ inputs.candidate || '26.8.1' }}
         run: |
           set -eu
           NET=$(docker inspect "$(hostname)" \
@@ -159,9 +163,9 @@ jobs:
         run: |
           rc=0
           bash .github/scripts/db-regression-diff-known.sh \
-            "${{ inputs.baseline || '26.7.2' }}" "result-${{ inputs.baseline || '26.7.2' }}.tsv" || rc=1
+            "$BASELINE" "result-$BASELINE.tsv" || rc=1
           bash .github/scripts/db-regression-diff-known.sh \
-            "${{ inputs.candidate || '26.8.1' }}" "result-${{ inputs.candidate || '26.8.1' }}.tsv" \
+            "$CANDIDATE" "result-$CANDIDATE.tsv" \
             || echo "::warning::кандидат разошёлся с известной картиной — это повод посмотреть, а не повод падать"
           exit "$rc"
 
@@ -188,9 +192,6 @@ jobs:
       # именно здесь (ровно так однажды пропала форма DELETE EDGE).
       - name: Сравнить версии
         if: always()
-        env:
-          BASELINE: ${{ inputs.baseline || '26.7.2' }}
-          CANDIDATE: ${{ inputs.candidate || '26.8.1' }}
         run: |
           a="result-$BASELINE.tsv"; b="result-$CANDIDATE.tsv"
           if [ ! -s "$a" ] || [ ! -s "$b" ]; then
