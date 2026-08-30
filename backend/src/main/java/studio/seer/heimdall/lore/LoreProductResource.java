@@ -1023,15 +1023,23 @@ public class LoreProductResource extends LoreResourceBase {
 
             boolean linked = false;
             if (!remove) {
+                // AC-03: цель ребра — РОЛЬ, а она после развода живёт в
+                // KnowProjectActor. FILLS_ROLE стало межтиповым, и это не
+                // побочный эффект, а точная запись смысла: личность исполняет
+                // описанную роль. Оставить обе стороны на KnowActor значило бы
+                // искать роль там, где её больше нет, и отвечать «не найдена»
+                // про каждую существующую.
                 List<Map<String, Object>> roleRows = ingest.queryPublic(
-                    "SELECT actor_id FROM KnowActor WHERE actor_id = :id", Map.of("id", req.target_id()));
+                    "SELECT actor_id FROM KnowProjectActor WHERE actor_id = :id", Map.of("id", req.target_id()));
                 if (roleRows == null || roleRows.isEmpty())
-                    return badParams("actor '" + req.target_id() + "' (роль) не найден — заведите через actor_new");
+                    return badParams("роль '" + req.target_id() + "' не найдена среди проектных акторов "
+                        + "(KnowProjectActor) — заведите через project_actor_new. Если вы искали агентную "
+                        + "личность, то FILLS_ROLE ведёт не к ней: связка идёт ОТ личности К роли");
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE FILLS_ROLE FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
-                        "TO (SELECT FROM KnowActor WHERE actor_id=:t) IF NOT EXISTS",
+                        "TO (SELECT FROM KnowProjectActor WHERE actor_id=:t) IF NOT EXISTS",
                         Map.of("id", req.actor_id(), "t", req.target_id())))
                     .await().indefinitely().result();
                 linked = created != null && !created.isEmpty();
@@ -1198,17 +1206,17 @@ public class LoreProductResource extends LoreResourceBase {
                 case "felt_by" -> {      // KnowPain -> KnowActor: чья это боль
                     edge = "FELT_BY";
                     fromSql = "(SELECT FROM KnowPain WHERE pain_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 case "desired_by" -> {   // KnowGain -> KnowActor: кто желает выгоду
                     edge = "DESIRED_BY";
                     fromSql = "(SELECT FROM KnowGain WHERE gain_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 case "performed_by" -> { // KnowJob -> KnowActor: чья это работа
                     edge = "PERFORMED_BY";
                     fromSql = "(SELECT FROM KnowJob WHERE job_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 case "blocks" -> {       // KnowPain -> KnowJob: боль мешает работе
                     edge = "BLOCKS";
@@ -1347,7 +1355,7 @@ public class LoreProductResource extends LoreResourceBase {
                 case "actor" -> { // D12: HAS_ACTOR — multi, UC -> KnowActor
                     edge = "HAS_ACTOR";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                 }
                 // PL-10 (D14): компонент у сценария — ПРЯМОЙ, а не только через
                 // родителя. Ядро ценности слоя — тройка «роль × компонент ×
@@ -1938,7 +1946,12 @@ public class LoreProductResource extends LoreResourceBase {
      */
     private CheckOutcome checkActorLoadDead() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowActor", Map.of());
+            // AC-03: считаем по проектным акторам. Раньше сюда попадали и семь
+            // агентных личностей — у них ноль сценариев по определению, и каждая
+            // выдавалась находкой «роль без единого сценария». Семь постоянных
+            // ложных находок приучают пролистывать весь список, то есть проверка
+            // тем вернее молчит, чем громче кричит.
+            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowProjectActor", Map.of());
 
         List<Map<String, Object>> findings = new ArrayList<>();
         int found = 0;

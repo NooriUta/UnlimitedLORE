@@ -546,7 +546,8 @@ export function registerLoreWrite(server: McpServer): void {
     'Link (or unlink) a KnowUseCase. rel="task": REALIZES edge (KnowTask→UC), target_id=full task_uid — ' +
       'REQUIRED discipline for tasks with work_class=uc (advisory, D3). rel="adr"/"decision": TRACED_TO ' +
       'edge (UC→justification) — OPTIONAL by design (D9). rel="actor": HAS_ACTOR edge (MULTI, D12) to a ' +
-      'KnowActor (create via actor_new first). rel="includes"/"extends": UC→UC graph relations (D13): ' +
+      'KnowProjectActor (create via project_actor_new first — NOT actor_new, that one writes agent identities). ' +
+      'rel="includes"/"extends": UC→UC graph relations (D13): ' +
       'includes = mandatory sub-scenario, extends = variant. rel="relieves"/"delivers" (ADR-LORE-032 §2): ' +
       'the UC actually relieves a KnowPain / delivers a KnowGain — these edges are what CLOSE the VP fit ' +
       'the feature only claimed via feature_link(pain|gain). rel="performs" (ADR-LORE-032 §2): the UC actually ' +
@@ -697,7 +698,8 @@ export function registerLoreWrite(server: McpServer): void {
   // не найден — не тихий no-op.
   definePostTool(server, {
     name: 'actor_link',
-    description: 'Link (or unlink) a KnowActor(kind=agent) to the KnowActor(kind=human-role) whose work it ' +
+    description: 'Link (or unlink) a KnowActor(kind=agent) — an agent IDENTITY — to the KnowProjectActor ' +
+      '(the design-side role, created via project_actor_new) whose work it ' +
       'performs — FILLS_ROLE edge (D-VP-ROLE-AGENT-PAIR). The pair is checked in product/self-check ' +
       '(actor_pairs): the two actors\' PERFORMED_BY job sets must match — a mismatch is a real finding, ' +
       'not a silent pass. Reassigning an agent replaces its previous FILLS_ROLE edge, it does not add a ' +

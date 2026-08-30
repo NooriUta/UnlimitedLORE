@@ -875,6 +875,11 @@ final class LoreSchemaMigrations {
         new FtIndex("ftKnowGain",        "KnowGain",        List.of("title", "body_md", "metric_md")),
         new FtIndex("ftKnowJob",         "KnowJob",         List.of("title", "body_md")),
         new FtIndex("ftKnowActor",       "KnowActor",       List.of("name", "body_md")),
+        // AC-03: описательные акторы уехали в свой тип — вместе с ними обязан
+        // уехать и полнотекстовый индекс. Без этой строки поиск по акторам
+        // перестал бы находить ровно те 10 вершин, ради которых развод и делался,
+        // и выглядело бы это как «таких акторов нет», а не как «искали не там».
+        new FtIndex("ftKnowProjectActor", "KnowProjectActor", List.of("name", "body_md")),
         new FtIndex("ftKnowRelease",     "KnowRelease",     List.of("description_md")),
 
         // ── V12: добор по аудиту схемы ──────────────────────────────────────
