@@ -155,7 +155,7 @@ function definePostTool<S extends z.ZodRawShape>(
 // first, then mirror here.
 const LORE_STATUS = z.enum([
   'todo', 'planned', 'active', 'partial', 'done',
-  'blocked', 'high', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
+  'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
 ]);
 
 export function registerLoreWrite(server: McpServer): void {
@@ -402,7 +402,7 @@ export function registerLoreWrite(server: McpServer): void {
       'Upserts by uc_id; parent_uc_id keeps the DECOMPOSES_INTO edge in sync (response carries ' +
       'parent_linked:false when the parent is missing — not a silent no-op, and a cycle is rejected ' +
       'outright). scenario_md/acceptance_md are separate fields; actors are ' +
-      'KnowActor VERTICES (D12, can be several) — attach via uc_link rel="actor", never a free-text string. ' +
+      'KnowProjectActor VERTICES (D12, can be several) — attach via uc_link rel="actor", never a free-text string. ' +
       'UC shipped ⇔ its uc-tasks are done (advisory). Mutates system_aida_lore.',
     schema: {
       uc_id:         z.string().describe('e.g. "UC-GIT-MERGE"'),
@@ -487,7 +487,7 @@ export function registerLoreWrite(server: McpServer): void {
     description: 'Create or update a KnowJob — a customer JOB-TO-BE-DONE as a graph vertex (ADR-LORE-032 §2, ' +
       'Osterwalder VPC). The third pillar of the customer profile: a pain BLOCKS a job, a gain is the SUCCESS_OF ' +
       'a job, and a use case PERFORMS it (uc_link rel="performs"). Whose job it is = vp_link(rel="performed_by") ' +
-      'to a KnowActor. GLOBAL vertex (no project) — the same job is felt across products; product context lives ' +
+      'to a KnowProjectActor. GLOBAL vertex (no project) — the same job is felt across products; product context lives ' +
       'on the edges. Upsert by job_id.',
     schema: {
       job_id:     z.string().describe('e.g. "JOB-RELEASE" (JOB-<slug>) — global, no project prefix required'),
@@ -506,7 +506,7 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'vp_link',
     description: 'Link (or unlink) the CUSTOMER-PROFILE edges of the Value Proposition Canvas (ADR-LORE-032 §2, ' +
-      'Osterwalder). rel="felt_by": a KnowPain is felt by a KnowActor; rel="desired_by": a KnowGain is desired ' +
+      'Osterwalder). rel="felt_by": a KnowPain is felt by a KnowProjectActor; rel="desired_by": a KnowGain is desired ' +
       'by an actor; rel="performed_by": a KnowJob is performed by an actor — these say WHOSE pain/gain/job it is ' +
       '(the segment). rel="blocks": a pain BLOCKS a job; rel="success_of": a gain is the SUCCESS_OF a job — these ' +
       'wire the three pillars into one canvas instead of three loose lists. linked:false = edge NOT created ' +
@@ -619,9 +619,15 @@ export function registerLoreWrite(server: McpServer): void {
 
   definePostTool(server, {
     name: 'actor_new',
-    description: 'Create or update a KnowActor — проектируемая роль приложения (D12): human-role | system | ' +
-      'agent. Upserts by actor_id. Один актор ссылается многими UC (HAS_ACTOR via uc_link rel="actor") — ' +
-      'реестр ролей и карта «сценарии роли» живут на этой вершине. Mutates system_aida_lore.',
+    description: 'Create or update a KnowActor — an agent IDENTITY (ADR-LORE-041 §4): the account behind a writing ' +
+      'session. Carries client_id, its human owner (OWNED_BY) and the session journal (LOGGED_BY); the whole ' +
+      'RBAC chain starts here. kind: human-role | system | agent.\n\n' +
+      'This is NOT the actor of a use case. Who ACTS in a scenario, whose pain it is, who performs a job — ' +
+      'that is KnowProjectActor, written by project_actor_new, and it carries no permissions at all. ' +
+      'Until 30.08.2026 both lived in one vertex, and the consequence was not cosmetic: creating a descriptive ' +
+      'actor had to pass a per-project RBAC gate, so design work was cut by a mechanism written for rights. ' +
+      'Reaching for this tool to describe a scenario role is the exact mistake the split was made to end.\n\n' +
+      'Upserts by actor_id. Mutates system_aida_lore.',
     schema: {
       actor_id: z.string().describe('e.g. "ACT-ADMIN", "ACT-AGENT-SESSION"'),
       name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Администратор LORE"'),

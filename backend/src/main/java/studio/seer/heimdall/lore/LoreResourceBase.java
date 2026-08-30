@@ -39,7 +39,7 @@ public abstract class LoreResourceBase {
     static final Set<String> ENTITY_TYPES =
         Set.of("plan_item", "sprint", "task", "checkpoint", "adr", "phase");
     static final Set<String> PLAN_STATUSES =
-        Set.of("todo", "active", "partial", "done", "blocked", "high", "cancelled",
+        Set.of("todo", "active", "partial", "done", "blocked", "cancelled",
                "planned", "backlog", "design", "ready_for_deploy");
     static final Set<String> ADR_STATUSES =
         Set.of("proposed", "accepted", "draft", "deferred", "superseded");
@@ -54,7 +54,6 @@ public abstract class LoreResourceBase {
         Map.entry("todo",             "⬜ TODO"),
         Map.entry("planned",          "📋 PLANNED"),
         Map.entry("blocked",          "🔴 BLOCKED"),
-        Map.entry("high",             "🔴 P0"),
         Map.entry("cancelled",        "🚫 CANCELLED"),
         Map.entry("ready_for_deploy", "🚀 READY FOR DEPLOY"),
         Map.entry("backlog",          "🟣 BACKLOG"),

@@ -68,7 +68,12 @@ function statusFamily(status: string | null | undefined): StatusFamily {
 }
 
 // Legend ordering + RU labels (legend is built from statuses actually present).
-const STATUS_ORDER = ['active', 'high', 'planned', 'design', 'partial', 'blocked', 'backlog', 'todo', 'done', 'deferred', 'cancelled'];
+// Порядок ПОКАЗА, а не канон: канон задаёт состав, порядок задаём мы.
+// Состав обязан совпадать с planStatuses — сверяется тестом LorePlanBoard.test.
+// До 30.08.2026 расходился в обе стороны: нёс 'deferred' (статус вопроса, не
+// спринта) и терял 'ready_for_deploy' — законный статус, спринт в котором молча
+// исчезал бы из легенды.
+export const STATUS_ORDER = ['active', 'planned', 'design', 'partial', 'ready_for_deploy', 'blocked', 'backlog', 'todo', 'done', 'cancelled'];
 const STATUS_RU: Record<string, string> = {
   active: 'в работе', high: 'важно', planned: 'план', design: 'дизайн', partial: 'частично',
   blocked: 'блок', backlog: 'бэклог', todo: 'не начато', done: 'готово', deferred: 'отложено', cancelled: 'отменено',

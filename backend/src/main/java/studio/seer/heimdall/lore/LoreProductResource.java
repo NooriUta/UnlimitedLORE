@@ -1211,21 +1211,21 @@ public class LoreProductResource extends LoreResourceBase {
             String outField, inField;
             Map<String, Object> p = Map.of("sid", req.source_id(), "tid", req.target_id());
             switch (req.rel()) {
-                case "felt_by" -> {      // KnowPain -> KnowActor: чья это боль
+                case "felt_by" -> {      // KnowPain -> KnowProjectActor: чья это боль
                     edge = "FELT_BY";
                     fromSql = "(SELECT FROM KnowPain WHERE pain_id=:sid)";
                     outField = "pain_id";
                     toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                     inField = "actor_id";
                 }
-                case "desired_by" -> {   // KnowGain -> KnowActor: кто желает выгоду
+                case "desired_by" -> {   // KnowGain -> KnowProjectActor: кто желает выгоду
                     edge = "DESIRED_BY";
                     fromSql = "(SELECT FROM KnowGain WHERE gain_id=:sid)";
                     outField = "gain_id";
                     toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
                     inField = "actor_id";
                 }
-                case "performed_by" -> { // KnowJob -> KnowActor: чья это работа
+                case "performed_by" -> { // KnowJob -> KnowProjectActor: чья это работа
                     edge = "PERFORMED_BY";
                     fromSql = "(SELECT FROM KnowJob WHERE job_id=:sid)";
                     outField = "job_id";
