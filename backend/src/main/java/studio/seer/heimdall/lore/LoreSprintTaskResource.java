@@ -148,6 +148,37 @@ public class LoreSprintTaskResource extends LoreResourceBase {
      * называет произошедшее, {@code reason} — почему. Молчаливого {@code ok:true}
      * на неприменённом назначении здесь быть не может.
      */
+    /**
+     * Кого можно поставить на роль этой задачи (TR-07).
+     *
+     * <p>Отдаётся ТЕМ ЖЕ методом, которым проверяет запись, — иначе форма
+     * предлагала бы один список, а отказ называл другой, и расхождение
+     * обнаружилось бы только в момент отказа. Одна правда о кандидатах, а не
+     * две согласуемые вручную.
+     *
+     * <p>Пустой список — содержательный ответ, а не отсутствие данных: он
+     * означает, что в проекте задачи нет ни одной роли, и чинится это в
+     * админке, а не выбором другого имени. Поэтому он приходит с признаком,
+     * который форме есть что показать.
+     */
+    @jakarta.ws.rs.GET
+    @Path("task/role-candidates")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response taskRoleCandidates(@jakarta.ws.rs.QueryParam("task_uid") String taskUid,
+                                       @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (taskUid == null || taskUid.isBlank()) return badParams("task_uid required");
+        java.util.List<String> people = roleService.peopleOfTaskProject(taskUid);
+        java.util.List<String> agents = roleService.declaredAgents();
+        return noStore(Response.ok(Map.of(
+            "task_uid", taskUid,
+            "people", people,
+            "agents", agents,
+            "project_has_roles", !people.isEmpty())));
+    }
+
     @POST
     @Path("task/role")
     @Consumes(MediaType.APPLICATION_JSON)

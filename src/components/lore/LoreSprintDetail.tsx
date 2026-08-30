@@ -7,7 +7,8 @@ import { MartProse } from '../bench/MartProse';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
-  upsertDictEntry,
+  fetchTaskRoleCandidates,
+  type TaskRoleCandidates,
   type LoreSprintTask, type LorePlanItemStatus, type LoreFileRow,
 } from '../../api/lore';
 import { parseHosts, primaryHost, fileUrl, prUrl, type RepoHost } from './repo-url';
@@ -534,38 +535,65 @@ const mdBox: React.CSSProperties = {
 // список открывался только по случайному клику, а показывал технические коды.
 // Выбор из словаря обязан ВЫГЛЯДЕТЬ как выбор: подпись сверху, русские
 // названия, отдельный пункт для значения, которого в словаре ещё нет.
-function AgentRolePicker({ id, label, value, onChange, hint, warn }: {
+// TR-07 (ADR-LORE-042). Было: выпадающий список из словаря `agent_role` со
+// свободным вводом. Список предлагал РОЛИ — «архитектор», «аналитик», — тогда
+// как поле отвечает на «кто», а свободный ввод принимал что угодно. Отсюда
+// 73 написания на десять заявленных личностей: сессии, проекты и проза в поле,
+// где должна стоять личность.
+//
+// Стало: список заявленных личностей — люди с ролью в проекте ЭТОЙ задачи и
+// агентные личности. Список приходит с бэкенда ТЕМ ЖЕ методом, которым он
+// проверяет запись: иначе форма предлагала бы одно, а отказ называл другое.
+//
+// Свободного ввода больше нет, и это главное изменение. Но значение, которое
+// уже стоит в поле и в список не входит, ПОКАЗЫВАЕТСЯ отдельным пунктом с
+// пометкой: убрать его молча значило бы стереть данные при первом открытии
+// формы — ровно тот способ, которым тихо теряется правда.
+function AgentRolePicker({ id, label, value, onChange, hint, warn, cands }: {
   id: string; label: string; value: string; onChange: (v: string) => void;
-  hint?: string; warn?: string | null;
+  hint?: string; warn?: string | null; cands: TaskRoleCandidates | null;
 }) {
-  const { entries } = useDictionary('agent_role');
-  const known = entries.some(e => e.code === value);
-  // Значение вне словаря — законно (по сохранении оно в словарь и попадёт),
-  // поэтому поле само переключается в ручной ввод, а не молча его теряет.
-  const [custom, setCustom] = useState(!!value && !known);
+  const { t } = useTranslation();
+  const people = cands?.people ?? [];
+  const agents = cands?.agents ?? [];
+  const known = people.includes(value) || agents.includes(value);
   return (
     <label htmlFor={id} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 134 }} title={hint}>
       <span style={{ fontSize: 'var(--fs-2xs)', color: warn ? 'var(--wrn)' : 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
         {label}
       </span>
-      {custom ? (
-        <input
-          id={id} value={value} onChange={e => onChange(e.target.value)}
-          onBlur={() => { if (!value.trim()) setCustom(false); }}
-          placeholder={label} style={{ ...inputStyle, width: 134 }}
-        />
-      ) : (
-        <select
-          id={id} value={known ? value : ''} style={{ ...inputStyle, width: 134 }}
-          onChange={e => {
-            if (e.target.value === 'custom') { onChange(''); setCustom(true); return; }
-            onChange(e.target.value);
-          }}
-        >
-          <option value="">—</option>
-          {entries.map(e => <option key={e.code} value={e.code}>{e.label_ru || e.code}</option>)}
-          <option value={'custom'}>+ своё значение…</option>
-        </select>
+      <select
+        id={id} value={value} style={{ ...inputStyle, width: 134 }}
+        onChange={e => onChange(e.target.value)}
+      >
+        <option value="">—</option>
+        {/* Незаявленное значение видно и выбрано — не стёрто. Пометка говорит,
+            что оно за пределами списка, чтобы «так и было» не читалось как
+            «так и надо». */}
+        {!!value && !known && (
+          <option value={value}>
+            {value} — {t('lore.sprintDetail.task.identityUnknown', 'не заявлен')}
+          </option>
+        )}
+        {people.length > 0 && (
+          <optgroup label={t('lore.sprintDetail.task.identityPeople', 'люди в проекте')}>
+            {people.map(p => <option key={p} value={p}>{p}</option>)}
+          </optgroup>
+        )}
+        {agents.length > 0 && (
+          <optgroup label={t('lore.sprintDetail.task.identityAgents', 'агенты')}>
+            {agents.map(a => <option key={a} value={a}>{a}</option>)}
+          </optgroup>
+        )}
+      </select>
+      {/* Пустой список — содержательный ответ, а не «не загрузилось»: в проекте
+          нет ни одной роли, и чинится это в админке. Без этой подсказки форма
+          выглядела бы сломанной. */}
+      {cands && !cands.project_has_roles && (
+        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)' }}>
+          {t('lore.sprintDetail.task.identityNoProjectRoles',
+             'в проекте задачи нет ни одной роли — выдайте её в админке')}
+        </span>
       )}
       {warn && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--wrn)' }}>{warn}</span>}
     </label>
@@ -612,21 +640,27 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
     finally { setCompBusy(null); }
   }
 
-  const { byCode: agentRoleByCode } = useDictionary('agent_role');
   const { byCode: dictTaskTypeByCode, entries: dictTaskTypes } = useDictionary('task_type');
 
-  // A role typed that isn't in the `agent_role` dictionary yet gets added to it
-  // (is_extensible) so it shows up in every other picker's dropdown from now on.
-  function registerNewRoles(values: string[]) {
-    const seen = new Set<string>();
-    for (const v of values) {
-      const code = v.trim();
-      if (!code || seen.has(code) || agentRoleByCode[code]) continue;
-      seen.add(code);
-      void upsertDictEntry({ dict_type: 'agent_role', code, label_ru: code, is_extensible: true })
-        .catch(() => { /* best-effort — free-text field still works without the dictionary entry */ });
-    }
-  }
+  // TR-07: кандидаты на роли этой задачи. Грузятся при открытии формы, а не
+  // на каждой строке списка: список задач бывает длинным, а нужен он только
+  // тому, кто правит.
+  //
+  // Пополнение словаря `agent_role` набранным текстом отсюда УБРАНО. Оно
+  // выглядело удобством — «набранное станет доступно в следующий раз», — а на
+  // деле было машинкой размножения: каждая опечатка и каждое имя сессии
+  // становились законным пунктом списка, и следующий выбирал уже из мусора.
+  // Так и выросли 73 написания на десять личностей. Плюс словарь называется
+  // РОЛЯМИ, а в поле стоит личность: пополнялся он ответом не на свой вопрос.
+  const [cands, setCands] = useState<TaskRoleCandidates | null>(null);
+  useEffect(() => {
+    if (!editing || cands) return;
+    const ac = new AbortController();
+    fetchTaskRoleCandidates(task.task_uid, ac.signal)
+      .then(setCands)
+      .catch(() => { /* форма остаётся рабочей: список пуст, значение видно */ });
+    return () => ac.abort();
+  }, [editing, cands, task.task_uid]);
 
   async function save() {
     if (busy || !title.trim()) return;
@@ -646,7 +680,6 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
         // что ловит слайс `unlinked_uc_tasks`.
         ucId: workClass === 'uc' ? (ucId.trim() || null) : null,
       });
-      registerNewRoles([author, executor, reviewer]);
       setEditing(false); onChanged();
     }
     catch (e) { onError(e); }
@@ -900,11 +933,11 @@ function TaskLine({ t: task, allComps, onChanged, onError }: {
               free text; new values are registered on save). reviewer must
               differ from executor before the task can reach done (backend gate). */}
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
-            <AgentRolePicker id={`${task.task_uid}-author`} value={author} onChange={setAuthor}
+            <AgentRolePicker id={`${task.task_uid}-author`} value={author} onChange={setAuthor} cands={cands}
               label={t('lore.sprintDetail.task.authorPlaceholder', 'автор')} />
-            <AgentRolePicker id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor}
+            <AgentRolePicker id={`${task.task_uid}-executor`} value={executor} onChange={setExecutor} cands={cands}
               label={t('lore.sprintDetail.task.executorPlaceholder', 'исполнитель')} />
-            <AgentRolePicker id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer}
+            <AgentRolePicker id={`${task.task_uid}-reviewer`} value={reviewer} onChange={setReviewer} cands={cands}
               label={t('lore.sprintDetail.task.reviewerPlaceholder', 'ревьювер')}
               hint={t('lore.sprintDetail.task.reviewerHint', 'Должен отличаться от исполнителя, иначе задача не сможет перейти в done')}
               // Совпадение с исполнителем — жёсткий гейт бэкенда: задача не
