@@ -3,7 +3,7 @@ import { filterActors, actorProjectCounts, ALL_PROJECTS, NO_PROJECT } from './Lo
 
 const ROWS = [
   { actor_id: 'ACT-ARCHITECT', name: 'Архитектор', kind: 'human-role', projects: ['org/lore'] },
-  { actor_id: 'ACT-CLAUDE', name: 'Агент Claude', kind: 'agent', projects: ['org/lore', 'org/aida'] },
+  { actor_id: 'ACT-CLAUDE', name: 'Агент Claude', kind: 'automation', projects: ['org/lore', 'org/aida'] },
   { actor_id: 'ACT-CI', name: 'CI-раннер', kind: 'system', projects: ['org/aida'] },
   // Актор без проектов вовсе — при включённом скоупе его не увидит никто.
   { actor_id: 'ACT-LEGACY', name: 'Без вида', kind: null, projects: [] },
@@ -11,7 +11,7 @@ const ROWS = [
 
 describe('PL-18 · фильтр реестра акторов', () => {
   it('вид отбирает только свои строки', () => {
-    expect(filterActors(ROWS, 'agent', '').map(r => r.actor_id)).toEqual(['ACT-CLAUDE']);
+    expect(filterActors(ROWS, 'automation', '').map(r => r.actor_id)).toEqual(['ACT-CLAUDE']);
   });
 
   it('«все» ничего не отсекает — включая строки без вида', () => {
@@ -26,7 +26,7 @@ describe('PL-18 · фильтр реестра акторов', () => {
     // склеены неверно, текст перебьёт вид и вернётся агент — фильтр при этом
     // выглядит работающим, пока не спросишь его о пересечении.
     expect(filterActors(ROWS, 'human-role', 'claude')).toEqual([]);
-    expect(filterActors(ROWS, 'agent', 'claude').map(r => r.actor_id)).toEqual(['ACT-CLAUDE']);
+    expect(filterActors(ROWS, 'automation', 'claude').map(r => r.actor_id)).toEqual(['ACT-CLAUDE']);
   });
 
   it('текст ищет и по id, и по имени, без учёта регистра и пробелов по краям', () => {
@@ -60,7 +60,7 @@ describe('AL-96 · проектный разрез реестра акторов
   });
 
   it('проект и вид сужают выборку вместе', () => {
-    expect(filterActors(ROWS, 'agent', '', 'org/aida').map(r => r.actor_id)).toEqual(['ACT-CLAUDE']);
+    expect(filterActors(ROWS, 'automation', '', 'org/aida').map(r => r.actor_id)).toEqual(['ACT-CLAUDE']);
     expect(filterActors(ROWS, 'system', '', 'org/lore')).toEqual([]);
   });
 
