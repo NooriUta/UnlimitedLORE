@@ -303,6 +303,78 @@ public abstract class LoreResourceBase {
      * @return {@code true} — ребро есть (создано сейчас или было раньше);
      *         {@code false} — компонент не зарегистрирован, связь НЕ создана
      */
+    /**
+     * Есть ли сейчас ребро между двумя концами (ADR-LORE-043).
+     *
+     * <p>В базовом классе, а не по месту: пробу нужно делать на КАЖДОМ пути
+     * связывания и снятия, а шаблон, размноженный по шести ресурсам, разойдётся
+     * — и разойдётся молча, потому что расхождение проб выглядит как разница в
+     * данных.
+     *
+     * <p>Сверка не удалась — отвечаем «нет». Врать в сторону «уже было» нельзя:
+     * это скрыло бы пропажу конца, то есть настоящую ошибку.
+     */
+    boolean edgeExists(String edgeType, String outField, Object outValue,
+                       String inField, Object inValue) {
+        if (outValue == null || inValue == null) return false;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT count(*) AS n FROM " + edgeType
+                + " WHERE @out." + outField + " = :o AND @in." + inField + " = :i",
+                Map.of("o", outValue, "i", inValue));
+            return !rows.isEmpty()
+                && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Есть ли у вершины хоть одно исходящее ребро такого типа.
+     *
+     * <p>Нужно там, где вызов сначала СНОСИТ все рёбра, а потом ставит новое
+     * (перепривязка). Вопрос «был ли родитель вообще» и вопрос «был ли именно
+     * этот» — разные, и после сноса оба отвечают «нет».
+     */
+    boolean anyEdgeFrom(String edgeType, String outField, Object outValue) {
+        if (outValue == null) return false;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT count(*) AS n FROM " + edgeType + " WHERE @out." + outField + " = :o",
+                Map.of("o", outValue));
+            return !rows.isEmpty()
+                && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Ответ связывания по ADR-LORE-043 — с исходом, выведенным из ФАКТА.
+     *
+     * <p>{@code hadBefore} берётся ДО записи, и это не перестраховка. Исход,
+     * выведенный из результата {@code CREATE EDGE}, зависит от поведения
+     * движка: он возвращает пустоту и когда связь уже была, и когда конца нет,
+     * — а на повторе может вернуть и строку. Признак доказывает отсутствие
+     * ошибки, но не факт записи, и подменять им факт нельзя.
+     */
+    Response linkOutcome(boolean hadBefore, Map<String, Object> base, boolean created,
+                         String edgeType, String outField, Object outValue,
+                         String inField, Object inValue, String what) {
+        if (hadBefore) return noStore(Response.ok(LoreOutcome.link(base, false, true, what)));
+        boolean exists = created || edgeExists(edgeType, outField, outValue, inField, inValue);
+        return noStore(Response.ok(LoreOutcome.link(base, exists, false, what)));
+    }
+
+    /**
+     * Ответ снятия связи. {@code had} — проба ДО удаления: после него она
+     * бессмысленна, ребра нет в обоих случаях, и «снято» стало бы утверждением
+     * без факта.
+     */
+    Response unlinkOutcome(Map<String, Object> base, boolean had) {
+        return noStore(Response.ok(LoreOutcome.unlink(base, had)));
+    }
+
     boolean linkComponentEdge(String type, String idField, String id, String componentId) {
         if (id == null || id.isBlank() || componentId == null || componentId.isBlank()) return true;
         @SuppressWarnings("unchecked")
@@ -397,6 +469,56 @@ public abstract class LoreResourceBase {
      * Direction is component → spec (the component documents itself in the spec),
      * matching how the `component` slice traverses it. Blank component detaches.
      */
+    /**
+     * Компонент спеки выражен ТРЕМЯ способами, и до этой правки два пути записи
+     * писали РАЗНОЕ (FIX-9).
+     *
+     * <p>Представления: поле {@code KnowSpec.component_id}; ребро
+     * {@code DOCUMENTED_IN} компонент → спека; ребро {@code BELONGS_TO} спека →
+     * компонент. Чтение берёт первое непустое — сперва {@code DOCUMENTED_IN},
+     * потом {@code BELONGS_TO}.
+     *
+     * <p>Отсюда следовала неработающая операция: {@code /lore/spec} писал поле
+     * и {@code DOCUMENTED_IN}, а {@code /lore/spec/link} — поле и
+     * {@code BELONGS_TO}. Перенос спеки в другой компонент отвечал успехом и
+     * НИЧЕГО не менял в чтении: старое ребро другого типа продолжало выигрывать
+     * в COALESCE.
+     *
+     * <p>Теперь оба пути зовут ЭТОТ метод, и он приводит к одному значению все
+     * три представления сразу. Модель пока остаётся тройной — свести её к одному
+     * ребру можно только миграцией и с замером, это отдельная работа. Но
+     * РАСХОЖДЕНИЕ между представлениями с этой правки не возникает: писать
+     * порознь больше нечем.
+     *
+     * <p>Пустой компонент отвязывает — оба ребра снимаются, поле очищается.
+     */
+    void syncSpecComponent(String specId, String componentId) {
+        relinkSpecComponentEdge(specId, componentId);
+        try {
+            // BELONGS_TO спека → компонент: снимаем все и ставим один.
+            // «Один» здесь не выбор из удобства: чтение берёт [0], поэтому два
+            // ребра означали бы, что компонент зависит от порядка вставки.
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "DELETE FROM (SELECT expand(outE('BELONGS_TO')) FROM KnowSpec WHERE spec_id=:sid)",
+                Map.of("sid", specId))).await().indefinitely();
+            if (componentId != null && !componentId.isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO FROM (SELECT FROM KnowSpec WHERE spec_id=:sid) "
+                    + "TO (SELECT FROM LoreComponent WHERE component_id=:cid)",
+                    Map.of("sid", specId, "cid", componentId))).await().indefinitely();
+            }
+            // Поле — третье представление. Держим в согласии, пока оно живо:
+            // рассинхронизованное поле хуже отсутствующего, потому что выглядит
+            // как ответ.
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "UPDATE KnowSpec SET component_id=:cid WHERE spec_id=:sid",
+                mapOfNullable("cid", componentId == null || componentId.isBlank() ? null : componentId,
+                    "sid", specId))).await().indefinitely();
+        } catch (Exception e) {
+            LOG.warnf("[LORE SPEC COMPONENT] sync %s→%s: %s", specId, componentId, e.getMessage());
+        }
+    }
+
     void relinkSpecComponentEdge(String specId, String componentId) {
         try {
             List<Map<String, Object>> rows = ingestService.queryPublic(

@@ -2,7 +2,12 @@ package studio.seer.heimdall.lore;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * ADR-LORE-023: реестр миграций схемы system_aida_lore. Принципы взяты из
@@ -77,17 +82,61 @@ final class LoreSchemaMigrations {
      * этот отказ и наблюдался на внешней установке 2026-08-17. Материальная сверка
      * превращает тихие 500 в громкий отказ старта с указанием, что накатить.
      *
-     * <p>KnowFeature СОЗНАТЕЛЬНО отсутствует: V6 его создаёт, V13 растворяет в
-     * KnowUseCase и ДРОПАЕТ (mergeFeaturesIntoUseCases). На здоровой актуальной
-     * БД его быть НЕ должно — включение сюда ложно роняло бы старт.
+     * <p>СПИСОК ВЫВОДИТСЯ ИЗ САМИХ ШАГОВ, а не ведётся рукой. Рукой ведомый
+     * список отставал молча: в нём было шесть имён из сорока трёх, которые
+     * шаги создают, — то есть пропажа тридцати семи типов не роняла старт и
+     * обнаруживалась только запросом в рантайме. Ошибка не в том, что кто-то
+     * забыл дописать строку: список, который надо помнить, забывают по
+     * определению, и признака этого нет.
+     *
+     * <p>Ниже — ровно та же мысль, что во всём корпусе: две правды об одном
+     * факте расходятся, поэтому правда должна быть одна. Здесь источник правды
+     * — {@link #STEPS}, а сверка её читает.
+     *
+     * <p>Исключения именные и с причиной у каждого, потому что исключение
+     * обязано быть решением, а не тихой строкой.
      */
-    static final List<String> REQUIRED_LIVE_TYPES = List.of(
-        "KnowUseCase", "KnowPain", "KnowGain", "KnowJob", "KnowActor", "KnowAsset",
-        // ADR-LORE-041: несущий тип продуктового слоя. Без него в списке
-        // непрошедшая миграция 30 не заметилась бы на старте — а именно она
-        // переносит описательных акторов, и её тихий пропуск оставил бы
-        // сценарии без действующих лиц при живом приложении.
-        "KnowProjectActor");
+    // МЕТОД, А НЕ ПОЛЕ, и это не стилистика. Статические поля инициализируются
+    // в порядке объявления: поле, посчитанное здесь, читало бы STEPS до того,
+    // как список создан, и класс падал бы при загрузке. Ленивое вычисление
+    // снимает зависимость от порядка строк в файле.
+    private static volatile List<String> requiredLiveTypes;
+
+    static List<String> requiredLiveTypes() {
+        List<String> v = requiredLiveTypes;
+        if (v == null) {
+            v = typesCreatedBySteps();
+            requiredLiveTypes = v;
+        }
+        return v;
+    }
+
+
+    /**
+     * Типы, которых на здоровой АКТУАЛЬНОЙ базе быть не должно, хотя шаг их
+     * когда-то создавал: позже другой шаг их растворил и удалил. Требовать их
+     * наличия значило бы ложно ронять старт.
+     */
+    private static final Set<String> DROPPED_BY_LATER_STEPS = Set.of(
+        // V6 создаёт, V13 растворяет в KnowUseCase и ДРОПАЕТ
+        // (mergeFeaturesIntoUseCases). На актуальной БД его нет и быть не должно.
+        "KnowFeature");
+
+    /** {@code CREATE VERTEX|EDGE|DOCUMENT TYPE X} — с {@code IF NOT EXISTS} и без. */
+    private static final Pattern CREATE_TYPE = Pattern.compile(
+        "(?i)CREATE\\s+(?:VERTEX|EDGE|DOCUMENT)\\s+TYPE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?`?(\\w+)`?");
+
+    private static List<String> typesCreatedBySteps() {
+        Set<String> types = new LinkedHashSet<>();
+        for (Step s : STEPS) {
+            for (String sql : s.sql()) {
+                Matcher m = CREATE_TYPE.matcher(sql);
+                while (m.find()) types.add(m.group(1));
+            }
+        }
+        types.removeAll(DROPPED_BY_LATER_STEPS);
+        return List.copyOf(types);
+    }
 
     /** Решение раннера о старте по версиям — чистое, тестируется без БД (ADR-023). */
     enum StartupDecision {
@@ -868,7 +917,68 @@ final class LoreSchemaMigrations {
             // Схема правится java-частью: имена типов и наличие свойства
             // проверяются по факту, а не перечисляются вслепую — DROP PROPERTY
             // у отсутствующего свойства уронил бы старт на ровном месте.
-            "CREATE EDGE TYPE BELONGS_TO IF NOT EXISTS"))
+            "CREATE EDGE TYPE BELONGS_TO IF NOT EXISTS")),
+
+        // Роли задач — рёбрами на заявленные личности (ADR-LORE-042,
+        // SPRINT_LORE_TASK_ROLE_EDGES/TR-02).
+        //
+        // ЧТО БЫЛО. author_agent/executor_agent/reviewer_agent — свободный
+        // текст на вершине. Замер 30.08.2026: 4114 заполненных значений, 73
+        // различных написания при десяти заявленных в админке личностях.
+        // Владелец записана шестью написаниями.
+        //
+        // Причина не в небрежности: в одну строку клали ЧЕТЫРЕ разных факта —
+        // кто, под каким профилем, на какой модели и (за неимением места) где,
+        // то есть в какой сессии. Два значения содержат ДВОИХ сразу
+        // («claude-full + соседняя сессия»), чего поле выразить не могло.
+        //
+        // Половину написаний поставлял сам интерфейс: AgentRolePicker предлагал
+        // значения справочника agent_role, то есть ПРОФИЛИ, в поле, отвечающее
+        // на вопрос «кто».
+        new Step(35, 17, "task_role_edges", List.of(
+            "CREATE EDGE TYPE ROLE_HELD_BY IF NOT EXISTS",
+
+            // role — какая это роль. Четыре значения, и reviewer с handoff
+            // разведены НАМЕРЕННО (ADR-LORE-042 §2): «подхватил работу» не то
+            // же, что «проверил работу», и склейка их закрывала бы гейт
+            // приёмки фактом, к проверке отношения не имеющим.
+            "CREATE PROPERTY ROLE_HELD_BY.role IF NOT EXISTS STRING",
+
+            // Атрибуты ДЕЙСТВИЯ, а не личности (§3). Агент мультиролевой:
+            // одна вершина сегодня архитектор, завтра тестировщик — значит
+            // профиль принадлежит конкретному действию. На вершине они дали бы
+            // «последнее значение выигрывает» и потерю истории.
+            "CREATE PROPERTY ROLE_HELD_BY.profile IF NOT EXISTS STRING",
+            "CREATE PROPERTY ROLE_HELD_BY.model   IF NOT EXISTS STRING",
+
+            // Обратная связь ревьюера (TR-06). Сегодня её негде записать:
+            // гейт проверяет, что ревьюер непуст и отличается от исполнителя,
+            // и не проверяет НИЧЕГО о содержании. Поэтому «проверено» сейчас
+            // неотличимо от проставленной строки, а агент не узнаёт, что было
+            // не так, и повторит ошибку.
+            "CREATE PROPERTY ROLE_HELD_BY.verdict     IF NOT EXISTS STRING",
+            "CREATE PROPERTY ROLE_HELD_BY.feedback_md IF NOT EXISTS STRING",
+            "CREATE PROPERTY ROLE_HELD_BY.reviewed_at IF NOT EXISTS STRING",
+
+            // Смена — мягким удалением (§4). Поле отвечало только на «кто
+            // сейчас» и стирало «кто был»; вопрос «сколько раз передавали»
+            // был неотвечаем в принципе. Текущий держатель роли — ребро с
+            // valid_to IS NULL, как открытая строка истории у задач.
+            "CREATE PROPERTY ROLE_HELD_BY.valid_from IF NOT EXISTS STRING",
+            "CREATE PROPERTY ROLE_HELD_BY.valid_to   IF NOT EXISTS STRING",
+
+            // Индекс по роли: и добор, и чтение всегда спрашивают «роль такая-то
+            // у этой задачи», а не перебирают все рёбра.
+            "CREATE INDEX IF NOT EXISTS ON ROLE_HELD_BY (role) NOTUNIQUE")),
+
+        // Добор рёбер ролей из полей (TR-03). Шаг только ДОБАВЛЯЕТ: поля
+        // author/executor/reviewer_agent остаются нетронутыми, пока обе правды
+        // не сойдутся. Снятие — отдельным шагом и последним.
+        //
+        // Схемных изменений нет: тип ребра заведён шагом 35, вся работа в
+        // java-части, где её видно и можно пересчитать.
+        new Step(36, 17, "task_role_backfill", List.of(
+            "CREATE EDGE TYPE ROLE_HELD_BY IF NOT EXISTS"))
     );
 
     /**

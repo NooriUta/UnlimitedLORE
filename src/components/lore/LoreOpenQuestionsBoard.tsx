@@ -550,9 +550,9 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
             </select>
             <input style={S.input} type="date" value={form.due_date}
               onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
-            <input style={S.input} placeholder="Владелец (owner)" value={form.owner}
+            <input style={S.input} placeholder={t('lore.oqBoard.ownerPlaceholder', 'Владелец вопроса')} value={form.owner}
               onChange={e => setForm(f => ({ ...f, owner: e.target.value }))} />
-            <input style={S.input} placeholder="Поставлен в ADR (raised_in)" value={form.raised_in}
+            <input style={S.input} placeholder={t('lore.oqBoard.raisedAdrPlaceholder', 'Поставлен в ADR')} value={form.raised_in}
               onChange={e => setForm(f => ({ ...f, raised_in: e.target.value }))} />
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
@@ -570,6 +570,12 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
           const overdue = isOverdue(r);
           const gate = gatingCount(r);
           const adr = first(r.raised_adr);
+          // Вопрос ставится и в ADR, и в СПРИНТЕ — одно ребро RAISED_IN на две
+          // цели. Спринтовую сторону доска не показывала вовсе: данные в срезе
+          // были, на экране их не было. Нашлось при сведении подписей для
+          // внешнего шлюза, где карточка рисует ВСЁ непустое, и потому эта
+          // сторона там видна — только голым именем поля.
+          const raisedSprint = first(r.raised_sprint);
           const ans = (r.answered_by ?? []).filter(Boolean);
           const rowOpen = openAns === r.question_id;
           const hasBody = !!(r.body_md && r.body_md.trim());
@@ -611,6 +617,9 @@ export default function LoreOpenQuestionsBoard({ q, onError, onNavigateAdr }: Pr
                   ? <span style={S.adrLink} title={adr}
                       {...a11yClick(() => onNavigateAdr(adr))}>{adr}</span>
                   : <span style={S.adrChip} title={adr}>{adr}</span>
+              )}
+              {raisedSprint && (
+                <span style={S.adrChip} title={t('lore.oqBoard.raisedSprintTitle', 'Поставлен в спринте')}>{raisedSprint}</span>
               )}
               {st === 'closed' && ans.length > 0 && (
                 <span style={{ ...S.ansChip, cursor: 'pointer' }}

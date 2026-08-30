@@ -136,7 +136,7 @@ public class LoreSpecResource extends LoreResourceBase {
             // ребро out('DOCUMENTED_IN'). Раньше писалось только поле — спека не
             // появлялась на своём компоненте (107 таких вершин). Держим ребро в
             // синхроне, как T01 сделал для PARENT_OF.
-            if (req.component_id() != null) relinkSpecComponentEdge(req.spec_id(), req.component_id());
+            if (req.component_id() != null) syncSpecComponent(req.spec_id(), req.component_id());
             hashStamper.stampOpenHist("KnowSpecHist", "KnowSpec", "spec_id", req.spec_id());
             Map<String, Object> out = new java.util.LinkedHashMap<>();
             out.put("ok", true);
@@ -146,7 +146,7 @@ public class LoreSpecResource extends LoreResourceBase {
             // она занимает место в реестре знаний и создаёт впечатление, что
             // тема покрыта. Advisory, на запись не влияет.
             WorkQuality.Result quality = specQuality(req.spec_id());
-            if (quality != null) out.put("quality", quality);
+            if (quality != null) out.put("quality", WorkQuality.compact(quality));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC UPSERT] %s: %s", req.spec_id(), e.getMessage());
@@ -259,12 +259,13 @@ public class LoreSpecResource extends LoreResourceBase {
                         + "Заведите его сначала (component_new / project_new).")));
             }
 
-            // Поле вершины держим в согласии с ребром: слайсы читают ребро, но
-            // component_id на вершине остаётся запасным путём и был бы стухшим.
-            if ("component".equals(rel) && !"remove".equals(mode)) {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "UPDATE KnowSpec SET component_id=:tid WHERE spec_id=:sid", p))
-                    .await().indefinitely();
+            // FIX-9: компонент выражен тремя способами, и раньше этот путь писал
+            // ДРУГОЕ ребро, чем upsert спеки. Перенос отвечал успехом и не был
+            // виден в чтении: старое ребро другого типа выигрывало в COALESCE.
+            // Теперь оба пути зовут одну точку, которая приводит к одному
+            // значению все три представления.
+            if ("component".equals(rel)) {
+                syncSpecComponent(req.spec_id(), "remove".equals(mode) ? null : req.target_id());
             }
 
             return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id(),

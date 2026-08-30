@@ -429,10 +429,17 @@ public class LoreBragiResource extends LoreResourceBase {
         if (!"add".equals(act) && !"remove".equals(act))
             return badParams("action must be \"add\" or \"remove\"");
         try {
+            // Проба ДО записи. assignRubric сначала СНИМАЕТ текущую рубрику, поэтому
+            // после него вопрос «была ли эта» уже неотличим от «не было никакой».
+            boolean had = edgeExists("IN_RUBRIC", idField, req.entity_id(),
+                "rubric_id", req.rubric_id());
             if ("remove".equals(act)) clearRubric(idField, req.entity_id());
             else assignRubric(entityType, idField, req.entity_id(), req.rubric_id());
-            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
-                "rubric_id", req.rubric_id(), "action", act)));
+            Map<String, Object> base = Map.of("ok", true, "entity_id", req.entity_id(),
+                "rubric_id", req.rubric_id(), "action", act);
+            return "remove".equals(act) ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, false, "IN_RUBRIC", idField, req.entity_id(),
+                    "rubric_id", req.rubric_id(), "запись " + req.entity_id() + " или рубрика " + req.rubric_id());
         } catch (Exception e) {
             LOG.warnf("[BRAGI RUBRIC LINK] %s: %s", req.entity_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -587,21 +594,27 @@ public class LoreBragiResource extends LoreResourceBase {
 
         boolean remove = "remove".equals(req.action());
         try {
+            // Проба ДО обеих веток: исход обязан опираться на факт, а не на то,
+            // что вернул движок (ADR-LORE-043).
+            boolean had = edgeExists(req.edge_type(), sourceField, req.entity_id(),
+                targetField, targetKey);
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('" + req.edge_type() + "')) FROM " + sourceType +
                     " WHERE " + sourceField + "=:sid) WHERE @in." + targetField + "=:tkey",
                     Map.of("sid", req.entity_id(), "tkey", targetKey))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
-                    "target_id", req.target_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "entity_id", req.entity_id(),
+                    "target_id", req.target_id(), "action", "removed"), had);
             }
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "CREATE EDGE " + req.edge_type() + " FROM (SELECT FROM " + sourceType +
                 " WHERE " + sourceField + "=:sid) TO (SELECT FROM " + targetType +
                 " WHERE " + targetField + "=:tkey) IF NOT EXISTS",
                 Map.of("sid", req.entity_id(), "tkey", targetKey))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "entity_id", req.entity_id(),
-                "target_id", req.target_id(), "action", "added")));
+            return linkOutcome(had, Map.of("ok", true, "entity_id", req.entity_id(),
+                "target_id", req.target_id(), "action", "added"), false,
+                req.edge_type(), sourceField, req.entity_id(), targetField, targetKey,
+                req.entity_id() + " или " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[BRAGI LINK] %s -%s-> %s: %s", req.entity_id(), req.edge_type(), req.target_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

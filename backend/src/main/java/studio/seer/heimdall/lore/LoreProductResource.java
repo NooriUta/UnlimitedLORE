@@ -1208,41 +1208,57 @@ public class LoreProductResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
+            String outField, inField;
             Map<String, Object> p = Map.of("sid", req.source_id(), "tid", req.target_id());
             switch (req.rel()) {
                 case "felt_by" -> {      // KnowPain -> KnowProjectActor: чья это боль
                     edge = "FELT_BY";
                     fromSql = "(SELECT FROM KnowPain WHERE pain_id=:sid)";
+                    outField = "pain_id";
                     toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
                 case "desired_by" -> {   // KnowGain -> KnowProjectActor: кто желает выгоду
                     edge = "DESIRED_BY";
                     fromSql = "(SELECT FROM KnowGain WHERE gain_id=:sid)";
+                    outField = "gain_id";
                     toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
                 case "performed_by" -> { // KnowJob -> KnowProjectActor: чья это работа
                     edge = "PERFORMED_BY";
                     fromSql = "(SELECT FROM KnowJob WHERE job_id=:sid)";
+                    outField = "job_id";
                     toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
                 case "blocks" -> {       // KnowPain -> KnowJob: боль мешает работе
                     edge = "BLOCKS";
                     fromSql = "(SELECT FROM KnowPain WHERE pain_id=:sid)";
+                    outField = "pain_id";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 case "success_of" -> {   // KnowGain -> KnowJob: выгода = успех в работе
                     edge = "SUCCESS_OF";
                     fromSql = "(SELECT FROM KnowGain WHERE gain_id=:sid)";
+                    outField = "gain_id";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 default -> { return badParams("rel must be felt_by|desired_by|performed_by|blocks|success_of"); }
             }
+                        // Проба ДО обеих веток. Имена ключевых полей у концов берутся из тех
+                        // же подзапросов, что и запись, — иначе проба спрашивала бы про
+                        // одно ребро, а писалось бы другое (ADR-LORE-043).
+            boolean had = edgeExists(edge, outField, req.source_id(), inField, req.target_id());
+
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM " + edge + " WHERE @out.pain_id=:sid OR @out.gain_id=:sid OR @out.job_id=:sid", p))
                     .await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "source_id", req.source_id(),
-                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "source_id", req.source_id(),
+                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -1250,9 +1266,9 @@ public class LoreProductResource extends LoreResourceBase {
                     "CREATE EDGE " + edge + " FROM " + fromSql + " TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "source_id", req.source_id(),
-                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — проверьте, что обе вершины существуют")));
+            return linkOutcome(had, Map.of("ok", true, "source_id", req.source_id(),
+                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked),
+                linked, edge, outField, req.source_id(), inField, req.target_id(), req.source_id() + " или " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE VP LINK] %s: %s", req.source_id(), e.getMessage());
             return upstream(e);
@@ -1276,38 +1292,49 @@ public class LoreProductResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, toSql;
+            String inField;
             Map<String, Object> p = Map.of("fid", req.feature_id(), "tid", req.target_id());
             switch (req.rel()) {
                 case "pain" -> { // фича ЗАЯВЛЯЕТ, что адресует боль; снимает её — UC (RELIEVES)
                     edge = "ADDRESSES";
                     toSql = "(SELECT FROM KnowPain WHERE pain_id=:tid)";
+                    inField = "pain_id";
                 }
                 case "gain" -> { // фича ОБЕЩАЕТ выгоду; создаёт её — UC (DELIVERS)
                     edge = "PROMISES";
                     toSql = "(SELECT FROM KnowGain WHERE gain_id=:tid)";
+                    inField = "gain_id";
                 }
                 case "job" -> { // фича ЗАЯВЛЯЕТ, что помогает с работой; выполняет — UC (PERFORMS)
                     edge = "HELPS_WITH";
                     toSql = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 case "milestone" -> { // ADR-032 §1: стратегическая цель (KAOS: веха = goal)
                     edge = "TARGETS_MILESTONE";
                     toSql = "(SELECT FROM KnowMilestone WHERE milestone_id=:tid)";
+                    inField = "milestone_id";
                 }
                 case "component" -> {
                     edge = "BELONGS_TO";
                     toSql = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                    inField = "component_id";
                 }
                 default -> { return badParams("rel must be pain|gain|job|milestone|component"); }
             }
+                        // Проба ДО обеих веток. Имена ключевых полей у концов берутся из тех
+                        // же подзапросов, что и запись, — иначе проба спрашивала бы про
+                        // одно ребро, а писалось бы другое (ADR-LORE-043).
+            boolean had = edgeExists(edge, "uc_id", req.feature_id(), inField, req.target_id());
+
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
                     "OR @in.milestone_id=:tid OR @in.component_id=:tid", p))
                     .await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id(),
-                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "feature_id", req.feature_id(),
+                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -1316,9 +1343,9 @@ public class LoreProductResource extends LoreResourceBase {
                     "TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id(),
-                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — проверьте, что фича и target существуют")));
+            return linkOutcome(had, Map.of("ok", true, "feature_id", req.feature_id(),
+                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked),
+                linked, edge, "uc_id", req.feature_id(), inField, req.target_id(), "фича " + req.feature_id() + " или " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE LINK] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
@@ -1342,27 +1369,35 @@ public class LoreProductResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
+            String outField, inField;
             Map<String, Object> p = Map.of("uid", req.uc_id(), "tid", req.target_id());
             switch (req.rel()) {
                 case "task" -> { // REALIZES: KnowTask -> KnowUseCase (target = task_uid)
                     edge = "REALIZES";
                     fromSql = "(SELECT FROM KnowTask WHERE task_uid=:tid)";
                     toSql   = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    // Единственное отношение с ОБРАТНЫМ направлением: ребро идёт от
+                    // задачи к сценарию. Поле конца названо явно, чтобы проба факта
+                    // спрашивала про то же ребро, которое пишется.
+                    inField = "uc_id";
                 }
                 case "adr" -> { // TRACED_TO: KnowUseCase -> KnowADR (опционально, D9)
                     edge = "TRACED_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowADR WHERE adr_id=:tid)";
+                    inField = "adr_id";
                 }
                 case "decision" -> {
                     edge = "TRACED_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowDecision WHERE decision_id=:tid)";
+                    inField = "decision_id";
                 }
                 case "actor" -> { // D12: HAS_ACTOR — multi, UC -> KnowActor
                     edge = "HAS_ACTOR";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
                 // PL-10 (D14): компонент у сценария — ПРЯМОЙ, а не только через
                 // родителя. Ядро ценности слоя — тройка «роль × компонент ×
@@ -1373,6 +1408,7 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "BELONGS_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                    inField = "component_id";
                 }
                 /**
                  * Проект сценария/корня (BELONGS_TO_PROJECT).
@@ -1388,35 +1424,49 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "BELONGS_TO_PROJECT";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowGitProject WHERE slug=:tid)";
+                    inField = "slug";
                 }
                 case "includes" -> { // D13: UC_INCLUDES — обязательный под-сценарий
                     edge = "UC_INCLUDES";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowUseCase WHERE uc_id=:tid)";
+                    inField = "uc_id";
                 }
                 case "extends" -> { // D13: UC_EXTENDS — вариант-расширение
                     edge = "UC_EXTENDS";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowUseCase WHERE uc_id=:tid)";
+                    inField = "uc_id";
                 }
                 case "relieves" -> { // ADR-032 D5: pain reliever — UC снимает боль
                     edge = "RELIEVES";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowPain WHERE pain_id=:tid)";
+                    inField = "pain_id";
                 }
                 case "delivers" -> { // ADR-032 D5: gain creator — UC создаёт выгоду
                     edge = "DELIVERS";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowGain WHERE gain_id=:tid)";
+                    inField = "gain_id";
                 }
                 case "performs" -> { // Остервальдер: UC ВЫПОЛНЯЕТ работу клиента —
                     // третья ось fit рядом с relieves/delivers
                     edge = "PERFORMS";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 default -> { return badParams("rel must be task|adr|decision|actor|component|includes|extends|relieves|delivers|performs"); }
             }
+            // Проба ДО обеих веток. У отношения "task" направление ОБРАТНОЕ —
+            // ребро идёт от задачи к сценарию, — поэтому концы берутся с
+            // поправкой на него. Спросить не про то ребро значило бы получить
+            // уверенный ответ о постороннем факте.
+            boolean reversed = "task".equals(req.rel());
+            boolean had = edgeExists(edge,
+                reversed ? "task_uid" : "uc_id", reversed ? req.target_id() : req.uc_id(),
+                reversed ? "uc_id" : inField,   reversed ? req.uc_id() : req.target_id());
             if (remove) {
                 boolean fromUc = !"task".equals(req.rel());
                 String delSql = fromUc
@@ -1437,8 +1487,8 @@ public class LoreProductResource extends LoreResourceBase {
                             req.uc_id(), LoreUpstream.detail(e));
                     }
                 }
-                return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
-                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "uc_id", req.uc_id(),
+                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -1506,7 +1556,10 @@ public class LoreProductResource extends LoreResourceBase {
                         req.uc_id(), LoreUpstream.detail(e));
                 }
             }
-            return noStore(Response.ok(out));
+            return linkOutcome(had, out, linked, edge,
+                reversed ? "task_uid" : "uc_id", reversed ? req.target_id() : req.uc_id(),
+                reversed ? "uc_id" : inField,   reversed ? req.uc_id() : req.target_id(),
+                "сценарий " + req.uc_id() + " или " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE UC LINK] %s: %s", req.uc_id(), e.getMessage());
             return upstream(e);

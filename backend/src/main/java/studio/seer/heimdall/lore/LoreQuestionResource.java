@@ -97,7 +97,7 @@ public class LoreQuestionResource extends LoreResourceBase {
             // Вердикт полноты (ADR-LORE-039): вопрос без владельца не закрывается —
             // он висит прочитанный и никем не взятый.
             WorkQuality.Result quality = questionQuality(req.question_id());
-            if (quality != null) out.put("quality", quality);
+            if (quality != null) out.put("quality", WorkQuality.compact(quality));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION CREATE] %s: %s", req.question_id(), e.getMessage());

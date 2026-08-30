@@ -183,11 +183,19 @@ public class LoreDocResource extends LoreResourceBase {
                 return badParams("parent_doc_id cannot equal doc_id");
         }
         try {
+            // Две РАЗНЫЕ пробы, и обе до удаления. Снятие спрашивает «был ли
+            // родитель вообще», перепривязка — «был ли ИМЕННО ЭТОТ». Одной
+            // пробой тут не обойтись: вызов сначала сносит все рёбра-родителя,
+            // поэтому после него оба вопроса отвечают «нет».
+            boolean hadAnyParent = anyEdgeFrom("DOC_CHILD_OF", "doc_id", req.doc_id());
+            boolean had = !remove && edgeExists("DOC_CHILD_OF", "doc_id", req.doc_id(),
+                "doc_id", req.parent_doc_id());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "DELETE FROM (SELECT expand(outE('DOC_CHILD_OF')) FROM KnowDoc WHERE doc_id=:id)",
                 Map.of("id", req.doc_id()))).await().indefinitely();
             if (remove) {
-                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "doc_id", req.doc_id(),
+                    "action", "removed"), hadAnyParent);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -198,9 +206,10 @@ public class LoreDocResource extends LoreResourceBase {
                     Map.of("id", req.doc_id(), "pid", req.parent_doc_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "parent_doc_id", req.parent_doc_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check both doc_id values exist")));
+            return linkOutcome(had, Map.of("ok", true, "doc_id", req.doc_id(),
+                "parent_doc_id", req.parent_doc_id(), "action", "added", "linked", linked),
+                linked, "DOC_CHILD_OF", "doc_id", req.doc_id(), "doc_id", req.parent_doc_id(),
+                "док " + req.doc_id() + " или док-родитель " + req.parent_doc_id());
         } catch (Exception e) {
             LOG.warnf("[LORE DOC PARENT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -236,13 +245,17 @@ public class LoreDocResource extends LoreResourceBase {
             return badParams("component_id contains illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+                        // Проба ДО записи и ДО удаления: исход обязан опираться на факт,
+                        // а не на то, что вернул движок (ADR-LORE-043).
+            boolean had = edgeExists("BELONGS_TO", "doc_id", req.doc_id(), "component_id", req.component_id());
+
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('BELONGS_TO')) FROM KnowDoc WHERE doc_id=:id) " +
                     "WHERE @in.component_id = :cid",
                     Map.of("id", req.doc_id(), "cid", req.component_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                    "component_id", req.component_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "doc_id", req.doc_id(),
+                    "component_id", req.component_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -253,9 +266,9 @@ public class LoreDocResource extends LoreResourceBase {
                     Map.of("id", req.doc_id(), "cid", req.component_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "component_id", req.component_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check doc_id/component_id exist")));
+            return linkOutcome(had, Map.of("ok", true, "doc_id", req.doc_id(),
+                "component_id", req.component_id(), "action", "added", "linked", linked),
+                linked, "BELONGS_TO", "doc_id", req.doc_id(), "component_id", req.component_id(), "док " + req.doc_id() + " или компонент " + req.component_id());
         } catch (Exception e) {
             LOG.warnf("[LORE DOC COMPONENT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -279,13 +292,17 @@ public class LoreDocResource extends LoreResourceBase {
             return badParams("project contains illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+                        // Проба ДО записи и ДО удаления: исход обязан опираться на факт,
+                        // а не на то, что вернул движок (ADR-LORE-043).
+            boolean had = edgeExists("BELONGS_TO_PROJECT", "doc_id", req.doc_id(), "slug", req.project());
+
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('BELONGS_TO_PROJECT')) FROM KnowDoc WHERE doc_id=:id) " +
                     "WHERE @in.slug = :p",
                     Map.of("id", req.doc_id(), "p", req.project()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                    "project", req.project(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "doc_id", req.doc_id(),
+                    "project", req.project(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -298,9 +315,10 @@ public class LoreDocResource extends LoreResourceBase {
             boolean linked = created != null && !created.isEmpty();
             // linked=false при незарегистрированном проекте — честная подсказка,
             // а не молчаливый no-op (урок lore_git_project_registration).
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "project", req.project(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check doc_id exists and project is registered (project_new)")));
+            return linkOutcome(had, Map.of("ok", true, "doc_id", req.doc_id(),
+                "project", req.project(), "action", "added", "linked", linked),
+                linked, "BELONGS_TO_PROJECT", "doc_id", req.doc_id(), "slug", req.project(), "док " + req.doc_id() + " или проект " + req.project()
+                    + " (проект заводится через project_new)");
         } catch (Exception e) {
             LOG.warnf("[LORE DOC PROJECT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -324,13 +342,17 @@ public class LoreDocResource extends LoreResourceBase {
             return badParams("sprint_id contains illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+                        // Проба ДО записи и ДО удаления: исход обязан опираться на факт,
+                        // а не на то, что вернул движок (ADR-LORE-043).
+            boolean had = edgeExists("IMPLEMENTED_IN", "doc_id", req.doc_id(), "sprint_id", req.sprint_id());
+
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('IMPLEMENTED_IN')) FROM KnowDoc WHERE doc_id=:id) " +
                     "WHERE @in.sprint_id = :sid",
                     Map.of("id", req.doc_id(), "sid", req.sprint_id()))).await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                    "sprint_id", req.sprint_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "doc_id", req.doc_id(),
+                    "sprint_id", req.sprint_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -341,9 +363,9 @@ public class LoreDocResource extends LoreResourceBase {
                     Map.of("id", req.doc_id(), "sid", req.sprint_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "doc_id", req.doc_id(),
-                "sprint_id", req.sprint_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — check doc_id/sprint_id exist")));
+            return linkOutcome(had, Map.of("ok", true, "doc_id", req.doc_id(),
+                "sprint_id", req.sprint_id(), "action", "added", "linked", linked),
+                linked, "IMPLEMENTED_IN", "doc_id", req.doc_id(), "sprint_id", req.sprint_id(), "док " + req.doc_id() + " или спринт " + req.sprint_id());
         } catch (Exception e) {
             LOG.warnf("[LORE DOC SPRINT] %s: %s", req.doc_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
