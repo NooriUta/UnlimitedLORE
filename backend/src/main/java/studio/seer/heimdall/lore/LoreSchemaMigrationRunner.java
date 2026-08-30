@@ -423,6 +423,7 @@ public class LoreSchemaMigrationRunner {
         // 31 — семь типов, 33 — те же плюс два QG-типа (NM-07). Добор
         // идемпотентен, повторный проход по уже обработанным безвреден.
         if (version == 31 || version == 33) backfillComponentEdges();
+        if (version == 34) dropComponentField();
         if (version == 28) recreateFtIndexes();
     }
 
@@ -990,6 +991,95 @@ public class LoreSchemaMigrationRunner {
 
     /** Экранирование одинарной кавычки для String.format-путей CREATE EDGE. */
     private static String esc(String v) { return v.replace("'", "''"); }
+
+    /**
+     * NM-05: снять поле {@code component_id} с вершин (ADR-LORE-041 §2, шаг 5).
+     *
+     * <p><b>Единственный необратимый шаг.</b> До него обе правды держались
+     * синхронно и работу можно было остановить где угодно; после него связь
+     * живёт только ребром, и восстанавливать её будет неоткуда.
+     *
+     * <p><b>Шаг отказывается работать, если предусловие не выполнено.</b> Перед
+     * снятием пересчитывается то же, что мерил срез расхождения: сколько записей
+     * имеют непустое поле и НЕ имеют канонического ребра. Ненулевой остаток
+     * означает, что связь существует только в поле — и снятие её сотрёт. Тогда
+     * шаг падает и называет тип и число, а не снимает поле «раз уж дошли».
+     *
+     * <p>Это не перестраховка ради перестраховки: ровно такая проверка на
+     * предыдущем шаге показала, что замер по спекам шёл по чужому ребру. Ошибка
+     * там была правдоподобной и обнаружилась только счётом.
+     *
+     * <p><b>Контроль после.</b> Считаем рёбра до и после снятия: снятие поля не
+     * имеет права трогать рёбра, и равенство этих чисел — единственное, что
+     * отличает «поле снято» от «снесено вместе со связями».
+     */
+    private void dropComponentField() {
+        // 1. Предусловие: ни одной записи, чья связь живёт ТОЛЬКО в поле.
+        List<String> blocking = new ArrayList<>();
+        int edgesBefore = 0;
+        for (ComponentLink link : COMPONENT_FIELD_TYPES) {
+            if (!typeExists(link.type())) continue;
+            String side = (link.entityToComponent() ? "out('" : "in('") + link.edge() + "')";
+            List<Map<String, Object>> orphan = ingest.queryPublic(
+                "SELECT count(*) AS n FROM " + link.type()
+                + " WHERE component_id IS NOT NULL AND component_id <> '' "
+                + "AND " + side + ".size() = 0", Map.of());
+            int n = orphan.isEmpty() ? 0 : ((Number) orphan.get(0).getOrDefault("n", 0)).intValue();
+            if (n > 0) blocking.add(link.type() + ": " + n);
+
+            List<Map<String, Object>> linked = ingest.queryPublic(
+                "SELECT count(*) AS n FROM " + link.type() + " WHERE " + side + ".size() > 0", Map.of());
+            edgesBefore += linked.isEmpty() ? 0 : ((Number) linked.get(0).getOrDefault("n", 0)).intValue();
+        }
+        if (!blocking.isEmpty()) {
+            throw new IllegalStateException("[LORE MIGRATE] V34: снятие поля component_id ПРЕРВАНО — "
+                + "есть записи, у которых связь существует только полем, и снятие её сотрёт: "
+                + String.join("; ", blocking)
+                + ". Сначала доберите рёбра (шаги V31/V33), затем повторите старт.");
+        }
+
+        // 2. Снятие. Свойство объявлено не у всех типов: у части оно жило как
+        //    schemaless-значение. DROP PROPERTY у необъявленного свойства —
+        //    ошибка, поэтому спрашиваем схему, а не гадаем.
+        Set<String> declared = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT name, properties FROM schema:types", Map.of())) {
+            String type = String.valueOf(r.get("name"));
+            if (String.valueOf(r.get("properties")).contains("component_id")) declared.add(type);
+        }
+
+        int dropped = 0, cleared = 0;
+        for (ComponentLink link : COMPONENT_FIELD_TYPES) {
+            if (!typeExists(link.type())) continue;
+            // Значения снимаются всегда: объявление свойства и наличие значений —
+            // разные вещи, и schemaless-значение переживёт DROP PROPERTY.
+            command("UPDATE " + link.type() + " REMOVE component_id", Map.of());
+            cleared++;
+            if (declared.contains(link.type())) {
+                exec("DROP PROPERTY " + link.type() + ".component_id FORCE");
+                dropped++;
+            }
+        }
+
+        // 3. Контроль: рёбра не тронуты. Снятие поля не имеет права их менять,
+        //    и это единственное, что отличает «поле снято» от «снесено вместе
+        //    со связями».
+        int edgesAfter = 0;
+        for (ComponentLink link : COMPONENT_FIELD_TYPES) {
+            if (!typeExists(link.type())) continue;
+            String side = (link.entityToComponent() ? "out('" : "in('") + link.edge() + "')";
+            List<Map<String, Object>> linked = ingest.queryPublic(
+                "SELECT count(*) AS n FROM " + link.type() + " WHERE " + side + ".size() > 0", Map.of());
+            edgesAfter += linked.isEmpty() ? 0 : ((Number) linked.get(0).getOrDefault("n", 0)).intValue();
+        }
+        if (edgesAfter != edgesBefore) {
+            throw new IllegalStateException("[LORE MIGRATE] V34: число связанных записей изменилось "
+                + "при снятии поля (" + edgesBefore + " → " + edgesAfter + "). Поле снимается, рёбра "
+                + "трогать оно не должно — расхождение означает потерю связей.");
+        }
+        LOG.infof("[LORE MIGRATE] V34: поле component_id снято (значения у %d типов, объявление у %d); "
+            + "связанных записей %d, до и после совпало", cleared, dropped, edgesAfter);
+    }
 
     private boolean typeExists(String name) {
         return !ingest.queryPublic("SELECT name FROM schema:types WHERE name = :n",
