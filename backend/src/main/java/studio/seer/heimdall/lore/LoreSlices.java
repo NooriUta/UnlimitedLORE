@@ -137,7 +137,7 @@ public final class LoreSlices {
             "out('HAS_STATE').valid_from[0] AS valid_from, " +
             "out('HAS_STATE').status_raw[0] AS status_raw " +
             "FROM KnowSprint ORDER BY sprint_id",
-            List.of(), Map.of(), " LIMIT 5000");
+            List.of(), Map.of(), "");
 
         // ── §2 ADRs ──────────────────────────────────────────────────────────
         slice("adrs",
@@ -245,7 +245,7 @@ public final class LoreSlices {
             // рабочей отсечкой. Сообщить об обрезке в ответе слайс не может:
             // он отдаёт строки, и места под признак в контракте нет — поэтому
             // единственная честная настройка та, при которой обрезки не бывает.
-            List.of(), Map.of(), " ORDER BY date_created DESC, decision_id LIMIT 3000");
+            List.of(), Map.of(), " ORDER BY date_created DESC, decision_id");
 
         // Decisions that belong to one ADR (in('DECIDED_IN') from the ADR side).
         slice("decisions_of_adr",
@@ -1231,7 +1231,7 @@ public final class LoreSlices {
                 // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
                 // делало сущность видимой только под одним произвольным компонентом.
                 "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
-            " ORDER BY spec_id LIMIT 5000");
+            " ORDER BY spec_id");
 
         slice("spec_by_id",
             "SELECT spec_id, title, file_path, " +
@@ -1261,7 +1261,7 @@ public final class LoreSlices {
             new LinkedHashMap<>(Map.of(
                 // CONTAINS, не [0] — см. комментарий в слайсе adrs.
                 "component", " AND (out('BELONGS_TO').component_id CONTAINS :component OR component_id = :component)")),
-            " ORDER BY spec_id LIMIT 5000");
+            " ORDER BY spec_id");
 
         // ── §7 History (SCD2 chain) ───────────────────────────────────────────
         // AL-30: + все версионируемые поля ревизии (тела, план, pr_refs) — история
@@ -1377,7 +1377,7 @@ public final class LoreSlices {
                 // Панель «Правила CLAUDE»: общий корпус KnowDoc уже упирается в
                 // LIMIT 200, серверный фильтр гарантирует полноту выборки по kind.
                 "kind", " WHERE kind = :kind")),
-            " ORDER BY doc_id LIMIT 5000");
+            " ORDER BY doc_id");
 
         slice("doc_by_id",
             // NB: KnowDoc has no SCD2 write path (flat vertex, see KnowDocParser
@@ -1404,7 +1404,7 @@ public final class LoreSlices {
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "area", " WHERE area = :area")),
-            " ORDER BY runbook_id LIMIT 5000");
+            " ORDER BY runbook_id");
 
         slice("runbook_by_id",
             "SELECT runbook_id, name, area, date_created, " +
@@ -1421,7 +1421,7 @@ public final class LoreSlices {
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
-            " ORDER BY qg_id LIMIT 5000");
+            " ORDER BY qg_id");
 
         slice("quality_gate_by_id",
             "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, content_md, sprint_id " +
@@ -1446,7 +1446,7 @@ public final class LoreSlices {
             "out('PROMOTED_TO').out('PART_OF').sprint_id[0]     AS promoted_sprint_id " +
             "FROM QGRecommendation WHERE in('PRODUCED').qg_id CONTAINS :qg_id " +
             "ORDER BY status",
-            List.of("qg_id"), Map.of(), " LIMIT 5000");
+            List.of("qg_id"), Map.of(), "");
 
         // ── §10b QG dashboard slices (no required params) ─────────────────────
         slice("qg_violations",
@@ -1459,7 +1459,7 @@ public final class LoreSlices {
             "SELECT rec_id, title, body_md, status, priority, severity, effort_days, " +
             "tags, out('BELONGS_TO').component_id[0] AS component_id, qg_id, inv_id, fix_cmd, how_to_verify " +
             "FROM QGRecommendation WHERE status = 'pending' ORDER BY priority ASC",
-            List.of(), Map.of(), " LIMIT 5000");
+            List.of(), Map.of(), "");
 
         // All QG routine runs (latest first). Includes run_id for metric join.
         slice("qg_routine_runs",
@@ -1471,13 +1471,13 @@ public final class LoreSlices {
         slice("qg_metrics_latest",
             "SELECT routine_name, run_date, metric_key, value, unit, target, status " +
             "FROM ClRoutineMetric WHERE routine_name LIKE 'qg-%' ORDER BY routine_name, metric_key",
-            List.of(), Map.of(), " LIMIT 5000");
+            List.of(), Map.of(), "");
 
         // All metrics for a specific run (detail panel).
         slice("qg_run_metrics",
             "SELECT metric_id, metric_key, value, unit, target, status, source " +
             "FROM ClRoutineMetric WHERE run_id = :run_id ORDER BY metric_key",
-            List.of("run_id"), Map.of(), " LIMIT 5000");
+            List.of("run_id"), Map.of(), "");
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
         slice("git_projects",
@@ -1502,7 +1502,7 @@ public final class LoreSlices {
         slice("backlog_tasks",
             "SELECT task_uid, task_id, title, status_raw, priority, out('BELONGS_TO').component_id[0] AS component_id, task_type " +
             "FROM KnowTask WHERE out('PART_OF').size() = 0",
-            List.of(), Map.of(), " ORDER BY task_uid LIMIT 5000");
+            List.of(), Map.of(), " ORDER BY task_uid");
 
         slice("all_tasks",
             // author/executor/reviewer_agent (ADR-LORE-014 §4) выбираются наравне
@@ -1539,7 +1539,7 @@ public final class LoreSlices {
             // defensive cap, not a UX pagination boundary. Raised 500→5000 so a full
             // task-effort export (e.g. the fractional-hours migration) doesn't
             // silently truncate; still bounded to avoid an unbounded query.
-            List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid LIMIT 20000");
+            List.of(), Map.of("q", ""), " ORDER BY sprint_id, task_uid");
 
         // SE-01: пожелание сессии проекта UDWE/mig_gen (передано владельцем
         // 2026-08-11/12) — `all_tasks` несёт `note_md`, из-за чего выдача по
@@ -1572,7 +1572,7 @@ public final class LoreSlices {
                 "sprint",  " WHERE out('PART_OF').sprint_id CONTAINS :sprint",
                 "component", " WHERE out('TAGGED_WITH').component_id CONTAINS :component",
                 "work_class", " WHERE work_class = :work_class")),
-            " ORDER BY sprint_id, task_uid LIMIT 20000");
+            " ORDER BY sprint_id, task_uid");
 
         // ── §12 KnowFinding (Phase 5 LAL-31) ─────────────────────────────────
         slice("findings",
@@ -1581,7 +1581,7 @@ public final class LoreSlices {
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "type", " WHERE type = :type")),
-            " ORDER BY finding_id LIMIT 5000");
+            " ORDER BY finding_id");
 
         slice("finding_by_id",
             "SELECT finding_id, type, verified, source_sprint, summary_md, evidence_md " +
@@ -1632,19 +1632,19 @@ public final class LoreSlices {
         slice("release_prs",
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_uid CONTAINS :ruid ORDER BY pr_number",
-            List.of("ruid"), Map.of(), " LIMIT 2000");
+            List.of("ruid"), Map.of(), "");
 
         slice("release_prs_by_tag",
             "SELECT pr_number, pr_uid, git_project, title, merged_at, url " +
             "FROM KnowPR WHERE out('SHIPPED_IN').release_id CONTAINS :tag ORDER BY pr_number",
-            List.of("tag"), Map.of(), " LIMIT 2000");
+            List.of("tag"), Map.of(), "");
 
         // ── §13 ClRoutine* slices (Phase 6 v1.3) ─────────────────────────────
         slice("routine_latest",
             "SELECT metric_key, value, unit, status, run_date " +
             "FROM ClRoutineMetric WHERE routine_name = :routine_name " +
             "AND run_date = (SELECT max(run_date) FROM ClRoutineMetric " +
-            "WHERE routine_name = :routine_name) ORDER BY metric_key LIMIT 2000",
+            "WHERE routine_name = :routine_name) ORDER BY metric_key",
             List.of("routine_name"), Map.of(), "");
 
         slice("routine_last_run",

@@ -383,21 +383,25 @@ public class LoreAdrResource extends LoreResourceBase {
         return noStore(Response.ok(LoreOutcome.unlink(base, had)));
     }
 
-    private Response linkOutcome(Map<String, Object> base, boolean created, String edgeType,
-                                 String adrId, String targetField, String targetValue, String what) {
-        boolean exists = created;
-        if (!created) {
-            try {
-                exists = edgeExists(edgeType, adrId, targetField, targetValue);
-            } catch (Exception ex) {
-                // Сверка не удалась — значит различить исходы НЕЧЕМ. Врать в
-                // сторону «уже было» нельзя: это бы скрыло пропажу конца.
-                LOG.warnf("[LORE ADR LINK verify] %s %s → %s: %s",
-                    edgeType, adrId, targetValue, LoreUpstream.detail(ex));
-                exists = false;
-            }
-        }
-        return noStore(Response.ok(LoreOutcome.link(base, created, exists, what)));
+    private Response linkOutcome(boolean hadBefore, Map<String, Object> base, boolean created,
+                                 String edgeType, String adrId, String targetField,
+                                 String targetValue, String what) {
+        // Связь была ДО вызова — это unchanged, и никакой результат CREATE
+        // этого не меняет.
+        //
+        // Раньше исход выводился ПОСЛЕ записи — из результата CREATE EDGE плюс
+        // сверки. CI 30.08.2026 показал, что так неверно: повтор связывания дал
+        // не unchanged. Какой именно из двух исходов пришёл вместо него —
+        // «created», если CREATE EDGE возвращает строку и на повторе, или
+        // «noop», если сверка не нашла ребра, — из падения не следует, и
+        // выяснять это не нужно: обе ветки означают, что вывод исхода зависел
+        // от поведения движка, а не от факта.
+        //
+        // Проба ДО вызова от этого поведения не зависит вовсе. Она стоит одного
+        // лишнего запроса и снимает целый класс догадок.
+        if (hadBefore) return noStore(Response.ok(LoreOutcome.link(base, false, true, what)));
+        boolean exists = created || edgeExists(edgeType, adrId, targetField, targetValue);
+        return noStore(Response.ok(LoreOutcome.link(base, exists, false, what)));
     }
 
     @POST
@@ -427,6 +431,10 @@ public class LoreAdrResource extends LoreResourceBase {
                     return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
                         "sprint_id", req.sprint_id(), "action", "removed"), had);
                 }
+                // ÐÑÐ¾Ð±Ð° ÐÐ Ð·Ð°Ð¿Ð¸ÑÐ¸: Ð¸ÑÑÐ¾Ð´ Â«ÑÐ¶Ðµ Ð±ÑÐ»Ð¾Â» Ð½Ðµ Ð²ÑÐ²Ð¾Ð´Ð¸ÑÑÑ Ð¸Ð· ÑÐµÐ·ÑÐ»ÑÑÐ°ÑÐ°
+                // CREATE EDGE â Ð¿ÑÐ¸ Ð¿Ð¾Ð²ÑÐ¾ÑÐµ Ð¾Ð½ Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ ÑÑÑÐ¾ÐºÑ ÑÐ°Ðº Ð¶Ðµ, ÐºÐ°Ðº Ð¿ÑÐ¸
+                // ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ð¸ (Ð·Ð°Ð¼ÐµÑÐµÐ½Ð¾ Ð½Ð° CI 30.08.2026).
+                boolean hadBefore = edgeExists("IMPLEMENTED_IN", req.adr_id(), "sprint_id", req.sprint_id());
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -437,7 +445,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     .await().indefinitely().result();
                 // CREATE EDGE into an empty FROM/TO set is a silent no-op — surface it.
                 boolean linked = created != null && !created.isEmpty();
-                return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+                return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                     "sprint_id", req.sprint_id(), "action", "added", "linked", linked),
                     linked, "IMPLEMENTED_IN", req.adr_id(), "sprint_id", req.sprint_id(),
                     "ADR " + req.adr_id() + " или спринт " + req.sprint_id());
@@ -459,6 +467,10 @@ public class LoreAdrResource extends LoreResourceBase {
                 return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
                     "release_id", req.release_id(), "action", "removed"), had);
             }
+            // ÐÑÐ¾Ð±Ð° ÐÐ Ð·Ð°Ð¿Ð¸ÑÐ¸: Ð¸ÑÑÐ¾Ð´ Â«ÑÐ¶Ðµ Ð±ÑÐ»Ð¾Â» Ð½Ðµ Ð²ÑÐ²Ð¾Ð´Ð¸ÑÑÑ Ð¸Ð· ÑÐµÐ·ÑÐ»ÑÑÐ°ÑÐ°
+            // CREATE EDGE â Ð¿ÑÐ¸ Ð¿Ð¾Ð²ÑÐ¾ÑÐµ Ð¾Ð½ Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ ÑÑÑÐ¾ÐºÑ ÑÐ°Ðº Ð¶Ðµ, ÐºÐ°Ðº Ð¿ÑÐ¸
+            // ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ð¸ (Ð·Ð°Ð¼ÐµÑÐµÐ½Ð¾ Ð½Ð° CI 30.08.2026).
+            boolean hadBefore = edgeExists("IMPLEMENTED_IN_RELEASE", req.adr_id(), relField, relKey);
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -468,7 +480,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "rkey", relKey)))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+            return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                 "release_id", req.release_id(), "action", "added", "linked", linked),
                 linked, "IMPLEMENTED_IN_RELEASE", req.adr_id(), relField, relKey,
                 "релиз по " + relField + "='" + relKey + "' (заведите его через release_new "
@@ -523,6 +535,10 @@ public class LoreAdrResource extends LoreResourceBase {
                 return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
                     "project", req.project(), "action", "removed"), had);
             }
+            // ÐÑÐ¾Ð±Ð° ÐÐ Ð·Ð°Ð¿Ð¸ÑÐ¸: Ð¸ÑÑÐ¾Ð´ Â«ÑÐ¶Ðµ Ð±ÑÐ»Ð¾Â» Ð½Ðµ Ð²ÑÐ²Ð¾Ð´Ð¸ÑÑÑ Ð¸Ð· ÑÐµÐ·ÑÐ»ÑÑÐ°ÑÐ°
+            // CREATE EDGE â Ð¿ÑÐ¸ Ð¿Ð¾Ð²ÑÐ¾ÑÐµ Ð¾Ð½ Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ ÑÑÑÐ¾ÐºÑ ÑÐ°Ðº Ð¶Ðµ, ÐºÐ°Ðº Ð¿ÑÐ¸
+            // ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ð¸ (Ð·Ð°Ð¼ÐµÑÐµÐ½Ð¾ Ð½Ð° CI 30.08.2026).
+            boolean hadBefore = edgeExists("BELONGS_TO_PROJECT", req.adr_id(), "slug", req.project());
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -532,7 +548,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "gp", req.project())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+            return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                 "project", req.project(), "action", "added", "linked", linked),
                 linked, "BELONGS_TO_PROJECT", req.adr_id(), "slug", req.project(),
                 "ADR " + req.adr_id() + " или проект " + req.project()
@@ -567,6 +583,10 @@ public class LoreAdrResource extends LoreResourceBase {
                 return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
                     "component_id", req.component_id(), "action", "removed"), had);
             }
+            // ÐÑÐ¾Ð±Ð° ÐÐ Ð·Ð°Ð¿Ð¸ÑÐ¸: Ð¸ÑÑÐ¾Ð´ Â«ÑÐ¶Ðµ Ð±ÑÐ»Ð¾Â» Ð½Ðµ Ð²ÑÐ²Ð¾Ð´Ð¸ÑÑÑ Ð¸Ð· ÑÐµÐ·ÑÐ»ÑÑÐ°ÑÐ°
+            // CREATE EDGE â Ð¿ÑÐ¸ Ð¿Ð¾Ð²ÑÐ¾ÑÐµ Ð¾Ð½ Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ ÑÑÑÐ¾ÐºÑ ÑÐ°Ðº Ð¶Ðµ, ÐºÐ°Ðº Ð¿ÑÐ¸
+            // ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ð¸ (Ð·Ð°Ð¼ÐµÑÐµÐ½Ð¾ Ð½Ð° CI 30.08.2026).
+            boolean hadBefore = edgeExists("BELONGS_TO", req.adr_id(), "component_id", req.component_id());
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -576,7 +596,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "cid", req.component_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+            return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                 "component_id", req.component_id(), "action", "added", "linked", linked),
                 linked, "BELONGS_TO", req.adr_id(), "component_id", req.component_id(),
                 "ADR " + req.adr_id() + " или компонент " + req.component_id());
@@ -610,6 +630,10 @@ public class LoreAdrResource extends LoreResourceBase {
                 return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
                     "dep_adr_id", req.dep_adr_id(), "action", "removed"), had);
             }
+            // ÐÑÐ¾Ð±Ð° ÐÐ Ð·Ð°Ð¿Ð¸ÑÐ¸: Ð¸ÑÑÐ¾Ð´ Â«ÑÐ¶Ðµ Ð±ÑÐ»Ð¾Â» Ð½Ðµ Ð²ÑÐ²Ð¾Ð´Ð¸ÑÑÑ Ð¸Ð· ÑÐµÐ·ÑÐ»ÑÑÐ°ÑÐ°
+            // CREATE EDGE â Ð¿ÑÐ¸ Ð¿Ð¾Ð²ÑÐ¾ÑÐµ Ð¾Ð½ Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ ÑÑÑÐ¾ÐºÑ ÑÐ°Ðº Ð¶Ðµ, ÐºÐ°Ðº Ð¿ÑÐ¸
+            // ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ð¸ (Ð·Ð°Ð¼ÐµÑÐµÐ½Ð¾ Ð½Ð° CI 30.08.2026).
+            boolean hadBefore = edgeExists("DEPENDS_ON", req.adr_id(), "adr_id", req.dep_adr_id());
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -619,7 +643,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "dep", req.dep_adr_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+            return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                 "dep_adr_id", req.dep_adr_id(), "action", "added", "linked", linked),
                 linked, "DEPENDS_ON", req.adr_id(), "adr_id", req.dep_adr_id(),
                 "ADR " + req.adr_id() + " или ADR " + req.dep_adr_id());
@@ -653,6 +677,10 @@ public class LoreAdrResource extends LoreResourceBase {
                 return unlinkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
                     "superseded_adr_id", req.superseded_adr_id(), "action", "removed"), had);
             }
+            // ÐÑÐ¾Ð±Ð° ÐÐ Ð·Ð°Ð¿Ð¸ÑÐ¸: Ð¸ÑÑÐ¾Ð´ Â«ÑÐ¶Ðµ Ð±ÑÐ»Ð¾Â» Ð½Ðµ Ð²ÑÐ²Ð¾Ð´Ð¸ÑÑÑ Ð¸Ð· ÑÐµÐ·ÑÐ»ÑÑÐ°ÑÐ°
+            // CREATE EDGE â Ð¿ÑÐ¸ Ð¿Ð¾Ð²ÑÐ¾ÑÐµ Ð¾Ð½ Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ ÑÑÑÐ¾ÐºÑ ÑÐ°Ðº Ð¶Ðµ, ÐºÐ°Ðº Ð¿ÑÐ¸
+            // ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ð¸ (Ð·Ð°Ð¼ÐµÑÐµÐ½Ð¾ Ð½Ð° CI 30.08.2026).
+            boolean hadBefore = edgeExists("SUPERSEDES", req.adr_id(), "adr_id", req.superseded_adr_id());
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -662,7 +690,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "sup", req.superseded_adr_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+            return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                 "superseded_adr_id", req.superseded_adr_id(), "action", "added", "linked", linked),
                 linked, "SUPERSEDES", req.adr_id(), "adr_id", req.superseded_adr_id(),
                 "ADR " + req.adr_id() + " или ADR " + req.superseded_adr_id());
@@ -701,6 +729,10 @@ public class LoreAdrResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE KnowTag SET tag_id=:tag UPSERT WHERE tag_id=:tag",
                 Map.of("tag", req.tag_id()))).await().indefinitely();
+            // ÐÑÐ¾Ð±Ð° ÐÐ Ð·Ð°Ð¿Ð¸ÑÐ¸: Ð¸ÑÑÐ¾Ð´ Â«ÑÐ¶Ðµ Ð±ÑÐ»Ð¾Â» Ð½Ðµ Ð²ÑÐ²Ð¾Ð´Ð¸ÑÑÑ Ð¸Ð· ÑÐµÐ·ÑÐ»ÑÑÐ°ÑÐ°
+            // CREATE EDGE â Ð¿ÑÐ¸ Ð¿Ð¾Ð²ÑÐ¾ÑÐµ Ð¾Ð½ Ð²Ð¾Ð·Ð²ÑÐ°ÑÐ°ÐµÑ ÑÑÑÐ¾ÐºÑ ÑÐ°Ðº Ð¶Ðµ, ÐºÐ°Ðº Ð¿ÑÐ¸
+            // ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ð¸ (Ð·Ð°Ð¼ÐµÑÐµÐ½Ð¾ Ð½Ð° CI 30.08.2026).
+            boolean hadBefore = edgeExists("TAGGED_WITH", req.adr_id(), "tag_id", req.tag_id());
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -710,7 +742,7 @@ public class LoreAdrResource extends LoreResourceBase {
                     Map.of("id", req.adr_id(), "tag", req.tag_id())))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return linkOutcome(Map.of("ok", true, "adr_id", req.adr_id(),
+            return linkOutcome(hadBefore, Map.of("ok", true, "adr_id", req.adr_id(),
                 "tag_id", req.tag_id(), "action", "added", "linked", linked),
                 linked, "TAGGED_WITH", req.adr_id(), "tag_id", req.tag_id(),
                 "ADR " + req.adr_id() + " или тег " + req.tag_id());

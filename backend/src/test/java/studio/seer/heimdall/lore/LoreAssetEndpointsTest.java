@@ -15,6 +15,10 @@ import static org.hamcrest.Matchers.equalTo;
  */
 @QuarkusTest
 @QuarkusTestResource(value = LoreArcadeDbTestResource.class, restrictToAnnotatedClass = true)
+// Тест поднимает контейнер БД, но, единственный из живых, не нёс отсечки по
+// переменной окружения. Из-за этого «прогнать набор без Docker» падало на нём
+// — и падение читалось как дефект правки, хотя означало отсутствие Docker.
+@org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable(named = "LORE_SKIP_LIVE_DB_TESTS", matches = "true")
 class LoreAssetEndpointsTest {
 
     private static final byte[] PNG = new byte[]{(byte) 0x89, 'P', 'N', 'G', 0, 0, 0, 0};
