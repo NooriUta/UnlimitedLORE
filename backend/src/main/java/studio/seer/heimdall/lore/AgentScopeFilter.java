@@ -79,7 +79,10 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
      * после {@code /lore/}. Значения без префикса {@code agent-}.
      */
-    private static final Map<String, Set<String>> FAMILY_AGENTS = Map.ofEntries(
+    // Пакетная видимость, а не private: набор читает сторож расхождения
+    // AgentDefinitionsMatchMatrixTest — белые списки в .claude/agents обязаны
+    // быть зеркалом этой матрицы, и расходиться они не должны молча.
+    static final Map<String, Set<String>> FAMILY_AGENTS = Map.ofEntries(
         // developer заводит ADR (README профилей: adr_new) — решение владельца
         // 2026-07-18. Создание и правка неразделимы по пути: adr_new и adr_set
         // оба идут в POST /lore/adr (upsert). А вот разрушающие операции

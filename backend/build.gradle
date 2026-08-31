@@ -85,3 +85,18 @@ tasks.named('test') {
         showStackTraces = true
     }
 }
+
+// Описания подагентов — ВХОДНЫЕ ДАННЫЕ тестов, а не посторонние файлы.
+//
+// Сторож AgentDefinitionsMatchMatrixTest сверяет белые списки в
+// .claude/agents с матрицей прав. Но Gradle об этих файлах не знает, и правка
+// одного лишь .md оставляла задачу «актуальной»: тест не перезапускался и
+// оставался зелёным из кэша — то есть спал ровно в тот момент, ради которого
+// написан. Поймано положительным контролем: подмешанный в белый список
+// чужой инструмент прошёл незамеченным, пока прогон не заставили повториться.
+tasks.named('test') {
+    inputs.dir(layout.projectDirectory.dir('../.claude/agents'))
+        .withPropertyName('agentDefinitions')
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .optional(true)
+}
