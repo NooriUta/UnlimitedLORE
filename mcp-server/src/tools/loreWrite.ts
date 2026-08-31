@@ -189,7 +189,7 @@ export function registerLoreWrite(server: McpServer): void {
       note_md: z.string().optional().describe('optional Markdown note'),
       phase_uid: z.string().optional()
         .describe('optional phase to attach to, e.g. "SPRINT_X/PHASE_A" (must belong to the same sprint; create via sprint_phase_new first)'),
-      author_agent: z.string().optional().describe('who owns/posed this task, e.g. "architect", "claude-full"'),
+      author_agent: z.string().optional().describe('кто поставил задачу. С TR-05 это РЕБРО, а не поле: значение обязано быть заявленной личностью (человек с ролью в проекте задачи либо агентная личность). Незаявленное — отказ со списком кандидатов, а не тихая запись строки'),
       executor_agent: z.string().optional().describe('who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('who accepts it — must differ from executor_agent for the task to reach done'),
       task_type: z.string().optional().describe('ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content); defaults to "dev" when omitted'),
@@ -1575,7 +1575,7 @@ export function registerLoreWrite(server: McpServer): void {
       title:          z.string().optional().describe('single-mode: new title'),
       note_md:        z.string().optional().describe('single-mode: Markdown note (replaces existing)'),
       effort_days:    z.number().optional().describe('single-mode: estimated effort in person-days, fractional to the hour (1 day = 8h, e.g. 0.125)'),
-      author_agent:   z.string().optional().describe('single-mode: who owns/posed this task'),
+      author_agent:   z.string().optional().describe('single-mode: кто поставил задачу — записывается ребром ROLE_HELD_BY; незаявленная личность отвергается со списком кандидатов'),
       executor_agent: z.string().optional().describe('single-mode: who is expected to do the work'),
       reviewer_agent: z.string().optional().describe('single-mode: who accepts it — must differ from executor_agent'),
       task_type:      z.string().optional().describe('single-mode: ADR-LORE-015 classification (planning|design|dev|test|ops|research|analytics|docs|content)'),
