@@ -65,9 +65,9 @@ class TaskRoleAgentGateTest {
      */
     @Test
     void unknownSpellingIsRefusedToo() {
-        String why = gate("omiloreadmin", "claude-печать", KNOWN);
+        String why = gate("omiloreadmin", "сессия печати пакета", KNOWN);
         assertNotNull(why, "имя вне списка прошло бы в корпус");
-        assertTrue(why.contains("claude-печать"), why);
+        assertTrue(why.contains("сессия печати пакета"), why);
     }
 
     /** Сырое, но однозначное написание проходит: сводит его таблица. */
