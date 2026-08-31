@@ -169,7 +169,14 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id())));
+            // NM-03 (ADR-LORE-041): фича писала component_id полем, а слайсы
+            // продуктового слоя читают out('BELONGS_TO') — связь, записанная
+            // здесь, не доезжала ни до одного экрана.
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("feature_id", req.feature_id());
+            linkComponentEdge("KnowUseCase", "uc_id", req.feature_id(), req.component_id(), out);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
@@ -337,6 +344,44 @@ public class LoreProductResource extends LoreResourceBase {
                                String project, List<String> projects,
                                String machine_id, String session_id) {}
 
+    /**
+     * Чистая часть объяснения отказа — без похода в граф, поэтому проверяема
+     * тестом. Три случая, которые прежде выглядели одинаково:
+     *
+     * <ul>
+     *   <li>агента не опознали (нет client_id или он не привязан к актору);</li>
+     *   <li>у владельца НЕТ роли в этом проекте — чинится выдачей роли;</li>
+     *   <li>роль есть, но она не делегирует этот профиль — чинится другой ролью
+     *       либо другим профилем.</li>
+     * </ul>
+     *
+     * Разница не косметическая: в первых двух случаях правки прав профиля не
+     * помогут вовсе, а искать будут именно там — сообщение вело туда.
+     */
+    static String denialMessage(String clientId, String owner, String role,
+                                String project, String agentScope) {
+        String who = "агент agent-" + agentScope + " не пишет в 'actor' для проекта '" + project + "': ";
+        if (clientId == null)
+            return who + "вызывающий не предъявил client_id — агентная личность не опознана.";
+        if (owner == null)
+            return who + "клиент '" + clientId + "' не привязан ни к одному актору-агенту (KnowActor "
+                + "kind='agent', ребро OWNED_BY) — у агента нет владельца, а права наследуются от него.";
+        if (role == null)
+            return who + "у владельца НЕТ роли в этом проекте. Права профиля тут ни при чём — "
+                + "выдайте роль (админка LORE → Люди → карточка пользователя → роль в проекте), "
+                + "после чего вызов заработает без перезапуска. Проекты без единой роли видны "
+                + "срезом projects_without_role.";
+        return who + "роль владельца там '" + role + "', и она не делегирует профиль '" + agentScope
+            + "'. Нужна либо более широкая роль в проекте, либо другой профиль агента.";
+    }
+
+    /** Тот же ответ, но со сходом в граф за владельцем и его ролью. */
+    private String explainProjectDenial(String clientId, String project, String agentScope) {
+        String owner = clientId == null ? null : projectRbac.ownerKcSub(clientId);
+        String role = owner == null ? null : projectRbac.ownerRoleInProject(owner, project);
+        return denialMessage(clientId, owner, role, project, agentScope);
+    }
+
     @POST
     @Path("actor")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -367,9 +412,14 @@ public class LoreProductResource extends LoreResourceBase {
             String clientId = callerClientId();
             for (String slug : asked == null ? List.<String>of() : asked) {
                 if (clientId == null || !projectRbac.agentAllowedInProject(clientId, slug, agentScope)) {
-                    return agentScopeForbidden("агент agent-" + agentScope + " не пишет в 'actor' "
-                        + "для проекта '" + slug + "': роль владельца там не делегирует этот профиль "
-                        + "(или клиент/владелец/роль не сопоставлены в графе)");
+                    // Прежнее сообщение сливало ТРИ разных случая в одну строку
+                    // «роль не делегирует (или не сопоставлены в графе)». Они
+                    // чинятся по-разному, а читались одинаково — и владелец
+                    // 30.08.2026 упёрлась ровно в это: отказ на AIDA/MIDGARD
+                    // выглядел как проблема прав профиля, тогда как роли в
+                    // проекте не было вовсе. Тот же класс, что И-6: «не найдено»
+                    // и «не выполнилось» обязаны различаться снаружи.
+                    return agentScopeForbidden(explainProjectDenial(clientId, slug, agentScope));
                 }
             }
         }
@@ -491,6 +541,172 @@ public class LoreProductResource extends LoreResourceBase {
         }
         if (req.project() != null && !req.project().isBlank()) return List.of(req.project());
         return null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Проектные акторы: описательная сторона, отделённая от прав (AC-02).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * ADR-LORE-041 §4: актор ПРОЕКТИРУЕМОЙ части — кто действует в сценарии,
+     * чья это боль, кто выполняет работу.
+     *
+     * <p>Отдельный тип от {@code KnowActor} намеренно. {@code KnowActor} —
+     * личность: {@code client_id}, {@code OWNED_BY}, {@code LOGGED_BY}, вся
+     * цепочка RBAC. Здесь ничего этого нет и появиться не должно, иначе развод
+     * схлопнется обратно.
+     *
+     * <p>Полей {@code machine_id}/{@code session_id} тут тоже нет: это атрибуты
+     * работающей сессии, у роли в сценарии их не бывает.
+     */
+    public record ProjectActorRequest(String actor_id, String name, String kind, String body_md,
+                                      String project, List<String> projects) {}
+
+    /** Допустимые {@code kind} проектного актора. Значение agent снято миграцией 30. */
+    static final List<String> PROJECT_ACTOR_KINDS = List.of("human-role", "system", "automation");
+
+    /**
+     * Заведение/правка проектного актора.
+     *
+     * <p><b>Здесь НЕТ проектного RBAC-гейта — и это суть задачи, а не упущение.</b>
+     * У {@code /lore/actor} гейт стоит потому, что создание актора там могло
+     * создать агентную личность, то есть звено цепочки прав. Проектный актор
+     * прав не несёт вовсе: он ничего не разрешает и ни от кого не наследует.
+     * Гейт на нём проверял не то — и 30.08.2026 остановил владельца на описании
+     * акторов для AIDA/MIDGARD, где у неё просто не было роли в проекте.
+     *
+     * <p>Что остаётся гейтом: {@link #requireAdmin} и семейный агентный скоуп —
+     * запись всё так же не открыта кому попало. Сужается ровно проверка «роль
+     * владельца в конкретном проекте», которой тут нечего охранять.
+     *
+     * <p>{@code kind} принимает automation, но не agent: миграция 30
+     * переименовала значение, и принимать оба означало бы завести два написания
+     * одного смысла — ровно ту болезнь, от которой этот спринт.
+     */
+    @POST
+    @Path("project-actor")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response upsertProjectActor(ProjectActorRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.actor_id() == null || req.actor_id().isBlank())
+            return badParams("actor_id required");
+        if (!SAFE_ID.matcher(req.actor_id()).matches())
+            return badParams("actor_id contains illegal characters");
+        if (req.kind() != null && !PROJECT_ACTOR_KINDS.contains(req.kind()))
+            return badParams(projectActorKindError(req.kind()));
+        // Столкновение с личностью ловим ЗДЕСЬ, а не оставляем на потом: один и
+        // тот же actor_id в двух реестрах — это ровно та двойная правда, ради
+        // разведения которой заведён отдельный тип. Молчаливый upsert создал бы
+        // её на ходу.
+        var clash = ingest.queryPublic(
+            "SELECT count(*) AS n FROM KnowActor WHERE actor_id = :id", Map.of("id", req.actor_id()));
+        long clashN = clash.isEmpty() ? 0 : ((Number) clash.get(0).getOrDefault("n", 0)).longValue();
+        if (clashN > 0) return badParams(identityClashError(req.actor_id()));
+
+        try {
+            StringBuilder sql = new StringBuilder("UPDATE KnowProjectActor SET actor_id=:id");
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("id", req.actor_id());
+            if (req.name() != null)    { sql.append(", name=:n");    p.put("n", req.name()); }
+            if (req.kind() != null)    { sql.append(", kind=:k");    p.put("k", req.kind()); }
+            if (req.body_md() != null) { sql.append(", body_md=:b"); p.put("b", req.body_md()); }
+            sql.append(" UPSERT WHERE actor_id=:id");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
+                .await().indefinitely();
+
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("actor_id", req.actor_id());
+            syncProjectActorProjects(req, out);
+            return noStore(Response.ok(out));
+        } catch (Exception e) {
+            LOG.warnf("[LORE PROJECT-ACTOR] %s: %s", req.actor_id(), e.getMessage());
+            return upstream(e);
+        }
+    }
+
+    /**
+     * Сообщение о недопустимом kind. Отдельный метод, потому что случай
+     * переименованного значения обязан читаться иначе, чем просто опечатка:
+     * вызывающий, приславший agent, писал по прежнему справочнику, и ему нужно
+     * знать, что значение переехало, а не что он ошибся.
+     */
+    static String projectActorKindError(String kind) {
+        String base = "kind must be " + String.join("|", PROJECT_ACTOR_KINDS);
+        if (!"agent".equals(kind)) return base;
+        return base + " — значение agent переименовано в automation (миграция 30): на проектной "
+            + "стороне оно означало роль в сценарии, а в KnowActor — учётную запись с владельцем";
+    }
+
+    /** Сообщение о занятом идентификаторе: разводим типы, а не молча дублируем. */
+    static String identityClashError(String actorId) {
+        return "actor_id '" + actorId + "' уже занят агентной личностью (KnowActor). "
+            + "Проектный актор и личность — разные вершины и не делят идентификатор; "
+            + "возьмите другой actor_id либо правьте личность через /lore/actor";
+    }
+
+    /**
+     * То же приведение рёбер {@code BELONGS_TO_PROJECT}, что у личности, и с
+     * тем же порядком «сначала создать, потом убрать лишнее»: обрыв посередине
+     * оставляет дубли, а не актора без проектов.
+     */
+    private void syncProjectActorProjects(ProjectActorRequest req, Map<String, Object> out) {
+        List<String> wanted;
+        if (req.projects() != null) {
+            wanted = req.projects().stream().filter(s -> s != null && !s.isBlank()).distinct().toList();
+        } else if (req.project() != null && !req.project().isBlank()) {
+            wanted = List.of(req.project());
+        } else {
+            return;   // ключей нет — рёбра не наше дело
+        }
+
+        List<String> missing = new java.util.ArrayList<>();
+        for (String slug : wanted) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> created = (List<Map<String, Object>>)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowProjectActor WHERE actor_id=:id) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("id", req.actor_id(), "p", slug)))
+                .await().indefinitely().result();
+            // Пусто и при «уже было», и при «проекта нет»: CREATE EDGE с пустым
+            // TO — тихий no-op. Различаем запросом к самому ребру, иначе
+            // незарегистрированный слаг уехал бы под ok:true.
+            if (created == null || created.isEmpty()) {
+                var exists = ingest.queryPublic(
+                    "SELECT count(*) AS n FROM BELONGS_TO_PROJECT "
+                    + "WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug));
+                long n = exists.isEmpty() ? 0 : ((Number) exists.get(0).getOrDefault("n", 0)).longValue();
+                if (n == 0) missing.add(slug);
+            }
+        }
+
+        var current = ingest.queryPublic(
+            "SELECT out('BELONGS_TO_PROJECT').slug AS slugs FROM KnowProjectActor WHERE actor_id = :id",
+            Map.of("id", req.actor_id()));
+        int removed = 0;
+        if (!current.isEmpty() && current.get(0).get("slugs") instanceof List<?> have) {
+            for (Object o : have) {
+                if (o == null) continue;
+                String slug = String.valueOf(o);
+                if (wanted.contains(slug)) continue;
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM BELONGS_TO_PROJECT WHERE @out.actor_id = :id AND @in.slug = :p",
+                    Map.of("id", req.actor_id(), "p", slug))).await().indefinitely();
+                removed++;
+            }
+        }
+
+        out.put("projects_linked", wanted.size() - missing.size());
+        out.put("projects_removed", removed);
+        if (!missing.isEmpty()) {
+            out.put("projects_missing", missing);
+            out.put("hint", "не зарегистрированы в реестре: " + String.join(", ", missing)
+                + " — заведите через project_new, иначе привязка молча не создаётся");
+        }
     }
 
     /**
@@ -814,15 +1030,23 @@ public class LoreProductResource extends LoreResourceBase {
 
             boolean linked = false;
             if (!remove) {
+                // AC-03: цель ребра — РОЛЬ, а она после развода живёт в
+                // KnowProjectActor. FILLS_ROLE стало межтиповым, и это не
+                // побочный эффект, а точная запись смысла: личность исполняет
+                // описанную роль. Оставить обе стороны на KnowActor значило бы
+                // искать роль там, где её больше нет, и отвечать «не найдена»
+                // про каждую существующую.
                 List<Map<String, Object>> roleRows = ingest.queryPublic(
-                    "SELECT actor_id FROM KnowActor WHERE actor_id = :id", Map.of("id", req.target_id()));
+                    "SELECT actor_id FROM KnowProjectActor WHERE actor_id = :id", Map.of("id", req.target_id()));
                 if (roleRows == null || roleRows.isEmpty())
-                    return badParams("actor '" + req.target_id() + "' (роль) не найден — заведите через actor_new");
+                    return badParams("роль '" + req.target_id() + "' не найдена среди проектных акторов "
+                        + "(KnowProjectActor) — заведите через project_actor_new. Если вы искали агентную "
+                        + "личность, то FILLS_ROLE ведёт не к ней: связка идёт ОТ личности К роли");
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> created = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE FILLS_ROLE FROM (SELECT FROM KnowActor WHERE actor_id=:id) " +
-                        "TO (SELECT FROM KnowActor WHERE actor_id=:t) IF NOT EXISTS",
+                        "TO (SELECT FROM KnowProjectActor WHERE actor_id=:t) IF NOT EXISTS",
                         Map.of("id", req.actor_id(), "t", req.target_id())))
                     .await().indefinitely().result();
                 linked = created != null && !created.isEmpty();
@@ -984,41 +1208,57 @@ public class LoreProductResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
+            String outField, inField;
             Map<String, Object> p = Map.of("sid", req.source_id(), "tid", req.target_id());
             switch (req.rel()) {
-                case "felt_by" -> {      // KnowPain -> KnowActor: чья это боль
+                case "felt_by" -> {      // KnowPain -> KnowProjectActor: чья это боль
                     edge = "FELT_BY";
                     fromSql = "(SELECT FROM KnowPain WHERE pain_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    outField = "pain_id";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
-                case "desired_by" -> {   // KnowGain -> KnowActor: кто желает выгоду
+                case "desired_by" -> {   // KnowGain -> KnowProjectActor: кто желает выгоду
                     edge = "DESIRED_BY";
                     fromSql = "(SELECT FROM KnowGain WHERE gain_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    outField = "gain_id";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
-                case "performed_by" -> { // KnowJob -> KnowActor: чья это работа
+                case "performed_by" -> { // KnowJob -> KnowProjectActor: чья это работа
                     edge = "PERFORMED_BY";
                     fromSql = "(SELECT FROM KnowJob WHERE job_id=:sid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    outField = "job_id";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
                 case "blocks" -> {       // KnowPain -> KnowJob: боль мешает работе
                     edge = "BLOCKS";
                     fromSql = "(SELECT FROM KnowPain WHERE pain_id=:sid)";
+                    outField = "pain_id";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 case "success_of" -> {   // KnowGain -> KnowJob: выгода = успех в работе
                     edge = "SUCCESS_OF";
                     fromSql = "(SELECT FROM KnowGain WHERE gain_id=:sid)";
+                    outField = "gain_id";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 default -> { return badParams("rel must be felt_by|desired_by|performed_by|blocks|success_of"); }
             }
+                        // Проба ДО обеих веток. Имена ключевых полей у концов берутся из тех
+                        // же подзапросов, что и запись, — иначе проба спрашивала бы про
+                        // одно ребро, а писалось бы другое (ADR-LORE-043).
+            boolean had = edgeExists(edge, outField, req.source_id(), inField, req.target_id());
+
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM " + edge + " WHERE @out.pain_id=:sid OR @out.gain_id=:sid OR @out.job_id=:sid", p))
                     .await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "source_id", req.source_id(),
-                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "source_id", req.source_id(),
+                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -1026,9 +1266,9 @@ public class LoreProductResource extends LoreResourceBase {
                     "CREATE EDGE " + edge + " FROM " + fromSql + " TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "source_id", req.source_id(),
-                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — проверьте, что обе вершины существуют")));
+            return linkOutcome(had, Map.of("ok", true, "source_id", req.source_id(),
+                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked),
+                linked, edge, outField, req.source_id(), inField, req.target_id(), req.source_id() + " или " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE VP LINK] %s: %s", req.source_id(), e.getMessage());
             return upstream(e);
@@ -1052,38 +1292,49 @@ public class LoreProductResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, toSql;
+            String inField;
             Map<String, Object> p = Map.of("fid", req.feature_id(), "tid", req.target_id());
             switch (req.rel()) {
                 case "pain" -> { // фича ЗАЯВЛЯЕТ, что адресует боль; снимает её — UC (RELIEVES)
                     edge = "ADDRESSES";
                     toSql = "(SELECT FROM KnowPain WHERE pain_id=:tid)";
+                    inField = "pain_id";
                 }
                 case "gain" -> { // фича ОБЕЩАЕТ выгоду; создаёт её — UC (DELIVERS)
                     edge = "PROMISES";
                     toSql = "(SELECT FROM KnowGain WHERE gain_id=:tid)";
+                    inField = "gain_id";
                 }
                 case "job" -> { // фича ЗАЯВЛЯЕТ, что помогает с работой; выполняет — UC (PERFORMS)
                     edge = "HELPS_WITH";
                     toSql = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 case "milestone" -> { // ADR-032 §1: стратегическая цель (KAOS: веха = goal)
                     edge = "TARGETS_MILESTONE";
                     toSql = "(SELECT FROM KnowMilestone WHERE milestone_id=:tid)";
+                    inField = "milestone_id";
                 }
                 case "component" -> {
                     edge = "BELONGS_TO";
                     toSql = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                    inField = "component_id";
                 }
                 default -> { return badParams("rel must be pain|gain|job|milestone|component"); }
             }
+                        // Проба ДО обеих веток. Имена ключевых полей у концов берутся из тех
+                        // же подзапросов, что и запись, — иначе проба спрашивала бы про
+                        // одно ребро, а писалось бы другое (ADR-LORE-043).
+            boolean had = edgeExists(edge, "uc_id", req.feature_id(), inField, req.target_id());
+
             if (remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowUseCase WHERE uc_id=:fid) " +
                     "WHERE @in.pain_id=:tid OR @in.gain_id=:tid OR @in.job_id=:tid " +
                     "OR @in.milestone_id=:tid OR @in.component_id=:tid", p))
                     .await().indefinitely();
-                return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id(),
-                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "feature_id", req.feature_id(),
+                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -1092,9 +1343,9 @@ public class LoreProductResource extends LoreResourceBase {
                     "TO " + toSql + " IF NOT EXISTS", p))
                 .await().indefinitely().result();
             boolean linked = created != null && !created.isEmpty();
-            return noStore(Response.ok(Map.of("ok", true, "feature_id", req.feature_id(),
-                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
-                "hint", linked ? "" : "no edge created — проверьте, что фича и target существуют")));
+            return linkOutcome(had, Map.of("ok", true, "feature_id", req.feature_id(),
+                "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked),
+                linked, edge, "uc_id", req.feature_id(), inField, req.target_id(), "фича " + req.feature_id() + " или " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE FEATURE LINK] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
@@ -1118,27 +1369,35 @@ public class LoreProductResource extends LoreResourceBase {
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
             String edge, fromSql, toSql;
+            String outField, inField;
             Map<String, Object> p = Map.of("uid", req.uc_id(), "tid", req.target_id());
             switch (req.rel()) {
                 case "task" -> { // REALIZES: KnowTask -> KnowUseCase (target = task_uid)
                     edge = "REALIZES";
                     fromSql = "(SELECT FROM KnowTask WHERE task_uid=:tid)";
                     toSql   = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
+                    // Единственное отношение с ОБРАТНЫМ направлением: ребро идёт от
+                    // задачи к сценарию. Поле конца названо явно, чтобы проба факта
+                    // спрашивала про то же ребро, которое пишется.
+                    inField = "uc_id";
                 }
                 case "adr" -> { // TRACED_TO: KnowUseCase -> KnowADR (опционально, D9)
                     edge = "TRACED_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowADR WHERE adr_id=:tid)";
+                    inField = "adr_id";
                 }
                 case "decision" -> {
                     edge = "TRACED_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowDecision WHERE decision_id=:tid)";
+                    inField = "decision_id";
                 }
                 case "actor" -> { // D12: HAS_ACTOR — multi, UC -> KnowActor
                     edge = "HAS_ACTOR";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
-                    toSql   = "(SELECT FROM KnowActor WHERE actor_id=:tid)";
+                    toSql   = "(SELECT FROM KnowProjectActor WHERE actor_id=:tid)";
+                    inField = "actor_id";
                 }
                 // PL-10 (D14): компонент у сценария — ПРЯМОЙ, а не только через
                 // родителя. Ядро ценности слоя — тройка «роль × компонент ×
@@ -1149,6 +1408,7 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "BELONGS_TO";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                    inField = "component_id";
                 }
                 /**
                  * Проект сценария/корня (BELONGS_TO_PROJECT).
@@ -1164,35 +1424,49 @@ public class LoreProductResource extends LoreResourceBase {
                     edge = "BELONGS_TO_PROJECT";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowGitProject WHERE slug=:tid)";
+                    inField = "slug";
                 }
                 case "includes" -> { // D13: UC_INCLUDES — обязательный под-сценарий
                     edge = "UC_INCLUDES";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowUseCase WHERE uc_id=:tid)";
+                    inField = "uc_id";
                 }
                 case "extends" -> { // D13: UC_EXTENDS — вариант-расширение
                     edge = "UC_EXTENDS";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowUseCase WHERE uc_id=:tid)";
+                    inField = "uc_id";
                 }
                 case "relieves" -> { // ADR-032 D5: pain reliever — UC снимает боль
                     edge = "RELIEVES";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowPain WHERE pain_id=:tid)";
+                    inField = "pain_id";
                 }
                 case "delivers" -> { // ADR-032 D5: gain creator — UC создаёт выгоду
                     edge = "DELIVERS";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowGain WHERE gain_id=:tid)";
+                    inField = "gain_id";
                 }
                 case "performs" -> { // Остервальдер: UC ВЫПОЛНЯЕТ работу клиента —
                     // третья ось fit рядом с relieves/delivers
                     edge = "PERFORMS";
                     fromSql = "(SELECT FROM KnowUseCase WHERE uc_id=:uid)";
                     toSql   = "(SELECT FROM KnowJob WHERE job_id=:tid)";
+                    inField = "job_id";
                 }
                 default -> { return badParams("rel must be task|adr|decision|actor|component|includes|extends|relieves|delivers|performs"); }
             }
+            // Проба ДО обеих веток. У отношения "task" направление ОБРАТНОЕ —
+            // ребро идёт от задачи к сценарию, — поэтому концы берутся с
+            // поправкой на него. Спросить не про то ребро значило бы получить
+            // уверенный ответ о постороннем факте.
+            boolean reversed = "task".equals(req.rel());
+            boolean had = edgeExists(edge,
+                reversed ? "task_uid" : "uc_id", reversed ? req.target_id() : req.uc_id(),
+                reversed ? "uc_id" : inField,   reversed ? req.uc_id() : req.target_id());
             if (remove) {
                 boolean fromUc = !"task".equals(req.rel());
                 String delSql = fromUc
@@ -1213,8 +1487,8 @@ public class LoreProductResource extends LoreResourceBase {
                             req.uc_id(), LoreUpstream.detail(e));
                     }
                 }
-                return noStore(Response.ok(Map.of("ok", true, "uc_id", req.uc_id(),
-                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed")));
+                return unlinkOutcome(Map.of("ok", true, "uc_id", req.uc_id(),
+                    "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
             }
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> created = (List<Map<String, Object>>)
@@ -1282,7 +1556,10 @@ public class LoreProductResource extends LoreResourceBase {
                         req.uc_id(), LoreUpstream.detail(e));
                 }
             }
-            return noStore(Response.ok(out));
+            return linkOutcome(had, out, linked, edge,
+                reversed ? "task_uid" : "uc_id", reversed ? req.target_id() : req.uc_id(),
+                reversed ? "uc_id" : inField,   reversed ? req.uc_id() : req.target_id(),
+                "сценарий " + req.uc_id() + " или " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE UC LINK] %s: %s", req.uc_id(), e.getMessage());
             return upstream(e);
@@ -1729,7 +2006,12 @@ public class LoreProductResource extends LoreResourceBase {
      */
     private CheckOutcome checkActorLoadDead() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowActor", Map.of());
+            // AC-03: считаем по проектным акторам. Раньше сюда попадали и семь
+            // агентных личностей — у них ноль сценариев по определению, и каждая
+            // выдавалась находкой «роль без единого сценария». Семь постоянных
+            // ложных находок приучают пролистывать весь список, то есть проверка
+            // тем вернее молчит, чем громче кричит.
+            "SELECT actor_id, name, kind, in('HAS_ACTOR').size() AS uc_count FROM KnowProjectActor", Map.of());
 
         List<Map<String, Object>> findings = new ArrayList<>();
         int found = 0;

@@ -39,6 +39,14 @@ public class LoreQualityResource extends LoreResourceBase {
     /** Потолок пачки. «Кусок» не должен превращаться во весь слой обходным путём. */
     static final int MAX_BATCH = 200;
 
+    /**
+     * id релиза — составной: {@code {git_project}#{release_id}}. Отдельный
+     * паттерн, потому что SAFE_ID не знает '#' и '/' в имени проекта: без
+     * него тип release отбивал КАЖДЫЙ корректный id как недопустимый.
+     */
+    static final java.util.regex.Pattern RELEASE_UID =
+        java.util.regex.Pattern.compile("[A-Za-z0-9_./-]{1,80}#[A-Za-z0-9_.-]{1,40}");
+
     // Проекции фактов живут в LoreQualityFacts — там же, откуда их берёт путь
     // записи. Собственной копии здесь нет намеренно: судья один, и разойтись
     // могли только факты (за один день это случилось трижды).
@@ -67,7 +75,14 @@ public class LoreQualityResource extends LoreResourceBase {
         List<String> ids = new ArrayList<>();
         for (String id : req.ids()) {
             if (id == null || id.isBlank()) continue;
-            if (!SAFE_ID.matcher(id).matches())
+            // Релиз адресуется release_uid — "{git_project}#{release_id}", и '#' в
+            // SAFE_ID не входит. Без этой ветки заявленный тип release не
+            // работал ВООБЩЕ: любой корректный id отбивался как «illegal
+            // characters». Поймано первым же вызовом по релизам.
+            boolean idOk = kind == LoreQualityFacts.Kind.RELEASE
+                ? RELEASE_UID.matcher(id).matches()
+                : SAFE_ID.matcher(id).matches();
+            if (!idOk)
                 return badParams("id contains illegal characters: " + id);
             if (!ids.contains(id)) ids.add(id);   // дубликаты в запросе не должны двоить ответ
         }

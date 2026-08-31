@@ -80,7 +80,7 @@ export default function ActorFormModal({
       await saveLoreActor({
         actor_id: finalId,
         name: name || undefined,
-        kind: (kind || undefined) as 'human-role' | 'system' | 'agent' | undefined,
+        kind: (kind || undefined) as 'human-role' | 'system' | 'automation' | undefined,
         body_md: body || undefined,
         // Шлём НАБОР всегда, даже пустой: пустой список — осознанное «убрать
         // все», а отсутствие ключа бэкенд трактует как «рёбра не трогать».
@@ -137,7 +137,7 @@ export default function ActorFormModal({
       <label style={label}>{t('lore.product.actor.kind', 'Вид')}</label>
       <select style={field} value={kind} onChange={e => setKind(e.target.value)}>
         <option value="human-role">{t('lore.product.vocab.actorKind.human-role', 'человек')}</option>
-        <option value="agent">{t('lore.product.vocab.actorKind.agent', 'агент')}</option>
+        <option value="automation">{t('lore.product.vocab.actorKind.automation', 'автоматизация')}</option>
         <option value="system">{t('lore.product.vocab.actorKind.system', 'система')}</option>
       </select>
 

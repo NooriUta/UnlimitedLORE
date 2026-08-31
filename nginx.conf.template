@@ -15,10 +15,28 @@
 # правила была написана одним `if` по шаблону IP, и проверка показала
 # `Host=127.0.0.1 → 301` — то есть health-check деплоя (`curl http://127.0.0.1/`
 # изнутри контейнера, ждёт ровно 200) отвалился бы на КАЖДОМ деплое.
-map $host $lore_redirect_to_https {
+#
+# ЧУЖАЯ УСТАНОВКА. Канонический адрес больше не вшит в файл: он приходит из
+# переменной LORE_PUBLIC_URL при старте контейнера (envsubst по шаблону,
+# см. Dockerfile). Раньше здесь стоял литерал lore.odal.seidrstudio.pro, и
+# любая посторонняя установка, открытая по IP, уводила браузер на чужой стенд —
+# на хост, к которому у неё нет ни доступа, ни отношения.
+# Переменная НЕ ЗАДАНА → редиректа нет вовсе. Это осознанный выбор в пользу
+# «работает, но без удобства» против «молча уводит не туда»: без HTTPS не будет
+# входа по OIDC, и об этом скажет 30-lore-public-url.sh на старте, — но
+# приложение поднимется и отдаст интерфейс.
+map $host $lore_bare_ip {
     default                  0;   # доменные имена (в т.ч. канонический хост) — как есть
     "~^127\."                0;   # loopback: health-check деплоя + сам по себе защищённый контекст
     "~^\d+\.\d+\.\d+\.\d+$"  1;   # голый IP — вход по OIDC там физически невозможен
+}
+
+# И «зашли по голому IP», И «канонический адрес настроен». В nginx нет «and»,
+# поэтому условия склеиваются в строку и проверяются одной регуляркой: при
+# пустом LORE_PUBLIC_URL получается "1:" и не матчится — редирект выключен.
+map "$lore_bare_ip:${LORE_PUBLIC_URL}" $lore_redirect_to_https {
+    default     0;
+    "~^1:.+"    1;
 }
 
 server {
@@ -56,7 +74,11 @@ server {
     # (1643 style={{}}), mermaid uses new Function (unsafe-eval), Monaco runs
     # workers from blob:. Tighten once inline styles are migrated (task B6).
     #
-    # Keycloak (odal.seidrstudio.pro) внесён в connect-src И frame-src, потому
+    # Origin Keycloak приходит из LORE_OIDC_ORIGIN (был вшит литералом — та же
+    # правка, что и у редиректа: чужой установке нужен СВОЙ Keycloak).
+    # Пусто → в CSP просто нет постороннего origin; при выключенном auth это
+    # верно, при включённом вход упрётся в CSP, о чём предупредит скрипт старта.
+    # Origin Keycloak вносится в connect-src И frame-src, потому
     # что он живёт на ДРУГОМ origin, а не путём на этом. Оба нужны и по разным
     # причинам: connect-src — обмен кода на токен и jwks; frame-src — скрытый
     # iframe тихого обновления (oidc-client-ts, automaticSilentRenew: true).
@@ -66,7 +88,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' https://odal.seidrstudio.pro; frame-src 'self' https://odal.seidrstudio.pro; frame-ancestors 'self'; base-uri 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
 
     # Trailing slash is deliberate: a bare `location /bench` prefix would also
     # match the SPA route `/benchmark` (and `/lore` would match a hard-reload of
@@ -88,13 +110,13 @@ server {
         # Инцидент 2026-07-21: адрес сменился с localhost на IP, и переезд молча
         # отобрал криптографию вместе с адресом — белый экран без объяснений.
         if ($lore_redirect_to_https) {
-            return 301 https://lore.odal.seidrstudio.pro$request_uri;
+            return 301 ${LORE_PUBLIC_URL}$request_uri;
         }
         add_header Cache-Control "no-cache" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' https://odal.seidrstudio.pro; frame-src 'self' https://odal.seidrstudio.pro; frame-ancestors 'self'; base-uri 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
         try_files /index.html =404;
     }
 
@@ -107,13 +129,13 @@ server {
     # change always produces a new filename.
     location = /index.html {
         if ($lore_redirect_to_https) {   # см. пояснение в location = /lore
-            return 301 https://lore.odal.seidrstudio.pro$request_uri;
+            return 301 ${LORE_PUBLIC_URL}$request_uri;
         }
         add_header Cache-Control "no-cache" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' https://odal.seidrstudio.pro; frame-src 'self' https://odal.seidrstudio.pro; frame-ancestors 'self'; base-uri 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${LORE_OIDC_ORIGIN}; frame-src 'self' ${LORE_OIDC_ORIGIN}; frame-ancestors 'self'; base-uri 'self'" always;
     }
 
     location /lore/ {
@@ -168,7 +190,7 @@ server {
     # bounce the browser off-port. SPA paths never need directory resolution.
     location / {
         if ($lore_redirect_to_https) {   # см. пояснение в location = /lore
-            return 301 https://lore.odal.seidrstudio.pro$request_uri;
+            return 301 ${LORE_PUBLIC_URL}$request_uri;
         }
         try_files $uri /index.html;
     }

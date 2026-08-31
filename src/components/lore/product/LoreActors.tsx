@@ -37,7 +37,7 @@ import { ACTOR_KIND_ICON, VP_ICON, iconOf } from './icons';
 import { GameIcon } from '../GameIcon';
 import { actorKindLabel } from './vocab';
 
-export type ActorKind = 'all' | 'human-role' | 'agent' | 'system';
+export type ActorKind = 'all' | 'human-role' | 'automation' | 'system';
 
 /**
  * Отбор строк реестра акторов: вид + текст (PL-18).
@@ -162,7 +162,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
   const kindDefs: { key: ActorKind; label: string }[] = [
     { key: 'all', label: t('lore.product.actor.kindAll', 'все') },
     { key: 'human-role', label: `${t('lore.product.actor.kindHuman', 'люди')}` },
-    { key: 'agent', label: `${t('lore.product.actor.kindAgent', 'агенты')}` },
+    { key: 'automation', label: `${t('lore.product.actor.kindAutomation', 'автоматизация')}` },
     { key: 'system', label: `${t('lore.product.actor.kindSystem', 'системы')}` },
   ];
 
@@ -202,7 +202,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
             title={a.name ?? a.actor_id}
             selected={a.actor_id === selectedId}
             onClick={() => onSelect(a.actor_id)}
-            meta={<IconPill icon={iconOf(ACTOR_KIND_ICON, a.kind)} tone={a.kind === 'agent' ? 'act' : 'muted'}>{a.uc_count ?? 0} US</IconPill>}
+            meta={<IconPill icon={iconOf(ACTOR_KIND_ICON, a.kind)} tone={a.kind === 'automation' ? 'act' : 'muted'}>{a.uc_count ?? 0} US</IconPill>}
           />
         ))}
       </>
@@ -236,7 +236,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
       detail = (
         <div>
           <PassportHeader title={a.name ?? a.actor_id}>
-            <IconPill icon={iconOf(ACTOR_KIND_ICON, a.kind)} tone={a.kind === 'agent' ? 'act' : 'muted'}>{actorKindLabel(t, a.kind)}</IconPill>
+            <IconPill icon={iconOf(ACTOR_KIND_ICON, a.kind)} tone={a.kind === 'automation' ? 'act' : 'muted'}>{actorKindLabel(t, a.kind)}</IconPill>
             <Pill>{t('lore.product.actor.segment', 'сегмент клиента')}</Pill>
             {/* AL-107: в форму уходит ВЕСЬ набор проектов. Прежняя редакция
                 передавала `actorProjects[0]` — первый из списка, — и правка

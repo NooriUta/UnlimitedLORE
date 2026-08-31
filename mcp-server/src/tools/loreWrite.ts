@@ -155,7 +155,7 @@ function definePostTool<S extends z.ZodRawShape>(
 // first, then mirror here.
 const LORE_STATUS = z.enum([
   'todo', 'planned', 'active', 'partial', 'done',
-  'blocked', 'high', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
+  'blocked', 'cancelled', 'backlog', 'design', 'ready_for_deploy',
 ]);
 
 export function registerLoreWrite(server: McpServer): void {
@@ -402,7 +402,7 @@ export function registerLoreWrite(server: McpServer): void {
       'Upserts by uc_id; parent_uc_id keeps the DECOMPOSES_INTO edge in sync (response carries ' +
       'parent_linked:false when the parent is missing — not a silent no-op, and a cycle is rejected ' +
       'outright). scenario_md/acceptance_md are separate fields; actors are ' +
-      'KnowActor VERTICES (D12, can be several) — attach via uc_link rel="actor", never a free-text string. ' +
+      'KnowProjectActor VERTICES (D12, can be several) — attach via uc_link rel="actor", never a free-text string. ' +
       'UC shipped ⇔ its uc-tasks are done (advisory). Mutates system_aida_lore.',
     schema: {
       uc_id:         z.string().describe('e.g. "UC-GIT-MERGE"'),
@@ -487,7 +487,7 @@ export function registerLoreWrite(server: McpServer): void {
     description: 'Create or update a KnowJob — a customer JOB-TO-BE-DONE as a graph vertex (ADR-LORE-032 §2, ' +
       'Osterwalder VPC). The third pillar of the customer profile: a pain BLOCKS a job, a gain is the SUCCESS_OF ' +
       'a job, and a use case PERFORMS it (uc_link rel="performs"). Whose job it is = vp_link(rel="performed_by") ' +
-      'to a KnowActor. GLOBAL vertex (no project) — the same job is felt across products; product context lives ' +
+      'to a KnowProjectActor. GLOBAL vertex (no project) — the same job is felt across products; product context lives ' +
       'on the edges. Upsert by job_id.',
     schema: {
       job_id:     z.string().describe('e.g. "JOB-RELEASE" (JOB-<slug>) — global, no project prefix required'),
@@ -506,7 +506,7 @@ export function registerLoreWrite(server: McpServer): void {
   definePostTool(server, {
     name: 'vp_link',
     description: 'Link (or unlink) the CUSTOMER-PROFILE edges of the Value Proposition Canvas (ADR-LORE-032 §2, ' +
-      'Osterwalder). rel="felt_by": a KnowPain is felt by a KnowActor; rel="desired_by": a KnowGain is desired ' +
+      'Osterwalder). rel="felt_by": a KnowPain is felt by a KnowProjectActor; rel="desired_by": a KnowGain is desired ' +
       'by an actor; rel="performed_by": a KnowJob is performed by an actor — these say WHOSE pain/gain/job it is ' +
       '(the segment). rel="blocks": a pain BLOCKS a job; rel="success_of": a gain is the SUCCESS_OF a job — these ' +
       'wire the three pillars into one canvas instead of three loose lists. linked:false = edge NOT created ' +
@@ -546,7 +546,8 @@ export function registerLoreWrite(server: McpServer): void {
     'Link (or unlink) a KnowUseCase. rel="task": REALIZES edge (KnowTask→UC), target_id=full task_uid — ' +
       'REQUIRED discipline for tasks with work_class=uc (advisory, D3). rel="adr"/"decision": TRACED_TO ' +
       'edge (UC→justification) — OPTIONAL by design (D9). rel="actor": HAS_ACTOR edge (MULTI, D12) to a ' +
-      'KnowActor (create via actor_new first). rel="includes"/"extends": UC→UC graph relations (D13): ' +
+      'KnowProjectActor (create via project_actor_new first — NOT actor_new, that one writes agent identities). ' +
+      'rel="includes"/"extends": UC→UC graph relations (D13): ' +
       'includes = mandatory sub-scenario, extends = variant. rel="relieves"/"delivers" (ADR-LORE-032 §2): ' +
       'the UC actually relieves a KnowPain / delivers a KnowGain — these edges are what CLOSE the VP fit ' +
       'the feature only claimed via feature_link(pain|gain). rel="performs" (ADR-LORE-032 §2): the UC actually ' +
@@ -618,9 +619,15 @@ export function registerLoreWrite(server: McpServer): void {
 
   definePostTool(server, {
     name: 'actor_new',
-    description: 'Create or update a KnowActor — проектируемая роль приложения (D12): human-role | system | ' +
-      'agent. Upserts by actor_id. Один актор ссылается многими UC (HAS_ACTOR via uc_link rel="actor") — ' +
-      'реестр ролей и карта «сценарии роли» живут на этой вершине. Mutates system_aida_lore.',
+    description: 'Create or update a KnowActor — an agent IDENTITY (ADR-LORE-041 §4): the account behind a writing ' +
+      'session. Carries client_id, its human owner (OWNED_BY) and the session journal (LOGGED_BY); the whole ' +
+      'RBAC chain starts here. kind: human-role | system | agent.\n\n' +
+      'This is NOT the actor of a use case. Who ACTS in a scenario, whose pain it is, who performs a job — ' +
+      'that is KnowProjectActor, written by project_actor_new, and it carries no permissions at all. ' +
+      'Until 30.08.2026 both lived in one vertex, and the consequence was not cosmetic: creating a descriptive ' +
+      'actor had to pass a per-project RBAC gate, so design work was cut by a mechanism written for rights. ' +
+      'Reaching for this tool to describe a scenario role is the exact mistake the split was made to end.\n\n' +
+      'Upserts by actor_id. Mutates system_aida_lore.',
     schema: {
       actor_id: z.string().describe('e.g. "ACT-ADMIN", "ACT-AGENT-SESSION"'),
       name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Администратор LORE"'),
@@ -648,6 +655,47 @@ export function registerLoreWrite(server: McpServer): void {
     }),
   });
 
+  // AC-02/ADR-LORE-041 §4: описательный актор проектируемой части — ОТДЕЛЬНЫЙ
+  // инструмент, а не флаг у actor_new.
+  //
+  // Разводится не хранение, а вопрос: actor_new заводит ЛИЧНОСТЬ (client_id,
+  // владелец, цепочка RBAC), этот — роль в сценарии. Слив их в один инструмент
+  // с переключателем вернул бы ровно ту неоднозначность, из-за которой у
+  // описания акторов появился проектный RBAC-гейт и 30.08.2026 остановил
+  // владельца на AIDA/MIDGARD.
+  definePostTool(server, {
+    name: 'project_actor_new',
+    description: 'Create or update a KnowProjectActor — the DESIGN-side actor: who acts in a use case, whose ' +
+      'pain it is, who performs a job (ADR-LORE-041 §4). Upserts by actor_id.\n\n' +
+      'This is NOT actor_new. actor_new writes KnowActor — an agent IDENTITY carrying client_id, OWNED_BY and ' +
+      'the whole RBAC chain; creating one there can create a link in the permission chain, which is why that ' +
+      'path has a per-project RBAC gate. A project actor carries no permissions at all, so it has no such gate: ' +
+      'you can describe actors for a project where you hold no role. That gate on descriptive work was the ' +
+      'defect this split fixes.\n\n' +
+      'kind accepts "automation", NOT "agent" — migration 30 renamed the value, and accepting both would ' +
+      'recreate two spellings of one meaning. An actor_id already taken by a KnowActor is a 400, not a silent ' +
+      'upsert: identity and description do not share identifiers. Mutates system_aida_lore.',
+    schema: {
+      actor_id: z.string().describe('e.g. "ACT-ANALYST", "ACT-CI-RUNNER"'),
+      name:     z.string().optional().describe('человекочитаемое имя роли, e.g. "Аналитик"'),
+      kind:     z.enum(['human-role', 'system', 'automation']).optional()
+        .describe('"agent" is rejected — renamed to "automation" by migration 30'),
+      body_md:  z.string().optional().describe('кто это, что делает, чего ждёт от системы'),
+      project:  z.string().optional()
+        .describe('ONE git-project slug — treated as a one-item set, so it DETACHES the actor from every other project. Prefer `projects` for a multi-project actor.'),
+      projects: z.array(z.string()).optional()
+        .describe('FULL set of git-project slugs; passing this key REPLACES the whole set (empty array detaches from all), omitting BOTH keys leaves the edges untouched. Response: projects_linked / projects_removed / projects_missing — an unregistered slug is reported, never a silent no-op.'),
+    },
+    path: '/lore/project-actor',
+    body: ({ actor_id, name, kind, body_md, project, projects }) => ({
+      actor_id, name: name ?? null, kind: kind ?? null, body_md: body_md ?? null,
+      // Как и в actor_new: undefined и null здесь значат разное — «ключа нет»
+      // против «снять все», и подмена стёрла бы различие.
+      project: project ?? null,
+      ...(projects === undefined ? {} : { projects }),
+    }),
+  });
+
   // MT-11/D-VP-ROLE-AGENT-PAIR (редакция 3): агент → роль, которую он
   // исполняет. rel — enum ради согласованности с остальными *_link
   // (uc_link/task_link/…), не задел на будущее расширение конкретно здесь.
@@ -656,7 +704,8 @@ export function registerLoreWrite(server: McpServer): void {
   // не найден — не тихий no-op.
   definePostTool(server, {
     name: 'actor_link',
-    description: 'Link (or unlink) a KnowActor(kind=agent) to the KnowActor(kind=human-role) whose work it ' +
+    description: 'Link (or unlink) a KnowActor(kind=agent) — an agent IDENTITY — to the KnowProjectActor ' +
+      '(the design-side role, created via project_actor_new) whose work it ' +
       'performs — FILLS_ROLE edge (D-VP-ROLE-AGENT-PAIR). The pair is checked in product/self-check ' +
       '(actor_pairs): the two actors\' PERFORMED_BY job sets must match — a mismatch is a real finding, ' +
       'not a silent pass. Reassigning an agent replaces its previous FILLS_ROLE edge, it does not add a ' +
@@ -1697,16 +1746,38 @@ export function registerLoreWrite(server: McpServer): void {
       finished_at:  z.string().optional().describe('ISO datetime when run finished'),
       flags:        z.string().optional().describe('Comma-separated flag strings, e.g. "coverage_low,shuttle_down"'),
       run_id:       z.string().optional().describe('Explicit run ID; auto-generated as routine_name+run_date if omitted'),
+      // SPRINT_QG_REBUILD/QG-12 (SPEC-QG-ARCHITECTURE §4.8, §4.9): channel and the
+      // change it is attributable to. Without `channel` "no commits this week" is
+      // indistinguishable from "the gate died" — two different verdicts.
+      channel:      z.enum(['actions', 'app_job']).optional().describe('Trigger channel: "actions" = Forgejo Actions (tied to a change), "app_job" = scheduled application job (tied to a date)'),
+      source_url:   z.string().optional().describe('Link to the run that produced this record (Actions run URL / job id) — one click from a red metric to its log'),
+      commit_sha:   z.string().optional().describe('Commit the verdict is attributable to (channel "actions")'),
+      pr_number:    z.number().int().optional().describe('PR the verdict is attributable to (channel "actions")'),
+      // QG-15: which model produced the judgement. The owner chose to keep the LLM
+      // call on our side specifically to compare models; a verdict whose model is
+      // unknown cannot be compared to anything. Empty is MEANINGFUL for channel
+      // "actions" — there is no judgement there, only the fact of a build.
+      model:        z.string().optional().describe('Model that produced the judgement, e.g. "claude-opus-5". Leave unset for channel "actions" — no judgement is made there'),
       metrics: z.array(z.object({
         key:    z.string().describe('Metric key, e.g. "inv_2_safecall_count" (one per invariant)'),
-        value:  z.number().describe('Numeric value (grep count / HTTP status / ms / ratio; -1 = SKIP/service down)'),
+        value:  z.number().describe('Numeric value (grep count / HTTP status / ms / ratio)'),
         unit:   z.string().optional().describe('Unit: "count" | "ratio" | "ms" | "bool" | "lines" | "pct"'),
         target: z.number().optional().describe('Target/threshold value'),
-        status: z.enum(['PASS', 'WARN', 'FAIL', 'SKIP']).optional().describe('Per-metric status vs target'),
+        status: z.enum(['PASS', 'WARN', 'FAIL', 'SKIP', 'NOT_MEASURED']).optional().describe('Per-metric status vs target. NOT_MEASURED = the measurement did not happen; it takes no part in the verdict but shows as failed in the report. SKIP is the legacy spelling of the same thing'),
         source: z.string().optional().describe('Exact reproducer command + file:line evidence, e.g. "grep -n safeCall CompositeListener.java → lines 47,89 (=5, want 8)". Drives _qg_recommend.'),
+        // §5: REQUIRED whenever status is NOT_MEASURED/SKIP — the backend rejects
+        // the whole run otherwise. Free text is refused on purpose: an untyped
+        // reason cannot be grouped or counted, so "how many days has this been
+        // unmeasured" has no answer. 35 silently skipped metrics are what this fixes.
+        not_measured_reason: z.enum([
+          'source_unreachable', 'source_missing', 'stand_absent', 'tool_disabled',
+          'script_absent', 'not_implemented', 'budget_exhausted', 'no_changes', 'no_evidence',
+        ]).optional().describe('REQUIRED when status is NOT_MEASURED or SKIP — why the measurement did not happen'),
+        model:  z.string().optional().describe('Model that judged this particular metric; defaults to the run-level model. Metrics collected by deterministic code have none'),
       })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
-    async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id, metrics }) => {
+    async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id,
+             channel, source_url, commit_sha, pr_number, model, metrics }) => {
       // try/catch как у всех прочих write-тулов: этот эндпоинт умеет 500-ить на
       // UPSERT-схеме, и без обёртки падение уходило необработанной ошибкой
       // протокола вместо стандартного {isError:true}.
@@ -1717,6 +1788,11 @@ export function registerLoreWrite(server: McpServer): void {
           finished_at: finished_at ?? null,
           flags:       flags       ?? null,
           run_id:      run_id      ?? null,
+          channel:     channel     ?? null,
+          source_url:  source_url  ?? null,
+          commit_sha:  commit_sha  ?? null,
+          pr_number:   pr_number   ?? null,
+          model:       model       ?? null,
           metrics:     metrics     ?? [],
         }));
       } catch (e) { return err(e); }

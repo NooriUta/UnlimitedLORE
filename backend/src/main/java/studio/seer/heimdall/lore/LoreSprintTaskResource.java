@@ -67,8 +67,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
     // quality — вердикт линтера полноты (WorkQuality). Поле добавочное: старые
     // клиенты его игнорируют, новые видят, чего не хватает, СРАЗУ после записи,
     // а не когда кто-то откроет срез гигиены через неделю.
+    // quality — компактная форма (WorkQuality.compact): «x из y» плюс ТОЛЬКО
+    // непройденное. Полный список выдавал пройденные и непройденные проверки
+    // одинаково, и пропуск тонул среди пройденного — ответ task_new читают
+    // чаще всех, поэтому здесь это стоило дороже всего.
     public record TaskWriteResponse(boolean ok, String task_uid, String task_id, Integer order_index,
-        WorkQuality.Result quality) {}
+        java.util.Map<String, Object> quality) {}
     // MCP-PHASES (SPRINT_LORE_MCP_GAPS_2): sprint phases write-path
     public record PhaseCreateRequest(String sprint_id, String phase_key, String name, Integer order_index,
         String summary_md) {}
@@ -117,7 +121,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
             out.put("created", r.created());
-            out.put("quality", sprintQuality(req.sprint_id()));
+            out.put("quality", WorkQuality.compact(sprintQuality(req.sprint_id())));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT CREATE] %s: %s", req.sprint_id(), e.getMessage());
@@ -128,10 +132,77 @@ public class LoreSprintTaskResource extends LoreResourceBase {
 
     // ── Write-path: create / edit a task ────────────────────────────────────
 
+    @jakarta.inject.Inject
+    TaskRoleService roleService;
+
+    /**
+     * Назначение роли на задаче (ADR-LORE-042, TR-04/TR-06).
+     *
+     * <p>Отдельный вызов, а не поле в {@code task_new}, потому что назначение —
+     * не свойство задачи, а СОБЫТИЕ: у него своя дата, свой прежний держатель и
+     * своя причина смены. Поля author/executor/reviewer_agent пока пишутся
+     * по-прежнему: обе правды живут рядом, пока не сойдутся, и снятие полей —
+     * отдельный последний шаг, а не побочный эффект этого.
+     *
+     * <p>Отказ отдаётся как {@code 400} с телом по ADR-LORE-043: {@code outcome}
+     * называет произошедшее, {@code reason} — почему. Молчаливого {@code ok:true}
+     * на неприменённом назначении здесь быть не может.
+     */
+    /**
+     * Кого можно поставить на роль этой задачи (TR-07).
+     *
+     * <p>Отдаётся ТЕМ ЖЕ методом, которым проверяет запись, — иначе форма
+     * предлагала бы один список, а отказ называл другой, и расхождение
+     * обнаружилось бы только в момент отказа. Одна правда о кандидатах, а не
+     * две согласуемые вручную.
+     *
+     * <p>Пустой список — содержательный ответ, а не отсутствие данных: он
+     * означает, что в проекте задачи нет ни одной роли, и чинится это в
+     * админке, а не выбором другого имени. Поэтому он приходит с признаком,
+     * который форме есть что показать.
+     */
+    @jakarta.ws.rs.GET
+    @Path("task/role-candidates")
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response taskRoleCandidates(@jakarta.ws.rs.QueryParam("task_uid") String taskUid,
+                                       @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (taskUid == null || taskUid.isBlank()) return badParams("task_uid required");
+        java.util.List<String> people = roleService.peopleOfTaskProject(taskUid);
+        java.util.List<String> agents = roleService.declaredAgents();
+        return noStore(Response.ok(Map.of(
+            "task_uid", taskUid,
+            "people", people,
+            "agents", agents,
+            "project_has_roles", !people.isEmpty())));
+    }
+
+    @POST
+    @Path("task/role")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @io.smallrye.common.annotation.Blocking
+    public Response setTaskRole(TaskRoleService.RoleRequest req,
+                                @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        TaskRoleService.Result r = roleService.apply(req);
+        return noStore(r.applied()
+            ? Response.ok(r.body())
+            : Response.status(Response.Status.BAD_REQUEST).entity(r.body()));
+    }
+
     @POST
     @Path("task")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
+    // @Blocking: гейт ролей для агента спрашивает граф синхронно, а без
+    // аннотации метод исполняется на event loop, где блокирующий вызов падает
+    // с «current thread cannot be blocked». Реактивная цепочка ниже от этого не
+    // меняется — меняется поток, на котором она собирается.
+    @io.smallrye.common.annotation.Blocking
     public Uni<Response> createTask(TaskCreateRequest req, @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return Uni.createFrom().item(disabled());
         requireAdmin(role);
@@ -141,6 +212,22 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         }
         if (!SAFE_ID.matcher(req.sprint_id()).matches() || !SAFE_ID.matcher(req.task_id()).matches()) {
             return Uni.createFrom().item(badParams("sprint_id / task_id contain illegal characters"));
+        }
+        // Решение владельца 30.08.2026: агент не создаёт задачу без ролей —
+        // отказ, а не запись с пропуском. Проверка стоит ДО первой команды в
+        // базу: иначе задача легла бы, а отказ пришёл после, и «не создана»
+        // было бы неправдой.
+        //
+        // Только для агентов. Человек заводит задачу в форме, видя список, и
+        // законно может не знать исполнителя в момент создания. У агента этого
+        // случая нет: он пишет из сценария, где обе роли известны.
+        if (callerAgentScope() != null) {
+            String refuse = roleService.refuseCreateForAgent(
+                req.sprint_id(), req.author_agent(), req.executor_agent());
+            if (refuse != null) {
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("ok", false, "outcome", LoreOutcome.NOOP, "reason", refuse))));
+            }
         }
         if (req.phase_uid() != null && !SAFE_ID.matcher(req.phase_uid()).matches()) {
             return Uni.createFrom().item(badParams("phase_uid contains illegal characters"));
@@ -231,7 +318,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     .chain(__ -> Uni.createFrom().item(() -> {
                             hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
                             return noStore(Response.ok(
-                                new TaskWriteResponse(true, uid, tid, order, taskQuality(uid))));
+                                new TaskWriteResponse(true, uid, tid, order, WorkQuality.compact(taskQuality(uid)))));
                         })
                         .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()));
 
@@ -709,7 +796,7 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     if (req.note_md() != null)
                         hashStamper.stampOpenHist("KnowTaskHist", "KnowTask", "task_uid", uid);
                     return noStore(Response.ok(
-                        new TaskWriteResponse(true, uid, null, null, taskQuality(uid))));
+                        new TaskWriteResponse(true, uid, null, null, WorkQuality.compact(taskQuality(uid)))));
                 })
                 .runSubscriptionOn(io.smallrye.mutiny.infrastructure.Infrastructure.getDefaultWorkerPool()))
             .onFailure().recoverWithItem(ex -> {

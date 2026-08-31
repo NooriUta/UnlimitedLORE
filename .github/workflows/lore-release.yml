@@ -199,6 +199,28 @@ jobs:
           set -u
           TAG="${INPUT_TAG:-${GITHUB_REF#refs/tags/}}"
 
+          # ГЛАВНОЕ В ЭТОМ ШАГЕ: github.com идёт МИМО прокси.
+          #
+          # Раннер выдаёт джобам HTTP(S)_PROXY (split-tunnel xray на хосте), и
+          # через него github.com не тянется вовсе. На v1.8.0 это стоило целого
+          # зеркала: git push упал с «gnutls_handshake() failed: The TLS
+          # connection was non-properly terminated», релиз в Forgejo вышел, а в
+          # GitHub не уехало ничего.
+          #
+          # Измерено на ci-server 30.08.2026 парой, а не предположено:
+          #   через прокси → тот же gnutls_handshake failed
+          #   напрямую     → git ls-remote отдаёт HEAD
+          # Тот же дефект тем же утром сорвал загрузку дистрибутива Gradle
+          # (services.gradle.org редиректит на github.com): напрямую 140 МБ за
+          # 79 с, через прокси ноль байт за 2.2 с.
+          #
+          # Снимаем переменные на весь шаг: и git push, и curl к api.github.com
+          # ходят на тот же хост и ломались бы одинаково.
+          unset https_proxy HTTPS_PROXY http_proxy HTTP_PROXY
+          # Прокси мог быть прописан и в git-конфиге раннера, а не только в
+          # окружении — тогда unset не спас бы. Гасим адресно для github.
+          git config --global http.https://github.com/.proxy ""
+
           if [ -z "${GH_TOKEN:-}" ] || [ -z "${GH_REPO:-}" ]; then
             echo "::warning::зеркало GitHub пропущено — не заданы GH_MIRROR_TOKEN/GH_MIRROR_REPO (Forgejo: Settings -> Actions -> Secrets). Тег $TAG останется только в Forgejo."
             exit 0
@@ -220,8 +242,17 @@ jobs:
             exit 0
           fi
 
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
-            "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"
+          # Отказ push'а обязан быть ВИДЕН. Шаг стоит под continue-on-error —
+          # это верно (упавшее зеркало не должно ронять уже опубликованный
+          # релиз), но без явной аннотации он давал ровно то, что случилось на
+          # v1.8.0: git печатал fatal в лог, шаг «завершался», джоб оставался
+          # зелёным, и релиз выглядел полностью выехавшим. Молчаливое зеркало
+          # хуже отсутствующего: про отсутствующее хотя бы знают.
+          if ! git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" \
+                 "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"; then
+            echo "::error::зеркало GitHub НЕ обновлено: git push на github.com/${GH_REPO} не прошёл. Тег $TAG и релиз в Forgejo на месте, наружу не уехало ничего. Первый подозреваемый — прокси: github.com через split-tunnel недоступен (проверено 30.08.2026), а этот шаг снимает proxy-переменные — если они вернулись из конфига раннера, снимите их и там."
+            exit 1
+          fi
           echo "зеркало обновлено: main + $TAG -> github.com/${GH_REPO}"
 
           # ── Release-объект в GitHub ────────────────────────────────────────

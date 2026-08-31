@@ -31,7 +31,7 @@ export const VP_ICON: Record<string, string> = {
 /** Вид актора: человек, агент, система. */
 export const ACTOR_KIND_ICON: Record<string, string> = {
   'human-role': 'person',
-  agent: 'robot-antennas',
+  automation: 'robot-antennas',
   system: 'gears',
 };
 

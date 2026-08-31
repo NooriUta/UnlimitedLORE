@@ -115,39 +115,21 @@ public class AidaLoreResource extends LoreResourceBase {
      * <p>Значок — приоритетный сигнал, тот же порядок и набор, что уже
      * проверенный {@code taskTick()} во фронтенде ({@code lore-status.ts},
      * покрыт тестами). Слова остаются вторым уровнем — легаси-строки без
-     * значка встречаются (см. `sprint_done_dates`'s `LIKE '✅%' OR 'ЗАВЕРШЁН%'`
-     * для того же класса компромисса).
+     * значка встречаются.
+     *
+     * <p>SPRINT_QG_REBUILD/QG-13: и значки, и слова переехали в
+     * {@link LoreStatusVocabulary} — единственное место, откуда их берут все
+     * три потребителя (эта функция, SQL-слайсы и фронт). До того словарь был
+     * записан трижды и трижды по-разному, и расхождение стоило одного спринта
+     * без даты закрытия и семи задач, числившихся открытыми.
      */
     // Package-private (not private) so AidaLoreResourceTest can call it directly —
     // same convention as WorkQuality's pure-function methods.
     static String classifyStatus(String s) {
-        if (s == null || s.isBlank()) return "none";   // status not set ≠ TODO
-        String trimmed = s.stripLeading();
-        if (trimmed.startsWith("✅")) return "done";
-        if (trimmed.startsWith("🔄")) return "in_progress";
-        if (trimmed.startsWith("🟡")) return "partial";
-        if (trimmed.startsWith("🚀")) return "ready_for_deploy";
-        if (trimmed.startsWith("🔴")) return "blocked";
-        if (trimmed.startsWith("🚫")) return "cancelled";
-        if (trimmed.startsWith("🔬")) return "design";
-        if (trimmed.startsWith("🟣")) return "backlog";
-        if (trimmed.startsWith("📋")) return "planned";
-        if (trimmed.startsWith("⏸")) return "deferred";
-        if (trimmed.startsWith("⬜")) return "todo";
-        // No leading marker (legacy row) — fall back to word matching.
-        String u = s.toUpperCase();
-        if (u.contains("DONE") || u.contains("CLOSED") || u.contains("MERGED")
-            || u.contains("ЗАВЕРШ") || u.contains("ЗАКРЫТ"))                    return "done";
-        if (u.contains("PROGRESS") || u.contains("WIP"))                        return "in_progress";
-        if (u.contains("PARTIAL") || u.contains("ЧАСТИЧ"))                      return "partial";
-        if (u.contains("READY") || u.contains("ДЕПЛО"))                         return "ready_for_deploy";
-        if (u.contains("BLOCK") || u.contains("ЗАБЛОК"))                        return "blocked";
-        if (u.contains("CANCEL") || u.contains("ОТМЕН"))                        return "cancelled";
-        if (u.contains("PLANNED"))                                             return "planned";
-        if (u.contains("DESIGN"))                                              return "design";
-        if (u.contains("BACKLOG"))                                             return "backlog";
-        if (u.contains("DEFER") || u.contains("ОТЛОЖ"))                        return "deferred";
-        return "todo";
+        // SPRINT_QG_REBUILD/QG-13: the vocabulary now lives in exactly one
+        // place. See LoreStatusVocabulary for why (three copies of "closed"
+        // drifted silently) and for the measurement behind anchored matching.
+        return LoreStatusVocabulary.classify(s);
     }
 
     @SuppressWarnings("unchecked")
@@ -612,6 +594,53 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
+    /**
+     * Серверный потолок выдачи ArcadeDB, замеренный 04.08.2026.
+     *
+     * <p>Приписывается СЕРВЕРОМ к каждому запросу: пробы слались без поля
+     * limit, а в тексте синтаксических ошибок видно «… limit 20000». Ключа с
+     * этим значением в справочнике настроек нет — поднять конфигурацией нельзя,
+     * остаётся только пагинация.
+     */
+    static final int SERVER_ROW_CAP = 20000;
+
+    /**
+     * Тело ответа среза — со ЯВНЫМ признаком усечения (DBU-13).
+     *
+     * <p>Три исхода, и третий важнее первых двух:
+     * <ul>
+     *   <li>сервер сказал «обрезал» — говорим прямо и называем потолок;
+     *   <li>сервер промолчал, строк меньше потолка — обычная выдача;
+     *   <li>сервер промолчал, а строк РОВНО потолок — отвечаем
+     *       {@code "unknown"}. Старые версии обрезают так же, но признака не
+     *       шлют, и делать из молчания вывод «усечения не было» значит
+     *       подменять «не смогли узнать» на «узнали, что всё в порядке».
+     * </ul>
+     *
+     * <p>Стало острее после снятия собственных потолков со списочных срезов
+     * (решение владельца 30.08.2026): серверный предел теперь единственный — и
+     * он же единственный молчаливый.
+     */
+    static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
+        List<Map<String, Object>> rows = res.result() == null ? List.of() : res.result();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("rows", rows);
+        if (Boolean.TRUE.equals(res.truncated())) {
+            int cap = res.limit() != null ? res.limit() : SERVER_ROW_CAP;
+            body.put("truncated", true);
+            body.put("limit", cap);
+            body.put("hint", "выдача обрезана сервером на " + cap + " строк(ах): "
+                + "это потолок HTTP-API базы, конфигурацией он не поднимается — "
+                + "сузьте запрос или разбейте на страницы");
+        } else if (res.truncated() == null && rows.size() >= SERVER_ROW_CAP) {
+            body.put("truncated", "unknown");
+            body.put("hint", "строк ровно " + rows.size() + " при известном потолке "
+                + SERVER_ROW_CAP + ", а версия базы об усечении НЕ СООБЩАЕТ — "
+                + "проверить, полна ли выдача, нечем");
+        }
+        return body;
+    }
+
     @GET
     @Path("slice/{id}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -650,8 +679,7 @@ public class AidaLoreResource extends LoreResourceBase {
         LOG.debugf("[LORE:%s] %s %s", db, id, composed.params());
 
         return client.query(db, basicAuth(), body)
-            .map(res -> noStore(Response.ok(Map.of("rows",
-                res.result() == null ? List.of() : res.result()))))
+            .map(res -> noStore(Response.ok(sliceBody(res))))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)

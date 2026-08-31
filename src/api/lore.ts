@@ -347,6 +347,8 @@ export interface LoreQuestionRow {
   title: string | null;
   body_md: string | null;                  // контекст вопроса (для раскрывающегося блока)
   status: string | null;                  // open | deferred | closed | dropped
+  /** условие возврата к вопросу; обязателен при status='deferred' (бэкенд отвергает без него) */
+  trigger?: string | null;
   component_id: string | null;
   components: (string | null)[] | null;    // T43: multi component via BELONGS_TO
   projects: (string | null)[] | null;      // T43: multi git project via BELONGS_TO_PROJECT
@@ -747,7 +749,7 @@ export interface LorePlanItem {
 
 // Canonical source of truth: shared/lore-statuses.json (planStatuses). Drift is
 // caught in CI by `npm run check:statuses` (scripts/check-lore-statuses.mjs).
-export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
+export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'cancelled' | 'ready_for_deploy';
 
 export interface LoreStatusUpdateResponse {
   ok: boolean;
@@ -1323,11 +1325,22 @@ export function saveLoreUc(body: {
   return loreMutate<LoreProductWriteResult>('/uc', body, signal);
 }
 
-/** Проектируемая роль. project обязателен по смыслу (D18), но не по схеме. */
+/**
+ * Актор ПРОЕКТИРУЕМОЙ части (ADR-LORE-041 §4): кто действует в сценарии.
+ *
+ * Пишет в `/lore/project-actor`, а НЕ в `/lore/actor`. Второй заводит агентную
+ * ЛИЧНОСТЬ со всей цепочкой RBAC, и у него есть проектный гейт прав — из-за
+ * него владелец не могла завести акторов для проекта, где у неё нет роли.
+ * Описательная форма к правам отношения не имеет и через тот гейт не ходит.
+ *
+ * Пока форма писала по старому адресу, она была сломана вдвойне: список акторов
+ * уже читает новый тип, поэтому только что созданный актор пропадал бы из
+ * списка — при успешном сохранении.
+ */
 export function saveLoreActor(body: {
   actor_id: string;
   name?: string;
-  kind?: 'human-role' | 'system' | 'agent';
+  kind?: 'human-role' | 'system' | 'automation';
   body_md?: string;
   /** Прежняя форма — ОДИН проект. Бэкенд трактует как набор из одного. */
   project?: string;
@@ -1339,7 +1352,7 @@ export function saveLoreActor(body: {
    */
   projects?: string[];
 }, signal?: AbortSignal) {
-  return loreMutate<LoreProductWriteResult>('/actor', body, signal);
+  return loreMutate<LoreProductWriteResult>('/project-actor', body, signal);
 }
 
 export function saveLorePain(body: {
@@ -1556,4 +1569,30 @@ export async function fetchLoreSelfCheck(signal?: AbortSignal): Promise<LoreSelf
   if (!res.ok) return parseError(res);
   assertJson(res);
   return (await res.json()) as LoreSelfCheckRun;
+}
+
+/** Кандидаты на роль в задаче (TR-07, ADR-LORE-042). */
+export interface TaskRoleCandidates {
+  task_uid: string;
+  /** Люди с ролью в проекте этой задачи. */
+  people: string[];
+  /** Заявленные агентные личности. */
+  agents: string[];
+  /**
+   * Пусто ли в проекте с ролями. Признак нужен ОТДЕЛЬНО от длины списка:
+   * пустой выпадающий список неотличим от «не загрузилось», а причина здесь
+   * содержательная и чинится в админке, а не выбором другого имени.
+   */
+  project_has_roles: boolean;
+}
+
+export async function fetchTaskRoleCandidates(
+  taskUid: string, signal?: AbortSignal,
+): Promise<TaskRoleCandidates> {
+  const res = await fetch(
+    `${LORE_BASE}/task/role-candidates?task_uid=${encodeURIComponent(taskUid)}`,
+    { headers: { ...authHeaders() }, signal });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<TaskRoleCandidates>;
 }

@@ -42,6 +42,14 @@ Replaces the "trust the `X-Seer-Role` header" model with verified Keycloak JWTs.
    `kcadm.sh create realms -f backend/keycloak/omilore-realm.json` (or the admin UI →
    Add realm → import). Then: rotate the `lore-mcp` secret, assign the `admin` realm
    role to the `lore-mcp` service-account user, and create your admin user(s).
+
+   ⚠️ **Replace `YOUR-LORE-HOST` first.** The `lore-app` client ships with a
+   placeholder in `redirectUris`/`webOrigins`, not with a real address. Until it is
+   substituted, login redirects back to the SPA fail — Keycloak matches these
+   literally. The placeholder is deliberate: the file used to carry one particular
+   stand's domains, so importing it anywhere else both broke that install's login
+   and whitelisted somebody else's host as a valid redirect target. `localhost`
+   entries are kept as-is — they are correct for every install.
 2. **Backend:** set `LORE_AUTH_ENABLED=true` and `LORE_OIDC_ISSUER=http://<kc>/kc/realms/omilore`
    (from inside the lore-backend container, `<kc>` must be reachable — add the KC host to
    `extra_hosts` / use the compose network alias). Rebuild the image.

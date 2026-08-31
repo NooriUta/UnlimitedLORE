@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerLoreRead } from './loreRead.js';
 import { registerLoreWrite } from './loreWrite.js';
 import { registerForgejo, forgejoConfigured } from './forgejo.js';
+import { registerClaudeRules } from './claudeRules.js';
 
 // Regression guard for ADR-LORE-014 §2 (T02): every tool renamed lore_* -> <category>_<verb>,
 // ~22 lore_link_*/lore_unlink_* collapsed into 8 <category>_link(rel, ...) tools. A stray
@@ -53,11 +54,26 @@ describe('registerLoreWrite', () => {
     //   журнал сессий агентов; отдельная вершина, не поле на KnowActor)
     // + quality_check (QUAL-7, ADR-LORE-039 — вердикт полноты пачкой БЕЗ записи;
     //   второй способ вызова того же линтера, что отвечает на write-пути)
+    // + project_actor_new (AC-02, ADR-LORE-041 §4 — KnowProjectActor: актор
+    //   ПРОЕКТИРУЕМОЙ части. Отдельный инструмент, а не флаг у actor_new:
+    //   actor_new заводит агентную личность со всей цепочкой RBAC, и общий
+    //   вход с переключателем вернул бы ту самую неоднозначность, из-за
+    //   которой у описания акторов появился проектный RBAC-гейт)
     // + product_link (RM-P6, D-2026-LORE-PRODUCT-IS-OWN-ENTITY — рёбра продуктовой
     //   оси: компонент/репозиторий/родительский продукт. Инструмента создания
     //   продукта тут НЕТ намеренно: продукт — запись справочника, заводится
     //   существующим dict_set, второй способ создать ту же запись не нужен)
-    expect(names).toHaveLength(81);
+    expect(names).toHaveLength(82);
+  });
+
+  it('registers project_actor_new separately from actor_new (ADR-LORE-041 §4)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    // Оба обязаны существовать. Один вместо другого означал бы не переезд, а
+    // подмену: личности и описательные роли живут в разных типах вершин, и
+    // потеря любого из входов оставила бы одну из сторон без записи.
+    expect(names).toContain('project_actor_new');
+    expect(names).toContain('actor_new');
   });
 
   it('registers actor_link (MT-11 — FILLS_ROLE, agent-to-role pairing)', () => {
@@ -190,5 +206,18 @@ describe('registerForgejo', () => {
 
   it('LORE_FORGEJO=false wins over stray FORGEJO_* env (explicit off-switch)', () => {
     expect(forgejoConfigured({ LORE_FORGEJO: 'false', FORGEJO_X: 'y' } as NodeJS.ProcessEnv)).toBe(false);
+  });
+});
+
+// Правила CLAUDE переехали из репозитория в LORE (решение владельца 29.08.2026:
+// main зеркалируется в публичный GitHub). После переезда положить правила и
+// забрать их обратно можно ТОЛЬКО этими двумя инструментами — если они тихо
+// пропадут при рефакторинге, правила окажутся в базе без способа их достать,
+// и заметят это не сразу, а когда понадобятся.
+describe('registerClaudeRules', () => {
+  it('registers exactly the load/unload pair', () => {
+    const { server, names } = fakeServer();
+    registerClaudeRules(server);
+    expect(names).toEqual(['claude_rules_push', 'claude_rules_pull']);
   });
 });
