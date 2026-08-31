@@ -1017,8 +1017,75 @@ final class LoreSchemaMigrations {
         // значений живёт schemaless и переживает DROP PROPERTY — их надо снимать
         // отдельно. Тот же приём, что в V34.
         new Step(39, 17, "drop_task_role_fields", List.of(
-            "CREATE EDGE TYPE ROLE_HELD_BY IF NOT EXISTS"))
+            "CREATE EDGE TYPE ROLE_HELD_BY IF NOT EXISTS")),
+
+        // RM-P6 / D-2026-LORE-PRODUCT-IS-OWN-ENTITY: тринадцать продуктов сидом.
+        //
+        // Почему сидом, а не через MCP. Продукт — запись справочника
+        // (dict_type='product'); семейство 'dict' в матрице прав человеко-только,
+        // и dict_set агенту отвечает 403. Это правило верное: словари задают
+        // словарь всей системы, и имена продуктов даёт владелец, а не агент.
+        // Но и человеку эта дверь была закрыта: вкладка «Справочники» собирает
+        // список типов из УЖЕ существующих строк (LoreAdminPanel.tsx), поэтому
+        // пустой dict_type='product' в интерфейсе не появлялся вовсе — завести
+        // первую запись было нечем ни с одной стороны. Сид снимает ровно это:
+        // после него тип виден, is_extensible=true, и четырнадцатый продукт
+        // владелец заводит руками в админке штатной кнопкой «+ значение».
+        //
+        // Состав — замер по проду 27.08.2026 (RM-P2), не догадка. Три вещи,
+        // которые он показал и которые здесь закреплены:
+        //   - HOUND лежит ВНУТРИ поддерева DALI, но это суб-продукт AIDA;
+        //   - MT лежит ВНЕ поддерева AIDA, но это тоже суб-продукт AIDA;
+        //   - дерево продуктов и дерево компонентов — РАЗНЫЕ деревья,
+        //     поэтому связь ведётся рёбрами IN_PRODUCT/PARENT_PRODUCT, а
+        //     не выводится обходом PARENT_OF.
+        // Сами рёбра сюда НЕ входят намеренно: они пишутся product_link'ом,
+        // это семейство агенту открыто, и складывать 90 связей в миграцию
+        // значило бы зашить замер одного дня в код.
+        //
+        // Не продукты и потому здесь отсутствуют: HARPA (сайт: делает AIDA,
+        // использует BALDR), BALDR (маркетинг), FREYJA (не разработка),
+        // FE и SVC (сняты). Отношение BALDR↔BRAGI владельцем не решено.
+        new Step(40, 17, "product_dictionary_seed", List.of(
+            // AIDA и её четыре суб-продукта: sort_order 10 и 11..14 —
+            // соседние числа держат их вместе в любом списке по порядку.
+            dictProduct("AIDA",     "AIDA",          "brain",        "var(--acc)",                                    10),
+            dictProduct("HOUND",    "HOUND",         "wolf-head",    "color-mix(in srgb,var(--acc) 60%,var(--dng))",  11),
+            dictProduct("SEIDR",    "SEIDR STUDIO",  "crystal-ball", "color-mix(in srgb,var(--acc) 60%,var(--inf))",  12),
+            dictProduct("HEIMDALL", "HEIMDALL",      "guards",       "color-mix(in srgb,var(--suc) 70%,var(--bg0))",  13),
+            dictProduct("MT",       "Mimir (MT)",    "open-book",    "var(--inf)",                                    14),
+            // Два продукта на одной БАЗЕ ДАННЫХ, но в разных репозиториях:
+            // OMILORE — ведение наших проектов, MINILORE — управление с телефона.
+            dictProduct("OMILORE",  "OMILORE",       "spell-book",   "var(--suc)",                                    20),
+            dictProduct("MINILORE", "miniLORE",      "smartphone",   "color-mix(in srgb,var(--suc) 60%,var(--inf))",  30),
+            dictProduct("BRAGI",    "BRAGI",         "scroll-quill", "color-mix(in srgb,var(--acc) 55%,var(--wrn))",  40),
+            dictProduct("MIDGARD",  "Мидгард", "Midgard", "house",   "color-mix(in srgb,var(--wrn) 60%,var(--suc))",  50),
+            dictProduct("ODIN",     "ODIN",          "horned-helm",  "color-mix(in srgb,var(--inf) 70%,var(--bg0))",  60),
+            dictProduct("VOLVA",    "Völva",         "third-eye",    "color-mix(in srgb,var(--inf) 60%,var(--acc))",  70),
+            dictProduct("MIGGEN",   "mig_gen (UDWE)","gears",        "var(--t2)",                                     80),
+            dictProduct("TYR",      "TYR",           "scales",       "color-mix(in srgb,var(--t2) 70%,var(--wrn))",   90)))
     );
+
+    /**
+     * Одна строка справочника продуктов. Идиома UPSERT та же, что у
+     * decision_status (V14) и work_class (V6): повторный прогон шага
+     * перезаписывает ту же запись, а не заводит вторую.
+     *
+     * is_extensible=true — в отличие от статусов и видов работ: список продуктов
+     * не закрыт, владелец добавляет новый продукт в админке сама.
+     */
+    private static String dictProduct(String code, String labelRu, String icon, String color, int order) {
+        return dictProduct(code, labelRu, labelRu, icon, color, order);
+    }
+
+    private static String dictProduct(String code, String labelRu, String labelEn,
+                                      String icon, String color, int order) {
+        return String.format(
+            "UPDATE KnowDictEntry SET dict_type='product', code='%s', label_ru='%s', label_en='%s', "
+            + "icon='%s', color='%s', sort_order=%d, is_active=true, is_extensible=true "
+            + "UPSERT WHERE dict_type='product' AND code='%s'",
+            code, labelRu, labelEn, icon, color, order, code);
+    }
 
     /**
      * SRCH-03: анализатор для русскоязычного корпуса. Замерено: с ним документ
