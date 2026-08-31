@@ -303,6 +303,25 @@ observe "ft.search_index_more" "SELECT count(*) AS n FROM RgScore WHERE SEARCH_I
 # Java-код (LoreSearchResource), а не СУБД. Кейс здесь проверял бы нас самих
 # чужими руками и молчал бы о настоящем регрессе — место для него в юнит-тесте.
 
+# --- C9e. Как добраться от вершины до ДРУГОГО КОНЦА ребра с фильтром по ------
+# --- свойству ребра. TR-05: роль задачи читается именно так.
+#
+# Заведено по факту: выражение `outE('X')[prop='v' AND flag IS NULL].in.field`
+# скомпилировалось, не упало и молча вернуло пусто на всех четырёх проверках.
+# То есть форма СИНТАКСИЧЕСКИ верна и семантически неверна — худший вид ошибки,
+# потому что отличить её от «данных нет» по ответу невозможно.
+#
+# Гадать дальше нельзя: каждая догадка стоит полного прогона сборки. Спрашиваем
+# базу напрямую и сравниваем формы между собой. Данные готовит C5: у RgA есть
+# ребро RgLink на RgB со свойством role='primary'.
+
+observe "edge.hop_filtered_single"  "SELECT outE('RgLink')[role='primary'].in.k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_filtered_and"     "SELECT outE('RgLink')[role='primary' AND closed IS NULL].in.k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_filtered_chained" "SELECT outE('RgLink')[role='primary'][closed IS NULL].in.k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_plain"            "SELECT out('RgLink').k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_via_expand"       "SELECT expand(outE('RgLink')[role='primary'].in) FROM RgA WHERE k = 'a1'"
+observe "edge.hop_in_subselect"     "SELECT (SELECT @in.k FROM RgLink WHERE @out.k = 'a1' AND role = 'primary') AS v"
+
 # --- C10. Супернода и конкурентная запись рёбер (#5302) ----------------------
 # В 26.7.3 исправлено: «edge-append merge больше не откатывает конкурентные
 # записи на многостраничных чанках рёбер» — то есть ПОТЕРЯ ДАННЫХ в сценариях
