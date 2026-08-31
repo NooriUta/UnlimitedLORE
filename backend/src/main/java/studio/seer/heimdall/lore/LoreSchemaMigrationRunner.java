@@ -424,7 +424,7 @@ public class LoreSchemaMigrationRunner {
         // идемпотентен, повторный проход по уже обработанным безвреден.
         if (version == 31 || version == 33) backfillComponentEdges();
         if (version == 34) dropComponentField();
-        if (version == 36) backfillTaskRoleEdges();
+        if (version == 36 || version == 37) backfillTaskRoleEdges();
         if (version == 28) recreateFtIndexes();
     }
 
