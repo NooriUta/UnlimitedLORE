@@ -141,6 +141,34 @@ class RoleEdgeHopFormLiveDbTest {
         seen.put("7. подзапрос от самого ребра",
             firstValue("SELECT @in.actor_id AS v FROM ROLE_HELD_BY WHERE @out.task_uid = '" + TASK + "'"));
 
+        // ── Второй заход: где именно проходит граница поломки ────────────────
+        //
+        // Первый заход дал не пустой список, а СПИСОК ИЗ ОДНОГО null. Значит
+        // фильтр отработал и выбрал ровно одно ребро — ломается не отбор, а
+        // переход к вершине после него. Формы 8 и 9 проверяют это в лоб:
+        // читается ли у отфильтрованного ребра его собственное свойство и
+        // видна ли вообще ссылка на вершину.
+        seen.put("8. фильтр + СВОЙСТВО САМОГО РЕБРА",
+            firstValue("SELECT outE('ROLE_HELD_BY')[role='executor' AND valid_to IS NULL].role AS v" + where));
+        seen.put("9. фильтр + сырая ссылка .in, без поля",
+            firstValue("SELECT outE('ROLE_HELD_BY')[role='executor' AND valid_to IS NULL].in AS v" + where));
+        seen.put("10. фильтр + .in.@rid",
+            firstValue("SELECT outE('ROLE_HELD_BY')[role='executor' AND valid_to IS NULL].in.@rid AS v" + where));
+
+        // Формы 11–13: подзапрос от ребра работает (форма 7), но в срезе он
+        // обязан быть СВЯЗАН с текущей задачей, а не с зашитым кодом. Какая из
+        // записей корреляции понимается — вопрос к базе, не к рассуждению.
+        seen.put("11. подзапрос, связь через $parent.$current",
+            firstValue("SELECT (SELECT @in.actor_id FROM ROLE_HELD_BY "
+                + "WHERE @out = $parent.$current AND role='executor' AND valid_to IS NULL) AS v" + where));
+        seen.put("12. подзапрос, связь по полю через $parent.$current",
+            firstValue("SELECT (SELECT @in.actor_id FROM ROLE_HELD_BY "
+                + "WHERE @out.task_uid = $parent.$current.task_uid AND role='executor' AND valid_to IS NULL) AS v" + where));
+        seen.put("13. подзапрос в LET",
+            firstValue("SELECT $r AS v FROM KnowTask LET $r = (SELECT @in.actor_id FROM ROLE_HELD_BY "
+                + "WHERE @out.task_uid = $parent.$current.task_uid AND role='executor' AND valid_to IS NULL) "
+                + "WHERE task_uid = '" + TASK + "'"));
+
         StringBuilder table = new StringBuilder("\nчто вернула база по каждой форме:\n");
         seen.forEach((k, v) -> table.append("  ").append(k).append(" → ").append(v).append('\n'));
 
