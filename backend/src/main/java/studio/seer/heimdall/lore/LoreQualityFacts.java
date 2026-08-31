@@ -118,8 +118,14 @@ public class LoreQualityFacts {
             + "in('IMPLEMENTED_IN_RELEASE').sprint_id AS sprints, "
             + "in('SHIPPED_IN').pr_number             AS prs, "
             + "out('BELONGS_TO_PROJECT').slug         AS projects"),
+        // parent_id и out('PARENT_OF') берутся ОБА и сравниваются (RM-P10):
+        // родитель хранится дважды, и брать любой один значит не заметить
+        // расхождения. Направление — out: PARENT_OF идёт ребёнок → родитель
+        // (relinkParentEdge), наружу у родителя это children.
         COMPONENT("component", "LoreComponent", "component_id",
-            "full_name, area, owner, game_icon"),
+            "full_name, area, owner, game_icon, "
+            + "parent_id, "
+            + "out('PARENT_OF').component_id AS parent_edge"),
         MILESTONE("milestone", "KnowMilestone", "milestone_id",
             "label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints"),
         QUESTION("question", "KnowQuestion", "question_id",
@@ -203,8 +209,11 @@ public class LoreQualityFacts {
                     return WorkQuality.evaluateRelease(s(r, "git_tag"), s(r, "description_md"),
                         r.get("sprints"), r.get("prs"), r.get("projects"));
                 case COMPONENT:
+                    // parent_edge — сырым, не через s(): тот сворачивает список к
+                    // первому элементу, а две записи в нём (два родителя) — сама
+                    // по себе поломка, и линтер должен её увидеть, а не срезать.
                     return WorkQuality.evaluateComponent(s(r, "full_name"), s(r, "area"),
-                        s(r, "owner"), s(r, "game_icon"));
+                        s(r, "owner"), s(r, "game_icon"), s(r, "parent_id"), r.get("parent_edge"));
                 case MILESTONE:
                     return WorkQuality.evaluateMilestone(s(r, "label"), s(r, "date_display"), r.get("sprints"));
                 case QUESTION:

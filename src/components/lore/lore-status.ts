@@ -27,7 +27,6 @@ const STATUS_META: Record<string, StatusMeta> = {
   planned:     { icon: 'calendar',       color: 'var(--st-planned)' },
   proposed:    { icon: 'calendar',       color: 'var(--st-planned)' },
   // priority marker — kept on the semantic warning token (it's not a status)
-  high:        { icon: 'dice-fire',      color: 'var(--wrn)' },
   // partially done — distinct from active
   partial:          { icon: 'battery-50',    color: 'var(--st-partial)' },
   // ready for deploy — work done, waiting for release

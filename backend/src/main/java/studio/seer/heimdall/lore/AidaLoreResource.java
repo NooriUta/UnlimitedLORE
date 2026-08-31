@@ -594,6 +594,53 @@ public class AidaLoreResource extends LoreResourceBase {
         return m;
     }
 
+    /**
+     * Серверный потолок выдачи ArcadeDB, замеренный 04.08.2026.
+     *
+     * <p>Приписывается СЕРВЕРОМ к каждому запросу: пробы слались без поля
+     * limit, а в тексте синтаксических ошибок видно «… limit 20000». Ключа с
+     * этим значением в справочнике настроек нет — поднять конфигурацией нельзя,
+     * остаётся только пагинация.
+     */
+    static final int SERVER_ROW_CAP = 20000;
+
+    /**
+     * Тело ответа среза — со ЯВНЫМ признаком усечения (DBU-13).
+     *
+     * <p>Три исхода, и третий важнее первых двух:
+     * <ul>
+     *   <li>сервер сказал «обрезал» — говорим прямо и называем потолок;
+     *   <li>сервер промолчал, строк меньше потолка — обычная выдача;
+     *   <li>сервер промолчал, а строк РОВНО потолок — отвечаем
+     *       {@code "unknown"}. Старые версии обрезают так же, но признака не
+     *       шлют, и делать из молчания вывод «усечения не было» значит
+     *       подменять «не смогли узнать» на «узнали, что всё в порядке».
+     * </ul>
+     *
+     * <p>Стало острее после снятия собственных потолков со списочных срезов
+     * (решение владельца 30.08.2026): серверный предел теперь единственный — и
+     * он же единственный молчаливый.
+     */
+    static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
+        List<Map<String, Object>> rows = res.result() == null ? List.of() : res.result();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("rows", rows);
+        if (Boolean.TRUE.equals(res.truncated())) {
+            int cap = res.limit() != null ? res.limit() : SERVER_ROW_CAP;
+            body.put("truncated", true);
+            body.put("limit", cap);
+            body.put("hint", "выдача обрезана сервером на " + cap + " строк(ах): "
+                + "это потолок HTTP-API базы, конфигурацией он не поднимается — "
+                + "сузьте запрос или разбейте на страницы");
+        } else if (res.truncated() == null && rows.size() >= SERVER_ROW_CAP) {
+            body.put("truncated", "unknown");
+            body.put("hint", "строк ровно " + rows.size() + " при известном потолке "
+                + SERVER_ROW_CAP + ", а версия базы об усечении НЕ СООБЩАЕТ — "
+                + "проверить, полна ли выдача, нечем");
+        }
+        return body;
+    }
+
     @GET
     @Path("slice/{id}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -632,8 +679,7 @@ public class AidaLoreResource extends LoreResourceBase {
         LOG.debugf("[LORE:%s] %s %s", db, id, composed.params());
 
         return client.query(db, basicAuth(), body)
-            .map(res -> noStore(Response.ok(Map.of("rows",
-                res.result() == null ? List.of() : res.result()))))
+            .map(res -> noStore(Response.ok(sliceBody(res))))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)

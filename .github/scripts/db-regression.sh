@@ -244,6 +244,84 @@ observe "sql.edge_in_out_fields"    "SELECT @out.k AS src, @in.k AS dst FROM RgL
 observe "sql.traverse_where"        "SELECT FROM (TRAVERSE out('RgLink') FROM (SELECT FROM RgA WHERE k = 'a1')) WHERE @class = 'RgB'"
 observe "sql.contains_on_traversal" "SELECT FROM RgA WHERE out('RgLink').k CONTAINS 'b1'"
 
+# --- C9b. Ранжирование: $score доступен ТОЛЬКО через именованный индекс -------
+# DBU-04. Порядок выдачи поиска — не косметика: без него список «что нашлось»
+# перестаёт быть списком «что нашлось СНАЧАЛА», а читают его именно так.
+#
+# $score берётся рядом с SEARCH_INDEX('<имя>', …). Отсюда прямая связь с C3/C4:
+# потеряно имя индекса — потеряно и ранжирование, причём молча: выдача
+# останется, просто порядок станет случайным. Заметки 26.8.1 трогали BM25
+# (#5267, #5181), поэтому порядок сравнивается с эталоном, а не глазами.
+#
+# СВОЙ ТИП И СВОЙ ИНДЕКС, а не rgFt из C1. Первая редакция спрашивала score у
+# rgFt — и падала на ОБЕИХ версиях с «Index with name 'rgFt' was not found».
+# Причина не в ранжировании: выше по файлу C3 делает REBUILD, а он на обеих
+# версиях ТЕРЯЕТ имя (это и есть проверяемый там дефект). То есть кейс мерил
+# последствие соседнего кейса и всегда краснел бы, что бы ни делало
+# ранжирование. Поймано сверкой с известной картиной в первом же прогоне —
+# ровно та работа, ради которой сверка и заводилась.
+
+sql "CREATE VERTEX TYPE RgScore IF NOT EXISTS" >/dev/null
+sql "CREATE PROPERTY RgScore.body IF NOT EXISTS STRING" >/dev/null
+sql "INSERT INTO RgScore SET body = 'TOKEN TOKEN TOKEN часто'" >/dev/null
+sql "INSERT INTO RgScore SET body = 'TOKEN редко'" >/dev/null
+sql "INSERT INTO RgScore SET body = 'ничего похожего'" >/dev/null
+sql "CREATE INDEX rgFtScore ON RgScore (body) FULL_TEXT METADATA {\\\"similarity\\\":\\\"BM25\\\"}" >/dev/null
+
+SCORE_RAW=$(sql "SELECT \$score AS s FROM RgScore WHERE SEARCH_INDEX('rgFtScore', 'TOKEN') = true LIMIT 1")
+if printf '%s' "$SCORE_RAW" | grep -q '"error"'; then
+  emit "ft.score_available" "FAIL" "score недоступен: $(printf '%s' "$SCORE_RAW" | grep -o '"detail":"[^"]*"' | head -c 200)"
+elif printf '%s' "$SCORE_RAW" | grep -qE '"s":[0-9]*\.?[0-9]+'; then
+  emit "ft.score_available" "PASS" "$(printf '%s' "$SCORE_RAW" | grep -o '"s":[0-9.]*' | head -1)"
+else
+  emit "ft.score_available" "FAIL" "ответ без числового score — ранжирования нет: $(printf '%s' "$SCORE_RAW" | head -c 160)"
+fi
+
+# Сами значения скора между версиями сравнивать бессмысленно (BM25 меняли), а
+# вот «сортировка по скору вообще возможна» — контракт, на котором стоит поиск.
+observe "ft.order_by_score" "SELECT \$score AS s FROM RgScore WHERE SEARCH_INDEX('rgFtScore', 'TOKEN') = true ORDER BY s DESC LIMIT 3"
+
+# --- C9c. unionall: две вещи, которые нас уже кусали -------------------------
+# Первая: $score внутри unionall ТЕРЯЕТСЯ — поэтому ветки поиска выполняются
+# по отдельности, а не одним объединением (LoreSearchResource). В коде это
+# записано как факт, но не проверялось нигде: изменись поведение — не узнали бы.
+observe "sql.unionall_keeps_score" "SELECT expand(unionall((SELECT \$score AS s FROM RgScore WHERE SEARCH_INDEX('rgFtScore','TOKEN') = true), (SELECT 1.0 AS s FROM RgRu LIMIT 1)))"
+
+# Вторая: expand(unionall(...)) с LET требует ВНЕШНЕГО SELECT — без обёртки
+# движок отвечает 400. Наступали; голая форма держится рядом намеренно, чтобы
+# дифф показал, если её однажды начнут принимать.
+observe "sql.unionall_let_outer" "SELECT FROM (SELECT expand(unionall(\$a, \$b)) LET \$a = (SELECT FROM RgA), \$b = (SELECT FROM RgB))"
+observe "sql.unionall_let_bare"  "SELECT expand(unionall(\$a, \$b)) LET \$a = (SELECT FROM RgA), \$b = (SELECT FROM RgB)"
+
+# --- C9d. «Похожие записи» (SEARCH_INDEX_MORE) -------------------------------
+# SRCH-06: на этой функции стоит блок «похожее» в карточке. Функция редкая, у
+# неё отдельная вероятность тихо пропасть между версиями.
+RID=$(sql "SELECT @rid AS r FROM RgScore LIMIT 1" | grep -o '"r":"[^"]*"' | head -1 | cut -d'"' -f4)
+observe "ft.search_index_more" "SELECT count(*) AS n FROM RgScore WHERE SEARCH_INDEX_MORE('rgFtScore', [$RID]) = true"
+
+# ПРО СНИППЕТЫ. Их в наборе намеренно НЕТ: подсветку совпадения считает наш
+# Java-код (LoreSearchResource), а не СУБД. Кейс здесь проверял бы нас самих
+# чужими руками и молчал бы о настоящем регрессе — место для него в юнит-тесте.
+
+# --- C9e. Как добраться от вершины до ДРУГОГО КОНЦА ребра с фильтром по ------
+# --- свойству ребра. TR-05: роль задачи читается именно так.
+#
+# Заведено по факту: выражение `outE('X')[prop='v' AND flag IS NULL].in.field`
+# скомпилировалось, не упало и молча вернуло пусто на всех четырёх проверках.
+# То есть форма СИНТАКСИЧЕСКИ верна и семантически неверна — худший вид ошибки,
+# потому что отличить её от «данных нет» по ответу невозможно.
+#
+# Гадать дальше нельзя: каждая догадка стоит полного прогона сборки. Спрашиваем
+# базу напрямую и сравниваем формы между собой. Данные готовит C5: у RgA есть
+# ребро RgLink на RgB со свойством role='primary'.
+
+observe "edge.hop_filtered_single"  "SELECT outE('RgLink')[role='primary'].in.k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_filtered_and"     "SELECT outE('RgLink')[role='primary' AND closed IS NULL].in.k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_filtered_chained" "SELECT outE('RgLink')[role='primary'][closed IS NULL].in.k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_plain"            "SELECT out('RgLink').k AS v FROM RgA WHERE k = 'a1'"
+observe "edge.hop_via_expand"       "SELECT expand(outE('RgLink')[role='primary'].in) FROM RgA WHERE k = 'a1'"
+observe "edge.hop_in_subselect"     "SELECT (SELECT @in.k FROM RgLink WHERE @out.k = 'a1' AND role = 'primary') AS v"
+
 # --- C10. Супернода и конкурентная запись рёбер (#5302) ----------------------
 # В 26.7.3 исправлено: «edge-append merge больше не откатывает конкурентные
 # записи на многостраничных чанках рёбер» — то есть ПОТЕРЯ ДАННЫХ в сценариях

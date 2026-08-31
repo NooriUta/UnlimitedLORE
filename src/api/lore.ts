@@ -749,7 +749,7 @@ export interface LorePlanItem {
 
 // Canonical source of truth: shared/lore-statuses.json (planStatuses). Drift is
 // caught in CI by `npm run check:statuses` (scripts/check-lore-statuses.mjs).
-export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'high' | 'cancelled' | 'ready_for_deploy';
+export type LorePlanItemStatus = 'todo' | 'planned' | 'backlog' | 'design' | 'active' | 'partial' | 'done' | 'blocked' | 'cancelled' | 'ready_for_deploy';
 
 export interface LoreStatusUpdateResponse {
   ok: boolean;
@@ -1569,4 +1569,30 @@ export async function fetchLoreSelfCheck(signal?: AbortSignal): Promise<LoreSelf
   if (!res.ok) return parseError(res);
   assertJson(res);
   return (await res.json()) as LoreSelfCheckRun;
+}
+
+/** Кандидаты на роль в задаче (TR-07, ADR-LORE-042). */
+export interface TaskRoleCandidates {
+  task_uid: string;
+  /** Люди с ролью в проекте этой задачи. */
+  people: string[];
+  /** Заявленные агентные личности. */
+  agents: string[];
+  /**
+   * Пусто ли в проекте с ролями. Признак нужен ОТДЕЛЬНО от длины списка:
+   * пустой выпадающий список неотличим от «не загрузилось», а причина здесь
+   * содержательная и чинится в админке, а не выбором другого имени.
+   */
+  project_has_roles: boolean;
+}
+
+export async function fetchTaskRoleCandidates(
+  taskUid: string, signal?: AbortSignal,
+): Promise<TaskRoleCandidates> {
+  const res = await fetch(
+    `${LORE_BASE}/task/role-candidates?task_uid=${encodeURIComponent(taskUid)}`,
+    { headers: { ...authHeaders() }, signal });
+  if (!res.ok) return parseError(res);
+  assertJson(res);
+  return res.json() as Promise<TaskRoleCandidates>;
 }

@@ -154,7 +154,38 @@ public class LoreSearchResource extends LoreResourceBase {
         new Branch("actor", "KnowProjectActor", "actor_id", "name", "ftKnowProjectActor",
             List.of("name", "body_md"),
             null, null, null,
-            DIRECT_COMP, null, null, DIRECT_PROJ, 1.20));
+            DIRECT_COMP, null, null, DIRECT_PROJ, 1.20),
+
+        // Релизы не искались ВООБЩЕ, при том что полнотекстовых индексов у них
+        // два — ftKnowRelease и ftKnowReleaseHist. Индексы строились, велись и
+        // не читались никем: поиск по тегу находил только записи, где тег
+        // упомянут прозой, а сам релиз оставался недостижим. Найдено живыми
+        // пробами мобильного клиента 30.08.2026.
+        //
+        // У релиза НЕТ компонента и нет наследования — оси фасетов пусты, а
+        // проект берётся ребром BELONGS_TO_PROJECT (поле git_project — вторая
+        // правда, оставленная сознательно, см. слайс releases).
+        //
+        // Заголовок — git_tag, а не release_id: человек ищет «v1.9.1».
+        new Branch("release", "KnowRelease", "release_id", "git_tag", "ftKnowRelease",
+            List.of("description_md"),
+            "KnowReleaseHist", "ftKnowReleaseHist", List.of("description_md"),
+            null, null, null, DIRECT_PROJ, 1.15),
+
+        // Агентные личности. Индекс ftKnowActor существовал и до сегодня, но
+        // после развода акторов (ADR-LORE-041) ветка поиска уехала на
+        // KnowProjectActor, и читателя у него не осталось — индекс велся впустую,
+        // а личности стали ненаходимы. Это следствие МОЕЙ правки, замеченное
+        // не мной, а пробами с телефона.
+        //
+        // Отдельный тип, а не расширение ветки actor: слить их значило бы
+        // вернуть ту самую склейку личности и описательной роли, ради разведения
+        // которой всё и делалось. Имя типа в API совпадает с тем, что уже принял
+        // у себя шлюз miniLORE.
+        new Branch("agent_actor", "KnowActor", "actor_id", "name", "ftKnowActor",
+            List.of("name", "body_md"),
+            null, null, null,
+            null, null, null, DIRECT_PROJ, 1.10));
 
     /** Переопределение приоритетов без пересборки: "adr:1.4,task:0.5". */
     @ConfigProperty(name = "lore.search.type-priority")
@@ -486,7 +517,7 @@ public class LoreSearchResource extends LoreResourceBase {
         String sql = "SELECT " + b.idField() + " AS ref_id, " + b.titleField() + " AS title, "
             + (vertexByIndex ? "$score AS score, " : "1.0 AS score, ")
             + textCols + ", "
-            + b.compExpr() + " AS comp_direct, "
+            + (b.compExpr() != null ? b.compExpr() : "null") + " AS comp_direct, "
             + (b.compInheritedExpr() != null ? b.compInheritedExpr() : "null") + " AS comp_inherited, "
             + b.projExpr() + " AS proj "
             + "FROM " + b.vertexClass() + " WHERE (" + b.idField() + " ILIKE :idlike OR " + matcher + ")"
@@ -542,7 +573,16 @@ public class LoreSearchResource extends LoreResourceBase {
                 + "in('HAS_STATE')." + b.titleField() + "[0] AS title, "
                 + (histByIndex ? "$score AS score, " : "1.0 AS score, ")
                 + histText + ", "
-                + "in('HAS_STATE')." + b.compExpr() + " AS comp_direct, "
+                // Ветка без компонента (релиз) — здесь ПРОСТО null, а не
+                // «in('HAS_STATE').null»: приписав обход к отсутствующему
+                // выражению, мы получали невалидный SQL и 400 на КАЖДЫЙ
+                // hist-запрос ветки. Наружу это выходило не отказом, а строкой
+                // «ветка опрошена частично» — то есть поиск по релизам
+                // молчаливо терял половину источника. Поймано живым тестом
+                // фасетов, а не чтением: у соседнего comp_inherited такая
+                // проверка уже стояла, у comp_direct её не было.
+                + (b.compExpr() != null ? "in('HAS_STATE')." + b.compExpr() : "null")
+                + " AS comp_direct, "
                 + (b.compInheritedExpr() != null
                     ? "in('HAS_STATE')." + b.compInheritedExpr() : "null") + " AS comp_inherited, "
                 + "in('HAS_STATE')." + b.projExpr() + " AS proj "
@@ -628,6 +668,12 @@ public class LoreSearchResource extends LoreResourceBase {
     /** Фасет-фильтр по компонентам: ОБА пути (прямой и выведенный), OR по значениям. */
     private String componentFilter(Branch b, List<String> comps, Map<String, Object> params, boolean viaParent) {
         if (comps.isEmpty()) return "";
+        // У ветки без компонента (релиз) фильтровать НЕ ПО ЧЕМУ. Пустой фильтр
+        // здесь — не пропуск проверки, а верный ответ: спрашивают «покажи то,
+        // что относится к компоненту X», а у релиза компонента нет вовсе.
+        // Прежде сюда подставлялось выражение из null и получался невалидный
+        // SQL — то есть вместо «ничего не подходит» ветка отвечала ошибкой.
+        if (b.compExpr() == null) return "";
         // БЕЗ [0] на hist-пути: обход от hist-строки через родителя возвращает
         // СПИСОК компонентов, и [0] превратил бы CONTAINS в сравнение с одним
         // случайным значением — ровно ловушка корпуса «многосвязное видно под
