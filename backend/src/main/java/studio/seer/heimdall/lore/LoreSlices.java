@@ -155,10 +155,39 @@ public final class LoreSlices {
             "WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 200");
 
+        // Порядок ПО ДАТЕ, а не по release_id. Было `ORDER BY release_id DESC` —
+        // строковое сравнение версий, из-за которого LIMIT срезал не хвост
+        // истории, а СЕРЕДИНУ окна по датам. Найдено сессией miniLORE-шлюза
+        // 31.08.2026 на живых данных: у AIDA/miniLore_serverside в выдачу
+        // попадали v0.3.9, v0.3.8, v0.3.7 … v0.3.42, v0.3.41, v0.3.40, v0.3.4,
+        // v0.3.39 … v0.3.30, v0.3.3 — а v0.3.29…v0.3.10 не попадали вовсе, хотя
+        // по датам лежат внутри тех же 22–31 августа. Счёт «за последние N дней»
+        // по такому срезу занижен, и отличить это от честного числа нечем.
+        //
+        // Соседние timeline_* (adrs, decisions) сортируются по дате изначально —
+        // расходился именно этот.
         slice("timeline_releases",
             "SELECT release_id, git_tag, release_date, is_current, git_project " +
-            "FROM KnowRelease ORDER BY release_id DESC",
+            "FROM KnowRelease ORDER BY release_date DESC",
             List.of(), Map.of(), " LIMIT 100");
+
+        // Окно релизов по ДАТЕ — для счётчиков «за N дней» (miniLORE CO-45).
+        // Отдельным срезом, а не параметром к `releases`: тому нужны тяжёлые
+        // поля (description_md, hosts, счётчики спринтов и PR), а для счёта они
+        // не нужны и гоняются зря.
+        //
+        // LIMIT здесь тоже есть, но он честный: при сортировке по дате он режет
+        // САМОЕ СТАРОЕ, то есть за пределами запрошенного окна, а не дырявит
+        // середину. Тысяча — с запасом: релизов в корпусе порядка двухсот.
+        slice("releases_since",
+            "SELECT release_id, git_tag, release_date, is_current, git_project, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowRelease " +
+            "WHERE release_date IS NOT NULL AND release_date >= :from",
+            List.of("from"),
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
+            " ORDER BY release_date DESC LIMIT 1000");
 
         // AL-113 (запрошено miniLORE 2026-08-16): у среза `specs` даты не было,
         // поэтому спеки не попадали в новостную ленту. Дата спеки = valid_from
@@ -1651,7 +1680,12 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').hosts[0] AS project_hosts, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
             "in('SHIPPED_IN').size() AS pr_count " +
-            "FROM KnowRelease ORDER BY release_id DESC",
+            // Порядок по ДАТЕ, а не по release_id: строковое сравнение версий
+            // ставило v0.3.9 выше v0.3.42, и LIMIT 200 отрезал середину окна, а
+            // не хвост истории (тот же дефект, что у timeline_releases выше).
+            // Для UI безопасно: доска релизов сортирует сама, semverCompare
+            // (LoreReleasesBoard.tsx:132), порядок среза она не наследует.
+            "FROM KnowRelease ORDER BY release_date DESC",
             List.of(), Map.of(), " LIMIT 200");
 
         slice("release_decisions",
