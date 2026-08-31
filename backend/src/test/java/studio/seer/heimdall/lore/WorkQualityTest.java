@@ -347,4 +347,70 @@ class WorkQualityTest {
             assertFalse(find(r, code).ok(), code + " обязан покраснеть");
         }
     }
+
+    // ── компонент: расхождение дерева (RM-P10) ───────────────────────────────
+    //
+    // Расхождение поля parent_id и ребра PARENT_OF стоило двух разных ответов на
+    // один вопрос: корней 26 против 14, спринтов у AIDA 34 против 223. Тесты
+    // построены так, чтобы «взять любую одну сторону» не могло их пройти.
+
+    @Test
+    void корневойКомпонентБезРодителяСогласован() {
+        // Оба пусты — это не дыра, а корень. Требование заполненности сделало бы
+        // все 14 корней вечно красными и обесценило бы проверку.
+        var r = WorkQuality.evaluateComponent("AIDA Platform", "platform", "noori", "brain", null, null);
+        assertTrue(find(r, "parent_sync").ok(), "корень согласован");
+        assertEquals(r.max(), r.score());
+    }
+
+    @Test
+    void реброЕстьПолеПустоКраснеет() {
+        // Ровно те 12 вершин, что нашлись на проде 27.08.2026.
+        var r = WorkQuality.evaluateComponent("Seidr", "platform", null, null,
+            null, List.of("AIDA"));
+        assertFalse(find(r, "parent_sync").ok(), "ребро без поля — расхождение");
+        assertTrue(find(r, "parent_sync").required(), "это инвариант, а не пожелание");
+    }
+
+    @Test
+    void полеЕстьРебраНетКраснеет() {
+        var r = WorkQuality.evaluateComponent("Seidr", "platform", null, null,
+            "AIDA", null);
+        assertFalse(find(r, "parent_sync").ok(), "поле без ребра — то же расхождение с другой стороны");
+    }
+
+    @Test
+    void разныеРодителиВПолеИРебреКраснеют() {
+        // Главный кейс: обе стороны НЕПУСТЫ, и проверка «оба заполнены» была бы
+        // зелёной. Красит только сравнение значений.
+        var r = WorkQuality.evaluateComponent("Dali", "platform", null, null,
+            "AIDA", List.of("MIDGARD"));
+        assertFalse(find(r, "parent_sync").ok(), "поле и ребро указывают на разных родителей");
+    }
+
+    @Test
+    void двоеРодителейПоРёбрамКраснеют() {
+        // Поле хранит одного; второе ребро в него не поместилось, и какой из двух
+        // родителей настоящий — запись уже не отвечает.
+        var r = WorkQuality.evaluateComponent("Dali", "platform", null, null,
+            "AIDA", List.of("AIDA", "MIDGARD"));
+        assertFalse(find(r, "parent_sync").ok(), "два родителя — расхождение, а не «возьмём первого»");
+    }
+
+    @Test
+    void совпадающийРодительСогласован() {
+        var r = WorkQuality.evaluateComponent("Dali", "platform", null, null,
+            "AIDA", List.of("AIDA"));
+        assertTrue(find(r, "parent_sync").ok());
+        assertEquals("component", r.kind());
+    }
+
+    @Test
+    void компонентБезОбластиКраснеетНоРодительОтдельно() {
+        // Две находки не должны склеиваться: пустая area не имеет отношения к
+        // дереву, и вердикт обязан различать, что именно не так.
+        var r = WorkQuality.evaluateComponent("Dali", null, null, null, "AIDA", List.of("AIDA"));
+        assertFalse(find(r, "area").ok());
+        assertTrue(find(r, "parent_sync").ok());
+    }
 }
