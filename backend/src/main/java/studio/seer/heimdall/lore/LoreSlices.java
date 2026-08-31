@@ -42,6 +42,53 @@ public final class LoreSlices {
 
     private static final Map<String, SliceDef> SLICES = new LinkedHashMap<>();
 
+    /**
+     * Держатели ролей задачи — ИЗ РЕБРА, а не из полей вершины (TR-05).
+     *
+     * <p>Ключи ответа оставлены прежними (`author_agent` и соседи) намеренно:
+     * поле исчезает, имя остаётся. Иначе пришлось бы одновременно править
+     * четыре среза, экран задач и мобильного клиента — и любая рассинхронизация
+     * этих правок выглядела бы как «роль пропала», а не как незавершённый
+     * переезд. Переименование, если понадобится, отдельным шагом и после.
+     *
+     * <p>Берётся ОТКРЫТОЕ ребро: {@code valid_to IS NULL}. Закрытые — это
+     * прежние держатели, и показывать их наравне с текущим значило бы вернуть
+     * ту самую неоднозначность, ради устранения которой роли уехали в рёбра.
+     *
+     * <p>Личность приходит с другого конца ребра и лежит в разных полях у
+     * человека и у агента, поэтому COALESCE: сперва {@code actor_id}, затем
+     * {@code display_name}. Один ключ на обоих — они отвечают на один вопрос
+     * «кто», и два ключа заставили бы каждого читателя склеивать их заново.
+     */
+    /**
+     * Конец ребра — {@code @in}, а НЕ {@code in} (TR-05, замерено пробой).
+     *
+     * <p>Первая редакция писала {@code .in.actor_id} и отдавала пусто ВСЕГДА:
+     * ошибки нет, значения нет — по ответу неотличимо от «роли не заведены».
+     * У ребра нет обычного свойства с таким именем, поэтому чтение молча даёт
+     * null; вершина на другом конце адресуется только через {@code @in}.
+     *
+     * <p>Замер {@code RoleEdgeHopFormLiveDbTest} на одном заведённом ребре:
+     * {@code [фильтр].@in.actor_id[0]} → значение; {@code [фильтр].in.actor_id}
+     * → null; и КОНТРОЛЬ — {@code .in.actor_id} БЕЗ фильтра тоже null. Значит
+     * переменная одна, и фильтр к отказу отношения не имеет.
+     *
+     * <p>Оговорка о собственной ошибке, ради которой контроль и ставился.
+     * Сначала я сравнила {@code outE(...)[фильтр].in.поле} с {@code out(...).поле}
+     * и объявила виноватым фильтр — а формы отличались СРАЗУ В ДВУХ местах:
+     * {@code out()} отдаёт вершину, {@code outE()} — ребро. Опыт с двумя
+     * различиями не отвечает ни на один вопрос, но выглядит как ответ: я на его
+     * основании успела назвать дефектом СУБД то, что было дефектом запроса.
+     * Поймано владельцем. Правило: меняй по одной переменной и ставь контроль.
+     */
+    private static String roleHolder(String role) {
+        String edge = "outE('ROLE_HELD_BY')[role='" + role + "' AND valid_to IS NULL].@in.";
+        return "COALESCE(" + edge + "actor_id[0], " + edge + "display_name[0]) AS " + role + "_agent";
+    }
+
+    private static final String ROLE_HOLDERS =
+        roleHolder("author") + ", " + roleHolder("executor") + ", " + roleHolder("reviewer");
+
     private static void slice(String id, String baseSql) {
         SLICES.put(id, new SliceDef(baseSql, List.of(), Map.of(), ""));
     }
@@ -498,7 +545,7 @@ public final class LoreSlices {
             // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
             // (ADR-LORE-015, T14) are plain KnowTask vertex fields — no traversal
             // needed, unlike note_md/effort_days above.
-            "author_agent, executor_agent, reviewer_agent, task_type " +
+            ROLE_HOLDERS + ", task_type " +
             "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
@@ -515,7 +562,7 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
             // (ADR-LORE-015, T14) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent, task_type, " +
+            ROLE_HOLDERS + ", task_type, " +
             // ADR-LORE-022: ЗАЧЕМ-ось + какой UC задача реализует (REALIZES).
             "work_class, out('REALIZES').uc_id AS realizes_uc " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sprint_id " +
@@ -999,7 +1046,7 @@ public final class LoreSlices {
             "out('TAGGED_WITH').component_id                          AS component_ids, " +
             // author/executor/reviewer_agent (ADR-LORE-014 §4) and task_type
             // (ADR-LORE-015, T14) — plain vertex fields.
-            "author_agent, executor_agent, reviewer_agent, task_type " +
+            ROLE_HOLDERS + ", task_type " +
             "FROM KnowTask WHERE out('PART_OF').sprint_id[0] IN :sprint_ids " +
             "ORDER BY out('PART_OF').sprint_id[0], order_index",
             List.of("sprint_ids"), Map.of(), "");
@@ -1528,7 +1575,7 @@ public final class LoreSlices {
             // Правило: у поля SCD2 ровно один законный источник — открытая
             // строка истории. Чтение с вершины даёт правдоподобную неправду.
             "SELECT task_uid, task_id, title, priority, out('BELONGS_TO').component_id[0] AS component_id, task_type, " +
-            "author_agent, executor_agent, reviewer_agent, " +
+            ROLE_HOLDERS + ", " +
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
             "out('PART_OF').sprint_id[0]    AS sprint_id, " +
             "out('PART_OF').title[0]        AS sprint_title, " +

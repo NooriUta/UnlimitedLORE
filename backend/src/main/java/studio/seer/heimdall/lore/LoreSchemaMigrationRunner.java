@@ -425,6 +425,8 @@ public class LoreSchemaMigrationRunner {
         if (version == 31 || version == 33) backfillComponentEdges();
         if (version == 34) dropComponentField();
         if (version == 36 || version == 37) backfillTaskRoleEdges();
+        if (version == 38) preserveRoleFieldsIntoNote();
+        if (version == 39) dropTaskRoleFields();
         if (version == 28) recreateFtIndexes();
     }
 
@@ -1104,6 +1106,182 @@ public class LoreSchemaMigrationRunner {
      * поэтому падение в середине даёт повторный прогон по частично обработанным
      * данным. Ребро ставится только там, где активного ребра этой роли ещё нет.
      */
+    /**
+     * V38: сохранить в примечание задачи те значения полей роли, которые НЕ
+     * стали ребром, — перед тем как поля снять (TR-05).
+     *
+     * <p>Согласовано владельцем: «сохранить исходное значение в примечание».
+     * Из 4159 заполненных значений таблица сопоставления и префиксное правило
+     * покрывают 4035; оставшиеся 124 — это сессии, проекты, команды и составные
+     * строки вроде «claude-full + соседняя сессия». Сопоставить их значило бы
+     * записать догадку как факт, а снять поле без сохранения — потерять их
+     * молча. Примечание не теряет ничего и остаётся на глазах у человека.
+     *
+     * <p>Сохраняются ТОЛЬКО непредставленные значения. Если у роли уже есть
+     * открытое ребро, поле дублирует его, и переносить дубль в текст значило бы
+     * засорить примечания тем, что и так читается.
+     *
+     * <p>Идемпотентность — по маркеру в тексте: повторный прогон видит свою же
+     * пометку и не дописывает вторую. Матч строки истории по {@code @rid}, а не
+     * по {@code state_uid}: у легаси-строк он null, и UPDATE по нему тихо
+     * не находил бы ничего, отвечая при этом успехом.
+     */
+    private void preserveRoleFieldsIntoNote() {
+        if (!typeExists("KnowTask")) {
+            LOG.info("[LORE MIGRATE] V38: типа KnowTask нет — сохранять нечего");
+            return;
+        }
+        final String marker = "<!-- roles-from-dropped-fields -->";
+        int preserved = 0, alreadyEdge = 0, alreadyNoted = 0, noHistRow = 0;
+
+        List<Map<String, Object>> tasks = ingest.queryPublic(
+            "SELECT task_uid, author_agent, executor_agent, reviewer_agent FROM KnowTask "
+            + "WHERE author_agent IS NOT NULL OR executor_agent IS NOT NULL "
+            + "OR reviewer_agent IS NOT NULL", Map.of());
+
+        for (Map<String, Object> t : tasks) {
+            String uid = str(t.get("task_uid"));
+            if (uid == null || uid.isBlank()) continue;
+
+            List<String> lost = new ArrayList<>();
+            for (Map.Entry<String, String> fr : ROLE_FIELDS.entrySet()) {
+                String raw = str(t.get(fr.getKey()));
+                if (raw == null || raw.isBlank()) continue;
+                if (hasOpenRoleEdge(uid, fr.getValue())) { alreadyEdge++; continue; }
+                lost.add(fr.getValue() + " = " + raw);
+            }
+            if (lost.isEmpty()) continue;
+
+            List<Map<String, Object>> hist = ingest.queryPublic(
+                "SELECT @rid AS rid, note_md FROM KnowTaskHist "
+                + "WHERE in('HAS_STATE').task_uid[0] = :u AND valid_to IS NULL LIMIT 1",
+                Map.of("u", uid));
+            if (hist.isEmpty()) { noHistRow++; continue; }
+
+            String note = str(hist.get(0).get("note_md"));
+            if (note != null && note.contains(marker)) { alreadyNoted++; continue; }
+
+            String addition = (note == null || note.isBlank() ? "" : note + "\n\n")
+                + marker + "\n**Роли из снятых полей** (не сопоставлены с заявленными "
+                + "личностями, сохранены при переходе на рёбра): " + String.join("; ", lost) + ".";
+            command("UPDATE KnowTaskHist SET note_md = :n WHERE @rid = " + hist.get(0).get("rid"),
+                Map.of("n", addition));
+            preserved++;
+        }
+
+        LOG.infof("[LORE MIGRATE] V38: примечаний дописано %d, значений покрыто ребром %d, "
+            + "уже помечено ранее %d, без открытой строки истории %d",
+            preserved, alreadyEdge, alreadyNoted, noHistRow);
+
+        if (noHistRow > 0) {
+            // Молчать нельзя: у этих задач значение поля исчезнет вместе с полем,
+            // и записать его оказалось некуда. Это не отказ шага, но и не норма.
+            LOG.warnf("[LORE MIGRATE] V38: у %d задач нет ОТКРЫТОЙ строки истории — "
+                + "их значения полей роли сохранить было НЕКУДА", noHistRow);
+        }
+    }
+
+    /** Есть ли у задачи открытое ребро этой роли. */
+    private boolean hasOpenRoleEdge(String taskUid, String role) {
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT count(*) AS n FROM ROLE_HELD_BY "
+            + "WHERE @out.task_uid = :u AND role = :r AND valid_to IS NULL",
+            Map.of("u", taskUid, "r", role));
+        return !rows.isEmpty() && ((Number) rows.get(0).getOrDefault("n", 0)).longValue() > 0;
+    }
+
+    /**
+     * V39: снять поля роли с KnowTask — последний шаг перехода на рёбра (TR-05).
+     *
+     * <p>Тем же порядком, что снятие поля компонента в V34, и по той же причине:
+     * снятие безопасно ровно тогда, когда ни одна связь не живёт ТОЛЬКО полем.
+     *
+     * <h3>Предусловие, без которого шаг отказывается работать</h3>
+     *
+     * Значение поля роли считается сохранённым, если у роли есть открытое ребро
+     * ЛИБО значение перенесено в примечание задачи шагом V38. Если найдётся
+     * хоть одно, для которого неверно ни то, ни другое, шаг ПРЕРЫВАЕТСЯ и
+     * называет число: снять поле в этом состоянии значит потерять данные молча.
+     *
+     * <p>Это не перестраховка. Ровно так V34 поймал бы восемь экранов без
+     * компонента, если бы добор рёбер не отработал.
+     *
+     * <h3>Почему DROP идёт через java, а не строкой шага</h3>
+     *
+     * Сторож идемпотентности требует у SQL-стейтментов форму {@code IF NOT
+     * EXISTS} или {@code UPSERT WHERE}; у DROP такой формы нет. Кроме того
+     * свойство объявлено не у всех документов одинаково: часть значений живёт
+     * schemaless и переживает {@code DROP PROPERTY}. Поэтому значения снимаются
+     * отдельно от объявления — как в V34.
+     */
+    private void dropTaskRoleFields() {
+        if (!typeExists("KnowTask")) {
+            LOG.info("[LORE MIGRATE] V39: типа KnowTask нет — снимать нечего");
+            return;
+        }
+        final String marker = "<!-- roles-from-dropped-fields -->";
+
+        // 1. Предусловие: ничего, что живёт только полем.
+        List<String> unsaved = new ArrayList<>();
+        for (Map<String, Object> t : ingest.queryPublic(
+                "SELECT task_uid, author_agent, executor_agent, reviewer_agent FROM KnowTask "
+                + "WHERE author_agent IS NOT NULL OR executor_agent IS NOT NULL "
+                + "OR reviewer_agent IS NOT NULL", Map.of())) {
+            String uid = str(t.get("task_uid"));
+            if (uid == null || uid.isBlank()) continue;
+            for (Map.Entry<String, String> fr : ROLE_FIELDS.entrySet()) {
+                String raw = str(t.get(fr.getKey()));
+                if (raw == null || raw.isBlank()) continue;
+                if (hasOpenRoleEdge(uid, fr.getValue())) continue;
+                List<Map<String, Object>> hist = ingest.queryPublic(
+                    "SELECT note_md FROM KnowTaskHist "
+                    + "WHERE in('HAS_STATE').task_uid[0] = :u AND valid_to IS NULL LIMIT 1",
+                    Map.of("u", uid));
+                String note = hist.isEmpty() ? null : str(hist.get(0).get("note_md"));
+                if (note == null || !note.contains(marker)) {
+                    if (unsaved.size() < 20) unsaved.add(uid + "." + fr.getValue() + " = " + raw);
+                    else if (unsaved.size() == 20) unsaved.add("…");
+                }
+            }
+        }
+        if (!unsaved.isEmpty()) {
+            throw new IllegalStateException("[LORE MIGRATE] V39: снятие полей роли ПРЕРВАНО — "
+                + "есть значения, которые не стали ребром и не сохранены в примечании, "
+                + "снятие стёрло бы их молча: " + String.join("; ", unsaved)
+                + ". Сначала отработайте шаг V38, затем повторите старт.");
+        }
+
+        // 2. Снятие. Значения убираем всегда, объявление — только где оно есть.
+        Set<String> declared = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT name, properties FROM schema:types WHERE name = 'KnowTask'", Map.of())) {
+            declared.add(String.valueOf(r.get("properties")));
+        }
+        String props = String.join(" ", declared);
+
+        int edgesBefore = countRoleEdges();
+        for (String field : ROLE_FIELDS.keySet()) {
+            command("UPDATE KnowTask REMOVE " + field, Map.of());
+            if (props.contains(field)) exec("DROP PROPERTY KnowTask." + field + " FORCE");
+        }
+
+        // 3. Контроль: рёбра не тронуты. Снятие поля не имеет права их менять,
+        //    и это единственное, что отличает «поле снято» от «снесено вместе
+        //    со связями».
+        int edgesAfter = countRoleEdges();
+        if (edgesAfter != edgesBefore) {
+            throw new IllegalStateException("[LORE MIGRATE] V39: после снятия полей число рёбер роли "
+                + "изменилось (" + edgesBefore + " → " + edgesAfter + ") — снятие задело связи");
+        }
+        LOG.infof("[LORE MIGRATE] V39: поля роли сняты, рёбер роли %d (не изменилось)", edgesAfter);
+    }
+
+    private int countRoleEdges() {
+        List<Map<String, Object>> r = ingest.queryPublic(
+            "SELECT count(*) AS n FROM ROLE_HELD_BY WHERE valid_to IS NULL", Map.of());
+        return r.isEmpty() ? 0 : ((Number) r.get(0).getOrDefault("n", 0)).intValue();
+    }
+
     private void backfillTaskRoleEdges() {
         if (!typeExists("KnowTask")) {
             LOG.info("[LORE MIGRATE] V36: типа KnowTask нет — свежая БД, доводить нечего");
