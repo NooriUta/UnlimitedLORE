@@ -83,7 +83,20 @@ public final class LoreSlices {
      */
     private static String roleHolder(String role) {
         String edge = "outE('ROLE_HELD_BY')[role='" + role + "' AND valid_to IS NULL].@in.";
-        return "COALESCE(" + edge + "actor_id[0], " + edge + "display_name[0]) AS " + role + "_agent";
+        // ЧИТАЕМОЕ ИМЯ ПЕРВЫМ, идентификатор — последним запасным.
+        //
+        // Прежний порядок начинался с actor_id, и в списках задач всегда стоял
+        // он: у агента actor_id непуст никогда, поэтому до имени очередь не
+        // доходила. Человек видел «AGENT-FULL-msbt0fed», где хвост — время
+        // заведения в 36-ричной записи, то есть служебный шум в лице колонки
+        // «кто». Читаемое имя при этом лежало рядом и не показывалось.
+        //
+        // Порядок разный у двух типов на том конце: у агента (KnowActor) есть
+        // name, у человека (KnowUser) его нет — только display_name. Поэтому
+        // сперва name, затем display_name, и лишь потом actor_id как признак
+        // того, что имя не заполнили.
+        return "COALESCE(" + edge + "name[0], " + edge + "display_name[0], "
+             + edge + "actor_id[0]) AS " + role + "_agent";
     }
 
     private static final String ROLE_HOLDERS =
