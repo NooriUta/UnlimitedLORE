@@ -187,6 +187,27 @@ public class LoreSchemaInitializer {
         // [[ADR-ID]] wiki link some runbooks carried in content_md.
         "CREATE EDGE TYPE REFERENCES_ADR   IF NOT EXISTS EXTENDS E",
 
+        // ── RM-P6 / D-2026-LORE-PRODUCT-IS-OWN-ENTITY: продуктовая ось ────────
+        // Продукт — запись справочника (KnowDictEntry, dict_type='product'), тем
+        // же приёмом, что и область (ADR-LORE-012 level B). Новый тип ВЕРШИНЫ не
+        // заводится намеренно: имя `product` в коде уже занято продуктовым слоем
+        // ADR-LORE-022 (Feature → UseCase → Actor), и своя вершина посадила бы на
+        // одно слово два разных понятия.
+        //
+        // IN_PRODUCT: LoreComponent → продукт. Ребро с ролью, а не поле: компонент
+        // бывает в двух продуктах ПО-РАЗНОМУ — HARPA разрабатывается в AIDA, а
+        // используется маркетингом (BALDR). Одна принадлежность этого не выражает.
+        "CREATE EDGE TYPE IN_PRODUCT       IF NOT EXISTS EXTENDS E",
+        "CREATE PROPERTY IN_PRODUCT.role   IF NOT EXISTS STRING",
+        // PARENT_PRODUCT: продукт → родительский продукт. ОТДЕЛЬНЫЙ тип, а не
+        // переиспользование PARENT_OF: дерево продуктов и дерево компонентов —
+        // разные деревья. Замерено 27.08.2026: HOUND лежит внутри DALI по
+        // компонентам, но является суб-продуктом AIDA; MT лежит вне поддерева
+        // AIDA по компонентам, но является её суб-продуктом. Смешать их в одном
+        // типе ребра значит требовать type-guard в каждом обходе — и получить
+        // обход, который молча пойдёт не по тому дереву.
+        "CREATE EDGE TYPE PARENT_PRODUCT   IF NOT EXISTS EXTENDS E",
+
         // ── Unique indexes on PK fields ───────────────────────────────────────
         // NB 2026-07-10: CREATE INDEX ... UNIQUE does NOT implicitly create the
         // property either (the 2026-07-01 note below only checked NOTUNIQUE) —
