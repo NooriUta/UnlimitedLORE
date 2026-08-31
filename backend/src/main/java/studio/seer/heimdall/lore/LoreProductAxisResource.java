@@ -112,11 +112,36 @@ public class LoreProductAxisResource extends LoreResourceBase {
             if (countOf(targetSelect) == 0)
                 return badParams("target '" + target + "' not found for rel=" + rel);
 
+            // Цикл в дереве продуктов. Прямое «сам себе родитель» отсечено выше,
+            // но A→B→A так не ловится, а последствие хуже отказа: обход вверх
+            // не завершается, и читатель либо висит, либо обрывается по счётчику
+            // глубины и молча отдаёт неполную цепочку. Тот же гвард есть у
+            // sprint_link(rel="dep") — здесь он по той же причине.
+            if ("parent".equals(rel) && "add".equals(action) && isAncestor(code, target))
+                return badParams("цикл: продукт '" + target + "' уже находится ниже '"
+                    + code + "' в дереве продуктов");
+
             // Снимаем существующее ребро в любом случае: для add это делает вызов
             // идемпотентным (иначе повтор плодит дубли — CREATE EDGE их не гасит),
             // для remove это и есть работа. DELETE EDGE в грамматике ArcadeDB
             // отсутствует, поэтому удаляем строки самого типа ребра по @rid.
-            int removed = dropEdges(edgeType, rel, code, target);
+            //
+            // КАРДИНАЛЬНОСТЬ РАЗНАЯ, и от неё зависит, что именно снимать.
+            //   component, project — многие-ко-многим. Продукт живёт в нескольких
+            //     репозиториях, а монорепо держит несколько продуктов; компонент
+            //     бывает в двух продуктах с разными ролями (HARPA: делает AIDA,
+            //     использует BALDR). Снимаем ТОЛЬКО эту пару, соседние связи не
+            //     трогаем.
+            //   parent — 0..1. Родитель у продукта один. Снимать только пару здесь
+            //     НЕДОСТАТОЧНО: добавление ДРУГОГО родителя оставило бы прежнего,
+            //     и у продукта молча стало бы два. Обход `out('PARENT_PRODUCT')`
+            //     отдал бы список, а читатель, берущий [0], показал бы один
+            //     случайный — расхождение без признака ошибки.
+            //   Поэтому для parent снимаем ВСЕ исходящие, как relinkAreaEdge
+            //   делает для области (там та же кардинальность 0..1).
+            int removed = "parent".equals(rel)
+                ? dropAllParents(code)
+                : dropEdges(edgeType, rel, code, target);
 
             if ("remove".equals(action)) {
                 return noStore(Response.ok(Map.of(
@@ -142,6 +167,10 @@ public class LoreProductAxisResource extends LoreResourceBase {
             body.put("target_id", target);
             body.put("action", "added");
             if ("component".equals(rel)) body.put("role", roleValue);
+            // Для parent видно, была ли это СМЕНА родителя или первичная
+            // привязка: из «ok:true» одно от другого не отличить, а разница
+            // существенная — смена молча переносит целое поддерево продуктов.
+            if ("parent".equals(rel)) body.put("previous_parent_removed", removed > 0);
             return noStore(Response.ok(body));
         } catch (Exception e) {
             LOG.warnf("[LORE PRODUCT LINK] %s %s %s→%s: %s", action, rel, code, target, e.getMessage());
@@ -161,6 +190,73 @@ public class LoreProductAxisResource extends LoreResourceBase {
         if (rows.isEmpty()) return 0;
         Object n = rows.get(0).get("n");
         return n instanceof Number num ? num.longValue() : 0;
+    }
+
+    /**
+     * Лежит ли {@code candidate} в поддереве {@code root} — то есть станет ли
+     * ребро {@code root → candidate} циклом.
+     *
+     * <p>Идём ВНИЗ от корня по {@code in('PARENT_PRODUCT')}, а не вверх от
+     * кандидата: вверх пришлось бы идти по ещё не существующему ребру. Счётчик
+     * глубины — страховка на случай, если цикл уже лежит в данных: обход по
+     * испорченному графу иначе не вернётся.
+     */
+    private boolean isAncestor(String root, String candidate) {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        java.util.Deque<String> queue = new java.util.ArrayDeque<>();
+        queue.add(root);
+        int guard = 0;
+        while (!queue.isEmpty() && guard++ < 200) {
+            String cur = queue.poll();
+            if (!seen.add(cur)) continue;
+            if (cur.equals(candidate) && !cur.equals(root)) return true;
+            try {
+                List<Map<String, Object>> rows = ingestService.queryPublic(
+                    "SELECT in('PARENT_PRODUCT').code AS kids FROM KnowDictEntry "
+                    + "WHERE dict_type='product' AND code=:code",
+                    Map.of("code", cur));
+                if (!rows.isEmpty() && rows.get(0).get("kids") instanceof List<?> kids) {
+                    for (Object k : kids) if (k != null) queue.add(String.valueOf(k));
+                }
+            } catch (Exception e) {
+                // Не смогли проверить — не то же самое, что «цикла нет». Считаем
+                // цикл возможным и отказываем: ложный отказ чинится повтором,
+                // ложное разрешение — испорченным деревом, которое молчит.
+                LOG.warnf("[LORE PRODUCT LINK] cycle check %s→%s failed: %s",
+                    root, candidate, e.getMessage());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Снять ВСЕ исходящие {@code PARENT_PRODUCT} у продукта — родитель один.
+     *
+     * <p>Отдельно от {@link #dropEdges}, потому что там фильтр по паре, а здесь
+     * нужен фильтр только по источнику: иначе смена родителя оставит прежнего.
+     * Возвращает число снятых, чтобы вызывающий видел, была ли смена (1) или
+     * первичная привязка (0) — разница между «переставили» и «поставили» иначе
+     * из ответа не читается.
+     */
+    private int dropAllParents(String code) {
+        int n = 0;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT @rid AS rid FROM PARENT_PRODUCT "
+                + "WHERE @out.code=:code AND @out.dict_type='product'",
+                Map.of("code", code));
+            for (Map<String, Object> row : rows) {
+                Object rid = row.get("rid");
+                if (rid == null) continue;
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "DELETE FROM PARENT_PRODUCT WHERE @rid=" + rid)).await().indefinitely();
+                n++;
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE PRODUCT LINK] drop parents of %s: %s", code, e.getMessage());
+        }
+        return n;
     }
 
     /**
