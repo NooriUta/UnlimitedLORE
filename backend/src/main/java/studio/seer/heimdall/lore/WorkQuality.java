@@ -318,17 +318,68 @@ final class WorkQuality {
     /**
      * Компонент (LoreComponent). Голый {@code component_id} в списках нечитаем,
      * а без области он не ложится ни в группировку, ни в цвет на доске.
+     *
+     * <p><b>parent_sync — проверка не косметическая (RM-P10).</b> Родитель задан
+     * ДВАЖДЫ: ребром {@code PARENT_OF} (канон, см.
+     * {@code D-2026-LORE-COMPONENT-PARENT-EDGE-IS-CANON}) и денормализованным
+     * полем {@code parent_id}. Копии разошлись на 12 вершинах, и цена была не в
+     * аккуратности: на вопрос «сколько у нас корневых компонентов» поле отвечало
+     * 26, рёбра — 14, а «сколько спринтов у AIDA» — 34 против 223. Оба числа
+     * выглядели как факт, и выбор между ними зависел от способа обхода графа.
+     *
+     * <p>Гэп возник потому, что его никто не сверял: {@code relinkParentEdge}
+     * пишет обе стороны, но вершины, заведённые до неё, остались с одной. Без
+     * этой проверки он разойдётся снова — молча и тем же способом.
      */
-    static Result evaluateComponent(String fullName, String area, String owner, String gameIcon) {
+    static Result evaluateComponent(String fullName, String area, String owner, String gameIcon,
+                                    String parentId, Object parentByEdge) {
         List<Finding> f = new ArrayList<>();
 
         req(f, "full_name", filled(fullName), "Полное имя задано");
         req(f, "area", filled(area), "Область (area) задана");
+        req(f, "parent_sync", parentInSync(parentId, parentByEdge),
+            "Родитель совпадает в ребре PARENT_OF и поле parent_id");
 
         hint(f, "owner", filled(owner), "Владелец указан — желательно");
         hint(f, "game_icon", filled(gameIcon), "Иконка задана — желательно");
 
         return score("component", f);
+    }
+
+    /**
+     * Ребро и поле согласованы. Корень — оба пусты — согласован: родителя у него
+     * нет, и требовать заполненности значило бы требовать несуществующего.
+     *
+     * <p>Сравнивается ЗНАЧЕНИЕ, а не факт непустоты. Проверка вида «ребро есть и
+     * поле есть» проходила бы и тогда, когда они указывают на РАЗНЫХ родителей —
+     * то есть ровно в том случае, ради которого заводится.
+     *
+     * <p>Два ребра сразу — тоже расхождение, а не «возьмём первое». Поле хранит
+     * одного родителя, значит второе ребро в поле не поместилось, и какой из
+     * двух родителей настоящий, запись уже не отвечает. На проде таких вершин
+     * ноль (замер 27.08.2026), и проверка нужна, чтобы ноль не стал единицей
+     * незаметно.
+     */
+    private static boolean parentInSync(String parentId, Object parentByEdge) {
+        List<String> edges = nonBlankValues(parentByEdge);
+        String field = filled(parentId) ? parentId.trim() : null;
+        if (edges.isEmpty()) return field == null;
+        return edges.size() == 1 && edges.get(0).equals(field);
+    }
+
+    /** Непустые значения обхода; скаляр и список ведут себя одинаково. */
+    private static List<String> nonBlankValues(Object raw) {
+        List<String> out = new ArrayList<>();
+        if (raw == null) return out;
+        if (raw instanceof Collection<?> c) {
+            for (Object o : c) {
+                if (o != null && !String.valueOf(o).isBlank()) out.add(String.valueOf(o).trim());
+            }
+            return out;
+        }
+        String s = String.valueOf(raw);
+        if (!s.isBlank()) out.add(s.trim());
+        return out;
     }
 
     /**
