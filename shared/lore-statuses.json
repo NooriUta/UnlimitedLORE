@@ -6,7 +6,6 @@
     "partial",
     "done",
     "blocked",
-    "high",
     "cancelled",
     "planned",
     "backlog",
@@ -30,17 +29,100 @@
   ],
   "_statusMatchComment": "SPRINT_QG_REBUILD/QG-13. A SECOND axis, deliberately separate from the ones above: planStatuses/statusRaw say what may be WRITTEN, statusMatch says how free text is READ back. status_raw is free text after the marker (\"✅ MERGED — ветка влита\"), so recognition needs its own vocabulary — and that vocabulary had drifted into three independent copies (Java classifyStatus, the SQL predicate in LoreSlices, taskTick in lore-status.ts). MERGED was known to two of three, ЗАКРЫТ to one, and the SQL demanded ЗАВЕРШЁН strictly with Ё. Cost: one sprint with no completion date and seven tasks counted as open (QG-06). Words are matched ANCHORED at the start, never as a substring: measured 2026-08-26, the whole corpus holds exactly ONE markerless value (\"DONE\", 1 sprint + 7 tasks), so the word layer exists for eight rows and must not also swallow \"NOT DONE\". Note: `high` is absent on purpose — it shares the 🔴 marker with `blocked` and is not separately recognizable from free text. Mirrors: LoreStatusVocabulary (guarded by LoreStatusesConsistencyTest) and lore-status.ts taskTick (guarded by scripts/check-lore-statuses.mjs).",
   "statusMatch": {
-    "done":             { "marker": "✅", "words": ["DONE", "CLOSED", "MERGED", "ЗАВЕРШ", "ЗАКРЫТ"] },
-    "in_progress":      { "marker": "🔄", "words": ["IN PROGRESS", "IN-PROGRESS", "PROGRESS", "WIP", "ACTIVE"] },
-    "partial":          { "marker": "🟡", "words": ["PARTIAL", "ЧАСТИЧ"] },
-    "ready_for_deploy": { "marker": "🚀", "words": ["READY", "RFD", "К ДЕПЛОЮ", "ДЕПЛО"] },
-    "blocked":          { "marker": "🔴", "words": ["BLOCK", "ЗАБЛОК"] },
-    "cancelled":        { "marker": "🚫", "words": ["CANCEL", "ОТМЕН"] },
-    "design":           { "marker": "🔬", "words": ["DESIGN", "ДИЗАЙН", "ПРОЕКТ"] },
-    "backlog":          { "marker": "🟣", "words": ["BACKLOG", "БЭКЛОГ", "БЭКЛ"] },
-    "planned":          { "marker": "📋", "words": ["PLANNED", "ЗАПЛАН", "ПЛАН"] },
-    "deferred":         { "marker": "⏸", "words": ["DEFER", "ОТЛОЖ", "HOLD", "PAUSE", "CONDITION", "УСЛОВН", "ПАУ"] },
-    "todo":             { "marker": "⬜", "words": ["TODO", "TO DO", "НЕ НАЧАТ"] }
+    "done": {
+      "marker": "✅",
+      "words": [
+        "DONE",
+        "CLOSED",
+        "MERGED",
+        "ЗАВЕРШ",
+        "ЗАКРЫТ"
+      ]
+    },
+    "in_progress": {
+      "marker": "🔄",
+      "words": [
+        "IN PROGRESS",
+        "IN-PROGRESS",
+        "PROGRESS",
+        "WIP",
+        "ACTIVE"
+      ]
+    },
+    "partial": {
+      "marker": "🟡",
+      "words": [
+        "PARTIAL",
+        "ЧАСТИЧ"
+      ]
+    },
+    "ready_for_deploy": {
+      "marker": "🚀",
+      "words": [
+        "READY",
+        "RFD",
+        "К ДЕПЛОЮ",
+        "ДЕПЛО"
+      ]
+    },
+    "blocked": {
+      "marker": "🔴",
+      "words": [
+        "BLOCK",
+        "ЗАБЛОК"
+      ]
+    },
+    "cancelled": {
+      "marker": "🚫",
+      "words": [
+        "CANCEL",
+        "ОТМЕН"
+      ]
+    },
+    "design": {
+      "marker": "🔬",
+      "words": [
+        "DESIGN",
+        "ДИЗАЙН",
+        "ПРОЕКТ"
+      ]
+    },
+    "backlog": {
+      "marker": "🟣",
+      "words": [
+        "BACKLOG",
+        "БЭКЛОГ",
+        "БЭКЛ"
+      ]
+    },
+    "planned": {
+      "marker": "📋",
+      "words": [
+        "PLANNED",
+        "ЗАПЛАН",
+        "ПЛАН"
+      ]
+    },
+    "deferred": {
+      "marker": "⏸",
+      "words": [
+        "DEFER",
+        "ОТЛОЖ",
+        "HOLD",
+        "PAUSE",
+        "CONDITION",
+        "УСЛОВН",
+        "ПАУ"
+      ]
+    },
+    "todo": {
+      "marker": "⬜",
+      "words": [
+        "TODO",
+        "TO DO",
+        "НЕ НАЧАТ"
+      ]
+    }
   },
   "statusRaw": {
     "done": "✅ DONE",
@@ -49,7 +131,6 @@
     "todo": "⬜ TODO",
     "planned": "📋 PLANNED",
     "blocked": "🔴 BLOCKED",
-    "high": "🔴 P0",
     "cancelled": "🚫 CANCELLED",
     "ready_for_deploy": "🚀 READY FOR DEPLOY",
     "backlog": "🟣 BACKLOG",

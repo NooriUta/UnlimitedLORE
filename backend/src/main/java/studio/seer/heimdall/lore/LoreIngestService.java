@@ -57,7 +57,7 @@ public class LoreIngestService {
     // Canonical status token → status_raw, mirrors AidaLoreResource.SCD2_STATUS_RAW.
     private static final Map<String, String> SPRINT_STATUS_RAW = Map.of(
         "done", "✅ DONE", "active", "🔄 IN PROGRESS", "partial", "🟡 PARTIAL",
-        "todo", "📋 PLANNED", "blocked", "🔴 BLOCKED", "high", "🔴 P0",
+        "todo", "📋 PLANNED", "blocked", "🔴 BLOCKED",
         "cancelled", "🚫 CANCELLED");
 
     /**

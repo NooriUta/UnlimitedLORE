@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип: дорожные карты по проектам (RM-U1, в3 — на сверенных данных)</title>
+<style>
+  :root{
+    --bg0:#0f1115; --bg1:#171a21; --bg2:#1f232c; --bd:#2b303b;
+    --t1:#e6e8ec; --t2:#a9b0bd; --t3:#6b7280;
+    --acc:#6ea8fe; --wrn:#e0a340; --dng:#e0645a; --suc:#5cb87a;
+    --mono:'Cascadia Code',Consolas,monospace;
+    --p-aida:#6ea8fe; --p-lore:#8b7ce0; --p-volva:#5cb87a; --p-midgard:#e0a340; --p-bragi:#e0645a;
+    --lane:150px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.45 system-ui,Segoe UI,sans-serif;padding:18px 22px 60px}
+  h1{font-size:17px;margin:0 0 2px} .sub{color:var(--t3);font-size:12px;margin-bottom:16px;max-width:980px}
+  .sub code{font-family:var(--mono)}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--bd)}
+  .bar label{color:var(--t3);font-size:12px;margin-right:2px}
+  select,button{background:var(--bg2);color:var(--t1);border:1px solid var(--bd);border-radius:7px;padding:5px 11px;font:inherit;cursor:pointer}
+  button.on{background:color-mix(in srgb,var(--acc) 20%,transparent);border-color:var(--acc);color:var(--acc)}
+  .view{display:none} .view.show{display:block}
+
+  /* --- легенда --- */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;font-size:11.5px;color:var(--t3)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+  /* --- дорожная карта --- */
+  .ms{border:1px solid var(--bd);border-radius:10px;margin-bottom:10px;overflow:hidden;background:var(--bg1)}
+  .ms.future{border-style:dashed;background:transparent}
+  .ms.foreign{background:transparent;opacity:.62}
+  .ms-h{display:flex;align-items:baseline;gap:10px;padding:9px 13px;background:var(--bg2);flex-wrap:wrap}
+  .ms.future .ms-h,.ms.foreign .ms-h{background:transparent}
+  .ms-h .lbl{font-weight:700} .ms-h .date{color:var(--t2);font-family:var(--mono);font-size:12px}
+  .ms-h .date.approx{color:var(--t3);font-style:italic}
+  .ms-h .prio{font-size:10.5px;font-family:var(--mono);color:var(--wrn);border:1px solid color-mix(in srgb,var(--wrn) 45%,transparent);border-radius:5px;padding:0 5px}
+  .ms-h .cnt{margin-left:auto;color:var(--t3);font-size:12px;font-family:var(--mono)}
+  .ms-h .cnt b{color:var(--t1);font-weight:600}
+  .ms-goal{padding:2px 13px 8px;color:var(--t2);font-size:12.5px}
+  .sprints{display:flex;flex-wrap:wrap;gap:6px;padding:10px 13px}
+  .sp{font-size:11.5px;font-family:var(--mono);padding:3px 8px;border-radius:6px;border:1px solid var(--bd);background:var(--bg0);color:var(--t2)}
+  .sp.done{border-color:color-mix(in srgb,var(--suc) 50%,transparent);color:var(--suc)}
+  .sp.prog{border-color:color-mix(in srgb,var(--acc) 50%,transparent);color:var(--acc)}
+  .sp.more{border-style:dashed;color:var(--t3)}
+  .sp.pick{cursor:pointer}
+  .sp.pick:hover{border-color:var(--t2)}
+  /* пустая веха — нейтрально, НЕ жёлтым: это не проблема */
+  .empty-ms{padding:12px 13px;color:var(--t3);font-size:12.5px}
+
+  /* жёлтый зарезервирован под проблему — только «вне плана»; красный — под «сироту» */
+  .unplanned{border:1px dashed var(--wrn);border-radius:10px;margin-top:16px;background:color-mix(in srgb,var(--wrn) 6%,transparent)}
+  .unplanned .ms-h{background:transparent}
+  .unplanned .ms-h .lbl{color:var(--wrn)}
+  .orphans{border:1px dashed var(--dng);border-radius:10px;margin-top:16px;background:color-mix(in srgb,var(--dng) 6%,transparent);padding-bottom:4px}
+  .orphans .hd{padding:9px 13px;font-weight:700;color:var(--dng);display:flex;gap:10px;align-items:baseline}
+  .orphans .hd .cnt{margin-left:auto;font-weight:400;font-size:12px;font-family:var(--mono);color:var(--t3)}
+  .orphans .it{padding:0 13px 9px;color:var(--t2);font-size:12.5px}
+  .orphans .it code{font-family:var(--mono);color:var(--t1)}
+  .picker{margin:0 13px 12px;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg1);font-size:12.5px}
+  .picker .ttl{color:var(--t2);margin-bottom:7px}
+  .picker .opts{display:flex;flex-wrap:wrap;gap:6px}
+  .picker .opt{font-size:11.5px;padding:3px 9px;border-radius:6px;border:1px solid var(--bd);background:var(--bg0);color:var(--t2);cursor:pointer}
+  .picker .opt:hover{border-color:var(--acc);color:var(--acc)}
+  .picker .mock{margin-top:8px;color:var(--t3);font-size:11px}
+
+  /* --- пустое состояние --- */
+  .estate{border:1px dashed var(--bd);border-radius:12px;padding:34px;text-align:center;color:var(--t2);margin-bottom:14px}
+  .estate h2{color:var(--t1);font-size:16px;margin:0 0 6px}
+  .estate .row{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .estate button.primary{background:var(--acc);color:#06101f;border-color:var(--acc);font-weight:600}
+
+  /* --- гант / портфель: одна шкала на ось и на полосы --- */
+  .gwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .ginner{min-width:620px}
+  .gantt{border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+  .grow{display:grid;grid-template-columns:var(--lane) 1fr;border-bottom:1px solid var(--bd)}
+  .grow:last-child{border-bottom:0}
+  .glane{padding:8px 11px;font-size:12px;border-right:1px solid var(--bd);background:var(--bg2);display:flex;align-items:center;gap:7px;min-width:0}
+  .glane .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .gtrack{position:relative;height:38px}
+  .gtrack .grid{position:absolute;inset:0;display:flex}
+  .gtrack .grid i{border-right:1px solid var(--bd)}
+  .gtrack .grid i:last-child{border-right:0}
+  .gbar{position:absolute;top:9px;height:20px;border-radius:5px;display:flex;align-items:center;padding:0 7px;font-size:11px;color:#06101f;font-weight:600;white-space:nowrap;overflow:hidden}
+  .gbar.approx{opacity:.55;border:1px dashed rgba(255,255,255,.55)}
+  .gbar.zero{background:transparent!important;border:1px dashed var(--bd);color:var(--t3);font-weight:400}
+  /* translate ПЕРЕД rotate — иначе сдвиг считается в повёрнутых координатах и ромб уезжает по диагонали */
+  .gpin{position:absolute;top:9px;width:11px;height:11px;margin-left:-5.5px;transform:rotate(45deg);border:2px solid var(--bg0)}
+  .gnone{position:absolute;inset:8px 10px;border:1px dashed var(--bd);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:11.5px}
+  .gaxis{display:grid;grid-template-columns:var(--lane) 1fr}
+  .gaxis .sp0{border-right:1px solid var(--bd)}
+  .gaxis .months{display:flex}
+  .gaxis .mo{font-size:11px;color:var(--t3);padding:4px 0 4px 6px;font-family:var(--mono);overflow:hidden}
+  .badge{margin-left:auto;font-size:10.5px;font-family:var(--mono);color:var(--wrn);white-space:nowrap}
+  .offaxis{margin-top:8px;padding:8px 12px;border:1px dashed var(--dng);border-radius:8px;color:var(--t3);font-size:11.5px}
+
+  .note{margin-top:22px;padding:12px 14px;border:1px solid var(--bd);border-radius:9px;background:var(--bg1);color:var(--t2);font-size:12.5px}
+  .note b{color:var(--t1)}
+  .chg{margin-top:12px;padding:12px 14px;border:1px solid var(--bd);border-radius:9px;color:var(--t3);font-size:12px}
+  .chg b{color:var(--t2)}
+  .chg ul{margin:6px 0 0;padding-left:18px} .chg li{margin:3px 0}
+  .chg code{font-family:var(--mono);color:var(--t2)}
+  .warnbar{margin:0 0 14px;padding:10px 13px;border:1px solid color-mix(in srgb,var(--wrn) 45%,transparent);border-left-width:3px;border-radius:8px;background:color-mix(in srgb,var(--wrn) 7%,transparent);color:var(--t2);font-size:12.5px;max-width:980px}
+  .warnbar b{color:var(--t1)}
+  .tag{display:inline-block;font-size:10.5px;font-family:var(--mono);padding:1px 6px;border-radius:5px;border:1px solid var(--bd);color:var(--t3);margin-left:6px}
+  @media(max-width:700px){ :root{--lane:104px} body{padding:14px 12px 50px} }
+</style>
+</head>
+<body>
+<h1>Дорожные карты по проектам <span class="tag">прототип RM-U1 · в3 · сверено с LORE 25.08.2026</span></h1>
+<div class="sub">Данные сняты с прода LORE (слайсы <code>milestones</code>, <code>sprints</code>, <code>git_projects</code>) и подставлены как есть.
+Главное, что выяснилось при сверке: <b>вехи в LORE общие, а не продуктовые</b> — у вехи нет ребра на проект, и в M3 одновременно сидят спринты AIDA, UnlimitedLORE, BRAGI, ODIN и seidr-site.
+Поэтому «дорожная карта продукта» здесь — это участие продукта в общем наборе вех, а не собственный набор. Своим он станет после RM-S1 и RM-X1. Макет ничего не сохраняет.</div>
+
+<div class="warnbar">
+  <b>Единица в этом макете — git-проект, и это временно.</b> Решение владельца 26.08.2026: продукт может содержать несколько корневых компонентов, поэтому продукт — отдельная сущность, а не синоним репозитория или компонента.
+  Сущности пока нет в схеме (вершин Product/KnowProduct не существует), и разложить дорожки по продуктам нечем — селектор ниже перечисляет репозитории.
+  Что это меняет, когда продукт появится: строка <b>AIDA</b> распадётся на DALI, Hound, MIMIR, HEIMDALL, ANVIL, SKULD и остальные — сейчас это один репозиторий на 267 спринтов;
+  шесть слугов <b>UDWE</b> сойдутся в одну строку; <b>FREYJA</b> (конференции, найм, ИП, аутрич) уйдёт из продуктов вовсе — это внешние обязательства. Задачи: RM-P1…RM-P6.
+</div>
+
+<div class="bar">
+  <label>Проект:</label>
+  <select id="proj" onchange="closePicker();render()"></select>
+  <label style="margin-left:14px">Вид:</label>
+  <button id="b-road" class="on" onclick="setView('road')">Дорожная карта</button>
+  <button id="b-gantt" onclick="setView('gantt')">Гант (дорожки)</button>
+  <button id="b-port" onclick="setView('port')">Портфель (все продукты)</button>
+</div>
+
+<div class="legend" id="legend"></div>
+
+<div id="v-road" class="view show"></div>
+<div id="v-gantt" class="view"></div>
+<div id="v-port" class="view"></div>
+
+<div class="note" id="note"></div>
+<div class="chg" id="chg"></div>
+
+<script>
+// ═══════════ данные: снято с прода LORE 25.08.2026 ═══════════
+// Вехи ОБЩИЕ: у KnowMilestone нет ребра на проект. total — сколько спринтов висит
+// на вехе у ВСЕХ продуктов сразу. date выведена из date_display; approx:true — дата
+// названа словом («Окт», «Ноя+», «июль 2026»), точного дня в данных нет.
+const MS = [
+  {id:"M0",        label:"M0",        date:"2026-04-18", disp:"18 апр",              week:0,  total:7,   goal:"Инфраструктура + Core готовы (early wave). ✅"},
+  {id:"M1",        label:"M1",        date:"2026-05-04", disp:"4 мая",               week:3,  total:76,  goal:"Feature wave + Hound стабилен + MIMIR prep готов. ✅"},
+  {id:"M2 ✓ core", label:"M2 ✓ core", date:"2026-05-31", disp:"31 мая → core 03.06", week:7, total:43, goal:"Core v1.4.4 PROD. ✅ 31/38 delivered, 7 carryover → M3."},
+  {id:"M3",        label:"M3",        date:"2026-07-06", disp:"6 июл",               week:13, total:128, prio:"P0", goal:"v1.5.0 PROD + 5-минутный wow demo + ИП оформлен + cold OEM."},
+  {id:"M4",        label:"M4",        date:"2026-08-31", disp:"31 авг",              week:20, total:58,  goal:"Demo video для cold outreach. 1–2 OEM warm. Helm chart."},
+  {id:"M5",        label:"M5",        date:"2026-09-30", disp:"30 сен",              week:26, total:3,   goal:"1+ OEM design partner LOI. Реестр ПО. Найм Mid DE."},
+  {id:"M6",        label:"M6",        date:"2026-10-31", disp:"Окт",  approx:true,   week:27, total:0,   goal:"HighLoad++ talk delivered. 5+ warm OEM leads. ⚠ Under risk."},
+  {id:"M7",        label:"M7",        date:"2026-11-30", disp:"Ноя+", approx:true,   week:29, total:1,   goal:"1 paying OEM partner signed. Wave 3 backlog. ALERTS."}
+];
+// Две вехи-сироты: спринтов нет, у второй нет даже даты. Разместить их на оси нечем —
+// показываем отдельно и честно, а не двигаем в конец шкалы наугад. Это RM-X1.
+const ORPHANS = [
+  {id:"M-PRODUCT-UI",       label:"Продуктовый слой: экраны и формы", disp:"июль 2026", why:"дата названа месяцем, цель не заполнена, спринтов 0"},
+  {id:"M-LORE-CLIENT-SAFE", label:"(без названия)",                   disp:"даты нет",  why:"ни названия, ни даты, ни цели, ни спринтов — пустая вершина"}
+];
+// Участие продукта в вехе: n — своих спринтов, done/prog — из них, head — первые шесть.
+const PART = {
+  "NooriUta/AIDA":{
+    "M0":{n:7,done:7,prog:0,head:[["SPRINT_CHDIAL","done"],["SPRINT_CICD","done"],["SPRINT_DSC","done"],["SPRINT_ELKQW","done"],["SPRINT_GAP_SP","done"],["SPRINT_HAPI","done"]]},
+    "M1":{n:75,done:74,prog:0,head:[["SPRINT_AIDA_TIMESERIES","done"],["SPRINT_ANVIL_CORE","done"],["SPRINT_ARC26","done"],["SPRINT_ARCADE_META","done"],["SPRINT_AUTH_REDESIGN_PLAN","done"],["SPRINT_C22","done"]]},
+    "M2 ✓ core":{n:38,done:36,prog:0,head:[["SPRINT_ARCH_HOUSEKEEPING","done"],["SPRINT_AUTH_REDESIGN","done"],["SPRINT_BACKEND_DATA_LAYER","done"],["SPRINT_DEMO_TENANT_MODULE","done"],["SPRINT_DEP_UPGRADES_JUN26","done"],["SPRINT_ELK_M2_KNOT","done"]]},
+    "M3":{n:77,done:76,prog:0,head:[["PLAN_HOUND_D4_PARITY","done"],["SPRINT_APR13_MAY9_M1","done"],["SPRINT_ARCADEDB_2671_AUDIT","done"],["SPRINT_ARCADEDB_2671_UPGRADE","done"],["SPRINT_ARCADE_2667_RESEARCH","done"],["SPRINT_AUTH_CUTOVER","done"]]},
+    "M4":{n:38,done:13,prog:3,head:[["SPRINT_AIDA_PREPROD_MIGRATION","prog"],["SPRINT_AI_AUTODOCS_BASIC","plan"],["SPRINT_AI_CPG_AUTODOCS_BACKLOG","plan"],["SPRINT_ALERTS","plan"],["SPRINT_ANVIL_IDE","plan"],["SPRINT_ARCADE_2672_UPGRADE","done"]]},
+    "M5":{n:2,done:0,prog:0,head:[["SPRINT_PENTEST_EXTERNAL","plan"],["SPRINT_Q6_SCHEMA","plan"]]}
+  },
+  "NooriUta/UnlimitedLORE":{
+    "M1":{n:1,done:1,prog:0,head:[["SPRINT_LORE_ADR_MODULE_FIXES","done"]]},
+    "M3":{n:35,done:35,prog:0,head:[["SPRINT_ARCADEDB_2671_AUDIT","done"],["SPRINT_BRAGI_ARCHIVE_FOLLOWUP","done"],["SPRINT_BRAGI_ARCHIVE_IMPL","done"],["SPRINT_BRAGI_PLATFORM_RENDER","done"],["SPRINT_COMPONENT_IDENTITY","done"],["SPRINT_DALI_DIALECTS_LORE_VIZ","done"]]},
+    "M4":{n:11,done:7,prog:3,head:[["SPRINT_BRAGI_ARCHIVE_V2","prog"],["SPRINT_LORE_CI_MIRROR","prog"],["SPRINT_LORE_CI_SERVER_MIGRATION","done"],["SPRINT_LORE_DB_RESILIENCE","plan"],["SPRINT_LORE_MCP_EVOLUTION","done"],["SPRINT_LORE_PRODUCT_LAYER","done"]]},
+    "M5":{n:1,done:0,prog:0,head:[["SPRINT_LORE_AGENT_OBSERVABILITY","plan"]]}
+  },
+  "NooriUta/volva":{
+    "M4":{n:5,done:4,prog:1,head:[["SPRINT_VOLVA_062_BRANDING","done"],["SPRINT_VOLVA_DRIVER_XRAY_SQL","done"],["SPRINT_VOLVA_GRAPH_CATEGORY_THEME","done"],["SPRINT_VOLVA_KC_AUTH","prog"],["SPRINT_VOLVA_REACT19","done"]]}
+  },
+  "AIDA/MIDGARD":{},
+  "NooriUta/BRAGI":{
+    "M3":{n:4,done:4,prog:0,head:[["SPRINT_BLOG2","done"],["SPRINT_BRAGI_ABOUT_PUB","done"],["SPRINT_BRAGI_PLATFORM_RENDER","done"],["SPRINT_SEO_MARKETING_W2","done"]]},
+    "M4":{n:6,done:1,prog:1,head:[["SPRINT_ALT_MLSD_WORK","plan"],["SPRINT_BRAGI_ARCHIVE_V2","prog"],["SPRINT_CONTENT_PIPELINE_JUL_AUG","plan"],["SPRINT_OEM_PARTNER_PROGRAM","plan"],["SPRINT_SEO_MARKETING_ACTIONS","done"],["SPRINT_SOVEREIGN_AI_MESSAGING","plan"]]}
+  }
+};
+// Спринты продукта без ребра TARGETS_MILESTONE. n — реальное число, head — первые шесть.
+// Всего в LORE таких 92 из 406 — почти четверть работы живёт вне вех.
+const UNPLANNED = {
+  "NooriUta/AIDA":{n:32,head:[["SPRINT_ARCADE_2681_UPGRADE","prog"],["SPRINT_BENCH_RUN","plan"],["SPRINT_DEMO_SCRIPT","plan"],["SPRINT_FRIGG_SESSION_AUTH","done"],["SPRINT_GREENPLUM_PARTITION_DDL","plan"],["SPRINT_HELM_CHART","plan"]]},
+  "NooriUta/UnlimitedLORE":{n:16,head:[["SPRINT_LORE_ADMIN_PANEL","done"],["SPRINT_LORE_DB_UPGRADE_REGRESSION","prog"],["SPRINT_LORE_DEPS_DOMPURIFY","done"],["SPRINT_LORE_FORGEJO_INTEGRATION","done"],["SPRINT_LORE_HOUSEKEEPING_2026W29","done"],["SPRINT_LORE_MEASURE_TRUTH","prog"]]},
+  "NooriUta/volva":{n:6,head:[["SPRINT_KC_THEMES_VOLVA_LORE","prog"],["SPRINT_VOLVA_ARCADEDB_DRIVER","done"],["SPRINT_VOLVA_CI","done"],["SPRINT_VOLVA_HOUND_BRIDGE","prog"],["SPRINT_VOLVA_MOBILE_ADMIN","done"],["SPRINT_VOLVA_SSO_OIDC","plan"]]},
+  "AIDA/MIDGARD":{n:4,head:[["SPRINT_MIDGARD_OWN_MODEL","prog"],["SPRINT_MIDGARD_PLAN_IMPORT","plan"],["SPRINT_MIDGARD_PLAN_UI","done"],["SPRINT_MIDGARD_STARTUP","prog"]]},
+  "NooriUta/BRAGI":{n:0,head:[]}
+};
+// Всего спринтов у продукта. Считать суммой по вехам нельзя: спринт может висеть
+// на двух вехах сразу (у AIDA таких два), и сумма даёт 269 вместо 267.
+const TOTALS = {"NooriUta/AIDA":267,"NooriUta/UnlimitedLORE":64,"NooriUta/volva":11,"AIDA/MIDGARD":4,"NooriUta/BRAGI":10};
+const COLOR = {"NooriUta/AIDA":"--p-aida","NooriUta/UnlimitedLORE":"--p-lore","NooriUta/volva":"--p-volva","AIDA/MIDGARD":"--p-midgard","NooriUta/BRAGI":"--p-bragi"};
+const PROJECTS = Object.keys(PART);
+
+// ─────────── шкала времени: одна на ось и на полосы ───────────
+// ВАЖНО: new Date("2026-04-01") разбирается как UTC и в местном поясе съезжает на часы —
+// ось тогда насчитывает лишний месяц, а полосы считаются от другого знаменателя. Разбираем локально.
+const day = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const T0 = day("2026-04-01"), T1 = day("2027-02-01");
+// месяцы разной длины, поэтому ячейка оси весит по числу дней — тогда граница месяца
+// на оси совпадает с той же датой на полосе, а не «в среднем»
+const MONTHS = (function(){
+  const names = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  const out = []; let d = new Date(T0);
+  while (d < T1) {
+    const next = new Date(d.getFullYear(), d.getMonth()+1, 1);
+    out.push({ name: names[d.getMonth()], days: (next - d) / 86400000 });
+    d = next;
+  }
+  return out;
+})();
+const pct = s => (day(s) - T0) / (T1 - T0) * 100;      // дата → % ширины трека
+function plural(n, forms){
+  const m = n % 100, k = n % 10;
+  const w = (m >= 11 && m <= 14) ? forms[2] : k === 1 ? forms[0] : (k >= 2 && k <= 4) ? forms[1] : forms[2];
+  return n + " " + w;
+}
+const own = (proj, id) => (PART[proj] || {})[id] || null;
+const allOf = proj => TOTALS[proj] || 0;
+
+let view = "road", openPick = null;
+
+document.getElementById("proj").innerHTML =
+  PROJECTS.map(p => '<option value="' + p + '">' + p + '</option>').join('');
+
+function setView(v){
+  view = v; closePicker();
+  for (const x of ["road","gantt","port"]) {
+    document.getElementById("v-" + x).classList.toggle("show", x === v);
+    document.getElementById("b-" + x).classList.toggle("on", x === v);
+  }
+  render();
+}
+function closePicker(){ openPick = null; }
+function togglePick(id){ openPick = (openPick === id) ? null : id; render(); }
+
+function render(){
+  const proj = document.getElementById("proj").value;
+  if (view === "road")  renderRoad(proj);
+  if (view === "gantt") renderGantt(proj);
+  if (view === "port")  renderPort();
+  renderLegend(); renderNote(); renderChg();
+}
+
+function renderLegend(){
+  const L = (view === "road")
+    ? [["var(--suc)","спринт done"],["var(--acc)","спринт в работе"],["var(--t3)","веха без участия продукта"],["var(--wrn)","вне плана — нет ребра TARGETS_MILESTONE"],["var(--dng)","веха-сирота — нечем разместить"]]
+    : [["var(--p-aida)","период до вехи"],["var(--t3)","пунктир — дата названа словом, точного дня нет"],["var(--wrn)","спринты вне плана"],["var(--dng)","вехи вне оси"]];
+  document.getElementById("legend").innerHTML =
+    L.map(([c,t]) => '<span><i style="background:' + c + '"></i>' + t + '</span>').join('');
+}
+
+function spBadges(list, clickable){
+  return list.map(function(pair){
+    const id = pair[0], st = pair[1];
+    const onclick = clickable ? ' onclick="togglePick(\'' + id + '\')"' : '';
+    return '<span class="sp ' + st + (clickable ? ' pick' : '') + '"' + onclick + '>' + id.replace('SPRINT_','') + '</span>';
+  }).join('');
+}
+function spBlock(part){
+  const rest = part.n - part.head.length;
+  return '<div class="sprints">' + spBadges(part.head, false)
+    + (rest > 0 ? '<span class="sp more">ещё ' + rest + '</span>' : '') + '</div>';
+}
+
+function pickerFor(proj, id){
+  const short = id.replace('SPRINT_','');
+  return '<div class="picker">'
+    + '<div class="ttl">Привязать <b>' + short + '</b> к вехе:</div><div class="opts">'
+    + MS.map(m => '<span class="opt" onclick="closePicker();render()">' + m.id + ' · ' + m.disp + '</span>').join('')
+    + '</div>'
+    + '<div class="mock">Список вех одинаков у любого проекта — вехи общие. Ровно это и чинят RM-S1 и RM-X1. Макет ничего не сохраняет.</div></div>';
+}
+
+function unplannedBlock(proj, un){
+  const rest = un.n - un.head.length;
+  return '<div class="unplanned">'
+    + '<div class="ms-h"><span class="lbl">⚠ Спринты вне плана</span><span class="cnt">' + un.n + ' из ' + allOf(proj) + ' спринтов продукта</span></div>'
+    + '<div class="ms-goal">Свои спринты без ребра TARGETS_MILESTONE — «что забыли поставить в план». Нажмите на спринт, чтобы привязать.</div>'
+    + '<div class="sprints">' + spBadges(un.head, true)
+    + (rest > 0 ? '<span class="sp more">ещё ' + rest + '</span>' : '') + '</div>'
+    + (openPick ? pickerFor(proj, openPick) : '')
+    + '</div>';
+}
+
+function orphansBlock(){
+  return '<div class="orphans"><div class="hd">✕ Вехи, которые никуда не встают'
+    + '<span class="cnt">' + ORPHANS.length + ' из ' + (MS.length + ORPHANS.length) + '</span></div>'
+    + ORPHANS.map(o => '<div class="it"><code>' + o.id + '</code> — ' + o.label + ' · ' + o.disp + ' · ' + o.why + '</div>').join('')
+    + '</div>';
+}
+
+function renderRoad(proj){
+  const el = document.getElementById("v-road"), un = UNPLANNED[proj] || {n:0,head:[]};
+  const mine = Object.keys(PART[proj] || {}).length;
+  let html = "";
+  if (mine === 0) {
+    html += '<div class="estate">'
+      + '<h2>Ни один спринт продукта не стоит в плане</h2>'
+      + '<div>У ' + proj + ' есть ' + plural(un.n, ["спринт","спринта","спринтов"]) + ', и ни один не привязан к вехе.<br>'
+      + 'Вехи в LORE общие, поэтому «своих» тут нет ни у кого — привязать можно к любой из ' + MS.length + '.</div>'
+      + '<div class="row"><button class="primary">➕ Завести веху продукта</button>'
+      + '<button onclick="document.getElementById(\'proj\').value=\'NooriUta/AIDA\';closePicker();render()">Посмотреть, как у AIDA</button>'
+      + '</div></div>';
+  }
+  for (const m of MS) {
+    const p = own(proj, m.id);
+    const foreign = !p;
+    html += '<div class="ms' + (foreign ? ' foreign' : '') + (m.total === 0 ? ' future' : '') + '">'
+      + '<div class="ms-h"><span class="lbl">' + m.label + '</span>'
+      + '<span class="date' + (m.approx ? ' approx' : '') + '">' + m.disp + ' · w' + m.week + '</span>'
+      + (m.prio ? '<span class="prio">' + m.prio + '</span>' : '')
+      + '<span class="cnt">' + (p ? '<b>' + p.n + '</b> своих' : 'своих нет') + ' · ' + m.total + ' всего</span></div>'
+      + '<div class="ms-goal">' + m.goal + '</div>'
+      + (p ? spBlock(p)
+           : '<div class="empty-ms">' + (m.total === 0
+               ? 'Спринтов нет вообще — ни у кого. Веха заведена под будущее.'
+               : 'Продукт в этой вехе не участвует; ' + plural(m.total, ["спринт","спринта","спринтов"]) + ' у других продуктов.') + '</div>')
+      + '</div>';
+  }
+  html += orphansBlock();
+  if (un.n) html += unplannedBlock(proj, un);
+  el.innerHTML = html;
+}
+
+function axis(){
+  return '<div class="gaxis"><div class="sp0"></div><div class="months">'
+    + MONTHS.map(m => '<div class="mo" style="flex:' + m.days + ' 0 0">' + m.name + '</div>').join('')
+    + '</div></div>';
+}
+function grid(){
+  return '<div class="grid">'
+    + MONTHS.map(m => '<i style="flex:' + m.days + ' 0 0"></i>').join('') + '</div>';
+}
+function offAxisNote(){
+  return '<div class="offaxis">Вне оси: ' + ORPHANS.map(o => o.id + ' (' + o.disp + ')').join(', ')
+    + ' — точной даты в данных нет, поэтому на шкале их не рисуем. Придумать им место значило бы соврать положением.</div>';
+}
+
+// Полоса = период от ПРЕДЫДУЩЕЙ ВЕХИ ПО ОБЩЕЙ ШКАЛЕ до даты этой вехи; ромб = сама дата.
+// Считать от предыдущей вехи, где продукт участвовал, нельзя: volva есть только в M4,
+// и полоса растянулась бы с апреля по август — вышло бы «volva работала всё лето»,
+// хотя её единственный отрезок — это подход к M4.
+function milestoneBars(colorVar, has, labelOf){
+  let prev = "2026-04-01", out = "";
+  for (const m of MS) {
+    if (!has(m)) { prev = m.date; continue; }
+    const l = pct(prev), r = pct(m.date), w = Math.max(r - l, 1.2);
+    const lab = labelOf ? labelOf(m) : m.id;
+    out += '<div class="gbar' + (m.approx ? ' approx' : '') + '" style="left:' + l + '%;width:' + w + '%;background:var(' + colorVar + ')"'
+        + ' title="' + m.id + ' · ' + m.disp + '">' + lab + '</div>'
+        + '<div class="gpin" style="left:' + r + '%;background:var(' + colorVar + ')"></div>';
+    prev = m.date;
+  }
+  return out;
+}
+
+function renderGantt(proj){
+  const el = document.getElementById("v-gantt"), c = COLOR[proj] || "--acc";
+  let prev = "2026-04-01", rows = "";
+  for (const m of MS) {
+    const p = own(proj, m.id);
+    const l = pct(prev), r = pct(m.date), w = Math.max(r - l, 1.2);
+    const zero = !p;
+    rows += '<div class="grow"><div class="glane"><span class="dot" style="background:var(' + (zero ? '--t3' : c) + ')"></span>'
+      + '<span class="nm">' + m.id + '</span></div>'
+      + '<div class="gtrack">' + grid()
+      + '<div class="gbar' + (m.approx ? ' approx' : '') + (zero ? ' zero' : '') + '" style="left:' + l + '%;width:' + w + '%;background:var(' + c + ')"'
+      + ' title="' + m.disp + '">' + (zero ? 'нет своих · ' + m.total + ' у других' : plural(p.n, ["спринт","спринта","спринтов"]) + ' · ' + p.done + ' done') + '</div>'
+      + '<div class="gpin" style="left:' + r + '%;background:var(' + (zero ? '--t3' : c) + ')" title="' + m.disp + '"></div>'
+      + '</div></div>';
+    prev = m.date;
+  }
+  el.innerHTML = '<div class="gwrap"><div class="ginner">' + axis() + '<div class="gantt">' + rows + '</div></div></div>' + offAxisNote();
+}
+
+function renderPort(){
+  let rows = "";
+  for (const p of PROJECTS) {
+    const c = COLOR[p] || "--acc", un = (UNPLANNED[p] || {n:0}).n;
+    const mine = MS.filter(m => own(p, m.id));
+    const track = mine.length
+      ? grid() + milestoneBars(c, m => !!own(p, m.id), m => m.id + ' · ' + own(p, m.id).n)
+      : grid() + '<div class="gnone">в плане нет ни одного спринта — все ' + un + ' вне вех</div>';
+    rows += '<div class="grow"><div class="glane"><span class="dot" style="background:var(' + c + ')"></span>'
+      + '<span class="nm">' + p.split('/')[1] + '</span>'
+      + (un ? '<span class="badge">⚠ ' + un + '</span>' : '')
+      + '</div><div class="gtrack">' + track + '</div></div>';
+  }
+  document.getElementById("v-port").innerHTML =
+    '<div class="gwrap"><div class="ginner">' + axis() + '<div class="gantt">' + rows + '</div></div></div>' + offAxisNote();
+}
+
+function renderNote(){
+  const notes = {
+    road: "<b>Дорожная карта продукта.</b> Счётчик справа читается «<b>своих</b> · всего»: у M3 при выборе UnlimitedLORE это 35 своих из 128 — знаменатель чужой, и потому назван вслух. Именно этого не делает нынешняя страница «Вехи»: она фильтрует числитель и оставляет знаменатель общим, и M1 у LORE выглядит как «1/76 · 1%». Вехи без участия продукта показаны приглушённо, а не спрятаны — иначе не видно, что план вообще-то общий.",
+    gantt: "<b>Гант дорожками.</b> Полоса — период от предыдущей вехи до этой, ромб — сама дата. Ось и полосы считаются от одной шкалы (апр 2026 — янв 2027). Пунктир — вехи, у которых в данных не дата, а слово: M6 «Окт», M7 «Ноя+». Две вехи-сироты на оси не рисуются вовсе — у одной нет даже месяца.",
+    port: "<b>Портфель — режим владельца.</b> Продукты строками на общей оси, на полосе — веха и число своих спринтов. У MIDGARD полосы нет: все 4 его спринта вне вех, и пустая дорожка говорит это прямым текстом. Жёлтая метка слева — сколько у продукта спринтов вне плана; всего таких по базе 92 из 406."
+  };
+  document.getElementById("note").innerHTML = notes[view];
+}
+
+function renderChg(){
+  document.getElementById("chg").innerHTML = '<b>В3 — что дала сверка с продом LORE (25.08.2026)</b><ul>'
+    + '<li><b>Вехи оказались общими.</b> У <code>KnowMilestone</code> нет ребра на проект: в M3 сидят спринты AIDA, UnlimitedLORE, BRAGI, ODIN, seidr-site и AIDA-TestPlayGround. Прежняя версия макета утверждала «вехи M0–M7 принадлежат AIDA, у остальных своих нет» — это была догадка, и она неверна.</li>'
+    + '<li><b>Вех десять, а не восемь.</b> Кроме M0–M7 есть <code>M-PRODUCT-UI</code> и <code>M-LORE-CLIENT-SAFE</code> — те самые «две сироты» из RM-X1. У второй нет ни названия, ни даты. Для них заведён отдельный блок и подпись «вне оси».</li>'
+    + '<li><b>У вехи нет даты как данных</b> — только подпись человеку: «18 апр», «31 мая → core 03.06», «Окт», «Ноя+», «июль 2026». Даты на оси выведены из этих строк; для трёх последних точного дня нет, и полосы у них пунктирные.</li>'
+    + '<li><b>Спринтов вне плана в разы больше, чем показывала прошлая версия:</b> у UnlimitedLORE не 4, а 16; у AIDA — 32; у volva — 6; у MIDGARD — все 4; у BRAGI — ни одного. Всего по базе 92 из 406.</li>'
+    + '<li><b>Размер вехи — до 128 спринтов.</b> Прошлая версия рисовала по три чипа, будто веха — это горсть спринтов. Теперь первые шесть и «ещё N»: иначе макет обещает вёрстку, которая на настоящих данных развалится.</li>'
+    + '<li><b>Нынешняя страница «Вехи» уже умеет половину задуманного.</b> Фильтр проекта в шапке есть, полоса «Спринты без вех · 92» с привязкой на месте есть, прогноз по velocity есть. Сломано другое: при фильтре числитель фильтруется, а знаменатель, чипы проектов и прогноз — нет. Отсюда «M1 · 1/76 · 1%» и «M4 ⚠ −22 дн, осталось 51 Sp» при показанных 7/58.</li>'
+    + '<li><b>В портфеле полоса считается от предыдущей вехи по общей шкале</b>, а не от предыдущей «своей». volva участвует только в M4 — по прежнему правилу её полоса растянулась бы с апреля по август и читалась бы как «работала всё лето». Теперь это один отрезок июл→авг.</li>'
+    + '<li><b>Правка владельца 26.08.2026:</b> продукт может содержать несколько корневых компонентов, значит продукт — своя сущность, а не синоним репозитория или компонента. В схеме её нет (вершин Product/KnowProduct не существует), поэтому селектор пока перечисляет git-проекты — см. предупреждение вверху страницы.</li>'
+    + '<li>Списки спринтов, счётчики и статусы больше не сочинены: сняты слайсами <code>milestones</code>, <code>sprints</code>, <code>git_projects</code> и подставлены как есть.</li>'
+    + '</ul>';
+}
+
+render();
+</script>
+</body>
+</html>
