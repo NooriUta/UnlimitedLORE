@@ -95,8 +95,12 @@ class RoleEdgeHopFormLiveDbTest {
         if (rows.isEmpty()) return "<нет строк>";
         Map<String, Object> row = rows.get(0);
         if (row.containsKey("__error")) return "ОШИБКА: " + row.get("__error");
-        Object v = row.values().stream().findFirst().orElse(null);
-        return v == null ? "null" : String.valueOf(v);
+        // Намеренно НЕ stream().findFirst(): Optional запрещает null, а null —
+        // это ровно тот ответ, ради которого проба и написана. Первая редакция
+        // падала с NullPointerException на самом интересном случае, то есть
+        // отказывалась сообщить именно то, что искали.
+        for (Object v : row.values()) return v == null ? "null" : String.valueOf(v);
+        return "<строка без полей>";
     }
 
     @Test
