@@ -1176,18 +1176,33 @@ final class LoreSchemaMigrations {
         // каждую запись, а выглядело бы это как «продуктовая ось не работает
         // после выката» — то есть причину искали бы в деплое, а не здесь.
         // Сторож против повторения — ProductEdgeTypesReachProdTest.
+        // БЕЗ «EXTENDS E» — и это не стиль, это отказ выката 04.09.2026:
+        //
+        //   V43: CREATE EDGE TYPE IN_PRODUCT IF NOT EXISTS EXTENDS E
+        //        → "Supertype 'E' not found"
+        //
+        // На боевой БД базового типа E НЕТ. Объявляет его только
+        // LoreSchemaInitializer, а он там выключен (lore.bootstrap=false) — то
+        // есть ровно та дыра, которую этот же шаг и закрывает. Все рёбра,
+        // заведённые миграциями, живут без супертипа: V22 это буквально
+        // «CREATE EDGE TYPE IN_AREA IF NOT EXISTS», V39 — то же для
+        // ROLE_HELD_BY. Форму «EXTENDS E» я скопировала из инициализатора
+        // вместо прецедента миграций, и она валила старт приложения в цикле:
+        // шаг не проходит → раннер отказывается поднять сервис → docker
+        // перезапускает контейнер → снова бэкап и снова отказ.
         new Step(43, 17, "product_edge_types_on_prod", List.of(
-            "CREATE EDGE TYPE IN_PRODUCT     IF NOT EXISTS EXTENDS E",
+            "CREATE EDGE TYPE IN_PRODUCT     IF NOT EXISTS",
             "CREATE PROPERTY IN_PRODUCT.role IF NOT EXISTS STRING",
-            "CREATE EDGE TYPE PARENT_PRODUCT IF NOT EXISTS EXTENDS E")),
+            "CREATE EDGE TYPE PARENT_PRODUCT IF NOT EXISTS")),
 
         // RM-S1: веха → продукт. Отдельный тип, а не общий IN_PRODUCT:
         // семантика другая (компонент ВХОДИТ в продукт, веха НАЦЕЛЕНА на него),
         // и слайс products читает состав как in('IN_PRODUCT').component_id —
         // вехи на том же типе приехали бы туда пачкой null'ов. Имя парное к
         // TARGETS_MILESTONE: цепь карты читается подряд спринт → веха → продукт.
+        // Тоже без «EXTENDS E» — по той же причине, см. комментарий к V43.
         new Step(44, 17, "milestone_targets_product", List.of(
-            "CREATE EDGE TYPE TARGETS_PRODUCT IF NOT EXISTS EXTENDS E"))
+            "CREATE EDGE TYPE TARGETS_PRODUCT IF NOT EXISTS"))
     );
 
     /**

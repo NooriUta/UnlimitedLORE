@@ -251,16 +251,29 @@ jobs:
       # Resolved via `docker compose ps -q`, not a hardcoded container name —
       # the compose project name is derived from the checkout directory, which
       # may not be "unlimitedlore" on the runner's workspace.
+      # Окно 300с, а не 120с. Замер 04.09.2026 на выкате с миграциями: один
+      # только «BACKUP DATABASE» перед шагами занял ~2.5 минуты, то есть
+      # корректный старт НЕ укладывался в прежние 120с и джоб краснел на
+      # исправно поднимающемся сервисе. Красный деплой при живом сервисе хуже
+      # медленного: он обесценивает сигнал, и следующий настоящий отказ прочтут
+      # как «опять не дождалось».
+      #
+      # При отказе печатаем хвост лога контейнера. Прежнее сообщение называло
+      # только «не стал healthy», и причину приходилось искать по ssh — а
+      # причина там же, в логе: миграция не прошла, приложение отказалось
+      # стартовать, docker перезапустил контейнер по кругу.
       - name: Wait for backend health
         if: steps.which.outputs.backend == 'true'
         run: |
           cid=$(docker compose ps -q lore-backend)
-          for i in $(seq 1 24); do
+          for i in $(seq 1 60); do
             status=$(docker inspect --format '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo "missing")
-            if [ "$status" = "healthy" ]; then echo "backend healthy"; exit 0; fi
+            if [ "$status" = "healthy" ]; then echo "backend healthy (${i}0s)"; exit 0; fi
             sleep 5
           done
-          echo "::error::backend did not report healthy within 120s (last status: $status)"
+          echo "::error::backend did not report healthy within 300s (last status: $status)"
+          echo "--- last 80 lines of lore-backend log ---"
+          docker logs --tail 80 "$cid" 2>&1 || true
           exit 1
 
       # DBU-14: лечение индексов после переезда СУБД — конвейером, не руками.
