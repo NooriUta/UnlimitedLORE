@@ -153,6 +153,80 @@ final class LoreSchemaMigrations {
         return StartupDecision.UP_TO_DATE;
     }
 
+    /**
+     * RM-P12: типы *Hist, у которых {@code valid_from} — ТЕКСТ в ISO-8601 UTC.
+     *
+     * <p>Один список на три потребителя: SQL шага V42 объявляет по нему
+     * свойство, {@code LoreSchemaMigrationRunner.normalizeHistValidFrom}
+     * приводит по нему строки, {@code LoreHistValidFromTypedTest} по нему же
+     * проверяет полноту. Ровно тот класс расхождения, который в этом же спринте
+     * разбирается отдельной задачей (RM-P8: PROJECT_SCOPED ведётся вручную в
+     * двух местах и они уже разошлись) — не заводим третью такую таблицу.
+     *
+     * <p><b>Почему STRING, а не DATETIME</b>, хотя два соседа объявлены DATETIME
+     * ({@link #HIST_VALID_FROM_TEMPORAL}). Замер по проду 04.09.2026, все 9400
+     * строк KnowTaskHist — четыре разных вида хранения в одной таблице:
+     * <pre>
+     *   ISO-8601 UTC  "2026-08-31T12:34:56.789Z"   8523   90.7 %
+     *   через пробел  "2026-06-11 22:26:41"         838
+     *   только дата   "2026-06-14"                   29
+     *   эпоха, число  1781569369738                  10
+     * </pre>
+     * Разнобой ИСТОРИЧЕСКИЙ и уже прекратился: всё, что записано после
+     * 30.06.2026, — ISO-8601 UTC, и все нынешние пишущие пути дают именно его
+     * ({@code Instant.now().toString()}). То есть ISO-Z — не выбор вкуса, а
+     * фактическое представление системы; DATETIME у двух соседей появился
+     * позже, как лечение того же бага.
+     *
+     * <p>Решающий довод, однако, не в дешевизне (877 строк против 9400), а на
+     * границе с потребителем. Объявление DATETIME заставило бы ArcadeDB
+     * приводить записи, и наружу пошёл бы вид «через пробел» — проверено на
+     * KnowSprintHist, который объявлен DATETIME: слайс {@code sprint_starts}
+     * отдаёт 1711 из 1711 строк как {@code "2026-04-13 00:00:00"}. В JS
+     * {@code new Date("2026-04-13 00:00:00")} разбирается как МЕСТНОЕ время, а
+     * {@code new Date("2026-04-13T00:00:00Z")} — как UTC. Потребители здесь
+     * браузерные (фронтенд и шлюз miniLORE), так что вид без обозначения зоны
+     * молча сдвигает дату на смещение читателя. ISO-Z однозначен.
+     *
+     * <p>Оговорка, которую не прячем: у 838 строк «через пробел» зона в самих
+     * данных не записана. Считаем их UTC — потому что все пишущие пути
+     * происходят от {@code Instant} (UTC по определению), а наносекундная
+     * дробь в этих значениях ({@code 2026-06-30 06:24:46.590910794}) выдаёт
+     * именно java-сериализацию Instant, а не рендер DATETIME (у того точность
+     * миллисекундная). Цифры часов при этом НЕ трогаются: приведение меняет
+     * форму, а не момент, и любой существующий порядок сохраняется.
+     */
+    static final List<String> HIST_VALID_FROM_TEXT = List.of(
+        "KnowADRHist",
+        "KnowDecisionHist",
+        "KnowDocHist",
+        "KnowFindingHist",
+        "KnowMilestoneHist",
+        "KnowPhaseHist",
+        "KnowReleaseHist",
+        "KnowRunbookHist",
+        "KnowSpecHist",
+        "KnowTaskHist");
+
+    /**
+     * RM-P12: типы *Hist, у которых {@code valid_from} объявлен DATETIME и
+     * данные ему уже соответствуют — {@link #HIST_VALID_FROM_TEXT} их не
+     * трогает НАМЕРЕННО.
+     *
+     * <p>Переводить их в текст значило бы переписать 1711 строк KnowSprintHist
+     * и сменить вид выдачи у {@code sprint_starts}, на котором висят lead/cycle
+     * time и вся аналитика — ради единообразия, а не ради исправления. Оба типа
+     * внутри себя согласованы, разнобоя в них нет.
+     *
+     * <p>Открытый вопрос владельцу — свести ли корпус к ОДНОМУ представлению
+     * (и к какому), с учётом того что вид «через пробел» на границе с JS
+     * двусмыслен. Замер и обе стороны — в задаче RM-P13; молча решать за неё
+     * переписывание всей истории спринтов не стали.
+     */
+    static final List<String> HIST_VALID_FROM_TEMPORAL = List.of(
+        "KnowSprintHist",
+        "KnowDictEntryHist");
+
     // SV-06: DDL сессий 2026-07 задним числом. На живой БД эти стейтменты уже
     // исполнялись out-of-band — идемпотентный replay безвреден и ставит ledger.
     static final List<Step> STEPS = List.of(
@@ -1063,7 +1137,25 @@ final class LoreSchemaMigrations {
             dictProduct("ODIN",     "ODIN",          "horned-helm",  "color-mix(in srgb,var(--inf) 70%,var(--bg0))",  60),
             dictProduct("VOLVA",    "Völva",         "third-eye",    "color-mix(in srgb,var(--inf) 60%,var(--acc))",  70),
             dictProduct("MIGGEN",   "mig_gen (UDWE)","gears",        "var(--t2)",                                     80),
-            dictProduct("TYR",      "TYR",           "scales",       "color-mix(in srgb,var(--t2) 70%,var(--wrn))",   90)))
+            dictProduct("TYR",      "TYR",           "scales",       "color-mix(in srgb,var(--t2) 70%,var(--wrn))",   90))),
+
+        // RM-P12: valid_from у *Hist приводится к ОДНОМУ виду — ISO-8601 UTC.
+        //
+        // Порядок из двух шагов существенный и он не косметика: SQL шага
+        // выполняется ДО его javaStep, поэтому объявить свойство и переписать
+        // строки одним шагом нельзя — объявление легло бы на ещё не приведённые
+        // значения. Сначала V41 приводит данные, потом V42 закрывает тип.
+        new Step(41, 17, "java__hist_valid_from_normalize_iso_utc", List.of()),
+
+        // Объявление — та же мера, что уже приняли дважды по тому же поводу:
+        // KnowSprintHist.valid_from (SPRINT_PLANITEM_RETIRE, «Comparison method
+        // violates its general contract!» на ORDER BY) и KnowDictEntryHist
+        // (V16). Разница в выбранном типе, и она обоснована замером — см.
+        // комментарий к HIST_VALID_FROM_TEXT.
+        new Step(42, 17, "hist_valid_from_declared_string",
+            HIST_VALID_FROM_TEXT.stream()
+                .map(t -> "CREATE PROPERTY " + t + ".valid_from IF NOT EXISTS STRING")
+                .toList())
     );
 
     /**

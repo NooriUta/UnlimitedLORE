@@ -428,6 +428,98 @@ public class LoreSchemaMigrationRunner {
         if (version == 38) preserveRoleFieldsIntoNote();
         if (version == 39) dropTaskRoleFields();
         if (version == 28) recreateFtIndexes();
+        if (version == 41) normalizeHistValidFrom();
+    }
+
+    /**
+     * RM-P12: приводит {@code valid_from} у *Hist к ISO-8601 UTC.
+     *
+     * <p>Идёт ДО объявления свойства (V42) — см. комментарий к шагу V41: SQL
+     * шага выполняется раньше его javaStep, поэтому объявление и приведение
+     * разнесены по двум шагам, а не сделаны одним.
+     *
+     * <p>Идемпотентен: канонические строки {@link #toIsoUtc} возвращает как
+     * {@code null}, и такая строка не переписывается. Повторный прогон шага
+     * (или его прогон на свежей БД, где приводить нечего) безвреден.
+     *
+     * <p>Неизвестная форма НЕ трогается и НЕ проглатывается: она попадает в
+     * отдельный счётчик и в лог с примером. Молчаливый пропуск здесь был бы
+     * тем же «пустой ответ вместо непроверенного», на котором в этом корпусе
+     * уже обжигались: строка осталась бы кривой, а шаг отчитался бы успехом.
+     */
+    private void normalizeHistValidFrom() {
+        for (String type : LoreSchemaMigrations.HIST_VALID_FROM_TEXT) {
+            int seen = 0, fixed = 0, unknown = 0;
+            String unknownSample = null;
+            while (true) {
+                List<Map<String, Object>> rows = ingest.queryPublic(
+                    "SELECT @rid AS rid, valid_from FROM " + type
+                    + " WHERE valid_from IS NOT NULL SKIP " + seen + " LIMIT 5000", Map.of());
+                if (rows.isEmpty()) break;
+                seen += rows.size();
+                for (Map<String, Object> r : rows) {
+                    Object raw = r.get("valid_from");
+                    String iso = toIsoUtc(raw);
+                    if (iso == null) {
+                        if (!isCanonicalIsoUtc(raw)) {
+                            unknown++;
+                            if (unknownSample == null) unknownSample = String.valueOf(raw);
+                        }
+                        continue;
+                    }
+                    command("UPDATE " + r.get("rid") + " SET valid_from = :vf", Map.of("vf", iso));
+                    fixed++;
+                }
+                if (rows.size() < 5000) break;
+            }
+            if (unknown > 0) {
+                LOG.warnf("[LORE MIGRATE] V41 %s: %d из %d строк непонятной формы — оставлены как есть "
+                    + "(пример: %s). Их valid_from по-прежнему не сравним с остальными.",
+                    type, unknown, seen, unknownSample);
+            }
+            LOG.infof("[LORE MIGRATE] V41 %s: приведено %d из %d (непонятных %d)", type, fixed, seen, unknown);
+        }
+    }
+
+    /** Уже канонический вид — переписывать нечего. */
+    private static boolean isCanonicalIsoUtc(Object v) {
+        return v instanceof String s && s.length() > 11 && s.charAt(10) == 'T' && s.endsWith("Z");
+    }
+
+    /**
+     * Одно значение {@code valid_from} → ISO-8601 UTC, или {@code null}, если
+     * переписывать не надо (уже канонично) либо не по чему (форма неизвестна).
+     *
+     * <p>Замеренные на проде 04.09.2026 виды и что с ними делаем:
+     * <pre>
+     *   "2026-08-31T12:34:56.789Z"     уже канон              → null
+     *   "2026-06-11 22:26:41[.nnn]"    пробел вместо T, без Z → T + "Z"
+     *   "2026-06-14"                   только дата            → полночь UTC
+     *   "2026-06-23T18:19:56.359765"   ISO без зоны           → + "Z"
+     *   1781569369738                  эпоха числом           → Instant
+     * </pre>
+     *
+     * <p>Эпоха разбирается по разрядности, и это не педантизм: сессия шлюза
+     * miniLORE прочитала ровно это значение как СЕКУНДЫ и получила 12.06.2026
+     * вместо 16.06.2026 — ошибка в отчёте родилась из той же неоднозначности,
+     * что и сам баг. Порог 1e11 разводит секунды (до 5138 года) и миллисекунды
+     * (с 1973 года) без пересечения на любых живых датах.
+     */
+    static String toIsoUtc(Object v) {
+        if (v == null) return null;
+        if (v instanceof Number n) {
+            long l = n.longValue();
+            return (l < 100_000_000_000L ? Instant.ofEpochSecond(l) : Instant.ofEpochMilli(l)).toString();
+        }
+        if (!(v instanceof String)) return null;
+        String s = ((String) v).trim();
+        if (s.length() == 10 && s.charAt(4) == '-' && s.charAt(7) == '-') return s + "T00:00:00Z";
+        if (s.length() < 19 || s.charAt(4) != '-' || s.charAt(7) != '-') return null;
+        char sep = s.charAt(10);
+        if (sep != 'T' && sep != ' ') return null;
+        if (sep == 'T' && s.endsWith("Z")) return null;              // канон
+        String body = sep == ' ' ? s.substring(0, 10) + 'T' + s.substring(11) : s;
+        return body.endsWith("Z") ? body : body + "Z";
     }
 
     // DBU-09/DBR-12 (#5321): пересоздать FULL_TEXT-индексы свежими после апгрейда
