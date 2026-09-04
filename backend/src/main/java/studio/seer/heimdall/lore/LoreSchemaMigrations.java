@@ -1155,7 +1155,31 @@ final class LoreSchemaMigrations {
         new Step(42, 17, "hist_valid_from_declared_string",
             HIST_VALID_FROM_TEXT.stream()
                 .map(t -> "CREATE PROPERTY " + t + ".valid_from IF NOT EXISTS STRING")
-                .toList())
+                .toList()),
+
+        // ДОБОР ЗА PR #598: продуктовая ось объявила свои рёбра ТОЛЬКО в
+        // LoreSchemaInitializer — и на прод они бы не доехали.
+        //
+        // Инициализатор гейтится флагом lore.bootstrap (default false, в
+        // compose тоже `${LORE_BOOTSTRAP:-false}`): на общей боевой БД он
+        // молча пропускается целиком — «schema init skipped». Дверь на прод
+        // одна, и это миграции (lore.migrate=true).
+        //
+        // В PR #598 рассуждение было «рёбра объявлены EXTENDS E без привязки
+        // к типам вершин, новый шаг миграции не нужен». Довод верен про
+        // СВОЙСТВА на существующем типе и неверен про СОЗДАНИЕ типа: в
+        // ArcadeDB CREATE EDGE по необъявленному типу не заводит его сам, а
+        // падает. Прецедент рядом и ровно об этом — шаг V22, который целиком
+        // состоит из одной строки «CREATE EDGE TYPE IN_AREA».
+        //
+        // Без этого шага после промоушна product_link отвечал бы ошибкой на
+        // каждую запись, а выглядело бы это как «продуктовая ось не работает
+        // после выката» — то есть причину искали бы в деплое, а не здесь.
+        // Сторож против повторения — ProductEdgeTypesReachProdTest.
+        new Step(43, 17, "product_edge_types_on_prod", List.of(
+            "CREATE EDGE TYPE IN_PRODUCT     IF NOT EXISTS EXTENDS E",
+            "CREATE PROPERTY IN_PRODUCT.role IF NOT EXISTS STRING",
+            "CREATE EDGE TYPE PARENT_PRODUCT IF NOT EXISTS EXTENDS E"))
     );
 
     /**
