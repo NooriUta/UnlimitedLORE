@@ -90,6 +90,37 @@ class ProductEdgeTypesReachProdTest {
             + ". Прибитый список протух — почистите.");
     }
 
+    /**
+     * Шаг миграции НЕ имеет права писать «EXTENDS E».
+     *
+     * <p>Стоило выката 04.09.2026: V43 упал с {@code Supertype 'E' not found},
+     * приложение отказалось стартовать, docker перезапускал контейнер по кругу,
+     * стенд лежал. Базовый тип {@code E} объявляет только
+     * {@link LoreSchemaInitializer}, а он на боевой БД выключен
+     * ({@code lore.bootstrap=false}) — то есть E там просто нет, и все рёбра,
+     * заведённые миграциями, живут без супертипа (V22 {@code IN_AREA},
+     * V39 {@code ROLE_HELD_BY}).
+     *
+     * <p>Инициализатору {@code EXTENDS E} писать МОЖНО и нужно: он сам же
+     * создаёт E строкой выше, на свежей БД супертип осмыслен. Запрет ровно на
+     * шаги миграций — там его создателя нет.
+     */
+    @Test
+    void migrationStepsDoNotExtendTheBaseEdgeType() {
+        List<String> offenders = new ArrayList<>();
+        for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS) {
+            for (String sql : s.sql()) {
+                if (sql.matches("(?s).*\\bEXTENDS\\s+E\\b.*")) {
+                    offenders.add("V" + s.version() + ": " + sql);
+                }
+            }
+        }
+        assertEquals(List.of(), offenders,
+            "шаг миграции пишет EXTENDS E, а на боевой БД базового типа E нет — "
+            + "старт приложения упадёт с «Supertype 'E' not found» и контейнер уйдёт в перезапуск. "
+            + "Пишите просто «CREATE EDGE TYPE X IF NOT EXISTS» (образцы: V22, V39, V43): " + offenders);
+    }
+
     /** Рёбра продуктовой оси — именно они и были потеряны, проверяем поимённо. */
     @Test
     void productAxisEdgesAreInMigrations() {
