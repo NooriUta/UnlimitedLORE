@@ -103,12 +103,31 @@ public final class LoreSlices {
         roleHolder("author") + ", " + roleHolder("executor") + ", " + roleHolder("reviewer");
 
     private static void slice(String id, String baseSql) {
-        SLICES.put(id, new SliceDef(baseSql, List.of(), Map.of(), ""));
+        slice(id, baseSql, List.of(), Map.of(), "");
     }
 
+    /**
+     * RM-P8: повторное объявление — ОТКАЗ, а не тихая перезапись.
+     *
+     * <p>Реестр это {@code LinkedHashMap}, и {@code put} по занятому ключу молча
+     * затирал первое определение вторым. Так и жило: {@code git_projects} был
+     * объявлен дважды, побеждало объявление БЕЗ поля {@code is_private} — то
+     * есть форма, которую ждала форма выбора проекта в вопросах и решениях,
+     * наружу не выходила вовсе. Ошибки при этом не было нигде: слайс есть,
+     * отвечает, просто не тем.
+     *
+     * <p>Падать на старте приложения хуже, чем на сборке, но несравнимо лучше,
+     * чем отвечать не тем: дубль ловится первым же прогоном тестов, потому что
+     * статический блок исполняется при первом обращении к классу.
+     */
     private static void slice(String id, String baseSql, List<String> required,
                               Map<String, String> optional, String suffix) {
-        SLICES.put(id, new SliceDef(baseSql, required, optional, suffix));
+        SliceDef prev = SLICES.put(id, new SliceDef(baseSql, required, optional, suffix));
+        if (prev != null) {
+            throw new IllegalStateException(
+                "слайс '" + id + "' объявлен дважды — второе определение молча затирало первое. "
+                + "Переименуйте один из них или удалите лишний.");
+        }
     }
 
     /**
@@ -1608,9 +1627,11 @@ public final class LoreSlices {
             List.of("run_id"), Map.of(), "");
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
-        slice("git_projects",
-            "SELECT slug, name, hosts, default_branch FROM KnowGitProject",
-            List.of(), Map.of(), " ORDER BY slug");
+        // RM-P8: здесь было ВТОРОЕ объявление git_projects. Оно молча затирало
+        // первое (§ выше, для формы выбора проекта) и отличалось отсутствием
+        // поля is_private — то есть наружу уходила форма без признака закрытости
+        // репозитория, а ошибки не было нигде. Снято; повторное объявление
+        // теперь валит старт (см. slice()).
 
         // AL-102: журнал выдачи/снятия проектных ролей (append-only, KnowProjectRoleEvent).
         // «кто (роль) · кому (kc_sub) · что (project+role) · действие · когда (at)».
