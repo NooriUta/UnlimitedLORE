@@ -153,6 +153,80 @@ final class LoreSchemaMigrations {
         return StartupDecision.UP_TO_DATE;
     }
 
+    /**
+     * RM-P12: типы *Hist, у которых {@code valid_from} — ТЕКСТ в ISO-8601 UTC.
+     *
+     * <p>Один список на три потребителя: SQL шага V42 объявляет по нему
+     * свойство, {@code LoreSchemaMigrationRunner.normalizeHistValidFrom}
+     * приводит по нему строки, {@code LoreHistValidFromTypedTest} по нему же
+     * проверяет полноту. Ровно тот класс расхождения, который в этом же спринте
+     * разбирается отдельной задачей (RM-P8: PROJECT_SCOPED ведётся вручную в
+     * двух местах и они уже разошлись) — не заводим третью такую таблицу.
+     *
+     * <p><b>Почему STRING, а не DATETIME</b>, хотя два соседа объявлены DATETIME
+     * ({@link #HIST_VALID_FROM_TEMPORAL}). Замер по проду 04.09.2026, все 9400
+     * строк KnowTaskHist — четыре разных вида хранения в одной таблице:
+     * <pre>
+     *   ISO-8601 UTC  "2026-08-31T12:34:56.789Z"   8523   90.7 %
+     *   через пробел  "2026-06-11 22:26:41"         838
+     *   только дата   "2026-06-14"                   29
+     *   эпоха, число  1781569369738                  10
+     * </pre>
+     * Разнобой ИСТОРИЧЕСКИЙ и уже прекратился: всё, что записано после
+     * 30.06.2026, — ISO-8601 UTC, и все нынешние пишущие пути дают именно его
+     * ({@code Instant.now().toString()}). То есть ISO-Z — не выбор вкуса, а
+     * фактическое представление системы; DATETIME у двух соседей появился
+     * позже, как лечение того же бага.
+     *
+     * <p>Решающий довод, однако, не в дешевизне (877 строк против 9400), а на
+     * границе с потребителем. Объявление DATETIME заставило бы ArcadeDB
+     * приводить записи, и наружу пошёл бы вид «через пробел» — проверено на
+     * KnowSprintHist, который объявлен DATETIME: слайс {@code sprint_starts}
+     * отдаёт 1711 из 1711 строк как {@code "2026-04-13 00:00:00"}. В JS
+     * {@code new Date("2026-04-13 00:00:00")} разбирается как МЕСТНОЕ время, а
+     * {@code new Date("2026-04-13T00:00:00Z")} — как UTC. Потребители здесь
+     * браузерные (фронтенд и шлюз miniLORE), так что вид без обозначения зоны
+     * молча сдвигает дату на смещение читателя. ISO-Z однозначен.
+     *
+     * <p>Оговорка, которую не прячем: у 838 строк «через пробел» зона в самих
+     * данных не записана. Считаем их UTC — потому что все пишущие пути
+     * происходят от {@code Instant} (UTC по определению), а наносекундная
+     * дробь в этих значениях ({@code 2026-06-30 06:24:46.590910794}) выдаёт
+     * именно java-сериализацию Instant, а не рендер DATETIME (у того точность
+     * миллисекундная). Цифры часов при этом НЕ трогаются: приведение меняет
+     * форму, а не момент, и любой существующий порядок сохраняется.
+     */
+    static final List<String> HIST_VALID_FROM_TEXT = List.of(
+        "KnowADRHist",
+        "KnowDecisionHist",
+        "KnowDocHist",
+        "KnowFindingHist",
+        "KnowMilestoneHist",
+        "KnowPhaseHist",
+        "KnowReleaseHist",
+        "KnowRunbookHist",
+        "KnowSpecHist",
+        "KnowTaskHist");
+
+    /**
+     * RM-P12: типы *Hist, у которых {@code valid_from} объявлен DATETIME и
+     * данные ему уже соответствуют — {@link #HIST_VALID_FROM_TEXT} их не
+     * трогает НАМЕРЕННО.
+     *
+     * <p>Переводить их в текст значило бы переписать 1711 строк KnowSprintHist
+     * и сменить вид выдачи у {@code sprint_starts}, на котором висят lead/cycle
+     * time и вся аналитика — ради единообразия, а не ради исправления. Оба типа
+     * внутри себя согласованы, разнобоя в них нет.
+     *
+     * <p>Открытый вопрос владельцу — свести ли корпус к ОДНОМУ представлению
+     * (и к какому), с учётом того что вид «через пробел» на границе с JS
+     * двусмыслен. Замер и обе стороны — в задаче RM-P13; молча решать за неё
+     * переписывание всей истории спринтов не стали.
+     */
+    static final List<String> HIST_VALID_FROM_TEMPORAL = List.of(
+        "KnowSprintHist",
+        "KnowDictEntryHist");
+
     // SV-06: DDL сессий 2026-07 задним числом. На живой БД эти стейтменты уже
     // исполнялись out-of-band — идемпотентный replay безвреден и ставит ledger.
     static final List<Step> STEPS = List.of(
@@ -1017,8 +1091,125 @@ final class LoreSchemaMigrations {
         // значений живёт schemaless и переживает DROP PROPERTY — их надо снимать
         // отдельно. Тот же приём, что в V34.
         new Step(39, 17, "drop_task_role_fields", List.of(
-            "CREATE EDGE TYPE ROLE_HELD_BY IF NOT EXISTS"))
+            "CREATE EDGE TYPE ROLE_HELD_BY IF NOT EXISTS")),
+
+        // RM-P6 / D-2026-LORE-PRODUCT-IS-OWN-ENTITY: тринадцать продуктов сидом.
+        //
+        // Почему сидом, а не через MCP. Продукт — запись справочника
+        // (dict_type='product'); семейство 'dict' в матрице прав человеко-только,
+        // и dict_set агенту отвечает 403. Это правило верное: словари задают
+        // словарь всей системы, и имена продуктов даёт владелец, а не агент.
+        // Но и человеку эта дверь была закрыта: вкладка «Справочники» собирает
+        // список типов из УЖЕ существующих строк (LoreAdminPanel.tsx), поэтому
+        // пустой dict_type='product' в интерфейсе не появлялся вовсе — завести
+        // первую запись было нечем ни с одной стороны. Сид снимает ровно это:
+        // после него тип виден, is_extensible=true, и четырнадцатый продукт
+        // владелец заводит руками в админке штатной кнопкой «+ значение».
+        //
+        // Состав — замер по проду 27.08.2026 (RM-P2), не догадка. Три вещи,
+        // которые он показал и которые здесь закреплены:
+        //   - HOUND лежит ВНУТРИ поддерева DALI, но это суб-продукт AIDA;
+        //   - MT лежит ВНЕ поддерева AIDA, но это тоже суб-продукт AIDA;
+        //   - дерево продуктов и дерево компонентов — РАЗНЫЕ деревья,
+        //     поэтому связь ведётся рёбрами IN_PRODUCT/PARENT_PRODUCT, а
+        //     не выводится обходом PARENT_OF.
+        // Сами рёбра сюда НЕ входят намеренно: они пишутся product_link'ом,
+        // это семейство агенту открыто, и складывать 90 связей в миграцию
+        // значило бы зашить замер одного дня в код.
+        //
+        // Не продукты и потому здесь отсутствуют: HARPA (сайт: делает AIDA,
+        // использует BALDR), BALDR (маркетинг), FREYJA (не разработка),
+        // FE и SVC (сняты). Отношение BALDR↔BRAGI владельцем не решено.
+        new Step(40, 17, "product_dictionary_seed", List.of(
+            // AIDA и её четыре суб-продукта: sort_order 10 и 11..14 —
+            // соседние числа держат их вместе в любом списке по порядку.
+            dictProduct("AIDA",     "AIDA",          "brain",        "var(--acc)",                                    10),
+            dictProduct("HOUND",    "HOUND",         "wolf-head",    "color-mix(in srgb,var(--acc) 60%,var(--dng))",  11),
+            dictProduct("SEIDR",    "SEIDR STUDIO",  "crystal-ball", "color-mix(in srgb,var(--acc) 60%,var(--inf))",  12),
+            dictProduct("HEIMDALL", "HEIMDALL",      "guards",       "color-mix(in srgb,var(--suc) 70%,var(--bg0))",  13),
+            dictProduct("MT",       "Mimir (MT)",    "open-book",    "var(--inf)",                                    14),
+            // Два продукта на одной БАЗЕ ДАННЫХ, но в разных репозиториях:
+            // OMILORE — ведение наших проектов, MINILORE — управление с телефона.
+            dictProduct("OMILORE",  "OMILORE",       "spell-book",   "var(--suc)",                                    20),
+            dictProduct("MINILORE", "miniLORE",      "smartphone",   "color-mix(in srgb,var(--suc) 60%,var(--inf))",  30),
+            dictProduct("BRAGI",    "BRAGI",         "scroll-quill", "color-mix(in srgb,var(--acc) 55%,var(--wrn))",  40),
+            dictProduct("MIDGARD",  "Мидгард", "Midgard", "house",   "color-mix(in srgb,var(--wrn) 60%,var(--suc))",  50),
+            dictProduct("ODIN",     "ODIN",          "horned-helm",  "color-mix(in srgb,var(--inf) 70%,var(--bg0))",  60),
+            dictProduct("VOLVA",    "Völva",         "third-eye",    "color-mix(in srgb,var(--inf) 60%,var(--acc))",  70),
+            dictProduct("MIGGEN",   "mig_gen (UDWE)","gears",        "var(--t2)",                                     80),
+            dictProduct("TYR",      "TYR",           "scales",       "color-mix(in srgb,var(--t2) 70%,var(--wrn))",   90))),
+
+        // RM-P12: valid_from у *Hist приводится к ОДНОМУ виду — ISO-8601 UTC.
+        //
+        // Порядок из двух шагов существенный и он не косметика: SQL шага
+        // выполняется ДО его javaStep, поэтому объявить свойство и переписать
+        // строки одним шагом нельзя — объявление легло бы на ещё не приведённые
+        // значения. Сначала V41 приводит данные, потом V42 закрывает тип.
+        new Step(41, 17, "java__hist_valid_from_normalize_iso_utc", List.of()),
+
+        // Объявление — та же мера, что уже приняли дважды по тому же поводу:
+        // KnowSprintHist.valid_from (SPRINT_PLANITEM_RETIRE, «Comparison method
+        // violates its general contract!» на ORDER BY) и KnowDictEntryHist
+        // (V16). Разница в выбранном типе, и она обоснована замером — см.
+        // комментарий к HIST_VALID_FROM_TEXT.
+        new Step(42, 17, "hist_valid_from_declared_string",
+            HIST_VALID_FROM_TEXT.stream()
+                .map(t -> "CREATE PROPERTY " + t + ".valid_from IF NOT EXISTS STRING")
+                .toList()),
+
+        // ДОБОР ЗА PR #598: продуктовая ось объявила свои рёбра ТОЛЬКО в
+        // LoreSchemaInitializer — и на прод они бы не доехали.
+        //
+        // Инициализатор гейтится флагом lore.bootstrap (default false, в
+        // compose тоже `${LORE_BOOTSTRAP:-false}`): на общей боевой БД он
+        // молча пропускается целиком — «schema init skipped». Дверь на прод
+        // одна, и это миграции (lore.migrate=true).
+        //
+        // В PR #598 рассуждение было «рёбра объявлены EXTENDS E без привязки
+        // к типам вершин, новый шаг миграции не нужен». Довод верен про
+        // СВОЙСТВА на существующем типе и неверен про СОЗДАНИЕ типа: в
+        // ArcadeDB CREATE EDGE по необъявленному типу не заводит его сам, а
+        // падает. Прецедент рядом и ровно об этом — шаг V22, который целиком
+        // состоит из одной строки «CREATE EDGE TYPE IN_AREA».
+        //
+        // Без этого шага после промоушна product_link отвечал бы ошибкой на
+        // каждую запись, а выглядело бы это как «продуктовая ось не работает
+        // после выката» — то есть причину искали бы в деплое, а не здесь.
+        // Сторож против повторения — ProductEdgeTypesReachProdTest.
+        new Step(43, 17, "product_edge_types_on_prod", List.of(
+            "CREATE EDGE TYPE IN_PRODUCT     IF NOT EXISTS EXTENDS E",
+            "CREATE PROPERTY IN_PRODUCT.role IF NOT EXISTS STRING",
+            "CREATE EDGE TYPE PARENT_PRODUCT IF NOT EXISTS EXTENDS E")),
+
+        // RM-S1: веха → продукт. Отдельный тип, а не общий IN_PRODUCT:
+        // семантика другая (компонент ВХОДИТ в продукт, веха НАЦЕЛЕНА на него),
+        // и слайс products читает состав как in('IN_PRODUCT').component_id —
+        // вехи на том же типе приехали бы туда пачкой null'ов. Имя парное к
+        // TARGETS_MILESTONE: цепь карты читается подряд спринт → веха → продукт.
+        new Step(44, 17, "milestone_targets_product", List.of(
+            "CREATE EDGE TYPE TARGETS_PRODUCT IF NOT EXISTS EXTENDS E"))
     );
+
+    /**
+     * Одна строка справочника продуктов. Идиома UPSERT та же, что у
+     * decision_status (V14) и work_class (V6): повторный прогон шага
+     * перезаписывает ту же запись, а не заводит вторую.
+     *
+     * is_extensible=true — в отличие от статусов и видов работ: список продуктов
+     * не закрыт, владелец добавляет новый продукт в админке сама.
+     */
+    private static String dictProduct(String code, String labelRu, String icon, String color, int order) {
+        return dictProduct(code, labelRu, labelRu, icon, color, order);
+    }
+
+    private static String dictProduct(String code, String labelRu, String labelEn,
+                                      String icon, String color, int order) {
+        return String.format(
+            "UPDATE KnowDictEntry SET dict_type='product', code='%s', label_ru='%s', label_en='%s', "
+            + "icon='%s', color='%s', sort_order=%d, is_active=true, is_extensible=true "
+            + "UPSERT WHERE dict_type='product' AND code='%s'",
+            code, labelRu, labelEn, icon, color, order, code);
+    }
 
     /**
      * SRCH-03: анализатор для русскоязычного корпуса. Замерено: с ним документ

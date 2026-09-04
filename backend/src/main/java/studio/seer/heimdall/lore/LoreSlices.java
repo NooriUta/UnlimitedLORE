@@ -83,19 +83,51 @@ public final class LoreSlices {
      */
     private static String roleHolder(String role) {
         String edge = "outE('ROLE_HELD_BY')[role='" + role + "' AND valid_to IS NULL].@in.";
-        return "COALESCE(" + edge + "actor_id[0], " + edge + "display_name[0]) AS " + role + "_agent";
+        // ЧИТАЕМОЕ ИМЯ ПЕРВЫМ, идентификатор — последним запасным.
+        //
+        // Прежний порядок начинался с actor_id, и в списках задач всегда стоял
+        // он: у агента actor_id непуст никогда, поэтому до имени очередь не
+        // доходила. Человек видел «AGENT-FULL-msbt0fed», где хвост — время
+        // заведения в 36-ричной записи, то есть служебный шум в лице колонки
+        // «кто». Читаемое имя при этом лежало рядом и не показывалось.
+        //
+        // Порядок разный у двух типов на том конце: у агента (KnowActor) есть
+        // name, у человека (KnowUser) его нет — только display_name. Поэтому
+        // сперва name, затем display_name, и лишь потом actor_id как признак
+        // того, что имя не заполнили.
+        return "COALESCE(" + edge + "name[0], " + edge + "display_name[0], "
+             + edge + "actor_id[0]) AS " + role + "_agent";
     }
 
     private static final String ROLE_HOLDERS =
         roleHolder("author") + ", " + roleHolder("executor") + ", " + roleHolder("reviewer");
 
     private static void slice(String id, String baseSql) {
-        SLICES.put(id, new SliceDef(baseSql, List.of(), Map.of(), ""));
+        slice(id, baseSql, List.of(), Map.of(), "");
     }
 
+    /**
+     * RM-P8: повторное объявление — ОТКАЗ, а не тихая перезапись.
+     *
+     * <p>Реестр это {@code LinkedHashMap}, и {@code put} по занятому ключу молча
+     * затирал первое определение вторым. Так и жило: {@code git_projects} был
+     * объявлен дважды, побеждало объявление БЕЗ поля {@code is_private} — то
+     * есть форма, которую ждала форма выбора проекта в вопросах и решениях,
+     * наружу не выходила вовсе. Ошибки при этом не было нигде: слайс есть,
+     * отвечает, просто не тем.
+     *
+     * <p>Падать на старте приложения хуже, чем на сборке, но несравнимо лучше,
+     * чем отвечать не тем: дубль ловится первым же прогоном тестов, потому что
+     * статический блок исполняется при первом обращении к классу.
+     */
     private static void slice(String id, String baseSql, List<String> required,
                               Map<String, String> optional, String suffix) {
-        SLICES.put(id, new SliceDef(baseSql, required, optional, suffix));
+        SliceDef prev = SLICES.put(id, new SliceDef(baseSql, required, optional, suffix));
+        if (prev != null) {
+            throw new IllegalStateException(
+                "слайс '" + id + "' объявлен дважды — второе определение молча затирало первое. "
+                + "Переименуйте один из них или удалите лишний.");
+        }
     }
 
     /**
@@ -155,10 +187,39 @@ public final class LoreSlices {
             "WHERE date_created IS NOT NULL ORDER BY date_created DESC",
             List.of(), Map.of(), " LIMIT 200");
 
+        // Порядок ПО ДАТЕ, а не по release_id. Было `ORDER BY release_id DESC` —
+        // строковое сравнение версий, из-за которого LIMIT срезал не хвост
+        // истории, а СЕРЕДИНУ окна по датам. Найдено сессией miniLORE-шлюза
+        // 31.08.2026 на живых данных: у AIDA/miniLore_serverside в выдачу
+        // попадали v0.3.9, v0.3.8, v0.3.7 … v0.3.42, v0.3.41, v0.3.40, v0.3.4,
+        // v0.3.39 … v0.3.30, v0.3.3 — а v0.3.29…v0.3.10 не попадали вовсе, хотя
+        // по датам лежат внутри тех же 22–31 августа. Счёт «за последние N дней»
+        // по такому срезу занижен, и отличить это от честного числа нечем.
+        //
+        // Соседние timeline_* (adrs, decisions) сортируются по дате изначально —
+        // расходился именно этот.
         slice("timeline_releases",
             "SELECT release_id, git_tag, release_date, is_current, git_project " +
-            "FROM KnowRelease ORDER BY release_id DESC",
+            "FROM KnowRelease ORDER BY release_date DESC",
             List.of(), Map.of(), " LIMIT 100");
+
+        // Окно релизов по ДАТЕ — для счётчиков «за N дней» (miniLORE CO-45).
+        // Отдельным срезом, а не параметром к `releases`: тому нужны тяжёлые
+        // поля (description_md, hosts, счётчики спринтов и PR), а для счёта они
+        // не нужны и гоняются зря.
+        //
+        // LIMIT здесь тоже есть, но он честный: при сортировке по дате он режет
+        // САМОЕ СТАРОЕ, то есть за пределами запрошенного окна, а не дырявит
+        // середину. Тысяча — с запасом: релизов в корпусе порядка двухсот.
+        slice("releases_since",
+            "SELECT release_id, git_tag, release_date, is_current, git_project, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowRelease " +
+            "WHERE release_date IS NOT NULL AND release_date >= :from",
+            List.of("from"),
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
+            " ORDER BY release_date DESC LIMIT 1000");
 
         // AL-113 (запрошено miniLORE 2026-08-16): у среза `specs` даты не было,
         // поэтому спеки не попадали в новостную ленту. Дата спеки = valid_from
@@ -1073,9 +1134,48 @@ public final class LoreSlices {
             // this "actual" bucket (TARGETS_MILESTONE edge). The property drifted
             // out of sync with the edge on 62+ sprints and was retired — the edge
             // is now the sole source of truth for sprint↔milestone membership.
-            "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
+            "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids, " +
+            // RM-S2: продукты вехи. Без них UI не может ни отфильтровать карту,
+            // ни показать принадлежность — а веха БЕЗ продукта после
+            // D-2026-LORE-PRODUCT-IS-OWN-ENTITY это незаполненность, и её надо
+            // видеть, а не выводить из пустоты.
+            "out('TARGETS_PRODUCT').code       AS products " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
+
+        // ── RM-S2: дорожная карта продукта ───────────────────────────────────
+        // Карта принадлежит ПРОДУКТУ (D-2026-LORE-PRODUCT-IS-OWN-ENTITY): «я хочу
+        // создать продукты, и у них будет roadmap, а не проекты — у нас и так
+        // меняется дорога». Проект остаётся границей ПРАВ и вехи не несёт.
+        slice("roadmap",
+            "SELECT milestone_id, label, week, date_display, priority, " +
+            "out('HAS_STATE').goal_md[0]       AS goal_md, " +
+            "in('TARGETS_MILESTONE').sprint_id AS sprint_ids, " +
+            "in('TARGETS_MILESTONE').size()    AS sprint_count, " +
+            "out('TARGETS_PRODUCT').code       AS products " +
+            "FROM KnowMilestone " +
+            // CONTAINS, а не [0] = : веха может целить в несколько продуктов,
+            // обход отдаёт СПИСОК, и сравнение по первому показало бы
+            // многосвязную веху под одним случайным продуктом.
+            "WHERE out('TARGETS_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY week, milestone_id");
+
+        // Спринты продукта ВНЕ вех — то самое «что забыли поставить в план»,
+        // ответа на которое сегодня нет вовсе.
+        //
+        // Отдельным срезом, а не числом внутри roadmap, и это не оформление:
+        // счётчик отвечает «сколько», а спросить надо «какие». Пустая карта при
+        // ненулевом хвосте — законный и важный ответ (замерено на MINILORE: все
+        // 13 его спринтов не привязаны ни к одной вехе), и число «0 вех» само по
+        // себе неотличимо от «продукта не существует» — а список отличим.
+        slice("roadmap_unplanned",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('BELONGS_TO').component_id AS components " +
+            "FROM KnowSprint " +
+            "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "AND out('TARGETS_MILESTONE').size() = 0",
+            List.of("code"), Map.of(), " ORDER BY sprint_id");
 
         // ── §4 Search — сквозной, по FULL_TEXT-индексам (SRCH-01, ADR-LORE-033) ─
         // Каждая ветка — ОДИН вызов SEARCH_INDEX('ftИмя', …) по именованному
@@ -1527,9 +1627,11 @@ public final class LoreSlices {
             List.of("run_id"), Map.of(), "");
 
         // ── §11 KnowTask standalone (Phase 5 LAL-31) ─────────────────────────
-        slice("git_projects",
-            "SELECT slug, name, hosts, default_branch FROM KnowGitProject",
-            List.of(), Map.of(), " ORDER BY slug");
+        // RM-P8: здесь было ВТОРОЕ объявление git_projects. Оно молча затирало
+        // первое (§ выше, для формы выбора проекта) и отличалось отсутствием
+        // поля is_private — то есть наружу уходила форма без признака закрытости
+        // репозитория, а ошибки не было нигде. Снято; повторное объявление
+        // теперь валит старт (см. slice()).
 
         // AL-102: журнал выдачи/снятия проектных ролей (append-only, KnowProjectRoleEvent).
         // «кто (роль) · кому (kc_sub) · что (project+role) · действие · когда (at)».
@@ -1651,7 +1753,12 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').hosts[0] AS project_hosts, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
             "in('SHIPPED_IN').size() AS pr_count " +
-            "FROM KnowRelease ORDER BY release_id DESC",
+            // Порядок по ДАТЕ, а не по release_id: строковое сравнение версий
+            // ставило v0.3.9 выше v0.3.42, и LIMIT 200 отрезал середину окна, а
+            // не хвост истории (тот же дефект, что у timeline_releases выше).
+            // Для UI безопасно: доска релизов сортирует сама, semverCompare
+            // (LoreReleasesBoard.tsx:132), порядок среза она не наследует.
+            "FROM KnowRelease ORDER BY release_date DESC",
             List.of(), Map.of(), " LIMIT 200");
 
         slice("release_decisions",

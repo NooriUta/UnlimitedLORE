@@ -76,6 +76,7 @@ public class LoreSchemaInitializer {
         }
         if (!ready) LOG.errorf("[LORE] БД %s не ответила на пробу — DDL пойдёт наудачу (смотри ошибки ниже)", db);
         DDL.forEach(this::execIgnoreError);
+        histValidFromText().forEach(this::execIgnoreError);
         LOG.infof("[LORE] Schema init complete for %s", db);
     }
 
@@ -207,6 +208,12 @@ public class LoreSchemaInitializer {
         // типе ребра значит требовать type-guard в каждом обходе — и получить
         // обход, который молча пойдёт не по тому дереву.
         "CREATE EDGE TYPE PARENT_PRODUCT   IF NOT EXISTS EXTENDS E",
+        // TARGETS_PRODUCT: веха → продукт (RM-S1). Носитель дорожной карты —
+        // продукт, а не проект. Отдельный тип от IN_PRODUCT: компонент ВХОДИТ
+        // в продукт, веха НАЦЕЛЕНА на него, и слайс products читает состав как
+        // in('IN_PRODUCT').component_id — вехи на общем типе приехали бы туда
+        // пачкой null'ов. Имя парное к TARGETS_MILESTONE.
+        "CREATE EDGE TYPE TARGETS_PRODUCT  IF NOT EXISTS EXTENDS E",
 
         // ── Unique indexes on PK fields ───────────────────────────────────────
         // NB 2026-07-10: CREATE INDEX ... UNIQUE does NOT implicitly create the
@@ -292,6 +299,18 @@ public class LoreSchemaInitializer {
         // rewriting each value through a bind-parameter command) but prevents new
         // writes from drifting again.
         "CREATE PROPERTY KnowSprintHist.valid_from  IF NOT EXISTS DATETIME",
+
+        // RM-P12: остальные *Hist — valid_from ТЕКСТОМ в ISO-8601 UTC.
+        // Тот же баг, что выше, и то же лечение, но тип другой, и выбран он
+        // замером, а не симметрией: 90.7 % строк уже в ISO-Z, все нынешние
+        // пишущие пути дают Instant.toString(), а вид «через пробел», в который
+        // приводит DATETIME, в JS разбирается как МЕСТНОЕ время и молча сдвигает
+        // дату у читателя. Разбор целиком — LoreSchemaMigrations.HIST_VALID_FROM_TEXT.
+        //
+        // Список здесь НЕ дублируется списком: инициализатор — статический
+        // массив строк, поэтому имена берутся из того же реестра, что и шаг V42
+        // (см. histValidFromText() ниже). Расхождение двух ручных таблиц —
+        // отдельная разбираемая болезнь корпуса (RM-P8), не заводим третью.
 
         // ── Hist valid_to indexes (current-row queries) ───────────────────────
         "CREATE PROPERTY KnowDecisionHist.valid_to  IF NOT EXISTS DATETIME",
@@ -707,4 +726,20 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowTaskHist.note_md       IF NOT EXISTS STRING",
         "CREATE INDEX IF NOT EXISTS ON KnowTaskHist (note_md)       FULL_TEXT"
     );
+
+    /**
+     * RM-P12: объявления {@code valid_from} для *Hist с текстовым ISO-8601 UTC.
+     *
+     * <p>Собираются из {@link LoreSchemaMigrations#HIST_VALID_FROM_TEXT} —
+     * того же реестра, по которому шаг V42 объявляет свойство на живой БД, а
+     * {@code LoreHistValidFromTypedTest} проверяет, что ни один *Hist не
+     * остался без объявления. Свежая БД и мигрированная обязаны прийти к
+     * ОДНОЙ схеме; два списка руками гарантированно разъедутся — этой болезнью
+     * корпус уже болеет в другом месте (RM-P8).
+     */
+    static List<String> histValidFromText() {
+        return LoreSchemaMigrations.HIST_VALID_FROM_TEXT.stream()
+            .map(t -> "CREATE PROPERTY " + t + ".valid_from IF NOT EXISTS STRING")
+            .toList();
+    }
 }
