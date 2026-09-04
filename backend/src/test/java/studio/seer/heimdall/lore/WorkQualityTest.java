@@ -327,10 +327,30 @@ class WorkQualityTest {
     @Test
     void вехаБезДатыКраснеет() {
         // Поля называются как в модели: label / date_display, не title / target_date.
-        var r = WorkQuality.evaluateMilestone("M1", null, null);
+        var r = WorkQuality.evaluateMilestone("M1", null, null, List.of("AIDA"));
         assertFalse(find(r, "date_display").ok());
         assertTrue(find(r, "label").ok());
         assertFalse(find(r, "sprints").required(), "спринты — подсказка");
+    }
+
+    /**
+     * RM-S3: продукт у вехи — ТРЕБОВАНИЕ, а не подсказка. Носитель дорожной
+     * карты — продукт (D-2026-LORE-PRODUCT-IS-OWN-ENTITY), и веха без продукта
+     * не попадёт ни в одну карту — то есть это незаполненность, а не «веха
+     * портфельного уровня».
+     */
+    @Test
+    void вехаБезПродуктаКраснеет() {
+        var r = WorkQuality.evaluateMilestone("M1", "12 сентября", List.of("SPRINT_X"), null);
+        assertFalse(find(r, "products").ok(), "веха без продукта обязана краснеть");
+        assertTrue(find(r, "products").required(), "продукт — требование, не подсказка");
+        // Именно «нет продукта», а не «что-то ещё»: остальные обязательные зелены.
+        assertTrue(find(r, "label").ok());
+        assertTrue(find(r, "date_display").ok());
+
+        var full = WorkQuality.evaluateMilestone("M1", "12 сентября", List.of("SPRINT_X"), List.of("AIDA"));
+        assertTrue(find(full, "products").ok());
+        assertEquals(full.max(), full.score(), "полная веха обязана быть зелёной целиком");
     }
 
     @Test
