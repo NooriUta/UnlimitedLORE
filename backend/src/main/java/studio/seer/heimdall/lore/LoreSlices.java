@@ -1115,9 +1115,48 @@ public final class LoreSlices {
             // this "actual" bucket (TARGETS_MILESTONE edge). The property drifted
             // out of sync with the edge on 62+ sprints and was retired — the edge
             // is now the sole source of truth for sprint↔milestone membership.
-            "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids " +
+            "in('TARGETS_MILESTONE').sprint_id AS direct_sprint_ids, " +
+            // RM-S2: продукты вехи. Без них UI не может ни отфильтровать карту,
+            // ни показать принадлежность — а веха БЕЗ продукта после
+            // D-2026-LORE-PRODUCT-IS-OWN-ENTITY это незаполненность, и её надо
+            // видеть, а не выводить из пустоты.
+            "out('TARGETS_PRODUCT').code       AS products " +
             "FROM KnowMilestone ORDER BY week",
             List.of(), Map.of(), "");
+
+        // ── RM-S2: дорожная карта продукта ───────────────────────────────────
+        // Карта принадлежит ПРОДУКТУ (D-2026-LORE-PRODUCT-IS-OWN-ENTITY): «я хочу
+        // создать продукты, и у них будет roadmap, а не проекты — у нас и так
+        // меняется дорога». Проект остаётся границей ПРАВ и вехи не несёт.
+        slice("roadmap",
+            "SELECT milestone_id, label, week, date_display, priority, " +
+            "out('HAS_STATE').goal_md[0]       AS goal_md, " +
+            "in('TARGETS_MILESTONE').sprint_id AS sprint_ids, " +
+            "in('TARGETS_MILESTONE').size()    AS sprint_count, " +
+            "out('TARGETS_PRODUCT').code       AS products " +
+            "FROM KnowMilestone " +
+            // CONTAINS, а не [0] = : веха может целить в несколько продуктов,
+            // обход отдаёт СПИСОК, и сравнение по первому показало бы
+            // многосвязную веху под одним случайным продуктом.
+            "WHERE out('TARGETS_PRODUCT').code CONTAINS :code",
+            List.of("code"), Map.of(), " ORDER BY week, milestone_id");
+
+        // Спринты продукта ВНЕ вех — то самое «что забыли поставить в план»,
+        // ответа на которое сегодня нет вовсе.
+        //
+        // Отдельным срезом, а не числом внутри roadmap, и это не оформление:
+        // счётчик отвечает «сколько», а спросить надо «какие». Пустая карта при
+        // ненулевом хвосте — законный и важный ответ (замерено на MINILORE: все
+        // 13 его спринтов не привязаны ни к одной вехе), и число «0 вех» само по
+        // себе неотличимо от «продукта не существует» — а список отличим.
+        slice("roadmap_unplanned",
+            "SELECT sprint_id, name, " +
+            "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, " +
+            "out('BELONGS_TO').component_id AS components " +
+            "FROM KnowSprint " +
+            "WHERE out('BELONGS_TO').out('IN_PRODUCT').code CONTAINS :code " +
+            "AND out('TARGETS_MILESTONE').size() = 0",
+            List.of("code"), Map.of(), " ORDER BY sprint_id");
 
         // ── §4 Search — сквозной, по FULL_TEXT-индексам (SRCH-01, ADR-LORE-033) ─
         // Каждая ветка — ОДИН вызов SEARCH_INDEX('ftИмя', …) по именованному

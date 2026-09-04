@@ -1179,7 +1179,15 @@ final class LoreSchemaMigrations {
         new Step(43, 17, "product_edge_types_on_prod", List.of(
             "CREATE EDGE TYPE IN_PRODUCT     IF NOT EXISTS EXTENDS E",
             "CREATE PROPERTY IN_PRODUCT.role IF NOT EXISTS STRING",
-            "CREATE EDGE TYPE PARENT_PRODUCT IF NOT EXISTS EXTENDS E"))
+            "CREATE EDGE TYPE PARENT_PRODUCT IF NOT EXISTS EXTENDS E")),
+
+        // RM-S1: веха → продукт. Отдельный тип, а не общий IN_PRODUCT:
+        // семантика другая (компонент ВХОДИТ в продукт, веха НАЦЕЛЕНА на него),
+        // и слайс products читает состав как in('IN_PRODUCT').component_id —
+        // вехи на том же типе приехали бы туда пачкой null'ов. Имя парное к
+        // TARGETS_MILESTONE: цепь карты читается подряд спринт → веха → продукт.
+        new Step(44, 17, "milestone_targets_product", List.of(
+            "CREATE EDGE TYPE TARGETS_PRODUCT IF NOT EXISTS EXTENDS E"))
     );
 
     /**

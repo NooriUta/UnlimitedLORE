@@ -127,7 +127,13 @@ public class LoreQualityFacts {
             + "parent_id, "
             + "out('PARENT_OF').component_id AS parent_edge"),
         MILESTONE("milestone", "KnowMilestone", "milestone_id",
-            "label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints"),
+            "label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints, "
+            // RM-S3: продукт вехи — факт отсюда, а не своей копией проекции по
+            // месту. Правило уже трижды нарушалось до его введения (v1.7.1:
+            // статус решения читался не из того поля, у спеки проверялось
+            // несуществующее поле, у релиза поиск шёл по неуникальному номеру
+            // версии и вердикт отчитывался по чужому релизу).
+            + "out('TARGETS_PRODUCT').code AS products"),
         QUESTION("question", "KnowQuestion", "question_id",
             "title, status, owner, due_date, out('RAISED_IN').adr_id AS links");
 
@@ -215,7 +221,8 @@ public class LoreQualityFacts {
                     return WorkQuality.evaluateComponent(s(r, "full_name"), s(r, "area"),
                         s(r, "owner"), s(r, "game_icon"), s(r, "parent_id"), r.get("parent_edge"));
                 case MILESTONE:
-                    return WorkQuality.evaluateMilestone(s(r, "label"), s(r, "date_display"), r.get("sprints"));
+                    return WorkQuality.evaluateMilestone(s(r, "label"), s(r, "date_display"),
+                        r.get("sprints"), r.get("products"));
                 case QUESTION:
                     return WorkQuality.evaluateQuestion(s(r, "title"), s(r, "status"), s(r, "owner"),
                         s(r, "due_date"), r.get("links"));
