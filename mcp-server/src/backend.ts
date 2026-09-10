@@ -13,13 +13,54 @@ const ROLE = process.env.LORE_SEER_ROLE ?? 'admin';
 export const ACTIVE_PROJECT = process.env.LORE_ACTIVE_PROJECT || undefined;
 
 // A2: client_credentials against the omilore realm's lore-mcp service account.
-// Feature-gated on both env vars being set — until the realm is imported and
-// these are configured, writeAuthHeaders() falls through to the X-Seer-Role
-// header exactly as before. See docs/AUTH_OMILORE.md.
+// Режим авторизации — «всё или ничего», см. authMode() ниже.
 const OIDC_ISSUER    = process.env.LORE_OIDC_ISSUER;
 const MCP_CLIENT_ID  = process.env.LORE_MCP_CLIENT_ID;
 const MCP_CLIENT_SECRET = process.env.LORE_MCP_CLIENT_SECRET;
-const OIDC_CONFIGURED = Boolean(OIDC_ISSUER && MCP_CLIENT_ID && MCP_CLIENT_SECRET);
+
+const OIDC_KEYS = ['LORE_OIDC_ISSUER', 'LORE_MCP_CLIENT_ID', 'LORE_MCP_CLIENT_SECRET'] as const;
+
+/**
+ * SPRINT_LORE_AGENT_OBSERVABILITY/AO-07: частичная настройка OIDC ОТКАЗЫВАЕТ,
+ * а не откатывается на заголовок роли.
+ *
+ * Раньше токен включался, только если заданы все три переменные, а иначе MCP
+ * молча слал X-Seer-Role из LORE_SEER_ROLE — в .mcp.json там admin. Значит
+ * запись сервера под профиль tester, которой забыли подать секрет, стартовала
+ * С ПРАВАМИ АДМИНИСТРАТОРА: обратное ограничению, без единой ошибки. Та же
+ * ловушка, что с легаси-клиентом lore-mcp без agent_scope, в новом обличье.
+ *
+ * Ни одной переменной — прежний режим заголовка (dev, осознанно). Все три —
+ * токен. Любая частичная комбинация — ошибка, НАЗЫВАЮЩАЯ пропущенные
+ * переменные. Пустая строка считается незаданной: так выглядит
+ * "${LORE_MCP_CLIENT_SECRET}" в .mcp.json при неподанной переменной.
+ */
+export function authMode(env: Record<string, string | undefined>): 'oidc' | 'header' {
+  const present = OIDC_KEYS.filter((k) => (env[k] ?? '').trim() !== '');
+  if (present.length === 0) return 'header';
+  if (present.length === OIDC_KEYS.length) return 'oidc';
+  const missing = OIDC_KEYS.filter((k) => !present.includes(k));
+  throw new Error(
+    `Частичная настройка OIDC: заданы ${present.join(', ')}; нет ${missing.join(', ')}. ` +
+    'Откат на заголовок X-Seer-Role не выполняется: он дал бы права из LORE_SEER_ROLE ' +
+    '(обычно admin) вместо профиля клиента. Подайте недостающие переменные либо уберите все три.',
+  );
+}
+
+// Вычисляется ЛЕНИВО, на каждом обращении к бэкенду, а не при загрузке модуля.
+//
+// Первая редакция считала режим при загрузке — и уронила три тестовых файла
+// из четырёх: в окружении оболочки задан только LORE_MCP_CLIENT_SECRET (он
+// лежит в пользовательском окружении, чтобы .mcp.json подставил его в
+// ${LORE_MCP_CLIENT_SECRET}), а issuer и client id заданы лишь в env самого
+// .mcp.json. Любой процесс, импортирующий этот модуль вне MCP, падал на импорте.
+//
+// Ленивая проверка к тому же лучше видна: упав при старте, MCP-сервер в Claude
+// Code выглядит лишь как «не подключился» без причины, а ошибка на обращении
+// приходит прямо в ответ инструмента — с именами пропущенных переменных.
+function currentAuthMode(): 'oidc' | 'header' {
+  return authMode(process.env);
+}
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
@@ -61,7 +102,7 @@ async function serviceAccountToken(): Promise<string> {
  * без окна молчания и без согласованного рестарта двух сторон.
  */
 async function writeAuthHeaders(): Promise<Record<string, string>> {
-  if (!OIDC_CONFIGURED) return { 'X-Seer-Role': ROLE };
+  if (currentAuthMode() !== 'oidc') return { 'X-Seer-Role': ROLE };
   return {
     Authorization: `Bearer ${await serviceAccountToken()}`,
     'X-Seer-Role': ROLE,
