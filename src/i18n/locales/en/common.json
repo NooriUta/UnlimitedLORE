@@ -1284,6 +1284,8 @@
       "openSprintTitle": "Open sprint {{id}}",
       "taskCount": "{{count}} tasks",
       "prLabel": "PR",
+      "noProject": "— no repository",
+      "noProjectTitle": "This release has no repository — there is nothing to build a link from",
       "prTitle": "PR #{{number}} · {{project}}",
       "decisionsLabel": "Decisions",
       "noLinkedRecords": "No linked records found.",

@@ -54,9 +54,39 @@ public class LoreReleaseResource extends LoreResourceBase {
     // релиза при полностью пустом своём — то есть соврал ровно там, где должен
     // был предупредить. Тот же капкан, что AL-111 в release_mv.
     // Без git_project вердикт не собираем: угадывать, чей это релиз, нельзя.
-    /** Проект-владелец релиза: присланный или исторический дефолт. Одно место на весь ресурс. */
-    private static String projectOf(String gitProject) {
-        return gitProject != null && !gitProject.isBlank() ? gitProject : "NooriUta/AIDA";
+    /**
+     * RM-P7: умолчания «монорепо» больше НЕТ.
+     *
+     * <p>Пять путей записи молча приписывали релиз {@code NooriUta/AIDA}, если
+     * вызывающий не назвал репозиторий. Релиз адресуется парой
+     * {@code release_uid = «репозиторий#версия»} — значит неверный репозиторий
+     * это не косметика, а запись в ЧУЖОЙ релиз. Тот же корень, что у AL-111 и у
+     * вердикта, отчитавшегося по чужому релизу на живом выпуске v1.7.0: один
+     * номер версии живёт в разных репозиториях (на 23.08.2026 — 13 пересечений).
+     *
+     * <p>После введения продуктовой оси цена выросла: сирота попадает не в тот
+     * ПРОДУКТ, а это уже искажение портфеля и дорожной карты.
+     *
+     * <p>Возвращает {@code null}, когда репозиторий неизвестен, — вызывающий
+     * обязан отказать с {@link #NO_PROJECT}, а не подставить свой. Escape-hatch
+     * для установки, которой умолчание всё-таки нужно, оставлен настройкой
+     * {@code lore.release.default-project}: пусто по умолчанию, то есть
+     * «угадывать нельзя», и включается осознанно.
+     */
+    @org.eclipse.microprofile.config.inject.ConfigProperty(
+        name = "lore.release.default-project", defaultValue = "")
+    String defaultReleaseProject;
+
+    static final String NO_PROJECT =
+        "git_project required: релиз адресуется парой «репозиторий#версия» (release_uid), "
+        + "и без репозитория запись уйдёт в чужой релиз — один номер версии живёт в разных "
+        + "репозиториях. Умолчание на монорепозиторий снято (RM-P7). Если оно нужно вашей "
+        + "установке, задайте lore.release.default-project.";
+
+    private String projectOf(String gitProject) {
+        if (gitProject != null && !gitProject.isBlank()) return gitProject.trim();
+        return defaultReleaseProject == null || defaultReleaseProject.isBlank()
+            ? null : defaultReleaseProject.trim();
     }
 
     @jakarta.inject.Inject
@@ -118,8 +148,8 @@ public class LoreReleaseResource extends LoreResourceBase {
             return badParams("release_id contains illegal characters");
         }
         try {
-            String gp   = req.git_project() != null && !req.git_project().isBlank()
-                          ? req.git_project() : "NooriUta/AIDA";
+            String gp = projectOf(req.git_project());
+            if (gp == null) return badParams(NO_PROJECT);
             String rdate = req.release_date() != null ? req.release_date()
                                                       : java.time.LocalDate.now().toString();
             // ADR-LORE-025 (OP-04): текущий релиз самоисцеляется. Если пайплайн
@@ -199,8 +229,8 @@ public class LoreReleaseResource extends LoreResourceBase {
         try {
             boolean curSet = req.is_current() != null;
             boolean cur    = Boolean.TRUE.equals(req.is_current());
-            String ugp     = req.git_project() != null && !req.git_project().isBlank()
-                             ? req.git_project() : "NooriUta/AIDA";
+            String ugp = projectOf(req.git_project());
+            if (ugp == null) return badParams(NO_PROJECT);
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + ugp + "'",
@@ -269,8 +299,8 @@ public class LoreReleaseResource extends LoreResourceBase {
         int sprintsLinked = 0, prsLinked = 0;
         List<String> errors = new java.util.ArrayList<>();
         try {
-            String gp = (req.git_project() != null && !req.git_project().isBlank())
-                ? req.git_project() : "NooriUta/AIDA";
+            String gp = projectOf(req.git_project());
+            if (gp == null) return badParams(NO_PROJECT);
             String ruid = gp + "#" + req.release_id();
             List<String> sprintIds = req.sprint_ids() != null ? req.sprint_ids() : List.of();
             for (String sid : sprintIds) {
@@ -363,8 +393,8 @@ public class LoreReleaseResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank())
             return badParams("release_id required");
-        String gp = (req.git_project() != null && !req.git_project().isBlank())
-            ? req.git_project() : "NooriUta/AIDA";
+        String gp = projectOf(req.git_project());
+        if (gp == null) return badParams(NO_PROJECT);
         String ruid = gp + "#" + req.release_id();
         int sprintsRemoved = 0, prsRemoved = 0;
         List<String> requestedSprints = req.sprint_ids() != null ? req.sprint_ids() : List.of();

@@ -1284,6 +1284,8 @@
       "openSprintTitle": "Открыть спринт {{id}}",
       "taskCount": "{{count}} задач",
       "prLabel": "PR",
+      "noProject": "— без репозитория",
+      "noProjectTitle": "У релиза не указан репозиторий — ссылку собрать не из чего",
       "prTitle": "PR #{{number}} · {{project}}",
       "decisionsLabel": "Решения",
       "noLinkedRecords": "Связанных записей не найдено.",
