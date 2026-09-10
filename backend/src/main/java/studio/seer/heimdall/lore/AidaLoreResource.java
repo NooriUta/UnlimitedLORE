@@ -330,7 +330,21 @@ public class AidaLoreResource extends LoreResourceBase {
             List<Map<String, Object>> tasksHist   = composeAndQuery("task_created_dates");
             List<Map<String, Object>> adrHist      = composeAndQuery("adr_history_all");
             List<Map<String, Object>> specHist     = composeAndQuery("spec_history_all");
-            List<Map<String, Object>> decisionHist = composeAndQuery("decision_history_all");
+            // SE-02: у решения нет истории, и «изменено» берётся из отметки правки
+            // на самой вершине. Прежний источник, KnowDecisionHist, схема создаёт,
+            // срез читает, а пишет НИКТО: тип осиротел при переходе на плоскую
+            // модель, и события «изменено» для решений не существовало с 14 июня.
+            // Отказ был тихим — лента не пустела, пропадало лишь то, чего читатель
+            // не ждёт увидеть поимённо.
+            //
+            // Форма строки повторяет настоящую историю (id + valid_from), поэтому
+            // свёртка по дню и пропуск дня создания работают без правок.
+            List<Map<String, Object>> decisionHist = decisions.stream()
+                .filter(d -> d.get("updated_at") != null && d.get("decision_id") != null)
+                .map(d -> Map.<String, Object>of(
+                    "decision_id", d.get("decision_id"),
+                    "valid_from",  d.get("updated_at")))
+                .toList();
             List<Map<String, Object>> sprints     = composeAndQuery("sprints");
             List<Map<String, Object>> allTasks    = composeAndQuery("all_tasks");
 
