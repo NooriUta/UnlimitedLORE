@@ -100,3 +100,33 @@ tasks.named('test') {
         .withPathSensitivity(PathSensitivity.RELATIVE)
         .optional(true)
 }
+// Сводка отказов В САМОМ КОНЦЕ прогона — иначе её не найти.
+//
+// Сообщения упавших тестов мы печатаем с 31.08 (до того в логе был виден
+// только тип исключения). Но печатаются они В МЕСТЕ отказа, а лог CI забит
+// служебными строками: каждый подъём приложения в тестах добавляет свои, и
+// при десятках тест-классов сообщение оказывается за тысячи строк от конца.
+//
+// 10.09 это стоило разбора вслепую: причину красного прогона пришлось
+// выводить из кода, а не из вывода. Инструмент диагностики, результат
+// которого нельзя прочитать, диагностикой не является.
+def loreFailures = []
+tasks.named('test') {
+    afterTest { desc, result ->
+        if (result.resultType == TestResult.ResultType.FAILURE) {
+            def why = result.exceptions ? result.exceptions[0].toString().readLines()[0] : 'без сообщения'
+            loreFailures << "${desc.className.tokenize('.').last()}.${desc.name}\n      ${why}"
+        }
+    }
+    // afterSuite, а НЕ doLast: doLast пропускается, когда задача падает — то
+    // есть сводка печаталась бы ровно тогда, когда она не нужна, и молчала бы
+    // на каждом красном прогоне. Поймано положительным контролем: подмешанный
+    // падающий тест не дал ни строки сводки.
+    afterSuite { desc, result ->
+        if (desc.parent == null && !loreFailures.isEmpty()) {
+            logger.lifecycle("\n==== УПАВШИЕ ТЕСТЫ (${loreFailures.size()}) ====")
+            loreFailures.each { logger.lifecycle("  • ${it}") }
+            logger.lifecycle("==== конец списка ====\n")
+        }
+    }
+}

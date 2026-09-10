@@ -188,7 +188,7 @@ public class LoreForgejoResource extends LoreResourceBase {
                 // FJ-05: замыкание релиз-цикла — авто-линк PR→релиз (SHIPPED_IN) и
                 // спринт→релиз (IMPLEMENTED_IN_RELEASE). Валидируем существование целей:
                 // тихий no-op здесь уже стоил релизов с prs_linked:0 (ADR-024, контекст).
-                Map<String, Object> linked = autoLink(req.git_project(), number, req.release_id(), req.sprint_id());
+                Map<String, Object> linked = autoLink(repo.get(), req.git_project(), number, req.release_id(), req.sprint_id());
                 out.putAll(linked);
             } else {
                 out.put("linked", false);
@@ -317,10 +317,15 @@ public class LoreForgejoResource extends LoreResourceBase {
      * передан → берём текущий (is_current) релиз проекта; его нет → linked:false
      * с подсказкой, НЕ молча (урок feedback_release_link_sprint_and_pr).
      */
-    private Map<String, Object> autoLink(String gitProject, long prNumber, String releaseId, String sprintId) {
+    private Map<String, Object> autoLink(ForgejoBridge.Repo repo, String gitProject, long prNumber,
+                                         String releaseId, String sprintId) {
         Map<String, Object> out = new LinkedHashMap<>();
         try {
             String rid = str(releaseId);
+            // Релиз, названный вызывающим ЯВНО, — осознанная просьба (например,
+            // дозаполнение истории): её исполняем. Проверка ниже — только для
+            // автовыбора, который и цеплял правки к вышедшему релизу.
+            boolean autoPicked = rid.isEmpty();
             if (rid.isEmpty()) {
                 List<Map<String, Object>> cur = ingestService.queryPublic(
                     "SELECT release_id FROM KnowRelease WHERE git_project=:gp AND is_current=true LIMIT 1",
@@ -340,6 +345,30 @@ public class LoreForgejoResource extends LoreResourceBase {
                 out.put("linked", false);
                 out.put("link_hint", "KnowRelease " + ruid + " не существует — release_new до merge");
                 return out;
+            }
+            // SE-09: к ВЫПУЩЕННОМУ релизу автоматика не цепляет. 10.09 — шесть
+            // слияний подряд легли в v1.10.0, у которого тег уже стоял на main;
+            // правки, влитые после тега, в него физически не входят.
+            if (autoPicked) {
+                List<Map<String, Object>> tagRow = ingestService.queryPublic(
+                    "SELECT git_tag FROM KnowRelease WHERE release_uid=:ruid", Map.of("ruid", ruid));
+                String tag = tagRow.isEmpty() ? "" : str(tagRow.get(0).get("git_tag"));
+                Integer tagStatus = null;
+                if (!tag.isEmpty()) {
+                    try {
+                        tagStatus = bridge.api(repo, "GET", "/repos/" + repo.path() + "/tags/"
+                            + java.net.URLEncoder.encode(tag, java.nio.charset.StandardCharsets.UTF_8), null).statusCode();
+                    } catch (Exception te) {
+                        LOG.warnf("[FORGEJO AUTOLINK] проверка тега %s не удалась: %s", tag, te.getMessage());
+                    }
+                }
+                ForgejoBridge.AutoLinkDecision dec =
+                    ForgejoBridge.autoLinkDecision(tag.isEmpty() ? null : tag, tagStatus);
+                if (!dec.link()) {
+                    out.put("linked", false);
+                    out.put("link_hint", dec.reason());
+                    return out;
+                }
             }
             String prUid = gitProject + "#" + prNumber;
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
