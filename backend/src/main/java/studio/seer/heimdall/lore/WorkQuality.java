@@ -276,8 +276,20 @@ final class WorkQuality {
      * <p>Порог тела тот же, что у ADR: решение из одного заголовка — ЯРЛЫК, а
      * правило должно быть сформулировано так, чтобы по нему можно было свериться.
      */
+    /**
+     * Проект — ОБЯЗАТЕЛЬНЫЙ пункт с 10.09.2026 (SE-07).
+     *
+     * <p>Раньше его в счёте не было вовсе, хотя у ЗАДАЧИ он есть: асимметрия
+     * оказалась недоделкой, а не замыслом. Пока проверки не было, инструмент
+     * отвечал «готово» записи без принадлежности, и единственным контролем
+     * оставался глаз владельца — срабатывал через сутки, трижды за две недели.
+     *
+     * <p>{ projects} приходит УЖЕ ВЫВЕДЕННЫМ: своё ребро, иначе
+     * унаследованное от родительского ADR. Требовать своё значило бы заругать
+     * 56 решений из 200, у которых наследование законно.
+     */
     static Result evaluateDecision(String status, String bodyMd, boolean hasParentAdr,
-                                   Object components, Object tags) {
+                                   Object components, Object tags, Object projects) {
         List<Finding> f = new ArrayList<>();
 
         req(f, "status", filled(status), "Статус задан");
@@ -285,6 +297,7 @@ final class WorkQuality {
         req(f, "parent_adr", hasParentAdr, "Привязано к ADR (DECIDED_IN) — решение живёт под ADR");
         req(f, "body_substantive", len(bodyMd) >= MIN_BODY,
             "Решение сформулировано как правило (≥ " + MIN_BODY + " симв.), а не ярлык");
+        req(f, "project", any(projects), "Проект известен — своим ребром либо от родительского ADR");
 
         hint(f, "component", any(components), "Компонент привязан — желательно");
         hint(f, "tags", any(tags), "Теги заданы — желательно");

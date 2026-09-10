@@ -91,6 +91,12 @@ public class LoreQualityFacts {
         DECISION("decision", "KnowDecision", "decision_id",
             // status_raw, а не status — см. D-2026-LORE-QUALITY-NO-PHANTOM-CHECKS
             "status_raw AS status, body_md, "
+            + "out('BELONGS_TO_PROJECT').slug AS projects, "
+            // Проект решения бывает УНАСЛЕДОВАННЫМ от родительского ADR, и это
+            // законно: 56 решений из 200 держатся только так. Гейт, требующий
+            // СВОЁ ребро, заругал бы их все — а ложные находки приучают не
+            // смотреть на гейт вовсе, и он умирает как проверка.
+            + "out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug AS adr_projects, "
             + "out('DECIDED_IN').size()       AS adr_count, "
             + "out('BELONGS_TO').component_id AS components, "
             + "out('TAGGED_WITH').tag_id      AS tags"),
@@ -198,8 +204,12 @@ public class LoreQualityFacts {
                 }
                 case DECISION: {
                     boolean hasAdr = r.get("adr_count") instanceof Number n && n.intValue() > 0;
+                    // Своё ребро, иначе унаследованное от ADR — тот же порядок,
+                    // по которому проект показывает лента.
+                    Object projects = r.get("projects");
+                    if (!any(projects)) projects = r.get("adr_projects");
                     return WorkQuality.evaluateDecision(s(r, "status"), s(r, "body_md"), hasAdr,
-                        r.get("components"), r.get("tags"));
+                        r.get("components"), r.get("tags"), projects);
                 }
                 case SPEC: {
                     // Любой из трёх способов привязки засчитывается. Требовать

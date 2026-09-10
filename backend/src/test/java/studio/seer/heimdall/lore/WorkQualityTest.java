@@ -294,16 +294,43 @@ class WorkQualityTest {
     @Test
     void решениеБезРодителяАдрКраснеет() {
         // Решение вне ADR не найти от него и оно не попадает в разбор на правила.
-        var r = WorkQuality.evaluateDecision("accepted", body("правило"), false, null, null);
+        var r = WorkQuality.evaluateDecision("accepted", body("правило"), false, null, null, List.of("proj"));
         assertFalse(find(r, "parent_adr").ok());
         assertEquals("decision", r.kind());
     }
 
     @Test
     void решениеИзОдногоЗаголовкаЭтоЯрлык() {
-        var r = WorkQuality.evaluateDecision("accepted", "Кэшируем", true, null, null);
+        var r = WorkQuality.evaluateDecision("accepted", "Кэшируем", true, null, null, List.of("proj"));
         assertTrue(find(r, "body").ok(), "тело непусто");
         assertFalse(find(r, "body_substantive").ok(), "но правилом это не назвать");
+    }
+
+    /**
+     * Решение без проекта краснеет — с 10.09.2026 это ОБЯЗАТЕЛЬНЫЙ пункт.
+     *
+     * <p>Пока его не было, инструмент отвечал «готово» записи без
+     * принадлежности, и единственным контролем оставался глаз владельца.
+     */
+    @Test
+    void решениеБезПроектаКраснеет() {
+        var r = WorkQuality.evaluateDecision("accepted", body("правило"), true, null, null, null);
+        assertFalse(find(r, "project").ok(), "проекта нет — пункт обязан быть красным");
+    }
+
+    /**
+     * УНАСЛЕДОВАННЫЙ от родительского ADR проект засчитывается наравне со своим.
+     *
+     * <p>Контроль к предыдущей проверке, и без него она ничего не стоит:
+     * гейт, требующий СВОЁ ребро, заругал бы 56 решений из 200, у которых
+     * наследование законно. Ложные находки приучают не смотреть на гейт
+     * вовсе — то есть строгость убила бы проверку вернее, чем её отсутствие.
+     */
+    @Test
+    void унаследованныйОтАдрПроектЗасчитывается() {
+        var r = WorkQuality.evaluateDecision("accepted", body("правило"), true, null, null,
+            List.of("AIDA/miniLORE"));
+        assertTrue(find(r, "project").ok(), "выведенный проект — тоже проект");
     }
 
     @Test
