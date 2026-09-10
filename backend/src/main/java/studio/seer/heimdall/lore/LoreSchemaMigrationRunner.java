@@ -1523,6 +1523,7 @@ public class LoreSchemaMigrationRunner {
         }
 
         int created = 0, skipped = 0, replaced = 0, absent = 0;
+        java.util.List<String> absentTypes = new java.util.ArrayList<>();
         for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
             String want = fieldKey(ix.type(), ix.fields());
             if (byName.contains(ix.name())) {
@@ -1537,7 +1538,7 @@ public class LoreSchemaMigrationRunner {
                 byFields.remove(nameToKey.get(ix.name()));
             }
             if (!types.contains(ix.type())) {
-                LOG.warnf("[LORE MIGRATE] тип %s отсутствует — индекс %s пропущен", ix.type(), ix.name());
+                absentTypes.add(ix.type() + "/" + ix.name());
                 absent++;
                 continue;
             }
@@ -1599,6 +1600,20 @@ public class LoreSchemaMigrationRunner {
         }
         LOG.infof("[LORE MIGRATE] полнотекст: создано %d (взамен старых %d), уже было %d, типов нет %d — реестр %d",
             created, replaced, skipped, absent, LoreSchemaMigrations.FT_INDEXES.size());
+        if (!absentTypes.isEmpty()) {
+            // ОДНОЙ строкой, а не по строке на каждый пропуск.
+            //
+            // Раньше печаталось внутри цикла и на КАЖДЫЙ подъём приложения в
+            // тестах: сотни одинаковых строк хоронили сообщения упавших
+            // тестов, и причину красного прогона приходилось выводить из кода,
+            // а не из лога. Печатать проверку так, чтобы её результат нельзя
+            // было прочитать, — та же беда, что мы ловим в данных.
+            //
+            // Находка не заглушена: перечень здесь же и он полнее прежнего —
+            // раньше имена были размазаны по сотням строк.
+            LOG.warnf("[LORE MIGRATE] полнотекст: типов нет для %d индексов — %s",
+                absentTypes.size(), String.join(", ", absentTypes));
+        }
 
         int expected = LoreSchemaMigrations.FT_INDEXES.size() - absent;
         if (created + skipped < expected) {
