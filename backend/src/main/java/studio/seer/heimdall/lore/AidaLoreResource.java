@@ -368,13 +368,13 @@ public class AidaLoreResource extends LoreResourceBase {
             for (Map<String, Object> r : releases) {
                 String date = dayOf(r.get("release_date"));
                 if (date != null)
-                    items.add(newsItem("release", date, timeOf(r.get("release_date")), firstStr(r.get("release_id")), "released", null, firstStr(r.get("git_project")), firstStr(r.get("release_id"))));
+                    items.add(newsItem("release", date, timeOf(r.get("release_date")), firstStr(r.get("release_id")), "released", null, projectList(r.get("git_project")), firstStr(r.get("release_id"))));
             }
             for (Map<String, Object> s : sprintsDone) {
                 String date = dayOf(s.get("done_date"));
                 if (date == null) continue;
                 String sid = firstStr(s.get("sprint_id"));
-                items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, sprintProject.get(sid), sid));
+                items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, projectList(sprintProject.get(sid)), sid));
             }
             // created-день и заголовок по id — нужны событию «изменено» ниже:
             // день создания из changed исключаем, заголовок берём человекочитаемый.
@@ -383,19 +383,19 @@ public class AidaLoreResource extends LoreResourceBase {
             // Проект по id — чтобы событие «изменено» несло его так же, как
             // «создано». Заполняются здесь и читаются в emitChanged ниже: у
             // *Hist-строк своего ребра на проект нет, он живёт на вершине.
-            Map<String, String> decisionProject = new HashMap<>();
-            Map<String, String> adrProjectById  = new HashMap<>();
-            Map<String, String> specProject     = new HashMap<>();
+            Map<String, List<String>> decisionProject = new HashMap<>();
+            Map<String, List<String>> adrProjectById  = new HashMap<>();
+            Map<String, List<String>> specProject     = new HashMap<>();
             for (Map<String, Object> d : decisions) {
                 String did = firstStr(d.get("decision_id"));
                 // Project: the decision's own BELONGS_TO_PROJECT edge if any, else
                 // its parent ADR's (decision →DECIDED_IN→ ADR →BELONGS_TO_PROJECT).
                 // Without this decisions fell into the feed's «без проекта» group.
-                String decProject = firstOfList(d.get("projects"));
-                if (decProject == null) decProject = firstOfList(d.get("adr_projects"));
+                List<String> decProject = projectList(d.get("projects"));
+                if (decProject.isEmpty()) decProject = projectList(d.get("adr_projects"));
                 // Карта заполняется ДО проверки даты: правка живёт и у сущности,
                 // у которой date_created пуст, — иначе changed снова без проекта.
-                if (did != null && decProject != null) decisionProject.put(did, decProject);
+                if (did != null && !decProject.isEmpty()) decisionProject.put(did, decProject);
                 String date = dayOf(d.get("date_created"));
                 if (date == null) continue;
                 if (did != null) { decisionCreatedDay.put(did, date); decisionTitle.put(did, firstStr(d.get("title"))); }
@@ -406,8 +406,8 @@ public class AidaLoreResource extends LoreResourceBase {
                 String aid = firstStr(a.get("adr_id"));
                 // Project: ADR's BELONGS_TO_PROJECT edge (ADRPROJ-01) — иначе ADR
                 // со связкой на проект оседали в «без проекта».
-                String adrProject = firstOfList(a.get("projects"));
-                if (aid != null && adrProject != null) adrProjectById.put(aid, adrProject);
+                List<String> adrProject = projectList(a.get("projects"));
+                if (aid != null && !adrProject.isEmpty()) adrProjectById.put(aid, adrProject);
                 String date = dayOf(a.get("date_created"));
                 if (date == null) continue;
                 if (aid != null) adrCreatedDay.put(aid, date);
@@ -423,11 +423,8 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (spid != null) { specCreatedDay.put(spid, date); specTitle.put(spid, title); }
                 // Spec carries BELONGS_TO_PROJECT (unlike decision/adr, untagged
                 // by model) — first project so the client's project filter keeps it.
-                String project = null;
-                Object pr = sp.get("projects");
-                if (pr instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
-                    project = String.valueOf(l.get(0));
-                if (spid != null && project != null) specProject.put(spid, project);
+                List<String> project = projectList(sp.get("projects"));
+                if (spid != null && !project.isEmpty()) specProject.put(spid, project);
                 items.add(newsItem("spec", date, timeOf(sp.get("date_created")), title, "created", spid, project, spid));
             }
 
@@ -460,7 +457,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 String title = (known != null && known[0] != null) ? known[0] : (tid != null ? tid : uid);
                 String project = (known != null && known[1] != null) ? sprintProject.get(known[1]) : null;
                 // ref = task_uid: miniLORE открывает карточку задачи; detail = tid.
-                items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), title, "closed", tid, project, uid));
+                items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), title, "closed", tid, projectList(project), uid));
             }
 
             // Событие «заведена»: min valid_from по задаче (task_created_dates —
@@ -488,7 +485,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 String sprintId = e.getValue()[1] != null ? e.getValue()[1]
                                 : (known != null ? known[1] : null);
                 String project = sprintId != null ? sprintProject.get(sprintId) : null;
-                items.add(newsItem("tasks", date, timeOf(vf), title, "created", null, project, uid));
+                items.add(newsItem("tasks", date, timeOf(vf), title, "created", null, projectList(project), uid));
             }
 
             // Date cursor for windowed / archive-tail loading (FN-12 «архив
@@ -569,7 +566,7 @@ public class AidaLoreResource extends LoreResourceBase {
                                     String idField, String kind,
                                     Map<String, String> createdDay,
                                     Map<String, String> titles,
-                                    Map<String, String> projects,
+                                    Map<String, List<String>> projects,
                                     Set<String> seen) {
         for (Map<String, Object> h : hist) {
             String id = firstStr(h.get(idField));
@@ -578,7 +575,7 @@ public class AidaLoreResource extends LoreResourceBase {
             if (date.equals(createdDay.get(id))) continue;       // это создание, не правка
             if (!seen.add(kind + "|" + id + "|" + date)) continue; // дедуп по дню
             String title = (titles != null && titles.get(id) != null) ? titles.get(id) : id;
-            String project = projects == null ? null : projects.get(id);
+            List<String> project = projects == null ? List.<String>of() : projects.getOrDefault(id, List.of());
             items.add(newsItem(kind, date, timeOf(h.get("valid_from")), title, "changed", null, project, id));
         }
     }
@@ -592,7 +589,28 @@ public class AidaLoreResource extends LoreResourceBase {
         return m.find() ? m.group(1) : null;
     }
 
-    private static Map<String, Object> newsItem(String kind, String date, String time, String title, String event, String detail, String project, String refId) {
+    /**
+     * Все принадлежности события списком: пустое, одиночное и повторяющееся
+     * значения приводятся к одному виду.
+     *
+     * <p>Порядок детерминированный, и это не косметика: первым элементом
+     * клиент подставляет поле project для сборок, которые ещё читают строку.
+     * Прыгающий «первый» менял бы проект записи между выкладками без единой
+     * правки данных — то есть выглядел бы порчей, не будучи ею.
+     */
+    static List<String> projectList(Object raw) {
+        if (raw == null) return List.of();
+        List<?> src = (raw instanceof List<?> l) ? l : List.of(raw);
+        return src.stream()
+            .filter(java.util.Objects::nonNull)
+            .map(String::valueOf)
+            .filter(s -> !s.isBlank())
+            .distinct()
+            .sorted()
+            .toList();
+    }
+
+    private static Map<String, Object> newsItem(String kind, String date, String time, String title, String event, String detail, List<String> projects, String refId) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("kind", kind);
         m.put("event", event);
@@ -600,7 +618,18 @@ public class AidaLoreResource extends LoreResourceBase {
         if (time != null) m.put("time", time);
         m.put("title", title);
         if (detail != null) m.put("detail", detail);
-        if (project != null) m.put("project", project);
+        // ОДНО событие — ОДНА строка, принадлежности списком внутри неё.
+        // Двумя строками (по строке на проект) отдавать нельзя: у потребителя
+        // ключ строки не содержит проекта, дубли схлопнутся и покажут
+        // случайную принадлежность — та же болезнь, только переехавшая к нему.
+        //
+        // projects присутствует ВСЕГДА, пустым списком в том числе: «нет
+        // проекта» и «поле не пришло» — разные ответы, и различать их обязан
+        // не читатель, а мы.
+        //
+        // project — первый из списка, ради сборок, которые ещё читают строку.
+        m.put("projects", projects == null ? List.<String>of() : projects);
+        if (projects != null && !projects.isEmpty()) m.put("project", projects.get(0));
         // ref {type,id} — куда открыть карточку. Единый news-API самодостаточен:
         // клиент (Forseti/miniLORE) навигирует по ref, а не восстанавливает id из
         // title/detail по-своему. Нет ref (задачи: id неуникален) — открывать нечем.
