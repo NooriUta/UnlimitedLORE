@@ -26,7 +26,7 @@ public class LoreDecisionResource extends LoreResourceBase {
     // AL-79: status — значение словаря decision_status (V14), не свободный текст.
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
         String date_created, String refs_raw, String component_id, String adr_id,
-        java.util.List<String> tags, String status) {}
+        java.util.List<String> tags, String status, String project) {}
 
     /**
      * AL-79: фолбэк на случай пустого словаря (свежая БД до сидов) — тот же
@@ -127,6 +127,25 @@ public class LoreDecisionResource extends LoreResourceBase {
                     "TO (SELECT FROM KnowADR WHERE adr_id=:adr) IF NOT EXISTS",
                     Map.of("did", req.decision_id(), "adr", req.adr_id()))).await().indefinitely();
             }
+            // SE-07: проект РЯДОМ с компонентом, где его и ищут.
+            //
+            // Параметра проекта у инструмента не было вовсе, и связь ставилась
+            // отдельным вызовом, о котором в момент записи ничто не напоминало.
+            // Компонент проектом не подменяется: он связан с проектом только
+            // через спринты — то есть пишущий добросовестно указывал компонент
+            // и получал запись без принадлежности. Владелец ловила это трижды
+            // за две недели, и каждый раз была права.
+            //
+            // Только ДОБАВЛЯЕТ: снятие и множественная привязка остаются за
+            // decision_link. Принадлежность у нас множественна по замыслу
+            // (решение владельца о совместных ADR и спринтах), поэтому запись
+            // одного проекта не имеет права стереть остальные.
+            if (req.project() != null && !req.project().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowDecision WHERE decision_id=:d) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("d", req.decision_id(), "p", req.project()))).await().indefinitely();
+            }
             if (req.tags() != null) {
                 for (String tag : req.tags()) {
                     if (tag == null || tag.isBlank()) continue;
@@ -146,6 +165,18 @@ public class LoreDecisionResource extends LoreResourceBase {
             // ни один слайс их связи не показывает. Инструмент при этом всегда
             // отвечал ok:true — отказ выглядел успехом.
             linkComponentEdge("KnowDecision", "decision_id", req.decision_id(), req.component_id(), out);
+            // Факт, а не намерение: CREATE EDGE к НЕЗАРЕГИСТРИРОВАННОМУ проекту —
+            // тихий no-op, и ответ ok:true выглядел бы подтверждением связи,
+            // которой нет. Спрашиваем ребро после записи и говорим прямо.
+            if (req.project() != null && !req.project().isBlank()) {
+                boolean linked = edgeExists("BELONGS_TO_PROJECT", "decision_id", req.decision_id(),
+                    "slug", req.project());
+                out.put("project", Map.of("slug", req.project(),
+                    "outcome", linked ? "linked" : "noop"));
+                if (!linked) LOG.warnf("[LORE DECISION] проект %s не привязан к %s — "
+                    + "такого проекта нет в реестре (заводится через project_new)",
+                    req.project(), req.decision_id());
+            }
             // Вердикт полноты (ADR-LORE-039): решение без родителя-ADR или из
             // одного заголовка — ярлык, а не правило. Advisory, на запись не влияет.
             WorkQuality.Result quality = decisionQuality(req.decision_id());
