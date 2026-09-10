@@ -1066,7 +1066,10 @@ export function registerLoreWrite(server: McpServer): void {
       'Use for recording key decisions made during a sprint or design session. ADR-019: a decision is a CHILD of ' +
       'an ADR — pass adr_id to link it (DECIDED_IN), component_id/tags for the "rule" filters. Stays vertex-only ' +
       '(no history) — consistent with the flat KnowDecision model. AL-79: status is a DICTIONARY value ' +
-      '(decision_status, editable in the admin panel) — free-text statuses are rejected with the allowed list.',
+      '(decision_status, editable in the admin panel) — free-text statuses are rejected with the allowed list. ' +
+      'SE-07: pass project — component_id is NOT a substitute (a component reaches a project only through sprints), ' +
+      'and quality_check now COUNTS the project: a decision with neither its own project edge nor a parent ADR carrying one scores short. ' +
+      'Title is written on EVERY call (there is no title-less update); tags are additive only; a second adr_id ADDS a parent rather than replacing one — multiple parents are intended.',
     schema: {
       decision_id:  z.string().describe('unique id, e.g. "D-2026-047"'),
       title:        z.string(),
@@ -1075,6 +1078,7 @@ export function registerLoreWrite(server: McpServer): void {
       refs_raw:     z.string().optional().describe('free-text references, e.g. "#420, ADR-HND-021"'),
       component_id: z.string().optional().describe('ADR-019: component this decision belongs to (filter axis)'),
       adr_id:       z.string().optional().describe('ADR-019: parent ADR — creates a DECIDED_IN edge to it'),
+      project:      z.string().optional().describe('git project slug — creates BELONGS_TO_PROJECT. ONLY ADDS: never removes other projects (belonging is multiple by design). A slug missing from the registry is a silent no-op in the graph, so the answer reports project.outcome = linked | noop.'),
       tags:         z.array(z.string()).optional().describe('ADR-019: free tags (KnowTag), e.g. ["stale-versions"]'),
       status:       z.string().optional().describe('AL-79: decision_status dictionary code — proposed|accepted|deferred|superseded (+legacy fixed|done); omit to leave unset/unchanged'),
     },
