@@ -70,6 +70,23 @@ public class LoreDecisionResource extends LoreResourceBase {
             return badParams("status must be one of: "
                 + dictCodes("decision_status", DECISION_STATUSES_FALLBACK)
                 + " (словарь decision_status, правится в админке)");
+        // SE-02: у решения нет истории (плоская модель), поэтому «когда его
+        // правили» жить может только отметкой на вершине. Пробуем СУЩЕСТВОВАНИЕ
+        // ДО записи: после UPSERT «была ли запись раньше» уже неотличимо от
+        // «появилась сейчас», и правка стала бы неотличима от создания.
+        boolean existedBefore;
+        try {
+            existedBefore = !ingestService.queryPublic(
+                "SELECT decision_id FROM KnowDecision WHERE decision_id = :did LIMIT 1",
+                Map.of("did", req.decision_id())).isEmpty();
+        } catch (Exception probeFailed) {
+            // Не молча: не сумев спросить, мы НЕ ЗНАЕМ, правка это или создание.
+            // Считать «создание» безопаснее — лишнего события в ленте не будет,
+            // но и врать о правке мы не станем.
+            LOG.warnf("[LORE DECISION] проба существования %s не удалась: %s — считаю созданием",
+                req.decision_id(), probeFailed.getMessage());
+            existedBefore = false;
+        }
         try {
             // LH-44: only SET provided fields — a title-only re-call must not wipe
             // body_md/refs_raw or reset date_created to today.
@@ -85,6 +102,14 @@ public class LoreDecisionResource extends LoreResourceBase {
             // слайсы decisions/decisions_of_adr; имя status было бы второй правдой.
             if (req.status() != null && !req.status().isBlank()) {
                 dsql.append(", status_raw=:st"); p.put("st", req.status());
+            }
+            // Отметка правки ставится ТОЛЬКО существовавшей записи: у новой
+            // «изменено» совпало бы с «создано» по дню и дало бы в ленте два
+            // события об одном факте.
+            if (existedBefore) {
+                dsql.append(", updated_at=:upd");
+                p.put("upd", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
             }
             dsql.append(" UPSERT WHERE decision_id=:did");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
