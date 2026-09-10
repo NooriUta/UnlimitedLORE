@@ -178,4 +178,36 @@ public class ForgejoBridge {
 
     /** true только когда merge разрешён (§10: только из GREEN). */
     static boolean mergeAllowed(String gateStatus) { return GREEN.equals(gateStatus); }
+
+    /**
+     * SE-09: цеплять ли PR к автоматически выбранному релизу после слияния.
+     *
+     * <p>Признак «вышел» — тег в РЕПОЗИТОРИИ, а не поле тега у релиза: план
+     * может нести имя тега заранее, и правило по полю отказало бы ровно там,
+     * где цеплять надо, — у ещё не вырезанного релиза. Поле может опережать
+     * факт; репозиторий — нет.
+     *
+     * <p>Неизвестность («проверить не удалось», любой не-200/404 ответ) — это
+     * НЕ «тега нет»: не цепляем и говорим почему. Неверная привязка хуже
+     * отсутствующей — отсутствие видно и чинится, неверная выглядит сделанной
+     * работой.
+     *
+     * @param releaseGitTag   тег релиза или null, если релиз его не несёт
+     * @param tagLookupStatus HTTP-код проверки тега в репозитории; null — проверка не состоялась
+     */
+    static AutoLinkDecision autoLinkDecision(String releaseGitTag, Integer tagLookupStatus) {
+        if (releaseGitTag == null || releaseGitTag.isBlank()) return new AutoLinkDecision(true, null);
+        if (tagLookupStatus == null)
+            return new AutoLinkDecision(false, "не удалось проверить, стоит ли тег " + releaseGitTag
+                + " в репозитории — не цепляю: неверная привязка хуже отсутствующей; release_link руками");
+        if (tagLookupStatus == 200)
+            return new AutoLinkDecision(false, "релиз " + releaseGitTag + " уже выпущен (тег стоит в репозитории) — "
+                + "правка в него физически не входит; привяжите её к следующему релизу");
+        if (tagLookupStatus == 404) return new AutoLinkDecision(true, null);
+        return new AutoLinkDecision(false, "Forgejo ответил " + tagLookupStatus + " на проверку тега " + releaseGitTag
+            + " — это «не знаем», а не «тега нет»; не цепляю, release_link руками");
+    }
+
+    /** Решение автопривязки: цеплять ли и, если нет, — почему (причина обязательна). */
+    record AutoLinkDecision(boolean link, String reason) {}
 }
