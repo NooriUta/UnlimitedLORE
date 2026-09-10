@@ -38,6 +38,18 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 class DecisionEditShowsInNewsLiveDbTest {
 
     private static final String DECISION = "D-NEWS-EDIT-PROBE";
+    /**
+     * Дата создания В ПРОШЛОМ — и это не косметика.
+     *
+     * <p>Свёртка событий намеренно пропускает правку в ДЕНЬ СОЗДАНИЯ: тот день
+     * уже покрыт событием «создано», и вторая строка об одном факте только
+     * зашумила бы ленту. Так устроено и у ADR, и у спек.
+     *
+     * <p>Первая редакция теста создавала и правила решение сегодня — и ждала
+     * «изменено», которого по этому правилу быть не может. Красный результат
+     * был верным ответом на неверный вопрос: правка была права, тест — нет.
+     */
+    private static final String CREATED_ON = "2026-08-01";
     private static final String TITLE    = "Правка решения обязана быть видна";
 
     private static io.restassured.specification.RequestSpecification admin() {
@@ -54,6 +66,7 @@ class DecisionEditShowsInNewsLiveDbTest {
     @Order(1)
     void aFreshDecisionShowsUpAsCreated() {
         admin().body("{\"decision_id\":\"" + DECISION + "\",\"title\":\"" + TITLE + "\","
+                + "\"date_created\":\"" + CREATED_ON + "\","
                 + "\"body_md\":\"Первая редакция.\",\"status\":\"proposed\"}")
             .when().post("/lore/decision").then().statusCode(200);
 
