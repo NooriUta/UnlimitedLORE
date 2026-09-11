@@ -1280,8 +1280,26 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   if (!sprint)  return <div style={S.empty}>{t('lore.sprintDetail.notFound', 'Спринт {{sprintId}} не найден.', { sprintId })}</div>;
 
   const status  = normalizeStatus(sprint.status_raw);
-  const ghSlug  = sprint.git_projects?.[0] ?? 'NooriUta/AIDA';
-  const ghBase  = ghSlug.startsWith('http') ? ghSlug : `https://github.com/${ghSlug}`;
+  // RM-P7: репозиторий берём, только когда он известен ОДНОЗНАЧНО.
+  //
+  // Здесь стояло `sprint.git_projects?.[0] ?? 'NooriUta/AIDA'`, и обе половины
+  // выражения врали по-своему. Умолчание приписывало спринт без проекта
+  // монорепозиторию — ссылка вела в чужой репозиторий и выглядела рабочей.
+  // А `[0]` у спринта с двумя репозиториями молча выбирал один из них: номера
+  // PR и версии релизов между репозиториями совпадают (13 пересечений по
+  // корпусу), так что «#612» открывался бы в соседнем проекте — и отличить это
+  // от верной ссылки на глаз нельзя.
+  //
+  // Поэтому `null` вместо догадки: ниже такие ссылки не рисуются вовсе, и
+  // вместо ложной ссылки видно, что репозиторий не определён. Та же развилка,
+  // что на сервере (`LoreReleaseResource.projectOf` → null, а не умолчание).
+  const sprintRepos = [...new Set(sprint.git_projects ?? [])];
+  const ghSlug  = sprintRepos.length === 1 ? sprintRepos[0] : null;
+  const ghBase  = ghSlug == null ? null
+    : ghSlug.startsWith('http') ? ghSlug : `https://github.com/${ghSlug}`;
+  const noRepoHint = sprintRepos.length === 0
+    ? t('lore.sprintDetail.noRepo.none', 'У спринта нет привязанного репозитория — ссылку построить не из чего')
+    : t('lore.sprintDetail.noRepo.many', 'Спринт привязан к нескольким репозиториям ({{n}}) — какой из них имеется в виду, неизвестно', { n: sprintRepos.length });
   // Prefer the structured IMPLEMENTED_IN_RELEASE edge (accurate — ADR-bridge + curated
   // status ship-patterns); fall back to the version named in status_raw for sprints
   // that have no edge yet.
@@ -1292,7 +1310,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   const prNums  = parsePrRefs(sprint.pr_refs);
   // ADR-018 §7: compose PR URLs from the project's hosts[] template (not a baked-in
   // host). Falls back to the GitHub-shaped ghBase for projects with no hosts yet.
-  const prHosts   = projectHosts[ghSlug] ?? [];
+  const prHosts   = ghSlug ? (projectHosts[ghSlug] ?? []) : [];
   const prPrimary = primaryHost(prHosts);
   const prMirrors = prPrimary ? prHosts.filter(h => h !== prPrimary) : [];
 
@@ -1415,6 +1433,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         const releaseOptions = allReleases.filter(r =>
           !linkedReleases.includes(r.id) &&
           (sprintProjects.length === 0 || sprintProjects.includes(r.gitProject)));
+        // RM-P7: репозиторий отвязываемого релиза берём У САМОГО РЕЛИЗА, а не
+        // «первый проект спринта». Версии повторяются между репозиториями (13
+        // пересечений по корпусу), и `release_uid` собирается как
+        // «репозиторий#версия» — ошибка в репозитории отвязывает ЧУЖОЙ релиз,
+        // отвечая при этом ok.
+        const releaseProject = (v: string): string | null => {
+          const cands = allReleases.filter(r => r.id === v
+            && (sprintProjects.length === 0 || sprintProjects.includes(r.gitProject)));
+          return cands.length === 1 ? cands[0].gitProject : null;
+        };
         const showProjects = linkedProjects.length > 0 || unlinkedProjects.length > 0;
         const showRelease = displayReleases.length > 0 || releaseOptions.length > 0;
         const showPr = prNums.length > 0;
@@ -1477,19 +1505,28 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                     <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={t('lore.sprintDetail.releaseBar.goToRelease', 'Перейти к релизу {{v}}', { v })}>
                       {v}
                     </button>
-                    <a
-                      href={`${ghBase}/releases/tag/${v}`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={S.ghLink} title={t('lore.sprintDetail.releaseBar.githubRelease', 'GitHub Release {{v}}', { v })}
-                    ><GhIcon /></a>
+                    {ghBase
+                      ? <a
+                          href={`${ghBase}/releases/tag/${v}`}
+                          target="_blank" rel="noopener noreferrer"
+                          style={S.ghLink} title={t('lore.sprintDetail.releaseBar.githubRelease', 'GitHub Release {{v}}', { v })}
+                        ><GhIcon /></a>
+                      // Ссылки нет — и это сказано вслух, а не спрятано: молча
+                      // убранная иконка неотличима от «релиз без тега».
+                      : <span style={{ ...S.ghLink, opacity: 0.35, cursor: 'help' }} title={noRepoHint}><GhIcon /></span>}
                     {linkedReleases.includes(v) && (
                       <button
-                        disabled={relLinking}
-                        title={t('lore.sprintDetail.releaseBar.unlink', 'Отвязать {{v}}', { v })}
+                        disabled={relLinking || releaseProject(v) == null}
+                        title={releaseProject(v) == null
+                          ? t('lore.sprintDetail.releaseBar.unlinkUnknownRepo',
+                              'Не отвязать: непонятно, релиз какого репозитория имеется в виду — версия {{v}} встречается больше чем в одном', { v })
+                          : t('lore.sprintDetail.releaseBar.unlink', 'Отвязать {{v}}', { v })}
                         onClick={async () => {
+                          const gp = releaseProject(v);
+                          if (gp == null) return;
                           setRelLinking(true);
                           try {
-                            await linkSprintRelease(sprint.sprint_id, v, sprintProjects[0] ?? ghSlug, 'remove');
+                            await linkSprintRelease(sprint.sprint_id, v, gp, 'remove');
                             setSprint(s => s ? { ...s, release_ids: (s.release_ids ?? []).filter(x => x !== v) } : s);
                           } catch (e) { onError(e); } finally { setRelLinking(false); }
                         }}
@@ -1554,7 +1591,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
                              style={{ ...S.prLink, fontSize: 'var(--fs-2xs)', opacity: 0.7 }}>⧉</a>
                         ))}
                       </span>
-                    : <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>#{n}</a>
+                    : ghBase
+                      ? <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>#{n}</a>
+                      // Номер показываем, ссылку — нет. Номера PR повторяются
+                      // между репозиториями, и «куда-нибудь» здесь хуже, чем никуда.
+                      : <span key={n} style={{ ...S.prLink, opacity: 0.6, cursor: 'help' }} title={noRepoHint}>#{n}</span>
                 ))}
               </span>
             )}
