@@ -152,3 +152,40 @@ tasks.named('test') {
         }
     }
 }
+
+// SE-10: отметка сборки — из какого коммита собран бэкенд.
+//
+// MCP-сервер сессий собирается из основного чекаута руками и живёт своей
+// жизнью: 10.09.2026 он оказался на 281 коммит позади develop, и правки схем
+// инструментов до агентов не доходили. Чтобы расхождение стало ВИДНЫМ, обе
+// стороны обязаны знать свою сборку; эта задача — половина бэкенда.
+//
+// Коммит берётся из LORE_BUILD_COMMIT (CD передаёт github.sha аргументом
+// сборки образа: .git в контекст образа не попадает), иначе спрашивается у
+// git (локальная сборка), иначе «unknown» — честное значение, а не пустота:
+// пустое поле неотличимо от «ручки нет».
+//
+// upToDateWhen { false }: время сборки меняется всегда, кэшировать нечего.
+def buildInfoDir = layout.buildDirectory.dir('generated-resources/build-info')
+def buildInfoRepoDir = projectDir
+tasks.register('generateBuildInfo') {
+    def outFile = buildInfoDir.map { it.file('build-info.properties') }
+    outputs.file(outFile)
+    outputs.upToDateWhen { false }
+    doLast {
+        String commit = (System.getenv('LORE_BUILD_COMMIT') ?: '').trim()
+        if (commit.isEmpty()) {
+            try {
+                def proc = ['git', 'rev-parse', '--short=12', 'HEAD'].execute(null, buildInfoRepoDir)
+                proc.waitForOrKill(5000)
+                if (proc.exitValue() == 0) commit = proc.text.trim()
+            } catch (Exception ignored) { }
+        }
+        if (commit.isEmpty()) commit = 'unknown'
+        def f = outFile.get().asFile
+        f.parentFile.mkdirs()
+        f.text = "commit=${commit}\nbuilt_at=${java.time.Instant.now()}\n"
+    }
+}
+sourceSets.main.resources.srcDir(buildInfoDir)
+tasks.named('processResources') { dependsOn('generateBuildInfo') }
