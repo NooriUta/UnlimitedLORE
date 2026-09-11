@@ -71,6 +71,8 @@ services:
         # Флипать ВМЕСТЕ с VITE_* у фронта (docs/AUTH_OMILORE.md).
         LORE_AUTH_ENABLED: ${LORE_AUTH_ENABLED:-}
         LORE_OIDC_ISSUER: ${LORE_OIDC_ISSUER:-}
+        # SE-10: коммит, из которого собран бэкенд — для /lore/version.
+        LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
         # Зеркало Nexus для Gradle ВНУТРИ сборки образа. Это отдельный Gradle,
         # не тот, что на шагах раннера: он не наследует ни прокси раннера, ни
         # его gradle.properties, и ходит наружу сам.
