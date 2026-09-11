@@ -389,7 +389,7 @@ public class LoreSearchResource extends LoreResourceBase {
                 // честный. Межтиповое сравнение задаёт type_priority. Это
                 // ОСОЗНАННАЯ приблизительность (ADR-033 §Consequences).
                 double max = rows.stream()
-                    .mapToDouble(r -> ((Number) r.getOrDefault("score", 1.0)).doubleValue())
+                    .mapToDouble(LoreSearchResource::scoreOf)
                     .max().orElse(1.0);
                 double p = prio.getOrDefault(b.type(), b.priority());
                 int taken = 0;
@@ -415,7 +415,7 @@ public class LoreSearchResource extends LoreResourceBase {
                         byProject.merge(String.valueOf(pr), 1, Integer::sum);
                     }
                     if (taken++ >= perType) continue; // фасет считаем по всем, в выдачу — квоту
-                    double raw = ((Number) r.getOrDefault("score", 1.0)).doubleValue();
+                    double raw = scoreOf(r);
                     double bm25 = max <= 0 ? 1.0 : raw / max;
                     // SRCH-09: ранг отдаётся РАЗЛОЖЕННЫМ. Итоговое число само по
                     // себе необъяснимо: «6.44» не отвечает, почему задача выше
@@ -715,7 +715,7 @@ public class LoreSearchResource extends LoreResourceBase {
         Map<String, Object> hit = new LinkedHashMap<>();
         hit.put("ref_id", r.get("ref_id"));
         hit.put("title", r.get("title"));
-        hit.put("score", r.getOrDefault("score", 1.0));
+        hit.put("score", scoreOf(r));
 
         // Где совпало: первое текстовое поле с токеном запроса. Совпадение может
         // быть морфологическим (поле «релиза», запрос «релиз») — тогда точного
@@ -831,6 +831,35 @@ public class LoreSearchResource extends LoreResourceBase {
         Set<String> out = new LinkedHashSet<>();
         for (String p : s.split(",")) if (!p.isBlank()) out.add(p.trim());
         return out;
+    }
+
+    /**
+     * Ранг строки; {@code 1.0}, если движок его не посчитал.
+     *
+     * <p>Здесь стояло {@code ((Number) r.getOrDefault("score", 1.0)).doubleValue()},
+     * и это была ошибка ровно на один случай: {@code getOrDefault} подставляет
+     * умолчание, только когда ключа НЕТ. Ключ есть всегда — ветка выбирает
+     * {@code $score} прямо в SELECT, — а вот ЗНАЧЕНИЕ приходит {@code null} у
+     * каждой строки, которую нашёл не индекс, а вторая половина условия
+     * {@code id ILIKE :idlike OR SEARCH_INDEX(...)}. То есть у любого попадания
+     * ПО КОДУ записи, когда текст запроса в полнотекст не попал.
+     *
+     * <p>Цена этой мелочи была непропорциональной. NPE вылетал не в строке, а в
+     * обходе ветки целиком, и внешний {@code catch} честно записывал ветку в
+     * {@code warnings} — со всеми её находками. Наружу это выглядело как «такой
+     * записи нет»: поиск по {@code FEAT-M} не находил только что созданный
+     * FEAT-M, хотя строка лежала в базе и добывалась обычным {@code ILIKE}.
+     *
+     * <p>Замерено на живой БД: {@code SELECT uc_id, $score FROM KnowUseCase
+     * WHERE (uc_id ILIKE '%UC-VP-MERGE%' OR SEARCH_INDEX('ftKnowUseCase', …))}
+     * отдаёт {@code score: null} при непустом {@code uc_id}.
+     *
+     * <p>Единица — то же значение, что ветка проставляет себе сама на сканном
+     * пути ({@code 1.0 AS score}): совпадение по коду ранжировать нечем, и
+     * нейтральный вес честнее выдуманного.
+     */
+    static double scoreOf(Map<String, Object> r) {
+        return r.get("score") instanceof Number n ? n.doubleValue() : 1.0;
     }
 
     private static double round3(double v) { return Math.round(v * 1000.0) / 1000.0; }

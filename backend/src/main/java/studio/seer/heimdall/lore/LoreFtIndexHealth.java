@@ -67,6 +67,32 @@ public class LoreFtIndexHealth {
     private volatile Map<String, Boolean> cache;
     private volatile long cachedAt;
 
+    /**
+     * Индексы, по которым вердикта НЕТ: на момент проверки тип был пуст, и
+     * {@link #checkOne} честно вернул {@code null} — «проверять было не на чем».
+     *
+     * <p><b>Зачем отдельное множество.</b> Без него «не на чем проверить»
+     * сливалось с «пригоден»: {@link #check()} собирает только ПЛОХИЕ находки,
+     * а {@link #usable} на отсутствие ключа отвечает «да». Вердикт, взятый на
+     * пустом типе, жил дальше десять минут TTL — и всё, что записали в это
+     * окно, искалось через индекс, который тогда ещё нечем было проверить.
+     *
+     * <p>Именно это уронило CI 10–11.09: на свежей тест-БД проверка проходила
+     * по пустым типам, ответ «пригоден» кэшировался, тест создавал запись и
+     * тут же искал её — поиск шёл в индекс и возвращал ПУСТО, а страховка
+     * (ветка сканом) не срабатывала, потому что индекс числился исправным.
+     * Симптом в тесте выглядел как {@code Actual: null}, то есть «записи нет»,
+     * хотя запись создалась и лежит в базе.
+     *
+     * <p>Замерено на оставшейся тест-БД {@code lore_ci_test}:
+     * {@code SEARCH_INDEX('ftKnowUseCase','Merge')} → 0, при том что
+     * {@code title LIKE '%Merge%'} → 1.
+     *
+     * <p>Это тот же класс, что «пустой ответ ≠ не найдено», только внутри
+     * самой проверки: непроведённая проверка выглядела как успешная.
+     */
+    private volatile Set<String> undetermined = Set.of();
+
     @Inject
     LoreIngestService ingest;
 
@@ -81,14 +107,8 @@ public class LoreFtIndexHealth {
      * список значит «всем веткам поиска можно верить».
      */
     public List<Finding> check() {
-        Set<String> types = new HashSet<>();
-        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:types", Map.of())) {
-            types.add(String.valueOf(r.get("name")));
-        }
         List<Finding> bad = new ArrayList<>();
-        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
-            if (!types.contains(ix.type())) continue;   // свежая БД — типа ещё нет
-            Finding f = checkOne(ix);
+        for (Finding f : checkAll().values()) {
             if (f != null && !f.ok()) bad.add(f);
         }
         if (!bad.isEmpty()) {
@@ -96,6 +116,28 @@ public class LoreFtIndexHealth {
                 + "отдаёт неполную выдачу, молча. Подробности: %s", bad.size(), bad);
         }
         return bad;
+    }
+
+    /**
+     * Вердикт по КАЖДОМУ индексу реестра, включая {@code null} — «проверять
+     * было не на чем, тип пуст».
+     *
+     * <p>Отдельный метод нужен потому, что {@link #check()} по своему договору
+     * отдаёт только плохие находки, и на его выдаче «не на чем проверить»
+     * неотличимо от «пригоден». Разницу обязан видеть кэш: первое надо
+     * перепроверить, как только в типе появятся данные, второе — нет.
+     */
+    Map<String, Finding> checkAll() {
+        Set<String> types = new HashSet<>();
+        for (Map<String, Object> r : ingest.queryPublic("SELECT name FROM schema:types", Map.of())) {
+            types.add(String.valueOf(r.get("name")));
+        }
+        Map<String, Finding> all = new HashMap<>();
+        for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
+            if (!types.contains(ix.type())) continue;   // свежая БД — типа ещё нет
+            all.put(ix.name(), checkOne(ix));           // значение null — тип пуст
+        }
+        return all;
     }
 
     /**
@@ -120,12 +162,61 @@ public class LoreFtIndexHealth {
         if (snapshot == null || System.currentTimeMillis() - cachedAt > TTL_MS) {
             snapshot = refresh();
         }
+        // Вердикт, взятый на ПУСТОМ типе, кэшировать нельзя: данные появляются
+        // в любой момент, а срок жизни кэша — десять минут. Перепроверяем такой
+        // индекс адресно, одной-двумя пробами, и только когда данные появились,
+        // записываем настоящий вердикт.
+        if (undetermined.contains(indexName)) return recheckUndetermined(indexName);
         return snapshot.getOrDefault(indexName, true);
+    }
+
+    /**
+     * Перепроверить индекс, по которому вердикта не было.
+     *
+     * <p>Тип всё ещё пуст — отвечаем «пригоден»: искать в нём нечего, и ветка
+     * через индекс вернёт пусто ровно так же, как вернул бы скан. Данные
+     * появились — считаем настоящий вердикт, кладём в кэш и снимаем индекс с
+     * перепроверки, чтобы не платить пробами на каждый запрос.
+     *
+     * <p>Проба не удалась — отвечаем «НЕ пригоден», то есть уводим ветку на
+     * скан. Здесь это безопасная сторона: скан отдаёт полную выдачу, теряется
+     * только ранжирование, тогда как ошибка в другую сторону отдаёт МОЛЧА
+     * неполную. Ровно из-за неё и написан этот метод.
+     */
+    private boolean recheckUndetermined(String indexName) {
+        LoreSchemaMigrations.FtIndex ix = LoreSchemaMigrations.FT_INDEXES.stream()
+            .filter(i -> i.name().equals(indexName)).findFirst().orElse(null);
+        if (ix == null) return true;                    // индекса нет в реестре — не наше дело
+        Finding f;
+        try {
+            f = checkOne(ix);
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE FT] %s: перепроверка не удалась (%s) — ветка идёт сканом",
+                indexName, LoreUpstream.detail(e));
+            return false;
+        }
+        if (f == null) return true;                     // тип всё ещё пуст — искать нечего
+        synchronized (this) {
+            Map<String, Boolean> next = new HashMap<>(cache == null ? Map.of() : cache);
+            if (!f.ok()) next.put(indexName, false);
+            cache = next;
+            Set<String> rest = new HashSet<>(undetermined);
+            rest.remove(indexName);
+            undetermined = Set.copyOf(rest);
+        }
+        if (!f.ok()) {
+            LOG.errorf("[LORE FT] %s признан непригодным при первой же записи в тип: %s",
+                indexName, f.detail());
+        }
+        return f.ok();
     }
 
     /** Сбросить кэш — после пересоздания индексов ждать TTL незачем. */
     public void invalidate() {
         cache = null;
+        // Список «без вердикта» — часть того же снимка: оставить его значило бы
+        // перепроверять по устаревшему списку индексы, которые уже пересобраны.
+        undetermined = Set.of();
     }
 
     private synchronized Map<String, Boolean> refresh() {
@@ -135,7 +226,16 @@ public class LoreFtIndexHealth {
 
         Map<String, Boolean> fresh = new HashMap<>();
         try {
-            for (Finding f : check()) fresh.put(f.index(), false);
+            Set<String> undet = new HashSet<>();
+            for (Map.Entry<String, Finding> e : checkAll().entrySet()) {
+                if (e.getValue() == null) undet.add(e.getKey());          // проверять было не на чем
+                else if (!e.getValue().ok()) fresh.put(e.getKey(), false);
+            }
+            undetermined = Set.copyOf(undet);
+            if (!undet.isEmpty()) {
+                LOG.infof("[LORE FT] без вердикта (тип пуст): %d — эти индексы будут "
+                    + "перепроверены, как только в типе появятся данные: %s", undet.size(), undet);
+            }
         } catch (RuntimeException e) {
             // Проверить не удалось — оставляем прежний вердикт, а если его не
             // было, пустая карта означает «всё пригодно» (см. javadoc usable).
