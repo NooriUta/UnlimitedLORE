@@ -1384,7 +1384,12 @@
         "goToRelease": "Go to release {{v}}",
         "githubRelease": "GitHub Release {{v}}",
         "unlink": "Unlink {{v}}",
+        "unlinkUnknownRepo": "Cannot unlink: it is unclear which repository's release this is — version {{v}} occurs in more than one",
         "linkPlaceholder": "+ link release…"
+      },
+      "noRepo": {
+        "none": "This sprint has no linked repository — there is nothing to build the link from",
+        "many": "This sprint is linked to several repositories ({{n}}) — which one is meant is unknown"
       },
       "prBar": {
         "label": "PR",
