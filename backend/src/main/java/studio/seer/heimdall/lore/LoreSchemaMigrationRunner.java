@@ -429,6 +429,7 @@ public class LoreSchemaMigrationRunner {
         if (version == 39) dropTaskRoleFields();
         if (version == 28) recreateFtIndexes();
         if (version == 41) normalizeHistValidFrom();
+        if (version == 46) backfillDroppedRoleNotes();
     }
 
     /**
@@ -1368,6 +1369,102 @@ public class LoreSchemaMigrationRunner {
         LOG.infof("[LORE MIGRATE] V39: поля роли сняты, рёбер роли %d (не изменилось)", edgesAfter);
     }
 
+
+    /**
+     * V46 (AO-05): значения роли, сохранённые шагом V38 в примечаниях, становятся
+     * рёбрами на единственного агента AGENT-FULL; исходная строка уезжает в
+     * атрибут ребра {@code origin} — ДОСЛОВНО.
+     *
+     * <h3>Почему один агент и почему дословно</h3>
+     *
+     * Решение владельца 31.08.2026: «все агент full, атрибуты за тобой». Заявленная
+     * агентная личность одна, значит на вопрос «кто» ответ один — включая
+     * volva-team (похоже на команду) и ui-design (похоже на дисциплину): завести
+     * под них личность значило бы повторить ошибку, из которой выросли 73
+     * написания. Что различалось — ГДЕ работала сессия, и это кладётся в origin
+     * как есть; «gateway-session ≈ серверная часть» — вывод, а не факт.
+     *
+     * <h3>Что считается</h3>
+     *
+     * В лог идёт число ЗНАЧЕНИЙ (рёбер), а не примечаний: расхождение «124 против
+     * 123» родилось ровно на смешении этих единиц. Разбирается только блок V38 на
+     * своей строке ({@link DroppedRoleNote}), метка в прозе не считается.
+     *
+     * <h3>Идемпотентность и отказ</h3>
+     *
+     * Ребро ставится только там, где для пары «задача + роль» открытого ребра нет;
+     * повторный прогон ничего не добавляет. Блоки в примечаниях НЕ удаляются — это
+     * след происхождения. Личности AGENT-FULL нет в графе — шаг ПРЕРЫВАЕТСЯ:
+     * CREATE EDGE с пустым TO — тихий no-op, и «создано 0» выглядело бы успехом.
+     */
+    void backfillDroppedRoleNotes() {
+        if (!typeExists("KnowTask")) {
+            LOG.info("[LORE MIGRATE] V46: типа KnowTask нет — свежая БД, доводить нечего");
+            return;
+        }
+        TaskRoleMapping.Target full = TaskRoleMapping.of("claude-full");
+        if (full == null || !full.isAgent()) {
+            throw new IllegalStateException("[LORE MIGRATE] V46: таблица сопоставления не знает "
+                + "личность полного агента — шаг не может выбрать цель ребра");
+        }
+        final String agent = full.identity();
+        List<Map<String, Object>> who = ingest.queryPublic(
+            "SELECT count(*) AS n FROM KnowActor WHERE actor_id = :a", Map.of("a", agent));
+        long present = who.isEmpty() ? 0 : ((Number) who.get(0).getOrDefault("n", 0)).longValue();
+        if (present == 0) {
+            List<Map<String, Object>> any = ingest.queryPublic(
+                "SELECT count(*) AS n FROM KnowTaskHist WHERE valid_to IS NULL AND note_md LIKE :m",
+                Map.of("m", "%" + DroppedRoleNote.MARKER + "%"));
+            long candidates = any.isEmpty() ? 0 : ((Number) any.get(0).getOrDefault("n", 0)).longValue();
+            if (candidates == 0) {
+                LOG.infof("[LORE MIGRATE] V46: личности %s нет и блоков V38 нет — доводить нечего", agent);
+                return;
+            }
+            throw new IllegalStateException("[LORE MIGRATE] V46: в графе НЕТ личности " + agent
+                + ", а примечаний с блоком V38 — " + candidates
+                + ". Ребро на отсутствующую вершину не создаётся молча; сначала заведите личность.");
+        }
+
+        String now = Instant.now().toString();
+        int values = 0, created = 0, already = 0, notes = 0;
+        Map<String, Integer> byOrigin = new LinkedHashMap<>();
+
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, note_md FROM KnowTaskHist "
+            + "WHERE valid_to IS NULL AND note_md LIKE :m",
+            Map.of("m", "%" + DroppedRoleNote.MARKER + "%"));
+
+        for (Map<String, Object> r : rows) {
+            String uid = str(r.get("task_uid"));
+            if (uid == null || uid.isBlank()) continue;
+            List<DroppedRoleNote.Entry> entries = DroppedRoleNote.parse(str(r.get("note_md")));
+            if (entries.isEmpty()) continue; // метка в прозе — не блок
+            notes++;
+            for (DroppedRoleNote.Entry e : entries) {
+                values++;
+                if (hasOpenRoleEdge(uid, e.role())) { already++; continue; }
+                exec(String.format(
+                    "CREATE EDGE ROLE_HELD_BY FROM (SELECT FROM KnowTask WHERE task_uid = '%s') "
+                    + "TO (SELECT FROM KnowActor WHERE actor_id = '%s') "
+                    + "SET role = '%s', valid_from = '%s', origin = '%s'",
+                    esc(uid), esc(agent), esc(e.role()), now, esc(e.origin())));
+                created++;
+                byOrigin.merge(e.origin(), 1, Integer::sum);
+            }
+        }
+
+        LOG.infof("[LORE MIGRATE] V46: значений в блоках %d (примечаний %d): рёбер на %s создано %d, "
+            + "уже было %d", values, notes, agent, created, already);
+        if (created > 0) {
+            StringBuilder sb = new StringBuilder();
+            int shown = 0;
+            for (Map.Entry<String, Integer> o : byOrigin.entrySet()) {
+                if (shown++ >= 40) { sb.append("…"); break; }
+                sb.append(o.getKey()).append(" ×").append(o.getValue()).append("; ");
+            }
+            LOG.infof("[LORE MIGRATE] V46: origin по написаниям (%d): %s", byOrigin.size(), sb);
+        }
+    }
     private int countRoleEdges() {
         List<Map<String, Object>> r = ingest.queryPublic(
             "SELECT count(*) AS n FROM ROLE_HELD_BY WHERE valid_to IS NULL", Map.of());
