@@ -139,6 +139,15 @@ public class LoreProductAxisResource extends LoreResourceBase {
             //     случайный — расхождение без признака ошибки.
             //   Поэтому для parent снимаем ВСЕ исходящие, как relinkAreaEdge
             //   делает для области (там та же кардинальность 0..1).
+            // RM-P15: прежний родитель читается ДО сноса, а не выводится из числа
+            // снятых рёбер. После dropAllParents «сменили родителя» и «переставили
+            // того же» выглядят одинаково — снято одно ребро в обоих случаях, — и
+            // ответ описывал повтор как изменение. Вызывающий, который ведёт
+            // журнал или сверяет раскладку, насчитал бы правки там, где ничего не
+            // менялось. ADR-LORE-043: исход выводится из ФАКТА, а не из того,
+            // какие команды выполнились.
+            final String prevParent = "parent".equals(rel) ? currentParent(code) : null;
+
             int removed = "parent".equals(rel)
                 ? dropAllParents(code)
                 : dropEdges(edgeType, rel, code, target);
@@ -167,10 +176,20 @@ public class LoreProductAxisResource extends LoreResourceBase {
             body.put("target_id", target);
             body.put("action", "added");
             if ("component".equals(rel)) body.put("role", roleValue);
-            // Для parent видно, была ли это СМЕНА родителя или первичная
-            // привязка: из «ok:true» одно от другого не отличить, а разница
-            // существенная — смена молча переносит целое поддерево продуктов.
-            if ("parent".equals(rel)) body.put("previous_parent_removed", removed > 0);
+            // Для parent исходов ТРИ, а не два, и они обязаны быть различимы.
+            // «Ничего не изменилось», «сменили родителя» и «поставили первого» —
+            // разные события: смена молча переносит целое поддерево продуктов,
+            // а повтор не переносит ничего. Прежний родитель называется по
+            // имени: без него «сменили» не говорит, с чего именно.
+            if ("parent".equals(rel)) {
+                if (target.equals(prevParent)) {
+                    body.put("action", "already_linked");
+                    body.put("previous_parent_removed", false);
+                } else {
+                    body.put("previous_parent_removed", prevParent != null);
+                    if (prevParent != null) body.put("previous_parent", prevParent);
+                }
+            }
             return noStore(Response.ok(body));
         } catch (Exception e) {
             LOG.warnf("[LORE PRODUCT LINK] %s %s %s→%s: %s", action, rel, code, target, e.getMessage());
@@ -228,6 +247,34 @@ public class LoreProductAxisResource extends LoreResourceBase {
             }
         }
         return false;
+    }
+
+    /**
+     * Код нынешнего родителя продукта, либо {@code null}, если его нет.
+     *
+     * <p>Читается ДО сноса рёбер: после {@link #dropAllParents} оба случая —
+     * «был другой родитель» и «был тот же» — выглядят одинаково, и различить их
+     * уже нечем.
+     *
+     * <p>Сверка не удалась — отвечаем {@code null}, то есть «родителя не было».
+     * Врать в другую сторону нельзя: ложное «был такой же» превратило бы
+     * настоящую смену родителя в «ничего не изменилось», а смена переносит
+     * поддерево.
+     */
+    private String currentParent(String code) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT out('PARENT_PRODUCT').code AS parent FROM KnowDictEntry "
+                + "WHERE dict_type='product' AND code=:code",
+                Map.of("code", code));
+            if (rows.isEmpty()) return null;
+            Object p = rows.get(0).get("parent");
+            if (p instanceof List<?> l) p = l.isEmpty() ? null : l.get(0);
+            return p == null ? null : String.valueOf(p);
+        } catch (Exception e) {
+            LOG.warnf("[LORE PRODUCT LINK] current parent of %s unreadable: %s", code, e.getMessage());
+            return null;
+        }
     }
 
     /**

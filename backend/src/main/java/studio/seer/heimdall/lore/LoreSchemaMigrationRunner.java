@@ -309,7 +309,7 @@ public class LoreSchemaMigrationRunner {
         // fresh vs upgrade: есть ли в БД данные, которые можно потерять.
         boolean hasData = !withRetry("проверка данных",
             () -> ingest.queryPublic("SELECT @rid FROM KnowADR LIMIT 1", Map.of())).isEmpty();
-        if (hasData && backupRequired) backupOrDie();
+        if (hasData && backupRequired) backupOnceOrDie(dbVersion);
         else LOG.infof("[LORE MIGRATE] бэкап пропущен (%s)", hasData ? "lore.migrate.backup=false" : "fresh БД, терять нечего");
 
         for (LoreSchemaMigrations.Step s : pending) {
@@ -1783,6 +1783,55 @@ public class LoreSchemaMigrationRunner {
                 if (rows.size() < 5000) break;
             }
             LOG.infof("[LORE MIGRATE] V%d backfill %s: %d строк", version, h.getKey(), total);
+        }
+    }
+
+    /**
+     * RM-P14: один бэкап на НАБОР непринятых шагов, а не на попытку старта.
+     *
+     * <p>Замерено 04.09.2026 на аварии стенда: шаг V43 падал, раннер намеренно
+     * ронял старт, docker перезапускал контейнер — и каждый заход снова снимал
+     * бэкап. За 15 минут накопился <b>51 бэкап на 1.2 ГБ</b>, все — копии
+     * одного и того же состояния: упавший шаг ничего не записал, ledger не
+     * тронут, между попытками база не менялась.
+     *
+     * <p>Множитель максимален там, где он опаснее всего. Ошибка в миграции —
+     * это как раз долгая авария (разбор, правка, CI, выкат), и если она
+     * случится при заполненном диске, к отказу миграции добавится отказ по
+     * месту, а второй замаскирует первый.
+     *
+     * <p><b>Метка — файл в контейнере, а не запись в БД.</b> Её время жизни
+     * должно совпадать с окном цикла перезапуска, и у файла оно совпадает
+     * ТОЧНО: {@code docker restart} сохраняет слой записи, а выкат создаёт
+     * контейнер заново и метку теряет. Метка в БД пережила бы и выкат — то
+     * есть могла бы пропустить бэкап через неделю, когда данные уже другие.
+     * Имя несёт версию схемы: применился хоть один шаг — версия сдвинулась,
+     * метка перестала подходить, следующий бэкап снимется.
+     *
+     * <p>Не смогли прочитать или записать метку — снимаем бэкап. Лишняя копия
+     * дешевле пропущенной.
+     */
+    private void backupOnceOrDie(int dbVersion) {
+        java.nio.file.Path marker = java.nio.file.Path.of(
+            System.getProperty("java.io.tmpdir", "/tmp"), ".lore-backup-v" + dbVersion);
+        try {
+            if (java.nio.file.Files.exists(marker)) {
+                LOG.infof("[LORE MIGRATE] бэкап уже снят в этом контейнере для схемы v%d "
+                    + "(%s) — повторный не снимаем: между попытками база не менялась", dbVersion, marker);
+                return;
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE MIGRATE] метку бэкапа не прочитать (%s) — снимаем бэкап", e.getMessage());
+        }
+        backupOrDie();
+        try {
+            java.nio.file.Files.writeString(marker, Instant.now().toString());
+        } catch (Exception e) {
+            // Не записалась — следующий заход снимет бэкап снова. Это возврат к
+            // прежнему поведению, а не поломка; говорим об этом вслух, чтобы
+            // «опять 50 копий» не искали заново.
+            LOG.warnf("[LORE MIGRATE] метку бэкапа не записать (%s) — при перезапуске "
+                + "бэкап снимется повторно", e.getMessage());
         }
     }
 
