@@ -873,8 +873,22 @@ public class LoreSprintTaskResource extends LoreResourceBase {
         if (req.pr_numbers() == null || req.pr_numbers().isEmpty())
             return badParams("pr_numbers required");
 
+        // RM-P7: репозиторий НАСЛЕДУЕТСЯ от спринта, а не подставляется монорепо.
+        //
+        // Здесь из него собирается адрес PR, и молчаливое «NooriUta/AIDA» давало
+        // ссылку в чужой репозиторий: она открывается, ведёт на существующий PR с
+        // тем же номером и потому не выглядит ошибкой. Спринт свой репозиторий
+        // знает — спрашивать его правильнее, чем угадывать.
+        //
+        // Ноль или несколько проектов у спринта — отказ, а не выбор первого:
+        // «у спринта два репозитория» и «у спринта один» это разные положения,
+        // и брать [0] значило бы решать за вызывающего молча.
         String gp = (req.git_project() != null && !req.git_project().isBlank())
-            ? req.git_project() : "NooriUta/AIDA";
+            ? req.git_project().trim() : sprintProject(req.sprint_id());
+        if (gp == null && (req.repo_url() == null || req.repo_url().isBlank()))
+            return badParams("git_project required: у спринта " + req.sprint_id()
+                + " не ровно один репозиторий, а из него собирается адрес PR. "
+                + "Передайте git_project или repo_url явно — умолчание на монорепозиторий снято (RM-P7).");
         String base = (req.repo_url() != null && !req.repo_url().isBlank())
             ? req.repo_url().replaceAll("/+$", "")
             : "https://github.com/" + gp + "/pull";
@@ -1382,6 +1396,37 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             LOG.warnf("[LORE SPRINT DEP] %s → %s: %s", req.from_sprint(), req.to_sprint(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * RM-P7: единственный репозиторий спринта, либо {@code null}.
+     *
+     * <p>Нужен там, где из репозитория собирается адрес PR. Прежде на его месте
+     * стояло молчаливое {@code "NooriUta/AIDA"}, и ссылка вела в чужой
+     * репозиторий: она открывается, показывает существующий PR с тем же номером
+     * и потому не выглядит ошибкой. Спринт свой репозиторий знает — спросить его
+     * вернее, чем угадать.
+     *
+     * <p>{@code null} при НУЛЕ и при НЕСКОЛЬКИХ проектах, и это не лень: взять
+     * первый значило бы решить за вызывающего молча, а «у спринта два
+     * репозитория» — законное положение (на 27.08.2026 таких спринтов 17).
+     * Сбой пробы тоже даёт {@code null}: не смогли выяснить — не то же самое,
+     * что выяснили.
+     */
+    private String sprintProject(String sprintId) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT out('BELONGS_TO_PROJECT').slug AS gps FROM KnowSprint WHERE sprint_id=:sid",
+                Map.of("sid", sprintId));
+            if (rows.isEmpty()) return null;
+            Object gps = rows.get(0).get("gps");
+            if (!(gps instanceof List<?> l) || l.size() != 1) return null;
+            Object one = l.get(0);
+            return one == null || String.valueOf(one).isBlank() ? null : String.valueOf(one);
+        } catch (Exception e) {
+            LOG.warnf("[LORE PR LINK] проект спринта %s не прочитать: %s", sprintId, e.getMessage());
+            return null;
         }
     }
 }

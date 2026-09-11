@@ -1066,7 +1066,10 @@ export function registerLoreWrite(server: McpServer): void {
       'Use for recording key decisions made during a sprint or design session. ADR-019: a decision is a CHILD of ' +
       'an ADR — pass adr_id to link it (DECIDED_IN), component_id/tags for the "rule" filters. Stays vertex-only ' +
       '(no history) — consistent with the flat KnowDecision model. AL-79: status is a DICTIONARY value ' +
-      '(decision_status, editable in the admin panel) — free-text statuses are rejected with the allowed list.',
+      '(decision_status, editable in the admin panel) — free-text statuses are rejected with the allowed list. ' +
+      'SE-07: pass project — component_id is NOT a substitute (a component reaches a project only through sprints), ' +
+      'and quality_check now COUNTS the project: a decision with neither its own project edge nor a parent ADR carrying one scores short. ' +
+      'Title is written on EVERY call (there is no title-less update); tags are additive only; a second adr_id ADDS a parent rather than replacing one — multiple parents are intended.',
     schema: {
       decision_id:  z.string().describe('unique id, e.g. "D-2026-047"'),
       title:        z.string(),
@@ -1075,6 +1078,7 @@ export function registerLoreWrite(server: McpServer): void {
       refs_raw:     z.string().optional().describe('free-text references, e.g. "#420, ADR-HND-021"'),
       component_id: z.string().optional().describe('ADR-019: component this decision belongs to (filter axis)'),
       adr_id:       z.string().optional().describe('ADR-019: parent ADR — creates a DECIDED_IN edge to it'),
+      project:      z.string().optional().describe('git project slug — creates BELONGS_TO_PROJECT. ONLY ADDS: never removes other projects (belonging is multiple by design). A slug missing from the registry is a silent no-op in the graph, so the answer reports project.outcome = linked | noop.'),
       tags:         z.array(z.string()).optional().describe('ADR-019: free tags (KnowTag), e.g. ["stale-versions"]'),
       status:       z.string().optional().describe('AL-79: decision_status dictionary code — proposed|accepted|deferred|superseded (+legacy fixed|done); omit to leave unset/unchanged'),
     },
@@ -1665,6 +1669,52 @@ export function registerLoreWrite(server: McpServer): void {
           product_code, rel, target_id,
           role: role ?? null, action: action ?? 'add',
         }),
+  });
+
+  definePostTool(server, {
+    name: 'milestone_link',
+    description: 'Link (or unlink) a MILESTONE to the PRODUCT whose roadmap it belongs to. ' +
+      'The roadmap belongs to the product, NOT to the git project: a product outlives a repo split ' +
+      'or merge, and in this corpus one tag already sits under two projects while one monorepo holds ' +
+      '267 sprints across a dozen products. The project axis still exists but is the RIGHTS boundary ' +
+      '(the AIDA tenant analogue), and it carries no milestones. ' +
+      'The edge is TARGETS_PRODUCT — a separate type from the component axis IN_PRODUCT on purpose: ' +
+      'a component IS IN a product, a milestone TARGETS one, and the products slice reads membership ' +
+      'as in(IN_PRODUCT).component_id, so milestones on the shared type would arrive there as nulls. ' +
+      'The product is a dictionary entry (KnowDictEntry, dict_type="product") — create it with dict_set, ' +
+      'not here. A milestone may target several products; add is idempotent. Both ends are checked ' +
+      'before the write — a missing one is a 400, not a silent no-op that would answer ok:true on ' +
+      'unwritten work. Mutates the shared system_aida_lore.',
+    schema: {
+      milestone_id: z.string().describe('milestone id, e.g. "M4"'),
+      rel: z.literal('product').describe('only "product" for now — a milestone belongs to a product roadmap'),
+      target_id: z.string().describe('product dictionary code, e.g. "AIDA", "OMILORE", "HOUND"'),
+      action: z.enum(['add', 'remove']).optional().describe('default "add"'),
+    },
+    path: '/lore/milestone/product',
+    body: ({ milestone_id, target_id, action }) => ({
+      milestone_id, product_code: target_id, action: action ?? 'add',
+    }),
+  });
+
+  definePostTool(server, {
+    name: 'milestone_sprints',
+    description: 'Attach (or detach) a LIST of sprints to one milestone in a single call — ' +
+      'TARGETS_MILESTONE edges. sprint_link(rel="milestone") does one at a time, and a roadmap of ' +
+      'twenty sprints then takes twenty calls, which in practice means it never gets built. ' +
+      'The answer carries a per-sprint outcome, not one summary ok: a batch verdict is exactly the ' +
+      'shape in which "two of these sprints do not exist" looks like success. One sprint that could ' +
+      'not be linked does not cancel the rest — the batch is not a transaction and does not pretend ' +
+      'to be one. Mutates the shared system_aida_lore.',
+    schema: {
+      milestone_id: z.string().describe('milestone id, e.g. "M4"'),
+      sprint_ids: z.array(z.string()).min(1).describe('sprint ids, e.g. ["SPRINT_ARC26", "SPRINT_BRAGI_ARCHIVE"]'),
+      action: z.enum(['add', 'remove']).optional().describe('default "add"'),
+    },
+    path: '/lore/milestone/sprints',
+    body: ({ milestone_id, sprint_ids, action }) => ({
+      milestone_id, sprint_ids, action: action ?? 'add',
+    }),
   });
 
   definePostTool(server, {

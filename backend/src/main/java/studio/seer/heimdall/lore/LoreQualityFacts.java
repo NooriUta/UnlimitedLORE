@@ -91,6 +91,12 @@ public class LoreQualityFacts {
         DECISION("decision", "KnowDecision", "decision_id",
             // status_raw, а не status — см. D-2026-LORE-QUALITY-NO-PHANTOM-CHECKS
             "status_raw AS status, body_md, "
+            + "out('BELONGS_TO_PROJECT').slug AS projects, "
+            // Проект решения бывает УНАСЛЕДОВАННЫМ от родительского ADR, и это
+            // законно: 56 решений из 200 держатся только так. Гейт, требующий
+            // СВОЁ ребро, заругал бы их все — а ложные находки приучают не
+            // смотреть на гейт вовсе, и он умирает как проверка.
+            + "out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug AS adr_projects, "
             + "out('DECIDED_IN').size()       AS adr_count, "
             + "out('BELONGS_TO').component_id AS components, "
             + "out('TAGGED_WITH').tag_id      AS tags"),
@@ -127,7 +133,13 @@ public class LoreQualityFacts {
             + "parent_id, "
             + "out('PARENT_OF').component_id AS parent_edge"),
         MILESTONE("milestone", "KnowMilestone", "milestone_id",
-            "label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints"),
+            "label, date_display, in('TARGETS_MILESTONE').sprint_id AS sprints, "
+            // RM-S3: продукт вехи — факт отсюда, а не своей копией проекции по
+            // месту. Правило уже трижды нарушалось до его введения (v1.7.1:
+            // статус решения читался не из того поля, у спеки проверялось
+            // несуществующее поле, у релиза поиск шёл по неуникальному номеру
+            // версии и вердикт отчитывался по чужому релизу).
+            + "out('TARGETS_PRODUCT').code AS products"),
         QUESTION("question", "KnowQuestion", "question_id",
             "title, status, owner, due_date, out('RAISED_IN').adr_id AS links");
 
@@ -192,8 +204,12 @@ public class LoreQualityFacts {
                 }
                 case DECISION: {
                     boolean hasAdr = r.get("adr_count") instanceof Number n && n.intValue() > 0;
+                    // Своё ребро, иначе унаследованное от ADR — тот же порядок,
+                    // по которому проект показывает лента.
+                    Object projects = r.get("projects");
+                    if (!any(projects)) projects = r.get("adr_projects");
                     return WorkQuality.evaluateDecision(s(r, "status"), s(r, "body_md"), hasAdr,
-                        r.get("components"), r.get("tags"));
+                        r.get("components"), r.get("tags"), projects);
                 }
                 case SPEC: {
                     // Любой из трёх способов привязки засчитывается. Требовать
@@ -215,7 +231,8 @@ public class LoreQualityFacts {
                     return WorkQuality.evaluateComponent(s(r, "full_name"), s(r, "area"),
                         s(r, "owner"), s(r, "game_icon"), s(r, "parent_id"), r.get("parent_edge"));
                 case MILESTONE:
-                    return WorkQuality.evaluateMilestone(s(r, "label"), s(r, "date_display"), r.get("sprints"));
+                    return WorkQuality.evaluateMilestone(s(r, "label"), s(r, "date_display"),
+                        r.get("sprints"), r.get("products"));
                 case QUESTION:
                     return WorkQuality.evaluateQuestion(s(r, "title"), s(r, "status"), s(r, "owner"),
                         s(r, "due_date"), r.get("links"));

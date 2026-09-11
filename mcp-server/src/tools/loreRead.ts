@@ -2,11 +2,47 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ACTIVE_PROJECT, loreGet, loreSlice, loreSlices } from '../backend.js';
 
-// ADR-LORE-017 (T16): Tier 1 — slices with a direct project relationship (today: sprints,
-// via BELONGS_TO_PROJECT — see LoreSlices.java's "sprints" optionalFilters). Extend this set
-// as more slices grow a `project` optional filter; Tier 2 (Task/Component/ADR/tech-registry)
-// deliberately never gets one (cross-project by design, see the ADR).
-const PROJECT_SCOPED_SLICES = new Set(['sprints']);
+// ADR-LORE-017 (T16): slices that take a `project` param inherit LORE_ACTIVE_PROJECT
+// when the caller omits it. Tier 2 (Task/Component/ADR/tech-registry) deliberately
+// never grows one — cross-project by design, see the ADR.
+//
+// RM-P8: the set is DERIVED from the backend registry, not hand-maintained here.
+// It used to be a literal `new Set(['sprints'])` with a comment saying "extend this
+// as more slices grow a project filter" — and by the time anyone looked, the backend
+// had six such slices and this file still had one. A hand-copied list is a second
+// source of truth, and the corpus already pays for that mistake elsewhere (the
+// PROJECT_SCOPED read-scope table, the twice-declared git_projects slice).
+//
+// Note these are two DIFFERENT things that only sound alike: LoreSlices.PROJECT_SCOPED
+// is the RBAC read-scope (who may see what), while this is the convenience default
+// (which project to assume when the caller names none). Merging them would be wrong.
+let projectAwareSlices: Set<string> | undefined;
+let projectAwareFailure: string | undefined;
+
+/**
+ * Does this slice take a `project` param? `undefined` = could not find out.
+ *
+ * The three answers stay distinct on purpose. "No" and "could not ask" would
+ * otherwise both silently mean "no default applied", and an unscoped answer
+ * would look exactly like a correctly scoped one.
+ */
+async function sliceTakesProject(slice: string): Promise<boolean | undefined> {
+  if (!projectAwareSlices && !projectAwareFailure) {
+    try {
+      const payload = (await loreSlices()) as {
+        slices?: Array<{ id: string; required?: string[]; optional?: string[] }>;
+      };
+      projectAwareSlices = new Set(
+        (payload.slices ?? [])
+          .filter((s) => [...(s.required ?? []), ...(s.optional ?? [])].includes('project'))
+          .map((s) => s.id),
+      );
+    } catch (e) {
+      projectAwareFailure = (e as Error).message ?? String(e);
+    }
+  }
+  return projectAwareSlices ? projectAwareSlices.has(slice) : undefined;
+}
 
 const json = (data: unknown) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -40,10 +76,12 @@ export function registerLoreRead(server: McpServer): void {
       'params {"id":"ADR-FE-001"}, "spec_by_id" with params {"id":"..."}, ' +
       '"search" with params {"pattern":"..."}. Use list_slices for the full ' +
       'catalog and each slice\'s required params. ' +
-      'ADR-LORE-017: project-scoped slices (currently "sprints") accept an optional ' +
-      '`project` param (git_project slug) — omit it to fall back to the session\'s ' +
-      'LORE_ACTIVE_PROJECT default, if set; passing one that differs from that default ' +
-      'is allowed but the response carries a `_warning` field so the mismatch is never silent.',
+      'ADR-LORE-017: slices that take a `project` param (git_project slug) — the set is read ' +
+      'from the backend registry, not hard-coded here — fall back to the session\'s ' +
+      'LORE_ACTIVE_PROJECT default when you omit it; passing one that differs from that default ' +
+      'is allowed but the response carries a `_warning` field so the mismatch is never silent. ' +
+      'If the registry cannot be reached, NO default is applied and the response says so — ' +
+      'an unscoped answer must not look like a scoped one.',
     {
       slice: z.string().describe('slice id from list_slices, e.g. "sprints"'),
       params: z
@@ -55,10 +93,14 @@ export function registerLoreRead(server: McpServer): void {
       try {
         const effectiveParams = { ...(params ?? {}) };
         let warning: string | undefined;
-        if (PROJECT_SCOPED_SLICES.has(slice) && ACTIVE_PROJECT) {
-          if (effectiveParams.project === undefined) {
+        if (ACTIVE_PROJECT) {
+          const takesProject = await sliceTakesProject(slice);
+          if (takesProject === undefined) {
+            warning = `LORE_ACTIVE_PROJECT="${ACTIVE_PROJECT}" was NOT applied: the slice registry ` +
+              `could not be read (${projectAwareFailure}). These rows are NOT limited to that project.`;
+          } else if (takesProject && effectiveParams.project === undefined) {
             effectiveParams.project = ACTIVE_PROJECT;
-          } else if (effectiveParams.project !== ACTIVE_PROJECT) {
+          } else if (takesProject && effectiveParams.project !== ACTIVE_PROJECT) {
             warning = `project="${effectiveParams.project}" differs from the session's active project ` +
               `("${ACTIVE_PROJECT}", from LORE_ACTIVE_PROJECT) — proceeding with the explicit value.`;
           }

@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prebuild": "node scripts/write-build-info.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.0",

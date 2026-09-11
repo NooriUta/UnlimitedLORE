@@ -155,6 +155,11 @@ COPY db-schema ./db-schema
 #
 # Тот же класс отказа уже ловили на CORS_ORIGINS (MIG-23): пустая строка из
 # `${VAR:-}` перекрывает дефолт конфига и выглядит как «настройка не применилась».
+# SE-10: коммит сборки приходит АРГУМЕНТОМ из CD (.git в контекст образа не
+# попадает — он в .dockerignore), Gradle кладёт его в build-info.properties.
+# Пусто — Gradle спросит git сам (локальная сборка), иначе «unknown».
+ARG LORE_BUILD_COMMIT=""
+ENV LORE_BUILD_COMMIT=$LORE_BUILD_COMMIT
 ARG LORE_AUTH_ENABLED=false
 ARG LORE_OIDC_ISSUER=http://localhost:18180/kc/realms/omilore
 ENV LORE_AUTH_ENABLED=$LORE_AUTH_ENABLED \

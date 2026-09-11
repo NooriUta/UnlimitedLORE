@@ -309,7 +309,7 @@ public class LoreSchemaMigrationRunner {
         // fresh vs upgrade: есть ли в БД данные, которые можно потерять.
         boolean hasData = !withRetry("проверка данных",
             () -> ingest.queryPublic("SELECT @rid FROM KnowADR LIMIT 1", Map.of())).isEmpty();
-        if (hasData && backupRequired) backupOrDie();
+        if (hasData && backupRequired) backupOnceOrDie(dbVersion);
         else LOG.infof("[LORE MIGRATE] бэкап пропущен (%s)", hasData ? "lore.migrate.backup=false" : "fresh БД, терять нечего");
 
         for (LoreSchemaMigrations.Step s : pending) {
@@ -428,6 +428,99 @@ public class LoreSchemaMigrationRunner {
         if (version == 38) preserveRoleFieldsIntoNote();
         if (version == 39) dropTaskRoleFields();
         if (version == 28) recreateFtIndexes();
+        if (version == 41) normalizeHistValidFrom();
+        if (version == 46) backfillDroppedRoleNotes();
+    }
+
+    /**
+     * RM-P12: приводит {@code valid_from} у *Hist к ISO-8601 UTC.
+     *
+     * <p>Идёт ДО объявления свойства (V42) — см. комментарий к шагу V41: SQL
+     * шага выполняется раньше его javaStep, поэтому объявление и приведение
+     * разнесены по двум шагам, а не сделаны одним.
+     *
+     * <p>Идемпотентен: канонические строки {@link #toIsoUtc} возвращает как
+     * {@code null}, и такая строка не переписывается. Повторный прогон шага
+     * (или его прогон на свежей БД, где приводить нечего) безвреден.
+     *
+     * <p>Неизвестная форма НЕ трогается и НЕ проглатывается: она попадает в
+     * отдельный счётчик и в лог с примером. Молчаливый пропуск здесь был бы
+     * тем же «пустой ответ вместо непроверенного», на котором в этом корпусе
+     * уже обжигались: строка осталась бы кривой, а шаг отчитался бы успехом.
+     */
+    private void normalizeHistValidFrom() {
+        for (String type : LoreSchemaMigrations.HIST_VALID_FROM_TEXT) {
+            int seen = 0, fixed = 0, unknown = 0;
+            String unknownSample = null;
+            while (true) {
+                List<Map<String, Object>> rows = ingest.queryPublic(
+                    "SELECT @rid AS rid, valid_from FROM " + type
+                    + " WHERE valid_from IS NOT NULL SKIP " + seen + " LIMIT 5000", Map.of());
+                if (rows.isEmpty()) break;
+                seen += rows.size();
+                for (Map<String, Object> r : rows) {
+                    Object raw = r.get("valid_from");
+                    String iso = toIsoUtc(raw);
+                    if (iso == null) {
+                        if (!isCanonicalIsoUtc(raw)) {
+                            unknown++;
+                            if (unknownSample == null) unknownSample = String.valueOf(raw);
+                        }
+                        continue;
+                    }
+                    command("UPDATE " + r.get("rid") + " SET valid_from = :vf", Map.of("vf", iso));
+                    fixed++;
+                }
+                if (rows.size() < 5000) break;
+            }
+            if (unknown > 0) {
+                LOG.warnf("[LORE MIGRATE] V41 %s: %d из %d строк непонятной формы — оставлены как есть "
+                    + "(пример: %s). Их valid_from по-прежнему не сравним с остальными.",
+                    type, unknown, seen, unknownSample);
+            }
+            LOG.infof("[LORE MIGRATE] V41 %s: приведено %d из %d (непонятных %d)", type, fixed, seen, unknown);
+        }
+    }
+
+    /** Уже канонический вид — переписывать нечего. */
+    private static boolean isCanonicalIsoUtc(Object v) {
+        return v instanceof String s && s.length() > 11 && s.charAt(10) == 'T' && s.endsWith("Z");
+    }
+
+    /**
+     * Одно значение {@code valid_from} → ISO-8601 UTC, или {@code null}, если
+     * переписывать не надо (уже канонично) либо не по чему (форма неизвестна).
+     *
+     * <p>Замеренные на проде 04.09.2026 виды и что с ними делаем:
+     * <pre>
+     *   "2026-08-31T12:34:56.789Z"     уже канон              → null
+     *   "2026-06-11 22:26:41[.nnn]"    пробел вместо T, без Z → T + "Z"
+     *   "2026-06-14"                   только дата            → полночь UTC
+     *   "2026-06-23T18:19:56.359765"   ISO без зоны           → + "Z"
+     *   1781569369738                  эпоха числом           → Instant
+     * </pre>
+     *
+     * <p>Эпоха разбирается по разрядности, и это не педантизм: сессия шлюза
+     * miniLORE прочитала ровно это значение как СЕКУНДЫ и получила 12.06.2026
+     * вместо 16.06.2026 — ошибка в отчёте родилась из той же неоднозначности,
+     * что и сам баг. Порог 1e11 разводит секунды (до 5138 года) и миллисекунды
+     * (с 1973 года) без пересечения на любых живых датах.
+     */
+    static String toIsoUtc(Object v) {
+        if (v == null) return null;
+        if (v instanceof Number n) {
+            long l = n.longValue();
+            return (l < 100_000_000_000L ? Instant.ofEpochSecond(l) : Instant.ofEpochMilli(l)).toString();
+        }
+        if (!(v instanceof String)) return null;
+        String s = ((String) v).trim();
+        if (s.length() == 10 && s.charAt(4) == '-' && s.charAt(7) == '-') return s + "T00:00:00Z";
+        if (s.length() < 19 || s.charAt(4) != '-' || s.charAt(7) != '-') return null;
+        char sep = s.charAt(10);
+        if (sep != 'T' && sep != ' ') return null;
+        if (sep == 'T' && s.endsWith("Z")) return null;              // канон
+        String body = sep == ' ' ? s.substring(0, 10) + 'T' + s.substring(11) : s;
+        return body.endsWith("Z") ? body : body + "Z";
     }
 
     // DBU-09/DBR-12 (#5321): пересоздать FULL_TEXT-индексы свежими после апгрейда
@@ -1276,6 +1369,102 @@ public class LoreSchemaMigrationRunner {
         LOG.infof("[LORE MIGRATE] V39: поля роли сняты, рёбер роли %d (не изменилось)", edgesAfter);
     }
 
+
+    /**
+     * V46 (AO-05): значения роли, сохранённые шагом V38 в примечаниях, становятся
+     * рёбрами на единственного агента AGENT-FULL; исходная строка уезжает в
+     * атрибут ребра {@code origin} — ДОСЛОВНО.
+     *
+     * <h3>Почему один агент и почему дословно</h3>
+     *
+     * Решение владельца 31.08.2026: «все агент full, атрибуты за тобой». Заявленная
+     * агентная личность одна, значит на вопрос «кто» ответ один — включая
+     * volva-team (похоже на команду) и ui-design (похоже на дисциплину): завести
+     * под них личность значило бы повторить ошибку, из которой выросли 73
+     * написания. Что различалось — ГДЕ работала сессия, и это кладётся в origin
+     * как есть; «gateway-session ≈ серверная часть» — вывод, а не факт.
+     *
+     * <h3>Что считается</h3>
+     *
+     * В лог идёт число ЗНАЧЕНИЙ (рёбер), а не примечаний: расхождение «124 против
+     * 123» родилось ровно на смешении этих единиц. Разбирается только блок V38 на
+     * своей строке ({@link DroppedRoleNote}), метка в прозе не считается.
+     *
+     * <h3>Идемпотентность и отказ</h3>
+     *
+     * Ребро ставится только там, где для пары «задача + роль» открытого ребра нет;
+     * повторный прогон ничего не добавляет. Блоки в примечаниях НЕ удаляются — это
+     * след происхождения. Личности AGENT-FULL нет в графе — шаг ПРЕРЫВАЕТСЯ:
+     * CREATE EDGE с пустым TO — тихий no-op, и «создано 0» выглядело бы успехом.
+     */
+    void backfillDroppedRoleNotes() {
+        if (!typeExists("KnowTask")) {
+            LOG.info("[LORE MIGRATE] V46: типа KnowTask нет — свежая БД, доводить нечего");
+            return;
+        }
+        TaskRoleMapping.Target full = TaskRoleMapping.of("claude-full");
+        if (full == null || !full.isAgent()) {
+            throw new IllegalStateException("[LORE MIGRATE] V46: таблица сопоставления не знает "
+                + "личность полного агента — шаг не может выбрать цель ребра");
+        }
+        final String agent = full.identity();
+        List<Map<String, Object>> who = ingest.queryPublic(
+            "SELECT count(*) AS n FROM KnowActor WHERE actor_id = :a", Map.of("a", agent));
+        long present = who.isEmpty() ? 0 : ((Number) who.get(0).getOrDefault("n", 0)).longValue();
+        if (present == 0) {
+            List<Map<String, Object>> any = ingest.queryPublic(
+                "SELECT count(*) AS n FROM KnowTaskHist WHERE valid_to IS NULL AND note_md LIKE :m",
+                Map.of("m", "%" + DroppedRoleNote.MARKER + "%"));
+            long candidates = any.isEmpty() ? 0 : ((Number) any.get(0).getOrDefault("n", 0)).longValue();
+            if (candidates == 0) {
+                LOG.infof("[LORE MIGRATE] V46: личности %s нет и блоков V38 нет — доводить нечего", agent);
+                return;
+            }
+            throw new IllegalStateException("[LORE MIGRATE] V46: в графе НЕТ личности " + agent
+                + ", а примечаний с блоком V38 — " + candidates
+                + ". Ребро на отсутствующую вершину не создаётся молча; сначала заведите личность.");
+        }
+
+        String now = Instant.now().toString();
+        int values = 0, created = 0, already = 0, notes = 0;
+        Map<String, Integer> byOrigin = new LinkedHashMap<>();
+
+        List<Map<String, Object>> rows = ingest.queryPublic(
+            "SELECT in('HAS_STATE').task_uid[0] AS task_uid, note_md FROM KnowTaskHist "
+            + "WHERE valid_to IS NULL AND note_md LIKE :m",
+            Map.of("m", "%" + DroppedRoleNote.MARKER + "%"));
+
+        for (Map<String, Object> r : rows) {
+            String uid = str(r.get("task_uid"));
+            if (uid == null || uid.isBlank()) continue;
+            List<DroppedRoleNote.Entry> entries = DroppedRoleNote.parse(str(r.get("note_md")));
+            if (entries.isEmpty()) continue; // метка в прозе — не блок
+            notes++;
+            for (DroppedRoleNote.Entry e : entries) {
+                values++;
+                if (hasOpenRoleEdge(uid, e.role())) { already++; continue; }
+                exec(String.format(
+                    "CREATE EDGE ROLE_HELD_BY FROM (SELECT FROM KnowTask WHERE task_uid = '%s') "
+                    + "TO (SELECT FROM KnowActor WHERE actor_id = '%s') "
+                    + "SET role = '%s', valid_from = '%s', origin = '%s'",
+                    esc(uid), esc(agent), esc(e.role()), now, esc(e.origin())));
+                created++;
+                byOrigin.merge(e.origin(), 1, Integer::sum);
+            }
+        }
+
+        LOG.infof("[LORE MIGRATE] V46: значений в блоках %d (примечаний %d): рёбер на %s создано %d, "
+            + "уже было %d", values, notes, agent, created, already);
+        if (created > 0) {
+            StringBuilder sb = new StringBuilder();
+            int shown = 0;
+            for (Map.Entry<String, Integer> o : byOrigin.entrySet()) {
+                if (shown++ >= 40) { sb.append("…"); break; }
+                sb.append(o.getKey()).append(" ×").append(o.getValue()).append("; ");
+            }
+            LOG.infof("[LORE MIGRATE] V46: origin по написаниям (%d): %s", byOrigin.size(), sb);
+        }
+    }
     private int countRoleEdges() {
         List<Map<String, Object>> r = ingest.queryPublic(
             "SELECT count(*) AS n FROM ROLE_HELD_BY WHERE valid_to IS NULL", Map.of());
@@ -1431,6 +1620,7 @@ public class LoreSchemaMigrationRunner {
         }
 
         int created = 0, skipped = 0, replaced = 0, absent = 0;
+        java.util.List<String> absentTypes = new java.util.ArrayList<>();
         for (LoreSchemaMigrations.FtIndex ix : LoreSchemaMigrations.FT_INDEXES) {
             String want = fieldKey(ix.type(), ix.fields());
             if (byName.contains(ix.name())) {
@@ -1445,7 +1635,7 @@ public class LoreSchemaMigrationRunner {
                 byFields.remove(nameToKey.get(ix.name()));
             }
             if (!types.contains(ix.type())) {
-                LOG.warnf("[LORE MIGRATE] тип %s отсутствует — индекс %s пропущен", ix.type(), ix.name());
+                absentTypes.add(ix.type() + "/" + ix.name());
                 absent++;
                 continue;
             }
@@ -1507,6 +1697,20 @@ public class LoreSchemaMigrationRunner {
         }
         LOG.infof("[LORE MIGRATE] полнотекст: создано %d (взамен старых %d), уже было %d, типов нет %d — реестр %d",
             created, replaced, skipped, absent, LoreSchemaMigrations.FT_INDEXES.size());
+        if (!absentTypes.isEmpty()) {
+            // ОДНОЙ строкой, а не по строке на каждый пропуск.
+            //
+            // Раньше печаталось внутри цикла и на КАЖДЫЙ подъём приложения в
+            // тестах: сотни одинаковых строк хоронили сообщения упавших
+            // тестов, и причину красного прогона приходилось выводить из кода,
+            // а не из лога. Печатать проверку так, чтобы её результат нельзя
+            // было прочитать, — та же беда, что мы ловим в данных.
+            //
+            // Находка не заглушена: перечень здесь же и он полнее прежнего —
+            // раньше имена были размазаны по сотням строк.
+            LOG.warnf("[LORE MIGRATE] полнотекст: типов нет для %d индексов — %s",
+                absentTypes.size(), String.join(", ", absentTypes));
+        }
 
         int expected = LoreSchemaMigrations.FT_INDEXES.size() - absent;
         if (created + skipped < expected) {
@@ -1676,6 +1880,55 @@ public class LoreSchemaMigrationRunner {
                 if (rows.size() < 5000) break;
             }
             LOG.infof("[LORE MIGRATE] V%d backfill %s: %d строк", version, h.getKey(), total);
+        }
+    }
+
+    /**
+     * RM-P14: один бэкап на НАБОР непринятых шагов, а не на попытку старта.
+     *
+     * <p>Замерено 04.09.2026 на аварии стенда: шаг V43 падал, раннер намеренно
+     * ронял старт, docker перезапускал контейнер — и каждый заход снова снимал
+     * бэкап. За 15 минут накопился <b>51 бэкап на 1.2 ГБ</b>, все — копии
+     * одного и того же состояния: упавший шаг ничего не записал, ledger не
+     * тронут, между попытками база не менялась.
+     *
+     * <p>Множитель максимален там, где он опаснее всего. Ошибка в миграции —
+     * это как раз долгая авария (разбор, правка, CI, выкат), и если она
+     * случится при заполненном диске, к отказу миграции добавится отказ по
+     * месту, а второй замаскирует первый.
+     *
+     * <p><b>Метка — файл в контейнере, а не запись в БД.</b> Её время жизни
+     * должно совпадать с окном цикла перезапуска, и у файла оно совпадает
+     * ТОЧНО: {@code docker restart} сохраняет слой записи, а выкат создаёт
+     * контейнер заново и метку теряет. Метка в БД пережила бы и выкат — то
+     * есть могла бы пропустить бэкап через неделю, когда данные уже другие.
+     * Имя несёт версию схемы: применился хоть один шаг — версия сдвинулась,
+     * метка перестала подходить, следующий бэкап снимется.
+     *
+     * <p>Не смогли прочитать или записать метку — снимаем бэкап. Лишняя копия
+     * дешевле пропущенной.
+     */
+    private void backupOnceOrDie(int dbVersion) {
+        java.nio.file.Path marker = java.nio.file.Path.of(
+            System.getProperty("java.io.tmpdir", "/tmp"), ".lore-backup-v" + dbVersion);
+        try {
+            if (java.nio.file.Files.exists(marker)) {
+                LOG.infof("[LORE MIGRATE] бэкап уже снят в этом контейнере для схемы v%d "
+                    + "(%s) — повторный не снимаем: между попытками база не менялась", dbVersion, marker);
+                return;
+            }
+        } catch (Exception e) {
+            LOG.warnf("[LORE MIGRATE] метку бэкапа не прочитать (%s) — снимаем бэкап", e.getMessage());
+        }
+        backupOrDie();
+        try {
+            java.nio.file.Files.writeString(marker, Instant.now().toString());
+        } catch (Exception e) {
+            // Не записалась — следующий заход снимет бэкап снова. Это возврат к
+            // прежнему поведению, а не поломка; говорим об этом вслух, чтобы
+            // «опять 50 копий» не искали заново.
+            LOG.warnf("[LORE MIGRATE] метку бэкапа не записать (%s) — при перезапуске "
+                + "бэкап снимется повторно", e.getMessage());
         }
     }
 

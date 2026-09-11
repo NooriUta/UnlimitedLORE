@@ -79,7 +79,10 @@ public class AgentScopeFilter implements ContainerRequestFilter {
      * Семейство → профили, которым разрешена запись. Ключ — первый сегмент пути
      * после {@code /lore/}. Значения без префикса {@code agent-}.
      */
-    private static final Map<String, Set<String>> FAMILY_AGENTS = Map.ofEntries(
+    // Пакетная видимость, а не private: набор читает сторож расхождения
+    // AgentDefinitionsMatchMatrixTest — белые списки в .claude/agents обязаны
+    // быть зеркалом этой матрицы, и расходиться они не должны молча.
+    static final Map<String, Set<String>> FAMILY_AGENTS = Map.ofEntries(
         // developer заводит ADR (README профилей: adr_new) — решение владельца
         // 2026-07-18. Создание и правка неразделимы по пути: adr_new и adr_set
         // оба идут в POST /lore/adr (upsert). А вот разрушающие операции
@@ -320,10 +323,28 @@ public class AgentScopeFilter implements ContainerRequestFilter {
     }
 
     /**
+     * Значение-отказ для токена с двумя РАЗНЫМИ профилями (AO-07, 10.09.2026).
+     *
+     * <p>Не совпадает ни с одним профилем матрицы, поэтому любая запись такого
+     * вызывающего отказывает. Это НЕ null намеренно: null для фильтра значит
+     * «человек, не агент», а такого пропускают вовсе без агентских ограничений —
+     * неоднозначный токен получил бы больше прав, чем любой из его профилей.
+     */
+    static final String AMBIGUOUS_SCOPE = "__ambiguous_agent_scope__";
+
+    /**
      * Значение {@code agent_scope} без префикса {@code agent-}, либо null для человека.
-     * Клейм многозначный (client-роли), но профиль у токена ровно один — берём первый
-     * подходящий, а не склеиваем: два профиля в одном токене означали бы ошибку
-     * провижининга, и молча выбирать «самый широкий» было бы опаснее, чем отказать.
+     *
+     * <p>Клейм многозначный (client-роли), но профиль у токена ровно один. Два
+     * РАЗНЫХ профиля означают ошибку провижининга, и на них возвращается
+     * {@link #AMBIGUOUS_SCOPE} — отказ. Один профиль, повторённый маппером, —
+     * не неоднозначность и определяется как этот профиль.
+     *
+     * <p>До 10.09.2026 этот javadoc обещал ровно такое поведение («молча выбирать
+     * было бы опаснее, чем отказать»), а код брал первый элемент. Расхождение
+     * было безвредным, пока у токена был один профиль; с профильными клиентами
+     * неверная настройка ролей дала бы агенту права случайного из двух — без
+     * единой ошибки.
      */
     private String agentScope() {
         return agentScopeOf(identity);
@@ -338,14 +359,21 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         if (!(identity.getPrincipal() instanceof JsonWebToken jwt)) return null;
         Object raw = jwt.getClaim("agent_scope");
         if (raw == null) return null;
-        String first = null;
+        java.util.Set<String> profiles = new java.util.LinkedHashSet<>();
         if (raw instanceof Collection<?> c) {
-            for (Object o : c) { first = unquote(String.valueOf(o)); break; }
+            for (Object o : c) addProfile(profiles, unquote(String.valueOf(o)));
         } else {
-            first = unquote(String.valueOf(raw));
+            addProfile(profiles, unquote(String.valueOf(raw)));
         }
-        if (first == null || first.isBlank()) return null;
-        return first.startsWith("agent-") ? first.substring("agent-".length()) : first;
+        if (profiles.isEmpty()) return null;
+        if (profiles.size() > 1) return AMBIGUOUS_SCOPE;
+        return profiles.iterator().next();
+    }
+
+    /** Нормализует значение клейма к имени профиля; пустые пропускает, повторы схлопывает Set. */
+    private static void addProfile(java.util.Set<String> out, String value) {
+        if (value == null || value.isBlank()) return;
+        out.add(value.startsWith("agent-") ? value.substring("agent-".length()) : value);
     }
 
     /**

@@ -26,7 +26,7 @@ public class LoreDecisionResource extends LoreResourceBase {
     // AL-79: status — значение словаря decision_status (V14), не свободный текст.
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
         String date_created, String refs_raw, String component_id, String adr_id,
-        java.util.List<String> tags, String status) {}
+        java.util.List<String> tags, String status, String project) {}
 
     /**
      * AL-79: фолбэк на случай пустого словаря (свежая БД до сидов) — тот же
@@ -70,6 +70,23 @@ public class LoreDecisionResource extends LoreResourceBase {
             return badParams("status must be one of: "
                 + dictCodes("decision_status", DECISION_STATUSES_FALLBACK)
                 + " (словарь decision_status, правится в админке)");
+        // SE-02: у решения нет истории (плоская модель), поэтому «когда его
+        // правили» жить может только отметкой на вершине. Пробуем СУЩЕСТВОВАНИЕ
+        // ДО записи: после UPSERT «была ли запись раньше» уже неотличимо от
+        // «появилась сейчас», и правка стала бы неотличима от создания.
+        boolean existedBefore;
+        try {
+            existedBefore = !ingestService.queryPublic(
+                "SELECT decision_id FROM KnowDecision WHERE decision_id = :did LIMIT 1",
+                Map.of("did", req.decision_id())).isEmpty();
+        } catch (Exception probeFailed) {
+            // Не молча: не сумев спросить, мы НЕ ЗНАЕМ, правка это или создание.
+            // Считать «создание» безопаснее — лишнего события в ленте не будет,
+            // но и врать о правке мы не станем.
+            LOG.warnf("[LORE DECISION] проба существования %s не удалась: %s — считаю созданием",
+                req.decision_id(), probeFailed.getMessage());
+            existedBefore = false;
+        }
         try {
             // LH-44: only SET provided fields — a title-only re-call must not wipe
             // body_md/refs_raw or reset date_created to today.
@@ -86,6 +103,14 @@ public class LoreDecisionResource extends LoreResourceBase {
             if (req.status() != null && !req.status().isBlank()) {
                 dsql.append(", status_raw=:st"); p.put("st", req.status());
             }
+            // Отметка правки ставится ТОЛЬКО существовавшей записи: у новой
+            // «изменено» совпало бы с «создано» по дню и дало бы в ленте два
+            // события об одном факте.
+            if (existedBefore) {
+                dsql.append(", updated_at=:upd");
+                p.put("upd", java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            }
             dsql.append(" UPSERT WHERE decision_id=:did");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 dsql.toString(), p)).await().indefinitely();
@@ -101,6 +126,25 @@ public class LoreDecisionResource extends LoreResourceBase {
                     "CREATE EDGE DECIDED_IN FROM (SELECT FROM KnowDecision WHERE decision_id=:did) " +
                     "TO (SELECT FROM KnowADR WHERE adr_id=:adr) IF NOT EXISTS",
                     Map.of("did", req.decision_id(), "adr", req.adr_id()))).await().indefinitely();
+            }
+            // SE-07: проект РЯДОМ с компонентом, где его и ищут.
+            //
+            // Параметра проекта у инструмента не было вовсе, и связь ставилась
+            // отдельным вызовом, о котором в момент записи ничто не напоминало.
+            // Компонент проектом не подменяется: он связан с проектом только
+            // через спринты — то есть пишущий добросовестно указывал компонент
+            // и получал запись без принадлежности. Владелец ловила это трижды
+            // за две недели, и каждый раз была права.
+            //
+            // Только ДОБАВЛЯЕТ: снятие и множественная привязка остаются за
+            // decision_link. Принадлежность у нас множественна по замыслу
+            // (решение владельца о совместных ADR и спринтах), поэтому запись
+            // одного проекта не имеет права стереть остальные.
+            if (req.project() != null && !req.project().isBlank()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowDecision WHERE decision_id=:d) " +
+                    "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
+                    Map.of("d", req.decision_id(), "p", req.project()))).await().indefinitely();
             }
             if (req.tags() != null) {
                 for (String tag : req.tags()) {
@@ -121,6 +165,18 @@ public class LoreDecisionResource extends LoreResourceBase {
             // ни один слайс их связи не показывает. Инструмент при этом всегда
             // отвечал ok:true — отказ выглядел успехом.
             linkComponentEdge("KnowDecision", "decision_id", req.decision_id(), req.component_id(), out);
+            // Факт, а не намерение: CREATE EDGE к НЕЗАРЕГИСТРИРОВАННОМУ проекту —
+            // тихий no-op, и ответ ok:true выглядел бы подтверждением связи,
+            // которой нет. Спрашиваем ребро после записи и говорим прямо.
+            if (req.project() != null && !req.project().isBlank()) {
+                boolean linked = edgeExists("BELONGS_TO_PROJECT", "decision_id", req.decision_id(),
+                    "slug", req.project());
+                out.put("project", Map.of("slug", req.project(),
+                    "outcome", linked ? "linked" : "noop"));
+                if (!linked) LOG.warnf("[LORE DECISION] проект %s не привязан к %s — "
+                    + "такого проекта нет в реестре (заводится через project_new)",
+                    req.project(), req.decision_id());
+            }
             // Вердикт полноты (ADR-LORE-039): решение без родителя-ADR или из
             // одного заголовка — ярлык, а не правило. Advisory, на запись не влияет.
             WorkQuality.Result quality = decisionQuality(req.decision_id());

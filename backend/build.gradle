@@ -85,3 +85,107 @@ tasks.named('test') {
         showStackTraces = true
     }
 }
+
+// Описания подагентов — ВХОДНЫЕ ДАННЫЕ тестов, а не посторонние файлы.
+//
+// Сторож AgentDefinitionsMatchMatrixTest сверяет белые списки в
+// .claude/agents с матрицей прав. Но Gradle об этих файлах не знает, и правка
+// одного лишь .md оставляла задачу «актуальной»: тест не перезапускался и
+// оставался зелёным из кэша — то есть спал ровно в тот момент, ради которого
+// написан. Поймано положительным контролем: подмешанный в белый список
+// чужой инструмент прошёл незамеченным, пока прогон не заставили повториться.
+tasks.named('test') {
+    inputs.dir(layout.projectDirectory.dir('../.claude/agents'))
+        .withPropertyName('agentDefinitions')
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .optional(true)
+}
+// Сводка отказов В САМОМ КОНЦЕ прогона — иначе её не найти.
+//
+// Сообщения упавших тестов мы печатаем с 31.08 (до того в логе был виден
+// только тип исключения). Но печатаются они В МЕСТЕ отказа, а лог CI забит
+// служебными строками: каждый подъём приложения в тестах добавляет свои, и
+// при десятках тест-классов сообщение оказывается за тысячи строк от конца.
+//
+// 10.09 это стоило разбора вслепую: причину красного прогона пришлось
+// выводить из кода, а не из вывода. Инструмент диагностики, результат
+// которого нельзя прочитать, диагностикой не является.
+def loreFailures = []
+tasks.named('test') {
+    afterTest { desc, result ->
+        if (result.resultType == TestResult.ResultType.FAILURE) {
+            // ВСЁ сообщение, а не первая строка. Обрезка по [0] стоила ночи
+            // разбора вслепую 10.09: сводка честно называла упавший тест —
+            // LoreFeatureMergeLiveDbTest.featureTypeIsGone — и обрывалась на
+            // «java.lang.AssertionError: 1 expectation failed». У RestAssured
+            // в первой строке стоит ровно это, а ЧТО ожидалось и ЧТО пришло —
+            // строками ниже. То есть печаталось всё, кроме причины.
+            //
+            // Это тот же дефект, против которого написан комментарий выше, и
+            // он же — в одном шаге от него: сигнал есть, но прочитать по нему
+            // нельзя. Половина диагностики хуже её отсутствия, потому что
+            // создаёт впечатление, что посмотрели.
+            //
+            // Потолок в 25 строк — чтобы стек на сотни кадров не вытеснил из
+            // лога остальные отказы; отрезанное называется числом, а не
+            // молчанием, и путь к полному отчёту печатается рядом.
+            def why = 'без сообщения'
+            if (result.exceptions) {
+                def lines = (result.exceptions[0].toString() ?: '').readLines()
+                def shown = lines.size() > 25
+                    ? lines[0..24] + ["… ещё ${lines.size() - 25} строк — build/reports/tests/test/index.html"]
+                    : lines
+                why = shown.join('\n      ')
+            }
+            loreFailures << "${desc.className.tokenize('.').last()}.${desc.name}\n      ${why}"
+        }
+    }
+    // afterSuite, а НЕ doLast: doLast пропускается, когда задача падает — то
+    // есть сводка печаталась бы ровно тогда, когда она не нужна, и молчала бы
+    // на каждом красном прогоне. Поймано положительным контролем: подмешанный
+    // падающий тест не дал ни строки сводки.
+    afterSuite { desc, result ->
+        if (desc.parent == null && !loreFailures.isEmpty()) {
+            logger.lifecycle("\n==== УПАВШИЕ ТЕСТЫ (${loreFailures.size()}) ====")
+            loreFailures.each { logger.lifecycle("  • ${it}") }
+            logger.lifecycle("==== конец списка ====\n")
+        }
+    }
+}
+
+// SE-10: отметка сборки — из какого коммита собран бэкенд.
+//
+// MCP-сервер сессий собирается из основного чекаута руками и живёт своей
+// жизнью: 10.09.2026 он оказался на 281 коммит позади develop, и правки схем
+// инструментов до агентов не доходили. Чтобы расхождение стало ВИДНЫМ, обе
+// стороны обязаны знать свою сборку; эта задача — половина бэкенда.
+//
+// Коммит берётся из LORE_BUILD_COMMIT (CD передаёт github.sha аргументом
+// сборки образа: .git в контекст образа не попадает), иначе спрашивается у
+// git (локальная сборка), иначе «unknown» — честное значение, а не пустота:
+// пустое поле неотличимо от «ручки нет».
+//
+// upToDateWhen { false }: время сборки меняется всегда, кэшировать нечего.
+def buildInfoDir = layout.buildDirectory.dir('generated-resources/build-info')
+def buildInfoRepoDir = projectDir
+tasks.register('generateBuildInfo') {
+    def outFile = buildInfoDir.map { it.file('build-info.properties') }
+    outputs.file(outFile)
+    outputs.upToDateWhen { false }
+    doLast {
+        String commit = (System.getenv('LORE_BUILD_COMMIT') ?: '').trim()
+        if (commit.isEmpty()) {
+            try {
+                def proc = ['git', 'rev-parse', '--short=12', 'HEAD'].execute(null, buildInfoRepoDir)
+                proc.waitForOrKill(5000)
+                if (proc.exitValue() == 0) commit = proc.text.trim()
+            } catch (Exception ignored) { }
+        }
+        if (commit.isEmpty()) commit = 'unknown'
+        def f = outFile.get().asFile
+        f.parentFile.mkdirs()
+        f.text = "commit=${commit}\nbuilt_at=${java.time.Instant.now()}\n"
+    }
+}
+sourceSets.main.resources.srcDir(buildInfoDir)
+tasks.named('processResources') { dependsOn('generateBuildInfo') }

@@ -35,6 +35,8 @@ class TaskRoleReadFromEdgeLiveDbTest {
     private static final String TASK    = SPRINT + "/RE-1";
     private static final String PERSON  = "RE Человек";
     private static final String AGENT   = "re-agent";
+    /** Читаемое имя агента — именно ОНО обязано попадать в списки. */
+    private static final String AGENT_NAME = "RE агент";
 
     private static io.restassured.specification.RequestSpecification admin() {
         return given().header("X-Seer-Role", "admin").contentType("application/json");
@@ -71,7 +73,14 @@ class TaskRoleReadFromEdgeLiveDbTest {
             .body("rows[0].executor_agent", nullValue());
     }
 
-    /** Ребро появилось — срез обязан его показать, хотя поле пусто. */
+    /**
+     * Ребро появилось — срез обязан показать ЧИТАЕМОЕ ИМЯ, хотя поле пусто.
+     *
+     * <p>Назначаем по идентификатору (`re-agent`), а ждём имя («RE агент») —
+     * то есть проверяем ровно подмену того, что видит человек, не трогая того,
+     * чем пользуются машины. Раньше в списке стоял идентификатор со служебным
+     * хвостом времени заведения: `AGENT-FULL-msbt0fed` в колонке «кто».
+     */
     @Test
     @Order(3)
     void theEdgeShowsUpInTheTaskList() {
@@ -80,7 +89,7 @@ class TaskRoleReadFromEdgeLiveDbTest {
 
         given().when().get("/lore/slice/tasks_of_sprint?sprint_id=" + SPRINT)
             .then().statusCode(200)
-            .body("rows[0].executor_agent", equalTo(AGENT));
+            .body("rows[0].executor_agent", equalTo(AGENT_NAME));
     }
 
     /**

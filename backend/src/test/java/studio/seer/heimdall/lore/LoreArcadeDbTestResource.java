@@ -52,7 +52,7 @@ public class LoreArcadeDbTestResource implements QuarkusTestResourceLifecycleMan
             TEST_DB = System.getenv().getOrDefault("LORE_TEST_DB_NAME", "lore_ci_test");
             ROOT_PASSWORD = System.getenv().getOrDefault("LORE_TEST_DB_PASSWORD", "playwithdata");
         } else {
-            arcade = new GenericContainer<>(DockerImageName.parse("arcadedata/arcadedb:26.7.2"))
+            arcade = new GenericContainer<>(DockerImageName.parse("arcadedata/arcadedb:26.9.1"))
                 .withEnv("JAVA_OPTS", "-Darcadedb.server.rootPassword=" + ROOT_PASSWORD_CONTAINER)
                 .withExposedPorts(2480)
                 .waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofSeconds(60)));

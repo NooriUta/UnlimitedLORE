@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
@@ -35,6 +36,44 @@ class AgentScopeAxisSeparationTest {
     void agentTokenWithAgentScopeClaimYieldsUnprefixedScope() {
         assertEquals("full", AgentScopeFilter.agentScopeOf(identityWithClaim(Map.of("agent_scope", List.of("agent-full")))),
             "агентный токен несёт agent_scope — скоуп обязан извлечься и потерять префикс agent-");
+    }
+
+    /**
+     * Два РАЗНЫХ профиля в одном токене — отказ, а не молчаливый выбор первого.
+     *
+     * <p>Раньше функция брала первый элемент клейма. Её же javadoc при этом
+     * говорит: «два профиля означали бы ошибку провижининга, и молча выбирать
+     * было бы опаснее, чем отказать». Код обещанию не соответствовал: при
+     * неверной настройке ролей агент тихо получал права случайного из двух.
+     *
+     * <p><b>Почему отказ — НЕ null.</b> Для фильтра null значит «человек, не
+     * агент», а такого пропускают вообще без агентских ограничений. Вернуть null
+     * здесь было бы худшим из возможных исправлений: неоднозначный токен получил
+     * бы БОЛЬШЕ прав, чем любой из двух его профилей. Отказ — значение, которое
+     * не совпадает ни с одним профилем матрицы, чтобы любая запись отказывала.
+     */
+    @Test
+    void twoDifferentProfilesInOneTokenAreRefusedNotSilentlyPicked() {
+        String scope = AgentScopeFilter.agentScopeOf(identityWithClaim(
+            Map.of("agent_scope", List.of("agent-architect", "agent-marketer"))));
+        assertEquals(AgentScopeFilter.AMBIGUOUS_SCOPE, scope,
+            "два разных профиля — ошибка провижининга; выбрать первый значит выдать случайные права");
+        assertFalse(AgentScopeFilter.FAMILY_AGENTS.values().stream().anyMatch(s -> s.contains(scope)),
+            "значение отказа обязано не совпадать ни с одним профилем — иначе оно само станет правом");
+    }
+
+    /**
+     * Контроль к предыдущему: один профиль, повторённый дважды, — НЕ неоднозначность.
+     *
+     * <p>Без этой проверки исправление, отказывающее при любом многозначном
+     * клейме, прошло бы предыдущий тест и выглядело бы так же — но отказывало бы
+     * законным токенам, у которых маппер просто продублировал роль.
+     */
+    @Test
+    void theSameProfileRepeatedIsNotAmbiguous() {
+        assertEquals("full", AgentScopeFilter.agentScopeOf(identityWithClaim(
+            Map.of("agent_scope", List.of("agent-full", "agent-full")))),
+            "повтор одного профиля обязан определиться как этот профиль, а не как отказ");
     }
 
     @Test
