@@ -1218,7 +1218,18 @@ final class LoreSchemaMigrations {
         // «когда правили в последний раз» — ровно на тот вопрос, который
         // задаёт лента.
         new Step(45, 17, "decision_updated_at", List.of(
-            "CREATE PROPERTY KnowDecision.updated_at IF NOT EXISTS STRING"))
+            "CREATE PROPERTY KnowDecision.updated_at IF NOT EXISTS STRING")),
+
+        // AO-05 (решение владельца 31.08.2026): 123 значения роли, которые V36/V37
+        // не сопоставили ни с одной личностью, лежат в примечаниях задач блоком V38.
+        // Все они — один и тот же агент AGENT-FULL; различались они тем, ГДЕ
+        // работала сессия (rollout, minilore-app, gateway-session…). Этому факту
+        // в модели ребра места не было — отсюда и остаток. origin — то самое место:
+        // необязательный атрибут ДЕЙСТВИЯ, пишется дословно, без приведения к
+        // общему виду (группировать — отдельным решением, когда будет основание).
+        // Java-часть шага (backfillDroppedRoleNotes) ставит рёбра — см. runner.
+        new Step(46, 17, "role_edge_origin", List.of(
+            "CREATE PROPERTY ROLE_HELD_BY.origin IF NOT EXISTS STRING"))
     );
 
     /**

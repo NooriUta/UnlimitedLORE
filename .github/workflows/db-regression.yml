@@ -15,11 +15,11 @@ on:
       baseline:
         description: 'Текущая рабочая версия — эталон сравнения'
         required: true
-        default: '26.7.2'
+        default: '26.9.1'
       candidate:
         description: 'Версия-кандидат на апгрейд'
         required: true
-        default: '26.8.1'
+        default: '26.9.1'
   schedule:
     # Раз в неделю: ловит новые релизы без ручного захода. Ночь субботы —
     # прогон ни с чем не конкурирует за раннер.
@@ -42,8 +42,8 @@ jobs:
     # шесть правок, любую из которых можно пропустить — а пропуск выглядел бы
     # не ошибкой, а прогоном не той пары версий (ARC281-08).
     env:
-      BASELINE: ${{ inputs.baseline || '26.7.2' }}
-      CANDIDATE: ${{ inputs.candidate || '26.8.1' }}
+      BASELINE: ${{ inputs.baseline || '26.8.1' }}
+      CANDIDATE: ${{ inputs.candidate || '26.9.1' }}
     steps:
       - uses: actions/checkout@v7
 
