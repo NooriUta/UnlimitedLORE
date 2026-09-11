@@ -15,6 +15,7 @@ import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * DBR-08 — {@link LoreFtIndexHealth} на живой БД.
@@ -80,5 +81,41 @@ class LoreFtIndexHealthLiveDbTest {
 
         assertNotNull(f, "на типе с данными проверка обязана дать вердикт, а не пропуск");
         assertFalse(f.ok(), "несуществующий индекс не может считаться пригодным: " + f);
+    }
+
+    /**
+     * «Проверять было не на чем» обязано остаться отдельным состоянием.
+     *
+     * <p>{@link LoreFtIndexHealth#check()} по договору отдаёт только плохие
+     * находки, и на его выдаче пустой тип неотличим от исправного индекса.
+     * Пока это было единственным источником кэша, вердикт «пригоден», взятый
+     * на ПУСТОМ типе, жил десять минут TTL — и все записи, сделанные в это
+     * окно, искались через индекс, который тогда ещё нечем было проверить.
+     *
+     * <p>Проверяется не наличие пустых типов (это свойство стенда), а то, что
+     * такой индекс ПОПАДАЕТ в выдачу {@code checkAll} со значением
+     * {@code null}, а не пропадает из неё: пропасть — значит снова слиться с
+     * «пригоден».
+     */
+    @Test
+    @Order(4)
+    void anEmptyTypeYieldsNoVerdictInsteadOfAPassingOne() {
+        var byIndex = health.checkAll();
+
+        var withoutVerdict = byIndex.entrySet().stream()
+            .filter(e -> e.getValue() == null).map(java.util.Map.Entry::getKey).toList();
+        assumeTrue(!withoutVerdict.isEmpty(),
+            "на этом стенде все типы реестра непусты — проверять нечего");
+
+        // Ни один из них не числится плохим (их никто не проверял)…
+        List<String> bad = health.check().stream().map(LoreFtIndexHealth.Finding::index).toList();
+        for (String name : withoutVerdict) {
+            assertFalse(bad.contains(name), name + " не проверялся — он не может быть «плохим»");
+        }
+        // …и при этом он ЕСТЬ в полной выдаче. Именно это отличает «не на чем
+        // проверить» от «пригоден»: из check() он выпал, из checkAll() — нет.
+        for (String name : withoutVerdict) {
+            assertTrue(byIndex.containsKey(name), name + " обязан быть в выдаче со значением null");
+        }
     }
 }
