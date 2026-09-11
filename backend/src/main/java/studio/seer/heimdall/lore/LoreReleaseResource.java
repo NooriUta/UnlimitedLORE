@@ -73,9 +73,31 @@ public class LoreReleaseResource extends LoreResourceBase {
      * {@code lore.release.default-project}: пусто по умолчанию, то есть
      * «угадывать нельзя», и включается осознанно.
      */
+    /**
+     * Здесь стояло {@code defaultValue = ""} с типом {@code String}, и это
+     * роняло ПРИЛОЖЕНИЕ ЦЕЛИКОМ на старте:
+     *
+     * <pre>ConfigurationException: Failed to load config value of type
+     * class java.lang.String for: lore.release.default-project</pre>
+     *
+     * <p>В MicroProfile Config пустая строка означает «значения нет», а не
+     * «значение — пустая строка». Умолчание конвертируется в {@code null},
+     * обязательное (не-{@code Optional}) поле его не принимает, и
+     * {@code validateRuntimeConfigProperty} валит развёртывание.
+     *
+     * <p>Соседние {@code defaultValue = ""} в корпусе это переживают только
+     * потому, что их ключи ОБЪЯВЛЕНЫ в {@code application.properties}
+     * ({@code lore.qg.actions-projects}, {@code lore.llm.local.model}): ключ
+     * существует, и до умолчания дело не доходит. То есть рабочей эту запись
+     * делает строка в другом файле — связь, которую не видно с места правки.
+     *
+     * <p>{@code Optional} убирает зависимость от неё: «не задано» выражается
+     * типом, а не пустой строкой. Строка в {@code application.properties} всё
+     * равно добавлена — ради того, чтобы настройку было видно оператору.
+     */
     @org.eclipse.microprofile.config.inject.ConfigProperty(
-        name = "lore.release.default-project", defaultValue = "")
-    String defaultReleaseProject;
+        name = "lore.release.default-project")
+    java.util.Optional<String> defaultReleaseProject;
 
     static final String NO_PROJECT =
         "git_project required: релиз адресуется парой «репозиторий#версия» (release_uid), "
@@ -85,8 +107,8 @@ public class LoreReleaseResource extends LoreResourceBase {
 
     private String projectOf(String gitProject) {
         if (gitProject != null && !gitProject.isBlank()) return gitProject.trim();
-        return defaultReleaseProject == null || defaultReleaseProject.isBlank()
-            ? null : defaultReleaseProject.trim();
+        return defaultReleaseProject
+            .map(String::trim).filter(s -> !s.isEmpty()).orElse(null);
     }
 
     @jakarta.inject.Inject
