@@ -89,8 +89,12 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
     return () => ctrl.abort();
   }, [onError]);
 
-  function toggle(uid: string, tag: string, ruid: string, gitTag: string | null) {
+  // RM-P7: ruid может быть null — у записи нет репозитория, и адресовать её
+  // парой «репозиторий#версия» нечем. Раскрываем строку, но связей не грузим:
+  // подставить монорепо значило бы показать связи ЧУЖОГО релиза.
+  function toggle(uid: string, tag: string, ruid: string | null, gitTag: string | null) {
     if (expanded === uid) { setExpanded(null); return; }
+    if (!ruid) { setExpanded(uid); return; }
     setExpanded(uid);
     if (decisions[uid]) return;
     setLoadingDetail(uid);
@@ -123,15 +127,21 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
       .catch(e => { onError(e); setLoadingDetail(null); });
   }
 
-  const projects = ['all', ...Array.from(new Set(rows.map(r => r.git_project ?? 'NooriUta/AIDA')))];
+  // RM-P7: релиз без репозитория — это «не указан», а не монорепо. Подстановка
+  // NooriUta/AIDA молча приписывала запись чужому репозиторию: фильтр по
+  // проекту показывал её среди монорепо, а ссылка вела на существующий PR с
+  // тем же номером — то есть выглядела рабочей. Идиома та же, что у аналитики
+  // («— без проекта»): честное пустое состояние вместо выдуманного значения.
+  const noProject = t('lore.releasesBoard.noProject', '— без репозитория');
+  const projects = ['all', ...Array.from(new Set(rows.map(r => r.git_project ?? noProject)))];
 
   const currentByProject: Record<string, string> = {};
-  rows.forEach(r => { if (r.is_current) currentByProject[r.git_project ?? 'NooriUta/AIDA'] = r.git_tag ?? r.release_id; });
+  rows.forEach(r => { if (r.is_current) currentByProject[r.git_project ?? noProject] = r.git_tag ?? r.release_id; });
 
   const filtered = [...rows]
     .sort(semverCompare)
     .filter(r => {
-      if (projectFilter !== 'all' && (r.git_project ?? 'NooriUta/AIDA') !== projectFilter) return false;
+      if (projectFilter !== 'all' && (r.git_project ?? noProject) !== projectFilter) return false;
       if (onlyCurrent && !r.is_current) return false;
       if (q && !(r.git_tag ?? r.release_id).toLowerCase().includes(q.toLowerCase())) return false;
       return true;
@@ -200,21 +210,30 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
               const id     = r.release_id;
               const uid    = r.release_uid ?? id;
               const tag    = r.git_tag ?? id;
-              const ruid   = r.release_uid ?? `${r.git_project ?? 'NooriUta/AIDA'}#${id}`;
+              // RM-P7: release_uid собирается ТОЛЬКО когда репозиторий известен.
+              // Прежде на его месте подставлялось монорепо, и запрос уходил за
+              // связями ЧУЖОГО релиза: один номер версии живёт в нескольких
+              // репозиториях (13 пересечений на 23.08.2026), и выдача выглядела
+              // осмысленной. Пусто здесь честнее — связи просто не грузятся.
+              const ruid   = r.release_uid ?? (r.git_project ? `${r.git_project}#${id}` : null);
               const isOpen = expanded === uid;
               const decs    = decisions[uid];
               const sprints = sprintRefs[uid];
               const prs     = prRefs[uid];
               const tasks   = taskMap[uid];
               const type   = r.type as string | null;
-              const gp     = r.git_project ?? 'NooriUta/AIDA';
+              const gp     = r.git_project;   // RM-P7: null = репозиторий не указан
               // AL-112: ссылки релиза строятся из hosts[] ПРОЕКТА (remote'ы
               // primary|mirror), а не хардкодом github.com — у проекта с primary
               // на Forgejo ссылка ведёт в Forgejo, а у проекта без github-зеркала
               // больше нет мёртвой github.com-ссылки. Fallback на старый github.com
               // — только когда hosts проекта не заведены (легаси-запись).
               const hosts  = parseHosts(r.project_hosts);
-              const ghUrl  = `https://github.com/${gp}/releases/tag/${tag}`;
+              // RM-P7: без репозитория ссылки нет. Прежде подставлялось монорепо,
+              // и github.com/NooriUta/AIDA/releases/tag/<чужой тег> открывался
+              // как обычная страница «release not found» — то есть выглядел
+              // сломанной ссылкой, а не отсутствующими данными.
+              const ghUrl  = gp ? `https://github.com/${gp}/releases/tag/${tag}` : null;
               return (
                 <div
                   key={uid}
@@ -229,7 +248,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                   </div>
                   <div style={{ ...S.body, ...(narrow ? S.bodyNarrow : null) }}>
                     {projectFilter === 'all' && projects.length > 2 && (
-                      <span style={S.repoBadge} title={gp}>{gp.split('/')[1]}</span>
+                      <span style={S.repoBadge} title={gp ?? noProject}>{gp ? gp.split('/')[1] : noProject}</span>
                     )}
                     {type && <span style={S.typeBadge}>{TYPE_LABEL[type] ?? type}</span>}
                     {r.week != null && <span style={S.weekBadge}>wk {r.week}</span>}
@@ -289,22 +308,26 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                           <>
                             <span style={{ ...S.refLabel, marginTop: sprints?.length ? 8 : 0 }}>{t('lore.releasesBoard.prLabel', 'PR')}</span>
                             {prs.map(p => {
-                              const prGp  = p.git_project ?? 'NooriUta/AIDA';
-                              const prUrl = p.url ?? `https://github.com/${prGp}/pull/${p.pr_number}`;
-                              const prRepo = prGp !== gp ? prGp.split('/')[1] : null;
+                              // RM-P7: у PR без репозитория адрес не собираем.
+                              // Прежде подставлялось монорепо, и ссылка вела на
+                              // СУЩЕСТВУЮЩИЙ чужой PR с тем же номером — она
+                              // открывалась и потому не выглядела ошибкой.
+                              const prGp  = p.git_project;
+                              const prUrl = p.url ?? (prGp ? `https://github.com/${prGp}/pull/${p.pr_number}` : null);
+                              const prRepo = prGp && prGp !== gp ? prGp.split('/')[1] : null;
                               return (
                                 <div key={p.pr_uid ?? p.pr_number} style={S.decisionRef}>
                                   <span style={S.decisionNum}>#{p.pr_number}</span>
                                   {prRepo && <span style={S.prRepo}>{prRepo}</span>}
                                   <span style={S.decisionTitle}>{p.title}</span>
-                                  <a
+                                  {prUrl && <a
                                     href={prUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     onClick={e => e.stopPropagation()}
                                     style={S.ghLink}
-                                    title={t('lore.releasesBoard.prTitle', 'PR #{{number}} · {{project}}', { number: p.pr_number, project: prGp })}
-                                  ><GhIcon /></a>
+                                    title={t('lore.releasesBoard.prTitle', 'PR #{{number}} · {{project}}', { number: p.pr_number, project: prGp ?? noProject })}
+                                  ><GhIcon /></a>}
                                 </div>
                               );
                             })}
@@ -349,7 +372,7 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                           })}
                         >{isGh ? <GhIcon /> : <span style={S.hostLabel}>{label}</span>}</a>
                       );
-                    }) : (
+                    }) : ghUrl ? (
                       <a
                         href={ghUrl}
                         target="_blank"
@@ -358,6 +381,11 @@ export default function LoreReleasesBoard({ q, onClearQ, onError, onNavigateToSp
                         style={S.ghLink}
                         title={t('lore.releasesBoard.githubReleaseTitle', 'GitHub Release {{tag}}', { tag })}
                       ><GhIcon /></a>
+                    ) : (
+                      // RM-P7: репозиторий не указан — ссылки нет и быть не может.
+                      // Показываем это словами, а не мёртвой ссылкой в монорепо.
+                      <span style={S.hostLabel} title={t('lore.releasesBoard.noProjectTitle',
+                        'У релиза не указан репозиторий — ссылку собрать не из чего')}>{noProject}</span>
                     )}
                   </div>
                 </div>

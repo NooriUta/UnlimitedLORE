@@ -1228,9 +1228,15 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
   // git_project column.
   useEffect(() => {
     fetchLoreSlice<{ release_id: string; release_uid: string }>('releases', {})
+      // RM-P7: релиз без известного репозитория ИСКЛЮЧАЕТСЯ из выбора, а не
+      // приписывается монорепо. Привязать его всё равно нельзя — адресация идёт
+      // парой «репозиторий#версия», — а показанный с чужим репозиторием он
+      // привязался бы к ЧУЖОМУ релизу с тем же номером версии (13 пересечений
+      // номеров между репозиториями на 23.08.2026). Отсутствие в списке честнее
+      // строки, которая молча сделает не то.
       .then(rows => setAllReleases((rows ?? []).map(r => ({
-        id: r.release_id, gitProject: r.release_uid?.split('#')[0] ?? 'NooriUta/AIDA',
-      }))))
+        id: r.release_id, gitProject: r.release_uid?.split('#')[0] ?? '',
+      })).filter(r => r.gitProject !== '')))
       .catch(() => {});
   }, []);
 
