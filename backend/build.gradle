@@ -114,7 +114,29 @@ def loreFailures = []
 tasks.named('test') {
     afterTest { desc, result ->
         if (result.resultType == TestResult.ResultType.FAILURE) {
-            def why = result.exceptions ? result.exceptions[0].toString().readLines()[0] : 'без сообщения'
+            // ВСЁ сообщение, а не первая строка. Обрезка по [0] стоила ночи
+            // разбора вслепую 10.09: сводка честно называла упавший тест —
+            // LoreFeatureMergeLiveDbTest.featureTypeIsGone — и обрывалась на
+            // «java.lang.AssertionError: 1 expectation failed». У RestAssured
+            // в первой строке стоит ровно это, а ЧТО ожидалось и ЧТО пришло —
+            // строками ниже. То есть печаталось всё, кроме причины.
+            //
+            // Это тот же дефект, против которого написан комментарий выше, и
+            // он же — в одном шаге от него: сигнал есть, но прочитать по нему
+            // нельзя. Половина диагностики хуже её отсутствия, потому что
+            // создаёт впечатление, что посмотрели.
+            //
+            // Потолок в 25 строк — чтобы стек на сотни кадров не вытеснил из
+            // лога остальные отказы; отрезанное называется числом, а не
+            // молчанием, и путь к полному отчёту печатается рядом.
+            def why = 'без сообщения'
+            if (result.exceptions) {
+                def lines = (result.exceptions[0].toString() ?: '').readLines()
+                def shown = lines.size() > 25
+                    ? lines[0..24] + ["… ещё ${lines.size() - 25} строк — build/reports/tests/test/index.html"]
+                    : lines
+                why = shown.join('\n      ')
+            }
             loreFailures << "${desc.className.tokenize('.').last()}.${desc.name}\n      ${why}"
         }
     }
