@@ -1549,6 +1549,15 @@
         "closed": "closed",
         "released": "released"
       },
+      "created": {
+        "tasks": "tasks opened",
+        "sprints": "sprints created",
+        "other": "other created (ADR, decisions, specs)"
+      },
+      "burn": {
+        "label": "task burn",
+        "hint": "closed {{closed}} − opened {{created}}: plus — backlog shrinks, minus — grows"
+      },
       "group": {
         "flat": "flat",
         "kind": "by type",
