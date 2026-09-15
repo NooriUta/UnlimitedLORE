@@ -4,14 +4,15 @@ import { BURN_H } from './sprintBurndown';
 // Регресс 15.09.2026 (владелец: «это очень внезапно»): SVG с одним viewBox и
 // width=100% масштабировал ВЫСОТУ вместе с шириной панели — на широком экране
 // burn-down вырастал до ~400px и выталкивал задачи спринта за экран.
-// Высота обязана быть фиксированной и небольшой, свёрнутый вид — спарклайн.
-describe('burn-down: высота фиксирована, а не пропорциональна ширине', () => {
-  it('свёрнутый — строка-спарклайн не выше 32px', () => {
-    expect(BURN_H.collapsed).toBeGreaterThan(0);
-    expect(BURN_H.collapsed).toBeLessThanOrEqual(32);
+// Затем (владелец: «убери график, сделай его соразмерным в конце блока
+// описания спринта») график переехал в конец блока «Контекст»: одна
+// фиксированная высота, соразмерная тексту описания, без сворачивания.
+describe('burn-down: одна фиксированная высота, соразмерная блоку описания', () => {
+  it('высота в пределах 48–80px — не спарклайн и не на пол-экрана', () => {
+    expect(BURN_H.inline).toBeGreaterThanOrEqual(48);
+    expect(BURN_H.inline).toBeLessThanOrEqual(80);
   });
-  it('развёрнутый — не выше 140px', () => {
-    expect(BURN_H.expanded).toBeGreaterThan(BURN_H.collapsed);
-    expect(BURN_H.expanded).toBeLessThanOrEqual(140);
+  it('размеров свёрнутого/развёрнутого больше нет — переключателя нет', () => {
+    expect(Object.keys(BURN_H)).toEqual(['inline']);
   });
 });

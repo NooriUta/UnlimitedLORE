@@ -1667,6 +1667,8 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
         ) : (
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t4)', fontStyle: 'italic' }}>{t('lore.sprintDetail.context.empty', 'Контекст не заполнен')}</div>
         )}
+        {/* Burn-down — в конце блока описания, по ширине колонки (решение владельца 15.09.2026) */}
+        {!ctxEdit && <SprintBurndownChart sprintId={sprintId} />}
       </div>
 
       {/* Drag handle — resizes META RIGHT (mirrors LorePage's .lore-resize-handle).
@@ -1903,7 +1905,6 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
       {/* ── Tasks (full width, scrollable) ── */}
       <div className="lore-sprint-detail-tasks" style={{ flex: 1, overflowY: 'auto' as const }}>
-      <SprintBurndownChart sprintId={sprintId} />
       <div style={S.section}>
         {/* Phases (when present) each with their tasks */}
         {phases.length > 0 && (
