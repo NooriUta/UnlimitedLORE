@@ -376,6 +376,16 @@ public class AidaLoreResource extends LoreResourceBase {
                 String sid = firstStr(s.get("sprint_id"));
                 items.add(newsItem("sprint", date, timeOf(s.get("done_date")), sprintName.getOrDefault(sid, sid), "closed", null, projectList(sprintProject.get(sid)), sid));
             }
+            // Событие «спринт создан» — по created_date вершины (не valid_from:
+            // тот SCD2 и равен дате последнего состояния). Без него «появилось»
+            // в ленте не отличало новый спринт от новой задачи.
+            Set<String> sprintCreatedSeen = new HashSet<>();
+            for (Map<String, Object> s : sprints) {
+                String sid = firstStr(s.get("sprint_id"));
+                String date = dayOf(s.get("created_date"));
+                if (sid == null || date == null || !sprintCreatedSeen.add(sid)) continue;
+                items.add(newsItem("sprint", date, timeOf(s.get("created_date")), sprintName.getOrDefault(sid, sid), "created", null, projectList(sprintProject.get(sid)), sid));
+            }
             // created-день и заголовок по id — нужны событию «изменено» ниже:
             // день создания из changed исключаем, заголовок берём человекочитаемый.
             Map<String, String> decisionCreatedDay = new HashMap<>(), decisionTitle = new HashMap<>();
