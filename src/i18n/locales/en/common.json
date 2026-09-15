@@ -1305,6 +1305,16 @@
       "emptyContent": "Content is empty."
     },
     "sprintDetail": {
+      "burndown": {
+        "label": "Burn-down",
+        "hint": "Remaining = opened − closed per day; dashed — scope. Line going down — we are burning.",
+        "remaining": "remaining",
+        "done": "closed",
+        "scope": "scope",
+        "peak": "peak",
+        "failed": "could not load task history",
+        "tooFew": "too few points for a chart"
+      },
       "status": {
         "todo": "TODO",
         "planned": "Planned",
@@ -1548,6 +1558,15 @@
         "changed": "changed",
         "closed": "closed",
         "released": "released"
+      },
+      "created": {
+        "tasks": "tasks opened",
+        "sprints": "sprints created",
+        "other": "other created (ADR, decisions, specs)"
+      },
+      "burn": {
+        "label": "task burn",
+        "hint": "closed {{closed}} − opened {{created}}: plus — backlog shrinks, minus — grows"
       },
       "group": {
         "flat": "flat",
