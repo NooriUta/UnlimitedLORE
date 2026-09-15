@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { parsePrRefs, normalizeStatus, formatEffortDays } from './loreUtils';
 import { MartProse } from '../bench/MartProse';
+import SprintBurndownChart from './SprintBurndownChart';
 import {
   fetchLoreSlice, postLoreStatus, createLoreTask, editLoreTask, updateLoreSprint, updateSprintPlan,
   linkSprintProject, linkSprintComponent, linkTaskComponent, linkSprintMilestone, linkSprintRelease,
@@ -1902,6 +1903,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
 
       {/* ── Tasks (full width, scrollable) ── */}
       <div className="lore-sprint-detail-tasks" style={{ flex: 1, overflowY: 'auto' as const }}>
+      <SprintBurndownChart sprintId={sprintId} />
       <div style={S.section}>
         {/* Phases (when present) each with their tasks */}
         {phases.length > 0 && (
