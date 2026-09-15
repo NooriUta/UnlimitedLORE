@@ -9,8 +9,9 @@ export interface BurnPoint { date: string; scope: number; done: number; remainin
 
 // Высота графика в px — ФИКСИРОВАННАЯ, не пропорциональная ширине: с одним
 // viewBox и width=100% burn-down на широкой панели вырастал до ~400px
-// (владелец: «это очень внезапно»). Свёрнутый вид — спарклайн в строке.
-export const BURN_H = { collapsed: 22, expanded: 120 } as const;
+// (владелец: «это очень внезапно»). Живёт в конце блока «Контекст» —
+// одна высота, соразмерная тексту описания (владелец: «сделай соразмерным»).
+export const BURN_H = { inline: 64 } as const;
 
 export function sprintBurndown(created: BurnRow[], done: BurnRow[], sprintId: string): BurnPoint[] {
   const prefix = `${sprintId}/`;
