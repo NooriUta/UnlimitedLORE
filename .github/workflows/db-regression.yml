@@ -19,7 +19,7 @@ on:
       candidate:
         description: 'Версия-кандидат на апгрейд'
         required: true
-        default: '26.10.1'
+        default: '26.10.2'
   schedule:
     # Раз в неделю: ловит новые релизы без ручного захода. Ночь субботы —
     # прогон ни с чем не конкурирует за раннер.
@@ -43,7 +43,7 @@ jobs:
     # не ошибкой, а прогоном не той пары версий (ARC281-08).
     env:
       BASELINE: ${{ inputs.baseline || '26.9.1' }}
-      CANDIDATE: ${{ inputs.candidate || '26.10.1' }}
+      CANDIDATE: ${{ inputs.candidate || '26.10.2' }}
     steps:
       - uses: actions/checkout@v7
 
