@@ -710,13 +710,14 @@ public class AidaLoreResource extends LoreResourceBase {
      * <p>Запись без проекта не обнуляется: у неё нет проекта, на котором можно
      * иметь роль (см. {@code LoreSlices.BODY_SCOPED}).
      */
-    studio.seer.heimdall.bench.MartResult redactIfNoRole(
-            String sliceId, studio.seer.heimdall.bench.MartResult res, String role) {
+    static studio.seer.heimdall.bench.MartResult redactIfNoRole(
+            String sliceId, studio.seer.heimdall.bench.MartResult res,
+            java.util.Set<String> allowed) {
         List<String> bodyFields = LoreSlices.BODY_SCOPED.get(sliceId);
-        if (!redactBodies || bodyFields == null || res.result() == null) return res;
-
-        java.util.Set<String> allowed = callerAllowedProjects(role);
-        if (allowed == null) return res;   // superadmin, выключенный auth, агент вне скоупа
+        // allowed == null значит «ограничения нет»: обнуление выключено,
+        // superadmin, выключенный auth. Резолв делает ВЫЗЫВАЮЩИЙ, до запроса к
+        // базе: здесь нельзя ходить в граф, метод исполняется на event loop.
+        if (allowed == null || bodyFields == null || res.result() == null) return res;
 
         for (Map<String, Object> row : res.result()) {
             List<?> projects = row.get("projects") instanceof List<?> l ? l : List.of();
@@ -793,8 +794,21 @@ public class AidaLoreResource extends LoreResourceBase {
             composed.params().isEmpty() ? null : composed.params(), -1);
         LOG.debugf("[LORE:%s] %s %s", db, id, composed.params());
 
+        // Разрешённые проекты резолвятся ЗДЕСЬ, до запроса, а не внутри .map().
+        //
+        // Первая редакция вызывала резолвер в продолжении реактивной цепочки —
+        // и получала 502 на каждом запросе с живым токеном. @Blocking стоит на
+        // slice(), но продолжение .map() исполняется не на этом потоке: поход в
+        // граф за проектами блокировал event loop, и отказ выходил наружу как
+        // LORE_UPSTREAM — то есть выглядел как сбой БАЗЫ, а не как наша ошибка
+        // потока. Прошли только пути, которые до графа не доходят вовсе
+        // (superadmin и выключенный auth) — из них двух можно было сделать
+        // вывод «работает».
+        java.util.Set<String> allowedForRedact =
+            redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? callerAllowedProjects(role) : null;
+
         return client.query(db, basicAuth(), body)
-            .map(res -> noStore(Response.ok(sliceBody(redactIfNoRole(id, res, role)))))
+            .map(res -> noStore(Response.ok(sliceBody(redactIfNoRole(id, res, allowedForRedact)))))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
