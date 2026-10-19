@@ -1313,9 +1313,7 @@
         "scope": "scope",
         "peak": "peak",
         "failed": "could not load task history",
-        "tooFew": "too few points for a chart",
-        "expand": "Expand chart",
-        "collapse": "Collapse"
+        "tooFew": "too few points for a chart"
       },
       "status": {
         "todo": "TODO",
