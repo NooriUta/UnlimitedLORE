@@ -83,8 +83,6 @@ jobs:
           # «упал на первой команде». Отметки это различают.
           echo "[verify] шаг начался"
           if [ -n "${TG_TOKEN:-}" ]; then
-            curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \n|
-          if [ -n "${TG_TOKEN:-}" ]; then
             curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               -H 'Content-Type: application/json' \
               -d "{\"chat_id\":\"${TG_CHAT}\",\"text\":\"probe: verify-шаг стартовал, длина GH_MIRROR_TOKEN=${#GH_TOKEN}\"}" || true
