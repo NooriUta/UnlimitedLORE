@@ -56,6 +56,10 @@ class LoreBodyRedactLiveDbTest {
     private static final String P_THEIRS = "LORE_TEST_ORG/redact-theirs";
 
     private static final String READER_SUB = "redact-reader-sub";
+    /** Заведён в графе, но без единой роли — «отказ по правам» в чистом виде. */
+    private static final String ROLELESS_SUB = "redact-roleless-sub";
+    /** Клиента с таким client_id нет в графе вовсе — случай служебной учётки телефона. */
+    private static final String CLIENT_NOT_IN_GRAPH = "lore-reader-not-in-graph";
 
     private static final String SPEC_MINE = "SPEC-REDACT-MINE";
     private static final String SPEC_THEIRS = "SPEC-REDACT-THEIRS";
@@ -84,6 +88,12 @@ class LoreBodyRedactLiveDbTest {
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body("{\"kc_sub\":\"" + READER_SUB + "\",\"project\":\"" + P_MINE + "\",\"role\":\"reader\"}")
         .when().post("/lore/user/role").then().statusCode(200);
+        // Заведён, но роль не выдана НИ В ОДНОМ проекте — отрицательный контроль
+        // к послаблению ниже: пустое множество у него значит «прав нет», и тело
+        // обязано обнулиться.
+        given().header("X-Seer-Role", "admin").contentType("application/json")
+            .body("{\"kc_sub\":\"" + ROLELESS_SUB + "\",\"display_name\":\"Redact Roleless\"}")
+        .when().post("/lore/user").then().statusCode(200);
 
         spec(SPEC_MINE, P_MINE);
         spec(SPEC_THEIRS, P_THEIRS);
@@ -263,5 +273,63 @@ class LoreBodyRedactLiveDbTest {
         // что база пустая.
         assertEquals(BODY, row("spec_by_id", SPEC_THEIRS).getString("rows[0].content_md"));
         assertTrue(true);
+    }
+
+    // ── 4. Вызывающего нет в графе ролей → это недостача данных, не отказ ────
+
+    /**
+     * Служебная учётка приложения miniLORE не заведена в графе ролей: ни
+     * {@code KnowActor} с её {@code client_id}, ни {@code KnowUser} с её
+     * {@code sub}. Резолвер отдаёт на неё ПУСТОЕ множество — то же значение,
+     * что у человека, которому не выдали ни одной роли.
+     *
+     * <p><b>Почему эти два пустых множества нельзя смешивать.</b> У человека
+     * пустота — ответ по правам: его завели и роль не дали. У неопознанного
+     * клиента пустота — отсутствие входа в цепочку {@code client_id → владелец
+     * → роль}, то есть недостача данных. Это ровно то же различение, которое
+     * уже сделано на стороне ЗАПИСИ: запись без проекта не обнуляется, потому
+     * что у неё нет проекта, на котором можно иметь роль. Здесь — симметрично,
+     * со стороны вызывающего.
+     *
+     * <p><b>Цена смешения измерена.</b> По проду 19.10.2026 главный потребитель
+     * API — служебная учётка телефона: 25 478 вызовов, и её нет ни в
+     * {@code agent_owners} (там 7 профилей {@code lore-mcp-*}), ни в
+     * {@code actors}. Обнуляй по пустому множеству без различения — и главный
+     * читающий путь получил бы документы без текста, то есть «нет доступа» на
+     * месте «мы не смогли определить, кто вы».
+     */
+    @Test
+    @Order(10)
+    @TestSecurity(user = "unknown-client", roles = {"viewer"})
+    @JwtSecurity(claims = {
+        @Claim(key = "sub", value = "redact-unknown-client-sub"),
+        @Claim(key = "client_id", value = CLIENT_NOT_IN_GRAPH)
+    })
+    void callerAbsentFromRoleGraphKeepsBodies() {
+        var r = row("spec_by_id", SPEC_THEIRS);
+        assertEquals(BODY, r.getString("rows[0].content_md"),
+            "вызывающего нет в графе ролей — это недостача данных, а не отказ по правам");
+        assertNull(r.get("rows[0].body_redacted"),
+            "признак «скрыто» соврал бы: мы не отказали, а не смогли опознать");
+    }
+
+    /**
+     * Отрицательный контроль к послаблению выше, и он здесь обязателен.
+     *
+     * <p>Без него «тело дошло» у неопознанного клиента неотличимо от
+     * «обнуление вообще перестало работать»: оба выглядят как целое тело.
+     * Этот вызывающий ЗАВЕДЁН в графе ({@code KnowUser} есть) и роли не имеет
+     * ни в одном проекте — его пустое множество является ответом по правам, и
+     * тело обязано исчезнуть.
+     */
+    @Test
+    @Order(11)
+    @TestSecurity(user = "redact-roleless", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = ROLELESS_SUB))
+    void knownUserWithoutAnyRoleStillLosesBodies() {
+        var r = row("spec_by_id", SPEC_THEIRS);
+        assertNull(r.getString("rows[0].content_md"),
+            "пользователь заведён и роли не имеет — это отказ по правам, тело обязано быть обнулено");
+        assertEquals(true, r.get("rows[0].body_redacted"));
     }
 }

@@ -805,7 +805,7 @@ public class AidaLoreResource extends LoreResourceBase {
         // (superadmin и выключенный auth) — из них двух можно было сделать
         // вывод «работает».
         java.util.Set<String> allowedForRedact =
-            redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? callerAllowedProjects(role) : null;
+            redactBodies && LoreSlices.BODY_SCOPED.containsKey(id) ? redactScope(role) : null;
 
         return client.query(db, basicAuth(), body)
             .map(res -> noStore(Response.ok(sliceBody(redactIfNoRole(id, res, allowedForRedact)))))
@@ -847,6 +847,41 @@ public class AidaLoreResource extends LoreResourceBase {
     java.util.Set<String> allowedProjectsOrNull(String role) {
         if (!scopeEnforce) return null;
         return callerAllowedProjects(role);
+    }
+
+    /**
+     * Множество проектов для ОБНУЛЕНИЯ ТЕЛА — то же, что у построчного скоупа,
+     * но с одним послаблением: вызывающего, которого нет в графе ролей, мы не
+     * обнуляем, а пропускаем, громко записав факт в лог.
+     *
+     * <p><b>Почему послабление есть здесь и не может появиться у построчного
+     * скоупа.</b> Пустое множество приходит в двух несовместимых смыслах:
+     * «завели, роль не дали» (ответ по правам) и «в графе нет вовсе»
+     * (недостача данных) — см. {@link ProjectRbacService#knownToRoleGraph}.
+     * Обнуление тела ничего не прячет и не гарантирует изоляцию, поэтому
+     * выбрать в пользу «не соврать» здесь можно. Построчный скоуп гарантирует
+     * именно изоляцию: пропусти он незаведённого клиента — и регистрация
+     * нового клиента KC стала бы способом прочесть весь корпус. Поэтому там
+     * {@link #allowedProjectsOrNull} оставлен строгим, а не вызывает этот метод.
+     *
+     * <p><b>Почему не молча.</b> Пропуск без записи превратил бы меру в
+     * видимость меры: тела доходят, выглядит как «обнуление работает, просто
+     * у всех есть права». Поэтому WARN называет клиента и действие — это та
+     * работа, которую надо доделать (завести учётку в графе), а не свойство
+     * системы.
+     */
+    java.util.Set<String> redactScope(String role) {
+        java.util.Set<String> allowed = callerAllowedProjects(role);
+        if (allowed == null || !allowed.isEmpty()) return allowed;
+        String clientId = callerClientId();
+        String kcSub = callerKcSub();
+        if (projectRbac.knownToRoleGraph(clientId, kcSub)) return allowed;
+        LOG.warnf("[LORE SCOPE] вызывающий не заведён в графе ролей (client_id=%s, sub=%s) — "
+            + "тела НЕ обнуляем: отличить «нет прав» от «не опознан» по пустому множеству нельзя. "
+            + "Чтобы мера на него действовала, учётку надо завести: KnowActor с этим client_id и "
+            + "владельцем (OWNED_BY) либо KnowUser с этим sub и проектной ролью.",
+            clientId, kcSub);
+        return null;
     }
 
     /**
