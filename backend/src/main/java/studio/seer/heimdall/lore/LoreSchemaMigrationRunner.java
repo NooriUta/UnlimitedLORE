@@ -430,6 +430,152 @@ public class LoreSchemaMigrationRunner {
         if (version == 28) recreateFtIndexes();
         if (version == 41) normalizeHistValidFrom();
         if (version == 46) backfillDroppedRoleNotes();
+        if (version == 47) backfillDocProjectEdgesByProduct();
+    }
+
+    /**
+     * Карта «продукт → проект» для шага V47.
+     *
+     * <p><b>Выведена из данных, а не назначена.</b> По записям, у которых проект
+     * УЖЕ стоит, посчитано, куда корпус относит документы каждого продукта
+     * (замер 19.10.2026): AIDA 87/91, HEIMDALL 10/10, HOUND 1/1, MT 7/7,
+     * SEIDR 10/10 → {@code NooriUta/AIDA}; MIDGARD 87/89 → {@code AIDA/MIDGARD};
+     * MINILORE 31/31 → {@code AIDA/miniLORE}; OMILORE 2/2 →
+     * {@code NooriUta/UnlimitedLORE}; VOLVA 1/1 → {@code NooriUta/volva}.
+     *
+     * <p>Карта зашита ЗДЕСЬ, а не вычисляется на ходу, намеренно: вычисляемая
+     * карта меняла бы смысл шага от прогона к прогону, и повторный запуск на
+     * другой базе привязал бы иначе. Решение должно быть читаемым на ревью.
+     *
+     * <p><b>Чего в карте нет и почему.</b> TYR, BRAGI, ODIN — ни одной уже
+     * привязанной записи, учиться было не на чем. MIGGEN исключён ОСОЗНАННО:
+     * данные дают {@code ciadmin/udwe-mig-gen}, но проект помечен «переехал в
+     * AIDA 17.08», и рядом есть {@code AIDA/udwe-mig-gen}. Обучение на истории
+     * повторило бы ошибку истории — эти записи привязываются вручную.
+     */
+    private static final Map<String, String> PRODUCT_TO_PROJECT = Map.of(
+        "AIDA",     "NooriUta/AIDA",
+        "HEIMDALL", "NooriUta/AIDA",
+        "HOUND",    "NooriUta/AIDA",
+        "MT",       "NooriUta/AIDA",
+        "SEIDR",    "NooriUta/AIDA",
+        "MIDGARD",  "AIDA/MIDGARD",
+        "MINILORE", "AIDA/miniLORE",
+        "OMILORE",  "NooriUta/UnlimitedLORE",
+        "VOLVA",    "NooriUta/volva");
+
+    /**
+     * RM-P9: спеки, доки и ранбуки без проекта получают его через ПРОДУКТ
+     * своего компонента.
+     *
+     * <p><b>Зачем отдельный шаг, если V20 это уже делал.</b> V20 выводил проект
+     * по цепочке «компонент → спринты компонента → их проекты» и брал результат
+     * только при ровно одном distinct-проекте. Замер 19.10.2026 показал, что на
+     * сегодняшних данных это правило закрывает <b>15 записей из 499</b>: путь
+     * отвечает на вопрос «в каких репозиториях трогали компонент», а не «чей
+     * это документ». У {@code DALI_OVERVIEW} кандидатов четыре, и все четыре
+     * «верны» — компонент DALI живёт в нескольких репозиториях.
+     *
+     * <p>Путь через продукт однозначен: у 457 спек и доков <b>ни одной</b>
+     * записи со смешанным набором продуктов не нашлось — либо все компоненты в
+     * семье одного продукта, либо ни один. Поэтому здесь нет развилки
+     * «мультипривязать или пропустить», которая была у V20.
+     *
+     * <p>Ранбуки идут своим путём — проект ADR, на который ранбук ссылается:
+     * у ADR проект есть всегда (218 из 218), а компонента у ранбука нет вовсе.
+     *
+     * <p>Идемпотентен: отбираются только вершины без единого
+     * {@code BELONGS_TO_PROJECT}, ребро создаётся с {@code IF NOT EXISTS}.
+     * Повторный прогон не найдёт ничего и скажет об этом.
+     *
+     * <p><b>Что шаг НЕ делает.</b> Не трогает записи, чьи продукты в карте
+     * отсутствуют, и записи без компонента вовсе. Их число печатается в лог —
+     * «пропущено» здесь содержательный результат, а не тишина: по нему видно,
+     * сколько осталось ручной работы.
+     */
+    private void backfillDocProjectEdgesByProduct() {
+        // Компонент → проект, через продукт. Собирается один раз: иначе на
+        // каждую запись шёл бы отдельный обход графа.
+        Map<String, String> compToProject = new java.util.HashMap<>();
+        int compsSkipped = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT component_id, out('IN_PRODUCT').code AS products FROM LoreComponent "
+                + "WHERE out('IN_PRODUCT').size() > 0", Map.of())) {
+            java.util.Set<String> targets = new java.util.HashSet<>();
+            for (String p : distinctSlugs(r.get("products"))) {
+                String proj = PRODUCT_TO_PROJECT.get(p);
+                if (proj != null) targets.add(proj);
+            }
+            // Компонент, ведущий в два РАЗНЫХ проекта, пропускается: привязать
+            // по нему значило бы выбрать за человека.
+            if (targets.size() == 1) compToProject.put(String.valueOf(r.get("component_id")),
+                targets.iterator().next());
+            else if (targets.size() > 1) compsSkipped++;
+        }
+        LOG.infof("[LORE MIGRATE] V47: компонентов с однозначным проектом %d, "
+            + "с расхождением %d (пропущены)", compToProject.size(), compsSkipped);
+
+        int edges = 0;
+        // Спеки и доки — компонент у них читается разными рёбрами, поэтому
+        // запрос на каждый тип свой, а правило одно. Разбор пропусков печатает
+        // сам linkByComponent: счётчики нужны там, где решение принимается.
+        edges += linkByComponent("KnowSpec", "spec_id",
+            "SELECT spec_id AS id, in('DOCUMENTED_IN').component_id AS c1, "
+            + "out('BELONGS_TO').component_id AS c2 FROM KnowSpec "
+            + "WHERE out('BELONGS_TO_PROJECT').size() = 0", compToProject);
+        edges += linkByComponent("KnowDoc", "doc_id",
+            "SELECT doc_id AS id, out('BELONGS_TO').component_id AS c1, "
+            + "null AS c2 FROM KnowDoc WHERE out('BELONGS_TO_PROJECT').size() = 0", compToProject);
+
+        // Ранбуки — через ADR. Своим путём, потому что компонента у них нет.
+        int rbEdges = 0, rbSkipped = 0;
+        for (Map<String, Object> r : ingest.queryPublic(
+                "SELECT runbook_id, out('REFERENCES_ADR').out('BELONGS_TO_PROJECT').slug AS slugs "
+                + "FROM KnowRunbook WHERE out('BELONGS_TO_PROJECT').size() = 0", Map.of())) {
+            java.util.Set<String> slugs = distinctSlugs(r.get("slugs"));
+            if (slugs.size() != 1) { if (!slugs.isEmpty()) rbSkipped++; continue; }
+            command("CREATE EDGE BELONGS_TO_PROJECT "
+                + "FROM (SELECT FROM KnowRunbook WHERE runbook_id = :r) "
+                + "TO (SELECT FROM KnowGitProject WHERE slug = :p) IF NOT EXISTS",
+                Map.of("r", r.get("runbook_id"), "p", slugs.iterator().next()));
+            rbEdges++;
+        }
+        LOG.infof("[LORE MIGRATE] V47 ранбуки через ADR: %d рёбер, %d с ADR разных проектов пропущено",
+            rbEdges, rbSkipped);
+        LOG.infof("[LORE MIGRATE] V47 ИТОГО: %d рёбер. Непривязанное остаётся видно "
+            + "срезом scope_orphans — там же ручной остаток", edges + rbEdges);
+    }
+
+    /** Одна форма на спеки и доки: компонент → проект по готовой карте. */
+    private int linkByComponent(String type, String idField, String sql,
+                                Map<String, String> compToProject) {
+        int edges = 0, ambiguous = 0, noRule = 0, noComp = 0;
+        for (Map<String, Object> r : ingest.queryPublic(sql, Map.of())) {
+            java.util.Set<String> comps = new java.util.HashSet<>();
+            comps.addAll(distinctSlugs(r.get("c1")));
+            comps.addAll(distinctSlugs(r.get("c2")));
+            if (comps.isEmpty()) { noComp++; continue; }
+            java.util.Set<String> targets = new java.util.HashSet<>();
+            boolean unknown = false;
+            for (String c : comps) {
+                String proj = compToProject.get(c);
+                if (proj == null) unknown = true; else targets.add(proj);
+            }
+            // Хотя бы один компонент без правила — пропускаем ВСЮ запись:
+            // привязать по части компонентов значило бы отнести документ туда,
+            // где он лишь частично живёт.
+            if (unknown) { noRule++; continue; }
+            if (targets.size() != 1) { ambiguous++; continue; }
+            command("CREATE EDGE BELONGS_TO_PROJECT "
+                + "FROM (SELECT FROM " + type + " WHERE " + idField + " = :i) "
+                + "TO (SELECT FROM KnowGitProject WHERE slug = :p) IF NOT EXISTS",
+                Map.of("i", r.get("id"), "p", targets.iterator().next()));
+            edges++;
+        }
+        LOG.infof("[LORE MIGRATE] V47 %s: %d рёбер; пропущено — без компонента %d, "
+            + "продукт без правила %d, компоненты в разные проекты %d",
+            type, edges, noComp, noRule, ambiguous);
+        return edges;
     }
 
     /**
