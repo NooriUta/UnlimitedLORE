@@ -51,6 +51,16 @@ class LoreScopeEnforcedLiveDbTest {
     /** Спринт на ПЕРЕСЕЧЕНИИ: рёбра и в alpha, и в hidden. */
     private static final String S_BOTH = "SPRINT_AL95_BOTH";
 
+    // Спеки, доки и ранбуки — три типа, названные владелицей отдельно
+    // («не показывать specs docs runbooks тем, у кого нет роли»). До этого
+    // они числились в PROJECT_SCOPED, но ни одним тестом не проверялись.
+    private static final String SPEC_ALPHA = "SPEC-AL95-ALPHA";
+    private static final String SPEC_HIDDEN = "SPEC-AL95-HIDDEN";
+    private static final String DOC_ALPHA = "al95_doc_alpha";
+    private static final String DOC_HIDDEN = "al95_doc_hidden";
+    private static final String RB_ALPHA = "RUNBOOK-AL95-ALPHA";
+    private static final String RB_HIDDEN = "RUNBOOK-AL95-HIDDEN";
+
     @Test
     @Order(1)
     void setUp() {
@@ -74,6 +84,54 @@ class LoreScopeEnforcedLiveDbTest {
         createSprint(S_ALPHA, "AL-95 alpha", List.of(P_ALPHA));
         createSprint(S_HIDDEN, "AL-95 hidden", List.of(P_HIDDEN));
         createSprint(S_BOTH, "AL-95 both", List.of(P_ALPHA, P_HIDDEN));
+
+        // Спека, док и ранбук — по паре на каждый тип: свой проект и чужой.
+        // Три типа заведены ЯВНО, а не «по аналогии со спринтом»: у каждого
+        // свой путь привязки проекта (spec/link rel=project, doc/project,
+        // runbook/project), и ошибка в любом из них даёт ту же картину, что
+        // верная работа, — записи просто не видно.
+        createSpec(SPEC_ALPHA, P_ALPHA);
+        createSpec(SPEC_HIDDEN, P_HIDDEN);
+        createDoc(DOC_ALPHA, P_ALPHA);
+        createDoc(DOC_HIDDEN, P_HIDDEN);
+        createRunbook(RB_ALPHA, P_ALPHA);
+        createRunbook(RB_HIDDEN, P_HIDDEN);
+    }
+
+    private void createSpec(String id, String project) {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"spec_id\":\"" + id + "\",\"title\":\"AL-95 " + id + "\"}")
+        .when().post("/lore/spec").then().statusCode(200);
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"spec_id\":\"" + id + "\",\"rel\":\"project\",\"target_id\":\"" + project
+                + "\",\"mode\":\"add\"}")
+        .when().post("/lore/spec/link").then().statusCode(200);
+    }
+
+    private void createDoc(String id, String project) {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"doc_id\":\"" + id + "\",\"title\":\"AL-95 " + id + "\",\"kind\":\"reference\"}")
+        .when().post("/lore/doc").then().statusCode(200);
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"doc_id\":\"" + id + "\",\"project\":\"" + project + "\",\"action\":\"add\"}")
+        .when().post("/lore/doc/project").then().statusCode(200);
+    }
+
+    private void createRunbook(String id, String project) {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"runbook_id\":\"" + id + "\",\"name\":\"AL-95 " + id + "\"}")
+        .when().post("/lore/runbook").then().statusCode(200);
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"runbook_id\":\"" + id + "\",\"project\":\"" + project + "\",\"action\":\"add\"}")
+        .when().post("/lore/runbook/project").then().statusCode(200);
+    }
+
+    /** Идентификаторы в выдаче произвольного слайса — одной формой на три типа. */
+    private List<String> idsOf(String slice, String idField) {
+        return given().contentType("application/json")
+            .when().get("/lore/slice/" + slice)
+            .then().statusCode(200)
+            .extract().jsonPath().getList("rows." + idField, String.class);
     }
 
     private void createSprint(String id, String name, List<String> projects) {
@@ -173,5 +231,54 @@ class LoreScopeEnforcedLiveDbTest {
         assertFalse(ids.contains(S_ALPHA));
         assertFalse(ids.contains(S_HIDDEN));
         assertFalse(ids.contains(S_BOTH));
+    }
+
+    // ── Требование владелицы 19.10.2026: спеки, доки и ранбуки ──────────────
+    //
+    // «make reader for people with right role on project if they didnt have
+    // don't show them specs docs runbooks».
+    //
+    // Эти три слайса лежали в PROJECT_SCOPED с самого начала и НЕ были покрыты
+    // ни одним тестом: проверялся только `sprints`. Непокрытый слайс под
+    // включённым флагом — это не «пока не сделали», это гарантия с видом
+    // исполненной. У каждого из трёх свой путь привязки проекта, и ошибка в
+    // любом даёт ровно ту же картину, что верная работа: записи не видно.
+
+    @Test
+    @Order(7)
+    @TestSecurity(user = "al95-viewer", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = VIEWER_SUB))
+    void readerWithRoleSeesSpecsDocsRunbooksOfOwnProjectOnly() {
+        var specs = idsOf("specs", "spec_id");
+        assertTrue(specs.contains(SPEC_ALPHA), "спека своего проекта обязана быть видна");
+        assertFalse(specs.contains(SPEC_HIDDEN),
+            "спека проекта без роли видна — скоуп к слайсу specs не применён");
+
+        var docs = idsOf("docs", "doc_id");
+        assertTrue(docs.contains(DOC_ALPHA), "док своего проекта обязан быть виден");
+        assertFalse(docs.contains(DOC_HIDDEN),
+            "док проекта без роли виден — скоуп к слайсу docs не применён");
+
+        var runbooks = idsOf("runbooks", "runbook_id");
+        assertTrue(runbooks.contains(RB_ALPHA), "ранбук своего проекта обязан быть виден");
+        assertFalse(runbooks.contains(RB_HIDDEN),
+            "ранбук проекта без роли виден — скоуп к слайсу runbooks не применён");
+    }
+
+    @Test
+    @Order(8)
+    @TestSecurity(user = "al95-nobody", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = "al95-nobody-sub"))
+    void userWithoutAnyRoleSeesNoSpecsDocsRunbooks() {
+        // Прямая формулировка требования: роли нет — трёх типов не видно
+        // ВООБЩЕ. Положительная половина (роль есть → видно) закреплена
+        // соседним тестом; без неё «не видно» ничего не значило бы — пустая
+        // выдача могла бы означать, что записей просто нет.
+        assertFalse(idsOf("specs", "spec_id").contains(SPEC_ALPHA));
+        assertFalse(idsOf("specs", "spec_id").contains(SPEC_HIDDEN));
+        assertFalse(idsOf("docs", "doc_id").contains(DOC_ALPHA));
+        assertFalse(idsOf("docs", "doc_id").contains(DOC_HIDDEN));
+        assertFalse(idsOf("runbooks", "runbook_id").contains(RB_ALPHA));
+        assertFalse(idsOf("runbooks", "runbook_id").contains(RB_HIDDEN));
     }
 }
