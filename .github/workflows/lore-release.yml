@@ -77,11 +77,19 @@ jobs:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TG_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          # SE-12: отметки «докуда дошли». Шаг дважды умирал с кодом 1 БЕЗ единой
+          # строки вывода (задания 15866 и 18008), и причину по логу назвать
+          # нельзя — отсутствие вывода не отличает «скрипт не начался» от
+          # «упал на первой команде». Отметки это различают.
+          echo "[verify] шаг начался"
+          if [ -n "${TG_TOKEN:-}" ]; then
+            curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \n|
           if [ -n "${TG_TOKEN:-}" ]; then
             curl -sf --max-time 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
               -H 'Content-Type: application/json' \
               -d "{\"chat_id\":\"${TG_CHAT}\",\"text\":\"probe: verify-шаг стартовал, длина GH_MIRROR_TOKEN=${#GH_TOKEN}\"}" || true
           fi
+          echo "[verify] telegram-проба пройдена"
           FAIL=""
           NOTE=""
           if [ -z "${GH_TOKEN:-}" ]; then
@@ -89,8 +97,16 @@ jobs:
           else
             code=$(curl -s -m 20 -o /tmp/user.json -w '%{http_code}' -D /tmp/hdr.txt \
               -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user) || code="000"
+            echo "[verify] /user ответил $code"
             if [ "$code" != "200" ]; then
-              FAIL="токен зеркала не аутентифицируется (HTTP $code): $(head -c 200 /tmp/user.json 2>/dev/null)"
+              # Не приговор: fine-grained PAT, выданный на один репозиторий,
+              # может не иметь доступа к /user, оставаясь годным для пуша.
+              # Судим по РАБОЧЕЙ пробе — доступу к самому репозиторию.
+              if git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO:-NooriUta/UnlimitedLORE}.git" HEAD >/dev/null 2>&1; then
+                NOTE="/user недоступен (HTTP $code), но репозиторий зеркала читается — для пуша этого достаточно"
+              else
+                FAIL="токен зеркала не аутентифицируется (HTTP $code) И репозиторий зеркала не читается: $(head -c 200 /tmp/user.json 2>/dev/null)"
+              fi
             else
               SCOPES=$(grep -i '^x-oauth-scopes:' /tmp/hdr.txt | cut -d: -f2- | tr -d ' \r')
               if [ -n "$SCOPES" ]; then
@@ -397,5 +413,5 @@ jobs:
         if: ${{ always() && steps.verify_mirror_token.outcome == 'failure' }}
         run: |
           echo "::error::проверка токена зеркала НЕ прошла (см. шаг Verify mirror token выше)."
-          echo "::error::Релиз в Forgejo при этом опубликован — проверьте страницу релиза и зеркало GitHub отдельно."
+          echo "::error::Публикация при этом шла своим чередом — смотрите её шаг отдельно; зеркало GitHub могло не обновиться."
           exit 1
