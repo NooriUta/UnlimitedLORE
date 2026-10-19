@@ -848,6 +848,35 @@ public final class LoreSlices {
             ") ORDER BY finding, ref_id",
             List.of(), Map.of(), "");
 
+        // RM-P9: что ИСЧЕЗНЕТ, если включить lore.scope.enforce.
+        //
+        // Скоуп режет по ребру BELONGS_TO_PROJECT. Запись без этого ребра
+        // отрезается не по правам, а по НЕДОСТАЮЩИМ ДАННЫМ — и пропадает у
+        // всех, включая владельца. Замер 19.10.2026 по проду: у спек нет
+        // проекта у 218 из 415, у доков у 239 из 292, у ранбуков у 42 из 47.
+        // То есть включение «изоляции» спрятало бы 499 записей от каждого.
+        //
+        // Срез существует ровно для того, чтобы включение не было прыжком в
+        // темноту: сначала смотрим, сколько потеряем, потом решаем. Отдаёт
+        // СЫРЬЁ построчно, а не счётчики, — по счётчику нельзя пойти и
+        // привязать проект, а по ref_id можно.
+        slice("scope_orphans",
+            "SELECT entity_type, ref_id, title FROM (SELECT expand(unionall($sp, $dc, $rb, $ad, $sr, $rl)) LET " +
+            "$sp = (SELECT 'spec' AS entity_type, spec_id AS ref_id, title FROM KnowSpec " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$dc = (SELECT 'doc' AS entity_type, doc_id AS ref_id, title FROM KnowDoc " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$rb = (SELECT 'runbook' AS entity_type, runbook_id AS ref_id, name AS title FROM KnowRunbook " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$ad = (SELECT 'adr' AS entity_type, adr_id AS ref_id, name AS title FROM KnowADR " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$sr = (SELECT 'sprint' AS entity_type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$rl = (SELECT 'release' AS entity_type, release_id AS ref_id, git_tag AS title FROM KnowRelease " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0)" +
+            ") ORDER BY entity_type, ref_id",
+            List.of(), Map.of(), "");
+
         // Проект без единой роли — тихая дыра в делегировании (найдено 30.08.2026
         // владельцем: «в full сессии Claude не даёт завести новых акторов»).
         //
