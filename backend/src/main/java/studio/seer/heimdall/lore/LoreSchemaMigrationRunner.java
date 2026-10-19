@@ -447,22 +447,37 @@ public class LoreSchemaMigrationRunner {
      * карта меняла бы смысл шага от прогона к прогону, и повторный запуск на
      * другой базе привязал бы иначе. Решение должно быть читаемым на ревью.
      *
-     * <p><b>Чего в карте нет и почему.</b> TYR, BRAGI, ODIN — ни одной уже
-     * привязанной записи, учиться было не на чем. MIGGEN исключён ОСОЗНАННО:
+     * <p><b>TYR, BRAGI, ODIN — со слов владелицы 19.10.2026</b>, не из данных:
+     * у этих трёх продуктов нет ни одной уже привязанной записи, учиться было
+     * не на чем. TYR показывает, почему такие случаи нельзя оставлять
+     * алгоритму: код продукта {@code TYR}, а репозиторий —
+     * {@code NooriUta/AIDA-TestPlayGround}, совпадения имён нет вовсе. Угадай
+     * мы BRAGI и ODIN «по совпадению имени» и окажись они правы — правило всё
+     * равно осталось бы негодным, потому что на TYR оно уже ошиблось. Слаги
+     * сверены по реестру {@code KnowGitProject} (срез {@code git_projects}),
+     * а не взяты из переписки: у {@code NooriUta/BRAGI} и {@code NooriUta/ODIN}
+     * вершины есть, {@code hosts} пустой — для {@code BELONGS_TO_PROJECT}
+     * этого достаточно, ребро ведёт в вершину, а не в URL.
+     *
+     * <p><b>Чего в карте нет и почему.</b> MIGGEN исключён ОСОЗНАННО:
      * данные дают {@code ciadmin/udwe-mig-gen}, но проект помечен «переехал в
      * AIDA 17.08», и рядом есть {@code AIDA/udwe-mig-gen}. Обучение на истории
      * повторило бы ошибку истории — эти записи привязываются вручную.
      */
-    private static final Map<String, String> PRODUCT_TO_PROJECT = Map.of(
-        "AIDA",     "NooriUta/AIDA",
-        "HEIMDALL", "NooriUta/AIDA",
-        "HOUND",    "NooriUta/AIDA",
-        "MT",       "NooriUta/AIDA",
-        "SEIDR",    "NooriUta/AIDA",
-        "MIDGARD",  "AIDA/MIDGARD",
-        "MINILORE", "AIDA/miniLORE",
-        "OMILORE",  "NooriUta/UnlimitedLORE",
-        "VOLVA",    "NooriUta/volva");
+    private static final Map<String, String> PRODUCT_TO_PROJECT = Map.ofEntries(
+        Map.entry("AIDA",     "NooriUta/AIDA"),
+        Map.entry("HEIMDALL", "NooriUta/AIDA"),
+        Map.entry("HOUND",    "NooriUta/AIDA"),
+        Map.entry("MT",       "NooriUta/AIDA"),
+        Map.entry("SEIDR",    "NooriUta/AIDA"),
+        Map.entry("MIDGARD",  "AIDA/MIDGARD"),
+        Map.entry("MINILORE", "AIDA/miniLORE"),
+        Map.entry("OMILORE",  "NooriUta/UnlimitedLORE"),
+        Map.entry("VOLVA",    "NooriUta/volva"),
+        // Ниже — со слов владелицы, выше — выведено из уже привязанных записей.
+        Map.entry("TYR",      "NooriUta/AIDA-TestPlayGround"),
+        Map.entry("BRAGI",    "NooriUta/BRAGI"),
+        Map.entry("ODIN",     "NooriUta/ODIN"));
 
     /**
      * RM-P9: спеки, доки и ранбуки без проекта получают его через ПРОДУКТ
@@ -492,6 +507,31 @@ public class LoreSchemaMigrationRunner {
      * отсутствуют, и записи без компонента вовсе. Их число печатается в лог —
      * «пропущено» здесь содержательный результат, а не тишина: по нему видно,
      * сколько осталось ручной работы.
+     *
+     * <p><b>Два исключения по решению владелицы 19.10.2026</b> («Claude rules
+     * infra пока ни к чему не привязывай»): доки вида {@code claude-rules} и
+     * ранбуки области {@code infra} остаются без проекта. Причина содержательная,
+     * а не отсрочка: и те и другие описывают МАШИНУ и стенд, а не продукт —
+     * правила {@code ~/.claude/CLAUDE.md}, доступ по SSH, DNS, Traefik, секреты.
+     * Привязка к одному проекту сделала бы общее знание чужим для остальных.
+     *
+     * <p>Исключения выражены условием запроса, а не оставлены на самотёк. Девять
+     * доков {@code claude-rules} сегодня и так без компонента, то есть шаг
+     * пропустил бы их сам — но это защита случайная: стоит кому-то привязать
+     * такому доку компонент, и следующий прогон утащил бы его в проект. Два
+     * инфраструктурных ранбука ({@code RUNBOOK-LOCAL-DNS} через
+     * {@code ADR-INFRA-002}, {@code RUNBOOK-SECRETS-HASHICORP-VAULT} через
+     * {@code ADR-LORE-024}) шаг привязал бы уже сейчас.
+     *
+     * <p>Условие написано как {@code (kind IS NULL OR kind <> 'claude-rules')}
+     * намеренно: голое {@code <>} в ArcadeDB отбрасывает и строки с {@code NULL},
+     * то есть «фильтр» заодно выкинул бы все доки без вида — и выглядел бы при
+     * этом работающим.
+     *
+     * <p>Тела этих записей читаются всеми, и {@code admin}/{@code superadmin}
+     * в частности: обнуление тела (AL-96) не трогает записи без проекта вовсе,
+     * а обе админские роли вдобавок обходят его через
+     * {@code AidaLoreResource.bypassesScope}.
      */
     private void backfillDocProjectEdgesByProduct() {
         // Компонент → проект, через продукт. Собирается один раз: иначе на
@@ -525,13 +565,15 @@ public class LoreSchemaMigrationRunner {
             + "WHERE out('BELONGS_TO_PROJECT').size() = 0", compToProject);
         edges += linkByComponent("KnowDoc", "doc_id",
             "SELECT doc_id AS id, out('BELONGS_TO').component_id AS c1, "
-            + "null AS c2 FROM KnowDoc WHERE out('BELONGS_TO_PROJECT').size() = 0", compToProject);
+            + "null AS c2 FROM KnowDoc WHERE out('BELONGS_TO_PROJECT').size() = 0 "
+            + "AND (kind IS NULL OR kind <> 'claude-rules')", compToProject);
 
         // Ранбуки — через ADR. Своим путём, потому что компонента у них нет.
         int rbEdges = 0, rbSkipped = 0;
         for (Map<String, Object> r : ingest.queryPublic(
                 "SELECT runbook_id, out('REFERENCES_ADR').out('BELONGS_TO_PROJECT').slug AS slugs "
-                + "FROM KnowRunbook WHERE out('BELONGS_TO_PROJECT').size() = 0", Map.of())) {
+                + "FROM KnowRunbook WHERE out('BELONGS_TO_PROJECT').size() = 0 "
+                + "AND (area IS NULL OR area <> 'infra')", Map.of())) {
             java.util.Set<String> slugs = distinctSlugs(r.get("slugs"));
             if (slugs.size() != 1) { if (!slugs.isEmpty()) rbSkipped++; continue; }
             command("CREATE EDGE BELONGS_TO_PROJECT "

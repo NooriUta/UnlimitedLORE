@@ -63,6 +63,8 @@ class LoreBodyRedactLiveDbTest {
     private static final String SPEC_ORPHAN = "SPEC-REDACT-ORPHAN";
 
     private static final String DOC_THEIRS = "redact_doc_theirs";
+    /** Без проекта — случай доков правил CLAUDE и инфраструктурных ранбуков. */
+    private static final String DOC_ORPHAN = "redact_doc_orphan";
     private static final String RB_THEIRS = "RUNBOOK-REDACT-THEIRS";
 
     private static final String BODY = "тело документа, которое не должно утечь";
@@ -94,6 +96,12 @@ class LoreBodyRedactLiveDbTest {
         given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"doc_id\":\"" + DOC_THEIRS + "\",\"project\":\"" + P_THEIRS + "\",\"action\":\"add\"}")
         .when().post("/lore/doc/project").then().statusCode(200);
+
+        // Док БЕЗ проектного ребра — намеренно, не забытый вызов /lore/doc/project.
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"doc_id\":\"" + DOC_ORPHAN + "\",\"title\":\"Redact orphan doc\","
+                + "\"kind\":\"claude-rules\",\"content_md_ru\":\"" + BODY + "\"}")
+        .when().post("/lore/doc").then().statusCode(200);
 
         given().header("X-Seer-Role", "superadmin").contentType("application/json")
             .body("{\"runbook_id\":\"" + RB_THEIRS + "\",\"name\":\"Redact runbook\","
@@ -202,10 +210,52 @@ class LoreBodyRedactLiveDbTest {
             "superadmin обязан видеть тело в проекте, где у него нет роли");
     }
 
+    @Test
+    @Order(7)
+    @TestSecurity(user = "redact-admin", roles = {"admin"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = "redact-admin-sub-without-roles"))
+    void adminSeesBodiesEverywhereToo() {
+        // Проверяется по требованию владелицы 19.10.2026: «посмотри, чтобы admin
+        // superadmin имели к ним доступ». Отдельным тестом, а не выводом из
+        // предыдущего: обход даёт ОДНО выражение на две роли
+        // (bypassesScope: superadmin || admin), и зелёный superadmin ничего не
+        // говорит про admin — достаточно опечатки в одном из двух сравнений.
+        //
+        // Путь роли тоже неочевиден и тоже проверяется здесь, а не читается:
+        // в заголовке X-Seer-Role тест ничего не посылает, роль ставит
+        // SeerRoleFromTokenFilter из realm-роли токена (admin → "admin").
+        // Сломайся это отображение — тест покраснеет, а не промолчит.
+        assertEquals(BODY, row("spec_by_id", SPEC_THEIRS).getString("rows[0].content_md"),
+            "admin администрирует весь корпус — тело обязано дойти целым и там, "
+            + "где у него нет проектной роли");
+        assertNull(row("spec_by_id", SPEC_THEIRS).get("rows[0].body_redacted"));
+    }
+
+    @Test
+    @Order(8)
+    @TestSecurity(user = "redact-claude-rules-reader", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = READER_SUB))
+    void docWithoutProjectKeepsBodyForPlainReaderToo() {
+        // Решение владелицы 19.10.2026: «Claude rules infra пока ни к чему не
+        // привязывай и посмотри, чтобы admin superadmin имели к ним доступ».
+        //
+        // Доки правил CLAUDE и инфраструктурные ранбуки остаются без проекта
+        // НАМЕРЕННО — они про машину, а не про продукт (шаг V47 исключает
+        // kind='claude-rules' и area='infra' условием запроса). Здесь
+        // закрепляется следствие, на которое это решение опирается: запись без
+        // проекта читается целиком даже тем, у кого нет вообще никаких прав —
+        // то есть admin и superadmin тем более. Поломайся правило «нет проекта →
+        // не обнуляем», и общие знания о стенде пропали бы у всех сразу.
+        var r = row("doc_by_id", DOC_ORPHAN);
+        assertEquals(BODY, r.getString("rows[0].content_md_ru"),
+            "док без проекта обязан читаться целиком: прав на него нет ни у кого по построению");
+        assertNull(r.get("rows[0].body_redacted"));
+    }
+
     // ── Страховка: выключенный auth не обнуляет ─────────────────────────────
 
     @Test
-    @Order(7)
+    @Order(9)
     void authOffKeepsBodies() {
         // Ни @TestSecurity, ни JWT — то, что видит бэкенд в dev без OIDC.
         // Решение владельца «auth off = superadmin» распространяется и сюда:
