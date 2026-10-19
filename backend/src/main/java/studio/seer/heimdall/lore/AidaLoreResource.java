@@ -58,6 +58,23 @@ public class AidaLoreResource extends LoreResourceBase {
     @ConfigProperty(name = "lore.scope.enforce", defaultValue = "false")
     boolean scopeEnforce;
 
+    /**
+     * Обнулять ли ТЕЛО документа читателю без роли в его проекте.
+     *
+     * <p>Решение владелицы 19.10.2026: «достаточно обнулять текст самого
+     * документа при выдаче по MCP или же в web». Отдельный флаг, а НЕ часть
+     * {@code lore.scope.enforce}, намеренно: это две разные меры с разной
+     * ценой, и включать их должно быть можно по одной.
+     *
+     * <p>Построчный скоуп прячет запись целиком и потому отрезает всё, у чего
+     * нет ребра на проект — 499 записей по замеру 19.10.2026. Обнуление тела
+     * не прячет ни одной строки и работает ровно там, где проект известен.
+     * Значит обнуление можно включить раньше и безопаснее, чем построчный
+     * скоуп, — и ради этого флаг свой.
+     */
+    @ConfigProperty(name = "lore.scope.redact-bodies", defaultValue = "false")
+    boolean redactBodies;
+
     @Inject
     ProjectRbacService projectRbac;
 
@@ -674,6 +691,51 @@ public class AidaLoreResource extends LoreResourceBase {
      * (решение владельца 30.08.2026): серверный предел теперь единственный — и
      * он же единственный молчаливый.
      */
+    /**
+     * Обнулить тело документа читателю без роли в его проекте.
+     *
+     * <p>Единственная точка на оба пути: и MCP, и web ходят за документом через
+     * {@code GET /lore/slice/<id>}, поэтому правка здесь закрывает сразу обе
+     * выдачи. Делать её в двух местах значило бы завести две правды о доступе.
+     *
+     * <p><b>Что остаётся видно:</b> идентификатор, заголовок, вид, проекты,
+     * даты — всё, кроме содержимого. Строка НЕ исчезает: исчезнувшая строка
+     * отрезала бы и те 499 записей, у которых проекта нет вовсе.
+     *
+     * <p><b>Признак обязателен.</b> Пустое тело без {@code body_redacted}
+     * читалось бы как «документ не написан». Поэтому рядом ставятся признак и
+     * причина — потребитель обязан иметь возможность сказать «нет доступа», а
+     * не нарисовать пустую страницу.
+     *
+     * <p>Запись без проекта не обнуляется: у неё нет проекта, на котором можно
+     * иметь роль (см. {@code LoreSlices.BODY_SCOPED}).
+     */
+    studio.seer.heimdall.bench.MartResult redactIfNoRole(
+            String sliceId, studio.seer.heimdall.bench.MartResult res, String role) {
+        List<String> bodyFields = LoreSlices.BODY_SCOPED.get(sliceId);
+        if (!redactBodies || bodyFields == null || res.result() == null) return res;
+
+        java.util.Set<String> allowed = callerAllowedProjects(role);
+        if (allowed == null) return res;   // superadmin, выключенный auth, агент вне скоупа
+
+        for (Map<String, Object> row : res.result()) {
+            List<?> projects = row.get("projects") instanceof List<?> l ? l : List.of();
+            // Нет проекта — обнулять нечему принадлежать. Пересечение есть —
+            // роль есть хотя бы в одном проекте записи, и это достаточно
+            // (то же правило «любой разрешённый», что у построчного скоупа).
+            if (projects.isEmpty() || projects.stream().anyMatch(p -> allowed.contains(String.valueOf(p)))) {
+                continue;
+            }
+            for (String f : bodyFields) {
+                if (row.containsKey(f)) row.put(f, null);
+            }
+            row.put("body_redacted", true);
+            row.put("body_redacted_reason",
+                "содержимое скрыто: у вас нет роли ни в одном проекте этой записи");
+        }
+        return res;
+    }
+
     static Map<String, Object> sliceBody(studio.seer.heimdall.bench.MartResult res) {
         List<Map<String, Object>> rows = res.result() == null ? List.of() : res.result();
         Map<String, Object> body = new LinkedHashMap<>();
@@ -732,7 +794,7 @@ public class AidaLoreResource extends LoreResourceBase {
         LOG.debugf("[LORE:%s] %s %s", db, id, composed.params());
 
         return client.query(db, basicAuth(), body)
-            .map(res -> noStore(Response.ok(sliceBody(res))))
+            .map(res -> noStore(Response.ok(sliceBody(redactIfNoRole(id, res, role)))))
             .onFailure().recoverWithItem(ex -> {
                 LOG.warnf("[LORE FAILED] slice=%s: %s", id, ex.getMessage());
                 return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -770,6 +832,24 @@ public class AidaLoreResource extends LoreResourceBase {
      */
     java.util.Set<String> allowedProjectsOrNull(String role) {
         if (!scopeEnforce) return null;
+        return callerAllowedProjects(role);
+    }
+
+    /**
+     * То же множество, но БЕЗ оглядки на {@code lore.scope.enforce}.
+     *
+     * <p>Вынесено потому, что мер стало две и у них разные выключатели:
+     * построчный скоуп ({@code lore.scope.enforce}) и обнуление тела
+     * ({@code lore.scope.redact-bodies}). Пока резолвер сам проверял флаг
+     * построчного скоупа, обнуление нельзя было включить отдельно — оно
+     * получало {@code null} и молча не работало. Ровно тот же дефект, что
+     * AL-95 поймал у первой редакции: код за флагом, который во включённом
+     * состоянии не делает ничего.
+     *
+     * <p>{@code null} здесь по-прежнему значит «ограничения нет»: superadmin,
+     * выключенная аутентификация, админ.
+     */
+    java.util.Set<String> callerAllowedProjects(String role) {
         // ПОРЯДОК СУЩЕСТВЕННЫЙ: агент опознаётся ДО роли. См. bypassesScope().
         String clientId = callerClientId();
         if (clientId != null) {

@@ -1567,6 +1567,10 @@ public final class LoreSlices {
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
             "out('IMPLEMENTED_IN').sprint_id AS sprint_ids, " +
+            // Проекты нужны не выдаче, а РЕШЕНИЮ об обнулении тела (BODY_SCOPED):
+            // без них сервер не может ответить, есть ли у читателя роль там, где
+            // документ числится. Поле заодно полезно само по себе.
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowDoc WHERE doc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
@@ -1586,7 +1590,9 @@ public final class LoreSlices {
             "SELECT runbook_id, name, area, date_created, " +
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
             "out('HAS_STATE').valid_from[0] AS valid_from, " +
-            "out('REFERENCES_ADR').adr_id AS adr_ids " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids, " +
+            // См. doc_by_id: проекты нужны решению об обнулении тела.
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowRunbook WHERE runbook_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -2116,6 +2122,39 @@ public final class LoreSlices {
         // Вопрос: своё ребро ИЛИ проект места, где он поднят (RAISED_IN → ADR/спринт).
         Map.entry("open_questions",
             "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug")
+    );
+
+    /**
+     * Слайсы, у которых при отсутствии роли обнуляется ТЕЛО, а не прячется
+     * строка. Значение — поля тела; поле проектов у всех трёх `projects`.
+     *
+     * <p>Решение владелицы 19.10.2026: «достаточно обнулять текст самого
+     * документа при выдаче по MCP или же в web». Это принципиально иная мера,
+     * чем {@link #PROJECT_SCOPED}: там строка исчезает из выдачи, здесь —
+     * остаётся с опознавательными полями (идентификатор, заголовок, вид,
+     * проекты), а скрывается только содержимое.
+     *
+     * <p><b>Почему это лучше для документов.</b> Скоуп по строкам режет по
+     * ребру {@code BELONGS_TO_PROJECT}, и запись БЕЗ ребра он отрезает не по
+     * правам, а по недостающим данным — у всех, включая владельца. Замер
+     * 19.10.2026: проекта нет у 218 спек из 415, у 239 доков из 292, у 42
+     * ранбуков из 47. Построчное скрытие спрятало бы 499 записей от каждого;
+     * обнуление тела не прячет ни одной.
+     *
+     * <p><b>Обнулённое тело обязано отличаться от пустого документа.</b> Рядом
+     * ставится признак {@code body_redacted} и причина: иначе «нет доступа»
+     * стало бы неотличимо от «не написано» — тот самый класс, против которого
+     * написана половина проверок корпуса.
+     *
+     * <p><b>Запись без проекта НЕ обнуляется.</b> У неё нет проекта, на котором
+     * можно иметь роль, и обнулять её значило бы снова наказывать за недостачу
+     * данных. Такие записи перечисляет срез {@code scope_orphans} — это видимая
+     * работа, а не тихая дыра.
+     */
+    static final Map<String, List<String>> BODY_SCOPED = Map.of(
+        "doc_by_id",     List.of("content_html", "content_md_en", "content_md_ru"),
+        "spec_by_id",    List.of("content_md", "summary"),
+        "runbook_by_id", List.of("content_md")
     );
 
     /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */
