@@ -447,7 +447,11 @@ public final class LoreSlices {
             // условием скоупа («… ORDER BY decision_id AND (…)»), и под
             // включённым lore.scope.enforce срез отвечал 502 — паспорт ADR
             // ломался у всех, кроме superadmin. Найдено живым тестом под флагом.
-            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id",
+            // SE-05 (20.10.2026): CONTAINS, а не [0] = — решение под двумя ADR
+            // (совместные ADR — замысел владелицы) было видно в паспорте только
+            // того родителя, что оказался первым. Тест — на ДВУХ родителях
+            // (DecisionUnderTwoAdrsLiveDbTest): на одном формы неразличимы.
+            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY decision_id");
 
         slice("decision",
@@ -693,7 +697,11 @@ public final class LoreSlices {
             // (ADR-LORE-015, T14) are plain KnowTask vertex fields — no traversal
             // needed, unlike note_md/effort_days above.
             ROLE_HOLDERS + ", task_type " +
-            "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
+            // SE-05 (20.10.2026): CONTAINS, а не [0] =. Модель допускает задачу
+            // в нескольких фазах — task/phase add не снимает прежнюю, а remove
+            // без фазы описан как «отцепить от ВСЕХ». С [0] такая задача была
+            // видна только в одной фазе, какой придётся (TaskInTwoPhasesLiveDbTest).
+            "FROM KnowTask WHERE out('IN_PHASE').phase_uid CONTAINS :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
 
