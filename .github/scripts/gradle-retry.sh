@@ -25,28 +25,60 @@
 #
 # ПОЧЕМУ ОТДЕЛЬНЫМ ФАЙЛОМ, а не bash внутри `run:` — многострочный bash в
 # workflow уже дважды ломал разбор у Forgejo (см. resolve-proxy.sh).
+#
+# НЕ ПОВТОРЯТЬ УПАВШИЕ ТЕСТЫ (20.10.2026). Повтор задуман против обрыва канала,
+# а срабатывал на ЛЮБОЙ отказ — в том числе на честно упавший тест. Тест,
+# падающий детерминированно, падал трижды: PR #688 держал слот выделенного
+# раннера 52 минуты вместо ~16, с теми же тремя отказами в каждой попытке, а
+# очередь остальных PR стояла за ним. Отказ, в котором тесты ДОБЕЖАЛИ и
+# упали, — не сеть: повтор его не лечит, только прячет красный на час.
 set -uo pipefail
 
 ATTEMPTS="${GRADLE_RETRY_ATTEMPTS:-3}"
 DELAY="${GRADLE_RETRY_DELAY:-20}"
+
+# Тесты добежали и упали? Признаки — строка итога build.gradle с ненулевым
+# «упало» и стандартное сообщение Gradle о падении тестов.
+tests_failed() {
+  grep -a -q -E '==== ИТОГ ТЕСТОВ: .*упало [1-9]|There were failing tests' "$1"
+}
+
+if [ "${1:-}" = "--selftest" ]; then
+  t=$(mktemp -d); rc=0
+  printf '==== ИТОГ ТЕСТОВ: всего 747, зелёных 744, упало 3, пропущено 0 ====\n' > "$t/red"
+  printf "> There were failing tests. See the report at: file:///x/index.html\n" > "$t/gradle"
+  printf 'Could not GET https://repo.maven.apache.org/x.pom\n> Read timed out\n' > "$t/net"
+  printf '==== ИТОГ ТЕСТОВ: всего 747, зелёных 747, упало 0, пропущено 0 ====\nRead timed out\n' > "$t/green"
+  tests_failed "$t/red"    || { echo "::error::selftest.red FAIL — упавшие тесты не опознаны, их снова будут повторять"; rc=1; }
+  tests_failed "$t/gradle" || { echo "::error::selftest.gradle FAIL — сообщение Gradle о тестах не опознано"; rc=1; }
+  tests_failed "$t/net"    && { echo "::error::selftest.net FAIL — обрыв сети принят за тесты, повтора не будет"; rc=1; }
+  tests_failed "$t/green"  && { echo "::error::selftest.green FAIL — «упало 0» принято за отказ тестов"; rc=1; }
+  rm -rf "$t"; [ "$rc" -eq 0 ] && echo "selftest ok"; exit "$rc"
+fi
 
 if [ "$#" -eq 0 ]; then
   echo "::error::gradle-retry.sh вызван без аргументов — нечего запускать"
   exit 2
 fi
 
+LOG=$(mktemp)
+trap 'rm -f "$LOG"' EXIT
+
 attempt=1
 while : ; do
   echo "── попытка $attempt из $ATTEMPTS: ./gradlew $* ──"
-  # `rc` берётся ИМЕННО в ветке else. После `fi` он был бы равен нулю: если
-  # условие провалилось, а ветки else нет, сам `if` возвращает 0 — и скрипт
-  # «падал бы успешно», отдавая наружу код 0 при неудачной сборке. Поймано
-  # собственной проверкой скрипта до первого прогона в CI.
-  if ./gradlew "$@"; then
+  # Код — ИМЕННО gradle, а не tee: PIPESTATUS[0], иначе конвейер отдал бы
+  # код tee (0) и скрипт «падал бы успешно».
+  ./gradlew "$@" 2>&1 | tee "$LOG"
+  rc=${PIPESTATUS[0]}
+  if [ "$rc" -eq 0 ]; then
     [ "$attempt" -gt 1 ] && echo "::notice::сборка прошла с попытки $attempt — канал до Maven Central нестабилен"
     exit 0
-  else
-    rc=$?
+  fi
+
+  if tests_failed "$LOG"; then
+    echo "::error::тесты добежали и упали (код $rc) — это не сеть, повтор не поможет; причина в сводке «УПАВШИЕ ТЕСТЫ» выше"
+    exit "$rc"
   fi
 
   # ОТКАТ ОТ ЗЕРКАЛА. Первая же неудача снимает init-скрипт Nexus, и следующая
