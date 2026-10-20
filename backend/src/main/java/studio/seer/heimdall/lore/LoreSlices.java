@@ -160,6 +160,88 @@ public final class LoreSlices {
     private static final String OPEN_TASK_STATUS_EXPR =
         "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
 
+    /**
+     * RM-P17: как зовётся родитель строки истории — одна пара на цепочку SCD2.
+     *
+     * <p>Нужно срезу {@code history_hygiene}: находка без {@code ref_id}
+     * бесполезна — по счётчику «семь строк» починить нельзя, по
+     * {@code SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-A} можно.
+     *
+     * <p><b>Какие цепочки существуют — не здесь.</b> Список берётся из реестра
+     * объявления {@code valid_from} ({@link LoreSchemaMigrations#HIST_VALID_FROM_TEXT}
+     * плюс {@link LoreSchemaMigrations#HIST_VALID_FROM_TEMPORAL}); эта таблица
+     * отвечает только на вопрос «как зовётся родитель». Новый {@code *Hist},
+     * попавший в реестр без пары здесь, валит статический блок при первом
+     * обращении к классу — то есть на первом же прогоне тестов. Молча выпасть
+     * из гигиены он не может, и третьей таблицы «какие бывают *Hist» в корпусе
+     * не появляется (RM-P8 — расхождение двух таблиц об одном).
+     *
+     * <p>У записи справочника одиночного естественного id нет (ключ составной,
+     * {@code dict_type} + {@code code}) — в находку едет {@code code}: он
+     * адресует строку внутри своего типа, а сам тип виден в {@code hist_type}.
+     */
+    record HistParent(String entityType, String idField) {}
+
+    static final Map<String, HistParent> HIST_PARENT = Map.ofEntries(
+        Map.entry("KnowADRHist",       new HistParent("adr",        "adr_id")),
+        Map.entry("KnowDecisionHist",  new HistParent("decision",   "decision_id")),
+        Map.entry("KnowDocHist",       new HistParent("doc",        "doc_id")),
+        Map.entry("KnowFindingHist",   new HistParent("finding",    "finding_id")),
+        Map.entry("KnowMilestoneHist", new HistParent("milestone",  "milestone_id")),
+        Map.entry("KnowPhaseHist",     new HistParent("phase",      "phase_uid")),
+        Map.entry("KnowReleaseHist",   new HistParent("release",    "release_id")),
+        Map.entry("KnowRunbookHist",   new HistParent("runbook",    "runbook_id")),
+        Map.entry("KnowSpecHist",      new HistParent("spec",       "spec_id")),
+        Map.entry("KnowTaskHist",      new HistParent("task",       "task_uid")),
+        Map.entry("KnowSprintHist",    new HistParent("sprint",     "sprint_id")),
+        Map.entry("KnowDictEntryHist", new HistParent("dict_entry", "code")));
+
+    /** Все цепочки SCD2 корпуса в устойчивом порядке — иначе SQL среза плывёт между прогонами. */
+    static List<String> histChains() {
+        List<String> all = new java.util.ArrayList<>(LoreSchemaMigrations.HIST_VALID_FROM_TEXT);
+        all.addAll(LoreSchemaMigrations.HIST_VALID_FROM_TEMPORAL);
+        return List.copyOf(all);
+    }
+
+    /**
+     * SQL среза {@code history_hygiene} — по одной ветке unionall на цепочку.
+     *
+     * <p>Собирается кодом, а не рукой: двенадцать почти одинаковых ветвей,
+     * написанных вручную, расходятся при первой же правке одной из них.
+     */
+    private static String histHygieneSql() {
+        List<String> chains = histChains();
+        if (chains.size() > 26) {
+            throw new IllegalStateException(
+                "цепочек SCD2 больше 26 — однобуквенные имена LET-переменных кончились, "
+                + "смените схему именования в histHygieneSql()");
+        }
+        StringBuilder vars = new StringBuilder();
+        StringBuilder lets = new StringBuilder();
+        for (int i = 0; i < chains.size(); i++) {
+            String hist = chains.get(i);
+            HistParent parent = HIST_PARENT.get(hist);
+            if (parent == null) {
+                throw new IllegalStateException(
+                    "RM-P17: цепочка " + hist + " объявлена в реестре valid_from, но пары в "
+                    + "LoreSlices.HIST_PARENT у неё нет — срез history_hygiene молча пропустил бы "
+                    + "весь этот тип. Добавьте пару «класс → поле id родителя».");
+            }
+            String var = "$h" + (char) ('a' + i);
+            if (i > 0) { vars.append(", "); lets.append(", "); }
+            vars.append(var);
+            lets.append(var)
+                .append(" = (SELECT 'open_state_without_valid_from' AS finding, '")
+                .append(parent.entityType()).append("' AS entity_type, '")
+                .append(hist).append("' AS hist_type, in('HAS_STATE').")
+                .append(parent.idField()).append("[0] AS ref_id, state_uid FROM ")
+                .append(hist).append(" WHERE valid_to IS NULL AND valid_from IS NULL)");
+        }
+        return "SELECT finding, entity_type, hist_type, ref_id, state_uid "
+            + "FROM (SELECT expand(unionall(" + vars + ")) LET " + lets + ") "
+            + "ORDER BY entity_type, ref_id";
+    }
+
     static {
         // ── §1 Timeline — 3 separate slices, merged on frontend ──────────────
         // No UNION in ArcadeDB /api/v1/query. Frontend fetches all 3, merges by date.
@@ -876,6 +958,32 @@ public final class LoreSlices {
             "       WHERE out('BELONGS_TO_PROJECT').size() = 0)" +
             ") ORDER BY entity_type, ref_id",
             List.of(), Map.of(), "");
+
+        // RM-P17: открытая строка истории без valid_from — ДЕФЕКТ, и его надо видеть.
+        //
+        // ЗАМЕР (прод, 11.09.2026). В KnowTaskHist восемь строк с valid_from = null
+        // из 9796, и семь из них ОТКРЫТЫЕ (valid_to IS NULL), то есть это текущее
+        // состояние задачи: SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-A…P1-G.
+        //
+        // ЧЕМ СТОИТ. Слайс task_starts отбирает `valid_from IS NOT NULL`,
+        // task_created_dates берёт min(valid_from) по цепочке. Такие задачи
+        // выпадают из аналитики МОЛЧА: их нет ни в «начале», ни в «заведении»,
+        // lead/cycle time по спринту считается без них, а пустая выдача читается
+        // как «таких задач не было» — тот же класс, что «пустой ответ ≠ не найдено».
+        //
+        // ПОЧЕМУ СРЕЗ, А НЕ ВЕРДИКТ ЗАПИСИ. Линтер полноты (WorkQuality) отвечает
+        // в ответе НА ЗАПИСЬ — а запись как раз и создаёт новую открытую строку с
+        // valid_from, поэтому в write-пути такая проверка всегда «ок» и не ловит
+        // ничего; обязательной её сделать тоже нельзя — max вырос бы у каждой
+        // задачи корпуса, сдвинув счёт там, где дефекта нет. Правило живёт срезом,
+        // как product_hygiene и scope_orphans: находка с ref_id, по которому можно
+        // пойти и починить, а не счётчик.
+        //
+        // ПОЧИНКА ДАННЫХ — НЕ ЗДЕСЬ. Восстановить дату неоткуда, кроме соседних
+        // фактов, а подставленная дата станет ФАКТОМ аналитики: это решение
+        // владелицы (развилка в RM-P17). Срез её не предрешает — он показывает
+        // недостачу, а не заполняет её.
+        slice("history_hygiene", histHygieneSql(), List.of(), Map.of(), "");
 
         // Проект без единой роли — тихая дыра в делегировании (найдено 30.08.2026
         // владельцем: «в full сессии Claude не даёт завести новых акторов»).
