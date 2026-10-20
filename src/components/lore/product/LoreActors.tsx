@@ -274,7 +274,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
             <ProfileLine icon={iconOf(VP_ICON, 'gain')} label={t('lore.product.actor.gains', 'Ожидания')} items={gainItems} color="var(--gain)" onNavigate={onNavigate} />
           </PSection>
 
-          <PSection title={t('lore.product.actor.ucRbac', 'US роли · отсюда строится RBAC')}>
+          <PSection title={t('lore.product.actor.ucRbac', 'US этой роли · из них выводится матрица прав описываемого продукта (не права в LORE)')}>
             {ucIds.length === 0 ? (
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', padding: '2px 0' }}>US ещё нет</div>
             ) : (
@@ -288,7 +288,7 @@ export default function LoreActors({ selectedId, onSelect, onNavigate, onError, 
           </PSection>
 
           {a.body_md && (
-            <PSection title={t('lore.product.actor.about', 'О роли')}>
+            <PSection title={t('lore.product.actor.about', 'О роли в продукте')}>
               <Markdown md={a.body_md} />
             </PSection>
           )}

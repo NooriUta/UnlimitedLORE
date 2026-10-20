@@ -1999,10 +1999,10 @@ export function registerLoreWrite(server: McpServer): void {
       '(dict_type, code), partial-safe for metadata (label/color/icon/sort_order left untouched when omitted; ' +
       'is_active defaults true, is_extensible false on create). Single canon read by frontend (useDictionary), ' +
       'backend and MCP via query_slice "dictionary". dict_type e.g. "sprint_status"|"task_status"|"adr_status"|' +
-      '"priority"|"artifact_kind"|"area"|"agent_role"|"task_type"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
+      '"priority"|"artifact_kind"|"area"|"agent_profile"|"task_type"|"bragi_channel"|"tag". color prefers a CSS token like "var(--suc)". ' +
       'Check query_slice "dictionary" (optionally dict_type=...) before adding. Mutates the shared system_aida_lore.',
     schema: {
-      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area", "agent_role"'),
+      dict_type:     z.string().describe('domain, e.g. "sprint_status", "priority", "area", "agent_profile"'),
       code:          z.string().describe('stable key, e.g. "done", "P0", "PROPOSED", "runbook"'),
       label_ru:      z.string().optional(),
       label_en:      z.string().optional(),
