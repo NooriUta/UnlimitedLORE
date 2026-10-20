@@ -1245,7 +1245,9 @@ public final class LoreSlices {
             List.of(), Map.of(), "");
 
         // Batch variant: fetch tasks for multiple sprints in one query.
-        // sprint_ids is a comma-separated string that the slice layer splits into a list.
+        // sprint_ids — список через запятую; слой срезов режет его в List (isListParam,
+        // SE-16). До 20.10.2026 этот комментарий обещал разбор, которого не было:
+        // строка "A,B" уходила в IN целиком и находила пусто.
         slice("tasks_of_sprints_batch",
             "SELECT task_uid, task_id, title, order_index, " +
             "out('PART_OF').sprint_id[0]                              AS sprint_id, " +
@@ -2341,6 +2343,34 @@ public final class LoreSlices {
         return new Composed(head + connector + condition + suffix, params);
     }
 
+    /**
+     * SE-16: списочный параметр — имя на {@code _ids} или {@code _uids}. Уходит в
+     * СУБД СПИСКОМ: ArcadeDB в {@code IN :ids} находит элементы массива, а строку
+     * «A,B» сравнивает целиком и отдаёт пусто (замер на проде 20.10.2026) — так
+     * пакетный срез работал только с одним элементом.
+     */
+    static final int LIST_PARAM_MAX = 200;
+
+    static boolean isListParam(String name) {
+        return name.endsWith("_ids") || name.endsWith("_uids");
+    }
+
+    /** Каждый элемент — тем же белым списком, что одиночное значение; пустые выброшены. */
+    static List<String> listValue(String name, String raw) {
+        List<String> out = new java.util.ArrayList<>();
+        if (raw != null) for (String part : raw.split(",")) {
+            String v = part.trim();
+            if (v.isEmpty()) continue;
+            if (!VALUE_RE.matcher(v).matches() || v.contains(","))
+                throw new IllegalArgumentException("bad value for param: " + name);
+            out.add(v);
+        }
+        if (out.isEmpty()) throw new IllegalArgumentException("empty list for param: " + name);
+        if (out.size() > LIST_PARAM_MAX)
+            throw new IllegalArgumentException("too many values for param: " + name + " (max " + LIST_PARAM_MAX + ")");
+        return out;
+    }
+
     public static Composed compose(String id, Map<String, String> given) {
         SliceDef def = SLICES.get(id);
         if (def == null) throw new IllegalArgumentException("unknown slice: " + id);
@@ -2356,6 +2386,10 @@ public final class LoreSlices {
         Map<String, Object> params = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : given.entrySet()) {
             String value = e.getValue();
+            if (isListParam(e.getKey())) {
+                params.put(e.getKey(), listValue(e.getKey(), value));
+                continue;
+            }
             if (value == null || !VALUE_RE.matcher(value).matches())
                 throw new IllegalArgumentException("bad value for param: " + e.getKey());
             params.put(e.getKey(), value);
