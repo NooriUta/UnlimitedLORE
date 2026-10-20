@@ -440,6 +440,169 @@ else
   emit "sql.scd2_open_row_projection" "FAIL" "проекция открытой строки сломана — на ней стоят все слайсы: $(printf '%s' "$OPEN_ROW" | head -c 200)"
 fi
 
+# --- C13: 26.10.1 меняет ПОВЕДЕНИЕ ЗАПИСИ — четыре пробы ---------------------
+#
+# Заметки 26.10.1 называют два изменения, после которых запись, молча
+# работавшая раньше, начинает отказывать, и одно, снимающее наш обход. Верить
+# заметкам нельзя: 26.8.1 объявлял исправленным индексный дефект, который не
+# исправился (их #5675/#5740, наш issue #6921). Поэтому замер.
+
+# C13a. Дата: раньше нераспознанная молча ложилась NULL, теперь отклоняется.
+#
+# Нам это важно предметно: KnowSprintHist и KnowDictEntryHist держат DATETIME,
+# остальные десять типов — текст ISO-8601 UTC (RM-P13). Если DATETIME-свойство
+# не примет нашу форму с T и Z, запись упадёт там, где раньше проходила.
+# Поэтому порядок: сначала положительный контроль обычной формой, потом НАША
+# форма с проверкой чтения обратно, и только затем мусор. «Отказ» без контроля
+# неотличим от «вставка сломана вообще», а «принято» без чтения обратно — от
+# «принято и потеряно».
+sql "CREATE DOCUMENT TYPE RgDt IF NOT EXISTS" >/dev/null
+sql "CREATE PROPERTY RgDt.whenAt IF NOT EXISTS DATETIME" >/dev/null
+
+OK_SPACE=$(sql "INSERT INTO RgDt SET k = 'space', whenAt = '2026-10-12 11:22:33'")
+if printf '%s' "$OK_SPACE" | grep -q '"error"'; then
+  emit "date.space_form_accepted" "FAIL" "обычная форма '2026-10-12 11:22:33' НЕ принята — судить об остальных отказах нельзя: $(printf '%s' "$OK_SPACE" | grep -o '"detail":"[^"]*"' | head -c 180)"
+else
+  emit "date.space_form_accepted" "PASS" "форма с пробелом принята — контроль есть"
+fi
+
+ISO_IN=$(sql "INSERT INTO RgDt SET k = 'iso', whenAt = '2026-10-12T11:22:33Z'")
+ISO_BACK=$(sql "SELECT whenAt AS w FROM RgDt WHERE k = 'iso'")
+if printf '%s' "$ISO_IN" | grep -q '"error"'; then
+  emit "date.iso_utc_round_trip" "FAIL" "НАША форма ISO-8601 с T и Z отвергнута при записи — записи LORE в DATETIME-свойства упадут: $(printf '%s' "$ISO_IN" | grep -o '"detail":"[^"]*"' | head -c 180)"
+elif printf '%s' "$ISO_BACK" | grep -q '"w":null'; then
+  emit "date.iso_utc_round_trip" "FAIL" "наша форма принята, но прочитана NULL — молчаливая потеря значения"
+else
+  emit "date.iso_utc_round_trip" "PASS" "наша форма ISO-8601 с T и Z записана и прочитана: $(printf '%s' "$ISO_BACK" | head -c 120)"
+fi
+
+# Та же форма, но с дробными долями секунды — ИМЕННО её пишет код:
+# LoreStatusResource и LoreDictResource кладут Instant.now().toString() в
+# valid_from/valid_to, а у KnowSprintHist и KnowDictEntryHist они объявлены
+# DATETIME. Проба без долей дала бы ложное спокойствие: отвергнуть может
+# именно наносекундный хвост.
+FRAC_IN=$(sql "INSERT INTO RgDt SET k = 'frac', whenAt = '2026-10-12T09:41:07.123456789Z'")
+FRAC_BACK=$(sql "SELECT whenAt AS w FROM RgDt WHERE k = 'frac'")
+if printf '%s' "$FRAC_IN" | grep -q '"error"'; then
+  emit "date.instant_now_form_round_trip" "FAIL" "форма Instant.now() с долями секунды отвергнута — упадут смена статуса спринта и правка словаря: $(printf '%s' "$FRAC_IN" | grep -o '"detail":"[^"]*"' | head -c 180)"
+elif printf '%s' "$FRAC_BACK" | grep -q '"w":null'; then
+  emit "date.instant_now_form_round_trip" "FAIL" "форма Instant.now() принята, но прочитана NULL — молчаливая потеря отметки времени"
+else
+  emit "date.instant_now_form_round_trip" "PASS" "форма Instant.now() записана и прочитана: $(printf '%s' "$FRAC_BACK" | head -c 120)"
+fi
+
+BAD_IN=$(sql "INSERT INTO RgDt SET k = 'bad', whenAt = 'не дата'")
+BAD_BACK=$(sql "SELECT count(*) AS n FROM RgDt WHERE k = 'bad'")
+if printf '%s' "$BAD_IN" | grep -q '"error"'; then
+  emit "date.garbage_rejected" "OBSERVE" "ОТКАЗ (поведение 26.10.1): $(printf '%s' "$BAD_IN" | grep -o '"detail":"[^"]*"' | head -c 180)"
+else
+  emit "date.garbage_rejected" "OBSERVE" "ПРИНЯТО без ошибки, строк с мусорной датой: $(scalar "$BAD_BACK" n) — старое молчаливое поведение"
+fi
+
+# C13b. Приращение по устаревшему чтению: раньше терялось, теперь отклоняется.
+#
+# Шесть писателей делают UPDATE … SET n = n + 1 по ОДНОЙ записи. Два вердикта
+# намеренно раздельные, как у суперноды выше: сколько писателей принято — это
+# OBSERVE (верного ответа набор не знает, отказ в 26.10.1 ЖЕЛАЕМ), а вот
+# «счётчик равен числу принятых» — это EXPECT: принятая запись обязана быть
+# в данных. Расхождение и есть молчаливая потеря.
+sql "CREATE DOCUMENT TYPE RgCnt IF NOT EXISTS" >/dev/null
+sql "INSERT INTO RgCnt SET k = 'c', n = 0" >/dev/null
+CPAR=6
+cnt_dir="$(mktemp -d)"
+for w in $(seq 1 "$CPAR"); do
+  (
+    f="$(mktemp)"
+    printf '{"language":"sql","command":"UPDATE RgCnt SET n = n + 1 WHERE k = %s"}' "'c'" > "$f"
+    body=$(curl -s -u "$DB_USER:$DB_PASS" -H 'Content-Type: application/json' \
+      -X POST "$DB_URL/api/v1/command/$DB_NAME" --data-binary "@$f")
+    printf '%s' "$body" | grep -q '"error"' || printf 'ok\n' > "$cnt_dir/$w"
+    rm -f "$f"
+  ) &
+done
+wait
+ACCEPTED=$(find "$cnt_dir" -type f | grep -c . || true)
+rm -rf "$cnt_dir"
+FINAL=$(scalar "$(sql "SELECT n FROM RgCnt WHERE k = 'c'")" n)
+
+emit "write.counter_writers_accepted" "OBSERVE" "принято ${ACCEPTED:-0} из $CPAR писателей по одной записи"
+if [ -z "${FINAL:-}" ]; then
+  emit "write.counter_no_lost_update" "FAIL" "счётчик не прочитан — проверка не выполнилась, это НЕ «потерь нет»"
+elif [ "$FINAL" -eq "${ACCEPTED:-0}" ]; then
+  emit "write.counter_no_lost_update" "PASS" "счётчик $FINAL == принятых ${ACCEPTED:-0} — ни одно подтверждённое приращение не потеряно"
+else
+  emit "write.counter_no_lost_update" "FAIL" "счётчик $FINAL, а принято ${ACCEPTED:-0} — потеряно $(( ${ACCEPTED:-0} - FINAL )) подтверждённых приращений молча"
+fi
+
+
+# Положительный контроль к счётчику: ОДИН писатель, без конкуренции.
+# Без него «счётчик не прочитан» неотличимо от «конкуренция сломала запись»:
+# первое — дефект пробы, второе — дефект СУБД, и лечатся они в разных местах.
+sql "INSERT INTO RgCnt SET k = 'solo', n = 0" >/dev/null
+SOLO_UPD=$(sql "UPDATE RgCnt SET n = n + 1 WHERE k = 'solo'")
+SOLO_READ=$(sql "SELECT n FROM RgCnt WHERE k = 'solo'")
+SOLO_N=$(scalar "$SOLO_READ" n)
+if [ "${SOLO_N:-}" = "1" ]; then
+  emit "write.counter_solo_control" "PASS" "один писатель: счётчик 1 — чтение и инкремент работают, мерка годна"
+else
+  emit "write.counter_solo_control" "FAIL" "один писатель БЕЗ конкуренции дал счётчик '${SOLO_N:-пусто}' — сломана сама проба, вердикты про конкуренцию ничего не значат. UPDATE: $(printf '%s' "$SOLO_UPD" | head -c 120) READ: $(printf '%s' "$SOLO_READ" | head -c 120)"
+fi
+
+# Сырое тело чтения конкурентного счётчика — чтобы «не прочитан» был фактом,
+# а не догадкой о форме ответа.
+emit "write.counter_read_body" "OBSERVE" "$(printf '%s' "$(sql "SELECT n FROM RgCnt WHERE k = 'c'")" | head -c 200)"
+
+# C13e. Устаревшее чтение — ТА САМАЯ форма, которую меняет 26.10.1.
+#
+# Проба выше её не проверяла, и это важно признать: UPDATE … SET n = n + 1
+# считается на сервере ОДНИМ оператором, устаревшего чтения в нём нет вовсе.
+# Заметки обещают отказ там, где клиент СНАЧАЛА прочитал значение, а потом
+# записал посчитанное по нему. Здесь ровно это: два писателя читают одно и то
+# же, оба пишут «прочитанное + 1».
+#
+# Информативна ПАРА чисел, а не каждое по отдельности:
+#   принято 2, счётчик 1 — второе приращение потеряно молча (старое поведение);
+#   принято 1, счётчик 1 — писателю отказали, потери нет (ожидаемое 26.10.1).
+sql "INSERT INTO RgCnt SET k = 'stale', n = 0" >/dev/null
+stale_dir="$(mktemp -d)"
+for w in 1 2; do
+  (
+    V=$(scalar "$(sql "SELECT n FROM RgCnt WHERE k = 'stale'")" n)
+    sleep 1   # оба обязаны прочитать ДО того, как любой запишет
+    body=$(sql "UPDATE RgCnt SET n = $(( ${V:-0} + 1 )) WHERE k = 'stale'")
+    printf '%s' "$body" | grep -q '"error"' || printf 'ok\n' > "$stale_dir/$w"
+  ) &
+done
+wait
+STALE_ACC=$(find "$stale_dir" -type f | grep -c . || true)
+rm -rf "$stale_dir"
+STALE_FIN=$(scalar "$(sql "SELECT n FROM RgCnt WHERE k = 'stale'")" n)
+emit "write.stale_read_pair" "OBSERVE" "принято ${STALE_ACC:-0} из 2 писателей, счётчик ${STALE_FIN:-пусто} (принято 2 при счётчике 1 = молчаливая потеря; принято 1 = писателю отказали)"
+
+# Запрос по НЕСУЩЕСТВУЮЩЕМУ индексу: сырое тело ответа.
+#
+# Самоконтроль ниже требует, чтобы такой запрос отбивался ошибкой. Если версия
+# начала отвечать пустотой вместо ошибки, это задевает нас прямее всего:
+# поиск LORE отличает «индекс непригоден» от «ничего не найдено» именно по
+# ошибке, и молчаливая пустота превращает поломку индекса в «записей нет».
+emit "index.missing_index_query_shape" "OBSERVE" "$(printf '%s' "$(sql "SELECT count(*) AS n FROM RgDoc WHERE SEARCH_INDEX('rgNoSuchIndex', 'TOKEN') = true")" | head -c 200)"
+# C13c. COUNT(DISTINCT …) раньше был синтаксической ошибкой — свёртку
+# приходилось делать в Java. Если заработал, часть обходов снимается.
+observe "sql.count_distinct" "SELECT count(DISTINCT k) AS n FROM RgDt"
+
+# C13d. DROP TYPE оставлял псевдоним типа, и тип возвращался после перезапуска.
+# Перезапуск здесь не проверяется — только то, видна ли в схеме остаточная
+# запись сразу после удаления. Зелёный тут НЕ означает «после перезапуска не
+# вернётся»: это слабая половина проверки, и так и подписана.
+sql "CREATE DOCUMENT TYPE RgTmpDrop IF NOT EXISTS" >/dev/null
+sql "DROP TYPE RgTmpDrop" >/dev/null
+LEFTOVER=$(sql "SELECT name FROM schema:types WHERE name LIKE 'RgTmpDrop%'")
+if printf '%s' "$LEFTOVER" | grep -q 'RgTmpDrop'; then
+  emit "schema.drop_type_leaves_no_alias" "FAIL" "после DROP TYPE в схеме осталось имя (перезапуск не проверялся): $(printf '%s' "$LEFTOVER" | head -c 160)"
+else
+  emit "schema.drop_type_leaves_no_alias" "PASS" "сразу после DROP TYPE имени в схеме нет; поведение ПОСЛЕ перезапуска этим кейсом не покрыто"
+fi
+
 # --- Самоконтроль: кейс, который ОБЯЗАН покраснеть ---------------------------
 # Без него зелёный прогон означал бы «набор ничего не смотрит» — ровно та
 # ошибка, что с выкаченным за флагом скоупом.

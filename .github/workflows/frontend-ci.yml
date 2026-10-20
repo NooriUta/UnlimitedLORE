@@ -13,7 +13,14 @@ jobs:
   build:
     # AL-88 (2026-07-30): пробовали выделенный раннер lore-only — см. тот же
     # комментарий в backend-ci.yml про необъяснённый сбой. Откачено к общему пулу.
-    runs-on: ubuntu-latest
+    # CIM-05 (2026-10-20): причина найдена — метка lore-only была
+    # зарегистрирована без образа job-контейнера (у всех рабочих раннеров вида
+    # «ubuntu-latest:docker://forgejo-ci-runtime:jdk21»), и job поднимался на
+    # образе по умолчанию без JDK и оснастки. Метка исправлена на
+    # «lore-only:docker://forgejo-ci-runtime:jdk21». Разбор — задача
+    # SPRINT_LORE_CI_MIRROR/CIM-05. Frontend переезжает первым: его джоб идёт
+    # без `container:`, то есть проверяет именно сопоставление метки.
+    runs-on: lore-only
     steps:
       - uses: actions/checkout@v7
 

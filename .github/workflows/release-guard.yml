@@ -1,0 +1,62 @@
+# SE-12: сторож заметок релиза — ловит пропажу ДО тега, пока она ещё обратима
+name: Release notes guard
+
+# Срабатывает только на PR в main. В main приходит ТОЛЬКО релиз из preprod, и
+# у релиза обязан быть файл заметок: публикация читает RELEASE-<tag>.md из
+# чекаута тега, а падает уже ПОСЛЕ простановки тега — когда назад не снять.
+#
+# Так ушёл v1.10.0 (прогон 14749, 31.08.2026): тег стоял, релиза в Forgejo не
+# было двенадцать дней, и заметил это посторонний. Проверка стоит копейки и
+# возможна здесь — пока PR ещё можно поправить.
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  notes:
+    name: RELEASE-<tag>.md есть в том, что уедет в main
+    runs-on: ubuntu-latest
+    steps:
+      # Нужна история обеих сторон: сравниваем ветку PR с main, а не с рабочим
+      # деревом. Поверхностный чекаут здесь дал бы «файлов нет» на пустом месте.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Сторож обязан уметь краснеть. Самопроверка идёт ПЕРВОЙ и отдельным
+      # шагом: зелёный прогон сторожа, который ничего не проверяет, — ровно та
+      # декорация, против которой весь этот набор.
+      - name: Самопроверка сторожа
+        run: bash .github/scripts/release-notes-guard.sh --selftest
+
+      - name: В ветке есть новые заметки релиза
+        shell: bash
+        run: |
+          set -uo pipefail
+          BASE="origin/${GITHUB_BASE_REF:-main}"
+          git fetch -q origin "${GITHUB_BASE_REF:-main}" || true
+
+          # Файлы заметок, которых в main ещё нет. Именно они и делают PR
+          # релизом: промоушн preprod → main без них означает, что тег будет
+          # поставлен на коммит без описания.
+          ADDED=$(git diff --name-only --diff-filter=A "$BASE"...HEAD -- 'RELEASE-v*.md' || true)
+
+          if [ -z "$ADDED" ]; then
+            echo "::error::PR в main не приносит ни одного RELEASE-v*.md."
+            echo "::error::Тег, поставленный на такой коммит, опубликовать не получится:"
+            echo "::error::lore-release.yml читает RELEASE-<tag>.md из чекаута тега и падает УЖЕ ПОСЛЕ тега."
+            echo "::error::Добавьте заметки в develop, промоутните в preprod и обновите этот PR."
+            exit 1
+          fi
+
+          echo "Новые заметки в этом PR:"
+          printf '  %s\n' $ADDED
+
+          # Каждый найденный файл проверяется тем же сторожем, что стоит перед
+          # тегом, — одной меркой, а не двумя похожими.
+          rc=0
+          for f in $ADDED; do
+            tag="${f#RELEASE-}"; tag="${tag%.md}"
+            bash .github/scripts/release-notes-guard.sh "$tag" HEAD || rc=1
+          done
+          exit "$rc"

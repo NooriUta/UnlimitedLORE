@@ -1,5 +1,6 @@
 package studio.seer.heimdall.lore;
 
+import io.quarkus.runtime.Startup;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import jakarta.annotation.PostConstruct;
@@ -43,6 +44,9 @@ import java.util.concurrent.TimeUnit;
  * читалось бы как факт, хотя это может быть неведение.
  */
 @ApplicationScoped
+// AO-08: без @Startup бин ленив — пока его никто не внедрил, @PostConstruct не
+// исполнится и расписание не запустится ни разу (так месяц молчали логины KC).
+@Startup
 public class LoreKcLoginPoller {
 
     private static final Logger LOG = Logger.getLogger(LoreKcLoginPoller.class);
@@ -77,6 +81,7 @@ public class LoreKcLoginPoller {
     /** Идентификаторы событий последнего окна — чтобы не задвоить на границе. */
     private final Set<String> seen = new HashSet<>();
     private boolean emptyReported;
+    private boolean notConfiguredReported;
 
     @PostConstruct
     void start() {
@@ -110,7 +115,17 @@ public class LoreKcLoginPoller {
     }
 
     void poll() throws Exception {
-        if (!kc.configured()) return;   // секрет lore-admin не задан — молча не работаем
+        if (!kc.configured()) {
+            // AO-08: раньше здесь было «молча не работаем» — и пустой logins_recent
+            // нельзя было отличить от «никто не входил». Одна строка на жизнь процесса:
+            // опрос раз в 5 минут не должен засорять лог, но и молчать не должен.
+            if (!notConfiguredReported) {
+                notConfiguredReported = true;
+                LOG.warn("[LORE STATS] опрос логинов KC пропущен: мост к Keycloak не настроен "
+                    + "(секрет lore-admin не задан) — logins_recent будет пуст не потому, что никто не входил");
+            }
+            return;
+        }
         String token = kc.adminToken();
         long from = since;
         long now = System.currentTimeMillis();

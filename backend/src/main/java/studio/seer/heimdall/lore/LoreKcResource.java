@@ -186,6 +186,29 @@ public class LoreKcResource extends LoreResourceBase {
 
     // ── Агенты (client-роли, ось агентов) — read + ротация ──────────────────
 
+    /**
+     * Может ли клиент KC получить СВОЙ токен и прийти с ним в LORE — то есть
+     * попадает ли он на ось агентов вообще.
+     *
+     * <p><b>Было написано префиксом {@code clientId.startsWith("lore-mcp")} —
+     * и это делало сторожа слепым ровно к тому, для чего он написан.</b>
+     * {@code agent-orphans} ищет «клиент KC без KnowActor»: у такого клиента
+     * нет входа в цепочку {@code client_id → владелец → роль}, и проектный
+     * скоуп отдаёт на него пустое множество. Префикс же отбирал только наши
+     * MCP-клиенты, а главный потребитель API — служебная учётка приложения
+     * miniLORE ({@code lore-reader-minilore}, 25 478 вызовов по проду
+     * 19.10.2026) — под него не попадает и в списке сирот не появлялась
+     * никогда. Сторож отвечал «сирот нет» при живой сироте: тот самый случай,
+     * когда непроведённая проверка выглядит как успешная.
+     *
+     * <p>Признак взят по СВОЙСТВУ клиента, а не по имени: имя — соглашение,
+     * которое следующий клиент может не соблюсти, а {@code serviceAccountsEnabled}
+     * и есть то, что позволяет прийти с собственным токеном.
+     */
+    private static boolean hasServiceAccount(io.vertx.core.json.JsonObject client) {
+        return Boolean.TRUE.equals(client.getBoolean("serviceAccountsEnabled", false));
+    }
+
     @GET
     @Path("agents")
     @Produces(MediaType.APPLICATION_JSON)
@@ -201,7 +224,7 @@ public class LoreKcResource extends LoreResourceBase {
             for (int i = 0; i < arr.size(); i++) {
                 io.vertx.core.json.JsonObject c = arr.getJsonObject(i);
                 String cid = c.getString("clientId", "");
-                if (!cid.startsWith("lore-mcp")) continue;
+                if (!hasServiceAccount(c)) continue;
                 HttpResponse<String> roles = kc("GET", "/clients/" + c.getString("id") + "/roles", null, t);
                 io.vertx.core.json.JsonArray scope = new io.vertx.core.json.JsonArray();
                 if (roles.statusCode() == 200) {
@@ -238,7 +261,7 @@ public class LoreKcResource extends LoreResourceBase {
             for (int i = 0; i < arr.size(); i++) {
                 io.vertx.core.json.JsonObject c = arr.getJsonObject(i);
                 String cid = c.getString("clientId", "");
-                if (!cid.startsWith("lore-mcp")) continue;
+                if (!hasServiceAccount(c)) continue;
                 if (!known.contains(cid)) {
                     out.add(io.vertx.core.json.JsonObject.of(
                         "clientId", cid, "id", c.getString("id"), "enabled", c.getBoolean("enabled")));

@@ -160,6 +160,88 @@ public final class LoreSlices {
     private static final String OPEN_TASK_STATUS_EXPR =
         "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]";
 
+    /**
+     * RM-P17: как зовётся родитель строки истории — одна пара на цепочку SCD2.
+     *
+     * <p>Нужно срезу {@code history_hygiene}: находка без {@code ref_id}
+     * бесполезна — по счётчику «семь строк» починить нельзя, по
+     * {@code SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-A} можно.
+     *
+     * <p><b>Какие цепочки существуют — не здесь.</b> Список берётся из реестра
+     * объявления {@code valid_from} ({@link LoreSchemaMigrations#HIST_VALID_FROM_TEXT}
+     * плюс {@link LoreSchemaMigrations#HIST_VALID_FROM_TEMPORAL}); эта таблица
+     * отвечает только на вопрос «как зовётся родитель». Новый {@code *Hist},
+     * попавший в реестр без пары здесь, валит статический блок при первом
+     * обращении к классу — то есть на первом же прогоне тестов. Молча выпасть
+     * из гигиены он не может, и третьей таблицы «какие бывают *Hist» в корпусе
+     * не появляется (RM-P8 — расхождение двух таблиц об одном).
+     *
+     * <p>У записи справочника одиночного естественного id нет (ключ составной,
+     * {@code dict_type} + {@code code}) — в находку едет {@code code}: он
+     * адресует строку внутри своего типа, а сам тип виден в {@code hist_type}.
+     */
+    record HistParent(String entityType, String idField) {}
+
+    static final Map<String, HistParent> HIST_PARENT = Map.ofEntries(
+        Map.entry("KnowADRHist",       new HistParent("adr",        "adr_id")),
+        Map.entry("KnowDecisionHist",  new HistParent("decision",   "decision_id")),
+        Map.entry("KnowDocHist",       new HistParent("doc",        "doc_id")),
+        Map.entry("KnowFindingHist",   new HistParent("finding",    "finding_id")),
+        Map.entry("KnowMilestoneHist", new HistParent("milestone",  "milestone_id")),
+        Map.entry("KnowPhaseHist",     new HistParent("phase",      "phase_uid")),
+        Map.entry("KnowReleaseHist",   new HistParent("release",    "release_id")),
+        Map.entry("KnowRunbookHist",   new HistParent("runbook",    "runbook_id")),
+        Map.entry("KnowSpecHist",      new HistParent("spec",       "spec_id")),
+        Map.entry("KnowTaskHist",      new HistParent("task",       "task_uid")),
+        Map.entry("KnowSprintHist",    new HistParent("sprint",     "sprint_id")),
+        Map.entry("KnowDictEntryHist", new HistParent("dict_entry", "code")));
+
+    /** Все цепочки SCD2 корпуса в устойчивом порядке — иначе SQL среза плывёт между прогонами. */
+    static List<String> histChains() {
+        List<String> all = new java.util.ArrayList<>(LoreSchemaMigrations.HIST_VALID_FROM_TEXT);
+        all.addAll(LoreSchemaMigrations.HIST_VALID_FROM_TEMPORAL);
+        return List.copyOf(all);
+    }
+
+    /**
+     * SQL среза {@code history_hygiene} — по одной ветке unionall на цепочку.
+     *
+     * <p>Собирается кодом, а не рукой: двенадцать почти одинаковых ветвей,
+     * написанных вручную, расходятся при первой же правке одной из них.
+     */
+    private static String histHygieneSql() {
+        List<String> chains = histChains();
+        if (chains.size() > 26) {
+            throw new IllegalStateException(
+                "цепочек SCD2 больше 26 — однобуквенные имена LET-переменных кончились, "
+                + "смените схему именования в histHygieneSql()");
+        }
+        StringBuilder vars = new StringBuilder();
+        StringBuilder lets = new StringBuilder();
+        for (int i = 0; i < chains.size(); i++) {
+            String hist = chains.get(i);
+            HistParent parent = HIST_PARENT.get(hist);
+            if (parent == null) {
+                throw new IllegalStateException(
+                    "RM-P17: цепочка " + hist + " объявлена в реестре valid_from, но пары в "
+                    + "LoreSlices.HIST_PARENT у неё нет — срез history_hygiene молча пропустил бы "
+                    + "весь этот тип. Добавьте пару «класс → поле id родителя».");
+            }
+            String var = "$h" + (char) ('a' + i);
+            if (i > 0) { vars.append(", "); lets.append(", "); }
+            vars.append(var);
+            lets.append(var)
+                .append(" = (SELECT 'open_state_without_valid_from' AS finding, '")
+                .append(parent.entityType()).append("' AS entity_type, '")
+                .append(hist).append("' AS hist_type, in('HAS_STATE').")
+                .append(parent.idField()).append("[0] AS ref_id, state_uid FROM ")
+                .append(hist).append(" WHERE valid_to IS NULL AND valid_from IS NULL)");
+        }
+        return "SELECT finding, entity_type, hist_type, ref_id, state_uid "
+            + "FROM (SELECT expand(unionall(" + vars + ")) LET " + lets + ") "
+            + "ORDER BY entity_type, ref_id";
+    }
+
     static {
         // ── §1 Timeline — 3 separate slices, merged on frontend ──────────────
         // No UNION in ArcadeDB /api/v1/query. Frontend fetches all 3, merges by date.
@@ -361,8 +443,16 @@ public final class LoreSlices {
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('TAGGED_WITH').tag_id AS tags " +
-            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id ORDER BY decision_id",
-            List.of("id"), Map.of(), "");
+            // AL-120 (20.10.2026): ORDER BY — в suffix. В теле он стоял ПЕРЕД
+            // условием скоупа («… ORDER BY decision_id AND (…)»), и под
+            // включённым lore.scope.enforce срез отвечал 502 — паспорт ADR
+            // ломался у всех, кроме superadmin. Найдено живым тестом под флагом.
+            // SE-05 (20.10.2026): CONTAINS, а не [0] = — решение под двумя ADR
+            // (совместные ADR — замысел владелицы) было видно в паспорте только
+            // того родителя, что оказался первым. Тест — на ДВУХ родителях
+            // (DecisionUnderTwoAdrsLiveDbTest): на одном формы неразличимы.
+            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY decision_id");
 
         slice("decision",
             // AL-79: status_raw в паспорте — раньше статус был виден в списках,
@@ -607,7 +697,11 @@ public final class LoreSlices {
             // (ADR-LORE-015, T14) are plain KnowTask vertex fields — no traversal
             // needed, unlike note_md/effort_days above.
             ROLE_HOLDERS + ", task_type " +
-            "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
+            // SE-05 (20.10.2026): CONTAINS, а не [0] =. Модель допускает задачу
+            // в нескольких фазах — task/phase add не снимает прежнюю, а remove
+            // без фазы описан как «отцепить от ВСЕХ». С [0] такая задача была
+            // видна только в одной фазе, какой придётся (TaskInTwoPhasesLiveDbTest).
+            "FROM KnowTask WHERE out('IN_PHASE').phase_uid CONTAINS :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
 
@@ -847,6 +941,61 @@ public final class LoreSlices {
             "       FROM KnowPain WHERE in('RELIEVES').size() = 0)" +
             ") ORDER BY finding, ref_id",
             List.of(), Map.of(), "");
+
+        // RM-P9: что ИСЧЕЗНЕТ, если включить lore.scope.enforce.
+        //
+        // Скоуп режет по ребру BELONGS_TO_PROJECT. Запись без этого ребра
+        // отрезается не по правам, а по НЕДОСТАЮЩИМ ДАННЫМ — и пропадает у
+        // всех, включая владельца. Замер 19.10.2026 по проду: у спек нет
+        // проекта у 218 из 415, у доков у 239 из 292, у ранбуков у 42 из 47.
+        // То есть включение «изоляции» спрятало бы 499 записей от каждого.
+        //
+        // Срез существует ровно для того, чтобы включение не было прыжком в
+        // темноту: сначала смотрим, сколько потеряем, потом решаем. Отдаёт
+        // СЫРЬЁ построчно, а не счётчики, — по счётчику нельзя пойти и
+        // привязать проект, а по ref_id можно.
+        slice("scope_orphans",
+            "SELECT entity_type, ref_id, title FROM (SELECT expand(unionall($sp, $dc, $rb, $ad, $sr, $rl)) LET " +
+            "$sp = (SELECT 'spec' AS entity_type, spec_id AS ref_id, title FROM KnowSpec " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$dc = (SELECT 'doc' AS entity_type, doc_id AS ref_id, title FROM KnowDoc " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$rb = (SELECT 'runbook' AS entity_type, runbook_id AS ref_id, name AS title FROM KnowRunbook " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$ad = (SELECT 'adr' AS entity_type, adr_id AS ref_id, name AS title FROM KnowADR " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$sr = (SELECT 'sprint' AS entity_type, sprint_id AS ref_id, name AS title FROM KnowSprint " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0), " +
+            "$rl = (SELECT 'release' AS entity_type, release_id AS ref_id, git_tag AS title FROM KnowRelease " +
+            "       WHERE out('BELONGS_TO_PROJECT').size() = 0)" +
+            ") ORDER BY entity_type, ref_id",
+            List.of(), Map.of(), "");
+
+        // RM-P17: открытая строка истории без valid_from — ДЕФЕКТ, и его надо видеть.
+        //
+        // ЗАМЕР (прод, 11.09.2026). В KnowTaskHist восемь строк с valid_from = null
+        // из 9796, и семь из них ОТКРЫТЫЕ (valid_to IS NULL), то есть это текущее
+        // состояние задачи: SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-A…P1-G.
+        //
+        // ЧЕМ СТОИТ. Слайс task_starts отбирает `valid_from IS NOT NULL`,
+        // task_created_dates берёт min(valid_from) по цепочке. Такие задачи
+        // выпадают из аналитики МОЛЧА: их нет ни в «начале», ни в «заведении»,
+        // lead/cycle time по спринту считается без них, а пустая выдача читается
+        // как «таких задач не было» — тот же класс, что «пустой ответ ≠ не найдено».
+        //
+        // ПОЧЕМУ СРЕЗ, А НЕ ВЕРДИКТ ЗАПИСИ. Линтер полноты (WorkQuality) отвечает
+        // в ответе НА ЗАПИСЬ — а запись как раз и создаёт новую открытую строку с
+        // valid_from, поэтому в write-пути такая проверка всегда «ок» и не ловит
+        // ничего; обязательной её сделать тоже нельзя — max вырос бы у каждой
+        // задачи корпуса, сдвинув счёт там, где дефекта нет. Правило живёт срезом,
+        // как product_hygiene и scope_orphans: находка с ref_id, по которому можно
+        // пойти и починить, а не счётчик.
+        //
+        // ПОЧИНКА ДАННЫХ — НЕ ЗДЕСЬ. Восстановить дату неоткуда, кроме соседних
+        // фактов, а подставленная дата станет ФАКТОМ аналитики: это решение
+        // владелицы (развилка в RM-P17). Срез её не предрешает — он показывает
+        // недостачу, а не заполняет её.
+        slice("history_hygiene", histHygieneSql(), List.of(), Map.of(), "");
 
         // Проект без единой роли — тихая дыра в делегировании (найдено 30.08.2026
         // владельцем: «в full сессии Claude не даёт завести новых акторов»).
@@ -1538,6 +1687,10 @@ public final class LoreSlices {
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
             "out('IMPLEMENTED_IN').sprint_id AS sprint_ids, " +
+            // Проекты нужны не выдаче, а РЕШЕНИЮ об обнулении тела (BODY_SCOPED):
+            // без них сервер не может ответить, есть ли у читателя роль там, где
+            // документ числится. Поле заодно полезно само по себе.
+            "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('HAS_STATE').valid_from[0] AS valid_from " +
             "FROM KnowDoc WHERE doc_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
@@ -1557,7 +1710,9 @@ public final class LoreSlices {
             "SELECT runbook_id, name, area, date_created, " +
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
             "out('HAS_STATE').valid_from[0] AS valid_from, " +
-            "out('REFERENCES_ADR').adr_id AS adr_ids " +
+            "out('REFERENCES_ADR').adr_id AS adr_ids, " +
+            // См. doc_by_id: проекты нужны решению об обнулении тела.
+            "out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowRunbook WHERE runbook_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
@@ -1758,8 +1913,15 @@ public final class LoreSlices {
             // не хвост истории (тот же дефект, что у timeline_releases выше).
             // Для UI безопасно: доска релизов сортирует сама, semverCompare
             // (LoreReleasesBoard.tsx:132), порядок среза она не наследует.
-            "FROM KnowRelease ORDER BY release_date DESC",
-            List.of(), Map.of(), " LIMIT 200");
+            //
+            // AL-120 (20.10.2026): ORDER BY — в suffix, а не в теле. compose()
+            // вставляет условие скоупа перед suffix'ом, и при сортировке в теле
+            // получалось «… ORDER BY release_date DESC WHERE (…) LIMIT 200» —
+            // ошибка разбора, 502 на списке релизов у каждого, кроме superadmin,
+            // в момент включения lore.scope.enforce. Без скоупа итоговый SQL тот же
+            // символ в символ: тело + suffix склеиваются как раньше.
+            "FROM KnowRelease",
+            List.of(), Map.of(), " ORDER BY release_date DESC LIMIT 200");
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +
@@ -2087,6 +2249,39 @@ public final class LoreSlices {
         // Вопрос: своё ребро ИЛИ проект места, где он поднят (RAISED_IN → ADR/спринт).
         Map.entry("open_questions",
             "out('BELONGS_TO_PROJECT').slug|out('RAISED_IN').out('BELONGS_TO_PROJECT').slug")
+    );
+
+    /**
+     * Слайсы, у которых при отсутствии роли обнуляется ТЕЛО, а не прячется
+     * строка. Значение — поля тела; поле проектов у всех трёх `projects`.
+     *
+     * <p>Решение владелицы 19.10.2026: «достаточно обнулять текст самого
+     * документа при выдаче по MCP или же в web». Это принципиально иная мера,
+     * чем {@link #PROJECT_SCOPED}: там строка исчезает из выдачи, здесь —
+     * остаётся с опознавательными полями (идентификатор, заголовок, вид,
+     * проекты), а скрывается только содержимое.
+     *
+     * <p><b>Почему это лучше для документов.</b> Скоуп по строкам режет по
+     * ребру {@code BELONGS_TO_PROJECT}, и запись БЕЗ ребра он отрезает не по
+     * правам, а по недостающим данным — у всех, включая владельца. Замер
+     * 19.10.2026: проекта нет у 218 спек из 415, у 239 доков из 292, у 42
+     * ранбуков из 47. Построчное скрытие спрятало бы 499 записей от каждого;
+     * обнуление тела не прячет ни одной.
+     *
+     * <p><b>Обнулённое тело обязано отличаться от пустого документа.</b> Рядом
+     * ставится признак {@code body_redacted} и причина: иначе «нет доступа»
+     * стало бы неотличимо от «не написано» — тот самый класс, против которого
+     * написана половина проверок корпуса.
+     *
+     * <p><b>Запись без проекта НЕ обнуляется.</b> У неё нет проекта, на котором
+     * можно иметь роль, и обнулять её значило бы снова наказывать за недостачу
+     * данных. Такие записи перечисляет срез {@code scope_orphans} — это видимая
+     * работа, а не тихая дыра.
+     */
+    static final Map<String, List<String>> BODY_SCOPED = Map.of(
+        "doc_by_id",     List.of("content_html", "content_md_en", "content_md_ru"),
+        "spec_by_id",    List.of("content_md", "summary"),
+        "runbook_by_id", List.of("content_md")
     );
 
     /** Значение-заглушка для пустого скоупа: slug, которого не бывает. */

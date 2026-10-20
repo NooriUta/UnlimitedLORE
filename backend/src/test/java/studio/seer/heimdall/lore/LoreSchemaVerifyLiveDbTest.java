@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -125,5 +127,42 @@ class LoreSchemaVerifyLiveDbTest {
             exec("UPDATE LoreSchemaVersion SET checksum = :c WHERE version = :v",
                 Map.of("c", original, "v", latest));
         }
+    }
+
+    @Test
+    @Order(5)
+    void physicallyMissingTypeStopsStartupEvenWithFullLedger() {
+        // SELF-PROVISION-VERIFY-GAP: ledger ПОЛОН — все шаги записаны, контрольные
+        // суммы сходятся, — а типа физически нет. Это ровно «шаг записан, DDL не
+        // материализовался»: ledger пишется отдельным INSERT после шага, не атомарно.
+        // Два теста выше ловят пропавшую строку ledger и дрейф checksum, но не этот
+        // случай — а без него сломанный typeExists (всегда «есть») оставил бы
+        // сверку зелёной и бесполезной.
+        //
+        // Удалять настоящий продуктовый тип из общей тестовой БД нельзя: в ней
+        // живут соседние классы, а DROP TYPE уносит и данные. Поэтому недостающий
+        // тип — заведомо несуществующий. Путь кода тот же: typeExists -> false -> отказ.
+        String phantom = "KnowЗаведомоНетТакогоТипа42";
+        List<String> required = new ArrayList<>(LoreSchemaMigrations.requiredLiveTypes());
+        required.add(phantom);
+
+        var e = assertThrows(IllegalStateException.class, () -> runner.verifySchemaAgainst(required),
+            "журнал полон, а типа нет — сверка обязана валить старт, а не пропускать");
+        assertTrue(e.getMessage().contains("ФИЗИЧЕСКИ НЕТ типов"),
+            "отказ обязан быть именно материальной сверкой, а не другим гардом: " + e.getMessage());
+        assertTrue(e.getMessage().contains(phantom),
+            "сообщение обязано назвать недостающий тип, иначе его нечем чинить: " + e.getMessage());
+        assertTrue(!e.getMessage().contains("KnowUseCase"),
+            "в отказе только недостающие типы, а не весь список: " + e.getMessage());
+    }
+
+    @Test
+    @Order(6)
+    void sameCheckWithoutPhantomPasses() {
+        // Положительный контроль к тесту выше: тот же вызов с тем же списком, но без
+        // фантома, обязан пройти. Иначе зелёный отказ выше доказывал бы лишь то,
+        // что перегрузка падает всегда.
+        assertDoesNotThrow(() -> runner.verifySchemaAgainst(LoreSchemaMigrations.requiredLiveTypes()),
+            "на полной схеме материальная сверка не должна ничего находить");
     }
 }

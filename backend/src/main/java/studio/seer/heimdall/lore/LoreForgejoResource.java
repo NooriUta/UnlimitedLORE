@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 
 /**
  * Forgejo-мост REST (ADR-LORE-024, FJ-03): граф-контекстные git-операции —
@@ -52,8 +54,7 @@ public class LoreForgejoResource extends LoreResourceBase {
     private Response projectNotResolvable(String slug) {
         return noStore(Response.status(Response.Status.NOT_FOUND)
             .entity(new LoreError("PROJECT_NOT_RESOLVABLE",
-                "KnowGitProject '" + slug + "' отсутствует или hosts[] без primary base_url — "
-                + "зарегистрируйте проект (project_new) с hosts")));
+                ForgejoBridge.notResolvableDetail(slug, bridge.slugsForRepoPath(slug)))));
     }
 
     /** Живость моста — для условной регистрации MCP-инструментов (FJ-04). */
@@ -213,15 +214,77 @@ public class LoreForgejoResource extends LoreResourceBase {
         Optional<ForgejoBridge.Repo> repo = bridge.resolve(gitProject);
         if (repo.isEmpty()) return projectNotResolvable(gitProject);
         try {
-            CiProbe probe = ciProbe(repo.get(), ref, 0);
+            // SE-13: имя ветки сначала разрешается в SHA, статусы — по SHA, как в пути PR.
+            // Неразрешённая ссылка — явная ошибка, а не UNKNOWN с пустыми проверками.
+            RefResolution res = resolveRef(repo.get().path(), ref, p -> fetch(repo.get(), p));
+            if (res.sha() == null)
+                return noStore(Response.status(res.httpStatus())
+                    .entity(new LoreError("REF_NOT_RESOLVED", res.error())));
+            CiProbe probe = ciProbe(repo.get(), res.sha(), 0);
             String status = ForgejoBridge.gateStatus(probe.byContext(), bridge.requiredChecks(gitProject),
                 probe.ageSeconds(), bridge.graceSeconds, probe.failed());
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ref", ref);
+            out.put("sha", res.sha());
+            out.put("resolved_via", res.via());
             out.put("status", status);
             out.put("checks", probe.byContext());
+            // UNKNOWN остаётся словом гейта («мержить нельзя»), но рядом — почему.
+            if (probe.failed()) out.put("error", probe.error());
             return noStore(Response.ok(out));
         } catch (Exception e) { return upstream(e); }
+    }
+
+    /** Что вернул Forgejo на один GET: код и тело. Отдельно от HttpResponse, чтобы
+     *  разрешение ссылки проверялось на поддельных ответах, без сети. */
+    record Upstream(int status, String body) {}
+
+    /** Итог разрешения ref → SHA. sha == null → error и httpStatus объясняют, почему. */
+    record RefResolution(String sha, String via, String error, int httpStatus) {}
+
+    private static final Pattern SHA_REF = Pattern.compile("^[0-9a-fA-F]{7,40}$");
+
+    /**
+     * SE-13: ref → SHA коммита. В путь /commits/{ref}/status имя ветки подставлять
+     * нельзя: {ref} у Forgejo — один сегмент пути, и слэш в имени
+     * (test/ygg-gate-selftest) разрывал маршрут. Ответ-ошибка молча превращался в
+     * UNKNOWN с пустыми проверками — на зелёной ветке. Эндпоинты веток и тегов
+     * принимают имя со слэшем целиком, поэтому разрешаем через них.
+     *
+     * Порядок: похоже на SHA → как есть, без запросов; иначе ветка, затем тег.
+     * Ветка, названная одними hex-символами (deadbeef), будет принята за SHA —
+     * осознанно: так же трактует ref сам Forgejo.
+     *
+     * Сбой Forgejo (не 200 и не 404) — стоп с ошибкой: искать дальше в тегах значило
+     * бы замаскировать 500 под «не найдено».
+     */
+    static RefResolution resolveRef(String repoPath, String ref, Function<String, Upstream> get) {
+        if (SHA_REF.matcher(ref).matches()) return new RefResolution(ref, "sha", null, 200);
+        for (String kind : new String[] {"branches", "tags"}) {
+            Upstream u = get.apply("/repos/" + repoPath + "/" + kind + "/" + ref);
+            if (u.status() == 404) continue;
+            if (u.status() != 200)
+                return new RefResolution(null, kind,
+                    "Forgejo ответил " + u.status() + " на " + kind + "/" + ref + ": " + str(u.body()), 502);
+            // У ветки коммит в commit.id, у тега — в commit.sha (id тега — SHA объекта тега, не коммита).
+            JsonObject commit = new JsonObject(u.body()).getJsonObject("commit", new JsonObject());
+            String sha = str(commit.getString("id", commit.getString("sha", "")));
+            if (sha.isEmpty())
+                return new RefResolution(null, kind,
+                    "Forgejo вернул " + kind + "/" + ref + " без коммита: " + str(u.body()), 502);
+            return new RefResolution(sha, kind, null, 200);
+        }
+        return new RefResolution(null, null, "ссылка не найдена ни среди веток, ни среди тегов: " + ref, 404);
+    }
+
+    /** GET к Forgejo в форме Upstream; исключение транспорта — код 599, тоже «не смогли». */
+    private Upstream fetch(ForgejoBridge.Repo repo, String path) {
+        try {
+            HttpResponse<String> r = bridge.api(repo, "GET", path, null);
+            return new Upstream(r.statusCode(), r.body());
+        } catch (Exception e) {
+            return new Upstream(599, String.valueOf(e.getMessage()));
+        }
     }
 
     // ── Branch protection: ТОЛЬКО чтение (решение 136) ──────────────────────
@@ -289,14 +352,17 @@ public class LoreForgejoResource extends LoreResourceBase {
             Boolean.TRUE.equals(pr.getBoolean("merged")), headSha, baseRef, status, probe.byContext(), null, 200);
     }
 
-    /** Комбинированный commit-status Forgejo по ref/sha → контекст→state. failed=true → UNKNOWN. */
-    record CiProbe(Map<String, String> byContext, long ageSeconds, boolean failed) {}
+    /** Комбинированный commit-status Forgejo по SHA → контекст→state. failed=true → UNKNOWN,
+     *  и error говорит почему: «не смогли проверить» не должно выглядеть как «проверок нет». */
+    record CiProbe(Map<String, String> byContext, long ageSeconds, boolean failed, String error) {}
 
     private CiProbe ciProbe(ForgejoBridge.Repo repo, String ref, long ageSeconds) {
         try {
             HttpResponse<String> r = bridge.api(repo, "GET",
                 "/repos/" + repo.path() + "/commits/" + ref + "/status", null);
-            if (r.statusCode() >= 300) return new CiProbe(Map.of(), ageSeconds, true);
+            if (r.statusCode() >= 300)
+                return new CiProbe(Map.of(), ageSeconds, true,
+                    "Forgejo ответил " + r.statusCode() + " на статусы " + ref);
             JsonObject combined = new JsonObject(r.body());
             JsonArray statuses = combined.getJsonArray("statuses", new JsonArray());
             // Forgejo кладёт статусы новее→старше; первый на контекст = актуальный.
@@ -305,10 +371,10 @@ public class LoreForgejoResource extends LoreResourceBase {
                 JsonObject s = statuses.getJsonObject(i);
                 byCtx.putIfAbsent(str(s.getString("context")), str(s.getString("status")));
             }
-            return new CiProbe(byCtx, ageSeconds, false);
+            return new CiProbe(byCtx, ageSeconds, false, null);
         } catch (Exception e) {
             LOG.warnf("[FORGEJO CI] %s@%s: %s", repo.path(), ref, e.getMessage());
-            return new CiProbe(Map.of(), ageSeconds, true);
+            return new CiProbe(Map.of(), ageSeconds, true, "сбой обращения к Forgejo: " + e.getMessage());
         }
     }
 

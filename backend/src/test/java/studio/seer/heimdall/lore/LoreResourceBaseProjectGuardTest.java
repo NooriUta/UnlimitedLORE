@@ -29,7 +29,17 @@ class LoreResourceBaseProjectGuardTest {
     @Test
     void agentFullPassesWithoutSuperAdminRole() {
         RESOURCE.identity = fakeIdentity(Map.of("agent_scope", List.of("agent-full")));
-        assertDoesNotThrow(() -> RESOURCE.requireSuperAdminOrAgentFull("admin"));
+        assertDoesNotThrow(() -> RESOURCE.requireSuperAdminOrProjectAgent("admin"));
+    }
+
+    @Test
+    void architectAndPmPassSinceSe11() {
+        // SE-11, D-2026-LORE-AGENT-MATRIX-WIDEN-PROFILES: замок в ресурсе открывается
+        // ровно тем профилям, что в строке матрицы "project" — без второго списка.
+        for (String p : new String[]{"agent-architect", "agent-pm"}) {
+            RESOURCE.identity = fakeIdentity(Map.of("agent_scope", List.of(p)));
+            assertDoesNotThrow(() -> RESOURCE.requireSuperAdminOrProjectAgent("admin"), p);
+        }
     }
 
     @Test
@@ -37,22 +47,22 @@ class LoreResourceBaseProjectGuardTest {
         // Заголовок роли не годится разделителем — узкие агентные профили тоже
         // ходят с ролью admin/superadmin. Гейт обязан смотреть на agent_scope,
         // не на X-Seer-Role, иначе исключение стало бы всеобщим.
-        RESOURCE.identity = fakeIdentity(Map.of("agent_scope", List.of("agent-pm")));
+        RESOURCE.identity = fakeIdentity(Map.of("agent_scope", List.of("agent-developer")));
         assertThrows(LoreExceptions.Forbidden.class,
-            () -> RESOURCE.requireSuperAdminOrAgentFull("superadmin"));
+            () -> RESOURCE.requireSuperAdminOrProjectAgent("superadmin"));
     }
 
     @Test
     void humanStillNeedsSuperAdminNotPlainAdmin() {
         RESOURCE.identity = fakeIdentity(Map.of("seer_roles", List.of("admin")));
         assertThrows(LoreExceptions.Forbidden.class,
-            () -> RESOURCE.requireSuperAdminOrAgentFull("admin"));
+            () -> RESOURCE.requireSuperAdminOrProjectAgent("admin"));
     }
 
     @Test
     void humanWithSuperAdminRolePasses() {
         RESOURCE.identity = fakeIdentity(Map.of("seer_roles", List.of("superadmin")));
-        assertDoesNotThrow(() -> RESOURCE.requireSuperAdminOrAgentFull("superadmin"));
+        assertDoesNotThrow(() -> RESOURCE.requireSuperAdminOrProjectAgent("superadmin"));
     }
 
     private static SecurityIdentity fakeIdentity(Map<String, Object> claims) {

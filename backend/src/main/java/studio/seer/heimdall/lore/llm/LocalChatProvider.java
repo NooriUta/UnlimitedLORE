@@ -35,9 +35,23 @@ public class LocalChatProvider implements LlmProvider {
     @RestClient
     LocalChatClient client;
 
-    /** Пусто = машина не заведена; тогда провайдер честно говорит, чего не хватает. */
-    @ConfigProperty(name = "lore.llm.local.model", defaultValue = "")
-    String model;
+    /**
+     * Пусто = машина не заведена; тогда провайдер честно говорит, чего не хватает.
+     *
+     * <p>{@code Optional}, а не {@code String} с {@code defaultValue = ""}: в
+     * MicroProfile Config пустая строка — «значения нет», и обязательное поле
+     * роняло СОЗДАНИЕ бина с «Failed to load config value» раньше, чем провайдер
+     * успевал что-то сказать. Объявление {@code ${LORE_LLM_LOCAL_MODEL:}} в
+     * application.properties от этого не спасает — без переменной оно та же
+     * пустота. Найдено 20.10.2026 сторожем {@code ConfigEmptyDefaultDeclaredTest}
+     * (AO-08), не на проде.
+     */
+    @ConfigProperty(name = "lore.llm.local.model")
+    Optional<String> modelConfig;
+
+    private String model() {
+        return modelConfig == null ? "" : modelConfig.orElse("");
+    }
 
     @ConfigProperty(name = "lore.llm.local.api-key")
     Optional<String> apiKey;
@@ -49,7 +63,7 @@ public class LocalChatProvider implements LlmProvider {
 
     @Override
     public boolean configured() {
-        return model != null && !model.isBlank();
+        return !model().isBlank();
     }
 
     @Override
@@ -76,7 +90,7 @@ public class LocalChatProvider implements LlmProvider {
 
         try {
             LocalChatClient.ChatResponse response = client.complete(auth,
-                new LocalChatClient.ChatRequest(model, messages, request.maxTokens(), Boolean.FALSE));
+                new LocalChatClient.ChatRequest(model(), messages, request.maxTokens(), Boolean.FALSE));
 
             if (response == null || response.choices() == null || response.choices().isEmpty()) {
                 // Двухсотка с пустым телом — это не пустой ответ модели, а
@@ -111,14 +125,14 @@ public class LocalChatProvider implements LlmProvider {
 
             // Кэша у локального раннера нет — второе поле остаётся нулевым, и это
             // правда о нём, а не пропуск измерения.
-            String actualModel = response.model() != null ? response.model() : model;
+            String actualModel = response.model() != null ? response.model() : model();
             return LlmAnswer.of(answer.content(), actualModel, new LlmUsage(in, 0, out));
 
         } catch (RuntimeException e) {
             // Машина выключена, сеть недоступна, раннер не поднят — всё это
             // «не измерено с причиной», а не исключение наружу: рутина обязана
             // дописать прогон при любом исходе.
-            LOG.warnf("[LORE LLM local] %s: %s", model, e.toString());
+            LOG.warnf("[LORE LLM local] %s: %s", model(), e.toString());
             return LlmAnswer.unavailable("локальная модель недоступна: " + e.getClass().getSimpleName()
                 + (e.getMessage() != null ? " — " + e.getMessage() : ""));
         }

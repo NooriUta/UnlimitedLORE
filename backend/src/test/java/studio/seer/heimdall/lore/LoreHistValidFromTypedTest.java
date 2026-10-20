@@ -170,6 +170,34 @@ class LoreHistValidFromTypedTest {
             "после приведения лексикографический порядок разошёлся с хронологическим");
     }
 
+    /**
+     * RM-P17: у каждой цепочки SCD2 обязана быть пара в
+     * {@code LoreSlices.HIST_PARENT} — иначе срез {@code history_hygiene}
+     * пропустит весь этот тип МОЛЧА, а молчащая гигиена хуже отсутствующей:
+     * пустая выдача читается как «дефектов нет».
+     *
+     * <p>Проверяются оба направления. Лишняя пара без цепочки — тоже дефект:
+     * она означает ветку SQL по классу, которого в реестре нет, то есть
+     * расхождение двух таблиц об одном (RM-P8).
+     */
+    @Test
+    void everyHistChainHasParentForHygieneSlice() {
+        Set<String> chains = new LinkedHashSet<>(LoreSlices.histChains());
+        Set<String> parents = new LinkedHashSet<>(LoreSlices.HIST_PARENT.keySet());
+
+        List<String> withoutParent = new ArrayList<>();
+        for (String c : chains) if (!parents.contains(c)) withoutParent.add(c);
+        assertEquals(List.of(), withoutParent,
+            "цепочка *Hist без пары в LoreSlices.HIST_PARENT: " + withoutParent
+            + " — срез history_hygiene не увидел бы ни одной её строки");
+
+        List<String> withoutChain = new ArrayList<>();
+        for (String p : parents) if (!chains.contains(p)) withoutChain.add(p);
+        assertEquals(List.of(), withoutChain,
+            "в LoreSlices.HIST_PARENT числится тип, которого нет в реестрах valid_from: "
+            + withoutChain);
+    }
+
     private static Set<String> histVertexTypes() {
         Set<String> out = new LinkedHashSet<>();
         Matcher m = VERTEX.matcher(sources());
