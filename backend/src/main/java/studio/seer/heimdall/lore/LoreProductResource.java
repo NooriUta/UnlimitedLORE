@@ -1501,11 +1501,32 @@ public class LoreProductResource extends LoreResourceBase {
             // сценария становится primary по умолчанию; явный actor_role сильнее и
             // проставляется даже на УЖЕ существующее ребро (иначе role legacy-рёбер
             // не выставить). Дефолт-role ставим только на свежесозданное ребро.
-            if ("actor".equals(req.rel()) && (linked || req.actor_role() != null)) {
+            //
+            // MT-12: роль ДО записи читается, чтобы исход называл смену роли на
+            // существующем ребре. Иначе ответ был «unchanged — повторять не
+            // нужно» при фактическом изменении: исход считался только по
+            // созданию ребра, а UPDATE в него не попадал.
+            //
+            // «Свежее» — это !had, а НЕ linked: CREATE EDGE … IF NOT EXISTS на
+            // повторе может вернуть строку существующего ребра, и повторный
+            // вызов без actor_role молча сбрасывал роль на дефолт (primary,
+            // заданный явно, превращался в supporting). Поймано тестом MT-12.
+            String roleBefore = null;
+            boolean roleChanged = false;
+            boolean fresh = linked && !had;
+            if ("actor".equals(req.rel()) && (fresh || req.actor_role() != null)) {
                 String desired = req.actor_role() != null ? req.actor_role()
                     : (countPrimaryActors(req.uc_id()) == 0 ? "primary" : "supporting");
                 if (!List.of("primary", "supporting").contains(desired))
                     return badParams("actor_role must be primary|supporting");
+                if (had) {
+                    List<Map<String, Object>> rows = ingestService.queryPublic(
+                        "SELECT role FROM HAS_ACTOR WHERE @out.uc_id=:uid AND @in.actor_id=:tid",
+                        Map.of("uid", req.uc_id(), "tid", req.target_id()));
+                    Object r = rows.isEmpty() ? null : rows.get(0).get("role");
+                    roleBefore = r == null ? null : r.toString();
+                    roleChanged = !desired.equals(roleBefore);
+                }
                 // Проставляем на ТОЛЬКО что созданное ребро к этому актору.
                 // ArcadeDB edge-query: @out/@in (правило корпуса feedback_arcadedb_edge_syntax).
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
@@ -1529,7 +1550,14 @@ public class LoreProductResource extends LoreResourceBase {
                 "ok", true, "uc_id", req.uc_id(),
                 "rel", req.rel(), "target_id", req.target_id(), "action", "added", "linked", linked,
                 "hint", linked ? "" : "no edge created — проверьте, что uc_id и target существуют"));
-            if ("actor".equals(req.rel()) && linked) out.put("quality", qualityOf(req.uc_id()));
+            if ("actor".equals(req.rel()) && (fresh || roleChanged)) out.put("quality", qualityOf(req.uc_id()));
+            if (roleChanged) {
+                out.put("outcome", LoreOutcome.UPDATED);
+                out.put("role_before", roleBefore);
+                out.put("role_after", req.actor_role());
+                out.remove("hint");
+                return noStore(Response.ok(out));
+            }
             // MT-07: привязка задачи меняет картину готовности — пересчитываем.
             //
             // Вычислитель просыпался ТОЛЬКО из recomputeForTask при смене статуса
