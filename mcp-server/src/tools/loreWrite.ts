@@ -1242,7 +1242,7 @@ export function registerLoreWrite(server: McpServer): void {
       git_tag:        z.string().optional(),
       type:           z.enum(['patch', 'minor', 'major']).optional(),
       description_md: z.string().optional().describe('changelog / release notes in Markdown'),
-      is_current:     z.boolean().optional().default(false).describe('mark as current prod release'),
+      is_current:     z.boolean().optional().describe('mark as current prod release; omit to let LORE decide: the newest TAGGED release of the project becomes current (ADR-LORE-025)'),
       week:           z.number().int().optional().describe('plan week number (relative to W0)'),
       git_project:    z.string().optional()
         .describe('GitHub project slug (default: NooriUta/AIDA)'),
@@ -1252,7 +1252,7 @@ export function registerLoreWrite(server: McpServer): void {
           release_id, release_date: release_date ?? null,
           git_tag: git_tag ?? null, type: type ?? null,
           description_md: description_md ?? null,
-          is_current: is_current ?? false, week: week ?? null,
+          is_current: is_current ?? null, week: week ?? null,
           git_project: git_project ?? null,
         }),
   });
