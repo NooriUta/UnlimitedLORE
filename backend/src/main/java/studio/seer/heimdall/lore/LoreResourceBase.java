@@ -114,10 +114,15 @@ public abstract class LoreResourceBase {
     // ничего не разделяет. В боевом пути AgentScopeFilter уже отсекает не-full
     // раньше, чем запрос сюда доходит, — эта ветка защищает второй эшелон
     // (dev/тесты с выключенным OIDC, где AgentScopeFilter — no-op).
-    void requireSuperAdminOrAgentFull(String role) {
+    //
+    // SE-11 (20.10.2026, D-2026-LORE-AGENT-MATRIX-WIDEN-PROFILES): кроме full —
+    // architect и pm. Список берётся из строки "project" матрицы фильтра, а не
+    // повторяется здесь: два списка одного права расходятся молча, и именно так
+    // профили обещали project_new, которого ни один замок не пропускал.
+    void requireSuperAdminOrProjectAgent(String role) {
         String scope = callerAgentScope();
         if (scope != null) {
-            if ("full".equals(scope)) return;
+            if (AgentScopeFilter.FAMILY_AGENTS.get("project").contains(scope)) return;
             throw new LoreExceptions.Forbidden("agent-" + scope + " не пишет в 'project'");
         }
         requireSuperAdmin(role);

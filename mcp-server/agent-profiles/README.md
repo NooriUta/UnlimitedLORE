@@ -13,8 +13,8 @@ needs restricting, only writes do.
 |---|---|
 | `full` | everything (primary) |
 | `architect` | `adr_*`, `component_*`, `tech_*`, `spec_*`, `runbook_*`, `doc_*`, `decision_*`, `question_*`, `project_new`, `status_set`, `feature_*`, `uc_*`, `pain_*`, `gain_*`, `job_*`, `vp_*` |
-| `marketer` | `bragi_*`, `task_*`, `insight_*`, `rec_*`, `doc_*`, `status_set` |
-| `developer` | `task_*`, `release_*`, `tech_*`, `spec_*`, `runbook_*`, `doc_*`, `adr_new`, `status_set` |
+| `marketer` | `bragi_*`, `task_*`, `insight_*`, `rec_*`, `doc_*`, `status_set` — except `doc_del` |
+| `developer` | `task_*`, `release_*`, `tech_*`, `spec_*`, `runbook_*`, `doc_*`, `adr_new`, `status_set` — except `doc_del`, `spec_del`, `release_mv` |
 | `tester` | `qg_*`, `task_*`, `status_set`, `status_set_batch` |
 | `pm` | `sprint_*`, `task_*`, `milestone_*`, `project_new`, `status_set`, `status_set_batch`, `feature_*`, `uc_*`, `pain_*`, `gain_*`, `job_*`, `vp_*` |
 | `analyst` | `metric_*`, `insight_*`, `rec_*`, `task_set`, `status_set` |
@@ -35,3 +35,16 @@ Point an agent's config at one of these files (or copy its `permission` block in
 and [opencode.ai/docs/config](https://opencode.ai/docs/config) for the full config shape. Each file
 here is already a complete, valid agent-config fragment (`mode` + `permission`), so the simplest
 wiring is to reference the file directly from your OpenCode agent registry.
+
+## The backend must agree (SE-11, 2026-10-20)
+
+Every `allow` here is checked against the backend matrix (`AgentScopeFilter.FAMILY_AGENTS`,
+`SUBPATH_AGENTS`, `SUBPATH_GRANTS`) by `AgentProfilesMatchMatrixTest`: a profile may promise
+less than the backend allows, never more. Tool → backend path comes from `tool-paths.json`,
+recorded by calling each tool in every branch (`mcp-server/src/tools/toolPaths.test.ts`;
+refresh with `UPDATE_TOOL_PATHS=1 npx vitest run src/tools/toolPaths.test.ts`), not guessed
+from the tool name — `insight_*`/`metric_log` write to `/lore/bragi/...`, `rec_*` to `/lore/qg/...`.
+
+Explicit `deny` entries after a wildcard (`"doc_*": "allow"`, then `"doc_del": "deny"`) carve out
+what the backend reserves: deletions stay `full`/`architect` (owner decision 2026-07-18), and
+`release_mv` writes to `/lore/project/move`.
