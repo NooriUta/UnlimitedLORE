@@ -200,7 +200,19 @@ services:
       # ADR-LORE-023: dev-стенд получает версию-маркер и раннер миграций
       # (OQ-023-DEVSTAND). При pending-шагах на БД с данными раннер сначала
       # снимает BACKUP DATABASE (SV-04); упавший шаг валит старт ГРОМКО.
-      - lore.migrate=${LORE_MIGRATE:-true}
+      #
+      # DBR-06 (20.10.2026): по умолчанию рантайм схему НЕ накатывает — накатка
+      # отдельный шаг CD «Migrate schema» (LORE_MIGRATE=true LORE_MIGRATE_ONLY=true
+      # LORE_MART_AUTH=basic docker compose run --rm --no-deps lore-backend):
+      # процесс накатывает и выходит. Перезапуск контейнера больше не операция над
+      # схемой; при рассинхроне версий рантайм не стартует (verifySchemaOrFail).
+      # Локально по-старому: LORE_MIGRATE=true в .env.
+      - lore.migrate=${LORE_MIGRATE:-false}
+      - lore.migrate.only=${LORE_MIGRATE_ONLY:-false}
+      # DBR-01: basic = user/пароль (root); token = собственный API-токен без
+      # updateSchema из секрет-сервиса (ключи ARCADEDB_API_TOKEN и
+      # ARCADEDB_API_TOKEN_BENCH). Отката token→basic нет намеренно.
+      - lore.mart.auth=${LORE_MART_AUTH:-basic}
       # SELF-PROVISION: на ЧИСТОЙ/внешней БД одного lore.migrate МАЛО. Ядро
       # (KnowTask/KnowSprint/KnowADR + Hist + рёбра) создаёт ТОЛЬКО инициализатор
       # под lore.bootstrap — миграции его не заводят, они добирают продуктовый

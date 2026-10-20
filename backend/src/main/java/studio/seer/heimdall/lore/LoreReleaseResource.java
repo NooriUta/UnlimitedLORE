@@ -136,6 +136,32 @@ public class LoreReleaseResource extends LoreResourceBase {
     // Первый релиз проекта → текущий. Задним числом старее текущего → НЕ крадёт
     // флаг. Сбой пробы → true: цель OP-04 в том, чтобы у проекта всегда был
     // текущий; лучше пометить, чем оставить проект без current из-за read-сбоя.
+    // SE-18: «текущий» — выкаченный, а не заведённый. Запись без тега (её
+    // заводят заранее, пока промо идёт) по дате оказывается самой свежей и
+    // забрала бы флаг раньше выкатки. Поэтому авто-current только с тегом;
+    // явное значение уважается как прежде. Проба `newest` без тега не зовётся.
+    static boolean autoCurrent(Boolean explicit, String gitTag, java.util.function.BooleanSupplier newest) {
+        if (explicit != null) return explicit;
+        if (gitTag == null || gitTag.isBlank()) return false;
+        return newest.getAsBoolean();
+    }
+
+    /** Дата уже заведённого релиза — для авто-current при простановке тега через update. */
+    private String releaseDateOf(String gp, String releaseId) {
+        try {
+            var rows = client.query(db, basicAuth(), new MartQuery("sql",
+                "SELECT release_date FROM KnowRelease WHERE release_uid = :k OR "
+                + "(release_id = :rid AND git_project = :gp) LIMIT 1",
+                Map.of("k", gp + "#" + releaseId, "rid", releaseId, "gp", gp), 1))
+                .await().indefinitely().result();
+            return rows == null || rows.isEmpty() ? null : str(rows.get(0).get("release_date"));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE RELEASE] auto-current: дата релиза %s не прочитана (%s) — флаг не трогаю",
+                releaseId, LoreUpstream.detail(e));
+            return null;
+        }
+    }
+
     private boolean isNewestForProject(String gp, String rdate) {
         try {
             var res = client.query(db, basicAuth(), new MartQuery("sql",
@@ -181,9 +207,8 @@ public class LoreReleaseResource extends LoreResourceBase {
             // текущего (NooriUta/AIDA: 101 релиз, ни одного current), и на это
             // жалуется мобильное приложение. Правка целиком в LORE — чужой
             // релизный пайплайн aida-root трогать не нужно.
-            boolean cur = req.is_current() != null
-                          ? req.is_current()
-                          : isNewestForProject(gp, rdate);
+            // SE-18: без тега запись заведена заранее и текущей не становится.
+            boolean cur = autoCurrent(req.is_current(), req.git_tag(), () -> isNewestForProject(gp, rdate));
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + gp + "'",
@@ -253,6 +278,16 @@ public class LoreReleaseResource extends LoreResourceBase {
             boolean cur    = Boolean.TRUE.equals(req.is_current());
             String ugp = projectOf(req.git_project());
             if (ugp == null) return badParams(NO_PROJECT);
+            // SE-18: тег проставлен позже записи (промо закончилось) и флаг не
+            // прислан — та же проба «самый свежий», что при создании. Не самый
+            // свежий — флаг не трогаем вовсе (не снимаем чужой текущий).
+            if (!curSet && req.git_tag() != null && !req.git_tag().isBlank()) {
+                String rd = req.release_date() != null ? req.release_date() : releaseDateOf(ugp, req.release_id());
+                if (rd != null && autoCurrent(null, req.git_tag(), () -> isNewestForProject(ugp, rd))) {
+                    curSet = true;
+                    cur = true;
+                }
+            }
             if (cur) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project='" + ugp + "'",

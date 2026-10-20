@@ -376,11 +376,65 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 }
                 return write;
             })
-            .onFailure().recoverWithItem(ex -> {
+            .onFailure().recoverWithUni(ex -> {
+                // SE-17: 409 здесь — уникальный индекс отверг дубль task_uid, а не
+                // сбой СУБД. Отдавать его как 502 LORE_UPSTREAM значило звать
+                // повторить тот же вызов. Отказ называет допустимое (ADR-LORE-043
+                // §3): код занят — вот следующий свободный.
+                if (isConflict(ex)) {
+                    return client.query(db, basicAuth(), new MartQuery("sql",
+                            "SELECT task_id FROM KnowTask WHERE out('PART_OF').sprint_id[0] = :sid",
+                            Map.of("sid", sid), -1))
+                        .map(r -> {
+                            List<String> ids = new java.util.ArrayList<>();
+                            if (r.result() != null) for (Map<String, Object> row : r.result())
+                                if (row.get("task_id") != null) ids.add(row.get("task_id").toString());
+                            return taskIdTaken(sid, tid, nextFreeTaskId(tid, ids));
+                        })
+                        .onFailure().recoverWithItem(e2 -> taskIdTaken(sid, tid, null));
+                }
                 LOG.warnf("[LORE TASK CREATE] %s: %s", uid, ex.getMessage());
-                return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage())));
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_GATEWAY)
+                    .entity(new LoreError("LORE_UPSTREAM", ex.getMessage()))));
             });
+    }
+
+    private Response taskIdTaken(String sid, String tid, String suggested) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", "TASK_ID_TAKEN");
+        body.put("detail", "код " + tid + " в спринте " + sid + " уже занят"
+            + (suggested != null ? " — свободный: " + suggested : ""));
+        body.put("task_id", tid);
+        if (suggested != null) body.put("suggested_task_id", suggested);
+        return noStore(Response.status(Response.Status.CONFLICT).entity(body));
+    }
+
+    /** Отказ СУБД с кодом 409 — нарушение уникальности, а не сбой. */
+    static boolean isConflict(Throwable e) {
+        return e instanceof jakarta.ws.rs.WebApplicationException w
+            && w.getResponse() != null && w.getResponse().getStatus() == 409;
+    }
+
+    /**
+     * Следующий свободный код в ряду занятого: тот же префикс, номер на единицу
+     * больше максимального среди кодов этого префикса, ширина цифр — как у
+     * занятого (T03 → T07). У кода без номера — суффикс «-N», которого ещё нет.
+     */
+    static String nextFreeTaskId(String taken, List<String> existing) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(.*?)(\\d+)$").matcher(taken);
+        if (m.matches()) {
+            String prefix = m.group(1);
+            int width = m.group(2).length();
+            int max = Integer.parseInt(m.group(2));
+            for (String id : existing) {
+                java.util.regex.Matcher e = java.util.regex.Pattern.compile("^" + java.util.regex.Pattern.quote(prefix) + "(\\d+)$").matcher(id);
+                if (e.matches()) max = Math.max(max, Integer.parseInt(e.group(1)));
+            }
+            return prefix + String.format("%0" + width + "d", max + 1);
+        }
+        int n = 2;
+        while (existing.contains(taken + "-" + n)) n++;
+        return taken + "-" + n;
     }
 
     // ── Линтер полноты: вердикт в ответе на запись ───────────────────────────

@@ -1243,7 +1243,20 @@ final class LoreSchemaMigrations {
         //
         // Карта «продукт → проект» выведена из уже привязанных записей и зашита
         // в PRODUCT_TO_PROJECT — читаемо на ревью и одинаково на любом прогоне.
-        new Step(47, 17, "java__doc_project_edges_by_product", List.of())
+        new Step(47, 17, "java__doc_project_edges_by_product", List.of()),
+
+        // SE-06, D-2026-LORE-AGENT-ROLE-DICT-IS-PROFILE (20.10.2026): справочник
+        // agent_role хранит ПРОФИЛИ агентов (набор разрешённых инструментов), а
+        // имя «роль» путало его с ролью доступа человека (project_role) и ролью в
+        // продукте. Коды не меняются. SQL пуст: перенос — два UPDATE данных,
+        // текстовое правило идемпотентности SQL-шагов их не пропустило бы, —
+        // вся работа в javaStep(48).
+        //
+        // Ось совместимости не поднимается: Java-код бэкенда словарь по имени не
+        // читает, читают фронт и описание MCP — они правятся в том же PR.
+        // Свойство KnowActor.agent_role и поле API actor/owner.agent_role — это
+        // другой контракт (клиенты вне репозитория) и этим шагом НЕ трогаются.
+        new Step(48, 17, "java__dict_agent_role_to_agent_profile", List.of())
     );
 
     /**
