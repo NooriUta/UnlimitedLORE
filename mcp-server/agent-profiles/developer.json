@@ -13,6 +13,9 @@
     "runbook_*": "allow",
     "doc_*": "allow",
     "adr_new": "allow",
-    "status_set": "allow"
+    "status_set": "allow",
+    "doc_del": "deny",
+    "spec_del": "deny",
+    "release_mv": "deny"
   }
 }

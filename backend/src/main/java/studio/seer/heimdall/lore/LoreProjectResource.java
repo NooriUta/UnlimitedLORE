@@ -30,7 +30,7 @@ import java.util.Map;
  * (ни один из семи агентных профилей, включая {@code full}, не писал сюда), а у
  * человека нет ни UI-кнопки, ни проверенной {@code superadmin}-учётки отдельно от
  * обычного {@code admin}. Открыт РОВНО {@code agent-full}
- * ({@link LoreResourceBase#requireSuperAdminOrAgentFull}) — человеческий порог не
+ * ({@link LoreResourceBase#requireSuperAdminOrProjectAgent}) — человеческий порог не
  * тронут, там по-прежнему нужна именно {@code superadmin}, не {@code admin}.
  */
 @Path("/lore")
@@ -50,7 +50,7 @@ public class LoreProjectResource extends LoreResourceBase {
         if (!enabled) return disabled();
         // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: проект — единица изоляции
         // всей RBAC-модели, требует super-admin (не admin) — либо agent-full.
-        requireSuperAdminOrAgentFull(role);
+        requireSuperAdminOrProjectAgent(role);
         if (req == null || req.slug() == null || req.slug().isBlank())
             return badParams("slug required");
         if (!SAFE_ID.matcher(req.slug()).matches())

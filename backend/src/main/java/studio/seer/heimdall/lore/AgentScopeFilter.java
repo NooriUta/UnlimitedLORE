@@ -106,8 +106,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // запрещал. Не задело никого лишь потому, что под этим профилем ещё
         // не работали — а проявилось бы как AGENT_SCOPE_FORBIDDEN на действии,
         // которое админка показывает разрешённым.
-        Map.entry("task",      Set.of("full", "pm", "developer", "tester", "marketer", "analyst", "architect")),
-        Map.entry("status",    Set.of("full", "pm", "developer", "tester", "marketer", "analyst", "architect")),
+        // product-analyst — SE-11, D-2026-LORE-AGENT-MATRIX-WIDEN-PROFILES (20.10.2026):
+        // его профиль обещал task_set/status_set для своих research/analytics-задач
+        // (ADR-LORE-015 §1b), а матрица отказывала.
+        Map.entry("task",      Set.of("full", "pm", "developer", "tester", "marketer", "analyst", "architect", "product-analyst")),
+        Map.entry("status",    Set.of("full", "pm", "developer", "tester", "marketer", "analyst", "architect", "product-analyst")),
         Map.entry("release",   Set.of("full", "developer")),
         Map.entry("qg",        Set.of("full", "tester")),
         Map.entry("question",  Set.of("full", "architect", "analyst", "pm", "product-analyst")),
@@ -164,9 +167,11 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // писал сюда, а у человека нет ни UI-кнопки, ни отдельной проверенной
         // superadmin-учётки. Открыт РОВНО full — остальные шесть профилей
         // по-прежнему без доступа. Человеческий порог не тронут: см.
-        // LoreResourceBase.requireSuperAdminOrAgentFull (там же по-прежнему
+        // LoreResourceBase.requireSuperAdminOrProjectAgent (там же по-прежнему
         // нужна именно superadmin, не admin).
-        Map.entry("project",   Set.of("full")),
+        // architect и pm — SE-11 (20.10.2026): их профили обещали project_new. Замок в
+        // ресурсе (requireSuperAdminOrProjectAgent) читает ЭТУ строку, второго списка нет.
+        Map.entry("project",   Set.of("full", "architect", "pm")),
         Map.entry("bragi",     Set.of("full", "marketer")),
         // NB: «quality» и «quality-gate» ниже — РАЗНЫЕ семейства. Первое —
         // проверка полноты записи (ничего не пишет, открыта всем), второе —
@@ -221,6 +226,27 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // более широкими правами — self-эскалация через ровно тот механизм,
         // которым AL-68 будет выводить эффективные права агента.
         "actor/owner",  Set.of());
+
+    /**
+     * Точечные РАСШИРЕНИЯ внутри семейства: подпуть, открытый профилям, которым
+     * семейство целиком не положено. Зеркало {@link #SUBPATH_AGENTS} (тот только
+     * сужает).
+     *
+     * <p>SE-11, решение владельца 20.10.2026 («открыть точечно»,
+     * D-2026-LORE-AGENT-MATRIX-WIDEN-PROFILES). Профили analyst/product-analyst
+     * обещали insight_* и metric_log, analyst/product-analyst/marketer — rec_*;
+     * эти инструменты пишут в {@code /lore/bragi/...} и {@code /lore/qg/...}.
+     * Открыть семейства целиком значило бы отдать аналитику публикации BRAGI, а
+     * маркетологу — гейты качества: этого профили не обещали.
+     */
+    private static final Map<String, Set<String>> SUBPATH_GRANTS = Map.of(
+        "bragi/insight",     Set.of("analyst", "product-analyst"),
+        "bragi/metric",      Set.of("analyst", "product-analyst"),
+        "qg/recommendation", Set.of("analyst", "product-analyst", "marketer"),
+        "qg/promote",        Set.of("analyst", "product-analyst", "marketer"));
+
+    /** Для админки и сторожей: точечные расширения как есть. */
+    static Map<String, Set<String>> subpathGrants() { return SUBPATH_GRANTS; }
 
     /**
      * Изъятия из {@link #HUMAN_ONLY}: подпуть, который человеческому семейству
@@ -284,42 +310,60 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         if (scope == null) return;                      // человек, а не агент
 
         String path = ctx.getUriInfo().getPath();
-        String family = familyOf(path);
-        if (family == null) return;
-
-        // Подпуть проверяется ПЕРВЫМ: он сужает права внутри разрешённого семейства.
-        Set<String> narrowed = SUBPATH_AGENTS.get(subPathOf(path));
-        if (narrowed != null && !narrowed.contains(scope)) {
-            deny(ctx, scope, subPathOf(path), "разрушающая операция; доступна: " + String.join(", ", narrowed));
+        Denial d = decide(scope, path);
+        if (d != null) {
+            deny(ctx, scope, d.what(), d.why());
             return;
         }
+        String family = familyOf(path);
+        if (family != null && !HUMAN_ONLY.contains(family) && !FAMILY_AGENTS.containsKey(family)
+                && loggedUnlisted.add(family)) {
+            LOG.infof("[agent-scope] семейство '%s' вне матрицы прав — пропускаю. "
+                + "Закрыть = добавить строку в FAMILY_AGENTS и в REVERSE_MATRIX админки", family);
+        }
+    }
+
+    /** Отказ: что именно закрыто (семейство или подпуть) и почему. */
+    record Denial(String what, String why) {}
+
+    /**
+     * Решение по одной записи агента — чистая функция, без контейнера.
+     *
+     * <p>Вынесена из {@link #filter}, чтобы сторож профилей
+     * (AgentProfilesMatchMatrixTest) проверял ТУ ЖЕ логику, что отказывает на
+     * проде, а не её пересказ: подпути, изъятия из HUMAN_ONLY и пропуск
+     * семейства вне матрицы — всё отсюда.
+     *
+     * @return {@code null} — запись пропускается; иначе отказ
+     */
+    static Denial decide(String scope, String path) {
+        String family = familyOf(path);
+        if (family == null) return null;
+        String sub = subPathOf(path);
+
+        // Подпуть проверяется ПЕРВЫМ: он сужает права внутри разрешённого семейства.
+        Set<String> narrowed = SUBPATH_AGENTS.get(sub);
+        if (narrowed != null && !narrowed.contains(scope))
+            return new Denial(sub, "разрушающая операция; доступна: " + String.join(", ", narrowed));
 
         // Изъятие проверяется ДО запрета семейства: иначе разрешение подпути не
         // имело бы силы — строка ниже отвергла бы его вместе со всем семейством.
-        Boolean exempt = humanOnlyExemption(subPathOf(path), scope);
+        Boolean exempt = humanOnlyExemption(sub, scope);
         if (exempt != null) {
-            if (!exempt) {
-                deny(ctx, scope, subPathOf(path),
-                    "подпуть человеческого семейства открыт только: "
-                    + String.join(", ", HUMAN_ONLY_EXEMPT.get(subPathOf(path))));
-                return;
-            }
+            if (!exempt)
+                return new Denial(sub, "подпуть человеческого семейства открыт только: "
+                    + String.join(", ", HUMAN_ONLY_EXEMPT.get(sub)));
             // Разрешено явно — HUMAN_ONLY к этому подпути не применяется.
         } else if (HUMAN_ONLY.contains(family)) {
-            deny(ctx, scope, family, "это семейство правит только человек");
-            return;
+            return new Denial(family, "это семейство правит только человек");
         }
+        Set<String> granted = SUBPATH_GRANTS.get(sub);
+        if (granted != null && granted.contains(scope)) return null;
         Set<String> allowed = FAMILY_AGENTS.get(family);
-        if (allowed == null) {
-            if (loggedUnlisted.add(family)) {
-                LOG.infof("[agent-scope] семейство '%s' вне матрицы прав — пропускаю. "
-                    + "Закрыть = добавить строку в FAMILY_AGENTS и в REVERSE_MATRIX админки", family);
-            }
-            return;
-        }
-        if (!allowed.contains(scope)) {
-            deny(ctx, scope, family, "профилю доступны: " + String.join(", ", allowed));
-        }
+        if (allowed == null) return null;               // вне матрицы — пропуск (см. лог в filter)
+        if (!allowed.contains(scope))
+            return new Denial(family, "профилю доступны: " + String.join(", ", allowed));
+        return null;
     }
 
     /**
