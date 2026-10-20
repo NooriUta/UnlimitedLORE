@@ -444,6 +444,20 @@ public class LoreSchemaMigrationRunner {
         if (version == 41) normalizeHistValidFrom();
         if (version == 46) backfillDroppedRoleNotes();
         if (version == 47) backfillDocProjectEdgesByProduct();
+        if (version == 48) renameAgentRoleDictToProfile();
+    }
+
+    /**
+     * V48 (SE-06): справочник agent_role → agent_profile, коды сохраняются.
+     *
+     * <p>История ({@code KnowDictEntryHist}) связана с записью парой
+     * (dict_type, code), а не ключом — поэтому переносится тем же условием, иначе
+     * срез history_dict потерял бы прошлое записи. Идемпотентен: второй прогон
+     * не находит строк со старым именем.
+     */
+    void renameAgentRoleDictToProfile() {
+        exec("UPDATE KnowDictEntry SET dict_type = 'agent_profile' WHERE dict_type = 'agent_role'");
+        exec("UPDATE KnowDictEntryHist SET dict_type = 'agent_profile' WHERE dict_type = 'agent_role'");
     }
 
     /**

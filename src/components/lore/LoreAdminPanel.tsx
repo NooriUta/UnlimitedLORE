@@ -472,7 +472,7 @@ function ProjectRolesEditor({ kcSub, username, onError }: {
   return (
     <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 8 }}>
       <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', marginBottom: 4 }}>
-        {t('lore.admin.projectRoles', 'Роли в проектах')}
+        {t('lore.admin.projectRoles', 'Роли доступа в проектах')}
       </div>
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--t3)', marginBottom: 6 }}>
         {t('lore.admin.projectRolesNote', 'Вторая ось прав: что человек делает в конкретном проекте. Отсюда же берётся, что может делать его агент (матрица делегирования) и какие проекты он видит.')}
@@ -508,7 +508,7 @@ function ProjectRolesEditor({ kcSub, username, onError }: {
             </select>
             <button style={S.primary} disabled={busy || !pick.project}
               onClick={() => apply(pick.project, pick.role, 'add')}>
-              {t('lore.admin.addProjectRole', '+ роль в проекте')}
+              {t('lore.admin.addProjectRole', '+ роль доступа в проекте')}
             </button>
           </div>
         </>
@@ -862,7 +862,7 @@ function UsersTab({ st, preflight, onError, reload }: {
 
 // ── Агенты ───────────────────────────────────────────────────────────────────
 /**
- * AL-104: агент в графе — единица прав. Роль берётся из поля `agent_role`
+ * AL-104: агент в графе — единица прав. Профиль берётся из поля `agent_role` (имя поля вершины прежнее, справочник — agent_profile с V48)
  * (миграция V21), а НЕ выводится из имени учётки: раньше роль и учётка были
  * неразличимы, и двух агентов одной роли завести было некуда
  * ([[D-AGENT-IDENTITY-PROFILE-VS-INSTANCE]]).
@@ -902,7 +902,7 @@ function AgentsTab({ st, people, preflight, onError }: {
   useEffect(() => {
     const ctrl = new AbortController();
     fetchLoreSlice<AgentRow>('agent_owners', {}, ctrl.signal).then(setAgents).catch(() => setAgents([]));
-    fetchLoreSlice<DictRow>('dictionary', { dict_type: 'agent_role' }, ctrl.signal)
+    fetchLoreSlice<DictRow>('dictionary', { dict_type: 'agent_profile' }, ctrl.signal)
       .then(rs => setRoles(rs.filter(r => r.is_active !== false))).catch(() => setRoles([]));
     // Матрица D4 — с бэкенда, не константой на фронте: правило живёт в
     // ProjectRbacService, вторая копия разошлась бы с первой.
@@ -990,7 +990,7 @@ function AgentsTab({ st, people, preflight, onError }: {
 
   const rows = st.rows;
 
-  // Роль, которая есть в Keycloak, но отсутствует в справочнике agent_role:
+  // Роль, которая есть в Keycloak, но отсутствует в справочнике agent_profile (до V48 — agent_role):
   // агента с ней здесь не завести — селект ролей берётся из справочника.
   // Показать обязательно: молча пропущенная роль выглядит как «такой роли
   // нет вовсе», хотя учётка под неё уже выпущена и клейм работает.
@@ -1022,7 +1022,7 @@ function AgentsTab({ st, people, preflight, onError }: {
       {err && <div style={{ ...S.warn, color: 'var(--dng)', borderColor: 'color-mix(in srgb, var(--dng) 40%, transparent)', background: 'color-mix(in srgb, var(--dng) 8%, transparent)' }}>{err}</div>}
       <div style={S.tw}>
         <table style={S.table}>
-          <thead><tr>{['агент', 'роль', 'владелец', 'учётка', 'видит', 'пишет', 'куда пишет'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{['агент', 'профиль', 'владелец', 'учётка', 'видит', 'пишет', 'куда пишет'].map(h => <th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>
             {agents.map(a => {
               const sub = firstOf(a.owner_kc_sub);
@@ -1032,7 +1032,7 @@ function AgentsTab({ st, people, preflight, onError }: {
                   <td style={S.td}>{a.name ?? a.actor_id}</td>
                   <td style={S.td}>{a.agent_role
                     ? <span style={S.pill('var(--inf)')}>{a.agent_role}</span>
-                    : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noRole', '⚠ роль не задана')}</span>}</td>
+                    : <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noRole', '⚠ профиль не задан')}</span>}</td>
                   <td style={S.td}>{firstOf(a.owner_display_name)
                     ?? <span style={{ color: 'var(--wrn)' }}>{t('lore.admin.noOwner', '⚠ нет владельца')}</span>}</td>
                   <td style={{ ...S.td, fontFamily: 'var(--mono)', fontSize: 'var(--fs-xs)', color: 'var(--t3)' }}>{a.client_id ?? '—'}</td>
@@ -1049,7 +1049,7 @@ function AgentsTab({ st, people, preflight, onError }: {
         <input style={{ ...S.input, width: 170 }} placeholder={t('lore.admin.agentName', 'имя агента')}
                value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
         <select style={S.select} value={draft.role} onChange={e => setDraft(d => ({ ...d, role: e.target.value }))}>
-          <option value="">{t('lore.admin.pickRole', '— роль —')}</option>
+          <option value="">{t('lore.admin.pickRole', '— профиль —')}</option>
           {roles.map(r => <option key={r.code} value={r.code}>{r.code}</option>)}
         </select>
         <select style={S.select} value={draft.owner} onChange={e => setDraft(d => ({ ...d, owner: e.target.value }))}>
@@ -1065,9 +1065,9 @@ function AgentsTab({ st, people, preflight, onError }: {
         <button style={S.primary} disabled={busy} onClick={saveAgent}>{busy ? '…' : t('lore.admin.addAgent', '+ агент')}</button>
       </div>
 
-      {/* ── Роли агентов: справочник + кто вправе делегировать ─────────── */}
+      {/* ── Профили агентов: справочник agent_profile + кто вправе делегировать ─ */}
       <div style={{ fontSize: 'var(--fs-2xs)', letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--t3)', margin: '20px 0 4px' }}>
-        {t('lore.admin.agentRolesSection', 'Роли агентов')}
+        {t('lore.admin.agentRolesSection', 'Профили агентов')}
       </div>
       <div style={S.tw}>
         <table style={S.table}>
@@ -1096,7 +1096,7 @@ function AgentsTab({ st, people, preflight, onError }: {
       {orphanScopes.length > 0 && (
         <div style={S.warn}>
           {t('lore.admin.scopeNotInDict',
-             'В Keycloak выпущены учётки под роли, которых нет в справочнике agent_role: {{list}}. Агента с такой ролью здесь не завести — список берётся из справочника. Добавить запись может только человек: справочники агентам не отдаются.',
+             'В Keycloak выпущены учётки под профили, которых нет в справочнике agent_profile: {{list}}. Агента с таким профилем здесь не завести — список берётся из справочника. Добавить запись может только человек: справочники агентам не отдаются.',
              { list: orphanScopes.join(', ') })}
         </div>
       )}
@@ -1149,7 +1149,7 @@ function RolesTab({ dicts, users, agents, preflight }: {
 }) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<'by-role' | 'by-object'>('by-role');
-  const agentRoles = dicts.filter(r => r.dict_type === 'agent_role');
+  const agentRoles = dicts.filter(r => r.dict_type === 'agent_profile');
   const humanCounts = useMemo(() => {
     if (users.k !== 'ok') return null;
     const m: Record<string, string[]> = { 'super-admin': [], admin: [], viewer: [] };
