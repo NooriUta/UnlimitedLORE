@@ -366,18 +366,21 @@ public class AidaLoreResource extends LoreResourceBase {
             List<Map<String, Object>> allTasks    = composeAndQuery("all_tasks");
 
             // Sprint rows carry only an id; the name a person gave it reads better.
-            // A sprint can span projects; the feed tags with the first (the one LORE
-            // itself leads with). Decisions/ADRs derive project from their own
-            // BELONGS_TO_PROJECT edge (ADRPROJ-01), decisions also via parent ADR.
+            // A sprint can span projects, and its events (and its tasks' events)
+            // carry ALL of them — the same rule SE-05 set for decisions/ADRs
+            // (owner, 31.08: «показывай в каждом проекте»). Until 20.10.2026 the
+            // sprint gave only the FIRST git project in traversal order:
+            // SPRINT_MINILORE_CUTOVER (three repos) put every task under
+            // UnlimitedLORE and none under miniLORE. projectList() sorts/dedups.
             Map<String, String> sprintName = new HashMap<>();
-            Map<String, String> sprintProject = new HashMap<>();
+            Map<String, Object> sprintProject = new HashMap<>();
             for (Map<String, Object> s : sprints) {
                 String sid = firstStr(s.get("sprint_id"));
                 if (sid == null) continue;
                 sprintName.putIfAbsent(sid, firstStr(s.get("name")));
                 Object gp = s.get("git_projects");
-                if (gp instanceof List<?> l && !l.isEmpty() && l.get(0) != null)
-                    sprintProject.putIfAbsent(sid, String.valueOf(l.get(0)));
+                if (gp instanceof List<?> l && !l.isEmpty())
+                    sprintProject.putIfAbsent(sid, l);
             }
 
             List<Map<String, Object>> items = new ArrayList<>();
@@ -482,7 +485,7 @@ public class AidaLoreResource extends LoreResourceBase {
                 String tid = firstStr(t.get("task_id"));
                 String[] known = uid == null ? null : byUid.get(uid);
                 String title = (known != null && known[0] != null) ? known[0] : (tid != null ? tid : uid);
-                String project = (known != null && known[1] != null) ? sprintProject.get(known[1]) : null;
+                Object project = (known != null && known[1] != null) ? sprintProject.get(known[1]) : null;
                 // ref = task_uid: miniLORE открывает карточку задачи; detail = tid.
                 items.add(newsItem("tasks", date, timeOf(t.get("valid_from")), title, "closed", tid, projectList(project), uid));
             }
@@ -511,7 +514,7 @@ public class AidaLoreResource extends LoreResourceBase {
                              : (uid.contains("/") ? uid.substring(uid.indexOf('/') + 1) : uid);
                 String sprintId = e.getValue()[1] != null ? e.getValue()[1]
                                 : (known != null ? known[1] : null);
-                String project = sprintId != null ? sprintProject.get(sprintId) : null;
+                Object project = sprintId != null ? sprintProject.get(sprintId) : null;
                 items.add(newsItem("tasks", date, timeOf(vf), title, "created", null, projectList(project), uid));
             }
 
