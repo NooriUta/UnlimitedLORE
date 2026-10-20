@@ -144,8 +144,16 @@ tasks.named('test') {
     // есть сводка печаталась бы ровно тогда, когда она не нужна, и молчала бы
     // на каждом красном прогоне. Поймано положительным контролем: подмешанный
     // падающий тест не дал ни строки сводки.
+    //
+    // CIM-07 (20.10.2026): итог печатается ВСЕГДА, а не только при падениях.
+    // Раньше зелёный прогон не давал ни одного числа — «дельту зелёных» из CI
+    // взять было нельзя, а массово пропущенный набор выглядел так же, как
+    // полный. Число пропущенных — в той же строке, рядом с зелёными.
     afterSuite { desc, result ->
-        if (desc.parent == null && !loreFailures.isEmpty()) {
+        if (desc.parent != null) return
+        logger.lifecycle("\n==== ИТОГ ТЕСТОВ: всего ${result.testCount}, зелёных ${result.successfulTestCount}, "
+            + "упало ${result.failedTestCount}, пропущено ${result.skippedTestCount} ====")
+        if (!loreFailures.isEmpty()) {
             logger.lifecycle("\n==== УПАВШИЕ ТЕСТЫ (${loreFailures.size()}) ====")
             loreFailures.each { logger.lifecycle("  • ${it}") }
             logger.lifecycle("==== конец списка ====\n")

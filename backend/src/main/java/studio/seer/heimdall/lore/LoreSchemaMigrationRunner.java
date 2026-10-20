@@ -136,6 +136,19 @@ public class LoreSchemaMigrationRunner {
      */
     /** package-private ради теста: гейт проверяется вызовом, а не через профиль. */
     void verifySchemaOrFail() {
+        verifySchemaAgainst(LoreSchemaMigrations.requiredLiveTypes());
+    }
+
+    /**
+     * То же, с явным списком типов для материальной сверки. Шов ради теста
+     * SELF-PROVISION-VERIFY-GAP: «журнал полон, а типа нет» нельзя воспроизвести,
+     * удалив настоящий тип из общей тестовой БД, — в ней живут соседи. Тест подаёт
+     * полный список плюс заведомо несуществующий тип; путь кода тот же.
+     *
+     * <p>Своё имя, а не перегрузка verifySchemaOrFail: перегрузка делала ссылку
+     * {@code runner::verifySchemaOrFail} в тестах неоднозначной для assertDoesNotThrow.
+     */
+    void verifySchemaAgainst(List<String> requiredTypes) {
         Map<Integer, String> applied = new HashMap<>();
         Map<Integer, Integer> appliedCompat = new HashMap<>();
         readLedgerTolerantly(applied, appliedCompat);
@@ -184,7 +197,7 @@ public class LoreSchemaMigrationRunner {
         // атомарно. Шаг, чья часть сделала no-op/прервалась, оставляет «версия
         // есть, типов нет» — и приложение молча отдаёт 500 по продуктовым
         // слайсам. Читаем схему (не мутируем) и падаем ГРОМКО, если чего-то нет.
-        List<String> missing = LoreSchemaMigrations.requiredLiveTypes().stream()
+        List<String> missing = requiredTypes.stream()
             .filter(t -> !typeExists(t))
             .toList();
         if (!missing.isEmpty()) {

@@ -54,6 +54,47 @@ class LoreSliceProjectScopeTest {
             "хвост слайса сохраняется целиком");
     }
 
+    /**
+     * AL-120 (20.10.2026): то же правило — по КАЖДОМУ проектному срезу, а не по
+     * одному {@code docs}.
+     *
+     * <p>{@code compose()} вставляет условие скоупа перед хвостом среза, а хвост
+     * узнаёт ТОЛЬКО из поля {@code suffix}. Срез, у которого {@code ORDER BY}
+     * записан прямо в теле SQL при пустом {@code suffix}, получает условие ПОСЛЕ
+     * сортировки — «… ORDER BY decision_id AND (…)» — и ArcadeDB отвечает
+     * ошибкой разбора, наружу это 502. Так и нашлось: живой тест под включённым
+     * {@code lore.scope.enforce} получил 502 на {@code decisions_of_adr}, то есть
+     * паспорт ADR сломался бы у всех, кроме superadmin, в момент включения флага.
+     *
+     * <p>Проверка на одном срезе ({@code docs}, выше) этот случай не видела по
+     * построению: у {@code docs} хвост лежит в {@code suffix}, как положено.
+     * Правило формы «у каждого» проверяется только перебором каждого.
+     */
+    @Test
+    void условиеСкоупаСтоитПередХвостомУКаждогоПроектногоСреза() {
+        java.util.List<String> broken = new java.util.ArrayList<>();
+        for (String id : LoreSlices.PROJECT_SCOPED.keySet()) {
+            var def = LoreSlices.get(id);
+            Map<String, String> given = new java.util.HashMap<>();
+            for (String r : def.required()) given.put(r, "x");
+            String sql = LoreSlices.compose(id, given, set("org/a")).sql();
+            int scopeAt = sql.lastIndexOf(":__scope");
+            if (scopeAt < 0) { broken.add(id + " — условия скоупа нет вовсе"); continue; }
+            // Всё, что идёт ПОСЛЕ условия скоупа, — хвост. Ни одного ключевого
+            // слова хвоста ДО условия на верхнем уровне быть не должно; проверяем
+            // грубо, но надёжно: после условия хвост обязан встретиться, если он
+            // есть в запросе вообще.
+            for (String tail : new String[] {" ORDER BY ", " LIMIT ", " GROUP BY "}) {
+                int lastTail = sql.lastIndexOf(tail);
+                if (lastTail >= 0 && lastTail < scopeAt)
+                    broken.add(id + " — «" + tail.trim() + "» стоит ДО условия скоупа");
+            }
+        }
+        assertEquals(java.util.List.of(), broken,
+            "условие скоупа дописывается после хвоста — под включённым скоупом эти срезы "
+            + "отдают ошибку разбора (502). Вынесите хвост из тела SQL в suffix среза.");
+    }
+
     @Test
     void несколькоПроектовДаютORАПараметрыСвязываются() {
         var c = LoreSlices.compose("adrs", Map.of(), set("org/a", "org/b"));

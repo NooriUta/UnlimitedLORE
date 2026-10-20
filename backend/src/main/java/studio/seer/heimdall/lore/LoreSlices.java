@@ -443,8 +443,16 @@ public final class LoreSlices {
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('TAGGED_WITH').tag_id AS tags " +
-            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id ORDER BY decision_id",
-            List.of("id"), Map.of(), "");
+            // AL-120 (20.10.2026): ORDER BY — в suffix. В теле он стоял ПЕРЕД
+            // условием скоупа («… ORDER BY decision_id AND (…)»), и под
+            // включённым lore.scope.enforce срез отвечал 502 — паспорт ADR
+            // ломался у всех, кроме superadmin. Найдено живым тестом под флагом.
+            // SE-05 (20.10.2026): CONTAINS, а не [0] = — решение под двумя ADR
+            // (совместные ADR — замысел владелицы) было видно в паспорте только
+            // того родителя, что оказался первым. Тест — на ДВУХ родителях
+            // (DecisionUnderTwoAdrsLiveDbTest): на одном формы неразличимы.
+            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY decision_id");
 
         slice("decision",
             // AL-79: status_raw в паспорте — раньше статус был виден в списках,
@@ -689,7 +697,11 @@ public final class LoreSlices {
             // (ADR-LORE-015, T14) are plain KnowTask vertex fields — no traversal
             // needed, unlike note_md/effort_days above.
             ROLE_HOLDERS + ", task_type " +
-            "FROM KnowTask WHERE out('IN_PHASE').phase_uid[0] = :phase_uid " +
+            // SE-05 (20.10.2026): CONTAINS, а не [0] =. Модель допускает задачу
+            // в нескольких фазах — task/phase add не снимает прежнюю, а remove
+            // без фазы описан как «отцепить от ВСЕХ». С [0] такая задача была
+            // видна только в одной фазе, какой придётся (TaskInTwoPhasesLiveDbTest).
+            "FROM KnowTask WHERE out('IN_PHASE').phase_uid CONTAINS :phase_uid " +
             "ORDER BY order_index",
             List.of("phase_uid"), Map.of(), "");
 
@@ -1901,8 +1913,15 @@ public final class LoreSlices {
             // не хвост истории (тот же дефект, что у timeline_releases выше).
             // Для UI безопасно: доска релизов сортирует сама, semverCompare
             // (LoreReleasesBoard.tsx:132), порядок среза она не наследует.
-            "FROM KnowRelease ORDER BY release_date DESC",
-            List.of(), Map.of(), " LIMIT 200");
+            //
+            // AL-120 (20.10.2026): ORDER BY — в suffix, а не в теле. compose()
+            // вставляет условие скоупа перед suffix'ом, и при сортировке в теле
+            // получалось «… ORDER BY release_date DESC WHERE (…) LIMIT 200» —
+            // ошибка разбора, 502 на списке релизов у каждого, кроме superadmin,
+            // в момент включения lore.scope.enforce. Без скоупа итоговый SQL тот же
+            // символ в символ: тело + suffix склеиваются как раньше.
+            "FROM KnowRelease",
+            List.of(), Map.of(), " ORDER BY release_date DESC LIMIT 200");
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +
