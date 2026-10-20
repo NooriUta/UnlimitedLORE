@@ -52,11 +52,20 @@ class AgentScopeFilterTest {
     }
 
     @Test
-    void проектОткрытТолькоFullОстальныеПрофилиПрежнегоЗакрыты() {
-        // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: единственный практический
-        // путь заведения проекта был мёртв для всех — открыт РОВНО full, не все
-        // агентные профили сразу (в отличие от обычных семейств вроде task/status).
-        assertEquals(Set.of("full"), allowedFor("project"));
+    void проектОткрытFullАрхитекторуИPmОстальныеЗакрыты() {
+        // AL-84/ADR-LORE-025-D17, поправка 2026-08-11: путь заведения проекта был
+        // мёртв для всех — открыт full. 20.10.2026 (SE-11,
+        // D-2026-LORE-AGENT-MATRIX-WIDEN-PROFILES): плюс architect и pm, которым
+        // это обещали их профили. Остальные профили по-прежнему закрыты.
+        assertEquals(Set.of("full", "architect", "pm"), allowedFor("project"));
+    }
+
+    @Test
+    void productAnalystВедётСвоиЗадачиИСтатусы() {
+        // SE-11: профиль product-analyst разрешал task_set/status_set (свои
+        // research/analytics-задачи, ADR-LORE-015 §1b), а матрица отказывала.
+        assertTrue(allowedFor("task").contains("product-analyst"));
+        assertTrue(allowedFor("status").contains("product-analyst"));
     }
 
     @Test
@@ -165,6 +174,21 @@ class AgentScopeFilterTest {
                 .map(s -> s.replace("'", "").trim()).filter(s -> !s.isEmpty())
                 .collect(java.util.stream.Collectors.toSet());
             if (uiAgents.contains("все агенты")) continue;   // строка про чтение
+
+            // Строка про точечное расширение (SUBPATH_GRANTS, SE-11): её подписчики —
+            // права семейства плюс расширение подпути, а не одно семейство.
+            Matcher sub = Pattern.compile("/lore/([a-z-]+/[a-z-]+)").matcher(api);
+            List<String> grantedSubs = new java.util.ArrayList<>();
+            while (sub.find()) if (AgentScopeFilter.subpathGrants().containsKey(sub.group(1))) grantedSubs.add(sub.group(1));
+            if (!grantedSubs.isEmpty()) {
+                for (String s : grantedSubs) {
+                    Set<String> expected = new java.util.HashSet<>(allowedFor(s.substring(0, s.indexOf('/'))));
+                    expected.addAll(AgentScopeFilter.subpathGrants().get(s));
+                    assertEquals(expected, uiAgents, "права на подпуть '" + s + "' разошлись с админкой");
+                    checked++;
+                }
+                continue;
+            }
 
             for (String family : familiesFromApiCell(api)) {
                 Set<String> backend = allowedFor(family);

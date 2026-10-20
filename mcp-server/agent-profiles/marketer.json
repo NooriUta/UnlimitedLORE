@@ -11,6 +11,7 @@
     "insight_*": "allow",
     "rec_*": "allow",
     "doc_*": "allow",
-    "status_set": "allow"
+    "status_set": "allow",
+    "doc_del": "deny"
   }
 }

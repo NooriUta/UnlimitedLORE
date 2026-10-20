@@ -1,0 +1,273 @@
+{
+  "actor_link": [
+    "/lore/actor/link"
+  ],
+  "actor_new": [
+    "/lore/actor"
+  ],
+  "adr_del": [
+    "/lore/adr/delete"
+  ],
+  "adr_link": [
+    "/lore/adr/component",
+    "/lore/adr/depends_on",
+    "/lore/adr/link",
+    "/lore/adr/project",
+    "/lore/adr/supersedes",
+    "/lore/adr/tag"
+  ],
+  "adr_new": [
+    "/lore/adr"
+  ],
+  "adr_rename": [
+    "/lore/adr/rename"
+  ],
+  "adr_set": [
+    "/lore/adr"
+  ],
+  "agent_session_log": [
+    "/lore/actor/session"
+  ],
+  "asset_up": [
+    "/lore/asset/upload"
+  ],
+  "bragi_asset_attach": [
+    "/lore/bragi/asset"
+  ],
+  "bragi_asset_up": [
+    "/lore/bragi/asset/upload"
+  ],
+  "bragi_campaign_new": [
+    "/lore/bragi/campaign"
+  ],
+  "bragi_channel_set": [
+    "/lore/bragi/channel"
+  ],
+  "bragi_integration_new": [
+    "/lore/bragi/integration"
+  ],
+  "bragi_keyword_set": [
+    "/lore/bragi/keyword"
+  ],
+  "bragi_link": [
+    "/lore/bragi/link",
+    "/lore/bragi/rubric/link"
+  ],
+  "bragi_page_set": [
+    "/lore/bragi/page"
+  ],
+  "bragi_pub_new": [
+    "/lore/bragi/publication"
+  ],
+  "bragi_rubric_set": [
+    "/lore/bragi/rubric"
+  ],
+  "bragi_search": [],
+  "bragi_sync": [
+    "/lore/bragi/integration/sync"
+  ],
+  "bragi_variant_new": [
+    "/lore/bragi/variant"
+  ],
+  "component_del": [
+    "/lore/component/delete"
+  ],
+  "component_new": [
+    "/lore/component/create"
+  ],
+  "component_set": [
+    "/lore/component/update"
+  ],
+  "decision_link": [
+    "/lore/decision/component",
+    "/lore/decision/project"
+  ],
+  "decision_new": [
+    "/lore/decision"
+  ],
+  "decision_set": [
+    "/lore/decision/status"
+  ],
+  "dict_set": [
+    "/lore/dict/entry"
+  ],
+  "doc_del": [
+    "/lore/doc/delete"
+  ],
+  "doc_link": [
+    "/lore/doc/component",
+    "/lore/doc/parent",
+    "/lore/doc/project",
+    "/lore/doc/sprint"
+  ],
+  "doc_new": [
+    "/lore/doc"
+  ],
+  "feature_link": [
+    "/lore/feature/link"
+  ],
+  "feature_new": [
+    "/lore/feature"
+  ],
+  "gain_new": [
+    "/lore/gain"
+  ],
+  "insight_link": [
+    "/lore/bragi/insight/link"
+  ],
+  "insight_new": [
+    "/lore/bragi/insight"
+  ],
+  "job_new": [
+    "/lore/job"
+  ],
+  "metric_get": [],
+  "metric_log": [
+    "/lore/bragi/metric"
+  ],
+  "milestone_link": [
+    "/lore/milestone/product"
+  ],
+  "milestone_new": [
+    "/lore/milestone"
+  ],
+  "milestone_set": [
+    "/lore/milestone"
+  ],
+  "milestone_sprints": [
+    "/lore/milestone/sprints"
+  ],
+  "pain_new": [
+    "/lore/pain"
+  ],
+  "product_link": [
+    "/lore/product/link"
+  ],
+  "project_actor_new": [
+    "/lore/project-actor"
+  ],
+  "project_new": [
+    "/lore/project"
+  ],
+  "qg_job_new": [
+    "/lore/qg/job-task"
+  ],
+  "qg_new": [
+    "/lore/quality-gate"
+  ],
+  "qg_run_log": [
+    "/lore/qg/run"
+  ],
+  "quality_check": [
+    "/lore/quality"
+  ],
+  "question_link": [
+    "/lore/question/answers",
+    "/lore/question/component",
+    "/lore/question/gates",
+    "/lore/question/project",
+    "/lore/question/raised_in"
+  ],
+  "question_new": [
+    "/lore/question"
+  ],
+  "question_set": [
+    "/lore/question"
+  ],
+  "rec_new": [
+    "/lore/qg/recommendation"
+  ],
+  "rec_promote": [
+    "/lore/qg/promote"
+  ],
+  "release_link": [
+    "/lore/release/link"
+  ],
+  "release_mv": [
+    "/lore/project/move"
+  ],
+  "release_new": [
+    "/lore/release"
+  ],
+  "release_set": [
+    "/lore/release/update"
+  ],
+  "release_unlink": [
+    "/lore/release/unlink"
+  ],
+  "runbook_link": [
+    "/lore/runbook/adr",
+    "/lore/runbook/project"
+  ],
+  "runbook_new": [
+    "/lore/runbook"
+  ],
+  "spec_del": [
+    "/lore/spec/delete"
+  ],
+  "spec_link": [
+    "/lore/spec/link"
+  ],
+  "spec_new": [
+    "/lore/spec"
+  ],
+  "spec_set": [
+    "/lore/spec"
+  ],
+  "sprint_link": [
+    "/lore/milestone/sprint",
+    "/lore/sprint/component",
+    "/lore/sprint/dep",
+    "/lore/sprint/project"
+  ],
+  "sprint_new": [
+    "/lore/sprint/create"
+  ],
+  "sprint_phase_new": [
+    "/lore/phase"
+  ],
+  "sprint_plan_set": [
+    "/lore/sprint/plan"
+  ],
+  "sprint_set": [
+    "/lore/sprint/refs",
+    "/lore/sprint/update"
+  ],
+  "status_set": [
+    "/lore/status"
+  ],
+  "status_set_batch": [
+    "/lore/status/batch"
+  ],
+  "task_link": [
+    "/lore/task/adr",
+    "/lore/task/component",
+    "/lore/task/file",
+    "/lore/task/phase"
+  ],
+  "task_mv": [
+    "/lore/task/move"
+  ],
+  "task_new": [
+    "/lore/task"
+  ],
+  "task_set": [
+    "/lore/task/edit",
+    "/lore/task/edit/batch"
+  ],
+  "tech_set": [
+    "/lore/spec"
+  ],
+  "uc_link": [
+    "/lore/uc/link"
+  ],
+  "uc_new": [
+    "/lore/uc"
+  ],
+  "uc_quality": [
+    "/lore/uc/quality"
+  ],
+  "vp_link": [
+    "/lore/vp/link"
+  ]
+}

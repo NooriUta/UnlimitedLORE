@@ -34,11 +34,11 @@ type Tab = 'users' | 'agents' | 'roles' | 'dicts' | 'projects' | 'tags' | 'claud
 const PROFILE_SCOPE: [string, string][] = [
   ['full', '"*": allow (primary — Claude/backfill)'],
   ['architect', 'adr_* · component_* · tech_* · spec_* · runbook_* · doc_* · decision_* · question_* · feature_* · uc_* · project_new · status_set'],
-  ['developer', 'task_* · release_* · tech_* · spec_* · runbook_* · doc_* · adr_new · status_set'],
+  ['developer', 'task_* · release_* · tech_* · spec_* · runbook_* · doc_* · adr_new · status_set · кроме doc_del · spec_del · release_mv'],
   ['tester', 'qg_* · task_* · status_set · status_set_batch'],
   ['pm', 'sprint_* · task_* · milestone_* · question_* · feature_* · uc_* · project_new · status_set · status_set_batch'],
   ['analyst', 'metric_* · insight_* · rec_* · question_* · task_set · status_set'],
-  ['marketer', 'bragi_* · task_* · insight_* · rec_* · doc_* · status_set'],
+  ['marketer', 'bragi_* · task_* · insight_* · rec_* · doc_* · status_set · кроме doc_del'],
 ];
 
 // Обратная матрица (AL-32/36, SPEC-RBAC-OMILORE-AGENTS §4): «кто имеет доступ к X» —
@@ -61,7 +61,7 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   { what: 'Решения', api: '/lore/decision*', humanOnly: false, agents: ['full', 'architect'] },
   { what: 'Спеки/ранбуки/доки', api: '/lore/spec*, runbook*, doc*', humanOnly: false, agents: ['full', 'architect', 'developer', 'marketer'] },
   { what: 'Спринты и вехи', api: '/lore/sprint*, milestone*', humanOnly: false, agents: ['full', 'pm'] },
-  { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst', 'architect'] },
+  { what: 'Задачи', api: '/lore/task*', humanOnly: false, agents: ['full', 'pm', 'developer', 'tester', 'marketer', 'analyst', 'architect', 'product-analyst'] },
   { what: 'Релизы', api: '/lore/release*', humanOnly: false, agents: ['full', 'developer'] },
   { what: 'Quality gates', api: '/lore/qg*', humanOnly: false, agents: ['full', 'tester'] },
   // QUAL-7: POST по форме, но ничего не пишет — спрашивает вердикт полноты по
@@ -102,8 +102,15 @@ const REVERSE_MATRIX: { what: string; api: string; humanOnly: boolean; agents: s
   // правки (заявляла architect/pm, а бэкенд не пускал вовсе — семейство сидело в
   // HUMAN_ONLY) и молчала, потому что coverage-тест пропускает пустые backend-сеты.
   // Теперь бэкенд взаправду допускает РОВНО full — строка выровнена по факту.
-  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full'] },
+  // SE-11 (20.10.2026, D-2026-LORE-AGENT-MATRIX-WIDEN-PROFILES): плюс architect и pm —
+  // их профили обещали project_new, а не пускал ни фильтр, ни замок в ресурсе.
+  { what: 'Проекты', api: '/lore/project*', humanOnly: false, agents: ['full', 'architect', 'pm'] },
   { what: 'Публикации BRAGI', api: '/lore/bragi*', humanOnly: false, agents: ['full', 'marketer'] },
+  // SE-11, точечные расширения (AgentScopeFilter.SUBPATH_GRANTS): подпуть открыт профилям,
+  // которым семейство целиком не положено — аналитику не отдаются публикации BRAGI,
+  // маркетологу — сами гейты качества. Подписчики = семейство + расширение.
+  { what: 'Инсайты и метрики', api: '/lore/bragi/insight, /lore/bragi/metric', humanOnly: false, agents: ['full', 'marketer', 'analyst', 'product-analyst'] },
+  { what: 'Рекомендации гейтов', api: '/lore/qg/recommendation, /lore/qg/promote', humanOnly: false, agents: ['full', 'tester', 'analyst', 'product-analyst', 'marketer'] },
   // AL-62: три семейства имели живой POST, но в матрице отсутствовали и попадали
   // в ветку «неизвестное — пропускаю». Держать синхронно с FAMILY_AGENTS в
   // AgentScopeFilter: расхождение = экран показывает не те права, что применяются.
