@@ -183,6 +183,11 @@ jobs:
       # `Read timed out` на 52 артефактах подряд (PR #173, 2026-07-19).
       # Ретрай тут уже был, но только на сборке образа ниже, и промах пришёлся
       # ровно на непокрытый шаг. Настоящее решение — зеркало Nexus.
+      # Ретрай различает «тесты упали» (не повторять) и «обрыв сети» (повторить).
+      # Сторож, который не умеет различать, снова будет гонять красный час.
+      - name: Gradle retry selftest
+        run: bash .github/scripts/gradle-retry.sh --selftest
+
       - name: Gradle build (Quarkus backend)
         working-directory: backend
         run: bash ../.github/scripts/gradle-retry.sh build --no-daemon
