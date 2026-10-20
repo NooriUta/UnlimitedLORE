@@ -278,6 +278,32 @@ jobs:
           docker logs --tail 80 "$cid" 2>&1 || true
           exit 1
 
+      # DBR-10, пункт 5: «healthy» выше — это LIVENESS (/q/health/live в
+      # healthcheck compose): процесс поднят. Он зелёный и тогда, когда к базе
+      # бэкенд не ходит вовсе — кред отбит, база не открыта. Ровно этот случай
+      # (локаут общего кред-а, 31.07) и есть причина спринта DB_RESILIENCE.
+      #
+      # READINESS спрашивает базу НАШИМ кредом (ArcadeReadinessCheck, PR #357:
+      # SELECT по schema:types) и обязательный KC-мост — то есть проверяет
+      # работу, а не наличие. Требуем HTTP 200; при отказе печатаем тело: в нём
+      # причина (какая проверка DOWN и почему), а «DOWN» без причины одинаково
+      # выглядит при упавшей БД, неверном креде и несуществующей базе.
+      - name: Verify backend readiness (DB reachable with our credential)
+        if: steps.which.outputs.backend == 'true'
+        run: |
+          cid=$(docker compose ps -q lore-backend)
+          body=""; code=""
+          for i in $(seq 1 24); do
+            code=$(docker exec "$cid" curl -s -o /tmp/ready.json -w '%{http_code}' -m 10 http://localhost:9100/q/health/ready || echo "000")
+            body=$(docker exec "$cid" cat /tmp/ready.json 2>/dev/null || true)
+            if [ "$code" = "200" ]; then echo "readiness UP (${i}×5s): $body"; exit 0; fi
+            sleep 5
+          done
+          echo "::error::readiness не поднялся за 120с (HTTP $code) — бэкенд жив, но не работает с базой или мостом"
+          echo "--- тело /q/health/ready ---"
+          echo "$body"
+          exit 1
+
       # DBU-14: лечение индексов после переезда СУБД — конвейером, не руками.
       #
       # Индекс, собранный до исправления порядка строковых ключей (ArcadeDB
@@ -462,6 +488,23 @@ jobs:
             exit 1
           fi
           echo "frontend OK ($code)"
+          # DBR-10, пункт 5: 200 на index.html — наличие, а не работа. SPA отдаёт
+          # 200 на любой путь, и битая сборка (index ссылается на бандл, которого
+          # в образе нет) прошла бы эту проверку. Поэтому берём бандл, на который
+          # ссылается САМ index, и требуем, чтобы он отдавался.
+          js=$(docker exec "$cid" sh -c 'curl -s http://127.0.0.1/ | grep -o "src=\"/assets/[^\"]*\.js\"" | head -1 | cut -d\" -f2')
+          if [ -z "$js" ]; then
+            echo "::error::в index.html не найден ни один /assets/*.js — проверять нечего, значит сборка не та"
+            exit 1
+          fi
+          jcode=$(docker exec "$cid" curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1$js")
+          jtype=$(docker exec "$cid" curl -s -o /dev/null -w "%{content_type}" "http://127.0.0.1$js")
+          case "$jtype" in *javascript*) ;; *) jtype="НЕ JS: $jtype" ;; esac
+          if [ "$jcode" != "200" ] || [ "${jtype#НЕ JS}" != "$jtype" ]; then
+            echo "::error::index.html ссылается на $js, а он отдаётся как HTTP $jcode ($jtype) — бандл не тот, что в index"
+            exit 1
+          fi
+          echo "бандл из index отдаётся: $js ($jcode, $jtype)"
 
       # ── Keycloak-тема LORE ────────────────────────────────────────────────
       #
