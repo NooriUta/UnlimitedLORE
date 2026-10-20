@@ -43,7 +43,7 @@
 # записей, индексы и поведение запросов — это .github/scripts/db-regression.sh.
 set -uo pipefail
 
-SRC=""; OLD=""; NEW=""; HEAP=8G; PORT=2487; KEEP=0
+SRC=""; OLD=""; NEW=""; HEAP=8G; PORT=2487; KEEP=0; SELFTEST=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --source) SRC="${2:-}"; shift 2 ;;
@@ -52,12 +52,16 @@ while [ $# -gt 0 ]; do
     --heap)   HEAP="${2:-}"; shift 2 ;;
     --port)   PORT="${2:-}"; shift 2 ;;
     --keep)   KEEP=1; shift ;;
+    # Самопроверка: классификатор расхождений на сфабрикованных снимках, без
+    # ArcadeDB и без docker. Гейт, не умеющий краснеть, — декорация, поэтому
+    # главные случаи самопроверки — те, где он ОБЯЗАН упасть.
+    --selftest) SELFTEST=1; shift ;;
     -h|--help) sed -n '2,46p' "$0"; exit 0 ;;
     *) echo "неизвестный аргумент: $1"; exit 64 ;;
   esac
 done
-if [ -z "$SRC" ] || [ -z "$OLD" ] || [ -z "$NEW" ]; then
-  echo "нужны --source, --old и --new. Подробности: $0 --help"
+if [ "$SELFTEST" = "0" ] && { [ -z "$SRC" ] || [ -z "$OLD" ] || [ -z "$NEW" ]; }; then
+  echo "нужны --source, --old и --new (или --selftest). Подробности: $0 --help"
   exit 64
 fi
 command -v jq >/dev/null || { echo "нужен jq: схему разбираем разбором, а не грепом"; exit 1; }
@@ -71,8 +75,6 @@ PW=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 24)
 say() { printf '\n== %s  [%s]\n' "$1" "$(date +%H:%M:%S)"; }
 die() { echo "ОСТАНОВКА: $1"; exit 1; }
 
-mkdir -p "$OUTDIR/schemas"
-
 cleanup() {
   docker rm -f "$C" >/dev/null 2>&1
   if [ "$KEEP" = "0" ]; then
@@ -81,7 +83,6 @@ cleanup() {
     echo "клоны оставлены: $A, $B"
   fi
 }
-trap cleanup EXIT
 
 clone() { # clone <куда> <откуда>
   docker volume rm -f "$1" >/dev/null 2>&1
@@ -187,13 +188,167 @@ snapshot() { # snapshot <файл>
       printf '%s\t%s\t%s\n' "$db" "$t" "${n:-ОШИБКА}" >> "$out"
     done
   done
-  local bad; bad=$(grep -c 'ОШИБКА' "$out" || true)
   printf '  баз %s, строк %s, не отвеченных типов %s\n' \
-    "$(printf '%s\n' $dbs | grep -c . || true)" "$(grep -c . "$out" || true)" "$bad"
-  # Не отвеченный тип — это не ноль записей. Молча записать его в снимок
-  # значит сравнить неизвестное с неизвестным.
-  [ "$bad" = "0" ] || die "$bad типов не ответили — куча мала или данные повреждены; снимок недостоверен"
+    "$(printf '%s\n' $dbs | grep -c . || true)" "$(grep -c . "$out" || true)" "$(grep -c 'ОШИБКА' "$out" || true)"
+  validate_snapshot "$out" || die "снимок $out недостоверен — куча мала или данные повреждены"
 }
+
+# Не отвеченный тип — это не ноль записей. Молча записать его в снимок значит
+# сравнить неизвестное с неизвестным. Пустой снимок — тоже не «записей нет»,
+# а «замер не состоялся».
+validate_snapshot() { # validate_snapshot <файл> -> 0 годен, 1 нет
+  [ -s "$1" ] || return 1
+  ! grep -q 'ОШИБКА' "$1"
+}
+
+# Сравнение двух снимков по ключу «база + тип». Не разбором диффа: так видны
+# и пропавшие, и новые типы, а не только изменившиеся числа.
+#   ЗАКОННО — у типа объявлены retentionMs > 0 или downsamplingTiers;
+#   НАХОДКА — политики нет (в том числе retentionMs = 0), тип пропал или
+#             появился. На побайтово одинаковых клонах число у такого типа
+#             обязано совпасть — в любую сторону, рост тоже находка.
+# Пишет $OUTDIR/verdict.txt. Возврат: 0 — находок нет, 2 — есть.
+classify() { # classify <old.tsv> <new.tsv>
+  local old="$1" new="$2" db t o n pol
+  : > "$OUTDIR/verdict.txt"
+  awk -F'\t' '
+    NR==FNR { a[$1"\t"$2]=$3; next }
+            { b[$1"\t"$2]=$3 }
+    END {
+      for (k in a) if (!(k in b)) print k "\t" a[k] "\t-"
+      for (k in b) if (!(k in a)) print k "\t-\t" b[k]
+      for (k in a) if ((k in b) && a[k] != b[k]) print k "\t" a[k] "\t" b[k]
+    }' "$old" "$new" | sort > "$OUTDIR/changed.tsv"
+  while IFS=$'\t' read -r db t o n; do
+    [ -n "$db" ] || continue
+    if [ "$o" = "-" ]; then
+      printf 'FATAL\t%s.%s\tтипа не было -> %s\tпоявился тип\n' "$db" "$t" "$n" >> "$OUTDIR/verdict.txt"; continue
+    fi
+    if [ "$n" = "-" ]; then
+      printf 'FATAL\t%s.%s\t%s -> типа нет\tтип пропал\n' "$db" "$t" "$o" >> "$OUTDIR/verdict.txt"; continue
+    fi
+    pol=$(policy_of "$db" "$t")
+    if [ -n "$pol" ]; then
+      printf 'LEGIT\t%s.%s\t%s -> %s\t%s\n' "$db" "$t" "$o" "$n" "$pol" >> "$OUTDIR/verdict.txt"
+    else
+      printf 'FATAL\t%s.%s\t%s -> %s\tполитики нет\n' "$db" "$t" "$o" "$n" >> "$OUTDIR/verdict.txt"
+    fi
+  done < "$OUTDIR/changed.tsv"
+
+  local legit fatal
+  legit=$(grep -c '^LEGIT' "$OUTDIR/verdict.txt" || true)
+  fatal=$(grep -c '^FATAL' "$OUTDIR/verdict.txt" || true)
+
+  if [ "$legit" = "0" ] && [ "$fatal" = "0" ]; then
+    echo "ЗЕЛЁНО: $(grep -c . "$old" || true) строк совпали. На одних и тех же байтах"
+    echo "обе версии видят одинаковое число записей в каждом типе каждой базы."
+    return 0
+  fi
+  if [ "$legit" != "0" ]; then
+    echo "ЗАКОННЫЕ расхождения ($legit) — у типа объявлена политика, число не сравнимо:"
+    grep '^LEGIT' "$OUTDIR/verdict.txt" | cut -f2- | sed 's/^/  /'
+  fi
+  if [ "$fatal" = "0" ]; then
+    echo
+    echo "ЗЕЛЁНО С ОГОВОРКОЙ: расхождения есть только у типов с объявленной политикой."
+    echo "Ни один тип без политики не изменился. Поднимать можно, но помнить: по"
+    echo "перечисленным типам новая версия применит политику необратимо."
+    return 0
+  fi
+  echo
+  echo "КРАСНО: находки ($fatal) — у этих типов расхождение объяснять нечем:"
+  grep '^FATAL' "$OUTDIR/verdict.txt" | cut -f2- | sed 's/^/  /'
+  return 2
+}
+
+# Самопроверка классификатора. Сфабрикованные схемы и снимки, ни ArcadeDB, ни
+# docker не нужны — поэтому её может гонять CI на каждом PR.
+#
+# Главные случаи — отрицательные: где гейт ОБЯЗАН покраснеть. Два из них
+# воспроизводят настоящие ловушки этого гейта:
+#   * retentionMs = 0 — это НЕ политика (у MetricSnapshot LORE ровно так);
+#   * рост числа на типе без политики — тоже находка: байты одни.
+selftest() {
+  local root fails=0 rc
+  root=$(mktemp -d)
+  OUTDIR="$root"
+  mkdir -p "$OUTDIR/schemas"
+  cat > "$OUTDIR/schemas/mdh.json" <<'J'
+{"types":{
+  "reading":{"type":"t","timestampColumn":"ts","shardCount":23,"retentionMs":31536000000,
+             "downsamplingTiers":[{"afterMs":604800000,"granularityMs":60000},
+                                  {"afterMs":2592000000,"granularityMs":3600000}]},
+  "journal":{"type":"t","timestampColumn":"ts","retentionMs":7776000000},
+  "node":{"type":"v"}
+}}
+J
+  cat > "$OUTDIR/schemas/lore.json" <<'J'
+{"types":{
+  "MetricSnapshot":{"type":"t","timestampColumn":"ts","retentionMs":0},
+  "KnowTask":{"type":"v"}
+}}
+J
+  printf 'lore\tKnowTask\t120\nlore\tMetricSnapshot\t300\nmdh\tjournal\t500\nmdh\tnode\t5\nmdh\treading\t1000\n' > "$root/base.tsv"
+
+  # mk <имя> <sed-выражение> — снимок «новой версии» правкой базового
+  mk() { sed "$2" "$root/base.tsv" > "$root/$1.tsv"; }
+  # case_ <описание> <файл> <ожидаемый код> <ожидаемых LEGIT> <ожидаемых FATAL>
+  case_() {
+    classify "$root/base.tsv" "$root/$2.tsv" >/dev/null; rc=$?
+    local l f
+    l=$(grep -c '^LEGIT' "$OUTDIR/verdict.txt" || true)
+    f=$(grep -c '^FATAL' "$OUTDIR/verdict.txt" || true)
+    if [ "$rc" = "$3" ] && [ "$l" = "$4" ] && [ "$f" = "$5" ]; then
+      printf '  ок    %s (код %s, законных %s, находок %s)\n' "$1" "$rc" "$l" "$f"
+    else
+      printf '  ПРОВАЛ %s: ждали код %s/%s/%s, получили %s/%s/%s\n' "$1" "$3" "$4" "$5" "$rc" "$l" "$f"
+      sed 's/^/          /' "$OUTDIR/verdict.txt"
+      fails=$((fails + 1))
+    fi
+  }
+
+  echo "самопроверка гейта:"
+  cp "$root/base.tsv" "$root/same.tsv"
+  mk legit_down  's/\treading\t1000$/\treading\t900/'
+  mk legit_up    's/\treading\t1000$/\treading\t1100/'
+  mk node_down   's/\tnode\t5$/\tnode\t4/'
+  mk zero_ret    's/\tMetricSnapshot\t300$/\tMetricSnapshot\t299/'
+  mk grow_plain  's/\tKnowTask\t120$/\tKnowTask\t121/'
+  mk mixed       's/\treading\t1000$/\treading\t900/; s/\tnode\t5$/\tnode\t4/'
+  mk type_gone   '/\tnode\t/d'
+  cat "$root/base.tsv" > "$root/type_new.tsv"; printf 'mdh\tbrand_new\t7\n' >> "$root/type_new.tsv"
+
+  case_ "одинаковые снимки — зелено"                             same       0 0 0
+  case_ "убыль у типа с прореживанием — законно"                 legit_down 0 1 0
+  case_ "рост у типа с прореживанием — тоже законно"             legit_up   0 1 0
+  case_ "убыль у графового типа без политики — КРАСНО"           node_down  2 0 1
+  case_ "retentionMs=0 — это не политика — КРАСНО"               zero_ret   2 0 1
+  case_ "рост у типа без политики на одних байтах — КРАСНО"      grow_plain 2 0 1
+  case_ "законное и находка вместе — КРАСНО, оба учтены"         mixed      2 1 1
+  case_ "тип пропал — КРАСНО"                                    type_gone  2 0 1
+  case_ "появился тип — КРАСНО"                                  type_new   2 0 1
+
+  # Снимок с неотвеченным типом и пустой снимок обязаны отвергаться.
+  printf 'mdh\treading\tОШИБКА\n' > "$root/err.tsv"; : > "$root/empty.tsv"
+  if validate_snapshot "$root/err.tsv"; then
+    echo "  ПРОВАЛ снимок с ОШИБКА принят как годный"; fails=$((fails + 1))
+  else echo "  ок    снимок с неотвеченным типом отвергнут"; fi
+  if validate_snapshot "$root/empty.tsv"; then
+    echo "  ПРОВАЛ пустой снимок принят как годный"; fails=$((fails + 1))
+  else echo "  ок    пустой снимок отвергнут"; fi
+  if validate_snapshot "$root/base.tsv"; then echo "  ок    годный снимок принят"
+  else echo "  ПРОВАЛ годный снимок отвергнут"; fails=$((fails + 1)); fi
+
+  rm -rf "$root"
+  if [ "$fails" = "0" ]; then echo "самопроверка: всё сошлось"; return 0; fi
+  echo "самопроверка: ПРОВАЛОВ $fails"; return 1
+}
+
+if [ "$SELFTEST" = "1" ]; then
+  selftest; exit $?
+fi
+mkdir -p "$OUTDIR/schemas"
+trap cleanup EXIT
 
 say "схемы из $SRC"
 fetch_schemas
@@ -220,45 +375,9 @@ docker logs "$C" 2>&1 | grep -i -E 'SEVERE|corrupt|Unsupported|OutOfMemory' | he
 down
 
 say "ГЕЙТ"
-if diff -u "$OUTDIR/old.tsv" "$OUTDIR/new.tsv" > "$OUTDIR/diff.txt"; then
-  echo "ЗЕЛЁНО: $(grep -c . "$OUTDIR/old.tsv") строк совпали. На одних и тех же байтах"
-  echo "$OLD и $NEW видят одинаковое число записей в каждом типе каждой базы."
-  echo "Снимки: $OUTDIR"
-  exit 0
-fi
-
-# Разбор по типам: законное расхождение против находки.
-LEGIT=0; FATAL=0
-: > "$OUTDIR/verdict.txt"
-grep -E '^-[a-zA-Z]' "$OUTDIR/diff.txt" | sed 's/^-//' | while IFS=$'\t' read -r db t nold; do
-  nnew=$(awk -F'\t' -v d="$db" -v y="$t" '$1==d && $2==y {print $3}' "$OUTDIR/new.tsv")
-  pol=$(policy_of "$db" "$t")
-  if [ -n "$pol" ]; then
-    printf 'LEGIT\t%s.%s\t%s -> %s\t%s\n' "$db" "$t" "$nold" "$nnew" "$pol" >> "$OUTDIR/verdict.txt"
-  else
-    printf 'FATAL\t%s.%s\t%s -> %s\tполитики нет\n' "$db" "$t" "$nold" "$nnew" >> "$OUTDIR/verdict.txt"
-  fi
-done
-LEGIT=$(grep -c '^LEGIT' "$OUTDIR/verdict.txt" || true)
-FATAL=$(grep -c '^FATAL' "$OUTDIR/verdict.txt" || true)
-
-if [ "$LEGIT" != "0" ]; then
-  echo "ЗАКОННЫЕ расхождения ($LEGIT) — у типа объявлена политика, число не сравнимо:"
-  grep '^LEGIT' "$OUTDIR/verdict.txt" | cut -f2- | sed 's/^/  /'
-fi
-
-if [ "$FATAL" = "0" ]; then
-  echo
-  echo "ЗЕЛЁНО С ОГОВОРКОЙ: расхождения есть только у типов с объявленной политикой."
-  echo "Ни один тип без политики не изменился. Поднимать можно, но помнить: по"
-  echo "перечисленным типам новая версия применит политику необратимо."
-  echo "Снимки: $OUTDIR"
-  exit 0
-fi
-
-echo
-echo "КРАСНО: расхождения у типов БЕЗ политики ($FATAL) — объяснять нечем:"
-grep '^FATAL' "$OUTDIR/verdict.txt" | cut -f2- | sed 's/^/  /'
+classify "$OUTDIR/old.tsv" "$OUTDIR/new.tsv"; RC=$?
+echo "Снимки и вердикт: $OUTDIR"
+[ "$RC" = "0" ] && exit 0
 cat <<'EOF'
 
 Прежде чем звать это потерей, проверить двумя независимыми мерками:
