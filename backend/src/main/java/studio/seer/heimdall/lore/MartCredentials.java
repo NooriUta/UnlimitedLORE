@@ -6,6 +6,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Optional;
 
 /**
  * Учётка к ArcadeDB (:2480) в одном месте.
@@ -51,8 +52,30 @@ public class MartCredentials {
     @ConfigProperty(name = "lore.secrets.key.mart-password", defaultValue = "ARCADEDB_ROOT_PASSWORD")
     String secretKey;
 
+    /**
+     * DBR-01: способ входа в ArcadeDB. {@code basic} — user/пароль (сегодня root);
+     * {@code token} — собственный API-токен приложения без права менять схему
+     * (D-DB-ACCESS-SPLIT). Отката с token на basic НЕТ намеренно: общий кред и
+     * есть анти-паттерн — неверный пароль любого сервиса запирал root всем
+     * (прод лёг 31.07). Нет токена — запросы и readiness падают громко.
+     */
+    @ConfigProperty(name = "lore.mart.auth", defaultValue = "basic")
+    String authMode = "basic";   // инициализатор — для экземпляров вне CDI (тесты)
+
+    /** Ключ секрета токена (SecretProvider: env или Infisical). */
+    @ConfigProperty(name = "lore.secrets.key.mart-token", defaultValue = "ARCADEDB_API_TOKEN")
+    String tokenKey = "ARCADEDB_API_TOKEN";
+
+    /** Токен к базе стенда Muninn (bench.mart.db) — токен ArcadeDB привязан к одной базе. */
+    @ConfigProperty(name = "lore.secrets.key.mart-token-bench", defaultValue = "ARCADEDB_API_TOKEN_BENCH")
+    String benchTokenKey = "ARCADEDB_API_TOKEN_BENCH";
+
     @Inject
     SecretProvider secrets;
+
+    public String authMode() {
+        return authMode;
+    }
 
     public String user() {
         return user;
@@ -64,9 +87,31 @@ public class MartCredentials {
             .orElse(passwordFromConfig);
     }
 
-    /** Готовый заголовок Authorization для запросов к :2480. */
+    /**
+     * Готовый заголовок Authorization для запросов к :2480 (база lore.db).
+     * Имя историческое: в режиме token это Bearer, а не Basic — все ~230 мест
+     * вызова переключаются здесь, а не по одному.
+     */
     public String basicAuth() {
-        return "Basic " + Base64.getEncoder().encodeToString(
-            (user() + ":" + password()).getBytes(StandardCharsets.UTF_8));
+        return header(authMode, user(), "token".equals(authMode) ? "" : password(), secrets.get(tokenKey));
+    }
+
+    /** То же для базы Muninn (bench.mart.db): у неё свой токен. */
+    public String benchAuth() {
+        return header(authMode, user(), "token".equals(authMode) ? "" : password(), secrets.get(benchTokenKey));
+    }
+
+    static String header(String mode, String user, String password, Optional<String> token) {
+        if ("basic".equals(mode)) {
+            return "Basic " + Base64.getEncoder().encodeToString(
+                (user + ":" + password).getBytes(StandardCharsets.UTF_8));
+        }
+        if ("token".equals(mode)) {
+            String t = token.map(String::trim).filter(v -> !v.isEmpty()).orElseThrow(() -> new IllegalStateException(
+                "[LORE MART] lore.mart.auth=token, но токен не задан (ARCADEDB_API_TOKEN / ARCADEDB_API_TOKEN_BENCH) — "
+                + "отката на root нет намеренно (DBR-01); выпустите токен или верните lore.mart.auth=basic"));
+            return "Bearer " + t;
+        }
+        throw new IllegalStateException("[LORE MART] lore.mart.auth=" + mode + " — допустимо basic или token");
     }
 }

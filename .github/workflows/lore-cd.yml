@@ -232,8 +232,38 @@ jobs:
         if: steps.which.outputs.frontend == 'true'
         run: bash .github/scripts/compose-build-retry.sh lore-app
 
+      # DBR-06: накатка схемы — отдельный ВИДИМЫЙ шаг, а не побочный эффект
+      # старта. Тот же образ, root-кред (LORE_MART_AUTH=basic), процесс
+      # накатывает и выходит (lore.migrate.only). Упавший шаг — ненулевой код,
+      # деплой останавливается ДО подмены работающего контейнера. Рантайм ниже
+      # стартует без накатки (lore.migrate=false) и сверяет версию схемы.
+      - name: Migrate schema (separate step, root)
+        if: steps.which.outputs.backend == 'true'
+        env:
+          LORE_MIGRATE: "true"
+          LORE_MIGRATE_ONLY: "true"
+          LORE_MART_AUTH: basic
+        run: |
+          rc=0
+          timeout 1800 docker compose run --rm --no-deps -T lore-backend > /tmp/migrate.log 2>&1 || rc=$?
+          grep -E "LORE MIGRATE|LORE MART|ERROR|Exception" /tmp/migrate.log | tail -80 || true
+          if [ "$rc" != "0" ]; then
+            echo "::error::накатка схемы упала (код $rc) — работающий бэкенд НЕ подменён. Хвост лога:"
+            tail -60 /tmp/migrate.log
+            exit 1
+          fi
+          grep -q "lore.migrate.only=true — схема накатана" /tmp/migrate.log \
+            || { echo "::error::процесс вышел с 0, но строки о завершённой накатке нет — накатка не подтверждена"; tail -60 /tmp/migrate.log; exit 1; }
+          echo "накатка подтверждена"
+
       - name: Deploy backend
         if: steps.which.outputs.backend == 'true'
+        env:
+          # DBR-01: способ входа рантайма — переменная репозитория (Settings →
+          # Actions → Variables). Не задана — basic, как было. token включать
+          # ТОЛЬКО после того, как ARCADEDB_API_TOKEN(_BENCH) лежат в Infisical:
+          # отката на root нет, без токена readiness не поднимется (шаг ниже упадёт).
+          LORE_MART_AUTH: ${{ vars.LORE_MART_AUTH || 'basic' }}
         run: docker compose up -d --no-deps lore-backend
 
       - name: Deploy frontend

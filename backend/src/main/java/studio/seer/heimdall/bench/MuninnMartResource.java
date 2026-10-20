@@ -111,7 +111,7 @@ public class MuninnMartResource {
     }
 
     private String basicAuth() {
-        return mart.basicAuth();
+        return mart.benchAuth();   // DBR-01: у базы стенда свой токен
     }
 
     private static Response noStore(Response.ResponseBuilder builder) {
