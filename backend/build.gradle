@@ -197,3 +197,17 @@ tasks.register('generateBuildInfo') {
 }
 sourceSets.main.resources.srcDir(buildInfoDir)
 tasks.named('processResources') { dependsOn('generateBuildInfo') }
+
+// CIM-08 (20.10.2026): built_at меняется при КАЖДОМ вызове Gradle, а файл лежит
+// на runtime-classpath тестов. Для Gradle это изменённый вход — и задача test
+// выполнялась заново целиком: backend CI с 11.09 гонял весь набор дважды
+// (`gradle build`, затем `gradle test`), на загруженной базе — +16,5 минут на
+// джоб. Нормализация убирает файл только из СВЕРКИ входов: на classpath он
+// остаётся, время сборки точное (сверка версий SE-10 и /lore/version не
+// задеты), а тестам оно не вход — ни один тест не зависит от его значения,
+// только от непустоты (LoreVersionEndpointTest).
+normalization {
+    runtimeClasspath {
+        ignore 'build-info.properties'
+    }
+}
