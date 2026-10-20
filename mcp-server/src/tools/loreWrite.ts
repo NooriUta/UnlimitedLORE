@@ -1083,12 +1083,12 @@ export function registerLoreWrite(server: McpServer): void {
       status:       z.string().optional().describe('AL-79: decision_status dictionary code — proposed|accepted|deferred|superseded (+legacy fixed|done); omit to leave unset/unchanged'),
     },
     path: '/lore/decision',
-    body: ({ decision_id, title, body_md, date_created, refs_raw, component_id, adr_id, tags, status }) => ({
+    body: ({ decision_id, title, body_md, date_created, refs_raw, component_id, adr_id, tags, status, project }) => ({
           decision_id, title,
           body_md: body_md ?? null, date_created: date_created ?? null,
           refs_raw: refs_raw ?? null,
           component_id: component_id ?? null, adr_id: adr_id ?? null, tags: tags ?? null,
-          status: status ?? null,
+          status: status ?? null, project: project ?? null,
         }),
   });
 
