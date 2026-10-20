@@ -281,4 +281,119 @@ class LoreScopeEnforcedLiveDbTest {
         assertFalse(idsOf("runbooks", "runbook_id").contains(RB_ALPHA));
         assertFalse(idsOf("runbooks", "runbook_id").contains(RB_HIDDEN));
     }
+
+    // ── AL-120: косвенная связь — проект через РОДИТЕЛЯ ─────────────────────
+    //
+    // Слова владелицы 2026-08-17: «проверять надо как прямую связь, так и
+    // косвенную через родительские объекты». Замер того дня: у решений СВОЕГО
+    // ребра проекта не было ни у одного из 300 — проект выводится только через
+    // родительский ADR (DECIDED_IN); у вопросов — через место, где подняты
+    // (RAISED_IN). PROJECT_SCOPED для них несёт два пути через «|», но при
+    // включённом скоупе это ни разу не проверялось: тест compose() видел SQL,
+    // а не выдачу. Здесь — выдача, под учёткой с ролью в одном проекте.
+    //
+    // У решений и вопросов ниже НЕТ своего ребра проекта — намеренно. С ним
+    // тест прошёл бы и на компоновке «только прямая связь», то есть проверял бы
+    // не то, ради чего написан.
+
+    private static final String ADR_ALPHA = "ADR-AL120-ALPHA";
+    private static final String ADR_HIDDEN = "ADR-AL120-HIDDEN";
+    private static final String DEC_ALPHA = "D-AL120-ALPHA";
+    private static final String DEC_HIDDEN = "D-AL120-HIDDEN";
+    private static final String Q_ALPHA = "Q-AL120-ALPHA";
+    private static final String Q_HIDDEN = "Q-AL120-HIDDEN";
+
+    private void createAdrInProject(String adrId, String project) {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"adr_id\":\"" + adrId + "\",\"name\":\"AL-120 " + adrId + "\"}")
+        .when().post("/lore/adr").then().statusCode(200);
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"adr_id\":\"" + adrId + "\",\"project\":\"" + project + "\",\"action\":\"add\"}")
+        .when().post("/lore/adr/project").then().statusCode(200);
+    }
+
+    /** Решение-ребёнок ADR: проекта не передаём — он обязан вывестись через DECIDED_IN. */
+    private void createDecisionUnder(String decisionId, String adrId) {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"decision_id\":\"" + decisionId + "\",\"title\":\"AL-120 " + decisionId + "\","
+                + "\"body_md\":\"Проект только через родительский ADR.\",\"adr_id\":\"" + adrId + "\"}")
+        .when().post("/lore/decision").then().statusCode(200);
+    }
+
+    /** Вопрос, поднятый в ADR: проекта не передаём — он обязан вывестись через RAISED_IN. */
+    private void createQuestionRaisedIn(String questionId, String adrId) {
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"question_id\":\"" + questionId + "\",\"title\":\"AL-120 " + questionId + "\","
+                + "\"status\":\"open\"}")
+        .when().post("/lore/question").then().statusCode(200);
+        given().header("X-Seer-Role", "superadmin").contentType("application/json")
+            .body("{\"question_id\":\"" + questionId + "\",\"target_type\":\"adr\",\"target_id\":\""
+                + adrId + "\",\"action\":\"add\"}")
+        .when().post("/lore/question/raised_in").then().statusCode(200);
+    }
+
+    @Test
+    @Order(20)
+    void setUpIndirectLinks() {
+        createAdrInProject(ADR_ALPHA, P_ALPHA);
+        createAdrInProject(ADR_HIDDEN, P_HIDDEN);
+        createDecisionUnder(DEC_ALPHA, ADR_ALPHA);
+        createDecisionUnder(DEC_HIDDEN, ADR_HIDDEN);
+        createQuestionRaisedIn(Q_ALPHA, ADR_ALPHA);
+        createQuestionRaisedIn(Q_HIDDEN, ADR_HIDDEN);
+    }
+
+    @Test
+    @Order(21)
+    @TestSecurity(user = "al95-viewer", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = VIEWER_SUB))
+    void decisionIsVisibleThroughItsParentAdrProjectOnly() {
+        var ids = idsOf("decisions", "decision_id");
+        assertTrue(ids.contains(DEC_ALPHA),
+            "решение без своего ребра, но под ADR своего проекта, обязано быть видно — "
+            + "иначе скоуп отрезает автора от его же решения (AL-120)");
+        assertFalse(ids.contains(DEC_HIDDEN),
+            "решение под ADR чужого проекта видно — косвенный путь пропускает лишнее");
+    }
+
+    @Test
+    @Order(22)
+    @TestSecurity(user = "al95-viewer", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = VIEWER_SUB))
+    void decisionsOfAdrFollowTheSameRule() {
+        // Второй слайс про те же решения — со своей строкой в PROJECT_SCOPED.
+        // Две строки об одном правиле расходятся молча (RM-P8), поэтому
+        // проверяются обе, а не «по аналогии».
+        List<String> own = given().contentType("application/json")
+            .when().get("/lore/slice/decisions_of_adr?id=" + ADR_ALPHA)
+            .then().statusCode(200).extract().jsonPath().getList("rows.decision_id", String.class);
+        List<String> foreign = given().contentType("application/json")
+            .when().get("/lore/slice/decisions_of_adr?id=" + ADR_HIDDEN)
+            .then().statusCode(200).extract().jsonPath().getList("rows.decision_id", String.class);
+        assertTrue(own.contains(DEC_ALPHA), "решения своего ADR обязаны быть видны");
+        assertFalse(foreign.contains(DEC_HIDDEN), "решения ADR чужого проекта видны");
+    }
+
+    @Test
+    @Order(23)
+    @TestSecurity(user = "al95-viewer", roles = {"viewer"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = VIEWER_SUB))
+    void questionIsVisibleThroughWhereItWasRaisedOnly() {
+        var ids = idsOf("open_questions", "question_id");
+        assertTrue(ids.contains(Q_ALPHA),
+            "вопрос, поднятый в ADR своего проекта, обязан быть виден (AL-120)");
+        assertFalse(ids.contains(Q_HIDDEN),
+            "вопрос, поднятый в ADR чужого проекта, виден — косвенный путь пропускает лишнее");
+    }
+
+    @Test
+    @Order(24)
+    @TestSecurity(user = "al95-root", roles = {"super-admin"})
+    @JwtSecurity(claims = @Claim(key = "sub", value = "al95-root-sub-without-any-role"))
+    void superadminSeesBothIndirectlyLinkedSides() {
+        // Положительный контроль к 21–23: обе стороны в базе ЕСТЬ. Без него
+        // «чужого не видно» неотличимо от «чужое не завелось».
+        assertTrue(idsOf("decisions", "decision_id").containsAll(List.of(DEC_ALPHA, DEC_HIDDEN)));
+        assertTrue(idsOf("open_questions", "question_id").containsAll(List.of(Q_ALPHA, Q_HIDDEN)));
+    }
 }

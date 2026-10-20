@@ -443,8 +443,12 @@ public final class LoreSlices {
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('TAGGED_WITH').tag_id AS tags " +
-            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id ORDER BY decision_id",
-            List.of("id"), Map.of(), "");
+            // AL-120 (20.10.2026): ORDER BY — в suffix. В теле он стоял ПЕРЕД
+            // условием скоупа («… ORDER BY decision_id AND (…)»), и под
+            // включённым lore.scope.enforce срез отвечал 502 — паспорт ADR
+            // ломался у всех, кроме superadmin. Найдено живым тестом под флагом.
+            "FROM KnowDecision WHERE out('DECIDED_IN').adr_id[0] = :id",
+            List.of("id"), Map.of(), " ORDER BY decision_id");
 
         slice("decision",
             // AL-79: status_raw в паспорте — раньше статус был виден в списках,
@@ -1901,8 +1905,15 @@ public final class LoreSlices {
             // не хвост истории (тот же дефект, что у timeline_releases выше).
             // Для UI безопасно: доска релизов сортирует сама, semverCompare
             // (LoreReleasesBoard.tsx:132), порядок среза она не наследует.
-            "FROM KnowRelease ORDER BY release_date DESC",
-            List.of(), Map.of(), " LIMIT 200");
+            //
+            // AL-120 (20.10.2026): ORDER BY — в suffix, а не в теле. compose()
+            // вставляет условие скоупа перед suffix'ом, и при сортировке в теле
+            // получалось «… ORDER BY release_date DESC WHERE (…) LIMIT 200» —
+            // ошибка разбора, 502 на списке релизов у каждого, кроме superadmin,
+            // в момент включения lore.scope.enforce. Без скоупа итоговый SQL тот же
+            // символ в символ: тело + suffix склеиваются как раньше.
+            "FROM KnowRelease",
+            List.of(), Map.of(), " ORDER BY release_date DESC LIMIT 200");
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +
