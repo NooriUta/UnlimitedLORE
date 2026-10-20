@@ -59,6 +59,9 @@ class NewsCarriesAllProjectsLiveDbTest {
     private static final String SHARED = "D-MULTI-PROJECT-PROBE";
     private static final String LONELY = "D-NO-PROJECT-PROBE";
 
+    private static final String SPRINT = "SPRINT_MULTI_PROJECT_PROBE";
+    private static final String TASK_UID = SPRINT + "/T-MULTI";
+
     private static io.restassured.specification.RequestSpecification admin() {
         return given().header("X-Seer-Role", "admin").contentType("application/json");
     }
@@ -87,6 +90,39 @@ class NewsCarriesAllProjectsLiveDbTest {
         admin().body("{\"decision_id\":\"" + LONELY + "\",\"title\":\"Ничьё\","
                 + "\"date_created\":\"2026-08-01\",\"body_md\":\"Тело.\"}")
             .when().post("/lore/decision").then().statusCode(200);
+
+        // Спринт двух проектов, задача заведена и закрыта.
+        admin().body("{\"sprint_id\":\"" + SPRINT + "\",\"name\":\"Спринт двух проектов\"}")
+            .when().post("/lore/sprint/create").then().statusCode(200);
+        for (String slug : new String[]{PROJECT_B, PROJECT_A}) {
+            admin().body("{\"sprint_id\":\"" + SPRINT + "\",\"git_project\":\"" + slug + "\"}")
+                .when().post("/lore/sprint/project").then().statusCode(200);
+        }
+        admin().body("{\"sprint_id\":\"" + SPRINT + "\",\"task_id\":\"T-MULTI\",\"title\":\"Задача двух проектов\"}")
+            .when().post("/lore/task").then().statusCode(200);
+        admin().body("{\"entity_type\":\"task\",\"id\":\"" + TASK_UID + "\",\"status\":\"done\"}")
+            .when().post("/lore/status").then().statusCode(200);
+    }
+
+    /**
+     * Спринт и его задачи — те же правила, что у решений (найдено 20.10.2026).
+     *
+     * <p>SE-05 перевёл на список решения и ADR, а спринт по-прежнему отдавал в
+     * ленту ПЕРВЫЙ свой git-проект — и задачи наследовали его. Спринт
+     * SPRINT_MINILORE_CUTOVER привязан к трём репо, первым в обходе шёл
+     * UnlimitedLORE, и в строке miniLORE у владелицы за день не было ни одной
+     * задачи при исправно закрытых — «вы задачи вообще закрываете?».
+     */
+    @Test
+    @Order(5)
+    void sprintAndItsTaskEventsCarryEverySprintProject() {
+        var news = given().when().get("/lore/news?days=3650&limit=5000").then().statusCode(200);
+        news.body("items.find { it.kind == 'sprint' && it.event == 'created' && it.title == 'Спринт двух проектов' }.projects",
+                contains(PROJECT_A, PROJECT_B))
+            .body("items.find { it.kind == 'tasks' && it.event == 'created' && it.ref?.id == '" + TASK_UID + "' }.projects",
+                contains(PROJECT_A, PROJECT_B))
+            .body("items.find { it.kind == 'tasks' && it.event == 'closed' && it.ref?.id == '" + TASK_UID + "' }.projects",
+                contains(PROJECT_A, PROJECT_B));
     }
 
     /** Обе принадлежности видны, и обе — в ОДНОЙ строке. */
