@@ -1,5 +1,6 @@
 package studio.seer.heimdall.lore;
 
+import io.quarkus.runtime.Startup;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import jakarta.annotation.PostConstruct;
@@ -51,6 +52,9 @@ import java.util.concurrent.TimeUnit;
  * контракте появилось поле {@code channel}.
  */
 @ApplicationScoped
+// AO-08: без @Startup бин ленив — пока его никто не внедрил, @PostConstruct не
+// исполнится и расписание не запустится ни разу (так месяц молчали логины KC).
+@Startup
 public class LoreQgActionsPoller {
 
     private static final Logger LOG = Logger.getLogger(LoreQgActionsPoller.class);
@@ -69,8 +73,16 @@ public class LoreQgActionsPoller {
      * этом один раз: молча ничего не делать здесь нельзя, иначе пустота в
      * корпусе снова будет выглядеть как «прогонов не было».
      */
-    @ConfigProperty(name = "lore.qg.actions-projects", defaultValue = "")
-    String projectsCsv;
+    // AO-08: Optional, а не String с defaultValue = "". На проде переменная
+    // LORE_QG_ACTIONS_PROJECTS не задана, объявление ${LORE_QG_ACTIONS_PROJECTS:}
+    // разрешается в пустоту, а пустая строка в MicroProfile Config — «значения
+    // нет». Пока бин был ленив и не создавался ни разу, ловушка ждала; с @Startup
+    // она роняла подъём ВСЕГО приложения. Поймано полным прогоном тестов до слияния.
+    @ConfigProperty(name = "lore.qg.actions-projects")
+    java.util.Optional<String> projectsConfig;
+
+    /** Разрешённый список проектов; пусто — переменная не задана. */
+    String projectsCsv = "";
 
     /** Сколько последних прогонов забирать за один заход. */
     @ConfigProperty(name = "lore.qg.actions-page-size", defaultValue = "30")
@@ -86,6 +98,7 @@ public class LoreQgActionsPoller {
 
     @PostConstruct
     void start() {
+        projectsCsv = projectsConfig == null ? "" : projectsConfig.orElse("");
         if (!loreEnabled || !pollEnabled) return;
         if (projectsCsv == null || projectsCsv.isBlank()) {
             LOG.warn("[LORE QG] опрос прогонов Actions включён, но lore.qg.actions-projects пуст — "

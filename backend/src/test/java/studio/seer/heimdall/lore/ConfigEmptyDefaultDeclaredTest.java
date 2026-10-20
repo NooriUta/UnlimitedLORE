@@ -54,6 +54,7 @@ class ConfigEmptyDefaultDeclaredTest {
 
         String declared = Files.readString(props, StandardCharsets.UTF_8);
         List<String> undeclared = new ArrayList<>();
+        List<String> emptyAfterAll = new ArrayList<>();
 
         try (Stream<Path> files = Files.walk(main)) {
             for (Path f : files.filter(p -> p.toString().endsWith(".java")).toList()) {
@@ -65,9 +66,17 @@ class ConfigEmptyDefaultDeclaredTest {
                     Matcher n = NAME_ATTR.matcher(attrs);
                     if (!n.find()) continue;
                     String key = n.group(1);
+                    // Optional<String> принимает «значения нет» — ему не страшно ничего.
+                    int semi = src.indexOf(';', m.end());
+                    String field = semi < 0 ? "" : src.substring(m.end(), semi);
+                    if (field.contains("Optional<")) continue;
+                    String where = key + "  (" + main.relativize(f) + ")";
                     // Ищем объявление ключа в начале строки — «key=» или «key =».
-                    if (!Pattern.compile("(?m)^\\s*" + Pattern.quote(key) + "\\s*=").matcher(declared).find()) {
-                        undeclared.add(key + "  (" + main.relativize(f) + ")");
+                    Matcher decl = Pattern.compile("(?m)^\\s*" + Pattern.quote(key) + "\\s*=(.*)$").matcher(declared);
+                    if (!decl.find()) {
+                        undeclared.add(where);
+                    } else if (RESOLVES_TO_EMPTY.matcher(decl.group(1).trim()).matches()) {
+                        emptyAfterAll.add(where + "  = " + decl.group(1).trim());
                     }
                 }
             }
@@ -77,7 +86,26 @@ class ConfigEmptyDefaultDeclaredTest {
             "У этих ключей стоит defaultValue = \"\", но самого ключа нет в "
             + "application.properties. Пустая строка в MicroProfile Config означает "
             + "«значения нет», поэтому приложение упадёт на старте с «Failed to load "
-            + "config value». Либо объявите ключ (обычно `ключ=${ENV_VAR:}`), либо "
-            + "смените тип поля на Optional<String>. Ключи: " + undeclared);
+            + "config value». Смените тип поля на Optional<String> — это единственная "
+            + "форма, которой пустота не страшна. Ключи: " + undeclared);
+
+        // AO-08 (20.10.2026): объявить ключ — мало. Прежний текст этой проверки
+        // советовал «объявите `ключ=${ENV_VAR:}`» — а это та же пустота, только
+        // отложенная: переменной нет, запасной вариант пуст, и поле получает
+        // «значения нет». Проверка была довольна, приложение не стартовало.
+        // Поймано полным прогоном: опросчик гейтов, ставший @Startup, уронил
+        // подъём Quarkus на lore.qg.actions-projects=${LORE_QG_ACTIONS_PROJECTS:}.
+        // Пока бин был ленив, ловушка просто ждала первого обращения к нему.
+        // Положительный контроль рядом, в том же файле свойств:
+        // bench.mart.password=${ARCADEDB_ROOT_PASSWORD:unset} — запасной вариант
+        // непустой, и его бин поднимается без ошибки.
+        assertTrue(emptyAfterAll.isEmpty(),
+            "Эти ключи объявлены, но их значение может разрешиться в ПУСТОТУ "
+            + "(`${ENV_VAR:}` без переменной или пустая строка), а поле — обязательный "
+            + "String. Приложение упадёт с «Failed to load config value», как только бин "
+            + "будет создан. Смените тип поля на Optional<String>. Ключи: " + emptyAfterAll);
     }
+
+    /** Значение, которое при отсутствии переменной окружения даёт пустоту. */
+    private static final Pattern RESOLVES_TO_EMPTY = Pattern.compile("|\\$\\{[A-Za-z0-9_.]+:\\}");
 }

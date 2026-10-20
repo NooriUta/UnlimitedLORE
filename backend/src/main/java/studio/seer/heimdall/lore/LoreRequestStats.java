@@ -1,5 +1,6 @@
 package studio.seer.heimdall.lore;
 
+import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -45,6 +46,9 @@ import java.util.concurrent.atomic.LongAdder;
  * использования — цена, несопоставимая с задачей.
  */
 @ApplicationScoped
+// AO-08: без @Startup бин ленив — пока его никто не внедрил, @PostConstruct не
+// исполнится и расписание не запустится ни разу (так месяц молчали логины KC).
+@Startup
 public class LoreRequestStats {
 
     private static final Logger LOG = Logger.getLogger(LoreRequestStats.class);
