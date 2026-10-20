@@ -54,8 +54,7 @@ public class LoreForgejoResource extends LoreResourceBase {
     private Response projectNotResolvable(String slug) {
         return noStore(Response.status(Response.Status.NOT_FOUND)
             .entity(new LoreError("PROJECT_NOT_RESOLVABLE",
-                "KnowGitProject '" + slug + "' отсутствует или hosts[] без primary base_url — "
-                + "зарегистрируйте проект (project_new) с hosts")));
+                ForgejoBridge.notResolvableDetail(slug, bridge.slugsForRepoPath(slug)))));
     }
 
     /** Живость моста — для условной регистрации MCP-инструментов (FJ-04). */

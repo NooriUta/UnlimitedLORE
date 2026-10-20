@@ -83,15 +83,10 @@ public class ForgejoBridge {
         try {
             List<Map<String, Object>> rows = ingest.queryPublic(
                 "SELECT hosts FROM KnowGitProject WHERE slug=:slug", Map.of("slug", gitProjectSlug));
-            if (rows.isEmpty() || rows.get(0).get("hosts") == null) return Optional.empty();
-            JsonArray hosts = new JsonArray(rows.get(0).get("hosts").toString());
-            JsonObject primary = null;
-            for (int i = 0; i < hosts.size(); i++) {
-                JsonObject h = hosts.getJsonObject(i);
-                if ("primary".equals(h.getString("role"))) { primary = h; break; }
-            }
-            if (primary == null) return Optional.empty();
-            URI base = URI.create(primary.getString("base_url", ""));
+            if (rows.isEmpty()) return Optional.empty();
+            Optional<JsonObject> primary = primaryHost(rows.get(0).get("hosts"));
+            if (primary.isEmpty()) return Optional.empty();
+            URI base = URI.create(primary.get().getString("base_url", ""));
             String[] seg = base.getPath().replaceAll("^/|/$", "").split("/");
             if (seg.length < 2) return Optional.empty();
             // Override — только для localhost-адресов: у проектов с primary на
@@ -105,6 +100,72 @@ public class ForgejoBridge {
             LOG.warnf("[FORGEJO] resolve %s: %s", gitProjectSlug, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /** primary-хост из hosts[] (JSON-строка); empty — hosts нет, не JSON или primary не объявлен. */
+    static Optional<JsonObject> primaryHost(Object hostsRaw) {
+        if (hostsRaw == null) return Optional.empty();
+        try {
+            JsonArray hosts = new JsonArray(hostsRaw.toString());
+            for (int i = 0; i < hosts.size(); i++) {
+                JsonObject h = hosts.getJsonObject(i);
+                if ("primary".equals(h.getString("role"))) return Optional.of(h);
+            }
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+        return Optional.empty();
+    }
+
+    /** «owner/repo» primary-репозитория — то, что Forgejo показывает в адресе. */
+    static Optional<String> primaryRepoPath(Object hostsRaw) {
+        return primaryHost(hostsRaw).flatMap(h -> {
+            try {
+                String[] seg = URI.create(h.getString("base_url", "")).getPath().replaceAll("^/|/$", "").split("/");
+                return seg.length < 2 ? Optional.empty() : Optional.of(seg[seg.length - 2] + "/" + seg[seg.length - 1]);
+            } catch (Exception e) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    /**
+     * SE-14: слаги проектов, чей primary-репозиторий — ровно этот путь. Нужен
+     * только для подсказки в ошибке: путь репозитория как слаг молча НЕ
+     * принимается — слаг ключ записей (PR, релизы, required_checks), подстановка
+     * разнесла бы их под разные ключи. Регистр игнорируется, как у Forgejo.
+     */
+    static List<String> slugsForRepoPath(String repoPath, Map<String, Object> hostsBySlug) {
+        List<String> out = new java.util.ArrayList<>();
+        hostsBySlug.forEach((slug, hosts) -> primaryRepoPath(hosts)
+            .filter(p -> p.equalsIgnoreCase(repoPath))
+            .ifPresent(p -> out.add(slug)));
+        return out;
+    }
+
+    List<String> slugsForRepoPath(String repoPath) {
+        try {
+            Map<String, Object> bySlug = new java.util.LinkedHashMap<>();
+            for (Map<String, Object> r : ingest.queryPublic("SELECT slug, hosts FROM KnowGitProject", Map.of()))
+                if (r.get("slug") != null) bySlug.put(r.get("slug").toString(), r.get("hosts"));
+            return slugsForRepoPath(repoPath, bySlug);
+        } catch (Exception e) {
+            LOG.warnf("[FORGEJO] slugsForRepoPath %s: %s", repoPath, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * Текст 404 PROJECT_NOT_RESOLVABLE. Совет «зарегистрируйте» уместен, только
+     * когда проекта действительно нет: на путь репозитория уже зарегистрированного
+     * проекта он ведёт к дублю KnowGitProject на тот же репозиторий.
+     */
+    static String notResolvableDetail(String given, List<String> slugsForPath) {
+        if (!slugsForPath.isEmpty())
+            return "'" + given + "' — путь репозитория в Forgejo, а не слаг проекта. Он зарегистрирован под слагом "
+                + String.join(", ", slugsForPath) + " — передайте его в git_project; регистрировать заново не нужно";
+        return "KnowGitProject '" + given + "' отсутствует или hosts[] без primary base_url — "
+            + "зарегистрируйте проект (project_new) с hosts";
     }
 
     /**
