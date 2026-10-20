@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип · RM-P11 · новый тип справочника</title>
+<style>
+  :root{
+    --bg0:#0f1115; --bg1:#161922; --bg2:#1e222d; --b1:#181c26; --b2:#212633; --b3:#2b3140;
+    --bd:#2a3040; --t1:#e6e9f0; --t2:#aab2c5; --t3:#7c869c; --t4:#5b6478;
+    --acc:#e0a03a; --on-accent:#1a1206; --suc:#4caf72; --wrn:#d9a441; --dng:#d76b6b; --inf:#5b9bd5;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+    --fs-2xs:10px; --fs-xs:11px; --fs-sm:12px; --fs-base:13px; --fs-lg:14px; --fs-xl:16px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg0:#f6f7fa; --bg1:#fff; --bg2:#eef1f6; --b1:#fff; --b2:#f1f3f8; --b3:#e2e6ee;
+      --bd:#dbe0ea; --t1:#1c2230; --t2:#485264; --t3:#7a8397; --t4:#a4adbf; --on-accent:#1a1206; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg0);color:var(--t1);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:var(--fs-base);line-height:1.45;padding:24px}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
+  h2{font-size:var(--fs-xl);margin:28px 0 6px}
+  .sub{color:var(--t3);font-size:var(--fs-sm);margin-bottom:8px;max-width:860px}
+  .sub b{color:var(--t2)}
+  .cols{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+  .frameWrap{display:flex;flex-direction:column;gap:8px}
+  .frameTitle{font-size:var(--fs-sm);color:var(--t3);font-family:var(--mono)}
+  .frame{background:var(--bg1);border:1px solid var(--bd);border-radius:12px;overflow:hidden;width:620px}
+  .lbl{font-size:var(--fs-xs);font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+  .tabs{display:flex;gap:2px;padding:8px 12px 0;border-bottom:1px solid var(--bd);background:color-mix(in srgb,var(--acc) 4%,transparent)}
+  .tab{font-size:var(--fs-sm);padding:6px 11px;border:1px solid transparent;border-bottom:none;border-radius:7px 7px 0 0;color:var(--t3)}
+  .tab.on{background:var(--bg1);border-color:var(--bd);color:var(--t1);font-weight:600}
+  .body{display:flex;min-height:286px}
+  .types{width:196px;border-right:1px solid var(--bd);padding:9px 0;flex-shrink:0}
+  .types .lbl{padding:0 12px 6px;display:block}
+  .tItem{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 12px;font-size:var(--fs-sm);color:var(--t2);font-family:var(--mono)}
+  .tItem.on{background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--t1);border-left:2px solid var(--acc);padding-left:10px}
+  .tItem .n{font-size:var(--fs-2xs);color:var(--t4)}
+  .rows{flex:1;min-width:0;padding:9px 13px}
+  table{width:100%;border-collapse:collapse}
+  th{font-size:var(--fs-2xs);font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;text-align:left;padding:0 6px 5px;border-bottom:1px solid var(--bd)}
+  td{font-size:var(--fs-sm);color:var(--t2);padding:5px 6px;border-bottom:1px solid var(--b2)}
+  td.code{font-family:var(--mono);color:var(--t1)}
+  .chip{font-size:var(--fs-2xs);font-family:var(--mono);padding:2px 7px;border-radius:999px;border:1px solid var(--bd);color:var(--t2);background:var(--bg2);display:inline-flex;align-items:center;gap:4px}
+  .chip.ok{background:color-mix(in srgb,var(--suc) 16%,transparent);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd));color:var(--t1)}
+  .chip.dng{background:color-mix(in srgb,var(--dng) 16%,transparent);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd));color:var(--t1)}
+  .chip.human{background:color-mix(in srgb,var(--inf) 14%,transparent);border-color:color-mix(in srgb,var(--inf) 45%,var(--bd));color:var(--t1)}
+  .btn{font-size:var(--fs-sm);height:26px;padding:0 10px;border-radius:6px;border:1px solid var(--b3);background:var(--bg2);color:var(--t1);display:inline-flex;align-items:center;gap:6px}
+  .btn.acc{background:var(--acc);border-color:var(--acc);color:var(--on-accent);font-weight:600}
+  .btn.ghost{background:transparent;border-style:dashed;color:var(--t3)}
+  .btn[disabled]{opacity:.45}
+  .inp{font-size:var(--fs-sm);height:26px;border:1px solid var(--b3);border-radius:5px;background:var(--bg2);color:var(--t1);padding:0 8px;font-family:var(--mono)}
+  .inp.bad{border-color:var(--dng)}
+  .newType{padding:8px 12px;border-top:1px solid var(--bd);margin-top:6px}
+  .newType .row{display:flex;gap:6px;align-items:center;margin-top:6px}
+  .hint{font-size:var(--fs-2xs);color:var(--t4);margin-top:5px;line-height:1.4}
+  .hint.bad{color:var(--dng)}
+  .empty{padding:26px 16px;text-align:center;color:var(--t3);font-size:var(--fs-sm)}
+  .empty .big{color:var(--t2);font-size:var(--fs-base);margin-bottom:5px}
+  .foot{display:flex;align-items:center;gap:8px;padding:8px 13px;border-top:1px solid var(--bd);background:var(--b1)}
+  .note{border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:0 8px 8px 0;background:var(--bg1);padding:10px 13px;max-width:860px;margin:10px 0 0;font-size:var(--fs-sm);color:var(--t2)}
+  .note b{color:var(--t1)}
+  .note code,.sub code,.hint code{font-family:var(--mono);font-size:var(--fs-xs);background:var(--bg2);border:1px solid var(--bd);border-radius:4px;padding:1px 4px;color:var(--t2)}
+  .dlg{padding:12px 14px}
+  .dlg .f{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .dlg .f .lbl{width:118px;flex-shrink:0;text-align:right}
+  .sw{width:22px;height:22px;border-radius:5px;border:1px solid var(--b3);background:#7c5cff}
+  .ico{width:22px;height:22px;border-radius:5px;border:1px solid var(--b3);background:var(--bg2);display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-sm);color:var(--t2)}
+</style>
+</head>
+<body>
+
+<h1>Новый тип справочника: дверь, которой нет</h1>
+<div class="sub">
+  Прототип к задаче <b>SPRINT_LORE_ROADMAP_PER_PROJECT/RM-P11</b>. Сегодня первый элемент нового
+  <code>dict_type</code> нельзя завести <b>ни с одной стороны</b>: агенту <code>dict_set</code> отвечает
+  <code>403 AGENT_SCOPE_FORBIDDEN</code> («это семейство правит только человек»), а у человека в интерфейсе
+  список типов строится из <b>уже существующих строк</b> — тип с нулём записей не появляется, и кнопка
+  «+ значение» пишет в выбранный тип. Правило RBAC верное и не снимается; не хватает ровно входа для человека.
+</div>
+
+<h2>1. Как сейчас</h2>
+<div class="cols">
+  <div class="frameWrap">
+    <div class="frameTitle">сейчас · админка → Справочники</div>
+    <div class="frame">
+      <div class="tabs">
+        <div class="tab">Проекты</div><div class="tab on">Справочники</div>
+        <div class="tab">Правила CLAUDE</div><div class="tab">Агенты</div>
+      </div>
+      <div class="body">
+        <div class="types">
+          <span class="lbl">Типы</span>
+          <div class="tItem on">work_class <span class="n">3</span></div>
+          <div class="tItem">decision_status <span class="n">5</span></div>
+          <div class="tItem">uc_goal_level <span class="n">4</span></div>
+          <div class="tItem">job_kind <span class="n">6</span></div>
+          <div class="tItem">task_type <span class="n">9</span></div>
+          <div class="hint" style="padding:0 12px">Список собран из значений <code>dict_type</code> у существующих записей.</div>
+        </div>
+        <div class="rows">
+          <table>
+            <tr><th>код</th><th>ru</th><th>en</th><th>вид</th></tr>
+            <tr><td class="code">uc</td><td>Сценарная</td><td>Use case</td><td><span class="chip">#5b9bd5</span></td></tr>
+            <tr><td class="code">jtd</td><td>Надо сделать</td><td>Job to be done</td><td><span class="chip">#4caf72</span></td></tr>
+            <tr><td class="code">enb</td><td>Энейблер</td><td>Enabler</td><td><span class="chip">#d9a441</span></td></tr>
+          </table>
+          <div style="margin-top:9px"><button class="btn">+ значение</button></div>
+        </div>
+      </div>
+      <div class="foot">
+        <span class="chip dng">нового типа тут нет</span>
+        <span class="hint" style="margin:0">ни поля, ни кнопки — завести <code>product</code> удалось только шагом миграции (PR #601)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="frameWrap">
+    <div class="frameTitle">сейчас · та же дверь со стороны агента</div>
+    <div class="frame" style="width:380px">
+      <div class="dlg">
+        <div class="lbl" style="margin-bottom:7px">MCP · dict_set</div>
+        <table>
+          <tr><td class="code" style="border:none;padding-left:0">dict_type</td><td style="border:none">"product"</td></tr>
+          <tr><td class="code" style="border:none;padding-left:0">code</td><td style="border:none">"AIDA"</td></tr>
+        </table>
+        <div class="note" style="margin-top:10px;border-left-color:var(--dng)">
+          <b>403 AGENT_SCOPE_FORBIDDEN</b><br>
+          профиль <code>agent-full</code> не пишет в <code>dict</code>: это семейство правит только человек
+        </div>
+        <div class="hint">
+          Правило верное: справочник — словарь смыслов корпуса, и расширять его должен человек.
+          Обе половины по отдельности разумны, вместе дают запертую дверь.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>2. Предложение: завести тип = завести его первую запись</h2>
+<div class="sub">
+  Одна строка ввода под списком типов, видимая <b>только человеку</b>. Тип не существует отдельно от своих
+  записей, поэтому форма сразу просит первую — иначе в корпусе появится пустой тип, которого снова не видно.
+</div>
+<div class="cols">
+  <div class="frameWrap">
+    <div class="frameTitle">предложение · ввод нового типа</div>
+    <div class="frame">
+      <div class="tabs">
+        <div class="tab">Проекты</div><div class="tab on">Справочники</div>
+        <div class="tab">Правила CLAUDE</div><div class="tab">Агенты</div>
+      </div>
+      <div class="body">
+        <div class="types">
+          <span class="lbl">Типы</span>
+          <div class="tItem">work_class <span class="n">3</span></div>
+          <div class="tItem">decision_status <span class="n">5</span></div>
+          <div class="tItem">uc_goal_level <span class="n">4</span></div>
+          <div class="tItem">job_kind <span class="n">6</span></div>
+          <div class="tItem">task_type <span class="n">9</span></div>
+          <div class="newType">
+            <span class="lbl">Новый тип</span>
+            <div class="row">
+              <input class="inp" style="width:104px" value="risk_level">
+              <button class="btn acc">Завести</button>
+            </div>
+            <div class="hint">Латиница, цифры, подчёркивание. <span class="chip human">только человек</span></div>
+          </div>
+        </div>
+        <div class="rows">
+          <div class="lbl">Первая запись типа <span style="font-family:var(--mono);color:var(--t1)">risk_level</span></div>
+          <div class="dlg" style="padding:10px 0 0">
+            <div class="f"><span class="lbl">код</span><input class="inp" style="width:120px" value="critical"></div>
+            <div class="f"><span class="lbl">подпись ru</span><input class="inp" style="width:200px;font-family:inherit" value="Критический"></div>
+            <div class="f"><span class="lbl">подпись en</span><input class="inp" style="width:200px;font-family:inherit" value="Critical"></div>
+            <div class="f"><span class="lbl">цвет / иконка</span><span class="sw"></span><span class="ico">⬤</span></div>
+            <div class="f"><span class="lbl">порядок</span><input class="inp" style="width:56px" value="10"></div>
+            <div class="f"><span class="lbl">расширяемый</span><span class="chip ok">да</span>
+              <span class="hint" style="margin:0">значения сможет добавлять человек кнопкой</span></div>
+          </div>
+          <div style="margin-top:4px"><button class="btn acc">Создать тип и запись</button>
+            <button class="btn ghost">Отмена</button></div>
+        </div>
+      </div>
+      <div class="foot">
+        <span class="chip ok">миграция больше не обязательна</span>
+        <span class="hint" style="margin:0">правило RBAC не тронуто: поля нет у агентского профиля вовсе</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="frameWrap">
+    <div class="frameTitle">состояния ввода</div>
+    <div class="frame" style="width:380px">
+      <div class="dlg">
+        <div class="lbl">код с пробелом или кириллицей</div>
+        <div class="row" style="display:flex;gap:6px;margin:6px 0">
+          <input class="inp bad" style="width:150px" value="M2 ✓ core">
+          <button class="btn" disabled>Завести</button>
+        </div>
+        <div class="hint bad">
+          Пробелы и символы вне латиницы нельзя: такой код не набирается с клавиатуры и не переживает
+          строгую проверку формата. Это уже случилось с вехой <code>M2 ✓ core</code> — обращение
+          по <code>M2</code> промахивается, а переименование уносит 43 привязанных спринта.
+        </div>
+
+        <div class="lbl" style="margin-top:14px">тип уже есть</div>
+        <div class="row" style="display:flex;gap:6px;margin:6px 0">
+          <input class="inp" style="width:150px" value="task_type">
+          <button class="btn">Открыть</button>
+        </div>
+        <div class="hint">
+          Не ошибка и не перезапись: кнопка меняет подпись и просто выбирает существующий тип в списке.
+        </div>
+
+        <div class="lbl" style="margin-top:14px">тип заведён, записей нет</div>
+        <div class="empty" style="border:1px solid var(--bd);border-radius:8px;margin-top:6px">
+          <div class="big">В типе <span style="font-family:var(--mono)">risk_level</span> пока ни одной записи</div>
+          <div>Это честное пустое состояние, а не «не смогли проверить».</div>
+          <div style="margin-top:8px"><button class="btn acc">+ первое значение</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>Что этот прототип НЕ меняет.</b> Правило «словари правит человек» остаётся: поле ввода нового типа
+  приходит тем же путём, что и кнопка «+ значение», и агентскому профилю не показывается — отказ
+  <code>403</code> у <code>dict_set</code> сохраняется как есть. Шаг миграции перестаёт быть
+  <i>обязательным</i>, но не запрещается: сид типа в миграции по-прежнему правильный способ завести
+  словарь, от которого зависит код.
+</div>
+<div class="note">
+  <b>Почему прототип, а не сразу код.</b> Это UX-изменение, а не баг-фикс, и по правилу процесса
+  значимые UX-паттерны идут задача → исследование → прототип → approve → код. Код ждёт решения владелицы
+  по форме: достаточно ли одной строки ввода под списком типов, или вход должен быть отдельным действием
+  в заголовке вкладки.
+</div>
+
+</body>
+</html>
