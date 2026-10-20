@@ -65,6 +65,14 @@ public class LoreSchemaMigrationRunner {
      */
     @ConfigProperty(name = "lore.schema.verify", defaultValue = "true")
     boolean verifySchema;
+    /**
+     * DBR-06: накатка отдельным шагом CD. При {@code true} процесс накатывает
+     * схему и завершается (код 0; упавший шаг — ненулевой код), не оставаясь
+     * сервером. Рантайм потом стартует с {@code lore.migrate=false} и токеном
+     * без updateSchema, а перезапуск контейнера перестаёт быть операцией над схемой.
+     */
+    @ConfigProperty(name = "lore.migrate.only", defaultValue = "false")
+    boolean migrateOnly;
     @ConfigProperty(name = "lore.migrate.backup", defaultValue = "true")
     boolean backupRequired;
     @ConfigProperty(name = "lore.db", defaultValue = "system_aida_lore")
@@ -238,8 +246,37 @@ public class LoreSchemaMigrationRunner {
         }
     }
 
+    /**
+     * DBR-01/DBR-06: недопустимые сочетания режимов; null — сочетание допустимо.
+     * Накатка под токеном невозможна по построению (у токена нет updateSchema),
+     * «только накатить» без накатки — опечатка, после которой сервис молча не поднялся бы.
+     */
+    static String modeProblem(boolean migrate, boolean migrateOnly, String authMode) {
+        if (migrateOnly && !migrate)
+            return "lore.migrate.only=true при lore.migrate=false — накатывать нечего, а сервер не поднимется; "
+                + "для шага накатки нужны оба флага";
+        if (migrate && "token".equals(authMode))
+            return "накатка (lore.migrate=true) под API-токеном невозможна: у токена нет updateSchema "
+                + "(D-DB-ACCESS-SPLIT). Накатывайте отдельным запуском с lore.mart.auth=basic (шаг CD «Migrate schema»)";
+        return null;
+    }
+
     @PostConstruct
     void run() {
+        if (enabled) {
+            LOG.infof("[LORE MART] вход в ArcadeDB: %s", "token".equals(mart.authMode())
+                ? "собственный API-токен (без updateSchema)" : "user/пароль (" + mart.user() + ")");
+            String problem = modeProblem(migrate, migrateOnly, mart.authMode());
+            if (problem != null) throw new IllegalStateException("[LORE MIGRATE] Отказ старта: " + problem);
+        }
+        runSchema();
+        if (enabled && migrateOnly) {
+            LOG.info("[LORE MIGRATE] lore.migrate.only=true — схема накатана, процесс завершается (шаг накатки CD)");
+            io.quarkus.runtime.Quarkus.asyncExit(0);
+        }
+    }
+
+    private void runSchema() {
         if (!enabled) {
             LOG.info("[LORE MIGRATE] skipped (lore.enabled=false)");
             return;
