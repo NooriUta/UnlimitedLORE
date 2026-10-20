@@ -165,14 +165,14 @@ export default function ActorFormModal({
         </div>
       )}
 
-      <label style={label}>{t('lore.product.actor.about', 'О роли')}</label>
+      <label style={label}>{t('lore.product.actor.about', 'О роли в продукте')}</label>
       <TipTapField
         value={body}
         onChange={setBody}
         minHeight={100}
         enableImages={false}
         enableHtmlMode={false}
-        ariaLabel={t('lore.product.actor.about', 'О роли')}
+        ariaLabel={t('lore.product.actor.about', 'О роли в продукте')}
       />
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
