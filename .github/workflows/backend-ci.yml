@@ -96,6 +96,14 @@ jobs:
       # Проверяем кандидатов по /api/v1/ready и берём первого живого; не нашли —
       # падаем ГРОМКО, потому что молчаливый скип live-DB тестов уже прятал
       # регрессию схемы (слепота CI, найдена 2026-07-17).
+      #
+      # 20.10.2026 (решение владелицы, Q-LORE-CI-LIVE-TESTS-ON-PROD-ARCADEDB):
+      # тесты уходят с :2480 — это ПРОД-контейнер LORE-ygg — на свой контейнер
+      # LORE-ygg-ci (arcadedb той же версии, порт 2482 только на мосту docker0,
+      # в LAN не торчит). Повод: раннер lore-only поднят до 4 слотов, и две
+      # бэкенд-джобы разом удваивали тестовую нагрузку на прод-СУБД. Запасного
+      # кандидата :2480 НЕТ намеренно: тихий откат на прод вернул бы ровно то,
+      # от чего уходим, — недоступный CI-контейнер должен краснеть.
       - name: Point live-DB tests at the standing test DB (self-hosted) / Testcontainers (github-hosted)
         shell: bash
         run: |
@@ -109,7 +117,7 @@ jobs:
           # Поэтому кандидат считается годным, только если под нашей учёткой
           # отдаёт список баз.
           FOUND=""
-          for cand in ${LORE_CI_DB_URL:-} http://host.docker.internal:2480 http://172.17.0.1:2480 http://127.0.0.1:2480; do
+          for cand in ${LORE_CI_DB_URL:-} http://host.docker.internal:2482 http://172.17.0.1:2482; do
             if ! curl -sf -m 4 "$cand/api/v1/ready" >/dev/null 2>&1; then
               echo "  $cand — не отвечает"; continue
             fi
@@ -119,7 +127,7 @@ jobs:
             echo "  $cand — отвечает, но НЕ пускает под root с текущим паролем"
           done
           if [ -z "$FOUND" ]; then
-            echo "::error::ArcadeDB для live-DB тестов недоступен ЛИБО не пускает под root. Пробовали: LORE_CI_DB_URL, host.docker.internal, 172.17.0.1, 127.0.0.1 (все :2480). Если сервер отвечает, но не пускает — задайте секрет ARCADEDB_ROOT_PASSWORD в Forgejo (Settings -> Actions -> Secrets): после переезда БД на ci-server прежний dev-пароль может не подходить. Молча пропускать live-DB тесты нельзя — так уже пряталась регрессия схемы (2026-07-17)."
+            echo "::error::ArcadeDB для live-DB тестов недоступен ЛИБО не пускает под root. Пробовали: LORE_CI_DB_URL, host.docker.internal:2482, 172.17.0.1:2482 (контейнер LORE-ygg-ci на ci-server). Если сервер отвечает, но не пускает — задайте секрет ARCADEDB_ROOT_PASSWORD в Forgejo (Settings -> Actions -> Secrets): после переезда БД на ci-server прежний dev-пароль может не подходить. Молча пропускать live-DB тесты нельзя — так уже пряталась регрессия схемы (2026-07-17)."
             exit 1
           fi
           echo "тест-БД: $FOUND"
