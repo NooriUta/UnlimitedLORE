@@ -1346,6 +1346,7 @@ export function registerLoreWrite(server: McpServer): void {
       summary:      z.string().optional().describe('short abstract shown in lists'),
       file_path:    z.string().optional().describe('source file path relative to docs root'),
       checkpoint:   z.boolean().optional().describe('LH-02: true = body edit opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of amending in place'),
+      status:       z.string().optional().describe('DS-4: spec_status dictionary code — proposed|accepted|deprecated|superseded (editable in admin); written to the open KnowSpecHist row, read back by specs/spec_by_id. A free-text value is rejected with the allowed list'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
@@ -1369,6 +1370,7 @@ export function registerLoreWrite(server: McpServer): void {
       summary:      z.string().optional().describe('omit to leave untouched'),
       file_path:    z.string().optional().describe('omit to leave untouched'),
       checkpoint:   z.boolean().optional().describe('LH-02: true = body amend opens a NEW hist version (SCD2 close-open, previous edition preserved) instead of in-place'),
+      status:       z.string().optional().describe('DS-4: spec_status code (proposed|accepted|deprecated|superseded) — omit to leave untouched'),
     },
     async (p) => {
       try { return json(await lorePost('/lore/spec', p)); }
@@ -1967,7 +1969,10 @@ export function registerLoreWrite(server: McpServer): void {
     description: 'Create or update a KnowGitProject vertex (upsert by slug, partial-safe — omitted ' +
       'fields left untouched). Register a repo BEFORE sprint_link(rel:"project"), release_new, or ' +
       'release_mv reference it — those all silently no-op if the git_project slug has no matching ' +
-      'vertex yet. RBAC: pm + architect + full only.',
+      'vertex yet. RBAC: pm + architect + full only. DS-1: a project with NO roles yet gives `owner` ' +
+      'to its creator (an agent\'s OWNED_BY owner, or the calling human) — `roles_granted` in the ' +
+      'response lists what was granted; `roles_warning` means nobody got a role and the project\'s ' +
+      'doc/spec bodies stay hidden from everyone but superadmin until project_role_set is called.',
     schema: {
       slug: z.string().describe('e.g. "NooriUta/UnlimitedLORE" (GitHub) or "AIDA/aida-root@forgejo" (Forgejo)'),
       name: z.string().optional().describe('human-readable project name, e.g. "UnlimitedLORE"'),
@@ -1989,6 +1994,30 @@ export function registerLoreWrite(server: McpServer): void {
       name: name ?? null,
       hosts: hosts ? JSON.stringify(hosts) : null,
       default_branch: default_branch ?? null,
+    }),
+  });
+
+  // DS-1: выдача проектной роли из MCP. Бэкенд (/lore/user/role) открыт ровно
+  // профилю full — D-2026-LORE-FULL-WRITES-PROJECT-ROLES; остальным профилям
+  // AgentScopeFilter отвечает AGENT_SCOPE_FORBIDDEN, инструмент этого не обходит.
+  definePostTool(server, {
+    name: 'project_role_set',
+    description: 'Grant, change or remove a person\'s role in a git project (HAS_PROJECT_ROLE edge, ' +
+      'one per person+project; every change is journaled in KnowProjectRoleEvent). The role scope ' +
+      'decides which doc/spec bodies the person — and their agents, via OWNED_BY — can read. ' +
+      'Allowed for the full agent profile only (owner decision D-2026-LORE-FULL-WRITES-PROJECT-ROLES); ' +
+      'other profiles get AGENT_SCOPE_FORBIDDEN. Removing the last owner of a project is refused (409).',
+    schema: {
+      kc_sub:       z.string().describe('Keycloak subject of the person (KnowUser.kc_sub) — see slice user_project_roles'),
+      project:      z.string().describe('git project slug, e.g. "AIDA/Datawanderers-ServerandLore"'),
+      role:         z.string().optional().describe('project_role code, e.g. "owner" — required unless action="remove"'),
+      display_name: z.string().optional().describe('creates/updates the KnowUser display name in the same call'),
+      action:       z.enum(['set', 'remove']).optional().default('set'),
+    },
+    path: '/lore/user/role',
+    body: ({ kc_sub, project, role, display_name, action }) => ({
+      kc_sub, project, role: role ?? null, display_name: display_name ?? null,
+      action: action === 'remove' ? 'remove' : null,
     }),
   });
 

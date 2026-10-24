@@ -1256,7 +1256,26 @@ final class LoreSchemaMigrations {
         // читает, читают фронт и описание MCP — они правятся в том же PR.
         // Свойство KnowActor.agent_role и поле API actor/owner.agent_role — это
         // другой контракт (клиенты вне репозитория) и этим шагом НЕ трогаются.
-        new Step(48, 17, "java__dict_agent_role_to_agent_profile", List.of())
+        new Step(48, 17, "java__dict_agent_role_to_agent_profile", List.of()),
+
+        // DS-3 (SPRINT_LORE_MCP_DOCSYNC_GAPS): хеш и длина каждого тела KnowDoc
+        // для сверки корпуса по списку docs. Новые записи получают их при upsert
+        // (LoreDocResource, LoreIngestService); этот шаг добирает уже записанные.
+        // SQL пуст — вся работа в javaStep(49). Аддитивен: только новые поля.
+        new Step(49, 17, "java__doc_body_digest", List.of()),
+
+        // DS-4: у спеки не было поля статуса — «предложение» жило только в тексте
+        // (SPEC-DWL-RUNE-DREAMS, сверка DWL 24.10.2026). Статус пишется на
+        // открытую KnowSpecHist (SCD2, как у ADR), значения — из этого словаря.
+        // Коды и иконография — те же, что у adr_status/decision_status: один
+        // смысл, один вид. is_extensible=true — владелец дополняет в админке.
+        new Step(50, 17, "spec_status_dictionary", List.of(
+            "CREATE PROPERTY KnowSpecHist.status IF NOT EXISTS STRING",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='proposed',   label_ru='Предложение', label_en='Proposed', icon='calendar',     color='var(--inf)', sort_order=10, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='proposed'",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='accepted',   label_ru='Принята',     label_en='Accepted', icon='laurel-crown', color='var(--suc)', sort_order=20, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='accepted'",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='deprecated', label_ru='Устарела',    label_en='Deprecated', icon='pause-button', color='var(--t3)', sort_order=30, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='deprecated'",
+            "UPDATE KnowDictEntry SET dict_type='spec_status', code='superseded', label_ru='Вытеснена',   label_en='Superseded', icon='pause-button', color='var(--t3)', sort_order=40, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='superseded'"
+        ))
     );
 
     /**

@@ -38,7 +38,7 @@ import java.util.function.Function;
  * {@code release_id}, совпадающему с тегом.
  *
  * <p>Неизвестность — не повод менять: репозиторий не резолвится, Forgejo
- * ответил не 200, ни один тег не узнан — флаг остаётся как есть.
+ * ответил не 200, ни один тег не узнан, тега текущего релиза в списке нет — флаг остаётся как есть.
  *
  * <p>{@code @Startup} обязателен: ленивый бин, которого никто не внедряет, не
  * создаётся никогда (AO-08). Выключается {@code lore.release.current-sync.enabled=false}.
@@ -150,7 +150,7 @@ public class LoreReleaseCurrentReconciler {
             rels.add(new Rel(id, r.get("git_tag") == null ? null : r.get("git_tag").toString()));
             if (Boolean.TRUE.equals(r.get("is_current"))) current = id;
         }
-        Optional<String> pick = pickCurrent(tags, rels);
+        Optional<String> pick = pickCurrent(tags, rels, current);
         if (pick.isEmpty() || pick.get().equals(current)) return;
         writeClient.command(db, mart.basicAuth(), new LoreCommandClient.LoreCommand("sql",
             "UPDATE KnowRelease SET is_current=false WHERE is_current=true AND git_project = :gp",
@@ -160,6 +160,21 @@ public class LoreReleaseCurrentReconciler {
             Map.of("rid", pick.get(), "gp", gp))).await().indefinitely();
         LOG.infof("[LORE RELEASE] %s: текущий релиз %s → %s (его тег последний в репозитории)",
             gp, current == null ? "—" : current, pick.get());
+    }
+
+    /**
+     * Как {@link #pickCurrent(List, List)}, но флаг двигается только от текущего релиза,
+     * чей тег в репозитории ЕСТЬ. Тега текущего нет (релиз без тега, тег в другом
+     * репозитории или старше окна {@link #TAG_PAGE}) — неизвестно, новее ли выбранный,
+     * и флаг не трогаем: иначе флаг уезжает НАЗАД (20.10: NooriUta/AIDA v1.8.0 → v1.7.2).
+     */
+    static Optional<String> pickCurrent(List<String> repoTagsNewestFirst, List<Rel> releases, String currentId) {
+        if (currentId != null) {
+            Rel cur = releases.stream().filter(r -> currentId.equals(r.releaseId())).findFirst().orElse(null);
+            String curTag = cur == null || cur.gitTag() == null || cur.gitTag().isBlank() ? currentId : cur.gitTag();
+            if (!repoTagsNewestFirst.contains(curTag)) return Optional.empty();
+        }
+        return pickCurrent(repoTagsNewestFirst, releases);
     }
 
     /** Первый тег репозитория (от новых к старым), у которого есть запись релиза. */

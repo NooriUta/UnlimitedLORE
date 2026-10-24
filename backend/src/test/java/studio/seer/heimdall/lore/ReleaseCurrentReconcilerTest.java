@@ -52,6 +52,27 @@ class ReleaseCurrentReconcilerTest {
     }
 
     @Test
+    void currentReleaseWhoseTagIsNotInTheRepoIsLeftAlone() {
+        // 20.10 прод: у NooriUta/AIDA текущим был v1.8.0, его тега в Forgejo нет (последний тег v1.7.5
+        // без записи релиза). Сверка увела флаг НАЗАД на v1.7.2. Неизвестность — не повод менять.
+        assertEquals(Optional.empty(), LoreReleaseCurrentReconciler.pickCurrent(
+            List.of("v1.7.5", "v1.7.4", "v1.7.2"),
+            List.of(rel("v1.7.2", "v1.7.2"), rel("v1.8.0", "v1.8.0")), "v1.8.0"));
+        assertEquals(Optional.empty(), LoreReleaseCurrentReconciler.pickCurrent(
+            List.of("v1.4.0"), List.of(rel("v1.4.0", null), rel("v1.4.3", null)), "v1.4.3"));
+    }
+
+    @Test
+    void currentReleaseWithTagInTheRepoMovesForwardToANewerTag() {
+        assertEquals(Optional.of("1.11.164"), LoreReleaseCurrentReconciler.pickCurrent(
+            List.of("1.11.164", "1.11.151"),
+            List.of(rel("minilore-1.11.151", "1.11.151"), rel("1.11.164", null)), "minilore-1.11.151"));
+        // нет текущего вовсе — назначаем по самому свежему тегу
+        assertEquals(Optional.of("sjon-v0.3.0"), LoreReleaseCurrentReconciler.pickCurrent(
+            List.of("sjon-v0.3.0"), List.of(rel("sjon-v0.3.0", null)), null));
+    }
+
+    @Test
     void tagListParsingKeepsRepositoryOrder() {
         assertEquals(List.of("v2", "v1"), LoreReleaseCurrentReconciler.tagNames(
             "[{\"name\":\"v2\",\"commit\":{}},{\"name\":\"v1\"}]"));

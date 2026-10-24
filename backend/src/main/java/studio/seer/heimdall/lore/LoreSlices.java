@@ -1518,6 +1518,11 @@ public final class LoreSlices {
         slice("specs",
             "SELECT spec_id, title, file_path, " +
             "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id, " +
+            // DS-2: версия/аннотация/статус — с открытой ревизии, как в spec_by_id.
+            // Без них сверка реестра шла N вызовами spec_by_id.
+            "COALESCE(out('HAS_STATE').version[0], version) AS version, " +
+            "out('HAS_STATE').summary[0] AS summary, " +
+            "out('HAS_STATE').status[0]  AS status, " + // DS-4
             // AL-96: ребро писалось (spec_link rel=project) с самого начала, но
             // ни один слайс его не читал — привязку можно было создать и нельзя
             // увидеть. Самый тихий вид разрыва: write-path «работает», данных нет.
@@ -1528,7 +1533,9 @@ public final class LoreSlices {
                 // CONTAINS, не [0]: у сущности может быть несколько BELONGS_TO, а
                 // порядок рёбер — это порядок вставки, не приоритет. Сравнение с [0]
                 // делало сущность видимой только под одним произвольным компонентом.
-                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component")),
+                "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component",
+                // DS-2: был 400 «unknown param: project».
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
             " ORDER BY spec_id");
 
         slice("spec_by_id",
@@ -1536,6 +1543,7 @@ public final class LoreSlices {
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
             "out('HAS_STATE').summary[0]                          AS summary, " +
             "COALESCE(out('HAS_STATE').version[0], version)       AS version, " +
+            "out('HAS_STATE').status[0]                           AS status, " + // DS-4
             "out('HAS_STATE').valid_from[0]                       AS valid_from, " +
             "COALESCE(in('DOCUMENTED_IN').component_id[0], out('BELONGS_TO').component_id[0]) AS component_id, " +
             "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-96
@@ -1660,6 +1668,9 @@ public final class LoreSlices {
             // prev/next sequence client-side from these three fields, same
             // pattern as component/milestone facets elsewhere in this app.
             "SELECT doc_id, title, kind, has_ext_deps, sort_order, " +
+            // DS-3: хеш и длина каждого тела — сверка корпуса одним вызовом,
+            // без N вызовов doc_by_id (сами тела список не тянет).
+            LoreDocBodyDigest.selectColumns() +
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
@@ -1674,7 +1685,9 @@ public final class LoreSlices {
                 "component", " WHERE out('BELONGS_TO').component_id CONTAINS :component",
                 // Панель «Правила CLAUDE»: общий корпус KnowDoc уже упирается в
                 // LIMIT 200, серверный фильтр гарантирует полноту выборки по kind.
-                "kind", " WHERE kind = :kind")),
+                "kind", " WHERE kind = :kind",
+                // DS-3: доки одного проекта — без выгрузки всего корпуса.
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
             " ORDER BY doc_id");
 
         slice("doc_by_id",
@@ -1684,6 +1697,7 @@ public final class LoreSlices {
             // consistency with every other *_by_id slice (was HAS_HIST, a type
             // never declared in the schema) in case doc history is added later.
             "SELECT doc_id, title, kind, has_ext_deps, content_html, content_md_en, content_md_ru, " +
+            LoreDocBodyDigest.selectColumns() + // DS-3
             "sort_order, " +
             "out('DOC_CHILD_OF').doc_id[0] AS parent_doc_id, " +
             "in('DOC_CHILD_OF').doc_id     AS child_ids, " +
