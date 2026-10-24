@@ -62,6 +62,64 @@ function currentAuthMode(): 'oidc' | 'header' {
   return authMode(process.env);
 }
 
+// ── DS-5: сетевые сбои с причиной, таймаутом и безопасным повтором ──────────
+//
+// Было: голый fetch. Сбой сети приходил как «TypeError: fetch failed», и это
+// ВСЁ, что видел агент: настоящая причина (ECONNRESET, ECONNREFUSED, таймаут
+// соединения) лежит в e.cause и терялась. Сверка DWL 24.10.2026 так и не
+// смогла сказать, почему упал doc_new, — повтор прошёл, корень остался гаданием.
+//
+// Повтор — ТОЛЬКО там, где запрос заведомо не ушёл (ошибка установки
+// соединения). Сброс уже открытого соединения повторять нельзя вслепую:
+// сервер мог запись принять, а metric_log/qg_run_log не идемпотентны. Такой
+// сбой не повторяется, но сообщение говорит, что запрос мог дойти.
+
+const TIMEOUT_MS = Number(process.env.LORE_HTTP_TIMEOUT_MS ?? '60000');
+
+/** Ошибки, при которых запрос до сервера не дошёл — повтор безопасен для любого метода. */
+const CONNECT_PHASE = new Set([
+  'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH', 'UND_ERR_CONNECT_TIMEOUT',
+]);
+
+export function causeOf(e: unknown): { code?: string; message?: string } {
+  const c = (e as { cause?: { code?: string; message?: string; name?: string } })?.cause;
+  if (!c) return {};
+  return { code: c.code ?? c.name, message: c.message };
+}
+
+export function describeFetchFailure(what: string, e: unknown): string {
+  const err = e as Error;
+  if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+    return `${what} → таймаут ${TIMEOUT_MS} мс (LORE_HTTP_TIMEOUT_MS): ответа не было; ` +
+      'запрос мог дойти до сервера — проверьте результат чтением, прежде чем повторять неидемпотентную запись';
+  }
+  const { code, message } = causeOf(e);
+  const reason = [code, message].filter(Boolean).join(': ') || err?.message || String(e);
+  if (code && CONNECT_PHASE.has(code)) {
+    return `${what} → сеть: ${reason} (соединение не установлено, запрос не ушёл; повтор безопасен)`;
+  }
+  return `${what} → сеть: ${reason} (соединение оборвалось — запрос мог дойти до сервера; ` +
+    'upsert-инструменты повторять безопасно, metric_log/qg_run_log — только после проверки)';
+}
+
+/** fetch с таймаутом, причиной сбоя в тексте ошибки и одним повтором при ошибке соединения. */
+export async function loreFetch(
+  what: string, url: string, init: RequestInit = {}, f: typeof fetch = fetch,
+): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await f(url, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    } catch (e) {
+      const { code } = causeOf(e);
+      if (attempt === 1 && code && CONNECT_PHASE.has(code)) {
+        await new Promise((r) => setTimeout(r, 300));
+        continue;
+      }
+      throw new Error(describeFetchFailure(what, e), { cause: e });
+    }
+  }
+}
+
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
 /** Bearer token for the lore-mcp service account, cached until near expiry
@@ -69,7 +127,7 @@ let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 async function serviceAccountToken(): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt > now) return cachedToken.accessToken;
-  const res = await fetch(`${OIDC_ISSUER}/protocol/openid-connect/token`, {
+  const res = await loreFetch('OIDC token request', `${OIDC_ISSUER}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -134,7 +192,7 @@ const readAuthHeaders = writeAuthHeaders;
 
 /** GET /lore/slices — catalog of named slices with their required/optional params. */
 export async function loreSlices(): Promise<unknown> {
-  const res = await fetch(`${BASE}/lore/slices`, { headers: await readAuthHeaders() });
+  const res = await loreFetch('GET /lore/slices', `${BASE}/lore/slices`, { headers: await readAuthHeaders() });
   if (!res.ok) throw new Error(`GET /lore/slices → ${res.status} ${await detail(res)}`);
   return res.json();
 }
@@ -144,21 +202,42 @@ export async function loreSlice(
   slice: string,
   params?: Record<string, string>,
 ): Promise<unknown[]> {
+  return (await loreSliceWithMeta(slice, params)).rows;
+}
+
+/** То же, плюс признак усечения — для query_slice, который обязан его показать. */
+export async function loreSliceWithMeta(
+  slice: string,
+  params?: Record<string, string>,
+): Promise<{ rows: unknown[]; meta?: SliceMeta }> {
   const qs =
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
       : '';
-  const res = await fetch(`${BASE}/lore/slice/${encodeURIComponent(slice)}${qs}`, {
+  const res = await loreFetch(`GET /lore/slice/${slice}`, `${BASE}/lore/slice/${encodeURIComponent(slice)}${qs}`, {
     headers: await readAuthHeaders(),
   });
   if (!res.ok) throw new Error(`GET /lore/slice/${slice} → ${res.status} ${await detail(res)}`);
-  const body = (await res.json()) as { rows?: unknown[] };
-  return Array.isArray(body.rows) ? body.rows : [];
+  const body = (await res.json()) as SliceBody;
+  return { rows: Array.isArray(body.rows) ? body.rows : [], meta: sliceMetaOf(body) };
+}
+
+type SliceBody = { rows?: unknown[]; truncated?: boolean | string; limit?: number; hint?: string };
+export type SliceMeta = { truncated: boolean | string; limit?: number; hint?: string };
+
+/**
+ * Признак усечения выдачи (DBU-13 на бэкенде) — раньше MCP его ВЫБРАСЫВАЛ:
+ * отсюда возвращались только rows, и обрезанный список выглядел полным.
+ * Ровно та ловушка, о которую споткнулась сверка DWL («выгружать все 424»).
+ */
+export function sliceMetaOf(body: SliceBody): SliceMeta | undefined {
+  if (body.truncated === undefined || body.truncated === false) return undefined;
+  return { truncated: body.truncated, limit: body.limit, hint: body.hint };
 }
 
 /** GET /bench/mart/slices — catalog of RAGVSDL experiment-mart slices. */
 export async function muninnSlices(): Promise<unknown> {
-  const res = await fetch(`${BASE}/bench/mart/slices`);
+  const res = await loreFetch('GET /bench/mart/slices', `${BASE}/bench/mart/slices`);
   if (!res.ok) throw new Error(`GET /bench/mart/slices → ${res.status} ${await detail(res)}`);
   return res.json();
 }
@@ -172,7 +251,7 @@ export async function muninnSlice(
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
       : '';
-  const res = await fetch(`${BASE}/bench/mart/slice/${encodeURIComponent(slice)}${qs}`);
+  const res = await loreFetch(`GET /bench/mart/slice/${slice}`, `${BASE}/bench/mart/slice/${encodeURIComponent(slice)}${qs}`);
   if (!res.ok) throw new Error(`GET /bench/mart/slice/${slice} → ${res.status} ${await detail(res)}`);
   const body = (await res.json()) as { rows?: unknown[] };
   return Array.isArray(body.rows) ? body.rows : [];
@@ -180,7 +259,7 @@ export async function muninnSlice(
 
 /** GET /bench/api/status — live STATUS.json of the running experiment cell. */
 export async function muninnStatus(): Promise<unknown> {
-  const res = await fetch(`${BASE}/bench/api/status`);
+  const res = await loreFetch('GET /bench/api/status', `${BASE}/bench/api/status`);
   if (!res.ok) throw new Error(`GET /bench/api/status → ${res.status} ${await detail(res)}`);
   return res.json();
 }
@@ -191,14 +270,14 @@ export async function loreGet(path: string, params?: Record<string, string>): Pr
     params && Object.keys(params).length > 0
       ? '?' + new URLSearchParams(params).toString()
       : '';
-  const res = await fetch(`${BASE}${path}${qs}`, { headers: await readAuthHeaders() });
+  const res = await loreFetch(`GET ${path}`, `${BASE}${path}${qs}`, { headers: await readAuthHeaders() });
   if (!res.ok) throw new Error(`GET ${path} → ${res.status} ${await detail(res)}`);
   return res.json();
 }
 
 /** POST a LORE write endpoint, authenticated per writeAuthHeaders() (see A2 above). */
 export async function lorePost(path: string, body: unknown): Promise<unknown> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await loreFetch(`POST ${path}`, `${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()) },
     body: JSON.stringify(body),
@@ -221,7 +300,7 @@ export async function loreUpload(
   const form = new FormData();
   form.append('file', new Blob([bytes], { type: contentType ?? 'application/octet-stream' }), filename);
   for (const [k, v] of Object.entries(extraFields ?? {})) form.append(k, v);
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await loreFetch(`POST ${path}`, `${BASE}${path}`, {
     method: 'POST',
     headers: { ...(await writeAuthHeaders()) },
     body: form,

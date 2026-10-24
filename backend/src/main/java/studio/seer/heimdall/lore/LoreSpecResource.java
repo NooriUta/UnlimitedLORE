@@ -31,7 +31,13 @@ public class LoreSpecResource extends LoreResourceBase {
         String component_id, String content_md, String file_path, String summary,
         // LH-02: true = a body edit opens a new hist version (SCD2 close-open) instead
         // of amending the open row in place, preserving the previous edition.
-        Boolean checkpoint) {}
+        Boolean checkpoint,
+        // DS-4: статус спеки — код словаря spec_status (V50), на открытой ревизии.
+        String status) {}
+
+    /** DS-4: страховка на пустой словарь — канон в spec_status (V50). */
+    static final List<String> SPEC_STATUSES_FALLBACK =
+        List.of("proposed", "accepted", "deprecated", "superseded");
     public record SpecDeleteRequest(String spec_id) {}
 
     /**
@@ -55,6 +61,14 @@ public class LoreSpecResource extends LoreResourceBase {
             return badParams("spec_id required");
         if (!SAFE_ID.matcher(req.spec_id()).matches())
             return badParams("spec_id contains illegal characters");
+        // DS-4: только значение словаря — свободный текст снова растащил бы статус
+        // по написаниям («Предложение», «proposal», «draft»), как было у решений.
+        if (req.status() != null && !req.status().isBlank()) {
+            List<String> allowed = activeDictCodes("spec_status", SPEC_STATUSES_FALLBACK);
+            if (!allowed.contains(req.status()))
+                return badParams("status must be one of: " + allowed
+                    + " (словарь spec_status, правится в админке)");
+        }
         try {
             // LH-44: only SET fields actually provided — a partial amend call (e.g. only
             // content_md to bump a spec's body) must not wipe version/component_id/file_path
@@ -77,13 +91,14 @@ public class LoreSpecResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
 
-            boolean bodyProvided = req.content_md() != null || req.version() != null || req.summary() != null;
+            boolean bodyProvided = req.content_md() != null || req.version() != null
+                || req.summary() != null || req.status() != null;
             boolean histWritten = false;
             if (bodyProvided) {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> histRows = (List<Map<String, Object>>)
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "SELECT @rid as rid, content_md, version, summary FROM KnowSpecHist " +
+                        "SELECT @rid as rid, content_md, version, summary, status FROM KnowSpecHist " +
                         "WHERE in('HAS_STATE').spec_id[0] = :id AND valid_to IS NULL LIMIT 1",
                         Map.of("id", req.spec_id())))
                     .await().indefinitely().result();
@@ -97,10 +112,11 @@ public class LoreSpecResource extends LoreResourceBase {
                     hp.put("content", req.content_md() != null ? req.content_md() : histRows.get(0).get("content_md"));
                     hp.put("version", req.version()    != null ? req.version()    : histRows.get(0).get("version"));
                     hp.put("summary", req.summary()    != null ? req.summary()    : histRows.get(0).get("summary"));
+                    hp.put("status",  req.status()     != null ? req.status()     : histRows.get(0).get("status"));
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         "UPDATE KnowSpecHist SET valid_to=:now WHERE @rid=:rid;" +
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
-                        "content_md=:content, version=:version, summary=:summary;" +
+                        "content_md=:content, version=:version, summary=:summary, status=:status;" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
                         "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 } else if (histRows != null && !histRows.isEmpty()) {
@@ -113,20 +129,22 @@ public class LoreSpecResource extends LoreResourceBase {
                     if (req.content_md() != null) { hsql.append(", content_md=:content"); hp.put("content", req.content_md()); }
                     if (req.version() != null)    { hsql.append(", version=:version");    hp.put("version", req.version()); }
                     if (req.summary() != null)    { hsql.append(", summary=:summary");    hp.put("summary", req.summary()); }
+                    if (req.status() != null)     { hsql.append(", status=:status");      hp.put("status",  req.status()); }
                     hsql.append(" WHERE @rid=:rid");
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         hsql.toString(), hp)).await().indefinitely();
                 } else {
                     String nsid = UUID.randomUUID().toString();
                     Map<String, Object> hp = mapOfNullable(
-                        "content", req.content_md(), "version", req.version(), "summary", req.summary());
+                        "content", req.content_md(), "version", req.version(), "summary", req.summary(),
+                        "status", req.status());
                     hp.put("id", req.spec_id());
                     hp.put("nsid", nsid);
                     hp.put("now", Instant.now().toString());
                     // A1: hist INSERT + HAS_STATE edge as one atomic sqlscript.
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                         "INSERT INTO KnowSpecHist SET spec_id=:id, state_uid=:nsid, valid_from=:now, " +
-                        "content_md=:content, version=:version, summary=:summary;" +
+                        "content_md=:content, version=:version, summary=:summary, status=:status;" +
                         "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSpec WHERE spec_id=:id) " +
                         "TO (SELECT FROM KnowSpecHist WHERE state_uid=:nsid);", hp)).await().indefinitely();
                 }

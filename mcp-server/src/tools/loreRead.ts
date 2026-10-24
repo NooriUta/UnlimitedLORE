@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ACTIVE_PROJECT, loreGet, loreSlice, loreSlices } from '../backend.js';
+import { ACTIVE_PROJECT, loreGet, loreSliceWithMeta, loreSlices } from '../backend.js';
 
 // ADR-LORE-017 (T16): slices that take a `project` param inherit LORE_ACTIVE_PROJECT
 // when the caller omits it. Tier 2 (Task/Component/ADR/tech-registry) deliberately
@@ -105,8 +105,16 @@ export function registerLoreRead(server: McpServer): void {
               `("${ACTIVE_PROJECT}", from LORE_ACTIVE_PROJECT) — proceeding with the explicit value.`;
           }
         }
-        const rows = await loreSlice(slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
-        return json(warning ? { rows, _warning: warning } : rows);
+        const { rows, meta } = await loreSliceWithMeta(
+          slice, Object.keys(effectiveParams).length ? effectiveParams : undefined);
+        // Усечённая выдача обязана выглядеть усечённой: голый массив читался
+        // как полный список, даже когда бэкенд прямо сказал «обрезал».
+        if (!warning && !meta) return json(rows);
+        return json({
+          rows,
+          ...(meta ? { _truncated: meta.truncated, _limit: meta.limit, _hint: meta.hint } : {}),
+          ...(warning ? { _warning: warning } : {}),
+        });
       } catch (e) {
         return err(e);
       }

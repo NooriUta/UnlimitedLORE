@@ -38,6 +38,9 @@ public class LoreProjectResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreProjectResource.class);
 
+    @jakarta.inject.Inject
+    ProjectRbacService projectRbac;
+
     // hosts = JSON array string (ADR-018); default_branch = repo default branch.
     // JSON field names map 1:1 to record components (snake_case kept deliberately).
     public record ProjectCreateRequest(String slug, String name, String hosts, String default_branch) {}
@@ -67,11 +70,74 @@ public class LoreProjectResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE slug=:slug");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "slug", req.slug())));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("slug", req.slug());
+            grantCreatorOwnerIfOrphan(req.slug(), role, out);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE PROJECT CREATE] %s: %s", req.slug(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
+        }
+    }
+
+    /**
+     * DS-1 (сверка DWL 24.10.2026): проект рождался БЕЗ единой роли, и скоуп
+     * чтения прятал тела его доков и спек даже от того, кто его завёл. Скрытие
+     * было честным («нет роли»), но вызывающему никто не говорил, что так будет.
+     *
+     * <p>Правило: если у проекта ещё НЕТ ни одной роли, роль {@code owner}
+     * получает создатель — для агента это его владелец ({@code OWNED_BY}), для
+     * человека — он сам, если заведён в графе. Проект с ролями не трогается:
+     * повторный upsert не должен перехватывать чужое владение.
+     *
+     * <p>Права не расширяются сверх уже решённого: агент full и так выдаёт роли
+     * своему владельцу (D-2026-LORE-FULL-WRITES-PROJECT-ROLES), а регистрировать
+     * проект может только full или superadmin. Выдача журналируется, как любая.
+     *
+     * <p>Не вышло назначить — ответ говорит об этом прямо ({@code roles_warning}),
+     * а не молчит: молчание и было исходной находкой.
+     */
+    private void grantCreatorOwnerIfOrphan(String slug, String byRole, Map<String, Object> out) {
+        try {
+            boolean hasRoles = !ingestService.queryPublic(
+                "SELECT @rid AS rid FROM HAS_PROJECT_ROLE WHERE @in.slug = :proj LIMIT 1",
+                Map.of("proj", slug)).isEmpty();
+            if (hasRoles) { out.put("roles_granted", java.util.List.of()); return; }
+
+            String clientId = callerClientId();
+            String grantee = clientId != null ? projectRbac.ownerKcSub(clientId) : callerKcSub();
+            boolean known = grantee != null && !ingestService.queryPublic(
+                "SELECT kc_sub FROM KnowUser WHERE kc_sub = :sub", Map.of("sub", grantee)).isEmpty();
+            if (!known) {
+                out.put("roles_granted", java.util.List.of());
+                out.put("roles_warning", clientId != null
+                    ? "у проекта нет ролей, а у агента " + clientId + " нет владельца в графе (OWNED_BY) — "
+                      + "тела доков и спек проекта будут скрыты от всех, кроме superadmin; выдайте роль: project_role_set"
+                    : "у проекта нет ролей, а вызывающий не заведён в графе (KnowUser) — "
+                      + "тела доков и спек проекта будут скрыты от всех, кроме superadmin; выдайте роль: project_role_set");
+                return;
+            }
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "CREATE EDGE HAS_PROJECT_ROLE FROM (SELECT FROM KnowUser WHERE kc_sub=:sub) " +
+                "TO (SELECT FROM KnowGitProject WHERE slug=:proj) SET role='owner'",
+                Map.of("sub", grantee, "proj", slug))).await().indefinitely();
+            Map<String, Object> ev = new java.util.HashMap<>();
+            ev.put("eid", java.util.UUID.randomUUID().toString());
+            ev.put("sub", grantee);
+            ev.put("proj", slug);
+            ev.put("at", java.time.Instant.now().toString());
+            ev.put("br", byRole == null ? "project_new" : byRole + " (project_new)");
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                "INSERT INTO KnowProjectRoleEvent SET event_uid=:eid, kc_sub=:sub, project=:proj, "
+                + "role='owner', action='grant', at=:at, by_role=:br", ev)).await().indefinitely();
+            out.put("roles_granted", java.util.List.of(Map.of("kc_sub", grantee, "role", "owner")));
+        } catch (Exception e) {
+            // Проект уже записан — роль вторична, но сбой обязан быть виден.
+            LOG.warnf("[LORE PROJECT CREATE] роль владельцу %s не выдана: %s", slug, e.getMessage());
+            out.put("roles_granted", java.util.List.of());
+            out.put("roles_warning", "роль создателю не выдана: " + e.getMessage());
         }
     }
 }

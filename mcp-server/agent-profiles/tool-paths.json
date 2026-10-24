@@ -149,6 +149,9 @@
   "project_new": [
     "/lore/project"
   ],
+  "project_role_set": [
+    "/lore/user/role"
+  ],
   "qg_job_new": [
     "/lore/qg/job-task"
   ],

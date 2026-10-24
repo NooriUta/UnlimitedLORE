@@ -234,6 +234,25 @@ public abstract class LoreResourceBase {
         return mart.basicAuth();
     }
 
+    /**
+     * Активные коды словаря {@code dictType}; пустой словарь (свежая БД до
+     * сидов) или сбой чтения — {@code fallback}. Канон — словарь, константа
+     * только страхует старт (тот же приём, что AL-79 у decision_status).
+     */
+    java.util.List<String> activeDictCodes(String dictType, java.util.List<String> fallback) {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT code FROM KnowDictEntry WHERE dict_type=:dt AND is_active=true",
+                Map.of("dt", dictType));
+            java.util.List<String> codes = rows.stream()
+                .map(r -> r.get("code")).filter(java.util.Objects::nonNull)
+                .map(String::valueOf).toList();
+            return codes.isEmpty() ? fallback : codes;
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
     /** Param map that tolerates null values (Map.of forbids them) — used for nullable note_md. */
     static Map<String, Object> mapOfNullable(Object... kv) {
         Map<String, Object> m = new java.util.HashMap<>();

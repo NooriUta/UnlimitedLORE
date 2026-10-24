@@ -69,7 +69,15 @@ describe('registerLoreWrite', () => {
     // + milestone_sprints (RM-M1 — список спринтов за один вызов. sprint_link
     //   работает по одному, и карта из двадцати спринтов строится двадцатью
     //   вызовами, то есть не строится вовсе)
-    expect(names).toHaveLength(84);
+    // + project_role_set (DS-1 — выдача проектной роли из MCP; бэкенд открыт
+    //   только профилю full, D-2026-LORE-FULL-WRITES-PROJECT-ROLES)
+    expect(names).toHaveLength(85);
+  });
+
+  it('registers project_role_set (DS-1 — роль в проекте выдаётся без захода в админку)', () => {
+    const { server, names } = fakeServer();
+    registerLoreWrite(server);
+    expect(names).toContain('project_role_set');
   });
 
   it('registers project_actor_new separately from actor_new (ADR-LORE-041 §4)', () => {

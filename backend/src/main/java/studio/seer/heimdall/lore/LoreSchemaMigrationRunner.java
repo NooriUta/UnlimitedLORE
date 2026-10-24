@@ -482,6 +482,39 @@ public class LoreSchemaMigrationRunner {
         if (version == 46) backfillDroppedRoleNotes();
         if (version == 47) backfillDocProjectEdgesByProduct();
         if (version == 48) renameAgentRoleDictToProfile();
+        if (version == 49) backfillDocBodyDigest();
+    }
+
+    /**
+     * V49 (DS-3): хеш и длина тел KnowDoc, у которых тело есть, а хеша нет.
+     *
+     * <p>Батч мал (50) намеренно: тело дока бывает ~100 КБ, и 5000 строк за раз,
+     * как в backfillContentHash, — это полгигабайта в одном ответе. Идемпотентен:
+     * повторный проход не находит строк без хеша.
+     */
+    void backfillDocBodyDigest() {
+        for (String f : LoreDocBodyDigest.BODY_FIELDS) {
+            int total = 0;
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            while (true) {
+                List<Map<String, Object>> rows = ingest.queryPublic(
+                    "SELECT @rid AS rid, " + f + " AS body FROM KnowDoc WHERE "
+                    + f + " IS NOT NULL AND " + f + "_sha256 IS NULL LIMIT 50", Map.of());
+                if (rows.isEmpty()) break;
+                for (Map<String, Object> r : rows) {
+                    // Строка вернулась повторно = запись не легла. Без этой проверки
+                    // цикл крутился бы вечно на одном батче, держа старт бэкенда.
+                    if (!seen.add(String.valueOf(r.get("rid"))))
+                        throw new IllegalStateException("V49: хеш не записался в " + r.get("rid") + "." + f);
+                    String body = String.valueOf(r.get("body"));
+                    command("UPDATE " + r.get("rid") + " SET " + f + "_sha256=:h, " + f + "_bytes=:n",
+                        Map.of("h", LoreDocBodyDigest.sha256(body), "n", LoreDocBodyDigest.bytes(body)));
+                    total++;
+                }
+                if (rows.size() < 50) break;
+            }
+            LOG.infof("[LORE MIGRATE] V49 backfill KnowDoc.%s_sha256: %d строк", f, total);
+        }
     }
 
     /**
