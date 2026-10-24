@@ -591,11 +591,15 @@ public class LoreIngestService {
         params.put("file_path",    nullToEmpty(doc.filePath()));
         params.put("content_html", nullToEmpty(doc.contentHtml()));
 
-        exec("UPDATE KnowDoc SET " +
+        // DS-3: второй писатель тела — хеш обязан ехать и отсюда, иначе он
+        // устареет молча после первого инжеста (см. LoreDocBodyDigest).
+        StringBuilder sql = new StringBuilder("UPDATE KnowDoc SET " +
                 "doc_id=:doc_id, title=:title, kind=:kind, " +
                 "has_ext_deps=:has_ext_deps, component_id=:component_id, " +
-                "file_path=:file_path, content_html=:content_html " +
-                "UPSERT WHERE doc_id=:doc_id", params);
+                "file_path=:file_path, content_html=:content_html");
+        LoreDocBodyDigest.appendSet(sql, params, "content_html", (String) params.get("content_html"));
+        sql.append(" UPSERT WHERE doc_id=:doc_id");
+        exec(sql.toString(), params);
     }
 
     // ── Infrastructure ────────────────────────────────────────────────────────
