@@ -222,7 +222,7 @@ public class LoreForgejoResource extends LoreResourceBase {
                     .entity(new LoreError("REF_NOT_RESOLVED", res.error())));
             CiProbe probe = ciProbe(repo.get(), res.sha(), 0);
             String status = ForgejoBridge.gateStatus(probe.byContext(), bridge.requiredChecks(gitProject),
-                probe.ageSeconds(), bridge.graceSeconds, probe.failed());
+                probe.ageSeconds(), bridge.graceSeconds(), probe.failed());
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ref", ref);
             out.put("sha", res.sha());
@@ -347,7 +347,7 @@ public class LoreForgejoResource extends LoreResourceBase {
         }
         CiProbe probe = ciProbe(repo, headSha, age);
         String status = ForgejoBridge.gateStatus(probe.byContext(), bridge.requiredChecks(gitProject),
-            probe.ageSeconds(), bridge.graceSeconds, probe.failed());
+            probe.ageSeconds(), bridge.graceSeconds(), probe.failed());
         return new PrGate(number, pr.getString("title"), pr.getString("state"),
             Boolean.TRUE.equals(pr.getBoolean("merged")), headSha, baseRef, status, probe.byContext(), null, 200);
     }
