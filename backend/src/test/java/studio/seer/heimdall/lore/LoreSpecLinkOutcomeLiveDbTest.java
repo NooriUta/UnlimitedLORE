@@ -87,7 +87,7 @@ class LoreSpecLinkOutcomeLiveDbTest {
     @Test
     @Order(4)
     void replaceToMissingTargetKeepsCurrentLink() {
-        admin().body(link("TEST-SPECOUT-НЕТ", "replace")).when().post("/lore/spec/link")
+        admin().body(link("TEST-SPECOUT-MISSING", "replace")).when().post("/lore/spec/link")
             .then().statusCode(404)
             .body("error", equalTo("TARGET_NOT_FOUND"));
         assertEquals(1, componentEdges(C1), "отклонённый replace снёс текущую привязку");

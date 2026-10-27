@@ -459,10 +459,12 @@ public class LoreReleaseResource extends LoreResourceBase {
         out.put("release_id", req.release_id());
         out.put("sprints_linked", sprintsLinked);
         out.put("prs_linked", prsLinked);
-        if (!noops.isEmpty()) {
+        // Любой несделанный элемент — noop, а не только «конца нет»: пропуск по
+        // недопустимому id и исключение тоже не создали ребра.
+        if (!errors.isEmpty()) {
             out.put("outcome", LoreOutcome.NOOP);
-            out.put("reason", "ребро не создано: " + String.join("; ", noops)
-                + ". CREATE EDGE по пустой выборке в ArcadeDB — тихий no-op.");
+            out.put("reason", "ребро не создано: " + String.join("; ", errors)
+                + (noops.isEmpty() ? "" : ". CREATE EDGE по пустой выборке в ArcadeDB — тихий no-op."));
         } else {
             out.put("outcome", created > 0 ? LoreOutcome.CREATED : LoreOutcome.UNCHANGED);
             if (created == 0) out.put("hint", "связи уже были — повторять вызов не нужно");

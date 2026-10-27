@@ -57,9 +57,9 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     @Order(1)
     void setUp() {
         admin().body("{\"sprint_id\":\"" + SPRINT + "\",\"name\":\"Спринт про исходы релиза\"}")
-            .when().post("/lore/sprint/create").then().statusCode(200);
+            .when().post("/lore/sprint/create").then().log().ifValidationFails().statusCode(200);
         admin().body(Map.of("release_id", REL, "git_project", GP, "release_date", "2026-10-27"))
-            .when().post("/lore/release").then().statusCode(200);
+            .when().post("/lore/release").then().log().ifValidationFails().statusCode(200);
     }
 
     @Test
@@ -67,7 +67,7 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     void firstSprintLinkIsCreated() {
         admin().body(Map.of("release_id", REL, "git_project", GP, "sprint_ids", List.of(SPRINT)))
             .when().post("/lore/release/link")
-            .then().statusCode(200)
+            .then().log().ifValidationFails().statusCode(200)
             .body("outcome", equalTo("created"))
             .body("ok", equalTo(true))
             .body("sprints_linked", equalTo(1));
@@ -78,7 +78,7 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     void repeatIsUnchangedAndDoesNotDuplicate() {
         admin().body(Map.of("release_id", REL, "git_project", GP, "sprint_ids", List.of(SPRINT)))
             .when().post("/lore/release/link")
-            .then().statusCode(200)
+            .then().log().ifValidationFails().statusCode(200)
             .body("outcome", equalTo("unchanged"))
             .body("ok", equalTo(true));
         assertEquals(1, sprintEdges(), "повтор release_link не должен создавать второе ребро");
@@ -88,13 +88,13 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     @Test
     @Order(4)
     void missingSprintIsNoopNotCounted() {
-        admin().body(Map.of("release_id", REL, "git_project", GP, "sprint_ids", List.of("SPRINT_НЕТ_ТАКОГО")))
+        admin().body(Map.of("release_id", REL, "git_project", GP, "sprint_ids", List.of("SPRINT_RELOUT_MISSING")))
             .when().post("/lore/release/link")
-            .then().statusCode(200)
+            .then().log().ifValidationFails().statusCode(200)
             .body("outcome", equalTo("noop"))
             .body("ok", equalTo(false))
             .body("sprints_linked", equalTo(0))
-            .body("reason", containsString("SPRINT_НЕТ_ТАКОГО"));
+            .body("reason", containsString("SPRINT_RELOUT_MISSING"));
     }
 
     /** Нет релиза — noop, и вершина PR-сироты не заводится. */
@@ -103,7 +103,7 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     void missingReleaseIsNoopAndCreatesNoOrphanPr() {
         admin().body(Map.of("release_id", "v9.9.9-out", "git_project", GP, "pr_numbers", List.of(990001)))
             .when().post("/lore/release/link")
-            .then().statusCode(200)
+            .then().log().ifValidationFails().statusCode(200)
             .body("outcome", equalTo("noop"))
             .body("ok", equalTo(false))
             .body("prs_linked", equalTo(0));
@@ -115,10 +115,10 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     void prLinkCreatedThenUnchanged() {
         admin().body(Map.of("release_id", REL, "git_project", GP, "pr_numbers", List.of(990002)))
             .when().post("/lore/release/link")
-            .then().statusCode(200).body("outcome", equalTo("created")).body("prs_linked", equalTo(1));
+            .then().log().ifValidationFails().statusCode(200).body("outcome", equalTo("created")).body("prs_linked", equalTo(1));
         admin().body(Map.of("release_id", REL, "git_project", GP, "pr_numbers", List.of(990002)))
             .when().post("/lore/release/link")
-            .then().statusCode(200).body("outcome", equalTo("unchanged"));
+            .then().log().ifValidationFails().statusCode(200).body("outcome", equalTo("unchanged"));
         assertEquals(1, count("SELECT count(*) AS n FROM SHIPPED_IN WHERE @out.pr_uid=:u AND @in.release_uid=:r",
             Map.of("u", GP + "#990002", "r", RUID)));
     }
@@ -128,7 +128,7 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     void unlinkExistingIsDeleted() {
         admin().body(Map.of("release_id", REL, "git_project", GP, "sprint_ids", List.of(SPRINT)))
             .when().post("/lore/release/unlink")
-            .then().statusCode(200)
+            .then().log().ifValidationFails().statusCode(200)
             .body("outcome", equalTo("deleted"))
             .body("sprints_removed", equalTo(1));
     }
@@ -139,7 +139,7 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     void unlinkMissingIsUnchanged() {
         admin().body(Map.of("release_id", REL, "git_project", GP, "sprint_ids", List.of(SPRINT)))
             .when().post("/lore/release/unlink")
-            .then().statusCode(200)
+            .then().log().ifValidationFails().statusCode(200)
             .body("outcome", equalTo("unchanged"))
             .body("sprints_removed", equalTo(0));
     }
