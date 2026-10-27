@@ -61,6 +61,9 @@ final class WorkQuality {
      * {@code hints}: они не входят в счёт и не должны выглядеть как долг.
      */
     static Map<String, Object> compact(Result r) {
+        // Судить нечего (сущности нет) — вердикта нет. Раньше здесь был NPE, и
+        // release_link к несуществующему релизу отвечал 500 вместо отказа.
+        if (r == null) return null;
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("kind", r.kind());
         out.put("score", r.score() + " из " + r.max());
