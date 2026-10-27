@@ -59,17 +59,29 @@ public class LoreBridgeProbeCheck implements HealthCheck {
 
     @Override
     public HealthCheckResponse call() {
-        long now = System.currentTimeMillis();
-        Probe k = kcLast = fresh(kcLast, now, kc.configured(), this::probeKc);
-        Probe f = fjLast = fresh(fjLast, now, forgejoProbeable(), this::probeForgejo);
-        return HealthCheckResponse.named("lore-bridges-live")
-            .status(k.up() && f.up())
-            .withData("kc_probed", k.probed())
-            .withData("kc_error", k.error() == null ? "" : k.error())
-            .withData("forgejo_probed", f.probed())
-            .withData("forgejo_error", f.error() == null ? "" : f.error())
-            .withData("cache_seconds", TTL.toSeconds())
-            .build();
+        // Проба не бросает наружу никогда. На #711 исключение внутри неё (NPE,
+        // дефект кода) превратилось в DOWN без данных моста, и CD назвал это
+        // «секрет отозван». Сбой самой пробы и неработающий секрет — разные
+        // факты, и в ответе они разведены: probe_defect против *_error.
+        try {
+            long now = System.currentTimeMillis();
+            Probe k = kcLast = fresh(kcLast, now, kc.configured(), this::probeKc);
+            Probe f = fjLast = fresh(fjLast, now, forgejoProbeable(), this::probeForgejo);
+            return HealthCheckResponse.named("lore-bridges-live")
+                .status(k.up() && f.up())
+                .withData("kc_probed", k.probed())
+                .withData("kc_error", k.error() == null ? "" : k.error())
+                .withData("forgejo_probed", f.probed())
+                .withData("forgejo_error", f.error() == null ? "" : f.error())
+                .withData("probe_defect", "")
+                .withData("cache_seconds", TTL.toSeconds())
+                .build();
+        } catch (RuntimeException e) {
+            LOG.errorf(e, "[LORE BRIDGES] сбой самой пробы — дефект кода, о секретах ничего не известно");
+            return HealthCheckResponse.named("lore-bridges-live").down()
+                .withData("probe_defect", e.getClass().getSimpleName() + ": " + e.getMessage())
+                .build();
+        }
     }
 
     /**
@@ -102,7 +114,7 @@ public class LoreBridgeProbeCheck implements HealthCheck {
     }
 
     private boolean forgejoProbeable() {
-        return forgejo.configured() && forgejo.baseOverride.filter(v -> !v.isBlank()).isPresent();
+        return forgejo.configured() && forgejo.probeBase().isPresent();
     }
 
     /**
@@ -113,7 +125,7 @@ public class LoreBridgeProbeCheck implements HealthCheck {
      * отбивает 401 на любом пути.
      */
     private String probeForgejo() throws Exception {
-        String base = forgejo.baseOverride.orElseThrow().replaceAll("/$", "");
+        String base = forgejo.probeBase().orElseThrow();
         HttpRequest req = HttpRequest.newBuilder(URI.create(base + "/api/v1/repos/search?limit=1"))
             .timeout(Duration.ofSeconds(10))
             .header("Authorization", "token " + forgejo.probeToken())

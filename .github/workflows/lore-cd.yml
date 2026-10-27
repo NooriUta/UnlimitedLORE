@@ -528,7 +528,15 @@ jobs:
           echo "$body"
           case "$code" in
             200) echo "мосты KC и Forgejo отвечают своими секретами (либо не настроены — probed=false в теле)" ;;
-            503) echo "::error::мост настроен, но не работает — тело выше называет, какой и почему (kc_error / forgejo_error). Секрет отозван или ротирован: обновите его в Infisical."; exit 1 ;;
+            503)
+              # Две РАЗНЫЕ причины DOWN, и текст обязан их различать: на #711
+              # сбой кода пробы (NPE) был назван «секрет отозван».
+              if printf '%s' "$body" | grep -qE '"probe_defect"[[:space:]]*:[[:space:]]*"[^"]+' || printf '%s' "$body" | grep -q '"exceptionClass"'; then
+                echo "::error::упала САМА проба мостов (дефект кода, не секрет) — причина в probe_defect/exceptionClass выше. О секретах это ничего не говорит."
+              else
+                echo "::error::мост настроен, но не работает — kc_error / forgejo_error выше называют, какой и почему. Секрет отозван или ротирован: обновите его в Infisical."
+              fi
+              exit 1 ;;
             *)   echo "::error::группа /q/health/group/bridges не ответила (HTTP $code) — бэкенд без LoreBridgeProbeCheck или недоступен"; exit 1 ;;
           esac
 
