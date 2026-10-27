@@ -227,54 +227,62 @@ public class LoreSpecResource extends LoreResourceBase {
         if (!Set.of("add", "remove", "replace").contains(mode))
             return badParams("mode must be add|remove|replace");
 
-        final String edge, toSql, targetField;
+        final String edge, targetType, targetField;
         switch (rel) {
             case "component" -> {
                 edge = "BELONGS_TO";
-                toSql = "(SELECT FROM LoreComponent WHERE component_id=:tid)";
+                targetType = "LoreComponent";
                 targetField = "component_id";
             }
             case "project" -> {
                 edge = "BELONGS_TO_PROJECT";
-                toSql = "(SELECT FROM KnowGitProject WHERE slug=:tid)";
+                targetType = "KnowGitProject";
                 targetField = "slug";
             }
             default -> { return badParams("rel must be component|project"); }
         }
+        final String toSql = "(SELECT FROM " + targetType + " WHERE " + targetField + "=:tid)";
+        boolean remove = "remove".equals(mode);
+        // Компонент у спеки один (syncSpecComponent снимает остальные), поэтому
+        // для него и add, и replace вытесняют прежнюю привязку.
+        boolean displacesOthers = "replace".equals(mode) || "component".equals(rel);
 
         Map<String, Object> p = new java.util.HashMap<>();
         p.put("sid", req.spec_id());
         p.put("tid", req.target_id());
 
         try {
-            // replace и remove снимают существующие рёбра этого типа. Удаление —
-            // через DELETE FROM по выбранным рёбрам: DELETE EDGE в грамматике
-            // ArcadeDB 26.7.2 отсутствует (AKI, проверено).
-            if ("replace".equals(mode) || "remove".equals(mode)) {
-                String where = "remove".equals(mode) ? " WHERE @in." + targetField + "=:tid" : "";
+            // DBR-17 (ADR-LORE-043): пробы ДО записи — исход выводится из факта.
+            boolean had = edgeExists(edge, "spec_id", req.spec_id(), targetField, req.target_id());
+            long others = countLong(ingestService.queryPublic(
+                "SELECT count(*) AS n FROM " + edge + " WHERE @out.spec_id=:sid AND @in." + targetField + "<>:tid", p));
+
+            // Цель проверяется ДО сноса. Раньше replace сначала снимал текущие
+            // рёбра и лишь потом замечал, что цели нет: запрос отклонён 404, а
+            // спека уже без компонента — отказ, изменивший состояние.
+            if (!remove && !had && countLong(ingestService.queryPublic(
+                    "SELECT count(*) AS n FROM " + targetType + " WHERE " + targetField + "=:tid", p)) == 0)
+                return noStore(Response.status(Response.Status.NOT_FOUND).entity(new LoreError(
+                    "TARGET_NOT_FOUND",
+                    rel + " '" + req.target_id() + "' не существует — ребро не создано. "
+                    + "Заведите его сначала (component_new / project_new).")));
+
+            // replace снимает рёбра этого типа КРОМЕ целевого, remove — только
+            // целевое. Удаление — через DELETE FROM по выбранным рёбрам: DELETE
+            // EDGE в грамматике ArcadeDB 26.7.2 отсутствует (AKI, проверено).
+            if ("replace".equals(mode) || remove) {
+                String where = remove ? " WHERE @in." + targetField + "=:tid" : " WHERE @in." + targetField + "<>:tid";
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "DELETE FROM (SELECT expand(outE('" + edge + "')) FROM KnowSpec WHERE spec_id=:sid)" + where,
                     p)).await().indefinitely();
             }
 
-            if (!"remove".equals(mode)) {
+            // IF NOT EXISTS: без него повтор add создавал второе такое же ребро.
+            if (!remove) {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowSpec WHERE spec_id=:sid) TO " + toSql,
+                    "CREATE EDGE " + edge + " FROM (SELECT FROM KnowSpec WHERE spec_id=:sid) TO " + toSql
+                        + " IF NOT EXISTS",
                     p)).await().indefinitely();
-
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> check = (List<Map<String, Object>>)
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "SELECT count(*) AS n FROM (SELECT expand(outE('" + edge + "')) FROM KnowSpec "
-                        + "WHERE spec_id=:sid) WHERE @in." + targetField + "=:tid", p))
-                    .await().indefinitely().result();
-                long n = check == null || check.isEmpty() ? 0
-                    : ((Number) check.get(0).getOrDefault("n", 0)).longValue();
-                if (n == 0)
-                    return noStore(Response.status(Response.Status.NOT_FOUND).entity(new LoreError(
-                        "TARGET_NOT_FOUND",
-                        rel + " '" + req.target_id() + "' не существует — ребро не создано. "
-                        + "Заведите его сначала (component_new / project_new).")));
             }
 
             // FIX-9: компонент выражен тремя способами, и раньше этот путь писал
@@ -282,17 +290,43 @@ public class LoreSpecResource extends LoreResourceBase {
             // виден в чтении: старое ребро другого типа выигрывало в COALESCE.
             // Теперь оба пути зовут одну точку, которая приводит к одному
             // значению все три представления.
-            if ("component".equals(rel)) {
-                syncSpecComponent(req.spec_id(), "remove".equals(mode) ? null : req.target_id());
+            //
+            // remove синхронизирует ТОЛЬКО когда снятая привязка была: пустой
+            // компонент в sync снимает все рёбра, и remove непривязанного
+            // компонента отвязывал настоящий.
+            if ("component".equals(rel) && (!remove || had)) {
+                syncSpecComponent(req.spec_id(), remove ? null : req.target_id());
             }
 
-            return noStore(Response.ok(Map.of("ok", true, "spec_id", req.spec_id(),
-                "rel", rel, "target_id", req.target_id(), "mode", mode)));
+            Map<String, Object> base = new java.util.LinkedHashMap<>();
+            base.put("ok", true);
+            base.put("spec_id", req.spec_id());
+            base.put("rel", rel);
+            base.put("target_id", req.target_id());
+            base.put("mode", mode);
+            if (remove) return unlinkOutcome(base, had);
+            String outcome;
+            if (had && (!displacesOthers || others == 0)) outcome = LoreOutcome.UNCHANGED;
+            else if (displacesOthers && others > 0)      outcome = LoreOutcome.UPDATED;
+            else                                         outcome = LoreOutcome.CREATED;
+            // Факт, а не признак: после записи ребро обязано быть.
+            if (!edgeExists(edge, "spec_id", req.spec_id(), targetField, req.target_id()))
+                return noStore(Response.ok(LoreOutcome.link(base, false, false, rel + " " + req.target_id())));
+            base.put("outcome", outcome);
+            if (LoreOutcome.UNCHANGED.equals(outcome)) base.put("hint", "связь уже была — повторять вызов не нужно");
+            if (LoreOutcome.UPDATED.equals(outcome))   base.put("replaced", others);
+            return noStore(Response.ok(base));
         } catch (Exception e) {
             LOG.warnf("[LORE SPEC LINK] %s %s %s: %s", req.spec_id(), rel, req.target_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    /** {@code SELECT count(*) AS n} → число; пустой ответ — ноль. */
+    private static long countLong(List<Map<String, Object>> rows) {
+        return rows == null || rows.isEmpty() ? 0
+            : ((Number) rows.get(0).getOrDefault("n", 0)).longValue();
     }
 
     @POST
