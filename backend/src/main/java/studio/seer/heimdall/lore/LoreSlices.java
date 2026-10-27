@@ -1937,7 +1937,15 @@ public final class LoreSlices {
             // в момент включения lore.scope.enforce. Без скоупа итоговый SQL тот же
             // символ в символ: тело + suffix склеиваются как раньше.
             "FROM KnowRelease",
-            List.of(), Map.of(), " ORDER BY release_date DESC LIMIT 200");
+            List.of(),
+            // DS-9: релизы одного проекта (был 400 «unknown param: project») —
+            // по ребру, тем же путём, что read-скоуп. Свой LIMIT 200 снят: он прятал
+            // старые релизы целиком, и is_current у v1.8.0 нечем было прочесть.
+            // Потолки списочных срезов сняты решением владельца 30.08.2026,
+            // серверное усечение помечается явно (DBU-13).
+            new LinkedHashMap<>(Map.of(
+                "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project")),
+            " ORDER BY release_date DESC");
 
         slice("release_decisions",
             "SELECT decision_id, title, status_raw FROM KnowDecision " +

@@ -483,6 +483,35 @@ public class LoreSchemaMigrationRunner {
         if (version == 47) backfillDocProjectEdgesByProduct();
         if (version == 48) renameAgentRoleDictToProfile();
         if (version == 49) backfillDocBodyDigest();
+        if (version == 51) dropLegacyAdrHasStatus();
+    }
+
+    /**
+     * V51 (LH-44, п.3): выгрузить в лог и снять легаси-рёбра HAS_STATUS у KnowADRHist.
+     *
+     * <p>Порядок «сначала выгрузка, потом удаление» — условие владельца: удаление
+     * необратимо, и строка лога — единственный след того, что было. Каждое ребро
+     * пишется отдельной строкой ДО удаления. После прохода — проверка факта:
+     * осталось ли хоть одно; осталось — шаг падает, ledger не пишется.
+     * Идемпотентен: повторный проход не находит рёбер.
+     */
+    void dropLegacyAdrHasStatus() {
+        // Та же форма выборки рёбер, что у DELETE в ресурсах (expand(outE(...))) —
+        // проверенная на этой грамматике, без фильтра по типу конца.
+        List<Map<String, Object>> edges = ingest.queryPublic(
+            "SELECT @rid AS rid, @out.state_uid AS state_uid, @out.adr_id AS adr_id, @in.status_id AS status_id "
+            + "FROM (SELECT expand(outE('HAS_STATUS')) FROM KnowADRHist)", Map.of());
+        for (Map<String, Object> e : edges) {
+            LOG.infof("[LORE MIGRATE] V51 снимаю HAS_STATUS rid=%s adr=%s state_uid=%s status=%s",
+                e.get("rid"), e.get("adr_id"), e.get("state_uid"), e.get("status_id"));
+            command("DELETE FROM HAS_STATUS WHERE @rid = " + e.get("rid"), Map.of());
+        }
+        List<Map<String, Object>> rest = ingest.queryPublic(
+            "SELECT count(*) AS n FROM (SELECT expand(outE('HAS_STATUS')) FROM KnowADRHist)", Map.of());
+        long left = rest.isEmpty() ? 0 : ((Number) rest.get(0).getOrDefault("n", 0)).longValue();
+        if (left > 0)
+            throw new IllegalStateException("V51: после удаления осталось " + left + " рёбер HAS_STATUS у KnowADRHist");
+        LOG.infof("[LORE MIGRATE] V51 снято %d легаси-рёбер HAS_STATUS у KnowADRHist", edges.size());
     }
 
     /**

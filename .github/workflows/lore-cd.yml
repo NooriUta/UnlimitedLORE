@@ -508,6 +508,30 @@ jobs:
               ;;
           esac
 
+      # DBR-18: секреты мостов проверяются РАБОТОЙ, а не наличием. Шаг выше
+      # подтверждает только kc_configured — «секрет получен»; отозванный или
+      # ротированный секрет проходил его зелёным, а мост был мёртв. Группа
+      # bridges (LoreBridgeProbeCheck) делает живую пробу: токен KC по client
+      # credentials и чтение репозитория зарегистрированного проекта в Forgejo
+      # (то же, что делает сам мост). Не в readiness намеренно —
+      # недоступный KC не должен выводить бэкенд из ротации.
+      # Решает HTTP-КОД группы (200 = UP, 503 = DOWN), а не поиск подстроки в
+      # теле: шесть ложных провалов AL-88 были ровно grep-ом по JSON.
+      - name: Verify bridges actually work (DBR-18)
+        if: steps.which.outputs.backend == 'true'
+        run: |
+          out=$(docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" curlimages/curl:latest \
+            sh -c 'curl -s -m 30 -w "\n%{http_code}" http://lore-backend:9100/q/health/group/bridges || printf "\n000"')
+          code=$(printf '%s' "$out" | tail -n1)
+          body=$(printf '%s' "$out" | sed '$d')
+          echo "bridges -> HTTP $code"
+          echo "$body"
+          case "$code" in
+            200) echo "мосты KC и Forgejo отвечают своими секретами (либо не настроены — probed=false в теле)" ;;
+            503) echo "::error::мост настроен, но не работает — тело выше называет, какой и почему (kc_error / forgejo_error). Секрет отозван или ротирован: обновите его в Infisical."; exit 1 ;;
+            *)   echo "::error::группа /q/health/group/bridges не ответила (HTTP $code) — бэкенд без LoreBridgeProbeCheck или недоступен"; exit 1 ;;
+          esac
+
       - name: Verify frontend serves
         if: steps.which.outputs.frontend == 'true'
         run: |

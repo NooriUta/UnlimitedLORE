@@ -38,8 +38,28 @@ public class LoreAuthStartupGuard {
     @Inject
     KcBridge kc;
 
+    /**
+     * FI-KC-DEFAULTS: умолчание issuer в application.properties — localhost:18180.
+     * Снять его нельзя (без значения OIDC-расширение не стартует и там, где auth
+     * выключен), поэтому при ВКЛЮЧЁННОМ auth неизменённое умолчание называется
+     * громко: чужая установка иначе молча проверяла бы токены против своего же
+     * localhost и отвечала 401 всем.
+     */
+    static final String DEFAULT_ISSUER = "http://localhost:18180/kc/realms/omilore";
+
+    @ConfigProperty(name = "quarkus.oidc.auth-server-url", defaultValue = "")
+    String issuer;
+
+    static boolean issuerLeftAtDefault(boolean oidcEnabled, String issuer) {
+        return oidcEnabled && DEFAULT_ISSUER.equals(issuer);
+    }
+
     @PostConstruct
     void check() {
+        if (issuerLeftAtDefault(oidcEnabled, issuer)) {
+            LOG.error("[LORE AUTH GUARD] auth включён, а issuer остался умолчанием " + DEFAULT_ISSUER
+                + " — задайте LORE_OIDC_ISSUER адресом своего Keycloak, иначе токены проверяются против localhost");
+        }
         if (!oidcEnabled || !requireAdmin) return;
         // MIG-33: Infisical нередко поднимается ПАРАЛЛЕЛЬНО с бэкендом (одна
         // compose-команда, оба контейнера стартуют вместе) — секрет может быть
@@ -58,8 +78,8 @@ public class LoreAuthStartupGuard {
         if (!configured) {
             // Auth включён, а мост не сконфигурирован: людей завести/проверить нечем.
             // Токены при этом валидируются самим OIDC — не смертельно, но громко.
-            LOG.error("[LORE AUTH GUARD] auth включён (LORE_AUTH_ENABLED=true), но KC-мост не настроен ("
-                + KcBridge.KC_SECRET_KEY + " unset) после 4 попыток — проверить наличие администраторов "
+            LOG.error("[LORE AUTH GUARD] auth включён (LORE_AUTH_ENABLED=true), но KC-мост не настроен (не задано: "
+                + String.join(", ", kc.missingConfig()) + ") после 4 попыток — проверить наличие администраторов "
                 + "невозможно, управление пользователями из Admin LORE работать не будет. "
                 + "/q/health/ready несёт kc_configured=false для мониторинга (MIG-33).");
             return;
