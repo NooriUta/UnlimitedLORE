@@ -186,4 +186,29 @@ export function registerLoreRead(server: McpServer): void {
     },
   );
 
+  // MT-TASK-SHAPE: форма и объём задач — статистика и вход для BI (Völva).
+  server.tool(
+    'task_shape',
+    'Task shape & volume statistics (SPRINT_LORE_MEASURE_TRUTH/MT-TASK-SHAPE). Per task: project, status, type, ' +
+      'effort_days, complexity class S/M/L/XL derived from factors (layers touched, prod data, hypothesis, owner ' +
+      'decision, touch points), skeleton signals (steps, why, verify, test) and recommendation codes ' +
+      '(epic|merge|stale_partial|steps|verify|test|probe|estimate). Fact for calibration: cycle_days created→done; ' +
+      'created_done=true marks tasks logged already done (excluded from cycle medians). summary is per project plus "*". ' +
+      'Note text is never returned. Use rows:false for the summary only — rows for all projects are large.',
+    {
+      project: z.string().optional().describe('git-project slug filter, e.g. "NooriUta/UnlimitedLORE"; omit = all projects'),
+      rows: z.boolean().optional().describe('include per-task rows (default true)'),
+    },
+    async ({ project, rows }) => {
+      try {
+        const params: Record<string, string> = {};
+        if (project) params.project = project;
+        if (rows !== undefined) params.rows = String(rows);
+        return json(await loreGet('/lore/task-shape', params));
+      } catch (e) {
+        return err(e);
+      }
+    },
+  );
+
 }

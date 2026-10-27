@@ -39,7 +39,11 @@ final class WorkQuality {
     record Finding(String code, boolean ok, boolean required, String message) {}
 
     /** Результат: score/max по обязательным + все находки, включая подсказки. */
-    record Result(String kind, int score, int max, List<Finding> findings) {}
+    record Result(String kind, int score, int max, List<Finding> findings, Map<String, Object> extra) {
+        Result(String kind, int score, int max, List<Finding> findings) {
+            this(kind, score, max, findings, null);
+        }
+    }
 
     /**
      * Ответ записи: счёт одной строкой, а НЕДОСТАЮЩЕЕ — поимённо.
@@ -75,6 +79,8 @@ final class WorkQuality {
         }
         if (!missing.isEmpty()) out.put("missing", missing);
         if (!hints.isEmpty()) out.put("hints", hints);
+        // MT-TASK-SHAPE: форма задачи (класс сложности, рекомендации) — рядом со счётом.
+        if (r.extra() != null) out.putAll(r.extra());
         return out;
     }
 
@@ -105,6 +111,33 @@ final class WorkQuality {
     static Result evaluateTask(String statusRaw, Double effortDays, String workClass,
                                Object components, Object projects,
                                Object realizesUc, Object justifiedBy) {
+        return evaluateTask(statusRaw, effortDays, workClass, components, projects, realizesUc, justifiedBy, null);
+    }
+
+    /**
+     * То же плюс форма задачи (MT-TASK-SHAPE). Форма — ПОДСКАЗКИ, не в счёт:
+     * поднять их в обязательные значило бы разом уронить счёт у 88% корпуса,
+     * а счёт, красный у всех, перестают читать. {@code shape == null} — текст
+     * задачи вызывающему неизвестен, и судить форму не по чему.
+     */
+    static Result evaluateTask(String statusRaw, Double effortDays, String workClass,
+                               Object components, Object projects,
+                               Object realizesUc, Object justifiedBy, TaskShape.Shape shape) {
+        Result base = evaluateTaskCore(statusRaw, effortDays, workClass, components, projects, realizesUc, justifiedBy);
+        if (shape == null) return base;
+        List<Finding> f = new ArrayList<>(base.findings());
+        hint(f, "shape_why", shape.why(), "Есть «почему»: повод, факт или симптом");
+        hint(f, "shape_steps", shape.steps() >= 2, "Не меньше двух шагов (проба → правка → проверка)");
+        hint(f, "shape_verify", shape.verify(), "Есть наблюдаемый критерий готовности");
+        if (shape.estimateFits() != null)
+            hint(f, "shape_estimate", shape.estimateFits(),
+                "Оценка сходится с составом (класс " + shape.complexity() + ")");
+        return new Result(base.kind(), base.score(), base.max(), f, Map.of("shape", shape.toMap()));
+    }
+
+    private static Result evaluateTaskCore(String statusRaw, Double effortDays, String workClass,
+                                           Object components, Object projects,
+                                           Object realizesUc, Object justifiedBy) {
         List<Finding> f = new ArrayList<>();
 
         req(f, "status", filled(statusRaw), "Статус задан");
