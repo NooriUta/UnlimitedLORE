@@ -113,9 +113,15 @@ class LoreReleaseLinkOutcomeLiveDbTest {
     @Test
     @Order(6)
     void prLinkCreatedThenUnchanged() {
-        admin().body(Map.of("release_id", REL, "git_project", GP, "pr_numbers", List.of(990002)))
-            .when().post("/lore/release/link")
-            .then().log().ifValidationFails().statusCode(200).body("outcome", equalTo("created")).body("prs_linked", equalTo(1));
+        // Тело ответа — в текст провала: stdout теста в лог CI не попадает, а
+        // причина noop живёт в reason/errors.
+        io.restassured.response.Response first = admin()
+            .body(Map.of("release_id", REL, "git_project", GP, "pr_numbers", List.of(990002)))
+            .when().post("/lore/release/link");
+        String body = first.asString();
+        assertEquals(200, first.statusCode(), body);
+        assertEquals("created", first.jsonPath().getString("outcome"), body);
+        assertEquals(1, first.jsonPath().getInt("prs_linked"), body);
         admin().body(Map.of("release_id", REL, "git_project", GP, "pr_numbers", List.of(990002)))
             .when().post("/lore/release/link")
             .then().log().ifValidationFails().statusCode(200).body("outcome", equalTo("unchanged"));
