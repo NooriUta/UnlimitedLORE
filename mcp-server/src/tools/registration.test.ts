@@ -19,12 +19,13 @@ function fakeServer() {
 }
 
 describe('registerLoreRead', () => {
-  it('registers exactly the four read tools under their canonical names', () => {
+  it('registers exactly the five read tools under their canonical names', () => {
     const { server, names } = fakeServer();
     registerLoreRead(server);
     // search — SRCH-07 (ADR-LORE-033): агент ищет тем же /lore/search, что UI.
     // search_similar — SRCH-06 (D6): «похожие» на SEARCH_INDEX_MORE, вход — id.
-    expect(names).toEqual(['list_slices', 'query_slice', 'search', 'search_similar']);
+    // task_shape — MT-TASK-SHAPE: форма и объём задач для статистики и BI.
+    expect(names).toEqual(['list_slices', 'query_slice', 'search', 'search_similar', 'task_shape']);
   });
 });
 

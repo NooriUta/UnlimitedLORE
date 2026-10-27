@@ -69,7 +69,12 @@ public class LoreQualityFacts {
             + "out('PART_OF').out('BELONGS_TO').component_id            AS sprint_components, "
             + "out('PART_OF').out('BELONGS_TO_PROJECT').slug            AS projects, "
             + "out('REALIZES').uc_id                                    AS realizes_uc, "
-            + "out('JUSTIFIED_BY').adr_id                               AS justified_by"),
+            + "out('JUSTIFIED_BY').adr_id                               AS justified_by, "
+            // MT-TASK-SHAPE: форма судится по тексту задачи и по тому, как долго
+            // она в текущем статусе (застрявший partial). Всё — с ОТКРЫТОЙ строки.
+            + "title, task_type, "
+            + "out('HAS_STATE')[note_md IS NOT NULL].note_md[0]         AS note_md, "
+            + "out('HAS_STATE')[valid_to IS NULL].valid_from[0]         AS state_since"),
         SPRINT("sprint", "KnowSprint", "sprint_id",
             "out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0] AS status_raw, "
             + "out('HAS_STATE')[planned_start_date IS NOT NULL].planned_start_date[0] AS planned_start_date, "
@@ -187,8 +192,10 @@ public class LoreQualityFacts {
                     if (!(comps instanceof java.util.Collection<?> c) || c.isEmpty()) comps = r.get("sprint_components");
                     Object eff = r.get("effort_days");
                     Double effort = eff instanceof Number n ? n.doubleValue() : null;
+                    TaskShape.Shape shape = TaskShape.analyze(s(r, "title"), s(r, "note_md"), s(r, "task_type"),
+                        effort, s(r, "status_raw"), daysSince(s(r, "state_since")));
                     return WorkQuality.evaluateTask(s(r, "status_raw"), effort, s(r, "work_class"),
-                        comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"));
+                        comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"), shape);
                 }
                 case SPRINT:
                     return WorkQuality.evaluateSprint(s(r, "status_raw"), r.get("projects"), r.get("components"),
@@ -245,6 +252,17 @@ public class LoreQualityFacts {
             Object v = r.get(key);
             if (v instanceof List<?> l) v = l.isEmpty() ? null : l.get(0);
             return v == null ? null : String.valueOf(v);
+        }
+
+        /** Дней с даты (строки истории бывают «2026-07-02 12:20:54» и ISO); не разобрали — null. */
+        static Long daysSince(String ts) {
+            if (ts == null || ts.length() < 10) return null;
+            try {
+                return java.time.temporal.ChronoUnit.DAYS.between(
+                    java.time.LocalDate.parse(ts.substring(0, 10)), java.time.LocalDate.now(java.time.ZoneOffset.UTC));
+            } catch (Exception e) {
+                return null;
+            }
         }
 
         /**
