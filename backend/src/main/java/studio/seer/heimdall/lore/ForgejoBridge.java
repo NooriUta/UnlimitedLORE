@@ -68,6 +68,9 @@ public class ForgejoBridge {
 
     private String token() { return secrets.get(FORGEJO_TOKEN_KEY).orElseThrow(); }
 
+    /** DBR-18: тот же токен для пробы живости — наружу не отдаётся, только в заголовок. */
+    String probeToken() { return token(); }
+
     /** Адресация репозитория, выведенная из KnowGitProject.hosts[] primary. */
     record Repo(String apiBase, String owner, String name) {
         String path() { return owner + "/" + name; }

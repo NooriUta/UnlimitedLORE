@@ -15,9 +15,14 @@ loadDotEnv();
 
 const USER = process.env.KC_ADMIN_USER, PASS = process.env.KC_ADMIN_PASS;
 const REALM = process.env.KC_ADMIN_REALM || 'omilore';
-const BASE = (process.env.KC_ADMIN_URL || 'http://localhost:18180/kc').replace(/^https?:\/\/[^/]+/, '');
-const HOST = (process.env.KC_ADMIN_URL || 'http://localhost:18180/kc').match(/^https?:\/\/([^:/]+)/)[1];
-const PORT = Number((process.env.KC_ADMIN_URL || '').match(/:(\d+)/)?.[1] || 18180);
+// FI-KC-DEFAULTS: адрес Keycloak без умолчания. Было localhost:18180 — на чужой
+// установке скрипт молча стучался в несуществующий KC и падал невнятной ошибкой
+// соединения вместо «адрес не задан».
+const KC_URL = process.env.KC_ADMIN_URL;
+if (!KC_URL) { console.log('Нет KC_ADMIN_URL в .env (например http://localhost:18180/kc)'); process.exit(1); }
+const BASE = KC_URL.replace(/^https?:\/\/[^/]+/, '');
+const HOST = KC_URL.match(/^https?:\/\/([^:/]+)/)[1];
+const PORT = Number(KC_URL.match(/:(\d+)/)?.[1] || (KC_URL.startsWith('https') ? 443 : 80));
 if (!USER || !PASS) { console.log('Нет KC_ADMIN_USER/KC_ADMIN_PASS в .env'); process.exit(1); }
 
 function req(method, p, body, token, form) {

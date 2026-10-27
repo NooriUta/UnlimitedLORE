@@ -1275,7 +1275,17 @@ final class LoreSchemaMigrations {
             "UPDATE KnowDictEntry SET dict_type='spec_status', code='accepted',   label_ru='Принята',     label_en='Accepted', icon='laurel-crown', color='var(--suc)', sort_order=20, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='accepted'",
             "UPDATE KnowDictEntry SET dict_type='spec_status', code='deprecated', label_ru='Устарела',    label_en='Deprecated', icon='pause-button', color='var(--t3)', sort_order=30, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='deprecated'",
             "UPDATE KnowDictEntry SET dict_type='spec_status', code='superseded', label_ru='Вытеснена',   label_en='Superseded', icon='pause-button', color='var(--t3)', sort_order=40, is_active=true, is_extensible=true UPSERT WHERE dict_type='spec_status' AND code='superseded'"
-        ))
+        )),
+
+        // LH-44, пункт 3 (решение владельца 27.10.2026: «удалить после выгрузки»):
+        // легаси-рёбра HAS_STATUS KnowADRHist → StatusAdr от Python-ingest. Их не
+        // читает ни один слайс, UI, MCP или скрипт (сверено grep-ом по всему
+        // репозиторию); статус ADR живёт в KnowADR.status. Рассинхрон с полем —
+        // ложь, которую можно прочесть прямым запросом. SQL пуст: javaStep(51)
+        // сначала ВЫГРУЖАЕТ каждое ребро в лог (rid, состояние ADR, статус), потом
+        // удаляет — по @rid, DELETE EDGE в грамматике нет. Типы StatusAdr и
+        // HAS_STATUS не снимаются: схема аддитивна, снос типа — отдельное решение.
+        new Step(51, 17, "java__drop_legacy_adr_has_status", List.of())
     );
 
     /**

@@ -267,6 +267,11 @@ printf '%s\\n' \\
  '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"query_slice","arguments":{"slice":"plan_config"}}}' \\
  | node dist/index.js`;
 
+// FI-KC-DEFAULTS: issuer в сниппете — того Keycloak, которым пользуется ЭТА
+// установка (VITE_OIDC_ISSUER сборки), а не зашитый адрес нашего стенда:
+// чужая установка копировала бы чужой issuer. Без auth — явная заглушка.
+const SNIPPET_ISSUER = (import.meta.env.VITE_OIDC_ISSUER as string | undefined)
+  || '<issuer вашего Keycloak, например https://kc.example/realms/omilore>';
 // AL-18: client_credentials fields kept in sync with the real repo-root
 // .mcp.json — LORE_OIDC_ISSUER/LORE_MCP_CLIENT_ID/LORE_MCP_CLIENT_SECRET are
 // not optional extras, they're what makes AgentScopeFilter see agent_scope
@@ -282,7 +287,7 @@ const MCP_JSON = `{
       "env": {
         "LORE_BACKEND_URL": "http://localhost:9100",
         "LORE_SEER_ROLE": "admin",
-        "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
+        "LORE_OIDC_ISSUER": "${SNIPPET_ISSUER}",
         "LORE_MCP_CLIENT_ID": "lore-mcp-full",
         "LORE_MCP_CLIENT_SECRET": "\${LORE_MCP_CLIENT_SECRET}"
       }
@@ -301,7 +306,7 @@ const OPENCODE_JSON = `{
       "environment": {
         "LORE_BACKEND_URL": "http://localhost:9100",
         "LORE_SEER_ROLE": "admin",
-        "LORE_OIDC_ISSUER": "https://odal.seidrstudio.pro/kc/realms/omilore",
+        "LORE_OIDC_ISSUER": "${SNIPPET_ISSUER}",
         "LORE_MCP_CLIENT_ID": "lore-mcp-architect",
         "LORE_MCP_CLIENT_SECRET": "\${LORE_MCP_CLIENT_SECRET}"
       }

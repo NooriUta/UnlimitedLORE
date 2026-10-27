@@ -100,12 +100,19 @@ public class LoreIngestService {
             // without its HAS_STATE edge. created_date is stamped exactly once here —
             // unlike valid_from (which moves on every SCD2 transition), it must
             // survive untouched so lead/cycle-time analytics have a real anchor.
+            // DS-7: priority — поле SCD2 (KnowSprintHist), его читают срез sprints и
+            // sprint_plan_set. Раньше начальная строка шла без него, и priority из
+            // sprint_new оседал только на вершине: ok:true, а в срезе пусто.
+            java.util.Map<String, Object> hp = new java.util.HashMap<>(
+                Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
+            String priSet = "";
+            if (priority != null && !priority.isBlank()) { priSet = ", priority=:pri"; hp.put("pri", priority); }
             execScript(
-                "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now;" +
+                "INSERT INTO KnowSprintHist SET state_uid=:su, status_raw=:sraw, valid_from=:now" + priSet + ";" +
                 "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowSprint WHERE sprint_id=:sp) " +
                 "TO (SELECT FROM KnowSprintHist WHERE state_uid=:su);" +
                 "UPDATE KnowSprint SET created_date=:now WHERE sprint_id=:sp;",
-                Map.of("su", stateUid, "sraw", statusRaw, "now", now, "sp", sprintId));
+                hp);
         }
 
         LOG.infof("[LORE] created sprint %s (new=%b)", sprintId, created);

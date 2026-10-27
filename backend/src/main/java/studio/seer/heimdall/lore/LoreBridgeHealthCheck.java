@@ -45,6 +45,9 @@ public class LoreBridgeHealthCheck implements HealthCheck {
         return HealthCheckResponse.named("lore-kc-bridge")
             .status(!mandatory || configured)
             .withData("kc_configured", configured)
+            // FI-KC-DEFAULTS: что именно не задано — секрет или адрес. Раньше
+            // отсутствие адреса пряталось за умолчанием localhost:18180.
+            .withData("kc_missing", String.join(",", kc.missingConfig()))
             .withData("mandatory", mandatory)
             .build();
     }

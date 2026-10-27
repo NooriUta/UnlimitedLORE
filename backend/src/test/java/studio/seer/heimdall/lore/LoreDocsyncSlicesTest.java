@@ -75,6 +75,24 @@ class LoreDocsyncSlicesTest {
         assertTrue(s.contains("content_md_ru_sha256"), s);
     }
 
+    /** DS-9: релизы одного проекта — был 400 «unknown param: project». */
+    @Test
+    void releasesAcceptsProjectFilter() {
+        String s = sql("releases", Map.of("project", "NooriUta/seidr-site"));
+        assertTrue(s.contains("out('BELONGS_TO_PROJECT').slug CONTAINS :project"), s);
+        assertTrue(s.indexOf(" WHERE ") < s.indexOf(" ORDER BY "), "фильтр обязан стоять до сортировки: " + s);
+    }
+
+    /**
+     * DS-9: свой потолок 200 прятал старые релизы — флаг is_current у v1.8.0
+     * нечем было прочесть. Потолки списочных срезов сняты решением владельца
+     * 30.08.2026; усечение, если оно есть, помечает сервер (DBU-13).
+     */
+    @Test
+    void releasesHasNoOwnRowCap() {
+        assertTrue(!sql("releases", Map.of()).contains("LIMIT"), sql("releases", Map.of()));
+    }
+
     /** Хеш — полный SHA-256 от UTF-8 байтов: потребитель сверяет его своим sha256sum. */
     @Test
     void digestIsPlainSha256OfUtf8() {
