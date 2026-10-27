@@ -250,6 +250,10 @@ public class LoreSchemaInitializer {
         "CREATE PROPERTY KnowPR.pr_number             IF NOT EXISTS INTEGER",
         "CREATE PROPERTY KnowPR.title                 IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowPR.git_project           IF NOT EXISTS STRING",
+        // DBR-17: «UPDATE KnowPR … UPSERT WHERE pr_uid» (release_link, автопривязка
+        // forgejo_pr_merge) на чистой базе без индекса отвечал 400 — тот же класс,
+        // что QGJobTask/QGRecommendation ниже. Найдено LoreReleaseLinkOutcomeLiveDbTest.
+        "CREATE INDEX IF NOT EXISTS ON KnowPR (pr_uid) UNIQUE",
         "CREATE PROPERTY KnowMilestone.milestone_id   IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowPhase.phase_uid          IF NOT EXISTS STRING",
         "CREATE PROPERTY KnowTask.task_uid            IF NOT EXISTS STRING",
