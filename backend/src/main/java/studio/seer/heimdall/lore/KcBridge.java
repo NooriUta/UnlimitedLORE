@@ -34,8 +34,15 @@ public class KcBridge {
     /** Обе администрирующие realm-роли: инвариант AL-35 — «существует хотя бы один их носитель». */
     static final List<String> ADMIN_ROLES = List.of("admin", "super-admin");
 
-    @ConfigProperty(name = "kc.admin.url", defaultValue = "http://localhost:18180/kc")
-    String kcUrl;
+    /**
+     * FI-KC-DEFAULTS: без умолчания. Было {@code http://localhost:18180/kc} — чужая
+     * установка без переменной молча шла на свой же localhost и получала «KC не
+     * отвечает» вместо «адрес не задан». Пусто → мост не настроен, и причина
+     * названа ({@link #missingConfig()}). Наш стенд задаёт адрес в compose.
+     * Optional, а не {@code ${VAR:}}: пустая строка там роняет старт.
+     */
+    @ConfigProperty(name = "kc.admin.url")
+    Optional<String> kcUrl;
     @ConfigProperty(name = "kc.admin.realm", defaultValue = "omilore")
     String kcRealm;
     @ConfigProperty(name = "kc.admin.client-id", defaultValue = "lore-admin")
@@ -44,7 +51,20 @@ public class KcBridge {
     @Inject
     SecretProvider secrets;
 
-    boolean configured() { return secrets.has(KC_SECRET_KEY); }
+    boolean configured() { return missingConfig().isEmpty(); }
+
+    /** Чего не хватает мосту — пусто, если всё есть. Называется в health и логах. */
+    List<String> missingConfig() {
+        List<String> out = new java.util.ArrayList<>();
+        if (!secrets.has(KC_SECRET_KEY)) out.add(KC_SECRET_KEY);
+        if (kcUrl.filter(u -> !u.isBlank()).isEmpty()) out.add("kc.admin.url");
+        return out;
+    }
+
+    private String url() {
+        return kcUrl.filter(u -> !u.isBlank()).orElseThrow(
+            () -> new IllegalStateException("kc.admin.url не задан"));
+    }
 
     private Optional<String> kcSecret() { return secrets.get(KC_SECRET_KEY); }
 
@@ -52,7 +72,7 @@ public class KcBridge {
     String adminToken() throws Exception {
         String body = "grant_type=client_credentials&client_id=" + URLEncoder.encode(kcClientId, StandardCharsets.UTF_8)
             + "&client_secret=" + URLEncoder.encode(kcSecret().orElseThrow(), StandardCharsets.UTF_8);
-        HttpRequest req = HttpRequest.newBuilder(URI.create(kcUrl + "/realms/" + kcRealm + "/protocol/openid-connect/token"))
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url() + "/realms/" + kcRealm + "/protocol/openid-connect/token"))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(body)).build();
         HttpResponse<String> r = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
@@ -61,7 +81,7 @@ public class KcBridge {
     }
 
     HttpResponse<String> kc(String method, String path, String json, String token) throws Exception {
-        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(kcUrl + "/admin/realms/" + kcRealm + path))
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(url() + "/admin/realms/" + kcRealm + path))
             .header("Authorization", "Bearer " + token);
         if (json != null) b.header("Content-Type", "application/json");
         b.method(method, json == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json));

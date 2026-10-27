@@ -121,6 +121,12 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             out.put("ok", true);
             out.put("sprint_id", r.sprintId());
             out.put("created", r.created());
+            // DS-7: у существующего спринта приоритет — ревизия плана (SCD2), а не
+            // поле создания. Молча проглотить его значило бы снова ok:true без записи.
+            if (!r.created() && req.priority() != null && !req.priority().isBlank()) {
+                out.put("priority_hint", "спринт уже существует: priority здесь в историю не записан — "
+                    + "меняйте через sprint_plan_set (SCD2-ревизия плана)");
+            }
             out.put("quality", WorkQuality.compact(sprintQuality(req.sprint_id())));
             return noStore(Response.ok(out));
         } catch (Exception e) {

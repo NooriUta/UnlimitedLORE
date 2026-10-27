@@ -17,7 +17,8 @@
     "/lore/adr/tag"
   ],
   "adr_new": [
-    "/lore/adr"
+    "/lore/adr",
+    "/lore/adr/project"
   ],
   "adr_rename": [
     "/lore/adr/rename"
@@ -101,7 +102,8 @@
     "/lore/doc/sprint"
   ],
   "doc_new": [
-    "/lore/doc"
+    "/lore/doc",
+    "/lore/doc/project"
   ],
   "feature_link": [
     "/lore/feature/link"
@@ -172,7 +174,8 @@
     "/lore/question/raised_in"
   ],
   "question_new": [
-    "/lore/question"
+    "/lore/question",
+    "/lore/question/project"
   ],
   "question_set": [
     "/lore/question"
@@ -203,7 +206,8 @@
     "/lore/runbook/project"
   ],
   "runbook_new": [
-    "/lore/runbook"
+    "/lore/runbook",
+    "/lore/runbook/project"
   ],
   "spec_del": [
     "/lore/spec/delete"
@@ -212,7 +216,8 @@
     "/lore/spec/link"
   ],
   "spec_new": [
-    "/lore/spec"
+    "/lore/spec",
+    "/lore/spec/link"
   ],
   "spec_set": [
     "/lore/spec"

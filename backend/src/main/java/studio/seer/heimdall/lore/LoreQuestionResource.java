@@ -139,6 +139,9 @@ public class LoreQuestionResource extends LoreResourceBase {
             return badParams("ids contain illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            // DBR-17 (ADR-LORE-043): проба ДО записи — исход из факта, а не из ok:true.
+            boolean had = edgeExists("ANSWERS", "decision_id", req.decision_id(), "question_id", req.question_id());
+            boolean linked = false;
             if (remove) {
                 deleteEdges("ANSWERS", "@out.decision_id=:d AND @in.question_id=:q",
                     Map.of("d", req.decision_id(), "q", req.question_id()));
@@ -155,18 +158,21 @@ public class LoreQuestionResource extends LoreResourceBase {
                     "WHERE question_id=:q AND status='closed' AND in('ANSWERS').size()=0",
                     Map.of("q", req.question_id()))).await().indefinitely();
             } else {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                linked = created(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE ANSWERS FROM (SELECT FROM KnowDecision WHERE decision_id=:d) " +
                     "TO (SELECT FROM KnowQuestion WHERE question_id=:q) IF NOT EXISTS",
-                    Map.of("d", req.decision_id(), "q", req.question_id()))).await().indefinitely();
+                    Map.of("d", req.decision_id(), "q", req.question_id()))).await().indefinitely().result());
                 // The invariant: a question is closed exactly when a decision answers it.
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowQuestion SET status='closed', closed_date=:cd " +
                     "WHERE question_id=:q AND status <> 'closed'",
                     Map.of("cd", java.time.LocalDate.now().toString(), "q", req.question_id()))).await().indefinitely();
             }
-            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id(),
-                "action", remove ? "removed" : "added")));
+            Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
+                "decision_id", req.decision_id(), "action", remove ? "removed" : "added");
+            return remove ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, linked, "ANSWERS", "decision_id", req.decision_id(),
+                    "question_id", req.question_id(), "решение " + req.decision_id() + " или вопрос " + req.question_id());
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION ANSWERS] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
@@ -196,17 +202,22 @@ public class LoreQuestionResource extends LoreResourceBase {
         }
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            boolean had = edgeExists("RAISED_IN", "question_id", req.question_id(), field, req.target_id()); // DBR-17
+            boolean linked = false;
             if (remove) {
                 deleteEdges("RAISED_IN", "@out.question_id=:q AND @in." + field + "=:t",
                     Map.of("q", req.question_id(), "t", req.target_id()));
             } else {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                linked = created(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE RAISED_IN FROM (SELECT FROM KnowQuestion WHERE question_id=:q) " +
                     "TO (SELECT FROM " + type + " WHERE " + field + "=:t) IF NOT EXISTS",
-                    Map.of("q", req.question_id(), "t", req.target_id()))).await().indefinitely();
+                    Map.of("q", req.question_id(), "t", req.target_id()))).await().indefinitely().result());
             }
-            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id(),
-                "action", remove ? "removed" : "added")));
+            Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
+                "target_id", req.target_id(), "action", remove ? "removed" : "added");
+            return remove ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, linked, "RAISED_IN", "question_id", req.question_id(), field, req.target_id(),
+                    "вопрос " + req.question_id() + " или " + req.target_type() + " " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION RAISED_IN] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
@@ -228,17 +239,22 @@ public class LoreQuestionResource extends LoreResourceBase {
             return badParams("ids contain illegal characters");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            boolean had = edgeExists("GATES", "question_id", req.question_id(), "task_uid", req.task_uid()); // DBR-17
+            boolean linked = false;
             if (remove) {
                 deleteEdges("GATES", "@out.question_id=:q AND @in.task_uid=:t",
                     Map.of("q", req.question_id(), "t", req.task_uid()));
             } else {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                linked = created(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE GATES FROM (SELECT FROM KnowQuestion WHERE question_id=:q) " +
                     "TO (SELECT FROM KnowTask WHERE task_uid=:t) IF NOT EXISTS",
-                    Map.of("q", req.question_id(), "t", req.task_uid()))).await().indefinitely();
+                    Map.of("q", req.question_id(), "t", req.task_uid()))).await().indefinitely().result());
             }
-            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id(),
-                "action", remove ? "removed" : "added")));
+            Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
+                "task_uid", req.task_uid(), "action", remove ? "removed" : "added");
+            return remove ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, linked, "GATES", "question_id", req.question_id(), "task_uid", req.task_uid(),
+                    "вопрос " + req.question_id() + " или задача " + req.task_uid());
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION GATES] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
@@ -262,21 +278,26 @@ public class LoreQuestionResource extends LoreResourceBase {
         // The legacy component_id vertex field is kept in sync as the "primary" (first) one.
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            boolean had = edgeExists("BELONGS_TO", "question_id", req.question_id(), "component_id", req.component_id()); // DBR-17
+            boolean linked = false;
             if (remove) {
                 deleteEdges("BELONGS_TO", "@out.question_id=:q AND @in.component_id=:c",
                     Map.of("q", req.question_id(), "c", req.component_id()));
             } else {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                linked = created(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE BELONGS_TO FROM (SELECT FROM KnowQuestion WHERE question_id=:q) " +
                     "TO (SELECT FROM LoreComponent WHERE component_id=:c) IF NOT EXISTS",
-                    Map.of("q", req.question_id(), "c", req.component_id()))).await().indefinitely();
+                    Map.of("q", req.question_id(), "c", req.component_id()))).await().indefinitely().result());
                 // keep the legacy single field pointing at the primary component if unset
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "UPDATE KnowQuestion SET component_id=:c WHERE question_id=:q AND component_id IS NULL",
                     Map.of("c", req.component_id(), "q", req.question_id()))).await().indefinitely();
             }
-            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id(),
-                "component_id", req.component_id(), "action", remove ? "removed" : "added")));
+            Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
+                "component_id", req.component_id(), "action", remove ? "removed" : "added");
+            return remove ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, linked, "BELONGS_TO", "question_id", req.question_id(),
+                    "component_id", req.component_id(), "вопрос " + req.question_id() + " или компонент " + req.component_id());
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION COMPONENT] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
@@ -299,17 +320,24 @@ public class LoreQuestionResource extends LoreResourceBase {
         // T43: questions belong to one or more git projects (multi) via BELONGS_TO_PROJECT.
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            boolean had = edgeExists("BELONGS_TO_PROJECT", "question_id", req.question_id(), "slug", req.project()); // DBR-17
+            boolean linked = false;
             if (remove) {
                 deleteEdges("BELONGS_TO_PROJECT", "@out.question_id=:q AND @in.slug=:p",
                     Map.of("q", req.question_id(), "p", req.project()));
             } else {
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                linked = created(writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                     "CREATE EDGE BELONGS_TO_PROJECT FROM (SELECT FROM KnowQuestion WHERE question_id=:q) " +
                     "TO (SELECT FROM KnowGitProject WHERE slug=:p) IF NOT EXISTS",
-                    Map.of("q", req.question_id(), "p", req.project()))).await().indefinitely();
+                    Map.of("q", req.question_id(), "p", req.project()))).await().indefinitely().result());
             }
-            return noStore(Response.ok(Map.of("ok", true, "question_id", req.question_id(),
-                "project", req.project(), "action", remove ? "removed" : "added")));
+            Map<String, Object> base = Map.of("ok", true, "question_id", req.question_id(),
+                "project", req.project(), "action", remove ? "removed" : "added");
+            // linked=false на незарегистрированном проекте — noop с причиной, а не ok:true.
+            return remove ? unlinkOutcome(base, had)
+                : linkOutcome(had, base, linked, "BELONGS_TO_PROJECT", "question_id", req.question_id(),
+                    "slug", req.project(), "вопрос " + req.question_id() + " или проект " + req.project()
+                        + " (проект заводится через project_new)");
         } catch (Exception e) {
             LOG.warnf("[LORE QUESTION PROJECT] %s: %s", req.question_id(), e.getMessage());
             return upstream(e);
@@ -317,6 +345,11 @@ public class LoreQuestionResource extends LoreResourceBase {
     }
 
     // ── helpers ────────────────────────────────────────────────────────────
+
+    /** Вернул ли CREATE EDGE строку. Признак, не факт: решает linkOutcome с пробой. */
+    private static boolean created(Object result) {
+        return result instanceof java.util.List<?> l && !l.isEmpty();
+    }
 
     private static void putIf(StringBuilder sql, Map<String, Object> p, String col, String bind, Object val) {
         if (val != null) { sql.append(", ").append(col).append('=').append(bind); p.put(bind.substring(1), val); }
