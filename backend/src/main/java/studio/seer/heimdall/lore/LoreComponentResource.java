@@ -38,6 +38,15 @@ public class LoreComponentResource extends LoreResourceBase {
         if (req == null || req.component_id() == null || req.component_id().isBlank())
             return badParams("component_id required");
         try {
+            // DBR-17: UPDATE по несуществующему id ничего не находит и раньше
+            // отвечал ok:true — правка «прошла» мимо графа. Родитель проверяется
+            // до записи по той же причине: поле parent_id записалось бы, а ребро
+            // PARENT_OF по пустой выборке — нет, и дерево разошлось бы с полем.
+            if (!exists("LoreComponent", "component_id", req.component_id()))
+                return targetNotFound("компонент " + req.component_id() + " не найден — заведите его component_new");
+            if (req.parent_id() != null && !req.parent_id().isBlank()
+                    && !exists("LoreComponent", "component_id", req.parent_id()))
+                return targetNotFound("родитель " + req.parent_id() + " не найден");
             // LH-44: the MCP tool contract explicitly promises "partial update — only
             // supplied fields written"; previously ALL six fields were SET unconditionally,
             // so an owner-only call wiped team/full_name/area/game_icon/parent_id.
@@ -58,7 +67,8 @@ public class LoreComponentResource extends LoreResourceBase {
             // T01: keep the PARENT_OF edge in sync with the parent_id field (the
             // tree UI reads the edge, not the field) — create/link-parent already do.
             if (req.parent_id() != null) relinkParentEdge(req.component_id(), req.parent_id());
-            return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id())));
+            return noStore(Response.ok(edgesChecked(req.component_id(), req.parent_id(), req.area(),
+                LoreOutcome.UPDATED)));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT UPDATE] %s: %s", req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -85,6 +95,12 @@ public class LoreComponentResource extends LoreResourceBase {
         if (!SAFE_ID.matcher(req.component_id()).matches())
             return badParams("component_id contains illegal characters");
         try {
+            // DBR-17: родителя нет — отказ ДО записи, иначе компонент ляжет с
+            // parent_id, а ребро PARENT_OF по пустой выборке не создастся.
+            if (req.parent_id() != null && !req.parent_id().isBlank()
+                    && !exists("LoreComponent", "component_id", req.parent_id()))
+                return targetNotFound("родитель " + req.parent_id() + " не найден — заведите его раньше ребёнка");
+            boolean existed = exists("LoreComponent", "component_id", req.component_id());
             // LH-44: dynamic SET — re-calling create on an existing component must not
             // wipe unspecified fields nor reset children/tech arrays (initialised below
             // only where still missing, i.e. genuinely new vertices).
@@ -106,20 +122,16 @@ public class LoreComponentResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE LoreComponent SET tech=[] WHERE component_id=:cid AND tech IS NULL",
                 Map.of("cid", req.component_id()))).await().indefinitely();
-            if (req.parent_id() != null && !req.parent_id().isBlank()) {
-                Map<String, Object> ep = Map.of("cid", req.component_id(), "pid", req.parent_id());
-                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    String.format(
-                    "CREATE EDGE PARENT_OF FROM (SELECT FROM LoreComponent WHERE component_id='%s') " +
-                    "TO (SELECT FROM LoreComponent WHERE component_id='%s')",
-                    req.component_id(), req.parent_id()),
-                    Map.of())).await().indefinitely();
-            }
+            // DBR-17: перепривязка, а не голый CREATE EDGE. Повторный create
+            // плодил дубль PARENT_OF, а create с другим родителем оставлял и
+            // прежнего — у компонента молча становилось два родителя.
+            if (req.parent_id() != null && !req.parent_id().isBlank()
+                    && !edgeExists("PARENT_OF", "component_id", req.component_id(), "component_id", req.parent_id()))
+                relinkParentEdge(req.component_id(), req.parent_id());
             // ADR-LORE-012 level B: keep the IN_AREA edge in sync with the string.
             if (req.area() != null) relinkAreaEdge(req.component_id(), req.area());
-            Map<String, Object> out = new java.util.LinkedHashMap<>();
-            out.put("ok", true);
-            out.put("component_id", req.component_id());
+            Map<String, Object> out = edgesChecked(req.component_id(), req.parent_id(), req.area(),
+                existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED);
             // Вердикт полноты (ADR-LORE-039): голый component_id в списках
             // нечитаем, а без области компонент не ложится в группировку.
             WorkQuality.Result quality = componentQuality(req.component_id());
@@ -170,6 +182,10 @@ public class LoreComponentResource extends LoreResourceBase {
             return badParams("component_id required");
         String cid = req.component_id();
         try {
+            // DBR-17: удалять нечего — законный исход повтора, а не «удалено».
+            if (!exists("LoreComponent", "component_id", cid))
+                return noStore(Response.ok(LoreOutcome.unlink(
+                    Map.of("ok", true, "component_id", cid), false)));
             Map<String, Object> p = Map.of("cid", cid);
             java.util.LinkedHashMap<String, Long> blockers = new java.util.LinkedHashMap<>();
             putIfPositive(blockers, "children",           countN("SELECT count(*) AS n FROM LoreComponent WHERE parent_id=:cid", p));
@@ -215,7 +231,16 @@ public class LoreComponentResource extends LoreResourceBase {
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "DELETE FROM LoreComponent WHERE component_id=:id",
                 Map.of("id", cid))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "component_id", cid)));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("component_id", cid);
+            if (exists("LoreComponent", "component_id", cid)) {
+                out.put("outcome", LoreOutcome.NOOP);
+                out.put("reason", "DELETE выполнен, но вершина компонента осталась в графе");
+            } else {
+                out.put("outcome", LoreOutcome.DELETED);
+            }
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT DELETE] %s: %s", cid, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -237,6 +262,28 @@ public class LoreComponentResource extends LoreResourceBase {
 
     private WorkQuality.Result componentQuality(String componentId) {
         return qualityFacts.forOne(LoreQualityFacts.Kind.COMPONENT, componentId);
+    }
+
+    /**
+     * Ответ записи компонента с исходом из ФАКТА (ADR-LORE-043): раз в запросе
+     * назван родитель, ребро PARENT_OF обязано быть в графе — иначе noop с
+     * причиной. Область — мягче: компонент законно живёт с областью, которой
+     * ещё нет в справочнике, но молчать об этом нельзя, отсюда {@code area_hint}.
+     */
+    private Map<String, Object> edgesChecked(String cid, String parentId, String area, String outcome) {
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("ok", true);
+        out.put("component_id", cid);
+        out.put("outcome", outcome);
+        if (parentId != null && !parentId.isBlank()
+                && !edgeExists("PARENT_OF", "component_id", cid, "component_id", parentId)) {
+            out.put("outcome", LoreOutcome.NOOP);
+            out.put("reason", "компонент записан, но ребро PARENT_OF → " + parentId + " не создано");
+        }
+        if (area != null && !area.isBlank() && !edgeExists("IN_AREA", "component_id", cid, "code", area))
+            out.put("area_hint", "области '" + area + "' нет в справочнике area — ребро IN_AREA не создано, "
+                + "компонент не попадёт в группировку по областям; заведите её dict_set");
+        return out;
     }
 
     private long countN(String sql, Map<String, Object> params) {
@@ -262,18 +309,36 @@ public class LoreComponentResource extends LoreResourceBase {
         requireAdmin(role);
         if (req == null || req.component_id() == null || req.parent_id() == null)
             return badParams("component_id and parent_id required");
+        if (req.component_id().equals(req.parent_id()))
+            return badParams("component cannot be its own parent");
         try {
+            // DBR-17: оба конца — до записи. Раньше поле parent_id писалось при
+            // любом исходе, а ребро по пустой выборке молча не создавалось.
+            if (!exists("LoreComponent", "component_id", req.component_id()))
+                return targetNotFound("компонент " + req.component_id() + " не найден");
+            if (!exists("LoreComponent", "component_id", req.parent_id()))
+                return targetNotFound("родитель " + req.parent_id() + " не найден");
+            Map<String, Object> base = Map.of("ok", true, "component_id", req.component_id(),
+                "parent_id", req.parent_id());
+            boolean had = edgeExists("PARENT_OF", "component_id", req.component_id(),
+                "component_id", req.parent_id());
+            if (had) return noStore(Response.ok(LoreOutcome.link(base, false, true, "")));
+            // Родитель один: голый CREATE EDGE при смене родителя оставлял и
+            // прежнего, а повтор — плодил дубль. Перепривязка снимает все исходящие.
+            boolean hadOther = anyEdgeFrom("PARENT_OF", "component_id", req.component_id());
             Map<String, Object> p = Map.of("cid", req.component_id(), "pid", req.parent_id());
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 "UPDATE LoreComponent SET parent_id=:pid WHERE component_id=:cid", p))
                 .await().indefinitely();
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                String.format(
-                    "CREATE EDGE PARENT_OF FROM (SELECT FROM LoreComponent WHERE component_id='%s') " +
-                    "TO (SELECT FROM LoreComponent WHERE component_id='%s')",
-                    req.component_id(), req.parent_id()),
-                Map.of())).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "component_id", req.component_id(), "parent_id", req.parent_id())));
+            relinkParentEdge(req.component_id(), req.parent_id());
+            Map<String, Object> out = LoreOutcome.link(base,
+                edgeExists("PARENT_OF", "component_id", req.component_id(), "component_id", req.parent_id()),
+                false, "компонент " + req.component_id() + " или родитель " + req.parent_id());
+            if (hadOther && LoreOutcome.CREATED.equals(out.get("outcome"))) {
+                out.put("outcome", LoreOutcome.UPDATED);
+                out.put("previous_parent_removed", true);
+            }
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE COMPONENT LINK-PARENT] %s→%s: %s", req.component_id(), req.parent_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

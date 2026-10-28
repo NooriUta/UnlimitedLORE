@@ -48,6 +48,21 @@ public class LoreDictResource extends LoreResourceBase {
                 || req.code() == null || req.code().isBlank())
             return badParams("dict_type and code required");
         try {
+            // DBR-17: исход из факта. Прежнее состояние читаем ДО записи: повтор
+            // тех же значений — unchanged, и он не плодит ревизию истории, а
+            // раньше каждый такой вызов открывал новую Hist-строку без изменений.
+            Map<String, Object> key0 = Map.of("dt", req.dict_type(), "code", req.code());
+            List<Map<String, Object>> prev = ingestService.queryPublic(
+                "SELECT label_ru, label_en, color, icon, sort_order, is_active, is_extensible " +
+                "FROM KnowDictEntry WHERE dict_type=:dt AND code=:code", key0);
+            boolean existed = !prev.isEmpty();
+            Map<String, Object> base = Map.of("ok", true, "dict_type", req.dict_type(), "code", req.code());
+            if (existed && sameAsStored(req, prev.get(0))) {
+                Map<String, Object> out = new java.util.LinkedHashMap<>(base);
+                out.put("outcome", LoreOutcome.UNCHANGED);
+                out.put("hint", "запись уже такая — повторять вызов не нужно");
+                return noStore(Response.ok(out));
+            }
             StringBuilder sql = new StringBuilder(
                 "UPDATE KnowDictEntry SET dict_type=:dt, code=:code");
             Map<String, Object> p = new java.util.HashMap<>();
@@ -77,13 +92,35 @@ public class LoreDictResource extends LoreResourceBase {
                 "UPDATE KnowDictEntry SET is_extensible=false WHERE dict_type=:dt AND code=:code AND is_extensible IS NULL",
                 key)).await().indefinitely();
             writeDictHist(req.dict_type(), req.code());
-            return noStore(Response.ok(Map.of("ok", true,
-                "dict_type", req.dict_type(), "code", req.code())));
+            Map<String, Object> out = new java.util.LinkedHashMap<>(base);
+            out.put("outcome", existed ? LoreOutcome.UPDATED : LoreOutcome.CREATED);
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE DICT] %s/%s: %s", req.dict_type(), req.code(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
                 .entity(new LoreError("LORE_UPSTREAM", e.getMessage())));
         }
+    }
+
+    /**
+     * Совпадает ли каждое ПРИСЛАННОЕ поле с хранимым (DBR-17). Неприсланное не
+     * сравнивается — partial-вызов его и не трогает. Числа сравниваются по
+     * значению: движок отдаёт sort_order то Integer, то Long.
+     */
+    static boolean sameAsStored(DictEntryRequest req, Map<String, Object> stored) {
+        return same(req.label_ru(), stored.get("label_ru"))
+            && same(req.label_en(), stored.get("label_en"))
+            && same(req.color(), stored.get("color"))
+            && same(req.icon(), stored.get("icon"))
+            && same(req.sort_order(), stored.get("sort_order"))
+            && same(req.is_active(), stored.get("is_active"))
+            && same(req.is_extensible(), stored.get("is_extensible"));
+    }
+
+    private static boolean same(Object sent, Object stored) {
+        if (sent == null) return true;
+        if (sent instanceof Number a && stored instanceof Number b) return a.longValue() == b.longValue();
+        return sent.equals(stored);
     }
 
     /**
@@ -138,12 +175,26 @@ public class LoreDictResource extends LoreResourceBase {
             // перевешивает рёбра.
             List<Map<String, Object>> comps = ingestService.queryPublic(
                 "SELECT component_id, area FROM LoreComponent WHERE area IS NOT NULL", Map.of());
+            // DBR-17: «relinked» раньше считал выполненные перепривязки, а не
+            // поставленные рёбра — компонент с областью, которой нет в
+            // справочнике, входил в счёт, хотя ребра у него так и не появилось.
             int n = 0;
+            List<String> unlinked = new java.util.ArrayList<>();
             for (Map<String, Object> c : comps) {
-                relinkAreaEdge((String) c.get("component_id"), (String) c.get("area"));
-                n++;
+                String cid = (String) c.get("component_id");
+                String area = (String) c.get("area");
+                relinkAreaEdge(cid, area);
+                if (area == null || area.isBlank() || edgeExists("IN_AREA", "component_id", cid, "code", area)) n++;
+                else unlinked.add(cid + "→" + area);
             }
-            return noStore(Response.ok(Map.of("ok", true, "relinked", n)));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("relinked", n);
+            out.put("unlinked", unlinked);
+            out.put("outcome", unlinked.isEmpty() ? LoreOutcome.UPDATED : LoreOutcome.NOOP);
+            if (!unlinked.isEmpty())
+                out.put("reason", unlinked.size() + " компонент(ов) с областью, которой нет в справочнике area");
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE IN_AREA backfill] %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

@@ -399,6 +399,22 @@ public abstract class LoreResourceBase {
         return noStore(Response.ok(LoreOutcome.unlink(base, had)));
     }
 
+    /**
+     * Есть ли вершина (DBR-17). Сбой запроса летит наверх: «не смогли
+     * проверить» — не то же самое, что «нет», и отвечать за вызывающего нельзя.
+     */
+    boolean exists(String type, String field, String value) {
+        if (value == null) return false;
+        return !ingestService.queryPublic(
+            "SELECT @rid FROM " + type + " WHERE " + field + "=:v LIMIT 1", Map.of("v", value)).isEmpty();
+    }
+
+    /** Отказ ДО записи: отсутствующий конец не должен оставлять сироту или полузапись. */
+    Response targetNotFound(String what) {
+        return noStore(Response.status(Response.Status.NOT_FOUND)
+            .entity(new LoreError("TARGET_NOT_FOUND", what)));
+    }
+
     boolean linkComponentEdge(String type, String idField, String id, String componentId) {
         if (id == null || id.isBlank() || componentId == null || componentId.isBlank()) return true;
         @SuppressWarnings("unchecked")
