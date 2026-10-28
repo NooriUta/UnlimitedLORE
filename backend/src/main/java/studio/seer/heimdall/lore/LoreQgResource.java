@@ -428,18 +428,6 @@ public class LoreQgResource extends LoreResourceBase {
 
     // ── DBR-17 helpers ───────────────────────────────────────────────────────
 
-    /** Есть ли вершина. Сбой запроса летит наверх — «не смогли проверить» ≠ «нет». */
-    private boolean exists(String type, String field, String value) {
-        return !ingestService.queryPublic(
-            "SELECT @rid FROM " + type + " WHERE " + field + "=:v LIMIT 1", Map.of("v", value)).isEmpty();
-    }
-
-    /** Отказ ДО записи: отсутствующий родитель не должен оставлять сироту. */
-    private Response targetNotFound(String what) {
-        return noStore(Response.status(Response.Status.NOT_FOUND)
-            .entity(new LoreError("TARGET_NOT_FOUND", what)));
-    }
-
     /**
      * Ответ upsert-записи с исходом (ADR-LORE-043): created/updated по пробе
      * вершины ДО записи; ребра к родителю после записи нет — noop с причиной.

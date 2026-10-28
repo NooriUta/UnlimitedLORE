@@ -125,6 +125,7 @@ public class LoreAssetResource extends LoreResourceBase {
             String hash = HexFormat.of().formatHex(
                 MessageDigest.getInstance("SHA-256").digest(bytes)).substring(0, 16);
             String key = type + "/" + id + "/" + hash + "." + ext;
+            boolean existed = exists("KnowAsset", "asset_key", key); // DBR-17: исход из факта
 
             try (InputStream in = new java.io.ByteArrayInputStream(bytes)) {
                 s3.put(key, in, size, mime);
@@ -147,9 +148,25 @@ public class LoreAssetResource extends LoreResourceBase {
                     target[0], target[1], id, key))).await().indefinitely();
             }
             String url = "/lore/asset/file/" + key;
-            return noStore(Response.ok(Map.of(
-                "ok", true, "asset_key", key, "file_url", url, "size_bytes", size,
-                "md", "![" + str(form.alt) + "](" + url + ")")));
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("asset_key", key);
+            out.put("file_url", url);
+            out.put("size_bytes", size);
+            out.put("md", "![" + str(form.alt) + "](" + url + ")");
+            // DBR-17: ассет без ребра к сущности не виден ни в одной карточке —
+            // ADR-031 запрещает такие, и ответ обязан сказать, если ребра нет.
+            boolean attached = !ingestService.queryPublic(
+                "SELECT @rid FROM ATTACHED_TO WHERE @in IN (SELECT @rid FROM KnowAsset WHERE asset_key=:k)",
+                Map.of("k", key)).isEmpty();
+            if (!attached) {
+                out.put("outcome", LoreOutcome.NOOP);
+                out.put("reason", "файл и вершина ассета записаны, но ребро ATTACHED_TO к " + target[0] + " " + id + " не создано");
+            } else {
+                out.put("outcome", existed ? LoreOutcome.UNCHANGED : LoreOutcome.CREATED);
+                if (existed) out.put("hint", "тот же файл уже был привязан — это прежний ассет, не дубль");
+            }
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE ASSET] upload %s/%s: %s", type, id, e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
